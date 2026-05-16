@@ -23,6 +23,7 @@ class ResultScreen extends ConsumerStatefulWidget {
 
 class _ResultScreenState extends ConsumerState<ResultScreen> {
   bool _saved = false;
+  bool _isSaving = false;
 
   PostGeneration get _generation =>
       widget.result['_generation'] as PostGeneration;
@@ -31,21 +32,24 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
       widget.result['scores'] as Map<String, dynamic>;
 
   Future<void> _save() async {
-    await ref.read(postNotifierProvider.notifier).saveGeneration(_generation);
-    if (!mounted) return;
-
-    final state = ref.read(postNotifierProvider);
-    if (state.hasError) {
-      showErrorSnack(context, state.error.toString());
-    } else {
-      setState(() => _saved = true);
+    setState(() => _isSaving = true);
+    try {
+      await ref.read(postServiceProvider).saveGeneration(_generation);
+      if (!mounted) return;
+      setState(() {
+        _saved = true;
+        _isSaving = false;
+      });
       showSuccessSnack(context, 'Salvo no histórico!');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      showErrorSnack(context, 'Erro ao salvar. Tente novamente.');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isSaving = ref.watch(postNotifierProvider).isLoading;
     final scores = _scores;
 
     return Scaffold(
@@ -54,8 +58,8 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
         actions: [
           if (!_saved)
             TextButton.icon(
-              onPressed: isSaving ? null : _save,
-              icon: isSaving
+              onPressed: _isSaving ? null : _save,
+              icon: _isSaving
                   ? const SizedBox(
                       width: 16,
                       height: 16,
@@ -74,7 +78,6 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Scores
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
@@ -93,8 +96,6 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
             ],
           ),
           const SizedBox(height: 20),
-
-          // Blocos de texto
           ResultBlock(
             title: 'Post Melhorado',
             content: widget.result['improved_text'] as String,

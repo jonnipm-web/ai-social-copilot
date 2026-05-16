@@ -36,8 +36,8 @@ class PostService {
         .order('created_at', ascending: false)
         .limit(50);
 
-    return (rows as List)
-        .map((row) => PostGeneration.fromMap(row as Map<String, dynamic>))
+    return rows
+        .map((row) => PostGeneration.fromMap(row))
         .toList();
   }
 

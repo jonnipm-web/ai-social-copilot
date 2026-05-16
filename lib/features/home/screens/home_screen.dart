@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/snackbar_utils.dart';
+import '../../../data/models/post_generation.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/post_provider.dart';
 import '../../../shared/widgets/loading_button.dart';
@@ -53,7 +54,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
-  Map<String, dynamic> _generationToMap(dynamic g) => {
+  Map<String, dynamic> _generationToMap(PostGeneration g) => {
         'improved_text': g.improvedText,
         'professional_version': g.professionalVersion,
         'casual_version': g.casualVersion,
