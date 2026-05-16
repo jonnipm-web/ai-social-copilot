@@ -1,11 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
-const MODEL = "claude-sonnet-4-6";
+const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") ?? "";
+const GEMINI_URL =
+  `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 const SYSTEM_PROMPT = `Você é um especialista em comunicação digital e redes sociais.
@@ -25,11 +27,10 @@ Receba um texto e retorne SOMENTE um JSON válido, sem markdown, sem explicaçõ
   }
 }
 
-As notas devem ser de 0 a 10 com uma casa decimal, avaliando o texto ORIGINAL (não o melhorado).
+As notas devem ser de 0 a 10 com uma casa decimal, avaliando o texto ORIGINAL.
 Retorne apenas o JSON. Nenhum texto antes ou depois.`;
 
 serve(async (req) => {
-  // CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -52,34 +53,37 @@ serve(async (req) => {
 
     const userText = body.text.trim();
 
-    const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
+    const geminiRes = await fetch(GEMINI_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: MODEL,
-        max_tokens: 1500,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: "user", content: userText }],
+        contents: [
+          {
+            parts: [
+              { text: `${SYSTEM_PROMPT}\n\nTexto do usuário:\n${userText}` },
+            ],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 1500,
+        },
       }),
     });
 
-    if (!anthropicRes.ok) {
-      const err = await anthropicRes.text();
-      console.error("Anthropic error:", err);
+    if (!geminiRes.ok) {
+      const err = await geminiRes.text();
+      console.error("Gemini error:", err);
       return new Response(
         JSON.stringify({ error: "Falha ao processar com a IA. Tente novamente." }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    const anthropicData = await anthropicRes.json();
-    const rawText: string = anthropicData.content?.[0]?.text ?? "";
+    const geminiData = await geminiRes.json();
+    const rawText: string =
+      geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 
-    // Extrai o JSON da resposta (remove eventuais artefatos)
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       console.error("JSON não encontrado na resposta:", rawText);
@@ -91,7 +95,6 @@ serve(async (req) => {
 
     const result = JSON.parse(jsonMatch[0]);
 
-    // Valida campos obrigatórios
     const required = [
       "improved_text",
       "professional_version",
