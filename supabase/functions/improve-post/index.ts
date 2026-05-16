@@ -1,13 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") ?? "";
-const GEMINI_URL =
-  `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") ?? "";
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 const SYSTEM_PROMPT = `Você é um especialista em comunicação digital e redes sociais.
@@ -53,40 +51,38 @@ serve(async (req) => {
 
     const userText = body.text.trim();
 
-    const geminiRes = await fetch(GEMINI_URL, {
+    const groqRes = await fetch(GROQ_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${GROQ_API_KEY}`,
+      },
       body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: `${SYSTEM_PROMPT}\n\nTexto do usuário:\n${userText}` },
-            ],
-          },
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: userText },
         ],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 1500,
-        },
+        temperature: 0.7,
+        max_tokens: 1500,
       }),
     });
 
-    if (!geminiRes.ok) {
-      const err = await geminiRes.text();
-      console.error("Gemini error:", err);
+    if (!groqRes.ok) {
+      const err = await groqRes.text();
+      console.error("Groq error:", err);
       return new Response(
         JSON.stringify({ error: "Falha ao processar com a IA. Tente novamente." }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    const geminiData = await geminiRes.json();
-    const rawText: string =
-      geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+    const groqData = await groqRes.json();
+    const rawText = groqData.choices?.[0]?.message?.content ?? "";
 
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      console.error("JSON não encontrado na resposta:", rawText);
+      console.error("JSON não encontrado:", rawText);
       return new Response(
         JSON.stringify({ error: "Resposta inválida da IA. Tente novamente." }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -95,15 +91,7 @@ serve(async (req) => {
 
     const result = JSON.parse(jsonMatch[0]);
 
-    const required = [
-      "improved_text",
-      "professional_version",
-      "casual_version",
-      "persuasive_version",
-      "comment_reply",
-      "scores",
-    ];
-    for (const field of required) {
+    for (const field of ["improved_text", "professional_version", "casual_version", "persuasive_version", "comment_reply", "scores"]) {
       if (!(field in result)) {
         return new Response(
           JSON.stringify({ error: `Campo '${field}' ausente na resposta da IA.` }),
