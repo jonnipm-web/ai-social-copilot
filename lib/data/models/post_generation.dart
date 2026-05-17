@@ -11,6 +11,11 @@ class PostGeneration {
   final double impactScore;
   final double engagementScore;
   final DateTime createdAt;
+  // Fase 3 — hashtags e plataformas (nullable para retrocompat com histórico antigo)
+  final List<String> suggestedHashtags;
+  final String? linkedinVersion;
+  final String? instagramVersion;
+  final String? twitterVersion;
 
   const PostGeneration({
     required this.id,
@@ -25,6 +30,10 @@ class PostGeneration {
     required this.impactScore,
     required this.engagementScore,
     required this.createdAt,
+    this.suggestedHashtags = const [],
+    this.linkedinVersion,
+    this.instagramVersion,
+    this.twitterVersion,
   });
 
   factory PostGeneration.fromMap(Map<String, dynamic> map) {
@@ -41,6 +50,13 @@ class PostGeneration {
       impactScore: (map['impact_score'] as num).toDouble(),
       engagementScore: (map['engagement_score'] as num).toDouble(),
       createdAt: DateTime.parse(map['created_at'] as String),
+      suggestedHashtags: (map['suggested_hashtags'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      linkedinVersion: map['linkedin_version'] as String?,
+      instagramVersion: map['instagram_version'] as String?,
+      twitterVersion: map['twitter_version'] as String?,
     );
   }
 
@@ -56,16 +72,20 @@ class PostGeneration {
       'clarity_score': clarityScore,
       'impact_score': impactScore,
       'engagement_score': engagementScore,
+      if (suggestedHashtags.isNotEmpty) 'suggested_hashtags': suggestedHashtags,
+      if (linkedinVersion != null) 'linkedin_version': linkedinVersion,
+      if (instagramVersion != null) 'instagram_version': instagramVersion,
+      if (twitterVersion != null) 'twitter_version': twitterVersion,
     };
   }
 
-  // Constrói a partir da resposta da Edge Function + texto original
   factory PostGeneration.fromApiResponse({
     required String userId,
     required String originalText,
     required Map<String, dynamic> response,
   }) {
     final scores = response['scores'] as Map<String, dynamic>;
+    final platforms = response['platforms'] as Map<String, dynamic>?;
     return PostGeneration(
       id: '',
       userId: userId,
@@ -79,6 +99,13 @@ class PostGeneration {
       impactScore: (scores['impact'] as num).toDouble(),
       engagementScore: (scores['engagement'] as num).toDouble(),
       createdAt: DateTime.now(),
+      suggestedHashtags: (response['suggested_hashtags'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      linkedinVersion: platforms?['linkedin'] as String?,
+      instagramVersion: platforms?['instagram'] as String?,
+      twitterVersion: platforms?['twitter_x'] as String?,
     );
   }
 }

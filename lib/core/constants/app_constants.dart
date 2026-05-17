@@ -11,6 +11,7 @@ class AppConstants {
   static const routeResult = '/result';
   static const routeHistory = '/history';
   static const routeHistoryDetail = '/history/:id';
+  static const routePaywall = '/paywall';
 
   // Supabase
   static const tablePostGenerations = 'post_generations';

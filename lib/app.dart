@@ -9,6 +9,7 @@ import 'features/auth/screens/login_screen.dart';
 import 'features/history/screens/history_detail_screen.dart';
 import 'features/history/screens/history_screen.dart';
 import 'features/home/screens/home_screen.dart';
+import 'features/paywall/screens/paywall_screen.dart';
 import 'features/result/screens/result_screen.dart';
 import 'features/splash/splash_screen.dart';
 
@@ -50,6 +51,10 @@ final _router = GoRouter(
     GoRoute(
       path: AppConstants.routeHistory,
       builder: (_, __) => const HistoryScreen(),
+    ),
+    GoRoute(
+      path: AppConstants.routePaywall,
+      builder: (_, __) => const PaywallScreen(),
     ),
     GoRoute(
       path: AppConstants.routeHistoryDetail,

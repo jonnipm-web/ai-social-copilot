@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/constants/app_constants.dart';
+import '../../core/exceptions/app_exceptions.dart';
 import '../models/post_generation.dart';
 
 class PostService {
@@ -33,9 +34,9 @@ class PostService {
       body: body,
     );
 
-    if (response.status != 200) {
-      throw Exception('Erro ao processar. Tente novamente.');
-    }
+    if (response.status == 429) throw const LimitReachedException();
+    if (response.status == 401) throw Exception('Sessão expirada. Faça login novamente.');
+    if (response.status != 200) throw Exception('Erro ao processar. Tente novamente.');
 
     return response.data as Map<String, dynamic>;
   }

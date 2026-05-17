@@ -22,8 +22,8 @@ class ProfileNotifier extends StateNotifier<AsyncValue<UserProfile?>> {
     state = AsyncValue.data(saved);
   }
 
-  String get currentNiche =>
-      state.valueOrNull?.niche ?? 'geral';
+  String get currentNiche => state.valueOrNull?.niche ?? 'geral';
+  bool get isPro => state.valueOrNull?.isPro ?? false;
 }
 
 final profileProvider =

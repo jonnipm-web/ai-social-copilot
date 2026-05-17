@@ -7,12 +7,14 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/niches.dart';
+import '../../../core/exceptions/app_exceptions.dart';
 import '../../../core/utils/snackbar_utils.dart';
 import '../../../data/models/post_generation.dart';
 import '../../../features/niche/screens/niche_screen.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/post_provider.dart';
 import '../../../providers/profile_provider.dart';
+import '../../../providers/usage_provider.dart';
 import '../../../shared/widgets/loading_button.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -104,9 +106,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   void _applyTemplate(String template) {
     _textCtrl.text = template;
-    _textCtrl.selection = TextSelection.fromPosition(
-      TextPosition(offset: template.length),
-    );
+    _textCtrl.selection =
+        TextSelection.fromPosition(TextPosition(offset: template.length));
   }
 
   Future<void> _generate() async {
@@ -115,9 +116,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     if (!hasImage && text.length < AppConstants.minTextLength) {
       showErrorSnack(
-        context,
-        'Escreva pelo menos ${AppConstants.minTextLength} caracteres.',
-      );
+          context, 'Escreva pelo menos ${AppConstants.minTextLength} caracteres.');
       return;
     }
 
@@ -133,11 +132,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     final state = ref.read(postNotifierProvider);
     if (state.hasError) {
-      showErrorSnack(context, state.error.toString());
+      if (state.error is LimitReachedException) {
+        context.push(AppConstants.routePaywall);
+      } else {
+        showErrorSnack(context, state.error.toString());
+      }
       return;
     }
 
     if (result != null) {
+      ref.invalidate(usageProvider); // atualiza contador
       context.push(AppConstants.routeResult, extra: {
         'originalText': text,
         'result': _generationToMap(result),
@@ -151,6 +155,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         'casual_version': g.casualVersion,
         'persuasive_version': g.persuasiveVersion,
         'comment_reply': g.commentReply,
+        'suggested_hashtags': g.suggestedHashtags,
+        'platforms': {
+          'linkedin': g.linkedinVersion,
+          'instagram': g.instagramVersion,
+          'twitter_x': g.twitterVersion,
+        },
         'scores': {
           'clarity': g.clarityScore,
           'impact': g.impactScore,
@@ -169,7 +179,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final isLoading = ref.watch(postNotifierProvider).isLoading;
     final hasImage = _selectedImage != null;
 
-    // Detecta perfil carregado para mostrar sheet no primeiro acesso
+    // Detecta primeiro acesso e exibe seleção de nicho
     ref.listen(profileProvider, (_, next) {
       if (next is AsyncData && next.value == null && !_nicheSheetShown) {
         _nicheSheetShown = true;
@@ -180,14 +190,45 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
 
     final profileState = ref.watch(profileProvider);
-    final nicheId =
-        profileState.valueOrNull?.niche ?? 'geral';
-    final niche = nicheById(nicheId);
+    final niche = nicheById(profileState.valueOrNull?.niche ?? 'geral');
+    final isPro = profileState.valueOrNull?.isPro ?? false;
+    final usageAsync = ref.watch(usageProvider);
+    final usageCount = usageAsync.valueOrNull ?? 0;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text(AppConstants.appName),
         actions: [
+          // Botão Pro ou indicador de uso
+          if (!isPro)
+            GestureDetector(
+              onTap: () => context.push(AppConstants.routePaywall),
+              child: Container(
+                margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
+                  color: usageCount >= freeMonthlyLimit
+                      ? Colors.orange.withOpacity(0.15)
+                      : Colors.white.withOpacity(0.06),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: usageCount >= freeMonthlyLimit
+                        ? Colors.orange.withOpacity(0.5)
+                        : Colors.white12,
+                  ),
+                ),
+                child: Text(
+                  '$usageCount/$freeMonthlyLimit',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: usageCount >= freeMonthlyLimit
+                        ? Colors.orange
+                        : Colors.white54,
+                  ),
+                ),
+              ),
+            ),
           IconButton(
             icon: const Icon(Icons.history_rounded),
             tooltip: 'Histórico',
@@ -205,29 +246,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Chip de nicho
-            _NicheChip(
-              niche: niche,
-              onTap: () => showNicheSheet(context),
-            ),
+            _NicheChip(niche: niche, onTap: () => showNicheSheet(context)),
             const SizedBox(height: 16),
 
-            // Prévia da imagem selecionada
             if (hasImage) ...[
-              _ImagePreview(
-                file: _selectedImage!,
-                onRemove: _removeImage,
-              ),
+              _ImagePreview(file: _selectedImage!, onRemove: _removeImage),
               const SizedBox(height: 12),
             ],
 
             Text(
-              hasImage
-                  ? 'Contexto adicional (opcional)'
-                  : 'Cole ou escreva seu post',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Colors.white70,
-                  ),
+              hasImage ? 'Contexto adicional (opcional)' : 'Cole ou escreva seu post',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(color: Colors.white70),
             ),
             const SizedBox(height: 12),
 
@@ -248,20 +280,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             const SizedBox(height: 12),
 
-            // Templates do nicho
-            _TemplateChips(
-              templates: niche.templates,
-              onSelected: _applyTemplate,
-            ),
+            _TemplateChips(templates: niche.templates, onSelected: _applyTemplate),
             const SizedBox(height: 12),
 
-            // Botão câmera/galeria
             OutlinedButton.icon(
               onPressed: isLoading ? null : _showImageSourceSheet,
               icon: Icon(
-                hasImage
-                    ? Icons.camera_alt_rounded
-                    : Icons.add_a_photo_outlined,
+                hasImage ? Icons.camera_alt_rounded : Icons.add_a_photo_outlined,
                 size: 18,
               ),
               label: Text(hasImage ? 'Trocar foto' : 'Adicionar foto'),
@@ -274,8 +299,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             const SizedBox(height: 10),
 
             LoadingButton(
-              label:
-                  hasImage ? '✨  Gerar post da foto' : '✨  Melhorar post',
+              label: hasImage ? '✨  Gerar post da foto' : '✨  Melhorar post',
               isLoading: isLoading,
               onPressed: _generate,
             ),
@@ -287,7 +311,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-// ── Widgets internos ────────────────────────────────────────────────────────
+// ── Widgets internos ─────────────────────────────────────────────────────────
 
 class _NicheChip extends StatelessWidget {
   const _NicheChip({required this.niche, required this.onTap});
@@ -314,10 +338,9 @@ class _NicheChip extends StatelessWidget {
             Text(
               niche.label,
               style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: Colors.white70,
-              ),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white70),
             ),
             const SizedBox(width: 6),
             const Icon(Icons.edit_rounded, size: 13, color: Colors.white38),
@@ -347,17 +370,14 @@ class _TemplateChips extends StatelessWidget {
           return GestureDetector(
             onTap: () => onSelected(t),
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.07),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: Colors.white12),
               ),
-              child: Text(
-                t,
-                style: const TextStyle(fontSize: 12, color: Colors.white60),
-              ),
+              child: Text(t,
+                  style: const TextStyle(fontSize: 12, color: Colors.white60)),
             ),
           );
         },
@@ -378,12 +398,8 @@ class _ImagePreview extends StatelessWidget {
       children: [
         ClipRRect(
           borderRadius: BorderRadius.circular(12),
-          child: Image.file(
-            file,
-            height: 200,
-            width: double.infinity,
-            fit: BoxFit.cover,
-          ),
+          child: Image.file(file,
+              height: 200, width: double.infinity, fit: BoxFit.cover),
         ),
         Positioned(
           top: 8,
@@ -392,15 +408,11 @@ class _ImagePreview extends StatelessWidget {
             onTap: onRemove,
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(20),
-              ),
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(20)),
               padding: const EdgeInsets.all(6),
-              child: const Icon(
-                Icons.close_rounded,
-                size: 18,
-                color: Colors.white,
-              ),
+              child: const Icon(Icons.close_rounded,
+                  size: 18, color: Colors.white),
             ),
           ),
         ),
