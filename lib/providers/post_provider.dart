@@ -50,13 +50,6 @@ class PostNotifier extends StateNotifier<AsyncValue<PostGeneration?>> {
     state = result;
     return result.valueOrNull;
   }
-
-  Future<void> saveGeneration(PostGeneration generation) async {
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard<PostGeneration?>(() async {
-      return _service.saveGeneration(generation);
-    });
-  }
 }
 
 final postNotifierProvider =

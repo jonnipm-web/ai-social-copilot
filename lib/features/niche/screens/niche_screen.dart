@@ -67,59 +67,57 @@ class _NicheScreenState extends ConsumerState<NicheScreen> {
           ),
         ),
         const SizedBox(height: 20),
-        Flexible(
-          child: GridView.builder(
-            shrinkWrap: true,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              childAspectRatio: 1.1,
-            ),
-            itemCount: niches.length,
-            itemBuilder: (_, i) {
-              final n = niches[i];
-              final isSelected = _selected == n.id;
-              return GestureDetector(
-                onTap: () => setState(() => _selected = n.id),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  decoration: BoxDecoration(
+        // Bug fix: sem Flexible — GridView com shrinkWrap define sua própria altura
+        GridView.builder(
+          shrinkWrap: true,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            mainAxisSpacing: 10,
+            crossAxisSpacing: 10,
+            childAspectRatio: 1.1,
+          ),
+          itemCount: niches.length,
+          itemBuilder: (_, i) {
+            final n = niches[i];
+            final isSelected = _selected == n.id;
+            return GestureDetector(
+              onTap: () => setState(() => _selected = n.id),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
+                      : Colors.white.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
                     color: isSelected
-                        ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
-                        : Colors.white.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: isSelected
-                          ? Theme.of(context).colorScheme.primary
-                          : Colors.white12,
-                      width: isSelected ? 2 : 1,
-                    ),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(n.emoji, style: const TextStyle(fontSize: 26)),
-                      const SizedBox(height: 6),
-                      Text(
-                        n.label,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: isSelected
-                              ? FontWeight.w600
-                              : FontWeight.normal,
-                          color: isSelected ? Colors.white : Colors.white70,
-                        ),
-                      ),
-                    ],
+                        ? Theme.of(context).colorScheme.primary
+                        : Colors.white12,
+                    width: isSelected ? 2 : 1,
                   ),
                 ),
-              );
-            },
-          ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(n.emoji, style: const TextStyle(fontSize: 26)),
+                    const SizedBox(height: 6),
+                    Text(
+                      n.label,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.normal,
+                        color: isSelected ? Colors.white : Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
         ),
         const SizedBox(height: 20),
         Padding(
@@ -150,6 +148,8 @@ void showNicheSheet(BuildContext context, {VoidCallback? onSaved}) {
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
-    builder: (_) => NicheScreen(onSaved: onSaved ?? () => Navigator.pop(context)),
+    builder: (_) => NicheScreen(
+      onSaved: onSaved ?? () => Navigator.pop(context),
+    ),
   );
 }

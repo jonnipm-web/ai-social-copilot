@@ -27,6 +27,6 @@ class ProfileNotifier extends StateNotifier<AsyncValue<UserProfile?>> {
 }
 
 final profileProvider =
-    StateNotifierProvider<ProfileNotifier, AsyncValue<UserProfile?>>(
+    StateNotifierProvider.autoDispose<ProfileNotifier, AsyncValue<UserProfile?>>(
   (ref) => ProfileNotifier(ref.watch(profileServiceProvider)),
 );

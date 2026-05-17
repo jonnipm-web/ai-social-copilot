@@ -34,24 +34,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.dispose();
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _maybeShowNicheSheet();
-  }
-
-  void _maybeShowNicheSheet() {
-    if (_nicheSheetShown) return;
-    final profileState = ref.read(profileProvider);
-    // Quando o perfil carregou e é null (primeiro acesso), mostra seleção de nicho
-    if (profileState is AsyncData && profileState.value == null) {
-      _nicheSheetShown = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) showNicheSheet(context);
-      });
-    }
-  }
-
   Future<void> _pickImage(ImageSource source) async {
     try {
       final picked = await _picker.pickImage(
