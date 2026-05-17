@@ -3,30 +3,56 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") ?? "";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
+const TEXT_MODEL = "llama-3.3-70b-versatile";
+const VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const SYSTEM_PROMPT = `Você é um especialista em comunicação digital e redes sociais.
+const JSON_SCHEMA = `{
+  "improved_text": "...",
+  "professional_version": "...",
+  "casual_version": "...",
+  "persuasive_version": "...",
+  "comment_reply": "...",
+  "scores": { "clarity": 8.5, "impact": 7.0, "engagement": 9.0 }
+}`;
+
+const TEXT_SYSTEM_PROMPT = `Você é um especialista em comunicação digital e redes sociais.
 
 Receba um texto e retorne SOMENTE um JSON válido, sem markdown, sem explicações, no seguinte formato exato:
 
-{
-  "improved_text": "texto otimizado mantendo a ideia original, mais claro e envolvente",
-  "professional_version": "versão com tom profissional e formal",
-  "casual_version": "versão descontraída e próxima, com linguagem natural",
-  "persuasive_version": "versão persuasiva com call-to-action claro",
-  "comment_reply": "sugestão de resposta para comentários sobre este post",
-  "scores": {
-    "clarity": 8.5,
-    "impact": 7.0,
-    "engagement": 9.0
-  }
-}
+${JSON_SCHEMA}
 
 As notas devem ser de 0 a 10 com uma casa decimal, avaliando o texto ORIGINAL.
 Retorne apenas o JSON. Nenhum texto antes ou depois.`;
+
+const VISION_SYSTEM_PROMPT = `Você é um especialista em comunicação digital e redes sociais com capacidade de análise visual.
+
+Analise a imagem fornecida e crie sugestões de posts para redes sociais com base no que está na foto.
+
+Retorne SOMENTE um JSON válido, sem markdown, sem explicações, no seguinte formato exato:
+
+${JSON_SCHEMA}
+
+- "improved_text": legenda principal otimizada, envolvente, que descreva e valorize a imagem
+- "professional_version": versão com tom profissional e formal
+- "casual_version": versão descontraída com linguagem natural
+- "persuasive_version": versão persuasiva com call-to-action
+- "comment_reply": sugestão de resposta para comentários sobre este post
+- As notas avaliam o potencial de engajamento da imagem/contexto fornecido
+Retorne apenas o JSON. Nenhum texto antes ou depois.`;
+
+const REQUIRED_FIELDS = [
+  "improved_text",
+  "professional_version",
+  "casual_version",
+  "persuasive_version",
+  "comment_reply",
+  "scores",
+];
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -42,14 +68,54 @@ serve(async (req) => {
     }
 
     const body = await req.json().catch(() => null);
-    if (!body || typeof body.text !== "string" || body.text.trim().length < 10) {
+    if (!body) {
       return new Response(
-        JSON.stringify({ error: "Campo 'text' obrigatório (mínimo 10 caracteres)." }),
+        JSON.stringify({ error: "Corpo da requisição inválido." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    const userText = body.text.trim();
+    const hasImage = typeof body.image_base64 === "string" && body.image_base64.length > 0;
+    const hasText = typeof body.text === "string" && body.text.trim().length >= 10;
+
+    if (!hasImage && !hasText) {
+      return new Response(
+        JSON.stringify({ error: "Envie uma imagem ou um texto com pelo menos 10 caracteres." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    let groqBody: Record<string, unknown>;
+
+    if (hasImage) {
+      const mediaType = (body.image_media_type as string) || "image/jpeg";
+      const imageUrl = `data:${mediaType};base64,${body.image_base64}`;
+      const userContent: unknown[] = [
+        { type: "image_url", image_url: { url: imageUrl } },
+      ];
+      if (hasText) {
+        userContent.push({ type: "text", text: `Contexto adicional: ${body.text.trim()}` });
+      }
+      groqBody = {
+        model: VISION_MODEL,
+        messages: [
+          { role: "system", content: VISION_SYSTEM_PROMPT },
+          { role: "user", content: userContent },
+        ],
+        temperature: 0.7,
+        max_tokens: 1500,
+      };
+    } else {
+      groqBody = {
+        model: TEXT_MODEL,
+        messages: [
+          { role: "system", content: TEXT_SYSTEM_PROMPT },
+          { role: "user", content: body.text.trim() },
+        ],
+        temperature: 0.7,
+        max_tokens: 1500,
+      };
+    }
 
     const groqRes = await fetch(GROQ_URL, {
       method: "POST",
@@ -57,15 +123,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${GROQ_API_KEY}`,
       },
-      body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userText },
-        ],
-        temperature: 0.7,
-        max_tokens: 1500,
-      }),
+      body: JSON.stringify(groqBody),
     });
 
     if (!groqRes.ok) {
@@ -91,7 +149,7 @@ serve(async (req) => {
 
     const result = JSON.parse(jsonMatch[0]);
 
-    for (const field of ["improved_text", "professional_version", "casual_version", "persuasive_version", "comment_reply", "scores"]) {
+    for (const field of REQUIRED_FIELDS) {
       if (!(field in result)) {
         return new Response(
           JSON.stringify({ error: `Campo '${field}' ausente na resposta da IA.` }),

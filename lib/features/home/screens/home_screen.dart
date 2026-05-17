@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/snackbar_utils.dart';
@@ -18,6 +21,8 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   final _textCtrl = TextEditingController();
+  final _picker = ImagePicker();
+  File? _selectedImage;
 
   @override
   void dispose() {
@@ -25,9 +30,77 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.dispose();
   }
 
-  Future<void> _improve() async {
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final picked = await _picker.pickImage(
+        source: source,
+        maxWidth: 1280,
+        maxHeight: 1280,
+        imageQuality: 85,
+      );
+      if (picked == null) return;
+      setState(() => _selectedImage = File(picked.path));
+    } catch (_) {
+      if (mounted) showErrorSnack(context, 'Não foi possível acessar a câmera/galeria.');
+    }
+  }
+
+  void _showImageSourceSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF1E1E2E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Adicionar foto',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_rounded),
+              title: const Text('Câmera'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_rounded),
+              title: const Text('Galeria'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.gallery);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _removeImage() => setState(() => _selectedImage = null);
+
+  Future<void> _generate() async {
     final text = _textCtrl.text.trim();
-    if (text.length < AppConstants.minTextLength) {
+    final hasImage = _selectedImage != null;
+
+    if (!hasImage && text.length < AppConstants.minTextLength) {
       showErrorSnack(
         context,
         'Escreva pelo menos ${AppConstants.minTextLength} caracteres.',
@@ -35,8 +108,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       return;
     }
 
-    final result =
-        await ref.read(postNotifierProvider.notifier).improvePost(text);
+    final result = await ref
+        .read(postNotifierProvider.notifier)
+        .improvePost(text, imageFile: _selectedImage);
 
     if (!mounted) return;
 
@@ -75,8 +149,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final postState = ref.watch(postNotifierProvider);
-    final isLoading = postState.isLoading;
+    final isLoading = ref.watch(postNotifierProvider).isLoading;
+    final hasImage = _selectedImage != null;
 
     return Scaffold(
       appBar: AppBar(
@@ -99,13 +173,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Prévia da imagem selecionada
+            if (hasImage) ...[
+              _ImagePreview(
+                file: _selectedImage!,
+                onRemove: _removeImage,
+              ),
+              const SizedBox(height: 12),
+            ],
+
             Text(
-              'Cole ou escreva seu post',
+              hasImage ? 'Contexto adicional (opcional)' : 'Cole ou escreva seu post',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     color: Colors.white70,
                   ),
             ),
             const SizedBox(height: 12),
+
             Expanded(
               child: TextFormField(
                 controller: _textCtrl,
@@ -113,23 +197,82 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 expands: true,
                 textAlignVertical: TextAlignVertical.top,
                 style: const TextStyle(fontSize: 15, height: 1.6),
-                decoration: const InputDecoration(
-                  hintText:
-                      'Ex: Hoje aprendi algo incrível sobre produtividade...',
+                decoration: InputDecoration(
+                  hintText: hasImage
+                      ? 'Ex: produto novo, evento especial...'
+                      : 'Ex: Hoje aprendi algo incrível sobre produtividade...',
                   alignLabelWithHint: true,
                 ),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
+
+            // Botão câmera/galeria
+            OutlinedButton.icon(
+              onPressed: isLoading ? null : _showImageSourceSheet,
+              icon: Icon(
+                hasImage
+                    ? Icons.camera_alt_rounded
+                    : Icons.add_a_photo_outlined,
+                size: 18,
+              ),
+              label: Text(hasImage ? 'Trocar foto' : 'Adicionar foto'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.white70,
+                side: const BorderSide(color: Colors.white24),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+            const SizedBox(height: 10),
+
             LoadingButton(
-              label: '✨  Melhorar post',
+              label: hasImage ? '✨  Gerar post da foto' : '✨  Melhorar post',
               isLoading: isLoading,
-              onPressed: _improve,
+              onPressed: _generate,
             ),
             const SizedBox(height: 12),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ImagePreview extends StatelessWidget {
+  const _ImagePreview({required this.file, required this.onRemove});
+
+  final File file;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.file(
+            file,
+            height: 200,
+            width: double.infinity,
+            fit: BoxFit.cover,
+          ),
+        ),
+        Positioned(
+          top: 8,
+          right: 8,
+          child: GestureDetector(
+            onTap: onRemove,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              padding: const EdgeInsets.all(6),
+              child: const Icon(Icons.close_rounded, size: 18, color: Colors.white),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

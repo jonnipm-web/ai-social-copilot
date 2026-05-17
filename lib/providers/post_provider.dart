@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -24,12 +26,12 @@ class PostNotifier extends StateNotifier<AsyncValue<PostGeneration?>> {
 
   final PostService _service;
 
-  Future<PostGeneration?> improvePost(String text) async {
+  Future<PostGeneration?> improvePost(String text, {File? imageFile}) async {
     state = const AsyncValue.loading();
 
     final result = await AsyncValue.guard<PostGeneration?>(() async {
       final userId = Supabase.instance.client.auth.currentUser!.id;
-      final apiResponse = await _service.improvePost(text);
+      final apiResponse = await _service.improvePost(text, imageFile: imageFile);
       return PostGeneration.fromApiResponse(
         userId: userId,
         originalText: text,
