@@ -12,6 +12,7 @@ class PostService {
   Future<Map<String, dynamic>> improvePost(
     String text, {
     File? imageFile,
+    String? nicheHint,
   }) async {
     final Map<String, dynamic> body = {};
 
@@ -22,6 +23,9 @@ class PostService {
       if (text.isNotEmpty) body['text'] = text;
     } else {
       body['text'] = text;
+    }
+    if (nicheHint != null && nicheHint.isNotEmpty) {
+      body['niche_hint'] = nicheHint;
     }
 
     final response = await _client.functions.invoke(

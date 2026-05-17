@@ -6,10 +6,13 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/constants/niches.dart';
 import '../../../core/utils/snackbar_utils.dart';
 import '../../../data/models/post_generation.dart';
+import '../../../features/niche/screens/niche_screen.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/post_provider.dart';
+import '../../../providers/profile_provider.dart';
 import '../../../shared/widgets/loading_button.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -23,11 +26,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   final _textCtrl = TextEditingController();
   final _picker = ImagePicker();
   File? _selectedImage;
+  bool _nicheSheetShown = false;
 
   @override
   void dispose() {
     _textCtrl.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _maybeShowNicheSheet();
+  }
+
+  void _maybeShowNicheSheet() {
+    if (_nicheSheetShown) return;
+    final profileState = ref.read(profileProvider);
+    // Quando o perfil carregou e é null (primeiro acesso), mostra seleção de nicho
+    if (profileState is AsyncData && profileState.value == null) {
+      _nicheSheetShown = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) showNicheSheet(context);
+      });
+    }
   }
 
   Future<void> _pickImage(ImageSource source) async {
@@ -41,7 +63,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       if (picked == null) return;
       setState(() => _selectedImage = File(picked.path));
     } catch (_) {
-      if (mounted) showErrorSnack(context, 'Não foi possível acessar a câmera/galeria.');
+      if (mounted) {
+        showErrorSnack(context, 'Não foi possível acessar a câmera/galeria.');
+      }
     }
   }
 
@@ -96,6 +120,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   void _removeImage() => setState(() => _selectedImage = null);
 
+  void _applyTemplate(String template) {
+    _textCtrl.text = template;
+    _textCtrl.selection = TextSelection.fromPosition(
+      TextPosition(offset: template.length),
+    );
+  }
+
   Future<void> _generate() async {
     final text = _textCtrl.text.trim();
     final hasImage = _selectedImage != null;
@@ -108,9 +139,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       return;
     }
 
+    final nicheHint =
+        nicheById(ref.read(profileProvider.notifier).currentNiche)
+            .systemPromptHint;
+
     final result = await ref
         .read(postNotifierProvider.notifier)
-        .improvePost(text, imageFile: _selectedImage);
+        .improvePost(text, imageFile: _selectedImage, nicheHint: nicheHint);
 
     if (!mounted) return;
 
@@ -152,6 +187,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final isLoading = ref.watch(postNotifierProvider).isLoading;
     final hasImage = _selectedImage != null;
 
+    // Detecta perfil carregado para mostrar sheet no primeiro acesso
+    ref.listen(profileProvider, (_, next) {
+      if (next is AsyncData && next.value == null && !_nicheSheetShown) {
+        _nicheSheetShown = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) showNicheSheet(context);
+        });
+      }
+    });
+
+    final profileState = ref.watch(profileProvider);
+    final nicheId =
+        profileState.valueOrNull?.niche ?? 'geral';
+    final niche = nicheById(nicheId);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(AppConstants.appName),
@@ -173,6 +223,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Chip de nicho
+            _NicheChip(
+              niche: niche,
+              onTap: () => showNicheSheet(context),
+            ),
+            const SizedBox(height: 16),
+
             // Prévia da imagem selecionada
             if (hasImage) ...[
               _ImagePreview(
@@ -183,7 +240,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ],
 
             Text(
-              hasImage ? 'Contexto adicional (opcional)' : 'Cole ou escreva seu post',
+              hasImage
+                  ? 'Contexto adicional (opcional)'
+                  : 'Cole ou escreva seu post',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     color: Colors.white70,
                   ),
@@ -205,7 +264,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
+
+            // Templates do nicho
+            _TemplateChips(
+              templates: niche.templates,
+              onSelected: _applyTemplate,
+            ),
+            const SizedBox(height: 12),
 
             // Botão câmera/galeria
             OutlinedButton.icon(
@@ -226,13 +292,93 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             const SizedBox(height: 10),
 
             LoadingButton(
-              label: hasImage ? '✨  Gerar post da foto' : '✨  Melhorar post',
+              label:
+                  hasImage ? '✨  Gerar post da foto' : '✨  Melhorar post',
               isLoading: isLoading,
               onPressed: _generate,
             ),
             const SizedBox(height: 12),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Widgets internos ────────────────────────────────────────────────────────
+
+class _NicheChip extends StatelessWidget {
+  const _NicheChip({required this.niche, required this.onTap});
+
+  final NicheDefinition niche;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(color: Colors.white12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(niche.emoji, style: const TextStyle(fontSize: 16)),
+            const SizedBox(width: 6),
+            Text(
+              niche.label,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: Colors.white70,
+              ),
+            ),
+            const SizedBox(width: 6),
+            const Icon(Icons.edit_rounded, size: 13, color: Colors.white38),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TemplateChips extends StatelessWidget {
+  const _TemplateChips({required this.templates, required this.onSelected});
+
+  final List<String> templates;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 34,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: templates.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (_, i) {
+          final t = templates[i];
+          return GestureDetector(
+            onTap: () => onSelected(t),
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.07),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.white12),
+              ),
+              child: Text(
+                t,
+                style: const TextStyle(fontSize: 12, color: Colors.white60),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -268,7 +414,11 @@ class _ImagePreview extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
               ),
               padding: const EdgeInsets.all(6),
-              child: const Icon(Icons.close_rounded, size: 18, color: Colors.white),
+              child: const Icon(
+                Icons.close_rounded,
+                size: 18,
+                color: Colors.white,
+              ),
             ),
           ),
         ),

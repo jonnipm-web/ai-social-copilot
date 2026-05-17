@@ -14,5 +14,6 @@ class AppConstants {
 
   // Supabase
   static const tablePostGenerations = 'post_generations';
+  static const tableUserProfiles = 'user_profiles';
   static const edgeFunctionImprove = 'improve-post';
 }

@@ -26,12 +26,20 @@ class PostNotifier extends StateNotifier<AsyncValue<PostGeneration?>> {
 
   final PostService _service;
 
-  Future<PostGeneration?> improvePost(String text, {File? imageFile}) async {
+  Future<PostGeneration?> improvePost(
+    String text, {
+    File? imageFile,
+    String? nicheHint,
+  }) async {
     state = const AsyncValue.loading();
 
     final result = await AsyncValue.guard<PostGeneration?>(() async {
       final userId = Supabase.instance.client.auth.currentUser!.id;
-      final apiResponse = await _service.improvePost(text, imageFile: imageFile);
+      final apiResponse = await _service.improvePost(
+        text,
+        imageFile: imageFile,
+        nicheHint: nicheHint,
+      );
       return PostGeneration.fromApiResponse(
         userId: userId,
         originalText: text,

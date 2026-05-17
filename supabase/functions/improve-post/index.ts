@@ -20,17 +20,20 @@ const JSON_SCHEMA = `{
   "scores": { "clarity": 8.5, "impact": 7.0, "engagement": 9.0 }
 }`;
 
-const TEXT_SYSTEM_PROMPT = `Você é um especialista em comunicação digital e redes sociais.
-
+function buildTextPrompt(nicheHint: string): string {
+  return `Você é um especialista em comunicação digital e redes sociais.
+${nicheHint ? `\n${nicheHint}\n` : ""}
 Receba um texto e retorne SOMENTE um JSON válido, sem markdown, sem explicações, no seguinte formato exato:
 
 ${JSON_SCHEMA}
 
 As notas devem ser de 0 a 10 com uma casa decimal, avaliando o texto ORIGINAL.
 Retorne apenas o JSON. Nenhum texto antes ou depois.`;
+}
 
-const VISION_SYSTEM_PROMPT = `Você é um especialista em comunicação digital e redes sociais com capacidade de análise visual.
-
+function buildVisionPrompt(nicheHint: string): string {
+  return `Você é um especialista em comunicação digital e redes sociais com capacidade de análise visual.
+${nicheHint ? `\n${nicheHint}\n` : ""}
 Analise a imagem fornecida e crie sugestões de posts para redes sociais com base no que está na foto.
 
 Retorne SOMENTE um JSON válido, sem markdown, sem explicações, no seguinte formato exato:
@@ -44,6 +47,7 @@ ${JSON_SCHEMA}
 - "comment_reply": sugestão de resposta para comentários sobre este post
 - As notas avaliam o potencial de engajamento da imagem/contexto fornecido
 Retorne apenas o JSON. Nenhum texto antes ou depois.`;
+}
 
 const REQUIRED_FIELDS = [
   "improved_text",
@@ -77,6 +81,7 @@ serve(async (req) => {
 
     const hasImage = typeof body.image_base64 === "string" && body.image_base64.length > 0;
     const hasText = typeof body.text === "string" && body.text.trim().length >= 10;
+    const nicheHint = typeof body.niche_hint === "string" ? body.niche_hint : "";
 
     if (!hasImage && !hasText) {
       return new Response(
@@ -99,7 +104,7 @@ serve(async (req) => {
       groqBody = {
         model: VISION_MODEL,
         messages: [
-          { role: "system", content: VISION_SYSTEM_PROMPT },
+          { role: "system", content: buildVisionPrompt(nicheHint) },
           { role: "user", content: userContent },
         ],
         temperature: 0.7,
@@ -109,7 +114,7 @@ serve(async (req) => {
       groqBody = {
         model: TEXT_MODEL,
         messages: [
-          { role: "system", content: TEXT_SYSTEM_PROMPT },
+          { role: "system", content: buildTextPrompt(nicheHint) },
           { role: "user", content: body.text.trim() },
         ],
         temperature: 0.7,
