@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shimmer/shimmer.dart';
 
-import '../../../core/constants/app_constants.dart';
 import '../../../data/models/post_generation.dart';
 import '../../../providers/post_provider.dart';
 
