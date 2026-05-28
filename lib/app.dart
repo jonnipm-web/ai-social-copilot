@@ -40,10 +40,22 @@ final _router = GoRouter(
     GoRoute(
       path: AppConstants.routeResult,
       builder: (context, state) {
-        final extra = state.extra as Map<String, dynamic>;
+        final extra = state.extra;
+        // extra é null quando o usuário atualiza a página no navegador,
+        // pois dados em memória não sobrevivem ao F5. Redireciona para home.
+        if (extra == null) {
+          WidgetsBinding.instance.addPostFrameCallback(
+            (_) => context.go(AppConstants.routeHome),
+          );
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        final map = extra as Map<String, dynamic>;
         return ResultScreen(
-          originalText: extra['originalText'] as String,
-          result: extra['result'] as Map<String, dynamic>,
+          originalText: map['originalText'] as String,
+          result: map['result'] as Map<String, dynamic>,
+          processingSeconds: map['processingSeconds'] as double?,
         );
       },
     ),

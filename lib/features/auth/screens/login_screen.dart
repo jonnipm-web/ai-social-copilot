@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
-import '../../../core/utils/snackbar_utils.dart';
+import '../../../core/utils/snackbar_utils.dart' show showErrorSnack, extractErrorMessage;
 import '../../../providers/auth_provider.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/loading_button.dart';
@@ -50,7 +50,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     final authState = ref.read(authNotifierProvider);
     authState.whenOrNull(
-      error: (e, _) => showErrorSnack(context, e.toString()),
+      error: (e, _) => showErrorSnack(context, extractErrorMessage(e)),
       data: (_) => context.go(AppConstants.routeHome),
     );
   }

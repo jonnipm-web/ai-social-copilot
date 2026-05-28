@@ -11,6 +11,9 @@ build/
 # Env — NUNCA enviar ao GitHub
 .env
 
+# Supabase CLI temporários
+supabase/.temp/
+
 # Android
 **/android/**/gradle-wrapper.jar
 **/android/.gradle
