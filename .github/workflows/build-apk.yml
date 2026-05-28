@@ -1,0 +1,45 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar código do repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Java (necessário para Android)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Criar arquivo .env com as credenciais
+        run: |
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" > .env
+          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
+
+      - name: Adicionar suporte à plataforma Android
+        run: flutter create --platforms android .
+
+      - name: Instalar dependências
+        run: flutter pub get
+
+      - name: Build do APK
+        run: flutter build apk --release
+
+      - name: Salvar APK como artefato para download
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-social-copilot-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
