@@ -16,50 +16,85 @@ class HistoryScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Histórico')),
-      body: historyAsync.when(
-        loading: () => _buildShimmer(),
-        error: (e, _) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.red),
-              const SizedBox(height: 12),
-              Text(e.toString(), textAlign: TextAlign.center),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => ref.invalidate(historyProvider),
-                child: const Text('Tentar novamente'),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
+          child: historyAsync.when(
+            loading: () => _buildShimmer(),
+            error: (e, _) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.wifi_off_rounded,
+                        size: 48, color: Colors.white24),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Não foi possível carregar o histórico.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white70),
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton.icon(
+                      onPressed: () => ref.invalidate(historyProvider),
+                      icon: const Icon(Icons.refresh, size: 16),
+                      label: const Text('Tentar novamente'),
+                    ),
+                  ],
+                ),
               ),
-            ],
+            ),
+            data: (items) {
+              if (items.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.auto_awesome_outlined,
+                          size: 64,
+                          color: Colors.white12,
+                        ),
+                        const SizedBox(height: 20),
+                        const Text(
+                          'Nenhum conteúdo salvo ainda',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'Volte à tela principal, escreva um post\ne toque em "Salvar" após gerar o resultado.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white38,
+                            fontSize: 13,
+                            height: 1.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              return RefreshIndicator(
+                onRefresh: () async => ref.invalidate(historyProvider),
+                child: ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: items.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (context, i) => _HistoryCard(item: items[i]),
+                ),
+              );
+            },
           ),
         ),
-        data: (items) {
-          if (items.isEmpty) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.history, size: 64, color: Colors.white24),
-                  SizedBox(height: 16),
-                  Text(
-                    'Nenhum post salvo ainda.',
-                    style: TextStyle(color: Colors.white54),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return RefreshIndicator(
-            onRefresh: () async => ref.invalidate(historyProvider),
-            child: ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: items.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
-              itemBuilder: (context, i) => _HistoryCard(item: items[i]),
-            ),
-          );
-        },
       ),
     );
   }
@@ -120,7 +155,7 @@ class _HistoryCard extends StatelessWidget {
                   _ScoreBadge(label: 'E', value: item.engagementScore),
                   const Spacer(),
                   Text(
-                    _formatDate(item.createdAt),
+                    _formatDateTime(item.createdAt),
                     style: const TextStyle(
                       fontSize: 11,
                       color: Colors.white38,
@@ -135,10 +170,12 @@ class _HistoryCard extends StatelessWidget {
     );
   }
 
-  String _formatDate(DateTime dt) {
-    return '${dt.day.toString().padLeft(2, '0')}/'
-        '${dt.month.toString().padLeft(2, '0')}/'
-        '${dt.year}';
+  String _formatDateTime(DateTime dt) {
+    final date =
+        '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
+    final time =
+        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    return '$date $time';
   }
 }
 

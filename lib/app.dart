@@ -55,6 +55,7 @@ final _router = GoRouter(
         return ResultScreen(
           originalText: map['originalText'] as String,
           result: map['result'] as Map<String, dynamic>,
+          processingSeconds: map['processingSeconds'] as double?,
         );
       },
     ),
