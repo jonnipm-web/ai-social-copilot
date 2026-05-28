@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
-import '../../../core/utils/snackbar_utils.dart';
+import '../../../core/utils/snackbar_utils.dart' show showErrorSnack, extractErrorMessage;
 import '../../../data/models/post_generation.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/post_provider.dart';
@@ -42,7 +42,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     final state = ref.read(postNotifierProvider);
     if (state.hasError) {
-      showErrorSnack(context, state.error.toString());
+      showErrorSnack(context, extractErrorMessage(state.error));
       return;
     }
 
