@@ -8,6 +8,7 @@ import '../../../core/utils/snackbar_utils.dart'
 import '../../../data/models/post_generation.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/post_provider.dart';
+import '../../../providers/role_provider.dart';
 import '../../../shared/widgets/loading_button.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -134,6 +135,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       appBar: AppBar(
         title: const Text(AppConstants.appName),
         actions: [
+          ref.watch(userPermissionProvider).whenOrNull(
+                data: (perm) => perm.role.isAdmin
+                    ? IconButton(
+                        icon: const Icon(Icons.admin_panel_settings_outlined),
+                        tooltip: 'Modo Editorial',
+                        onPressed: () =>
+                            context.push(AppConstants.routeAdmin),
+                      )
+                    : null,
+              ) ??
+              const SizedBox.shrink(),
           IconButton(
             icon: const Icon(Icons.history_rounded),
             tooltip: 'Histórico',

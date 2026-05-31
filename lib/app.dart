@@ -5,6 +5,17 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
+import 'features/admin/screens/admin_dashboard_screen.dart';
+import 'features/admin/screens/brand_studio/brand_form_screen.dart';
+import 'features/admin/screens/brand_studio/brand_studio_screen.dart';
+import 'features/admin/screens/calendar/calendar_screen.dart';
+import 'features/admin/screens/content_library/content_item_form_screen.dart';
+import 'features/admin/screens/content_library/content_library_screen.dart';
+import 'features/admin/screens/extract/excerpt_extractor_screen.dart';
+import 'features/admin/screens/history/advanced_history_screen.dart';
+import 'features/admin/screens/personas/persona_form_screen.dart';
+import 'features/admin/screens/personas/personas_screen.dart';
+import 'features/admin/screens/repurpose/repurposing_screen.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/history/screens/history_detail_screen.dart';
 import 'features/history/screens/history_screen.dart';
@@ -69,6 +80,77 @@ final _router = GoRouter(
         final id = state.pathParameters['id']!;
         return HistoryDetailScreen(id: id);
       },
+    ),
+
+    // ── Modo Editorial (Admin) ──────────────────────────────
+    GoRoute(
+      path: AppConstants.routeAdmin,
+      builder: (_, __) => const AdminDashboardScreen(),
+    ),
+
+    // Brand Studio
+    GoRoute(
+      path: AppConstants.routeAdminBrands,
+      builder: (_, __) => const BrandStudioScreen(),
+    ),
+    GoRoute(
+      path: AppConstants.routeAdminBrandsNew,
+      builder: (_, __) => const BrandFormScreen(),
+    ),
+    GoRoute(
+      path: '/admin/brands/:brandId',
+      builder: (_, state) =>
+          BrandFormScreen(brandId: state.pathParameters['brandId']),
+    ),
+
+    // Personas
+    GoRoute(
+      path: AppConstants.routeAdminPersonas,
+      builder: (_, __) => const PersonasScreen(),
+    ),
+    GoRoute(
+      path: AppConstants.routeAdminPersonasNew,
+      builder: (_, __) => const PersonaFormScreen(),
+    ),
+    GoRoute(
+      path: '/admin/personas/:personaId',
+      builder: (_, state) =>
+          PersonaFormScreen(personaId: state.pathParameters['personaId']),
+    ),
+
+    // Biblioteca
+    GoRoute(
+      path: AppConstants.routeAdminLibrary,
+      builder: (_, __) => const ContentLibraryScreen(),
+    ),
+    GoRoute(
+      path: AppConstants.routeAdminLibraryNew,
+      builder: (_, __) => const ContentItemFormScreen(),
+    ),
+    GoRoute(
+      path: '/admin/library/:itemId',
+      builder: (_, state) =>
+          ContentItemFormScreen(itemId: state.pathParameters['itemId']),
+    ),
+
+    // Geradores
+    GoRoute(
+      path: AppConstants.routeAdminExtract,
+      builder: (_, __) => const ExcerptExtractorScreen(),
+    ),
+    GoRoute(
+      path: AppConstants.routeAdminRepurpose,
+      builder: (_, __) => const RepurposingScreen(),
+    ),
+    GoRoute(
+      path: AppConstants.routeAdminCalendar,
+      builder: (_, __) => const CalendarScreen(),
+    ),
+
+    // Histórico avançado
+    GoRoute(
+      path: AppConstants.routeAdminHistory,
+      builder: (_, __) => const AdvancedHistoryScreen(),
     ),
   ],
 );
