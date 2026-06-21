@@ -45,22 +45,31 @@ jobs:
           with open(path) as f:
               content = f.read()
 
-          print("=== Original flutter_bootstrap.js ===")
-          print(content[:2000])
+          # Flutter 3.44.2 usa CDN para canvaskit por padrao.
+          # Forcamos o path local "canvaskit" substituindo a expressao ternaria completa.
+          old = 'e.engineRevision&&!e.useLocalCanvasKit?I("https://www.gstatic.com/flutter-canvaskit",e.engineRevision):"canvaskit"'
+          new_val = '"canvaskit"'
 
-          new = re.sub(
-              r'initializeEngine\(\s*\)',
-              'initializeEngine({canvasKitBaseUrl: "canvaskit/"})',
-              content
-          )
-
-          if new != content:
+          if old in content:
+              patched = content.replace(old, new_val)
               with open(path, 'w') as f:
-                  f.write(new)
-              print("=== Patched com sucesso! ===")
+                  f.write(patched)
+              print("=== Patch aplicado com sucesso! CDN substituido por 'canvaskit' local ===")
           else:
-              print("AVISO: padrao initializeEngine() nao encontrado!")
-              print(content[:3000])
+              print("AVISO: padrao CDN nao encontrado. Procurando variantes...")
+              # Tenta regex mais flexivel
+              patched = re.sub(
+                  r'e\.engineRevision&&!e\.useLocalCanvasKit\?[^:]+:"canvaskit"',
+                  '"canvaskit"',
+                  content
+              )
+              if patched != content:
+                  with open(path, 'w') as f:
+                      f.write(patched)
+                  print("=== Patch aplicado via regex ===")
+              else:
+                  print("ERRO: nenhum padrao encontrado! Conteudo do arquivo (primeiros 2000 chars):")
+                  print(content[:2000])
           PYEOF
 
       - name: Publicar no GitHub Pages
