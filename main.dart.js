@@ -28966,7 +28966,7 @@ var $async$a44=A.E(function(a0,a1){if(a0===1){p.push(a1)
 s=q}for(;;)switch(s){case 0:if($.a1==null)A.Gz()
 $.a1.toString
 o="https://nzngvbajrnruknpzzjbf.supabase.co"
-n="sb_publishable_fZboVtE9PeokahlYmhc_vg_t6JHOmFh"
+n="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im56bmd2YmFqcm5ydWtucHp6amJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg5NDUzODYsImV4cCI6MjA5NDUyMTM4Nn0.mOvtGzA0ZNKmVY1FAT0-v7pICmz68VrFaFKEbKE8WvI"
 q=3
 s=6
 return A.u($.aF8().Cq(0,".env"),$async$a44)
