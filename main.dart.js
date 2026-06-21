@@ -18045,7 +18045,7 @@ $iyQ:1}
 A.a0R.prototype={
 $1(a){var s=A.c5().b
 s=s==null?null:s.canvasKitBaseUrl
-return(s==null?"canvaskit/":s)+a},
+return(s==null?"https://www.gstatic.com/flutter-canvaskit/77e2e94772b6eb43759e34ed1ad7da4674e19cab/":s)+a},
 $S:82}
 A.Bn.prototype={
 guB(){var s=this.b
