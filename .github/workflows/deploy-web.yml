@@ -34,7 +34,7 @@ jobs:
         run: flutter pub get
 
       - name: Build da versão Web
-        run: flutter build web --release --base-href /ai-social-copilot/
+        run: flutter build web --release --base-href /ai-social-copilot/ --dart-define=FLUTTER_WEB_CANVASKIT_URL=canvaskit/
 
       - name: Publicar no GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
