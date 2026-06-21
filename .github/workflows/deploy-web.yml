@@ -34,7 +34,7 @@ jobs:
         run: flutter pub get
 
       - name: Build da versão Web
-        run: flutter build web --release --base-href /ai-social-copilot/ --web-renderer html
+        run: flutter build web --release --base-href /ai-social-copilot/
 
       - name: Publicar no GitHub Pages
         uses: peaceiris/actions-gh-pages@v3

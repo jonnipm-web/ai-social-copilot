@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -7,10 +9,13 @@ import 'app.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Mostra loading enquanto inicializa
-  runApp(const _LoadingApp());
+  runZonedGuarded(() async {
+    // Mostra loading imediatamente
+    runApp(const _LoadingApp());
 
-  try {
+    // Pequena pausa para o Flutter pintar a tela antes de inicializar
+    await Future.delayed(const Duration(milliseconds: 200));
+
     await Supabase.initialize(
       url: 'https://nzngvbajrnruknpzzjbf.supabase.co',
       anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'
@@ -19,9 +24,10 @@ Future<void> main() async {
     );
 
     runApp(const ProviderScope(child: App()));
-  } catch (e, st) {
-    runApp(_ErrorApp(error: '$e\n\n$st'));
-  }
+  }, (error, stack) {
+    // Captura qualquer erro async que escape, inclusive de Futures internos
+    runApp(_ErrorApp(error: '$error\n\n$stack'));
+  });
 }
 
 class _LoadingApp extends StatelessWidget {
@@ -62,8 +68,8 @@ class _ErrorApp extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: SelectableText(
-              'Erro:\n\n$error',
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
+              'Erro de inicialização:\n\n$error',
+              style: const TextStyle(color: Colors.redAccent, fontSize: 12),
             ),
           ),
         ),
