@@ -40,7 +40,7 @@ class UpgradeScreen extends ConsumerWidget {
                   period: '',
                   isHighlighted: false,
                   badge: null,
-                  features: const [
+                  features: [
                     _Feature('$limit gerações por mês', true),
                     _Feature('Todas as versões de post', true),
                     _Feature('Histórico dos últimos 50 posts', true),
