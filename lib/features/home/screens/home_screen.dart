@@ -46,6 +46,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       return;
     }
 
+    final usage = ref.read(monthlyUsageProvider).valueOrNull ?? 0;
+    if (usage >= AppConstants.freeTierLimit) {
+      showErrorSnack(
+        context,
+        'Você atingiu o limite de ${AppConstants.freeTierLimit} gerações gratuitas este mês.',
+      );
+      return;
+    }
+
     _startTime = DateTime.now();
 
     final result =
@@ -60,6 +69,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
 
     if (result != null) {
+      ref.invalidate(monthlyUsageProvider);
       final elapsed = _startTime != null
           ? DateTime.now().difference(_startTime!).inMilliseconds / 1000
           : null;
@@ -125,10 +135,48 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return Colors.white38;
   }
 
+  Widget _buildCreditsBanner(int used, int limit) {
+    final remaining = limit - used;
+    final isFull = remaining <= 0;
+    final color = isFull
+        ? Colors.red.shade700
+        : remaining == 1
+            ? Colors.orange.shade700
+            : Colors.teal.shade700;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.15),
+        border: Border.all(color: color.withOpacity(0.5)),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            isFull ? Icons.lock_outline_rounded : Icons.bolt_rounded,
+            size: 18,
+            color: color,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              isFull
+                  ? 'Limite gratuito atingido (${AppConstants.freeTierLimit}/${AppConstants.freeTierLimit}). Upgrade para continuar.'
+                  : '$remaining de ${AppConstants.freeTierLimit} gerações gratuitas restantes este mês.',
+              style: TextStyle(fontSize: 13, color: color),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final postState = ref.watch(postNotifierProvider);
     final isLoading = postState.isLoading;
+    final usageAsync = ref.watch(monthlyUsageProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -154,6 +202,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                usageAsync.when(
+                  data: (used) => Column(
+                    children: [
+                      _buildCreditsBanner(used, AppConstants.freeTierLimit),
+                      const SizedBox(height: 14),
+                    ],
+                  ),
+                  loading: () => const SizedBox.shrink(),
+                  error: (_, __) => const SizedBox.shrink(),
+                ),
                 Text(
                   'Cole ou escreva seu post',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -207,7 +265,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   label: '✨  Melhorar post',
                   loadingLabel: 'Analisando seu conteúdo...',
                   isLoading: isLoading,
-                  onPressed: _improve,
+                  onPressed: (usageAsync.valueOrNull ?? 0) >= AppConstants.freeTierLimit
+                      ? null
+                      : _improve,
                 ),
                 const SizedBox(height: 12),
               ],

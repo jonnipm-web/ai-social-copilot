@@ -6,6 +6,11 @@ import '../data/services/post_service.dart';
 
 final postServiceProvider = Provider<PostService>((_) => PostService());
 
+// Contagem de gerações do mês atual (para controle de cota gratuita)
+final monthlyUsageProvider = FutureProvider.autoDispose<int>((ref) {
+  return ref.watch(postServiceProvider).countMonthlyGenerations();
+});
+
 // Provider do histórico
 final historyProvider =
     FutureProvider.autoDispose<List<PostGeneration>>((ref) {

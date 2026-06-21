@@ -41,6 +41,18 @@ class PostService {
         .toList();
   }
 
+  Future<int> countMonthlyGenerations() async {
+    final now = DateTime.now();
+    final firstOfMonth = DateTime(now.year, now.month, 1).toUtc().toIso8601String();
+
+    final rows = await _client
+        .from(AppConstants.tablePostGenerations)
+        .select('id')
+        .gte('created_at', firstOfMonth);
+
+    return (rows as List).length;
+  }
+
   Future<PostGeneration> fetchById(String id) async {
     final row = await _client
         .from(AppConstants.tablePostGenerations)
