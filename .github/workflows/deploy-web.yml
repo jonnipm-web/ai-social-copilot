@@ -30,41 +30,38 @@ jobs:
       - name: Adicionar suporte à plataforma Web
         run: flutter create --platforms web .
 
-      - name: Usar CanvasKit local (sem CDN)
-        run: |
-          python3 - <<'PYEOF'
-          import os, re
-
-          # Patch flutter_bootstrap.js para usar canvaskit/ local
-          bootstrap = 'web/flutter_bootstrap.js'
-          if os.path.exists(bootstrap):
-              with open(bootstrap) as f:
-                  content = f.read()
-              print("=== flutter_bootstrap.js original ===")
-              print(content)
-              # Adiciona canvasKitBaseUrl no initializeEngine
-              new = re.sub(
-                  r'initializeEngine\(\s*\)',
-                  'initializeEngine({canvasKitBaseUrl: "canvaskit/"})',
-                  content
-              )
-              if new != content:
-                  with open(bootstrap, 'w') as f:
-                      f.write(new)
-                  print("=== Patched! ===")
-              else:
-                  print("Pattern 'initializeEngine()' not found — printing file for debug:")
-              print(new)
-          else:
-              print(f"File not found: {bootstrap}")
-              print("web/ contents:", os.listdir('web') if os.path.exists('web') else 'NO WEB DIR')
-          PYEOF
-
       - name: Instalar dependências
         run: flutter pub get
 
       - name: Build da versão Web
         run: flutter build web --release --base-href /ai-social-copilot/ --pwa-strategy none
+
+      - name: Patch flutter_bootstrap.js com CanvasKit local
+        run: |
+          python3 - <<'PYEOF'
+          import re
+
+          path = 'build/web/flutter_bootstrap.js'
+          with open(path) as f:
+              content = f.read()
+
+          print("=== Original flutter_bootstrap.js ===")
+          print(content[:2000])
+
+          new = re.sub(
+              r'initializeEngine\(\s*\)',
+              'initializeEngine({canvasKitBaseUrl: "canvaskit/"})',
+              content
+          )
+
+          if new != content:
+              with open(path, 'w') as f:
+                  f.write(new)
+              print("=== Patched com sucesso! ===")
+          else:
+              print("AVISO: padrao initializeEngine() nao encontrado!")
+              print(content[:3000])
+          PYEOF
 
       - name: Publicar no GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
