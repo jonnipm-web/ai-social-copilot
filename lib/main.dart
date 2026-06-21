@@ -8,13 +8,20 @@ import 'app.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await dotenv.load(fileName: '.env').catchError((_) {});
+  var supabaseUrl = 'https://nzngvbajrnruknpzzjbf.supabase.co';
+  var supabaseKey = 'sb_publishable_fZboVtE9PeokahlYmhc_vg_t6JHOmFh';
+
+  try {
+    await dotenv.load(fileName: '.env');
+    final envUrl = dotenv.env['SUPABASE_URL']?.trim() ?? '';
+    final envKey = dotenv.env['SUPABASE_ANON_KEY']?.trim() ?? '';
+    if (envUrl.isNotEmpty) supabaseUrl = envUrl;
+    if (envKey.isNotEmpty) supabaseKey = envKey;
+  } catch (_) {}
 
   await Supabase.initialize(
-    url: dotenv.env['SUPABASE_URL'] ??
-        'https://nzngvbajrnruknpzzjbf.supabase.co',
-    anonKey: dotenv.env['SUPABASE_ANON_KEY'] ??
-        'sb_publishable_fZboVtE9PeokahlYmhc_vg_t6JHOmFh',
+    url: supabaseUrl,
+    anonKey: supabaseKey,
   );
 
   runApp(
