@@ -11,6 +11,7 @@ import 'features/history/screens/history_screen.dart';
 import 'features/home/screens/home_screen.dart';
 import 'features/result/screens/result_screen.dart';
 import 'features/splash/splash_screen.dart';
+import 'features/upgrade/screens/upgrade_screen.dart';
 
 final _router = GoRouter(
   initialLocation: AppConstants.routeSplash,
@@ -62,6 +63,10 @@ final _router = GoRouter(
     GoRoute(
       path: AppConstants.routeHistory,
       builder: (_, __) => const HistoryScreen(),
+    ),
+    GoRoute(
+      path: AppConstants.routeUpgrade,
+      builder: (_, __) => const UpgradeScreen(),
     ),
     GoRoute(
       path: AppConstants.routeHistoryDetail,

@@ -162,10 +162,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           Expanded(
             child: Text(
               isFull
-                  ? 'Limite gratuito atingido (${AppConstants.freeTierLimit}/${AppConstants.freeTierLimit}). Upgrade para continuar.'
+                  ? 'Limite gratuito atingido (${AppConstants.freeTierLimit}/${AppConstants.freeTierLimit}).'
                   : '$remaining de ${AppConstants.freeTierLimit} gerações gratuitas restantes este mês.',
               style: TextStyle(fontSize: 13, color: color),
             ),
+          ),
+          const SizedBox(width: 8),
+          TextButton(
+            onPressed: () => context.push(AppConstants.routeUpgrade),
+            style: TextButton.styleFrom(
+              foregroundColor: color,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              textStyle: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            child: Text(isFull ? 'Upgrade' : 'Ver planos'),
           ),
         ],
       ),
