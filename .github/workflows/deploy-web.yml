@@ -39,37 +39,32 @@ jobs:
       - name: Patch flutter_bootstrap.js com CanvasKit local
         run: |
           python3 - <<'PYEOF'
-          import re
-
           path = 'build/web/flutter_bootstrap.js'
           with open(path) as f:
               content = f.read()
 
-          # Flutter 3.44.2 usa CDN para canvaskit por padrao.
-          # Forcamos o path local "canvaskit" substituindo a expressao ternaria completa.
-          old = 'e.engineRevision&&!e.useLocalCanvasKit?I("https://www.gstatic.com/flutter-canvaskit",e.engineRevision):"canvaskit"'
-          new_val = '"canvaskit"'
+          changes = []
 
-          if old in content:
-              patched = content.replace(old, new_val)
+          # 1) Forca renderer classico 'canvaskit' em vez de wimp/skwasm
+          old1 = 'l.initializeEngine(t).then(u=>u.runApp())'
+          new1 = 'l.initializeEngine({...t,renderer:"canvaskit",canvasKitBaseUrl:"canvaskit/"}).then(u=>u.runApp())'
+          if old1 in content:
+              content = content.replace(old1, new1)
+              changes.append("renderer forcado para canvaskit")
+
+          # 2) Substitui CDN gstatic por path local
+          old2 = 'e.engineRevision&&!e.useLocalCanvasKit?I("https://www.gstatic.com/flutter-canvaskit",e.engineRevision):"canvaskit"'
+          if old2 in content:
+              content = content.replace(old2, '"canvaskit"')
+              changes.append("CDN substituido por canvaskit local")
+
+          if changes:
               with open(path, 'w') as f:
-                  f.write(patched)
-              print("=== Patch aplicado com sucesso! CDN substituido por 'canvaskit' local ===")
+                  f.write(content)
+              print("=== Patches aplicados:", ', '.join(changes), "===")
           else:
-              print("AVISO: padrao CDN nao encontrado. Procurando variantes...")
-              # Tenta regex mais flexivel
-              patched = re.sub(
-                  r'e\.engineRevision&&!e\.useLocalCanvasKit\?[^:]+:"canvaskit"',
-                  '"canvaskit"',
-                  content
-              )
-              if patched != content:
-                  with open(path, 'w') as f:
-                      f.write(patched)
-                  print("=== Patch aplicado via regex ===")
-              else:
-                  print("ERRO: nenhum padrao encontrado! Conteudo do arquivo (primeiros 2000 chars):")
-                  print(content[:2000])
+              print("AVISO: nenhum patch aplicado! Conteudo do arquivo:")
+              print(content[:3000])
           PYEOF
 
       - name: Publicar no GitHub Pages
