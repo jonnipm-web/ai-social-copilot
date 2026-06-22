@@ -16,11 +16,12 @@ jobs:
       - name: Baixar código do repositório
         uses: actions/checkout@v4
 
-      - name: Configurar Flutter
+      - name: Configurar Flutter 3.22.3
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.22.3'
           channel: stable
-          cache: true
+          cache: false
 
       - name: Criar arquivo .env com as credenciais
         run: |
@@ -34,38 +35,7 @@ jobs:
         run: flutter pub get
 
       - name: Build da versão Web
-        run: flutter build web --release --base-href /ai-social-copilot/ --pwa-strategy none
-
-      - name: Patch flutter_bootstrap.js com CanvasKit local
-        run: |
-          python3 - <<'PYEOF'
-          path = 'build/web/flutter_bootstrap.js'
-          with open(path) as f:
-              content = f.read()
-
-          changes = []
-
-          # 1) Forca renderer classico 'canvaskit' em vez de wimp/skwasm
-          old1 = 'l.initializeEngine(t).then(u=>u.runApp())'
-          new1 = 'l.initializeEngine({...t,renderer:"canvaskit",canvasKitBaseUrl:"canvaskit/"}).then(u=>u.runApp())'
-          if old1 in content:
-              content = content.replace(old1, new1)
-              changes.append("renderer forcado para canvaskit")
-
-          # 2) Substitui CDN gstatic por path local
-          old2 = 'e.engineRevision&&!e.useLocalCanvasKit?I("https://www.gstatic.com/flutter-canvaskit",e.engineRevision):"canvaskit"'
-          if old2 in content:
-              content = content.replace(old2, '"canvaskit"')
-              changes.append("CDN substituido por canvaskit local")
-
-          if changes:
-              with open(path, 'w') as f:
-                  f.write(content)
-              print("=== Patches aplicados:", ', '.join(changes), "===")
-          else:
-              print("AVISO: nenhum patch aplicado! Conteudo do arquivo:")
-              print(content[:3000])
-          PYEOF
+        run: flutter build web --release --base-href /ai-social-copilot/ --web-renderer canvaskit
 
       - name: Publicar no GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
