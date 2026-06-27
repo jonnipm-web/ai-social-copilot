@@ -23,6 +23,9 @@ dependencies:
   google_fonts: ^6.2.1
   shimmer: ^3.0.0
 
+  # Env / config
+  flutter_dotenv: ^5.1.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -30,3 +33,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - .env

@@ -16,10 +16,10 @@ jobs:
       - name: Baixar código do repositório
         uses: actions/checkout@v4
 
-      - name: Configurar Flutter 3.22.3
+      - name: Configurar Flutter 3.24.5
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.3'
+          flutter-version: '3.24.5'
           channel: stable
           cache: false
 
@@ -35,7 +35,7 @@ jobs:
         run: flutter pub get
 
       - name: Build da versão Web
-        run: flutter build web --profile --base-href /ai-social-copilot/ --web-renderer html
+        run: flutter build web --release --base-href /ai-social-copilot/ --web-renderer html
 
       - name: Publicar no GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
