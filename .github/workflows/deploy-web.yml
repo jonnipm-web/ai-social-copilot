@@ -16,10 +16,10 @@ jobs:
       - name: Baixar código do repositório
         uses: actions/checkout@v4
 
-      - name: Configurar Flutter 3.24.5
+      - name: Configurar Flutter 3.27.4
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.5'
+          flutter-version: '3.27.4'
           channel: stable
           cache: false
 
