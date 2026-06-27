@@ -10,9 +10,6 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Supabase
-  supabase_flutter: ^2.5.6
-
   # Estado
   flutter_riverpod: ^2.5.1
 
@@ -22,9 +19,6 @@ dependencies:
   # UI utilitários
   google_fonts: ^6.2.1
   shimmer: ^3.0.0
-
-  # Env / config
-  flutter_dotenv: ^5.1.0
 
 dev_dependencies:
   flutter_test:
