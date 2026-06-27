@@ -37,6 +37,23 @@ jobs:
       - name: Build da versão Web
         run: flutter build web --release --base-href /ai-social-copilot/ --web-renderer canvaskit
 
+      - name: Forçar canvaskit local (sem CDN)
+        run: |
+          python3 -c "
+          import re
+          with open('build/web/flutter_bootstrap.js', 'r') as f:
+              content = f.read()
+          patched = re.sub(
+              r'_flutter\.loader\.load\(\{',
+              '_flutter.loader.load({\n  config: { canvasKitBaseUrl: \"canvaskit/\" },',
+              content
+          )
+          assert patched != content, 'Patch nao aplicado: padrao nao encontrado'
+          with open('build/web/flutter_bootstrap.js', 'w') as f:
+              f.write(patched)
+          print('Patch aplicado com sucesso')
+          "
+
       - name: Publicar no GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
