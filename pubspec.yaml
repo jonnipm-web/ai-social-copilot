@@ -10,8 +10,8 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Supabase
-  supabase_flutter: ^2.5.6
+  # Supabase — fixado em <2.15.0 para evitar dependência no passkeys_web (crasha no GitHub Pages)
+  supabase_flutter: ">=2.5.6 <2.15.0"
 
   # Estado
   flutter_riverpod: ^2.5.1
