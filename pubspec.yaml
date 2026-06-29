@@ -34,6 +34,7 @@ dev_dependencies:
 # Forçar versões mais novas dos plugins web para corrigir null check
 dependency_overrides:
   url_launcher_web: ^2.4.3
+  app_links: ^7.0.0
 
 flutter:
   uses-material-design: true
