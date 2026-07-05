@@ -24,7 +24,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
     final session = Supabase.instance.client.auth.currentSession;
     context.go(
-      session != null ? AppConstants.routeHome : AppConstants.routeLogin,
+      session != null ? AppConstants.routeDashboard : AppConstants.routeLogin,
     );
   }
 

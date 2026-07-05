@@ -5,10 +5,17 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
+import 'features/admin/screens/admin_panel_screen.dart';
 import 'features/auth/screens/login_screen.dart';
+import 'features/calendar/screens/calendar_screen.dart';
+import 'features/content/screens/content_form_screen.dart';
+import 'features/content/screens/content_library_screen.dart';
+import 'features/dashboard/screens/dashboard_screen.dart';
 import 'features/history/screens/history_detail_screen.dart';
 import 'features/history/screens/history_screen.dart';
 import 'features/home/screens/home_screen.dart';
+import 'features/personas/screens/persona_form_screen.dart';
+import 'features/personas/screens/personas_screen.dart';
 import 'features/result/screens/result_screen.dart';
 import 'features/splash/splash_screen.dart';
 import 'features/upgrade/screens/upgrade_screen.dart';
@@ -17,12 +24,12 @@ final _router = GoRouter(
   initialLocation: AppConstants.routeSplash,
   redirect: (context, state) {
     final session = Supabase.instance.client.auth.currentSession;
-    final goingToAuth = state.fullPath == AppConstants.routeLogin;
+    final goingToAuth   = state.fullPath == AppConstants.routeLogin;
     final goingToSplash = state.fullPath == AppConstants.routeSplash;
 
     if (goingToSplash) return null;
     if (session == null && !goingToAuth) return AppConstants.routeLogin;
-    if (session != null && goingToAuth) return AppConstants.routeHome;
+    if (session != null && goingToAuth)  return AppConstants.routeDashboard;
     return null;
   },
   routes: [
@@ -35,6 +42,10 @@ final _router = GoRouter(
       builder: (_, __) => const LoginScreen(),
     ),
     GoRoute(
+      path: AppConstants.routeDashboard,
+      builder: (_, __) => const DashboardScreen(),
+    ),
+    GoRoute(
       path: AppConstants.routeHome,
       builder: (_, __) => const HomeScreen(),
     ),
@@ -42,8 +53,6 @@ final _router = GoRouter(
       path: AppConstants.routeResult,
       builder: (context, state) {
         final extra = state.extra;
-        // extra é null quando o usuário atualiza a página no navegador,
-        // pois dados em memória não sobrevivem ao F5. Redireciona para home.
         if (extra == null) {
           WidgetsBinding.instance.addPostFrameCallback(
             (_) => context.go(AppConstants.routeHome),
@@ -54,8 +63,8 @@ final _router = GoRouter(
         }
         final map = extra as Map<String, dynamic>;
         return ResultScreen(
-          originalText: map['originalText'] as String,
-          result: map['result'] as Map<String, dynamic>,
+          originalText:      map['originalText'] as String,
+          result:            map['result'] as Map<String, dynamic>,
           processingSeconds: map['processingSeconds'] as double?,
         );
       },
@@ -65,15 +74,61 @@ final _router = GoRouter(
       builder: (_, __) => const HistoryScreen(),
     ),
     GoRoute(
-      path: AppConstants.routeUpgrade,
-      builder: (_, __) => const UpgradeScreen(),
-    ),
-    GoRoute(
       path: AppConstants.routeHistoryDetail,
       builder: (context, state) {
         final id = state.pathParameters['id']!;
         return HistoryDetailScreen(id: id);
       },
+    ),
+    GoRoute(
+      path: AppConstants.routeUpgrade,
+      builder: (_, __) => const UpgradeScreen(),
+    ),
+
+    // ── Personas ───────────────────────────────────────────────
+    GoRoute(
+      path: AppConstants.routePersonas,
+      builder: (_, __) => const PersonasScreen(),
+    ),
+    GoRoute(
+      path: AppConstants.routePersonaNew,
+      builder: (_, __) => const PersonaFormScreen(),
+    ),
+    GoRoute(
+      path: AppConstants.routePersonaEdit,
+      builder: (context, state) {
+        final id = state.pathParameters['id']!;
+        return PersonaFormScreen(personaId: id);
+      },
+    ),
+
+    // ── Biblioteca ─────────────────────────────────────────────
+    GoRoute(
+      path: AppConstants.routeContent,
+      builder: (_, __) => const ContentLibraryScreen(),
+    ),
+    GoRoute(
+      path: AppConstants.routeContentNew,
+      builder: (_, __) => const ContentFormScreen(),
+    ),
+    GoRoute(
+      path: AppConstants.routeContentEdit,
+      builder: (context, state) {
+        final id = state.pathParameters['id']!;
+        return ContentFormScreen(itemId: id);
+      },
+    ),
+
+    // ── Calendário ─────────────────────────────────────────────
+    GoRoute(
+      path: AppConstants.routeCalendar,
+      builder: (_, __) => const CalendarScreen(),
+    ),
+
+    // ── Admin ──────────────────────────────────────────────────
+    GoRoute(
+      path: AppConstants.routeAdmin,
+      builder: (_, __) => const AdminPanelScreen(),
     ),
   ],
 );
@@ -84,10 +139,10 @@ class App extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp.router(
-      title: AppConstants.appName,
+      title:                      AppConstants.appName,
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.dark,
-      routerConfig: _router,
+      theme:                      AppTheme.dark,
+      routerConfig:               _router,
     );
   }
 }

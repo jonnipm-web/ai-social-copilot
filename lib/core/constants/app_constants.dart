@@ -7,16 +7,43 @@ class AppConstants {
   static const freeTierLimit = 9999;
   static const maxBodyWidth = 700.0;
 
-  // Rotas
-  static const routeSplash = '/';
-  static const routeLogin = '/login';
-  static const routeHome = '/home';
-  static const routeResult = '/result';
-  static const routeHistory = '/history';
-  static const routeHistoryDetail = '/history/:id';
-  static const routeUpgrade = '/upgrade';
+  // Limites por papel
+  static const Map<String, int> planLimits = {
+    'admin':       99999,
+    'premium':     1000,
+    'pro':         100,
+    'beta_tester': 50,
+    'free':        5,
+  };
 
-  // Supabase
+  static int limitForRole(String role) => planLimits[role] ?? 5;
+
+  // Rotas
+  static const routeSplash         = '/';
+  static const routeLogin          = '/login';
+  static const routeDashboard      = '/dashboard';
+  static const routeHome           = '/home';
+  static const routeResult         = '/result';
+  static const routeHistory        = '/history';
+  static const routeHistoryDetail  = '/history/:id';
+  static const routeUpgrade        = '/upgrade';
+  static const routePersonas       = '/personas';
+  static const routePersonaNew     = '/personas/new';
+  static const routePersonaEdit    = '/personas/:id/edit';
+  static const routeContent        = '/content';
+  static const routeContentNew     = '/content/new';
+  static const routeContentEdit    = '/content/:id/edit';
+  static const routeCalendar       = '/calendar';
+  static const routeAdmin          = '/admin';
+
+  // Tabelas Supabase
   static const tablePostGenerations = 'post_generations';
-  static const edgeFunctionImprove = 'improve-post';
+  static const tableProfiles        = 'profiles';
+  static const tablePersonas        = 'personas';
+  static const tableContentItems    = 'content_items';
+  static const tableCalendarItems   = 'calendar_items';
+  static const edgeFunctionImprove  = 'improve-post';
+
+  // Admin
+  static const adminEmail = 'jpaulo.start@gmail.com';
 }
