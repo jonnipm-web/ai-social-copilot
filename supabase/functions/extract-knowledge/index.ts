@@ -169,10 +169,16 @@ serve(async (req) => {
     let content: string = body.content ?? "";
     const sourceUrl: string | null = body.source_url ?? null;
 
-    // If a source URL is provided, fetch content from it
-    if (sourceUrl && sourceUrl.startsWith("http")) {
+    // Detect URL: use source_url if provided, otherwise check if content itself is a bare URL
+    const trimmedContent = content.trim();
+    const urlToFetch = sourceUrl ??
+      (trimmedContent.startsWith("http") && !trimmedContent.includes(" ") && !trimmedContent.includes("\n")
+        ? trimmedContent
+        : null);
+
+    if (urlToFetch) {
       try {
-        content = await fetchUrlContent(sourceUrl);
+        content = await fetchUrlContent(urlToFetch);
       } catch (fetchErr) {
         return new Response(
           JSON.stringify({ error: String(fetchErr instanceof Error ? fetchErr.message : fetchErr) }),
