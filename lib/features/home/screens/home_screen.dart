@@ -8,6 +8,8 @@ import '../../../core/utils/snackbar_utils.dart'
 import '../../../data/models/post_generation.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/post_provider.dart';
+import '../../../providers/profile_provider.dart';
+import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/loading_button.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -47,10 +49,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
 
     final usage = ref.read(monthlyUsageProvider).valueOrNull ?? 0;
-    if (usage >= AppConstants.freeTierLimit) {
+    final profile = ref.read(currentProfileProvider).valueOrNull;
+    final limit = profile?.monthlyLimit ?? AppConstants.freeTierLimit;
+    if (usage >= limit) {
       showErrorSnack(
         context,
-        'Você atingiu o limite de ${AppConstants.freeTierLimit} gerações gratuitas este mês.',
+        'Você atingiu o limite de $limit gerações este mês.',
       );
       return;
     }
@@ -162,8 +166,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           Expanded(
             child: Text(
               isFull
-                  ? 'Limite gratuito atingido (${AppConstants.freeTierLimit}/${AppConstants.freeTierLimit}).'
-                  : '$remaining de ${AppConstants.freeTierLimit} gerações gratuitas restantes este mês.',
+                  ? 'Limite atingido ($limit/$limit gerações este mês).'
+                  : '$remaining de $limit gerações restantes este mês.',
               style: TextStyle(fontSize: 13, color: color),
             ),
           ),
@@ -187,9 +191,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final postState = ref.watch(postNotifierProvider);
-    final isLoading = postState.isLoading;
+    final postState  = ref.watch(postNotifierProvider);
+    final isLoading  = postState.isLoading;
     final usageAsync = ref.watch(monthlyUsageProvider);
+    final profile    = ref.watch(currentProfileProvider).valueOrNull;
+    final limit      = profile?.monthlyLimit ?? AppConstants.freeTierLimit;
 
     return Scaffold(
       appBar: AppBar(
@@ -207,6 +213,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ],
       ),
+      drawer: const AppDrawer(),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
@@ -218,7 +225,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 usageAsync.when(
                   data: (used) => Column(
                     children: [
-                      _buildCreditsBanner(used, AppConstants.freeTierLimit),
+                      _buildCreditsBanner(used, limit),
                       const SizedBox(height: 14),
                     ],
                   ),
@@ -278,7 +285,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   label: '✨  Melhorar post',
                   loadingLabel: 'Analisando seu conteúdo...',
                   isLoading: isLoading,
-                  onPressed: (usageAsync.valueOrNull ?? 0) >= AppConstants.freeTierLimit
+                  onPressed: (usageAsync.valueOrNull ?? 0) >= limit
                       ? null
                       : _improve,
                 ),

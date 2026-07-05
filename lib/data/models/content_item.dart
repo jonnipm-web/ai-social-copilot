@@ -1,0 +1,84 @@
+class ContentItem {
+  final String id;
+  final String userId;
+  final String? personaId;
+  final String title;
+  final String type;
+  final String? description;
+  final String? baseText;
+  final String? niche;
+  final String? targetAudience;
+  final String? commercialObjective;
+  final String language;
+  final String status;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  static const types = [
+    'livro', 'ebook', 'artigo', 'post', 'ideia',
+    'texto', 'campanha', 'produto', 'marca', 'projeto',
+  ];
+
+  static const typeLabels = {
+    'livro':    'Livro',
+    'ebook':    'E-book',
+    'artigo':   'Artigo',
+    'post':     'Post',
+    'ideia':    'Ideia',
+    'texto':    'Texto Bruto',
+    'campanha': 'Campanha',
+    'produto':  'Produto Digital',
+    'marca':    'Marca',
+    'projeto':  'Projeto',
+  };
+
+  const ContentItem({
+    required this.id,
+    required this.userId,
+    this.personaId,
+    required this.title,
+    required this.type,
+    this.description,
+    this.baseText,
+    this.niche,
+    this.targetAudience,
+    this.commercialObjective,
+    this.language = 'pt-BR',
+    this.status = 'active',
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  factory ContentItem.fromMap(Map<String, dynamic> map) {
+    return ContentItem(
+      id:                  map['id'] as String,
+      userId:              map['user_id'] as String,
+      personaId:           map['persona_id'] as String?,
+      title:               map['title'] as String,
+      type:                map['type'] as String,
+      description:         map['description'] as String?,
+      baseText:            map['base_text'] as String?,
+      niche:               map['niche'] as String?,
+      targetAudience:      map['target_audience'] as String?,
+      commercialObjective: map['commercial_objective'] as String?,
+      language:            map['language'] as String? ?? 'pt-BR',
+      status:              map['status'] as String? ?? 'active',
+      createdAt:           DateTime.parse(map['created_at'] as String),
+      updatedAt:           DateTime.parse(map['updated_at'] as String),
+    );
+  }
+
+  Map<String, dynamic> toInsertMap() => {
+    'user_id':              userId,
+    'persona_id':           personaId,
+    'title':                title,
+    'type':                 type,
+    'description':          description,
+    'base_text':            baseText,
+    'niche':                niche,
+    'target_audience':      targetAudience,
+    'commercial_objective': commercialObjective,
+    'language':             language,
+    'status':               status,
+  };
+}
