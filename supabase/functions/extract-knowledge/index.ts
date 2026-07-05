@@ -69,6 +69,82 @@ O JSON deve ter exatamente esta estrutura:
 Scores são inteiros de 0 a 100.
 Retorne apenas o JSON. Nenhum texto antes ou depois.`;
 
+// ── Fetch content from a URL ──────────────────────────────────
+
+async function fetchUrlContent(url: string): Promise<string> {
+  // Google Docs → export as plain text
+  const docsMatch = url.match(/docs\.google\.com\/document\/d\/([a-zA-Z0-9_-]+)/);
+  if (docsMatch) {
+    const exportUrl = `https://docs.google.com/document/d/${docsMatch[1]}/export?format=txt`;
+    const res = await fetch(exportUrl, {
+      headers: { "User-Agent": "Mozilla/5.0" },
+      redirect: "follow",
+    });
+    if (!res.ok) {
+      throw new Error(
+        `Google Doc inacessível (${res.status}). Verifique se está compartilhado como 'Qualquer pessoa com o link pode visualizar'.`
+      );
+    }
+    return await res.text();
+  }
+
+  // Google Drive file (PDF/DOCX) → download attempt
+  const driveMatch = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (driveMatch) {
+    const fileId = driveMatch[1];
+    // Try the export as plain text (works for Google Docs stored as Drive files)
+    const exportUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+    const res = await fetch(exportUrl, {
+      headers: { "User-Agent": "Mozilla/5.0" },
+      redirect: "follow",
+    });
+    if (!res.ok) {
+      throw new Error(
+        `Arquivo do Google Drive inacessível. Use um Google Doc (não PDF) e compartilhe como 'Qualquer pessoa com o link'.`
+      );
+    }
+    const contentType = res.headers.get("content-type") ?? "";
+    if (contentType.includes("text/html")) {
+      // Google Drive shows a confirmation page for large files — treat as error
+      throw new Error(
+        `Não foi possível baixar o arquivo diretamente. Converta para Google Docs e use o link de edição.`
+      );
+    }
+    const text = await res.text();
+    if (text.trim().length < 20) {
+      throw new Error("Arquivo vazio ou binário. Use um Google Doc com o link de edição.");
+    }
+    return text;
+  }
+
+  // Generic public URL → fetch HTML and strip tags
+  const res = await fetch(url, {
+    headers: { "User-Agent": "Mozilla/5.0" },
+    redirect: "follow",
+  });
+  if (!res.ok) {
+    throw new Error(`URL inacessível (${res.status}). Verifique se o endereço é público.`);
+  }
+
+  const contentType = res.headers.get("content-type") ?? "";
+  if (contentType.includes("text/html") || contentType.includes("text/plain")) {
+    const raw = await res.text();
+    // Strip HTML tags
+    const text = raw
+      .replace(/<script[\s\S]*?<\/script>/gi, "")
+      .replace(/<style[\s\S]*?<\/style>/gi, "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (text.length < 20) throw new Error("Conteúdo da URL muito curto para análise.");
+    return text;
+  }
+
+  throw new Error("Tipo de arquivo não suportado para análise automática. Use Texto Manual.");
+}
+
+// ── Main handler ──────────────────────────────────────────────
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -83,19 +159,40 @@ serve(async (req) => {
     }
 
     const body = await req.json().catch(() => null);
-    if (!body || typeof body.content !== "string" || body.content.trim().length < 20) {
+    if (!body) {
       return new Response(
-        JSON.stringify({ error: "Campo 'content' obrigatório (mínimo 20 caracteres)." }),
+        JSON.stringify({ error: "Body inválido." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    const content = body.content.trim();
+    let content: string = body.content ?? "";
+    const sourceUrl: string | null = body.source_url ?? null;
+
+    // If a source URL is provided, fetch content from it
+    if (sourceUrl && sourceUrl.startsWith("http")) {
+      try {
+        content = await fetchUrlContent(sourceUrl);
+      } catch (fetchErr) {
+        return new Response(
+          JSON.stringify({ error: String(fetchErr instanceof Error ? fetchErr.message : fetchErr) }),
+          { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
+    if (!content || content.trim().length < 20) {
+      return new Response(
+        JSON.stringify({ error: "Conteúdo muito curto para análise (mínimo 20 caracteres)." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     const niche = body.niche ? `\nNicho: ${body.niche}` : "";
     const audience = body.target_audience ? `\nAudiência-alvo: ${body.target_audience}` : "";
     const language = body.language ?? "pt-BR";
 
-    const userMessage = `Idioma de análise: ${language}${niche}${audience}\n\nConteúdo para analisar:\n\n${content.slice(0, 8000)}`;
+    const userMessage = `Idioma de análise: ${language}${niche}${audience}\n\nConteúdo para analisar:\n\n${content.trim().slice(0, 10000)}`;
 
     const groqRes = await fetch(GROQ_URL, {
       method: "POST",

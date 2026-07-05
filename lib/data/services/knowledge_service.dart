@@ -79,6 +79,7 @@ class KnowledgeService {
 
   Future<Map<String, dynamic>> extractWithAI({
     required String content,
+    String? sourceUrl,
     String? niche,
     String? targetAudience,
     String language = 'pt-BR',
@@ -87,6 +88,7 @@ class KnowledgeService {
       _edgeFunction,
       body: {
         'content':         content,
+        'source_url':      sourceUrl,
         'niche':           niche,
         'target_audience': targetAudience,
         'language':        language,
@@ -117,6 +119,7 @@ class KnowledgeService {
     try {
       final aiData = await extractWithAI(
         content:        item.content,
+        sourceUrl:      item.sourceType == 'url' ? item.sourceUrl : null,
         niche:          item.niche,
         targetAudience: item.targetAudience,
         language:       item.language,

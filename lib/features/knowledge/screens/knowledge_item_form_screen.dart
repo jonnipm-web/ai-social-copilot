@@ -195,7 +195,7 @@ class _KnowledgeItemFormScreenState
                 const SizedBox(height: 8),
                 _Field(
                   controller: _urlCtrl,
-                  hint: 'https://exemplo.com/artigo',
+                  hint: 'https://docs.google.com/document/d/...',
                   keyboardType: TextInputType.url,
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) return 'Informe a URL.';
@@ -206,9 +206,30 @@ class _KnowledgeItemFormScreenState
                   },
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'A IA irá analisar o conteúdo desta URL.',
-                  style: TextStyle(color: Colors.white38, fontSize: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6C63FF).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFF6C63FF).withOpacity(0.3)),
+                  ),
+                  child: const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '📄 Para Google Docs / Livros:',
+                        style: TextStyle(color: Color(0xFF6C63FF), fontSize: 12, fontWeight: FontWeight.w600),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        '1. Abra o documento no Google Docs\n'
+                        '2. Clique em Compartilhar\n'
+                        '3. Mude para "Qualquer pessoa com o link pode visualizar"\n'
+                        '4. Copie o link e cole aqui',
+                        style: TextStyle(color: Colors.white54, fontSize: 12, height: 1.5),
+                      ),
+                    ],
+                  ),
                 ),
               ] else ...[
                 const _Label('Conteúdo *'),
