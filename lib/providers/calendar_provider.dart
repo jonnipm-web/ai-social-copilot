@@ -23,14 +23,22 @@ class CalendarNotifier extends StateNotifier<AsyncValue<CalendarItem?>> {
 
   Future<void> updateStatus(String id, String status) async {
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() async {
-      return _service.updateStatus(id, status);
-    });
+    try {
+      await _service.updateStatus(id, status);
+      state = const AsyncValue.data(null);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
   }
 
   Future<void> delete(String id) async {
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() => _service.delete(id));
+    try {
+      await _service.delete(id);
+      state = const AsyncValue.data(null);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
   }
 }
 
