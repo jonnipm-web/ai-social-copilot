@@ -4,7 +4,7 @@ class AppConstants {
   static const appName = 'AI Social Copilot';
   static const minTextLength = 10;
   static const maxTextLength = 5000;
-  static const freeTierLimit = 5;
+  static const freeTierLimit = 9999;
   static const maxBodyWidth = 700.0;
 
   // Rotas
