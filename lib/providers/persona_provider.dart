@@ -35,7 +35,12 @@ class PersonaNotifier extends StateNotifier<AsyncValue<Persona?>> {
 
   Future<void> delete(String id) async {
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() => _service.delete(id));
+    try {
+      await _service.delete(id);
+      state = const AsyncValue.data(null);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
   }
 }
 
