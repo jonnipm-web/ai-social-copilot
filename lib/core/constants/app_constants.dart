@@ -34,15 +34,22 @@ class AppConstants {
   static const routeContentNew     = '/content/new';
   static const routeContentEdit    = '/content/:id/edit';
   static const routeCalendar       = '/calendar';
-  static const routeAdmin          = '/admin';
+  static const routeAdmin             = '/admin';
+  static const routeKnowledge         = '/knowledge';
+  static const routeKnowledgeNew      = '/knowledge/new';
+  static const routeKnowledgeEdit     = '/knowledge/:id/edit';
+  static const routeKnowledgeAnalysis = '/knowledge/:id/analysis';
 
   // Tabelas Supabase
-  static const tablePostGenerations = 'post_generations';
-  static const tableProfiles        = 'profiles';
-  static const tablePersonas        = 'personas';
-  static const tableContentItems    = 'content_items';
-  static const tableCalendarItems   = 'calendar_items';
-  static const edgeFunctionImprove  = 'improve-post';
+  static const tablePostGenerations   = 'post_generations';
+  static const tableProfiles          = 'profiles';
+  static const tablePersonas          = 'personas';
+  static const tableContentItems      = 'content_items';
+  static const tableCalendarItems     = 'calendar_items';
+  static const tableKnowledgeItems    = 'knowledge_items';
+  static const tableKnowledgeAnalysis = 'knowledge_analysis';
+  static const edgeFunctionImprove    = 'improve-post';
+  static const edgeFunctionKnowledge  = 'extract-knowledge';
 
   // Admin
   static const adminEmail = 'jpaulo.start@gmail.com';

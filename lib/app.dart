@@ -18,6 +18,9 @@ import 'features/personas/screens/persona_form_screen.dart';
 import 'features/personas/screens/personas_screen.dart';
 import 'features/result/screens/result_screen.dart';
 import 'features/splash/splash_screen.dart';
+import 'features/knowledge/screens/knowledge_analysis_screen.dart';
+import 'features/knowledge/screens/knowledge_item_form_screen.dart';
+import 'features/knowledge/screens/knowledge_vault_screen.dart';
 import 'features/upgrade/screens/upgrade_screen.dart';
 
 final _router = GoRouter(
@@ -129,6 +132,30 @@ final _router = GoRouter(
     GoRoute(
       path: AppConstants.routeAdmin,
       builder: (_, __) => const AdminPanelScreen(),
+    ),
+
+    // ── Knowledge Vault ────────────────────────────────────────
+    GoRoute(
+      path: AppConstants.routeKnowledge,
+      builder: (_, __) => const KnowledgeVaultScreen(),
+    ),
+    GoRoute(
+      path: AppConstants.routeKnowledgeNew,
+      builder: (_, __) => const KnowledgeItemFormScreen(),
+    ),
+    GoRoute(
+      path: AppConstants.routeKnowledgeEdit,
+      builder: (context, state) {
+        final id = state.pathParameters['id']!;
+        return KnowledgeItemFormScreen(itemId: id);
+      },
+    ),
+    GoRoute(
+      path: AppConstants.routeKnowledgeAnalysis,
+      builder: (context, state) {
+        final id = state.pathParameters['id']!;
+        return KnowledgeAnalysisScreen(itemId: id);
+      },
     ),
   ],
 );
