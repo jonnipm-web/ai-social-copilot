@@ -45,8 +45,12 @@ class Profile {
       role:         map['role'] as String? ?? 'free',
       monthlyLimit: map['monthly_limit'] as int? ?? 5,
       isActive:     map['is_active'] as bool? ?? true,
-      createdAt:    DateTime.parse(map['created_at'] as String),
-      updatedAt:    DateTime.parse(map['updated_at'] as String),
+      createdAt:    map['created_at'] != null
+          ? DateTime.parse(map['created_at'] as String)
+          : DateTime.now(),
+      updatedAt:    map['updated_at'] != null
+          ? DateTime.parse(map['updated_at'] as String)
+          : DateTime.now(),
     );
   }
 

@@ -18,7 +18,7 @@ class AppDrawer extends ConsumerWidget {
       backgroundColor: const Color(0xFF0F0F1A),
       child: profileAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error:   (_, __) => const SizedBox.shrink(),
+        error:   (_, __) => _DrawerContent(profile: null),
         data:    (profile) => _DrawerContent(profile: profile),
       ),
     );
