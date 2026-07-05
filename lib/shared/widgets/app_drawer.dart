@@ -137,6 +137,12 @@ class _DrawerContent extends ConsumerWidget {
                   locked: !isPro && !isAdmin,
                 ),
                 _NavItem(
+                  icon: Icons.auto_stories_rounded,
+                  label: 'Cofre de Conhecimento',
+                  route: AppConstants.routeKnowledge,
+                  current: current,
+                ),
+                _NavItem(
                   icon: Icons.history_rounded,
                   label: 'Histórico',
                   route: AppConstants.routeHistory,
