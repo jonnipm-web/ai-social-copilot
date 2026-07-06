@@ -143,6 +143,12 @@ class _DrawerContent extends ConsumerWidget {
                   current: current,
                 ),
                 _NavItem(
+                  icon: Icons.campaign_rounded,
+                  label: 'Campanhas',
+                  route: AppConstants.routeCampaigns,
+                  current: current,
+                ),
+                _NavItem(
                   icon: Icons.history_rounded,
                   label: 'Histórico',
                   route: AppConstants.routeHistory,

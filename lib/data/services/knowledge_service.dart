@@ -151,15 +151,24 @@ class KnowledgeService {
         scoreAmazonKdp:           _int(aiData['score_amazon_kdp']),
         scoreLinkedin:            _int(aiData['score_linkedin']),
         scoreSocial:              _int(aiData['score_social']),
+        scoreOpportunity:         _int(aiData['score_opportunity']),
+        scoreHotmart:             _int(aiData['score_hotmart']),
+        scoreShopify:             _int(aiData['score_shopify']),
         scoreDetails:             _map(aiData['score_details']),
+        hotmartData:              _map(aiData['hotmart_data']),
+        shopifyData:              _map(aiData['shopify_data']),
+        personaTraining:          _map(aiData['persona_training']),
         createdAt:                DateTime.now(),
         updatedAt:                DateTime.now(),
       );
 
       final saved = await saveAnalysis(analysis);
 
-      // Marca como analisado
-      await update(item.id, {'status': 'analyzed'});
+      // Marca como analisado e salva opportunity_score no item
+      await update(item.id, {
+        'status': 'analyzed',
+        'opportunity_score': _int(aiData['score_opportunity']),
+      });
 
       return saved;
     } catch (e) {

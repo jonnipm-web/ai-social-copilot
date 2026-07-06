@@ -39,6 +39,10 @@ class AppConstants {
   static const routeKnowledgeNew      = '/knowledge/new';
   static const routeKnowledgeEdit     = '/knowledge/:id/edit';
   static const routeKnowledgeAnalysis = '/knowledge/:id/analysis';
+  static const routeKnowledgeStrategy = '/knowledge/:id/strategy';
+  static const routeCampaigns          = '/campaigns';
+  static const routeCampaignNew        = '/campaigns/new';
+  static const routeCampaignDetail     = '/campaigns/:id';
 
   // Tabelas Supabase
   static const tablePostGenerations   = 'post_generations';
@@ -47,9 +51,15 @@ class AppConstants {
   static const tableContentItems      = 'content_items';
   static const tableCalendarItems     = 'calendar_items';
   static const tableKnowledgeItems    = 'knowledge_items';
-  static const tableKnowledgeAnalysis = 'knowledge_analysis';
-  static const edgeFunctionImprove    = 'improve-post';
-  static const edgeFunctionKnowledge  = 'extract-knowledge';
+  static const tableKnowledgeAnalysis  = 'knowledge_analysis';
+  static const tableKnowledgeStrategies = 'knowledge_strategies';
+  static const tableCampaigns          = 'campaigns';
+  static const tableCampaignCalendar   = 'campaign_calendar';
+  static const edgeFunctionImprove     = 'improve-post';
+  static const edgeFunctionKnowledge   = 'extract-knowledge';
+  static const edgeFunctionStrategy    = 'generate-strategy';
+  static const edgeFunctionCampaign    = 'generate-campaign';
+  static const edgeFunctionProcessFile = 'process-file';
 
   // Admin
   static const adminEmail = 'jpaulo.start@gmail.com';

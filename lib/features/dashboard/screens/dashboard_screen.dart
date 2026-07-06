@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../providers/calendar_provider.dart';
+import '../../../providers/campaign_provider.dart';
 import '../../../providers/content_provider.dart';
+import '../../../providers/knowledge_provider.dart';
 import '../../../providers/persona_provider.dart';
 import '../../../providers/post_provider.dart';
 import '../../../providers/profile_provider.dart';
@@ -111,6 +113,26 @@ class DashboardScreen extends ConsumerWidget {
                             icon: Icons.history_rounded,
                             label: 'Histórico',
                             onTap: () => context.push(AppConstants.routeHistory),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _ShortcutCard(
+                            icon: Icons.auto_stories_rounded,
+                            label: 'Cofre',
+                            onTap: () => context.go(AppConstants.routeKnowledge),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _ShortcutCard(
+                            icon: Icons.campaign_rounded,
+                            label: 'Campanhas',
+                            onTap: () => context.go(AppConstants.routeCampaigns),
                           ),
                         ),
                       ],
@@ -347,34 +369,72 @@ class _AdminStats extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final usersAsync   = ref.watch(allProfilesProvider);
+    final usersAsync    = ref.watch(allProfilesProvider);
     final personasAsync = ref.watch(personasProvider);
-    final contentAsync = ref.watch(contentItemsProvider);
+    final contentAsync  = ref.watch(contentItemsProvider);
+    final knowledgeAsync = ref.watch(knowledgeItemsProvider);
+    final campaignsAsync = ref.watch(campaignsProvider);
 
-    return Row(
+    return Column(
       children: [
-        Expanded(
-          child: _StatTile(
-            label: 'Usuários',
-            value: usersAsync.valueOrNull?.length.toString() ?? '—',
-            icon: Icons.people_rounded,
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: _StatTile(
+                label: 'Usuários',
+                value: usersAsync.valueOrNull?.length.toString() ?? '—',
+                icon: Icons.people_rounded,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _StatTile(
+                label: 'Personas',
+                value: personasAsync.valueOrNull?.length.toString() ?? '—',
+                icon: Icons.person_pin_rounded,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _StatTile(
+                label: 'Conteúdos',
+                value: contentAsync.valueOrNull?.length.toString() ?? '—',
+                icon: Icons.library_books_rounded,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _StatTile(
-            label: 'Personas',
-            value: personasAsync.valueOrNull?.length.toString() ?? '—',
-            icon: Icons.person_pin_rounded,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _StatTile(
-            label: 'Conteúdos',
-            value: contentAsync.valueOrNull?.length.toString() ?? '—',
-            icon: Icons.library_books_rounded,
-          ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: _StatTile(
+                label: 'Cofre',
+                value: knowledgeAsync.valueOrNull?.length.toString() ?? '—',
+                icon: Icons.auto_stories_rounded,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _StatTile(
+                label: 'Campanhas',
+                value: campaignsAsync.valueOrNull?.length.toString() ?? '—',
+                icon: Icons.campaign_rounded,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _StatTile(
+                label: 'Analisados',
+                value: knowledgeAsync.valueOrNull
+                        ?.where((i) => i.status == 'analyzed')
+                        .length
+                        .toString() ??
+                    '—',
+                icon: Icons.analytics_rounded,
+              ),
+            ),
+          ],
         ),
       ],
     );
