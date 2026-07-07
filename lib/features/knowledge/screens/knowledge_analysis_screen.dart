@@ -309,6 +309,8 @@ class _ActionButtons extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final personas = ref.watch(personasProvider).valueOrNull ?? [];
+
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -334,15 +336,13 @@ class _ActionButtons extends ConsumerWidget {
           icon:  Icons.person_pin_rounded,
           label: 'Treinar Persona',
           color: const Color(0xFFFF9800),
-          onTap: () => _trainPersona(context, ref),
+          onTap: () => _trainPersona(context, ref, personas),
         ),
       ],
     );
   }
 
-  Future<void> _trainPersona(BuildContext context, WidgetRef ref) async {
-    final personasAsync = ref.read(personasProvider);
-    final personas = personasAsync.valueOrNull ?? [];
+  Future<void> _trainPersona(BuildContext context, WidgetRef ref, List personas) async {
 
     if (personas.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
