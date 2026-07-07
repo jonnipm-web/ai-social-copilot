@@ -37,6 +37,28 @@ O JSON deve ter exatamente esta estrutura:
   "score_amazon_kdp": 45,
   "score_linkedin": 80,
   "score_social": 70,
+  "score_opportunity": 82,
+  "score_hotmart": 75,
+  "score_shopify": 60,
+  "hotmart_data": {
+    "product_name": "nome sugerido para o produto digital",
+    "promise": "promessa principal do produto",
+    "price_range": "R$ 97 - R$ 297",
+    "format": "ebook/curso/mentoria/comunidade",
+    "upsell": "sugestão de upsell"
+  },
+  "shopify_data": {
+    "product_name": "nome sugerido para o produto físico/digital",
+    "short_description": "descrição curta em 1 frase",
+    "categories": ["categoria 1", "categoria 2"],
+    "price_range": "R$ 29 - R$ 97"
+  },
+  "persona_training": {
+    "tone": "tom de voz (ex: educativo, inspirador, direto)",
+    "vocabulary": ["palavra 1", "palavra 2", "até 5 palavras-chave do vocabulário"],
+    "values": ["valor 1", "valor 2", "até 3 valores centrais"],
+    "communication_style": "estilo de comunicação em 1 frase"
+  },
   "score_details": {
     "seo": {
       "strengths": ["ponto forte 1", "ponto forte 2"],
@@ -66,7 +88,10 @@ O JSON deve ter exatamente esta estrutura:
   }
 }
 
-Scores são inteiros de 0 a 100.
+Todos os scores são inteiros de 0 a 100.
+score_opportunity avalia: tamanho de mercado, intensidade da dor, potencial de monetização, SEO e recorrência.
+score_hotmart avalia potencial como produto digital (ebook, curso, mentoria).
+score_shopify avalia potencial como produto e-commerce.
 Retorne apenas o JSON. Nenhum texto antes ou depois.`;
 
 // ── Fetch content from a URL ──────────────────────────────────
@@ -169,10 +194,16 @@ serve(async (req) => {
     let content: string = body.content ?? "";
     const sourceUrl: string | null = body.source_url ?? null;
 
-    // If a source URL is provided, fetch content from it
-    if (sourceUrl && sourceUrl.startsWith("http")) {
+    // Detect URL: use source_url if provided, otherwise check if content itself is a bare URL
+    const trimmedContent = content.trim();
+    const urlToFetch = sourceUrl ??
+      (trimmedContent.startsWith("http") && !trimmedContent.includes(" ") && !trimmedContent.includes("\n")
+        ? trimmedContent
+        : null);
+
+    if (urlToFetch) {
       try {
-        content = await fetchUrlContent(sourceUrl);
+        content = await fetchUrlContent(urlToFetch);
       } catch (fetchErr) {
         return new Response(
           JSON.stringify({ error: String(fetchErr instanceof Error ? fetchErr.message : fetchErr) }),
@@ -207,7 +238,7 @@ serve(async (req) => {
           { role: "user", content: userMessage },
         ],
         temperature: 0.5,
-        max_tokens: 3000,
+        max_tokens: 4000,
       }),
     });
 

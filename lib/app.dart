@@ -18,9 +18,13 @@ import 'features/personas/screens/persona_form_screen.dart';
 import 'features/personas/screens/personas_screen.dart';
 import 'features/result/screens/result_screen.dart';
 import 'features/splash/splash_screen.dart';
+import 'features/campaigns/screens/campaign_builder_screen.dart';
+import 'features/campaigns/screens/campaign_detail_screen.dart';
+import 'features/campaigns/screens/campaigns_screen.dart';
 import 'features/knowledge/screens/knowledge_analysis_screen.dart';
 import 'features/knowledge/screens/knowledge_item_form_screen.dart';
 import 'features/knowledge/screens/knowledge_vault_screen.dart';
+import 'features/knowledge/screens/strategy_screen.dart';
 import 'features/upgrade/screens/upgrade_screen.dart';
 
 final _router = GoRouter(
@@ -155,6 +159,33 @@ final _router = GoRouter(
       builder: (context, state) {
         final id = state.pathParameters['id']!;
         return KnowledgeAnalysisScreen(itemId: id);
+      },
+    ),
+    GoRoute(
+      path: AppConstants.routeKnowledgeStrategy,
+      builder: (context, state) {
+        final id = state.pathParameters['id']!;
+        return StrategyScreen(itemId: id);
+      },
+    ),
+
+    // ── Campaigns ──────────────────────────────────────────────
+    GoRoute(
+      path: AppConstants.routeCampaigns,
+      builder: (_, __) => const CampaignsScreen(),
+    ),
+    GoRoute(
+      path: AppConstants.routeCampaignNew,
+      builder: (context, state) {
+        final itemId = state.extra as String? ?? '';
+        return CampaignBuilderScreen(itemId: itemId);
+      },
+    ),
+    GoRoute(
+      path: AppConstants.routeCampaignDetail,
+      builder: (context, state) {
+        final id = state.pathParameters['id']!;
+        return CampaignDetailScreen(campaignId: id);
       },
     ),
   ],

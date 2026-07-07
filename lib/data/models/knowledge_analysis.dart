@@ -24,7 +24,13 @@ class KnowledgeAnalysis {
   final int scoreAmazonKdp;
   final int scoreLinkedin;
   final int scoreSocial;
+  final int scoreOpportunity;
+  final int scoreHotmart;
+  final int scoreShopify;
   final Map<String, dynamic> scoreDetails;
+  final Map<String, dynamic> hotmartData;
+  final Map<String, dynamic> shopifyData;
+  final Map<String, dynamic> personaTraining;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -54,7 +60,13 @@ class KnowledgeAnalysis {
     this.scoreAmazonKdp       = 0,
     this.scoreLinkedin        = 0,
     this.scoreSocial          = 0,
+    this.scoreOpportunity     = 0,
+    this.scoreHotmart         = 0,
+    this.scoreShopify         = 0,
     this.scoreDetails         = const {},
+    this.hotmartData          = const {},
+    this.shopifyData          = const {},
+    this.personaTraining      = const {},
     required this.createdAt,
     required this.updatedAt,
   });
@@ -98,7 +110,13 @@ class KnowledgeAnalysis {
       scoreAmazonKdp:           (map['score_amazon_kdp'] as int?) ?? 0,
       scoreLinkedin:            (map['score_linkedin'] as int?) ?? 0,
       scoreSocial:              (map['score_social'] as int?) ?? 0,
+      scoreOpportunity:         (map['score_opportunity'] as int?) ?? 0,
+      scoreHotmart:             (map['score_hotmart'] as int?) ?? 0,
+      scoreShopify:             (map['score_shopify'] as int?) ?? 0,
       scoreDetails:             _parseMap(map['score_details']),
+      hotmartData:              _parseMap(map['hotmart_data']),
+      shopifyData:              _parseMap(map['shopify_data']),
+      personaTraining:          _parseMap(map['persona_training']),
       createdAt:                map['created_at'] != null
           ? DateTime.parse(map['created_at'] as String)
           : DateTime.now(),
@@ -133,6 +151,12 @@ class KnowledgeAnalysis {
     'score_amazon_kdp':       scoreAmazonKdp,
     'score_linkedin':         scoreLinkedin,
     'score_social':           scoreSocial,
+    'score_opportunity':      scoreOpportunity,
+    'score_hotmart':          scoreHotmart,
+    'score_shopify':          scoreShopify,
     'score_details':          scoreDetails,
+    'hotmart_data':           hotmartData,
+    'shopify_data':           shopifyData,
+    'persona_training':       personaTraining,
   };
 }

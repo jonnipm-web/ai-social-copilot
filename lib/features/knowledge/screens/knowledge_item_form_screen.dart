@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../data/models/knowledge_item.dart';
+import '../../../data/services/file_import_service.dart';
 import '../../../providers/knowledge_provider.dart';
 
 class KnowledgeItemFormScreen extends ConsumerStatefulWidget {
@@ -29,6 +30,8 @@ class _KnowledgeItemFormScreenState
   String _language   = 'pt-BR';
   bool   _loading    = false;
   bool   _init       = false;
+  bool   _importing  = false;
+  String? _importedFileName;
 
   KnowledgeItem? _existing;
 
@@ -74,6 +77,16 @@ class _KnowledgeItemFormScreenState
     final content = _sourceType == 'url'
         ? _urlCtrl.text.trim()
         : _contentCtrl.text.trim();
+
+    if (content.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Importe ou cole o conteúdo antes de salvar.'),
+          backgroundColor: Color(0xFFF44336),
+        ),
+      );
+      return;
+    }
 
     setState(() => _loading = true);
 
@@ -155,7 +168,9 @@ class _KnowledgeItemFormScreenState
               // ── Tipo de fonte ────────────────────────────────
               const _Label('Tipo de fonte'),
               const SizedBox(height: 8),
-              Row(
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
                 children: [
                   _SourceTypeButton(
                     icon:  Icons.edit_note_rounded,
@@ -164,11 +179,17 @@ class _KnowledgeItemFormScreenState
                     current: _sourceType,
                     onTap: (v) => setState(() => _sourceType = v),
                   ),
-                  const SizedBox(width: 8),
                   _SourceTypeButton(
                     icon:  Icons.link_rounded,
                     label: 'URL',
                     value: 'url',
+                    current: _sourceType,
+                    onTap: (v) => setState(() => _sourceType = v),
+                  ),
+                  _SourceTypeButton(
+                    icon:  Icons.upload_file_rounded,
+                    label: 'Arquivo',
+                    value: 'file',
                     current: _sourceType,
                     onTap: (v) => setState(() => _sourceType = v),
                   ),
@@ -190,7 +211,22 @@ class _KnowledgeItemFormScreenState
               const SizedBox(height: 20),
 
               // ── Conteúdo ─────────────────────────────────────
-              if (_sourceType == 'url') ...[
+              if (_sourceType == 'file') ...[
+                const _Label('Importar Arquivo (PDF, DOCX, TXT)'),
+                const SizedBox(height: 8),
+                _FileImportSection(
+                  importing:        _importing,
+                  importedFileName: _importedFileName,
+                  contentCtrl:      _contentCtrl,
+                  titleCtrl:        _titleCtrl,
+                  onImport: (fileName) => setState(() {
+                    _importedFileName = fileName;
+                    _importing = false;
+                  }),
+                  onImporting: () => setState(() => _importing = true),
+                  onError: () => setState(() => _importing = false),
+                ),
+              ] else if (_sourceType == 'url') ...[
                 const _Label('URL do conteúdo *'),
                 const SizedBox(height: 8),
                 _Field(
@@ -380,6 +416,172 @@ class _Field extends StatelessWidget {
         errorStyle: const TextStyle(color: Color(0xFFF44336)),
       ),
     );
+  }
+}
+
+class _FileImportSection extends StatelessWidget {
+  const _FileImportSection({
+    required this.importing,
+    required this.importedFileName,
+    required this.contentCtrl,
+    required this.titleCtrl,
+    required this.onImport,
+    required this.onImporting,
+    required this.onError,
+  });
+
+  final bool                    importing;
+  final String?                 importedFileName;
+  final TextEditingController   contentCtrl;
+  final TextEditingController   titleCtrl;
+  final void Function(String)   onImport;
+  final VoidCallback            onImporting;
+  final VoidCallback            onError;
+
+  @override
+  Widget build(BuildContext context) {
+    if (importing) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A1A2E),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF6C63FF)),
+            ),
+            SizedBox(width: 12),
+            Text('Extraindo texto…', style: TextStyle(color: Colors.white54)),
+          ],
+        ),
+      );
+    }
+
+    if (importedFileName != null) {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFF4CAF50).withOpacity(0.08),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFF4CAF50).withOpacity(0.4)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.check_circle_rounded,
+                color: Color(0xFF4CAF50), size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    importedFileName!,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500),
+                  ),
+                  Text(
+                    '${contentCtrl.text.length} caracteres extraídos',
+                    style: const TextStyle(color: Colors.white38, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+            TextButton(
+              onPressed: () => _pickFile(context),
+              child: const Text('Trocar',
+                  style: TextStyle(color: Color(0xFF6C63FF), fontSize: 12)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: () => _pickFile(context),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1A1A2E),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                  color: const Color(0xFF6C63FF).withOpacity(0.3),
+                  style: BorderStyle.solid),
+            ),
+            child: const Column(
+              children: [
+                Icon(Icons.upload_file_rounded,
+                    color: Color(0xFF6C63FF), size: 40),
+                SizedBox(height: 8),
+                Text(
+                  'Clique para selecionar arquivo',
+                  style: TextStyle(
+                      color: Color(0xFF6C63FF),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'PDF, DOCX ou TXT',
+                  style: TextStyle(color: Colors.white38, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFF9800).withOpacity(0.08),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+                color: const Color(0xFFFF9800).withOpacity(0.25)),
+          ),
+          child: const Text(
+            'PDF deve ter texto selecionável (não imagem escaneada). Para melhores resultados, use TXT ou DOCX.',
+            style: TextStyle(color: Colors.white38, fontSize: 11, height: 1.4),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _pickFile(BuildContext context) async {
+    onImporting();
+    try {
+      final service = FileImportService();
+      final result  = await service.pickAndExtract();
+      if (result == null) {
+        onError();
+        return;
+      }
+      contentCtrl.text = result.text;
+      if (titleCtrl.text.trim().isEmpty) {
+        final name = result.fileName.replaceAll(RegExp(r'\.[^.]+$'), '');
+        titleCtrl.text = name;
+      }
+      onImport(result.fileName);
+    } catch (e) {
+      onError();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao importar: $e'),
+            backgroundColor: const Color(0xFFF44336),
+          ),
+        );
+      }
+    }
   }
 }
 

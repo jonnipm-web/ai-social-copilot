@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../data/models/knowledge_analysis.dart';
 import '../../../data/models/knowledge_item.dart';
 import '../../../providers/knowledge_provider.dart';
+import '../../../providers/persona_provider.dart';
 
 class KnowledgeAnalysisScreen extends ConsumerWidget {
   const KnowledgeAnalysisScreen({super.key, required this.itemId});
@@ -29,16 +32,29 @@ class KnowledgeAnalysisScreen extends ConsumerWidget {
           itemAsync.maybeWhen(
             data: (item) => item == null
                 ? const SizedBox.shrink()
-                : IconButton(
-                    icon: const Icon(Icons.auto_awesome_rounded),
-                    tooltip: 'Re-analisar',
-                    onPressed: () async {
-                      await ref
-                          .read(knowledgeAnalysisNotifierProvider.notifier)
-                          .analyze(item);
-                      ref.invalidate(knowledgeAnalysisProvider(itemId));
-                      ref.invalidate(knowledgeItemsProvider);
-                    },
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.rocket_launch_rounded),
+                        tooltip: 'Gerar Estratégia',
+                        onPressed: () => context.push(
+                          AppConstants.routeKnowledgeStrategy
+                              .replaceFirst(':id', item.id),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.auto_awesome_rounded),
+                        tooltip: 'Re-analisar',
+                        onPressed: () async {
+                          await ref
+                              .read(knowledgeAnalysisNotifierProvider.notifier)
+                              .analyze(item);
+                          ref.invalidate(knowledgeAnalysisProvider(itemId));
+                          ref.invalidate(knowledgeItemsProvider);
+                        },
+                      ),
+                    ],
                   ),
             orElse: () => const SizedBox.shrink(),
           ),
@@ -146,7 +162,17 @@ class _AnalysisContent extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
       children: [
         _ItemHeader(item: item),
+        const SizedBox(height: 12),
+
+        // Botões de ação
+        _ActionButtons(item: item, analysis: analysis),
         const SizedBox(height: 16),
+
+        // Opportunity Score
+        if (analysis.scoreOpportunity > 0) ...[
+          _OpportunityScoreCard(score: analysis.scoreOpportunity),
+          const SizedBox(height: 16),
+        ],
 
         if (analysis.summary != null) ...[
           _SectionTitle('Resumo'),
@@ -246,6 +272,22 @@ class _AnalysisContent extends StatelessWidget {
           const SizedBox(height: 12),
         ],
 
+        // Hotmart
+        if (analysis.scoreHotmart > 0 || analysis.hotmartData.isNotEmpty) ...[
+          _SectionTitle('Hotmart Engine'),
+          _HotmartCard(
+              score: analysis.scoreHotmart, data: analysis.hotmartData),
+          const SizedBox(height: 12),
+        ],
+
+        // Shopify
+        if (analysis.scoreShopify > 0 || analysis.shopifyData.isNotEmpty) ...[
+          _SectionTitle('Shopify Engine'),
+          _ShopifyCard(
+              score: analysis.scoreShopify, data: analysis.shopifyData),
+          const SizedBox(height: 12),
+        ],
+
         if (analysis.scoreDetails.isNotEmpty) ...[
           _SectionTitle('Detalhes por Canal'),
           _ScoreDetailsSection(analysis.scoreDetails),
@@ -256,6 +298,442 @@ class _AnalysisContent extends StatelessWidget {
 }
 
 // ── Common widgets ───────────────────────────────────────────
+
+// ── Action buttons ───────────────────────────────────────────
+
+class _ActionButtons extends ConsumerWidget {
+  const _ActionButtons({required this.item, required this.analysis});
+
+  final KnowledgeItem     item;
+  final KnowledgeAnalysis analysis;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        _ActionChip(
+          icon:  Icons.rocket_launch_rounded,
+          label: 'Gerar Estratégia',
+          color: const Color(0xFF6C63FF),
+          onTap: () => context.push(
+            AppConstants.routeKnowledgeStrategy.replaceFirst(':id', item.id),
+          ),
+        ),
+        _ActionChip(
+          icon:  Icons.campaign_rounded,
+          label: 'Criar Campanha',
+          color: const Color(0xFF00BCD4),
+          onTap: () => context.push(
+            AppConstants.routeCampaignNew,
+            extra: item.id,
+          ),
+        ),
+        _ActionChip(
+          icon:  Icons.person_pin_rounded,
+          label: 'Treinar Persona',
+          color: const Color(0xFFFF9800),
+          onTap: () => _trainPersona(context, ref),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _trainPersona(BuildContext context, WidgetRef ref) async {
+    final personasAsync = ref.read(personasProvider);
+    final personas = personasAsync.valueOrNull ?? [];
+
+    if (personas.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Crie uma Persona primeiro em Personas / Marcas.'),
+          backgroundColor: Color(0xFF1A1A2E),
+        ),
+      );
+      return;
+    }
+
+    if (!context.mounted) return;
+
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: const Color(0xFF1A1A2E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Treinar Persona',
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Selecione a persona que vai aprender com este conteúdo:',
+              style: TextStyle(color: Colors.white54, fontSize: 12),
+            ),
+            const SizedBox(height: 16),
+            ...personas.map(
+              (p) => ListTile(
+                leading: const Icon(Icons.person_pin_rounded,
+                    color: Color(0xFFFF9800)),
+                title: Text(p.name,
+                    style: const TextStyle(color: Colors.white)),
+                subtitle: p.niche != null
+                    ? Text(p.niche!,
+                        style: const TextStyle(
+                            color: Colors.white38, fontSize: 12))
+                    : null,
+                onTap: () => Navigator.pop(context, p.id),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+
+    if (selected == null || !context.mounted) return;
+
+    try {
+      await ref
+          .read(knowledgeServiceProvider)
+          .update(item.id, {'persona_id': selected});
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Persona vinculada! Ela agora aprende com este conteúdo.'),
+            backgroundColor: Color(0xFF4CAF50),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro: $e'),
+            backgroundColor: const Color(0xFFF44336),
+          ),
+        );
+      }
+    }
+  }
+}
+
+class _ActionChip extends StatelessWidget {
+  const _ActionChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String   label;
+  final Color    color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color.withOpacity(0.4)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 14),
+            const SizedBox(width: 6),
+            Text(label,
+                style: TextStyle(
+                    color: color,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Opportunity Score ────────────────────────────────────────
+
+class _OpportunityScoreCard extends StatelessWidget {
+  const _OpportunityScoreCard({required this.score});
+  final int score;
+
+  Color get _color {
+    if (score >= 80) return const Color(0xFF4CAF50);
+    if (score >= 60) return const Color(0xFFFF9800);
+    return const Color(0xFFF44336);
+  }
+
+  String get _label {
+    if (score >= 80) return 'Alta Oportunidade';
+    if (score >= 60) return 'Boa Oportunidade';
+    if (score >= 40) return 'Oportunidade Moderada';
+    return 'Baixa Oportunidade';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [_color.withOpacity(0.2), _color.withOpacity(0.05)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _color.withOpacity(0.4)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _color.withOpacity(0.15),
+              border: Border.all(color: _color, width: 2),
+            ),
+            child: Center(
+              child: Text(
+                '$score',
+                style: TextStyle(
+                    color: _color,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Opportunity Score',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                Text(_label,
+                    style: TextStyle(color: _color, fontSize: 12,
+                        fontWeight: FontWeight.w600)),
+                const SizedBox(height: 6),
+                LinearProgressIndicator(
+                  value: score / 100,
+                  backgroundColor: Colors.white12,
+                  valueColor: AlwaysStoppedAnimation<Color>(_color),
+                  minHeight: 4,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Hotmart Card ─────────────────────────────────────────────
+
+class _HotmartCard extends StatelessWidget {
+  const _HotmartCard({required this.score, required this.data});
+  final int                  score;
+  final Map<String, dynamic> data;
+
+  @override
+  Widget build(BuildContext context) {
+    const color = Color(0xFF6C63FF);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.07),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.storefront_rounded, color: color, size: 18),
+              const SizedBox(width: 8),
+              const Text('Hotmart',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700)),
+              const Spacer(),
+              if (score > 0) _ScoreBadge(score, color),
+            ],
+          ),
+          if (data.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            const Divider(color: Colors.white12, height: 1),
+            const SizedBox(height: 10),
+            ...{
+              'Produto':    data['product_name'],
+              'Promessa':   data['promise'],
+              'Formato':    data['format'],
+              'Preço':      data['price_range'],
+              'Upsell':     data['upsell'],
+            }.entries
+                .where((e) => e.value != null && e.value.toString().isNotEmpty)
+                .map((e) => _DataRow(e.key, e.value.toString())),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ── Shopify Card ─────────────────────────────────────────────
+
+class _ShopifyCard extends StatelessWidget {
+  const _ShopifyCard({required this.score, required this.data});
+  final int                  score;
+  final Map<String, dynamic> data;
+
+  @override
+  Widget build(BuildContext context) {
+    const color = Color(0xFF00BCD4);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.07),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.shopping_cart_rounded, color: color, size: 18),
+              const SizedBox(width: 8),
+              const Text('Shopify',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700)),
+              const Spacer(),
+              if (score > 0) _ScoreBadge(score, color),
+            ],
+          ),
+          if (data.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            const Divider(color: Colors.white12, height: 1),
+            const SizedBox(height: 10),
+            ...{
+              'Produto':   data['product_name'],
+              'Descrição': data['short_description'],
+              'Preço':     data['price_range'],
+            }.entries
+                .where((e) => e.value != null && e.value.toString().isNotEmpty)
+                .map((e) => _DataRow(e.key, e.value.toString())),
+            if (data['categories'] is List) ...[
+              const SizedBox(height: 4),
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: (data['categories'] as List)
+                    .map((c) => Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: color.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                                color: color.withOpacity(0.3)),
+                          ),
+                          child: Text(c.toString(),
+                              style: TextStyle(
+                                  color: color, fontSize: 11)),
+                        ))
+                    .toList(),
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ScoreBadge extends StatelessWidget {
+  const _ScoreBadge(this.score, this.color);
+  final int   score;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.4)),
+      ),
+      child: Text(
+        '$score/100',
+        style: TextStyle(
+            color: color, fontSize: 12, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+}
+
+class _DataRow extends StatelessWidget {
+  const _DataRow(this.label, this.value);
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 5),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 65,
+            child: Text('$label:',
+                style: const TextStyle(
+                    color: Colors.white38,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600)),
+          ),
+          Expanded(
+            child: Text(value,
+                style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Item header ──────────────────────────────────────────────
 
 class _ItemHeader extends StatelessWidget {
   const _ItemHeader({required this.item});
