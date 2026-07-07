@@ -27,7 +27,7 @@ dependencies:
   flutter_dotenv: ^5.1.0
 
   # File import (Smart Import Engine)
-  file_picker: ^5.5.0
+  file_picker: ^3.0.4
 
 dev_dependencies:
   flutter_test:
