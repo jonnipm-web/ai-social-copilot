@@ -31,6 +31,9 @@ jobs:
       - name: Adicionar suporte à plataforma Android
         run: flutter create --platforms android .
 
+      - name: Corrigir compatibilidade AGP 9+
+        run: echo "android.newDsl=false" >> android/gradle.properties
+
       - name: Instalar dependências
         run: flutter pub get
 
