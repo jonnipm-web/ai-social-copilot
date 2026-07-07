@@ -359,44 +359,47 @@ class _ActionButtons extends ConsumerWidget {
     final selected = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: const Color(0xFF1A1A2E),
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Treinar Persona',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'Selecione a persona que vai aprender com este conteúdo:',
-              style: TextStyle(color: Colors.white54, fontSize: 12),
-            ),
-            const SizedBox(height: 16),
-            ...personas.map(
-              (p) => ListTile(
-                leading: const Icon(Icons.person_pin_rounded,
-                    color: Color(0xFFFF9800)),
-                title: Text(p.name,
-                    style: const TextStyle(color: Colors.white)),
-                subtitle: p.niche != null
-                    ? Text(p.niche!,
-                        style: const TextStyle(
-                            color: Colors.white38, fontSize: 12))
-                    : null,
-                onTap: () => Navigator.pop(context, p.id),
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Treinar Persona',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold),
               ),
-            ),
-            const SizedBox(height: 8),
-          ],
+              const SizedBox(height: 4),
+              const Text(
+                'Selecione a persona que vai aprender com este conteúdo:',
+                style: TextStyle(color: Colors.white54, fontSize: 12),
+              ),
+              const SizedBox(height: 16),
+              ...personas.map(
+                (p) => ListTile(
+                  leading: const Icon(Icons.person_pin_rounded,
+                      color: Color(0xFFFF9800)),
+                  title: Text(p.name,
+                      style: const TextStyle(color: Colors.white)),
+                  subtitle: p.niche != null
+                      ? Text(p.niche!,
+                          style: const TextStyle(
+                              color: Colors.white38, fontSize: 12))
+                      : null,
+                  onTap: () => Navigator.pop(context, p.id),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );
