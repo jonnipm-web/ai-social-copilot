@@ -356,33 +356,26 @@ class _ActionButtons extends ConsumerWidget {
 
     if (!context.mounted) return;
 
-    final selected = await showModalBottomSheet<String>(
+    final selected = await showDialog<String>(
       context: context,
-      backgroundColor: const Color(0xFF1A1A2E),
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A2E),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Treinar Persona',
+          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        content: SizedBox(
+          width: 360,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Treinar Persona',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
-              const Text(
                 'Selecione a persona que vai aprender com este conteúdo:',
                 style: TextStyle(color: Colors.white54, fontSize: 12),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               ...personas.map(
                 (p) => ListTile(
                   leading: const Icon(Icons.person_pin_rounded,
@@ -394,13 +387,18 @@ class _ActionButtons extends ConsumerWidget {
                           style: const TextStyle(
                               color: Colors.white38, fontSize: 12))
                       : null,
-                  onTap: () => Navigator.pop(context, p.id),
+                  onTap: () => Navigator.pop(ctx, p.id),
                 ),
               ),
-              const SizedBox(height: 16),
             ],
           ),
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.white54)),
+          ),
+        ],
       ),
     );
 
