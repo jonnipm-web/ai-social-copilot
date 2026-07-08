@@ -33,23 +33,26 @@ jobs:
       - name: Adicionar suporte à plataforma Android
         run: flutter create --platforms android --project-name ai_social_copilot .
 
-      - name: Downgrade AGP para 8.7.3 (compativel com Flutter Gradle plugin)
+      - name: Fixar AGP para 8.11.1 (compativel com Flutter Gradle plugin)
         run: |
-          # Flutter gera settings.gradle.kts com AGP 9.x mas o Flutter Gradle plugin
-          # ainda nao suporta AGP 9 — fazemos downgrade para 8.7.3
           if [ -f android/settings.gradle.kts ]; then
-            sed -i 's/id("com.android.application") version "[^"]*"/id("com.android.application") version "8.9.1"/g' android/settings.gradle.kts
-            sed -i 's/id("com.android.library") version "[^"]*"/id("com.android.library") version "8.9.1"/g' android/settings.gradle.kts
+            sed -i 's/id("com.android.application") version "[^"]*"/id("com.android.application") version "8.11.1"/g' android/settings.gradle.kts
+            sed -i 's/id("com.android.library") version "[^"]*"/id("com.android.library") version "8.11.1"/g' android/settings.gradle.kts
             echo "=== settings.gradle.kts ===" && cat android/settings.gradle.kts
           fi
 
       - name: Instalar dependências
         run: flutter pub get
 
-      - name: Corrigir jcenter obsoleto no file_picker
+      - name: Corrigir file_picker 3.x para AGP 8.x (jcenter e namespace)
         run: |
-          find ~/.pub-cache -path "*/file_picker*/android/build.gradle" -exec \
-            sed -i 's/jcenter()/mavenCentral()/g' {} \;
+          find ~/.pub-cache -path "*/file_picker-3.0.4/android/build.gradle" | while read f; do
+            sed -i 's/jcenter()/mavenCentral()/g' "$f"
+            if ! grep -q 'namespace' "$f"; then
+              sed -i '/^android {/a\    namespace "com.mr.flutter.plugin.filepicker"' "$f"
+            fi
+            echo "=== $f ===" && cat "$f"
+          done
 
       - name: Build APK release
         run: flutter build apk --release
