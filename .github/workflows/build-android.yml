@@ -33,6 +33,16 @@ jobs:
       - name: Adicionar suporte à plataforma Android
         run: flutter create --platforms android --project-name ai_social_copilot .
 
+      - name: Downgrade AGP para 8.7.3 (compativel com Flutter Gradle plugin)
+        run: |
+          # Flutter gera settings.gradle.kts com AGP 9.x mas o Flutter Gradle plugin
+          # ainda nao suporta AGP 9 — fazemos downgrade para 8.7.3
+          if [ -f android/settings.gradle.kts ]; then
+            sed -i 's/id("com.android.application") version "[^"]*"/id("com.android.application") version "8.7.3"/g' android/settings.gradle.kts
+            sed -i 's/id("com.android.library") version "[^"]*"/id("com.android.library") version "8.7.3"/g' android/settings.gradle.kts
+            echo "=== settings.gradle.kts ===" && cat android/settings.gradle.kts
+          fi
+
       - name: Instalar dependências
         run: flutter pub get
 
