@@ -27,7 +27,7 @@ dependencies:
   flutter_dotenv: ^5.1.0
 
   # File import (Smart Import Engine)
-  file_picker: ^8.1.6
+  file_picker: ^3.0.4
 
 dev_dependencies:
   flutter_test:
@@ -40,7 +40,6 @@ dependency_overrides:
   app_links: ^7.0.0
   device_info_plus: ^13.0.0
   package_info_plus: ^10.0.0
-  win32: ^6.0.0
 
 flutter:
   uses-material-design: true

@@ -42,6 +42,11 @@ jobs:
       - name: Instalar dependências
         run: flutter pub get
 
+      - name: Corrigir jcenter obsoleto no file_picker
+        run: |
+          find ~/.pub-cache -path "*/file_picker*/android/build.gradle" -exec \
+            sed -i 's/jcenter()/mavenCentral()/g' {} \;
+
       - name: Build do APK
         run: flutter build apk --release
 
