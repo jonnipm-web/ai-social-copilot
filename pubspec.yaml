@@ -27,7 +27,10 @@ dependencies:
   flutter_dotenv: ^5.1.0
 
   # File import (Smart Import Engine)
-  file_picker: ^8.0.6
+  # Fixado em <5.3.2: versoes 5.3.2+ adicionam win32 ^5.x que conflita com
+  # device_info_plus ^13 e package_info_plus ^10 (que exigem win32 ^6.x).
+  # Versoes <5.3.2 usam v2 embedding e nao dependem de win32.
+  file_picker: ">=5.0.0 <5.3.2"
 
 dev_dependencies:
   flutter_test:
