@@ -42,9 +42,9 @@ jobs:
       - name: Instalar dependências
         run: flutter pub get
 
-      - name: Corrigir file_picker 3.x para AGP 8.x (jcenter e namespace)
+      - name: Corrigir file_picker para AGP 8.x (jcenter e namespace se necessario)
         run: |
-          find ~/.pub-cache -path "*/file_picker-3.0.4/android/build.gradle" | while read f; do
+          find ~/.pub-cache -path "*/file_picker-*/android/build.gradle" | while read f; do
             sed -i 's/jcenter()/mavenCentral()/g' "$f"
             if ! grep -q 'namespace' "$f"; then
               sed -i '/^android {/a\    namespace "com.mr.flutter.plugin.filepicker"' "$f"
