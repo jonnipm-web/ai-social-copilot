@@ -17,9 +17,10 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Configurar Flutter
+      - name: Configurar Flutter (versao estavel mais recente)
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.24.3'
           channel: stable
           cache: true
 
@@ -30,9 +31,6 @@ jobs:
 
       - name: Adicionar suporte à plataforma Android
         run: flutter create --platforms android .
-
-      - name: Corrigir compatibilidade AGP 9+
-        run: echo "android.newDsl=false" >> android/gradle.properties
 
       - name: Instalar dependências
         run: flutter pub get
