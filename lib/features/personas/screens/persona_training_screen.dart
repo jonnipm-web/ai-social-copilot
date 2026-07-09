@@ -90,7 +90,7 @@ class _TrainingContent extends StatelessWidget {
   List<String> _combinedUniqueVocabulary() {
     final all = <String>{};
     for (final t in trainings) {
-      all.addAll(t.vocabulary ?? []);
+      all.addAll(t.vocabularyJson);
     }
     return all.toList();
   }
@@ -98,7 +98,7 @@ class _TrainingContent extends StatelessWidget {
   List<String> _combinedUniqueValues() {
     final all = <String>{};
     for (final t in trainings) {
-      all.addAll(t.values ?? []);
+      all.addAll(t.brandValuesJson);
     }
     return all.toList();
   }
@@ -107,7 +107,7 @@ class _TrainingContent extends StatelessWidget {
     if (trainings.isEmpty) return null;
     final sorted = List<PersonaTraining>.from(trainings)
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    return sorted.first.toneProfile;
+    return sorted.first.toneProfileJson;
   }
 
   @override
@@ -422,7 +422,7 @@ class _TrainingItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final vocabulary = training.vocabulary ?? [];
+    final vocabulary = training.vocabularyJson;
     final tone = training.tone ?? '';
 
     return Dismissible(

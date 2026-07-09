@@ -45,12 +45,9 @@ class WebsiteAnalysisResultScreen extends ConsumerWidget {
               children: [
                 TextButton.icon(
                   onPressed: () {
-                    ref
-                        .read(websiteAnalyzerNotifierProvider.notifier)
-                        .saveToVault(analysis.id);
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Salvo no Cofre com sucesso!'),
+                        content: Text('Análise já salva no banco de dados!'),
                         backgroundColor: Colors.green,
                       ),
                     );
@@ -164,10 +161,10 @@ class _AnalysisContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final websiteScore = analysis.websiteScore ?? 0;
-    final adsenseScore = analysis.adsenseScore ?? 0;
-    final seoScore = analysis.seoScore ?? 0;
-    final monetizationScore = analysis.monetizationScore ?? 0;
+    final websiteScore = analysis.scoreWebsite;
+    final adsenseScore = analysis.scoreAdsense;
+    final seoScore = analysis.scoreSeo;
+    final monetizationScore = analysis.scoreMonetization;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -269,64 +266,64 @@ class _AnalysisContent extends StatelessWidget {
 
           const SizedBox(height: 8),
 
-          if (analysis.strengths != null && analysis.strengths!.isNotEmpty)
+          if (analysis.strengths.isNotEmpty)
             _ExpandableSection(
               title: 'Pontos Fortes',
               icon: Icons.thumb_up,
               iconColor: Colors.green,
               cardColor: cardColor,
               child: _BulletList(
-                items: analysis.strengths!,
+                items: analysis.strengths,
                 color: Colors.green,
               ),
             ),
 
-          if (analysis.strengths != null && analysis.strengths!.isNotEmpty)
+          if (analysis.strengths.isNotEmpty)
             const SizedBox(height: 8),
 
-          if (analysis.weaknesses != null && analysis.weaknesses!.isNotEmpty)
+          if (analysis.weaknesses.isNotEmpty)
             _ExpandableSection(
               title: 'Pontos Fracos',
               icon: Icons.thumb_down,
               iconColor: Colors.orange,
               cardColor: cardColor,
               child: _BulletList(
-                items: analysis.weaknesses!,
+                items: analysis.weaknesses,
                 color: Colors.orange,
               ),
             ),
 
-          if (analysis.weaknesses != null && analysis.weaknesses!.isNotEmpty)
+          if (analysis.weaknesses.isNotEmpty)
             const SizedBox(height: 8),
 
-          if (analysis.criticalIssues != null && analysis.criticalIssues!.isNotEmpty)
+          if (analysis.criticalIssues.isNotEmpty)
             _ExpandableSection(
               title: 'Problemas Críticos',
               icon: Icons.warning_amber,
               iconColor: Colors.red,
               cardColor: cardColor,
               child: _BulletList(
-                items: analysis.criticalIssues!,
+                items: analysis.criticalIssues,
                 color: Colors.red,
               ),
             ),
 
-          if (analysis.criticalIssues != null && analysis.criticalIssues!.isNotEmpty)
+          if (analysis.criticalIssues.isNotEmpty)
             const SizedBox(height: 8),
 
-          if (analysis.seoAnalysis != null && analysis.seoAnalysis!.isNotEmpty)
+          if (analysis.seoAnalysis.isNotEmpty)
             _ExpandableSection(
               title: 'Análise SEO',
               icon: Icons.search,
               iconColor: accent,
               cardColor: cardColor,
-              child: _MapContent(data: analysis.seoAnalysis!),
+              child: _MapContent(data: analysis.seoAnalysis),
             ),
 
-          if (analysis.seoAnalysis != null && analysis.seoAnalysis!.isNotEmpty)
+          if (analysis.seoAnalysis.isNotEmpty)
             const SizedBox(height: 8),
 
-          if (analysis.adsenseAnalysis != null && analysis.adsenseAnalysis!.isNotEmpty)
+          if (analysis.adsenseAnalysis.isNotEmpty)
             _ExpandableSection(
               title: 'Análise AdSense',
               icon: Icons.monetization_on,
@@ -335,90 +332,87 @@ class _AnalysisContent extends StatelessWidget {
               child: _AdsenseContent(analysis: analysis),
             ),
 
-          if (analysis.adsenseAnalysis != null && analysis.adsenseAnalysis!.isNotEmpty)
+          if (analysis.adsenseAnalysis.isNotEmpty)
             const SizedBox(height: 8),
 
-          if (analysis.quickWins != null && analysis.quickWins!.isNotEmpty)
+          if (analysis.quickWins.isNotEmpty)
             _ExpandableSection(
               title: 'Vitórias Rápidas',
               icon: Icons.bolt,
               iconColor: Colors.yellow,
               cardColor: cardColor,
               child: _BulletList(
-                items: analysis.quickWins!,
+                items: analysis.quickWins,
                 color: Colors.green,
                 bulletChar: '✓',
               ),
             ),
 
-          if (analysis.quickWins != null && analysis.quickWins!.isNotEmpty)
+          if (analysis.quickWins.isNotEmpty)
             const SizedBox(height: 8),
 
-          if (analysis.plan7Days != null && analysis.plan7Days!.isNotEmpty)
+          if (analysis.plan7Days.isNotEmpty)
             _ExpandableSection(
               title: 'Plano 7 Dias',
               icon: Icons.calendar_today,
               iconColor: primary,
               cardColor: cardColor,
-              child: _NumberedList(items: analysis.plan7Days!),
+              child: _NumberedList(items: analysis.plan7Days),
             ),
 
-          if (analysis.plan7Days != null && analysis.plan7Days!.isNotEmpty)
+          if (analysis.plan7Days.isNotEmpty)
             const SizedBox(height: 8),
 
-          if (analysis.plan30Days != null && analysis.plan30Days!.isNotEmpty)
+          if (analysis.plan30Days.isNotEmpty)
             _ExpandableSection(
               title: 'Plano 30 Dias',
               icon: Icons.date_range,
               iconColor: primary,
               cardColor: cardColor,
-              child: _NumberedList(items: analysis.plan30Days!),
+              child: _NumberedList(items: analysis.plan30Days),
             ),
 
-          if (analysis.plan30Days != null && analysis.plan30Days!.isNotEmpty)
+          if (analysis.plan30Days.isNotEmpty)
             const SizedBox(height: 8),
 
-          if (analysis.articleIdeas != null && analysis.articleIdeas!.isNotEmpty)
+          if (analysis.articleIdeas.isNotEmpty)
             _ExpandableSection(
               title: 'Ideias de Artigos',
               icon: Icons.article,
               iconColor: accent,
               cardColor: cardColor,
               child: _BulletList(
-                items: analysis.articleIdeas!,
+                items: analysis.articleIdeas,
                 color: accent,
               ),
             ),
 
-          if (analysis.articleIdeas != null && analysis.articleIdeas!.isNotEmpty)
+          if (analysis.articleIdeas.isNotEmpty)
             const SizedBox(height: 8),
 
-          if (analysis.monetizationOpportunities != null &&
-              analysis.monetizationOpportunities!.isNotEmpty)
+          if (analysis.monetizationOpportunities.isNotEmpty)
             _ExpandableSection(
               title: 'Oportunidades de Monetização',
               icon: Icons.attach_money,
               iconColor: Colors.green,
               cardColor: cardColor,
               child: _BulletList(
-                items: analysis.monetizationOpportunities!,
+                items: analysis.monetizationOpportunities,
                 color: Colors.green,
               ),
             ),
 
-          if (analysis.monetizationOpportunities != null &&
-              analysis.monetizationOpportunities!.isNotEmpty)
+          if (analysis.monetizationOpportunities.isNotEmpty)
             const SizedBox(height: 8),
 
-          if (analysis.commercialOpportunities != null &&
-              analysis.commercialOpportunities!.isNotEmpty)
+          if (analysis.commercialOpportunities.isNotEmpty)
             _ExpandableSection(
               title: 'Oportunidades Comerciais',
               icon: Icons.business_center,
               iconColor: Colors.amber,
               cardColor: cardColor,
               child: _BulletList(
-                items: analysis.commercialOpportunities!,
+                items: analysis.commercialOpportunities,
                 color: Colors.amber,
               ),
             ),
@@ -579,12 +573,18 @@ class _DiagnosticContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final mainTopics = () {
+      final raw = analysis.analysisJson['main_topics'];
+      if (raw is List) return raw.map((e) => e.toString()).toList();
+      return <String>[];
+    }();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (analysis.diagnosticTitle != null) ...[
+        if (analysis.title != null) ...[
           Text(
-            analysis.diagnosticTitle!,
+            analysis.title!,
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
@@ -593,9 +593,9 @@ class _DiagnosticContent extends StatelessWidget {
           ),
           const SizedBox(height: 8),
         ],
-        if (analysis.diagnosticDescription != null) ...[
+        if (analysis.description != null) ...[
           Text(
-            analysis.diagnosticDescription!,
+            analysis.description!,
             style: TextStyle(
               color: Colors.white.withOpacity(0.8),
               fontSize: 14,
@@ -604,7 +604,7 @@ class _DiagnosticContent extends StatelessWidget {
           ),
           const SizedBox(height: 10),
         ],
-        if (analysis.mainTopics != null && analysis.mainTopics!.isNotEmpty) ...[
+        if (mainTopics.isNotEmpty) ...[
           Text(
             'Tópicos Principais:',
             style: TextStyle(
@@ -617,7 +617,7 @@ class _DiagnosticContent extends StatelessWidget {
           Wrap(
             spacing: 8,
             runSpacing: 6,
-            children: analysis.mainTopics!
+            children: mainTopics
                 .map(
                   (topic) => Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -825,7 +825,11 @@ class _AdsenseContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final adsenseData = analysis.adsenseAnalysis ?? {};
+    final adsenseData = analysis.adsenseAnalysis;
+
+    final hasPrivacyPolicy = adsenseData['has_privacy_policy'] == true;
+    final hasAboutPage = adsenseData['has_about_page'] == true;
+    final hasContactPage = adsenseData['has_contact'] == true;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -835,17 +839,17 @@ class _AdsenseContent extends StatelessWidget {
           children: [
             _PolicyIndicator(
               label: 'Política de Privacidade',
-              hasIt: analysis.hasPrivacyPolicy ?? false,
+              hasIt: hasPrivacyPolicy,
             ),
             const SizedBox(width: 8),
             _PolicyIndicator(
               label: 'Sobre',
-              hasIt: analysis.hasAboutPage ?? false,
+              hasIt: hasAboutPage,
             ),
             const SizedBox(width: 8),
             _PolicyIndicator(
               label: 'Contato',
-              hasIt: analysis.hasContactPage ?? false,
+              hasIt: hasContactPage,
             ),
           ],
         ),

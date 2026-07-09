@@ -226,9 +226,9 @@ class _MetricCard extends StatelessWidget {
         : 0.0;
     final convRate = impressions > 0 ? (metric.leads / impressions * 100) : 0.0;
 
-    final dateStr = '${metric.date.day.toString().padLeft(2, '0')}/'
-        '${metric.date.month.toString().padLeft(2, '0')}/'
-        '${metric.date.year}';
+    final dateStr = '${metric.createdAt.day.toString().padLeft(2, '0')}/'
+        '${metric.createdAt.month.toString().padLeft(2, '0')}/'
+        '${metric.createdAt.year}';
 
     return Dismissible(
       key: ValueKey(metric.id),
@@ -505,20 +505,24 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
     setState(() => _saving = true);
 
     try {
-      await ref.read(performanceNotifierProvider.notifier).create(
-            platform: _selectedPlatform!,
-            date: DateTime.now(),
-            impressions: _parseInt(_impressoesCtrl),
-            clicks: _parseInt(_cliquesCtrl),
-            likes: _parseInt(_curtidasCtrl),
-            comments: _parseInt(_comentariosCtrl),
-            shares: _parseInt(_compartilhamentosCtrl),
-            saves: _parseInt(_salvamentosCtrl),
-            leads: _parseInt(_leadsCtrl),
-            sales: _parseInt(_vendasCtrl),
-            revenue: _parseDouble(_receitaCtrl),
-            notes: _notasCtrl.text.trim().isEmpty ? null : _notasCtrl.text.trim(),
+      final metrics = PerformanceMetrics(
+            id:             '',
+            userId:         '',
+            platform:       _selectedPlatform!,
+            impressions:    _parseInt(_impressoesCtrl),
+            clicks:         _parseInt(_cliquesCtrl),
+            likes:          _parseInt(_curtidasCtrl),
+            comments:       _parseInt(_comentariosCtrl),
+            shares:         _parseInt(_compartilhamentosCtrl),
+            saves:          _parseInt(_salvamentosCtrl),
+            leads:          _parseInt(_leadsCtrl),
+            sales:          _parseInt(_vendasCtrl),
+            revenue:        _parseDouble(_receitaCtrl),
+            notes:          _notasCtrl.text.trim().isEmpty ? null : _notasCtrl.text.trim(),
+            createdAt:      DateTime.now(),
+            updatedAt:      DateTime.now(),
           );
+      await ref.read(performanceNotifierProvider.notifier).create(metrics);
 
       if (mounted) {
         Navigator.pop(context);
