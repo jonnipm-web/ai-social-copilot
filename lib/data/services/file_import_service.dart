@@ -26,7 +26,7 @@ class FileImportService {
   static const _supportedExtensions = ['pdf', 'docx', 'txt'];
 
   Future<FileImportResult?> pickAndExtract() async {
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker().pickFiles(
       type: FileType.custom,
       allowedExtensions: _supportedExtensions,
       withData: true,
