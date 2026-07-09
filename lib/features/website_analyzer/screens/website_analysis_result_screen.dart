@@ -957,7 +957,7 @@ class _BottomActionBar extends StatelessWidget {
                 color: accent,
                 onTap: () => context.go(
                   '/campaigns/new',
-                  extra: {'websiteUrl': analysis.url},
+                  extra: analysis.url,
                 ),
               ),
             ),
@@ -967,9 +967,11 @@ class _BottomActionBar extends StatelessWidget {
                 label: 'Plano SEO',
                 icon: Icons.search,
                 color: Colors.green,
-                onTap: () => context.go(
-                  '/seo-plan/new',
-                  extra: {'analysisId': analysis.id},
+                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Plano SEO — disponível na Fase 9'),
+                    backgroundColor: Colors.green,
+                  ),
                 ),
               ),
             ),
@@ -979,9 +981,11 @@ class _BottomActionBar extends StatelessWidget {
                 label: 'Plano AdSense',
                 icon: Icons.monetization_on,
                 color: Colors.amber,
-                onTap: () => context.go(
-                  '/adsense-plan/new',
-                  extra: {'analysisId': analysis.id},
+                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Plano AdSense — disponível na Fase 9'),
+                    backgroundColor: Colors.amber,
+                  ),
                 ),
               ),
             ),
