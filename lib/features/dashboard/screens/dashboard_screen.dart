@@ -137,6 +137,26 @@ class DashboardScreen extends ConsumerWidget {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _ShortcutCard(
+                            icon: Icons.language_rounded,
+                            label: 'Website\nAnalyzer',
+                            onTap: () => context.go(AppConstants.routeWebsiteAnalyzer),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _ShortcutCard(
+                            icon: Icons.bar_chart_rounded,
+                            label: 'Performance',
+                            onTap: () => context.go(AppConstants.routePerformance),
+                          ),
+                        ),
+                      ],
+                    ),
 
                     // Painel Admin
                     if (isAdmin) ...[
@@ -402,6 +422,22 @@ class _AdminStats extends ConsumerWidget {
                 icon: Icons.library_books_rounded,
               ),
             ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: _StatTile(
+                label: 'Sites',
+                value: '—',
+                icon: Icons.language_rounded,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(child: const SizedBox()),
+            const SizedBox(width: 8),
+            Expanded(child: const SizedBox()),
           ],
         ),
         const SizedBox(height: 8),

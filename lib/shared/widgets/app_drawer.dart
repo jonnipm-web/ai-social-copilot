@@ -149,6 +149,18 @@ class _DrawerContent extends ConsumerWidget {
                   current: current,
                 ),
                 _NavItem(
+                  icon: Icons.language_rounded,
+                  label: 'Website Analyzer',
+                  route: AppConstants.routeWebsiteAnalyzer,
+                  current: current,
+                ),
+                _NavItem(
+                  icon: Icons.bar_chart_rounded,
+                  label: 'Performance',
+                  route: AppConstants.routePerformance,
+                  current: current,
+                ),
+                _NavItem(
                   icon: Icons.history_rounded,
                   label: 'Histórico',
                   route: AppConstants.routeHistory,

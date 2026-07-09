@@ -43,6 +43,10 @@ class AppConstants {
   static const routeCampaigns          = '/campaigns';
   static const routeCampaignNew        = '/campaigns/new';
   static const routeCampaignDetail     = '/campaigns/:id';
+  static const routeWebsiteAnalyzer       = '/website-analyzer';
+  static const routeWebsiteAnalysisResult = '/website-analyzer/:id';
+  static const routePerformance           = '/performance';
+  static const routePersonaTraining       = '/personas/:id/training';
 
   // Tabelas Supabase
   static const tablePostGenerations   = 'post_generations';
@@ -55,6 +59,10 @@ class AppConstants {
   static const tableKnowledgeStrategies = 'knowledge_strategies';
   static const tableCampaigns          = 'campaigns';
   static const tableCampaignCalendar   = 'campaign_calendar';
+  static const tablePersonaTraining    = 'persona_training';
+  static const tablePerformanceMetrics = 'performance_metrics';
+  static const tableWebsiteAnalyses    = 'website_analyses';
+  static const edgeFunctionWebsite     = 'analyze-website';
   static const edgeFunctionImprove     = 'improve-post';
   static const edgeFunctionKnowledge   = 'extract-knowledge';
   static const edgeFunctionStrategy    = 'generate-strategy';

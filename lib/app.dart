@@ -26,6 +26,10 @@ import 'features/knowledge/screens/knowledge_item_form_screen.dart';
 import 'features/knowledge/screens/knowledge_vault_screen.dart';
 import 'features/knowledge/screens/strategy_screen.dart';
 import 'features/upgrade/screens/upgrade_screen.dart';
+import 'features/website_analyzer/screens/website_analyzer_screen.dart';
+import 'features/website_analyzer/screens/website_analysis_result_screen.dart';
+import 'features/performance/screens/performance_screen.dart';
+import 'features/personas/screens/persona_training_screen.dart';
 
 final _router = GoRouter(
   initialLocation: AppConstants.routeSplash,
@@ -186,6 +190,35 @@ final _router = GoRouter(
       builder: (context, state) {
         final id = state.pathParameters['id']!;
         return CampaignDetailScreen(campaignId: id);
+      },
+    ),
+
+    // ── Website Analyzer ───────────────────────────────────────
+    GoRoute(
+      path: AppConstants.routeWebsiteAnalyzer,
+      builder: (_, __) => const WebsiteAnalyzerScreen(),
+    ),
+    GoRoute(
+      path: AppConstants.routeWebsiteAnalysisResult,
+      builder: (context, state) {
+        final id = state.pathParameters['id']!;
+        return WebsiteAnalysisResultScreen(analysisId: id);
+      },
+    ),
+
+    // ── Performance ────────────────────────────────────────────
+    GoRoute(
+      path: AppConstants.routePerformance,
+      builder: (_, __) => const PerformanceScreen(),
+    ),
+
+    // ── Persona Training ───────────────────────────────────────
+    GoRoute(
+      path: AppConstants.routePersonaTraining,
+      builder: (context, state) {
+        final id = state.pathParameters['id']!;
+        final personaName = state.extra as String? ?? 'Persona';
+        return PersonaTrainingScreen(personaId: id, personaName: personaName);
       },
     ),
   ],

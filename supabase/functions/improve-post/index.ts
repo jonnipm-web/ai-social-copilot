@@ -51,6 +51,21 @@ serve(async (req) => {
 
     const userText = body.text.trim();
 
+    // Build system prompt with optional persona context
+    let systemPrompt = SYSTEM_PROMPT;
+    if (body.persona_context && typeof body.persona_context === "object") {
+      const pc = body.persona_context;
+      const personaLines: string[] = [];
+      if (pc.name) personaLines.push(`Persona/Marca: ${pc.name}`);
+      if (pc.tone) personaLines.push(`Tom de voz: ${pc.tone}`);
+      if (pc.vocabulary?.length) personaLines.push(`Vocabulário preferido: ${pc.vocabulary.join(", ")}`);
+      if (pc.values?.length) personaLines.push(`Valores: ${pc.values.join(", ")}`);
+      if (pc.style) personaLines.push(`Estilo: ${pc.style}`);
+      if (personaLines.length > 0) {
+        systemPrompt = SYSTEM_PROMPT + "\n\nCONTEXTO DA PERSONA/MARCA (use para adaptar o tom e estilo):\n" + personaLines.join("\n");
+      }
+    }
+
     const groqRes = await fetch(GROQ_URL, {
       method: "POST",
       headers: {
@@ -60,7 +75,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "llama-3.3-70b-versatile",
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: systemPrompt },
           { role: "user", content: userText },
         ],
         temperature: 0.7,
