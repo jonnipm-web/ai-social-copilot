@@ -33,3 +33,10 @@ final websiteAnalyzerNotifierProvider = StateNotifierProvider.autoDispose<
     WebsiteAnalyzerNotifier, AsyncValue<WebsiteAnalysis?>>(
   (ref) => WebsiteAnalyzerNotifier(ref.watch(websiteAnalyzerServiceProvider)),
 );
+
+final websiteAnalysisByIdProvider =
+    FutureProvider.autoDispose.family<WebsiteAnalysis, String>((ref, id) async {
+  final result = await ref.read(websiteAnalyzerServiceProvider).fetchById(id);
+  if (result == null) throw Exception('Análise não encontrada');
+  return result;
+});

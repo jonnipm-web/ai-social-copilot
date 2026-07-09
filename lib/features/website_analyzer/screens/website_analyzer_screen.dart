@@ -282,15 +282,13 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                   separatorBuilder: (_, __) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {
                     final analysis = analyses[index];
-                    final websiteScore = analysis.websiteScore ?? 0;
-                    final adsenseScore = analysis.adsenseScore ?? 0;
+                    final websiteScore = analysis.scoreWebsite;
+                    final adsenseScore = analysis.scoreAdsense;
                     final displayUrl = analysis.url.length > 40
                         ? '${analysis.url.substring(0, 40)}...'
                         : analysis.url;
 
-                    final dateStr = analysis.createdAt != null
-                        ? _formatDate(analysis.createdAt!)
-                        : '';
+                    final dateStr = _formatDate(analysis.createdAt);
 
                     return InkWell(
                       onTap: () => context.go('/website-analyzer/${analysis.id}'),
@@ -322,8 +320,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                                if (dateStr.isNotEmpty)
-                                  Text(
+                                Text(
                                     dateStr,
                                     style: TextStyle(
                                       color: Colors.white.withOpacity(0.4),
