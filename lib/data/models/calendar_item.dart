@@ -11,20 +11,27 @@ class CalendarItem {
   final String? cta;
   final String status;
   final String? generatedContent;
+  final String? campaignId;
+  final String? publicationUrl;
+  final DateTime? scheduledAt;
+  final DateTime? publishedAt;
+  final String? externalPlatform;
   final DateTime createdAt;
   final DateTime updatedAt;
 
   static const statuses = [
-    'ideia', 'planejado', 'gerado', 'aprovado', 'publicado', 'arquivado'
+    'ideia', 'planejado', 'gerado', 'aprovado', 'pronto_publicar', 'publicado', 'falha_publicacao', 'arquivado'
   ];
 
   static const statusLabels = {
-    'ideia':     'Ideia',
-    'planejado': 'Planejado',
-    'gerado':    'Gerado',
-    'aprovado':  'Aprovado',
-    'publicado': 'Publicado',
-    'arquivado': 'Arquivado',
+    'ideia':            'Ideia',
+    'planejado':        'Planejado',
+    'gerado':           'Gerado',
+    'aprovado':         'Aprovado',
+    'pronto_publicar':  'Pronto p/ Publicar',
+    'publicado':        'Publicado',
+    'falha_publicacao': 'Falha na Publicação',
+    'arquivado':        'Arquivado',
   };
 
   static const platforms = [
@@ -60,6 +67,11 @@ class CalendarItem {
     this.cta,
     this.status = 'ideia',
     this.generatedContent,
+    this.campaignId,
+    this.publicationUrl,
+    this.scheduledAt,
+    this.publishedAt,
+    this.externalPlatform,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -80,6 +92,15 @@ class CalendarItem {
       cta:              map['cta'] as String?,
       status:           map['status'] as String? ?? 'ideia',
       generatedContent: map['generated_content'] as String?,
+      campaignId:       map['campaign_id'] as String?,
+      publicationUrl:   map['publication_url'] as String?,
+      scheduledAt:      map['scheduled_at'] != null
+          ? DateTime.parse(map['scheduled_at'] as String)
+          : null,
+      publishedAt:      map['published_at'] != null
+          ? DateTime.parse(map['published_at'] as String)
+          : null,
+      externalPlatform: map['external_platform'] as String?,
       createdAt:        DateTime.parse(map['created_at'] as String),
       updatedAt:        DateTime.parse(map['updated_at'] as String),
     );
@@ -97,9 +118,22 @@ class CalendarItem {
     'cta':               cta,
     'status':            status,
     'generated_content': generatedContent,
+    'campaign_id':       campaignId,
+    'publication_url':   publicationUrl,
+    'scheduled_at':      scheduledAt?.toUtc().toIso8601String(),
+    'published_at':      publishedAt?.toUtc().toIso8601String(),
+    'external_platform': externalPlatform,
   };
 
-  CalendarItem copyWith({String? status, String? generatedContent}) =>
+  CalendarItem copyWith({
+    String? status,
+    String? generatedContent,
+    String? campaignId,
+    String? publicationUrl,
+    DateTime? scheduledAt,
+    DateTime? publishedAt,
+    String? externalPlatform,
+  }) =>
       CalendarItem(
         id:               id,
         userId:           userId,
@@ -113,6 +147,11 @@ class CalendarItem {
         cta:              cta,
         status:           status ?? this.status,
         generatedContent: generatedContent ?? this.generatedContent,
+        campaignId:       campaignId ?? this.campaignId,
+        publicationUrl:   publicationUrl ?? this.publicationUrl,
+        scheduledAt:      scheduledAt ?? this.scheduledAt,
+        publishedAt:      publishedAt ?? this.publishedAt,
+        externalPlatform: externalPlatform ?? this.externalPlatform,
         createdAt:        createdAt,
         updatedAt:        DateTime.now(),
       );

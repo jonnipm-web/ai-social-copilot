@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/knowledge_analysis.dart';
 import '../models/knowledge_item.dart';
+import 'content_service.dart';
 
 class KnowledgeService {
   final _client = Supabase.instance.client;
@@ -164,10 +165,40 @@ class KnowledgeService {
 
       final saved = await saveAnalysis(analysis);
 
+      // Auto-sync to Library (Módulo 2: Cofre → Biblioteca)
+      try {
+        final detectedType = aiData['detected_type'] as String? ?? 'texto';
+        final mappedType = _mapContentType(detectedType);
+        await ContentService().upsertFromKnowledge(
+          userId:           uid,
+          knowledgeItemId:  item.id,
+          title:            (aiData['detected_title'] as String?)?.isNotEmpty == true
+              ? aiData['detected_title'] as String
+              : item.title,
+          type:             mappedType,
+          description:      aiData['summary'] as String?,
+          niche:            (aiData['detected_niche'] as String?)?.isNotEmpty == true
+              ? aiData['detected_niche'] as String
+              : item.niche,
+          targetAudience:   (aiData['detected_audience'] as String?)?.isNotEmpty == true
+              ? aiData['detected_audience'] as String
+              : item.targetAudience,
+          keywords:         _list(aiData['keywords_primary']),
+          opportunityScore: _int(aiData['score_opportunity']),
+          language:         item.language,
+        );
+      } catch (_) {
+        // Sync failure is non-fatal
+      }
+
       // Marca como analisado e salva opportunity_score no item
       await update(item.id, {
-        'status': 'analyzed',
+        'status':            'analyzed',
         'opportunity_score': _int(aiData['score_opportunity']),
+        'auto_title':        aiData['detected_title'],
+        'auto_type':         aiData['detected_type'],
+        'auto_niche':        aiData['detected_niche'],
+        'auto_audience':     aiData['detected_audience'],
       });
 
       return saved;
@@ -194,5 +225,21 @@ class KnowledgeService {
     if (v == null) return {};
     if (v is Map) return Map<String, dynamic>.from(v);
     return {};
+  }
+
+  static String _mapContentType(String detected) {
+    const map = {
+      'livro': 'livro',
+      'ebook': 'ebook',
+      'artigo': 'artigo',
+      'post': 'post',
+      'site': 'projeto',
+      'produto': 'produto',
+      'marca': 'marca',
+      'projeto': 'projeto',
+      'curso': 'produto',
+      'texto': 'texto',
+    };
+    return map[detected.toLowerCase()] ?? 'texto';
   }
 }

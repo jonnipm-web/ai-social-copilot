@@ -11,6 +11,7 @@ class KnowledgeItem {
   final String language;
   final String? personaId;
   final String status;
+  final int opportunityScore;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -44,6 +45,7 @@ class KnowledgeItem {
     this.language = 'pt-BR',
     this.personaId,
     this.status = 'pending',
+    this.opportunityScore = 0,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -65,6 +67,7 @@ class KnowledgeItem {
       language:       map['language'] as String? ?? 'pt-BR',
       personaId:      map['persona_id'] as String?,
       status:         map['status'] as String? ?? 'pending',
+      opportunityScore: map['opportunity_score'] as int? ?? 0,
       createdAt:      map['created_at'] != null
           ? DateTime.parse(map['created_at'] as String)
           : DateTime.now(),
@@ -86,6 +89,7 @@ class KnowledgeItem {
     'language':       language,
     'persona_id':     personaId,
     'status':         status,
+    'opportunity_score': opportunityScore,
   };
 
   KnowledgeItem copyWith({
@@ -99,6 +103,7 @@ class KnowledgeItem {
     String? language,
     String? personaId,
     String? status,
+    int? opportunityScore,
   }) {
     return KnowledgeItem(
       id:             id,
@@ -113,6 +118,7 @@ class KnowledgeItem {
       language:       language       ?? this.language,
       personaId:      personaId      ?? this.personaId,
       status:         status         ?? this.status,
+      opportunityScore: opportunityScore ?? this.opportunityScore,
       createdAt:      createdAt,
       updatedAt:      DateTime.now(),
     );

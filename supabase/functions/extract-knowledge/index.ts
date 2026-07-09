@@ -16,6 +16,11 @@ O JSON deve ter exatamente esta estrutura:
 
 {
   "summary": "resumo em 3-5 frases do conteúdo",
+  "detected_title": "título detectado do conteúdo",
+  "detected_type": "tipo detectado: livro | ebook | artigo | post | site | produto | marca | projeto | curso | texto",
+  "detected_niche": "nicho principal detectado automaticamente",
+  "detected_audience": "público-alvo detectado automaticamente",
+  "detected_language": "idioma detectado: pt-BR | en-US | es",
   "keywords_primary": ["palavra-chave 1", "palavra-chave 2", "...até 8"],
   "keywords_secondary": ["kw secundária 1", "...até 10"],
   "keywords_longtail": ["frase longa 1", "...até 8"],

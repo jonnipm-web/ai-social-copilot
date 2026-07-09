@@ -4,10 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/snackbar_utils.dart';
 import '../../../data/models/knowledge_analysis.dart';
 import '../../../data/models/knowledge_item.dart';
+import '../../../data/services/persona_training_service.dart';
 import '../../../providers/knowledge_provider.dart';
 import '../../../providers/persona_provider.dart';
+import '../../../providers/persona_training_provider.dart';
 
 class KnowledgeAnalysisScreen extends ConsumerWidget {
   const KnowledgeAnalysisScreen({super.key, required this.itemId});
@@ -343,89 +346,62 @@ class _ActionButtons extends ConsumerWidget {
   }
 
   Future<void> _trainPersona(BuildContext context, WidgetRef ref, List personas) async {
-
     if (personas.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Crie uma Persona primeiro em Personas / Marcas.'),
-          backgroundColor: Color(0xFF1A1A2E),
-        ),
-      );
+      showErrorSnack(context, 'Nenhuma persona encontrada. Crie uma persona primeiro.');
       return;
     }
-
-    if (!context.mounted) return;
-
-    final selected = await showDialog<String>(
+    String? selectedPersonaId;
+    await showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A2E),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Treinar Persona',
-          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-        content: SizedBox(
-          width: 360,
-          child: Column(
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx2, setState) => AlertDialog(
+          backgroundColor: const Color(0xFF1A1A2E),
+          title: const Text('Treinar Persona', style: TextStyle(color: Colors.white)),
+          content: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Selecione a persona que vai aprender com este conteúdo:',
-                style: TextStyle(color: Colors.white54, fontSize: 12),
-              ),
-              const SizedBox(height: 12),
-              ...personas.map(
-                (p) => ListTile(
-                  leading: const Icon(Icons.person_pin_rounded,
-                      color: Color(0xFFFF9800)),
-                  title: Text(p.name,
-                      style: const TextStyle(color: Colors.white)),
-                  subtitle: p.niche != null
-                      ? Text(p.niche!,
-                          style: const TextStyle(
-                              color: Colors.white38, fontSize: 12))
-                      : null,
-                  onTap: () => Navigator.pop(ctx, p.id),
-                ),
-              ),
-            ],
+            children: personas.map((p) => RadioListTile<String>(
+              title: Text(p.name, style: const TextStyle(color: Colors.white70)),
+              value: p.id as String,
+              groupValue: selectedPersonaId,
+              onChanged: (v) => setState(() => selectedPersonaId = v),
+              activeColor: const Color(0xFF6C63FF),
+            )).toList(),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: selectedPersonaId == null
+                  ? null
+                  : () async {
+                      Navigator.pop(ctx);
+                      try {
+                        await ref
+                            .read(personaTrainingNotifierProvider.notifier)
+                            .train(
+                              personaId: selectedPersonaId!,
+                              item: item,
+                              analysis: analysis,
+                            );
+                        if (context.mounted) {
+                          showSuccessSnack(context, 'Persona treinada com sucesso!');
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          showErrorSnack(context, e.toString());
+                        }
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6C63FF)),
+              child: const Text('Treinar'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar', style: TextStyle(color: Colors.white54)),
-          ),
-        ],
       ),
     );
-
-    if (selected == null || !context.mounted) return;
-
-    try {
-      await ref
-          .read(knowledgeServiceProvider)
-          .update(item.id, {'persona_id': selected});
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Persona vinculada! Ela agora aprende com este conteúdo.'),
-            backgroundColor: Color(0xFF4CAF50),
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erro: $e'),
-            backgroundColor: const Color(0xFFF44336),
-          ),
-        );
-      }
-    }
   }
 }
 
