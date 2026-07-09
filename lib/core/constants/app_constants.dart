@@ -48,6 +48,18 @@ class AppConstants {
   static const routePerformance           = '/performance';
   static const routePersonaTraining       = '/personas/:id/training';
 
+  // Fase 9 — Market Intelligence
+  static const routeMarketIntelligence            = '/market-intelligence';
+  static const routeMarketIntelligenceCompetitors = '/market-intelligence/competitors/:id';
+  static const routeMarketIntelligenceGaps        = '/market-intelligence/gaps/:id';
+  static const routeMarketIntelligenceOpportunities = '/market-intelligence/opportunities/:id';
+  static const routeMarketIntelligenceNiches      = '/market-intelligence/niches/:id';
+  static const routeMarketIntelligenceCluster     = '/market-intelligence/content-cluster/:id';
+  static const routeMarketIntelligenceRevenue     = '/market-intelligence/revenue/:id';
+  static const routeMarketIntelligenceHub         = '/market-intelligence/:id';
+  static const routeProjects                      = '/projects';
+  static const routeRoiTracker                    = '/roi-tracker';
+
   // Tabelas Supabase
   static const tablePostGenerations   = 'post_generations';
   static const tableProfiles          = 'profiles';
@@ -62,6 +74,21 @@ class AppConstants {
   static const tablePersonaTraining    = 'persona_training';
   static const tablePerformanceMetrics = 'performance_metrics';
   static const tableWebsiteAnalyses    = 'website_analyses';
+  static const tableMarketAnalyses     = 'market_analyses';
+  static const tableCompetitors        = 'competitors';
+  static const tableGapAnalyses        = 'gap_analyses';
+  static const tableOpportunities      = 'opportunities';
+  static const tableNicheRankings      = 'niche_rankings';
+  static const tableContentClusters    = 'content_clusters';
+  static const tableRevenuePlans       = 'revenue_plans';
+  static const tableProjects           = 'projects';
+  static const tableRoiMetrics         = 'roi_metrics';
+  static const edgeFunctionMarket      = 'market-analysis';
+  static const edgeFunctionCompetitor  = 'competitor-discovery';
+  static const edgeFunctionGap         = 'gap-analysis';
+  static const edgeFunctionOpportunity = 'opportunity-discovery';
+  static const edgeFunctionNiche       = 'niche-discovery';
+  static const edgeFunctionRevenue     = 'revenue-planner';
   static const edgeFunctionWebsite     = 'analyze-website';
   static const edgeFunctionImprove     = 'improve-post';
   static const edgeFunctionKnowledge   = 'extract-knowledge';

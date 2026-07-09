@@ -30,6 +30,16 @@ import 'features/website_analyzer/screens/website_analyzer_screen.dart';
 import 'features/website_analyzer/screens/website_analysis_result_screen.dart';
 import 'features/performance/screens/performance_screen.dart';
 import 'features/personas/screens/persona_training_screen.dart';
+import 'features/market_intelligence/screens/market_intelligence_screen.dart';
+import 'features/market_intelligence/screens/market_intelligence_hub_screen.dart';
+import 'features/market_intelligence/screens/competitor_discovery_screen.dart';
+import 'features/market_intelligence/screens/gap_analysis_screen.dart';
+import 'features/market_intelligence/screens/opportunity_discovery_screen.dart';
+import 'features/market_intelligence/screens/niche_discovery_screen.dart';
+import 'features/market_intelligence/screens/content_cluster_screen.dart';
+import 'features/market_intelligence/screens/revenue_planner_screen.dart';
+import 'features/projects/screens/project_command_center_screen.dart';
+import 'features/roi_tracker/screens/roi_tracker_screen.dart';
 
 final _router = GoRouter(
   initialLocation: AppConstants.routeSplash,
@@ -220,6 +230,75 @@ final _router = GoRouter(
         final personaName = state.extra as String? ?? 'Persona';
         return PersonaTrainingScreen(personaId: id, personaName: personaName);
       },
+    ),
+
+    // ── Market Intelligence (Fase 9) ───────────────────────────
+    GoRoute(
+      path: AppConstants.routeMarketIntelligence,
+      builder: (_, __) => const MarketIntelligenceScreen(),
+    ),
+    // Specific sub-routes MUST come before the :id catch-all
+    GoRoute(
+      path: AppConstants.routeMarketIntelligenceCompetitors,
+      builder: (context, state) {
+        final id = state.pathParameters['id']!;
+        return CompetitorDiscoveryScreen(analysisId: id);
+      },
+    ),
+    GoRoute(
+      path: AppConstants.routeMarketIntelligenceGaps,
+      builder: (context, state) {
+        final id = state.pathParameters['id']!;
+        return GapAnalysisScreen(analysisId: id);
+      },
+    ),
+    GoRoute(
+      path: AppConstants.routeMarketIntelligenceOpportunities,
+      builder: (context, state) {
+        final id = state.pathParameters['id']!;
+        return OpportunityDiscoveryScreen(analysisId: id);
+      },
+    ),
+    GoRoute(
+      path: AppConstants.routeMarketIntelligenceNiches,
+      builder: (context, state) {
+        final id = state.pathParameters['id']!;
+        return NicheDiscoveryScreen(analysisId: id);
+      },
+    ),
+    GoRoute(
+      path: AppConstants.routeMarketIntelligenceCluster,
+      builder: (context, state) {
+        final id = state.pathParameters['id']!;
+        return ContentClusterScreen(analysisId: id);
+      },
+    ),
+    GoRoute(
+      path: AppConstants.routeMarketIntelligenceRevenue,
+      builder: (context, state) {
+        final id = state.pathParameters['id']!;
+        return RevenuePlannerScreen(analysisId: id);
+      },
+    ),
+    // Hub :id catch-all MUST come last among /market-intelligence/* routes
+    GoRoute(
+      path: AppConstants.routeMarketIntelligenceHub,
+      builder: (context, state) {
+        final id = state.pathParameters['id']!;
+        return MarketIntelligenceHubScreen(analysisId: id);
+      },
+    ),
+
+    // ── Projects ────────────────────────────────────────────────
+    GoRoute(
+      path: AppConstants.routeProjects,
+      builder: (_, __) => const ProjectCommandCenterScreen(),
+    ),
+
+    // ── ROI Tracker ─────────────────────────────────────────────
+    GoRoute(
+      path: AppConstants.routeRoiTracker,
+      builder: (_, __) => const RoiTrackerScreen(),
     ),
   ],
 );

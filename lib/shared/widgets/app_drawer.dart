@@ -160,6 +160,26 @@ class _DrawerContent extends ConsumerWidget {
                   route: AppConstants.routePerformance,
                   current: current,
                 ),
+                const Divider(color: Colors.white12, height: 24),
+                _NavItem(
+                  icon: Icons.analytics_rounded,
+                  label: 'Market Intelligence',
+                  route: AppConstants.routeMarketIntelligence,
+                  current: current,
+                ),
+                _NavItem(
+                  icon: Icons.rocket_launch_rounded,
+                  label: 'Projetos',
+                  route: AppConstants.routeProjects,
+                  current: current,
+                ),
+                _NavItem(
+                  icon: Icons.insights_rounded,
+                  label: 'ROI Tracker',
+                  route: AppConstants.routeRoiTracker,
+                  current: current,
+                ),
+                const Divider(color: Colors.white12, height: 24),
                 _NavItem(
                   icon: Icons.history_rounded,
                   label: 'Histórico',
