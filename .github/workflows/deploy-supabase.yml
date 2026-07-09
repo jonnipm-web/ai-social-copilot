@@ -1,0 +1,35 @@
+name: Deploy Supabase (Migration + Edge Functions)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar código do repositório
+        uses: actions/checkout@v4
+
+      - name: Instalar Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Fazer login no Supabase
+        run: supabase login --token ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Vincular ao projeto
+        run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }} --password ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+      - name: Executar migration da Fase 8
+        run: supabase db push --password ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+      - name: Deploy da Edge Function analyze-website (nova)
+        run: supabase functions deploy analyze-website
+
+      - name: Deploy da Edge Function extract-knowledge (atualizada)
+        run: supabase functions deploy extract-knowledge
+
+      - name: Deploy da Edge Function improve-post (atualizada)
+        run: supabase functions deploy improve-post
