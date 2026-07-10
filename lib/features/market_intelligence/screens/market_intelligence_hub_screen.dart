@@ -178,11 +178,13 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
           ),
         ),
         data: (analysis) {
-          final competitors = [...(competitorsAsync.value ?? [])]
-            ..sort((a, b) => b.overallScore.compareTo(a.overallScore));
+          final competitors = (competitorsAsync.value ?? <Competitor>[])
+              .toList()
+              ..sort((a, b) => b.overallScore.compareTo(a.overallScore));
           final gap   = gapAsync.value;
-          final opps  = [...(opportunitiesAsync.value ?? [])]
-            ..sort((a, b) => b.opportunityScore.compareTo(a.opportunityScore));
+          final opps  = (opportunitiesAsync.value ?? <Opportunity>[])
+              .toList()
+              ..sort((a, b) => b.opportunityScore.compareTo(a.opportunityScore));
           final plan  = revenuePlanAsync.value;
 
           return SingleChildScrollView(

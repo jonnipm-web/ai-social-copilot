@@ -7,20 +7,15 @@ class OpportunityLabService {
   final _client = Supabase.instance.client;
 
   Future<List<OpportunityLabItem>> fetchAll({String? projectId, String? status}) async {
-    var query = _client
+    var filter = _client
         .from(AppConstants.tableOpportunityLab)
-        .select()
-        .order('final_score', ascending: false);
+        .select();
 
-    if (projectId != null) {
-      query = query.eq('project_id', projectId) as dynamic;
-    }
-    if (status != null) {
-      query = query.eq('status', status) as dynamic;
-    }
+    if (projectId != null) filter = filter.eq('project_id', projectId);
+    if (status != null)    filter = filter.eq('status', status);
 
-    final rows = await query;
-    return (rows as List).map((r) => OpportunityLabItem.fromMap(r)).toList();
+    final rows = await filter.order('final_score', ascending: false);
+    return rows.map((r) => OpportunityLabItem.fromMap(r)).toList();
   }
 
   Future<OpportunityLabItem> create(OpportunityLabItem item) async {

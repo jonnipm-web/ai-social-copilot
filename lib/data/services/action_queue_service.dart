@@ -7,20 +7,15 @@ class ActionQueueService {
   final _client = Supabase.instance.client;
 
   Future<List<ActionQueueItem>> fetchAll({String? projectId, String? status}) async {
-    var query = _client
+    var filter = _client
         .from(AppConstants.tableActionQueue)
-        .select()
-        .order('priority', ascending: true);
+        .select();
 
-    if (projectId != null) {
-      query = query.eq('project_id', projectId) as dynamic;
-    }
-    if (status != null) {
-      query = query.eq('status', status) as dynamic;
-    }
+    if (projectId != null) filter = filter.eq('project_id', projectId);
+    if (status != null)    filter = filter.eq('status', status);
 
-    final rows = await query;
-    return (rows as List).map((r) => ActionQueueItem.fromMap(r)).toList();
+    final rows = await filter.order('priority', ascending: true);
+    return rows.map((r) => ActionQueueItem.fromMap(r)).toList();
   }
 
   Future<ActionQueueItem> create(ActionQueueItem item) async {
