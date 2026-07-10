@@ -39,11 +39,11 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
 
     final url = _urlController.text.trim();
     try {
-      final analysisId = await ref
+      final analysis = await ref
           .read(websiteAnalyzerNotifierProvider.notifier)
           .analyze(url);
-      if (mounted) {
-        context.go('/website-analyzer/$analysisId');
+      if (mounted && analysis != null) {
+        context.go('/website-analyzer/${analysis.id}');
       }
     } catch (e) {
       if (mounted) {

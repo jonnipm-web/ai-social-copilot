@@ -48,3 +48,6 @@ jobs:
 
       - name: Deploy da Edge Function revenue-planner (Fase 9)
         run: supabase functions deploy revenue-planner
+
+      - name: Deploy da Edge Function content-cluster (Fase 9)
+        run: supabase functions deploy content-cluster
