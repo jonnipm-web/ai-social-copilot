@@ -22,7 +22,19 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
     final itemsAsync = ref.watch(contentItemsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Biblioteca de Conteúdo')),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go(AppConstants.routeHome);
+            }
+          },
+        ),
+        title: const Text('Biblioteca de Conteúdo'),
+      ),
       drawer: const AppDrawer(),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push(AppConstants.routeContentNew),

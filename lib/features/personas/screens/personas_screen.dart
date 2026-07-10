@@ -18,7 +18,19 @@ class PersonasScreen extends ConsumerWidget {
     final isAdmin       = profile?.isAdmin ?? false;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Personas / Marcas')),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go(AppConstants.routeHome);
+            }
+          },
+        ),
+        title: const Text('Personas / Marcas'),
+      ),
       drawer: const AppDrawer(),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push(AppConstants.routePersonaNew),

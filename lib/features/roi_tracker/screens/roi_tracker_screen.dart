@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../data/models/roi_metric.dart';
 import '../../../providers/roi_metric_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
@@ -85,6 +87,16 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F1A),
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go(AppConstants.routeHome);
+            }
+          },
+        ),
         backgroundColor: const Color(0xFF0F0F1A),
         title: const Text('ROI Tracker', style: TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),

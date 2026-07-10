@@ -64,6 +64,16 @@ class _ProjectCommandCenterScreenState
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F1A),
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go(AppConstants.routeHome);
+            }
+          },
+        ),
         backgroundColor: const Color(0xFF0F0F1A),
         title: const Text('Project Command Center', style: TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),

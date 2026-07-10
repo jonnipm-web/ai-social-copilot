@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../data/models/calendar_item.dart';
 import '../../../providers/calendar_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
@@ -20,7 +22,19 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     final itemsAsync = ref.watch(calendarItemsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Calendário Editorial')),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go(AppConstants.routeHome);
+            }
+          },
+        ),
+        title: const Text('Calendário Editorial'),
+      ),
       drawer: const AppDrawer(),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showCreateDialog(context),

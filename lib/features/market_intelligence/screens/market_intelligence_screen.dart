@@ -46,6 +46,16 @@ class _MarketIntelligenceScreenState
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F1A),
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go(AppConstants.routeHome);
+            }
+          },
+        ),
         backgroundColor: const Color(0xFF0F0F1A),
         title: const Text('Market Intelligence', style: TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
