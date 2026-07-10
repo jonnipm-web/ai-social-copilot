@@ -40,6 +40,11 @@ import 'features/market_intelligence/screens/content_cluster_screen.dart';
 import 'features/market_intelligence/screens/revenue_planner_screen.dart';
 import 'features/projects/screens/project_command_center_screen.dart';
 import 'features/roi_tracker/screens/roi_tracker_screen.dart';
+import 'features/ecosystem/screens/ecosystem_view_screen.dart';
+import 'features/advisor/screens/advisor_onboarding_screen.dart';
+import 'features/opportunity_lab/screens/opportunity_lab_screen.dart';
+import 'features/action_engine/screens/action_engine_screen.dart';
+import 'features/dashboard/screens/executive_dashboard_screen.dart';
 
 final _router = GoRouter(
   initialLocation: AppConstants.routeSplash,
@@ -299,6 +304,28 @@ final _router = GoRouter(
     GoRoute(
       path: AppConstants.routeRoiTracker,
       builder: (_, __) => const RoiTrackerScreen(),
+    ),
+
+    // ── Fase 10A — Business Operating System ────────────────────
+    GoRoute(
+      path: AppConstants.routeEcosystem,
+      builder: (_, __) => const EcosystemViewScreen(),
+    ),
+    GoRoute(
+      path: AppConstants.routeAdvisorOnboarding,
+      builder: (_, __) => const AdvisorOnboardingScreen(),
+    ),
+    GoRoute(
+      path: AppConstants.routeOpportunityLab,
+      builder: (_, __) => const OpportunityLabScreen(),
+    ),
+    GoRoute(
+      path: AppConstants.routeActionEngine,
+      builder: (_, __) => const ActionEngineScreen(),
+    ),
+    GoRoute(
+      path: AppConstants.routeExecutiveDashboard,
+      builder: (_, __) => const ExecutiveDashboardScreen(),
     ),
   ],
 );

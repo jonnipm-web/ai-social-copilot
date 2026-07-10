@@ -23,12 +23,23 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
   bool _saving = false;
 
   static const _metricTypes = [
-    {'value': 'revenue',     'label': 'Receita',        'icon': Icons.attach_money_rounded,     'color': Color(0xFF6BCB77)},
-    {'value': 'investment',  'label': 'Investimento',   'icon': Icons.savings_rounded,           'color': Color(0xFFFF6B6B)},
-    {'value': 'traffic',     'label': 'Tráfego',        'icon': Icons.trending_up_rounded,       'color': Color(0xFF4D96FF)},
-    {'value': 'leads',       'label': 'Leads',          'icon': Icons.people_alt_rounded,        'color': Color(0xFFAB83FF)},
-    {'value': 'conversions', 'label': 'Conversões',     'icon': Icons.check_circle_rounded,      'color': Color(0xFFFFD93D)},
-    {'value': 'other',       'label': 'Outro',          'icon': Icons.category_rounded,          'color': Color(0xFF00BCD4)},
+    // ── Originais ──────────────────────────────────────────────
+    {'value': 'revenue',                'label': 'Receita',              'icon': Icons.attach_money_rounded,   'color': Color(0xFF6BCB77)},
+    {'value': 'investment',             'label': 'Investimento',         'icon': Icons.savings_rounded,         'color': Color(0xFFFF6B6B)},
+    {'value': 'traffic',                'label': 'Tráfego',              'icon': Icons.trending_up_rounded,     'color': Color(0xFF4D96FF)},
+    {'value': 'leads',                  'label': 'Leads',                'icon': Icons.people_alt_rounded,      'color': Color(0xFFAB83FF)},
+    {'value': 'conversions',            'label': 'Conversões',           'icon': Icons.check_circle_rounded,    'color': Color(0xFFFFD93D)},
+    {'value': 'other',                  'label': 'Outro',                'icon': Icons.category_rounded,        'color': Color(0xFF00BCD4)},
+    // ── Fase 10A (Business OS) ─────────────────────────────────
+    {'value': 'opportunities',          'label': 'Oportunidades',        'icon': Icons.lightbulb_rounded,       'color': Color(0xFFFFD700)},
+    {'value': 'revenue_potential',      'label': 'Receita Potencial',    'icon': Icons.bar_chart_rounded,       'color': Color(0xFF00BCD4)},
+    {'value': 'revenue_estimated',      'label': 'Receita Estimada',     'icon': Icons.calculate_rounded,       'color': Color(0xFF4CAF50)},
+    {'value': 'hours_saved',            'label': 'Horas Economizadas',   'icon': Icons.schedule_rounded,        'color': Color(0xFF9C27B0)},
+    {'value': 'strategies_executed',    'label': 'Estratégias',          'icon': Icons.flag_rounded,            'color': Color(0xFF6C63FF)},
+    {'value': 'campaigns_executed',     'label': 'Campanhas',            'icon': Icons.campaign_rounded,        'color': Color(0xFFE91E63)},
+    {'value': 'decisions_made',         'label': 'Decisões',             'icon': Icons.psychology_rounded,      'color': Color(0xFFFF9800)},
+    {'value': 'opportunity_score',      'label': 'Score MI',             'icon': Icons.analytics_rounded,       'color': Color(0xFF4D96FF)},
+    {'value': 'avg_opportunity_score',  'label': 'Score Médio',          'icon': Icons.star_rounded,            'color': Color(0xFFFFD93D)},
   ];
 
   @override
@@ -115,9 +126,16 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Summary cards
+            // Executive Dashboard (M6 expansion)
             asyncSummary.when(
               loading: () => const SizedBox(height: 100, child: Center(child: CircularProgressIndicator(color: Color(0xFFFFD93D)))),
+              error: (_, __) => const SizedBox.shrink(),
+              data: (summary) => _ExecutiveDashboardSection(summary: summary),
+            ),
+
+            // Summary cards
+            asyncSummary.when(
+              loading: () => const SizedBox.shrink(),
               error: (_, __) => const SizedBox.shrink(),
               data: (summary) => _SummarySection(summary: summary, color: _color, icon: _icon, label: _label),
             ),
@@ -453,6 +471,136 @@ class _MetricCard extends StatelessWidget {
             onTap: onDelete,
             child: const Icon(Icons.close_rounded, color: Colors.white24, size: 18),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── M6: Executive Dashboard Section ──────────────────────────────────────────
+class _ExecutiveDashboardSection extends StatelessWidget {
+  const _ExecutiveDashboardSection({required this.summary});
+  final Map<String, double> summary;
+
+  String _fmtBRL(double v) {
+    if (v <= 0) return 'R\$ 0';
+    if (v >= 1000000) return 'R\$ ${(v / 1000000).toStringAsFixed(1)}M';
+    if (v >= 1000) return 'R\$ ${(v / 1000).toStringAsFixed(0)}k';
+    return 'R\$ ${v.toStringAsFixed(0)}';
+  }
+
+  String _fmt(double? v) => v != null && v > 0 ? v.round().toString() : '–';
+
+  @override
+  Widget build(BuildContext context) {
+    final revenue           = summary['revenue']             ?? 0;
+    final revPotential      = summary['revenue_potential']   ?? 0;
+    final revEstimated      = summary['revenue_estimated']   ?? 0;
+    final hoursSaved        = summary['hours_saved']         ?? 0;
+    final strategies        = summary['strategies_executed'] ?? 0;
+    final campaigns         = summary['campaigns_executed']  ?? 0;
+    final decisions         = summary['decisions_made']      ?? 0;
+    final opportunities     = summary['opportunities']       ?? 0;
+
+    final hasData = revenue > 0 || revPotential > 0 || opportunities > 0;
+    if (!hasData) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A2E),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF4CAF50).withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.insights_rounded, color: Color(0xFF4CAF50), size: 18),
+              const SizedBox(width: 8),
+              const Text(
+                'Dashboard Executivo',
+                style: TextStyle(
+                    color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Revenue row
+          if (revenue > 0 || revPotential > 0 || revEstimated > 0)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('RECEITA',
+                    style: TextStyle(
+                        color: Colors.white38,
+                        fontSize: 10,
+                        letterSpacing: 1.2,
+                        fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    if (revenue > 0)
+                      _ExecStat('Registrada',  _fmtBRL(revenue),      const Color(0xFF6BCB77)),
+                    if (revPotential > 0)
+                      _ExecStat('Potencial',   _fmtBRL(revPotential), const Color(0xFF00BCD4)),
+                    if (revEstimated > 0)
+                      _ExecStat('Estimada',    _fmtBRL(revEstimated), const Color(0xFF4CAF50)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
+          // Activity row
+          const Text('ATIVIDADE',
+              style: TextStyle(
+                  color: Colors.white38,
+                  fontSize: 10,
+                  letterSpacing: 1.2,
+                  fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 16,
+            runSpacing: 8,
+            children: [
+              if (opportunities > 0)
+                _ExecStat('Oportunidades',    _fmt(opportunities), const Color(0xFFFFD700)),
+              if (strategies > 0)
+                _ExecStat('Estratégias',      _fmt(strategies),    const Color(0xFF6C63FF)),
+              if (campaigns > 0)
+                _ExecStat('Campanhas',        _fmt(campaigns),     const Color(0xFFE91E63)),
+              if (decisions > 0)
+                _ExecStat('Decisões',         _fmt(decisions),     const Color(0xFFFF9800)),
+              if (hoursSaved > 0)
+                _ExecStat('Horas Econ.',      '${hoursSaved.round()}h', const Color(0xFF9C27B0)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ExecStat extends StatelessWidget {
+  const _ExecStat(this.label, this.value, this.color);
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 16, bottom: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(value,
+              style: TextStyle(
+                  color: color, fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(label,
+              style: const TextStyle(color: Colors.white38, fontSize: 10)),
         ],
       ),
     );

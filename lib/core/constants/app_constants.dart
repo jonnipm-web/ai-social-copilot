@@ -60,6 +60,13 @@ class AppConstants {
   static const routeProjects                      = '/projects';
   static const routeRoiTracker                    = '/roi-tracker';
 
+  // Fase 10A — Business Operating System
+  static const routeEcosystem            = '/ecosystem';
+  static const routeAdvisorOnboarding    = '/advisor-onboarding';
+  static const routeOpportunityLab       = '/opportunity-lab';
+  static const routeActionEngine         = '/action-engine';
+  static const routeExecutiveDashboard   = '/executive-dashboard';
+
   // Tabelas Supabase
   static const tablePostGenerations   = 'post_generations';
   static const tableProfiles          = 'profiles';
@@ -83,6 +90,17 @@ class AppConstants {
   static const tableRevenuePlans       = 'revenue_plans';
   static const tableProjects           = 'projects';
   static const tableRoiMetrics         = 'roi_metrics';
+
+  // Fase 10A tables
+  static const tableBusinessMemory     = 'business_memory';
+  static const tableAdvisorProfiles    = 'advisor_profiles';
+  static const tableOpportunityLab     = 'opportunity_lab';
+  static const tableActionQueue        = 'action_queue';
+  static const tableFeatureFlags       = 'feature_flags';
+  static const tableCopilotSessions    = 'copilot_sessions';
+  static const tableCopilotMessages    = 'copilot_messages';
+  static const tableCopilotContext     = 'copilot_context';
+  static const tableTrendSignals       = 'trend_signals';
   static const edgeFunctionMarket      = 'market-analysis';
   static const edgeFunctionCompetitor  = 'competitor-discovery';
   static const edgeFunctionGap         = 'gap-analysis';

@@ -180,6 +180,32 @@ class _DrawerContent extends ConsumerWidget {
                   current: current,
                 ),
                 const Divider(color: Colors.white12, height: 24),
+                // ── Fase 10A — Business OS ─────────────────────
+                _NavItem(
+                  icon: Icons.speed_rounded,
+                  label: 'Business Dashboard',
+                  route: AppConstants.routeExecutiveDashboard,
+                  current: current,
+                ),
+                _NavItem(
+                  icon: Icons.hub_rounded,
+                  label: 'Ecosystem View',
+                  route: AppConstants.routeEcosystem,
+                  current: current,
+                ),
+                _NavItem(
+                  icon: Icons.science_rounded,
+                  label: 'Opportunity Lab',
+                  route: AppConstants.routeOpportunityLab,
+                  current: current,
+                ),
+                _NavItem(
+                  icon: Icons.bolt_rounded,
+                  label: 'Action Engine',
+                  route: AppConstants.routeActionEngine,
+                  current: current,
+                ),
+                const Divider(color: Colors.white12, height: 24),
                 _NavItem(
                   icon: Icons.history_rounded,
                   label: 'Histórico',
