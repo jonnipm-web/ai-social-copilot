@@ -35,16 +35,66 @@ class MarketAnalysis {
     required this.updatedAt,
   });
 
+  // ── Getters básicos ──────────────────────────────────────────────────────
   List<String> get recommendations => _list(analysisJson['recommendations']);
-  List<String> get strengths => _list(analysisJson['strengths']);
-  List<String> get weaknesses => _list(analysisJson['weaknesses']);
-  List<String> get marketTrends => _list(analysisJson['market_trends']);
-  String get executiveSummary => analysisJson['executive_summary'] as String? ?? '';
-  String get competitiveLandscape => analysisJson['competitive_landscape'] as String? ?? '';
+  List<String> get strengths       => _list(analysisJson['strengths']);
+  List<String> get weaknesses      => _list(analysisJson['weaknesses']);
+  List<String> get marketTrends    => _list(analysisJson['market_trends']);
+  String get executiveSummary      => analysisJson['executive_summary']      as String? ?? '';
+  String get competitiveLandscape  => analysisJson['competitive_landscape']  as String? ?? '';
+
+  // ── Getters Sprint 9.5 — Investment ──────────────────────────────────────
+  String get investmentRecommendation {
+    final v = analysisJson['investment_recommendation'] as String?;
+    if (v != null) return v;
+    if (opportunityScore >= 70) return 'SIM';
+    if (opportunityScore >= 50) return 'CONDICIONAL';
+    return 'NÃO';
+  }
+
+  int get investmentScore =>
+      analysisJson['investment_score'] as int? ?? opportunityScore;
+
+  String get investmentJustification =>
+      analysisJson['investment_justification'] as String? ?? executiveSummary;
+
+  // ── Getters Sprint 9.5 — Revenue ─────────────────────────────────────────
+  double get revenueMonthlyMin  => _toDouble(analysisJson['revenue_monthly_min']);
+  double get revenueMonthlyMax  => _toDouble(analysisJson['revenue_monthly_max']);
+  int    get monthsToRevenue    => analysisJson['months_to_revenue']   as int? ?? 90;
+  int    get revenueConfidence  => analysisJson['revenue_confidence']  as int? ?? 60;
+
+  // ── Getters Sprint 9.5 — Score Breakdown ─────────────────────────────────
+  int get scoreSeo          => analysisJson['score_seo']          as int? ?? (opportunityScore * 0.90).round().clamp(0, 100);
+  int get scoreMonetization => analysisJson['score_monetization'] as int? ?? opportunityScore;
+  int get scoreCompetition  => analysisJson['score_competition']  as int? ?? (opportunityScore * 0.85).round().clamp(0, 100);
+  int get scoreGrowth       => analysisJson['score_growth']       as int? ?? (opportunityScore * 0.95).round().clamp(0, 100);
+
+  // ── Getters Sprint 9.5 — Priority Actions ────────────────────────────────
+  List<Map<String, dynamic>> get priorityActions {
+    final raw = analysisJson['priority_actions'];
+    if (raw is List && raw.isNotEmpty) {
+      return raw.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    }
+    // Fallback: derive from recommendations with default impact/effort
+    return recommendations.asMap().entries.map((e) => <String, dynamic>{
+      'action':       e.value,
+      'impact':       e.key == 0 ? 'Alto' : e.key <= 2 ? 'Médio' : 'Baixo',
+      'effort':       'Médio',
+      'roi_expected': 'A calcular',
+      'priority':     e.key + 1,
+    }).toList();
+  }
 
   static List<String> _list(dynamic v) {
     if (v is List) return v.map((e) => e.toString()).toList();
     return [];
+  }
+
+  static double _toDouble(dynamic v) {
+    if (v is num) return v.toDouble();
+    if (v is String) return double.tryParse(v) ?? 0.0;
+    return 0.0;
   }
 
   factory MarketAnalysis.fromMap(Map<String, dynamic> map) {
