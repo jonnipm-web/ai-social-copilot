@@ -264,7 +264,7 @@ class _ProjectCard extends StatelessWidget {
             if (project.description.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(
-                project.description!,
+                project.description,
                 style: const TextStyle(color: Colors.white54, fontSize: 12),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
