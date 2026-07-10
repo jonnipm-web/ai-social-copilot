@@ -177,6 +177,7 @@ class KnowledgeService {
               : item.title,
           type:             mappedType,
           description:      aiData['summary'] as String?,
+          baseText:         item.content.isNotEmpty ? item.content : null,
           niche:            (aiData['detected_niche'] as String?)?.isNotEmpty == true
               ? aiData['detected_niche'] as String
               : item.niche,
