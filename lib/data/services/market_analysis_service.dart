@@ -272,7 +272,7 @@ class MarketAnalysisService {
     if (uid == null) throw Exception('Usuário não autenticado.');
 
     final response = await _client.functions.invoke(
-      'content-cluster',
+      AppConstants.edgeFunctionCluster,
       body: {'market_analysis_id': marketAnalysisId, 'input': input, 'main_keyword': mainKeyword},
     );
 

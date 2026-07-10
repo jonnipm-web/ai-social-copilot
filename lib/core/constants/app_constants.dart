@@ -89,6 +89,7 @@ class AppConstants {
   static const edgeFunctionOpportunity = 'opportunity-discovery';
   static const edgeFunctionNiche       = 'niche-discovery';
   static const edgeFunctionRevenue     = 'revenue-planner';
+  static const edgeFunctionCluster     = 'content-cluster';
   static const edgeFunctionWebsite     = 'analyze-website';
   static const edgeFunctionImprove     = 'improve-post';
   static const edgeFunctionKnowledge   = 'extract-knowledge';
