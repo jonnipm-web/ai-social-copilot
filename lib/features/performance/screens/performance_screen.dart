@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../data/models/performance_metrics.dart';
 import '../../../providers/performance_provider.dart';
@@ -62,6 +63,16 @@ class _PerformanceScreenState extends ConsumerState<PerformanceScreen> {
     return Scaffold(
       backgroundColor: _bgColor,
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go(AppConstants.routeHome);
+            }
+          },
+        ),
         backgroundColor: _cardColor,
         title: const Text(
           'Performance',

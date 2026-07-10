@@ -39,11 +39,11 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
 
     final url = _urlController.text.trim();
     try {
-      final analysisId = await ref
+      final analysis = await ref
           .read(websiteAnalyzerNotifierProvider.notifier)
           .analyze(url);
-      if (mounted) {
-        context.go('/website-analyzer/$analysisId');
+      if (mounted && analysis != null) {
+        context.go('/website-analyzer/${analysis.id}');
       }
     } catch (e) {
       if (mounted) {
@@ -66,6 +66,16 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
       backgroundColor: _background,
       drawer: const AppDrawer(),
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go(AppConstants.routeHome);
+            }
+          },
+        ),
         backgroundColor: _cardColor,
         title: const Text(
           'Website Analyzer',

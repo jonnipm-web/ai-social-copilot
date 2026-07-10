@@ -18,6 +18,16 @@ class KnowledgeVaultScreen extends ConsumerWidget {
       backgroundColor: const Color(0xFF0F0F1A),
       drawer: const AppDrawer(),
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go(AppConstants.routeHome);
+            }
+          },
+        ),
         backgroundColor: const Color(0xFF0F0F1A),
         foregroundColor: Colors.white,
         title: const Text(

@@ -29,6 +29,16 @@ class AdminPanelScreen extends ConsumerWidget {
       length: 3,
       child: Scaffold(
         appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go(AppConstants.routeHome);
+              }
+            },
+          ),
           title: const Text('Painel Admin'),
           bottom: const TabBar(
             tabs: [
