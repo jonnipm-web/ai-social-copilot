@@ -517,7 +517,7 @@ class _RevenuePotentialCard extends StatelessWidget {
               ),
             ],
             const SizedBox(height: 12),
-            _InfoRow2(icon: Icons.timer_rounded,   label: 'Prazo',     value: '$months dias'),
+            _InfoRow2(icon: Icons.timer_rounded,   label: 'Prazo',     value: '$months meses'),
             const SizedBox(height: 6),
             _InfoRow2(icon: Icons.verified_rounded, label: 'Confiança', value: '$conf%'),
           ],
@@ -636,12 +636,12 @@ class _PriorityActionsCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           ...actions.asMap().entries.map((e) {
-            final idx    = e.key;
-            final action = e.value;
-            final name   = action['action']       as String? ?? '';
-            final impact = action['impact']       as String? ?? 'Médio';
-            final effort = action['effort']       as String? ?? 'Médio';
-            final roi    = action['roi_expected'] as String? ?? '';
+            final action   = e.value;
+            final name     = action['action']       as String? ?? '';
+            final impact   = action['impact']       as String? ?? 'Médio';
+            final effort   = action['effort']       as String? ?? 'Médio';
+            final roi      = action['roi_expected'] as String? ?? '';
+            final priority = action['priority']     as int?    ?? (e.key + 1);
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 14),
@@ -658,7 +658,7 @@ class _PriorityActionsCard extends StatelessWidget {
                       border: Border.all(color: _kPrimary.withOpacity(0.4)),
                     ),
                     child: Text(
-                      '${idx + 1}',
+                      '$priority',
                       style: const TextStyle(
                           color: _kPrimary, fontSize: 12, fontWeight: FontWeight.bold),
                     ),
