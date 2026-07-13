@@ -49,17 +49,19 @@ jobs:
           echo "=== strings.xml ===" && cat android/app/src/main/res/values/strings.xml
 
       - name: Exibir SHA-1 do keystore usado na assinatura
+        continue-on-error: true
         run: |
           KEYSTORE="$HOME/.android/debug.keystore"
+          mkdir -p "$HOME/.android"
           if [ ! -f "$KEYSTORE" ]; then
             keytool -genkey -v -keystore "$KEYSTORE" -alias androiddebugkey \
               -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 10000 \
-              -dname "CN=Android Debug,O=Android,C=US" 2>/dev/null || true
+              -dname "CN=Android Debug,O=Android,C=US"
           fi
           echo "============================================"
           echo "SHA-1 DO KEYSTORE DE ASSINATURA DO CI:"
           keytool -list -v -keystore "$KEYSTORE" -alias androiddebugkey \
-            -storepass android -keypass android 2>/dev/null | grep -E "SHA1:|SHA-1:"
+            -storepass android -keypass android | grep -E "SHA1:|SHA-1:"
           echo "============================================"
           echo "Adicione este SHA-1 no Google Cloud Console em:"
           echo "APIs e Servicos > Credenciais > Cliente Android > SHA-1"
