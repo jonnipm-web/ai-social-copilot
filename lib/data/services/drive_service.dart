@@ -40,9 +40,6 @@ class DriveFile {
 }
 
 class DriveService {
-  static const _webClientId =
-      '221504834589-jll1257ccns2sprai9ps949rv21gf7p2.apps.googleusercontent.com';
-
   static const _supportedMimes =
       "mimeType='application/vnd.google-apps.document' OR "
       "mimeType='application/pdf' OR "
@@ -50,7 +47,6 @@ class DriveService {
       "mimeType='application/vnd.openxmlformats-officedocument.wordprocessingml.document'";
 
   final _googleSignIn = GoogleSignIn(
-    serverClientId: _webClientId,
     scopes: ['https://www.googleapis.com/auth/drive.readonly'],
   );
 
