@@ -41,6 +41,17 @@ jobs:
             echo "=== settings.gradle.kts ===" && cat android/settings.gradle.kts
           fi
 
+      - name: Configurar Google Sign-In (strings.xml)
+        run: |
+          mkdir -p android/app/src/main/res/values
+          cat > android/app/src/main/res/values/strings.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <string name="app_name">AI Social Copilot</string>
+              <string name="default_web_client_id">221504834589-jll1257ccns2sprai9ps949rv21gf7p2.apps.googleusercontent.com</string>
+          </resources>
+          EOF
+
       - name: Instalar dependências
         run: flutter pub get
 

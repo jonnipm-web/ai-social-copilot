@@ -26,6 +26,10 @@ dependencies:
   # Env / config
   flutter_dotenv: ^5.1.0
 
+  # Google Drive integration
+  google_sign_in: ^6.2.1
+  http: ^1.2.1
+
   # File import (Smart Import Engine)
   # TODAS as versoes estaveis de file_picker (5.x–11.x) dependem de win32 ^2–5,
   # incompativel com device_info_plus ^13 e package_info_plus ^10 (win32 ^6).

@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../data/models/knowledge_item.dart';
 import '../../../data/services/file_import_service.dart';
 import '../../../providers/knowledge_provider.dart';
+import 'drive_picker_screen.dart';
 
 class KnowledgeItemFormScreen extends ConsumerStatefulWidget {
   const KnowledgeItemFormScreen({super.key, this.itemId});
@@ -78,6 +79,9 @@ class _KnowledgeItemFormScreenState
         ? _urlCtrl.text.trim()
         : _contentCtrl.text.trim();
 
+    final sourceTypeToSave =
+        _sourceType == 'drive' ? 'file' : _sourceType;
+
     if (content.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -96,7 +100,7 @@ class _KnowledgeItemFormScreenState
       if (_isEdit && _existing != null) {
         await notifier.update(_existing!.id, {
           'title':           _titleCtrl.text.trim(),
-          'source_type':     _sourceType,
+          'source_type':     sourceTypeToSave,
           'source_url':      _sourceType == 'url' ? _urlCtrl.text.trim() : null,
           'content':         content,
           'niche':           _nicheCtrl.text.trim().isEmpty
@@ -113,7 +117,7 @@ class _KnowledgeItemFormScreenState
           id:             '',
           userId:         uid,
           title:          _titleCtrl.text.trim(),
-          sourceType:     _sourceType,
+          sourceType:     sourceTypeToSave,
           sourceUrl:      _sourceType == 'url' ? _urlCtrl.text.trim() : null,
           content:        _sourceType == 'url' ? _urlCtrl.text.trim() : content,
           niche:          _nicheCtrl.text.trim().isEmpty
@@ -193,6 +197,13 @@ class _KnowledgeItemFormScreenState
                     current: _sourceType,
                     onTap: (v) => setState(() => _sourceType = v),
                   ),
+                  _SourceTypeButton(
+                    icon:  Icons.add_to_drive_rounded,
+                    label: 'Google Drive',
+                    value: 'drive',
+                    current: _sourceType,
+                    onTap: (v) => setState(() => _sourceType = v),
+                  ),
                 ],
               ),
 
@@ -211,7 +222,16 @@ class _KnowledgeItemFormScreenState
               const SizedBox(height: 20),
 
               // ── Conteúdo ─────────────────────────────────────
-              if (_sourceType == 'file') ...[
+              if (_sourceType == 'drive') ...[
+                const _Label('Importar do Google Drive'),
+                const SizedBox(height: 8),
+                _DriveImportSection(
+                  importedFileName: _importedFileName,
+                  contentCtrl:     _contentCtrl,
+                  titleCtrl:       _titleCtrl,
+                  onImported: (name) => setState(() => _importedFileName = name),
+                ),
+              ] else if (_sourceType == 'file') ...[
                 const _Label('Importar Arquivo (PDF, DOCX, TXT)'),
                 const SizedBox(height: 8),
                 _FileImportSection(
@@ -582,6 +602,109 @@ class _FileImportSection extends StatelessWidget {
         );
       }
     }
+  }
+}
+
+class _DriveImportSection extends StatelessWidget {
+  const _DriveImportSection({
+    required this.importedFileName,
+    required this.contentCtrl,
+    required this.titleCtrl,
+    required this.onImported,
+  });
+
+  final String?                importedFileName;
+  final TextEditingController  contentCtrl;
+  final TextEditingController  titleCtrl;
+  final void Function(String)  onImported;
+
+  Future<void> _openPicker(BuildContext context) async {
+    final result = await Navigator.of(context).push<Map<String, String>>(
+      MaterialPageRoute(builder: (_) => const DrivePickerScreen()),
+    );
+    if (result == null || !context.mounted) return;
+
+    contentCtrl.text = result['content'] ?? '';
+    if (titleCtrl.text.trim().isEmpty) {
+      final name = (result['name'] ?? '').replaceAll(RegExp(r'\.[^.]+$'), '');
+      titleCtrl.text = name;
+    }
+    onImported(result['name'] ?? 'arquivo do Drive');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (importedFileName != null) {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFF4CAF50).withOpacity(0.08),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFF4CAF50).withOpacity(0.4)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.check_circle_rounded,
+                color: Color(0xFF4CAF50), size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(importedFileName!,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500)),
+                  Text(
+                    '${contentCtrl.text.length} caracteres extraídos',
+                    style:
+                        const TextStyle(color: Colors.white38, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+            TextButton(
+              onPressed: () => _openPicker(context),
+              child: const Text('Trocar',
+                  style: TextStyle(color: Color(0xFF6C63FF), fontSize: 12)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return GestureDetector(
+      onTap: () => _openPicker(context),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A1A2E),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFF6C63FF).withOpacity(0.3)),
+        ),
+        child: const Column(
+          children: [
+            Icon(Icons.add_to_drive_rounded,
+                color: Color(0xFF6C63FF), size: 40),
+            SizedBox(height: 8),
+            Text(
+              'Selecionar arquivo do Drive',
+              style: TextStyle(
+                  color: Color(0xFF6C63FF),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500),
+            ),
+            SizedBox(height: 4),
+            Text(
+              'Google Docs, PDF, DOCX ou TXT',
+              style: TextStyle(color: Colors.white38, fontSize: 12),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
