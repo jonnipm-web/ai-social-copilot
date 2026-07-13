@@ -44,13 +44,25 @@ jobs:
       - name: Configurar Google Sign-In (strings.xml)
         run: |
           mkdir -p android/app/src/main/res/values
-          cat > android/app/src/main/res/values/strings.xml << 'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <resources>
-              <string name="app_name">AI Social Copilot</string>
-              <string name="default_web_client_id">221504834589-jll1257ccns2sprai9ps949rv21gf7p2.apps.googleusercontent.com</string>
-          </resources>
-          EOF
+          printf '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <string name="app_name">AI Social Copilot</string>\n    <string name="default_web_client_id">221504834589-jll1257ccns2sprai9ps949rv21gf7p2.apps.googleusercontent.com</string>\n</resources>\n' \
+            > android/app/src/main/res/values/strings.xml
+          echo "=== strings.xml ===" && cat android/app/src/main/res/values/strings.xml
+
+      - name: Exibir SHA-1 do keystore usado na assinatura
+        run: |
+          KEYSTORE="$HOME/.android/debug.keystore"
+          if [ ! -f "$KEYSTORE" ]; then
+            keytool -genkey -v -keystore "$KEYSTORE" -alias androiddebugkey \
+              -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US" 2>/dev/null || true
+          fi
+          echo "============================================"
+          echo "SHA-1 DO KEYSTORE DE ASSINATURA DO CI:"
+          keytool -list -v -keystore "$KEYSTORE" -alias androiddebugkey \
+            -storepass android -keypass android 2>/dev/null | grep -E "SHA1:|SHA-1:"
+          echo "============================================"
+          echo "Adicione este SHA-1 no Google Cloud Console em:"
+          echo "APIs e Servicos > Credenciais > Cliente Android > SHA-1"
 
       - name: Instalar dependências
         run: flutter pub get
