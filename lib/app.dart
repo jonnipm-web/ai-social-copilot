@@ -40,7 +40,9 @@ import 'features/market_intelligence/screens/content_cluster_screen.dart';
 import 'features/market_intelligence/screens/revenue_planner_screen.dart';
 import 'features/projects/screens/project_command_center_screen.dart';
 import 'features/roi_tracker/screens/roi_tracker_screen.dart';
-import 'features/ecosystem/screens/ecosystem_view_screen.dart';
+import 'features/ecosystem/screens/executive_decision_center_screen.dart';
+import 'features/ecosystem/screens/resource_allocation_screen.dart';
+import 'features/ecosystem/screens/weekly_briefing_screen.dart';
 import 'features/advisor/screens/advisor_onboarding_screen.dart';
 import 'features/opportunity_lab/screens/opportunity_lab_screen.dart';
 import 'features/action_engine/screens/action_engine_screen.dart';
@@ -309,7 +311,17 @@ final _router = GoRouter(
     // ── Fase 10A — Business Operating System ────────────────────
     GoRoute(
       path: AppConstants.routeEcosystem,
-      builder: (_, __) => const EcosystemViewScreen(),
+      builder: (_, __) => const ExecutiveDecisionCenterScreen(),
+    ),
+
+    // ── Fase 10B — Ecosystem Intelligence Layer ──────────────────
+    GoRoute(
+      path: AppConstants.routeEcosystemResources,
+      builder: (_, __) => const ResourceAllocationScreen(),
+    ),
+    GoRoute(
+      path: AppConstants.routeEcosystemBriefing,
+      builder: (_, __) => const WeeklyBriefingScreen(),
     ),
     GoRoute(
       path: AppConstants.routeAdvisorOnboarding,
