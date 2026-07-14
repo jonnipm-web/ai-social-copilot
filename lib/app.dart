@@ -352,6 +352,14 @@ class App extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme:                      AppTheme.dark,
       routerConfig:               _router,
+      // Global safe area: evita que conteúdo fique atrás da barra de navegação
+      // do Android (edge-to-edge mode). top: false pois o AppBar já cuida do topo.
+      builder: (context, child) => SafeArea(
+        top: false,
+        left: false,
+        right: false,
+        child: child!,
+      ),
     );
   }
 }
