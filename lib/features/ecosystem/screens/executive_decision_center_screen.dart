@@ -68,6 +68,11 @@ class _ExecutiveDecisionCenterScreenState
       appBar: AppBar(
         backgroundColor: _kBg,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go(AppConstants.routeDashboard),
+        ),
         title: const Text('Decision Center', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         iconTheme: const IconThemeData(color: Colors.white),
         bottom: TabBar(

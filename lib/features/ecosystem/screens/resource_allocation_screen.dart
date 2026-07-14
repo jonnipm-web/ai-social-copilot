@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../data/models/resource_allocation.dart';
 import '../../../providers/ecosystem_intelligence_provider.dart';
+import '../../../shared/widgets/app_drawer.dart';
 
 const _kBg      = Color(0xFF0A0A14);
 const _kCard    = Color(0xFF12121E);
@@ -38,10 +41,15 @@ class _ResourceAllocationScreenState extends ConsumerState<ResourceAllocationScr
 
     return Scaffold(
       backgroundColor: _kBg,
+      drawer: const AppDrawer(),
       appBar: AppBar(
         backgroundColor: _kBg,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go(AppConstants.routeEcosystem),
+        ),
         title: const Text('Alocação de Recursos',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),

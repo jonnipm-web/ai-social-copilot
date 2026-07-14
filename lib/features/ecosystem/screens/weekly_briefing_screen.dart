@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../data/models/weekly_briefing.dart';
 import '../../../providers/ecosystem_intelligence_provider.dart';
+import '../../../shared/widgets/app_drawer.dart';
 
 const _kBg      = Color(0xFF0A0A14);
 const _kCard    = Color(0xFF12121E);
@@ -26,10 +29,15 @@ class WeeklyBriefingScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: _kBg,
+      drawer: const AppDrawer(),
       appBar: AppBar(
         backgroundColor: _kBg,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go(AppConstants.routeEcosystem),
+        ),
         title: const Text('Briefing Executivo Semanal',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         actions: [
