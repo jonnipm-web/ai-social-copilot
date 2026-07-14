@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../data/models/roi_metric.dart';
+import '../../../providers/project_provider.dart';
 import '../../../providers/roi_metric_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 
@@ -233,6 +234,49 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
             }).toList(),
           ),
           const SizedBox(height: 12),
+
+          // Project selector
+          const SizedBox(height: 4),
+          Consumer(builder: (context, ref, _) {
+            final projectsAsync = ref.watch(projectsProvider);
+            return projectsAsync.when(
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+              data: (projects) => projects.isEmpty
+                  ? const SizedBox.shrink()
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Projeto (opcional)', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                        const SizedBox(height: 6),
+                        DropdownButtonFormField<String?>(
+                          value: _selectedProjectId,
+                          dropdownColor: const Color(0xFF1A1A2E),
+                          style: const TextStyle(color: Colors.white, fontSize: 13),
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: const Color(0xFF0F0F1A),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Color(0xFF333355)),
+                            ),
+                          ),
+                          items: [
+                            const DropdownMenuItem<String?>(value: null, child: Text('Nenhum', style: TextStyle(color: Colors.white54))),
+                            ...projects.map((p) => DropdownMenuItem<String?>(
+                              value: p.id,
+                              child: Text(p.name, overflow: TextOverflow.ellipsis),
+                            )),
+                          ],
+                          onChanged: (v) => setState(() => _selectedProjectId = v),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                    ),
+            );
+          }),
 
           // Value
           TextField(

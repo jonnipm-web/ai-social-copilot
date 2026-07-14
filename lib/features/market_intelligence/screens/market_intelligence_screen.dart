@@ -38,6 +38,26 @@ class _MarketIntelligenceScreenState
     }
   }
 
+  static String _friendlyError(String raw) {
+    final lower = raw.toLowerCase();
+    if (lower.contains('404') || lower.contains('not_found') || lower.contains('not found')) {
+      return 'A função de análise não foi encontrada no servidor. Verifique se as Edge Functions estão implantadas no Supabase Dashboard.';
+    }
+    if (lower.contains('401') || lower.contains('unauthorized') || lower.contains('jwt')) {
+      return 'Sessão expirada. Saia e entre novamente no aplicativo.';
+    }
+    if (lower.contains('timeout') || lower.contains('timed out')) {
+      return 'A análise demorou demais. Tente novamente em alguns instantes.';
+    }
+    if (lower.contains('network') || lower.contains('socket') || lower.contains('connection')) {
+      return 'Sem conexão com a internet. Verifique sua rede e tente novamente.';
+    }
+    if (lower.contains('groq') || lower.contains('api key') || lower.contains('apikey')) {
+      return 'Chave de API não configurada no servidor. Configure GROQ_API_KEY nos secrets do Supabase.';
+    }
+    return 'Tente novamente em alguns instantes. Se o erro persistir, verifique o Supabase Dashboard.';
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(marketAnalysisNotifierProvider);
@@ -182,9 +202,23 @@ class _MarketIntelligenceScreenState
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: Colors.red.withOpacity(0.3)),
                   ),
-                  child: Text(
-                    state.error.toString().replaceFirst('Exception: ', ''),
-                    style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 16),
+                          SizedBox(width: 6),
+                          Text('Não foi possível conectar ao mecanismo de análise',
+                              style: TextStyle(color: Colors.redAccent, fontSize: 13, fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _friendlyError(state.error.toString()),
+                        style: const TextStyle(color: Colors.white54, fontSize: 12),
+                      ),
+                    ],
                   ),
                 ),
               ],

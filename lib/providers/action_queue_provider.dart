@@ -49,6 +49,11 @@ class ActionQueueNotifier
     await load();
   }
 
+  Future<void> execute(String id) async {
+    await _svc.updateStatus(id, 'executing');
+    await load();
+  }
+
   Future<void> complete(String id) async {
     await _svc.updateStatus(id, 'completed');
     await load();
@@ -57,6 +62,35 @@ class ActionQueueNotifier
   Future<void> cancel(String id) async {
     await _svc.updateStatus(id, 'cancelled');
     await load();
+  }
+
+  Future<ActionQueueItem> addFromOpportunity({
+    required String title,
+    required String description,
+    String? projectId,
+    String? opportunityId,
+    int priority = 50,
+    int impactScore = 60,
+    int effortScore = 50,
+  }) async {
+    final uid = _svc.currentUserId;
+    if (uid == null) throw Exception('Não autenticado');
+    final item = ActionQueueItem(
+      id:            '',
+      userId:        uid,
+      projectId:     projectId,
+      actionType:    'opportunity',
+      title:         '[Lab] $title',
+      priority:      priority,
+      impactScore:   impactScore,
+      effortScore:   effortScore,
+      roiScore:      0,
+      status:        'pending',
+      createdAt:     DateTime.now(),
+    );
+    final created = await _svc.create(item);
+    await load();
+    return created;
   }
 
   Future<void> delete(String id) async {

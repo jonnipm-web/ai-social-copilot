@@ -6,7 +6,10 @@ import '../data/models/opportunity.dart';
 import '../data/models/niche_ranking.dart';
 import '../data/models/content_cluster.dart';
 import '../data/models/revenue_plan.dart';
+import '../data/models/opportunity_lab_item.dart';
 import '../data/services/market_analysis_service.dart';
+import '../data/services/opportunity_lab_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 final marketAnalysisServiceProvider = Provider<MarketAnalysisService>(
   (_) => MarketAnalysisService(),
@@ -72,6 +75,10 @@ class MarketAnalysisNotifier extends StateNotifier<AsyncValue<MarketAnalysis?>> 
     try {
       final result = await _service.analyze(input, inputType: inputType);
       state = AsyncValue.data(result);
+
+      // Auto-seed Opportunity Lab with the top priority actions from the analysis
+      _seedOpportunityLab(result);
+
       return result;
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -80,6 +87,45 @@ class MarketAnalysisNotifier extends StateNotifier<AsyncValue<MarketAnalysis?>> 
   }
 
   void reset() => state = const AsyncValue.data(null);
+
+  void _seedOpportunityLab(MarketAnalysis analysis) {
+    final uid = Supabase.instance.client.auth.currentUser?.id;
+    if (uid == null) return;
+
+    final json = analysis.analysisJson;
+    final actions = json['priority_actions'] as List<dynamic>? ?? [];
+    if (actions.isEmpty) return;
+
+    final svc = OpportunityLabService();
+    // Create up to 3 opportunity lab items from the top priority actions
+    final top = actions.take(3);
+    for (final a in top) {
+      if (a is! Map) continue;
+      final title = a['action'] as String? ?? '';
+      if (title.isEmpty) continue;
+      final score = _parseScore(a['roi_expected'] as String?);
+      final item = OpportunityLabItem(
+        id:              '',
+        userId:          uid,
+        opportunityType: 'content',
+        title:           title,
+        description:     'Gerado pelo Market Intelligence — impacto: ${a['impact'] ?? 'N/A'}, esforço: ${a['effort'] ?? 'N/A'}',
+        marketScore:     analysis.opportunityScore,
+        revenueScore:    score,
+        finalScore:      analysis.opportunityScore,
+        createdAt:       DateTime.now(),
+      );
+      svc.create(item).catchError((_) {});
+    }
+  }
+
+  static int _parseScore(String? s) {
+    if (s == null) return 60;
+    final digits = RegExp(r'\d+').firstMatch(s)?.group(0);
+    if (digits == null) return 60;
+    final v = int.tryParse(digits) ?? 60;
+    return v.clamp(0, 100);
+  }
 }
 
 final marketAnalysisNotifierProvider =
