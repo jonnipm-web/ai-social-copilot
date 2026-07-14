@@ -77,7 +77,7 @@ class MarketAnalysisNotifier extends StateNotifier<AsyncValue<MarketAnalysis?>> 
       state = AsyncValue.data(result);
 
       // Auto-seed Opportunity Lab with the top priority actions from the analysis
-      _seedOpportunityLab(result);
+      await _seedOpportunityLab(result);
 
       return result;
     } catch (e, st) {
@@ -88,7 +88,7 @@ class MarketAnalysisNotifier extends StateNotifier<AsyncValue<MarketAnalysis?>> 
 
   void reset() => state = const AsyncValue.data(null);
 
-  void _seedOpportunityLab(MarketAnalysis analysis) {
+  Future<void> _seedOpportunityLab(MarketAnalysis analysis) async {
     final uid = Supabase.instance.client.auth.currentUser?.id;
     if (uid == null) return;
 
@@ -97,7 +97,6 @@ class MarketAnalysisNotifier extends StateNotifier<AsyncValue<MarketAnalysis?>> 
     if (actions.isEmpty) return;
 
     final svc = OpportunityLabService();
-    // Create up to 3 opportunity lab items from the top priority actions
     final top = actions.take(3);
     for (final a in top) {
       if (a is! Map) continue;
@@ -105,17 +104,24 @@ class MarketAnalysisNotifier extends StateNotifier<AsyncValue<MarketAnalysis?>> 
       if (title.isEmpty) continue;
       final score = _parseScore(a['roi_expected'] as String?);
       final item = OpportunityLabItem(
-        id:              '',
-        userId:          uid,
-        opportunityType: 'content',
-        title:           title,
-        description:     'Gerado pelo Market Intelligence — impacto: ${a['impact'] ?? 'N/A'}, esforço: ${a['effort'] ?? 'N/A'}',
-        marketScore:     analysis.opportunityScore,
-        revenueScore:    score,
-        finalScore:      analysis.opportunityScore,
-        createdAt:       DateTime.now(),
+        id:               '',
+        userId:           uid,
+        marketAnalysisId: analysis.id,
+        opportunityType:  'content',
+        title:            title,
+        description:      'Gerado pelo Market Intelligence — impacto: ${a['impact'] ?? 'N/A'}, esforço: ${a['effort'] ?? 'N/A'}',
+        marketScore:      analysis.opportunityScore,
+        revenueScore:     score,
+        finalScore:       analysis.opportunityScore,
+        createdAt:        DateTime.now(),
       );
-      svc.create(item).catchError((_) {});
+      try {
+        await svc.create(item);
+      } catch (e) {
+        // Log but don't fail the main analysis flow
+        // ignore: avoid_print
+        print('[MarketAnalysis] seed opportunity lab error: $e');
+      }
     }
   }
 
