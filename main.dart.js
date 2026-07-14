@@ -59955,9 +59955,7 @@ i=o.pop()
 l=A.a9(i)
 k=A.av(i)
 n.saS(A.eB(l,k,t.bN))
-q=null
-s=1
-break
+throw i
 s=6
 break
 case 3:s=2
