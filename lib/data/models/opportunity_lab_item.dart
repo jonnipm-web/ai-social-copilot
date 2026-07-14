@@ -2,6 +2,7 @@ class OpportunityLabItem {
   final String id;
   final String userId;
   final String? projectId;
+  final String? marketAnalysisId;
   final String opportunityType;
   final String title;
   final String description;
@@ -18,6 +19,7 @@ class OpportunityLabItem {
     required this.id,
     required this.userId,
     this.projectId,
+    this.marketAnalysisId,
     this.opportunityType = 'expansão',
     required this.title,
     this.description = '',
@@ -55,6 +57,7 @@ class OpportunityLabItem {
         id:               map['id'] as String,
         userId:           map['user_id'] as String,
         projectId:        map['project_id'] as String?,
+        marketAnalysisId: map['market_analysis_id'] as String?,
         opportunityType:  map['opportunity_type'] as String? ?? 'expansão',
         title:            map['title'] as String? ?? '',
         description:      map['description'] as String? ?? '',
@@ -69,9 +72,10 @@ class OpportunityLabItem {
       );
 
   Map<String, dynamic> toInsertMap() => {
-        'user_id':          userId,
-        'project_id':       projectId,
-        'opportunity_type': opportunityType,
+        'user_id':             userId,
+        'project_id':          projectId,
+        'market_analysis_id':  marketAnalysisId,
+        'opportunity_type':    opportunityType,
         'title':            title,
         'description':      description,
         'market_score':     marketScore,

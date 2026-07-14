@@ -2,6 +2,7 @@ class ActionQueueItem {
   final String id;
   final String userId;
   final String? projectId;
+  final String? opportunityLabId;
   final String actionType;
   final String title;
   final int priority;
@@ -15,6 +16,7 @@ class ActionQueueItem {
     required this.id,
     required this.userId,
     this.projectId,
+    this.opportunityLabId,
     this.actionType = 'task',
     required this.title,
     this.priority = 0,
@@ -34,10 +36,11 @@ class ActionQueueItem {
   ];
 
   factory ActionQueueItem.fromMap(Map<String, dynamic> map) => ActionQueueItem(
-        id:          map['id'] as String,
-        userId:      map['user_id'] as String,
-        projectId:   map['project_id'] as String?,
-        actionType:  map['action_type'] as String? ?? 'task',
+        id:               map['id'] as String,
+        userId:           map['user_id'] as String,
+        projectId:        map['project_id'] as String?,
+        opportunityLabId: map['opportunity_lab_id'] as String?,
+        actionType:       map['action_type'] as String? ?? 'task',
         title:       map['title'] as String? ?? '',
         priority:    map['priority'] as int? ?? 0,
         impactScore: map['impact_score'] as int? ?? 0,
@@ -48,9 +51,10 @@ class ActionQueueItem {
       );
 
   Map<String, dynamic> toInsertMap() => {
-        'user_id':      userId,
-        'project_id':   projectId,
-        'action_type':  actionType,
+        'user_id':           userId,
+        'project_id':        projectId,
+        'opportunity_lab_id': opportunityLabId,
+        'action_type':       actionType,
         'title':        title,
         'priority':     priority,
         'impact_score': impactScore,

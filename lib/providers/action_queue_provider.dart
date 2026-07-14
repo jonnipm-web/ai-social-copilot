@@ -68,7 +68,7 @@ class ActionQueueNotifier
     required String title,
     required String description,
     String? projectId,
-    String? opportunityId,
+    String? opportunityLabId,
     int priority = 50,
     int impactScore = 60,
     int effortScore = 50,
@@ -76,17 +76,18 @@ class ActionQueueNotifier
     final uid = _svc.currentUserId;
     if (uid == null) throw Exception('Não autenticado');
     final item = ActionQueueItem(
-      id:            '',
-      userId:        uid,
-      projectId:     projectId,
-      actionType:    'opportunity',
-      title:         '[Lab] $title',
-      priority:      priority,
-      impactScore:   impactScore,
-      effortScore:   effortScore,
-      roiScore:      0,
-      status:        'pending',
-      createdAt:     DateTime.now(),
+      id:               '',
+      userId:           uid,
+      projectId:        projectId,
+      opportunityLabId: opportunityLabId,
+      actionType:       'opportunity',
+      title:            '[Lab] $title',
+      priority:         priority,
+      impactScore:      impactScore,
+      effortScore:      effortScore,
+      roiScore:         0,
+      status:           'pending',
+      createdAt:        DateTime.now(),
     );
     final created = await _svc.create(item);
     await load();
