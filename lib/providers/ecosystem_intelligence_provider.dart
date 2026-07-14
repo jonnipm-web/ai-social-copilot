@@ -15,18 +15,20 @@ final _eiService = EcosystemIntelligenceService();
 // ── Master provider: loads all data and computes ecosystem scores ──────────
 final ecosystemScoresProvider =
     FutureProvider.autoDispose<List<EcosystemScore>>((ref) async {
-  final projects  = await ref.watch(projectsProvider.future);
-  final analyses  = await ref.watch(marketAnalysesProvider.future);
-  final actions   = await ref.watch(actionQueueProvider.future);
-  final labItems  = await ref.watch(opportunityLabProvider.future);
-  final roiList   = await ref.watch(roiMetricsProvider.future);
+  final projects     = await ref.watch(projectsProvider.future);
+  final analyses     = await ref.watch(marketAnalysesProvider.future);
+  final actions      = await ref.watch(actionQueueProvider.future);
+  final labItems     = await ref.watch(opportunityLabProvider.future);
+  final roiList      = await ref.watch(roiMetricsProvider.future);
+  final revenuePlans = await ref.watch(allRevenuePlansProvider.future);
 
   return _eiService.computeProjectScores(
-    projects:   projects,
-    analyses:   analyses,
-    actions:    actions,
-    labItems:   labItems,
-    roiMetrics: roiList,
+    projects:      projects,
+    analyses:      analyses,
+    actions:       actions,
+    labItems:      labItems,
+    roiMetrics:    roiList,
+    revenuePlans:  revenuePlans,
   );
 });
 

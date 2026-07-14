@@ -298,6 +298,15 @@ class MarketAnalysisService {
     return ContentCluster.fromMap(row);
   }
 
+  // All Revenue Plans (for ecosystem scoring)
+  Future<List<RevenuePlan>> fetchAllRevenuePlans() async {
+    final rows = await _client
+        .from(AppConstants.tableRevenuePlans)
+        .select()
+        .order('created_at', ascending: false);
+    return (rows as List).map((r) => RevenuePlan.fromMap(r)).toList();
+  }
+
   // Revenue Plan
   Future<RevenuePlan?> fetchRevenuePlan(String marketAnalysisId) async {
     final row = await _client
