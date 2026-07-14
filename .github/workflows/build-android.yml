@@ -85,14 +85,21 @@ jobs:
         run: flutter build apk --release
 
       - name: Verificar SHA-1 real do certificado do APK
+        continue-on-error: true
         run: |
           APK="build/app/outputs/flutter-apk/app-release.apk"
           echo "============================================"
-          echo "SHA-1 REAL EMBUTIDO NO APK GERADO:"
-          keytool -printcert -jarfile "$APK" | grep -E "SHA1:|SHA-1:|SHA256:|MD5:"
+          echo "SHA-1 REAL EMBUTIDO NO APK GERADO (keytool):"
+          keytool -printcert -jarfile "$APK" 2>&1 || true
           echo "============================================"
-          echo "Compare este SHA-1 com o registrado no Google Cloud Console"
-          echo "em: APIs e Servicos > Credenciais > Cliente OAuth Android"
+          echo "SHA-1 VIA apksigner:"
+          APKSIGNER="$ANDROID_SDK_ROOT/build-tools/$(ls $ANDROID_SDK_ROOT/build-tools | tail -1)/apksigner"
+          if [ -f "$APKSIGNER" ]; then
+            "$APKSIGNER" verify --print-certs "$APK" 2>&1 | grep -E "SHA-1|SHA1|MD5" || true
+          else
+            echo "apksigner nao encontrado, usando apenas keytool acima"
+          fi
+          echo "============================================"
 
       - name: Publicar APK como artefato
         uses: actions/upload-artifact@v4
