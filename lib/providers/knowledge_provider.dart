@@ -38,7 +38,7 @@ class KnowledgeItemNotifier extends StateNotifier<AsyncValue<KnowledgeItem?>> {
       return result;
     } catch (e, st) {
       state = AsyncValue.error(e, st);
-      return null;
+      rethrow;
     }
   }
 
