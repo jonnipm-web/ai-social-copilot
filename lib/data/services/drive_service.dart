@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class DriveFile {
   const DriveFile({
@@ -104,20 +106,70 @@ class DriveService {
     final token = await _token();
     if (token == null) throw Exception('Não autenticado com Google');
 
-    final Uri uri;
+    // Google Docs → export directly as plain text
     if (file.isGoogleDoc) {
-      uri = Uri.parse(
+      final uri = Uri.parse(
           'https://www.googleapis.com/drive/v3/files/${file.id}/export'
           '?mimeType=text/plain');
-    } else {
-      uri = Uri.parse(
-          'https://www.googleapis.com/drive/v3/files/${file.id}?alt=media');
+      final res = await http.get(uri, headers: {'Authorization': 'Bearer $token'});
+      if (res.statusCode != 200) {
+        throw Exception('Erro ao baixar arquivo: ${res.statusCode}');
+      }
+      return _stripNulls(res.body);
     }
 
+    // DOCX and PDF → download raw bytes, extract text via Edge Function
+    // (same approach as local file import — avoids null bytes from binary data)
+    if (file.isDocx || file.isPdf) {
+      final uri = Uri.parse(
+          'https://www.googleapis.com/drive/v3/files/${file.id}?alt=media');
+      final res = await http.get(uri, headers: {'Authorization': 'Bearer $token'});
+      if (res.statusCode != 200) {
+        throw Exception('Erro ao baixar arquivo: ${res.statusCode}');
+      }
+      return _extractTextViaEdgeFunction(
+        res.bodyBytes,
+        file.isDocx ? 'docx' : 'pdf',
+      );
+    }
+
+    // TXT and other text formats → download as text, strip any null bytes
+    final uri = Uri.parse(
+        'https://www.googleapis.com/drive/v3/files/${file.id}?alt=media');
     final res = await http.get(uri, headers: {'Authorization': 'Bearer $token'});
     if (res.statusCode != 200) {
       throw Exception('Erro ao baixar arquivo: ${res.statusCode}');
     }
-    return res.body;
+    return _stripNulls(res.body);
   }
+
+  Future<String> _extractTextViaEdgeFunction(
+    Uint8List bytes,
+    String extension,
+  ) async {
+    final response = await Supabase.instance.client.functions.invoke(
+      'process-file',
+      body: {
+        'file_base64': base64Encode(bytes),
+        'file_type':   extension,
+      },
+    );
+
+    if (response.data == null) {
+      throw Exception('Resposta vazia do serviço de extração de texto.');
+    }
+
+    final data = response.data as Map<String, dynamic>;
+    if (data.containsKey('error')) throw Exception(data['error']);
+
+    final text = _stripNulls(data['text'] as String? ?? '');
+    if (text.trim().length < 20) {
+      throw Exception(
+        'Conteúdo extraído muito curto. O arquivo pode estar protegido ou corrompido.',
+      );
+    }
+    return text;
+  }
+
+  static String _stripNulls(String s) => s.replaceAll('\x00', '');
 }
