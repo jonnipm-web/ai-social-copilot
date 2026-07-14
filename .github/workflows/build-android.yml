@@ -41,12 +41,14 @@ jobs:
             echo "=== settings.gradle.kts ===" && cat android/settings.gradle.kts
           fi
 
-      - name: Configurar Google Sign-In (strings.xml)
+      - name: Configurar Google Sign-In (google-services.json + strings.xml)
         run: |
+          cp android/app/google-services.json android/app/google-services.json || true
           mkdir -p android/app/src/main/res/values
           printf '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <string name="app_name">AI Social Copilot</string>\n    <string name="default_web_client_id">221504834589-jll1257ccns2sprai9ps949rv21gf7p2.apps.googleusercontent.com</string>\n</resources>\n' \
             > android/app/src/main/res/values/strings.xml
           echo "=== strings.xml ===" && cat android/app/src/main/res/values/strings.xml
+          echo "=== google-services.json ===" && cat android/app/google-services.json
 
       - name: Exibir SHA-1 do keystore usado na assinatura
         continue-on-error: true
