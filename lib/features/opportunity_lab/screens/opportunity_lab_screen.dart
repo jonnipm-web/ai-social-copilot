@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../data/models/action_queue_item.dart';
 import '../../../data/models/opportunity_lab_item.dart';
+import '../../../providers/action_queue_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
 import '../../../providers/feature_flag_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
@@ -144,6 +146,36 @@ class _LabBody extends StatelessWidget {
                   ref.read(opportunityLabNotifierProvider.notifier).approve(items[i].id),
               onDelete: () =>
                   ref.read(opportunityLabNotifierProvider.notifier).delete(items[i].id),
+              onConvertToAction: items[i].status == 'approved'
+                  ? () async {
+                      try {
+                        await ref
+                            .read(actionQueueNotifierProvider.notifier)
+                            .addFromOpportunity(
+                              title:       items[i].title,
+                              description: items[i].description,
+                              projectId:   items[i].projectId,
+                              priority:    items[i].finalScore > 0 ? items[i].finalScore : 50,
+                              impactScore: items[i].revenueScore > 0 ? items[i].revenueScore : 60,
+                              effortScore: 50,
+                            );
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Ação criada no Action Engine!'),
+                              backgroundColor: Color(0xFF4CAF50),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red),
+                          );
+                        }
+                      }
+                    }
+                  : null,
             ),
           ),
         );
@@ -164,10 +196,12 @@ class _LabItemCard extends StatelessWidget {
     required this.item,
     required this.onApprove,
     required this.onDelete,
+    this.onConvertToAction,
   });
   final OpportunityLabItem item;
   final VoidCallback onApprove;
   final VoidCallback onDelete;
+  final VoidCallback? onConvertToAction;
 
   static Color _statusColor(String s) {
     const m = {
@@ -267,6 +301,15 @@ class _LabItemCard extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 8)),
                   child: const Text('Aprovar', style: TextStyle(fontSize: 12)),
                 ),
+              if (item.status == 'approved' && onConvertToAction != null)
+                TextButton(
+                  onPressed: onConvertToAction,
+                  style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFF00BCD4),
+                      minimumSize: Size.zero,
+                      padding: const EdgeInsets.symmetric(horizontal: 8)),
+                  child: const Text('→ Ação', style: TextStyle(fontSize: 12)),
+                ),
               IconButton(
                 icon: const Icon(Icons.delete_outline_rounded,
                     color: Colors.white24, size: 18),
@@ -347,6 +390,12 @@ class _AddOpportunityDialogState
   final _descCtrl  = TextEditingController();
   String _type = OpportunityLabItem.types.first;
   bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleCtrl.addListener(() => setState(() {}));
+  }
 
   @override
   void dispose() {

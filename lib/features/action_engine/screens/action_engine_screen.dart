@@ -351,12 +351,15 @@ class _ActionCard extends StatelessWidget {
               ],
               if (item.status == 'approved') ...[
                 _ActionBtn('Iniciar', _kCyan,
-                    () => notifier.complete(item.id)),
+                    () => notifier.execute(item.id)),
                 const SizedBox(width: 8),
               ],
               if (item.status == 'executing') ...[
                 _ActionBtn('Concluir', _kGreen,
                     () => notifier.complete(item.id)),
+                const SizedBox(width: 8),
+                _ActionBtn('Pausar', _kOrange,
+                    () => notifier.approve(item.id)),
                 const SizedBox(width: 8),
               ],
               IconButton(

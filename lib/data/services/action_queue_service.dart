@@ -6,6 +6,8 @@ import '../../core/constants/app_constants.dart';
 class ActionQueueService {
   final _client = Supabase.instance.client;
 
+  String? get currentUserId => _client.auth.currentUser?.id;
+
   Future<List<ActionQueueItem>> fetchAll({String? projectId, String? status}) async {
     var filter = _client
         .from(AppConstants.tableActionQueue)

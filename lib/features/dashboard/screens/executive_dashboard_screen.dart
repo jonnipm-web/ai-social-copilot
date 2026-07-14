@@ -115,6 +115,15 @@ class ExecutiveDashboardScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
 
+            // Executive Recommendations (based on real data)
+            _ExecutiveRecommendations(
+              projects:  projectsAsync.value ?? [],
+              analyses:  analysesAsync.value ?? [],
+              actions:   actionsAsync.value ?? [],
+              roiMap:    roiAsync.value ?? {},
+            ),
+            const SizedBox(height: 16),
+
             // Revenue Potential
             _RevenuePotentialBanner(analyses: analysesAsync.value ?? []),
             const SizedBox(height: 16),
@@ -714,4 +723,202 @@ class _Stat extends StatelessWidget {
       ),
     );
   }
+}
+
+// ── Executive Recommendations (real-data driven) ────────────────────────────
+class _ExecutiveRecommendations extends StatelessWidget {
+  const _ExecutiveRecommendations({
+    required this.projects,
+    required this.analyses,
+    required this.actions,
+    required this.roiMap,
+  });
+
+  final List<Project>        projects;
+  final List<MarketAnalysis> analyses;
+  final List<ActionQueueItem> actions;
+  final Map<String, double>   roiMap;
+
+  List<_Recommendation> _build() {
+    final recs = <_Recommendation>[];
+
+    // No advisor configured
+    // (handled upstream — this widget is only rendered when data is available)
+
+    // No projects
+    if (projects.isEmpty) {
+      recs.add(_Recommendation(
+        icon: Icons.add_business_rounded,
+        color: _kPrimary,
+        title: 'Cadastre seu primeiro projeto',
+        body: 'Acesse o Project Command Center e cadastre pelo menos um projeto para desbloquear análises e oportunidades.',
+        confidence: 100,
+      ));
+      return recs;
+    }
+
+    // No market analyses
+    if (analyses.isEmpty) {
+      recs.add(_Recommendation(
+        icon: Icons.analytics_rounded,
+        color: _kCyan,
+        title: 'Execute sua primeira análise de mercado',
+        body: 'Vá ao Market Intelligence e analise o nicho ou URL do seu projeto "${projects.first.name}" para gerar oportunidades.',
+        confidence: 95,
+      ));
+    }
+
+    // Pending actions
+    final pending = actions.where((a) => a.status == 'pending').length;
+    if (pending > 0) {
+      recs.add(_Recommendation(
+        icon: Icons.bolt_rounded,
+        color: _kGold,
+        title: '$pending ação${pending > 1 ? "ões" : ""} aguardando aprovação',
+        body: 'Revise e aprove as ações pendentes no Action Engine para começar a execução.',
+        confidence: 90,
+      ));
+    }
+
+    // High opportunity score analyses
+    final topAnalyses = analyses
+        .where((a) => a.opportunityScore >= 75)
+        .toList()
+      ..sort((a, b) => b.opportunityScore.compareTo(a.opportunityScore));
+    if (topAnalyses.isNotEmpty) {
+      final top = topAnalyses.first;
+      recs.add(_Recommendation(
+        icon: Icons.star_rounded,
+        color: _kGreen,
+        title: 'Oportunidade de alta pontuação: ${top.niche ?? top.input}',
+        body: 'Score ${top.opportunityScore}/100. Acione o Opportunity Lab para converter as ações recomendadas em tarefas executáveis.',
+        confidence: top.opportunityScore,
+      ));
+    }
+
+    // Executing actions
+    final executing = actions.where((a) => a.status == 'executing').length;
+    if (executing > 0) {
+      recs.add(_Recommendation(
+        icon: Icons.play_circle_rounded,
+        color: _kCyan,
+        title: '$executing ação${executing > 1 ? "ões" : ""} em execução',
+        body: 'Acompanhe o progresso e registre o resultado no ROI Tracker ao concluir.',
+        confidence: 85,
+      ));
+    }
+
+    // Revenue potential
+    final revPot = roiMap['revenue_potential'] ?? 0;
+    if (revPot > 0) {
+      recs.add(_Recommendation(
+        icon: Icons.attach_money_rounded,
+        color: _kGreen,
+        title: 'Potencial de receita registrado: R\$ ${revPot.toStringAsFixed(0)}',
+        body: 'Compare com a receita efetiva para calcular o ROI real dos seus projetos.',
+        confidence: 80,
+      ));
+    }
+
+    // No revenue recorded
+    if ((roiMap['revenue'] ?? 0) == 0 && projects.isNotEmpty) {
+      recs.add(_Recommendation(
+        icon: Icons.payments_rounded,
+        color: _kOrange,
+        title: 'Nenhuma receita registrada ainda',
+        body: 'Adicione entradas de receita no ROI Tracker para acompanhar o retorno real dos seus projetos.',
+        confidence: 75,
+      ));
+    }
+
+    return recs.take(4).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final recs = _build();
+    if (recs.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _kCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _kGold.withOpacity(0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.lightbulb_rounded, color: _kGold, size: 18),
+              SizedBox(width: 8),
+              Text(
+                'Recomendações Executivas',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...recs.map((r) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: r.color.withOpacity(0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(r.icon, color: r.color, size: 16),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(r.title,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 2),
+                          Text(r.body,
+                              style: const TextStyle(
+                                  color: Colors.white54, fontSize: 11, height: 1.4)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${r.confidence}%',
+                      style: TextStyle(
+                          color: r.color, fontSize: 10, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              )),
+        ],
+      ),
+    );
+  }
+}
+
+class _Recommendation {
+  const _Recommendation({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.body,
+    required this.confidence,
+  });
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String body;
+  final int confidence;
 }
