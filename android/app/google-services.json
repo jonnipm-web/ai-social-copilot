@@ -1,0 +1,43 @@
+{
+  "project_info": {
+    "project_number": "221504834589",
+    "project_id": "focused-code-423720-r1",
+    "storage_bucket": ""
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:221504834589:android:e918u3i4fh6cjps9hdu6lchpnqrpjh9j",
+        "android_client_info": {
+          "package_name": "com.example.ai_social_copilot"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "221504834589-e918u3i4fh6cjps9hdu6lchpnqrpjh9j.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.ai_social_copilot",
+            "certificate_hash": ""
+          }
+        },
+        {
+          "client_id": "221504834589-jll1257ccns2sprai9ps949rv21gf7p2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "221504834589-jll1257ccns2sprai9ps949rv21gf7p2.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
