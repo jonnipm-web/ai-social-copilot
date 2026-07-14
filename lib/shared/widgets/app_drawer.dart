@@ -189,8 +189,20 @@ class _DrawerContent extends ConsumerWidget {
                 ),
                 _NavItem(
                   icon: Icons.hub_rounded,
-                  label: 'Ecosystem View',
+                  label: 'Decision Center',
                   route: AppConstants.routeEcosystem,
+                  current: current,
+                ),
+                _NavItem(
+                  icon: Icons.schedule_rounded,
+                  label: 'Alocação de Recursos',
+                  route: AppConstants.routeEcosystemResources,
+                  current: current,
+                ),
+                _NavItem(
+                  icon: Icons.summarize_rounded,
+                  label: 'Briefing Semanal',
+                  route: AppConstants.routeEcosystemBriefing,
                   current: current,
                 ),
                 _NavItem(

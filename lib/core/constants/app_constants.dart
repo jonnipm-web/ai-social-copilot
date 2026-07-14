@@ -67,6 +67,10 @@ class AppConstants {
   static const routeActionEngine         = '/action-engine';
   static const routeExecutiveDashboard   = '/executive-dashboard';
 
+  // Fase 10B — Ecosystem Intelligence Layer
+  static const routeEcosystemResources   = '/ecosystem/resources';
+  static const routeEcosystemBriefing    = '/ecosystem/briefing';
+
   // Tabelas Supabase
   static const tablePostGenerations   = 'post_generations';
   static const tableProfiles          = 'profiles';
