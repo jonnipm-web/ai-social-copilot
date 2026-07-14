@@ -99,7 +99,9 @@ class _ExecutiveDecisionCenterScreenState
           ),
         ],
       ),
-      body: Column(
+      body: SafeArea(
+        top: false,
+        child: Column(
         children: [
           // Health banner
           healthAsync.when(
@@ -118,6 +120,7 @@ class _ExecutiveDecisionCenterScreenState
             ),
           ),
         ],
+        ),
       ),
     );
   }
@@ -218,7 +221,7 @@ class _Top5Tab extends ConsumerWidget {
               style: TextStyle(color: Colors.white54)));
         }
         return ListView(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
           children: [
             _Top5Section(
               title: '🚀 TOP 5 PROJETOS',
@@ -480,7 +483,7 @@ class _EcosystemTab extends StatelessWidget {
               style: TextStyle(color: Colors.white54)));
         }
         return ListView.separated(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
           itemCount: scores.length,
           separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (_, i) => _EcosystemCard(score: scores[i]),
@@ -663,7 +666,7 @@ class _RecsTab extends StatelessWidget {
               style: TextStyle(color: Colors.white54)));
         }
         return ListView.separated(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
           itemCount: recs.length,
           separatorBuilder: (_, __) => const SizedBox(height: 10),
           itemBuilder: (_, i) => _RecCard(rec: recs[i]),

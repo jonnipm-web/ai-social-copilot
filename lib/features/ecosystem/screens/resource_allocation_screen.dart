@@ -53,8 +53,10 @@ class _ResourceAllocationScreenState extends ConsumerState<ResourceAllocationScr
         title: const Text('Alocação de Recursos',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      body: SafeArea(
+        top: false,
+        child: ListView(
+        padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
         children: [
           // Mode selector
           _ModeSelector(
@@ -79,6 +81,7 @@ class _ResourceAllocationScreenState extends ConsumerState<ResourceAllocationScr
             data: (alloc) => _AllocationResult(alloc: alloc),
           ),
         ],
+        ),
       ),
     );
   }

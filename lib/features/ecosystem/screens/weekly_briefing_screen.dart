@@ -47,12 +47,15 @@ class WeeklyBriefingScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: briefingAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator(color: _kPrimary)),
-        error: (e, _) => Center(
-          child: Text('Erro ao gerar briefing: $e',
-            style: const TextStyle(color: _kRed), textAlign: TextAlign.center)),
-        data: (b) => _BriefingBody(briefing: b),
+      body: SafeArea(
+        top: false,
+        child: briefingAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator(color: _kPrimary)),
+          error: (e, _) => Center(
+            child: Text('Erro ao gerar briefing: $e',
+              style: const TextStyle(color: _kRed), textAlign: TextAlign.center)),
+          data: (b) => _BriefingBody(briefing: b),
+        ),
       ),
     );
   }
@@ -68,8 +71,9 @@ class _BriefingBody extends StatelessWidget {
     final month = briefing.generatedAt.month.toString().padLeft(2, '0');
     final year  = briefing.generatedAt.year;
 
+    final bottomPad = MediaQuery.of(context).padding.bottom;
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomPad),
       children: [
         // Header
         _Header(briefing: briefing, dateStr: '$day/$month/$year'),
