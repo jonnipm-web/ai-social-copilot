@@ -9,6 +9,14 @@ class PersonaTrainingService {
 
   static const _table = 'persona_training';
 
+  Future<List<PersonaTraining>> fetchAll() async {
+    final rows = await _client
+        .from(_table)
+        .select()
+        .order('created_at', ascending: false);
+    return (rows as List).map((r) => PersonaTraining.fromMap(r)).toList();
+  }
+
   Future<List<PersonaTraining>> fetchForPersona(String personaId) async {
     final rows = await _client
         .from(_table)

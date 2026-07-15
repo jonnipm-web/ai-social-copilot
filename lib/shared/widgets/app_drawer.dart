@@ -104,15 +104,21 @@ class _DrawerContent extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(vertical: 8),
               children: [
                 _NavItem(
+                  icon: Icons.hub_rounded,
+                  label: 'OS Command Center',
+                  route: AppConstants.routeHome,
+                  current: current,
+                ),
+                _NavItem(
                   icon: Icons.dashboard_rounded,
-                  label: 'Dashboard',
+                  label: 'Business Dashboard',
                   route: AppConstants.routeDashboard,
                   current: current,
                 ),
                 _NavItem(
                   icon: Icons.auto_fix_high_rounded,
                   label: 'Melhorar Post',
-                  route: AppConstants.routeHome,
+                  route: AppConstants.routeGenerate,
                   current: current,
                 ),
                 _NavItem(
@@ -183,7 +189,7 @@ class _DrawerContent extends ConsumerWidget {
                 // ── Fase 10A — Business OS ─────────────────────
                 _NavItem(
                   icon: Icons.speed_rounded,
-                  label: 'Business Dashboard',
+                  label: 'Executive Dashboard',
                   route: AppConstants.routeExecutiveDashboard,
                   current: current,
                 ),

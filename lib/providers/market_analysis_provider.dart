@@ -64,6 +64,11 @@ final revenuePlanByAnalysisProvider =
   return ref.read(marketAnalysisServiceProvider).fetchRevenuePlan(marketAnalysisId);
 });
 
+// All revenue plans — used by ecosystem scoring
+final allRevenuePlansProvider = FutureProvider.autoDispose<List<RevenuePlan>>((ref) {
+  return ref.read(marketAnalysisServiceProvider).fetchAllRevenuePlans();
+});
+
 // Notifier for running market analysis
 class MarketAnalysisNotifier extends StateNotifier<AsyncValue<MarketAnalysis?>> {
   MarketAnalysisNotifier(this._service) : super(const AsyncValue.data(null));
@@ -78,6 +83,9 @@ class MarketAnalysisNotifier extends StateNotifier<AsyncValue<MarketAnalysis?>> 
 
       // Auto-seed Opportunity Lab with the top priority actions from the analysis
       await _seedOpportunityLab(result);
+
+      // Auto-link matching project by URL so ecosystem scores become non-zero immediately
+      if (inputType == 'url') await _tryLinkProject(result, input);
 
       return result;
     } catch (e, st) {
@@ -124,6 +132,45 @@ class MarketAnalysisNotifier extends StateNotifier<AsyncValue<MarketAnalysis?>> 
       }
     }
   }
+
+  // Auto-link the analysis to a project whose URL matches the analyzed input
+  Future<void> _tryLinkProject(MarketAnalysis analysis, String input) async {
+    try {
+      final client = Supabase.instance.client;
+      final normInput = _normalizeUrl(input);
+
+      final rows = await client
+          .from('projects')
+          .select('id, url, market_analysis_id')
+          .is_('market_analysis_id', null);
+
+      for (final row in (rows as List)) {
+        final url = row['url'] as String? ?? '';
+        if (url.isEmpty) continue;
+        if (_normalizeUrl(url) == normInput) {
+          await client
+              .from('projects')
+              .update({
+                'market_analysis_id': analysis.id,
+                'opportunity_score':  analysis.opportunityScore,
+                'updated_at':         DateTime.now().toIso8601String(),
+              })
+              .eq('id', row['id'] as String);
+          break;
+        }
+      }
+    } catch (e) {
+      // ignore: avoid_print
+      print('[MarketAnalysis] auto-link project error: $e');
+    }
+  }
+
+  static String _normalizeUrl(String url) => url
+      .toLowerCase()
+      .replaceAll(RegExp(r'^https?://'), '')
+      .replaceAll(RegExp(r'^www\.'), '')
+      .replaceAll(RegExp(r'/$'), '')
+      .split('?').first;
 
   static int _parseScore(String? s) {
     if (s == null) return 60;

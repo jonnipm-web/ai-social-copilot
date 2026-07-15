@@ -7,6 +7,7 @@ import '../models/opportunity_lab_item.dart';
 import '../models/priority_recommendation.dart';
 import '../models/project.dart';
 import '../models/resource_allocation.dart';
+import '../models/revenue_plan.dart';
 import '../models/roi_metric.dart';
 import '../models/weekly_briefing.dart';
 
@@ -19,25 +20,28 @@ class EcosystemIntelligenceService {
     required List<ActionQueueItem> actions,
     required List<OpportunityLabItem> labItems,
     required List<RoiMetric> roiMetrics,
+    List<RevenuePlan> revenuePlans = const [],
   }) {
-    final now = DateTime.now();
+    final now    = DateTime.now();
     final cutoff = now.subtract(const Duration(days: 30));
 
     return projects.map((p) {
-      final analysis = _findAnalysis(p, analyses);
+      final analysis = _findAnalysisMatch(p, analyses);
+      final plan     = _findRevenuePlan(p, analysis, revenuePlans);
       final pActions = actions.where((a) => a.projectId == p.id).toList();
       final pLab     = labItems.where((l) => l.projectId == p.id).toList();
       final pRoi     = roiMetrics.where((r) => r.projectId == p.id).toList();
 
-      final oppScore     = analysis?.opportunityScore ?? p.opportunityScore;
-      final strategic    = _strategicFit(p, analysis, pActions, pRoi);
-      final synergy      = _synergyScore(p, analysis, pLab, pActions);
-      final roi          = _roiScore(pRoi);
-      final momentum     = _momentumScore(pActions, pLab, cutoff);
-      final ecosystem    = _weighted(oppScore, strategic, synergy, roi, momentum);
-      final recommendation = _recommend(ecosystem);
-      final totalRoi     = pRoi.fold(0.0, (s, r) => s + r.metricValue);
-      final completed    = pActions.where((a) => a.status == 'completed').length;
+      // Use analysis score when available; derive from project fields when not
+      final oppScore  = analysis?.opportunityScore ?? _deriveOppScore(p);
+      final strategic = _strategicFit(p, analysis, pActions, pRoi);
+      final synergy   = _synergyScore(p, analysis, pLab, pActions);
+      final roi       = _roiScore(pRoi, plan);
+      final momentum  = _momentumScore(pActions, pLab, cutoff);
+      final ecosystem = _weighted(oppScore, strategic, synergy, roi, momentum);
+      final rec       = _recommend(ecosystem);
+      final totalRoi  = pRoi.fold(0.0, (s, r) => s + r.metricValue);
+      final completed = pActions.where((a) => a.status == 'completed').length;
 
       return EcosystemScore(
         project:          p,
@@ -47,7 +51,7 @@ class EcosystemIntelligenceService {
         roiScore:         roi,
         momentumScore:    momentum,
         ecosystemScore:   ecosystem,
-        recommendation:   recommendation,
+        recommendation:   rec,
         strengths:        _strengths(p, analysis, roi, synergy, momentum),
         risks:            _risks(p, pActions, roi, momentum),
         quickWins:        _quickWins(pActions),
@@ -227,11 +231,17 @@ class EcosystemIntelligenceService {
       impact: s.ecosystemScore,
     )).toList();
 
-    final priorities = scores.take(3).map((s) => BriefingItem(
-      title:  s.project.name,
-      detail: '${s.recommendationEmoji} ${s.recommendation} — Score ${s.ecosystemScore}/100',
-      impact: s.ecosystemScore,
-    )).toList();
+    // Only show non-PAUSAR projects as priorities to avoid contradiction
+    final priorityCandidates = scores
+        .where((s) => s.recommendation != 'PAUSAR')
+        .take(3)
+        .toList();
+    final priorities = (priorityCandidates.isNotEmpty ? priorityCandidates : scores.take(3))
+        .map((s) => BriefingItem(
+          title:  s.project.name,
+          detail: '${s.recommendationEmoji} ${s.recommendation} — Score ${s.ecosystemScore}/100',
+          impact: s.ecosystemScore,
+        )).toList();
 
     final toPause = pausing.map((s) => BriefingItem(
       title:  s.project.name,
@@ -272,29 +282,84 @@ class EcosystemIntelligenceService {
 
   // ── Scoring Helpers ───────────────────────────────────────────────────────
 
-  MarketAnalysis? _findAnalysis(Project p, List<MarketAnalysis> analyses) {
+  // 3-strategy analysis lookup: FK → URL → skip
+  MarketAnalysis? _findAnalysisMatch(Project p, List<MarketAnalysis> analyses) {
+    if (analyses.isEmpty) return null;
+
+    // Strategy 1: direct FK (most reliable)
     if (p.marketAnalysisId != null) {
-      return analyses.firstWhere((a) => a.id == p.marketAnalysisId,
-          orElse: () => analyses.isNotEmpty ? analyses.first : throw StateError(''));
+      final direct = analyses.where((a) => a.id == p.marketAnalysisId).toList();
+      if (direct.isNotEmpty) return direct.first;
     }
-    return analyses.isEmpty ? null : null;
+
+    // Strategy 2: URL match (analysis.input vs project.url)
+    if (p.url != null && p.url!.isNotEmpty) {
+      final pUrl = _normalizeUrl(p.url!);
+      for (final a in analyses) {
+        if (_normalizeUrl(a.input) == pUrl) return a;
+      }
+    }
+
+    // Strategy 3: project name appears in analysis input/niche (fuzzy)
+    final pName = p.name.toLowerCase().trim();
+    if (pName.length >= 4) {
+      for (final a in analyses) {
+        final inputLow = _normalizeUrl(a.input);
+        final nicheLow = (a.niche ?? '').toLowerCase();
+        if (inputLow.contains(pName) || nicheLow.contains(pName)) return a;
+      }
+    }
+
+    return null;
   }
 
+  // Derive opportunity score from project's own fields when no analysis exists
+  int _deriveOppScore(Project p) {
+    final revScore = math.min(50, (p.revenuePotential / 2000)).round();
+    final priScore = (p.priorityScore * 0.30).round();
+    final timeBonus = p.timeToRevenueDays > 0 && p.timeToRevenueDays <= 90 ? 10 : 0;
+    return (revScore + priScore + timeBonus).clamp(0, 100);
+  }
+
+  // Revenue plan linked via analysis chain
+  RevenuePlan? _findRevenuePlan(Project p, MarketAnalysis? a, List<RevenuePlan> plans) {
+    if (plans.isEmpty) return null;
+    // Via project's direct FK
+    if (p.marketAnalysisId != null) {
+      final direct = plans.where((r) => r.marketAnalysisId == p.marketAnalysisId).toList();
+      if (direct.isNotEmpty) return direct.first;
+    }
+    // Via matched analysis
+    if (a != null) {
+      final linked = plans.where((r) => r.marketAnalysisId == a.id).toList();
+      if (linked.isNotEmpty) return linked.first;
+    }
+    return null;
+  }
+
+  String _normalizeUrl(String url) => url
+      .toLowerCase()
+      .replaceAll(RegExp(r'^https?://'), '')
+      .replaceAll(RegExp(r'^www\.'), '')
+      .replaceAll(RegExp(r'/$'), '')
+      .split('?').first;
+
   int _strategicFit(Project p, MarketAnalysis? a, List<ActionQueueItem> actions, List<RoiMetric> roi) {
-    final market     = (a?.opportunityScore ?? p.opportunityScore) * 0.35;
-    final priority   = p.priorityScore * 0.20;
-    final totalRoi   = roi.fold(0.0, (s, r) => s + r.metricValue);
-    final roiComp    = math.min(100.0, totalRoi / 2000 * 100) * 0.25;
-    final total      = actions.length;
-    final done       = actions.where((a) => a.status == 'completed').length;
-    final execComp   = total == 0 ? 30.0 : (done / total * 100) * 0.20;
+    final market   = (a?.opportunityScore ?? _deriveOppScore(p)) * 0.35;
+    final priority = p.priorityScore * 0.20;
+    final totalRoi = roi.fold(0.0, (s, r) => s + r.metricValue);
+    final roiComp  = math.min(100.0, totalRoi / 2000 * 100) * 0.25;
+    final total    = actions.length;
+    final done     = actions.where((a) => a.status == 'completed').length;
+    // 5.0 baseline for zero-action projects — honest floor, not inflated
+    final execComp = total == 0 ? 5.0 : (done / total * 100) * 0.20;
     return (market + priority + roiComp + execComp).round().clamp(0, 100);
   }
 
   int _synergyScore(Project p, MarketAnalysis? a, List<OpportunityLabItem> lab, List<ActionQueueItem> actions) {
     int score = 0;
-    if (a != null)      score += 25;
-    if (p.marketAnalysisId != null) score += 10;
+    // Analysis link: 25 pts — single condition, no double-count
+    if (a != null) score += 25;
     score += math.min(30, lab.length * 8);
     final approved = lab.where((l) => l.status == 'approved').length;
     score += math.min(20, approved * 10);
@@ -302,16 +367,26 @@ class EcosystemIntelligenceService {
     return score.clamp(0, 100);
   }
 
-  int _roiScore(List<RoiMetric> roi) {
-    if (roi.isEmpty) return 0;
-    final total = roi.fold(0.0, (s, r) => s + r.metricValue);
-    return math.min(100, (total / 2000 * 100).round());
+  int _roiScore(List<RoiMetric> roi, RevenuePlan? plan) {
+    // Actual recorded ROI takes priority
+    if (roi.isNotEmpty) {
+      final total = roi.fold(0.0, (s, r) => s + r.metricValue);
+      return math.min(100, (total / 2000 * 100).round());
+    }
+    // Projected ROI from revenue plan (R$5000/month ≈ 50 pts; R$10000 ≈ 100 pts)
+    if (plan != null && plan.monthlyModerate > 0) {
+      return math.min(100, (plan.monthlyModerate / 100).round());
+    }
+    return 0;
   }
 
   int _momentumScore(List<ActionQueueItem> actions, List<OpportunityLabItem> lab, DateTime cutoff) {
-    final recentA = actions.where((a) => a.createdAt.isAfter(cutoff)).length;
-    final recentL = lab.where((l) => l.createdAt.isAfter(cutoff)).length;
-    return math.min(100, recentA * 15 + recentL * 10);
+    // Baseline: project with any items shows it's being worked on
+    final baseline = (actions.isNotEmpty || lab.isNotEmpty) ? 15 : 0;
+    final recentA  = actions.where((a) => a.createdAt.isAfter(cutoff)).length;
+    final recentL  = lab.where((l) => l.createdAt.isAfter(cutoff)).length;
+    final completed = actions.where((a) => a.status == 'completed').length;
+    return math.min(100, baseline + recentA * 12 + recentL * 8 + completed * 5);
   }
 
   int _weighted(int opp, int fit, int syn, int roi, int mom) =>
@@ -324,7 +399,8 @@ class EcosystemIntelligenceService {
     return 'PAUSAR';
   }
 
-  int _confidence(int score) => score.clamp(50, 95);
+  // Allow low confidence for data-sparse projects (was clamp(50, 95) — always ≥50)
+  int _confidence(int score) => score.clamp(20, 90);
 
   List<String> _strengths(Project p, MarketAnalysis? a, int roi, int synergy, int momentum) {
     final s = <String>[];
