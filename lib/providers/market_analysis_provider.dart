@@ -142,7 +142,7 @@ class MarketAnalysisNotifier extends StateNotifier<AsyncValue<MarketAnalysis?>> 
       final rows = await client
           .from('projects')
           .select('id, url, market_analysis_id')
-          .is_('market_analysis_id', null);
+          .filter('market_analysis_id', 'is', null);
 
       for (final row in (rows as List)) {
         final url = row['url'] as String? ?? '';
