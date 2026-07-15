@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../data/models/project.dart';
 import '../../../data/models/score_breakdown.dart';
 import '../../../data/models/validation_result.dart';
 import '../../../providers/action_queue_provider.dart';
+import '../../../providers/auto_bootstrap_provider.dart';
 import '../../../providers/ecosystem_intelligence_provider.dart';
 import '../../../providers/intelligence_debug_provider.dart';
 import '../../../providers/knowledge_provider.dart';
@@ -790,14 +792,17 @@ class _HealthTab extends ConsumerWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// MODULE 8 — Automated Validation Tests
+// MODULE 8 — Automated Validation Tests + Bootstrap Engine
 // ═══════════════════════════════════════════════════════════════════════════
 class _TestsTab extends ConsumerWidget {
   const _TestsTab();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final reportAsync = ref.watch(validationReportProvider);
+    final reportAsync         = ref.watch(validationReportProvider);
+    final bootstrapState      = ref.watch(autoBootstrapNotifierProvider);
+    final needsBootstrapAsync = ref.watch(projectsNeedingBootstrapProvider);
+    final bootstrapNotifier   = ref.read(autoBootstrapNotifierProvider.notifier);
 
     if (reportAsync.isLoading) {
       return const Center(
@@ -819,6 +824,15 @@ class _TestsTab extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
+        // ── Knowledge → Action Engine ──────────────────────────────────
+        _BootstrapEngineCard(
+          bootstrapState:      bootstrapState,
+          notifier:            bootstrapNotifier,
+          needsBootstrapAsync: needsBootstrapAsync,
+        ),
+        const SizedBox(height: 16),
+        const Divider(color: Color(0xFF1A1A2E), height: 1),
+        const SizedBox(height: 12),
         // Summary header
         _TestSummaryCard(report: report),
         const SizedBox(height: 12),
@@ -830,6 +844,220 @@ class _TestsTab extends ConsumerWidget {
       ],
     );
   }
+}
+
+// ── Bootstrap Engine Card ─────────────────────────────────────────────────
+class _BootstrapEngineCard extends StatelessWidget {
+  final BootstrapState bootstrapState;
+  final AutoBootstrapNotifier notifier;
+  final AsyncValue<List<Project>> needsBootstrapAsync;
+
+  const _BootstrapEngineCard({
+    required this.bootstrapState,
+    required this.notifier,
+    required this.needsBootstrapAsync,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final report    = bootstrapState.report;
+    final isRunning = bootstrapState.isRunning;
+    final isDone    = bootstrapState.isDone;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF0E0E1C),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _kOrange.withOpacity(0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: _kOrange.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.bolt_rounded, color: _kOrange, size: 18),
+                ),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Knowledge → Action Engine',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13)),
+                      Text('Converte documentos em oportunidades, ações e roadmap',
+                          style: TextStyle(color: Colors.white38, fontSize: 10)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // Status / pending info
+          needsBootstrapAsync.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 14),
+              child: Text('Verificando projetos...', style: TextStyle(color: Colors.white38, fontSize: 11)),
+            ),
+            error: (_, __) => const SizedBox.shrink(),
+            data: (projects) {
+              if (isDone) return const SizedBox.shrink();
+              if (isRunning) return const SizedBox.shrink();
+              if (projects.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 14),
+                  child: Row(
+                    children: [
+                      Icon(Icons.check_circle_rounded, color: _kGreen, size: 14),
+                      SizedBox(width: 6),
+                      Text('Todos os projetos têm inteligência operacional.',
+                          style: TextStyle(color: _kGreen, fontSize: 11)),
+                    ],
+                  ),
+                );
+              }
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Text(
+                  '⚡ ${projects.length} projeto${projects.length != 1 ? "s" : ""} com documentos mas sem oportunidades ou ações.',
+                  style: const TextStyle(color: _kOrange, fontSize: 11),
+                ),
+              );
+            },
+          ),
+
+          // Progress
+          if (isRunning) ...[
+            const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  LinearProgressIndicator(
+                    value: bootstrapState.totalProjects > 0
+                        ? bootstrapState.currentProject / bootstrapState.totalProjects
+                        : null,
+                    backgroundColor: Colors.white10,
+                    valueColor: const AlwaysStoppedAnimation(_kOrange),
+                    minHeight: 3,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(bootstrapState.progressLabel,
+                      style: const TextStyle(color: Colors.white54, fontSize: 10)),
+                ],
+              ),
+            ),
+          ],
+
+          // Results
+          if (isDone && report != null) ...[
+            const SizedBox(height: 10),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 14),
+              child: Divider(color: Colors.white12, height: 1),
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Resultado do Bootstrap',
+                      style: TextStyle(
+                          color: Colors.white54,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 10)),
+                  const SizedBox(height: 6),
+                  _resultRow('Projetos processados', '${report.projectsBootstrapped}'),
+                  _resultRow('Oportunidades criadas', '${report.totalOpportunities}'),
+                  _resultRow('Ações criadas',         '${report.totalActions}'),
+                  _resultRow('Planos de receita',     '${report.totalRevenuePlans}'),
+                  _resultRow('Personas treinadas',    '${report.personasTrainedTotal}'),
+                  ...report.projectResults.map((r) => Padding(
+                    padding: const EdgeInsets.only(top: 3),
+                    child: Text('  ${r.projectName}: ${r.summary}',
+                        style: TextStyle(
+                            color: r.success ? Colors.white54 : _kRed,
+                            fontSize: 10)),
+                  )),
+                ],
+              ),
+            ),
+          ],
+
+          // Error
+          if (bootstrapState.error != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+              child: Text('Erro: ${bootstrapState.error}',
+                  style: const TextStyle(color: _kRed, fontSize: 10)),
+            ),
+
+          // Action button
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: isRunning ? null : () {
+                  if (isDone) {
+                    notifier.reset();
+                  } else {
+                    notifier.runAll();
+                  }
+                },
+                icon: Icon(isDone
+                    ? Icons.refresh_rounded
+                    : Icons.play_arrow_rounded),
+                label: Text(isRunning
+                    ? 'Executando...'
+                    : isDone
+                        ? 'Executar novamente'
+                        : '▶ Executar Knowledge → Action Engine'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isRunning
+                      ? Colors.white10
+                      : _kOrange.withOpacity(0.2),
+                  foregroundColor: _kOrange,
+                  side: BorderSide(color: _kOrange.withOpacity(0.4)),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _resultRow(String label, String value) => Padding(
+    padding: const EdgeInsets.only(bottom: 2),
+    child: Row(
+      children: [
+        SizedBox(
+          width: 140,
+          child: Text(label, style: const TextStyle(color: Colors.white38, fontSize: 10)),
+        ),
+        Text(value, style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w600)),
+      ],
+    ),
+  );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

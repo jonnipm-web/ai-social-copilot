@@ -23,6 +23,7 @@ final projectIntelligenceProfilesProvider =
   final labItems      = await ref.watch(opportunityLabProvider.future);
   final revenuePlans  = await ref.watch(allRevenuePlansProvider.future);
   final knowledgeList = await ref.watch(knowledgeItemsProvider.future);
+  final trainings     = await ref.watch(allPersonaTrainingsProvider.future);
 
   return _piService.computeProfiles(
     projects:            projects,
@@ -31,6 +32,7 @@ final projectIntelligenceProfilesProvider =
     labItems:            labItems,
     revenuePlans:        revenuePlans,
     totalKnowledgeItems: knowledgeList.length,
+    trainings:           trainings,
   );
 });
 

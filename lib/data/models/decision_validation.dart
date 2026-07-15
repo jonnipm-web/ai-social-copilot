@@ -1,4 +1,4 @@
-enum DecisionValidationStatus { approved, blocked }
+enum DecisionValidationStatus { approved, blocked, structuring }
 
 class DecisionValidation {
   static const int minCoverage = 60;
@@ -36,7 +36,15 @@ class DecisionValidation {
     required this.blockReasons,
   });
 
-  bool get isBlocked => status == DecisionValidationStatus.blocked;
+  bool get isBlocked =>
+      status == DecisionValidationStatus.blocked ||
+      status == DecisionValidationStatus.structuring;
+
+  bool get isStructuring => status == DecisionValidationStatus.structuring;
+
+  String get blockMessage => isStructuring
+      ? 'Projeto ainda em fase de estruturação. Conhecimento disponível, mas inteligência operacional insuficiente para recomendação estratégica.'
+      : 'Dados insuficientes para decisão estratégica.';
 
   String get indexingStatus =>
       documentCount == 0 ? 'Sem documentos' : '$indexedDocuments/$documentCount indexados';

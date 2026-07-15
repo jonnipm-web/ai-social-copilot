@@ -6,6 +6,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../data/models/decision_validation.dart';
 import '../../../data/models/ecosystem_score.dart';
 import '../../../data/models/priority_recommendation.dart';
+import '../../../providers/auto_bootstrap_provider.dart';
 import '../../../providers/decision_validation_provider.dart';
 import '../../../providers/ecosystem_intelligence_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
@@ -60,8 +61,10 @@ class _ExecutiveDecisionCenterScreenState
 
   @override
   Widget build(BuildContext context) {
-    final scoresAsync = ref.watch(ecosystemScoresProvider);
-    final healthAsync = ref.watch(ecosystemHealthProvider);
+    final scoresAsync        = ref.watch(ecosystemScoresProvider);
+    final healthAsync        = ref.watch(ecosystemHealthProvider);
+    final needsBootstrapAsync = ref.watch(projectsNeedingBootstrapProvider);
+    final bootstrapState     = ref.watch(autoBootstrapNotifierProvider);
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -110,6 +113,21 @@ class _ExecutiveDecisionCenterScreenState
             error: (_, __) => const SizedBox.shrink(),
             data: (h) => _HealthBanner(health: h),
           ),
+          // Bootstrap banner
+          needsBootstrapAsync.when(
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+            data: (projects) {
+              if (projects.isEmpty && !bootstrapState.isRunning) {
+                return const SizedBox.shrink();
+              }
+              return _BootstrapBanner(
+                pendingCount: projects.length,
+                bootstrapState: bootstrapState,
+                onTap: () => context.push(AppConstants.routeIntelligenceDebug),
+              );
+            },
+          ),
           Expanded(
             child: TabBarView(
               controller: _tab,
@@ -121,6 +139,59 @@ class _ExecutiveDecisionCenterScreenState
             ),
           ),
         ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Bootstrap Banner ──────────────────────────────────────────────────────
+class _BootstrapBanner extends StatelessWidget {
+  final int pendingCount;
+  final BootstrapState bootstrapState;
+  final VoidCallback onTap;
+  const _BootstrapBanner({
+    required this.pendingCount,
+    required this.bootstrapState,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isRunning = bootstrapState.isRunning;
+    final label = isRunning
+        ? bootstrapState.progressLabel
+        : '$pendingCount projeto${pendingCount != 1 ? "s" : ""} sem inteligência operacional';
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        color: _kOrange.withOpacity(0.12),
+        child: Row(
+          children: [
+            if (isRunning)
+              const SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation(_kOrange),
+                ),
+              )
+            else
+              const Icon(Icons.bolt_rounded, color: _kOrange, size: 16),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(color: _kOrange, fontSize: 11),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: _kOrange, size: 16),
+          ],
         ),
       ),
     );
@@ -764,8 +835,8 @@ class _ValidationGateCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('⚠️ Dados insuficientes para decisão estratégica.',
-                    style: TextStyle(
+                Text('⚠️ ${validation.blockMessage}',
+                    style: const TextStyle(
                         color: _kOrange, fontSize: 12, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 10),
                 _GateMetricRow(label: 'Knowledge Coverage', value: validation.coverageLabel),

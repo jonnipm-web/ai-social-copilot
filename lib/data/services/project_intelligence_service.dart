@@ -22,7 +22,11 @@ class ProjectIntelligenceService {
     required List<OpportunityLabItem> labItems,
     required List<RevenuePlan> revenuePlans,
     required int totalKnowledgeItems,
+    List<PersonaTraining> trainings = const [],
   }) {
+    final trainedPersonaCount =
+        trainings.map((t) => t.personaId).toSet().length;
+
     return projects.map((p) {
       final analysis = _findAnalysis(p, analyses);
       final plan     = _findRevenuePlan(p, analysis, revenuePlans);
@@ -36,6 +40,7 @@ class ProjectIntelligenceService {
         actions:            pActions,
         labItems:           pLab,
         revenuePlan:        plan,
+        trainedPersonaCount: trainedPersonaCount,
       );
 
       return ProjectIntelligenceProfile(
@@ -188,6 +193,11 @@ class ProjectIntelligenceService {
       final linked = plans.where((r) => r.marketAnalysisId == a.id).toList();
       if (linked.isNotEmpty) return linked.first;
     }
+    // Bootstrap-generated plans: market_analysis_id is null, matched by project name
+    final byName = plans
+        .where((r) => r.marketAnalysisId == null && r.projectName == p.name)
+        .toList();
+    if (byName.isNotEmpty) return byName.first;
     return null;
   }
 
