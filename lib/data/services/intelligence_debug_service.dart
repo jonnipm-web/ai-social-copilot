@@ -4,10 +4,12 @@ import '../models/action_queue_item.dart';
 import '../models/ecosystem_score.dart';
 import '../models/knowledge_item.dart';
 import '../models/market_analysis.dart';
+import '../models/market_profile.dart';
 import '../models/opportunity_lab_item.dart';
 import '../models/persona_learning_profile.dart';
 import '../models/priority_recommendation.dart';
 import '../models/project.dart';
+import '../models/revenue_intelligence.dart';
 import '../models/revenue_plan.dart';
 import '../models/roi_metric.dart';
 import '../models/score_breakdown.dart';
@@ -47,6 +49,8 @@ class IntelligenceDebugService {
     required List<EcosystemScore> scores,
     required List<PriorityRecommendation> recommendations,
     required int healthScore,
+    List<MarketProfile> marketProfiles = const [],
+    List<RevenueIntelligence> revenueIntelligence = const [],
   }) {
     final tests = <ValidationTest>[];
 
@@ -152,6 +156,113 @@ class IntelligenceDebugService {
           .map((s) => '${s.project.name} [${s.ecosystemScore}pts]')
           .toList(),
       suggestion: 'Vincule análises de mercado e registre métricas ROI para melhorar os scores.',
+    ));
+
+    // ── Phase 10I Tests ────────────────────────────────────────────────────
+
+    // T07 — Market Profiles válidos
+    final profilesWithData = marketProfiles.where((p) => p.confidence >= 50).length;
+    tests.add(ValidationTest(
+      id: 'T07',
+      name: 'Market Profiles Válidos',
+      description: 'Todos os projetos possuem Market Profile com confiança ≥ 50%?',
+      status: marketProfiles.isEmpty
+          ? ValidationStatus.warning
+          : _status(profilesWithData, marketProfiles.length),
+      passed: profilesWithData,
+      total: marketProfiles.length,
+      failedItems: marketProfiles
+          .where((p) => p.confidence < 50)
+          .map((p) => '${p.projectName} [${p.confidence}% confiança — fonte: ${p.profileSource}]')
+          .toList(),
+      suggestion: 'Vincule análises de mercado para elevar a confiança do Market Profile.',
+    ));
+
+    // T08 — Revenue Projections válidas
+    final revenueWithPlan = revenueIntelligence.where((r) => r.hasRealPlan).length;
+    tests.add(ValidationTest(
+      id: 'T08',
+      name: 'Revenue Projections Válidas',
+      description: 'Todos os projetos possuem plano de receita gerado?',
+      status: revenueIntelligence.isEmpty
+          ? ValidationStatus.warning
+          : _status(revenueWithPlan, revenueIntelligence.length),
+      passed: revenueWithPlan,
+      total: revenueIntelligence.length,
+      failedItems: revenueIntelligence
+          .where((r) => !r.hasRealPlan)
+          .map((r) => r.projectName)
+          .toList(),
+      suggestion: 'Execute o Knowledge → Action Engine para gerar planos de receita automaticamente.',
+    ));
+
+    // T09 — ROI Score válido (> 0)
+    final scoresWithRoi = scores.where((s) => s.roiScore > 0).length;
+    tests.add(ValidationTest(
+      id: 'T09',
+      name: 'ROI Score Válido',
+      description: 'Todos os projetos possuem ROI Score > 0?',
+      status: _status(scoresWithRoi, scores.length),
+      passed: scoresWithRoi,
+      total: scores.length,
+      failedItems: scores
+          .where((s) => s.roiScore == 0)
+          .map((s) => '${s.project.name} [ROI=0]')
+          .toList(),
+      suggestion: 'Gere planos de receita via Knowledge → Action Engine ou registre métricas ROI.',
+    ));
+
+    // T10 — Strategic Fit válido (> 0)
+    final scoresWithFit = scores.where((s) => s.strategicFit > 0).length;
+    tests.add(ValidationTest(
+      id: 'T10',
+      name: 'Strategic Fit Válido',
+      description: 'Todos os projetos possuem Strategic Fit > 0?',
+      status: _status(scoresWithFit, scores.length),
+      passed: scoresWithFit,
+      total: scores.length,
+      failedItems: scores
+          .where((s) => s.strategicFit == 0)
+          .map((s) => '${s.project.name} [Fit=0, Market=${s.marketScore}]')
+          .toList(),
+      suggestion: 'Vincule análises de mercado ou gere oportunidades via Knowledge → Action Engine.',
+    ));
+
+    // T11 — Decision coerente (sem ANÁLISE INCOMPLETA em projetos com dados)
+    final incoherentDecisions = scores
+        .where((s) => s.recommendation == 'ANÁLISE INCOMPLETA' && s.hasEnoughData)
+        .length;
+    final coherentDecisions = scores.length - incoherentDecisions;
+    tests.add(ValidationTest(
+      id: 'T11',
+      name: 'Decisões Coerentes',
+      description: 'Nenhum projeto com dados recebe recomendação "ANÁLISE INCOMPLETA"?',
+      status: _status(coherentDecisions, scores.length),
+      passed: coherentDecisions,
+      total: scores.length,
+      failedItems: scores
+          .where((s) => s.recommendation == 'ANÁLISE INCOMPLETA' && s.hasEnoughData)
+          .map((s) => '${s.project.name} [tem dados mas recebeu ANÁLISE INCOMPLETA]')
+          .toList(),
+      suggestion: 'Verifique o Motor de Decisão — projetos com dados não devem receber ANÁLISE INCOMPLETA.',
+    ));
+
+    // T12 — Projetos classificados corretamente (nenhum com score >= 40 recebe PAUSAR)
+    final correctlyClassified = scores
+        .where((s) => !(s.ecosystemScore >= 40 && s.recommendation == 'PAUSAR'))
+        .length;
+    tests.add(ValidationTest(
+      id: 'T12',
+      name: 'Classificação de Projetos Correta',
+      description: 'Nenhum projeto com score ≥ 40 recebe recomendação PAUSAR?',
+      status: _status(correctlyClassified, scores.length),
+      passed: correctlyClassified,
+      total: scores.length,
+      failedItems: scores
+          .where((s) => s.ecosystemScore >= 40 && s.recommendation == 'PAUSAR')
+          .map((s) => '${s.project.name} [score=${s.ecosystemScore} mas PAUSAR]')
+          .toList(),
+      suggestion: 'Motor de decisão com thresholds incorretos — verifique o EcosystemIntelligenceService.',
     ));
 
     final orphanActions = actions.where((a) => a.projectId == null).length;
@@ -395,6 +506,14 @@ class IntelligenceDebugService {
     if (a != null) {
       final linked = plans.where((r) => r.marketAnalysisId == a.id).toList();
       if (linked.isNotEmpty) return linked.first;
+    }
+    // Phase 10I fix: bootstrap-generated plans have null market_analysis_id
+    final pName = p.name.trim().toLowerCase();
+    for (final r in plans) {
+      if (r.marketAnalysisId == null &&
+          r.projectName.trim().toLowerCase() == pName) {
+        return r;
+      }
     }
     return null;
   }

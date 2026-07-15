@@ -10,6 +10,7 @@ import '../../../providers/ecosystem_intelligence_provider.dart';
 import '../../../providers/intelligence_debug_provider.dart';
 import '../../../providers/knowledge_provider.dart';
 import '../../../providers/market_analysis_provider.dart';
+import '../../../providers/market_intelligence_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
 import '../../../providers/project_intelligence_provider.dart';
 import '../../../providers/project_provider.dart';
@@ -675,14 +676,14 @@ class _HealthTab extends ConsumerWidget {
     final profilesAsync  = ref.watch(personaLearningProfilesProvider);
     final scoresAsync    = ref.watch(ecosystemScoresProvider);
 
-    final health     = healthAsync.valueOrNull ?? 0;
-    final coverage   = coverageAsync.valueOrNull ?? 0;
-    final learning   = learningAsync.valueOrNull ?? 0;
-    final recs       = recsAsync.valueOrNull ?? [];
-    final labItems   = labAsync.valueOrNull ?? [];
-    final kItems     = kAsync.valueOrNull ?? [];
-    final personas   = profilesAsync.valueOrNull ?? [];
-    final scores     = scoresAsync.valueOrNull ?? [];
+    final health   = healthAsync.valueOrNull ?? 0;
+    final coverage = coverageAsync.valueOrNull ?? 0;
+    final learning = learningAsync.valueOrNull ?? 0;
+    final recs     = recsAsync.valueOrNull ?? [];
+    final labItems = labAsync.valueOrNull ?? [];
+    final kItems   = kAsync.valueOrNull ?? [];
+    final personas = profilesAsync.valueOrNull ?? [];
+    final scores   = scoresAsync.valueOrNull ?? [];
 
     final indexedDocs = kItems.where((k) => k.status == 'analyzed').length;
     final activePersonas = personas.where((p) => p.learningScore > 0).length;
@@ -735,10 +736,10 @@ class _HealthTab extends ConsumerWidget {
             _healthMetric('Recomendações com evidências', recsWithEvidence, recs.length),
             _debugRow('Confiança média',
                 recs.isEmpty ? '—' : '${(recs.fold(0, (s, r) => s + r.confidence) / recs.length).round()}%'),
-            _debugRow('Scores > 45 (MANTER/ACELERAR)',
-                '${scores.where((s) => s.ecosystemScore >= 45).length}/${scores.length}'),
-            _debugRow('Scores < 25 (PAUSAR)',
-                '${scores.where((s) => s.ecosystemScore < 25).length}/${scores.length}'),
+            _debugRow('Score ≥ 60 (ACELERAR/ESCALAR)',
+                '${scores.where((s) => s.ecosystemScore >= 60).length}/${scores.length}'),
+            _debugRow('Score < 20 (PAUSAR)',
+                '${scores.where((s) => s.ecosystemScore < 20 && s.hasEnoughData).length}/${scores.length}'),
             _debugRow('Status', _healthLabel(recsWithEvidence, recs.length)),
           ],
         ),
@@ -757,6 +758,87 @@ class _HealthTab extends ConsumerWidget {
             _debugRow('Status', _healthLabel(highScoreOpps, labItems.length)),
           ],
         ),
+
+        // Phase 10I: Market Health
+        Consumer(builder: (context, ref, _) {
+          final marketHealth = ref.watch(portfolioMarketHealthProvider).valueOrNull ?? 0;
+          final profiles     = ref.watch(marketProfilesProvider).valueOrNull ?? [];
+          final withAnalysis = profiles.where((p) => p.profileSource == 'analysis').length;
+          return _DebugCard(
+            leading: '🌐',
+            title: 'Market Health',
+            subtitle: 'Market Profiles · Confiança · Fonte de dados',
+            children: [
+              _healthMetric('Market Score médio do portfólio', marketHealth, 100),
+              _healthMetric('Perfis com análise vinculada', withAnalysis, profiles.length),
+              _debugRow('Via oportunidades', '${profiles.where((p) => p.profileSource == "opportunities").length}'),
+              _debugRow('Inferidos',         '${profiles.where((p) => p.profileSource == "inferred").length}'),
+              _debugRow('Status', marketHealth >= 60 ? '🟢 Saudável' : marketHealth >= 40 ? '🟡 Atenção' : '🔴 Crítico'),
+            ],
+          );
+        }),
+
+        // Phase 10I: ROI Health
+        Consumer(builder: (context, ref, _) {
+          final roiHealth = ref.watch(portfolioRoiHealthProvider).valueOrNull ?? 0;
+          final intel     = ref.watch(revenueIntelligenceProvider).valueOrNull ?? [];
+          final withPlan  = intel.where((i) => i.hasRealPlan).length;
+          final roiScores = scores.where((s) => s.roiScore > 0).length;
+          return _DebugCard(
+            leading: '💰',
+            title: 'ROI Health',
+            subtitle: 'Revenue Plans · ROI Score · Projeções',
+            children: [
+              _healthMetric('Projetos com plano de receita', withPlan, intel.length),
+              _healthMetric('Projetos com ROI Score > 0',   roiScores, scores.length),
+              _debugRow('ROI Health',
+                  '${intel.where((i) => i.monthlyModerate > 0).length}/${intel.length} com receita projetada'),
+              _debugRow('Status', roiHealth >= 60 ? '🟢 Saudável' : roiHealth >= 40 ? '🟡 Atenção' : '🔴 Crítico'),
+            ],
+          );
+        }),
+
+        // Phase 10I: Execution Health
+        Consumer(builder: (context, ref, _) {
+          final execHealth = ref.watch(portfolioExecutionHealthProvider).valueOrNull ?? 0;
+          final execScores = ref.watch(executionScoresProvider).valueOrNull ?? [];
+          final withExec   = execScores.where((e) => e.score >= 40).length;
+          final withRoadmap = execScores.where((e) => e.hasRoadmap).length;
+          return _DebugCard(
+            leading: '⚙️',
+            title: 'Execution Health',
+            subtitle: 'Ações concluídas · Roadmap · Oportunidades aprovadas',
+            children: [
+              _healthMetric('Execution Score médio', execHealth, 100),
+              _healthMetric('Projetos com execução ≥ 40', withExec, execScores.length),
+              _healthMetric('Projetos com roadmap',    withRoadmap, execScores.length),
+              _debugRow('Ações concluídas total',
+                  '${execScores.fold(0, (s, e) => s + e.completedActions)}/'
+                  '${execScores.fold(0, (s, e) => s + e.totalActions)}'),
+              _debugRow('Status', execHealth >= 60 ? '🟢 Saudável' : execHealth >= 40 ? '🟡 Atenção' : '🔴 Crítico'),
+            ],
+          );
+        }),
+
+        // Phase 10I: Strategic Fit Health
+        Consumer(builder: (context, ref, _) {
+          final withFit   = scores.where((s) => s.strategicFit > 0).length;
+          final avgFit    = scores.isEmpty ? 0 : scores.fold(0, (s, e) => s + e.strategicFit) ~/ scores.length;
+          final withMarket = scores.where((s) => s.marketScore > 0).length;
+          return _DebugCard(
+            leading: '🎯',
+            title: 'Strategic Fit Health',
+            subtitle: 'Alinhamento estratégico · Market Score · ROI',
+            children: [
+              _healthMetric('Projetos com Strategic Fit > 0', withFit, scores.length),
+              _healthMetric('Strategic Fit médio', avgFit, 100),
+              _healthMetric('Projetos com Market Score > 0', withMarket, scores.length),
+              _debugRow('Rec ESCALAR/ACELERAR', '${scores.where((s) => s.recommendation == "ESCALAR" || s.recommendation == "ACELERAR").length}/${scores.length}'),
+              _debugRow('Rec ANÁLISE INCOMPLETA', '${scores.where((s) => s.recommendation == "ANÁLISE INCOMPLETA").length}/${scores.length}'),
+              _debugRow('Status', avgFit >= 40 ? '🟢 Saudável' : avgFit >= 20 ? '🟡 Atenção' : '🔴 Crítico'),
+            ],
+          );
+        }),
       ],
     );
   }
