@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../data/models/decision_validation.dart';
 import '../../../data/models/ecosystem_score.dart';
 import '../../../data/models/priority_recommendation.dart';
+import '../../../providers/decision_validation_provider.dart';
 import '../../../providers/ecosystem_intelligence_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
 import '../../../providers/action_queue_provider.dart';
@@ -59,7 +61,6 @@ class _ExecutiveDecisionCenterScreenState
   @override
   Widget build(BuildContext context) {
     final scoresAsync = ref.watch(ecosystemScoresProvider);
-    final recsAsync   = ref.watch(priorityRecommendationsProvider);
     final healthAsync = ref.watch(ecosystemHealthProvider);
 
     return Scaffold(
@@ -115,7 +116,7 @@ class _ExecutiveDecisionCenterScreenState
               children: [
                 _Top5Tab(scoresAsync: scoresAsync),
                 _EcosystemTab(scoresAsync: scoresAsync),
-                _RecsTab(recsAsync: recsAsync),
+                const _RecsTab(),
               ],
             ),
           ),
@@ -649,12 +650,21 @@ class _ScoreRow extends StatelessWidget {
 }
 
 // ── Tab 3: Recommendations ────────────────────────────────────────────────
-class _RecsTab extends StatelessWidget {
-  final AsyncValue<List<PriorityRecommendation>> recsAsync;
-  const _RecsTab({required this.recsAsync});
+class _RecsTab extends ConsumerWidget {
+  const _RecsTab();
+
+  static const _blockedTypes = {
+    RecommendationType.investProject,
+    RecommendationType.pauseProject,
+    RecommendationType.executeOpportunity,
+  };
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final recsAsync       = ref.watch(priorityRecommendationsProvider);
+    final validationAsync = ref.watch(decisionValidationMapProvider);
+    final labAsync        = ref.watch(opportunityLabProvider);
+
     return recsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator(color: _kPrimary)),
       error: (e, _) => Center(child: Text('Erro: $e', style: const TextStyle(color: _kRed))),
@@ -665,13 +675,150 @@ class _RecsTab extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.white54)));
         }
+
+        final validationMap = validationAsync.value ?? {};
+        final labItems      = labAsync.value ?? [];
+
         return ListView.separated(
           padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
           itemCount: recs.length,
           separatorBuilder: (_, __) => const SizedBox(height: 10),
-          itemBuilder: (_, i) => _RecCard(rec: recs[i]),
+          itemBuilder: (_, i) {
+            final rec = recs[i];
+
+            if (_blockedTypes.contains(rec.type)) {
+              DecisionValidation? validation;
+              if (rec.type == RecommendationType.executeOpportunity) {
+                final matches = labItems.where((l) => l.id == rec.entityId);
+                final labItem = matches.isEmpty ? null : matches.first;
+                if (labItem?.projectId != null) {
+                  validation = validationMap[labItem!.projectId!];
+                }
+              } else {
+                validation = validationMap[rec.entityId];
+              }
+
+              if (validation != null && validation.isBlocked) {
+                return _ValidationGateCard(rec: rec, validation: validation);
+              }
+            }
+
+            return _RecCard(rec: rec);
+          },
         );
       },
+    );
+  }
+}
+
+class _ValidationGateCard extends StatelessWidget {
+  final PriorityRecommendation rec;
+  final DecisionValidation validation;
+  const _ValidationGateCard({required this.rec, required this.validation});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _kCard,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _kOrange.withOpacity(0.45)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: _kOrange.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text('🔒 BLOQUEADO',
+                    style: TextStyle(color: _kOrange, fontSize: 10, fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(rec.typeLabel,
+                    style: const TextStyle(color: Colors.white38, fontSize: 10)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(rec.title,
+              style: const TextStyle(
+                  color: Colors.white38,
+                  fontSize: 12,
+                  decoration: TextDecoration.lineThrough,
+                  decorationColor: Colors.white38)),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: _kOrange.withOpacity(0.07),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: _kOrange.withOpacity(0.2)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('⚠️ Dados insuficientes para decisão estratégica.',
+                    style: TextStyle(
+                        color: _kOrange, fontSize: 12, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 10),
+                _GateMetricRow(label: 'Knowledge Coverage', value: validation.coverageLabel),
+                _GateMetricRow(label: 'Learning Score', value: validation.learningLabel),
+                _GateMetricRow(label: 'Intelligence Profile', value: validation.profileLabel),
+                const Divider(color: Colors.white12, height: 16),
+                _GateMetricRow(label: 'Documentos', value: '${validation.documentCount}'),
+                _GateMetricRow(label: 'Indexação', value: validation.indexingStatus),
+                _GateMetricRow(label: 'Ativos', value: '${validation.assetCount}'),
+                _GateMetricRow(label: 'Oportunidades', value: '${validation.opportunityCount}'),
+                if (validation.blockReasons.isNotEmpty) ...[
+                  const Divider(color: Colors.white12, height: 16),
+                  const Text('Motivos do bloqueio:',
+                      style: TextStyle(color: Colors.white38, fontSize: 10)),
+                  const SizedBox(height: 4),
+                  ...validation.blockReasons.map((r) => Padding(
+                        padding: const EdgeInsets.only(bottom: 2),
+                        child: Text('• $r',
+                            style: const TextStyle(color: Colors.white38, fontSize: 10)),
+                      )),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GateMetricRow extends StatelessWidget {
+  final String label;
+  final String value;
+  const _GateMetricRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 118,
+            child: Text(label,
+                style: const TextStyle(color: Colors.white38, fontSize: 10)),
+          ),
+          Expanded(
+            child: Text(value,
+                style: const TextStyle(color: Colors.white70, fontSize: 10)),
+          ),
+        ],
+      ),
     );
   }
 }
