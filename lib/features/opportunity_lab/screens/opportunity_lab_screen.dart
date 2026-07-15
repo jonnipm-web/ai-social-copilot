@@ -9,6 +9,8 @@ import '../../../providers/action_queue_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
 import '../../../providers/feature_flag_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import '../../../shared/widgets/context_copilot_widget.dart';
+import '../../../data/models/copilot_context_data.dart';
 
 // ── Colors ───────────────────────────────────────────────────────────────────
 const _kBg      = Color(0xFF0F0F1A);
@@ -52,6 +54,10 @@ class OpportunityLabScreen extends ConsumerWidget {
         ),
       ),
       drawer: const AppDrawer(),
+      floatingActionButton: ContextCopilotButton(
+        screenName: 'Oportunidades',
+        context: CopilotContextData(),
+      ),
       body: flagAsync.when(
         loading: () =>
             const Center(child: CircularProgressIndicator(color: _kPrimary)),

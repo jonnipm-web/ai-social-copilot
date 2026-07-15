@@ -7,6 +7,8 @@ import '../../../data/models/persona.dart';
 import '../../../providers/persona_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import '../../../shared/widgets/context_copilot_widget.dart';
+import '../../../data/models/copilot_context_data.dart';
 
 class PersonasScreen extends ConsumerWidget {
   const PersonasScreen({super.key});
@@ -32,11 +34,22 @@ class PersonasScreen extends ConsumerWidget {
         title: const Text('Personas / Marcas'),
       ),
       drawer: const AppDrawer(),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push(AppConstants.routePersonaNew),
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Nova Persona'),
-        backgroundColor: const Color(0xFF6C63FF),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ContextCopilotButton(
+            screenName: 'Personas',
+            context: CopilotContextData(),
+          ),
+          const SizedBox(height: 12),
+          FloatingActionButton.extended(
+            heroTag: 'persona_add',
+            onPressed: () => context.push(AppConstants.routePersonaNew),
+            icon: const Icon(Icons.add_rounded),
+            label: const Text('Nova Persona'),
+            backgroundColor: const Color(0xFF6C63FF),
+          ),
+        ],
       ),
       body: personasAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),

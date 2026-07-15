@@ -127,6 +127,9 @@ class AppConstants {
   static const edgeFunctionGenerateOpportunities = 'generate-project-opportunities';
   static const edgeFunctionGenerateActions        = 'generate-project-actions';
 
+  // Fase 10K — Context Copilot
+  static const edgeFunctionContextCopilot = 'context-copilot';
+
   // Admin
   static const adminEmail = 'jpaulo.start@gmail.com';
 }
