@@ -8,11 +8,11 @@ import 'opportunity_lab_provider.dart';
 
 final decisionValidationMapProvider =
     FutureProvider.autoDispose<Map<String, DecisionValidation>>((ref) async {
-  final profiles        = await ref.watch(projectIntelligenceProfilesProvider.future);
+  final profiles         = await ref.watch(projectIntelligenceProfilesProvider.future);
   final learningProfiles = await ref.watch(personaLearningProfilesProvider.future);
-  final knowledgeItems  = await ref.watch(knowledgeItemsProvider.future);
-  final actions         = await ref.watch(actionQueueProvider.future);
-  final labItems        = await ref.watch(opportunityLabProvider.future);
+  final knowledgeItems   = await ref.watch(knowledgeItemsProvider.future);
+  final actions          = await ref.watch(actionQueueProvider.future);
+  final labItems         = await ref.watch(opportunityLabProvider.future);
 
   final avgLearning = learningProfiles.isEmpty
       ? 0
@@ -25,12 +25,16 @@ final decisionValidationMapProvider =
   final map = <String, DecisionValidation>{};
 
   for (final profile in profiles) {
-    final projectId      = profile.project.id;
-    final coverageScore  = profile.coverage.score;
+    final projectId       = profile.project.id;
+    final coverageScore   = profile.coverage.score;
     final profileComplete = profile.analysis != null;
     final assetCount      = actions.where((a) => a.projectId == projectId).length;
     final opportunityCount = labItems.where((l) => l.projectId == projectId).length;
 
+    // Module 8 — structuring check (no operational intelligence at all)
+    final hasNoOperationalIntelligence = opportunityCount == 0 && assetCount == 0;
+
+    // Evidence quality checks
     final blockReasons = <String>[];
     if (coverageScore < DecisionValidation.minCoverage) {
       blockReasons.add(
@@ -44,20 +48,34 @@ final decisionValidationMapProvider =
       blockReasons.add('Perfil de inteligência incompleto — vincule uma análise de mercado');
     }
 
+    final DecisionValidationStatus status;
+    if (hasNoOperationalIntelligence) {
+      // Structuring block takes precedence (knowledge exists but no ops intelligence)
+      status = DecisionValidationStatus.structuring;
+    } else if (blockReasons.isNotEmpty) {
+      status = DecisionValidationStatus.blocked;
+    } else {
+      status = DecisionValidationStatus.approved;
+    }
+
+    // For structuring projects, add a descriptive reason
+    final reasons = List<String>.from(blockReasons);
+    if (hasNoOperationalIntelligence) {
+      reasons.add('Nenhuma oportunidade ou ação gerada ainda — execute o Knowledge → Action Engine');
+    }
+
     map[projectId] = DecisionValidation(
-      projectId:       projectId,
-      entityName:      profile.project.name,
-      status:          blockReasons.isEmpty
-          ? DecisionValidationStatus.approved
-          : DecisionValidationStatus.blocked,
-      coverageScore:   coverageScore,
-      learningScore:   avgLearning,
-      profileComplete: profileComplete,
-      documentCount:   totalDocs,
+      projectId:        projectId,
+      entityName:       profile.project.name,
+      status:           status,
+      coverageScore:    coverageScore,
+      learningScore:    avgLearning,
+      profileComplete:  profileComplete,
+      documentCount:    totalDocs,
       indexedDocuments: indexedDocs,
-      assetCount:      assetCount,
+      assetCount:       assetCount,
       opportunityCount: opportunityCount,
-      blockReasons:    blockReasons,
+      blockReasons:     reasons,
     );
   }
 

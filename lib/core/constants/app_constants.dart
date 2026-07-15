@@ -123,6 +123,10 @@ class AppConstants {
   static const edgeFunctionCampaign    = 'generate-campaign';
   static const edgeFunctionProcessFile = 'process-file';
 
+  // Fase 10H — Knowledge → Action Engine
+  static const edgeFunctionGenerateOpportunities = 'generate-project-opportunities';
+  static const edgeFunctionGenerateActions        = 'generate-project-actions';
+
   // Admin
   static const adminEmail = 'jpaulo.start@gmail.com';
 }
