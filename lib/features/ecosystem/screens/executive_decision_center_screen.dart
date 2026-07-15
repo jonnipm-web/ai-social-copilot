@@ -12,6 +12,8 @@ import '../../../providers/ecosystem_intelligence_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
 import '../../../providers/action_queue_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import '../../../shared/widgets/context_copilot_widget.dart';
+import '../../../data/models/copilot_context_data.dart';
 
 // ── Colors ────────────────────────────────────────────────────────────────
 const _kBg      = Color(0xFF0A0A14);
@@ -114,6 +116,10 @@ class _ExecutiveDecisionCenterScreenState
             onPressed: () => context.push(AppConstants.routeEcosystemBriefing),
           ),
         ],
+      ),
+      floatingActionButton: ContextCopilotButton(
+        screenName: 'Decisões',
+        context: CopilotContextData(),
       ),
       body: SafeArea(
         top: false,

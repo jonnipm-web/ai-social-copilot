@@ -6,6 +6,8 @@ import '../../../core/constants/app_constants.dart';
 import '../../../data/models/weekly_briefing.dart';
 import '../../../providers/ecosystem_intelligence_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import '../../../shared/widgets/context_copilot_widget.dart';
+import '../../../data/models/copilot_context_data.dart';
 
 const _kBg      = Color(0xFF0A0A14);
 const _kCard    = Color(0xFF12121E);
@@ -46,6 +48,10 @@ class WeeklyBriefingScreen extends ConsumerWidget {
             onPressed: () => ref.invalidate(weeklyBriefingProvider),
           ),
         ],
+      ),
+      floatingActionButton: ContextCopilotButton(
+        screenName: 'Briefing',
+        context: CopilotContextData(),
       ),
       body: SafeArea(
         top: false,
