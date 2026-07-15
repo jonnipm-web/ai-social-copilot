@@ -13,6 +13,7 @@ import 'features/content/screens/content_library_screen.dart';
 import 'features/dashboard/screens/dashboard_screen.dart';
 import 'features/history/screens/history_detail_screen.dart';
 import 'features/history/screens/history_screen.dart';
+import 'features/home/screens/content_generation_screen.dart';
 import 'features/home/screens/home_screen.dart';
 import 'features/personas/screens/persona_form_screen.dart';
 import 'features/personas/screens/personas_screen.dart';
@@ -76,6 +77,10 @@ final _router = GoRouter(
     GoRoute(
       path: AppConstants.routeHome,
       builder: (_, __) => const HomeScreen(),
+    ),
+    GoRoute(
+      path: AppConstants.routeGenerate,
+      builder: (_, __) => const ContentGenerationScreen(),
     ),
     GoRoute(
       path: AppConstants.routeResult,

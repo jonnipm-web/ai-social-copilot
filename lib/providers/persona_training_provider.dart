@@ -14,6 +14,12 @@ final personaTrainingProvider =
   return ref.watch(personaTrainingServiceProvider).fetchForPersona(personaId);
 });
 
+// All trainings across all personas — used by learning profiles
+final allPersonaTrainingsProvider =
+    FutureProvider.autoDispose<List<PersonaTraining>>((ref) {
+  return ref.watch(personaTrainingServiceProvider).fetchAll();
+});
+
 class PersonaTrainingNotifier
     extends StateNotifier<AsyncValue<PersonaTraining?>> {
   PersonaTrainingNotifier(this._service) : super(const AsyncValue.data(null));

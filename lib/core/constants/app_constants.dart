@@ -23,6 +23,7 @@ class AppConstants {
   static const routeLogin          = '/login';
   static const routeDashboard      = '/dashboard';
   static const routeHome           = '/home';
+  static const routeGenerate       = '/generate';
   static const routeResult         = '/result';
   static const routeHistory        = '/history';
   static const routeHistoryDetail  = '/history/:id';
