@@ -72,6 +72,9 @@ class AppConstants {
   static const routeEcosystemResources   = '/ecosystem/resources';
   static const routeEcosystemBriefing    = '/ecosystem/briefing';
 
+  // Fase 10F — Intelligence Debug & Observability
+  static const routeIntelligenceDebug    = '/intelligence-debug';
+
   // Tabelas Supabase
   static const tablePostGenerations   = 'post_generations';
   static const tableProfiles          = 'profiles';

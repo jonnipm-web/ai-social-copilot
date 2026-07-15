@@ -237,6 +237,13 @@ class _DrawerContent extends ConsumerWidget {
                   route: AppConstants.routeUpgrade,
                   current: current,
                 ),
+                const Divider(color: Colors.white12, height: 24),
+                _NavItem(
+                  icon: Icons.bug_report_rounded,
+                  label: 'Intelligence Debug',
+                  route: AppConstants.routeIntelligenceDebug,
+                  current: current,
+                ),
                 if (isAdmin) ...[
                   const Divider(color: Colors.white12, height: 24),
                   _NavItem(
