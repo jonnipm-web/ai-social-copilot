@@ -40,14 +40,21 @@ class RevenueIntelligence {
 
   static RevenueIntelligence fromPlan(RevenuePlan plan) {
     final sources = plan.revenueSources
-        .map((s) => (s as Map?)?['source']?.toString() ?? '')
+        .map((s) {
+          final m = s as Map?;
+          return m?['source']?.toString() ?? '';
+        })
         .where((s) => s.isNotEmpty)
         .toList();
 
     final milestones = plan.milestones;
-    final firstMilestone = milestones.isNotEmpty
-        ? (milestones.first as Map?)?['description']?.toString() ?? ''
-        : '';
+    String firstMilestone = '';
+    if (milestones.isNotEmpty) {
+      final first = milestones.first;
+      if (first is Map) {
+        firstMilestone = (first['description'] as String?) ?? '';
+      }
+    }
 
     return RevenueIntelligence(
       projectId:            plan.marketAnalysisId ?? plan.projectName,
