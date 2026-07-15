@@ -16,6 +16,10 @@ class EcosystemScore {
   final int actionCount;
   final int completedActions;
   final int labItemCount;
+  // Phase 10I — new fields
+  final int marketScore;
+  final int executionScore;
+  final bool hasEnoughData;
 
   const EcosystemScore({
     required this.project,
@@ -33,14 +37,19 @@ class EcosystemScore {
     required this.actionCount,
     required this.completedActions,
     required this.labItemCount,
+    this.marketScore    = 0,
+    this.executionScore = 0,
+    this.hasEnoughData  = true,
   });
 
   String get recommendationEmoji {
     switch (recommendation) {
-      case 'ACELERAR': return '🚀';
-      case 'MANTER':   return '✅';
-      case 'REVISAR':  return '⚠️';
-      default:         return '⏸️';
+      case 'ESCALAR':              return '⚡';
+      case 'ACELERAR':             return '🚀';
+      case 'MANTER':               return '✅';
+      case 'VALIDAR':              return '🔍';
+      case 'ANÁLISE INCOMPLETA':   return '📊';
+      default:                     return '⏸️'; // PAUSAR
     }
   }
 

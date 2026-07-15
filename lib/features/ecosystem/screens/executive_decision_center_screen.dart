@@ -25,10 +25,22 @@ const _kRed     = Color(0xFFFF1744);
 const _kCyan    = Color(0xFF00E5FF);
 
 Color _scoreColor(int s) {
-  if (s >= 70) return _kGreen;
-  if (s >= 45) return _kOrange;
-  if (s >= 25) return Colors.amber;
+  if (s >= 80) return _kGreen;
+  if (s >= 60) return const Color(0xFF00C853);
+  if (s >= 40) return _kOrange;
+  if (s >= 20) return Colors.amber;
   return _kRed;
+}
+
+Color _recColor(String rec) {
+  switch (rec) {
+    case 'ESCALAR':            return _kGreen;
+    case 'ACELERAR':           return const Color(0xFF00C853);
+    case 'MANTER':             return _kOrange;
+    case 'VALIDAR':            return Colors.amber;
+    case 'ANÁLISE INCOMPLETA': return const Color(0xFF9E9E9E);
+    default:                   return _kRed; // PAUSAR
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -246,9 +258,10 @@ class _HealthBanner extends StatelessWidget {
   }
 
   String _healthLabel(int h) {
-    if (h >= 70) return 'Ecossistema saudável e em crescimento';
-    if (h >= 45) return 'Ecossistema estável com oportunidades de melhoria';
-    if (h >= 25) return 'Ecossistema com pontos de atenção';
+    if (h >= 80) return 'Ecossistema em escala — máximo potencial ativo';
+    if (h >= 60) return 'Ecossistema saudável e em crescimento acelerado';
+    if (h >= 40) return 'Ecossistema estável com oportunidades de melhoria';
+    if (h >= 20) return 'Ecossistema em validação — adicione mais inteligência';
     return 'Ecossistema requer revisão estratégica urgente';
   }
 }
@@ -463,11 +476,11 @@ class _ProjectCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text('Opp ${score.opportunityScore}',
+              Text('Mkt ${score.marketScore}',
                 style: const TextStyle(color: Colors.white38, fontSize: 10)),
               Text('Fit ${score.strategicFit}',
                 style: const TextStyle(color: Colors.white38, fontSize: 10)),
-              Text('Syn ${score.synergyScore}',
+              Text('Exec ${score.executionScore}',
                 style: const TextStyle(color: Colors.white38, fontSize: 10)),
             ],
           ),
@@ -621,11 +634,13 @@ class _EcosystemCardState extends State<_EcosystemCard> {
                   Text('${s.recommendationEmoji} ${s.recommendation}',
                     style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 10),
+                  _ScoreRow(label: 'Mercado', value: s.marketScore),
+                  const SizedBox(height: 4),
                   _ScoreRow(label: 'Oportunidade', value: s.opportunityScore),
                   const SizedBox(height: 4),
                   _ScoreRow(label: 'Strategic Fit', value: s.strategicFit),
                   const SizedBox(height: 4),
-                  _ScoreRow(label: 'Synergy', value: s.synergyScore),
+                  _ScoreRow(label: 'Execução', value: s.executionScore),
                   const SizedBox(height: 4),
                   _ScoreRow(label: 'ROI', value: s.roiScore),
                   const SizedBox(height: 4),
