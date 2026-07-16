@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/models/copilot_context_data.dart';
 import '../../data/models/ive_state.dart';
 import '../../providers/ive_provider.dart';
 import 'context_copilot_widget.dart' show showCopilotChat;
