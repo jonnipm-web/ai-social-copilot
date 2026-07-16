@@ -11,6 +11,7 @@ void showCopilotChat(
   BuildContext context, {
   required String screenName,
   CopilotContextData? contextData,
+  String? initialMessage,
 }) {
   showModalBottomSheet(
     context:             context,
@@ -19,8 +20,9 @@ void showCopilotChat(
     builder: (_) => ProviderScope(
       parent: ProviderScope.containerOf(context),
       child:  _CopilotSheet(
-        screenName: screenName,
-        context:    contextData ?? CopilotContextData(),
+        screenName:     screenName,
+        context:        contextData ?? CopilotContextData(),
+        initialMessage: initialMessage,
       ),
     ),
   );
@@ -68,17 +70,37 @@ class ContextCopilotButton extends ConsumerWidget {
 class _CopilotSheet extends ConsumerStatefulWidget {
   final String screenName;
   final CopilotContextData context;
+  final String? initialMessage;
 
-  const _CopilotSheet({required this.screenName, required this.context});
+  const _CopilotSheet({
+    required this.screenName,
+    required this.context,
+    this.initialMessage,
+  });
 
   @override
   ConsumerState<_CopilotSheet> createState() => _CopilotSheetState();
 }
 
 class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
-  final _ctrl     = TextEditingController();
-  final _scroll   = ScrollController();
-  bool  _expanded = false;
+  final _ctrl   = TextEditingController();
+  final _scroll = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialMessage != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ref.read(contextCopilotProvider(widget.screenName).notifier).send(
+              message:    widget.initialMessage!,
+              screenName: widget.screenName,
+              context:    widget.context,
+            );
+        Future.delayed(const Duration(milliseconds: 400), _scrollToBottom);
+      });
+    }
+  }
 
   @override
   void dispose() {

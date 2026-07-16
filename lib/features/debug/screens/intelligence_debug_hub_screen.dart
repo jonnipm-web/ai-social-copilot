@@ -16,8 +16,6 @@ import '../../../providers/project_intelligence_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../providers/roi_metric_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
-import '../../../shared/widgets/context_copilot_widget.dart';
-import '../../../data/models/copilot_context_data.dart';
 
 // ─── Palette ───────────────────────────────────────────────────────────────
 const _kBg       = Color(0xFF080810);
@@ -90,10 +88,6 @@ class IntelligenceDebugHubScreen extends ConsumerWidget {
             labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
             tabs: _tabs,
           ),
-        ),
-        floatingActionButton: ContextCopilotButton(
-          screenName: 'Debug Hub',
-          context: CopilotContextData(),
         ),
         body: const TabBarView(
           children: [

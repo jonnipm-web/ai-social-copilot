@@ -16,6 +16,7 @@ import '../../../providers/ive_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/context_copilot_widget.dart';
 import '../../../shared/widgets/ive_detail_sheet.dart';
+import '../../../shared/widgets/ive_explain_button.dart';
 import '../../../data/models/copilot_context_data.dart';
 
 // ── Colors ────────────────────────────────────────────────────────────────
@@ -132,10 +133,6 @@ class _ExecutiveDecisionCenterScreenState
             onPressed: () => context.push(AppConstants.routeEcosystemBriefing),
           ),
         ],
-      ),
-      floatingActionButton: ContextCopilotButton(
-        screenName: 'Decisões',
-        context: CopilotContextData(),
       ),
       body: SafeArea(
         top: false,
@@ -268,8 +265,14 @@ class _HealthBanner extends StatelessWidget {
               children: [
                 Text('Saúde do Ecossistema',
                   style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
-                Text(_healthLabel(health),
-                  style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                Text(_healthNarrative(health),
+                  style: const TextStyle(color: Colors.white70, fontSize: 12, height: 1.35)),
+                const SizedBox(height: 4),
+                IveExplainButton(
+                  question:   'Por que minha saúde do ecossistema está em $health? O que está limitando e como posso melhorar?',
+                  screenName: 'Decisões',
+                  compact:    true,
+                ),
               ],
             ),
           ),
@@ -279,12 +282,12 @@ class _HealthBanner extends StatelessWidget {
     );
   }
 
-  String _healthLabel(int h) {
-    if (h >= 80) return 'Ecossistema em escala — máximo potencial ativo';
-    if (h >= 60) return 'Ecossistema saudável e em crescimento acelerado';
-    if (h >= 40) return 'Ecossistema estável com oportunidades de melhoria';
-    if (h >= 20) return 'Ecossistema em validação — adicione mais inteligência';
-    return 'Ecossistema requer revisão estratégica urgente';
+  String _healthNarrative(int h) {
+    if (h >= 80) return 'Seu ecossistema está operando no máximo potencial. Os projetos estão sincronizados e escalando.';
+    if (h >= 60) return 'Seu ecossistema está saudável e crescendo. Existem alavancas prontas para acelerar.';
+    if (h >= 40) return 'Seu ecossistema está estável. Algumas áreas precisam de atenção para desbloquear crescimento.';
+    if (h >= 20) return 'Seu ecossistema está em fase de validação. Adicione mais análises para elevar a inteligência.';
+    return 'Seu ecossistema precisa de revisão estratégica. A IVE pode ajudar a identificar os bloqueios.';
   }
 }
 
@@ -542,6 +545,15 @@ class _ProjectCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
+      // IVE explain button
+      Padding(
+        padding: const EdgeInsets.only(top: 6, left: 2),
+        child: IveExplainButton(
+          question:   'Por que o projeto ${score.project.name} tem score ${score.ecosystemScore}? Explique cada componente e como melhorar.',
+          screenName: 'Decisões',
+          compact:    true,
+        ),
       ),
       ),
     );
