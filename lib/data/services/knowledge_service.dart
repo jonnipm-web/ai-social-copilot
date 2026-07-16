@@ -2,6 +2,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/knowledge_analysis.dart';
 import '../models/knowledge_item.dart';
+import '../../core/services/ive_event_bus.dart';
+import '../../data/models/ive_event.dart';
 import 'content_service.dart';
 
 class KnowledgeService {
@@ -114,8 +116,11 @@ class KnowledgeService {
     final uid = _client.auth.currentUser?.id;
     if (uid == null) throw Exception('Usuário não autenticado.');
 
-    // Marca como processando
+    // Marca como processando e notifica IVE
     await update(item.id, {'status': 'processing'});
+    IveEventBus.instance.emit(
+      IveEvent.knowledgeAnalysisStarted(itemId: item.id, itemName: item.title),
+    );
 
     try {
       final aiData = await extractWithAI(
@@ -165,17 +170,16 @@ class KnowledgeService {
 
       final saved = await saveAnalysis(analysis);
 
-      // Auto-sync to Library (Módulo 2: Cofre → Biblioteca)
+      // Auto-sync to Library — não-fatal
       try {
         final detectedType = aiData['detected_type'] as String? ?? 'texto';
-        final mappedType = _mapContentType(detectedType);
         await ContentService().upsertFromKnowledge(
           userId:           uid,
           knowledgeItemId:  item.id,
           title:            (aiData['detected_title'] as String?)?.isNotEmpty == true
               ? aiData['detected_title'] as String
               : item.title,
-          type:             mappedType,
+          type:             _mapContentType(detectedType),
           description:      aiData['summary'] as String?,
           baseText:         item.content.isNotEmpty ? item.content : null,
           niche:            (aiData['detected_niche'] as String?)?.isNotEmpty == true
@@ -192,7 +196,7 @@ class KnowledgeService {
         // Sync failure is non-fatal
       }
 
-      // Marca como analisado e salva opportunity_score no item
+      // Marca como analisado — dentro do try para evitar inconsistência de status
       await update(item.id, {
         'status':            'analyzed',
         'opportunity_score': _int(aiData['score_opportunity']),
@@ -202,9 +206,28 @@ class KnowledgeService {
         'auto_audience':     aiData['detected_audience'],
       });
 
+      // Notifica IVE de conclusão
+      IveEventBus.instance.emit(
+        IveEvent.knowledgeAnalysisCompleted(
+          itemId:           item.id,
+          itemName:         item.title,
+          opportunityScore: _int(aiData['score_opportunity']),
+        ),
+      );
+
       return saved;
     } catch (e) {
       await update(item.id, {'status': 'error'});
+
+      // Notifica IVE do erro
+      IveEventBus.instance.emit(
+        IveEvent.knowledgeAnalysisFailed(
+          itemId:         item.id,
+          itemName:       item.title,
+          technicalError: e.toString(),
+        ),
+      );
+
       rethrow;
     }
   }
@@ -230,16 +253,16 @@ class KnowledgeService {
 
   static String _mapContentType(String detected) {
     const map = {
-      'livro': 'livro',
-      'ebook': 'ebook',
-      'artigo': 'artigo',
-      'post': 'post',
-      'site': 'projeto',
+      'livro':   'livro',
+      'ebook':   'ebook',
+      'artigo':  'artigo',
+      'post':    'post',
+      'site':    'projeto',
       'produto': 'produto',
-      'marca': 'marca',
+      'marca':   'marca',
       'projeto': 'projeto',
-      'curso': 'produto',
-      'texto': 'texto',
+      'curso':   'produto',
+      'texto':   'texto',
     };
     return map[detected.toLowerCase()] ?? 'texto';
   }

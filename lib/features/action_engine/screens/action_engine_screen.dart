@@ -145,7 +145,7 @@ class _ActionBody extends StatelessWidget {
                 _SectionHeader('Pendentes', pending.length, _kOrange),
                 ...pending.map((item) => Padding(
                       padding: const EdgeInsets.only(bottom: 10),
-                      child: _ActionCard(item: item, ref: ref),
+                      child: _ActionCard(item: item),
                     )),
                 const SizedBox(height: 8),
               ],
@@ -154,7 +154,7 @@ class _ActionBody extends StatelessWidget {
                 _SectionHeader('Em Execução', active.length, _kCyan),
                 ...active.map((item) => Padding(
                       padding: const EdgeInsets.only(bottom: 10),
-                      child: _ActionCard(item: item, ref: ref),
+                      child: _ActionCard(item: item),
                     )),
                 const SizedBox(height: 8),
               ],
@@ -163,7 +163,7 @@ class _ActionBody extends StatelessWidget {
                 _SectionHeader('Concluídas', completed.length, _kGreen),
                 ...completed.take(5).map((item) => Padding(
                       padding: const EdgeInsets.only(bottom: 10),
-                      child: _ActionCard(item: item, ref: ref),
+                      child: _ActionCard(item: item),
                     )),
               ],
 
@@ -272,10 +272,18 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-class _ActionCard extends StatelessWidget {
-  const _ActionCard({required this.item, required this.ref});
+// ── Action Card ───────────────────────────────────────────────────────────────
+
+class _ActionCard extends ConsumerStatefulWidget {
+  const _ActionCard({required this.item});
   final ActionQueueItem item;
-  final WidgetRef ref;
+
+  @override
+  ConsumerState<_ActionCard> createState() => _ActionCardState();
+}
+
+class _ActionCardState extends ConsumerState<_ActionCard> {
+  bool _loading = false;
 
   static Color _statusColor(String s) {
     const m = {
@@ -288,9 +296,61 @@ class _ActionCard extends StatelessWidget {
     return m[s] ?? Colors.white38;
   }
 
+  Future<void> _run(Future<void> Function() action) async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    try {
+      await action();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro: ${e.toString()}'),
+            backgroundColor: _kRed,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _confirmDelete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A2E),
+        title: const Text('Excluir ação?',
+            style: TextStyle(color: Colors.white, fontSize: 16)),
+        content: Text(
+          'A ação "${widget.item.title}" será removida permanentemente.',
+          style: const TextStyle(color: Colors.white54, fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar',
+                style: TextStyle(color: Colors.white38)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Excluir',
+                style: TextStyle(color: _kRed, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await _run(() => ref
+          .read(actionQueueNotifierProvider.notifier)
+          .delete(widget.item.id, title: widget.item.title));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final notifier = ref.read(actionQueueNotifierProvider.notifier);
+    final item     = widget.item;
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -314,20 +374,30 @@ class _ActionCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                decoration: BoxDecoration(
-                  color: _statusColor(item.status).withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(6),
+              if (_loading)
+                const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 1.5,
+                    color: _kPrimary,
+                  ),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: _statusColor(item.status).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    item.status,
+                    style: TextStyle(
+                        color: _statusColor(item.status),
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold),
+                  ),
                 ),
-                child: Text(
-                  item.status,
-                  style: TextStyle(
-                      color: _statusColor(item.status),
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold),
-                ),
-              ),
             ],
           ),
           const SizedBox(height: 10),
@@ -344,31 +414,32 @@ class _ActionCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              if (item.status == 'pending') ...[
-                _ActionBtn('Aprovar', _kGreen,
-                    () => notifier.approve(item.id)),
+              if (item.status == 'pending' && !_loading) ...[
+                _ActionBtn('Aprovar', _kGreen, () => _run(
+                    () => notifier.approve(item.id, title: item.title))),
                 const SizedBox(width: 8),
               ],
-              if (item.status == 'approved') ...[
-                _ActionBtn('Iniciar', _kCyan,
-                    () => notifier.execute(item.id)),
+              if (item.status == 'approved' && !_loading) ...[
+                _ActionBtn('Iniciar', _kCyan, () => _run(
+                    () => notifier.execute(item.id, title: item.title))),
                 const SizedBox(width: 8),
               ],
-              if (item.status == 'executing') ...[
-                _ActionBtn('Concluir', _kGreen,
-                    () => notifier.complete(item.id)),
+              if (item.status == 'executing' && !_loading) ...[
+                _ActionBtn('Concluir', _kGreen, () => _run(
+                    () => notifier.complete(item.id, title: item.title))),
                 const SizedBox(width: 8),
-                _ActionBtn('Pausar', _kOrange,
-                    () => notifier.approve(item.id)),
+                _ActionBtn('Pausar', _kOrange, () => _run(
+                    () => notifier.approve(item.id, title: item.title))),
                 const SizedBox(width: 8),
               ],
-              IconButton(
-                icon: const Icon(Icons.delete_outline_rounded,
-                    color: Colors.white24, size: 16),
-                onPressed: () => notifier.delete(item.id),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
+              if (!_loading)
+                IconButton(
+                  icon: const Icon(Icons.delete_outline_rounded,
+                      color: Colors.white24, size: 16),
+                  onPressed: _confirmDelete,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
             ],
           ),
         ],

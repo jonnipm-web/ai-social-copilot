@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/services/ive_event_bus.dart';
 import '../data/models/action_queue_item.dart';
+import '../data/models/ive_event.dart';
 import '../data/services/action_queue_service.dart';
 
 final actionQueueServiceProvider =
@@ -40,28 +42,78 @@ class ActionQueueNotifier
   }
 
   Future<void> add(ActionQueueItem item) async {
-    await _svc.create(item);
-    await load();
+    try {
+      await _svc.create(item);
+      await load();
+    } catch (e) {
+      IveEventBus.instance.emit(
+        IveEvent.actionMutationFailed(
+          actionTitle:    item.title,
+          technicalError: e.toString(),
+        ),
+      );
+      rethrow;
+    }
   }
 
-  Future<void> approve(String id) async {
-    await _svc.updateStatus(id, 'approved');
-    await load();
+  Future<void> approve(String id, {String title = 'Ação'}) async {
+    try {
+      await _svc.updateStatus(id, 'approved');
+      await load();
+    } catch (e) {
+      IveEventBus.instance.emit(
+        IveEvent.actionMutationFailed(
+          actionTitle:    title,
+          technicalError: e.toString(),
+        ),
+      );
+      rethrow;
+    }
   }
 
-  Future<void> execute(String id) async {
-    await _svc.updateStatus(id, 'executing');
-    await load();
+  Future<void> execute(String id, {String title = 'Ação'}) async {
+    try {
+      await _svc.updateStatus(id, 'executing');
+      await load();
+    } catch (e) {
+      IveEventBus.instance.emit(
+        IveEvent.actionMutationFailed(
+          actionTitle:    title,
+          technicalError: e.toString(),
+        ),
+      );
+      rethrow;
+    }
   }
 
-  Future<void> complete(String id) async {
-    await _svc.updateStatus(id, 'completed');
-    await load();
+  Future<void> complete(String id, {String title = 'Ação'}) async {
+    try {
+      await _svc.updateStatus(id, 'completed');
+      await load();
+    } catch (e) {
+      IveEventBus.instance.emit(
+        IveEvent.actionMutationFailed(
+          actionTitle:    title,
+          technicalError: e.toString(),
+        ),
+      );
+      rethrow;
+    }
   }
 
-  Future<void> cancel(String id) async {
-    await _svc.updateStatus(id, 'cancelled');
-    await load();
+  Future<void> cancel(String id, {String title = 'Ação'}) async {
+    try {
+      await _svc.updateStatus(id, 'cancelled');
+      await load();
+    } catch (e) {
+      IveEventBus.instance.emit(
+        IveEvent.actionMutationFailed(
+          actionTitle:    title,
+          technicalError: e.toString(),
+        ),
+      );
+      rethrow;
+    }
   }
 
   Future<ActionQueueItem> addFromOpportunity({
@@ -89,14 +141,34 @@ class ActionQueueNotifier
       status:           'pending',
       createdAt:        DateTime.now(),
     );
-    final created = await _svc.create(item);
-    await load();
-    return created;
+    try {
+      final created = await _svc.create(item);
+      await load();
+      return created;
+    } catch (e) {
+      IveEventBus.instance.emit(
+        IveEvent.actionMutationFailed(
+          actionTitle:    '[Lab] $title',
+          technicalError: e.toString(),
+        ),
+      );
+      rethrow;
+    }
   }
 
-  Future<void> delete(String id) async {
-    await _svc.delete(id);
-    await load();
+  Future<void> delete(String id, {String title = 'Ação'}) async {
+    try {
+      await _svc.delete(id);
+      await load();
+    } catch (e) {
+      IveEventBus.instance.emit(
+        IveEvent.actionMutationFailed(
+          actionTitle:    title,
+          technicalError: e.toString(),
+        ),
+      );
+      rethrow;
+    }
   }
 }
 
