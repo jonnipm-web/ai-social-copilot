@@ -33,6 +33,8 @@ class IveMemory {
     this.dismissedAlerts    = const [],
   });
 
+  bool isAlertDismissed(String alertId) => dismissedAlerts.contains(alertId);
+
   IveMemory copyWith({
     String?        lastRoute,
     String?        lastProjectId,
