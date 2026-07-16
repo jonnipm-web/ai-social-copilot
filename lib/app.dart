@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
+import 'shared/widgets/ive_overlay.dart';
 import 'features/admin/screens/admin_panel_screen.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/calendar/screens/calendar_screen.dart';
@@ -50,8 +51,11 @@ import 'features/action_engine/screens/action_engine_screen.dart';
 import 'features/dashboard/screens/executive_dashboard_screen.dart';
 import 'features/debug/screens/intelligence_debug_hub_screen.dart';
 
+final _iveObserver = IveRouteObserver();
+
 final _router = GoRouter(
   initialLocation: AppConstants.routeSplash,
+  observers: [_iveObserver],
   redirect: (context, state) {
     final session = Supabase.instance.client.auth.currentSession;
     final goingToAuth   = state.fullPath == AppConstants.routeLogin;
@@ -370,7 +374,14 @@ class App extends ConsumerWidget {
         top: false,
         left: false,
         right: false,
-        child: child!,
+        child: Consumer(
+          builder: (ctx, ref, _) => Stack(
+            children: [
+              child!,
+              const IveOverlay(),
+            ],
+          ),
+        ),
       ),
     );
   }

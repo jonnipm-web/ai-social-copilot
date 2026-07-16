@@ -5,6 +5,27 @@ import '../../data/models/copilot_context_data.dart';
 import '../../data/models/copilot_turn.dart';
 import '../../providers/context_copilot_provider.dart';
 
+// ── Public helper ─────────────────────────────────────────────────────────────
+
+void showCopilotChat(
+  BuildContext context, {
+  required String screenName,
+  CopilotContextData? contextData,
+}) {
+  showModalBottomSheet(
+    context:             context,
+    isScrollControlled:  true,
+    backgroundColor:     Colors.transparent,
+    builder: (_) => ProviderScope(
+      parent: ProviderScope.containerOf(context),
+      child:  _CopilotSheet(
+        screenName: screenName,
+        context:    contextData ?? CopilotContextData(),
+      ),
+    ),
+  );
+}
+
 class ContextCopilotButton extends ConsumerWidget {
   final String screenName;
   final CopilotContextData context;

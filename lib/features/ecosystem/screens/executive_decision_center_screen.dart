@@ -11,8 +11,11 @@ import '../../../providers/decision_validation_provider.dart';
 import '../../../providers/ecosystem_intelligence_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
 import '../../../providers/action_queue_provider.dart';
+import '../../../data/models/ive_state.dart';
+import '../../../providers/ive_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/context_copilot_widget.dart';
+import '../../../shared/widgets/ive_detail_sheet.dart';
 import '../../../data/models/copilot_context_data.dart';
 
 // ── Colors ────────────────────────────────────────────────────────────────
@@ -65,6 +68,19 @@ class _ExecutiveDecisionCenterScreenState
   void initState() {
     super.initState();
     _tab = TabController(length: 3, vsync: this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(ecosystemScoresProvider.future).then((scores) {
+        if (!mounted) return;
+        final risky = scores.where((s) => s.ecosystemScore < 40).toList();
+        if (risky.isNotEmpty) {
+          ref.read(iveProvider.notifier).showMessage(
+            'Atenção: ${risky.length} projeto(s) com score crítico. Posso ajudar a resolver.',
+            expression: IveExpression.thinking,
+          );
+        }
+      }).catchError((_) {});
+    });
   }
 
   @override
@@ -442,10 +458,45 @@ class _ProjectCard extends StatelessWidget {
   final EcosystemScore score;
   const _ProjectCard({required this.score});
 
+  void _showDetail(BuildContext context) {
+    IveDetailSheet.show(
+      context,
+      title:            score.project.name,
+      emoji:            score.recommendationEmoji,
+      humanExplanation:
+          '${score.project.name} tem um Ecosystem Score de ${score.ecosystemScore}/100. '
+          'Isso significa que o projeto está classificado como "${score.recommendation}". '
+          'O score combina oportunidades de mercado, fit estratégico, ROI potencial e capacidade de execução.',
+      evidence: [
+        IveEvidence(emoji: '🎯', label: 'Oportunidade',   value: '${score.opportunityScore}/100'),
+        IveEvidence(emoji: '🔗', label: 'Strategic Fit',  value: '${score.strategicFit}/100'),
+        IveEvidence(emoji: '💰', label: 'ROI Score',      value: '${score.roiScore}/100'),
+        IveEvidence(emoji: '⚡', label: 'Mercado',        value: '${score.marketScore}/100'),
+        IveEvidence(emoji: '🏃', label: 'Execução',       value: '${score.executionScore}/100'),
+      ],
+      expandedData: {
+        'Momentum':    '${score.momentumScore}/100',
+        'Sinergia':    '${score.synergyScore}/100',
+        'ROI Total':   'R\$${score.totalRoi.toStringAsFixed(0)}',
+        'Ecosystem':   '${score.ecosystemScore}/100',
+      },
+      suggestedActions: [
+        IveAction(
+          emoji:       '💬',
+          label:       'Perguntar à IVE como melhorar este score',
+          description: 'Abrir chat com contexto deste projeto',
+        ),
+      ],
+      screenName: 'Decisões',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final color = _scoreColor(score.ecosystemScore);
-    return Container(
+    return GestureDetector(
+      onTap: () => _showDetail(context),
+      child: Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -491,6 +542,7 @@ class _ProjectCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
       ),
     );
   }
