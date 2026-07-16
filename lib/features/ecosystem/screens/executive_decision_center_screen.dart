@@ -507,53 +507,55 @@ class _ProjectCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: color.withOpacity(0.3)),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 44, height: 44,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text('${score.ecosystemScore}',
-                style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(score.project.name,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
-                const SizedBox(height: 2),
-                Text('${score.recommendationEmoji} ${score.recommendation}  •  ROI R\$${score.totalRoi.toStringAsFixed(0)}',
-                  style: const TextStyle(color: Colors.white54, fontSize: 11)),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          Row(
             children: [
-              Text('Mkt ${score.marketScore}',
-                style: const TextStyle(color: Colors.white38, fontSize: 10)),
-              Text('Fit ${score.strategicFit}',
-                style: const TextStyle(color: Colors.white38, fontSize: 10)),
-              Text('Exec ${score.executionScore}',
-                style: const TextStyle(color: Colors.white38, fontSize: 10)),
+              Container(
+                width: 44, height: 44,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text('${score.ecosystemScore}',
+                    style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(score.project.name,
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+                    const SizedBox(height: 2),
+                    Text('${score.recommendationEmoji} ${score.recommendation}  •  ROI R\$${score.totalRoi.toStringAsFixed(0)}',
+                      style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text('Mkt ${score.marketScore}',
+                    style: const TextStyle(color: Colors.white38, fontSize: 10)),
+                  Text('Fit ${score.strategicFit}',
+                    style: const TextStyle(color: Colors.white38, fontSize: 10)),
+                  Text('Exec ${score.executionScore}',
+                    style: const TextStyle(color: Colors.white38, fontSize: 10)),
+                ],
+              ),
             ],
           ),
+          const SizedBox(height: 6),
+          IveExplainButton(
+            question:   'Por que o projeto ${score.project.name} tem score ${score.ecosystemScore}? Explique cada componente e como melhorar.',
+            screenName: 'Decisões',
+            compact:    true,
+          ),
         ],
-      ),
-      // IVE explain button
-      Padding(
-        padding: const EdgeInsets.only(top: 6, left: 2),
-        child: IveExplainButton(
-          question:   'Por que o projeto ${score.project.name} tem score ${score.ecosystemScore}? Explique cada componente e como melhorar.',
-          screenName: 'Decisões',
-          compact:    true,
-        ),
       ),
       ),
     );
