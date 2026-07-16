@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants/app_constants.dart';
 import '../data/models/ive_state.dart';
+import 'ive_context_provider.dart';
 
 // ── Screen context messages ────────────────────────────────────────────────
 
@@ -123,6 +124,71 @@ class IveNotifier extends StateNotifier<IveState> {
       bubbleVisible: true,
     );
     _scheduleDismiss();
+  }
+
+  /// Gera mensagem contextual baseada em dados reais do ecossistema.
+  /// Substitui a mensagem estática padrão quando há dados disponíveis.
+  void showContextAwareMessage(IveContextData ctx, String route) {
+    // Alertas têm prioridade máxima
+    if (ctx.hasAlert && ctx.alertMessage.isNotEmpty) {
+      state = state.copyWith(
+        message:       ctx.alertMessage,
+        expression:    IveExpression.neutral,
+        bubbleVisible: true,
+      );
+      _scheduleDismiss();
+      return;
+    }
+
+    // Mensagem contextual por tela com dados reais
+    final msg = _buildContextMessage(ctx, route);
+    if (msg.isNotEmpty) {
+      final expr = _kExpressions[route] ?? IveExpression.happy;
+      state = state.copyWith(
+        message:       msg,
+        expression:    expr,
+        bubbleVisible: true,
+      );
+      _scheduleDismiss();
+    }
+  }
+
+  String _buildContextMessage(IveContextData ctx, String route) {
+    if (ctx.healthScore == 0) return ''; // dados ainda não carregados
+
+    switch (route) {
+      case AppConstants.routeEcosystem:
+        final bottleneck = ctx.mainBottleneckName ?? 'execução';
+        return 'Ecossistema em ${ctx.healthScore}/100. '
+               'Principal gargalo: $bottleneck. '
+               'Posso detalhar como melhorar.';
+
+      case AppConstants.routeProjects:
+        if (ctx.topProjectName != null) {
+          return '${ctx.topProjectName} lidera com score ${ctx.topProjectScore}. '
+                 '${ctx.pendingActionsCount > 0 ? "${ctx.pendingActionsCount} ações pendentes detectadas." : "Quer analisar oportunidades?"}';
+        }
+        break;
+
+      case AppConstants.routeOpportunityLab:
+        if (ctx.pendingOpportunitiesCount > 0) {
+          return '${ctx.pendingOpportunitiesCount} oportunidades aguardando sua avaliação. '
+                 'Posso priorizar as de maior ROI.';
+        }
+        break;
+
+      case AppConstants.routeEcosystemBriefing:
+        return 'Briefing gerado com saúde geral em ${ctx.healthScore}/100. '
+               'Posso traduzir os dados em ações concretas.';
+
+      case AppConstants.routeActionEngine:
+        if (ctx.pendingActionsCount > 0) {
+          return '${ctx.pendingActionsCount} ações pendentes. '
+                 'Posso identificar as de maior impacto no score de execução.';
+        }
+        break;
+    }
+    return ''; // fallback para mensagem estática
   }
 
   @override
