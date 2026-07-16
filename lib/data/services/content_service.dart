@@ -6,11 +6,10 @@ import '../models/content_item.dart';
 class ContentService {
   final _client = Supabase.instance.client;
 
-  Future<List<ContentItem>> fetchAll() async {
-    final rows = await _client
-        .from(AppConstants.tableContentItems)
-        .select()
-        .order('created_at', ascending: false);
+  Future<List<ContentItem>> fetchAll({String? projectId}) async {
+    var query = _client.from(AppConstants.tableContentItems).select();
+    if (projectId != null) query = query.eq('project_id', projectId);
+    final rows = await query.order('created_at', ascending: false);
     return (rows as List).map((r) => ContentItem.fromMap(r)).toList();
   }
 
@@ -52,6 +51,7 @@ class ContentService {
 
   Future<void> upsertFromKnowledge({
     required String userId,
+    String? projectId,
     required String knowledgeItemId,
     required String title,
     required String type,
@@ -72,6 +72,7 @@ class ContentService {
 
     final data = {
       'user_id':            userId,
+      if (projectId != null) 'project_id': projectId,
       'knowledge_item_id':  knowledgeItemId,
       'title':              title,
       'type':               type,

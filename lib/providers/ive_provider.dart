@@ -7,6 +7,7 @@ import '../data/models/ecosystem_score.dart';
 import '../data/models/ive_event.dart';
 import '../data/models/ive_issue.dart';
 import '../data/models/ive_state.dart';
+import 'auto_bootstrap_provider.dart';
 import 'ecosystem_intelligence_provider.dart';
 import 'ive_context_provider.dart';
 import 'ive_memory_provider.dart';
@@ -126,6 +127,42 @@ class IveNotifier extends StateNotifier<IveState> {
         if (name != null) {
           _showTransient('Analisando "$name"...', IveExpression.thinking);
         }
+        break;
+
+      case IveEventType.projectCreated:
+        final name = event.entityName;
+        if (name != null) {
+          _showTransient(
+            'Projeto "$name" criado! Iniciando análise automática...',
+            IveExpression.excited,
+          );
+        }
+        _ref.read(autoBootstrapNotifierProvider.notifier).runAll();
+        break;
+
+      case IveEventType.projectDeleted:
+        final name = event.entityName;
+        if (name != null) {
+          _showTransient('Projeto "$name" removido.', IveExpression.neutral);
+        }
+        break;
+
+      case IveEventType.projectStatusChanged:
+        final name   = event.entityName;
+        final status = event.payload['status'] as String?;
+        if (name != null && status != null) {
+          final label = status == 'active'
+              ? 'ativado'
+              : status == 'paused'
+                  ? 'pausado'
+                  : status == 'completed'
+                      ? 'concluído'
+                      : status;
+          _showTransient('"$name" $label.', IveExpression.happy);
+        }
+        break;
+
+      case IveEventType.projectUpdated:
         break;
 
       default:

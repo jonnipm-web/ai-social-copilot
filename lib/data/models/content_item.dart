@@ -1,6 +1,7 @@
 class ContentItem {
   final String id;
   final String userId;
+  final String? projectId;
   final String? personaId;
   final String title;
   final String type;
@@ -39,6 +40,7 @@ class ContentItem {
   const ContentItem({
     required this.id,
     required this.userId,
+    this.projectId,
     this.personaId,
     required this.title,
     required this.type,
@@ -61,6 +63,7 @@ class ContentItem {
     return ContentItem(
       id:                  map['id'] as String,
       userId:              map['user_id'] as String,
+      projectId:           map['project_id'] as String?,
       personaId:           map['persona_id'] as String?,
       title:               map['title'] as String,
       type:                map['type'] as String,
@@ -84,6 +87,7 @@ class ContentItem {
 
   Map<String, dynamic> toInsertMap() => {
     'user_id':              userId,
+    if (projectId != null) 'project_id': projectId,
     'persona_id':           personaId,
     'title':                title,
     'type':                 type,

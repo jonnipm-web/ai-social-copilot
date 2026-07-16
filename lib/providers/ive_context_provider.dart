@@ -12,12 +12,16 @@ class IveContextData {
   final int    pendingActionsCount;
   final int    pendingOpportunitiesCount;
   final String? topProjectName;
+  final String? topProjectDescription;
+  final String? topProjectType;
   final int?    topProjectScore;
   final String? mainBottleneckName;
   final int?    mainBottleneckScore;
   final bool   hasAlert;
   final String alertMessage;
   final String alertId;
+  // Snapshot das top 3 projetos para contexto rico no chat
+  final List<Map<String, dynamic>> topProjectsSnapshot;
 
   const IveContextData({
     this.healthScore                = 0,
@@ -25,12 +29,15 @@ class IveContextData {
     this.pendingActionsCount        = 0,
     this.pendingOpportunitiesCount  = 0,
     this.topProjectName,
+    this.topProjectDescription,
+    this.topProjectType,
     this.topProjectScore,
     this.mainBottleneckName,
     this.mainBottleneckScore,
     this.hasAlert                   = false,
     this.alertMessage               = '',
     this.alertId                    = '',
+    this.topProjectsSnapshot        = const [],
   });
 }
 
@@ -81,17 +88,29 @@ final iveContextDataProvider = FutureProvider.autoDispose<IveContextData>((ref) 
                 'Isso está impactando seu score de execução.';
   }
 
+  final topThree = sorted.take(3).map((s) => {
+    'name':        s.project.name,
+    'description': s.project.description,
+    'type':        s.project.type,
+    'status':      s.project.status,
+    'score':       s.ecosystemScore,
+    'opportunity': s.project.opportunityScore,
+  }).toList();
+
   return IveContextData(
     healthScore:               health,
     projectCount:              scores.length,
     pendingActionsCount:       pending.length,
     pendingOpportunitiesCount: pendingLab,
     topProjectName:            top?.project.name,
+    topProjectDescription:     top?.project.description,
+    topProjectType:            top?.project.type,
     topProjectScore:           top?.ecosystemScore,
     mainBottleneckName:        bottleneck?.project.name,
     mainBottleneckScore:       bottleneck?.executionScore,
     hasAlert:                  hasAlert,
     alertMessage:              alertMsg,
     alertId:                   alertId,
+    topProjectsSnapshot:       topThree,
   );
 });

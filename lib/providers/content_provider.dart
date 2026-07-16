@@ -9,6 +9,11 @@ final contentItemsProvider = FutureProvider.autoDispose<List<ContentItem>>((ref)
   return ref.watch(contentServiceProvider).fetchAll();
 });
 
+final contentItemsByProjectProvider =
+    FutureProvider.autoDispose.family<List<ContentItem>, String>((ref, projectId) {
+  return ref.watch(contentServiceProvider).fetchAll(projectId: projectId);
+});
+
 final contentItemByIdProvider =
     FutureProvider.autoDispose.family<ContentItem?, String>((ref, id) {
   return ref.watch(contentServiceProvider).fetchById(id);

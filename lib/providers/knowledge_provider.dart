@@ -12,6 +12,11 @@ final knowledgeItemsProvider =
   return ref.watch(knowledgeServiceProvider).fetchAll();
 });
 
+final knowledgeItemsByProjectProvider =
+    FutureProvider.autoDispose.family<List<KnowledgeItem>, String>((ref, projectId) {
+  return ref.watch(knowledgeServiceProvider).fetchAll(projectId: projectId);
+});
+
 final knowledgeItemByIdProvider =
     FutureProvider.autoDispose.family<KnowledgeItem?, String>((ref, id) {
   return ref.watch(knowledgeServiceProvider).fetchById(id);

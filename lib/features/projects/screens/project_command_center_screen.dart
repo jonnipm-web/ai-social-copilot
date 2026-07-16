@@ -197,7 +197,6 @@ class _ProjectCommandCenterScreenState
   }
 
   Widget _buildProjectList(List<Project> projects) {
-    // Sort by priority_score desc
     final sorted = [...projects]..sort((a, b) => b.priorityScore.compareTo(a.priorityScore));
 
     return ListView.builder(
@@ -208,8 +207,7 @@ class _ProjectCommandCenterScreenState
         rank: i + 1,
         onStatusChange: (status) =>
             ref.read(projectsNotifierProvider.notifier).updateStatus(sorted[i].id, status),
-        onDelete: () =>
-            ref.read(projectsNotifierProvider.notifier).delete(sorted[i].id),
+        onDelete: () => _confirmDelete(sorted[i]),
         onAnalyze: sorted[i].marketAnalysisId != null
             ? () => context.go(
                 AppConstants.routeMarketIntelligenceHub
@@ -217,6 +215,34 @@ class _ProjectCommandCenterScreenState
             : null,
       ),
     );
+  }
+
+  Future<void> _confirmDelete(Project project) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A2E),
+        title: const Text('Confirmar exclusão', style: TextStyle(color: Colors.white)),
+        content: Text(
+          'Excluir "${project.name}"?\nEsta ação não pode ser desfeita.',
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.white54)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: const Color(0xFFFF6B6B)),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      ref.read(projectsNotifierProvider.notifier).delete(project.id);
+    }
   }
 }
 
