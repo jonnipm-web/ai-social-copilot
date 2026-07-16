@@ -17,6 +17,9 @@ enum IveEventType {
   simulationCompleted,
   // Projects
   projectCreated,
+  projectUpdated,
+  projectStatusChanged,
+  projectDeleted,
 }
 
 class IveEvent {
@@ -89,5 +92,51 @@ class IveEvent {
           technicalError: technicalError,
         ),
         timestamp: DateTime.now(),
+      );
+
+  factory IveEvent.projectCreated({
+    required String projectId,
+    required String projectName,
+  }) =>
+      IveEvent(
+        type:       IveEventType.projectCreated,
+        entityId:   projectId,
+        entityName: projectName,
+        timestamp:  DateTime.now(),
+      );
+
+  factory IveEvent.projectUpdated({
+    required String projectId,
+    required String projectName,
+  }) =>
+      IveEvent(
+        type:       IveEventType.projectUpdated,
+        entityId:   projectId,
+        entityName: projectName,
+        timestamp:  DateTime.now(),
+      );
+
+  factory IveEvent.projectStatusChanged({
+    required String projectId,
+    required String projectName,
+    required String status,
+  }) =>
+      IveEvent(
+        type:       IveEventType.projectStatusChanged,
+        entityId:   projectId,
+        entityName: projectName,
+        payload:    {'status': status},
+        timestamp:  DateTime.now(),
+      );
+
+  factory IveEvent.projectDeleted({
+    required String projectId,
+    required String projectName,
+  }) =>
+      IveEvent(
+        type:       IveEventType.projectDeleted,
+        entityId:   projectId,
+        entityName: projectName,
+        timestamp:  DateTime.now(),
       );
 }

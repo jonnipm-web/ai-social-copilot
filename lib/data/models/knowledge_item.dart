@@ -1,6 +1,7 @@
 class KnowledgeItem {
   final String id;
   final String userId;
+  final String? projectId;
   final String title;
   final String sourceType;
   final String? sourceUrl;
@@ -35,6 +36,7 @@ class KnowledgeItem {
   const KnowledgeItem({
     required this.id,
     required this.userId,
+    this.projectId,
     required this.title,
     this.sourceType = 'manual',
     this.sourceUrl,
@@ -57,6 +59,7 @@ class KnowledgeItem {
     return KnowledgeItem(
       id:             map['id'] as String,
       userId:         map['user_id'] as String,
+      projectId:      map['project_id'] as String?,
       title:          map['title'] as String,
       sourceType:     map['source_type'] as String? ?? 'manual',
       sourceUrl:      map['source_url'] as String?,
@@ -79,6 +82,7 @@ class KnowledgeItem {
 
   Map<String, dynamic> toInsertMap() => {
     'user_id':        userId,
+    if (projectId != null) 'project_id': projectId,
     'title':          title,
     'source_type':    sourceType,
     'source_url':     sourceUrl,
@@ -93,6 +97,7 @@ class KnowledgeItem {
   };
 
   KnowledgeItem copyWith({
+    String? projectId,
     String? title,
     String? sourceType,
     String? sourceUrl,
@@ -108,6 +113,7 @@ class KnowledgeItem {
     return KnowledgeItem(
       id:             id,
       userId:         userId,
+      projectId:      projectId      ?? this.projectId,
       title:          title          ?? this.title,
       sourceType:     sourceType     ?? this.sourceType,
       sourceUrl:      sourceUrl      ?? this.sourceUrl,

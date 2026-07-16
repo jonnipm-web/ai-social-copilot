@@ -15,11 +15,10 @@ class KnowledgeService {
 
   // ── Items ────────────────────────────────────────────────────
 
-  Future<List<KnowledgeItem>> fetchAll() async {
-    final rows = await _client
-        .from(_tableItems)
-        .select()
-        .order('created_at', ascending: false);
+  Future<List<KnowledgeItem>> fetchAll({String? projectId}) async {
+    var query = _client.from(_tableItems).select();
+    if (projectId != null) query = query.eq('project_id', projectId);
+    final rows = await query.order('created_at', ascending: false);
     return (rows as List).map((r) => KnowledgeItem.fromMap(r)).toList();
   }
 
@@ -175,6 +174,7 @@ class KnowledgeService {
         final detectedType = aiData['detected_type'] as String? ?? 'texto';
         await ContentService().upsertFromKnowledge(
           userId:           uid,
+          projectId:        item.projectId,
           knowledgeItemId:  item.id,
           title:            (aiData['detected_title'] as String?)?.isNotEmpty == true
               ? aiData['detected_title'] as String
@@ -192,8 +192,14 @@ class KnowledgeService {
           opportunityScore: _int(aiData['score_opportunity']),
           language:         item.language,
         );
-      } catch (_) {
-        // Sync failure is non-fatal
+      } catch (e) {
+        IveEventBus.instance.emit(
+          IveEvent.knowledgeAnalysisFailed(
+            itemId:         item.id,
+            itemName:       item.title,
+            technicalError: 'Sync to Library failed: $e',
+          ),
+        );
       }
 
       // Marca como analisado — dentro do try para evitar inconsistência de status

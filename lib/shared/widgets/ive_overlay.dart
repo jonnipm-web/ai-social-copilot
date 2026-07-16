@@ -90,30 +90,33 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
           mainAxisSize:       MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            // Speech bubble
-            AnimatedOpacity(
-              duration: const Duration(milliseconds: 350),
-              opacity:  state.bubbleVisible && !_dragging ? 1.0 : 0.0,
-              child: AnimatedSlide(
+            // Speech bubble — IgnorePointer evita hitbox invisível quando opacity=0
+            IgnorePointer(
+              ignoring: !state.bubbleVisible || _dragging,
+              child: AnimatedOpacity(
                 duration: const Duration(milliseconds: 350),
-                offset:   state.bubbleVisible && !_dragging
-                    ? Offset.zero
-                    : const Offset(0, 0.15),
-                curve:    Curves.easeOut,
-                child: _IveBubble(
-                  message:     state.message,
-                  expression:  state.expression,
-                  activeIssue: state.activeIssue,
-                  onDismiss: () {
-                    final ctx = ref.read(iveContextDataProvider).valueOrNull;
-                    if (ctx != null && ctx.alertId.isNotEmpty) {
-                      ref.read(iveMemoryProvider.notifier).dismissAlert(ctx.alertId);
-                    }
-                    ref.read(iveProvider.notifier).dismissBubble();
-                  },
-                  onChat: state.activeIssue == null
-                      ? () => _openChat(context, state.screenName)
-                      : null,
+                opacity:  state.bubbleVisible && !_dragging ? 1.0 : 0.0,
+                child: AnimatedSlide(
+                  duration: const Duration(milliseconds: 350),
+                  offset:   state.bubbleVisible && !_dragging
+                      ? Offset.zero
+                      : const Offset(0, 0.15),
+                  curve:    Curves.easeOut,
+                  child: _IveBubble(
+                    message:     state.message,
+                    expression:  state.expression,
+                    activeIssue: state.activeIssue,
+                    onDismiss: () {
+                      final ctx = ref.read(iveContextDataProvider).valueOrNull;
+                      if (ctx != null && ctx.alertId.isNotEmpty) {
+                        ref.read(iveMemoryProvider.notifier).dismissAlert(ctx.alertId);
+                      }
+                      ref.read(iveProvider.notifier).dismissBubble();
+                    },
+                    onChat: state.activeIssue == null
+                        ? () => _openChat(context, state.screenName)
+                        : null,
+                  ),
                 ),
               ),
             ),
@@ -159,15 +162,20 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
   CopilotContextData _buildCopilotContext(IveContextData ctx) =>
       CopilotContextData(
         scores: {
-          'ecosystem_health':         ctx.healthScore,
-          'total_projects':           ctx.projectCount,
-          'pending_actions':          ctx.pendingActionsCount,
-          'pending_opportunities':    ctx.pendingOpportunitiesCount,
-          if (ctx.topProjectName    != null) 'top_project_name':            ctx.topProjectName,
-          if (ctx.topProjectScore   != null) 'top_project_score':           ctx.topProjectScore,
-          if (ctx.mainBottleneckName != null) 'main_bottleneck':             ctx.mainBottleneckName,
-          if (ctx.mainBottleneckScore != null) 'bottleneck_execution_score': ctx.mainBottleneckScore,
+          'ecosystem_health':           ctx.healthScore,
+          'total_projects':             ctx.projectCount,
+          'pending_actions':            ctx.pendingActionsCount,
+          'pending_opportunities':      ctx.pendingOpportunitiesCount,
+          if (ctx.topProjectName         != null) 'top_project_name':            ctx.topProjectName,
+          if (ctx.topProjectDescription  != null) 'top_project_description':     ctx.topProjectDescription,
+          if (ctx.topProjectType         != null) 'top_project_type':            ctx.topProjectType,
+          if (ctx.topProjectScore        != null) 'top_project_score':           ctx.topProjectScore,
+          if (ctx.mainBottleneckName     != null) 'main_bottleneck':             ctx.mainBottleneckName,
+          if (ctx.mainBottleneckScore    != null) 'bottleneck_execution_score':  ctx.mainBottleneckScore,
         },
+        project: ctx.topProjectsSnapshot.isNotEmpty
+            ? {'projects': ctx.topProjectsSnapshot}
+            : null,
       );
 
   String _routeToName(String route) {

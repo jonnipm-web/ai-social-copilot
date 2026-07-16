@@ -4,7 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../data/models/weekly_briefing.dart';
+import '../../../providers/action_queue_provider.dart';
 import '../../../providers/ecosystem_intelligence_provider.dart';
+import '../../../providers/opportunity_lab_provider.dart';
+import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 
 const _kBg      = Color(0xFF0A0A14);
@@ -43,7 +46,14 @@ class WeeklyBriefingScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: Colors.white54),
-            onPressed: () => ref.invalidate(weeklyBriefingProvider),
+            onPressed: () {
+              // Invalida toda a cadeia para forçar recálculo completo
+              ref.invalidate(projectsProvider);
+              ref.invalidate(opportunityLabProvider);
+              ref.invalidate(actionQueueProvider);
+              ref.invalidate(ecosystemScoresProvider);
+              ref.invalidate(weeklyBriefingProvider);
+            },
           ),
         ],
       ),
