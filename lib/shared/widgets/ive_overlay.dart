@@ -4,14 +4,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/copilot_context_data.dart';
 import '../../data/models/ive_issue.dart';
 import '../../data/models/ive_state.dart';
+import '../../features/ive/visual/ive_avatar.dart';
+import '../../features/ive/visual/ive_avatar_state.dart';
+import '../../features/ive/visual/ive_visual_config.dart';
 import '../../providers/ive_context_provider.dart';
 import '../../providers/ive_memory_provider.dart';
 import '../../providers/ive_provider.dart';
 import 'context_copilot_widget.dart' show showCopilotChat;
-import 'ive_avatar.dart';
 
 // ── Route bridge ──────────────────────────────────────────────────────────────
-// GoRouter observer seta este notifier; IveOverlay lê e sincroniza ao iveProvider.
 final iveRouteNotifier = ValueNotifier<String>('');
 
 class IveRouteObserver extends NavigatorObserver {
@@ -20,8 +21,7 @@ class IveRouteObserver extends NavigatorObserver {
     if (name.isNotEmpty) iveRouteNotifier.value = name;
   }
 
-  @override
-  void didPush(Route route, Route? previousRoute) => _notify(route);
+  @override void didPush(Route route, Route? previousRoute) => _notify(route);
 
   @override
   void didPop(Route route, Route? previousRoute) {
@@ -34,7 +34,7 @@ class IveRouteObserver extends NavigatorObserver {
   }
 }
 
-// ── Overlay widget ─────────────────────────────────────────────────────────────
+// ── Overlay ───────────────────────────────────────────────────────────────────
 
 class IveOverlay extends ConsumerStatefulWidget {
   const IveOverlay({super.key});
@@ -53,16 +53,16 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
     iveRouteNotifier.addListener(_onRouteChange);
   }
 
-  void _onRouteChange() {
-    final route = iveRouteNotifier.value;
-    ref.read(iveProvider.notifier).setRoute(route);
-    ref.read(iveMemoryProvider.notifier).setRoute(route);
-  }
-
   @override
   void dispose() {
     iveRouteNotifier.removeListener(_onRouteChange);
     super.dispose();
+  }
+
+  void _onRouteChange() {
+    final route = iveRouteNotifier.value;
+    ref.read(iveProvider.notifier).setRoute(route);
+    ref.read(iveMemoryProvider.notifier).setRoute(route);
   }
 
   Offset _defaultPosition(Size screen) =>
@@ -85,9 +85,9 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
             Offset(screen.width - 72, screen.height - 100),
           );
         }),
-        onPanEnd:    (_) => setState(() => _dragging = false),
+        onPanEnd: (_) => setState(() => _dragging = false),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize:       MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             // Speech bubble
@@ -100,12 +100,11 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
                     ? Offset.zero
                     : const Offset(0, 0.15),
                 curve:    Curves.easeOut,
-                child:    _IveBubble(
+                child: _IveBubble(
                   message:     state.message,
                   expression:  state.expression,
                   activeIssue: state.activeIssue,
-                  onDismiss:   () {
-                    // Persiste dismiss do alerta atual
+                  onDismiss: () {
                     final ctx = ref.read(iveContextDataProvider).valueOrNull;
                     if (ctx != null && ctx.alertId.isNotEmpty) {
                       ref.read(iveMemoryProvider.notifier).dismissAlert(ctx.alertId);
@@ -119,23 +118,24 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
               ),
             ),
             const SizedBox(height: 6),
-            // Avatar
+
+            // ── New IveAvatar (replaces old IveAvatarWidget) ─────────────────
             GestureDetector(
               onTap: () {
-                if (!_dragging) {
-                  if (state.bubbleVisible) {
-                    ref.read(iveProvider.notifier).dismissBubble();
-                  } else {
-                    _openChat(context, state.screenName);
-                  }
+                if (_dragging) return;
+                if (state.bubbleVisible) {
+                  ref.read(iveProvider.notifier).dismissBubble();
+                } else {
+                  _openChat(context, state.screenName);
                 }
               },
               child: AnimatedScale(
                 scale:    _dragging ? 0.92 : 1.0,
                 duration: const Duration(milliseconds: 150),
-                child: IveAvatarWidget(
-                  expression: state.expression,
-                  size:       62,
+                child: IveAvatar(
+                  size:           IveAvatarSize.compact,
+                  showStatusRing: true,
+                  interactive:    false, // overlay owns the tap
                 ),
               ),
             ),
@@ -146,13 +146,9 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
   }
 
   void _openChat(BuildContext context, String screenName) {
-    // Incrementa contador de interações
     ref.read(iveMemoryProvider.notifier).incrementInteraction();
-
-    // Constrói contexto rico com dados reais do ecossistema
-    final ctx = ref.read(iveContextDataProvider).valueOrNull;
+    final ctx         = ref.read(iveContextDataProvider).valueOrNull;
     final contextData = ctx != null ? _buildCopilotContext(ctx) : CopilotContextData();
-
     showCopilotChat(
       context,
       screenName:  _routeToName(screenName),
@@ -160,34 +156,33 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
     );
   }
 
-  CopilotContextData _buildCopilotContext(IveContextData ctx) {
-    return CopilotContextData(
-      scores: {
-        'ecosystem_health':          ctx.healthScore,
-        'total_projects':            ctx.projectCount,
-        'pending_actions':           ctx.pendingActionsCount,
-        'pending_opportunities':     ctx.pendingOpportunitiesCount,
-        if (ctx.topProjectName  != null) 'top_project_name':  ctx.topProjectName,
-        if (ctx.topProjectScore != null) 'top_project_score': ctx.topProjectScore,
-        if (ctx.mainBottleneckName != null) 'main_bottleneck': ctx.mainBottleneckName,
-        if (ctx.mainBottleneckScore != null) 'bottleneck_execution_score': ctx.mainBottleneckScore,
-      },
-    );
-  }
+  CopilotContextData _buildCopilotContext(IveContextData ctx) =>
+      CopilotContextData(
+        scores: {
+          'ecosystem_health':         ctx.healthScore,
+          'total_projects':           ctx.projectCount,
+          'pending_actions':          ctx.pendingActionsCount,
+          'pending_opportunities':    ctx.pendingOpportunitiesCount,
+          if (ctx.topProjectName    != null) 'top_project_name':            ctx.topProjectName,
+          if (ctx.topProjectScore   != null) 'top_project_score':           ctx.topProjectScore,
+          if (ctx.mainBottleneckName != null) 'main_bottleneck':             ctx.mainBottleneckName,
+          if (ctx.mainBottleneckScore != null) 'bottleneck_execution_score': ctx.mainBottleneckScore,
+        },
+      );
 
   String _routeToName(String route) {
     const map = <String, String>{
-      '/projects':           'Projetos',
-      '/opportunity-lab':    'Oportunidades',
-      '/ecosystem':          'Decisões',
-      '/ecosystem/briefing': 'Briefing',
-      '/ecosystem/resources':'Recursos',
-      '/personas':           'Personas',
-      '/knowledge':          'Conhecimento',
-      '/action-engine':      'Ações',
-      '/intelligence-debug': 'Debug Hub',
-      '/market-intelligence':'Inteligência de Mercado',
-      '/roi-tracker':        'ROI Tracker',
+      '/projects':            'Projetos',
+      '/opportunity-lab':     'Oportunidades',
+      '/ecosystem':           'Decisões',
+      '/ecosystem/briefing':  'Briefing',
+      '/ecosystem/resources': 'Recursos',
+      '/personas':            'Personas',
+      '/knowledge':           'Conhecimento',
+      '/action-engine':       'Ações',
+      '/intelligence-debug':  'Debug Hub',
+      '/market-intelligence': 'Inteligência de Mercado',
+      '/roi-tracker':         'ROI Tracker',
     };
     return map[route] ?? route;
   }
@@ -260,7 +255,7 @@ class _IveBubble extends StatelessWidget {
             mainAxisSize:       MainAxisSize.min,
             children: [
               Row(
-                mainAxisSize: MainAxisSize.min,
+                mainAxisSize:       MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Flexible(
@@ -268,14 +263,11 @@ class _IveBubble extends StatelessWidget {
                       text: TextSpan(
                         children: [
                           TextSpan(
-                            text: '$_moodIcon ',
-                            style: TextStyle(
-                              color:    _iconColor,
-                              fontSize: 11,
-                            ),
+                            text:  '$_moodIcon ',
+                            style: TextStyle(color: _iconColor, fontSize: 11),
                           ),
                           TextSpan(
-                            text: message,
+                            text:  message,
                             style: const TextStyle(
                               color:    Colors.white,
                               fontSize: 12,
@@ -305,8 +297,8 @@ class _IveBubble extends StatelessWidget {
                       Container(
                         width: 4, height: 4,
                         decoration: const BoxDecoration(
-                          color:  Color(0xFF7B5CF6),
-                          shape:  BoxShape.circle,
+                          color: Color(0xFF7B5CF6),
+                          shape: BoxShape.circle,
                         ),
                       ),
                       const SizedBox(width: 5),
@@ -339,11 +331,10 @@ class _IssueActions extends StatelessWidget {
   Widget build(BuildContext context) {
     final actions = issue.recommendedActions;
     if (actions.isEmpty) return const SizedBox.shrink();
-
     return Wrap(
-      spacing: 6,
+      spacing:    6,
       runSpacing: 4,
-      children: actions.map((a) => _IssueActionChip(action: a)).toList(),
+      children:   actions.map((a) => _IssueActionChip(action: a)).toList(),
     );
   }
 }
@@ -358,8 +349,6 @@ class _IssueActionChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        // dismiss é o único actionKey com comportamento genérico aqui;
-        // os demais são tratados por fluxos específicos nas telas
         if (action.actionKey == 'dismiss') {
           Navigator.of(context, rootNavigator: true).maybePop();
         }
