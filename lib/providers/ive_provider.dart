@@ -2,8 +2,14 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants/app_constants.dart';
+import '../core/services/ive_event_bus.dart';
+import '../data/models/ecosystem_score.dart';
+import '../data/models/ive_event.dart';
+import '../data/models/ive_issue.dart';
 import '../data/models/ive_state.dart';
+import 'ecosystem_intelligence_provider.dart';
 import 'ive_context_provider.dart';
+import 'ive_memory_provider.dart';
 
 // ── Screen context messages ────────────────────────────────────────────────
 
@@ -51,30 +57,147 @@ const _kMessages = <String, List<String>>{
 };
 
 const _kExpressions = <String, IveExpression>{
-  AppConstants.routeProjects:         IveExpression.excited,
-  AppConstants.routeOpportunityLab:   IveExpression.excited,
-  AppConstants.routeEcosystem:        IveExpression.thinking,
-  AppConstants.routeEcosystemBriefing:         IveExpression.happy,
-  AppConstants.routePersonas:         IveExpression.winking,
-  AppConstants.routeKnowledge:        IveExpression.happy,
-  AppConstants.routeActionEngine:     IveExpression.thinking,
+  AppConstants.routeProjects:          IveExpression.excited,
+  AppConstants.routeOpportunityLab:    IveExpression.excited,
+  AppConstants.routeEcosystem:         IveExpression.thinking,
+  AppConstants.routeEcosystemBriefing: IveExpression.happy,
+  AppConstants.routePersonas:          IveExpression.winking,
+  AppConstants.routeKnowledge:         IveExpression.happy,
+  AppConstants.routeActionEngine:      IveExpression.thinking,
   AppConstants.routeIntelligenceDebug: IveExpression.neutral,
 };
 
 // ── Notifier ──────────────────────────────────────────────────────────────────
 
 class IveNotifier extends StateNotifier<IveState> {
-  IveNotifier() : super(const IveState());
+  IveNotifier(this._ref) : super(const IveState()) {
+    // Escuta eventos do sistema (erros, conclusões de análise, etc.)
+    _eventSub = IveEventBus.instance.stream.listen(_onEvent);
+
+    // Escuta contexto do ecossistema — substitui ref.listen no overlay
+    _ref.listen<AsyncValue<IveContextData>>(
+      iveContextDataProvider,
+      (_, next) => next.whenData(_onContextData),
+    );
+
+    // Mantém snapshot de memória atualizado quando scores mudam
+    _ref.listen<AsyncValue<List<EcosystemScore>>>(
+      ecosystemScoresProvider,
+      (_, next) => next.whenData((scores) {
+        final snapshot = {
+          for (final s in scores) s.project.id: s.ecosystemScore,
+        };
+        final health =
+            _ref.read(iveContextDataProvider).valueOrNull?.healthScore ?? 0;
+        _ref
+            .read(iveMemoryProvider.notifier)
+            .updateEcosystemSnapshot(health: health, scores: snapshot);
+      }),
+    );
+  }
+
+  final Ref _ref;
+  StreamSubscription<IveEvent>? _eventSub;
 
   Timer? _dismissTimer;
   Timer? _cycleTimer;
-  int    _msgIndex = 0;
+  int    _msgIndex     = 0;
   String _currentRoute = '';
+
+  // ── Event Bus ─────────────────────────────────────────────────────────────
+
+  void _onEvent(IveEvent event) {
+    switch (event.type) {
+      case IveEventType.assetAnalysisFailed:
+      case IveEventType.assetDownloadFailed:
+      case IveEventType.actionMutationFailed:
+        if (event.issue != null) _showIssue(event.issue!);
+        break;
+
+      case IveEventType.assetAnalysisCompleted:
+        final name = event.entityName;
+        if (name != null) {
+          _showTransient('Análise de "$name" concluída!', IveExpression.excited);
+        }
+        break;
+
+      case IveEventType.assetAnalysisStarted:
+        final name = event.entityName;
+        if (name != null) {
+          _showTransient('Analisando "$name"...', IveExpression.thinking);
+        }
+        break;
+
+      default:
+        break;
+    }
+  }
+
+  void _showIssue(IveIssue issue) {
+    _cycleTimer?.cancel();
+    _dismissTimer?.cancel();
+    state = state.copyWith(
+      message:       issue.userMessage,
+      expression:    issue.severity == IveIssueSeverity.critical
+          ? IveExpression.neutral
+          : IveExpression.thinking,
+      bubbleVisible: true,
+      activeIssue:   issue,
+    );
+    // Issues ficam visíveis por 15s (em vez de 7s)
+    _dismissTimer = Timer(const Duration(seconds: 15), () {
+      state = state.copyWith(bubbleVisible: false, clearIssue: true);
+    });
+  }
+
+  void _showTransient(String message, IveExpression expression) {
+    if (state.activeIssue != null && state.bubbleVisible) return;
+    state = state.copyWith(
+      message:       message,
+      expression:    expression,
+      bubbleVisible: true,
+    );
+    _scheduleDismiss();
+  }
+
+  // ── Context data handler (antes no IveOverlay) ────────────────────────────
+
+  void _onContextData(IveContextData ctx) {
+    // Não sobrescreve issue ativo
+    if (state.activeIssue != null && state.bubbleVisible) return;
+
+    final alertId = ctx.alertId;
+    final memory  = _ref.read(iveMemoryProvider);
+
+    if (ctx.hasAlert && alertId.isNotEmpty && !memory.isAlertDismissed(alertId)) {
+      showContextAwareMessage(ctx, _currentRoute);
+    } else if (!ctx.hasAlert) {
+      showContextAwareMessage(ctx, _currentRoute);
+    } else {
+      // Alerta já dispensado — exibe mensagem contextual como fallback
+      final msg = _buildContextMessage(ctx, _currentRoute);
+      if (msg.isNotEmpty) {
+        final expr = _kExpressions[_currentRoute] ?? IveExpression.happy;
+        state = state.copyWith(
+          message:       msg,
+          expression:    expr,
+          bubbleVisible: true,
+        );
+        _scheduleDismiss();
+      }
+    }
+  }
+
+  // ── Route control ─────────────────────────────────────────────────────────
 
   void setRoute(String route) {
     if (route == _currentRoute) return;
     _currentRoute = route;
-    _msgIndex = 0;
+    _msgIndex     = 0;
+    // Limpa issue ao trocar de tela
+    if (state.activeIssue != null) {
+      state = state.copyWith(clearIssue: true, bubbleVisible: false);
+    }
     _showMessage(route, 0);
     _scheduleCycle(route);
   }
@@ -107,17 +230,28 @@ class IveNotifier extends StateNotifier<IveState> {
     _cycleTimer?.cancel();
     _cycleTimer = Timer.periodic(const Duration(seconds: 20), (_) {
       if (!mounted) return;
+      // Não interrompe issue ativo
+      if (state.activeIssue != null && state.bubbleVisible) return;
       _msgIndex++;
       _showMessage(route, _msgIndex);
     });
   }
 
+  // ── Public API ────────────────────────────────────────────────────────────
+
   void dismissBubble() {
     _dismissTimer?.cancel();
-    state = state.copyWith(bubbleVisible: false);
+    state = state.copyWith(bubbleVisible: false, clearIssue: true);
   }
 
-  void showMessage(String message, {IveExpression expression = IveExpression.happy}) {
+  void clearActiveIssue() {
+    state = state.copyWith(clearIssue: true);
+  }
+
+  void showMessage(
+    String message, {
+    IveExpression expression = IveExpression.happy,
+  }) {
     state = state.copyWith(
       message:       message,
       expression:    expression,
@@ -126,10 +260,7 @@ class IveNotifier extends StateNotifier<IveState> {
     _scheduleDismiss();
   }
 
-  /// Gera mensagem contextual baseada em dados reais do ecossistema.
-  /// Substitui a mensagem estática padrão quando há dados disponíveis.
   void showContextAwareMessage(IveContextData ctx, String route) {
-    // Alertas têm prioridade máxima
     if (ctx.hasAlert && ctx.alertMessage.isNotEmpty) {
       state = state.copyWith(
         message:       ctx.alertMessage,
@@ -140,7 +271,6 @@ class IveNotifier extends StateNotifier<IveState> {
       return;
     }
 
-    // Mensagem contextual por tela com dados reais
     final msg = _buildContextMessage(ctx, route);
     if (msg.isNotEmpty) {
       final expr = _kExpressions[route] ?? IveExpression.happy;
@@ -154,7 +284,7 @@ class IveNotifier extends StateNotifier<IveState> {
   }
 
   String _buildContextMessage(IveContextData ctx, String route) {
-    if (ctx.healthScore == 0) return ''; // dados ainda não carregados
+    if (ctx.healthScore == 0) return '';
 
     switch (route) {
       case AppConstants.routeEcosystem:
@@ -188,11 +318,12 @@ class IveNotifier extends StateNotifier<IveState> {
         }
         break;
     }
-    return ''; // fallback para mensagem estática
+    return '';
   }
 
   @override
   void dispose() {
+    _eventSub?.cancel();
     _dismissTimer?.cancel();
     _cycleTimer?.cancel();
     super.dispose();
@@ -202,5 +333,5 @@ class IveNotifier extends StateNotifier<IveState> {
 // ── Provider ──────────────────────────────────────────────────────────────────
 
 final iveProvider = StateNotifierProvider<IveNotifier, IveState>(
-  (_) => IveNotifier(),
+  (ref) => IveNotifier(ref),
 );

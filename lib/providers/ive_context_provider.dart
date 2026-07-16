@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'ecosystem_intelligence_provider.dart';
 import 'action_queue_provider.dart';
 import 'opportunity_lab_provider.dart';
-import 'ive_memory_provider.dart';
 
 // ── IveContextData — dados em tempo real do ecossistema para a IVE ────────────
 
@@ -81,13 +80,6 @@ final iveContextDataProvider = FutureProvider.autoDispose<IveContextData>((ref) 
     alertMsg  = '${pending.length} ações pendentes acumuladas. '
                 'Isso está impactando seu score de execução.';
   }
-
-  // ── Atualiza snapshot na memória (in-session) ─────────────────────────────
-  final snapshot = <String, int>{
-    for (final s in scores) s.project.id: s.ecosystemScore,
-  };
-  ref.read(iveMemoryProvider.notifier)
-     .updateEcosystemSnapshot(health: health, scores: snapshot);
 
   return IveContextData(
     healthScore:               health,

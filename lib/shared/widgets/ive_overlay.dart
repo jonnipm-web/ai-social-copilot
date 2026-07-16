@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/copilot_context_data.dart';
+import '../../data/models/ive_issue.dart';
 import '../../data/models/ive_state.dart';
 import '../../providers/ive_context_provider.dart';
 import '../../providers/ive_memory_provider.dart';
@@ -73,23 +74,6 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
     final screen = MediaQuery.of(context).size;
     _position ??= _defaultPosition(screen);
 
-    // ── Listener de contexto: sobrescreve mensagem quando há alerta ou dados ──
-    ref.listen<AsyncValue<IveContextData>>(iveContextDataProvider, (prev, next) {
-      next.whenData((ctx) {
-        final route   = iveRouteNotifier.value;
-        final memory  = ref.read(iveMemoryProvider);
-        final alertId = ctx.alertId;
-
-        // Exibe alerta apenas se ainda não foi dispensado nesta sessão
-        if (ctx.hasAlert && alertId.isNotEmpty && !memory.isAlertDismissed(alertId)) {
-          ref.read(iveProvider.notifier).showContextAwareMessage(ctx, route);
-        } else if (!ctx.hasAlert) {
-          // Atualiza mensagem com dados reais quando não há alerta
-          ref.read(iveProvider.notifier).showContextAwareMessage(ctx, route);
-        }
-      });
-    });
-
     return Positioned(
       left: _position!.dx,
       top:  _position!.dy,
@@ -117,9 +101,10 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
                     : const Offset(0, 0.15),
                 curve:    Curves.easeOut,
                 child:    _IveBubble(
-                  message:    state.message,
-                  expression: state.expression,
-                  onDismiss:  () {
+                  message:     state.message,
+                  expression:  state.expression,
+                  activeIssue: state.activeIssue,
+                  onDismiss:   () {
                     // Persiste dismiss do alerta atual
                     final ctx = ref.read(iveContextDataProvider).valueOrNull;
                     if (ctx != null && ctx.alertId.isNotEmpty) {
@@ -127,7 +112,9 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
                     }
                     ref.read(iveProvider.notifier).dismissBubble();
                   },
-                  onChat: () => _openChat(context, state.screenName),
+                  onChat: state.activeIssue == null
+                      ? () => _openChat(context, state.screenName)
+                      : null,
                 ),
               ),
             ),
@@ -211,17 +198,22 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
 class _IveBubble extends StatelessWidget {
   final String        message;
   final IveExpression expression;
+  final IveIssue?     activeIssue;
   final VoidCallback  onDismiss;
-  final VoidCallback  onChat;
+  final VoidCallback? onChat;
 
   const _IveBubble({
     required this.message,
     required this.expression,
     required this.onDismiss,
-    required this.onChat,
+    this.activeIssue,
+    this.onChat,
   });
 
+  bool get _hasIssue => activeIssue != null;
+
   String get _moodIcon {
+    if (_hasIssue) return '⚠';
     switch (expression) {
       case IveExpression.excited:  return '✦';
       case IveExpression.thinking: return '◈';
@@ -231,6 +223,12 @@ class _IveBubble extends StatelessWidget {
       default:                     return '◈';
     }
   }
+
+  Color get _accentColor =>
+      _hasIssue ? const Color(0xFFFF4560) : const Color(0xFF7B5CF6);
+
+  Color get _iconColor =>
+      _hasIssue ? const Color(0xFFFF4560) : const Color(0xFF9B8FFF);
 
   @override
   Widget build(BuildContext context) {
@@ -255,7 +253,7 @@ class _IveBubble extends StatelessWidget {
                 offset:     const Offset(0, 4),
               ),
             ],
-            border: Border.all(color: const Color(0xFF7B5CF6).withOpacity(0.35)),
+            border: Border.all(color: _accentColor.withOpacity(0.45)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -271,8 +269,8 @@ class _IveBubble extends StatelessWidget {
                         children: [
                           TextSpan(
                             text: '$_moodIcon ',
-                            style: const TextStyle(
-                              color:    Color(0xFF9B8FFF),
+                            style: TextStyle(
+                              color:    _iconColor,
                               fontSize: 11,
                             ),
                           ),
@@ -296,31 +294,89 @@ class _IveBubble extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 8),
-              GestureDetector(
-                onTap: onChat,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 4, height: 4,
-                      decoration: const BoxDecoration(
-                        color:  Color(0xFF7B5CF6),
-                        shape:  BoxShape.circle,
+              if (_hasIssue)
+                _IssueActions(issue: activeIssue!)
+              else if (onChat != null)
+                GestureDetector(
+                  onTap: onChat,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 4, height: 4,
+                        decoration: const BoxDecoration(
+                          color:  Color(0xFF7B5CF6),
+                          shape:  BoxShape.circle,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 5),
-                    const Text(
-                      'Conversar com a IVE',
-                      style: TextStyle(
-                        color:      Color(0xFF9B8FFF),
-                        fontSize:   11,
-                        fontWeight: FontWeight.w600,
+                      const SizedBox(width: 5),
+                      const Text(
+                        'Conversar com a IVE',
+                        style: TextStyle(
+                          color:      Color(0xFF9B8FFF),
+                          fontSize:   11,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Issue action buttons ──────────────────────────────────────────────────────
+
+class _IssueActions extends StatelessWidget {
+  const _IssueActions({required this.issue});
+  final IveIssue issue;
+
+  @override
+  Widget build(BuildContext context) {
+    final actions = issue.recommendedActions;
+    if (actions.isEmpty) return const SizedBox.shrink();
+
+    return Wrap(
+      spacing: 6,
+      runSpacing: 4,
+      children: actions.map((a) => _IssueActionChip(action: a)).toList(),
+    );
+  }
+}
+
+class _IssueActionChip extends StatelessWidget {
+  const _IssueActionChip({required this.action});
+  final IveIssueAction action;
+
+  static const _color = Color(0xFFFF4560);
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        // dismiss é o único actionKey com comportamento genérico aqui;
+        // os demais são tratados por fluxos específicos nas telas
+        if (action.actionKey == 'dismiss') {
+          Navigator.of(context, rootNavigator: true).maybePop();
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color:        _color.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(6),
+          border:       Border.all(color: _color.withOpacity(0.4)),
+        ),
+        child: Text(
+          action.label,
+          style: const TextStyle(
+            color:      _color,
+            fontSize:   10,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ),
