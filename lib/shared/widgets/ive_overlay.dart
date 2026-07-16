@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/copilot_context_data.dart';
 import '../../data/models/ive_state.dart';
+import '../../providers/ive_context_provider.dart';
+import '../../providers/ive_memory_provider.dart';
 import '../../providers/ive_provider.dart';
 import 'context_copilot_widget.dart' show showCopilotChat;
 import 'ive_avatar.dart';
 
 // ── Route bridge ──────────────────────────────────────────────────────────────
-// GoRouter observer sets this; IveOverlay reads it and syncs to iveProvider.
+// GoRouter observer seta este notifier; IveOverlay lê e sincroniza ao iveProvider.
 final iveRouteNotifier = ValueNotifier<String>('');
 
 class IveRouteObserver extends NavigatorObserver {
@@ -51,7 +53,9 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
   }
 
   void _onRouteChange() {
-    ref.read(iveProvider.notifier).setRoute(iveRouteNotifier.value);
+    final route = iveRouteNotifier.value;
+    ref.read(iveProvider.notifier).setRoute(route);
+    ref.read(iveMemoryProvider.notifier).setRoute(route);
   }
 
   @override
@@ -68,6 +72,23 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
     final state  = ref.watch(iveProvider);
     final screen = MediaQuery.of(context).size;
     _position ??= _defaultPosition(screen);
+
+    // ── Listener de contexto: sobrescreve mensagem quando há alerta ou dados ──
+    ref.listen<AsyncValue<IveContextData>>(iveContextDataProvider, (prev, next) {
+      next.whenData((ctx) {
+        final route   = iveRouteNotifier.value;
+        final memory  = ref.read(iveMemoryProvider);
+        final alertId = ctx.alertId;
+
+        // Exibe alerta apenas se ainda não foi dispensado nesta sessão
+        if (ctx.hasAlert && alertId.isNotEmpty && !memory.isAlertDismissed(alertId)) {
+          ref.read(iveProvider.notifier).showContextAwareMessage(ctx, route);
+        } else if (!ctx.hasAlert) {
+          // Atualiza mensagem com dados reais quando não há alerta
+          ref.read(iveProvider.notifier).showContextAwareMessage(ctx, route);
+        }
+      });
+    });
 
     return Positioned(
       left: _position!.dx,
@@ -87,8 +108,8 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
           children: [
             // Speech bubble
             AnimatedOpacity(
-              duration:   const Duration(milliseconds: 350),
-              opacity:    state.bubbleVisible && !_dragging ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 350),
+              opacity:  state.bubbleVisible && !_dragging ? 1.0 : 0.0,
               child: AnimatedSlide(
                 duration: const Duration(milliseconds: 350),
                 offset:   state.bubbleVisible && !_dragging
@@ -98,8 +119,15 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
                 child:    _IveBubble(
                   message:    state.message,
                   expression: state.expression,
-                  onDismiss:  () => ref.read(iveProvider.notifier).dismissBubble(),
-                  onChat:     () => _openChat(context, state.screenName),
+                  onDismiss:  () {
+                    // Persiste dismiss do alerta atual
+                    final ctx = ref.read(iveContextDataProvider).valueOrNull;
+                    if (ctx != null && ctx.alertId.isNotEmpty) {
+                      ref.read(iveMemoryProvider.notifier).dismissAlert(ctx.alertId);
+                    }
+                    ref.read(iveProvider.notifier).dismissBubble();
+                  },
+                  onChat: () => _openChat(context, state.screenName),
                 ),
               ),
             ),
@@ -131,23 +159,48 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
   }
 
   void _openChat(BuildContext context, String screenName) {
+    // Incrementa contador de interações
+    ref.read(iveMemoryProvider.notifier).incrementInteraction();
+
+    // Constrói contexto rico com dados reais do ecossistema
+    final ctx = ref.read(iveContextDataProvider).valueOrNull;
+    final contextData = ctx != null ? _buildCopilotContext(ctx) : CopilotContextData();
+
     showCopilotChat(
       context,
       screenName:  _routeToName(screenName),
-      contextData: CopilotContextData(),
+      contextData: contextData,
+    );
+  }
+
+  CopilotContextData _buildCopilotContext(IveContextData ctx) {
+    return CopilotContextData(
+      scores: {
+        'ecosystem_health':          ctx.healthScore,
+        'total_projects':            ctx.projectCount,
+        'pending_actions':           ctx.pendingActionsCount,
+        'pending_opportunities':     ctx.pendingOpportunitiesCount,
+        if (ctx.topProjectName  != null) 'top_project_name':  ctx.topProjectName,
+        if (ctx.topProjectScore != null) 'top_project_score': ctx.topProjectScore,
+        if (ctx.mainBottleneckName != null) 'main_bottleneck': ctx.mainBottleneckName,
+        if (ctx.mainBottleneckScore != null) 'bottleneck_execution_score': ctx.mainBottleneckScore,
+      },
     );
   }
 
   String _routeToName(String route) {
     const map = <String, String>{
-      '/projects':          'Projetos',
-      '/opportunity-lab':   'Oportunidades',
-      '/ecosystem':         'Decisões',
-      '/ecosystem/briefing':'Briefing',
-      '/personas':          'Personas',
-      '/knowledge':         'Conhecimento',
-      '/action-engine':     'Ações',
-      '/intelligence-debug':'Debug Hub',
+      '/projects':           'Projetos',
+      '/opportunity-lab':    'Oportunidades',
+      '/ecosystem':          'Decisões',
+      '/ecosystem/briefing': 'Briefing',
+      '/ecosystem/resources':'Recursos',
+      '/personas':           'Personas',
+      '/knowledge':          'Conhecimento',
+      '/action-engine':      'Ações',
+      '/intelligence-debug': 'Debug Hub',
+      '/market-intelligence':'Inteligência de Mercado',
+      '/roi-tracker':        'ROI Tracker',
     };
     return map[route] ?? route;
   }
@@ -168,14 +221,14 @@ class _IveBubble extends StatelessWidget {
     required this.onChat,
   });
 
-  String get _moodEmoji {
+  String get _moodIcon {
     switch (expression) {
-      case IveExpression.excited:  return '✨';
-      case IveExpression.thinking: return '🤔';
-      case IveExpression.winking:  return '😉';
-      case IveExpression.neutral:  return '💡';
+      case IveExpression.excited:  return '✦';
+      case IveExpression.thinking: return '◈';
+      case IveExpression.winking:  return '◉';
+      case IveExpression.neutral:  return '⬡';
       case IveExpression.happy:
-      default:                     return '😊';
+      default:                     return '◈';
     }
   }
 
@@ -188,7 +241,7 @@ class _IveBubble extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
           decoration: BoxDecoration(
-            color: const Color(0xFF2A2450),
+            color: const Color(0xFF1A1535),
             borderRadius: const BorderRadius.only(
               topLeft:     Radius.circular(14),
               topRight:    Radius.circular(14),
@@ -197,12 +250,12 @@ class _IveBubble extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color:      Colors.black.withOpacity(0.35),
-                blurRadius: 12,
+                color:      Colors.black.withOpacity(0.4),
+                blurRadius: 16,
                 offset:     const Offset(0, 4),
               ),
             ],
-            border: Border.all(color: const Color(0xFF6C63FF).withOpacity(0.4)),
+            border: Border.all(color: const Color(0xFF7B5CF6).withOpacity(0.35)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -213,32 +266,58 @@ class _IveBubble extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Flexible(
-                    child: Text(
-                      '$_moodEmoji $message',
-                      style: const TextStyle(
-                        color:    Colors.white,
-                        fontSize: 12,
-                        height:   1.4,
+                    child: RichText(
+                      text: TextSpan(
+                        children: [
+                          TextSpan(
+                            text: '$_moodIcon ',
+                            style: const TextStyle(
+                              color:    Color(0xFF9B8FFF),
+                              fontSize: 11,
+                            ),
+                          ),
+                          TextSpan(
+                            text: message,
+                            style: const TextStyle(
+                              color:    Colors.white,
+                              fontSize: 12,
+                              height:   1.45,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
                   const SizedBox(width: 4),
                   GestureDetector(
                     onTap:  onDismiss,
-                    child:  const Icon(Icons.close_rounded, size: 14, color: Colors.white38),
+                    child:  const Icon(Icons.close_rounded, size: 14, color: Colors.white24),
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               GestureDetector(
                 onTap: onChat,
-                child: Text(
-                  'Abrir chat →',
-                  style: TextStyle(
-                    color:     const Color(0xFF6C63FF).withOpacity(0.9),
-                    fontSize:  11,
-                    fontWeight: FontWeight.w600,
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 4, height: 4,
+                      decoration: const BoxDecoration(
+                        color:  Color(0xFF7B5CF6),
+                        shape:  BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    const Text(
+                      'Conversar com a IVE',
+                      style: TextStyle(
+                        color:      Color(0xFF9B8FFF),
+                        fontSize:   11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],

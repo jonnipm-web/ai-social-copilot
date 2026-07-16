@@ -130,6 +130,9 @@ class AppConstants {
   // Fase 10K — Context Copilot
   static const edgeFunctionContextCopilot = 'context-copilot';
 
+  // Fase 10L — Decision Simulator (IVE v1.1)
+  static const edgeFunctionDecisionSimulator = 'decision-simulator';
+
   // Admin
   static const adminEmail = 'jpaulo.start@gmail.com';
 }
