@@ -557,15 +557,6 @@ class _ProjectCard extends StatelessWidget {
           ),
         ],
       ),
-      // IVE explain button
-      Padding(
-        padding: const EdgeInsets.only(top: 6, left: 2),
-        child: IveExplainButton(
-          question:   'Por que o projeto ${score.project.name} tem score ${score.ecosystemScore}? Explique cada componente e como melhorar.',
-          screenName: 'Decisões',
-          compact:    true,
-        ),
-      ),
       ),
     );
   }
