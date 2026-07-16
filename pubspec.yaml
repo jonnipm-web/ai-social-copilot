@@ -33,6 +33,9 @@ dependencies:
   # IVE Memory Layer — persistência local
   shared_preferences: ^2.3.0
 
+  # IVE Visual Runtime — Rive character integration
+  rive: ^0.13.12
+
   # File import (Smart Import Engine)
   # TODAS as versoes estaveis de file_picker (5.x–11.x) dependem de win32 ^2–5,
   # incompativel com device_info_plus ^13 e package_info_plus ^10 (win32 ^6).
@@ -55,3 +58,5 @@ flutter:
   uses-material-design: true
   assets:
     - .env
+    - assets/ive/reference/
+    - assets/ive/rive/
