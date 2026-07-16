@@ -6,8 +6,6 @@ import '../../../core/constants/app_constants.dart';
 import '../../../data/models/knowledge_item.dart';
 import '../../../providers/knowledge_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
-import '../../../shared/widgets/context_copilot_widget.dart';
-import '../../../data/models/copilot_context_data.dart';
 
 class KnowledgeVaultScreen extends ConsumerWidget {
   const KnowledgeVaultScreen({super.key});
@@ -44,23 +42,12 @@ class KnowledgeVaultScreen extends ConsumerWidget {
           ),
         ],
       ),
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ContextCopilotButton(
-            screenName: 'Conhecimento',
-            context: CopilotContextData(),
-          ),
-          const SizedBox(height: 12),
-          FloatingActionButton.extended(
-            heroTag: 'knowledge_add',
-            backgroundColor: const Color(0xFF6C63FF),
-            foregroundColor: Colors.white,
-            icon: const Icon(Icons.add_rounded),
-            label: const Text('Novo Item'),
-            onPressed: () => context.push(AppConstants.routeKnowledgeNew),
-          ),
-        ],
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: const Color(0xFF6C63FF),
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('Novo Item'),
+        onPressed: () => context.push(AppConstants.routeKnowledgeNew),
       ),
       body: itemsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),

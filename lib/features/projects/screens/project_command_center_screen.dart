@@ -6,8 +6,6 @@ import '../../../core/constants/app_constants.dart';
 import '../../../data/models/project.dart';
 import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
-import '../../../shared/widgets/context_copilot_widget.dart';
-import '../../../data/models/copilot_context_data.dart';
 
 class ProjectCommandCenterScreen extends ConsumerStatefulWidget {
   const ProjectCommandCenterScreen({super.key});
@@ -90,10 +88,6 @@ class _ProjectCommandCenterScreenState
         ],
       ),
       drawer: const AppDrawer(),
-      floatingActionButton: ContextCopilotButton(
-        screenName: 'Projetos',
-        context: CopilotContextData(),
-      ),
       body: Column(
         children: [
           if (_showForm) _buildForm(),

@@ -8,44 +8,44 @@ import '../data/models/ive_state.dart';
 
 const _kMessages = <String, List<String>>{
   AppConstants.routeProjects: [
-    'Quer saber qual projeto tem maior potencial?',
-    'Posso analisar seu portfólio agora.',
-    'Algum projeto precisa de atenção especial?',
+    'Olá! Sou a IVE, sua consultora executiva. Posso analisar seu portfólio agora.',
+    'Quer saber qual projeto tem mais potencial de escala neste momento?',
+    'Identifico padrões entre seus projetos. Alguma dúvida estratégica?',
   ],
   AppConstants.routeOpportunityLab: [
-    'Encontrei oportunidades interessantes para você.',
-    'Posso explicar qual tem maior ROI.',
-    'Quer que eu priorize as melhores oportunidades?',
+    'Identifiquei oportunidades com alto ROI nesta lista. Posso priorizar para você.',
+    'Cada oportunidade aqui tem critérios mensuráveis. Posso explicar qualquer uma.',
+    'Quer que eu indique quais oportunidades executar primeiro esta semana?',
   ],
   AppConstants.routeEcosystem: [
-    'Quer entender como esse score foi calculado?',
-    'Posso simular cenários para você.',
-    'Alguma decisão estratégica que posso ajudar?',
+    'Este é seu centro de decisão. Posso explicar qualquer score em linguagem simples.',
+    'Vejo projetos com potencial não explorado. Quer uma análise detalhada?',
+    'Posso simular o impacto de aprovar oportunidades ou concluir ações.',
   ],
   AppConstants.routeEcosystemBriefing: [
-    'Posso explicar este relatório.',
-    'Quer um resumo executivo desta semana?',
-    'Posso destacar os pontos mais críticos.',
+    'Seu briefing executivo está pronto. Posso destacar o que é mais urgente.',
+    'Quer que eu traduza este relatório em próximos passos concretos?',
+    'Posso identificar o que mudou esta semana e por quê.',
   ],
   AppConstants.routePersonas: [
-    'Qual persona está avançando mais rápido?',
-    'Posso comparar o desempenho das suas personas.',
-    'Quer explorar novos nichos para suas marcas?',
+    'Suas personas são sua presença no mercado. Posso comparar o desempenho de cada uma.',
+    'Quer saber qual persona tem maior potencial de crescimento agora?',
+    'Posso recomendar estratégias específicas para cada nicho.',
   ],
   AppConstants.routeKnowledge: [
-    'Posso mostrar o que você mais aprendeu.',
-    'Qual documento mais impacta seu projeto?',
-    'Quer que eu conecte conhecimentos entre projetos?',
+    'Seu cofre de conhecimento alimenta toda a inteligência do sistema.',
+    'Qual documento quer que eu analise ou conecte com seus projetos?',
+    'Posso mostrar quais conhecimentos estão gerando mais insights.',
   ],
   AppConstants.routeActionEngine: [
-    'Quais ações estão mais atrasadas?',
-    'Posso ajudar a priorizar sua fila de ações.',
-    'Quer um plano de execução para esta semana?',
+    'Sua fila de ações determina sua velocidade de execução.',
+    'Posso ajudar a priorizar: quais ações têm maior impacto no score?',
+    'Quer que eu identifique o que está bloqueando seu progresso?',
   ],
   AppConstants.routeIntelligenceDebug: [
-    'Posso explicar qualquer score ou cálculo.',
-    'Quer entender por que um score mudou?',
-    'Posso auditar a lógica de qualquer indicador.',
+    'Centro de observabilidade completo. Posso auditar qualquer cálculo.',
+    'Quer entender como um score foi gerado? Basta perguntar.',
+    'Posso rastrear a origem de qualquer dado ou recomendação.',
   ],
 };
 
