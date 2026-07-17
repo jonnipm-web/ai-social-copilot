@@ -57,7 +57,7 @@ class OpportunityDetailScreen extends ConsumerWidget {
         actions: [
           itemAsync.maybeWhen(
             data: (item) => item != null
-                ? _StatusMenu(item: item, ref: ref)
+                ? _StatusMenu(item: item)
                 : const SizedBox.shrink(),
             orElse: () => const SizedBox.shrink(),
           ),
@@ -74,58 +74,83 @@ class OpportunityDetailScreen extends ConsumerWidget {
             ? const Center(
                 child: Text('Oportunidade não encontrada.',
                     style: TextStyle(color: Colors.white54)))
-            : _DetailBody(item: item, ref: ref),
+            : _DetailBody(item: item),
       ),
     );
   }
 }
 
 // ── Status change menu ────────────────────────────────────────────────────────
-class _StatusMenu extends StatelessWidget {
-  const _StatusMenu({required this.item, required this.ref});
+class _StatusMenu extends ConsumerStatefulWidget {
+  const _StatusMenu({required this.item});
 
   final OpportunityLabItem item;
-  final WidgetRef          ref;
+
+  @override
+  ConsumerState<_StatusMenu> createState() => _StatusMenuState();
+}
+
+class _StatusMenuState extends ConsumerState<_StatusMenu> {
+  bool _loading = false;
+
+  Future<void> _approveAndCreate() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    try {
+      final action = await ref
+          .read(opportunityLabNotifierProvider.notifier)
+          .approveAndCreateAction(
+            widget.item,
+            ref.read(actionQueueNotifierProvider.notifier),
+          );
+      ref.invalidate(opportunityLabItemByIdProvider(widget.item.id));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text('Aprovada e enviada ao Action Engine!'),
+          backgroundColor: _kGreen,
+          action: SnackBarAction(
+            label: 'Ver Ação',
+            textColor: Colors.white,
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ActionDetailScreen(itemId: action.id),
+              ),
+            ),
+          ),
+        ));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text(
+            'Não foi possível criar a ação. A oportunidade não foi convertida. Tente novamente.',
+          ),
+          backgroundColor: _kRed,
+          duration: const Duration(seconds: 5),
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return const Padding(
+        padding: EdgeInsets.all(12),
+        child: SizedBox(
+          width: 20, height: 20,
+          child: CircularProgressIndicator(strokeWidth: 2, color: _kGreen),
+        ),
+      );
+    }
     return PopupMenuButton<String>(
       icon: const Icon(Icons.more_vert, color: Colors.white),
       color: _kCard,
       onSelected: (v) async {
         if (v == 'approve') {
-          await ref
-              .read(opportunityLabNotifierProvider.notifier)
-              .approve(item.id);
-          ref.invalidate(opportunityLabItemByIdProvider(item.id));
-          if (!context.mounted) return;
-          try {
-            final action = await ref
-                .read(actionQueueNotifierProvider.notifier)
-                .addFromOpportunityItem(item);
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: const Text('Aprovada e enviada ao Action Engine!'),
-                backgroundColor: _kGreen,
-                action: SnackBarAction(
-                  label: 'Ver Ação',
-                  textColor: Colors.white,
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => ActionDetailScreen(itemId: action.id),
-                    ),
-                  ),
-                ),
-              ));
-            }
-          } catch (_) {
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                content: Text('Oportunidade aprovada!'),
-                backgroundColor: _kGreen,
-              ));
-            }
-          }
+          await _approveAndCreate();
         } else if (v == 'delete') {
           final ok = await showDialog<bool>(
             context: context,
@@ -134,7 +159,7 @@ class _StatusMenu extends StatelessWidget {
               title: const Text('Excluir oportunidade?',
                   style: TextStyle(color: Colors.white)),
               content: Text(
-                '"${item.title}" será removida permanentemente.',
+                '"${widget.item.title}" será removida permanentemente.',
                 style: const TextStyle(color: Colors.white70),
               ),
               actions: [
@@ -152,13 +177,13 @@ class _StatusMenu extends StatelessWidget {
           if (ok == true) {
             await ref
                 .read(opportunityLabNotifierProvider.notifier)
-                .delete(item.id);
-            if (context.mounted) context.pop();
+                .delete(widget.item.id);
+            if (mounted) context.pop();
           }
         }
       },
       itemBuilder: (_) => [
-        if (item.status == 'pending')
+        if (widget.item.status == 'pending')
           const PopupMenuItem(
             value: 'approve',
             child: Text('Aprovar e criar ação', style: TextStyle(color: _kGreen)),
@@ -173,14 +198,13 @@ class _StatusMenu extends StatelessWidget {
 }
 
 // ── Detail body ───────────────────────────────────────────────────────────────
-class _DetailBody extends StatelessWidget {
-  const _DetailBody({required this.item, required this.ref});
+class _DetailBody extends ConsumerWidget {
+  const _DetailBody({required this.item});
 
   final OpportunityLabItem item;
-  final WidgetRef          ref;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final projectsAsync = ref.watch(projectsNotifierProvider);
     final projects = projectsAsync.valueOrNull ?? [];
     final projectName = item.projectId == null
@@ -260,7 +284,7 @@ class _DetailBody extends StatelessWidget {
         const SizedBox(height: 20),
 
         // ── Action buttons ─────────────────────────────────────
-        _ActionButtons(item: item, ref: ref),
+        _ActionButtons(item: item),
       ],
     );
   }
@@ -818,16 +842,64 @@ class _StatusBadge extends StatelessWidget {
 }
 
 // ── Action buttons ────────────────────────────────────────────────────────────
-class _ActionButtons extends StatelessWidget {
-  const _ActionButtons({required this.item, required this.ref});
+class _ActionButtons extends ConsumerStatefulWidget {
+  const _ActionButtons({required this.item});
 
   final OpportunityLabItem item;
-  final WidgetRef          ref;
+
+  @override
+  ConsumerState<_ActionButtons> createState() => _ActionButtonsState();
+}
+
+class _ActionButtonsState extends ConsumerState<_ActionButtons> {
+  bool    _loading      = false;
+  String? _linkedActionId;
+
+  Future<void> _approveAndCreate() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    try {
+      final action = await ref
+          .read(opportunityLabNotifierProvider.notifier)
+          .approveAndCreateAction(
+            widget.item,
+            ref.read(actionQueueNotifierProvider.notifier),
+          );
+      ref.invalidate(opportunityLabItemByIdProvider(widget.item.id));
+      if (mounted) {
+        setState(() => _linkedActionId = action.id);
+        await Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => ActionDetailScreen(itemId: action.id)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+            'Não foi possível criar a ação. A oportunidade não foi convertida. Tente novamente.',
+          ),
+          backgroundColor: _kRed,
+          duration: Duration(seconds: 5),
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final item = widget.item;
+
+    // For already-approved items, look up linked action from DB
+    final linkedAsync = item.status == 'approved' && _linkedActionId == null
+        ? ref.watch(actionByOpportunityLabIdProvider(item.id))
+        : null;
+    final effectiveActionId = _linkedActionId ?? linkedAsync?.valueOrNull?.id;
+
     return Column(
       children: [
+        // ── Pending: single approve+create button ──────────────
         if (item.status == 'pending')
           SizedBox(
             width: double.infinity,
@@ -839,38 +911,20 @@ class _ActionButtons extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
               ),
-              icon: const Icon(Icons.bolt_rounded),
-              label: const Text('Aprovar e Criar Ação'),
-              onPressed: () async {
-                await ref
-                    .read(opportunityLabNotifierProvider.notifier)
-                    .approve(item.id);
-                ref.invalidate(opportunityLabItemByIdProvider(item.id));
-                if (!context.mounted) return;
-                try {
-                  final action = await ref
-                      .read(actionQueueNotifierProvider.notifier)
-                      .addFromOpportunityItem(item);
-                  if (context.mounted) {
-                    await Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => ActionDetailScreen(itemId: action.id),
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text('Aprovada! Erro ao criar ação: $e'),
-                      backgroundColor: _kOrange,
-                    ));
-                  }
-                }
-              },
+              icon: _loading
+                  ? const SizedBox(
+                      width: 18, height: 18,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(Icons.bolt_rounded),
+              label: Text(_loading ? 'Criando ação…' : 'Aprovar e Criar Ação'),
+              onPressed: _loading ? null : _approveAndCreate,
             ),
           ),
 
-        if (item.status == 'approved') ...[
+        // ── Approved: open linked action ───────────────────────
+        if (item.status == 'approved' && effectiveActionId != null)
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
@@ -881,32 +935,14 @@ class _ActionButtons extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
               ),
-              icon: const Icon(Icons.bolt_rounded),
-              label: const Text('Enviar para Action Engine'),
-              onPressed: () async {
-                try {
-                  await ref
-                      .read(actionQueueNotifierProvider.notifier)
-                      .addFromOpportunityItem(item);
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text('Ação criada no Action Engine!'),
-                      backgroundColor: _kGreen,
-                    ));
-                    context.go(AppConstants.routeActionEngine);
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text('Erro: $e'),
-                      backgroundColor: _kRed,
-                    ));
-                  }
-                }
-              },
+              icon: const Icon(Icons.open_in_new_rounded),
+              label: const Text('Abrir Ação'),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                    builder: (_) => ActionDetailScreen(itemId: effectiveActionId)),
+              ),
             ),
           ),
-        ],
 
         const SizedBox(height: 10),
 
@@ -922,11 +958,7 @@ class _ActionButtons extends StatelessWidget {
             ),
             icon: const Icon(Icons.auto_awesome_rounded),
             label: const Text('Perguntar à IVE sobre esta oportunidade'),
-            onPressed: () {
-              // IVE overlay is always available via the floating button;
-              // navigate to lab screen so IVE has opportunity context loaded
-              context.go(AppConstants.routeOpportunityLab);
-            },
+            onPressed: () => context.go(AppConstants.routeOpportunityLab),
           ),
         ),
       ],

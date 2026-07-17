@@ -27,12 +27,31 @@ class ActionQueueService {
     final map = item.toInsertMap();
     map['user_id'] = uid;
 
+    try {
+      final row = await _client
+          .from(AppConstants.tableActionQueue)
+          .insert(map)
+          .select()
+          .single();
+      return ActionQueueItem.fromMap(row);
+    } on PostgrestException catch (e) {
+      // Unique constraint violation (23505): return existing action instead of crashing
+      if (e.code == '23505' && item.opportunityLabId != null) {
+        final existing = await fetchByOpportunityLabId(item.opportunityLabId!);
+        if (existing != null) return existing;
+      }
+      rethrow;
+    }
+  }
+
+  /// Returns the action linked to an opportunity, if any.
+  Future<ActionQueueItem?> fetchByOpportunityLabId(String opportunityLabId) async {
     final row = await _client
         .from(AppConstants.tableActionQueue)
-        .insert(map)
         .select()
-        .single();
-    return ActionQueueItem.fromMap(row);
+        .eq('opportunity_lab_id', opportunityLabId)
+        .maybeSingle();
+    return row == null ? null : ActionQueueItem.fromMap(row);
   }
 
   Future<ActionQueueItem> updateStatus(String id, String status) async {

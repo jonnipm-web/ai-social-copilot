@@ -194,67 +194,8 @@ class _LabBody extends ConsumerWidget {
                         builder: (_) => OpportunityDetailScreen(itemId: items[i].id),
                       ),
                     ),
-                    onApprove: () {
-                      final opp = items[i];
-                      Future(() async {
-                        await ref
-                            .read(opportunityLabNotifierProvider.notifier)
-                            .approve(opp.id);
-                        if (!context.mounted) return;
-                        try {
-                          final action = await ref
-                              .read(actionQueueNotifierProvider.notifier)
-                              .addFromOpportunityItem(opp);
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                              content: const Text('Aprovada e enviada ao Action Engine!'),
-                              backgroundColor: const Color(0xFF4CAF50),
-                              action: SnackBarAction(
-                                label: 'Ver Ação',
-                                textColor: Colors.white,
-                                onPressed: () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => ActionDetailScreen(itemId: action.id),
-                                  ),
-                                ),
-                              ),
-                            ));
-                          }
-                        } catch (_) {}
-                      });
-                    },
                     onDelete: () =>
                         ref.read(opportunityLabNotifierProvider.notifier).delete(items[i].id),
-                    onConvertToAction: items[i].status == 'approved'
-                        ? () async {
-                            try {
-                              final action = await ref
-                                  .read(actionQueueNotifierProvider.notifier)
-                                  .addFromOpportunityItem(items[i]);
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                  content: const Text('Ação criada no Action Engine!'),
-                                  backgroundColor: const Color(0xFF4CAF50),
-                                  action: SnackBarAction(
-                                    label: 'Ver',
-                                    textColor: Colors.white,
-                                    onPressed: () => Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) => ActionDetailScreen(itemId: action.id),
-                                      ),
-                                    ),
-                                  ),
-                                ));
-                              }
-                            } catch (e) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red),
-                                );
-                              }
-                            }
-                          }
-                        : null,
                   ),
                 ),
               ),
@@ -266,19 +207,20 @@ class _LabBody extends ConsumerWidget {
   }
 }
 
-class _LabItemCard extends StatelessWidget {
+class _LabItemCard extends ConsumerStatefulWidget {
   const _LabItemCard({
     required this.item,
     required this.onTap,
-    required this.onApprove,
     required this.onDelete,
-    this.onConvertToAction,
   });
   final OpportunityLabItem item;
   final VoidCallback        onTap;
-  final VoidCallback        onApprove;
   final VoidCallback        onDelete;
-  final VoidCallback?       onConvertToAction;
+}
+
+class _LabItemCardState extends ConsumerState<_LabItemCard> {
+  bool   _loading      = false;
+  String? _linkedActionId;
 
   static Color _statusColor(String s) {
     const m = {
@@ -289,121 +231,186 @@ class _LabItemCard extends StatelessWidget {
     return m[s] ?? const Color(0xFFFF9800);
   }
 
+  Future<void> _approve() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    try {
+      final action = await ref
+          .read(opportunityLabNotifierProvider.notifier)
+          .approveAndCreateAction(
+            widget.item,
+            ref.read(actionQueueNotifierProvider.notifier),
+          );
+      if (mounted) {
+        setState(() => _linkedActionId = action.id);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text('Aprovada e enviada ao Action Engine!'),
+          backgroundColor: _kGreen,
+          action: SnackBarAction(
+            label: 'Ver Ação',
+            textColor: Colors.white,
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ActionDetailScreen(itemId: action.id),
+              ),
+            ),
+          ),
+        ));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+            'Não foi possível criar a ação. A oportunidade não foi convertida. Tente novamente.',
+            style: const TextStyle(fontSize: 12),
+          ),
+          backgroundColor: _kRed,
+          duration: const Duration(seconds: 5),
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _openLinkedAction(String actionId) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => ActionDetailScreen(itemId: actionId)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final item  = widget.item;
     final score = item.finalScore;
     final c     = _scoreColor(score);
 
+    // For already-approved items (loaded from DB), look up linked action
+    final linkedAsync = item.status == 'approved' && _linkedActionId == null
+        ? ref.watch(actionByOpportunityLabIdProvider(item.id))
+        : null;
+    final dbLinkedId = linkedAsync?.valueOrNull?.id;
+    final effectiveActionId = _linkedActionId ?? dbLinkedId;
+
     return GestureDetector(
-      onTap: onTap,
+      onTap: widget.onTap,
       child: Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.07)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: _kPrimary.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  item.opportunityType.toUpperCase(),
-                  style: const TextStyle(
-                      color: _kPrimary, fontSize: 9, fontWeight: FontWeight.bold),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  item.title,
-                  style: const TextStyle(
-                      color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (score > 0) ...[
-                const SizedBox(width: 8),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: _kCard,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withOpacity(0.07)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: c.withOpacity(0.15),
+                    color: _kPrimary.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: Text('$score',
-                      style: TextStyle(
-                          color: c,
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold)),
+                  child: Text(
+                    item.opportunityType.toUpperCase(),
+                    style: const TextStyle(
+                        color: _kPrimary, fontSize: 9, fontWeight: FontWeight.bold),
+                  ),
                 ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    item.title,
+                    style: const TextStyle(
+                        color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (score > 0) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: c.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text('$score',
+                        style: TextStyle(
+                            color: c, fontSize: 13, fontWeight: FontWeight.bold)),
+                  ),
+                ],
               ],
+            ),
+            if (item.description.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(item.description,
+                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis),
             ],
-          ),
-          if (item.description.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(item.description,
-                style: const TextStyle(color: Colors.white54, fontSize: 12),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis),
-          ],
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: _statusColor(item.status).withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(6),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: _statusColor(item.status).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    item.status,
+                    style: TextStyle(
+                        color: _statusColor(item.status),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600),
+                  ),
                 ),
-                child: Text(
-                  item.status,
-                  style: TextStyle(
-                      color: _statusColor(item.status),
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600),
+                const Spacer(),
+
+                // ── Approve button (pending only) ────────────────
+                if (item.status == 'pending')
+                  _loading
+                      ? const SizedBox(
+                          width: 18, height: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: _kGreen),
+                        )
+                      : TextButton(
+                          onPressed: _approve,
+                          style: TextButton.styleFrom(
+                              foregroundColor: _kGreen,
+                              minimumSize: Size.zero,
+                              padding: const EdgeInsets.symmetric(horizontal: 8)),
+                          child: const Text('Aprovar', style: TextStyle(fontSize: 12)),
+                        ),
+
+                // ── Open action button (approved with linked action) ──
+                if (item.status == 'approved' && effectiveActionId != null)
+                  TextButton(
+                    onPressed: () => _openLinkedAction(effectiveActionId),
+                    style: TextButton.styleFrom(
+                        foregroundColor: const Color(0xFF00BCD4),
+                        minimumSize: Size.zero,
+                        padding: const EdgeInsets.symmetric(horizontal: 8)),
+                    child: const Text('Abrir Ação', style: TextStyle(fontSize: 12)),
+                  ),
+
+                IconButton(
+                  icon: const Icon(Icons.delete_outline_rounded,
+                      color: Colors.white24, size: 18),
+                  onPressed: widget.onDelete,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
-              ),
-              const Spacer(),
-              if (item.status == 'pending')
-                TextButton(
-                  onPressed: onApprove,
-                  style: TextButton.styleFrom(
-                      foregroundColor: _kGreen,
-                      minimumSize: Size.zero,
-                      padding: const EdgeInsets.symmetric(horizontal: 8)),
-                  child: const Text('Aprovar', style: TextStyle(fontSize: 12)),
-                ),
-              if (item.status == 'approved' && onConvertToAction != null)
-                TextButton(
-                  onPressed: onConvertToAction,
-                  style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFF00BCD4),
-                      minimumSize: Size.zero,
-                      padding: const EdgeInsets.symmetric(horizontal: 8)),
-                  child: const Text('→ Ação', style: TextStyle(fontSize: 12)),
-                ),
-              IconButton(
-                icon: const Icon(Icons.delete_outline_rounded,
+                const SizedBox(width: 4),
+                const Icon(Icons.chevron_right_rounded,
                     color: Colors.white24, size: 18),
-                onPressed: onDelete,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-              const SizedBox(width: 4),
-              const Icon(Icons.chevron_right_rounded,
-                  color: Colors.white24, size: 18),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
-    ),
     );
   }
 }

@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/models/action_queue_item.dart';
 import '../data/models/opportunity_lab_item.dart';
 import '../data/services/opportunity_lab_service.dart';
+import 'action_queue_provider.dart';
 
 final opportunityLabServiceProvider =
     Provider<OpportunityLabService>((_) => OpportunityLabService());
@@ -54,6 +56,27 @@ class OpportunityLabNotifier
   Future<void> approve(String id) async {
     await _svc.updateStatus(id, 'approved');
     await load(projectId: _activeProjectId);
+  }
+
+  /// Single entry point for approving an opportunity and creating its action.
+  ///
+  /// Sequence (action first, then approve) ensures that a failed action
+  /// creation never leaves the opportunity in an approved-without-action state.
+  /// Idempotent: a second call returns the existing action without creating a duplicate.
+  Future<ActionQueueItem> approveAndCreateAction(
+    OpportunityLabItem opp,
+    ActionQueueNotifier actionNotifier,
+  ) async {
+    if (opp.status == 'approved') {
+      // Already approved — just ensure the action exists (idempotent create)
+      return actionNotifier.addFromOpportunityItem(opp);
+    }
+    // 1. Create action first; DB UNIQUE constraint + service idempotency prevent duplicates
+    final action = await actionNotifier.addFromOpportunityItem(opp);
+    // 2. Approve opportunity only after action is confirmed persisted
+    await _svc.updateStatus(opp.id, 'approved');
+    await load(projectId: _activeProjectId);
+    return action;
   }
 
   Future<void> delete(String id) async {

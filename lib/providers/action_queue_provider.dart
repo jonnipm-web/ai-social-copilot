@@ -29,6 +29,12 @@ final actionQueueItemByIdProvider =
   return ref.read(actionQueueServiceProvider).fetchById(id);
 });
 
+// Lookup action linked to a specific opportunity (for idempotency check in UI)
+final actionByOpportunityLabIdProvider =
+    FutureProvider.autoDispose.family<ActionQueueItem?, String>((ref, opportunityLabId) {
+  return ref.read(actionQueueServiceProvider).fetchByOpportunityLabId(opportunityLabId);
+});
+
 // Action queue filtered by project_id (real Supabase filter)
 final actionQueueByProjectProvider =
     FutureProvider.autoDispose.family<List<ActionQueueItem>, String>((ref, projectId) {
