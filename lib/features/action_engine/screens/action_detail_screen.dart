@@ -400,11 +400,16 @@ class _ScoreBreakdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final fromLab = item.origin == 'opportunity_lab';
     final dims = [
-      ('ROI',      item.roiScore,    const Color(0xFF4CAF50)),
-      ('Impacto',  item.impactScore, const Color(0xFF6C63FF)),
-      ('Esforço',  item.effortScore, const Color(0xFFFF9800)),
-      ('Prio.',    item.priority,    const Color(0xFF00BCD4)),
+      if (fromLab && item.marketScore > 0)
+        ('Mercado',   item.marketScore, const Color(0xFF6C63FF)),
+      ('Receita',     item.impactScore, const Color(0xFF4CAF50)),
+      ('ROI / Final', item.roiScore,    const Color(0xFFB44FE8)),
+      ('Esforço',     item.effortScore, const Color(0xFFFF9800)),
+      ('Prioridade',  item.priority,    const Color(0xFF00BCD4)),
+      if (fromLab && item.confidence > 0)
+        ('Confiança', item.confidence,  const Color(0xFFFFD700)),
     ];
     return Column(
       children: dims
@@ -483,8 +488,14 @@ class _OriginSection extends StatelessWidget {
         if (item.opportunityLabId != null)
           _InfoRow(
             icon: Icons.science_rounded,
-            label: 'Oportunidade de origem',
-            value: 'Opportunity Lab #${item.opportunityLabId!.substring(0, 8)}…',
+            label: 'Oportunidade',
+            value: 'Lab #${item.opportunityLabId!.substring(0, 8)}…',
+          ),
+        if (item.marketAnalysisId != null)
+          _InfoRow(
+            icon: Icons.analytics_rounded,
+            label: 'Análise de mercado',
+            value: 'Market #${item.marketAnalysisId!.substring(0, 8)}…',
           ),
         _InfoRow(
           icon: Icons.calendar_today_rounded,
