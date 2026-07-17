@@ -65,6 +65,7 @@ class AppConstants {
   static const routeEcosystem            = '/ecosystem';
   static const routeAdvisorOnboarding    = '/advisor-onboarding';
   static const routeOpportunityLab       = '/opportunity-lab';
+  static const routeOpportunityDetail    = '/opportunity-lab/:id';
   static const routeActionEngine         = '/action-engine';
   static const routeExecutiveDashboard   = '/executive-dashboard';
 

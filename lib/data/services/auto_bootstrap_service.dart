@@ -85,6 +85,9 @@ class AutoBootstrapService {
         final rawOpps = (oppData['opportunities'] as List? ?? []);
         for (final raw in rawOpps) {
           if (raw is! Map<String, dynamic>) continue;
+          final rawRisks = raw['risks'];
+          final rawSteps = raw['action_steps'];
+
           final item = OpportunityLabItem(
             id:               '',
             userId:           uid,
@@ -101,6 +104,16 @@ class AutoBootstrapService {
             finalScore:       _toInt(raw['final_score']),
             status:           'pending',
             createdAt:        DateTime.now(),
+            origin:           'auto_bootstrap',
+            sources:          [project.name],
+            rationale:        raw['rationale'] as String?,
+            confidence:       _toInt(raw['confidence']),
+            risks: rawRisks is List
+                ? rawRisks.map((e) => e.toString()).toList()
+                : const [],
+            actionSteps: rawSteps is List
+                ? rawSteps.map((e) => e.toString()).toList()
+                : const [],
           );
           if (item.title.isEmpty) continue;
           final saved = await _oppSvc.create(item);
