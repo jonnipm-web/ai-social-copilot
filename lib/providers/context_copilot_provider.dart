@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/constants/app_constants.dart';
 import '../data/models/copilot_context_data.dart';
 import '../data/models/copilot_turn.dart';
+import 'ive_memory_provider.dart';
 
 // ── State ────────────────────────────────────────────────────────────────────
 
@@ -33,8 +34,9 @@ class CopilotState {
 // ── Notifier ─────────────────────────────────────────────────────────────────
 
 class ContextCopilotNotifier extends StateNotifier<CopilotState> {
-  ContextCopilotNotifier() : super(const CopilotState());
+  ContextCopilotNotifier(this._ref) : super(const CopilotState());
 
+  final Ref _ref;
   final _client = Supabase.instance.client;
 
   Future<void> send({
@@ -48,6 +50,9 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
       timestamp: DateTime.now(),
     );
 
+    // Persiste pergunta na memória da IVE — alimenta contexto futuro
+    _ref.read(iveMemoryProvider.notifier).addQuestion(message);
+
     state = state.copyWith(
       turns:   [...state.turns, userTurn],
       loading: true,
@@ -59,13 +64,18 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
           .map((t) => t.toHistoryMap())
           .toList();
 
+      // Perguntas recentes da memória enriquecem o contexto da IA
+      final recentQuestions = _ref.read(iveMemoryProvider).recentQuestions;
+
       final res = await _client.functions.invoke(
         AppConstants.edgeFunctionContextCopilot,
         body: {
-          'message':     message,
-          'screen_name': screenName,
-          'context':     context.toMap(),
-          'history':     history,
+          'message':          message,
+          'screen_name':      screenName,
+          'context':          context.toMap(),
+          'history':          history,
+          if (recentQuestions.isNotEmpty)
+            'recent_questions': recentQuestions,
         },
       );
 
@@ -107,8 +117,9 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
 }
 
 // ── Provider ──────────────────────────────────────────────────────────────────
-
-final contextCopilotProvider = StateNotifierProvider.family
-    .autoDispose<ContextCopilotNotifier, CopilotState, String>(
-  (ref, screenName) => ContextCopilotNotifier(),
+// Sem autoDispose: histórico do chat persiste enquanto o app estiver aberto.
+// Family key = screenName → um estado por tela, nunca compartilhado.
+final contextCopilotProvider = StateNotifierProvider.family<
+    ContextCopilotNotifier, CopilotState, String>(
+  (ref, screenName) => ContextCopilotNotifier(ref),
 );
