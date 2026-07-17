@@ -299,7 +299,7 @@ void main() {
   });
 
   // ── update() ─────────────────────────────────────────────────────────────
-  group('update()', () {
+  group('updateFields()', () {
     test('atualiza campos arbitrários e emite projectUpdated', () async {
       final original = _project(id: 'p1', name: 'Old');
       final updated = _project(id: 'p1', name: 'New');
@@ -316,7 +316,7 @@ void main() {
 
       await container
           .read(projectsNotifierProvider.notifier)
-          .update('p1', {'name': 'New'});
+          .updateFields('p1', {'name': 'New'});
 
       await Future<void>.delayed(Duration.zero);
       await sub.cancel();

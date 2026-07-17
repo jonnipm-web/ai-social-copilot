@@ -66,8 +66,9 @@ class ProjectsNotifier extends AsyncNotifier<List<Project>> {
   }
 
   // ── Update arbitrary fields ───────────────────────────────────────────────
+  // Nomeado updateFields para não conflitar com AsyncNotifier.update() do Riverpod
 
-  Future<void> update(String id, Map<String, dynamic> data) async {
+  Future<void> updateFields(String id, Map<String, dynamic> data) async {
     final project = await ref.read(projectServiceProvider).update(id, data);
 
     state = state.whenData(
