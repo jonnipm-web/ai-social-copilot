@@ -177,15 +177,7 @@ class _LabBody extends StatelessWidget {
                       try {
                         await ref
                             .read(actionQueueNotifierProvider.notifier)
-                            .addFromOpportunity(
-                              title:            items[i].title,
-                              description:      items[i].description,
-                              projectId:        items[i].projectId,
-                              opportunityLabId: items[i].id,
-                              priority:         items[i].finalScore > 0 ? items[i].finalScore : 50,
-                              impactScore:      items[i].revenueScore > 0 ? items[i].revenueScore : 60,
-                              effortScore:      50,
-                            );
+                            .addFromOpportunityItem(items[i]);
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(

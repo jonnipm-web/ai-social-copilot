@@ -5,9 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
-import '../../../data/models/opportunity_lab_item.dart';
+import '../../../data/models/action_queue_item.dart';
 import '../../../providers/action_queue_provider.dart';
-import '../../../providers/opportunity_lab_provider.dart';
 import '../../../providers/project_provider.dart';
 
 // ── Colors ────────────────────────────────────────────────────────────────────
@@ -17,7 +16,18 @@ const _kPrimary = Color(0xFF6C63FF);
 const _kGreen   = Color(0xFF4CAF50);
 const _kOrange  = Color(0xFFFF9800);
 const _kRed     = Color(0xFFF44336);
-const _kTeal    = Color(0xFF00BCD4);
+const _kCyan    = Color(0xFF00BCD4);
+
+Color _statusColor(String s) {
+  const m = {
+    'pending':   _kOrange,
+    'approved':  _kPrimary,
+    'executing': _kCyan,
+    'completed': _kGreen,
+    'cancelled': _kRed,
+  };
+  return m[s] ?? Colors.white38;
+}
 
 Color _scoreColor(int s) {
   if (s >= 80) return _kGreen;
@@ -26,16 +36,16 @@ Color _scoreColor(int s) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// Opportunity Detail Screen
+// Action Detail Screen
 // ════════════════════════════════════════════════════════════════════════════
-class OpportunityDetailScreen extends ConsumerWidget {
-  const OpportunityDetailScreen({super.key, required this.itemId});
+class ActionDetailScreen extends ConsumerWidget {
+  const ActionDetailScreen({super.key, required this.itemId});
 
   final String itemId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final itemAsync = ref.watch(opportunityLabItemByIdProvider(itemId));
+    final itemAsync = ref.watch(actionQueueItemByIdProvider(itemId));
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -46,10 +56,10 @@ class OpportunityDetailScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
           onPressed: () => context.canPop()
               ? context.pop()
-              : context.go(AppConstants.routeOpportunityLab),
+              : context.go(AppConstants.routeActionEngine),
         ),
         title: const Text(
-          'Detalhe da Oportunidade',
+          'Detalhe da Ação',
           style: TextStyle(
               color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
         ),
@@ -71,7 +81,7 @@ class OpportunityDetailScreen extends ConsumerWidget {
         ),
         data: (item) => item == null
             ? const Center(
-                child: Text('Oportunidade não encontrada.',
+                child: Text('Ação não encontrada.',
                     style: TextStyle(color: Colors.white54)))
             : _DetailBody(item: item, ref: ref),
       ),
@@ -79,12 +89,12 @@ class OpportunityDetailScreen extends ConsumerWidget {
   }
 }
 
-// ── Status change menu ────────────────────────────────────────────────────────
+// ── Status menu ───────────────────────────────────────────────────────────────
 class _StatusMenu extends StatelessWidget {
   const _StatusMenu({required this.item, required this.ref});
 
-  final OpportunityLabItem item;
-  final WidgetRef          ref;
+  final ActionQueueItem item;
+  final WidgetRef       ref;
 
   @override
   Widget build(BuildContext context) {
@@ -92,58 +102,72 @@ class _StatusMenu extends StatelessWidget {
       icon: const Icon(Icons.more_vert, color: Colors.white),
       color: _kCard,
       onSelected: (v) async {
-        if (v == 'approve') {
-          await ref
-              .read(opportunityLabNotifierProvider.notifier)
-              .approve(item.id);
-          ref.invalidate(opportunityLabItemByIdProvider(item.id));
-          if (context.mounted) {
+        final notifier = ref.read(actionQueueNotifierProvider.notifier);
+        try {
+          if (v == 'approve')  await notifier.approve(item.id,  title: item.title);
+          if (v == 'execute')  await notifier.execute(item.id,  title: item.title);
+          if (v == 'complete') await notifier.complete(item.id, title: item.title);
+          if (v == 'cancel')   await notifier.cancel(item.id,   title: item.title);
+          ref.invalidate(actionQueueItemByIdProvider(item.id));
+          if (context.mounted && v == 'complete') {
             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Oportunidade aprovada!'),
+              content: Text('Ação concluída!'),
               backgroundColor: _kGreen,
             ));
           }
-        } else if (v == 'delete') {
-          final ok = await showDialog<bool>(
-            context: context,
-            builder: (_) => AlertDialog(
-              backgroundColor: _kCard,
-              title: const Text('Excluir oportunidade?',
-                  style: TextStyle(color: Colors.white)),
-              content: Text(
-                '"${item.title}" será removida permanentemente.',
-                style: const TextStyle(color: Colors.white70),
+          if (v == 'delete') {
+            final ok = await showDialog<bool>(
+              context: context,
+              builder: (_) => AlertDialog(
+                backgroundColor: _kCard,
+                title: const Text('Excluir ação?',
+                    style: TextStyle(color: Colors.white)),
+                content: Text('"${item.title}" será removida.',
+                    style: const TextStyle(color: Colors.white70)),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancelar',
+                          style: TextStyle(color: Colors.white54))),
+                  TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Excluir',
+                          style: TextStyle(color: _kRed))),
+                ],
               ),
-              actions: [
-                TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: const Text('Cancelar',
-                        style: TextStyle(color: Colors.white54))),
-                TextButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    child: const Text('Excluir',
-                        style: TextStyle(color: _kRed))),
-              ],
-            ),
-          );
-          if (ok == true) {
-            await ref
-                .read(opportunityLabNotifierProvider.notifier)
-                .delete(item.id);
-            if (context.mounted) context.pop();
+            );
+            if (ok == true) {
+              await notifier.delete(item.id, title: item.title);
+              if (context.mounted) context.pop();
+            }
+          }
+        } catch (e) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('Erro: $e'),
+              backgroundColor: _kRed,
+            ));
           }
         }
       },
       itemBuilder: (_) => [
         if (item.status == 'pending')
-          const PopupMenuItem(
-            value: 'approve',
-            child: Text('Aprovar', style: TextStyle(color: _kGreen)),
-          ),
-        const PopupMenuItem(
-          value: 'delete',
-          child: Text('Excluir', style: TextStyle(color: _kRed)),
-        ),
+          const PopupMenuItem(value: 'approve',
+              child: Text('Aprovar', style: TextStyle(color: _kPrimary))),
+        if (item.status == 'approved')
+          const PopupMenuItem(value: 'execute',
+              child: Text('Iniciar', style: TextStyle(color: _kCyan))),
+        if (item.status == 'executing') ...[
+          const PopupMenuItem(value: 'complete',
+              child: Text('Concluir', style: TextStyle(color: _kGreen))),
+          const PopupMenuItem(value: 'approve',
+              child: Text('Pausar', style: TextStyle(color: _kOrange))),
+        ],
+        if (item.status != 'completed' && item.status != 'cancelled')
+          const PopupMenuItem(value: 'cancel',
+              child: Text('Cancelar', style: TextStyle(color: Colors.white54))),
+        const PopupMenuItem(value: 'delete',
+            child: Text('Excluir', style: TextStyle(color: _kRed))),
       ],
     );
   }
@@ -153,8 +177,8 @@ class _StatusMenu extends StatelessWidget {
 class _DetailBody extends StatelessWidget {
   const _DetailBody({required this.item, required this.ref});
 
-  final OpportunityLabItem item;
-  final WidgetRef          ref;
+  final ActionQueueItem item;
+  final WidgetRef       ref;
 
   @override
   Widget build(BuildContext context) {
@@ -167,8 +191,8 @@ class _DetailBody extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
       children: [
-        // ── Hero header ────────────────────────────────────────
-        _HeroHeader(item: item),
+        // ── Hero ───────────────────────────────────────────────
+        _HeroHeader(item: item, projectName: projectName),
 
         const SizedBox(height: 16),
 
@@ -197,6 +221,19 @@ class _DetailBody extends StatelessWidget {
           ),
         ],
 
+        if (item.description != null && item.description!.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _Section(
+            icon: Icons.description_rounded,
+            title: 'Descrição',
+            child: Text(
+              item.description!,
+              style: const TextStyle(
+                  color: Colors.white70, fontSize: 13, height: 1.5),
+            ),
+          ),
+        ],
+
         if (item.rationale != null && item.rationale!.isNotEmpty) ...[
           const SizedBox(height: 12),
           _Section(
@@ -206,15 +243,14 @@ class _DetailBody extends StatelessWidget {
           ),
         ],
 
-        const SizedBox(height: 12),
-
-        // ── Confiança ──────────────────────────────────────────
-        if (item.confidence > 0)
+        if (item.plan.isNotEmpty) ...[
+          const SizedBox(height: 12),
           _Section(
-            icon: Icons.verified_rounded,
-            title: 'Confiança',
-            child: _ConfidenceMeter(value: item.confidence),
+            icon: Icons.list_alt_rounded,
+            title: 'Plano de Execução',
+            child: _PlanList(steps: item.plan),
           ),
+        ],
 
         if (item.risks.isNotEmpty) ...[
           const SizedBox(height: 12),
@@ -225,19 +261,10 @@ class _DetailBody extends StatelessWidget {
           ),
         ],
 
-        if (item.actionSteps.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          _Section(
-            icon: Icons.checklist_rounded,
-            title: 'Próximos Passos',
-            child: _ActionStepsList(steps: item.actionSteps),
-          ),
-        ],
-
         const SizedBox(height: 20),
 
-        // ── Action buttons ─────────────────────────────────────
-        _ActionButtons(item: item, ref: ref),
+        // ── Status actions ─────────────────────────────────────
+        _StatusButtons(item: item, ref: ref),
       ],
     );
   }
@@ -245,14 +272,14 @@ class _DetailBody extends StatelessWidget {
 
 // ── Hero header ───────────────────────────────────────────────────────────────
 class _HeroHeader extends StatelessWidget {
-  const _HeroHeader({required this.item});
+  const _HeroHeader({required this.item, this.projectName});
 
-  final OpportunityLabItem item;
+  final ActionQueueItem item;
+  final String?         projectName;
 
   @override
   Widget build(BuildContext context) {
-    final score = item.finalScore;
-    final scoreC = _scoreColor(score);
+    final sc = _scoreColor(item.priority);
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -263,19 +290,27 @@ class _HeroHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Score ring
+          // Priority ring
           SizedBox(
-            width: 72,
-            height: 72,
+            width: 68,
+            height: 68,
             child: CustomPaint(
-              painter: _RingPainter(score: score, color: scoreC),
+              painter: _RingPainter(score: item.priority, color: sc),
               child: Center(
-                child: Text(
-                  '$score',
-                  style: TextStyle(
-                      color: scoreC,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${item.priority}',
+                      style: TextStyle(
+                          color: sc,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold),
+                    ),
+                    Text('prio',
+                        style: TextStyle(
+                            color: sc.withOpacity(0.7), fontSize: 8)),
+                  ],
                 ),
               ),
             ),
@@ -287,8 +322,8 @@ class _HeroHeader extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    _TypeBadge(type: item.opportunityType),
-                    const SizedBox(width: 8),
+                    _TypeBadge(type: item.actionType),
+                    const SizedBox(width: 6),
                     _StatusBadge(status: item.status),
                   ],
                 ),
@@ -297,18 +332,21 @@ class _HeroHeader extends StatelessWidget {
                   item.title,
                   style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 16,
+                      fontSize: 15,
                       fontWeight: FontWeight.bold,
                       height: 1.3),
                 ),
-                if (item.description.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    item.description,
-                    style: const TextStyle(
-                        color: Colors.white60, fontSize: 12, height: 1.4),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
+                if (projectName != null) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.folder_rounded,
+                          color: _kPrimary, size: 12),
+                      const SizedBox(width: 4),
+                      Text(projectName!,
+                          style: const TextStyle(
+                              color: _kPrimary, fontSize: 11)),
+                    ],
                   ),
                 ],
               ],
@@ -330,23 +368,22 @@ class _RingPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final c = Offset(size.width / 2, size.height / 2);
     final r = size.width / 2 - 6;
-    final trackPaint = Paint()
+    final track = Paint()
       ..color = Colors.white12
       ..strokeWidth = 6
       ..style = PaintingStyle.stroke;
-    final arcPaint = Paint()
+    final arc = Paint()
       ..color = color
       ..strokeWidth = 6
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
-
-    canvas.drawCircle(c, r, trackPaint);
+    canvas.drawCircle(c, r, track);
     canvas.drawArc(
       Rect.fromCircle(center: c, radius: r),
       -math.pi / 2,
       2 * math.pi * score / 100,
       false,
-      arcPaint,
+      arc,
     );
   }
 
@@ -359,30 +396,26 @@ class _RingPainter extends CustomPainter {
 class _ScoreBreakdown extends StatelessWidget {
   const _ScoreBreakdown({required this.item});
 
-  final OpportunityLabItem item;
+  final ActionQueueItem item;
 
   @override
   Widget build(BuildContext context) {
     final dims = [
-      ('Mercado',          item.marketScore,      const Color(0xFF6C63FF)),
-      ('Receita',          item.revenueScore,     const Color(0xFF4CAF50)),
-      ('Competição',       item.competitionScore, const Color(0xFFFF9800)),
-      ('Sinergia',         item.synergyScore,     const Color(0xFF00BCD4)),
-      ('Fit Estratégico',  item.strategicFit,     const Color(0xFFB44FE8)),
+      ('ROI',      item.roiScore,    const Color(0xFF4CAF50)),
+      ('Impacto',  item.impactScore, const Color(0xFF6C63FF)),
+      ('Esforço',  item.effortScore, const Color(0xFFFF9800)),
+      ('Prio.',    item.priority,    const Color(0xFF00BCD4)),
     ];
-
     return Column(
-      children: dims.map((d) => _ScoreRow(label: d.$1, value: d.$2, color: d.$3)).toList(),
+      children: dims
+          .map((d) => _ScoreRow(label: d.$1, value: d.$2, color: d.$3))
+          .toList(),
     );
   }
 }
 
 class _ScoreRow extends StatelessWidget {
-  const _ScoreRow({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
+  const _ScoreRow({required this.label, required this.value, required this.color});
 
   final String label;
   final int    value;
@@ -395,7 +428,7 @@ class _ScoreRow extends StatelessWidget {
       child: Row(
         children: [
           SizedBox(
-            width: 110,
+            width: 60,
             child: Text(label,
                 style: const TextStyle(color: Colors.white70, fontSize: 12)),
           ),
@@ -413,14 +446,10 @@ class _ScoreRow extends StatelessWidget {
           const SizedBox(width: 8),
           SizedBox(
             width: 32,
-            child: Text(
-              '$value',
-              textAlign: TextAlign.right,
-              style: TextStyle(
-                  color: color,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold),
-            ),
+            child: Text('$value',
+                textAlign: TextAlign.right,
+                style: TextStyle(
+                    color: color, fontSize: 12, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -432,8 +461,8 @@ class _ScoreRow extends StatelessWidget {
 class _OriginSection extends StatelessWidget {
   const _OriginSection({required this.item, this.projectName});
 
-  final OpportunityLabItem item;
-  final String?            projectName;
+  final ActionQueueItem item;
+  final String?         projectName;
 
   @override
   Widget build(BuildContext context) {
@@ -451,34 +480,35 @@ class _OriginSection extends StatelessWidget {
             label: 'Projeto',
             value: projectName!,
           ),
-        if (item.marketAnalysisId != null)
+        if (item.opportunityLabId != null)
           _InfoRow(
-            icon: Icons.analytics_rounded,
-            label: 'Análise de mercado',
-            value: item.marketAnalysisId!.substring(0, 8) + '…',
+            icon: Icons.science_rounded,
+            label: 'Oportunidade de origem',
+            value: 'Opportunity Lab #${item.opportunityLabId!.substring(0, 8)}…',
           ),
         _InfoRow(
           icon: Icons.calendar_today_rounded,
           label: 'Criada em',
-          value: _formatDate(item.createdAt),
+          value: _fmtDate(item.createdAt),
         ),
+        if (item.updatedAt != null)
+          _InfoRow(
+            icon: Icons.update_rounded,
+            label: 'Atualizada em',
+            value: _fmtDate(item.updatedAt!),
+          ),
       ],
     );
   }
 
-  String _formatDate(DateTime dt) {
-    return '${dt.day.toString().padLeft(2, '0')}/'
-        '${dt.month.toString().padLeft(2, '0')}/'
-        '${dt.year}';
-  }
+  String _fmtDate(DateTime dt) =>
+      '${dt.day.toString().padLeft(2, '0')}/'
+      '${dt.month.toString().padLeft(2, '0')}/'
+      '${dt.year}';
 }
 
 class _InfoRow extends StatelessWidget {
-  const _InfoRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
+  const _InfoRow({required this.icon, required this.label, required this.value});
 
   final IconData icon;
   final String   label;
@@ -505,7 +535,7 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-// ── Sources list ──────────────────────────────────────────────────────────────
+// ── Sources ───────────────────────────────────────────────────────────────────
 class _SourcesList extends StatelessWidget {
   const _SourcesList({required this.sources});
 
@@ -518,8 +548,7 @@ class _SourcesList extends StatelessWidget {
       runSpacing: 8,
       children: sources
           .map((s) => Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
                   color: _kPrimary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
@@ -528,12 +557,10 @@ class _SourcesList extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.link_rounded,
-                        color: _kPrimary, size: 12),
+                    const Icon(Icons.link_rounded, color: _kPrimary, size: 12),
                     const SizedBox(width: 4),
                     Text(s,
-                        style: const TextStyle(
-                            color: _kPrimary, fontSize: 11)),
+                        style: const TextStyle(color: _kPrimary, fontSize: 11)),
                   ],
                 ),
               ))
@@ -560,15 +587,12 @@ class _RationaleCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.format_quote_rounded,
-              color: _kPrimary, size: 20),
+          const Icon(Icons.format_quote_rounded, color: _kPrimary, size: 20),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              rationale,
-              style: const TextStyle(
-                  color: Colors.white70, fontSize: 13, height: 1.5),
-            ),
+            child: Text(rationale,
+                style: const TextStyle(
+                    color: Colors.white70, fontSize: 13, height: 1.5)),
           ),
         ],
       ),
@@ -576,46 +600,54 @@ class _RationaleCard extends StatelessWidget {
   }
 }
 
-// ── Confidence meter ──────────────────────────────────────────────────────────
-class _ConfidenceMeter extends StatelessWidget {
-  const _ConfidenceMeter({required this.value});
+// ── Plan ──────────────────────────────────────────────────────────────────────
+class _PlanList extends StatelessWidget {
+  const _PlanList({required this.steps});
 
-  final int value;
+  final List<String> steps;
 
   @override
   Widget build(BuildContext context) {
-    final color = _scoreColor(value);
-    final label = value >= 80
-        ? 'Alta'
-        : value >= 60
-            ? 'Média'
-            : 'Baixa';
-
-    return Row(
-      children: [
-        Expanded(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: LinearProgressIndicator(
-              value: value / 100,
-              backgroundColor: Colors.white12,
-              valueColor: AlwaysStoppedAnimation(color),
-              minHeight: 12,
-            ),
+    return Column(
+      children: steps.asMap().entries.map((e) {
+        final n = e.key + 1;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 22,
+                height: 22,
+                margin: const EdgeInsets.only(top: 1),
+                decoration: BoxDecoration(
+                  color: _kPrimary.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: _kPrimary.withOpacity(0.4)),
+                ),
+                child: Center(
+                  child: Text('$n',
+                      style: const TextStyle(
+                          color: _kPrimary,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold)),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(e.value,
+                    style: const TextStyle(
+                        color: Colors.white70, fontSize: 12, height: 1.4)),
+              ),
+            ],
           ),
-        ),
-        const SizedBox(width: 12),
-        Text('$value% $label',
-            style: TextStyle(
-                color: color,
-                fontSize: 13,
-                fontWeight: FontWeight.bold)),
-      ],
+        );
+      }).toList(),
     );
   }
 }
 
-// ── Risks list ────────────────────────────────────────────────────────────────
+// ── Risks ─────────────────────────────────────────────────────────────────────
 class _RisksList extends StatelessWidget {
   const _RisksList({required this.risks});
 
@@ -646,63 +678,9 @@ class _RisksList extends StatelessWidget {
   }
 }
 
-// ── Action steps ──────────────────────────────────────────────────────────────
-class _ActionStepsList extends StatelessWidget {
-  const _ActionStepsList({required this.steps});
-
-  final List<String> steps;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: steps.asMap().entries.map((e) {
-        final n = e.key + 1;
-        final text = e.value;
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 22,
-                height: 22,
-                margin: const EdgeInsets.only(top: 1),
-                decoration: BoxDecoration(
-                  color: _kPrimary.withOpacity(0.15),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: _kPrimary.withOpacity(0.4)),
-                ),
-                child: Center(
-                  child: Text(
-                    '$n',
-                    style: const TextStyle(
-                        color: _kPrimary,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(text,
-                    style: const TextStyle(
-                        color: Colors.white70, fontSize: 12, height: 1.4)),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
-    );
-  }
-}
-
 // ── Section wrapper ───────────────────────────────────────────────────────────
 class _Section extends StatelessWidget {
-  const _Section({
-    required this.icon,
-    required this.title,
-    required this.child,
-  });
+  const _Section({required this.icon, required this.title, required this.child});
 
   final IconData icon;
   final String   title;
@@ -739,7 +717,7 @@ class _Section extends StatelessWidget {
   }
 }
 
-// ── Type & Status badges ──────────────────────────────────────────────────────
+// ── Badges ────────────────────────────────────────────────────────────────────
 class _TypeBadge extends StatelessWidget {
   const _TypeBadge({required this.type});
 
@@ -767,132 +745,177 @@ class _StatusBadge extends StatelessWidget {
 
   final String status;
 
-  static Color _color(String s) {
-    const m = {
-      'approved':  _kGreen,
-      'executing': _kTeal,
-      'rejected':  _kRed,
-    };
-    return m[s] ?? _kOrange;
-  }
-
   @override
   Widget build(BuildContext context) {
-    final c = _color(status);
+    final c = _statusColor(status);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: c.withOpacity(0.12),
         borderRadius: BorderRadius.circular(6),
       ),
-      child: Text(
-        status,
-        style: TextStyle(
-            color: c, fontSize: 9, fontWeight: FontWeight.bold),
-      ),
+      child: Text(status,
+          style: TextStyle(
+              color: c, fontSize: 9, fontWeight: FontWeight.bold)),
     );
   }
 }
 
-// ── Action buttons ────────────────────────────────────────────────────────────
-class _ActionButtons extends StatelessWidget {
-  const _ActionButtons({required this.item, required this.ref});
+// ── Status buttons ────────────────────────────────────────────────────────────
+class _StatusButtons extends StatelessWidget {
+  const _StatusButtons({required this.item, required this.ref});
 
-  final OpportunityLabItem item;
-  final WidgetRef          ref;
+  final ActionQueueItem item;
+  final WidgetRef       ref;
+
+  Future<void> _run(BuildContext context, Future<void> Function() fn) async {
+    try {
+      await fn();
+      ref.invalidate(actionQueueItemByIdProvider(item.id));
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Erro: $e'),
+          backgroundColor: _kRed,
+        ));
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final n = ref.read(actionQueueNotifierProvider.notifier);
+
     return Column(
       children: [
         if (item.status == 'pending')
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _kGreen,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-              icon: const Icon(Icons.check_circle_outline_rounded),
-              label: const Text('Aprovar Oportunidade'),
-              onPressed: () async {
-                await ref
-                    .read(opportunityLabNotifierProvider.notifier)
-                    .approve(item.id);
-                ref.invalidate(opportunityLabItemByIdProvider(item.id));
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text('Oportunidade aprovada!'),
-                    backgroundColor: _kGreen,
-                  ));
-                }
-              },
-            ),
+          _Btn(
+            label: 'Aprovar Ação',
+            icon: Icons.check_circle_outline_rounded,
+            color: _kPrimary,
+            onTap: () => _run(context, () => n.approve(item.id, title: item.title)),
           ),
 
         if (item.status == 'approved') ...[
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _kTeal,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-              icon: const Icon(Icons.bolt_rounded),
-              label: const Text('Enviar para Action Engine'),
-              onPressed: () async {
-                try {
-                  await ref
-                      .read(actionQueueNotifierProvider.notifier)
-                      .addFromOpportunityItem(item);
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text('Ação criada no Action Engine!'),
-                      backgroundColor: _kGreen,
-                    ));
-                    context.go(AppConstants.routeActionEngine);
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text('Erro: $e'),
-                      backgroundColor: _kRed,
-                    ));
-                  }
-                }
-              },
-            ),
+          _Btn(
+            label: 'Iniciar Execução',
+            icon: Icons.play_arrow_rounded,
+            color: _kCyan,
+            onTap: () => _run(context, () => n.execute(item.id, title: item.title)),
           ),
         ],
 
-        const SizedBox(height: 10),
-
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            style: OutlinedButton.styleFrom(
-              foregroundColor: _kPrimary,
-              side: const BorderSide(color: _kPrimary),
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-            ),
-            icon: const Icon(Icons.auto_awesome_rounded),
-            label: const Text('Perguntar à IVE sobre esta oportunidade'),
-            onPressed: () {
-              // IVE overlay is always available via the floating button;
-              // navigate to lab screen so IVE has opportunity context loaded
-              context.go(AppConstants.routeOpportunityLab);
+        if (item.status == 'executing') ...[
+          _Btn(
+            label: 'Marcar como Concluída',
+            icon: Icons.task_alt_rounded,
+            color: _kGreen,
+            onTap: () async {
+              await _run(context, () => n.complete(item.id, title: item.title));
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                  content: Text('Ação concluída!'),
+                  backgroundColor: _kGreen,
+                ));
+              }
             },
           ),
+          const SizedBox(height: 8),
+          _Btn(
+            label: 'Pausar',
+            icon: Icons.pause_rounded,
+            color: _kOrange,
+            outlined: true,
+            onTap: () => _run(context, () => n.approve(item.id, title: item.title)),
+          ),
+        ],
+
+        if (item.status == 'completed')
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: _kGreen.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: _kGreen.withOpacity(0.3)),
+            ),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.task_alt_rounded, color: _kGreen, size: 18),
+                SizedBox(width: 8),
+                Text('Concluída',
+                    style: TextStyle(color: _kGreen, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+
+        const SizedBox(height: 10),
+
+        OutlinedButton.icon(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: _kPrimary,
+            side: const BorderSide(color: _kPrimary),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            minimumSize: const Size(double.infinity, 0),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          icon: const Icon(Icons.auto_awesome_rounded),
+          label: const Text('Perguntar à IVE sobre esta ação'),
+          onPressed: () => context.go(AppConstants.routeActionEngine),
         ),
       ],
+    );
+  }
+}
+
+class _Btn extends StatelessWidget {
+  const _Btn({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+    this.outlined = false,
+  });
+
+  final String       label;
+  final IconData     icon;
+  final Color        color;
+  final VoidCallback onTap;
+  final bool         outlined;
+
+  @override
+  Widget build(BuildContext context) {
+    if (outlined) {
+      return SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: color,
+            side: BorderSide(color: color),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
+          ),
+          icon: Icon(icon),
+          label: Text(label),
+          onPressed: onTap,
+        ),
+      );
+    }
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        icon: Icon(icon),
+        label: Text(label),
+        onPressed: onTap,
+      ),
     );
   }
 }

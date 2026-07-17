@@ -27,6 +27,8 @@ class IveContextData {
   final List<Map<String, dynamic>> knowledgeItemsSummary;
   // Top 3 oportunidades pendentes — alimenta opportunities no chat
   final List<Map<String, dynamic>> pendingOpportunitiesSummary;
+  // Top 3 ações pendentes com campos de auditoria
+  final List<Map<String, dynamic>> pendingActionsSummary;
 
   const IveContextData({
     this.healthScore                = 0,
@@ -45,6 +47,7 @@ class IveContextData {
     this.topProjectsSnapshot        = const [],
     this.knowledgeItemsSummary      = const [],
     this.pendingOpportunitiesSummary = const [],
+    this.pendingActionsSummary       = const [],
   });
 }
 
@@ -89,6 +92,20 @@ final iveContextDataProvider = FutureProvider.autoDispose<IveContextData>((ref) 
       'rationale': o.rationale,
     if (o.risks.isNotEmpty)   'risks':        o.risks.take(3).toList(),
     if (o.actionSteps.isNotEmpty) 'next_steps': o.actionSteps.take(3).toList(),
+  }).toList();
+
+  // Ações pendentes — top 3 por prioridade com campos de auditoria
+  final pendingActionsSorted = [...pending]
+    ..sort((a, b) => b.priority.compareTo(a.priority));
+  final actionsSummary = pendingActionsSorted.take(3).map((a) => {
+    'title':    a.title,
+    'priority': a.priority,
+    'impact':   a.impactScore,
+    'origin':   a.originLabel,
+    if (a.rationale != null && a.rationale!.isNotEmpty)
+      'rationale': a.rationale,
+    if (a.plan.isNotEmpty)  'plan': a.plan.take(2).toList(),
+    if (a.risks.isNotEmpty) 'risks': a.risks.take(2).toList(),
   }).toList();
 
   // Projeto de maior score
@@ -155,5 +172,6 @@ final iveContextDataProvider = FutureProvider.autoDispose<IveContextData>((ref) 
     topProjectsSnapshot:         topThree,
     knowledgeItemsSummary:       knowledgeSummary,
     pendingOpportunitiesSummary: opportunitiesSummary,
+    pendingActionsSummary:       actionsSummary,
   );
 });

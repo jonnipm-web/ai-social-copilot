@@ -67,6 +67,7 @@ class AppConstants {
   static const routeOpportunityLab       = '/opportunity-lab';
   static const routeOpportunityDetail    = '/opportunity-lab/:id';
   static const routeActionEngine         = '/action-engine';
+  static const routeActionDetail         = '/action-engine/:id';
   static const routeExecutiveDashboard   = '/executive-dashboard';
 
   // Fase 10B — Ecosystem Intelligence Layer
