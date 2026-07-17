@@ -559,47 +559,55 @@ class EcosystemIntelligenceService {
 
   MarketAnalysis? _findAnalysisMatch(Project p, List<MarketAnalysis> analyses) {
     if (analyses.isEmpty) return null;
-    if (p.marketAnalysisId != null) {
-      final direct = analyses.where((a) => a.id == p.marketAnalysisId).toList();
-      if (direct.isNotEmpty) return direct.first;
+
+    // 1. FK direto: analysis.project_id == project.id (mais confiável)
+    for (final a in analyses) {
+      if (a.projectId == p.id) return a;
     }
+
+    // 2. FK inverso legado: project.market_analysis_id aponta para a análise
+    if (p.marketAnalysisId != null) {
+      for (final a in analyses) {
+        if (a.id == p.marketAnalysisId) return a;
+      }
+    }
+
+    // 3. Normalização de URL como último recurso (dados antigos sem FK)
     if (p.url != null && p.url!.isNotEmpty) {
       final pUrl = _normalizeUrl(p.url!);
       for (final a in analyses) {
         if (_normalizeUrl(a.input) == pUrl) return a;
       }
     }
-    final pName = p.name.toLowerCase().trim();
-    if (pName.length >= 4) {
-      for (final a in analyses) {
-        final inputLow = _normalizeUrl(a.input);
-        final nicheLow = (a.niche ?? '').toLowerCase();
-        if (inputLow.contains(pName) || nicheLow.contains(pName)) return a;
-      }
-    }
+
+    // Matching por substring de nome REMOVIDO — gerava falsos positivos
     return null;
   }
 
-  // Phase 10I fix: also look up by project name for bootstrap-generated plans
   RevenuePlan? _findRevenuePlan(
       Project p, MarketAnalysis? a, List<RevenuePlan> plans) {
     if (plans.isEmpty) return null;
-    if (p.marketAnalysisId != null) {
-      final direct = plans.where((r) => r.marketAnalysisId == p.marketAnalysisId).toList();
-      if (direct.isNotEmpty) return direct.first;
-    }
-    if (a != null) {
-      final linked = plans.where((r) => r.marketAnalysisId == a.id).toList();
-      if (linked.isNotEmpty) return linked.first;
-    }
-    // Bootstrap-generated plans have null market_analysis_id — match by project name
-    final pName = p.name.trim().toLowerCase();
+
+    // 1. FK direto: plan.project_id == project.id (mais confiável)
     for (final r in plans) {
-      if (r.marketAnalysisId == null &&
-          r.projectName.trim().toLowerCase() == pName) {
-        return r;
+      if (r.projectId == p.id) return r;
+    }
+
+    // 2. Via project.market_analysis_id
+    if (p.marketAnalysisId != null) {
+      for (final r in plans) {
+        if (r.marketAnalysisId == p.marketAnalysisId) return r;
       }
     }
+
+    // 3. Via análise vinculada
+    if (a != null) {
+      for (final r in plans) {
+        if (r.marketAnalysisId == a.id) return r;
+      }
+    }
+
+    // Matching por projectName REMOVIDO — quebrava em renomeações e colisões
     return null;
   }
 

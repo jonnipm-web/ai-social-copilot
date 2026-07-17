@@ -1,8 +1,9 @@
 class RevenuePlan {
-  final String id;
-  final String userId;
+  final String  id;
+  final String  userId;
+  final String? projectId;
   final String? marketAnalysisId;
-  final String projectName;
+  final String  projectName;
   final double monthlyConservative;
   final double monthlyModerate;
   final double monthlyAggressive;
@@ -15,6 +16,7 @@ class RevenuePlan {
   const RevenuePlan({
     required this.id,
     required this.userId,
+    this.projectId,
     this.marketAnalysisId,
     required this.projectName,
     this.monthlyConservative = 0,
@@ -55,6 +57,7 @@ class RevenuePlan {
     return RevenuePlan(
       id:                   map['id'] as String,
       userId:               map['user_id'] as String,
+      projectId:            map['project_id'] as String?,
       marketAnalysisId:     map['market_analysis_id'] as String?,
       projectName:          map['project_name'] as String,
       monthlyConservative:  _d(map['monthly_conservative']),
@@ -72,6 +75,7 @@ class RevenuePlan {
 
   Map<String, dynamic> toInsertMap() => {
     'user_id':              userId,
+    if (projectId != null)  'project_id': projectId,
     'market_analysis_id':   marketAnalysisId,
     'project_name':         projectName,
     'monthly_conservative': monthlyConservative,

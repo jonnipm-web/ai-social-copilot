@@ -1,7 +1,8 @@
 class MarketAnalysis {
-  final String id;
-  final String userId;
-  final String input;
+  final String  id;
+  final String  userId;
+  final String? projectId;
+  final String  input;
   final String inputType;
   final String? niche;
   final String? subNiche;
@@ -19,6 +20,7 @@ class MarketAnalysis {
   const MarketAnalysis({
     required this.id,
     required this.userId,
+    this.projectId,
     required this.input,
     this.inputType = 'url',
     this.niche,
@@ -101,6 +103,7 @@ class MarketAnalysis {
     return MarketAnalysis(
       id:                 map['id'] as String,
       userId:             map['user_id'] as String,
+      projectId:          map['project_id'] as String?,
       input:              map['input'] as String,
       inputType:          map['input_type'] as String? ?? 'url',
       niche:              map['niche'] as String?,
@@ -122,6 +125,7 @@ class MarketAnalysis {
 
   Map<String, dynamic> toInsertMap() => {
     'user_id':            userId,
+    if (projectId != null) 'project_id': projectId,
     'input':              input,
     'input_type':         inputType,
     'niche':              niche,
