@@ -65,6 +65,15 @@ class KnowledgeService {
     return row == null ? null : KnowledgeAnalysis.fromMap(row);
   }
 
+  Future<List<KnowledgeAnalysis>> fetchAnalysisByProject(String projectId) async {
+    final rows = await _client
+        .from(_tableAnalysis)
+        .select()
+        .eq('project_id', projectId)
+        .order('created_at', ascending: false);
+    return (rows as List).map((r) => KnowledgeAnalysis.fromMap(r)).toList();
+  }
+
   Future<KnowledgeAnalysis> saveAnalysis(KnowledgeAnalysis analysis) async {
     final row = await _client
         .from(_tableAnalysis)
@@ -134,6 +143,7 @@ class KnowledgeService {
         id:                       '',
         knowledgeItemId:          item.id,
         userId:                   uid,
+        projectId:                item.projectId,
         summary:                  aiData['summary'] as String?,
         keywordsPrimary:          _list(aiData['keywords_primary']),
         keywordsSecondary:        _list(aiData['keywords_secondary']),

@@ -34,10 +34,13 @@ class KnowledgeAnalysis {
   final DateTime createdAt;
   final DateTime updatedAt;
 
+  final String? projectId;
+
   const KnowledgeAnalysis({
     required this.id,
     required this.knowledgeItemId,
     required this.userId,
+    this.projectId,
     this.summary,
     this.keywordsPrimary      = const [],
     this.keywordsSecondary    = const [],
@@ -88,6 +91,7 @@ class KnowledgeAnalysis {
       id:                       map['id'] as String,
       knowledgeItemId:          map['knowledge_item_id'] as String,
       userId:                   map['user_id'] as String,
+      projectId:                map['project_id'] as String?,
       summary:                  map['summary'] as String?,
       keywordsPrimary:          _parseList(map['keywords_primary']),
       keywordsSecondary:        _parseList(map['keywords_secondary']),
@@ -129,6 +133,7 @@ class KnowledgeAnalysis {
   Map<String, dynamic> toInsertMap() => {
     'knowledge_item_id':      knowledgeItemId,
     'user_id':                userId,
+    if (projectId != null) 'project_id': projectId,
     'summary':                summary,
     'keywords_primary':       keywordsPrimary,
     'keywords_secondary':     keywordsSecondary,

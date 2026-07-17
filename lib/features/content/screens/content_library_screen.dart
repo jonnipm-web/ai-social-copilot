@@ -5,21 +5,29 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../data/models/content_item.dart';
 import '../../../providers/content_provider.dart';
+import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 
 class ContentLibraryScreen extends ConsumerStatefulWidget {
   const ContentLibraryScreen({super.key});
 
   @override
-  ConsumerState<ContentLibraryScreen> createState() => _ContentLibraryScreenState();
+  ConsumerState<ContentLibraryScreen> createState() =>
+      _ContentLibraryScreenState();
 }
 
 class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
   String? _selectedType;
+  String? _projectId;
 
   @override
   Widget build(BuildContext context) {
-    final itemsAsync = ref.watch(contentItemsProvider);
+    final itemsAsync = _projectId != null
+        ? ref.watch(contentItemsByProjectProvider(_projectId!))
+        : ref.watch(contentItemsProvider);
+
+    final projectsAsync = ref.watch(projectsNotifierProvider);
+    final projects = projectsAsync.valueOrNull ?? [];
 
     return Scaffold(
       appBar: AppBar(
@@ -44,12 +52,36 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
       ),
       body: Column(
         children: [
-          // Filtro por tipo
+          // ── Filtro por projeto ────────────────────────────────
+          if (projects.isNotEmpty)
+            SizedBox(
+              height: 48,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                children: [
+                  _FilterChip(
+                    label: 'Todos',
+                    selected: _projectId == null,
+                    onTap: () => setState(() => _projectId = null),
+                  ),
+                  ...projects.map((p) => _FilterChip(
+                        label: p.name,
+                        selected: _projectId == p.id,
+                        onTap: () => setState(() => _projectId = p.id),
+                      )),
+                ],
+              ),
+            ),
+
+          // ── Filtro por tipo ───────────────────────────────────
           SizedBox(
-            height: 50,
+            height: 48,
             child: ListView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               children: [
                 _TypeChip(
                   label: 'Todos',
@@ -64,11 +96,14 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
               ],
             ),
           ),
+
           Expanded(
             child: itemsAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error:   (e, _) => Center(
-                child: Text('Erro: $e', style: const TextStyle(color: Colors.white54)),
+              loading: () =>
+                  const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(
+                child: Text('Erro: $e',
+                    style: const TextStyle(color: Colors.white54)),
               ),
               data: (items) {
                 final filtered = _selectedType == null
@@ -84,15 +119,19 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
                             size: 64, color: Colors.white24),
                         const SizedBox(height: 12),
                         Text(
-                          _selectedType == null
-                              ? 'Biblioteca vazia.'
-                              : 'Nenhum item deste tipo.',
-                          style: const TextStyle(color: Colors.white54),
+                          _selectedType != null
+                              ? 'Nenhum item deste tipo.'
+                              : _projectId != null
+                                  ? 'Nenhum item neste projeto.'
+                                  : 'Biblioteca vazia.',
+                          style:
+                              const TextStyle(color: Colors.white54),
                         ),
                         const SizedBox(height: 4),
                         const Text(
                           'Adicione itens usando o botão abaixo.',
-                          style: TextStyle(color: Colors.white38, fontSize: 12),
+                          style: TextStyle(
+                              color: Colors.white38, fontSize: 12),
                         ),
                       ],
                     ),
@@ -100,11 +139,27 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
                 }
 
                 return ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+                  padding:
+                      const EdgeInsets.fromLTRB(16, 0, 16, 80),
                   itemCount: filtered.length,
                   itemBuilder: (_, i) => _ContentCard(
                     item: filtered[i],
                     ref: ref,
+                    projectName: _projectId != null
+                        ? null
+                        : projects
+                            .where((p) =>
+                                p.id == filtered[i].projectId)
+                            .map((p) => p.name)
+                            .firstOrNull,
+                    onDeleted: () {
+                      if (_projectId != null) {
+                        ref.invalidate(contentItemsByProjectProvider(
+                            _projectId!));
+                      } else {
+                        ref.invalidate(contentItemsProvider);
+                      }
+                    },
                   ),
                 );
               },
@@ -116,6 +171,48 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
   }
 }
 
+// ── Project filter chip ───────────────────────────────────────────────────────
+
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String       label;
+  final bool         selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Chip(
+          label: Text(label,
+              style: TextStyle(
+                color: selected ? Colors.white : Colors.white54,
+                fontSize: 12,
+              )),
+          backgroundColor: selected
+              ? const Color(0xFF6C63FF)
+              : Colors.white.withOpacity(0.07),
+          side: BorderSide(
+              color: selected
+                  ? const Color(0xFF6C63FF)
+                  : Colors.white12),
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+      ),
+    );
+  }
+}
+
+// ── Type filter chip ──────────────────────────────────────────────────────────
+
 class _TypeChip extends StatelessWidget {
   const _TypeChip({
     required this.label,
@@ -123,8 +220,8 @@ class _TypeChip extends StatelessWidget {
     required this.onTap,
   });
 
-  final String  label;
-  final bool    selected;
+  final String       label;
+  final bool         selected;
   final VoidCallback onTap;
 
   @override
@@ -142,10 +239,11 @@ class _TypeChip extends StatelessWidget {
             ),
           ),
           backgroundColor: selected
-              ? const Color(0xFF6C63FF)
+              ? const Color(0xFF9C27B0)
               : Colors.white.withOpacity(0.07),
           side: BorderSide(
-            color: selected ? const Color(0xFF6C63FF) : Colors.white12,
+            color:
+                selected ? const Color(0xFF9C27B0) : Colors.white12,
           ),
           padding: const EdgeInsets.symmetric(horizontal: 4),
           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -155,10 +253,20 @@ class _TypeChip extends StatelessWidget {
   }
 }
 
+// ── Content card ──────────────────────────────────────────────────────────────
+
 class _ContentCard extends StatelessWidget {
-  const _ContentCard({required this.item, required this.ref});
-  final ContentItem item;
-  final WidgetRef   ref;
+  const _ContentCard({
+    required this.item,
+    required this.ref,
+    required this.onDeleted,
+    this.projectName,
+  });
+
+  final ContentItem  item;
+  final WidgetRef    ref;
+  final VoidCallback onDeleted;
+  final String?      projectName;
 
   @override
   Widget build(BuildContext context) {
@@ -185,11 +293,13 @@ class _ContentCard extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: typeColor.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: typeColor.withOpacity(0.3)),
+                      border:
+                          Border.all(color: typeColor.withOpacity(0.3)),
                     ),
                     child: Text(
                       typeLabel,
@@ -200,6 +310,35 @@ class _ContentCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (projectName != null) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF6C63FF).withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                            color: const Color(0xFF6C63FF)
+                                .withOpacity(0.25)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.folder_rounded,
+                              size: 10,
+                              color: Color(0xFF6C63FF)),
+                          const SizedBox(width: 3),
+                          Text(
+                            projectName!,
+                            style: const TextStyle(
+                                color: Color(0xFF6C63FF),
+                                fontSize: 10),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const Spacer(),
                   PopupMenuButton<String>(
                     icon: const Icon(Icons.more_vert,
@@ -211,25 +350,40 @@ class _ContentCard extends StatelessWidget {
                           context: context,
                           builder: (ctx) => AlertDialog(
                             title: const Text('Excluir item'),
-                            content: Text('Deseja excluir "${item.title}"?'),
+                            content: Text(
+                                'Deseja excluir "${item.title}"?'),
                             actions: [
                               TextButton(
-                                onPressed: () => Navigator.pop(ctx, false),
+                                onPressed: () =>
+                                    Navigator.pop(ctx, false),
                                 child: const Text('Cancelar'),
                               ),
                               TextButton(
-                                onPressed: () => Navigator.pop(ctx, true),
+                                onPressed: () =>
+                                    Navigator.pop(ctx, true),
                                 child: const Text('Excluir',
-                                    style: TextStyle(color: Colors.red)),
+                                    style:
+                                        TextStyle(color: Colors.red)),
                               ),
                             ],
                           ),
                         );
                         if (ok == true) {
-                          await ref
-                              .read(contentNotifierProvider.notifier)
-                              .delete(item.id);
-                          ref.invalidate(contentItemsProvider);
+                          try {
+                            await ref
+                                .read(contentNotifierProvider.notifier)
+                                .delete(item.id);
+                            onDeleted();
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context)
+                                  .showSnackBar(SnackBar(
+                                content: Text('Erro ao excluir: $e'),
+                                backgroundColor:
+                                    const Color(0xFFF44336),
+                              ));
+                            }
+                          }
                         }
                       }
                     },
@@ -247,16 +401,17 @@ class _ContentCard extends StatelessWidget {
               Text(
                 item.title,
                 style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14),
               ),
-              if (item.description != null && item.description!.isNotEmpty) ...[
+              if (item.description != null &&
+                  item.description!.isNotEmpty) ...[
                 const SizedBox(height: 4),
                 Text(
                   item.description!,
-                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  style: const TextStyle(
+                      color: Colors.white54, fontSize: 12),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -285,12 +440,12 @@ class _ContentCard extends StatelessWidget {
 
   Color _typeColor(String type) {
     switch (type) {
-      case 'produto': return const Color(0xFF6C63FF);
+      case 'produto':  return const Color(0xFF6C63FF);
       case 'campanha': return const Color(0xFFB44FE8);
-      case 'marca': return const Color(0xFFFFD700);
+      case 'marca':    return const Color(0xFFFFD700);
       case 'livro':
-      case 'ebook': return Colors.teal;
-      default: return Colors.white54;
+      case 'ebook':    return Colors.teal;
+      default:         return Colors.white54;
     }
   }
 }
