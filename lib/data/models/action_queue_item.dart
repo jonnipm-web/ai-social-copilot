@@ -21,6 +21,11 @@ class ActionQueueItem {
   final List<String> risks;
   final DateTime?    updatedAt;
 
+  // ── Opportunity scores (preserved from OpportunityLabItem) ────
+  final int     marketScore;
+  final int     confidence;
+  final String? marketAnalysisId;
+
   const ActionQueueItem({
     required this.id,
     required this.userId,
@@ -41,6 +46,9 @@ class ActionQueueItem {
     this.plan = const [],
     this.risks = const [],
     this.updatedAt,
+    this.marketScore     = 0,
+    this.confidence      = 0,
+    this.marketAnalysisId,
   });
 
   static const List<String> statusValues = [
@@ -89,6 +97,9 @@ class ActionQueueItem {
         updatedAt: map['updated_at'] != null
             ? DateTime.parse(map['updated_at'] as String)
             : null,
+        marketScore:      map['market_score'] as int? ?? 0,
+        confidence:       map['confidence'] as int? ?? 0,
+        marketAnalysisId: map['market_analysis_id'] as String?,
       );
 
   Map<String, dynamic> toInsertMap() => {
@@ -108,5 +119,8 @@ class ActionQueueItem {
         if (rationale != null) 'rationale': rationale,
         'plan':               plan,
         'risks':              risks,
+        'market_score':       marketScore,
+        'confidence':         confidence,
+        if (marketAnalysisId != null) 'market_analysis_id': marketAnalysisId,
       };
 }

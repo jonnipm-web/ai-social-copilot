@@ -9,6 +9,7 @@ import '../../../data/models/opportunity_lab_item.dart';
 import '../../../providers/action_queue_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
 import '../../../providers/project_provider.dart';
+import '../../action_engine/screens/action_detail_screen.dart';
 
 // ── Colors ────────────────────────────────────────────────────────────────────
 const _kBg      = Color(0xFF0F0F1A);
@@ -97,11 +98,33 @@ class _StatusMenu extends StatelessWidget {
               .read(opportunityLabNotifierProvider.notifier)
               .approve(item.id);
           ref.invalidate(opportunityLabItemByIdProvider(item.id));
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Oportunidade aprovada!'),
-              backgroundColor: _kGreen,
-            ));
+          if (!context.mounted) return;
+          try {
+            final action = await ref
+                .read(actionQueueNotifierProvider.notifier)
+                .addFromOpportunityItem(item);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: const Text('Aprovada e enviada ao Action Engine!'),
+                backgroundColor: _kGreen,
+                action: SnackBarAction(
+                  label: 'Ver Ação',
+                  textColor: Colors.white,
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ActionDetailScreen(itemId: action.id),
+                    ),
+                  ),
+                ),
+              ));
+            }
+          } catch (_) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text('Oportunidade aprovada!'),
+                backgroundColor: _kGreen,
+              ));
+            }
           }
         } else if (v == 'delete') {
           final ok = await showDialog<bool>(
@@ -138,7 +161,7 @@ class _StatusMenu extends StatelessWidget {
         if (item.status == 'pending')
           const PopupMenuItem(
             value: 'approve',
-            child: Text('Aprovar', style: TextStyle(color: _kGreen)),
+            child: Text('Aprovar e criar ação', style: TextStyle(color: _kGreen)),
           ),
         const PopupMenuItem(
           value: 'delete',
@@ -816,18 +839,32 @@ class _ActionButtons extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
               ),
-              icon: const Icon(Icons.check_circle_outline_rounded),
-              label: const Text('Aprovar Oportunidade'),
+              icon: const Icon(Icons.bolt_rounded),
+              label: const Text('Aprovar e Criar Ação'),
               onPressed: () async {
                 await ref
                     .read(opportunityLabNotifierProvider.notifier)
                     .approve(item.id);
                 ref.invalidate(opportunityLabItemByIdProvider(item.id));
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text('Oportunidade aprovada!'),
-                    backgroundColor: _kGreen,
-                  ));
+                if (!context.mounted) return;
+                try {
+                  final action = await ref
+                      .read(actionQueueNotifierProvider.notifier)
+                      .addFromOpportunityItem(item);
+                  if (context.mounted) {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => ActionDetailScreen(itemId: action.id),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text('Aprovada! Erro ao criar ação: $e'),
+                      backgroundColor: _kOrange,
+                    ));
+                  }
                 }
               },
             ),

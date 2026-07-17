@@ -10,6 +10,7 @@ import '../../../providers/opportunity_lab_provider.dart';
 import '../../../providers/feature_flag_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import '../../action_engine/screens/action_detail_screen.dart';
 import 'opportunity_detail_screen.dart';
 
 // ── Colors ───────────────────────────────────────────────────────────────────
@@ -193,23 +194,57 @@ class _LabBody extends ConsumerWidget {
                         builder: (_) => OpportunityDetailScreen(itemId: items[i].id),
                       ),
                     ),
-                    onApprove: () =>
-                        ref.read(opportunityLabNotifierProvider.notifier).approve(items[i].id),
+                    onApprove: () {
+                      final opp = items[i];
+                      Future(() async {
+                        await ref
+                            .read(opportunityLabNotifierProvider.notifier)
+                            .approve(opp.id);
+                        if (!context.mounted) return;
+                        try {
+                          final action = await ref
+                              .read(actionQueueNotifierProvider.notifier)
+                              .addFromOpportunityItem(opp);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: const Text('Aprovada e enviada ao Action Engine!'),
+                              backgroundColor: const Color(0xFF4CAF50),
+                              action: SnackBarAction(
+                                label: 'Ver Ação',
+                                textColor: Colors.white,
+                                onPressed: () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => ActionDetailScreen(itemId: action.id),
+                                  ),
+                                ),
+                              ),
+                            ));
+                          }
+                        } catch (_) {}
+                      });
+                    },
                     onDelete: () =>
                         ref.read(opportunityLabNotifierProvider.notifier).delete(items[i].id),
                     onConvertToAction: items[i].status == 'approved'
                         ? () async {
                             try {
-                              await ref
+                              final action = await ref
                                   .read(actionQueueNotifierProvider.notifier)
                                   .addFromOpportunityItem(items[i]);
                               if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Ação criada no Action Engine!'),
-                                    backgroundColor: Color(0xFF4CAF50),
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                  content: const Text('Ação criada no Action Engine!'),
+                                  backgroundColor: const Color(0xFF4CAF50),
+                                  action: SnackBarAction(
+                                    label: 'Ver',
+                                    textColor: Colors.white,
+                                    onPressed: () => Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => ActionDetailScreen(itemId: action.id),
+                                      ),
+                                    ),
                                   ),
-                                );
+                                ));
                               }
                             } catch (e) {
                               if (context.mounted) {
