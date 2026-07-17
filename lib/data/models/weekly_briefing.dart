@@ -23,6 +23,13 @@ class WeeklyBriefing {
   final List<BriefingItem> risks;
   final String executiveSummary;
 
+  // ── Metadados de auditoria ────────────────────────────────────────────────
+  final List<String> analyzedProjectNames;
+  final int projectCount;
+  final int analysisCount;
+  final int actionsCount;
+  final int opportunitiesCount;
+
   const WeeklyBriefing({
     required this.generatedAt,
     required this.overallHealthScore,
@@ -35,6 +42,11 @@ class WeeklyBriefing {
     required this.newOpportunities,
     required this.risks,
     required this.executiveSummary,
+    this.analyzedProjectNames = const [],
+    this.projectCount         = 0,
+    this.analysisCount        = 0,
+    this.actionsCount         = 0,
+    this.opportunitiesCount   = 0,
   });
 
   String get healthEmoji {
