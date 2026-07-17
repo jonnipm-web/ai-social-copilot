@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../data/models/knowledge_item.dart';
 import '../../../data/services/file_import_service.dart';
 import '../../../providers/knowledge_provider.dart';
+import '../../../providers/project_provider.dart';
 import 'drive_picker_screen.dart';
 
 class KnowledgeItemFormScreen extends ConsumerStatefulWidget {
@@ -27,11 +28,12 @@ class _KnowledgeItemFormScreenState
   final _nicheCtrl          = TextEditingController();
   final _audienceCtrl       = TextEditingController();
 
-  String _sourceType = 'manual';
-  String _language   = 'pt-BR';
-  bool   _loading    = false;
-  bool   _init       = false;
-  bool   _importing  = false;
+  String  _sourceType = 'manual';
+  String  _language   = 'pt-BR';
+  String? _projectId;
+  bool    _loading    = false;
+  bool    _init       = false;
+  bool    _importing  = false;
   String? _importedFileName;
 
   KnowledgeItem? _existing;
@@ -49,8 +51,17 @@ class _KnowledgeItemFormScreenState
   }
 
   Future<void> _loadExisting() async {
-    if (_init || !_isEdit) { _init = true; return; }
+    if (_init) return;
     _init = true;
+
+    // Load projectId passed via GoRouter extra (new item from vault filter)
+    if (!_isEdit) {
+      final extra = GoRouterState.of(context).extra;
+      if (extra is Map && extra['projectId'] is String) {
+        setState(() => _projectId = extra['projectId'] as String);
+      }
+      return;
+    }
 
     final item = await ref
         .read(knowledgeServiceProvider)
@@ -66,6 +77,7 @@ class _KnowledgeItemFormScreenState
     setState(() {
       _sourceType = item.sourceType;
       _language   = item.language;
+      _projectId  = item.projectId;
     });
   }
 
@@ -116,6 +128,7 @@ class _KnowledgeItemFormScreenState
         await notifier.create(KnowledgeItem(
           id:             '',
           userId:         uid,
+          projectId:      _projectId,
           title:          _titleCtrl.text.trim(),
           sourceType:     sourceTypeToSave,
           sourceUrl:      _sourceType == 'url' ? _urlCtrl.text.trim() : null,
@@ -169,6 +182,14 @@ class _KnowledgeItemFormScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ── Projeto (opcional) ───────────────────────────
+              _ProjectSelector(
+                selectedId: _projectId,
+                onChanged: (id) => setState(() => _projectId = id),
+              ),
+
+              const SizedBox(height: 20),
+
               // ── Tipo de fonte ────────────────────────────────
               const _Label('Tipo de fonte'),
               const SizedBox(height: 8),
@@ -704,6 +725,60 @@ class _DriveImportSection extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ProjectSelector extends ConsumerWidget {
+  const _ProjectSelector({
+    required this.selectedId,
+    required this.onChanged,
+  });
+
+  final String? selectedId;
+  final void Function(String?) onChanged;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final projectsAsync = ref.watch(projectsNotifierProvider);
+    final projects = projectsAsync.valueOrNull ?? [];
+
+    if (projects.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _Label('Projeto (opcional)'),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String?>(
+          value: selectedId,
+          dropdownColor: const Color(0xFF1A1A2E),
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: const Color(0xFF1A1A2E),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none,
+            ),
+          ),
+          hint: const Text('Sem projeto',
+              style: TextStyle(color: Colors.white38)),
+          items: [
+            const DropdownMenuItem<String?>(
+              value: null,
+              child: Text('Sem projeto',
+                  style: TextStyle(color: Colors.white54)),
+            ),
+            ...projects.map((p) => DropdownMenuItem<String?>(
+                  value: p.id,
+                  child: Text(p.name,
+                      style: const TextStyle(color: Colors.white)),
+                )),
+          ],
+          onChanged: onChanged,
+        ),
+      ],
     );
   }
 }

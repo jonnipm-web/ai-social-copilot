@@ -28,6 +28,12 @@ final knowledgeAnalysisProvider =
   return ref.watch(knowledgeServiceProvider).fetchAnalysis(itemId);
 });
 
+final knowledgeAnalysisByProjectProvider =
+    FutureProvider.autoDispose.family<List<KnowledgeAnalysis>, String>(
+        (ref, projectId) {
+  return ref.watch(knowledgeServiceProvider).fetchAnalysisByProject(projectId);
+});
+
 // ── Notifier for CRUD ────────────────────────────────────────
 
 class KnowledgeItemNotifier extends StateNotifier<AsyncValue<KnowledgeItem?>> {
@@ -55,7 +61,7 @@ class KnowledgeItemNotifier extends StateNotifier<AsyncValue<KnowledgeItem?>> {
       return result;
     } catch (e, st) {
       state = AsyncValue.error(e, st);
-      return null;
+      rethrow;
     }
   }
 
@@ -66,6 +72,7 @@ class KnowledgeItemNotifier extends StateNotifier<AsyncValue<KnowledgeItem?>> {
       state = const AsyncValue.data(null);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
+      rethrow;
     }
   }
 }
@@ -92,7 +99,7 @@ class KnowledgeAnalysisNotifier
       return result;
     } catch (e, st) {
       state = AsyncValue.error(e, st);
-      return null;
+      rethrow;
     }
   }
 }
