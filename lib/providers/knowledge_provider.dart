@@ -104,7 +104,7 @@ class KnowledgeAnalysisNotifier
   }
 }
 
-final knowledgeAnalysisNotifierProvider = StateNotifierProvider.autoDispose<
-    KnowledgeAnalysisNotifier, AsyncValue<KnowledgeAnalysis?>>(
-  (ref) => KnowledgeAnalysisNotifier(ref.watch(knowledgeServiceProvider)),
+final knowledgeAnalysisNotifierProvider = StateNotifierProvider.autoDispose
+    .family<KnowledgeAnalysisNotifier, AsyncValue<KnowledgeAnalysis?>, String>(
+  (ref, itemId) => KnowledgeAnalysisNotifier(ref.watch(knowledgeServiceProvider)),
 );

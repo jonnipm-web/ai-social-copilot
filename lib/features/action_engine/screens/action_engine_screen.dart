@@ -459,7 +459,7 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
                     () => notifier.complete(item.id, title: item.title))),
                 const SizedBox(width: 8),
                 _ActionBtn('Pausar', _kOrange, () => _run(
-                    () => notifier.approve(item.id, title: item.title))),
+                    () => notifier.pause(item.id, title: item.title))),
                 const SizedBox(width: 8),
               ],
               if (!_loading)

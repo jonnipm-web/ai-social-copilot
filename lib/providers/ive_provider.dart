@@ -227,16 +227,31 @@ class IveNotifier extends StateNotifier<IveState> {
 
   // ── Route control ─────────────────────────────────────────────────────────
 
+  // Normaliza caminhos com parâmetros (ex: /opportunity-lab/opp-1 → /opportunity-lab)
+  String _normalizeRoute(String route) {
+    String best = '';
+    for (final key in _kMessages.keys) {
+      if ((route == key ||
+              route.startsWith('$key/') ||
+              route.startsWith('$key?')) &&
+          key.length > best.length) {
+        best = key;
+      }
+    }
+    return best.isNotEmpty ? best : route;
+  }
+
   void setRoute(String route) {
-    if (route == _currentRoute) return;
-    _currentRoute = route;
+    final normalized = _normalizeRoute(route);
+    if (normalized == _currentRoute) return;
+    _currentRoute = normalized;
     _msgIndex     = 0;
     // Limpa issue ao trocar de tela
     if (state.activeIssue != null) {
       state = state.copyWith(clearIssue: true, bubbleVisible: false);
     }
-    _showMessage(route, 0);
-    _scheduleCycle(route);
+    _showMessage(normalized, 0);
+    _scheduleCycle(normalized);
   }
 
   void _showMessage(String route, int index) {
@@ -279,6 +294,12 @@ class IveNotifier extends StateNotifier<IveState> {
   void dismissBubble() {
     _dismissTimer?.cancel();
     state = state.copyWith(bubbleVisible: false, clearIssue: true);
+  }
+
+  void retryCurrentRoute() {
+    state = state.copyWith(clearIssue: true, bubbleVisible: false);
+    _showMessage(_currentRoute, _msgIndex);
+    _scheduleCycle(_currentRoute);
   }
 
   void clearActiveIssue() {

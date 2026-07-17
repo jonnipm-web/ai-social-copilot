@@ -107,6 +107,7 @@ class _StatusMenu extends StatelessWidget {
           if (v == 'approve')  await notifier.approve(item.id,  title: item.title);
           if (v == 'execute')  await notifier.execute(item.id,  title: item.title);
           if (v == 'complete') await notifier.complete(item.id, title: item.title);
+          if (v == 'pause')    await notifier.pause(item.id,    title: item.title);
           if (v == 'cancel')   await notifier.cancel(item.id,   title: item.title);
           ref.invalidate(actionQueueItemByIdProvider(item.id));
           if (context.mounted && v == 'complete') {
@@ -160,7 +161,7 @@ class _StatusMenu extends StatelessWidget {
         if (item.status == 'executing') ...[
           const PopupMenuItem(value: 'complete',
               child: Text('Concluir', style: TextStyle(color: _kGreen))),
-          const PopupMenuItem(value: 'approve',
+          const PopupMenuItem(value: 'pause',
               child: Text('Pausar', style: TextStyle(color: _kOrange))),
         ],
         if (item.status != 'completed' && item.status != 'cancelled')
@@ -837,7 +838,7 @@ class _StatusButtons extends StatelessWidget {
             icon: Icons.pause_rounded,
             color: _kOrange,
             outlined: true,
-            onTap: () => _run(context, () => n.approve(item.id, title: item.title)),
+            onTap: () => _run(context, () => n.pause(item.id, title: item.title)),
           ),
         ],
 

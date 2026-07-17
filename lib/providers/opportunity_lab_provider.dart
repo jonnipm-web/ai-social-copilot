@@ -79,6 +79,11 @@ class OpportunityLabNotifier
     return action;
   }
 
+  Future<void> reject(String id) async {
+    await _svc.updateStatus(id, 'rejected');
+    await load(projectId: _activeProjectId);
+  }
+
   Future<void> delete(String id) async {
     await _svc.delete(id);
     await load(projectId: _activeProjectId);

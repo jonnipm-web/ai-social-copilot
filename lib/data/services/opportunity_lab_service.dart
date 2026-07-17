@@ -59,10 +59,10 @@ class OpportunityLabService {
   Future<Map<String, int>> summary() async {
     final list = await fetchAll();
     return {
-      'total':     list.length,
-      'pending':   list.where((i) => i.status == 'pending').length,
-      'approved':  list.where((i) => i.status == 'approved').length,
-      'executing': list.where((i) => i.status == 'executing').length,
+      'total':    list.length,
+      'pending':  list.where((i) => i.status == 'pending').length,
+      'approved': list.where((i) => i.status == 'approved').length,
+      'rejected': list.where((i) => i.status == 'rejected').length,
     };
   }
 }

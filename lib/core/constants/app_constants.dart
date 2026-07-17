@@ -71,6 +71,7 @@ class AppConstants {
   static const routeExecutiveDashboard   = '/executive-dashboard';
 
   // Fase 10B — Ecosystem Intelligence Layer
+  static const routeEcosystemView        = '/ecosystem/view';
   static const routeEcosystemResources   = '/ecosystem/resources';
   static const routeEcosystemBriefing    = '/ecosystem/briefing';
 

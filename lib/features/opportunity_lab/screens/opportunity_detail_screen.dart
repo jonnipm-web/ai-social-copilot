@@ -855,6 +855,27 @@ class _ActionButtonsState extends ConsumerState<_ActionButtons> {
   bool    _loading      = false;
   String? _linkedActionId;
 
+  Future<void> _reject() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    try {
+      await ref
+          .read(opportunityLabNotifierProvider.notifier)
+          .reject(widget.item.id);
+      ref.invalidate(opportunityLabItemByIdProvider(widget.item.id));
+      if (mounted) context.pop();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Erro ao rejeitar: $e'),
+          backgroundColor: _kRed,
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   Future<void> _approveAndCreate() async {
     if (_loading) return;
     setState(() => _loading = true);
@@ -922,6 +943,26 @@ class _ActionButtonsState extends ConsumerState<_ActionButtons> {
               onPressed: _loading ? null : _approveAndCreate,
             ),
           ),
+
+        // ── Pending: reject button ──────────────────────────────
+        if (item.status == 'pending') ...[
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: _kRed,
+                side: const BorderSide(color: _kRed),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              icon: const Icon(Icons.thumb_down_outlined, size: 18),
+              label: const Text('Rejeitar Oportunidade'),
+              onPressed: _loading ? null : _reject,
+            ),
+          ),
+        ],
 
         // ── Approved: open linked action ───────────────────────
         if (item.status == 'approved' && effectiveActionId != null)

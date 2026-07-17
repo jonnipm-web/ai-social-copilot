@@ -121,6 +121,21 @@ class ActionQueueNotifier
     }
   }
 
+  Future<void> pause(String id, {String title = 'Ação'}) async {
+    try {
+      await _svc.updateStatus(id, 'pending');
+      await load(projectId: _activeProjectId);
+    } catch (e) {
+      IveEventBus.instance.emit(
+        IveEvent.actionMutationFailed(
+          actionTitle:    title,
+          technicalError: e.toString(),
+        ),
+      );
+      rethrow;
+    }
+  }
+
   Future<void> cancel(String id, {String title = 'Ação'}) async {
     try {
       await _svc.updateStatus(id, 'cancelled');
@@ -203,7 +218,7 @@ class ActionQueueNotifier
       marketAnalysisId: opp.marketAnalysisId,
       priority:         opp.finalScore > 0 ? opp.finalScore : 50,
       impactScore:      opp.revenueScore > 0 ? opp.revenueScore : 60,
-      effortScore:      50,
+      effortScore:      opp.confidence > 0 ? (100 - opp.confidence).clamp(10, 90) : 50,
       roiScore:         opp.finalScore,
       marketScore:      opp.marketScore,
       confidence:       opp.confidence,

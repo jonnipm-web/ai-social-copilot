@@ -80,8 +80,12 @@ class ContentItem {
           ? (map['keywords'] as List).map((e) => e.toString()).toList()
           : [],
       opportunityScore:    map['opportunity_score'] as int? ?? 0,
-      createdAt:           DateTime.parse(map['created_at'] as String),
-      updatedAt:           DateTime.parse(map['updated_at'] as String),
+      createdAt:           map['created_at'] != null
+          ? DateTime.tryParse(map['created_at'] as String) ?? DateTime.now()
+          : DateTime.now(),
+      updatedAt:           map['updated_at'] != null
+          ? DateTime.tryParse(map['updated_at'] as String) ?? DateTime.now()
+          : DateTime.now(),
     );
   }
 

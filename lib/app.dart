@@ -43,6 +43,7 @@ import 'features/market_intelligence/screens/revenue_planner_screen.dart';
 import 'features/projects/screens/project_command_center_screen.dart';
 import 'features/roi_tracker/screens/roi_tracker_screen.dart';
 import 'features/ecosystem/screens/executive_decision_center_screen.dart';
+import 'features/ecosystem/screens/ecosystem_view_screen.dart';
 import 'features/ecosystem/screens/resource_allocation_screen.dart';
 import 'features/ecosystem/screens/weekly_briefing_screen.dart';
 import 'features/advisor/screens/advisor_onboarding_screen.dart';
@@ -65,7 +66,7 @@ final _router = GoRouter(
 
     if (goingToSplash) return null;
     if (session == null && !goingToAuth) return AppConstants.routeLogin;
-    if (session != null && goingToAuth)  return AppConstants.routeDashboard;
+    if (session != null && goingToAuth)  return AppConstants.routeExecutiveDashboard;
     return null;
   },
   routes: [
@@ -327,6 +328,10 @@ final _router = GoRouter(
     ),
 
     // ── Fase 10B — Ecosystem Intelligence Layer ──────────────────
+    GoRoute(
+      path: AppConstants.routeEcosystemView,
+      builder: (_, __) => const EcosystemViewScreen(),
+    ),
     GoRoute(
       path: AppConstants.routeEcosystemResources,
       builder: (_, __) => const ResourceAllocationScreen(),

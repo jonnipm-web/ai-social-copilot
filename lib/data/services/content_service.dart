@@ -7,7 +7,9 @@ class ContentService {
   final _client = Supabase.instance.client;
 
   Future<List<ContentItem>> fetchAll({String? projectId}) async {
+    final uid = _client.auth.currentUser?.id;
     var query = _client.from(AppConstants.tableContentItems).select();
+    if (uid != null) query = query.eq('user_id', uid);
     if (projectId != null) query = query.eq('project_id', projectId);
     final rows = await query.order('created_at', ascending: false);
     return (rows as List).map((r) => ContentItem.fromMap(r)).toList();
@@ -23,9 +25,13 @@ class ContentService {
   }
 
   Future<ContentItem> create(ContentItem item) async {
+    final uid = _client.auth.currentUser?.id;
+    if (uid == null) throw Exception('Não autenticado');
+    final map = item.toInsertMap();
+    map['user_id'] = uid;
     final row = await _client
         .from(AppConstants.tableContentItems)
-        .insert(item.toInsertMap())
+        .insert(map)
         .select()
         .single();
     return ContentItem.fromMap(row);

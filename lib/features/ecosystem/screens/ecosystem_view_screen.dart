@@ -100,8 +100,7 @@ class EcosystemViewScreen extends ConsumerWidget {
                 // Project cards
                 ...projects.map((p) {
                   final analysis = analyses
-                      .where((a) => a.input.contains(p.name) ||
-                          (p.marketAnalysisId != null && a.id == p.marketAnalysisId))
+                      .where((a) => p.marketAnalysisId != null && a.id == p.marketAnalysisId)
                       .firstOrNull;
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 12),

@@ -231,6 +231,25 @@ class _LabItemCardState extends ConsumerState<_LabItemCard> {
     return m[s] ?? const Color(0xFFFF9800);
   }
 
+  Future<void> _reject() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    try {
+      await ref
+          .read(opportunityLabNotifierProvider.notifier)
+          .reject(widget.item.id);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Erro ao rejeitar: $e', style: const TextStyle(fontSize: 12)),
+          backgroundColor: _kRed,
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   Future<void> _approve() async {
     if (_loading) return;
     setState(() => _loading = true);
@@ -368,7 +387,7 @@ class _LabItemCardState extends ConsumerState<_LabItemCard> {
                 ),
                 const Spacer(),
 
-                // ── Approve button (pending only) ────────────────
+                // ── Pending action buttons ────────────────────────
                 if (item.status == 'pending')
                   _loading
                       ? const SizedBox(
@@ -376,13 +395,26 @@ class _LabItemCardState extends ConsumerState<_LabItemCard> {
                           child: CircularProgressIndicator(
                               strokeWidth: 2, color: _kGreen),
                         )
-                      : TextButton(
-                          onPressed: _approve,
-                          style: TextButton.styleFrom(
-                              foregroundColor: _kGreen,
-                              minimumSize: Size.zero,
-                              padding: const EdgeInsets.symmetric(horizontal: 8)),
-                          child: const Text('Aprovar', style: TextStyle(fontSize: 12)),
+                      : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            TextButton(
+                              onPressed: _reject,
+                              style: TextButton.styleFrom(
+                                  foregroundColor: _kRed,
+                                  minimumSize: Size.zero,
+                                  padding: const EdgeInsets.symmetric(horizontal: 6)),
+                              child: const Text('Rejeitar', style: TextStyle(fontSize: 12)),
+                            ),
+                            TextButton(
+                              onPressed: _approve,
+                              style: TextButton.styleFrom(
+                                  foregroundColor: _kGreen,
+                                  minimumSize: Size.zero,
+                                  padding: const EdgeInsets.symmetric(horizontal: 6)),
+                              child: const Text('Aprovar', style: TextStyle(fontSize: 12)),
+                            ),
+                          ],
                         ),
 
                 // ── Open action button (approved with linked action) ──

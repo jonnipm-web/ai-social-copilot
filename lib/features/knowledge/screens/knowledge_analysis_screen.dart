@@ -51,7 +51,7 @@ class KnowledgeAnalysisScreen extends ConsumerWidget {
                         tooltip: 'Re-analisar',
                         onPressed: () async {
                           await ref
-                              .read(knowledgeAnalysisNotifierProvider.notifier)
+                              .read(knowledgeAnalysisNotifierProvider(itemId).notifier)
                               .analyze(item);
                           ref.invalidate(knowledgeAnalysisProvider(itemId));
                           ref.invalidate(knowledgeItemsProvider);
@@ -98,7 +98,7 @@ class _NoAnalysis extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(knowledgeAnalysisNotifierProvider) is AsyncLoading;
+    final isLoading = ref.watch(knowledgeAnalysisNotifierProvider(item.id)) is AsyncLoading;
 
     return Center(
       child: Padding(
@@ -136,7 +136,7 @@ class _NoAnalysis extends ConsumerWidget {
                 label: const Text('Analisar com IA'),
                 onPressed: () async {
                   await ref
-                      .read(knowledgeAnalysisNotifierProvider.notifier)
+                      .read(knowledgeAnalysisNotifierProvider(item.id).notifier)
                       .analyze(item);
                   ref.invalidate(knowledgeAnalysisProvider(item.id));
                   ref.invalidate(knowledgeItemsProvider);

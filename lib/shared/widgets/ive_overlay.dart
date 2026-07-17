@@ -349,20 +349,16 @@ class _IssueActions extends StatelessWidget {
   }
 }
 
-class _IssueActionChip extends StatelessWidget {
+class _IssueActionChip extends ConsumerWidget {
   const _IssueActionChip({required this.action});
   final IveIssueAction action;
 
   static const _color = Color(0xFFFF4560);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return GestureDetector(
-      onTap: () {
-        if (action.actionKey == 'dismiss') {
-          Navigator.of(context, rootNavigator: true).maybePop();
-        }
-      },
+      onTap: () => _handle(context, ref),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
@@ -380,6 +376,36 @@ class _IssueActionChip extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  void _handle(BuildContext context, WidgetRef ref) {
+    switch (action.actionKey) {
+      case 'dismiss':
+        ref.read(iveProvider.notifier).dismissBubble();
+      case 'retry':
+        // Volta para o ciclo de mensagem contextual da tela atual
+        ref.read(iveProvider.notifier).retryCurrentRoute();
+      case 'view_details':
+        // Abre o hub de diagnóstico para investigação detalhada
+        ref.read(iveProvider.notifier).dismissBubble();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Acesse o Intelligence Debug Hub para detalhes.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      case 'send_file':
+        // Navega para o Cofre de Conhecimento para upload
+        ref.read(iveProvider.notifier).dismissBubble();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Acesse o Cofre de Conhecimento para enviar arquivos.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      default:
+        ref.read(iveProvider.notifier).dismissBubble();
+    }
   }
 }
 

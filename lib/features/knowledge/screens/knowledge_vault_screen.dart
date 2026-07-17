@@ -391,7 +391,7 @@ class _KnowledgeCard extends ConsumerWidget {
                       }
                       try {
                         final notifier = ref
-                            .read(knowledgeAnalysisNotifierProvider.notifier);
+                            .read(knowledgeAnalysisNotifierProvider(item.id).notifier);
                         await notifier.analyze(item);
                         onInvalidate();
                         if (context.mounted) {
