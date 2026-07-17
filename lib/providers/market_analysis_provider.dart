@@ -131,7 +131,7 @@ class MarketAnalysisNotifier extends StateNotifier<AsyncValue<MarketAnalysis?>> 
         origin:           'market_analysis',
         sources:          [analysis.id],
         rationale:        a['rationale'] as String? ??
-            'Identificado pelo Market Intelligence com base na análise de ${analysis.websiteUrl ?? 'conteúdo'}.',
+            'Identificado pelo Market Intelligence com base na análise de ${analysis.input}.',
         confidence:       (score * 0.8).round().clamp(0, 100),
         risks:            risks,
         actionSteps:      steps,
