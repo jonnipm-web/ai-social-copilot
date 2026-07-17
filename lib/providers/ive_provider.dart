@@ -55,17 +55,29 @@ const _kMessages = <String, List<String>>{
     'Quer entender como um score foi gerado? Basta perguntar.',
     'Posso rastrear a origem de qualquer dado ou recomendação.',
   ],
+  AppConstants.routeMarketIntelligence: [
+    'Analisando inteligência de mercado. Posso identificar gaps e oportunidades ocultas.',
+    'Quer saber onde sua concorrência está falhando e como aproveitar isso?',
+    'Posso recomendar estratégias de nicho baseadas nos dados de mercado atuais.',
+  ],
+  AppConstants.routeRoiTracker: [
+    'Monitorando retorno sobre investimento em tempo real.',
+    'Posso calcular o ROI projetado de qualquer ação ou projeto aprovado.',
+    'Quer identificar quais projetos têm o melhor retorno sobre esforço?',
+  ],
 };
 
 const _kExpressions = <String, IveExpression>{
-  AppConstants.routeProjects:          IveExpression.excited,
-  AppConstants.routeOpportunityLab:    IveExpression.excited,
-  AppConstants.routeEcosystem:         IveExpression.thinking,
-  AppConstants.routeEcosystemBriefing: IveExpression.happy,
-  AppConstants.routePersonas:          IveExpression.winking,
-  AppConstants.routeKnowledge:         IveExpression.happy,
-  AppConstants.routeActionEngine:      IveExpression.thinking,
-  AppConstants.routeIntelligenceDebug: IveExpression.neutral,
+  AppConstants.routeProjects:            IveExpression.excited,
+  AppConstants.routeOpportunityLab:      IveExpression.excited,
+  AppConstants.routeEcosystem:           IveExpression.thinking,
+  AppConstants.routeEcosystemBriefing:   IveExpression.happy,
+  AppConstants.routePersonas:            IveExpression.winking,
+  AppConstants.routeKnowledge:           IveExpression.happy,
+  AppConstants.routeActionEngine:        IveExpression.thinking,
+  AppConstants.routeIntelligenceDebug:   IveExpression.neutral,
+  AppConstants.routeMarketIntelligence:  IveExpression.thinking,
+  AppConstants.routeRoiTracker:          IveExpression.excited,
 };
 
 // ── Notifier ──────────────────────────────────────────────────────────────────

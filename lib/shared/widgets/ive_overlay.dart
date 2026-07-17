@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../core/constants/app_constants.dart';
 import '../../data/models/copilot_context_data.dart';
 import '../../data/models/ive_issue.dart';
 import '../../data/models/ive_state.dart';
@@ -10,7 +12,9 @@ import '../../features/ive/visual/ive_visual_config.dart';
 import '../../providers/ive_context_provider.dart';
 import '../../providers/ive_memory_provider.dart';
 import '../../providers/ive_provider.dart';
+import '../../providers/knowledge_provider.dart';
 import 'context_copilot_widget.dart' show showCopilotChat;
+import 'ive_issue_detail_sheet.dart';
 
 // ── Route bridge ──────────────────────────────────────────────────────────────
 final iveRouteNotifier = ValueNotifier<String>('');
@@ -162,23 +166,30 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
   CopilotContextData _buildCopilotContext(IveContextData ctx) =>
       CopilotContextData(
         scores: {
-          'ecosystem_health':           ctx.healthScore,
-          'total_projects':             ctx.projectCount,
-          'pending_actions':            ctx.pendingActionsCount,
-          'pending_opportunities':      ctx.pendingOpportunitiesCount,
-          if (ctx.topProjectName         != null) 'top_project_name':            ctx.topProjectName,
-          if (ctx.topProjectDescription  != null) 'top_project_description':     ctx.topProjectDescription,
-          if (ctx.topProjectType         != null) 'top_project_type':            ctx.topProjectType,
-          if (ctx.topProjectScore        != null) 'top_project_score':           ctx.topProjectScore,
-          if (ctx.mainBottleneckName     != null) 'main_bottleneck':             ctx.mainBottleneckName,
-          if (ctx.mainBottleneckScore    != null) 'bottleneck_execution_score':  ctx.mainBottleneckScore,
+          'ecosystem':      ctx.healthScore,
+          if (ctx.topProjectScore     != null) 'opportunity': ctx.topProjectScore,
+          if (ctx.mainBottleneckScore != null) 'execution':   ctx.mainBottleneckScore,
+          'recommendation': _recommendation(ctx.healthScore),
         },
         project: ctx.topProjectsSnapshot.isNotEmpty
-            ? {'projects': ctx.topProjectsSnapshot}
+            ? {
+                'name':        ctx.topProjectName        ?? '',
+                'description': ctx.topProjectDescription ?? '',
+                'type':        ctx.topProjectType        ?? '',
+                'status':      'active',
+                'score':       ctx.topProjectScore       ?? 0,
+              }
             : null,
         documents:     ctx.knowledgeItemsSummary,
         opportunities: ctx.pendingOpportunitiesSummary,
+        actions:       ctx.pendingActionsSummary,
       );
+
+  String _recommendation(int health) {
+    if (health >= 70) return 'Ecossistema saudável. Priorize escalar oportunidades de alto ROI.';
+    if (health >= 40) return 'Ecossistema moderado. Execute ações pendentes para melhorar execução.';
+    return 'Atenção: scores críticos detectados. Intervenção imediata recomendada.';
+  }
 
   String _routeToName(String route) {
     const map = <String, String>{
@@ -378,31 +389,51 @@ class _IssueActionChip extends ConsumerWidget {
     );
   }
 
-  void _handle(BuildContext context, WidgetRef ref) {
+  Future<void> _handle(BuildContext context, WidgetRef ref) async {
+    final issue = ref.read(iveProvider).activeIssue;
     switch (action.actionKey) {
       case 'dismiss':
         ref.read(iveProvider.notifier).dismissBubble();
+
       case 'retry':
-        // Volta para o ciclo de mensagem contextual da tela atual
-        ref.read(iveProvider.notifier).retryCurrentRoute();
+        if (issue?.entityType == 'knowledge_item' && issue?.entityId != null) {
+          // Retry real: rebusca o item e re-dispara a análise por IA
+          ref.read(iveProvider.notifier).dismissBubble();
+          final svc  = ref.read(knowledgeServiceProvider);
+          final item = await svc.fetchById(issue!.entityId!);
+          if (item != null) {
+            await ref
+                .read(knowledgeAnalysisNotifierProvider(issue.entityId!).notifier)
+                .analyze(item);
+          }
+        } else {
+          // Fallback: reinicia o ciclo de mensagens da tela atual
+          ref.read(iveProvider.notifier).retryCurrentRoute();
+        }
+
       case 'view_details':
-        // Abre o hub de diagnóstico para investigação detalhada
-        ref.read(iveProvider.notifier).dismissBubble();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Acesse o Intelligence Debug Hub para detalhes.'),
-            duration: Duration(seconds: 3),
-          ),
-        );
+        // Abre o sheet de diagnóstico completo
+        if (issue != null && context.mounted) {
+          showModalBottomSheet<void>(
+            context:            context,
+            backgroundColor:    Colors.transparent,
+            isScrollControlled: true,
+            builder: (_) => IveIssueDetailSheet(issue: issue),
+          );
+        }
+
       case 'send_file':
         // Navega para o Cofre de Conhecimento para upload
         ref.read(iveProvider.notifier).dismissBubble();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Acesse o Cofre de Conhecimento para enviar arquivos.'),
-            duration: Duration(seconds: 3),
-          ),
-        );
+        if (context.mounted) GoRouter.of(context).push(AppConstants.routeKnowledge);
+
+      case 'update_link':
+        // Navega para a edição do item de conhecimento
+        ref.read(iveProvider.notifier).dismissBubble();
+        if (issue?.entityId != null && context.mounted) {
+          GoRouter.of(context).push('/knowledge/${issue!.entityId}/edit');
+        }
+
       default:
         ref.read(iveProvider.notifier).dismissBubble();
     }

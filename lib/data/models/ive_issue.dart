@@ -27,6 +27,8 @@ class IveIssue {
   final List<IveIssueAction> recommendedActions;
   final String?            entityId;
   final String?            entityName;
+  // 'knowledge_item' | 'action' | null — usado para rotear o retry ao serviço correto
+  final String?            entityType;
   final DateTime           occurredAt;
 
   const IveIssue({
@@ -39,6 +41,7 @@ class IveIssue {
     this.recommendedActions = const [],
     this.entityId,
     this.entityName,
+    this.entityType,
     required this.occurredAt,
   });
 
@@ -58,6 +61,7 @@ class IveIssue {
         technicalMessage: technicalError,
         entityId:         itemId,
         entityName:       itemName,
+        entityType:       'knowledge_item',
         occurredAt:       DateTime.now(),
         recommendedActions: const [
           IveIssueAction(label: 'Tentar novamente', actionKey: 'retry'),
@@ -81,6 +85,7 @@ class IveIssue {
         technicalMessage: technicalError,
         entityId:         itemId,
         entityName:       itemName,
+        entityType:       'knowledge_item',
         occurredAt:       DateTime.now(),
         recommendedActions: const [
           IveIssueAction(label: 'Tentar novamente', actionKey: 'retry'),
@@ -102,9 +107,11 @@ class IveIssue {
                           'Verifique sua conexão e tente novamente.',
         technicalMessage: technicalError,
         entityName:       actionTitle,
+        entityType:       'action',
         occurredAt:       DateTime.now(),
         recommendedActions: const [
           IveIssueAction(label: 'Tentar novamente', actionKey: 'retry'),
+          IveIssueAction(label: 'Ver detalhes',     actionKey: 'view_details'),
         ],
       );
 }

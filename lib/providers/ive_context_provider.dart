@@ -82,29 +82,32 @@ final iveContextDataProvider = FutureProvider.autoDispose<IveContextData>((ref) 
   final pendingOpportunities = [...opportunities.where((o) => o.status == 'pending')]
     ..sort((a, b) => b.finalScore.compareTo(a.finalScore));
   final opportunitiesSummary = pendingOpportunities.take(3).map((o) => {
-    'title':        o.title,
-    'description':  o.description,
-    'score':        o.finalScore,
-    'type':         o.opportunityType,
-    'origin':       o.originLabel,
-    'confidence':   o.confidence,
+    'title':            o.title,
+    'description':      o.description,
+    'finalScore':       o.finalScore,
+    'opportunityType':  o.opportunityType,
+    'status':           o.status,
+    'origin':           o.originLabel,
+    'confidence':       o.confidence,
     if (o.rationale != null && o.rationale!.isNotEmpty)
       'rationale': o.rationale,
-    if (o.risks.isNotEmpty)   'risks':        o.risks.take(3).toList(),
-    if (o.actionSteps.isNotEmpty) 'next_steps': o.actionSteps.take(3).toList(),
+    if (o.risks.isNotEmpty)        'risks':      o.risks.take(3).toList(),
+    if (o.actionSteps.isNotEmpty)  'next_steps': o.actionSteps.take(3).toList(),
   }).toList();
 
   // Ações pendentes — top 3 por prioridade com campos de auditoria
   final pendingActionsSorted = [...pending]
     ..sort((a, b) => b.priority.compareTo(a.priority));
   final actionsSummary = pendingActionsSorted.take(3).map((a) => {
-    'title':    a.title,
-    'priority': a.priority,
-    'impact':   a.impactScore,
-    'origin':   a.originLabel,
+    'title':       a.title,
+    'status':      a.status,
+    'priority':    a.priority,
+    'impactScore': a.impactScore,
+    'effortScore': a.effortScore,
+    'origin':      a.originLabel,
     if (a.rationale != null && a.rationale!.isNotEmpty)
       'rationale': a.rationale,
-    if (a.plan.isNotEmpty)  'plan': a.plan.take(2).toList(),
+    if (a.plan.isNotEmpty)  'plan':  a.plan.take(2).toList(),
     if (a.risks.isNotEmpty) 'risks': a.risks.take(2).toList(),
   }).toList();
 
