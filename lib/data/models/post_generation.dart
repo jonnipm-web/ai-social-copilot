@@ -1,3 +1,5 @@
+import '../../core/utils/date_parser.dart';
+
 class PostGeneration {
   final String id;
   final String userId;
@@ -37,10 +39,10 @@ class PostGeneration {
       casualVersion: map['casual_version'] as String,
       persuasiveVersion: map['persuasive_version'] as String,
       commentReply: map['comment_reply'] as String,
-      clarityScore: (map['clarity_score'] as num).toDouble(),
-      impactScore: (map['impact_score'] as num).toDouble(),
-      engagementScore: (map['engagement_score'] as num).toDouble(),
-      createdAt: DateTime.parse(map['created_at'] as String),
+      clarityScore: _toDouble(map['clarity_score']),
+      impactScore: _toDouble(map['impact_score']),
+      engagementScore: _toDouble(map['engagement_score']),
+      createdAt: DateParser.parse(map['created_at']),
     );
   }
 
@@ -57,6 +59,12 @@ class PostGeneration {
       'impact_score': impactScore,
       'engagement_score': engagementScore,
     };
+  }
+
+  static double _toDouble(dynamic v) {
+    if (v is num) return v.toDouble();
+    if (v is String) return double.tryParse(v) ?? 0.0;
+    return 0.0;
   }
 
   // Constrói a partir da resposta da Edge Function + texto original

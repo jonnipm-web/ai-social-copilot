@@ -1,3 +1,5 @@
+import '../../core/utils/date_parser.dart';
+
 class AdvisorProfile {
   final String id;
   final String userId;
@@ -53,7 +55,7 @@ class AdvisorProfile {
         advisorPersonalityJson: map['advisor_personality_json'] is Map
             ? Map<String, dynamic>.from(map['advisor_personality_json'] as Map)
             : {},
-        createdAt: DateTime.parse(map['created_at'] as String),
+        createdAt: DateParser.parse(map['created_at']),
       );
 
   Map<String, dynamic> toInsertMap() => {

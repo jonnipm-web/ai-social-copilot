@@ -1,3 +1,5 @@
+import '../../core/utils/date_parser.dart';
+
 class ContentCluster {
   final String id;
   final String userId;
@@ -43,7 +45,7 @@ class ContentCluster {
       seoStructure:       map['seo_structure'] is Map
           ? Map<String, dynamic>.from(map['seo_structure'] as Map)
           : {},
-      createdAt: DateTime.parse(map['created_at'] as String),
+      createdAt: DateParser.parse(map['created_at']),
     );
   }
 

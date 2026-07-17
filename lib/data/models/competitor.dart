@@ -1,3 +1,5 @@
+import '../../core/utils/date_parser.dart';
+
 class Competitor {
   final String id;
   final String userId;
@@ -51,7 +53,7 @@ class Competitor {
       detailsJson:        map['details_json'] is Map
           ? Map<String, dynamic>.from(map['details_json'] as Map)
           : {},
-      createdAt: DateTime.parse(map['created_at'] as String),
+      createdAt: DateParser.parse(map['created_at']),
     );
   }
 

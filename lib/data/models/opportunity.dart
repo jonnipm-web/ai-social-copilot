@@ -1,3 +1,5 @@
+import '../../core/utils/date_parser.dart';
+
 class Opportunity {
   final String id;
   final String userId;
@@ -58,7 +60,7 @@ class Opportunity {
       detailsJson:        map['details_json'] is Map
           ? Map<String, dynamic>.from(map['details_json'] as Map)
           : {},
-      createdAt: DateTime.parse(map['created_at'] as String),
+      createdAt: DateParser.parse(map['created_at']),
     );
   }
 

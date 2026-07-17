@@ -1,3 +1,5 @@
+import '../../core/utils/date_parser.dart';
+
 class TrendSignal {
   final String id;
   final String userId;
@@ -24,7 +26,7 @@ class TrendSignal {
         keyword:    map['keyword'] as String? ?? '',
         trendScore: map['trend_score'] as int? ?? 0,
         growthRate: _toDouble(map['growth_rate']),
-        detectedAt: DateTime.parse(map['detected_at'] as String),
+        detectedAt: DateParser.parse(map['detected_at']),
       );
 
   static double _toDouble(dynamic v) {

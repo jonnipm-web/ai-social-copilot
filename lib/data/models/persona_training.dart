@@ -1,3 +1,5 @@
+import '../../core/utils/date_parser.dart';
+
 class PersonaTraining {
   final String id;
   final String userId;
@@ -54,7 +56,7 @@ class PersonaTraining {
       positioningJson:  toMap(map['positioning_json']),
       audienceJson:     toMap(map['audience_json']),
       examplesJson:     toList(map['examples_json']),
-      createdAt:        DateTime.parse(map['created_at'] as String),
+      createdAt:        DateParser.parse(map['created_at']),
     );
   }
 

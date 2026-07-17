@@ -1,3 +1,5 @@
+import '../../core/utils/date_parser.dart';
+
 class KnowledgeAnalysis {
   final String id;
   final String knowledgeItemId;
@@ -121,12 +123,8 @@ class KnowledgeAnalysis {
       hotmartData:              _parseMap(map['hotmart_data']),
       shopifyData:              _parseMap(map['shopify_data']),
       personaTraining:          _parseMap(map['persona_training']),
-      createdAt:                map['created_at'] != null
-          ? DateTime.parse(map['created_at'] as String)
-          : DateTime.now(),
-      updatedAt:                map['updated_at'] != null
-          ? DateTime.parse(map['updated_at'] as String)
-          : DateTime.now(),
+      createdAt:                DateParser.parse(map['created_at']),
+      updatedAt:                DateParser.parse(map['updated_at']),
     );
   }
 

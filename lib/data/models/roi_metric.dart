@@ -1,3 +1,5 @@
+import '../../core/utils/date_parser.dart';
+
 class RoiMetric {
   final String id;
   final String userId;
@@ -31,7 +33,7 @@ class RoiMetric {
       metricType:  map['metric_type'] as String,
       metricValue: _d(map['metric_value']),
       notes:       map['notes'] as String?,
-      createdAt:   DateTime.parse(map['created_at'] as String),
+      createdAt:   DateParser.parse(map['created_at']),
     );
   }
 

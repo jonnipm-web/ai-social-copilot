@@ -7,7 +7,8 @@ class PersonaService {
   final _client = Supabase.instance.client;
 
   Future<List<Persona>> fetchAll() async {
-    final uid = _client.auth.currentUser!.id;
+    final uid = _client.auth.currentUser?.id;
+    if (uid == null) throw Exception('Não autenticado');
 
     // Traz globais + próprias
     final rows = await _client

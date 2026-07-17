@@ -1,3 +1,5 @@
+import '../../core/utils/date_parser.dart';
+
 class FeatureFlag {
   final String featureName;
   final bool enabled;
@@ -15,7 +17,7 @@ class FeatureFlag {
         featureName:  map['feature_name'] as String,
         enabled:      map['enabled'] as bool? ?? false,
         planRequired: map['plan_required'] as String? ?? 'free',
-        createdAt:    DateTime.parse(map['created_at'] as String),
+        createdAt:    DateParser.parse(map['created_at']),
       );
 
   static const advisorEnabled        = 'advisor_enabled';

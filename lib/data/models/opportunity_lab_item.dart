@@ -1,3 +1,5 @@
+import '../../core/utils/date_parser.dart';
+
 class OpportunityLabItem {
   final String id;
   final String userId;
@@ -97,7 +99,7 @@ class OpportunityLabItem {
         strategicFit:     map['strategic_fit'] as int? ?? 0,
         finalScore:       map['final_score'] as int? ?? 0,
         status:           map['status'] as String? ?? 'pending',
-        createdAt:        DateTime.parse(map['created_at'] as String),
+        createdAt:        DateParser.parse(map['created_at']),
         origin:           map['origin'] as String? ?? 'manual',
         sources:          _parseList(map['sources']),
         rationale:        map['rationale'] as String?,

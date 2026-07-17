@@ -1,3 +1,5 @@
+import '../../core/utils/date_parser.dart';
+
 class ActionQueueItem {
   final String id;
   final String userId;
@@ -87,16 +89,14 @@ class ActionQueueItem {
         effortScore:      map['effort_score'] as int? ?? 0,
         roiScore:         map['roi_score'] as int? ?? 0,
         status:           map['status'] as String? ?? 'pending',
-        createdAt:        DateTime.parse(map['created_at'] as String),
+        createdAt:        DateParser.parse(map['created_at']),
         description:      map['description'] as String?,
         origin:           map['origin'] as String? ?? 'manual',
         sources:          _parseList(map['sources']),
         rationale:        map['rationale'] as String?,
         plan:             _parseList(map['plan']),
         risks:            _parseList(map['risks']),
-        updatedAt: map['updated_at'] != null
-            ? DateTime.parse(map['updated_at'] as String)
-            : null,
+        updatedAt: DateParser.parseOrNull(map['updated_at']),
         marketScore:      map['market_score'] as int? ?? 0,
         confidence:       map['confidence'] as int? ?? 0,
         marketAnalysisId: map['market_analysis_id'] as String?,

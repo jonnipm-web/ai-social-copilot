@@ -1,3 +1,5 @@
+import '../../core/utils/date_parser.dart';
+
 class PerformanceMetrics {
   final String id;
   final String userId;
@@ -88,8 +90,8 @@ class PerformanceMetrics {
       engagementRate:   toDouble(map['engagement_rate']),
       conversionRate:   toDouble(map['conversion_rate']),
       notes:            map['notes'] as String?,
-      createdAt:        DateTime.parse(map['created_at'] as String),
-      updatedAt:        DateTime.parse(map['updated_at'] as String),
+      createdAt:        DateParser.parse(map['created_at']),
+      updatedAt:        DateParser.parse(map['updated_at']),
     );
   }
 

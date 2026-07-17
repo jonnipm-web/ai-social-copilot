@@ -1,3 +1,5 @@
+import '../../core/utils/date_parser.dart';
+
 class GapAnalysis {
   final String id;
   final String userId;
@@ -48,7 +50,7 @@ class GapAnalysis {
       analysisJson:       map['analysis_json'] is Map
           ? Map<String, dynamic>.from(map['analysis_json'] as Map)
           : {},
-      createdAt: DateTime.parse(map['created_at'] as String),
+      createdAt: DateParser.parse(map['created_at']),
     );
   }
 

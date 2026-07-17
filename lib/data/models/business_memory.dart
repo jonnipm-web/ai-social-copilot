@@ -1,3 +1,5 @@
+import '../../core/utils/date_parser.dart';
+
 class BusinessMemory {
   final String id;
   final String userId;
@@ -40,7 +42,7 @@ class BusinessMemory {
         content:         map['content'] as String? ?? '',
         confidenceScore: map['confidence_score'] as int? ?? 50,
         source:          map['source'] as String? ?? '',
-        createdAt:       DateTime.parse(map['created_at'] as String),
+        createdAt:       DateParser.parse(map['created_at']),
       );
 
   Map<String, dynamic> toInsertMap() => {

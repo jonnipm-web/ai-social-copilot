@@ -1,3 +1,5 @@
+import '../../core/utils/date_parser.dart';
+
 class Campaign {
   final String id;
   final String userId;
@@ -41,12 +43,8 @@ class Campaign {
       campaignJson:     map['campaign_json'] is Map
           ? Map<String, dynamic>.from(map['campaign_json'] as Map)
           : {},
-      createdAt: map['created_at'] != null
-          ? DateTime.parse(map['created_at'] as String)
-          : DateTime.now(),
-      updatedAt: map['updated_at'] != null
-          ? DateTime.parse(map['updated_at'] as String)
-          : DateTime.now(),
+      createdAt: DateParser.parse(map['created_at']),
+      updatedAt: DateParser.parse(map['updated_at']),
     );
   }
 

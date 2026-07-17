@@ -33,7 +33,8 @@ class PostNotifier extends StateNotifier<AsyncValue<PostGeneration?>> {
     state = const AsyncValue.loading();
 
     final result = await AsyncValue.guard<PostGeneration?>(() async {
-      final userId = Supabase.instance.client.auth.currentUser!.id;
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId == null) throw Exception('Não autenticado');
       final apiResponse = await _service.improvePost(text);
       return PostGeneration.fromApiResponse(
         userId: userId,

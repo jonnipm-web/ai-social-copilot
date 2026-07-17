@@ -1,3 +1,5 @@
+import '../../core/utils/date_parser.dart';
+
 class KnowledgeStrategy {
   final String id;
   final String knowledgeItemId;
@@ -23,12 +25,8 @@ class KnowledgeStrategy {
       strategyJson:     map['strategy_json'] is Map
           ? Map<String, dynamic>.from(map['strategy_json'] as Map)
           : {},
-      createdAt: map['created_at'] != null
-          ? DateTime.parse(map['created_at'] as String)
-          : DateTime.now(),
-      updatedAt: map['updated_at'] != null
-          ? DateTime.parse(map['updated_at'] as String)
-          : DateTime.now(),
+      createdAt: DateParser.parse(map['created_at']),
+      updatedAt: DateParser.parse(map['updated_at']),
     );
   }
 

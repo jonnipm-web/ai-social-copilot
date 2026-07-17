@@ -1,3 +1,5 @@
+import '../../core/utils/date_parser.dart';
+
 class Persona {
   final String id;
   final String? ownerId;
@@ -69,8 +71,8 @@ class Persona {
       communicationExamples:  map['communication_examples'] as String?,
       specificRules:          map['specific_rules'] as String?,
       isActive:               map['is_active'] as bool? ?? true,
-      createdAt:              DateTime.parse(map['created_at'] as String),
-      updatedAt:              DateTime.parse(map['updated_at'] as String),
+      createdAt:              DateParser.parse(map['created_at']),
+      updatedAt:              DateParser.parse(map['updated_at']),
     );
   }
 

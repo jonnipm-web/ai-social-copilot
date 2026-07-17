@@ -1,3 +1,5 @@
+import '../../core/utils/date_parser.dart';
+
 class Project {
   final String id;
   final String userId;
@@ -68,8 +70,8 @@ class Project {
       detailsJson:         map['details_json'] is Map
           ? Map<String, dynamic>.from(map['details_json'] as Map)
           : {},
-      createdAt: DateTime.parse(map['created_at'] as String),
-      updatedAt: DateTime.parse(map['updated_at'] as String),
+      createdAt: DateParser.parse(map['created_at']),
+      updatedAt: DateParser.parse(map['updated_at']),
     );
   }
 

@@ -1,3 +1,5 @@
+import '../../core/utils/date_parser.dart';
+
 class CalendarItem {
   final String id;
   final String userId;
@@ -82,9 +84,7 @@ class CalendarItem {
       userId:           map['user_id'] as String,
       personaId:        map['persona_id'] as String?,
       contentItemId:    map['content_item_id'] as String?,
-      suggestedDate:    map['suggested_date'] != null
-          ? DateTime.parse(map['suggested_date'] as String)
-          : null,
+      suggestedDate:    DateParser.parseOrNull(map['suggested_date']),
       platform:         map['platform'] as String?,
       theme:            map['theme'] as String?,
       format:           map['format'] as String?,
@@ -94,15 +94,11 @@ class CalendarItem {
       generatedContent: map['generated_content'] as String?,
       campaignId:       map['campaign_id'] as String?,
       publicationUrl:   map['publication_url'] as String?,
-      scheduledAt:      map['scheduled_at'] != null
-          ? DateTime.parse(map['scheduled_at'] as String)
-          : null,
-      publishedAt:      map['published_at'] != null
-          ? DateTime.parse(map['published_at'] as String)
-          : null,
+      scheduledAt:      DateParser.parseOrNull(map['scheduled_at']),
+      publishedAt:      DateParser.parseOrNull(map['published_at']),
       externalPlatform: map['external_platform'] as String?,
-      createdAt:        DateTime.parse(map['created_at'] as String),
-      updatedAt:        DateTime.parse(map['updated_at'] as String),
+      createdAt:        DateParser.parse(map['created_at']),
+      updatedAt:        DateParser.parse(map['updated_at']),
     );
   }
 

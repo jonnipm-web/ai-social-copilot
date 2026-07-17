@@ -1,3 +1,5 @@
+import '../../core/utils/date_parser.dart';
+
 class RevenuePlan {
   final String  id;
   final String  userId;
@@ -69,7 +71,7 @@ class RevenuePlan {
       planJson:             map['plan_json'] is Map
           ? Map<String, dynamic>.from(map['plan_json'] as Map)
           : {},
-      createdAt: DateTime.parse(map['created_at'] as String),
+      createdAt: DateParser.parse(map['created_at']),
     );
   }
 

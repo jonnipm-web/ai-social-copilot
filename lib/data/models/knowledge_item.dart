@@ -1,3 +1,5 @@
+import '../../core/utils/date_parser.dart';
+
 class KnowledgeItem {
   final String id;
   final String userId;
@@ -71,12 +73,8 @@ class KnowledgeItem {
       personaId:      map['persona_id'] as String?,
       status:         map['status'] as String? ?? 'pending',
       opportunityScore: map['opportunity_score'] as int? ?? 0,
-      createdAt:      map['created_at'] != null
-          ? DateTime.parse(map['created_at'] as String)
-          : DateTime.now(),
-      updatedAt:      map['updated_at'] != null
-          ? DateTime.parse(map['updated_at'] as String)
-          : DateTime.now(),
+      createdAt:      DateParser.parse(map['created_at']),
+      updatedAt:      DateParser.parse(map['updated_at']),
     );
   }
 

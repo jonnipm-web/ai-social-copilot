@@ -1,3 +1,5 @@
+import '../../core/utils/date_parser.dart';
+
 class CopilotSession {
   final String id;
   final String userId;
@@ -25,8 +27,8 @@ class CopilotSession {
             ? Map<String, dynamic>.from(map['context_json'] as Map)
             : {},
         status:      map['status'] as String? ?? 'active',
-        createdAt:   DateTime.parse(map['created_at'] as String),
-        updatedAt:   DateTime.parse(map['updated_at'] as String),
+        createdAt:   DateParser.parse(map['created_at']),
+        updatedAt:   DateParser.parse(map['updated_at']),
       );
 
   Map<String, dynamic> toInsertMap() => {
@@ -60,7 +62,7 @@ class CopilotMessage {
         userId:    map['user_id'] as String,
         role:      map['role'] as String? ?? 'user',
         content:   map['content'] as String? ?? '',
-        createdAt: DateTime.parse(map['created_at'] as String),
+        createdAt: DateParser.parse(map['created_at']),
       );
 
   Map<String, dynamic> toInsertMap() => {
