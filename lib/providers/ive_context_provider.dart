@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'ecosystem_intelligence_provider.dart';
 import 'action_queue_provider.dart';
 import 'opportunity_lab_provider.dart';
+import 'knowledge_provider.dart';
 
 // ── IveContextData — dados em tempo real do ecossistema para a IVE ────────────
 
@@ -22,6 +23,10 @@ class IveContextData {
   final String alertId;
   // Snapshot das top 3 projetos para contexto rico no chat
   final List<Map<String, dynamic>> topProjectsSnapshot;
+  // Top 5 knowledge items por score — alimenta documentos no chat
+  final List<Map<String, dynamic>> knowledgeItemsSummary;
+  // Top 3 oportunidades pendentes — alimenta opportunities no chat
+  final List<Map<String, dynamic>> pendingOpportunitiesSummary;
 
   const IveContextData({
     this.healthScore                = 0,
@@ -38,6 +43,8 @@ class IveContextData {
     this.alertMessage               = '',
     this.alertId                    = '',
     this.topProjectsSnapshot        = const [],
+    this.knowledgeItemsSummary      = const [],
+    this.pendingOpportunitiesSummary = const [],
   });
 }
 
@@ -49,6 +56,34 @@ final iveContextDataProvider = FutureProvider.autoDispose<IveContextData>((ref) 
   final scores    = await ref.watch(ecosystemScoresProvider.future);
   final pending   = await ref.watch(pendingActionsProvider.future);
   final labSummary = await ref.watch(opportunityLabSummaryProvider.future);
+
+  // Knowledge items — top 5 por opportunityScore
+  final knowledgeRaw = await ref.watch(knowledgeItemsProvider.future).then(
+    (v) => v,
+    onError: (_, __) => <dynamic>[],
+  );
+  final knowledgeSorted = [...knowledgeRaw]
+    ..sort((a, b) => b.opportunityScore.compareTo(a.opportunityScore));
+  final knowledgeSummary = knowledgeSorted.take(5).map((k) => {
+    'title':  k.title,
+    'score':  k.opportunityScore,
+    'status': k.status,
+    if (k.niche != null) 'niche': k.niche,
+  }).toList();
+
+  // Oportunidades pendentes — top 3 por finalScore
+  final opportunities = await ref.watch(opportunityLabProvider.future).then(
+    (v) => v,
+    onError: (_, __) => <dynamic>[],
+  );
+  final pendingOpportunities = [...opportunities.where((o) => o.status == 'pending')]
+    ..sort((a, b) => b.finalScore.compareTo(a.finalScore));
+  final opportunitiesSummary = pendingOpportunities.take(3).map((o) => {
+    'title':       o.title,
+    'description': o.description,
+    'score':       o.finalScore,
+    'type':        o.opportunityType,
+  }).toList();
 
   // Projeto de maior score
   final sorted = [...scores]
@@ -98,19 +133,21 @@ final iveContextDataProvider = FutureProvider.autoDispose<IveContextData>((ref) 
   }).toList();
 
   return IveContextData(
-    healthScore:               health,
-    projectCount:              scores.length,
-    pendingActionsCount:       pending.length,
-    pendingOpportunitiesCount: pendingLab,
-    topProjectName:            top?.project.name,
-    topProjectDescription:     top?.project.description,
-    topProjectType:            top?.project.type,
-    topProjectScore:           top?.ecosystemScore,
-    mainBottleneckName:        bottleneck?.project.name,
-    mainBottleneckScore:       bottleneck?.executionScore,
-    hasAlert:                  hasAlert,
-    alertMessage:              alertMsg,
-    alertId:                   alertId,
-    topProjectsSnapshot:       topThree,
+    healthScore:                 health,
+    projectCount:                scores.length,
+    pendingActionsCount:         pending.length,
+    pendingOpportunitiesCount:   pendingLab,
+    topProjectName:              top?.project.name,
+    topProjectDescription:       top?.project.description,
+    topProjectType:              top?.project.type,
+    topProjectScore:             top?.ecosystemScore,
+    mainBottleneckName:          bottleneck?.project.name,
+    mainBottleneckScore:         bottleneck?.executionScore,
+    hasAlert:                    hasAlert,
+    alertMessage:                alertMsg,
+    alertId:                     alertId,
+    topProjectsSnapshot:         topThree,
+    knowledgeItemsSummary:       knowledgeSummary,
+    pendingOpportunitiesSummary: opportunitiesSummary,
   );
 });
