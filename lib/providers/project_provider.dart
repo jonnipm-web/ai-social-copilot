@@ -4,6 +4,9 @@ import '../core/services/ive_event_bus.dart';
 import '../data/models/ive_event.dart';
 import '../data/models/project.dart';
 import '../data/services/project_service.dart';
+import 'action_queue_provider.dart';
+import 'market_analysis_provider.dart';
+import 'opportunity_lab_provider.dart';
 
 // ── Service provider — injetável em testes via override ───────────────────────
 final projectServiceProvider =
@@ -28,6 +31,14 @@ class ProjectsNotifier extends AsyncNotifier<List<Project>> {
     return ref.read(projectServiceProvider).fetchAll();
   }
 
+  // Invalida providers que não reagem automaticamente a projectsProvider
+  // (ecosystemScoresProvider e weeklyBriefingProvider cascateiam via ref.watch)
+  void _cascadeInvalidate() {
+    ref.invalidate(opportunityLabProvider);
+    ref.invalidate(actionQueueProvider);
+    ref.invalidate(marketAnalysesProvider);
+  }
+
   // ── Create ────────────────────────────────────────────────────────────────
 
   Future<Project> create(Map<String, dynamic> data) async {
@@ -38,6 +49,7 @@ class ProjectsNotifier extends AsyncNotifier<List<Project>> {
 
     // Resincroniza com o DB para ordem e scores corretos
     ref.invalidateSelf();
+    _cascadeInvalidate();
 
     IveEventBus.instance.emit(
       IveEvent.projectCreated(projectId: project.id, projectName: project.name),
@@ -55,6 +67,7 @@ class ProjectsNotifier extends AsyncNotifier<List<Project>> {
       (list) => [for (final p in list) p.id == id ? project : p],
     );
     ref.invalidateSelf();
+    _cascadeInvalidate();
 
     IveEventBus.instance.emit(
       IveEvent.projectStatusChanged(
@@ -75,6 +88,7 @@ class ProjectsNotifier extends AsyncNotifier<List<Project>> {
       (list) => [for (final p in list) p.id == id ? project : p],
     );
     ref.invalidateSelf();
+    _cascadeInvalidate();
 
     IveEventBus.instance.emit(
       IveEvent.projectUpdated(projectId: id, projectName: project.name),
@@ -94,6 +108,7 @@ class ProjectsNotifier extends AsyncNotifier<List<Project>> {
     try {
       await ref.read(projectServiceProvider).delete(id);
       ref.invalidateSelf();
+      _cascadeInvalidate();
       IveEventBus.instance.emit(
         IveEvent.projectDeleted(projectId: id, projectName: name),
       );

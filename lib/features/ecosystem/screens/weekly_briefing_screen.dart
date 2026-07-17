@@ -6,6 +6,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../data/models/weekly_briefing.dart';
 import '../../../providers/action_queue_provider.dart';
 import '../../../providers/ecosystem_intelligence_provider.dart';
+import '../../../providers/market_analysis_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
@@ -47,10 +48,10 @@ class WeeklyBriefingScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: Colors.white54),
             onPressed: () {
-              // Invalida toda a cadeia para forçar recálculo completo
               ref.invalidate(projectsProvider);
               ref.invalidate(opportunityLabProvider);
               ref.invalidate(actionQueueProvider);
+              ref.invalidate(marketAnalysesProvider);
               ref.invalidate(ecosystemScoresProvider);
               ref.invalidate(weeklyBriefingProvider);
             },
@@ -87,6 +88,10 @@ class _BriefingBody extends StatelessWidget {
       children: [
         // Header
         _Header(briefing: briefing, dateStr: '$day/$month/$year'),
+        const SizedBox(height: 10),
+
+        // Metadados — projetos analisados, origem dos dados, data de geração
+        _DataOriginCard(briefing: briefing),
         const SizedBox(height: 16),
 
         // Executive summary
@@ -291,6 +296,150 @@ class _BriefingRow extends StatelessWidget {
               style: const TextStyle(color: Colors.white54, fontSize: 11)),
           ],
         ],
+      ),
+    );
+  }
+}
+
+// ── Data Origin Card ──────────────────────────────────────────────────────────
+class _DataOriginCard extends StatelessWidget {
+  final WeeklyBriefing briefing;
+  const _DataOriginCard({required this.briefing});
+
+  @override
+  Widget build(BuildContext context) {
+    final h  = briefing.generatedAt.hour.toString().padLeft(2, '0');
+    final m  = briefing.generatedAt.minute.toString().padLeft(2, '0');
+    final d  = briefing.generatedAt.day.toString().padLeft(2, '0');
+    final mo = briefing.generatedAt.month.toString().padLeft(2, '0');
+    final y  = briefing.generatedAt.year;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _kCard,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: _kBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.analytics_rounded, color: _kPrimary, size: 14),
+              const SizedBox(width: 6),
+              const Text(
+                'DADOS ANALISADOS',
+                style: TextStyle(
+                  color: _kPrimary,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                'Gerado em $d/$mo/$y às $h:$m',
+                style: const TextStyle(color: Colors.white38, fontSize: 10),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Contadores de origem
+          Row(
+            children: [
+              _CountChip(
+                label: 'Projetos',
+                value: briefing.projectCount,
+                color: _kCyan,
+              ),
+              const SizedBox(width: 8),
+              _CountChip(
+                label: 'Análises',
+                value: briefing.analysisCount,
+                color: _kGold,
+              ),
+              const SizedBox(width: 8),
+              _CountChip(
+                label: 'Ações',
+                value: briefing.actionsCount,
+                color: _kOrange,
+              ),
+              const SizedBox(width: 8),
+              _CountChip(
+                label: 'Oportunidades',
+                value: briefing.opportunitiesCount,
+                color: _kGreen,
+              ),
+            ],
+          ),
+
+          // Projetos analisados
+          if (briefing.analyzedProjectNames.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            const Text(
+              'Projetos incluídos',
+              style: TextStyle(color: Colors.white38, fontSize: 10),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: briefing.analyzedProjectNames.map((name) => Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: _kPrimary.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: _kPrimary.withOpacity(0.25)),
+                ),
+                child: Text(
+                  name,
+                  style: const TextStyle(color: Colors.white70, fontSize: 10),
+                ),
+              )).toList(),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CountChip extends StatelessWidget {
+  const _CountChip({required this.label, required this.value, required this.color});
+  final String label;
+  final int    value;
+  final Color  color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.07),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color.withOpacity(0.2)),
+        ),
+        child: Column(
+          children: [
+            Text(
+              '$value',
+              style: TextStyle(
+                color: color,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 1),
+            Text(
+              label,
+              style: const TextStyle(color: Colors.white38, fontSize: 9),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }

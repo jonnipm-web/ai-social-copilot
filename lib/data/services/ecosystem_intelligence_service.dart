@@ -385,16 +385,21 @@ class EcosystemIntelligenceService {
           '${growing.length} projeto(s) em crescimento, ${pausing.length} requerem revisão.';
 
     return WeeklyBriefing(
-      generatedAt:        now,
-      overallHealthScore: health,
-      whatChanged:        changed,
-      whatGrew:           grew,
-      whatDeclined:       declined,
-      topPriorities:      priorities,
-      toPause:            toPause,
-      newOpportunities:   newOpps,
-      risks:              allRisks,
-      executiveSummary:   summary,
+      generatedAt:          now,
+      overallHealthScore:   health,
+      whatChanged:          changed,
+      whatGrew:             grew,
+      whatDeclined:         declined,
+      topPriorities:        priorities,
+      toPause:              toPause,
+      newOpportunities:     newOpps,
+      risks:                allRisks,
+      executiveSummary:     summary,
+      analyzedProjectNames: scores.map((s) => s.project.name).toList(),
+      projectCount:         scores.length,
+      analysisCount:        analyses.length,
+      actionsCount:         actions.length,
+      opportunitiesCount:   labItems.length,
     );
   }
 
