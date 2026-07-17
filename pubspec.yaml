@@ -46,6 +46,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  mocktail: ^1.0.4
 
 # Forçar versões mais novas dos plugins web para corrigir null check
 dependency_overrides:
