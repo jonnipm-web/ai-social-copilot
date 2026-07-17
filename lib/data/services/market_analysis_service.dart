@@ -11,11 +11,12 @@ import '../../core/constants/app_constants.dart';
 class MarketAnalysisService {
   final _client = Supabase.instance.client;
 
-  Future<List<MarketAnalysis>> fetchAll() async {
-    final rows = await _client
+  Future<List<MarketAnalysis>> fetchAll({String? projectId}) async {
+    var query = _client
         .from(AppConstants.tableMarketAnalyses)
-        .select()
-        .order('created_at', ascending: false);
+        .select();
+    if (projectId != null) query = query.eq('project_id', projectId);
+    final rows = await query.order('created_at', ascending: false);
     return (rows as List).map((r) => MarketAnalysis.fromMap(r)).toList();
   }
 
@@ -32,7 +33,11 @@ class MarketAnalysisService {
     await _client.from(AppConstants.tableMarketAnalyses).delete().eq('id', id);
   }
 
-  Future<MarketAnalysis> analyze(String input, {String inputType = 'url'}) async {
+  Future<MarketAnalysis> analyze(
+    String input, {
+    String inputType = 'url',
+    String? projectId,
+  }) async {
     final uid = _client.auth.currentUser?.id;
     if (uid == null) throw Exception('Usuário não autenticado.');
 
@@ -49,6 +54,7 @@ class MarketAnalysisService {
         .from(AppConstants.tableMarketAnalyses)
         .insert({
           'user_id':            uid,
+          if (projectId != null) 'project_id': projectId,
           'input':              input,
           'input_type':         inputType,
           'niche':              data['niche'] as String?,
@@ -299,11 +305,10 @@ class MarketAnalysisService {
   }
 
   // All Revenue Plans (for ecosystem scoring)
-  Future<List<RevenuePlan>> fetchAllRevenuePlans() async {
-    final rows = await _client
-        .from(AppConstants.tableRevenuePlans)
-        .select()
-        .order('created_at', ascending: false);
+  Future<List<RevenuePlan>> fetchAllRevenuePlans({String? projectId}) async {
+    var query = _client.from(AppConstants.tableRevenuePlans).select();
+    if (projectId != null) query = query.eq('project_id', projectId);
+    final rows = await query.order('created_at', ascending: false);
     return (rows as List).map((r) => RevenuePlan.fromMap(r)).toList();
   }
 
@@ -317,7 +322,12 @@ class MarketAnalysisService {
     return row == null ? null : RevenuePlan.fromMap(row);
   }
 
-  Future<RevenuePlan> buildRevenuePlan(String marketAnalysisId, String input, String projectName) async {
+  Future<RevenuePlan> buildRevenuePlan(
+    String marketAnalysisId,
+    String input,
+    String projectName, {
+    String? projectId,
+  }) async {
     final uid = _client.auth.currentUser?.id;
     if (uid == null) throw Exception('Usuário não autenticado.');
 
@@ -340,6 +350,7 @@ class MarketAnalysisService {
         .from(AppConstants.tableRevenuePlans)
         .insert({
           'user_id':              uid,
+          if (projectId != null) 'project_id': projectId,
           'market_analysis_id':   marketAnalysisId,
           'project_name':         projectName,
           'monthly_conservative': _d(data['monthly_conservative']),

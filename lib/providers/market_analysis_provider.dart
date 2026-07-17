@@ -20,6 +20,12 @@ final marketAnalysesProvider = FutureProvider.autoDispose<List<MarketAnalysis>>(
   return ref.read(marketAnalysisServiceProvider).fetchAll();
 });
 
+// Market analyses filtered by project_id
+final marketAnalysesByProjectProvider =
+    FutureProvider.autoDispose.family<List<MarketAnalysis>, String>((ref, projectId) {
+  return ref.read(marketAnalysisServiceProvider).fetchAll(projectId: projectId);
+});
+
 // Single market analysis by id
 final marketAnalysisByIdProvider =
     FutureProvider.autoDispose.family<MarketAnalysis, String>((ref, id) async {
@@ -69,23 +75,34 @@ final allRevenuePlansProvider = FutureProvider.autoDispose<List<RevenuePlan>>((r
   return ref.read(marketAnalysisServiceProvider).fetchAllRevenuePlans();
 });
 
+// Revenue plans filtered by project_id
+final revenuePlansByProjectProvider =
+    FutureProvider.autoDispose.family<List<RevenuePlan>, String>((ref, projectId) {
+  return ref.read(marketAnalysisServiceProvider).fetchAllRevenuePlans(projectId: projectId);
+});
+
 // Notifier for running market analysis
 class MarketAnalysisNotifier extends StateNotifier<AsyncValue<MarketAnalysis?>> {
   MarketAnalysisNotifier(this._service) : super(const AsyncValue.data(null));
 
   final MarketAnalysisService _service;
 
-  Future<MarketAnalysis?> analyze(String input, {String inputType = 'url'}) async {
+  Future<MarketAnalysis?> analyze(
+    String input, {
+    String inputType = 'url',
+    String? projectId,
+  }) async {
     state = const AsyncValue.loading();
     try {
-      final result = await _service.analyze(input, inputType: inputType);
+      final result = await _service.analyze(
+        input,
+        inputType: inputType,
+        projectId: projectId,
+      );
       state = AsyncValue.data(result);
 
-      // Auto-seed Opportunity Lab with the top priority actions from the analysis
-      await _seedOpportunityLab(result);
-
-      // Auto-link matching project by URL so ecosystem scores become non-zero immediately
-      if (inputType == 'url') await _tryLinkProject(result, input);
+      // Auto-seed Opportunity Lab com as top ações da análise
+      await _seedOpportunityLab(result, projectId: projectId);
 
       return result;
     } catch (e, st) {
@@ -96,11 +113,14 @@ class MarketAnalysisNotifier extends StateNotifier<AsyncValue<MarketAnalysis?>> 
 
   void reset() => state = const AsyncValue.data(null);
 
-  Future<void> _seedOpportunityLab(MarketAnalysis analysis) async {
+  Future<void> _seedOpportunityLab(
+    MarketAnalysis analysis, {
+    String? projectId,
+  }) async {
     final uid = Supabase.instance.client.auth.currentUser?.id;
     if (uid == null) return;
 
-    final json = analysis.analysisJson;
+    final json    = analysis.analysisJson;
     final actions = json['priority_actions'] as List<dynamic>? ?? [];
     if (actions.isEmpty) return;
 
@@ -111,15 +131,11 @@ class MarketAnalysisNotifier extends StateNotifier<AsyncValue<MarketAnalysis?>> 
       final title = a['action'] as String? ?? '';
       if (title.isEmpty) continue;
       final score = _parseScore(a['roi_expected'] as String?);
-      final risks = <String>[];
-      if (a['effort'] != null) risks.add('Esforço: ${a['effort']}');
-
-      final steps = <String>[];
-      if (a['timeframe'] != null) steps.add('Prazo estimado: ${a['timeframe']}');
 
       final item = OpportunityLabItem(
         id:               '',
         userId:           uid,
+        projectId:        projectId ?? analysis.projectId,
         marketAnalysisId: analysis.id,
         opportunityType:  'content',
         title:            title,
@@ -133,57 +149,19 @@ class MarketAnalysisNotifier extends StateNotifier<AsyncValue<MarketAnalysis?>> 
         rationale:        a['rationale'] as String? ??
             'Identificado pelo Market Intelligence com base na análise de ${analysis.input}.',
         confidence:       (score * 0.8).round().clamp(0, 100),
-        risks:            risks,
-        actionSteps:      steps,
+        risks:            a['effort'] != null ? ['Esforço: ${a['effort']}'] : [],
+        actionSteps:      a['timeframe'] != null ? ['Prazo estimado: ${a['timeframe']}'] : [],
       );
       try {
         await svc.create(item);
       } catch (e) {
-        // Log but don't fail the main analysis flow
         // ignore: avoid_print
         print('[MarketAnalysis] seed opportunity lab error: $e');
       }
     }
   }
 
-  // Auto-link the analysis to a project whose URL matches the analyzed input
-  Future<void> _tryLinkProject(MarketAnalysis analysis, String input) async {
-    try {
-      final client = Supabase.instance.client;
-      final normInput = _normalizeUrl(input);
-
-      final rows = await client
-          .from('projects')
-          .select('id, url, market_analysis_id')
-          .filter('market_analysis_id', 'is', null);
-
-      for (final row in (rows as List)) {
-        final url = row['url'] as String? ?? '';
-        if (url.isEmpty) continue;
-        if (_normalizeUrl(url) == normInput) {
-          await client
-              .from('projects')
-              .update({
-                'market_analysis_id': analysis.id,
-                'opportunity_score':  analysis.opportunityScore,
-                'updated_at':         DateTime.now().toIso8601String(),
-              })
-              .eq('id', row['id'] as String);
-          break;
-        }
-      }
-    } catch (e) {
-      // ignore: avoid_print
-      print('[MarketAnalysis] auto-link project error: $e');
-    }
-  }
-
-  static String _normalizeUrl(String url) => url
-      .toLowerCase()
-      .replaceAll(RegExp(r'^https?://'), '')
-      .replaceAll(RegExp(r'^www\.'), '')
-      .replaceAll(RegExp(r'/$'), '')
-      .split('?').first;
+  // _tryLinkProject REMOVIDO — o project_id agora é passado diretamente ao criar a análise
 
   static int _parseScore(String? s) {
     if (s == null) return 60;

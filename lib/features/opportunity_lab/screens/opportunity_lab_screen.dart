@@ -8,6 +8,7 @@ import '../../../data/models/opportunity_lab_item.dart';
 import '../../../providers/action_queue_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
 import '../../../providers/feature_flag_provider.dart';
+import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import 'opportunity_detail_screen.dart';
 
@@ -29,13 +30,33 @@ Color _scoreColor(int s) {
 // ════════════════════════════════════════════════════════════════════════════
 // Opportunity Lab Screen (M4) — Feature-flagged
 // ════════════════════════════════════════════════════════════════════════════
-class OpportunityLabScreen extends ConsumerWidget {
+class OpportunityLabScreen extends ConsumerStatefulWidget {
   const OpportunityLabScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final flagAsync = ref.watch(
-        featureFlagProvider(FeatureFlag.opportunityLabEnabled));
+  ConsumerState<OpportunityLabScreen> createState() => _OpportunityLabScreenState();
+}
+
+class _OpportunityLabScreenState extends ConsumerState<OpportunityLabScreen> {
+  String? _projectId;
+
+  void _setProject(String? id) {
+    setState(() => _projectId = id);
+    ref.read(opportunityLabNotifierProvider.notifier).load(projectId: id);
+  }
+
+  void _showAddDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Consumer(
+        builder: (ctx, r, _) => _AddOpportunityDialog(ref: r),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final flagAsync = ref.watch(featureFlagProvider(FeatureFlag.opportunityLabEnabled));
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -63,18 +84,10 @@ class OpportunityLabScreen extends ConsumerWidget {
       body: flagAsync.when(
         loading: () =>
             const Center(child: CircularProgressIndicator(color: _kPrimary)),
-        error: (_, __) => _LabBody(ref: ref),
-        data: (enabled) =>
-            enabled ? _LabBody(ref: ref) : const _FeatureGated(),
-      ),
-    );
-  }
-
-  void _showAddDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => Consumer(
-        builder: (ctx, ref, _) => _AddOpportunityDialog(ref: ref),
+        error: (_, __) => _LabBody(projectId: _projectId, onProjectChange: _setProject),
+        data: (enabled) => enabled
+            ? _LabBody(projectId: _projectId, onProjectChange: _setProject)
+            : const _FeatureGated(),
       ),
     );
   }
@@ -131,12 +144,13 @@ class _FeatureGated extends StatelessWidget {
   }
 }
 
-class _LabBody extends StatelessWidget {
-  const _LabBody({required this.ref});
-  final WidgetRef ref;
+class _LabBody extends ConsumerWidget {
+  const _LabBody({required this.projectId, required this.onProjectChange});
+  final String?                 projectId;
+  final void Function(String?)  onProjectChange;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final itemsAsync = ref.watch(opportunityLabNotifierProvider);
 
     return itemsAsync.when(
@@ -148,60 +162,73 @@ class _LabBody extends StatelessWidget {
       ),
       data: (items) {
         if (items.isEmpty) {
-          return _EmptyLab(
-            onAdd: () => showDialog(
-              context: context,
-              builder: (ctx) =>
-                  Consumer(builder: (ctx, r, _) => _AddOpportunityDialog(ref: r)),
-            ),
-          );
-        }
-        return ListView.builder(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-          itemCount: items.length,
-          itemBuilder: (_, i) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _LabItemCard(
-              item: items[i],
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => OpportunityDetailScreen(itemId: items[i].id),
+          return Column(
+            children: [
+              _ProjectFilter(selected: projectId, onSelect: onProjectChange),
+              Expanded(
+                child: _EmptyLab(
+                  onAdd: () => showDialog(
+                    context: context,
+                    builder: (ctx) =>
+                        Consumer(builder: (ctx, r, _) => _AddOpportunityDialog(ref: r)),
+                  ),
                 ),
               ),
-              onApprove: () =>
-                  ref.read(opportunityLabNotifierProvider.notifier).approve(items[i].id),
-              onDelete: () =>
-                  ref.read(opportunityLabNotifierProvider.notifier).delete(items[i].id),
-              onConvertToAction: items[i].status == 'approved'
-                  ? () async {
-                      try {
-                        await ref
-                            .read(actionQueueNotifierProvider.notifier)
-                            .addFromOpportunityItem(items[i]);
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Ação criada no Action Engine!'),
-                              backgroundColor: Color(0xFF4CAF50),
-                            ),
-                          );
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red),
-                          );
-                        }
-                      }
-                    }
-                  : null,
+            ],
+          );
+        }
+        return Column(
+          children: [
+            _ProjectFilter(selected: projectId, onSelect: onProjectChange),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
+                itemCount: items.length,
+                itemBuilder: (_, i) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _LabItemCard(
+                    item: items[i],
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => OpportunityDetailScreen(itemId: items[i].id),
+                      ),
+                    ),
+                    onApprove: () =>
+                        ref.read(opportunityLabNotifierProvider.notifier).approve(items[i].id),
+                    onDelete: () =>
+                        ref.read(opportunityLabNotifierProvider.notifier).delete(items[i].id),
+                    onConvertToAction: items[i].status == 'approved'
+                        ? () async {
+                            try {
+                              await ref
+                                  .read(actionQueueNotifierProvider.notifier)
+                                  .addFromOpportunityItem(items[i]);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Ação criada no Action Engine!'),
+                                    backgroundColor: Color(0xFF4CAF50),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red),
+                                );
+                              }
+                            }
+                          }
+                        : null,
+                  ),
+                ),
+              ),
             ),
-          ),
+          ],
         );
       },
     );
   }
-
 }
 
 class _LabItemCard extends StatelessWidget {
@@ -389,6 +416,80 @@ class _EmptyLab extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Project Filter ────────────────────────────────────────────────────────────
+
+class _ProjectFilter extends ConsumerWidget {
+  const _ProjectFilter({required this.selected, required this.onSelect});
+  final String?                selected;
+  final void Function(String?) onSelect;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final projectsAsync = ref.watch(projectsProvider);
+    return projectsAsync.maybeWhen(
+      data: (projects) {
+        if (projects.isEmpty) return const SizedBox.shrink();
+        return SizedBox(
+          height: 48,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            children: [
+              _Chip(
+                label: 'Todos',
+                selected: selected == null,
+                onTap: () => onSelect(null),
+              ),
+              ...projects.map((p) => _Chip(
+                    label: p.name,
+                    selected: selected == p.id,
+                    onTap: () => onSelect(p.id),
+                  )),
+            ],
+          ),
+        );
+      },
+      orElse: () => const SizedBox.shrink(),
+    );
+  }
+}
+
+class _Chip extends StatelessWidget {
+  const _Chip({required this.label, required this.selected, required this.onTap});
+  final String       label;
+  final bool         selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: selected ? _kPrimary : _kCard,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: selected ? _kPrimary : Colors.white.withOpacity(0.12),
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: selected ? Colors.white : Colors.white54,
+              fontSize: 12,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+            ),
+          ),
         ),
       ),
     );

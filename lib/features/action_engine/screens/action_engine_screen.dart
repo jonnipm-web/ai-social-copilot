@@ -6,6 +6,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../data/models/action_queue_item.dart';
 import '../../../providers/action_queue_provider.dart';
 import '../../../providers/feature_flag_provider.dart';
+import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import 'action_detail_screen.dart';
 
@@ -22,11 +23,23 @@ const _kGold    = Color(0xFFFFD700);
 // ════════════════════════════════════════════════════════════════════════════
 // Action Engine Screen (M5) — Feature-flagged
 // ════════════════════════════════════════════════════════════════════════════
-class ActionEngineScreen extends ConsumerWidget {
+class ActionEngineScreen extends ConsumerStatefulWidget {
   const ActionEngineScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ActionEngineScreen> createState() => _ActionEngineScreenState();
+}
+
+class _ActionEngineScreenState extends ConsumerState<ActionEngineScreen> {
+  String? _projectId;
+
+  void _setProject(String? id) {
+    setState(() => _projectId = id);
+    ref.read(actionQueueNotifierProvider.notifier).load(projectId: id);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final flagAsync =
         ref.watch(featureFlagProvider(FeatureFlag.actionEngineEnabled));
 
@@ -50,9 +63,10 @@ class ActionEngineScreen extends ConsumerWidget {
       body: flagAsync.when(
         loading: () =>
             const Center(child: CircularProgressIndicator(color: _kPrimary)),
-        error: (_, __) => _ActionBody(ref: ref),
-        data: (enabled) =>
-            enabled ? _ActionBody(ref: ref) : const _FeatureGated(),
+        error: (_, __) => _ActionBody(projectId: _projectId, onProjectChange: _setProject),
+        data: (enabled) => enabled
+            ? _ActionBody(projectId: _projectId, onProjectChange: _setProject)
+            : const _FeatureGated(),
       ),
     );
   }
@@ -109,12 +123,13 @@ class _FeatureGated extends StatelessWidget {
   }
 }
 
-class _ActionBody extends StatelessWidget {
-  const _ActionBody({required this.ref});
-  final WidgetRef ref;
+class _ActionBody extends ConsumerWidget {
+  const _ActionBody({required this.projectId, required this.onProjectChange});
+  final String?                projectId;
+  final void Function(String?) onProjectChange;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final itemsAsync = ref.watch(actionQueueNotifierProvider);
 
     return itemsAsync.when(
@@ -129,49 +144,54 @@ class _ActionBody extends StatelessWidget {
         final active    = items.where((i) => i.status == 'executing').toList();
         final completed = items.where((i) => i.status == 'completed').toList();
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Summary
-              _ActionSummaryRow(
-                pending: pending.length,
-                active:  active.length,
-                done:    completed.length,
-              ),
-              const SizedBox(height: 20),
+        return Column(
+          children: [
+            _ProjectFilter(selected: projectId, onSelect: onProjectChange),
+            Expanded(
+              child: items.isEmpty
+                  ? const _EmptyQueue()
+                  : SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _ActionSummaryRow(
+                            pending: pending.length,
+                            active:  active.length,
+                            done:    completed.length,
+                          ),
+                          const SizedBox(height: 20),
 
-              if (pending.isNotEmpty) ...[
-                _SectionHeader('Pendentes', pending.length, _kOrange),
-                ...pending.map((item) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: _ActionCard(item: item),
-                    )),
-                const SizedBox(height: 8),
-              ],
+                          if (pending.isNotEmpty) ...[
+                            _SectionHeader('Pendentes', pending.length, _kOrange),
+                            ...pending.map((item) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: _ActionCard(item: item),
+                                )),
+                            const SizedBox(height: 8),
+                          ],
 
-              if (active.isNotEmpty) ...[
-                _SectionHeader('Em Execução', active.length, _kCyan),
-                ...active.map((item) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: _ActionCard(item: item),
-                    )),
-                const SizedBox(height: 8),
-              ],
+                          if (active.isNotEmpty) ...[
+                            _SectionHeader('Em Execução', active.length, _kCyan),
+                            ...active.map((item) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: _ActionCard(item: item),
+                                )),
+                            const SizedBox(height: 8),
+                          ],
 
-              if (completed.isNotEmpty) ...[
-                _SectionHeader('Concluídas', completed.length, _kGreen),
-                ...completed.take(5).map((item) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: _ActionCard(item: item),
-                    )),
-              ],
-
-              if (items.isEmpty)
-                const _EmptyQueue(),
-            ],
-          ),
+                          if (completed.isNotEmpty) ...[
+                            _SectionHeader('Concluídas', completed.length, _kGreen),
+                            ...completed.take(5).map((item) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: _ActionCard(item: item),
+                                )),
+                          ],
+                        ],
+                      ),
+                    ),
+            ),
+          ],
         );
       },
     );
@@ -503,6 +523,80 @@ class _ActionBtn extends StatelessWidget {
         child: Text(label,
             style: TextStyle(
                 color: color, fontSize: 11, fontWeight: FontWeight.w600)),
+      ),
+    );
+  }
+}
+
+// ── Project Filter ────────────────────────────────────────────────────────────
+
+class _ProjectFilter extends ConsumerWidget {
+  const _ProjectFilter({required this.selected, required this.onSelect});
+  final String?                selected;
+  final void Function(String?) onSelect;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final projectsAsync = ref.watch(projectsProvider);
+    return projectsAsync.maybeWhen(
+      data: (projects) {
+        if (projects.isEmpty) return const SizedBox.shrink();
+        return SizedBox(
+          height: 48,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            children: [
+              _Chip(
+                label: 'Todos',
+                selected: selected == null,
+                onTap: () => onSelect(null),
+              ),
+              ...projects.map((p) => _Chip(
+                    label: p.name,
+                    selected: selected == p.id,
+                    onTap: () => onSelect(p.id),
+                  )),
+            ],
+          ),
+        );
+      },
+      orElse: () => const SizedBox.shrink(),
+    );
+  }
+}
+
+class _Chip extends StatelessWidget {
+  const _Chip({required this.label, required this.selected, required this.onTap});
+  final String       label;
+  final bool         selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: selected ? _kPrimary : _kCard,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: selected ? _kPrimary : Colors.white.withOpacity(0.12),
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: selected ? Colors.white : Colors.white54,
+              fontSize: 12,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+            ),
+          ),
+        ),
       ),
     );
   }

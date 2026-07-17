@@ -29,6 +29,12 @@ final actionQueueItemByIdProvider =
   return ref.read(actionQueueServiceProvider).fetchById(id);
 });
 
+// Action queue filtered by project_id (real Supabase filter)
+final actionQueueByProjectProvider =
+    FutureProvider.autoDispose.family<List<ActionQueueItem>, String>((ref, projectId) {
+  return ref.read(actionQueueServiceProvider).fetchAll(projectId: projectId);
+});
+
 class ActionQueueNotifier
     extends StateNotifier<AsyncValue<List<ActionQueueItem>>> {
   ActionQueueNotifier(this._svc) : super(const AsyncValue.loading()) {
@@ -36,8 +42,10 @@ class ActionQueueNotifier
   }
 
   final ActionQueueService _svc;
+  String? _activeProjectId;
 
   Future<void> load({String? projectId, String? status}) async {
+    _activeProjectId = projectId;
     state = const AsyncValue.loading();
     try {
       final list = await _svc.fetchAll(projectId: projectId, status: status);
@@ -50,7 +58,7 @@ class ActionQueueNotifier
   Future<void> add(ActionQueueItem item) async {
     try {
       await _svc.create(item);
-      await load();
+      await load(projectId: _activeProjectId);
     } catch (e) {
       IveEventBus.instance.emit(
         IveEvent.actionMutationFailed(
@@ -65,7 +73,7 @@ class ActionQueueNotifier
   Future<void> approve(String id, {String title = 'Ação'}) async {
     try {
       await _svc.updateStatus(id, 'approved');
-      await load();
+      await load(projectId: _activeProjectId);
     } catch (e) {
       IveEventBus.instance.emit(
         IveEvent.actionMutationFailed(
@@ -80,7 +88,7 @@ class ActionQueueNotifier
   Future<void> execute(String id, {String title = 'Ação'}) async {
     try {
       await _svc.updateStatus(id, 'executing');
-      await load();
+      await load(projectId: _activeProjectId);
     } catch (e) {
       IveEventBus.instance.emit(
         IveEvent.actionMutationFailed(
@@ -95,7 +103,7 @@ class ActionQueueNotifier
   Future<void> complete(String id, {String title = 'Ação'}) async {
     try {
       await _svc.updateStatus(id, 'completed');
-      await load();
+      await load(projectId: _activeProjectId);
     } catch (e) {
       IveEventBus.instance.emit(
         IveEvent.actionMutationFailed(
@@ -110,7 +118,7 @@ class ActionQueueNotifier
   Future<void> cancel(String id, {String title = 'Ação'}) async {
     try {
       await _svc.updateStatus(id, 'cancelled');
-      await load();
+      await load(projectId: _activeProjectId);
     } catch (e) {
       IveEventBus.instance.emit(
         IveEvent.actionMutationFailed(
@@ -193,7 +201,7 @@ class ActionQueueNotifier
   Future<void> delete(String id, {String title = 'Ação'}) async {
     try {
       await _svc.delete(id);
-      await load();
+      await load(projectId: _activeProjectId);
     } catch (e) {
       IveEventBus.instance.emit(
         IveEvent.actionMutationFailed(

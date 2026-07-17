@@ -33,8 +33,10 @@ class OpportunityLabNotifier
   }
 
   final OpportunityLabService _svc;
+  String? _activeProjectId;
 
   Future<void> load({String? projectId}) async {
+    _activeProjectId = projectId;
     state = const AsyncValue.loading();
     try {
       final list = await _svc.fetchAll(projectId: projectId);
@@ -46,17 +48,17 @@ class OpportunityLabNotifier
 
   Future<void> add(OpportunityLabItem item) async {
     await _svc.create(item);
-    await load();
+    await load(projectId: _activeProjectId);
   }
 
   Future<void> approve(String id) async {
     await _svc.updateStatus(id, 'approved');
-    await load();
+    await load(projectId: _activeProjectId);
   }
 
   Future<void> delete(String id) async {
     await _svc.delete(id);
-    await load();
+    await load(projectId: _activeProjectId);
   }
 }
 
