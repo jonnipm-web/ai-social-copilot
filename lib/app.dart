@@ -47,6 +47,7 @@ import 'features/ecosystem/screens/resource_allocation_screen.dart';
 import 'features/ecosystem/screens/weekly_briefing_screen.dart';
 import 'features/advisor/screens/advisor_onboarding_screen.dart';
 import 'features/opportunity_lab/screens/opportunity_lab_screen.dart';
+import 'features/opportunity_lab/screens/opportunity_detail_screen.dart';
 import 'features/action_engine/screens/action_engine_screen.dart';
 import 'features/dashboard/screens/executive_dashboard_screen.dart';
 import 'features/debug/screens/intelligence_debug_hub_screen.dart';
@@ -340,6 +341,12 @@ final _router = GoRouter(
     GoRoute(
       path: AppConstants.routeOpportunityLab,
       builder: (_, __) => const OpportunityLabScreen(),
+    ),
+    GoRoute(
+      path: AppConstants.routeOpportunityDetail,
+      builder: (_, state) => OpportunityDetailScreen(
+        itemId: state.pathParameters['id']!,
+      ),
     ),
     GoRoute(
       path: AppConstants.routeActionEngine,

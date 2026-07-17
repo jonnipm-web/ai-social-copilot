@@ -16,6 +16,11 @@ final opportunityLabByProjectProvider =
   return ref.read(opportunityLabServiceProvider).fetchAll(projectId: projectId);
 });
 
+final opportunityLabItemByIdProvider =
+    FutureProvider.autoDispose.family<OpportunityLabItem?, String>((ref, id) {
+  return ref.read(opportunityLabServiceProvider).fetchById(id);
+});
+
 final opportunityLabSummaryProvider =
     FutureProvider.autoDispose<Map<String, int>>((ref) {
   return ref.read(opportunityLabServiceProvider).summary();

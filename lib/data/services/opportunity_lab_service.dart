@@ -43,6 +43,15 @@ class OpportunityLabService {
     return OpportunityLabItem.fromMap(row);
   }
 
+  Future<OpportunityLabItem?> fetchById(String id) async {
+    final row = await _client
+        .from(AppConstants.tableOpportunityLab)
+        .select()
+        .eq('id', id)
+        .maybeSingle();
+    return row == null ? null : OpportunityLabItem.fromMap(row);
+  }
+
   Future<void> delete(String id) async {
     await _client.from(AppConstants.tableOpportunityLab).delete().eq('id', id);
   }

@@ -9,6 +9,7 @@ import '../../../providers/action_queue_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
 import '../../../providers/feature_flag_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import 'opportunity_detail_screen.dart';
 
 // ── Colors ───────────────────────────────────────────────────────────────────
 const _kBg      = Color(0xFF0F0F1A);
@@ -52,12 +53,28 @@ class OpportunityLabScreen extends ConsumerWidget {
         ),
       ),
       drawer: const AppDrawer(),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: _kPrimary,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('Nova Oportunidade'),
+        onPressed: () => _showAddDialog(context),
+      ),
       body: flagAsync.when(
         loading: () =>
             const Center(child: CircularProgressIndicator(color: _kPrimary)),
         error: (_, __) => _LabBody(ref: ref),
         data: (enabled) =>
             enabled ? _LabBody(ref: ref) : const _FeatureGated(),
+      ),
+    );
+  }
+
+  void _showAddDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Consumer(
+        builder: (ctx, ref, _) => _AddOpportunityDialog(ref: ref),
       ),
     );
   }
@@ -132,7 +149,11 @@ class _LabBody extends StatelessWidget {
       data: (items) {
         if (items.isEmpty) {
           return _EmptyLab(
-            onAdd: () => _showAddDialog(context, ref),
+            onAdd: () => showDialog(
+              context: context,
+              builder: (ctx) =>
+                  Consumer(builder: (ctx, r, _) => _AddOpportunityDialog(ref: r)),
+            ),
           );
         }
         return ListView.builder(
@@ -142,6 +163,11 @@ class _LabBody extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 12),
             child: _LabItemCard(
               item: items[i],
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => OpportunityDetailScreen(itemId: items[i].id),
+                ),
+              ),
               onApprove: () =>
                   ref.read(opportunityLabNotifierProvider.notifier).approve(items[i].id),
               onDelete: () =>
@@ -184,25 +210,21 @@ class _LabBody extends StatelessWidget {
     );
   }
 
-  void _showAddDialog(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (_) => _AddOpportunityDialog(ref: ref),
-    );
-  }
 }
 
 class _LabItemCard extends StatelessWidget {
   const _LabItemCard({
     required this.item,
+    required this.onTap,
     required this.onApprove,
     required this.onDelete,
     this.onConvertToAction,
   });
   final OpportunityLabItem item;
-  final VoidCallback onApprove;
-  final VoidCallback onDelete;
-  final VoidCallback? onConvertToAction;
+  final VoidCallback        onTap;
+  final VoidCallback        onApprove;
+  final VoidCallback        onDelete;
+  final VoidCallback?       onConvertToAction;
 
   static Color _statusColor(String s) {
     const m = {
@@ -218,7 +240,9 @@ class _LabItemCard extends StatelessWidget {
     final score = item.finalScore;
     final c     = _scoreColor(score);
 
-    return Container(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: _kCard,
@@ -318,10 +342,14 @@ class _LabItemCard extends StatelessWidget {
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),
+              const SizedBox(width: 4),
+              const Icon(Icons.chevron_right_rounded,
+                  color: Colors.white24, size: 18),
             ],
           ),
         ],
       ),
+    ),
     );
   }
 }

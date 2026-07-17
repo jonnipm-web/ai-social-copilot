@@ -111,17 +111,30 @@ class MarketAnalysisNotifier extends StateNotifier<AsyncValue<MarketAnalysis?>> 
       final title = a['action'] as String? ?? '';
       if (title.isEmpty) continue;
       final score = _parseScore(a['roi_expected'] as String?);
+      final risks = <String>[];
+      if (a['effort'] != null) risks.add('Esforço: ${a['effort']}');
+
+      final steps = <String>[];
+      if (a['timeframe'] != null) steps.add('Prazo estimado: ${a['timeframe']}');
+
       final item = OpportunityLabItem(
         id:               '',
         userId:           uid,
         marketAnalysisId: analysis.id,
         opportunityType:  'content',
         title:            title,
-        description:      'Gerado pelo Market Intelligence — impacto: ${a['impact'] ?? 'N/A'}, esforço: ${a['effort'] ?? 'N/A'}',
+        description:      'Impacto: ${a['impact'] ?? 'N/A'} · Esforço: ${a['effort'] ?? 'N/A'}',
         marketScore:      analysis.opportunityScore,
         revenueScore:     score,
         finalScore:       analysis.opportunityScore,
         createdAt:        DateTime.now(),
+        origin:           'market_analysis',
+        sources:          [analysis.id],
+        rationale:        a['rationale'] as String? ??
+            'Identificado pelo Market Intelligence com base na análise de ${analysis.websiteUrl ?? 'conteúdo'}.',
+        confidence:       (score * 0.8).round().clamp(0, 100),
+        risks:            risks,
+        actionSteps:      steps,
       );
       try {
         await svc.create(item);

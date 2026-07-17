@@ -79,10 +79,16 @@ final iveContextDataProvider = FutureProvider.autoDispose<IveContextData>((ref) 
   final pendingOpportunities = [...opportunities.where((o) => o.status == 'pending')]
     ..sort((a, b) => b.finalScore.compareTo(a.finalScore));
   final opportunitiesSummary = pendingOpportunities.take(3).map((o) => {
-    'title':       o.title,
-    'description': o.description,
-    'score':       o.finalScore,
-    'type':        o.opportunityType,
+    'title':        o.title,
+    'description':  o.description,
+    'score':        o.finalScore,
+    'type':         o.opportunityType,
+    'origin':       o.originLabel,
+    'confidence':   o.confidence,
+    if (o.rationale != null && o.rationale!.isNotEmpty)
+      'rationale': o.rationale,
+    if (o.risks.isNotEmpty)   'risks':        o.risks.take(3).toList(),
+    if (o.actionSteps.isNotEmpty) 'next_steps': o.actionSteps.take(3).toList(),
   }).toList();
 
   // Projeto de maior score
