@@ -45,6 +45,15 @@ class ActionQueueService {
     return ActionQueueItem.fromMap(row);
   }
 
+  Future<ActionQueueItem?> fetchById(String id) async {
+    final row = await _client
+        .from(AppConstants.tableActionQueue)
+        .select()
+        .eq('id', id)
+        .maybeSingle();
+    return row == null ? null : ActionQueueItem.fromMap(row);
+  }
+
   Future<void> delete(String id) async {
     await _client.from(AppConstants.tableActionQueue).delete().eq('id', id);
   }

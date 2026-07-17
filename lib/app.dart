@@ -49,6 +49,7 @@ import 'features/advisor/screens/advisor_onboarding_screen.dart';
 import 'features/opportunity_lab/screens/opportunity_lab_screen.dart';
 import 'features/opportunity_lab/screens/opportunity_detail_screen.dart';
 import 'features/action_engine/screens/action_engine_screen.dart';
+import 'features/action_engine/screens/action_detail_screen.dart';
 import 'features/dashboard/screens/executive_dashboard_screen.dart';
 import 'features/debug/screens/intelligence_debug_hub_screen.dart';
 
@@ -351,6 +352,12 @@ final _router = GoRouter(
     GoRoute(
       path: AppConstants.routeActionEngine,
       builder: (_, __) => const ActionEngineScreen(),
+    ),
+    GoRoute(
+      path: AppConstants.routeActionDetail,
+      builder: (_, state) => ActionDetailScreen(
+        itemId: state.pathParameters['id']!,
+      ),
     ),
     GoRoute(
       path: AppConstants.routeExecutiveDashboard,

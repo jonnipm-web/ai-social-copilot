@@ -7,6 +7,7 @@ import '../../../data/models/action_queue_item.dart';
 import '../../../providers/action_queue_provider.dart';
 import '../../../providers/feature_flag_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import 'action_detail_screen.dart';
 
 // ── Colors ───────────────────────────────────────────────────────────────────
 const _kBg      = Color(0xFF0F0F1A);
@@ -352,7 +353,13 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
     final notifier = ref.read(actionQueueNotifierProvider.notifier);
     final item     = widget.item;
 
-    return Container(
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => ActionDetailScreen(itemId: item.id),
+        ),
+      ),
+      child: Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: _kCard,
@@ -398,6 +405,9 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
                         fontWeight: FontWeight.bold),
                   ),
                 ),
+              const SizedBox(width: 4),
+              const Icon(Icons.chevron_right_rounded,
+                  color: Colors.white24, size: 16),
             ],
           ),
           const SizedBox(height: 10),
@@ -444,6 +454,7 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
           ),
         ],
       ),
+    ),
     );
   }
 }
