@@ -246,9 +246,11 @@ void main() {
       final p1 = _proj(id: 'p1', name: 'Manter');
       final p2 = _proj(id: 'p2', name: 'Deletar');
 
-      when(() => svc.fetchAll())
-          .thenAnswer((_) async => [p1, p2])
-          .thenAnswer((_) async => [p1]);
+      var fetchCount = 0;
+      when(() => svc.fetchAll()).thenAnswer((_) async {
+        fetchCount++;
+        return fetchCount == 1 ? [p1, p2] : [p1];
+      });
       when(() => svc.delete('p2')).thenAnswer((_) async {});
 
       final container = _container(svc);

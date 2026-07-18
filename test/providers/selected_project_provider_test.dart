@@ -2,8 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-
 import 'package:ai_social_copilot/data/models/project.dart';
 import 'package:ai_social_copilot/data/services/project_service.dart';
 import 'package:ai_social_copilot/providers/project_provider.dart';
@@ -30,16 +28,6 @@ Project _project({
       createdAt: DateTime(2026),
       updatedAt: DateTime(2026),
     );
-
-ProviderContainer _container(
-  MockProjectService svc, {
-  Map<String, Object> prefs = const {},
-}) {
-  SharedPreferences.setMockInitialValues(prefs);
-  return ProviderContainer(
-    overrides: [projectServiceProvider.overrideWithValue(svc)],
-  );
-}
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 

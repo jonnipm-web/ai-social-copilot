@@ -8,10 +8,6 @@ import '../../../providers/post_provider.dart';
 class UpgradeScreen extends ConsumerWidget {
   const UpgradeScreen({super.key});
 
-  static const _primary = Color(0xFF6C63FF);
-  static const _gold = Color(0xFFFFD700);
-  static const _surface = Color(0xFF1A1A2E);
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final usageAsync = ref.watch(monthlyUsageProvider);

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../data/models/ive_state.dart';
 import 'context_copilot_widget.dart';
 import '../../data/models/copilot_context_data.dart';
 

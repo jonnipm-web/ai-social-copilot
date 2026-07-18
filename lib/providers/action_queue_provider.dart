@@ -170,7 +170,6 @@ class ActionQueueNotifier
     List<String> risks   = const [],
   }) async {
     final uid = _svc.currentUserId;
-    if (uid == null) throw Exception('Não autenticado');
     final item = ActionQueueItem(
       id:               '',
       userId:           uid,
