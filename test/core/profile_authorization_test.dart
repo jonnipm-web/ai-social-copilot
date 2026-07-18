@@ -14,6 +14,7 @@
 /// de staging com Supabase real.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:ai_social_copilot/data/services/profile_service.dart';
@@ -50,6 +51,7 @@ Matcher throwsAdminRequired() => throwsA(
 
 void main() {
   setUpAll(() async {
+    SharedPreferences.setMockInitialValues({});
     try {
       await Supabase.initialize(
         url: 'http://localhost:54321',

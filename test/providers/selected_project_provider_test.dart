@@ -36,6 +36,7 @@ void main() {
   late MockProjectService svc;
 
   setUpAll(() async {
+    SharedPreferences.setMockInitialValues({});
     try {
       await Supabase.initialize(
         url: 'http://localhost:54321',

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:ai_social_copilot/data/models/ive_state.dart';
@@ -13,6 +14,7 @@ import 'package:ai_social_copilot/features/ive/visual/ive_visual_fallback.dart';
 
 void main() {
   setUpAll(() async {
+    SharedPreferences.setMockInitialValues({});
     try {
       await Supabase.initialize(
         url: 'http://localhost:54321',

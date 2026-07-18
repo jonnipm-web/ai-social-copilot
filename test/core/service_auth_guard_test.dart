@@ -8,6 +8,7 @@
 // Isso é exatamente o comportamento que queremos verificar.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:ai_social_copilot/data/models/action_queue_item.dart';
@@ -83,6 +84,7 @@ PostGeneration _fakePostGeneration() => PostGeneration(
 
 void main() {
   setUpAll(() async {
+    SharedPreferences.setMockInitialValues({});
     try {
       await Supabase.initialize(
         url: 'http://localhost:54321',
