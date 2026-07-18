@@ -128,7 +128,7 @@ class _IveAvatarState extends ConsumerState<IveAvatar>
       child: GestureDetector(
         onTap:      widget.onTap,
         onLongPress: widget.onLongPress,
-        child: avatar,
+        child: ExcludeSemantics(child: avatar),
       ),
     );
   }
