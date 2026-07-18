@@ -1,4 +1,4 @@
-name: Build Android APK
+name: LEGACY — GERAR APK
 
 on:
   push:
