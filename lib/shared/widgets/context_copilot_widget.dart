@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/constants/app_constants.dart';
 import '../../data/models/copilot_context_data.dart';
 import '../../data/models/copilot_turn.dart';
+import '../../data/models/action_queue_item.dart';
 import '../../providers/context_copilot_provider.dart';
-
-// ── Public helper ─────────────────────────────────────────────────────────────
+import '../../providers/ive_context_provider.dart';
+import '../../providers/selected_project_provider.dart';
+import 'ive_action_confirmation_card.dart';
 
 void showCopilotChat(
   BuildContext context, {
@@ -14,14 +19,14 @@ void showCopilotChat(
   String? initialMessage,
 }) {
   showModalBottomSheet(
-    context:             context,
-    isScrollControlled:  true,
-    backgroundColor:     Colors.transparent,
-    builder: (_) => ProviderScope(
-      parent: ProviderScope.containerOf(context),
-      child:  _CopilotSheet(
-        screenName:     screenName,
-        context:        contextData ?? CopilotContextData(),
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (_) => UncontrolledProviderScope(
+      container: ProviderScope.containerOf(context),
+      child: _CopilotSheet(
+        screenName: screenName,
+        contextData: contextData,
         initialMessage: initialMessage,
       ),
     ),
@@ -39,42 +44,29 @@ class ContextCopilotButton extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext ctx, WidgetRef ref) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return FloatingActionButton(
       heroTag: 'copilot_$screenName',
-      onPressed: () => _openCopilot(ctx, ref),
-      backgroundColor: const Color(0xFF6C63FF),
-      tooltip: 'Pergunte ao Copilot',
-      child: const Text('💬', style: TextStyle(fontSize: 22)),
-    );
-  }
-
-  void _openCopilot(BuildContext ctx, WidgetRef ref) {
-    showModalBottomSheet(
-      context:       ctx,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => ProviderScope(
-        parent: ProviderScope.containerOf(ctx),
-        child: _CopilotSheet(
-          screenName: screenName,
-          context:    context,
-        ),
+      onPressed: () => showCopilotChat(
+        context,
+        screenName: screenName,
+        contextData: this.context,
       ),
+      backgroundColor: const Color(0xFF6C63FF),
+      tooltip: 'Pergunte à IVE',
+      child: const Text('💬', style: TextStyle(fontSize: 22)),
     );
   }
 }
 
-// ── Internal bottom-sheet ─────────────────────────────────────────────────────
-
 class _CopilotSheet extends ConsumerStatefulWidget {
   final String screenName;
-  final CopilotContextData context;
+  final CopilotContextData? contextData;
   final String? initialMessage;
 
   const _CopilotSheet({
     required this.screenName,
-    required this.context,
+    this.contextData,
     this.initialMessage,
   });
 
@@ -83,67 +75,135 @@ class _CopilotSheet extends ConsumerStatefulWidget {
 }
 
 class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
-  final _ctrl   = TextEditingController();
-  final _scroll = ScrollController();
+  final _controller = TextEditingController();
+  final _scrollController = ScrollController();
+  bool _initialMessageSent = false;
 
   @override
   void initState() {
     super.initState();
-    if (widget.initialMessage != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        ref.read(contextCopilotProvider(widget.screenName).notifier).send(
-              message:    widget.initialMessage!,
-              screenName: widget.screenName,
-              context:    widget.context,
-            );
-        Future.delayed(const Duration(milliseconds: 400), _scrollToBottom);
-      });
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) => _sendInitialMessage());
   }
 
   @override
   void dispose() {
-    _ctrl.dispose();
-    _scroll.dispose();
+    _controller.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
+  CopilotScope _scope(String uid, String? projectId) => CopilotScope(
+        userId: uid,
+        projectId: projectId ?? '',
+        screenName: widget.screenName,
+      );
+
+  CopilotContextData? _currentContext() {
+    final live = ref.read(iveContextDataProvider).valueOrNull;
+    if (live == null || !live.hasActiveProject) return null;
+    final trusted = live.toCopilotContext(route: widget.screenName);
+    final provided = widget.contextData;
+    if (provided == null ||
+        provided.isEmpty ||
+        provided.userId != trusted.userId ||
+        provided.projectId != trusted.projectId) {
+      return trusted;
+    }
+    return CopilotContextData(
+      userId: trusted.userId,
+      projectId: trusted.projectId,
+      route: widget.screenName,
+      project: trusted.project,
+      scores: provided.scores ?? trusted.scores,
+      opportunities: provided.opportunities.isEmpty
+          ? trusted.opportunities
+          : provided.opportunities,
+      actions: provided.actions.isEmpty ? trusted.actions : provided.actions,
+      documents:
+          provided.documents.isEmpty ? trusted.documents : provided.documents,
+      personas:
+          provided.personas.isEmpty ? trusted.personas : provided.personas,
+      revenue: provided.revenue ?? trusted.revenue,
+      market: provided.market ?? trusted.market,
+      sourceLimitations: {
+        ...trusted.sourceLimitations,
+        ...provided.sourceLimitations,
+      }.toList(),
+    );
+  }
+
+  Future<void> _sendInitialMessage() async {
+    if (!mounted || _initialMessageSent || widget.initialMessage == null)
+      return;
+    final context = _currentContext();
+    final uid = Supabase.instance.client.auth.currentUser?.id;
+    final projectId = ref.read(selectedProjectProvider)?.id;
+    if (context == null || uid == null || projectId == null) return;
+    _initialMessageSent = true;
+    await ref
+        .read(contextCopilotProvider(_scope(uid, projectId)).notifier)
+        .send(
+          message: widget.initialMessage!,
+          context: context,
+        );
+    _scrollToBottom();
+  }
+
   void _send() {
-    final msg = _ctrl.text.trim();
-    if (msg.isEmpty) return;
-    _ctrl.clear();
-    ref.read(contextCopilotProvider(widget.screenName).notifier).send(
-          message:    msg,
-          screenName: widget.screenName,
-          context:    widget.context,
+    final message = _controller.text.trim();
+    final uid = Supabase.instance.client.auth.currentUser?.id;
+    final projectId = ref.read(selectedProjectProvider)?.id;
+    final context = _currentContext();
+    if (message.isEmpty ||
+        uid == null ||
+        projectId == null ||
+        context == null) {
+      return;
+    }
+    _controller.clear();
+    ref.read(contextCopilotProvider(_scope(uid, projectId)).notifier).send(
+          message: message,
+          context: context,
         );
     Future.delayed(const Duration(milliseconds: 300), _scrollToBottom);
   }
 
   void _scrollToBottom() {
-    if (_scroll.hasClients) {
-      _scroll.animateTo(
-        _scroll.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve:    Curves.easeOut,
-      );
-    }
+    if (!_scrollController.hasClients) return;
+    _scrollController.animateTo(
+      _scrollController.position.maxScrollExtent,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
   }
 
   @override
-  Widget build(BuildContext ctx) {
-    final state = ref.watch(contextCopilotProvider(widget.screenName));
+  Widget build(BuildContext context) {
+    final uid = Supabase.instance.client.auth.currentUser?.id ?? '';
+    final project = ref.watch(selectedProjectProvider);
+    final liveContext = ref.watch(iveContextDataProvider);
+    final canChat = project != null &&
+        liveContext.valueOrNull?.activeProjectId == project.id;
+    final scope = _scope(uid, project?.id);
+    final state = ref.watch(contextCopilotProvider(scope));
+
+    ref.listen(selectedProjectProvider, (previous, next) {
+      if (previous?.id != null && previous?.id != next?.id && uid.isNotEmpty) {
+        ref
+            .read(contextCopilotProvider(_scope(uid, previous!.id)).notifier)
+            .invalidateProposalForProjectChange();
+      }
+    });
 
     if (state.turns.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
     }
 
     return DraggableScrollableSheet(
-      initialChildSize: 0.55,
-      minChildSize:     0.35,
-      maxChildSize:     0.92,
-      builder: (_, scrollCtrl) => Container(
+      initialChildSize: 0.68,
+      minChildSize: 0.42,
+      maxChildSize: 0.94,
+      builder: (_, __) => Container(
         decoration: const BoxDecoration(
           color: Color(0xFF1E1B2E),
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -151,22 +211,68 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
         child: Column(
           children: [
             _handle(),
-            _header(state),
+            _header(state, scope),
+            _projectBadge(project?.name),
+            if (liveContext.isLoading)
+              const LinearProgressIndicator(
+                minHeight: 2,
+                color: Color(0xFF6C63FF),
+                backgroundColor: Colors.transparent,
+              ),
             const Divider(color: Colors.white12, height: 1),
             Expanded(
               child: state.turns.isEmpty
-                  ? _empty()
+                  ? _empty(project != null)
                   : _messages(state.turns),
             ),
+            if (state.pendingProposal != null)
+              IveActionConfirmationCard(
+                proposal: state.pendingProposal!,
+                executing: state.executing,
+                onConfirm: () => ref
+                    .read(contextCopilotProvider(scope).notifier)
+                    .confirmProposal(),
+                onCancel: () => ref
+                    .read(contextCopilotProvider(scope).notifier)
+                    .cancelProposal(),
+                onEdit: ({
+                  required title,
+                  required description,
+                  required priority,
+                  required impact,
+                  required effort,
+                }) =>
+                    ref
+                        .read(contextCopilotProvider(scope).notifier)
+                        .reviseProposal(
+                          title: title,
+                          description: description,
+                          priority: priority,
+                          impact: impact,
+                          effort: effort,
+                        ),
+              ),
+            if (state.lastExecution != null)
+              _executionResult(context, state.lastExecution!.action),
             if (state.error != null)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                child: Text(
-                  'Erro: ${state.error}',
-                  style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 2),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline_rounded,
+                        color: Colors.orangeAccent, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        state.error!,
+                        style: const TextStyle(
+                            color: Colors.orangeAccent, fontSize: 12),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            _input(state.loading),
+            _input(state.loading || state.executing, canChat),
           ],
         ),
       ),
@@ -176,162 +282,233 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
   Widget _handle() => Center(
         child: Container(
           margin: const EdgeInsets.symmetric(vertical: 10),
-          width:  40,
+          width: 40,
           height: 4,
           decoration: BoxDecoration(
-            color:        Colors.white24,
+            color: Colors.white24,
             borderRadius: BorderRadius.circular(2),
           ),
         ),
       );
 
-  Widget _header(CopilotState state) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 8, 10),
+  Widget _header(CopilotState state, CopilotScope scope) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 8, 8),
         child: Row(
           children: [
-            const Text('💬', style: TextStyle(fontSize: 20)),
+            const Text('IVE',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold)),
             const SizedBox(width: 8),
-            const Expanded(
-              child: Text(
-                'AI Copilot',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-              ),
+            Expanded(
+              child: Text(widget.screenName,
+                  style: const TextStyle(color: Colors.white38, fontSize: 12)),
             ),
             if (state.turns.isNotEmpty)
               IconButton(
-                icon:    const Icon(Icons.delete_sweep_rounded, size: 20),
-                color:   Colors.white38,
-                tooltip: 'Limpar histórico',
-                onPressed: () => ref
-                    .read(contextCopilotProvider(widget.screenName).notifier)
-                    .clearHistory(),
+                icon: const Icon(Icons.delete_sweep_rounded, size: 20),
+                color: Colors.white38,
+                tooltip: 'Limpar histórico desta conversa',
+                onPressed: state.executing
+                    ? null
+                    : () => ref
+                        .read(contextCopilotProvider(scope).notifier)
+                        .clearHistory(),
               ),
             IconButton(
-              icon:    const Icon(Icons.close_rounded),
-              color:   Colors.white38,
+              icon: const Icon(Icons.close_rounded),
+              color: Colors.white38,
               onPressed: () => Navigator.of(context).pop(),
             ),
           ],
         ),
       );
 
-  Widget _empty() => Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+  Widget _projectBadge(String? projectName) => Container(
+        width: double.infinity,
+        margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: projectName == null
+              ? Colors.orange.withValues(alpha: 0.12)
+              : const Color(0xFF6C63FF).withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: projectName == null
+                ? Colors.orangeAccent.withValues(alpha: 0.5)
+                : const Color(0xFF6C63FF).withValues(alpha: 0.5),
+          ),
+        ),
+        child: Row(
           children: [
-            const Text('💬', style: TextStyle(fontSize: 48)),
-            const SizedBox(height: 12),
-            const Text(
-              'Pergunte ao Copilot',
-              style: TextStyle(color: Colors.white70, fontSize: 16, fontWeight: FontWeight.bold),
+            Icon(
+              projectName == null
+                  ? Icons.info_outline_rounded
+                  : Icons.workspaces_rounded,
+              color: projectName == null
+                  ? Colors.orangeAccent
+                  : const Color(0xFF9B8FFF),
+              size: 17,
             ),
-            const SizedBox(height: 6),
-            Text(
-              widget.screenName,
-              style: const TextStyle(color: Colors.white38, fontSize: 12),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                projectName == null
+                    ? 'Nenhum projeto selecionado'
+                    : 'Projeto ativo: $projectName',
+                style: const TextStyle(color: Colors.white, fontSize: 12),
+              ),
             ),
-            const SizedBox(height: 20),
-            ..._suggestions().map((s) => _suggestionChip(s)),
+            if (projectName == null)
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  GoRouter.of(context).go(AppConstants.routeProjects);
+                },
+                child: const Text('Selecionar'),
+              ),
           ],
         ),
       );
 
-  List<String> _suggestions() {
-    switch (widget.screenName) {
-      case 'Projetos':
-        return ['Qual projeto devo focar?', 'Quais projetos têm mais risco?'];
-      case 'Oportunidades':
-        return ['Qual oportunidade tem maior ROI?', 'O que devo aprovar agora?'];
-      case 'Scores':
-        return ['Por que meu score está baixo?', 'Como melhorar o Ecosystem Score?'];
-      case 'Decisões':
-        return ['O que devo escalar?', 'Simule o impacto de aprovar a top oportunidade'];
-      case 'Briefing':
-        return ['Resuma minha semana', 'Quais ações críticas estão atrasadas?'];
-      case 'Conhecimento':
-        return ['O que aprendi esta semana?', 'Qual documento mais impacta meu projeto?'];
-      case 'Personas':
-        return ['Qual persona mais avançou?', 'Qual nicho tem mais potencial?'];
-      default:
-        return ['Me explique os dados desta tela', 'O que devo fazer agora?'];
-    }
-  }
+  Widget _empty(bool hasProject) => Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('◆',
+                  style: TextStyle(fontSize: 42, color: Color(0xFF8B7CFF))),
+              const SizedBox(height: 12),
+              Text(
+                hasProject
+                    ? 'Posso analisar prioridades e transformar uma recomendação em ação.'
+                    : 'Selecione um projeto para iniciar uma conversa executiva.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white70, height: 1.4),
+              ),
+              if (hasProject) ...[
+                const SizedBox(height: 18),
+                ..._suggestions().map(_suggestionChip),
+              ],
+            ],
+          ),
+        ),
+      );
+
+  List<String> _suggestions() => const [
+        'Qual ação devo priorizar para melhorar este projeto?',
+        'Quais oportunidades têm maior impacto agora?',
+      ];
 
   Widget _suggestionChip(String text) => GestureDetector(
         onTap: () {
-          _ctrl.text = text;
+          _controller.text = text;
           _send();
         },
         child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 24),
+          margin: const EdgeInsets.symmetric(vertical: 4),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            border:       Border.all(color: const Color(0xFF6C63FF), width: 1),
+            border: Border.all(color: const Color(0xFF6C63FF)),
             borderRadius: BorderRadius.circular(20),
           ),
-          child: Text(text, style: const TextStyle(color: Color(0xFF6C63FF), fontSize: 13)),
+          child: Text(text,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Color(0xFF9B8FFF), fontSize: 12)),
         ),
       );
 
   Widget _messages(List<CopilotTurn> turns) => ListView.builder(
-        controller: _scroll,
-        padding:    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        itemCount:  turns.length,
-        itemBuilder: (_, i) => _TurnBubble(turn: turns[i]),
+        controller: _scrollController,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        itemCount: turns.length,
+        itemBuilder: (_, index) => _TurnBubble(turn: turns[index]),
       );
 
-  Widget _input(bool loading) => SafeArea(
+  Widget _executionResult(BuildContext context, ActionQueueItem action) =>
+      Container(
+        margin: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.green.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.green.withValues(alpha: 0.45)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.check_circle_rounded, color: Colors.green),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(action.title,
+                      style: const TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold)),
+                  Text('Status: ${action.status}',
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 12)),
+                ],
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                GoRouter.of(context).go('/action-engine/${action.id}');
+              },
+              child: const Text('Abrir no Action Engine'),
+            ),
+          ],
+        ),
+      );
+
+  Widget _input(bool busy, bool hasProject) => SafeArea(
         child: Padding(
           padding: EdgeInsets.only(
-            left:   12,
-            right:  12,
-            top:    8,
+            left: 12,
+            right: 12,
+            top: 8,
             bottom: MediaQuery.of(context).viewInsets.bottom + 8,
           ),
           child: Row(
             children: [
               Expanded(
                 child: TextField(
-                  controller:    _ctrl,
-                  onSubmitted:   (_) => _send(),
-                  enabled:       !loading,
-                  maxLines:      null,
-                  style:         const TextStyle(color: Colors.white, fontSize: 14),
-                  decoration:    InputDecoration(
-                    hintText:       'Pergunte ao Copilot…',
-                    hintStyle:      const TextStyle(color: Colors.white38),
-                    filled:         true,
-                    fillColor:      const Color(0xFF2A2740),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    border:         OutlineInputBorder(
+                  controller: _controller,
+                  onSubmitted: (_) => _send(),
+                  enabled: !busy && hasProject,
+                  maxLines: null,
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: hasProject
+                        ? 'Pergunte à IVE…'
+                        : 'Selecione um projeto para conversar',
+                    hintStyle: const TextStyle(color: Colors.white38),
+                    filled: true,
+                    fillColor: const Color(0xFF2A2740),
+                    border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(24),
-                      borderSide:   BorderSide.none,
+                      borderSide: BorderSide.none,
                     ),
                   ),
                 ),
               ),
               const SizedBox(width: 8),
-              loading
+              busy
                   ? const SizedBox(
-                      width:  40,
+                      width: 40,
                       height: 40,
-                      child:  Center(
-                        child: SizedBox(
-                          width: 20, height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color:       Color(0xFF6C63FF),
-                          ),
-                        ),
+                      child: Center(
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Color(0xFF6C63FF)),
                       ),
                     )
                   : IconButton(
-                      onPressed:       _send,
-                      icon:            const Icon(Icons.send_rounded),
-                      color:           const Color(0xFF6C63FF),
-                      style:           IconButton.styleFrom(
-                        backgroundColor: const Color(0xFF2A2740),
-                      ),
+                      onPressed: hasProject ? _send : null,
+                      icon: const Icon(Icons.send_rounded),
+                      color: const Color(0xFF6C63FF),
                     ),
             ],
           ),
@@ -339,88 +516,55 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
       );
 }
 
-// ── Message bubble ────────────────────────────────────────────────────────────
-
 class _TurnBubble extends StatelessWidget {
   final CopilotTurn turn;
+
   const _TurnBubble({required this.turn});
 
   @override
-  Widget build(BuildContext ctx) {
+  Widget build(BuildContext context) {
     final isUser = turn.role == 'user';
-
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin:  const EdgeInsets.symmetric(vertical: 4),
+        margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.all(12),
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(ctx).size.width * 0.82,
+          maxWidth: MediaQuery.of(context).size.width * 0.84,
         ),
         decoration: BoxDecoration(
-          color: isUser
-              ? const Color(0xFF6C63FF)
-              : const Color(0xFF2A2740),
+          color: isUser ? const Color(0xFF6C63FF) : const Color(0xFF2A2740),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              turn.content,
-              style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.4),
-            ),
-            if (!isUser && (turn.sources.isNotEmpty || turn.confidence > 0))
-              _meta(turn),
-            if (!isUser && turn.actionSuggestion != null)
-              _actionChip(turn.actionSuggestion!),
+            Text(turn.content,
+                style: const TextStyle(color: Colors.white, height: 1.4)),
+            if (!isUser && turn.sources.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: turn.sources.take(3).map((source) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.white10,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(source,
+                          style: const TextStyle(
+                              color: Colors.white54, fontSize: 10)),
+                    );
+                  }).toList(),
+                ),
+              ),
           ],
         ),
       ),
     );
   }
-
-  Widget _meta(CopilotTurn turn) => Padding(
-        padding: const EdgeInsets.only(top: 8),
-        child: Wrap(
-          spacing: 6,
-          runSpacing: 4,
-          children: [
-            _badge('${turn.confidence}% conf.', Colors.white24),
-            ...turn.sources.take(3).map((s) => _badge(s, const Color(0xFF3D3A5C))),
-          ],
-        ),
-      );
-
-  Widget _badge(String text, Color bg) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          color:        bg,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Text(text, style: const TextStyle(color: Colors.white54, fontSize: 10)),
-      );
-
-  Widget _actionChip(CopilotActionSuggestion action) => Container(
-        margin:  const EdgeInsets.only(top: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color:        const Color(0xFF6C63FF).withOpacity(0.25),
-          border:       Border.all(color: const Color(0xFF6C63FF), width: 1),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.bolt_rounded, size: 14, color: Color(0xFF6C63FF)),
-            const SizedBox(width: 4),
-            Flexible(
-              child: Text(
-                action.label,
-                style: const TextStyle(color: Color(0xFF6C63FF), fontSize: 12),
-              ),
-            ),
-          ],
-        ),
-      );
 }
