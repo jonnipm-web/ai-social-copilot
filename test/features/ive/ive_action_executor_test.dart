@@ -148,4 +148,30 @@ void main() {
 
     await expectLater(executor.execute(proposal), throwsStateError);
   });
+
+  test('14 retry após recriar executor recupera marcador sem duplicar',
+      () async {
+    final created = persisted();
+    var fetchCount = 0;
+    when(() => actionService.fetchAll(projectId: 'project-1'))
+        .thenAnswer((_) async {
+      fetchCount++;
+      return fetchCount == 1 ? <ActionQueueItem>[] : [created];
+    });
+    when(() => actionService.create(any())).thenAnswer((_) async => created);
+    when(() => actionService.fetchById('action-1'))
+        .thenAnswer((_) async => created);
+
+    await executor.execute(proposal);
+    final recreatedExecutor = ServiceBackedIveActionExecutor(
+      actionService: actionService,
+      projectService: projectService,
+    );
+    final retry = await recreatedExecutor.execute(proposal);
+
+    expect(retry.recoveredExisting, isTrue);
+    expect(retry.proposalId, proposal.proposalId);
+    expect(retry.idempotencyKey, proposal.idempotencyKey);
+    verify(() => actionService.create(any())).called(1);
+  });
 }
