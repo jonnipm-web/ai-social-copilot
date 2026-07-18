@@ -11,10 +11,12 @@ import '../../providers/context_copilot_provider.dart';
 import '../../providers/ive_context_provider.dart';
 import '../../providers/selected_project_provider.dart';
 import 'ive_action_confirmation_card.dart';
+import 'ive_response_context_panel.dart';
 
 void showCopilotChat(
   BuildContext context, {
   required String screenName,
+  String? route,
   CopilotContextData? contextData,
   String? initialMessage,
 }) {
@@ -26,6 +28,7 @@ void showCopilotChat(
       container: ProviderScope.containerOf(context),
       child: _CopilotSheet(
         screenName: screenName,
+        route: route,
         contextData: contextData,
         initialMessage: initialMessage,
       ),
@@ -50,6 +53,7 @@ class ContextCopilotButton extends ConsumerWidget {
       onPressed: () => showCopilotChat(
         context,
         screenName: screenName,
+        route: this.context.route,
         contextData: this.context,
       ),
       backgroundColor: const Color(0xFF6C63FF),
@@ -61,11 +65,13 @@ class ContextCopilotButton extends ConsumerWidget {
 
 class _CopilotSheet extends ConsumerStatefulWidget {
   final String screenName;
+  final String? route;
   final CopilotContextData? contextData;
   final String? initialMessage;
 
   const _CopilotSheet({
     required this.screenName,
+    this.route,
     this.contextData,
     this.initialMessage,
   });
@@ -101,7 +107,9 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
   CopilotContextData? _currentContext() {
     final live = ref.read(iveContextDataProvider).valueOrNull;
     if (live == null || !live.hasActiveProject) return null;
-    final trusted = live.toCopilotContext(route: widget.screenName);
+    final trusted = live.toCopilotContext(
+      route: widget.route ?? widget.screenName,
+    );
     final provided = widget.contextData;
     if (provided == null ||
         provided.isEmpty ||
@@ -112,7 +120,7 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
     return CopilotContextData(
       userId: trusted.userId,
       projectId: trusted.projectId,
-      route: widget.screenName,
+      route: widget.route ?? widget.screenName,
       project: trusted.project,
       scores: provided.scores ?? trusted.scores,
       opportunities: provided.opportunities.isEmpty
@@ -133,8 +141,9 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
   }
 
   Future<void> _sendInitialMessage() async {
-    if (!mounted || _initialMessageSent || widget.initialMessage == null)
+    if (!mounted || _initialMessageSent || widget.initialMessage == null) {
       return;
+    }
     final context = _currentContext();
     final uid = Supabase.instance.client.auth.currentUser?.id;
     final projectId = ref.read(selectedProjectProvider)?.id;
@@ -225,6 +234,11 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
                   ? _empty(project != null)
                   : _messages(state.turns),
             ),
+            if (state.evidence.isNotEmpty || state.limitations.isNotEmpty)
+              IveResponseContextPanel(
+                evidence: state.evidence,
+                limitations: state.limitations,
+              ),
             if (state.pendingProposal != null)
               IveActionConfirmationCard(
                 proposal: state.pendingProposal!,

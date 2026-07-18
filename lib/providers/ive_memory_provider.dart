@@ -96,8 +96,9 @@ class IveMemoryNotifier extends StateNotifier<IveMemory> {
   }
 
   void dismissAlert(String alertId) {
-    if (_activeUserId == null || state.dismissedAlerts.contains(alertId))
+    if (_activeUserId == null || state.dismissedAlerts.contains(alertId)) {
       return;
+    }
     state = state.copyWith(
       dismissedAlerts: [...state.dismissedAlerts, alertId],
     );
@@ -105,6 +106,13 @@ class IveMemoryNotifier extends StateNotifier<IveMemory> {
 
   bool isAlertDismissed(String alertId) =>
       state.dismissedAlerts.contains(alertId);
+
+  /// Limpa apenas a memória em RAM após rejeição de autenticação.
+  /// O namespace persistido só volta a ser carregado após nova sessão válida.
+  void clearSensitiveSession() {
+    _activeUserId = null;
+    state = const IveMemory();
+  }
 
   Future<void> incrementInteraction() async {
     final uid = _activeUserId;

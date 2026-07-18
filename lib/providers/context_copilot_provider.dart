@@ -3,15 +3,17 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../core/constants/app_constants.dart';
 import '../data/models/copilot_context_data.dart';
 import '../data/models/copilot_turn.dart';
 import '../features/ive/domain/ive_action_proposal.dart';
+import '../features/ive/domain/ive_copilot_contract.dart';
 import '../features/ive/services/ive_action_executor.dart';
+import '../features/ive/services/ive_copilot_gateway.dart';
 import 'action_queue_provider.dart';
 import 'ecosystem_intelligence_provider.dart';
 import 'ive_context_provider.dart';
 import 'ive_memory_provider.dart';
+import 'selected_project_provider.dart';
 
 class CopilotScope {
   final String userId;
@@ -42,6 +44,10 @@ class CopilotState {
   final IveActionProposal? pendingProposal;
   final IveActionExecutionResult? lastExecution;
   final bool executing;
+  final List<IveEvidence> evidence;
+  final List<String> limitations;
+  final String? responseId;
+  final String? correlationId;
 
   const CopilotState({
     this.turns = const [],
@@ -50,6 +56,10 @@ class CopilotState {
     this.pendingProposal,
     this.lastExecution,
     this.executing = false,
+    this.evidence = const [],
+    this.limitations = const [],
+    this.responseId,
+    this.correlationId,
   });
 
   CopilotState copyWith({
@@ -62,6 +72,11 @@ class CopilotState {
     IveActionExecutionResult? lastExecution,
     bool clearExecution = false,
     bool? executing,
+    List<IveEvidence>? evidence,
+    List<String>? limitations,
+    String? responseId,
+    String? correlationId,
+    bool clearResponseContext = false,
   }) =>
       CopilotState(
         turns: turns ?? this.turns,
@@ -72,12 +87,62 @@ class CopilotState {
         lastExecution:
             clearExecution ? null : (lastExecution ?? this.lastExecution),
         executing: executing ?? this.executing,
+        evidence: clearResponseContext ? const [] : (evidence ?? this.evidence),
+        limitations:
+            clearResponseContext ? const [] : (limitations ?? this.limitations),
+        responseId:
+            clearResponseContext ? null : (responseId ?? this.responseId),
+        correlationId:
+            clearResponseContext ? null : (correlationId ?? this.correlationId),
+      );
+
+  CopilotState preserveForFailure(String message) => copyWith(
+        loading: false,
+        executing: false,
+        error: message,
+      );
+
+  static CopilotState unauthorized(String message) =>
+      CopilotState(error: message);
+
+  CopilotState invalidProject(String message) => copyWith(
+        loading: false,
+        executing: false,
+        error: message,
+        clearProposal: true,
+        clearExecution: true,
+        clearResponseContext: true,
       );
 }
 
 class ContextCopilotNotifier extends StateNotifier<CopilotState> {
-  ContextCopilotNotifier(this._ref, this.scope) : super(const CopilotState()) {
-    _authSub = _client.auth.onAuthStateChange.listen((event) {
+  ContextCopilotNotifier(
+    this._ref,
+    this.scope, {
+    IveCopilotGateway? gateway,
+    String? Function()? currentUserId,
+    Stream<AuthState>? authChanges,
+    void Function(String)? rememberQuestion,
+    List<String> Function()? recentQuestions,
+    Future<void> Function()? clearSelectedProject,
+    void Function()? clearSensitiveMemory,
+  }) : super(const CopilotState()) {
+    _gateway = gateway ?? _ref.read(iveCopilotGatewayProvider);
+    _currentUserId =
+        currentUserId ?? () => Supabase.instance.client.auth.currentUser?.id;
+    _rememberQuestion = rememberQuestion ??
+        (question) =>
+            _ref.read(iveMemoryProvider.notifier).addQuestion(question);
+    _recentQuestions =
+        recentQuestions ?? () => _ref.read(iveMemoryProvider).recentQuestions;
+    _clearSelectedProject = clearSelectedProject ??
+        () => _ref.read(selectedProjectProvider.notifier).clear();
+    _clearSensitiveMemory = clearSensitiveMemory ??
+        () => _ref.read(iveMemoryProvider.notifier).clearSensitiveSession();
+
+    final stream =
+        authChanges ?? Supabase.instance.client.auth.onAuthStateChange;
+    _authSub = stream.listen((event) {
       if (event.event == AuthChangeEvent.signedOut ||
           event.session?.user.id != scope.userId) {
         clearHistory();
@@ -87,16 +152,26 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
 
   final Ref _ref;
   final CopilotScope scope;
-  final _client = Supabase.instance.client;
+  late final IveCopilotGateway _gateway;
+  late final String? Function() _currentUserId;
+  late final void Function(String) _rememberQuestion;
+  late final List<String> Function() _recentQuestions;
+  late final Future<void> Function() _clearSelectedProject;
+  late final void Function() _clearSensitiveMemory;
   StreamSubscription<AuthState>? _authSub;
 
   Future<void> send({
     required String message,
     required CopilotContextData context,
+    String? selectedEntityType,
+    String? selectedEntityId,
   }) async {
-    final uid = _client.auth.currentUser?.id;
+    if (state.loading || state.executing) return;
+    final uid = _currentUserId();
     if (uid == null || uid != scope.userId) {
-      state = state.copyWith(error: 'Sessão inválida. Entre novamente.');
+      state = CopilotState.unauthorized(
+        'Sessão inválida. Entre novamente.',
+      );
       return;
     }
     if (scope.projectId.isEmpty || context.projectId != scope.projectId) {
@@ -106,12 +181,23 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
       return;
     }
 
+    final request = IveCopilotRequest.fromConversation(
+      message: message,
+      projectId: scope.projectId,
+      route: context.route,
+      screenName: scope.screenName,
+      context: context,
+      turns: state.turns,
+      recentQuestions: _recentQuestions(),
+      selectedEntityType: selectedEntityType,
+      selectedEntityId: selectedEntityId,
+    );
     final userTurn = CopilotTurn(
       role: 'user',
-      content: message,
+      content: message.trim(),
       timestamp: DateTime.now(),
     );
-    _ref.read(iveMemoryProvider.notifier).addQuestion(message);
+    _rememberQuestion(message);
     state = state.copyWith(
       turns: [...state.turns, userTurn],
       loading: true,
@@ -120,80 +206,75 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
     );
 
     try {
-      final history = state.turns
-          .where((turn) => turn.role == 'user' || turn.role == 'assistant')
-          .map((turn) => turn.toHistoryMap())
-          .toList();
-      final recentQuestions = _ref.read(iveMemoryProvider).recentQuestions;
-
-      final response = await _client.functions.invoke(
-        AppConstants.edgeFunctionContextCopilot,
-        body: {
-          'message': message,
-          'screen_name': scope.screenName,
-          'user_id': uid,
-          'project_id': scope.projectId,
-          'context': context.toMap(),
-          'history': history,
-          if (recentQuestions.isNotEmpty) 'recent_questions': recentQuestions,
-        },
+      final data = await _gateway.invoke(request);
+      final allowedOpportunityIds = context.opportunities
+          .map((item) => item['id'])
+          .whereType<String>()
+          .toSet();
+      final response = IveCopilotResponse.parse(
+        data,
+        activeProjectId: scope.projectId,
+        requestCorrelationId: request.correlationId,
+        allowedOpportunityIds: allowedOpportunityIds,
       );
 
-      final data = response.data as Map<String, dynamic>? ?? {};
-      if (data['error'] != null) throw Exception(data['error']);
-
-      final sources =
-          (data['sources'] as List?)?.map((item) => item.toString()).toList() ??
-              [];
-      final entities = (data['entities'] as List?)
-              ?.map((item) => item.toString())
-              .toList() ??
-          [];
-      CopilotActionSuggestion? suggestion;
-      if (data['action_suggestion'] is Map) {
-        suggestion = CopilotActionSuggestion.fromMap(
-          Map<String, dynamic>.from(data['action_suggestion'] as Map),
-        );
-      }
-
       IveActionProposal? proposal;
-      if (suggestion != null &&
-          (suggestion.type == 'create_action' ||
-              suggestion.type == 'action.create')) {
-        final allowedOpportunityIds = context.opportunities
-            .map((item) => item['id'])
-            .whereType<String>()
-            .toSet();
-        proposal = IveActionProposal.fromSuggestion(
-          suggestion: suggestion,
+      if (response.proposedAction != null) {
+        proposal = IveActionProposal.fromProposedAction(
+          action: response.proposedAction!,
           userId: uid,
-          projectId: scope.projectId,
           projectName: context.project?['name'] as String? ?? 'Projeto',
-          allowedOpportunityIds: allowedOpportunityIds,
+          correlationId: response.correlationId,
         );
+      } else if (response.legacySuggestion != null &&
+          (response.legacySuggestion!.type == 'create_action' ||
+              response.legacySuggestion!.type == 'action.create')) {
+        try {
+          proposal = IveActionProposal.fromSuggestion(
+            suggestion: response.legacySuggestion!,
+            userId: uid,
+            projectId: scope.projectId,
+            projectName: context.project?['name'] as String? ?? 'Projeto',
+            allowedOpportunityIds: allowedOpportunityIds,
+            correlationId: response.correlationId,
+          );
+        } on FormatException {
+          proposal = null;
+        }
       }
 
       final assistantTurn = CopilotTurn(
         role: 'assistant',
-        content: data['answer'] as String? ?? 'Não recebi uma resposta válida.',
-        sources: sources,
-        entities: entities,
-        confidence: _confidence(data['confidence']),
-        actionSuggestion: suggestion,
-        timestamp: DateTime.now(),
+        content: response.responseText,
+        sources: response.isV2 ? const [] : response.legacySources,
+        entities: response.entities,
+        confidence: response.confidence,
+        actionSuggestion: response.legacySuggestion,
+        timestamp: response.serverTimestamp ?? DateTime.now(),
       );
       state = state.copyWith(
         turns: [...state.turns, assistantTurn],
         loading: false,
         pendingProposal: proposal,
         clearProposal: proposal == null,
+        evidence: response.evidence,
+        limitations: response.limitations,
+        responseId: response.responseId,
+        correlationId: response.correlationId,
         clearError: true,
       );
+    } on IveCopilotHttpException catch (error) {
+      if (error.clearsSensitiveState) {
+        _clearSensitiveMemory();
+        state = CopilotState.unauthorized(_friendlyError(error));
+      } else if (error.clearsSelectedProject) {
+        await _clearSelectedProject();
+        state = state.invalidProject(_friendlyError(error));
+      } else {
+        state = state.preserveForFailure(_friendlyError(error));
+      }
     } catch (error) {
-      state = state.copyWith(
-        loading: false,
-        error: _friendlyError(error),
-      );
+      state = state.preserveForFailure(_friendlyError(error));
     }
   }
 
@@ -289,26 +370,23 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
         clearError: true,
       );
     } catch (error) {
-      state = state.copyWith(
-        executing: false,
-        error: _friendlyError(error),
-      );
+      state = state.preserveForFailure(_friendlyError(error));
     }
   }
 
   void clearHistory() => state = const CopilotState();
 
   String _friendlyError(Object error) {
+    if (error is IveCopilotHttpException) return error.message;
+    if (error is IveCopilotContractException) return error.message;
     final text = error.toString().replaceFirst('Exception: ', '');
     if (text.contains('SocketException') || text.contains('ClientException')) {
       return 'Não foi possível conectar. Verifique sua conexão e tente novamente.';
     }
+    if (text.contains('TimeoutException')) {
+      return 'A IVE demorou para responder. Tente novamente.';
+    }
     return text;
-  }
-
-  int _confidence(dynamic value) {
-    if (value is! num) return 0;
-    return value.toInt().clamp(0, 100);
   }
 
   @override

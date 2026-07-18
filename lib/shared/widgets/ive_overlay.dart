@@ -140,7 +140,7 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
               child: AnimatedScale(
                 scale: _dragging ? 0.92 : 1.0,
                 duration: const Duration(milliseconds: 150),
-                child: IveAvatar(
+                child: const IveAvatar(
                   size: IveAvatarSize.compact,
                   showStatusRing: true,
                   interactive: false, // overlay owns the tap
@@ -158,6 +158,7 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
     showCopilotChat(
       context,
       screenName: IveRouteContext.displayName(screenName),
+      route: screenName,
     );
   }
 }
@@ -385,8 +386,9 @@ class _IssueActionChip extends ConsumerWidget {
       case 'send_file':
         // Navega para o Cofre de Conhecimento para upload
         ref.read(iveProvider.notifier).dismissBubble();
-        if (context.mounted)
+        if (context.mounted) {
           GoRouter.of(context).push(AppConstants.routeKnowledge);
+        }
 
       case 'update_link':
         // Navega para a edição do item de conhecimento
