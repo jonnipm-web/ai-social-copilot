@@ -11,3 +11,16 @@
 ### Comunicação
 - **Sempre fornecer passo a passo** ao usuário em todas as tarefas. Cada ação relevante deve ser explicada de forma sequencial e clara antes ou durante a execução.
 - **Ser didático em cada etapa**: o usuário é iniciante e este é seu primeiro projeto. Explicar o que é cada ferramenta, por que está sendo usada e o que esperar como resultado. Nunca assumir conhecimento prévio. Usar linguagem simples e acessível.
+
+### Formato de Relatórios — OBRIGATÓRIO
+- **Todo relatório, resumo de fase, auditoria ou entrega final DEVE ser apresentado dentro de um bloco de código** (```), para que o usuário possa copiar e colar facilmente.
+- O bloco deve conter o relatório completo em texto puro, sem formatação Markdown interna (sem `**negrito**`, sem `###`, sem tabelas Markdown) — usar apenas espaços, hífens e maiúsculas para estrutura visual.
+- Exemplo de estrutura dentro do bloco:
+  ```
+  RELATÓRIO — FASE X
+  ==================
+  ITEM 1: ...
+  ITEM 2: ...
+  VEREDICTO: APROVADA / APROVADA COM RESSALVAS / REPROVADA
+  ```
+- Fora do bloco, pode haver uma frase curta de introdução, mas o conteúdo do relatório fica sempre dentro do bloco copiável.
