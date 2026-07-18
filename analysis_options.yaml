@@ -1,0 +1,20 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  errors:
+    # Informações tratadas como warnings (não como erros), para não quebrar --fatal-warnings
+    todo: ignore
+  exclude:
+    - '**/*.g.dart'
+    - '**/*.freezed.dart'
+
+linter:
+  rules:
+    # debugPrint é o padrão Flutter para logs de debug — não é print() comum
+    avoid_print: true
+    # Regras essenciais para segurança e qualidade
+    avoid_dynamic_calls: false   # Supabase retorna dynamic com frequência
+    always_declare_return_types: true
+    prefer_const_constructors: true
+    prefer_final_fields: true
+    unnecessary_null_comparison: true
