@@ -3,18 +3,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants/app_constants.dart';
 import '../core/services/ive_event_bus.dart';
-import '../data/models/ecosystem_score.dart';
 import '../data/models/ive_event.dart';
 import '../data/models/ive_issue.dart';
 import '../data/models/ive_state.dart';
+import '../features/ive/domain/ive_route_context.dart';
 import 'auto_bootstrap_provider.dart';
-import 'ecosystem_intelligence_provider.dart';
 import 'ive_context_provider.dart';
 import 'ive_memory_provider.dart';
 
 // ── Screen context messages ────────────────────────────────────────────────
 
 const _kMessages = <String, List<String>>{
+  AppConstants.routeExecutiveDashboard: [
+    'Posso analisar as prioridades do projeto ativo e transformar uma recomendação em ação.',
+    'As recomendações usam apenas os dados disponíveis para o projeto selecionado.',
+  ],
   AppConstants.routeProjects: [
     'Olá! Sou a IVE, sua consultora executiva. Posso analisar seu portfólio agora.',
     'Quer saber qual projeto tem mais potencial de escala neste momento?',
@@ -45,6 +48,10 @@ const _kMessages = <String, List<String>>{
     'Qual documento quer que eu analise ou conecte com seus projetos?',
     'Posso mostrar quais conhecimentos estão gerando mais insights.',
   ],
+  AppConstants.routeContent: [
+    'Esta é a Library. Posso considerar os ativos disponíveis para o projeto selecionado.',
+    'Posso ajudar a identificar conteúdo reutilizável sem afirmar acesso a dados indisponíveis.',
+  ],
   AppConstants.routeActionEngine: [
     'Sua fila de ações determina sua velocidade de execução.',
     'Posso ajudar a priorizar: quais ações têm maior impacto no score?',
@@ -68,16 +75,18 @@ const _kMessages = <String, List<String>>{
 };
 
 const _kExpressions = <String, IveExpression>{
-  AppConstants.routeProjects:            IveExpression.excited,
-  AppConstants.routeOpportunityLab:      IveExpression.excited,
-  AppConstants.routeEcosystem:           IveExpression.thinking,
-  AppConstants.routeEcosystemBriefing:   IveExpression.happy,
-  AppConstants.routePersonas:            IveExpression.winking,
-  AppConstants.routeKnowledge:           IveExpression.happy,
-  AppConstants.routeActionEngine:        IveExpression.thinking,
-  AppConstants.routeIntelligenceDebug:   IveExpression.neutral,
-  AppConstants.routeMarketIntelligence:  IveExpression.thinking,
-  AppConstants.routeRoiTracker:          IveExpression.excited,
+  AppConstants.routeExecutiveDashboard: IveExpression.happy,
+  AppConstants.routeProjects: IveExpression.excited,
+  AppConstants.routeOpportunityLab: IveExpression.excited,
+  AppConstants.routeEcosystem: IveExpression.thinking,
+  AppConstants.routeEcosystemBriefing: IveExpression.happy,
+  AppConstants.routePersonas: IveExpression.winking,
+  AppConstants.routeKnowledge: IveExpression.happy,
+  AppConstants.routeContent: IveExpression.thinking,
+  AppConstants.routeActionEngine: IveExpression.thinking,
+  AppConstants.routeIntelligenceDebug: IveExpression.neutral,
+  AppConstants.routeMarketIntelligence: IveExpression.thinking,
+  AppConstants.routeRoiTracker: IveExpression.excited,
 };
 
 // ── Notifier ──────────────────────────────────────────────────────────────────
@@ -92,21 +101,6 @@ class IveNotifier extends StateNotifier<IveState> {
       iveContextDataProvider,
       (_, next) => next.whenData(_onContextData),
     );
-
-    // Mantém snapshot de memória atualizado quando scores mudam
-    _ref.listen<AsyncValue<List<EcosystemScore>>>(
-      ecosystemScoresProvider,
-      (_, next) => next.whenData((scores) {
-        final snapshot = {
-          for (final s in scores) s.project.id: s.ecosystemScore,
-        };
-        final health =
-            _ref.read(iveContextDataProvider).valueOrNull?.healthScore ?? 0;
-        _ref
-            .read(iveMemoryProvider.notifier)
-            .updateEcosystemSnapshot(health: health, scores: snapshot);
-      }),
-    );
   }
 
   final Ref _ref;
@@ -114,7 +108,7 @@ class IveNotifier extends StateNotifier<IveState> {
 
   Timer? _dismissTimer;
   Timer? _cycleTimer;
-  int    _msgIndex     = 0;
+  int _msgIndex = 0;
   String _currentRoute = '';
 
   // ── Event Bus ─────────────────────────────────────────────────────────────
@@ -130,7 +124,8 @@ class IveNotifier extends StateNotifier<IveState> {
       case IveEventType.assetAnalysisCompleted:
         final name = event.entityName;
         if (name != null) {
-          _showTransient('Análise de "$name" concluída!', IveExpression.excited);
+          _showTransient(
+              'Análise de "$name" concluída!', IveExpression.excited);
         }
         break;
 
@@ -160,7 +155,7 @@ class IveNotifier extends StateNotifier<IveState> {
         break;
 
       case IveEventType.projectStatusChanged:
-        final name   = event.entityName;
+        final name = event.entityName;
         final status = event.payload['status'] as String?;
         if (name != null && status != null) {
           final label = status == 'active'
@@ -186,12 +181,12 @@ class IveNotifier extends StateNotifier<IveState> {
     _cycleTimer?.cancel();
     _dismissTimer?.cancel();
     state = state.copyWith(
-      message:       issue.userMessage,
-      expression:    issue.severity == IveIssueSeverity.critical
+      message: issue.userMessage,
+      expression: issue.severity == IveIssueSeverity.critical
           ? IveExpression.neutral
           : IveExpression.thinking,
       bubbleVisible: true,
-      activeIssue:   issue,
+      activeIssue: issue,
     );
     // Issues ficam visíveis por 15s (em vez de 7s)
     _dismissTimer = Timer(const Duration(seconds: 15), () {
@@ -202,8 +197,8 @@ class IveNotifier extends StateNotifier<IveState> {
   void _showTransient(String message, IveExpression expression) {
     if (state.activeIssue != null && state.bubbleVisible) return;
     state = state.copyWith(
-      message:       message,
-      expression:    expression,
+      message: message,
+      expression: expression,
       bubbleVisible: true,
     );
     _scheduleDismiss();
@@ -212,13 +207,25 @@ class IveNotifier extends StateNotifier<IveState> {
   // ── Context data handler (antes no IveOverlay) ────────────────────────────
 
   void _onContextData(IveContextData ctx) {
+    if (ctx.activeProjectId != null && ctx.activeProjectName != null) {
+      _ref.read(iveMemoryProvider.notifier).setActiveProject(
+            ctx.activeProjectId!,
+            ctx.activeProjectName!,
+          );
+      _ref.read(iveMemoryProvider.notifier).updateEcosystemSnapshot(
+        health: ctx.healthScore,
+        scores: {ctx.activeProjectId!: ctx.healthScore},
+      );
+    }
     // Não sobrescreve issue ativo
     if (state.activeIssue != null && state.bubbleVisible) return;
 
     final alertId = ctx.alertId;
-    final memory  = _ref.read(iveMemoryProvider);
+    final memory = _ref.read(iveMemoryProvider);
 
-    if (ctx.hasAlert && alertId.isNotEmpty && !memory.isAlertDismissed(alertId)) {
+    if (ctx.hasAlert &&
+        alertId.isNotEmpty &&
+        !memory.isAlertDismissed(alertId)) {
       showContextAwareMessage(ctx, _currentRoute);
     } else if (!ctx.hasAlert) {
       showContextAwareMessage(ctx, _currentRoute);
@@ -228,8 +235,8 @@ class IveNotifier extends StateNotifier<IveState> {
       if (msg.isNotEmpty) {
         final expr = _kExpressions[_currentRoute] ?? IveExpression.happy;
         state = state.copyWith(
-          message:       msg,
-          expression:    expr,
+          message: msg,
+          expression: expr,
           bubbleVisible: true,
         );
         _scheduleDismiss();
@@ -241,28 +248,24 @@ class IveNotifier extends StateNotifier<IveState> {
 
   // Normaliza caminhos com parâmetros (ex: /opportunity-lab/opp-1 → /opportunity-lab)
   String _normalizeRoute(String route) {
-    String best = '';
-    for (final key in _kMessages.keys) {
-      if ((route == key ||
-              route.startsWith('$key/') ||
-              route.startsWith('$key?')) &&
-          key.length > best.length) {
-        best = key;
-      }
-    }
-    return best.isNotEmpty ? best : route;
+    return IveRouteContext.normalize(route);
   }
 
   void setRoute(String route) {
     final normalized = _normalizeRoute(route);
     if (normalized == _currentRoute) return;
     _currentRoute = normalized;
-    _msgIndex     = 0;
+    _msgIndex = 0;
     // Limpa issue ao trocar de tela
     if (state.activeIssue != null) {
       state = state.copyWith(clearIssue: true, bubbleVisible: false);
     }
-    _showMessage(normalized, 0);
+    final context = _ref.read(iveContextDataProvider).valueOrNull;
+    if (context != null) {
+      showContextAwareMessage(context, normalized);
+    } else {
+      _showMessage(normalized, 0);
+    }
     _scheduleCycle(normalized);
   }
 
@@ -272,12 +275,12 @@ class IveNotifier extends StateNotifier<IveState> {
       state = state.copyWith(bubbleVisible: false);
       return;
     }
-    final msg  = msgs[index % msgs.length];
+    final msg = msgs[index % msgs.length];
     final expr = _kExpressions[route] ?? IveExpression.happy;
     state = state.copyWith(
-      screenName:    route,
-      message:       msg,
-      expression:    expr,
+      screenName: route,
+      message: msg,
+      expression: expr,
       bubbleVisible: true,
     );
     _scheduleDismiss();
@@ -323,8 +326,8 @@ class IveNotifier extends StateNotifier<IveState> {
     IveExpression expression = IveExpression.happy,
   }) {
     state = state.copyWith(
-      message:       message,
-      expression:    expression,
+      message: message,
+      expression: expression,
       bubbleVisible: true,
     );
     _scheduleDismiss();
@@ -333,8 +336,8 @@ class IveNotifier extends StateNotifier<IveState> {
   void showContextAwareMessage(IveContextData ctx, String route) {
     if (ctx.hasAlert && ctx.alertMessage.isNotEmpty) {
       state = state.copyWith(
-        message:       ctx.alertMessage,
-        expression:    IveExpression.neutral,
+        message: ctx.alertMessage,
+        expression: IveExpression.neutral,
         bubbleVisible: true,
       );
       _scheduleDismiss();
@@ -345,8 +348,8 @@ class IveNotifier extends StateNotifier<IveState> {
     if (msg.isNotEmpty) {
       final expr = _kExpressions[route] ?? IveExpression.happy;
       state = state.copyWith(
-        message:       msg,
-        expression:    expr,
+        message: msg,
+        expression: expr,
         bubbleVisible: true,
       );
       _scheduleDismiss();
@@ -354,37 +357,40 @@ class IveNotifier extends StateNotifier<IveState> {
   }
 
   String _buildContextMessage(IveContextData ctx, String route) {
-    if (ctx.healthScore == 0) return '';
+    if (!ctx.hasActiveProject) {
+      return 'Nenhum projeto selecionado. Selecione um projeto para receber recomendações executivas.';
+    }
 
     switch (route) {
+      case AppConstants.routeExecutiveDashboard:
+        final greeting =
+            ctx.userName.isEmpty ? 'Olá.' : 'Olá, ${ctx.userName}.';
+        return '$greeting Estou acompanhando o projeto ${ctx.activeProjectName}. '
+            'Posso analisar suas prioridades ou transformar uma recomendação em ação.';
+
       case AppConstants.routeEcosystem:
-        final bottleneck = ctx.mainBottleneckName ?? 'execução';
-        return 'Ecossistema em ${ctx.healthScore}/100. '
-               'Principal gargalo: $bottleneck. '
-               'Posso detalhar como melhorar.';
+        return '${ctx.activeProjectName} está com saúde ${ctx.healthScore}/100. '
+            'Posso explicar os dados disponíveis e sugerir um próximo passo.';
 
       case AppConstants.routeProjects:
-        if (ctx.topProjectName != null) {
-          return '${ctx.topProjectName} lidera com score ${ctx.topProjectScore}. '
-                 '${ctx.pendingActionsCount > 0 ? "${ctx.pendingActionsCount} ações pendentes detectadas." : "Quer analisar oportunidades?"}';
-        }
-        break;
+        return 'Projeto ativo: ${ctx.activeProjectName}. '
+            '${ctx.pendingActionsCount > 0 ? "${ctx.pendingActionsCount} ações pendentes." : "Nenhuma ação pendente registrada."}';
 
       case AppConstants.routeOpportunityLab:
         if (ctx.pendingOpportunitiesCount > 0) {
           return '${ctx.pendingOpportunitiesCount} oportunidades aguardando sua avaliação. '
-                 'Posso priorizar as de maior ROI.';
+              'Posso priorizar as de maior ROI.';
         }
         break;
 
       case AppConstants.routeEcosystemBriefing:
-        return 'Briefing gerado com saúde geral em ${ctx.healthScore}/100. '
-               'Posso traduzir os dados em ações concretas.';
+        return 'Briefing de ${ctx.activeProjectName} com saúde em ${ctx.healthScore}/100. '
+            'Posso traduzir os dados em ações concretas.';
 
       case AppConstants.routeActionEngine:
         if (ctx.pendingActionsCount > 0) {
           return '${ctx.pendingActionsCount} ações pendentes. '
-                 'Posso identificar as de maior impacto no score de execução.';
+              'Posso identificar as de maior impacto no score de execução.';
         }
         break;
     }
