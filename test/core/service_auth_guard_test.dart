@@ -8,6 +8,7 @@
 // Isso é exatamente o comportamento que queremos verificar.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:ai_social_copilot/data/models/action_queue_item.dart';
 import 'package:ai_social_copilot/data/models/calendar_item.dart';
@@ -81,6 +82,15 @@ PostGeneration _fakePostGeneration() => PostGeneration(
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 void main() {
+  setUpAll(() async {
+    try {
+      await Supabase.initialize(
+        url: 'http://localhost:54321',
+        anonKey: 'test-anon-key',
+      );
+    } catch (_) {}
+  });
+
   group('Auth guard — fetchAll() sem sessão', () {
     test('PostService.fetchHistory() lança exceção', () {
       expect(PostService().fetchHistory(), throwsNotAuthenticated());

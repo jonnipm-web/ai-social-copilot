@@ -15,6 +15,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:ai_social_copilot/data/models/project.dart';
 import 'package:ai_social_copilot/data/services/project_service.dart';
@@ -52,7 +53,13 @@ void main() {
   late MockProjectService svcA;
   late MockProjectService svcB;
 
-  setUpAll(() {
+  setUpAll(() async {
+    try {
+      await Supabase.initialize(
+        url: 'http://localhost:54321',
+        anonKey: 'test-anon-key',
+      );
+    } catch (_) {}
     registerFallbackValue(_projA('fallback'));
     registerFallbackValue(<String, dynamic>{});
   });

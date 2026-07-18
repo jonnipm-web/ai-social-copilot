@@ -14,6 +14,7 @@
 /// de staging com Supabase real.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:ai_social_copilot/data/services/profile_service.dart';
 
@@ -48,6 +49,15 @@ Matcher throwsAdminRequired() => throwsA(
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 void main() {
+  setUpAll(() async {
+    try {
+      await Supabase.initialize(
+        url: 'http://localhost:54321',
+        anonKey: 'test-anon-key',
+      );
+    } catch (_) {}
+  });
+
   group('ProfileService — guard de autenticação (sem sessão)', () {
     test('fetchAllProfiles() lança exceção sem sessão', () {
       expect(

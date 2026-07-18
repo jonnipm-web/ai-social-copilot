@@ -8,6 +8,7 @@
 /// RLS no banco é a segunda camada; esses testes validam a primeira (service).
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:ai_social_copilot/data/services/market_analysis_service.dart';
 
@@ -30,6 +31,15 @@ const _fakeId = 'fake-market-analysis-id';
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 void main() {
+  setUpAll(() async {
+    try {
+      await Supabase.initialize(
+        url: 'http://localhost:54321',
+        anonKey: 'test-anon-key',
+      );
+    } catch (_) {}
+  });
+
   group('MarketAnalysisService — exige autenticação (sem sessão)', () {
     test('fetchAll() lança exceção', () {
       expect(MarketAnalysisService().fetchAll(), throwsNotAuthenticated());

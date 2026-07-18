@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:ai_social_copilot/core/services/ive_event_bus.dart';
 import 'package:ai_social_copilot/data/models/ive_event.dart';
@@ -41,6 +42,15 @@ ProviderContainer _container(MockProjectService svc) => ProviderContainer(
 void main() {
   late MockProjectService svc;
 
+  setUpAll(() async {
+    try {
+      await Supabase.initialize(
+        url: 'http://localhost:54321',
+        anonKey: 'test-anon-key',
+      );
+    } catch (_) {}
+  });
+
   setUp(() {
     svc = MockProjectService();
   });
@@ -68,10 +78,7 @@ void main() {
       final result = await container.read(projectsNotifierProvider.future);
 
       expect(result, [p]);
-      expect(
-        container.read(projectsNotifierProvider),
-        AsyncData([p]),
-      );
+      expect(container.read(projectsNotifierProvider).valueOrNull, [p]);
       verify(() => svc.fetchAll()).called(1);
     });
 
