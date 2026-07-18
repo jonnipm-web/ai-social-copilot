@@ -30,7 +30,7 @@ class SupabaseIveCopilotGateway implements IveCopilotGateway {
       }
       return data;
     } on FunctionException catch (error) {
-      throw _httpError(error.status, _map(error.details));
+      throw _httpError(error.status ?? 0, _map(error.details));
     }
   }
 
