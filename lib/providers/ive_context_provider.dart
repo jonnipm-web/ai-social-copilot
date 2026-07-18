@@ -1,180 +1,237 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'ecosystem_intelligence_provider.dart';
+import '../data/models/copilot_context_data.dart';
 import 'action_queue_provider.dart';
-import 'opportunity_lab_provider.dart';
+import 'ecosystem_intelligence_provider.dart';
 import 'knowledge_provider.dart';
+import 'opportunity_lab_provider.dart';
+import 'profile_provider.dart';
+import 'selected_project_provider.dart';
 
-// ── IveContextData — dados em tempo real do ecossistema para a IVE ────────────
-
+/// Snapshot estritamente limitado ao usuário autenticado e ao projeto ativo.
 class IveContextData {
-  final int    healthScore;
-  final int    projectCount;
-  final int    pendingActionsCount;
-  final int    pendingOpportunitiesCount;
-  final String? topProjectName;
-  final String? topProjectDescription;
-  final String? topProjectType;
-  final int?    topProjectScore;
-  final String? mainBottleneckName;
-  final int?    mainBottleneckScore;
-  final bool   hasAlert;
+  final String userId;
+  final String userName;
+  final String? activeProjectId;
+  final String? activeProjectName;
+  final String? activeProjectDescription;
+  final String? activeProjectType;
+  final String? activeProjectStatus;
+  final int healthScore;
+  final int projectCount;
+  final int pendingActionsCount;
+  final int pendingOpportunitiesCount;
+  final int? executionScore;
+  final bool hasAlert;
   final String alertMessage;
   final String alertId;
-  // Snapshot das top 3 projetos para contexto rico no chat
-  final List<Map<String, dynamic>> topProjectsSnapshot;
-  // Top 5 knowledge items por score — alimenta documentos no chat
   final List<Map<String, dynamic>> knowledgeItemsSummary;
-  // Top 3 oportunidades pendentes — alimenta opportunities no chat
   final List<Map<String, dynamic>> pendingOpportunitiesSummary;
-  // Top 3 ações pendentes com campos de auditoria
   final List<Map<String, dynamic>> pendingActionsSummary;
+  final List<String> sourceLimitations;
 
   const IveContextData({
-    this.healthScore                = 0,
-    this.projectCount               = 0,
-    this.pendingActionsCount        = 0,
-    this.pendingOpportunitiesCount  = 0,
-    this.topProjectName,
-    this.topProjectDescription,
-    this.topProjectType,
-    this.topProjectScore,
-    this.mainBottleneckName,
-    this.mainBottleneckScore,
-    this.hasAlert                   = false,
-    this.alertMessage               = '',
-    this.alertId                    = '',
-    this.topProjectsSnapshot        = const [],
-    this.knowledgeItemsSummary      = const [],
+    this.userId = '',
+    this.userName = '',
+    this.activeProjectId,
+    this.activeProjectName,
+    this.activeProjectDescription,
+    this.activeProjectType,
+    this.activeProjectStatus,
+    this.healthScore = 0,
+    this.projectCount = 0,
+    this.pendingActionsCount = 0,
+    this.pendingOpportunitiesCount = 0,
+    this.executionScore,
+    this.hasAlert = false,
+    this.alertMessage = '',
+    this.alertId = '',
+    this.knowledgeItemsSummary = const [],
     this.pendingOpportunitiesSummary = const [],
-    this.pendingActionsSummary       = const [],
+    this.pendingActionsSummary = const [],
+    this.sourceLimitations = const [],
   });
+
+  bool get hasActiveProject =>
+      activeProjectId != null && activeProjectId!.isNotEmpty;
+
+  CopilotContextData toCopilotContext({required String route}) =>
+      CopilotContextData(
+        userId: userId,
+        projectId: activeProjectId,
+        route: route,
+        project: hasActiveProject
+            ? {
+                'id': activeProjectId,
+                'name': activeProjectName ?? '',
+                'description': activeProjectDescription ?? '',
+                'objective': activeProjectDescription ?? '',
+                'stage': activeProjectType ?? '',
+                'type': activeProjectType ?? '',
+                'status': activeProjectStatus ?? '',
+              }
+            : null,
+        scores: hasActiveProject
+            ? {
+                'ecosystem': healthScore,
+                'execution': executionScore ?? 0,
+                'recommendation': _recommendation(healthScore),
+              }
+            : null,
+        documents: knowledgeItemsSummary,
+        opportunities: pendingOpportunitiesSummary,
+        actions: pendingActionsSummary,
+        sourceLimitations: sourceLimitations,
+      );
+
+  static String _recommendation(int health) {
+    if (health >= 70) {
+      return 'Projeto saudável. Priorize oportunidades de maior impacto.';
+    }
+    if (health >= 40) {
+      return 'Execução moderada. Priorize ações pendentes de alto impacto.';
+    }
+    return 'Atenção: o projeto precisa de intervenção e validação dos dados.';
+  }
 }
 
-// ── Provider — FutureProvider derivado dos providers de ecossistema ───────────
+final iveContextDataProvider =
+    FutureProvider.autoDispose<IveContextData>((ref) async {
+  final user = Supabase.instance.client.auth.currentUser;
+  if (user == null) return const IveContextData();
 
-final iveContextDataProvider = FutureProvider.autoDispose<IveContextData>((ref) async {
-  // Lê dados existentes — não cria nova lógica, apenas agrega
-  final health    = await ref.watch(ecosystemHealthProvider.future);
-  final scores    = await ref.watch(ecosystemScoresProvider.future);
-  final pending   = await ref.watch(pendingActionsProvider.future);
-  final labSummary = await ref.watch(opportunityLabSummaryProvider.future);
+  final project = ref.watch(selectedProjectProvider);
+  final profile = await ref.watch(currentProfileProvider.future).then(
+        (value) => value,
+        onError: (_, __) => null,
+      );
 
-  // Knowledge items — top 5 por opportunityScore
-  final knowledgeRaw = await ref.watch(knowledgeItemsProvider.future).then(
-    (v) => v,
-    onError: (_, __) => <dynamic>[],
-  );
-  final knowledgeSorted = [...knowledgeRaw]
-    ..sort((a, b) => b.opportunityScore.compareTo(a.opportunityScore));
-  final knowledgeSummary = knowledgeSorted.take(5).map((k) => {
-    'title':  k.title,
-    'score':  k.opportunityScore,
-    'status': k.status,
-    if (k.niche != null) 'niche': k.niche,
-  }).toList();
-
-  // Oportunidades pendentes — top 3 por finalScore
-  final opportunities = await ref.watch(opportunityLabProvider.future).then(
-    (v) => v,
-    onError: (_, __) => <dynamic>[],
-  );
-  final pendingOpportunities = [...opportunities.where((o) => o.status == 'pending')]
-    ..sort((a, b) => b.finalScore.compareTo(a.finalScore));
-  final opportunitiesSummary = pendingOpportunities.take(3).map((o) => {
-    'title':            o.title,
-    'description':      o.description,
-    'finalScore':       o.finalScore,
-    'opportunityType':  o.opportunityType,
-    'status':           o.status,
-    'origin':           o.originLabel,
-    'confidence':       o.confidence,
-    if (o.rationale != null && o.rationale!.isNotEmpty)
-      'rationale': o.rationale,
-    if (o.risks.isNotEmpty)        'risks':      o.risks.take(3).toList(),
-    if (o.actionSteps.isNotEmpty)  'next_steps': o.actionSteps.take(3).toList(),
-  }).toList();
-
-  // Ações pendentes — top 3 por prioridade com campos de auditoria
-  final pendingActionsSorted = [...pending]
-    ..sort((a, b) => b.priority.compareTo(a.priority));
-  final actionsSummary = pendingActionsSorted.take(3).map((a) => {
-    'title':       a.title,
-    'status':      a.status,
-    'priority':    a.priority,
-    'impactScore': a.impactScore,
-    'effortScore': a.effortScore,
-    'origin':      a.originLabel,
-    if (a.rationale != null && a.rationale!.isNotEmpty)
-      'rationale': a.rationale,
-    if (a.plan.isNotEmpty)  'plan':  a.plan.take(2).toList(),
-    if (a.risks.isNotEmpty) 'risks': a.risks.take(2).toList(),
-  }).toList();
-
-  // Projeto de maior score
-  final sorted = [...scores]
-    ..sort((a, b) => b.ecosystemScore.compareTo(a.ecosystemScore));
-  final top = sorted.isNotEmpty ? sorted.first : null;
-
-  // Projeto com pior execução (principal gargalo)
-  final bottleneck = scores.isNotEmpty
-      ? scores.reduce(
-          (a, b) => a.executionScore < b.executionScore ? a : b)
-      : null;
-
-  final pendingLab = labSummary['pending'] ?? 0;
-
-  // ── Detecção de alertas ───────────────────────────────────────────────────
-  bool hasAlert     = false;
-  String alertMsg   = '';
-  String alertId    = '';
-
-  final criticals = scores.where((s) => s.ecosystemScore < 30).toList();
-
-  if (health < 40) {
-    hasAlert  = true;
-    alertId   = 'health_low_$health';
-    alertMsg  = 'Saúde do ecossistema em $health/100. '
-                'Ação imediata recomendada.';
-  } else if (criticals.isNotEmpty) {
-    final c   = criticals.first;
-    hasAlert  = true;
-    alertId   = 'score_critical_${c.project.id}';
-    alertMsg  = '${c.project.name} com score crítico (${c.ecosystemScore}/100). '
-                'Posso identificar o que está limitando.';
-  } else if (pending.length > 5) {
-    hasAlert  = true;
-    alertId   = 'actions_overdue_${pending.length}';
-    alertMsg  = '${pending.length} ações pendentes acumuladas. '
-                'Isso está impactando seu score de execução.';
+  if (project == null) {
+    return IveContextData(
+      userId: user.id,
+      userName: profile?.fullName?.trim() ?? '',
+      sourceLimitations: const [
+        'Nenhum projeto foi selecionado; dados de negócio não foram carregados.',
+      ],
+    );
   }
 
-  final topThree = sorted.take(3).map((s) => {
-    'name':        s.project.name,
-    'description': s.project.description,
-    'type':        s.project.type,
-    'status':      s.project.status,
-    'score':       s.ecosystemScore,
-    'opportunity': s.project.opportunityScore,
-  }).toList();
+  if (project.userId != user.id) {
+    throw Exception('Projeto não pertence ao usuário');
+  }
+
+  final results = await Future.wait<dynamic>([
+    ref.watch(ecosystemScoresProvider.future).then(
+          (value) => value,
+          onError: (_, __) => <dynamic>[],
+        ),
+    ref.watch(actionQueueByProjectProvider(project.id).future).then(
+          (value) => value,
+          onError: (_, __) => <dynamic>[],
+        ),
+    ref.watch(opportunityLabByProjectProvider(project.id).future).then(
+          (value) => value,
+          onError: (_, __) => <dynamic>[],
+        ),
+    ref.watch(knowledgeItemsByProjectProvider(project.id).future).then(
+          (value) => value,
+          onError: (_, __) => <dynamic>[],
+        ),
+  ]);
+
+  final scores = results[0] as List;
+  final actions = results[1] as List;
+  final opportunities = results[2] as List;
+  final knowledge = results[3] as List;
+
+  final selectedScores =
+      scores.where((score) => score.project.id == project.id).toList();
+  final score = selectedScores.isEmpty ? null : selectedScores.first;
+
+  final pendingActions = actions
+      .where((action) => action.status == 'pending')
+      .toList()
+    ..sort((a, b) => b.priority.compareTo(a.priority));
+  final pendingOpportunities = opportunities
+      .where((opportunity) => opportunity.status == 'pending')
+      .toList()
+    ..sort((a, b) => b.finalScore.compareTo(a.finalScore));
+  final knowledgeSorted = [...knowledge]
+    ..sort((a, b) => b.opportunityScore.compareTo(a.opportunityScore));
+
+  final knowledgeSummary = knowledgeSorted
+      .take(5)
+      .map((item) => {
+            'id': item.id,
+            'title': item.title,
+            'score': item.opportunityScore,
+            'status': item.status,
+            if (item.niche != null) 'niche': item.niche,
+          })
+      .toList();
+
+  final opportunitySummary = pendingOpportunities
+      .take(3)
+      .map((item) => {
+            'id': item.id,
+            'title': item.title,
+            'description': item.description,
+            'finalScore': item.finalScore,
+            'opportunityType': item.opportunityType,
+            'status': item.status,
+            'origin': item.originLabel,
+            'confidence': item.confidence,
+            if (item.rationale != null && item.rationale!.isNotEmpty)
+              'rationale': item.rationale,
+            if (item.risks.isNotEmpty) 'risks': item.risks.take(3).toList(),
+            if (item.actionSteps.isNotEmpty)
+              'next_steps': item.actionSteps.take(3).toList(),
+          })
+      .toList();
+
+  final actionSummary = pendingActions
+      .take(3)
+      .map((item) => {
+            'id': item.id,
+            'title': item.title,
+            'status': item.status,
+            'priority': item.priority,
+            'impactScore': item.impactScore,
+            'effortScore': item.effortScore,
+            'origin': item.originLabel,
+            if (item.rationale != null && item.rationale!.isNotEmpty)
+              'rationale': item.rationale,
+          })
+      .toList();
+
+  final health = score?.ecosystemScore ?? 0;
+  final hasAlert = health > 0 && health < 40;
 
   return IveContextData(
-    healthScore:                 health,
-    projectCount:                scores.length,
-    pendingActionsCount:         pending.length,
-    pendingOpportunitiesCount:   pendingLab,
-    topProjectName:              top?.project.name,
-    topProjectDescription:       top?.project.description,
-    topProjectType:              top?.project.type,
-    topProjectScore:             top?.ecosystemScore,
-    mainBottleneckName:          bottleneck?.project.name,
-    mainBottleneckScore:         bottleneck?.executionScore,
-    hasAlert:                    hasAlert,
-    alertMessage:                alertMsg,
-    alertId:                     alertId,
-    topProjectsSnapshot:         topThree,
-    knowledgeItemsSummary:       knowledgeSummary,
-    pendingOpportunitiesSummary: opportunitiesSummary,
-    pendingActionsSummary:       actionsSummary,
+    userId: user.id,
+    userName: profile?.fullName?.trim() ?? '',
+    activeProjectId: project.id,
+    activeProjectName: project.name,
+    activeProjectDescription: project.description,
+    activeProjectType: project.type,
+    activeProjectStatus: project.status,
+    healthScore: health,
+    projectCount: 1,
+    executionScore: score?.executionScore,
+    pendingActionsCount: pendingActions.length,
+    pendingOpportunitiesCount: pendingOpportunities.length,
+    hasAlert: hasAlert,
+    alertId: hasAlert ? 'project_health_low_${project.id}_$health' : '',
+    alertMessage: hasAlert
+        ? '${project.name} está com saúde $health/100. Posso priorizar uma ação.'
+        : '',
+    knowledgeItemsSummary: knowledgeSummary,
+    pendingOpportunitiesSummary: opportunitySummary,
+    pendingActionsSummary: actionSummary,
+    sourceLimitations: const [
+      'A Knowledge Base fornece apenas metadados e análises disponíveis; o conteúdo integral dos documentos não foi lido nesta conversa.',
+      'Recomendações dependem da atualidade dos dados registrados no projeto.',
+    ],
   );
 });

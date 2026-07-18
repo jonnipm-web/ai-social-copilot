@@ -1,75 +1,104 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/models/ive_memory.dart';
 
-// ── Chaves SharedPreferences ───────────────────────────────────────────────────
-const _kLastRoute        = 'ive_last_route';
-const _kLastProjectId    = 'ive_last_project_id';
-const _kLastProjectName  = 'ive_last_project_name';
-const _kRecentQuestions  = 'ive_recent_questions';
+const _kLastRoute = 'ive_last_route';
+const _kLastProjectId = 'ive_last_project_id';
+const _kLastProjectName = 'ive_last_project_name';
+const _kRecentQuestions = 'ive_recent_questions';
 const _kInteractionCount = 'ive_interaction_count';
 
 class IveMemoryNotifier extends StateNotifier<IveMemory> {
   IveMemoryNotifier() : super(const IveMemory()) {
-    _load();
+    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((event) {
+      if (event.event == AuthChangeEvent.signedOut) {
+        _activeUserId = null;
+        if (mounted) state = const IveMemory();
+        return;
+      }
+      final uid = event.session?.user.id;
+      if (uid != null && uid != _activeUserId) _load(uid);
+    });
+    final uid = Supabase.instance.client.auth.currentUser?.id;
+    if (uid != null) _load(uid);
   }
 
-  // ── Carrega do SharedPreferences na inicialização ─────────────────────────
-  Future<void> _load() async {
+  StreamSubscription<AuthState>? _authSub;
+  String? _activeUserId;
+
+  String _key(String base, String uid) => '${base}_$uid';
+
+  Future<void> _load(String uid) async {
+    _activeUserId = uid;
+    if (mounted) state = const IveMemory();
     try {
       final prefs = await SharedPreferences.getInstance();
+      if (!mounted || _activeUserId != uid) return;
       state = state.copyWith(
-        lastRoute:        prefs.getString(_kLastRoute)        ?? '',
-        lastProjectId:    prefs.getString(_kLastProjectId),
-        lastProjectName:  prefs.getString(_kLastProjectName),
-        recentQuestions:  prefs.getStringList(_kRecentQuestions) ?? [],
-        interactionCount: prefs.getInt(_kInteractionCount)    ?? 0,
+        lastRoute: prefs.getString(_key(_kLastRoute, uid)) ?? '',
+        lastProjectId: prefs.getString(_key(_kLastProjectId, uid)),
+        lastProjectName: prefs.getString(_key(_kLastProjectName, uid)),
+        recentQuestions:
+            prefs.getStringList(_key(_kRecentQuestions, uid)) ?? [],
+        interactionCount: prefs.getInt(_key(_kInteractionCount, uid)) ?? 0,
       );
-    } catch (_) {
-      // SharedPreferences pode falhar em ambiente de teste — ignora
+    } catch (error) {
+      assert(() {
+        debugPrint('[IveMemory] load failed: $error');
+        return true;
+      }());
     }
   }
 
-  // ── API pública ───────────────────────────────────────────────────────────
-
   Future<void> setRoute(String route) async {
-    if (route == state.lastRoute) return;
+    final uid = _activeUserId;
+    if (uid == null || route == state.lastRoute) return;
     state = state.copyWith(lastRoute: route);
-    _persist((prefs) => prefs.setString(_kLastRoute, route));
+    _persist(uid, (prefs) => prefs.setString(_key(_kLastRoute, uid), route));
   }
 
   Future<void> setActiveProject(String id, String name) async {
+    final uid = _activeUserId;
+    if (uid == null) return;
     state = state.copyWith(lastProjectId: id, lastProjectName: name);
-    _persist((prefs) async {
-      await prefs.setString(_kLastProjectId, id);
-      await prefs.setString(_kLastProjectName, name);
+    _persist(uid, (prefs) async {
+      await prefs.setString(_key(_kLastProjectId, uid), id);
+      await prefs.setString(_key(_kLastProjectName, uid), name);
     });
   }
 
   Future<void> addQuestion(String question) async {
-    if (question.trim().isEmpty) return;
-    final updated = [question.trim(), ...state.recentQuestions]
-        .take(5)
-        .toList();
+    final uid = _activeUserId;
+    if (uid == null || question.trim().isEmpty) return;
+    final updated =
+        [question.trim(), ...state.recentQuestions].take(5).toList();
     state = state.copyWith(recentQuestions: updated);
-    _persist((prefs) => prefs.setStringList(_kRecentQuestions, updated));
+    _persist(
+      uid,
+      (prefs) => prefs.setStringList(_key(_kRecentQuestions, uid), updated),
+    );
   }
 
   void updateEcosystemSnapshot({
     required int health,
     required Map<String, int> scores,
   }) {
+    if (_activeUserId == null) return;
     state = state.copyWith(
       overallHealthScore: health,
-      ecosystemSnapshot:  scores,
+      ecosystemSnapshot: scores,
     );
-    // health e snapshot são sessão apenas — não persistem
   }
 
   void dismissAlert(String alertId) {
-    if (state.dismissedAlerts.contains(alertId)) return;
+    if (_activeUserId == null || state.dismissedAlerts.contains(alertId)) {
+      return;
+    }
     state = state.copyWith(
       dismissedAlerts: [...state.dismissedAlerts, alertId],
     );
@@ -78,24 +107,48 @@ class IveMemoryNotifier extends StateNotifier<IveMemory> {
   bool isAlertDismissed(String alertId) =>
       state.dismissedAlerts.contains(alertId);
 
-  Future<void> incrementInteraction() async {
-    final count = state.interactionCount + 1;
-    state = state.copyWith(interactionCount: count);
-    _persist((prefs) => prefs.setInt(_kInteractionCount, count));
+  /// Limpa apenas a memória em RAM após rejeição de autenticação.
+  /// O namespace persistido só volta a ser carregado após nova sessão válida.
+  void clearSensitiveSession() {
+    _activeUserId = null;
+    state = const IveMemory();
   }
 
-  // ── Utilitário privado ────────────────────────────────────────────────────
-  void _persist(Future<void> Function(SharedPreferences) fn) async {
+  Future<void> incrementInteraction() async {
+    final uid = _activeUserId;
+    if (uid == null) return;
+    final count = state.interactionCount + 1;
+    state = state.copyWith(interactionCount: count);
+    _persist(
+      uid,
+      (prefs) => prefs.setInt(_key(_kInteractionCount, uid), count),
+    );
+  }
+
+  void _persist(
+    String uid,
+    Future<void> Function(SharedPreferences) operation,
+  ) async {
     try {
+      if (_activeUserId != uid) return;
       final prefs = await SharedPreferences.getInstance();
-      await fn(prefs);
-    } catch (e) {
-      assert(() { debugPrint('[IveMemory] persist failed: $e'); return true; }());
+      if (_activeUserId != uid) return;
+      await operation(prefs);
+    } catch (error) {
+      assert(() {
+        debugPrint('[IveMemory] persist failed: $error');
+        return true;
+      }());
     }
+  }
+
+  @override
+  void dispose() {
+    _authSub?.cancel();
+    super.dispose();
   }
 }
 
-// ── Provider global ───────────────────────────────────────────────────────────
 final iveMemoryProvider = StateNotifierProvider<IveMemoryNotifier, IveMemory>(
   (_) => IveMemoryNotifier(),
 );

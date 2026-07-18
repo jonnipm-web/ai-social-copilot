@@ -61,12 +61,13 @@ final _router = GoRouter(
   observers: [_iveObserver],
   redirect: (context, state) {
     final session = Supabase.instance.client.auth.currentSession;
-    final goingToAuth   = state.fullPath == AppConstants.routeLogin;
+    final goingToAuth = state.fullPath == AppConstants.routeLogin;
     final goingToSplash = state.fullPath == AppConstants.routeSplash;
 
     if (goingToSplash) return null;
     if (session == null && !goingToAuth) return AppConstants.routeLogin;
-    if (session != null && goingToAuth)  return AppConstants.routeExecutiveDashboard;
+    if (session != null && goingToAuth)
+      return AppConstants.routeExecutiveDashboard;
     return null;
   },
   routes: [
@@ -104,8 +105,8 @@ final _router = GoRouter(
         }
         final map = extra as Map<String, dynamic>;
         return ResultScreen(
-          originalText:      map['originalText'] as String,
-          result:            map['result'] as Map<String, dynamic>,
+          originalText: map['originalText'] as String,
+          result: map['result'] as Map<String, dynamic>,
           processingSeconds: map['processingSeconds'] as double?,
         );
       },
@@ -377,16 +378,41 @@ final _router = GoRouter(
   ],
 );
 
-class App extends ConsumerWidget {
+class App extends ConsumerStatefulWidget {
   const App({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<App> createState() => _AppState();
+}
+
+class _AppState extends ConsumerState<App> {
+  @override
+  void initState() {
+    super.initState();
+    _router.routerDelegate.addListener(_syncIveRoute);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _syncIveRoute());
+  }
+
+  void _syncIveRoute() {
+    final location = _router.routerDelegate.currentConfiguration.uri.toString();
+    if (location.isNotEmpty && iveRouteNotifier.value != location) {
+      iveRouteNotifier.value = location;
+    }
+  }
+
+  @override
+  void dispose() {
+    _router.routerDelegate.removeListener(_syncIveRoute);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return MaterialApp.router(
-      title:                      AppConstants.appName,
+      title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
-      theme:                      AppTheme.dark,
-      routerConfig:               _router,
+      theme: AppTheme.dark,
+      routerConfig: _router,
       // Global safe area: evita que conteúdo fique atrás da barra de navegação
       // do Android (edge-to-edge mode). top: false pois o AppBar já cuida do topo.
       builder: (context, child) => SafeArea(

@@ -3,12 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_constants.dart';
-import '../../data/models/copilot_context_data.dart';
 import '../../data/models/ive_issue.dart';
 import '../../data/models/ive_state.dart';
 import '../../features/ive/visual/ive_avatar.dart';
-import '../../features/ive/visual/ive_avatar_state.dart';
-import '../../features/ive/visual/ive_visual_config.dart';
+import '../../features/ive/domain/ive_route_context.dart';
 import '../../providers/ive_context_provider.dart';
 import '../../providers/ive_memory_provider.dart';
 import '../../providers/ive_provider.dart';
@@ -25,7 +23,8 @@ class IveRouteObserver extends NavigatorObserver {
     if (name.isNotEmpty) iveRouteNotifier.value = name;
   }
 
-  @override void didPush(Route route, Route? previousRoute) => _notify(route);
+  @override
+  void didPush(Route route, Route? previousRoute) => _notify(route);
 
   @override
   void didPop(Route route, Route? previousRoute) {
@@ -49,7 +48,7 @@ class IveOverlay extends ConsumerStatefulWidget {
 
 class _IveOverlayState extends ConsumerState<IveOverlay> {
   Offset? _position;
-  bool    _dragging = false;
+  bool _dragging = false;
 
   @override
   void initState() {
@@ -74,15 +73,15 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
 
   @override
   Widget build(BuildContext context) {
-    final state  = ref.watch(iveProvider);
+    final state = ref.watch(iveProvider);
     final screen = MediaQuery.of(context).size;
     _position ??= _defaultPosition(screen);
 
     return Positioned(
       left: _position!.dx,
-      top:  _position!.dy,
+      top: _position!.dy,
       child: GestureDetector(
-        onPanStart:  (_) => setState(() => _dragging = true),
+        onPanStart: (_) => setState(() => _dragging = true),
         onPanUpdate: (d) => setState(() {
           _position = (_position! + d.delta).clamp(
             Offset.zero,
@@ -91,7 +90,7 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
         }),
         onPanEnd: (_) => setState(() => _dragging = false),
         child: Column(
-          mainAxisSize:       MainAxisSize.min,
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             // Speech bubble — IgnorePointer evita hitbox invisível quando opacity=0
@@ -99,21 +98,23 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
               ignoring: !state.bubbleVisible || _dragging,
               child: AnimatedOpacity(
                 duration: const Duration(milliseconds: 350),
-                opacity:  state.bubbleVisible && !_dragging ? 1.0 : 0.0,
+                opacity: state.bubbleVisible && !_dragging ? 1.0 : 0.0,
                 child: AnimatedSlide(
                   duration: const Duration(milliseconds: 350),
-                  offset:   state.bubbleVisible && !_dragging
+                  offset: state.bubbleVisible && !_dragging
                       ? Offset.zero
                       : const Offset(0, 0.15),
-                  curve:    Curves.easeOut,
+                  curve: Curves.easeOut,
                   child: _IveBubble(
-                    message:     state.message,
-                    expression:  state.expression,
+                    message: state.message,
+                    expression: state.expression,
                     activeIssue: state.activeIssue,
                     onDismiss: () {
                       final ctx = ref.read(iveContextDataProvider).valueOrNull;
                       if (ctx != null && ctx.alertId.isNotEmpty) {
-                        ref.read(iveMemoryProvider.notifier).dismissAlert(ctx.alertId);
+                        ref
+                            .read(iveMemoryProvider.notifier)
+                            .dismissAlert(ctx.alertId);
                       }
                       ref.read(iveProvider.notifier).dismissBubble();
                     },
@@ -137,12 +138,12 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
                 }
               },
               child: AnimatedScale(
-                scale:    _dragging ? 0.92 : 1.0,
+                scale: _dragging ? 0.92 : 1.0,
                 duration: const Duration(milliseconds: 150),
-                child: IveAvatar(
-                  size:           IveAvatarSize.compact,
+                child: const IveAvatar(
+                  size: IveAvatarSize.compact,
                   showStatusRing: true,
-                  interactive:    false, // overlay owns the tap
+                  interactive: false, // overlay owns the tap
                 ),
               ),
             ),
@@ -154,68 +155,21 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
 
   void _openChat(BuildContext context, String screenName) {
     ref.read(iveMemoryProvider.notifier).incrementInteraction();
-    final ctx         = ref.read(iveContextDataProvider).valueOrNull;
-    final contextData = ctx != null ? _buildCopilotContext(ctx) : CopilotContextData();
     showCopilotChat(
       context,
-      screenName:  _routeToName(screenName),
-      contextData: contextData,
+      screenName: IveRouteContext.displayName(screenName),
+      route: screenName,
     );
-  }
-
-  CopilotContextData _buildCopilotContext(IveContextData ctx) =>
-      CopilotContextData(
-        scores: {
-          'ecosystem':      ctx.healthScore,
-          if (ctx.topProjectScore     != null) 'opportunity': ctx.topProjectScore,
-          if (ctx.mainBottleneckScore != null) 'execution':   ctx.mainBottleneckScore,
-          'recommendation': _recommendation(ctx.healthScore),
-        },
-        project: ctx.topProjectsSnapshot.isNotEmpty
-            ? {
-                'name':        ctx.topProjectName        ?? '',
-                'description': ctx.topProjectDescription ?? '',
-                'type':        ctx.topProjectType        ?? '',
-                'status':      'active',
-                'score':       ctx.topProjectScore       ?? 0,
-              }
-            : null,
-        documents:     ctx.knowledgeItemsSummary,
-        opportunities: ctx.pendingOpportunitiesSummary,
-        actions:       ctx.pendingActionsSummary,
-      );
-
-  String _recommendation(int health) {
-    if (health >= 70) return 'Ecossistema saudável. Priorize escalar oportunidades de alto ROI.';
-    if (health >= 40) return 'Ecossistema moderado. Execute ações pendentes para melhorar execução.';
-    return 'Atenção: scores críticos detectados. Intervenção imediata recomendada.';
-  }
-
-  String _routeToName(String route) {
-    const map = <String, String>{
-      '/projects':            'Projetos',
-      '/opportunity-lab':     'Oportunidades',
-      '/ecosystem':           'Decisões',
-      '/ecosystem/briefing':  'Briefing',
-      '/ecosystem/resources': 'Recursos',
-      '/personas':            'Personas',
-      '/knowledge':           'Conhecimento',
-      '/action-engine':       'Ações',
-      '/intelligence-debug':  'Debug Hub',
-      '/market-intelligence': 'Inteligência de Mercado',
-      '/roi-tracker':         'ROI Tracker',
-    };
-    return map[route] ?? route;
   }
 }
 
 // ── Speech bubble ─────────────────────────────────────────────────────────────
 
 class _IveBubble extends StatelessWidget {
-  final String        message;
+  final String message;
   final IveExpression expression;
-  final IveIssue?     activeIssue;
-  final VoidCallback  onDismiss;
+  final IveIssue? activeIssue;
+  final VoidCallback onDismiss;
   final VoidCallback? onChat;
 
   const _IveBubble({
@@ -231,12 +185,16 @@ class _IveBubble extends StatelessWidget {
   String get _moodIcon {
     if (_hasIssue) return '⚠';
     switch (expression) {
-      case IveExpression.excited:  return '✦';
-      case IveExpression.thinking: return '◈';
-      case IveExpression.winking:  return '◉';
-      case IveExpression.neutral:  return '⬡';
+      case IveExpression.excited:
+        return '✦';
+      case IveExpression.thinking:
+        return '◈';
+      case IveExpression.winking:
+        return '◉';
+      case IveExpression.neutral:
+        return '⬡';
       case IveExpression.happy:
-      default:                     return '◈';
+        return '◈';
     }
   }
 
@@ -257,26 +215,26 @@ class _IveBubble extends StatelessWidget {
           decoration: BoxDecoration(
             color: const Color(0xFF1A1535),
             borderRadius: const BorderRadius.only(
-              topLeft:     Radius.circular(14),
-              topRight:    Radius.circular(14),
-              bottomLeft:  Radius.circular(14),
+              topLeft: Radius.circular(14),
+              topRight: Radius.circular(14),
+              bottomLeft: Radius.circular(14),
               bottomRight: Radius.circular(4),
             ),
             boxShadow: [
               BoxShadow(
-                color:      Colors.black.withOpacity(0.4),
+                color: Colors.black.withValues(alpha: 0.4),
                 blurRadius: 16,
-                offset:     const Offset(0, 4),
+                offset: const Offset(0, 4),
               ),
             ],
-            border: Border.all(color: _accentColor.withOpacity(0.45)),
+            border: Border.all(color: _accentColor.withValues(alpha: 0.45)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize:       MainAxisSize.min,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Row(
-                mainAxisSize:       MainAxisSize.min,
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Flexible(
@@ -284,15 +242,15 @@ class _IveBubble extends StatelessWidget {
                       text: TextSpan(
                         children: [
                           TextSpan(
-                            text:  '$_moodIcon ',
+                            text: '$_moodIcon ',
                             style: TextStyle(color: _iconColor, fontSize: 11),
                           ),
                           TextSpan(
-                            text:  message,
+                            text: message,
                             style: const TextStyle(
-                              color:    Colors.white,
+                              color: Colors.white,
                               fontSize: 12,
-                              height:   1.45,
+                              height: 1.45,
                             ),
                           ),
                         ],
@@ -301,8 +259,9 @@ class _IveBubble extends StatelessWidget {
                   ),
                   const SizedBox(width: 4),
                   GestureDetector(
-                    onTap:  onDismiss,
-                    child:  const Icon(Icons.close_rounded, size: 14, color: Colors.white24),
+                    onTap: onDismiss,
+                    child: const Icon(Icons.close_rounded,
+                        size: 14, color: Colors.white24),
                   ),
                 ],
               ),
@@ -316,7 +275,8 @@ class _IveBubble extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        width: 4, height: 4,
+                        width: 4,
+                        height: 4,
                         decoration: const BoxDecoration(
                           color: Color(0xFF7B5CF6),
                           shape: BoxShape.circle,
@@ -326,8 +286,8 @@ class _IveBubble extends StatelessWidget {
                       const Text(
                         'Conversar com a IVE',
                         style: TextStyle(
-                          color:      Color(0xFF9B8FFF),
-                          fontSize:   11,
+                          color: Color(0xFF9B8FFF),
+                          fontSize: 11,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -353,9 +313,9 @@ class _IssueActions extends StatelessWidget {
     final actions = issue.recommendedActions;
     if (actions.isEmpty) return const SizedBox.shrink();
     return Wrap(
-      spacing:    6,
+      spacing: 6,
       runSpacing: 4,
-      children:   actions.map((a) => _IssueActionChip(action: a)).toList(),
+      children: actions.map((a) => _IssueActionChip(action: a)).toList(),
     );
   }
 }
@@ -373,15 +333,15 @@ class _IssueActionChip extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color:        _color.withOpacity(0.12),
+          color: _color.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(6),
-          border:       Border.all(color: _color.withOpacity(0.4)),
+          border: Border.all(color: _color.withValues(alpha: 0.4)),
         ),
         child: Text(
           action.label,
           style: const TextStyle(
-            color:      _color,
-            fontSize:   10,
+            color: _color,
+            fontSize: 10,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -399,11 +359,12 @@ class _IssueActionChip extends ConsumerWidget {
         if (issue?.entityType == 'knowledge_item' && issue?.entityId != null) {
           // Retry real: rebusca o item e re-dispara a análise por IA
           ref.read(iveProvider.notifier).dismissBubble();
-          final svc  = ref.read(knowledgeServiceProvider);
+          final svc = ref.read(knowledgeServiceProvider);
           final item = await svc.fetchById(issue!.entityId!);
           if (item != null) {
             await ref
-                .read(knowledgeAnalysisNotifierProvider(issue.entityId!).notifier)
+                .read(
+                    knowledgeAnalysisNotifierProvider(issue.entityId!).notifier)
                 .analyze(item);
           }
         } else {
@@ -415,8 +376,8 @@ class _IssueActionChip extends ConsumerWidget {
         // Abre o sheet de diagnóstico completo
         if (issue != null && context.mounted) {
           showModalBottomSheet<void>(
-            context:            context,
-            backgroundColor:    Colors.transparent,
+            context: context,
+            backgroundColor: Colors.transparent,
             isScrollControlled: true,
             builder: (_) => IveIssueDetailSheet(issue: issue),
           );
@@ -425,7 +386,9 @@ class _IssueActionChip extends ConsumerWidget {
       case 'send_file':
         // Navega para o Cofre de Conhecimento para upload
         ref.read(iveProvider.notifier).dismissBubble();
-        if (context.mounted) GoRouter.of(context).push(AppConstants.routeKnowledge);
+        if (context.mounted) {
+          GoRouter.of(context).push(AppConstants.routeKnowledge);
+        }
 
       case 'update_link':
         // Navega para a edição do item de conhecimento
