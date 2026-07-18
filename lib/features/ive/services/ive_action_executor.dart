@@ -8,14 +8,18 @@ import '../../../providers/project_provider.dart';
 import '../domain/ive_action_proposal.dart';
 
 class IveActionExecutionResult {
+  final String proposalId;
   final String operationId;
   final String idempotencyKey;
+  final String correlationId;
   final ActionQueueItem action;
   final bool recoveredExisting;
 
   const IveActionExecutionResult({
+    required this.proposalId,
     required this.operationId,
     required this.idempotencyKey,
+    required this.correlationId,
     required this.action,
     this.recoveredExisting = false,
   });
@@ -42,6 +46,9 @@ class ServiceBackedIveActionExecutor implements IveActionExecutor {
     required this.actionService,
     required this.projectService,
   });
+
+  // Idempotência local e de retry. O marcador persistido reduz duplicações
+  // após falhas, mas não oferece transação atômica entre dispositivos.
 
   @override
   Future<IveActionExecutionResult> execute(IveActionProposal proposal) async {
@@ -95,7 +102,12 @@ class ServiceBackedIveActionExecutor implements IveActionExecutor {
         createdAt: DateTime.now().toUtc(),
         description: proposal.description.isEmpty ? null : proposal.description,
         origin: proposal.origin,
-        sources: [proposal.persistenceMarker, 'IVE Executive Assistant'],
+        sources: [
+          proposal.persistenceMarker,
+          'IVE Executive Assistant',
+          if (proposal.correlationId.isNotEmpty)
+            'ive_correlation:${proposal.correlationId}',
+        ],
         rationale: proposal.rationale,
         plan: plan,
       ));
@@ -134,8 +146,10 @@ class ServiceBackedIveActionExecutor implements IveActionExecutor {
           'A ação persistida não corresponde à proposta confirmada.');
     }
     return IveActionExecutionResult(
-      operationId: 'operation_${proposal.proposalId}',
+      proposalId: proposal.proposalId,
+      operationId: proposal.operationId,
       idempotencyKey: proposal.idempotencyKey,
+      correlationId: proposal.correlationId,
       action: action,
       recoveredExisting: recoveredExisting,
     );

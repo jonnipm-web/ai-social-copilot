@@ -1,5 +1,6 @@
 import '../../../data/models/copilot_turn.dart';
 import '../../../core/utils/date_parser.dart';
+import 'ive_copilot_contract.dart';
 
 enum IveActionProposalStatus {
   pendingConfirmation,
@@ -15,6 +16,7 @@ class IveActionProposal {
 
   final String proposalId;
   final String toolName;
+  final String correlationId;
   final String userId;
   final String projectId;
   final String projectName;
@@ -27,6 +29,7 @@ class IveActionProposal {
   final String rationale;
   final String origin;
   final String? opportunityId;
+  final List<String> evidenceIds;
   final DateTime createdAt;
   final DateTime expiresAt;
   final IveActionProposalStatus status;
@@ -34,6 +37,7 @@ class IveActionProposal {
   const IveActionProposal({
     required this.proposalId,
     this.toolName = 'action.create',
+    this.correlationId = '',
     required this.userId,
     required this.projectId,
     required this.projectName,
@@ -46,6 +50,7 @@ class IveActionProposal {
     required this.rationale,
     required this.origin,
     this.opportunityId,
+    this.evidenceIds = const [],
     required this.createdAt,
     required this.expiresAt,
     this.status = IveActionProposalStatus.pendingConfirmation,
@@ -53,6 +58,7 @@ class IveActionProposal {
 
   bool get isExpired => DateTime.now().isAfter(expiresAt);
   String get idempotencyKey => 'ive_action_create_$proposalId';
+  String get operationId => 'operation_$proposalId';
   String get persistenceMarker => 'ive_proposal:$proposalId';
 
   factory IveActionProposal.fromSuggestion({
@@ -61,6 +67,8 @@ class IveActionProposal {
     required String projectId,
     required String projectName,
     required Set<String> allowedOpportunityIds,
+    Set<String>? allowedEvidenceIds,
+    String correlationId = '',
   }) {
     if (suggestion.type != 'create_action' &&
         suggestion.type != 'action.create') {
@@ -68,6 +76,9 @@ class IveActionProposal {
     }
 
     final data = suggestion.data;
+    if (data['_tool'] != null && data['_tool'] != 'action.create') {
+      throw const FormatException('Ferramenta não permitida nesta sprint.');
+    }
     final title = (data['title'] as String? ?? '').trim();
     if (title.isEmpty) {
       throw const FormatException('A proposta não possui um título válido.');
@@ -79,9 +90,16 @@ class IveActionProposal {
         ? rawOpportunityId
         : null;
     final now = DateTime.now().toUtc();
+    final evidenceIds =
+        (data['evidence_ids'] as List?)?.whereType<String>().toList() ?? [];
+    if (allowedEvidenceIds != null &&
+        evidenceIds.any((id) => !allowedEvidenceIds.contains(id))) {
+      throw const FormatException('A proposta contém evidência inválida.');
+    }
 
     return IveActionProposal(
       proposalId: _newId(userId, projectId, now),
+      correlationId: correlationId,
       userId: userId,
       projectId: projectId,
       projectName: projectName,
@@ -96,6 +114,35 @@ class IveActionProposal {
           .trim(),
       origin: opportunityId == null ? 'ive' : 'opportunity_lab',
       opportunityId: opportunityId,
+      evidenceIds: evidenceIds,
+      createdAt: now,
+      expiresAt: now.add(const Duration(minutes: 15)),
+    );
+  }
+
+  factory IveActionProposal.fromProposedAction({
+    required IveProposedAction action,
+    required String userId,
+    required String projectName,
+    required String correlationId,
+  }) {
+    final now = DateTime.now().toUtc();
+    return IveActionProposal(
+      proposalId: _newId(userId, action.projectId, now),
+      correlationId: correlationId,
+      userId: userId,
+      projectId: action.projectId,
+      projectName: projectName,
+      title: action.title,
+      description: action.description,
+      priority: action.priorityScore,
+      impact: action.impactScore,
+      effort: action.effortScore,
+      suggestedDueDate: action.dueDate,
+      rationale: action.rationale,
+      origin: action.opportunityId == null ? 'ive' : 'opportunity_lab',
+      opportunityId: action.opportunityId,
+      evidenceIds: action.evidenceIds,
       createdAt: now,
       expiresAt: now.add(const Duration(minutes: 15)),
     );
@@ -112,6 +159,7 @@ class IveActionProposal {
     final now = DateTime.now().toUtc();
     return IveActionProposal(
       proposalId: _newId(userId, projectId, now),
+      correlationId: correlationId,
       userId: userId,
       projectId: projectId,
       projectName: projectName,
@@ -124,6 +172,7 @@ class IveActionProposal {
       rationale: rationale,
       origin: origin,
       opportunityId: opportunityId,
+      evidenceIds: evidenceIds,
       createdAt: now,
       expiresAt: now.add(const Duration(minutes: 15)),
     );
@@ -133,6 +182,7 @@ class IveActionProposal {
       IveActionProposal(
         proposalId: proposalId,
         toolName: toolName,
+        correlationId: correlationId,
         userId: userId,
         projectId: projectId,
         projectName: projectName,
@@ -145,6 +195,7 @@ class IveActionProposal {
         rationale: rationale,
         origin: origin,
         opportunityId: opportunityId,
+        evidenceIds: evidenceIds,
         createdAt: createdAt,
         expiresAt: expiresAt,
         status: status ?? this.status,
