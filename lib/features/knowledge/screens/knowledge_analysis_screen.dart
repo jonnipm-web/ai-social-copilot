@@ -7,7 +7,6 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/snackbar_utils.dart';
 import '../../../data/models/knowledge_analysis.dart';
 import '../../../data/models/knowledge_item.dart';
-import '../../../data/services/persona_training_service.dart';
 import '../../../providers/knowledge_provider.dart';
 import '../../../providers/persona_provider.dart';
 import '../../../providers/persona_training_provider.dart';
