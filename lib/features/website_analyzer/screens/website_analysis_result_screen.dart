@@ -773,7 +773,7 @@ class _MapContent extends StatelessWidget {
               if (value is List)
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: (value as List).map((item) {
+                  children: value.map((item) {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 4),
                       child: Row(
