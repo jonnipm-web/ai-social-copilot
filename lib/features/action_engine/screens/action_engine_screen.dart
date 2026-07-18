@@ -7,7 +7,10 @@ import '../../../data/models/action_queue_item.dart';
 import '../../../providers/action_queue_provider.dart';
 import '../../../providers/feature_flag_provider.dart';
 import '../../../providers/project_provider.dart';
+import '../../../providers/selected_project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import '../../../shared/widgets/context_copilot_widget.dart'
+    show clearIveProjectContext, synchronizeIveProjectContext;
 import 'action_detail_screen.dart';
 
 // ── Colors ───────────────────────────────────────────────────────────────────
@@ -31,10 +34,14 @@ class ActionEngineScreen extends ConsumerStatefulWidget {
 }
 
 class _ActionEngineScreenState extends ConsumerState<ActionEngineScreen> {
-  String? _projectId;
-
-  void _setProject(String? id) {
-    setState(() => _projectId = id);
+  Future<void> _setProject(String? id) async {
+    final container = ProviderScope.containerOf(context);
+    if (id == null) {
+      await clearIveProjectContext(container);
+    } else {
+      await synchronizeIveProjectContext(container, projectId: id);
+    }
+    if (!mounted) return;
     ref.read(actionQueueNotifierProvider.notifier).load(projectId: id);
   }
 
@@ -42,6 +49,7 @@ class _ActionEngineScreenState extends ConsumerState<ActionEngineScreen> {
   Widget build(BuildContext context) {
     final flagAsync =
         ref.watch(featureFlagProvider(FeatureFlag.actionEngineEnabled));
+    final projectId = ref.watch(selectedProjectProvider)?.id;
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -63,9 +71,9 @@ class _ActionEngineScreenState extends ConsumerState<ActionEngineScreen> {
       body: flagAsync.when(
         loading: () =>
             const Center(child: CircularProgressIndicator(color: _kPrimary)),
-        error: (_, __) => _ActionBody(projectId: _projectId, onProjectChange: _setProject),
+        error: (_, __) => _ActionBody(projectId: projectId, onProjectChange: _setProject),
         data: (enabled) => enabled
-            ? _ActionBody(projectId: _projectId, onProjectChange: _setProject)
+            ? _ActionBody(projectId: projectId, onProjectChange: _setProject)
             : const _FeatureGated(),
       ),
     );

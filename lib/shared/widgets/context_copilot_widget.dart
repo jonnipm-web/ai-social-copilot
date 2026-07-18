@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../core/constants/app_constants.dart';
 import '../../data/models/copilot_context_data.dart';
 import '../../data/models/copilot_turn.dart';
 import '../../data/models/action_queue_item.dart';
+import '../../data/models/project.dart';
 import '../../providers/context_copilot_provider.dart';
 import '../../providers/ive_context_provider.dart';
+import '../../providers/ive_memory_provider.dart';
+import '../../providers/project_provider.dart';
 import '../../providers/selected_project_provider.dart';
 import 'ive_action_confirmation_card.dart';
 import 'ive_response_context_panel.dart';
@@ -27,9 +29,49 @@ void _debugIve(String marker) {
   }());
 }
 
-Future<void> openIveChat(
+Future<Project?> synchronizeIveProjectContext(
+  ProviderContainer container, {
+  required String projectId,
+  Project? project,
+}) async {
+  final id = projectId.trim();
+  if (id.isEmpty) return container.read(selectedProjectProvider);
+
+  final current = container.read(selectedProjectProvider);
+  if (current?.id == id) {
+    final context = await container.read(iveContextDataProvider.future);
+    if (context.activeProjectId != id) {
+      throw StateError('Contexto da IVE não sincronizado com o projeto $id');
+    }
+    return current;
+  }
+
+  await container.read(iveMemoryProvider.notifier).clearProjectContext();
+  final notifier = container.read(selectedProjectProvider.notifier);
+  final selected = project?.id == id
+      ? await (() async {
+          await notifier.select(project!);
+          return project;
+        })()
+      : await notifier.selectById(id);
+  container.invalidate(iveContextDataProvider);
+  final context = await container.read(iveContextDataProvider.future);
+  if (context.activeProjectId != id) {
+    throw StateError('Contexto da IVE não sincronizado com o projeto $id');
+  }
+  return selected;
+}
+
+Future<void> clearIveProjectContext(ProviderContainer container) async {
+  await container.read(iveMemoryProvider.notifier).clearProjectContext();
+  await container.read(selectedProjectProvider.notifier).clear();
+  container.invalidate(iveContextDataProvider);
+}
+
+Future<void> openIveWithContext(
   BuildContext requestContext, {
   required String screenName,
+  String? projectId,
   String? route,
   CopilotContextData? contextData,
   String? initialMessage,
@@ -41,15 +83,28 @@ Future<void> openIveChat(
   _debugIve('IVE_OPEN_REQUESTED');
   if (_iveChatOpen) return;
 
+  _iveChatOpen = true;
+
   try {
     final container = ProviderScope.containerOf(requestContext);
+    final contextualProjectId = contextData?.projectId?.trim();
+    final resolvedProjectId = projectId?.trim().isNotEmpty == true
+        ? projectId!.trim()
+        : contextualProjectId?.isNotEmpty == true
+            ? contextualProjectId
+            : container.read(selectedProjectProvider)?.id;
+    if (resolvedProjectId != null) {
+      await synchronizeIveProjectContext(
+        container,
+        projectId: resolvedProjectId,
+      );
+    }
     final navigator = iveRootNavigatorKey.currentState ??
         Navigator.maybeOf(requestContext, rootNavigator: true);
     if (navigator == null || !navigator.mounted) {
       throw StateError('IVE root Navigator unavailable');
     }
 
-    _iveChatOpen = true;
     final sheet = showModalBottomSheet<void>(
       context: navigator.context,
       useRootNavigator: true,
@@ -77,6 +132,29 @@ Future<void> openIveChat(
     _iveChatOpen = false;
   }
 }
+
+Future<void> openIveChat(
+  BuildContext requestContext, {
+  required String screenName,
+  String? route,
+  CopilotContextData? contextData,
+  String? initialMessage,
+  String? inputHint,
+  String? selectedEntityType,
+  String? selectedEntityId,
+  String? selectedEntityLabel,
+}) =>
+    openIveWithContext(
+      requestContext,
+      screenName: screenName,
+      route: route,
+      contextData: contextData,
+      initialMessage: initialMessage,
+      inputHint: inputHint,
+      selectedEntityType: selectedEntityType,
+      selectedEntityId: selectedEntityId,
+      selectedEntityLabel: selectedEntityLabel,
+    );
 
 class ContextCopilotButton extends ConsumerWidget {
   final String screenName;
@@ -134,6 +212,8 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
   bool _initialMessageSent = false;
+  bool _selectorVisible = false;
+  bool _selectingProject = false;
 
   @override
   void initState() {
@@ -278,6 +358,7 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
             _handle(),
             _header(state, scope),
             _projectBadge(project?.name),
+            if (project == null || _selectorVisible) _projectSelector(),
             if (widget.selectedEntityLabel != null)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
@@ -446,17 +527,73 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
                 style: const TextStyle(color: Colors.white, fontSize: 12),
               ),
             ),
-            if (projectName == null)
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  GoRouter.of(context).go(AppConstants.routeProjects);
-                },
-                child: const Text('Selecionar'),
-              ),
+            TextButton(
+              key: const ValueKey('ive-project-selector-toggle'),
+              onPressed: _selectingProject
+                  ? null
+                  : () => setState(() => _selectorVisible = !_selectorVisible),
+              child: Text(projectName == null ? 'Selecionar' : 'Trocar'),
+            ),
           ],
         ),
       );
+
+  Widget _projectSelector() {
+    final projects = ref.watch(projectsProvider);
+    return Container(
+      key: const ValueKey('ive-project-selector'),
+      height: 54,
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+      child: projects.when(
+        loading: () => const Center(
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+        error: (_, __) => const Center(
+          child: Text(
+            'Não foi possível carregar os projetos.',
+            style: TextStyle(color: Colors.orangeAccent, fontSize: 12),
+          ),
+        ),
+        data: (items) => items.isEmpty
+            ? const Center(
+                child: Text(
+                  'Nenhum projeto disponível.',
+                  style: TextStyle(color: Colors.white54, fontSize: 12),
+                ),
+              )
+            : ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: items.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (_, index) {
+                  final project = items[index];
+                  return ActionChip(
+                    key: ValueKey('ive-project-option-${project.id}'),
+                    label: Text(project.name),
+                    onPressed: _selectingProject
+                        ? null
+                        : () => _selectProject(project),
+                  );
+                },
+              ),
+      ),
+    );
+  }
+
+  Future<void> _selectProject(Project project) async {
+    setState(() => _selectingProject = true);
+    try {
+      final container = ProviderScope.containerOf(context);
+      await synchronizeIveProjectContext(
+        container,
+        projectId: project.id,
+        project: project,
+      );
+      if (mounted) setState(() => _selectorVisible = false);
+    } finally {
+      if (mounted) setState(() => _selectingProject = false);
+    }
+  }
 
   Widget _empty(bool hasProject) => SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),

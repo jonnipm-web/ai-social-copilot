@@ -8,6 +8,7 @@ import '../../../data/models/project.dart';
 import '../../../providers/ecosystem_intelligence_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import '../../../shared/widgets/context_copilot_widget.dart' show synchronizeIveProjectContext;
 
 class ProjectCommandCenterScreen extends ConsumerStatefulWidget {
   const ProjectCommandCenterScreen({super.key});
@@ -110,7 +111,13 @@ class _ProjectCommandCenterScreenState
     }
   }
 
-  void _openDetail(Project project, EcosystemScore? score) {
+  Future<void> _openDetail(Project project, EcosystemScore? score) async {
+    await synchronizeIveProjectContext(
+      ProviderScope.containerOf(context),
+      projectId: project.id,
+      project: project,
+    );
+    if (!mounted) return;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,

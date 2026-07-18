@@ -11,7 +11,7 @@ import '../../../providers/action_queue_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../providers/selected_project_provider.dart';
-import '../../../shared/widgets/context_copilot_widget.dart' show openIveChat;
+import '../../../shared/widgets/context_copilot_widget.dart' show openIveWithContext;
 import '../../action_engine/screens/action_detail_screen.dart';
 
 // ── Colors ────────────────────────────────────────────────────────────────────
@@ -995,52 +995,65 @@ class _ActionButtonsState extends ConsumerState<_ActionButtons> {
 
         const SizedBox(height: 10),
 
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            style: OutlinedButton.styleFrom(
-              foregroundColor: _kPrimary,
-              side: const BorderSide(color: _kPrimary),
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-            ),
-            icon: const Icon(Icons.auto_awesome_rounded),
-            label: const Text('Perguntar à IVE sobre esta oportunidade'),
-            onPressed: () {
-              final project = ref.read(selectedProjectProvider);
-              final route = '/opportunity-lab/${item.id}';
-              openIveChat(
-                context,
-                screenName: 'Detalhe da Oportunidade',
-                route: route,
-                contextData: CopilotContextData(
-                  userId: item.userId,
-                  projectId: item.projectId,
-                  route: route,
-                  project: project == null
-                      ? null
-                      : {'id': project.id, 'name': project.name},
-                  opportunities: [
-                    {
-                      'id': item.id,
-                      'title': item.title,
-                      'status': item.status,
-                      'final_score': item.finalScore,
-                      'market_score': item.marketScore,
-                      'revenue_score': item.revenueScore,
-                    },
-                  ],
-                ),
-                inputHint: 'Pergunte algo sobre esta oportunidade...',
-                selectedEntityType: 'opportunity',
-                selectedEntityId: item.id,
-                selectedEntityLabel: 'Oportunidade — ${item.title}',
-              );
-            },
-          ),
-        ),
+        IveOpportunityAskButton(item: item),
       ],
+    );
+  }
+}
+
+@visibleForTesting
+class IveOpportunityAskButton extends ConsumerWidget {
+  const IveOpportunityAskButton({super.key, required this.item});
+
+  final OpportunityLabItem item;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        key: const ValueKey('ive-opportunity-ask-cta'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: _kPrimary,
+          side: const BorderSide(color: _kPrimary),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        icon: const Icon(Icons.auto_awesome_rounded),
+        label: const Text('Perguntar à IVE sobre esta oportunidade'),
+        onPressed: () async {
+          final project = ref.read(selectedProjectProvider);
+          final route = '/opportunity-lab/${item.id}';
+          await openIveWithContext(
+            context,
+            screenName: 'Detalhe da Oportunidade',
+            projectId: item.projectId,
+            route: route,
+            contextData: CopilotContextData(
+              userId: item.userId,
+              projectId: item.projectId,
+              route: route,
+              project: project?.id == item.projectId
+                  ? {'id': project!.id, 'name': project.name}
+                  : null,
+              opportunities: [
+                {
+                  'id': item.id,
+                  'title': item.title,
+                  'status': item.status,
+                  'final_score': item.finalScore,
+                  'market_score': item.marketScore,
+                  'revenue_score': item.revenueScore,
+                },
+              ],
+            ),
+            inputHint: 'Pergunte algo sobre esta oportunidade...',
+            selectedEntityType: 'opportunity',
+            selectedEntityId: item.id,
+            selectedEntityLabel: 'Oportunidade — ${item.title}',
+          );
+        },
+      ),
     );
   }
 }

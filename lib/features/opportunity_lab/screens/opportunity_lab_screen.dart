@@ -8,7 +8,10 @@ import '../../../providers/action_queue_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
 import '../../../providers/feature_flag_provider.dart';
 import '../../../providers/project_provider.dart';
+import '../../../providers/selected_project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import '../../../shared/widgets/context_copilot_widget.dart'
+    show clearIveProjectContext, synchronizeIveProjectContext;
 import '../../action_engine/screens/action_detail_screen.dart';
 import 'opportunity_detail_screen.dart';
 
@@ -38,10 +41,14 @@ class OpportunityLabScreen extends ConsumerStatefulWidget {
 }
 
 class _OpportunityLabScreenState extends ConsumerState<OpportunityLabScreen> {
-  String? _projectId;
-
-  void _setProject(String? id) {
-    setState(() => _projectId = id);
+  Future<void> _setProject(String? id) async {
+    final container = ProviderScope.containerOf(context);
+    if (id == null) {
+      await clearIveProjectContext(container);
+    } else {
+      await synchronizeIveProjectContext(container, projectId: id);
+    }
+    if (!mounted) return;
     ref.read(opportunityLabNotifierProvider.notifier).load(projectId: id);
   }
 
@@ -57,6 +64,7 @@ class _OpportunityLabScreenState extends ConsumerState<OpportunityLabScreen> {
   @override
   Widget build(BuildContext context) {
     final flagAsync = ref.watch(featureFlagProvider(FeatureFlag.opportunityLabEnabled));
+    final projectId = ref.watch(selectedProjectProvider)?.id;
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -84,9 +92,9 @@ class _OpportunityLabScreenState extends ConsumerState<OpportunityLabScreen> {
       body: flagAsync.when(
         loading: () =>
             const Center(child: CircularProgressIndicator(color: _kPrimary)),
-        error: (_, __) => _LabBody(projectId: _projectId, onProjectChange: _setProject),
+        error: (_, __) => _LabBody(projectId: projectId, onProjectChange: _setProject),
         data: (enabled) => enabled
-            ? _LabBody(projectId: _projectId, onProjectChange: _setProject)
+            ? _LabBody(projectId: projectId, onProjectChange: _setProject)
             : const _FeatureGated(),
       ),
     );

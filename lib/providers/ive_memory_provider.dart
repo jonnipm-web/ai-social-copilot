@@ -114,6 +114,30 @@ class IveMemoryNotifier extends StateNotifier<IveMemory> {
     state = const IveMemory();
   }
 
+  /// Limpa dados que poderiam contaminar outro projeto sem invalidar a sessão.
+  Future<void> clearProjectContext() async {
+    final uid = _activeUserId;
+    state = IveMemory(
+      lastRoute: state.lastRoute,
+      interactionCount: state.interactionCount,
+    );
+    if (uid == null) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (_activeUserId != uid) return;
+      await Future.wait([
+        prefs.remove(_key(_kLastProjectId, uid)),
+        prefs.remove(_key(_kLastProjectName, uid)),
+        prefs.remove(_key(_kRecentQuestions, uid)),
+      ]);
+    } catch (error) {
+      assert(() {
+        debugPrint('[IveMemory] project context clear failed: $error');
+        return true;
+      }());
+    }
+  }
+
   Future<void> incrementInteraction() async {
     final uid = _activeUserId;
     if (uid == null) return;

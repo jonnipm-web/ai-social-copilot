@@ -26,7 +26,7 @@ class SelectedProjectNotifier extends StateNotifier<Project?> {
         _clearPersisted();
         if (mounted) state = null;
       } else if (event.event == AuthChangeEvent.signedIn ||
-                 event.event == AuthChangeEvent.tokenRefreshed) {
+          event.event == AuthChangeEvent.tokenRefreshed) {
         _restore();
       }
     });
@@ -62,13 +62,27 @@ class SelectedProjectNotifier extends StateNotifier<Project?> {
   Future<void> select(Project project) async {
     final uid = Supabase.instance.client.auth.currentUser?.id;
     if (uid == null) throw Exception('Não autenticado');
-    if (project.userId != uid) throw Exception('Projeto não pertence ao usuário');
+    if (project.userId != uid)
+      throw Exception('Projeto não pertence ao usuário');
 
     state = project;
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_kSelectedProjectId, project.id);
     } catch (_) {}
+  }
+
+  Future<Project> selectById(String projectId) async {
+    final id = projectId.trim();
+    if (id.isEmpty) throw ArgumentError.value(projectId, 'projectId');
+
+    final current = state;
+    if (current?.id == id) return current!;
+
+    final project = await _service.fetchById(id);
+    if (project == null) throw StateError('Projeto não encontrado');
+    await select(project);
+    return project;
   }
 
   Future<void> refresh() async {

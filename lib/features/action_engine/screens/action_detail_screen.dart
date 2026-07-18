@@ -10,7 +10,7 @@ import '../../../data/models/copilot_context_data.dart';
 import '../../../providers/action_queue_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../providers/selected_project_provider.dart';
-import '../../../shared/widgets/context_copilot_widget.dart' show openIveChat;
+import '../../../shared/widgets/context_copilot_widget.dart' show openIveWithContext;
 
 // ── Colors ────────────────────────────────────────────────────────────────────
 const _kBg = Color(0xFF0F0F1A);
@@ -907,20 +907,20 @@ class IveActionAskButton extends ConsumerWidget {
       ),
       icon: const Icon(Icons.auto_awesome_rounded),
       label: const Text('Perguntar à IVE sobre esta ação'),
-      onPressed: () {
+      onPressed: () async {
         final project = ref.read(selectedProjectProvider);
         final route = '/action-engine/${item.id}';
         final actionContext = CopilotContextData(
           userId: item.userId,
           projectId: item.projectId,
           route: route,
-          project: project == null
-              ? null
-              : {
-                  'id': project.id,
+          project: project?.id == item.projectId
+              ? {
+                  'id': project!.id,
                   'name': project.name,
                   'status': project.status,
-                },
+                }
+              : null,
           actions: [
             {
               'id': item.id,
@@ -936,9 +936,10 @@ class IveActionAskButton extends ConsumerWidget {
             },
           ],
         );
-        openIveChat(
+        await openIveWithContext(
           context,
           screenName: 'Detalhe da Ação',
+          projectId: item.projectId,
           route: route,
           contextData: actionContext,
           inputHint: 'Pergunte algo sobre esta ação...',
