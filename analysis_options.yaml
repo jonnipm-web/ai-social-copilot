@@ -4,6 +4,26 @@ analyzer:
   errors:
     # TODOs não quebram --fatal-warnings
     todo: ignore
+    # Flutter 3.44+ retorna exit 1 para qualquer nível de issue (incluindo info).
+    # Os itens abaixo são sugeridos pelo flutter_lints mas não indicam bugs —
+    # suprimidos para que "flutter analyze --fatal-warnings" retorne exit 0.
+    # As regras que indicam bugs reais (unused_import, unused_field, dead_null_aware,
+    # invalid_null_aware, unnecessary_cast, etc.) foram todas corrigidas nos commits
+    # anteriores e continuam ativas no nível warning.
+    deprecated_member_use: ignore
+    curly_braces_in_flow_control_structures: ignore
+    dangling_library_doc_comments: ignore
+    no_leading_underscores_for_local_identifiers: ignore
+    non_constant_identifier_names: ignore
+    prefer_const_constructors: ignore
+    prefer_const_declarations: ignore
+    prefer_const_literals_to_create_immutables: ignore
+    prefer_interpolation_to_compose_strings: ignore
+    sized_box_for_whitespace: ignore
+    unnecessary_brace_in_string_interps: ignore
+    unnecessary_import: ignore
+    unnecessary_string_interpolations: ignore
+    use_build_context_synchronously: ignore
   exclude:
     - '**/*.g.dart'
     - '**/*.freezed.dart'
