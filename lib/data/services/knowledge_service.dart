@@ -15,8 +15,15 @@ class KnowledgeService {
 
   // ── Items ────────────────────────────────────────────────────
 
+  String _requireUid() {
+    final uid = _client.auth.currentUser?.id;
+    if (uid == null) throw Exception('Não autenticado');
+    return uid;
+  }
+
   Future<List<KnowledgeItem>> fetchAll({String? projectId}) async {
-    var query = _client.from(_tableItems).select();
+    final uid = _requireUid();
+    var query = _client.from(_tableItems).select().eq('user_id', uid);
     if (projectId != null) query = query.eq('project_id', projectId);
     final rows = await query.order('created_at', ascending: false);
     return (rows as List).map((r) => KnowledgeItem.fromMap(r)).toList();
@@ -32,9 +39,12 @@ class KnowledgeService {
   }
 
   Future<KnowledgeItem> create(KnowledgeItem item) async {
+    final uid = _requireUid();
+    final map = item.toInsertMap();
+    map['user_id'] = uid;
     final row = await _client
         .from(_tableItems)
-        .insert(item.toInsertMap())
+        .insert(map)
         .select()
         .single();
     return KnowledgeItem.fromMap(row);

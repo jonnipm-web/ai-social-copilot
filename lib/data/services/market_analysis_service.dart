@@ -11,10 +11,18 @@ import '../../core/constants/app_constants.dart';
 class MarketAnalysisService {
   final _client = Supabase.instance.client;
 
+  String _requireUid() {
+    final uid = _client.auth.currentUser?.id;
+    if (uid == null) throw Exception('Não autenticado');
+    return uid;
+  }
+
   Future<List<MarketAnalysis>> fetchAll({String? projectId}) async {
+    final uid = _requireUid();
     var query = _client
         .from(AppConstants.tableMarketAnalyses)
-        .select();
+        .select()
+        .eq('user_id', uid);
     if (projectId != null) query = query.eq('project_id', projectId);
     final rows = await query.order('created_at', ascending: false);
     return (rows as List).map((r) => MarketAnalysis.fromMap(r)).toList();
@@ -306,7 +314,8 @@ class MarketAnalysisService {
 
   // All Revenue Plans (for ecosystem scoring)
   Future<List<RevenuePlan>> fetchAllRevenuePlans({String? projectId}) async {
-    var query = _client.from(AppConstants.tableRevenuePlans).select();
+    final uid = _requireUid();
+    var query = _client.from(AppConstants.tableRevenuePlans).select().eq('user_id', uid);
     if (projectId != null) query = query.eq('project_id', projectId);
     final rows = await query.order('created_at', ascending: false);
     return (rows as List).map((r) => RevenuePlan.fromMap(r)).toList();

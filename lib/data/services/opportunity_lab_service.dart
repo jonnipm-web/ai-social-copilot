@@ -6,10 +6,18 @@ import '../../core/constants/app_constants.dart';
 class OpportunityLabService {
   final _client = Supabase.instance.client;
 
+  String _requireUid() {
+    final uid = _client.auth.currentUser?.id;
+    if (uid == null) throw Exception('Não autenticado');
+    return uid;
+  }
+
   Future<List<OpportunityLabItem>> fetchAll({String? projectId, String? status}) async {
+    final uid = _requireUid();
     var filter = _client
         .from(AppConstants.tableOpportunityLab)
-        .select();
+        .select()
+        .eq('user_id', uid);
 
     if (projectId != null) filter = filter.eq('project_id', projectId);
     if (status != null)    filter = filter.eq('status', status);

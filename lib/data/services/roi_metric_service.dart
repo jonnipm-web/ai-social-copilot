@@ -5,20 +5,20 @@ import '../../core/constants/app_constants.dart';
 class RoiMetricService {
   final _client = Supabase.instance.client;
 
+  String _requireUid() {
+    final uid = _client.auth.currentUser?.id;
+    if (uid == null) throw Exception('Não autenticado');
+    return uid;
+  }
+
   Future<List<RoiMetric>> fetchAll({String? projectId}) async {
-    List<dynamic> rows;
-    if (projectId != null) {
-      rows = await _client
-          .from(AppConstants.tableRoiMetrics)
-          .select()
-          .eq('project_id', projectId)
-          .order('created_at', ascending: false);
-    } else {
-      rows = await _client
-          .from(AppConstants.tableRoiMetrics)
-          .select()
-          .order('created_at', ascending: false);
-    }
+    final uid = _requireUid();
+    var query = _client
+        .from(AppConstants.tableRoiMetrics)
+        .select()
+        .eq('user_id', uid);
+    if (projectId != null) query = query.eq('project_id', projectId);
+    final rows = await query.order('created_at', ascending: false);
     return rows.map((r) => RoiMetric.fromMap(r as Map<String, dynamic>)).toList();
   }
 

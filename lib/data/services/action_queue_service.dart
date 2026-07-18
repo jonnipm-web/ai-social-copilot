@@ -6,12 +6,18 @@ import '../../core/constants/app_constants.dart';
 class ActionQueueService {
   final _client = Supabase.instance.client;
 
-  String? get currentUserId => _client.auth.currentUser?.id;
+  String get currentUserId {
+    final uid = _client.auth.currentUser?.id;
+    if (uid == null) throw Exception('Não autenticado');
+    return uid;
+  }
 
   Future<List<ActionQueueItem>> fetchAll({String? projectId, String? status}) async {
+    final uid = currentUserId;
     var filter = _client
         .from(AppConstants.tableActionQueue)
-        .select();
+        .select()
+        .eq('user_id', uid);
 
     if (projectId != null) filter = filter.eq('project_id', projectId);
     if (status != null)    filter = filter.eq('status', status);

@@ -9,10 +9,18 @@ class CopilotService {
 
   // ── Sessions ────────────────────────────────────────────────
 
+  String _requireUid() {
+    final uid = _client.auth.currentUser?.id;
+    if (uid == null) throw Exception('Não autenticado');
+    return uid;
+  }
+
   Future<List<CopilotSession>> fetchSessions() async {
+    final uid = _requireUid();
     final rows = await _client
         .from(AppConstants.tableCopilotSessions)
         .select()
+        .eq('user_id', uid)
         .eq('status', 'active')
         .order('updated_at', ascending: false);
     return (rows as List).map((r) => CopilotSession.fromMap(r)).toList();

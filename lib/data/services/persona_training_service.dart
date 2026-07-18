@@ -9,19 +9,29 @@ class PersonaTrainingService {
 
   static const _table = 'persona_training';
 
+  String _requireUid() {
+    final uid = _client.auth.currentUser?.id;
+    if (uid == null) throw Exception('Não autenticado');
+    return uid;
+  }
+
   Future<List<PersonaTraining>> fetchAll() async {
+    final uid = _requireUid();
     final rows = await _client
         .from(_table)
         .select()
+        .eq('user_id', uid)
         .order('created_at', ascending: false);
     return (rows as List).map((r) => PersonaTraining.fromMap(r)).toList();
   }
 
   Future<List<PersonaTraining>> fetchForPersona(String personaId) async {
+    final uid = _requireUid();
     final rows = await _client
         .from(_table)
         .select()
         .eq('persona_id', personaId)
+        .eq('user_id', uid)
         .order('created_at', ascending: false);
     return (rows as List).map((r) => PersonaTraining.fromMap(r)).toList();
   }

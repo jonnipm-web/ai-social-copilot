@@ -7,10 +7,18 @@ class WebsiteAnalyzerService {
   static const _table = 'website_analyses';
   static const _edgeFunction = 'analyze-website';
 
+  String _requireUid() {
+    final uid = _client.auth.currentUser?.id;
+    if (uid == null) throw Exception('Não autenticado');
+    return uid;
+  }
+
   Future<List<WebsiteAnalysis>> fetchAll() async {
+    final uid = _requireUid();
     final rows = await _client
         .from(_table)
         .select()
+        .eq('user_id', uid)
         .order('created_at', ascending: false);
     return (rows as List).map((r) => WebsiteAnalysis.fromMap(r)).toList();
   }

@@ -4,8 +4,35 @@ on:
   workflow_dispatch:
 
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar código do repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Flutter (versao estavel mais recente)
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Criar arquivo .env com as credenciais
+        run: |
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" > .env
+          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
+
+      - name: Instalar dependências
+        run: flutter pub get
+
+      - name: Análise estática (flutter analyze)
+        run: flutter analyze --no-pub
+
+      - name: Testes unitários e de integração (flutter test)
+        run: flutter test --no-pub
+
   build:
     runs-on: ubuntu-latest
+    needs: validate
 
     steps:
       - name: Baixar código do repositório

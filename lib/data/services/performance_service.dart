@@ -6,19 +6,29 @@ class PerformanceService {
 
   static const _table = 'performance_metrics';
 
+  String _requireUid() {
+    final uid = _client.auth.currentUser?.id;
+    if (uid == null) throw Exception('Não autenticado');
+    return uid;
+  }
+
   Future<List<PerformanceMetrics>> fetchAll() async {
+    final uid = _requireUid();
     final rows = await _client
         .from(_table)
         .select()
+        .eq('user_id', uid)
         .order('created_at', ascending: false);
     return (rows as List).map((r) => PerformanceMetrics.fromMap(r)).toList();
   }
 
   Future<List<PerformanceMetrics>> fetchForCampaign(String campaignId) async {
+    final uid = _requireUid();
     final rows = await _client
         .from(_table)
         .select()
         .eq('campaign_id', campaignId)
+        .eq('user_id', uid)
         .order('created_at', ascending: false);
     return (rows as List).map((r) => PerformanceMetrics.fromMap(r)).toList();
   }

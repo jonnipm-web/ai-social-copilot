@@ -19,10 +19,19 @@ class PostService {
     return response.data as Map<String, dynamic>;
   }
 
+  String _requireUid() {
+    final uid = _client.auth.currentUser?.id;
+    if (uid == null) throw Exception('Não autenticado');
+    return uid;
+  }
+
   Future<PostGeneration> saveGeneration(PostGeneration generation) async {
+    final uid = _requireUid();
+    final map = generation.toInsertMap();
+    map['user_id'] = uid;
     final rows = await _client
         .from(AppConstants.tablePostGenerations)
-        .insert(generation.toInsertMap())
+        .insert(map)
         .select()
         .single();
 
@@ -30,9 +39,11 @@ class PostService {
   }
 
   Future<List<PostGeneration>> fetchHistory() async {
+    final uid = _requireUid();
     final rows = await _client
         .from(AppConstants.tablePostGenerations)
         .select()
+        .eq('user_id', uid)
         .order('created_at', ascending: false)
         .limit(50);
 
@@ -42,12 +53,14 @@ class PostService {
   }
 
   Future<int> countMonthlyGenerations() async {
+    final uid = _requireUid();
     final now = DateTime.now();
     final firstOfMonth = DateTime(now.year, now.month, 1).toUtc().toIso8601String();
 
     final rows = await _client
         .from(AppConstants.tablePostGenerations)
         .select('id')
+        .eq('user_id', uid)
         .gte('created_at', firstOfMonth);
 
     return (rows as List).length;

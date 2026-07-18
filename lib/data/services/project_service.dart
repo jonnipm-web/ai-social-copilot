@@ -16,9 +16,12 @@ class ProjectService implements ProjectServiceInterface {
 
   @override
   Future<List<Project>> fetchAll() async {
+    final uid = _client.auth.currentUser?.id;
+    if (uid == null) throw Exception('Não autenticado');
     final rows = await _client
         .from(AppConstants.tableProjects)
         .select()
+        .eq('user_id', uid)
         .order('priority_score', ascending: false);
     return (rows as List).map((r) => Project.fromMap(r)).toList();
   }

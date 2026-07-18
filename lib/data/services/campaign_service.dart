@@ -11,28 +11,40 @@ class CampaignService {
   static const _tableCampaigns = 'campaigns';
   static const _edgeFunction   = 'generate-campaign';
 
+  String _requireUid() {
+    final uid = _client.auth.currentUser?.id;
+    if (uid == null) throw Exception('Não autenticado');
+    return uid;
+  }
+
   Future<List<Campaign>> fetchAll() async {
+    final uid = _requireUid();
     final rows = await _client
         .from(_tableCampaigns)
         .select()
+        .eq('user_id', uid)
         .order('created_at', ascending: false);
     return (rows as List).map((r) => Campaign.fromMap(r)).toList();
   }
 
   Future<Campaign?> fetchById(String id) async {
+    final uid = _requireUid();
     final row = await _client
         .from(_tableCampaigns)
         .select()
         .eq('id', id)
+        .eq('user_id', uid)
         .maybeSingle();
     return row == null ? null : Campaign.fromMap(row);
   }
 
   Future<List<Campaign>> fetchByItemId(String itemId) async {
+    final uid = _requireUid();
     final rows = await _client
         .from(_tableCampaigns)
         .select()
         .eq('knowledge_item_id', itemId)
+        .eq('user_id', uid)
         .order('created_at', ascending: false);
     return (rows as List).map((r) => Campaign.fromMap(r)).toList();
   }

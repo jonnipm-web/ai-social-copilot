@@ -6,18 +6,22 @@ import '../../core/constants/app_constants.dart';
 class BusinessMemoryService {
   final _client = Supabase.instance.client;
 
+  String _requireUid() {
+    final uid = _client.auth.currentUser?.id;
+    if (uid == null) throw Exception('Não autenticado');
+    return uid;
+  }
+
   Future<List<BusinessMemory>> fetchAll({String? projectId, String? memoryType}) async {
+    final uid = _requireUid();
     var query = _client
         .from(AppConstants.tableBusinessMemory)
         .select()
+        .eq('user_id', uid)
         .order('created_at', ascending: false);
 
-    if (projectId != null) {
-      query = query.eq('project_id', projectId) as dynamic;
-    }
-    if (memoryType != null) {
-      query = query.eq('memory_type', memoryType) as dynamic;
-    }
+    if (projectId != null) query = query.eq('project_id', projectId);
+    if (memoryType != null) query = query.eq('memory_type', memoryType);
 
     final rows = await query;
     return (rows as List).map((r) => BusinessMemory.fromMap(r)).toList();
