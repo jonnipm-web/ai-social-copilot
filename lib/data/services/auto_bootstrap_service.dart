@@ -70,8 +70,8 @@ class AutoBootstrapService {
         AppConstants.edgeFunctionGenerateOpportunities,
         body: {
           'project_name':        project.name,
-          'project_description': project.description ?? '',
-          'project_type':        project.type ?? '',
+          'project_description': project.description,
+          'project_type':        project.type,
           'documents':           docSummaries,
           'market_context':      linkedAnalysis?.niche ?? '',
         },
@@ -191,7 +191,7 @@ class AutoBootstrapService {
       try {
         final docContext = knowledgeItems.take(3).map((k) => k.title).join(', ');
         final revenueInput =
-            '${project.name}: ${project.description ?? ""}. Documentos: $docContext.';
+            '${project.name}: ${project.description}. Documentos: $docContext.';
 
         final revResp = await _client.functions.invoke(
           AppConstants.edgeFunctionRevenue,

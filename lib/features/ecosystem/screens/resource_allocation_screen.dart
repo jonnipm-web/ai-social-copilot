@@ -144,7 +144,6 @@ class _BudgetSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = mode == 'hours' ? 'horas' : 'R\$';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

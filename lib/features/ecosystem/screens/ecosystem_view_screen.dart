@@ -17,8 +17,6 @@ const _kGreen   = Color(0xFF4CAF50);
 const _kOrange  = Color(0xFFFF9800);
 const _kRed     = Color(0xFFF44336);
 const _kCyan    = Color(0xFF00BCD4);
-const _kGold    = Color(0xFFFFD700);
-
 Color _scoreColor(int s) {
   if (s >= 80) return _kGreen;
   if (s >= 60) return _kOrange;
@@ -30,10 +28,6 @@ Color _scoreColor(int s) {
 // ════════════════════════════════════════════════════════════════════════════
 class EcosystemViewScreen extends ConsumerWidget {
   const EcosystemViewScreen({super.key});
-
-  static const List<String> _projectTypes = [
-    'Blog', 'SaaS', 'App', 'Livro', 'Curso', 'E-commerce',
-  ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -203,7 +197,7 @@ class _ProjectCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final score = analysis?.opportunityScore ?? 0;
     final color = _scoreColor(score);
-    final typeColor = _typeColor(project.type ?? 'projeto');
+    final typeColor = _typeColor(project.type);
 
     return GestureDetector(
       onTap: onTap,
@@ -226,7 +220,7 @@ class _ProjectCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    (project.type ?? 'Projeto').toUpperCase(),
+                    project.type.toUpperCase(),
                     style: TextStyle(
                         color: typeColor, fontSize: 9, fontWeight: FontWeight.bold),
                   ),

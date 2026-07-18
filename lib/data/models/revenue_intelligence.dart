@@ -51,9 +51,7 @@ class RevenueIntelligence {
     String firstMilestone = '';
     if (milestones.isNotEmpty) {
       final first = milestones.first;
-      if (first is Map) {
-        firstMilestone = (first['description'] as String?) ?? '';
-      }
+      firstMilestone = (first['description'] as String?) ?? '';
     }
 
     return RevenueIntelligence(

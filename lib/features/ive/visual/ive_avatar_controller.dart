@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import '../domain/ive_visual_event.dart';
 import 'ive_avatar_state.dart';
 import 'ive_rive_runtime.dart';
-import 'ive_visual_runtime.dart';
 
 // ── Avatar Controller ─────────────────────────────────────────────────────────
 // Bridge between the IVE Context Engine (business logic / IveProvider) and the

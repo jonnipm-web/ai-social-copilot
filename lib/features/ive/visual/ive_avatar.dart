@@ -3,7 +3,6 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rive/rive.dart';
 
-import '../../../data/models/ive_state.dart';
 import '../../../providers/ive_provider.dart';
 import 'ive_avatar_controller.dart';
 import 'ive_avatar_state.dart';

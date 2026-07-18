@@ -19,7 +19,7 @@ class RoiMetricService {
         .eq('user_id', uid);
     if (projectId != null) query = query.eq('project_id', projectId);
     final rows = await query.order('created_at', ascending: false);
-    return rows.map((r) => RoiMetric.fromMap(r as Map<String, dynamic>)).toList();
+    return rows.map((r) => RoiMetric.fromMap(r)).toList();
   }
 
   Future<RoiMetric> create({

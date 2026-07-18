@@ -16,8 +16,6 @@ linter:
     avoid_print: true
     # Supabase retorna dynamic com frequência — desativado para evitar falsos positivos
     avoid_dynamic_calls: false
-    # Comparações desnecessárias indicam lógica incorreta (não null-safe)
-    unnecessary_null_comparison: true
     #
     # Regras desativadas para Build Week (código legado extenso):
     # always_declare_return_types — produziria centenas de itens em código legado.
