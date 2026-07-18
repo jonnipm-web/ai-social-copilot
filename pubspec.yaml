@@ -60,4 +60,7 @@ flutter:
   assets:
     - .env
     - assets/ive/reference/
-    - assets/ive/rive/
+    # assets/ive/rive/ removido — nenhum arquivo .riv existe ainda (Build Week).
+    # IveRiveRuntime.initialize() lança FlutterError capturado pelo controller,
+    # que cai automaticamente para IveVisualFallback (PNG).
+    # Adicionar de volta quando ive_executive_v1.riv for entregue pelo time de design.

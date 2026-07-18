@@ -14,17 +14,19 @@ class BusinessMemoryService {
 
   Future<List<BusinessMemory>> fetchAll({String? projectId, String? memoryType}) async {
     final uid = _requireUid();
+    // Filters must be applied before order() — order() returns PostgrestTransformBuilder
+    // which does not expose .eq(). Applying filters first keeps the type as
+    // PostgrestFilterBuilder throughout the chain.
     var query = _client
         .from(AppConstants.tableBusinessMemory)
         .select()
-        .eq('user_id', uid)
-        .order('created_at', ascending: false);
+        .eq('user_id', uid);
 
     if (projectId != null) query = query.eq('project_id', projectId);
     if (memoryType != null) query = query.eq('memory_type', memoryType);
 
-    final rows = await query;
-    return (rows as List).map((r) => BusinessMemory.fromMap(r)).toList();
+    final rows = await query.order('created_at', ascending: false);
+    return rows.map((r) => BusinessMemory.fromMap(r)).toList();
   }
 
   Future<BusinessMemory> create({

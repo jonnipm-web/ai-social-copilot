@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/market_analysis.dart';
 import '../data/models/competitor.dart';
@@ -155,8 +156,7 @@ class MarketAnalysisNotifier extends StateNotifier<AsyncValue<MarketAnalysis?>> 
       try {
         await svc.create(item);
       } catch (e) {
-        // ignore: avoid_print
-        print('[MarketAnalysis] seed opportunity lab error: $e');
+        debugPrint('[MarketAnalysis] seed opportunity lab error: $e');
       }
     }
   }

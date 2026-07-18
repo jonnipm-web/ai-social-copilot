@@ -106,6 +106,23 @@ void main() {
       expect(BusinessMemoryService().fetchAll(), throwsNotAuthenticated());
     });
 
+    // Testa os filtros condicionais (projectId e memoryType) — validam
+    // que os parâmetros compilam corretamente após a correção que moveu
+    // .order() para depois dos filtros (evitando TypeError em TransformBuilder).
+    test('BusinessMemoryService.fetchAll(projectId:) lança exceção antes de query', () {
+      expect(
+        BusinessMemoryService().fetchAll(projectId: 'proj-test'),
+        throwsNotAuthenticated(),
+      );
+    });
+
+    test('BusinessMemoryService.fetchAll(memoryType:) lança exceção antes de query', () {
+      expect(
+        BusinessMemoryService().fetchAll(memoryType: 'opportunity'),
+        throwsNotAuthenticated(),
+      );
+    });
+
     test('ProjectService.fetchAll() lança exceção', () {
       expect(ProjectService().fetchAll(), throwsNotAuthenticated());
     });
