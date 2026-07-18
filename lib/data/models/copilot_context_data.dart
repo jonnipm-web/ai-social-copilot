@@ -43,6 +43,14 @@ class CopilotContextData {
           'source_limitations': sourceLimitations,
       };
 
+  /// Apenas hints não autoritativos aceitos pelo contrato backend V2.
+  Map<String, dynamic> toServerHints() => {
+        if (scores != null) 'scores': scores,
+        if (market != null) 'market': market,
+        if (personas.isNotEmpty) 'personas': personas,
+        if (revenue != null) 'revenue': revenue,
+      };
+
   bool get isEmpty =>
       userId == null &&
       projectId == null &&
