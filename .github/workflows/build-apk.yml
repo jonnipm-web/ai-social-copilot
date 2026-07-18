@@ -25,10 +25,12 @@ jobs:
         run: flutter pub get
 
       - name: Análise estática (flutter analyze)
-        run: flutter analyze --no-pub
+        # --fatal-warnings: warnings são tratados como erros — nenhum é ocultado
+        run: flutter analyze --no-pub --fatal-warnings
 
       - name: Testes unitários e de integração (flutter test)
-        run: flutter test --no-pub
+        # --reporter=expanded: exibe nome de cada teste (sem omitir resultados)
+        run: flutter test --no-pub --reporter=expanded
 
   build:
     runs-on: ubuntu-latest

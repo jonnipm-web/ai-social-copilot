@@ -37,17 +37,12 @@ class MarketAnalysisService {
     return row == null ? null : MarketAnalysis.fromMap(row);
   }
 
-  Future<void> delete(String id) async {
-    await _client.from(AppConstants.tableMarketAnalyses).delete().eq('id', id);
-  }
-
   Future<MarketAnalysis> analyze(
     String input, {
     String inputType = 'url',
     String? projectId,
   }) async {
-    final uid = _client.auth.currentUser?.id;
-    if (uid == null) throw Exception('Usuário não autenticado.');
+    final uid = _requireUid();
 
     final response = await _client.functions.invoke(
       AppConstants.edgeFunctionMarket,
@@ -82,8 +77,22 @@ class MarketAnalysisService {
     return MarketAnalysis.fromMap(row);
   }
 
+  Future<void> delete(String id) async {
+    final uid = _requireUid();
+    // Verifica propriedade antes de deletar
+    final existing = await _client
+        .from(AppConstants.tableMarketAnalyses)
+        .select('id')
+        .eq('id', id)
+        .eq('user_id', uid)
+        .maybeSingle();
+    if (existing == null) throw Exception('Análise não encontrada ou não autorizada');
+    await _client.from(AppConstants.tableMarketAnalyses).delete().eq('id', id);
+  }
+
   // Competitors
   Future<List<Competitor>> fetchCompetitors(String marketAnalysisId) async {
+    _requireUid();
     final rows = await _client
         .from(AppConstants.tableCompetitors)
         .select()
@@ -93,8 +102,7 @@ class MarketAnalysisService {
   }
 
   Future<List<Competitor>> discoverCompetitors(String marketAnalysisId, String input) async {
-    final uid = _client.auth.currentUser?.id;
-    if (uid == null) throw Exception('Usuário não autenticado.');
+    final uid = _requireUid();
 
     final response = await _client.functions.invoke(
       AppConstants.edgeFunctionCompetitor,
@@ -131,6 +139,7 @@ class MarketAnalysisService {
 
   // Gap Analysis
   Future<GapAnalysis?> fetchGapAnalysis(String marketAnalysisId) async {
+    _requireUid();
     final row = await _client
         .from(AppConstants.tableGapAnalyses)
         .select()
@@ -140,8 +149,7 @@ class MarketAnalysisService {
   }
 
   Future<GapAnalysis> runGapAnalysis(String marketAnalysisId, String input) async {
-    final uid = _client.auth.currentUser?.id;
-    if (uid == null) throw Exception('Usuário não autenticado.');
+    final uid = _requireUid();
 
     final response = await _client.functions.invoke(
       AppConstants.edgeFunctionGap,
@@ -172,6 +180,7 @@ class MarketAnalysisService {
 
   // Opportunities
   Future<List<Opportunity>> fetchOpportunities(String marketAnalysisId) async {
+    _requireUid();
     final rows = await _client
         .from(AppConstants.tableOpportunities)
         .select()
@@ -181,8 +190,7 @@ class MarketAnalysisService {
   }
 
   Future<List<Opportunity>> discoverOpportunities(String marketAnalysisId, String input) async {
-    final uid = _client.auth.currentUser?.id;
-    if (uid == null) throw Exception('Usuário não autenticado.');
+    final uid = _requireUid();
 
     final response = await _client.functions.invoke(
       AppConstants.edgeFunctionOpportunity,
@@ -222,6 +230,7 @@ class MarketAnalysisService {
 
   // Niche Rankings
   Future<List<NicheRanking>> fetchNiches(String marketAnalysisId) async {
+    _requireUid();
     final rows = await _client
         .from(AppConstants.tableNicheRankings)
         .select()
@@ -231,8 +240,7 @@ class MarketAnalysisService {
   }
 
   Future<List<NicheRanking>> discoverNiches(String marketAnalysisId, String input) async {
-    final uid = _client.auth.currentUser?.id;
-    if (uid == null) throw Exception('Usuário não autenticado.');
+    final uid = _requireUid();
 
     final response = await _client.functions.invoke(
       AppConstants.edgeFunctionNiche,
@@ -273,6 +281,7 @@ class MarketAnalysisService {
 
   // Content Cluster
   Future<ContentCluster?> fetchContentCluster(String marketAnalysisId) async {
+    _requireUid();
     final row = await _client
         .from(AppConstants.tableContentClusters)
         .select()
@@ -282,8 +291,7 @@ class MarketAnalysisService {
   }
 
   Future<ContentCluster> buildContentCluster(String marketAnalysisId, String input, String mainKeyword) async {
-    final uid = _client.auth.currentUser?.id;
-    if (uid == null) throw Exception('Usuário não autenticado.');
+    final uid = _requireUid();
 
     final response = await _client.functions.invoke(
       AppConstants.edgeFunctionCluster,
@@ -323,6 +331,7 @@ class MarketAnalysisService {
 
   // Revenue Plan
   Future<RevenuePlan?> fetchRevenuePlan(String marketAnalysisId) async {
+    _requireUid();
     final row = await _client
         .from(AppConstants.tableRevenuePlans)
         .select()
@@ -337,8 +346,7 @@ class MarketAnalysisService {
     String projectName, {
     String? projectId,
   }) async {
-    final uid = _client.auth.currentUser?.id;
-    if (uid == null) throw Exception('Usuário não autenticado.');
+    final uid = _requireUid();
 
     final response = await _client.functions.invoke(
       AppConstants.edgeFunctionRevenue,
