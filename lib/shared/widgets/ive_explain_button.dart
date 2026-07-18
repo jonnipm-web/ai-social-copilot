@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'context_copilot_widget.dart' show showCopilotChat;
+import 'context_copilot_widget.dart' show openIveChat;
 
 /// Botão "Explicar com IVE" — qualquer componente pode adicionar.
 ///
@@ -32,8 +32,8 @@ class IveExplainButton extends StatelessWidget {
             Text(
               label ?? 'Entender',
               style: const TextStyle(
-                color:      Color(0xFF9B8FFF),
-                fontSize:   11,
+                color: Color(0xFF9B8FFF),
+                fontSize: 11,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -54,15 +54,16 @@ class IveExplainButton extends StatelessWidget {
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
       icon: const Text('💬', style: TextStyle(fontSize: 13)),
-      label: Text(label ?? 'Explicar com IVE', style: const TextStyle(fontSize: 12)),
+      label: Text(label ?? 'Explicar com IVE',
+          style: const TextStyle(fontSize: 12)),
       onPressed: () => _open(context),
     );
   }
 
   void _open(BuildContext context) {
-    showCopilotChat(
+    openIveChat(
       context,
-      screenName:     screenName,
+      screenName: screenName,
       initialMessage: question,
     );
   }

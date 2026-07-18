@@ -29,16 +29,16 @@ export 'ive_visual_config.dart' show IveAvatarSize;
 
 class IveAvatar extends ConsumerStatefulWidget {
   final IveAvatarSize size;
-  final bool          showStatusRing;
-  final bool          interactive;
+  final bool showStatusRing;
+  final bool interactive;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
   const IveAvatar({
     super.key,
-    this.size          = IveAvatarSize.standard,
+    this.size = IveAvatarSize.standard,
     this.showStatusRing = true,
-    this.interactive   = true,
+    this.interactive = true,
     this.onTap,
     this.onLongPress,
   });
@@ -50,17 +50,17 @@ class IveAvatar extends ConsumerStatefulWidget {
 class _IveAvatarState extends ConsumerState<IveAvatar>
     with SingleTickerProviderStateMixin {
   final _controller = IveAvatarController();
-  bool  _initialized = false;
+  bool _initialized = false;
 
   // Ring pulse animation (used even when Rive is active for the outer ring)
   late final AnimationController _pulseCtrl;
-  late final Animation<double>   _pulse;
+  late final Animation<double> _pulse;
 
   @override
   void initState() {
     super.initState();
     _pulseCtrl = AnimationController(
-      vsync:    this,
+      vsync: this,
       duration: const Duration(milliseconds: 2400),
     )..repeat(reverse: true);
     _pulse = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -91,7 +91,7 @@ class _IveAvatarState extends ConsumerState<IveAvatar>
 
   @override
   Widget build(BuildContext context) {
-    final iveState    = ref.watch(iveProvider);
+    final iveState = ref.watch(iveProvider);
     final visualState = IveVisualStateMapper.fromIveState(iveState);
 
     // Propagate state changes to the Rive runtime
@@ -107,26 +107,27 @@ class _IveAvatarState extends ConsumerState<IveAvatar>
       // ── Rive path ────────────────────────────────────────────────────────
       avatar = _RiveAvatar(
         controller: _controller,
-        size:       dp,
-        state:      visualState,
-        pulse:      _pulse,
-        showRing:   widget.showStatusRing,
+        size: dp,
+        state: visualState,
+        pulse: _pulse,
+        showRing: widget.showStatusRing,
       );
     } else {
       // ── Fallback path ─────────────────────────────────────────────────────
       avatar = IveVisualFallback(
         state: visualState,
-        size:  dp,
+        size: dp,
       );
     }
 
     if (!widget.interactive) return avatar;
 
     return Semantics(
-      label:  'IVE, assistente executiva',
+      label: 'IVE, assistente executiva',
       button: true,
       child: GestureDetector(
-        onTap:      widget.onTap,
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
         onLongPress: widget.onLongPress,
         child: ExcludeSemantics(child: avatar),
       ),
@@ -146,22 +147,22 @@ class _RiveAvatar extends StatelessWidget {
   });
 
   final IveAvatarController controller;
-  final double              size;
-  final IveVisualState      state;
-  final Animation<double>   pulse;
-  final bool                showRing;
+  final double size;
+  final IveVisualState state;
+  final Animation<double> pulse;
+  final bool showRing;
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: pulse,
       builder: (_, __) => SizedBox(
-        width:  size,
+        width: size,
         height: size,
         child: showRing
             ? CustomPaint(
                 painter: IveStatusRingPainter(
-                  state:     state,
+                  state: state,
                   glowPulse: pulse.value,
                 ),
                 child: Padding(
@@ -178,9 +179,9 @@ class _RiveAvatar extends StatelessWidget {
     final artboard = controller.riveRuntime?.artboard;
     if (artboard == null) return const SizedBox.shrink();
     return Rive(
-      artboard:          artboard,
-      fit:               BoxFit.contain,
-      useArtboardSize:   false,
+      artboard: artboard,
+      fit: BoxFit.contain,
+      useArtboardSize: false,
     );
   }
 }

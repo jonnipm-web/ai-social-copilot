@@ -11,7 +11,7 @@ import '../../providers/ive_context_provider.dart';
 import '../../providers/ive_memory_provider.dart';
 import '../../providers/ive_provider.dart';
 import '../../providers/knowledge_provider.dart';
-import 'context_copilot_widget.dart' show showCopilotChat;
+import 'context_copilot_widget.dart' show openIveChat;
 import 'ive_issue_detail_sheet.dart';
 
 // ── Route bridge ──────────────────────────────────────────────────────────────
@@ -47,6 +47,8 @@ class IveOverlay extends ConsumerStatefulWidget {
 }
 
 class _IveOverlayState extends ConsumerState<IveOverlay> {
+  static const double _overlayWidth = 220;
+  static const double _avatarTouchSize = 56;
   Offset? _position;
   bool _dragging = false;
 
@@ -68,8 +70,9 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
     ref.read(iveMemoryProvider.notifier).setRoute(route);
   }
 
-  Offset _defaultPosition(Size screen) =>
-      Offset(screen.width - 80, screen.height - 200);
+  Offset _defaultPosition(Size screen) => Offset(
+      (screen.width - _overlayWidth - 12).clamp(0, double.infinity),
+      screen.height - 200);
 
   @override
   Widget build(BuildContext context) {
@@ -77,18 +80,17 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
     final screen = MediaQuery.of(context).size;
     _position ??= _defaultPosition(screen);
 
+    final maxPosition = Offset(
+      (screen.width - _overlayWidth).clamp(0, double.infinity),
+      (screen.height - 100).clamp(0, double.infinity),
+    );
+    _position = _position!.clamp(Offset.zero, maxPosition);
+
     return Positioned(
       left: _position!.dx,
       top: _position!.dy,
-      child: GestureDetector(
-        onPanStart: (_) => setState(() => _dragging = true),
-        onPanUpdate: (d) => setState(() {
-          _position = (_position! + d.delta).clamp(
-            Offset.zero,
-            Offset(screen.width - 72, screen.height - 100),
-          );
-        }),
-        onPanEnd: (_) => setState(() => _dragging = false),
+      child: SizedBox(
+        width: _overlayWidth,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.end,
@@ -119,7 +121,11 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
                       ref.read(iveProvider.notifier).dismissBubble();
                     },
                     onChat: state.activeIssue == null
-                        ? () => _openChat(context, state.screenName)
+                        ? () {
+                            _debugTap('IVE_CTA_TAP');
+                            ref.read(iveProvider.notifier).dismissBubble();
+                            _openChat(context, state.screenName);
+                          }
                         : null,
                   ),
                 ),
@@ -129,21 +135,33 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
 
             // ── New IveAvatar (replaces old IveAvatarWidget) ─────────────────
             GestureDetector(
+              key: const ValueKey('ive-overlay-avatar'),
+              behavior: HitTestBehavior.opaque,
+              onPanStart: (_) => setState(() => _dragging = true),
+              onPanUpdate: (d) => setState(() {
+                _position = (_position! + d.delta).clamp(
+                  Offset.zero,
+                  maxPosition,
+                );
+              }),
+              onPanEnd: (_) => setState(() => _dragging = false),
               onTap: () {
                 if (_dragging) return;
-                if (state.bubbleVisible) {
-                  ref.read(iveProvider.notifier).dismissBubble();
-                } else {
-                  _openChat(context, state.screenName);
-                }
+                _debugTap('IVE_AVATAR_TAP');
+                ref.read(iveProvider.notifier).dismissBubble();
+                _openChat(context, state.screenName);
               },
-              child: AnimatedScale(
-                scale: _dragging ? 0.92 : 1.0,
-                duration: const Duration(milliseconds: 150),
-                child: const IveAvatar(
-                  size: IveAvatarSize.compact,
-                  showStatusRing: true,
-                  interactive: false, // overlay owns the tap
+              child: SizedBox(
+                width: _avatarTouchSize,
+                height: _avatarTouchSize,
+                child: AnimatedScale(
+                  scale: _dragging ? 0.92 : 1.0,
+                  duration: const Duration(milliseconds: 150),
+                  child: const IveAvatar(
+                    size: IveAvatarSize.compact,
+                    showStatusRing: true,
+                    interactive: false, // overlay owns the tap
+                  ),
                 ),
               ),
             ),
@@ -155,11 +173,18 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
 
   void _openChat(BuildContext context, String screenName) {
     ref.read(iveMemoryProvider.notifier).incrementInteraction();
-    showCopilotChat(
+    openIveChat(
       context,
       screenName: IveRouteContext.displayName(screenName),
       route: screenName,
     );
+  }
+
+  void _debugTap(String marker) {
+    assert(() {
+      debugPrint(marker);
+      return true;
+    }());
   }
 }
 
@@ -270,6 +295,8 @@ class _IveBubble extends StatelessWidget {
                 _IssueActions(issue: activeIssue!)
               else if (onChat != null)
                 GestureDetector(
+                  key: const ValueKey('ive-bubble-chat-cta'),
+                  behavior: HitTestBehavior.opaque,
                   onTap: onChat,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -283,12 +310,15 @@ class _IveBubble extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 5),
-                      const Text(
-                        'Conversar com a IVE',
-                        style: TextStyle(
-                          color: Color(0xFF9B8FFF),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
+                      const Flexible(
+                        child: Text(
+                          'Conversar com a IVE',
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Color(0xFF9B8FFF),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ],

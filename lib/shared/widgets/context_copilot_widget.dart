@@ -13,27 +13,69 @@ import '../../providers/selected_project_provider.dart';
 import 'ive_action_confirmation_card.dart';
 import 'ive_response_context_panel.dart';
 
-void showCopilotChat(
-  BuildContext context, {
+final iveRootNavigatorKey = GlobalKey<NavigatorState>();
+
+bool _iveChatOpen = false;
+
+@visibleForTesting
+void resetIveChatGateForTesting() => _iveChatOpen = false;
+
+void _debugIve(String marker) {
+  assert(() {
+    debugPrint(marker);
+    return true;
+  }());
+}
+
+Future<void> openIveChat(
+  BuildContext requestContext, {
   required String screenName,
   String? route,
   CopilotContextData? contextData,
   String? initialMessage,
-}) {
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (_) => UncontrolledProviderScope(
-      container: ProviderScope.containerOf(context),
-      child: _CopilotSheet(
-        screenName: screenName,
-        route: route,
-        contextData: contextData,
-        initialMessage: initialMessage,
+  String? inputHint,
+  String? selectedEntityType,
+  String? selectedEntityId,
+  String? selectedEntityLabel,
+}) async {
+  _debugIve('IVE_OPEN_REQUESTED');
+  if (_iveChatOpen) return;
+
+  try {
+    final container = ProviderScope.containerOf(requestContext);
+    final navigator = iveRootNavigatorKey.currentState ??
+        Navigator.maybeOf(requestContext, rootNavigator: true);
+    if (navigator == null || !navigator.mounted) {
+      throw StateError('IVE root Navigator unavailable');
+    }
+
+    _iveChatOpen = true;
+    final sheet = showModalBottomSheet<void>(
+      context: navigator.context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => UncontrolledProviderScope(
+        container: container,
+        child: _CopilotSheet(
+          screenName: screenName,
+          route: route,
+          contextData: contextData,
+          initialMessage: initialMessage,
+          inputHint: inputHint,
+          selectedEntityType: selectedEntityType,
+          selectedEntityId: selectedEntityId,
+          selectedEntityLabel: selectedEntityLabel,
+        ),
       ),
-    ),
-  );
+    );
+    _debugIve('IVE_CHAT_OPENED');
+    await sheet;
+  } catch (error) {
+    _debugIve('IVE_CHAT_OPEN_FAILED: $error');
+  } finally {
+    _iveChatOpen = false;
+  }
 }
 
 class ContextCopilotButton extends ConsumerWidget {
@@ -50,7 +92,7 @@ class ContextCopilotButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return FloatingActionButton(
       heroTag: 'copilot_$screenName',
-      onPressed: () => showCopilotChat(
+      onPressed: () => openIveChat(
         context,
         screenName: screenName,
         route: this.context.route,
@@ -68,12 +110,20 @@ class _CopilotSheet extends ConsumerStatefulWidget {
   final String? route;
   final CopilotContextData? contextData;
   final String? initialMessage;
+  final String? inputHint;
+  final String? selectedEntityType;
+  final String? selectedEntityId;
+  final String? selectedEntityLabel;
 
   const _CopilotSheet({
     required this.screenName,
     this.route,
     this.contextData,
     this.initialMessage,
+    this.inputHint,
+    this.selectedEntityType,
+    this.selectedEntityId,
+    this.selectedEntityLabel,
   });
 
   @override
@@ -154,6 +204,8 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
         .send(
           message: widget.initialMessage!,
           context: context,
+          selectedEntityType: widget.selectedEntityType,
+          selectedEntityId: widget.selectedEntityId,
         );
     _scrollToBottom();
   }
@@ -173,6 +225,8 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
     ref.read(contextCopilotProvider(_scope(uid, projectId)).notifier).send(
           message: message,
           context: context,
+          selectedEntityType: widget.selectedEntityType,
+          selectedEntityId: widget.selectedEntityId,
         );
     Future.delayed(const Duration(milliseconds: 300), _scrollToBottom);
   }
@@ -209,6 +263,8 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
     }
 
     return DraggableScrollableSheet(
+      key: const ValueKey('ive-chat-sheet'),
+      expand: false,
       initialChildSize: 0.68,
       minChildSize: 0.42,
       maxChildSize: 0.94,
@@ -222,6 +278,21 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
             _handle(),
             _header(state, scope),
             _projectBadge(project?.name),
+            if (widget.selectedEntityLabel != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Contexto: ${widget.selectedEntityLabel}',
+                    key: const ValueKey('ive-chat-entity-context'),
+                    style: const TextStyle(
+                      color: Color(0xFF9B8FFF),
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ),
             if (liveContext.isLoading)
               const LinearProgressIndicator(
                 minHeight: 2,
@@ -331,6 +402,7 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
                         .clearHistory(),
               ),
             IconButton(
+              key: const ValueKey('ive-chat-close'),
               icon: const Icon(Icons.close_rounded),
               color: Colors.white38,
               onPressed: () => Navigator.of(context).pop(),
@@ -386,9 +458,9 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
         ),
       );
 
-  Widget _empty(bool hasProject) => Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+  Widget _empty(bool hasProject) => SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+        child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -490,6 +562,7 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
             children: [
               Expanded(
                 child: TextField(
+                  key: const ValueKey('ive-chat-input'),
                   controller: _controller,
                   onSubmitted: (_) => _send(),
                   enabled: !busy && hasProject,
@@ -497,7 +570,7 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
                   style: const TextStyle(color: Colors.white, fontSize: 14),
                   decoration: InputDecoration(
                     hintText: hasProject
-                        ? 'Pergunte à IVE…'
+                        ? widget.inputHint ?? 'Pergunte à IVE…'
                         : 'Selecione um projeto para conversar',
                     hintStyle: const TextStyle(color: Colors.white38),
                     filled: true,
@@ -520,6 +593,7 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
                       ),
                     )
                   : IconButton(
+                      key: const ValueKey('ive-chat-send'),
                       onPressed: hasProject ? _send : null,
                       icon: const Icon(Icons.send_rounded),
                       color: const Color(0xFF6C63FF),

@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
 import 'shared/widgets/ive_overlay.dart';
+import 'shared/widgets/context_copilot_widget.dart' show iveRootNavigatorKey;
 import 'features/admin/screens/admin_panel_screen.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/calendar/screens/calendar_screen.dart';
@@ -57,6 +58,7 @@ import 'features/debug/screens/intelligence_debug_hub_screen.dart';
 final _iveObserver = IveRouteObserver();
 
 final _router = GoRouter(
+  navigatorKey: iveRootNavigatorKey,
   initialLocation: AppConstants.routeSplash,
   observers: [_iveObserver],
   redirect: (context, state) {

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import 'context_copilot_widget.dart';
-import '../../data/models/copilot_context_data.dart';
 
 /// Generic drill-down sheet IVE opens when user taps any data item.
 class IveDetailSheet extends StatelessWidget {
@@ -18,7 +17,7 @@ class IveDetailSheet extends StatelessWidget {
     required this.title,
     required this.emoji,
     required this.humanExplanation,
-    this.evidence       = const [],
+    this.evidence = const [],
     this.suggestedActions = const [],
     this.expandedData,
     this.screenName = '',
@@ -35,17 +34,17 @@ class IveDetailSheet extends StatelessWidget {
     String screenName = '',
   }) {
     showModalBottomSheet(
-      context:             context,
-      isScrollControlled:  true,
-      backgroundColor:     Colors.transparent,
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (_) => IveDetailSheet(
-        title:            title,
-        emoji:            emoji,
+        title: title,
+        emoji: emoji,
         humanExplanation: humanExplanation,
-        evidence:         evidence,
+        evidence: evidence,
         suggestedActions: suggestedActions,
-        expandedData:     expandedData,
-        screenName:       screenName,
+        expandedData: expandedData,
+        screenName: screenName,
       ),
     );
   }
@@ -54,11 +53,11 @@ class IveDetailSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return DraggableScrollableSheet(
       initialChildSize: 0.60,
-      minChildSize:     0.40,
-      maxChildSize:     0.92,
+      minChildSize: 0.40,
+      maxChildSize: 0.92,
       builder: (_, ctrl) => Container(
         decoration: const BoxDecoration(
-          color:        Color(0xFF1A1635),
+          color: Color(0xFF1A1635),
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
@@ -99,7 +98,8 @@ class IveDetailSheet extends StatelessWidget {
   Widget _handle() => Center(
         child: Container(
           margin: const EdgeInsets.symmetric(vertical: 10),
-          width: 40, height: 4,
+          width: 40,
+          height: 4,
           decoration: BoxDecoration(
             color: Colors.white24,
             borderRadius: BorderRadius.circular(2),
@@ -143,13 +143,17 @@ class IveDetailSheet extends StatelessWidget {
               const SizedBox(width: 6),
               const Text(
                 'Explicação IVE',
-                style: TextStyle(color: Color(0xFF6C63FF), fontWeight: FontWeight.bold, fontSize: 13),
+                style: TextStyle(
+                    color: Color(0xFF6C63FF),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13),
               ),
             ]),
             const SizedBox(height: 8),
             Text(
               humanExplanation,
-              style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.5),
+              style: const TextStyle(
+                  color: Colors.white, fontSize: 14, height: 1.5),
             ),
           ],
         ),
@@ -160,7 +164,10 @@ class IveDetailSheet extends StatelessWidget {
         children: [
           const Text(
             'Evidências',
-            style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold),
+            style: TextStyle(
+                color: Colors.white70,
+                fontSize: 13,
+                fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           ...evidence.map((e) => _evidenceCard(e)),
@@ -184,10 +191,14 @@ class IveDetailSheet extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(e.label,
-                      style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
+                      style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600)),
                   const SizedBox(height: 2),
                   Text(e.value,
-                      style: const TextStyle(color: Colors.white, fontSize: 13)),
+                      style:
+                          const TextStyle(color: Colors.white, fontSize: 13)),
                 ],
               ),
             ),
@@ -203,15 +214,22 @@ class IveDetailSheet extends StatelessWidget {
         iconColor: Colors.white38,
         collapsedIconColor: Colors.white24,
         tilePadding: EdgeInsets.zero,
-        children: expandedData!.entries.map((e) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 3),
-          child: Row(
-            children: [
-              Expanded(child: Text(e.key, style: const TextStyle(color: Colors.white38, fontSize: 12))),
-              Text(e.value.toString(), style: const TextStyle(color: Colors.white60, fontSize: 12)),
-            ],
-          ),
-        )).toList(),
+        children: expandedData!.entries
+            .map((e) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: Row(
+                    children: [
+                      Expanded(
+                          child: Text(e.key,
+                              style: const TextStyle(
+                                  color: Colors.white38, fontSize: 12))),
+                      Text(e.value.toString(),
+                          style: const TextStyle(
+                              color: Colors.white60, fontSize: 12)),
+                    ],
+                  ),
+                ))
+            .toList(),
       );
 
   Widget _actionsSection(BuildContext context) => Column(
@@ -219,7 +237,10 @@ class IveDetailSheet extends StatelessWidget {
         children: [
           const Text(
             'Ações sugeridas',
-            style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold),
+            style: TextStyle(
+                color: Colors.white70,
+                fontSize: 13,
+                fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           ...suggestedActions.map((a) => _actionTile(context, a)),
@@ -237,7 +258,8 @@ class IveDetailSheet extends StatelessWidget {
             : null,
         trailing: action.onTap != null
             ? IconButton(
-                icon: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF6C63FF)),
+                icon: const Icon(Icons.arrow_forward_ios_rounded,
+                    size: 14, color: Color(0xFF6C63FF)),
                 onPressed: () {
                   Navigator.of(context).pop();
                   action.onTap!();
@@ -253,20 +275,16 @@ class IveDetailSheet extends StatelessWidget {
             foregroundColor: const Color(0xFF6C63FF),
             side: const BorderSide(color: Color(0xFF6C63FF)),
             padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
           icon: const Text('💬', style: TextStyle(fontSize: 16)),
           label: const Text('Perguntar mais ao Copilot'),
           onPressed: () {
             Navigator.of(context).pop();
-            showModalBottomSheet(
-              context:            context,
-              isScrollControlled: true,
-              backgroundColor:    Colors.transparent,
-              builder: (_) => ContextCopilotButton(
-                screenName: screenName.isNotEmpty ? screenName : title,
-                context:    CopilotContextData(),
-              ),
+            openIveChat(
+              context,
+              screenName: screenName.isNotEmpty ? screenName : title,
             );
           },
         ),
