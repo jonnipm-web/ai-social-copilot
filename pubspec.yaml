@@ -42,6 +42,12 @@ dependencies:
   # A versao 12.0.0-beta.1 e a primeira a usar win32 ^6 — unica opcao compativel.
   file_picker: ">=12.0.0-beta.1"
 
+  # Asset Ingestion Hub
+  # archive: ZIP extraction com segurança (path traversal, bomb detection)
+  archive: ^3.6.1
+  # crypto: SHA-256 fingerprint para de-duplicação por conteúdo
+  crypto: ^3.0.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
