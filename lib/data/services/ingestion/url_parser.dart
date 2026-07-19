@@ -10,7 +10,7 @@ import 'asset_parser_interface.dart';
 
 /// Parser para URLs/links externos.
 /// Registra URL, domínio, título e metadados sem duplicar downloads.
-class UrlParser implements AssetParserInterface {
+class UrlParser extends AssetParserInterface {
   UrlParser({http.Client? httpClient}) : _httpClient = httpClient;
 
   final http.Client? _httpClient;
@@ -139,7 +139,7 @@ class UrlParser implements AssetParserInterface {
 
   String? _extractTitle(String html) {
     final ogTitle = RegExp(
-      r'<meta[^>]+property=["\']og:title["\'][^>]+content=["\'](.*?)["\']',
+      '<meta[^>]+property=["\']og:title["\'][^>]+content=["\']([^"\']*)["\']',
       caseSensitive: false,
     ).firstMatch(html)?.group(1);
     if (ogTitle != null && ogTitle.isNotEmpty) return _decodeHtml(ogTitle);
@@ -156,13 +156,13 @@ class UrlParser implements AssetParserInterface {
 
   String? _extractDescription(String html) {
     final ogDesc = RegExp(
-      r'<meta[^>]+property=["\']og:description["\'][^>]+content=["\'](.*?)["\']',
+      '<meta[^>]+property=["\']og:description["\'][^>]+content=["\']([^"\']*)["\']',
       caseSensitive: false,
     ).firstMatch(html)?.group(1);
     if (ogDesc != null && ogDesc.isNotEmpty) return _decodeHtml(ogDesc);
 
     final metaDesc = RegExp(
-      r'<meta[^>]+name=["\']description["\'][^>]+content=["\'](.*?)["\']',
+      '<meta[^>]+name=["\']description["\'][^>]+content=["\']([^"\']*)["\']',
       caseSensitive: false,
     ).firstMatch(html)?.group(1);
     if (metaDesc != null && metaDesc.isNotEmpty) return _decodeHtml(metaDesc);

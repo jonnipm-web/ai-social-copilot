@@ -9,7 +9,7 @@ import '../../models/parsed_content.dart';
 import 'asset_parser_interface.dart';
 
 /// Parser para conteúdo de texto simples (TXT, texto colado).
-class TextParser implements AssetParserInterface {
+class TextParser extends AssetParserInterface {
   const TextParser();
 
   @override

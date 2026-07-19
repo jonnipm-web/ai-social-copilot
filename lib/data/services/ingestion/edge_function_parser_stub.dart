@@ -13,7 +13,7 @@ import 'asset_parser_interface.dart';
 ///
 /// Delega a extração para a Edge Function `process-file` existente.
 /// Se a Edge Function não estiver disponível, retorna conteúdo vazio com aviso.
-class EdgeFunctionParserStub implements AssetParserInterface {
+class EdgeFunctionParserStub extends AssetParserInterface {
   const EdgeFunctionParserStub({
     this.functionName = 'process-file',
   });

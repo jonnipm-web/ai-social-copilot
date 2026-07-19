@@ -85,7 +85,7 @@ class ZipItemInfo {
 ///   - Execução: nunca executa conteúdo — apenas lê bytes
 ///   - MIME: detecta por magic bytes, não por extensão
 ///   - Limite de arquivos: bloqueia ZIPs com número excessivo de entradas
-class ZipIngestionService implements AssetParserInterface {
+class ZipIngestionService extends AssetParserInterface {
   ZipIngestionService({ZipSecurityLimits? limits})
       : limits = limits ?? const ZipSecurityLimits();
 

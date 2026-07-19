@@ -1,6 +1,8 @@
 import 'asset_import_proposal.dart';
 import 'ingestion_source.dart';
 
+export 'ingestion_source.dart' show IngestionStatus;
+
 /// Resultado final após o usuário confirmar a ingestão.
 /// Gerado somente após persistência bem-sucedida.
 class AssetImportResult {
@@ -105,5 +107,3 @@ class IngestionSession {
   );
 }
 
-// Re-export IngestionStatus for convenience
-export 'ingestion_source.dart' show IngestionStatus;

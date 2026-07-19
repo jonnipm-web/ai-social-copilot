@@ -68,7 +68,7 @@ class AssetIngestionService implements AssetIngestionServiceInterface {
     _classifier       = classifier       ?? const AssetClassifierService(),
     _duplicateChecker = duplicateChecker ?? const AssetDuplicateChecker(),
     _textParser       = textParser       ?? const TextParser(),
-    _urlParser        = urlParser        ?? const UrlParser(),
+    _urlParser        = urlParser        ?? UrlParser(),
     _zipService       = zipService       ?? ZipIngestionService(),
     _edgeParser       = edgeFunctionParser;
 
@@ -154,7 +154,7 @@ class AssetIngestionService implements AssetIngestionServiceInterface {
         childProposals = await _buildZipChildren(bytes, sessionId, projectId);
       default:
         if (_edgeParser != null) {
-          content = await _edgeParser!.parseBytes(
+          content = await _edgeParser.parseBytes(
             bytes,
             source:   source,
             fileName: fileName,
@@ -369,7 +369,7 @@ class AssetIngestionService implements AssetIngestionServiceInterface {
         return _textParser.parseBytes(bytes, source: source, fileName: fileName);
       default:
         if (_edgeParser != null) {
-          return _edgeParser!.parseBytes(bytes, source: source, fileName: fileName);
+          return _edgeParser.parseBytes(bytes, source: source, fileName: fileName);
         }
         return _textParser.parseBytes(bytes, source: source, fileName: fileName);
     }
