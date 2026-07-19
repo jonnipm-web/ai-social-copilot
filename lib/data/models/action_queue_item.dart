@@ -5,6 +5,7 @@ class ActionQueueItem {
   final String userId;
   final String? projectId;
   final String? opportunityLabId;
+  final String? assetId;
   final String actionType;
   final String title;
   final int priority;
@@ -33,6 +34,7 @@ class ActionQueueItem {
     required this.userId,
     this.projectId,
     this.opportunityLabId,
+    this.assetId,
     this.actionType = 'task',
     required this.title,
     this.priority = 0,
@@ -82,6 +84,7 @@ class ActionQueueItem {
         userId:           map['user_id'] as String,
         projectId:        map['project_id'] as String?,
         opportunityLabId: map['opportunity_lab_id'] as String?,
+        assetId:          map['asset_id'] as String?,
         actionType:       map['action_type'] as String? ?? 'task',
         title:            map['title'] as String? ?? '',
         priority:         map['priority'] as int? ?? 0,
@@ -106,6 +109,7 @@ class ActionQueueItem {
         'user_id':            userId,
         'project_id':         projectId,
         'opportunity_lab_id': opportunityLabId,
+        if (assetId != null) 'asset_id': assetId,
         'action_type':        actionType,
         'title':              title,
         'priority':           priority,

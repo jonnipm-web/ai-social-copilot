@@ -5,6 +5,7 @@ class OpportunityLabItem {
   final String userId;
   final String? projectId;
   final String? marketAnalysisId;
+  final String? assetId;
   final String opportunityType;
   final String title;
   final String description;
@@ -30,6 +31,7 @@ class OpportunityLabItem {
     required this.userId,
     this.projectId,
     this.marketAnalysisId,
+    this.assetId,
     this.opportunityType = 'expansão',
     required this.title,
     this.description = '',
@@ -89,6 +91,7 @@ class OpportunityLabItem {
         userId:           map['user_id'] as String,
         projectId:        map['project_id'] as String?,
         marketAnalysisId: map['market_analysis_id'] as String?,
+        assetId:          map['asset_id'] as String?,
         opportunityType:  map['opportunity_type'] as String? ?? 'expansão',
         title:            map['title'] as String? ?? '',
         description:      map['description'] as String? ?? '',
@@ -112,6 +115,7 @@ class OpportunityLabItem {
         'user_id':             userId,
         'project_id':          projectId,
         'market_analysis_id':  marketAnalysisId,
+        if (assetId != null) 'asset_id': assetId,
         'opportunity_type':    opportunityType,
         'title':               title,
         'description':         description,
@@ -138,12 +142,15 @@ class OpportunityLabItem {
     List<String>? actionSteps,
     List<String>? sources,
     String? origin,
+    String? assetId,
+    bool clearAsset = false,
   }) =>
       OpportunityLabItem(
         id:               id,
         userId:           userId,
         projectId:        projectId,
         marketAnalysisId: marketAnalysisId,
+        assetId:          clearAsset ? null : (assetId ?? this.assetId),
         opportunityType:  opportunityType,
         title:            title,
         description:      description,

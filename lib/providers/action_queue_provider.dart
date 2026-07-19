@@ -41,6 +41,13 @@ final actionQueueByProjectProvider =
   return ref.read(actionQueueServiceProvider).fetchAll(projectId: projectId);
 });
 
+/// Ações vinculadas a um asset específico.
+/// Requer migration 023 aplicada no banco para retornar dados reais.
+final actionQueueByAssetProvider =
+    FutureProvider.autoDispose.family<List<ActionQueueItem>, String>((ref, assetId) {
+  return ref.read(actionQueueServiceProvider).fetchByAsset(assetId);
+});
+
 class ActionQueueNotifier
     extends StateNotifier<AsyncValue<List<ActionQueueItem>>> {
   ActionQueueNotifier(this._svc) : super(const AsyncValue.loading()) {

@@ -28,6 +28,13 @@ final opportunityLabSummaryProvider =
   return ref.read(opportunityLabServiceProvider).summary();
 });
 
+/// Oportunidades vinculadas a um asset específico.
+/// Requer migration 023 aplicada no banco para retornar dados reais.
+final opportunityLabByAssetProvider =
+    FutureProvider.autoDispose.family<List<OpportunityLabItem>, String>((ref, assetId) {
+  return ref.read(opportunityLabServiceProvider).fetchByAsset(assetId);
+});
+
 class OpportunityLabNotifier
     extends StateNotifier<AsyncValue<List<OpportunityLabItem>>> {
   OpportunityLabNotifier(this._svc) : super(const AsyncValue.loading()) {

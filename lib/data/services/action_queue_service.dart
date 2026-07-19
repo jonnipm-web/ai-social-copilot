@@ -60,6 +60,20 @@ class ActionQueueService {
     return row == null ? null : ActionQueueItem.fromMap(row);
   }
 
+  /// Retorna ações vinculadas a um asset específico.
+  /// Filtra por user_id + asset_id. Requer migration 023 aplicada no banco.
+  Future<List<ActionQueueItem>> fetchByAsset(String assetId) async {
+    if (assetId.isEmpty) throw Exception('assetId inválido');
+    final uid = currentUserId;
+    final rows = await _client
+        .from(AppConstants.tableActionQueue)
+        .select()
+        .eq('user_id', uid)
+        .eq('asset_id', assetId)
+        .order('priority', ascending: true);
+    return (rows as List).map((r) => ActionQueueItem.fromMap(r)).toList();
+  }
+
   Future<ActionQueueItem> updateStatus(String id, String status) async {
     final row = await _client
         .from(AppConstants.tableActionQueue)

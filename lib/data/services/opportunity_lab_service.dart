@@ -64,6 +64,20 @@ class OpportunityLabService {
     await _client.from(AppConstants.tableOpportunityLab).delete().eq('id', id);
   }
 
+  /// Retorna oportunidades vinculadas a um asset específico.
+  /// Filtra por user_id + asset_id. Requer migration 023 aplicada no banco.
+  Future<List<OpportunityLabItem>> fetchByAsset(String assetId) async {
+    if (assetId.isEmpty) throw Exception('assetId inválido');
+    final uid = _requireUid();
+    final rows = await _client
+        .from(AppConstants.tableOpportunityLab)
+        .select()
+        .eq('user_id', uid)
+        .eq('asset_id', assetId)
+        .order('final_score', ascending: false);
+    return (rows as List).map((r) => OpportunityLabItem.fromMap(r)).toList();
+  }
+
   Future<Map<String, int>> summary() async {
     final list = await fetchAll();
     return {
