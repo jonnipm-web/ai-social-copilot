@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,15 +10,58 @@ import '../../data/models/ive_state.dart';
 import '../../features/ive/visual/ive_avatar.dart';
 import '../../features/ive/domain/ive_route_context.dart';
 import '../../features/ive/domain/ive_presentation_state.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/ive_context_provider.dart';
 import '../../providers/ive_memory_provider.dart';
 import '../../providers/ive_provider.dart';
 import '../../providers/knowledge_provider.dart';
-import 'context_copilot_widget.dart' show openIveChat;
+import '../../providers/project_provider.dart';
+import '../../providers/selected_project_provider.dart';
+import 'context_copilot_widget.dart' show closeIveForSignedOut, openIveChat;
 import 'ive_issue_detail_sheet.dart';
 
 // ── Route bridge ──────────────────────────────────────────────────────────────
 final iveRouteNotifier = ValueNotifier<String>('');
+
+/// Fronteira visual de autenticação. Não cria [IveOverlay] enquanto não
+/// existir uma sessão válida, evitando inicializar providers de negócio.
+class AuthenticatedIveOverlay extends ConsumerStatefulWidget {
+  const AuthenticatedIveOverlay({super.key});
+
+  @override
+  ConsumerState<AuthenticatedIveOverlay> createState() =>
+      _AuthenticatedIveOverlayState();
+}
+
+class _AuthenticatedIveOverlayState
+    extends ConsumerState<AuthenticatedIveOverlay> {
+  void _clearSignedOutSession() {
+    closeIveForSignedOut();
+    iveRouteNotifier.value = '';
+    ref.read(iveProvider.notifier).resetForSignedOut();
+    ref.read(iveMemoryProvider.notifier).clearSensitiveSession();
+    unawaited(ref.read(selectedProjectProvider.notifier).clear());
+    ref.invalidate(iveContextDataProvider);
+    ref.invalidate(projectsNotifierProvider);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen<AsyncValue<String?>>(authenticatedUserIdProvider,
+        (previous, next) {
+      if (previous?.valueOrNull != null && next.valueOrNull == null) {
+        _clearSignedOutSession();
+      }
+    });
+    final userId = ref.watch(authenticatedUserIdProvider).valueOrNull;
+    if (userId == null) {
+      return const SizedBox.shrink(
+        key: ValueKey('ive-authenticated-overlay-blocked'),
+      );
+    }
+    return const IveOverlay();
+  }
+}
 
 class IveRouteObserver extends NavigatorObserver {
   void _registerModal(Route route) {

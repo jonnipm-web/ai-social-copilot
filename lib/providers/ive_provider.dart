@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/constants/app_constants.dart';
 import '../core/services/ive_event_bus.dart';
@@ -93,6 +94,10 @@ const _kExpressions = <String, IveExpression>{
 
 class IveNotifier extends StateNotifier<IveState> {
   IveNotifier(this._ref) : super(const IveState()) {
+    // O provider pode ser lido por infraestrutura global. Sem usuário, ele
+    // permanece inerte: não observa contexto, eventos ou inicia timers.
+    if (Supabase.instance.client.auth.currentUser == null) return;
+
     // Escuta eventos do sistema (erros, conclusões de análise, etc.)
     _eventSub = IveEventBus.instance.stream.listen(_onEvent);
 
@@ -116,6 +121,7 @@ class IveNotifier extends StateNotifier<IveState> {
   // ── Event Bus ─────────────────────────────────────────────────────────────
 
   void _onEvent(IveEvent event) {
+    if (Supabase.instance.client.auth.currentUser == null) return;
     switch (event.type) {
       case IveEventType.assetAnalysisFailed:
       case IveEventType.assetDownloadFailed:
@@ -210,6 +216,11 @@ class IveNotifier extends StateNotifier<IveState> {
   // ── Context data handler (antes no IveOverlay) ────────────────────────────
 
   void _onContextData(IveContextData ctx) {
+    if (Supabase.instance.client.auth.currentUser == null ||
+        ctx.userId.isEmpty) {
+      resetForSignedOut();
+      return;
+    }
     final projectChanged = ctx.activeProjectId != _currentProjectId;
     _currentProjectId = ctx.activeProjectId;
     if (ctx.activeProjectId != null && ctx.activeProjectName != null) {
@@ -306,6 +317,16 @@ class IveNotifier extends StateNotifier<IveState> {
 
   void clearActiveIssue() {
     state = state.copyWith(clearIssue: true);
+  }
+
+  void resetForSignedOut() {
+    _dismissTimer?.cancel();
+    _currentRoute = '';
+    _currentProjectId = null;
+    _visibleContextKey = null;
+    _dismissedContextKeys.clear();
+    _msgIndex = 0;
+    state = const IveState();
   }
 
   void showMessage(

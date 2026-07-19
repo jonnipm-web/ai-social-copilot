@@ -26,6 +26,17 @@ void resetIveChatGateForTesting() {
   ivePresentationController.reset();
 }
 
+/// Fecha qualquer conversa visual e remove estado de apresentação no logout.
+void closeIveForSignedOut() {
+  final shouldCloseSheet = _iveChatOpen;
+  _iveChatOpen = false;
+  ivePresentationController.reset();
+  final navigator = iveRootNavigatorKey.currentState;
+  if (shouldCloseSheet && navigator != null && navigator.canPop()) {
+    navigator.pop();
+  }
+}
+
 void _debugIve(String marker) {
   assert(() {
     debugPrint(marker);
@@ -693,14 +704,24 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
         ),
       );
 
-  Widget _input(bool busy, bool hasProject) => SafeArea(
+  Widget _input(bool busy, bool hasProject) {
+    final media = MediaQuery.of(context);
+    final obstruction = media.viewInsets.bottom > media.viewPadding.bottom
+        ? media.viewInsets.bottom
+        : media.viewPadding.bottom;
+    final additionalBottom =
+        (obstruction - media.padding.bottom).clamp(0.0, double.infinity);
+
+    return AnimatedPadding(
+      key: const ValueKey('ive-composer-animated-padding'),
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOut,
+      padding: EdgeInsets.only(bottom: additionalBottom),
+      child: SafeArea(
+        bottom: true,
+        minimum: const EdgeInsets.only(bottom: 8),
         child: Padding(
-          padding: EdgeInsets.only(
-            left: 12,
-            right: 12,
-            top: 8,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 8,
-          ),
+          padding: const EdgeInsets.only(left: 12, right: 12, top: 8),
           child: Row(
             children: [
               Expanded(
@@ -744,7 +765,9 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
             ],
           ),
         ),
-      );
+      ),
+    );
+  }
 }
 
 class _TurnBubble extends StatelessWidget {

@@ -22,7 +22,10 @@ interface ValidationResult<T> {
   error?: string;
 }
 
-import { buildOpportunityContextSection } from './context_prompt.ts';
+import {
+  buildOpportunityContextSection,
+  buildProjectContextSection,
+} from './context_prompt.ts';
 
 // ── Lógica pura extraída para teste ──────────────────────────────────────────
 
@@ -349,6 +352,29 @@ Deno.test('21. contexto de oportunidades limita volume sem misturar fontes', () 
   const section = buildOpportunityContextSection(opportunities, true);
   assertContains(section, 'opp-4', 'quinta oportunidade entra');
   assert(!section.includes('opp-5'), 'sexta oportunidade fica fora do limite');
+});
+
+Deno.test('22. scores são vinculados explicitamente ao projeto', () => {
+  const section = buildProjectContextSection(
+    { id: 'project-rcbo', name: 'PROJETO RCBO BRASIL', status: 'active' },
+    {
+      ecosystem: 45,
+      opportunity: 80,
+      strategic_fit: 31,
+      synergy: 0,
+      roi: 0,
+      momentum: 99,
+      market: 76,
+      execution: 20,
+    },
+  );
+  assertContains(section, 'id: project-rcbo', 'deve identificar projectId');
+  assertContains(section, 'name: PROJETO RCBO BRASIL', 'deve identificar projectName');
+  assertContains(
+    section,
+    'Project PROJETO RCBO BRASIL (project-rcbo) — Ecosystem Score: 45/100',
+    'score deve pertencer explicitamente ao projeto',
+  );
 });
 
 console.log('\n✓ Todos os testes de lógica pura passaram\n');

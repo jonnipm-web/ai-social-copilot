@@ -425,7 +425,7 @@ class _AppState extends ConsumerState<App> {
           builder: (ctx, ref, _) => Stack(
             children: [
               child!,
-              const IveOverlay(),
+              const AuthenticatedIveOverlay(),
             ],
           ),
         ),

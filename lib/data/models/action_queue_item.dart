@@ -120,7 +120,8 @@ class ActionQueueItem {
         'plan':               plan,
         'risks':              risks,
         'market_score':       marketScore,
-        'confidence':         confidence,
+        // `confidence` permanece como metadata em memória. A produção ainda
+        // não possui a migration 019 aplicada e não pode receber essa coluna.
         if (marketAnalysisId != null) 'market_analysis_id': marketAnalysisId,
       };
 }

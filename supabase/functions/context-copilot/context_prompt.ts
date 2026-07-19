@@ -18,3 +18,38 @@ export function buildOpportunityContextSection(
   if (!hasActiveProject) return '';
   return '## OPORTUNIDADES DO PROJETO (0 total, fonte: servidor)\nEste projeto ainda não possui oportunidades registradas no Opportunity Lab. Ao responder perguntas sobre oportunidades, declare exatamente essa ausência e ofereça gerar/analisar oportunidades. Não use a frase genérica "dados insuficientes".';
 }
+
+export function buildProjectContextSection(
+  project: Record<string, unknown> | null,
+  scores: Record<string, unknown> | null,
+): string {
+  if (!project) return '';
+
+  const id = project.id ?? '—';
+  const name = project.name ?? '—';
+  const lines = [
+    '## PROJECT (validado pelo servidor)',
+    `id: ${id}`,
+    `name: ${name}`,
+    `description: ${project.description || '—'}`,
+    `type: ${project.type || '—'}`,
+    `status: ${project.status || '—'}`,
+  ];
+
+  if (scores) {
+    lines.push(
+      '',
+      '## PROJECT_SCORES (hint do cliente vinculado ao PROJECT acima)',
+      `Project ${name} (${id}) — Ecosystem Score: ${scores.ecosystem ?? 0}/100`,
+      `Project ${name} (${id}) — Opportunity Score: ${scores.opportunity ?? 0}/100`,
+      `Project ${name} (${id}) — Strategic Fit: ${scores.strategic_fit ?? 0}/100`,
+      `Project ${name} (${id}) — Synergy: ${scores.synergy ?? 0}/100`,
+      `Project ${name} (${id}) — ROI: ${scores.roi ?? 0}/100`,
+      `Project ${name} (${id}) — Momentum: ${scores.momentum ?? 0}/100`,
+      `Project ${name} (${id}) — Market Score: ${scores.market ?? 0}/100`,
+      `Project ${name} (${id}) — Execution Score: ${scores.execution ?? 0}/100`,
+    );
+  }
+
+  return lines.join('\n');
+}

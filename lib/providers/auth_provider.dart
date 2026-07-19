@@ -10,6 +10,16 @@ final authStateProvider = StreamProvider<AuthState>((ref) {
   return ref.watch(authServiceProvider).authStateChanges;
 });
 
+/// Identidade reativa da sessão usada por superfícies que não podem existir
+/// antes do login. Emite primeiro o estado atual e depois todas as mudanças.
+final authenticatedUserIdProvider = StreamProvider<String?>((ref) async* {
+  final client = Supabase.instance.client;
+  yield client.auth.currentUser?.id;
+  await for (final authState in client.auth.onAuthStateChange) {
+    yield authState.session?.user.id;
+  }
+});
+
 // Notifier para operações de login/cadastro
 class AuthNotifier extends StateNotifier<AsyncValue<void>> {
   AuthNotifier(this._service) : super(const AsyncValue.data(null));

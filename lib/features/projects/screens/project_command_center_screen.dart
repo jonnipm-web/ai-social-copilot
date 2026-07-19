@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../data/models/copilot_context_data.dart';
 import '../../../data/models/ecosystem_score.dart';
 import '../../../data/models/project.dart';
 import '../../../providers/ecosystem_intelligence_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
-import '../../../shared/widgets/context_copilot_widget.dart' show synchronizeIveProjectContext;
+import '../../../shared/widgets/context_copilot_widget.dart'
+    show openIveWithContext, synchronizeIveProjectContext;
 
 class ProjectCommandCenterScreen extends ConsumerStatefulWidget {
   const ProjectCommandCenterScreen({super.key});
@@ -858,6 +860,8 @@ class _ProjectDetailSheet extends StatelessWidget {
             const SizedBox(height: 12),
 
             // Action buttons
+            IveProjectAskButton(project: project, ecosystemScore: s),
+            const SizedBox(height: 8),
             if (onAnalyze != null)
               _SheetButton(
                 icon: Icons.analytics_rounded,
@@ -936,6 +940,63 @@ class _ProjectDetailSheet extends StatelessWidget {
                 ),
               ))
           .toList();
+}
+
+@visibleForTesting
+class IveProjectAskButton extends StatelessWidget {
+  const IveProjectAskButton({
+    super.key,
+    required this.project,
+    this.ecosystemScore,
+  });
+
+  final Project project;
+  final EcosystemScore? ecosystemScore;
+
+  @override
+  Widget build(BuildContext context) {
+    final score = ecosystemScore;
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        key: const ValueKey('ive-project-ask-cta'),
+        onPressed: () => openIveWithContext(
+          context,
+          screenName: 'Detalhe do Projeto',
+          projectId: project.id,
+          route: AppConstants.routeProjects,
+          contextData: CopilotContextData(
+            userId: project.userId,
+            projectId: project.id,
+            route: AppConstants.routeProjects,
+            project: {
+              'id': project.id,
+              'name': project.name,
+              'status': project.status,
+            },
+            scores: score == null
+                ? null
+                : {
+                    'ecosystem': score.ecosystemScore,
+                    'opportunity': score.opportunityScore,
+                    'strategic_fit': score.strategicFit,
+                    'synergy': score.synergyScore,
+                    'roi': score.roiScore,
+                    'momentum': score.momentumScore,
+                    'market': score.marketScore,
+                    'execution': score.executionScore,
+                  },
+          ),
+          inputHint: 'Pergunte algo sobre este projeto...',
+          selectedEntityType: 'project',
+          selectedEntityId: project.id,
+          selectedEntityLabel: 'Projeto — ${project.name}',
+        ),
+        icon: const Icon(Icons.auto_awesome_rounded),
+        label: const Text('Perguntar à IVE sobre este projeto'),
+      ),
+    );
+  }
 }
 
 // ── Score row com barra de progresso ─────────────────────────────────────────

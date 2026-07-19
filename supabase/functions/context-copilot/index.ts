@@ -20,13 +20,16 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { buildOpportunityContextSection } from './context_prompt.ts';
+import {
+  buildOpportunityContextSection,
+  buildProjectContextSection,
+} from './context_prompt.ts';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const GROQ_URL        = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL      = 'llama-3.3-70b-versatile';
-const PROMPT_VERSION  = '2.0.0';
+const PROMPT_VERSION  = '2.0.1';
 
 const MAX_PAYLOAD_BYTES      = 64_000;   // 64 KB
 const MAX_MESSAGE_CHARS      = 2_000;
@@ -166,7 +169,7 @@ async function loadServerContext(
   // ── Ações ────────────────────────────────────────────────────────────────
   const actQuery = client
     .from('action_queue')
-    .select('id,project_id,opportunity_lab_id,title,description,status,priority,impact_score,effort_score,roi_score,market_score,confidence,origin,rationale,plan,risks,created_at')
+    .select('id,project_id,opportunity_lab_id,title,description,status,priority,impact_score,effort_score,roi_score,market_score,origin,rationale,plan,risks,created_at')
     .eq('user_id', uid)
     .order('priority', { ascending: false })
     .limit(MAX_CONTEXT_ITEMS);
@@ -291,10 +294,13 @@ function buildSystemPrompt(
 ): string {
   const lines: string[] = [`TELA ATUAL: ${screenName}`];
 
-  if (serverCtx.project) {
-    const p = serverCtx.project;
-    lines.push(`\n## PROJETO ATIVO (validado pelo servidor)\nNome: ${p.name}\nDescrição: ${p.description || '—'}\nTipo: ${p.type || '—'}\nStatus: ${p.status || '—'}\nScore de Oportunidade: ${p.opportunity_score || 0}/100\nPotencial de Receita: R$${p.revenue_potential || 0}`);
-  }
+  const projectSection = buildProjectContextSection(
+    serverCtx.project,
+    clientHints.scores
+      ? clientHints.scores as Record<string, unknown>
+      : null,
+  );
+  if (projectSection) lines.push(`\n${projectSection}`);
 
   const opportunitySection = buildOpportunityContextSection(
     serverCtx.opportunities,
@@ -318,12 +324,9 @@ function buildSystemPrompt(
     lines.push(`\n## BASE DE CONHECIMENTO (${serverCtx.kb_items.length} itens, fonte: servidor)\n${kb}`);
   }
 
-  // Scores e mercado vêm dos hints do cliente (não temos tabela própria de scores calculados)
+  // Mercado vem dos hints do cliente. Scores já foram vinculados explicitamente
+  // ao PROJECT validado pelo servidor no bloco PROJECT_SCORES.
   const hints = clientHints;
-  if (hints.scores) {
-    const s = hints.scores as Record<string, unknown>;
-    lines.push(`\n## SCORES DO ECOSSISTEMA (hint do cliente)\nEcosystem Score: ${s.ecosystem}/100\nExecution Score: ${s.execution}/100\nOportunidade: ${s.opportunity}/100\nMercado: ${s.market}/100\nFit estratégico: ${s.strategic_fit}/100\nSinergia: ${s.synergy}/100\nROI Score: ${s.roi}/100\nMomentum: ${s.momentum}/100`);
-  }
   if (hints.market) {
     const m = hints.market as Record<string, unknown>;
     lines.push(`\n## MERCADO (hint do cliente)\nNicho: ${m.niche || '—'}\nCompetição: ${m.competition || '—'}`);
@@ -340,6 +343,10 @@ function buildSystemPrompt(
 Seu papel é analisar os dados do contexto atual e responder às perguntas do usuário com precisão, clareza e ação.
 
 Quando houver oportunidades, compare apenas as oportunidades listadas para o projeto ativo. Para recomendar a melhor, informe nome, score final, critérios determinantes, risco e próxima ação. Nunca use dados de outro projeto nem invente oportunidades.
+
+O bloco PROJECT_SCORES pertence exclusivamente ao PROJECT identificado por id e name. Nunca descreva esses scores como globais ou como scores do ecossistema inteiro.
+
+Se o usuário pedir comparação com outro projeto que não esteja carregado no bloco PROJECT, responda precisamente: "Posso analisar o projeto ativo agora, mas para comparar com o outro projeto preciso abrir/carregar também os dados autorizados desse projeto." Não invente scores do segundo projeto.
 
 ${contextBlock}
 
