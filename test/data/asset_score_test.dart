@@ -94,7 +94,7 @@ void main() {
     test('2c. market_size grande em metadata aumenta potentialScore', () {
       final withSize = _svc.compute(_asset(
         niche:    'SaaS',
-        metadata: {'market_size': 2_000_000},
+        metadata: {'market_size': 2000000},
       ));
       final without = _svc.compute(_asset(niche: 'SaaS'));
       expect(withSize.potentialScore, greaterThan(without.potentialScore));
@@ -227,7 +227,7 @@ void main() {
         strategicPriority: 10,
         lifecycleStage:    'growth',
         metadata: {
-          'market_size':       5_000_000,
+          'market_size':       5000000,
           'roi_actual':        500.0,
           'action_count':      20,
           'completed_actions': 18,

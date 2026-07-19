@@ -81,9 +81,9 @@ class AssetScoreService {
     // Sinais externos via metadata
     final marketSize = (meta['market_size'] as num?)?.toDouble() ?? 0;
     if (marketSize > 0) {
-      if (marketSize >= 1_000_000) pts += 30;
-      else if (marketSize >= 100_000) pts += 20;
-      else if (marketSize >= 10_000)  pts += 10;
+      if (marketSize >= 1000000) pts += 30;
+      else if (marketSize >= 100000) pts += 20;
+      else if (marketSize >= 10000)  pts += 10;
       else                            pts +=  5;
     }
 
