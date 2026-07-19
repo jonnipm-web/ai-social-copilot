@@ -146,8 +146,8 @@ class AssetDuplicateChecker {
     if (na == nb)              return 0.9;
     if (na.contains(nb) || nb.contains(na)) return 0.75;
 
-    final wa = na.split(RegExp(r'\s+'))..removeWhere((w) => w.length <= 2);
-    final wb = nb.split(RegExp(r'\s+'))..removeWhere((w) => w.length <= 2);
+    final wa = na.split(RegExp(r'\s+'));
+    final wb = nb.split(RegExp(r'\s+'));
     if (wa.isEmpty || wb.isEmpty) return 0.0;
 
     final intersection = wa.where((w) => wb.contains(w)).length;

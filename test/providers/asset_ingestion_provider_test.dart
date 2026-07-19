@@ -62,6 +62,7 @@ void main() {
     registerFallbackValue(_fakeProposal());
     registerFallbackValue(IngestionClassification.asset);
     registerFallbackValue(DuplicateDecision.createNew);
+    registerFallbackValue(IngestionSource.text);
   });
 
   setUp(() {
