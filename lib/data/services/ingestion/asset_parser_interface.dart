@@ -6,6 +6,8 @@ import '../../models/parsed_content.dart';
 /// Contrato base para todos os parsers de ingestão.
 /// Cada implementação lida com um ou mais formatos de entrada.
 abstract class AssetParserInterface {
+  const AssetParserInterface();
+
   /// Versão do parser — incluída no provenance de todo conteúdo extraído.
   String get parserVersion;
 
