@@ -112,6 +112,7 @@ class AppConstants {
   static const tableCopilotMessages    = 'copilot_messages';
   static const tableCopilotContext     = 'copilot_context';
   static const tableTrendSignals       = 'trend_signals';
+  static const tableAssets             = 'assets';
   static const edgeFunctionMarket      = 'market-analysis';
   static const edgeFunctionCompetitor  = 'competitor-discovery';
   static const edgeFunctionGap         = 'gap-analysis';
