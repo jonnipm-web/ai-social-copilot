@@ -107,9 +107,11 @@ class IveNotifier extends StateNotifier<IveState> {
   StreamSubscription<IveEvent>? _eventSub;
 
   Timer? _dismissTimer;
-  Timer? _cycleTimer;
   int _msgIndex = 0;
   String _currentRoute = '';
+  String? _currentProjectId;
+  String? _visibleContextKey;
+  final Set<String> _dismissedContextKeys = <String>{};
 
   // ── Event Bus ─────────────────────────────────────────────────────────────
 
@@ -178,8 +180,8 @@ class IveNotifier extends StateNotifier<IveState> {
   }
 
   void _showIssue(IveIssue issue) {
-    _cycleTimer?.cancel();
     _dismissTimer?.cancel();
+    _visibleContextKey = null;
     state = state.copyWith(
       message: issue.userMessage,
       expression: issue.severity == IveIssueSeverity.critical
@@ -190,12 +192,13 @@ class IveNotifier extends StateNotifier<IveState> {
     );
     // Issues ficam visíveis por 15s (em vez de 7s)
     _dismissTimer = Timer(const Duration(seconds: 15), () {
-      state = state.copyWith(bubbleVisible: false, clearIssue: true);
+      _hideBubble(suppressContext: false, clearIssue: true);
     });
   }
 
   void _showTransient(String message, IveExpression expression) {
     if (state.activeIssue != null && state.bubbleVisible) return;
+    _visibleContextKey = null;
     state = state.copyWith(
       message: message,
       expression: expression,
@@ -207,6 +210,8 @@ class IveNotifier extends StateNotifier<IveState> {
   // ── Context data handler (antes no IveOverlay) ────────────────────────────
 
   void _onContextData(IveContextData ctx) {
+    final projectChanged = ctx.activeProjectId != _currentProjectId;
+    _currentProjectId = ctx.activeProjectId;
     if (ctx.activeProjectId != null && ctx.activeProjectName != null) {
       _ref.read(iveMemoryProvider.notifier).setActiveProject(
             ctx.activeProjectId!,
@@ -216,6 +221,12 @@ class IveNotifier extends StateNotifier<IveState> {
         health: ctx.healthScore,
         scores: {ctx.activeProjectId!: ctx.healthScore},
       );
+    }
+    // Trocar/restaurar projeto reconstrói o contexto sem abrir um balão
+    // imediatamente sobre a nova tela.
+    if (projectChanged) {
+      _hideBubble(suppressContext: false, clearIssue: true);
+      return;
     }
     // Não sobrescreve issue ativo
     if (state.activeIssue != null && state.bubbleVisible) return;
@@ -230,17 +241,7 @@ class IveNotifier extends StateNotifier<IveState> {
     } else if (!ctx.hasAlert) {
       showContextAwareMessage(ctx, _currentRoute);
     } else {
-      // Alerta já dispensado — exibe mensagem contextual como fallback
-      final msg = _buildContextMessage(ctx, _currentRoute);
-      if (msg.isNotEmpty) {
-        final expr = _kExpressions[_currentRoute] ?? IveExpression.happy;
-        state = state.copyWith(
-          message: msg,
-          expression: expr,
-          bubbleVisible: true,
-        );
-        _scheduleDismiss();
-      }
+      _hideBubble(suppressContext: true, clearIssue: true);
     }
   }
 
@@ -256,17 +257,13 @@ class IveNotifier extends StateNotifier<IveState> {
     if (normalized == _currentRoute) return;
     _currentRoute = normalized;
     _msgIndex = 0;
-    // Limpa issue ao trocar de tela
-    if (state.activeIssue != null) {
-      state = state.copyWith(clearIssue: true, bubbleVisible: false);
-    }
+    _hideBubble(suppressContext: false, clearIssue: true);
     final context = _ref.read(iveContextDataProvider).valueOrNull;
     if (context != null) {
       showContextAwareMessage(context, normalized);
     } else {
       _showMessage(normalized, 0);
     }
-    _scheduleCycle(normalized);
   }
 
   void _showMessage(String route, int index) {
@@ -276,7 +273,10 @@ class IveNotifier extends StateNotifier<IveState> {
       return;
     }
     final msg = msgs[index % msgs.length];
+    final key = _contextKey(route, msg);
+    if (_dismissedContextKeys.contains(key)) return;
     final expr = _kExpressions[route] ?? IveExpression.happy;
+    _visibleContextKey = key;
     state = state.copyWith(
       screenName: route,
       message: msg,
@@ -289,32 +289,19 @@ class IveNotifier extends StateNotifier<IveState> {
   void _scheduleDismiss() {
     _dismissTimer?.cancel();
     _dismissTimer = Timer(const Duration(seconds: 7), () {
-      state = state.copyWith(bubbleVisible: false);
-    });
-  }
-
-  void _scheduleCycle(String route) {
-    _cycleTimer?.cancel();
-    _cycleTimer = Timer.periodic(const Duration(seconds: 20), (_) {
-      if (!mounted) return;
-      // Não interrompe issue ativo
-      if (state.activeIssue != null && state.bubbleVisible) return;
-      _msgIndex++;
-      _showMessage(route, _msgIndex);
+      _hideBubble(suppressContext: true);
     });
   }
 
   // ── Public API ────────────────────────────────────────────────────────────
 
   void dismissBubble() {
-    _dismissTimer?.cancel();
-    state = state.copyWith(bubbleVisible: false, clearIssue: true);
+    _hideBubble(suppressContext: true, clearIssue: true);
   }
 
   void retryCurrentRoute() {
-    state = state.copyWith(clearIssue: true, bubbleVisible: false);
+    _hideBubble(suppressContext: false, clearIssue: true);
     _showMessage(_currentRoute, _msgIndex);
-    _scheduleCycle(_currentRoute);
   }
 
   void clearActiveIssue() {
@@ -325,6 +312,7 @@ class IveNotifier extends StateNotifier<IveState> {
     String message, {
     IveExpression expression = IveExpression.happy,
   }) {
+    _visibleContextKey = null;
     state = state.copyWith(
       message: message,
       expression: expression,
@@ -334,6 +322,14 @@ class IveNotifier extends StateNotifier<IveState> {
   }
 
   void showContextAwareMessage(IveContextData ctx, String route) {
+    final message = ctx.hasAlert && ctx.alertMessage.isNotEmpty
+        ? ctx.alertMessage
+        : _buildContextMessage(ctx, route);
+    if (message.isEmpty) return;
+    final key = _contextKey(route, message, alertId: ctx.alertId);
+    if (_dismissedContextKeys.contains(key)) return;
+    _visibleContextKey = key;
+
     if (ctx.hasAlert && ctx.alertMessage.isNotEmpty) {
       state = state.copyWith(
         message: ctx.alertMessage,
@@ -344,16 +340,33 @@ class IveNotifier extends StateNotifier<IveState> {
       return;
     }
 
-    final msg = _buildContextMessage(ctx, route);
-    if (msg.isNotEmpty) {
+    if (message.isNotEmpty) {
       final expr = _kExpressions[route] ?? IveExpression.happy;
       state = state.copyWith(
-        message: msg,
+        message: message,
         expression: expr,
         bubbleVisible: true,
       );
       _scheduleDismiss();
     }
+  }
+
+  String _contextKey(String route, String message, {String alertId = ''}) =>
+      '$route|${_currentProjectId ?? 'portfolio'}|$alertId|$message';
+
+  void _hideBubble({
+    required bool suppressContext,
+    bool clearIssue = false,
+  }) {
+    _dismissTimer?.cancel();
+    if (suppressContext && _visibleContextKey != null) {
+      _dismissedContextKeys.add(_visibleContextKey!);
+    }
+    _visibleContextKey = null;
+    state = state.copyWith(
+      bubbleVisible: false,
+      clearIssue: clearIssue,
+    );
   }
 
   String _buildContextMessage(IveContextData ctx, String route) {
@@ -401,7 +414,6 @@ class IveNotifier extends StateNotifier<IveState> {
   void dispose() {
     _eventSub?.cancel();
     _dismissTimer?.cancel();
-    _cycleTimer?.cancel();
     super.dispose();
   }
 }

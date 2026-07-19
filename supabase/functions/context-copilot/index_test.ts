@@ -22,6 +22,8 @@ interface ValidationResult<T> {
   error?: string;
 }
 
+import { buildOpportunityContextSection } from './context_prompt.ts';
+
 // ── Lógica pura extraída para teste ──────────────────────────────────────────
 
 const MAX_MESSAGE_CHARS     = 2_000;
@@ -296,6 +298,57 @@ Deno.test('18b. validateActionProposal — project_id vem do servidor, não do c
   );
   assert(result !== null, 'proposta aceita');
   assertEquals(result!.project_id as string, 'projeto-validado-pelo-servidor', 'server project_id prevalece');
+});
+
+Deno.test('19. projeto sem oportunidades recebe ausência semântica', () => {
+  const section = buildOpportunityContextSection([], true);
+  assertContains(
+    section,
+    'Este projeto ainda não possui oportunidades registradas no Opportunity Lab.',
+    'deve declarar exatamente a ausência',
+  );
+  assertContains(section, 'gerar/analisar oportunidades', 'deve oferecer ação coerente');
+});
+
+Deno.test('20. oportunidade real fornece critérios suficientes para comparação', () => {
+  const section = buildOpportunityContextSection([{
+    id: 'opp-b',
+    title: 'Oportunidade B',
+    status: 'approved',
+    final_score: 91,
+    market_score: 88,
+    revenue_score: 86,
+    strategic_fit: 93,
+    synergy_score: 84,
+    competition_score: 40,
+    confidence: 90,
+    rationale: 'Melhor alinhamento estratégico.',
+    risks: ['Dependência de parceiro'],
+    action_steps: ['Validar demanda'],
+  }], true);
+  for (const expected of [
+    'Oportunidade B',
+    'Score final: 91/100',
+    'Mercado: 88/100',
+    'Receita/ROI: 86/100',
+    'Fit estratégico: 93/100',
+    'Sinergia: 84/100',
+    'Dependência de parceiro',
+    'Validar demanda',
+  ]) {
+    assertContains(section, expected, `contexto deve conter ${expected}`);
+  }
+});
+
+Deno.test('21. contexto de oportunidades limita volume sem misturar fontes', () => {
+  const opportunities = Array.from({ length: 7 }, (_, index) => ({
+    id: `opp-${index}`,
+    title: `Oportunidade ${index}`,
+    final_score: 90 - index,
+  }));
+  const section = buildOpportunityContextSection(opportunities, true);
+  assertContains(section, 'opp-4', 'quinta oportunidade entra');
+  assert(!section.includes('opp-5'), 'sexta oportunidade fica fora do limite');
 });
 
 console.log('\n✓ Todos os testes de lógica pura passaram\n');

@@ -7,6 +7,7 @@ import '../../data/models/ive_issue.dart';
 import '../../data/models/ive_state.dart';
 import '../../features/ive/visual/ive_avatar.dart';
 import '../../features/ive/domain/ive_route_context.dart';
+import '../../features/ive/domain/ive_presentation_state.dart';
 import '../../providers/ive_context_provider.dart';
 import '../../providers/ive_memory_provider.dart';
 import '../../providers/ive_provider.dart';
@@ -18,21 +19,44 @@ import 'ive_issue_detail_sheet.dart';
 final iveRouteNotifier = ValueNotifier<String>('');
 
 class IveRouteObserver extends NavigatorObserver {
+  void _registerModal(Route route) {
+    if (route is PopupRoute) {
+      ivePresentationController.registerModal(route);
+    }
+  }
+
+  void _unregisterModal(Route route) {
+    if (route is PopupRoute) {
+      ivePresentationController.unregisterModal(route);
+    }
+  }
+
   void _notify(Route route) {
     final name = route.settings.name ?? '';
     if (name.isNotEmpty) iveRouteNotifier.value = name;
   }
 
   @override
-  void didPush(Route route, Route? previousRoute) => _notify(route);
+  void didPush(Route route, Route? previousRoute) {
+    _registerModal(route);
+    _notify(route);
+  }
 
   @override
   void didPop(Route route, Route? previousRoute) {
+    _unregisterModal(route);
     if (previousRoute != null) _notify(previousRoute);
   }
 
   @override
+  void didRemove(Route route, Route? previousRoute) {
+    _unregisterModal(route);
+  }
+
+  @override
   void didReplace({Route? newRoute, Route? oldRoute}) {
+    if (oldRoute != null) _unregisterModal(oldRoute);
+    if (newRoute != null) _registerModal(newRoute);
     if (newRoute != null) _notify(newRoute);
   }
 }
@@ -76,8 +100,23 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
 
   @override
   Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: ivePresentationController,
+      builder: (context, _) {
+        final media = MediaQuery.of(context);
+        if (!ivePresentationController.externalOverlayVisible ||
+            media.viewInsets.bottom > 0) {
+          return const SizedBox.shrink(
+            key: ValueKey('ive-external-overlay-hidden'),
+          );
+        }
+        return _buildVisibleOverlay(context, media.size);
+      },
+    );
+  }
+
+  Widget _buildVisibleOverlay(BuildContext context, Size screen) {
     final state = ref.watch(iveProvider);
-    final screen = MediaQuery.of(context).size;
     _position ??= _defaultPosition(screen);
 
     final maxPosition = Offset(
@@ -87,6 +126,7 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
     _position = _position!.clamp(Offset.zero, maxPosition);
 
     return Positioned(
+      key: const ValueKey('ive-external-overlay-visible'),
       left: _position!.dx,
       top: _position!.dy,
       child: SizedBox(

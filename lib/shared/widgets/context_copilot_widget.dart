@@ -7,6 +7,7 @@ import '../../data/models/copilot_context_data.dart';
 import '../../data/models/copilot_turn.dart';
 import '../../data/models/action_queue_item.dart';
 import '../../data/models/project.dart';
+import '../../features/ive/domain/ive_presentation_state.dart';
 import '../../providers/context_copilot_provider.dart';
 import '../../providers/ive_context_provider.dart';
 import '../../providers/ive_memory_provider.dart';
@@ -20,7 +21,10 @@ final iveRootNavigatorKey = GlobalKey<NavigatorState>();
 bool _iveChatOpen = false;
 
 @visibleForTesting
-void resetIveChatGateForTesting() => _iveChatOpen = false;
+void resetIveChatGateForTesting() {
+  _iveChatOpen = false;
+  ivePresentationController.reset();
+}
 
 void _debugIve(String marker) {
   assert(() {
@@ -84,6 +88,7 @@ Future<void> openIveWithContext(
   if (_iveChatOpen) return;
 
   _iveChatOpen = true;
+  ivePresentationController.setChatOpen(true);
 
   try {
     final container = ProviderScope.containerOf(requestContext);
@@ -130,6 +135,7 @@ Future<void> openIveWithContext(
     _debugIve('IVE_CHAT_OPEN_FAILED: $error');
   } finally {
     _iveChatOpen = false;
+    ivePresentationController.setChatOpen(false);
   }
 }
 

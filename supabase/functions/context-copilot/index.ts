@@ -20,6 +20,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { buildOpportunityContextSection } from './context_prompt.ts';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -148,7 +149,7 @@ async function loadServerContext(
   // ── Oportunidades ────────────────────────────────────────────────────────
   const oppQuery = client
     .from('opportunity_lab')
-    .select('id,title,description,status,opportunity_type,final_score,impact_score,created_at')
+    .select('id,project_id,title,description,status,opportunity_type,final_score,market_score,revenue_score,competition_score,synergy_score,strategic_fit,origin,rationale,confidence,risks,action_steps,created_at')
     .eq('user_id', uid)
     .order('final_score', { ascending: false })
     .limit(MAX_CONTEXT_ITEMS);
@@ -165,7 +166,7 @@ async function loadServerContext(
   // ── Ações ────────────────────────────────────────────────────────────────
   const actQuery = client
     .from('action_queue')
-    .select('id,title,description,status,priority,impact_score,effort_score,created_at')
+    .select('id,project_id,opportunity_lab_id,title,description,status,priority,impact_score,effort_score,roi_score,market_score,confidence,origin,rationale,plan,risks,created_at')
     .eq('user_id', uid)
     .order('priority', { ascending: false })
     .limit(MAX_CONTEXT_ITEMS);
@@ -295,18 +296,16 @@ function buildSystemPrompt(
     lines.push(`\n## PROJETO ATIVO (validado pelo servidor)\nNome: ${p.name}\nDescrição: ${p.description || '—'}\nTipo: ${p.type || '—'}\nStatus: ${p.status || '—'}\nScore de Oportunidade: ${p.opportunity_score || 0}/100\nPotencial de Receita: R$${p.revenue_potential || 0}`);
   }
 
-  if (serverCtx.opportunities.length) {
-    const opps = serverCtx.opportunities
-      .slice(0, 5)
-      .map(o => `• [${o.id}] ${o.title} [score=${o.final_score}, status=${o.status}]`)
-      .join('\n');
-    lines.push(`\n## OPORTUNIDADES DO PROJETO (${serverCtx.opportunities.length} total, fonte: servidor)\n${opps}`);
-  }
+  const opportunitySection = buildOpportunityContextSection(
+    serverCtx.opportunities,
+    serverCtx.project !== null,
+  );
+  if (opportunitySection) lines.push(`\n${opportunitySection}`);
 
   if (serverCtx.actions.length) {
     const acts = serverCtx.actions
       .slice(0, 5)
-      .map(a => `• [${a.id}] ${a.title} [status=${a.status}, prioridade=${a.priority}]`)
+      .map(a => `• [${a.id}] ${a.title} [status=${a.status}, prioridade=${a.priority}, impacto=${a.impact_score}, esforço=${a.effort_score}, ROI=${a.roi_score}]`)
       .join('\n');
     lines.push(`\n## AÇÕES DO PROJETO (${serverCtx.actions.length} total, fonte: servidor)\n${acts}`);
   }
@@ -323,7 +322,7 @@ function buildSystemPrompt(
   const hints = clientHints;
   if (hints.scores) {
     const s = hints.scores as Record<string, unknown>;
-    lines.push(`\n## SCORES DO ECOSSISTEMA (hint do cliente)\nEcosystem Score: ${s.ecosystem}/100\nOportunidade: ${s.opportunity}/100\nROI Score: ${s.roi}/100\nMomentum: ${s.momentum}/100`);
+    lines.push(`\n## SCORES DO ECOSSISTEMA (hint do cliente)\nEcosystem Score: ${s.ecosystem}/100\nExecution Score: ${s.execution}/100\nOportunidade: ${s.opportunity}/100\nMercado: ${s.market}/100\nFit estratégico: ${s.strategic_fit}/100\nSinergia: ${s.synergy}/100\nROI Score: ${s.roi}/100\nMomentum: ${s.momentum}/100`);
   }
   if (hints.market) {
     const m = hints.market as Record<string, unknown>;
@@ -339,6 +338,8 @@ function buildSystemPrompt(
   return `Você é o AI Social Copilot, assistente estratégico integrado à plataforma de gestão de projetos digitais.
 
 Seu papel é analisar os dados do contexto atual e responder às perguntas do usuário com precisão, clareza e ação.
+
+Quando houver oportunidades, compare apenas as oportunidades listadas para o projeto ativo. Para recomendar a melhor, informe nome, score final, critérios determinantes, risco e próxima ação. Nunca use dados de outro projeto nem invente oportunidades.
 
 ${contextBlock}
 

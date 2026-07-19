@@ -19,6 +19,12 @@ class IveContextData {
   final String? activeProjectType;
   final String? activeProjectStatus;
   final int healthScore;
+  final int opportunityScore;
+  final int marketScore;
+  final int strategicFit;
+  final int synergyScore;
+  final int roiScore;
+  final int momentumScore;
   final int projectCount;
   final int pendingActionsCount;
   final int pendingOpportunitiesCount;
@@ -40,6 +46,12 @@ class IveContextData {
     this.activeProjectType,
     this.activeProjectStatus,
     this.healthScore = 0,
+    this.opportunityScore = 0,
+    this.marketScore = 0,
+    this.strategicFit = 0,
+    this.synergyScore = 0,
+    this.roiScore = 0,
+    this.momentumScore = 0,
     this.projectCount = 0,
     this.pendingActionsCount = 0,
     this.pendingOpportunitiesCount = 0,
@@ -76,6 +88,12 @@ class IveContextData {
             ? {
                 'ecosystem': healthScore,
                 'execution': executionScore ?? 0,
+                'opportunity': opportunityScore,
+                'market': marketScore,
+                'strategic_fit': strategicFit,
+                'synergy': synergyScore,
+                'roi': roiScore,
+                'momentum': momentumScore,
                 'recommendation': _recommendation(healthScore),
               }
             : null,
@@ -157,6 +175,10 @@ final iveContextDataProvider =
       .where((opportunity) => opportunity.status == 'pending')
       .toList()
     ..sort((a, b) => b.finalScore.compareTo(a.finalScore));
+  final rankedOpportunities = [...opportunities]
+    ..sort((a, b) => b.finalScore.compareTo(a.finalScore));
+  final rankedActions = [...actions]
+    ..sort((a, b) => b.priority.compareTo(a.priority));
   final knowledgeSorted = [...knowledge]
     ..sort((a, b) => b.opportunityScore.compareTo(a.opportunityScore));
 
@@ -171,14 +193,20 @@ final iveContextDataProvider =
           })
       .toList();
 
-  final opportunitySummary = pendingOpportunities
-      .take(3)
+  final opportunitySummary = rankedOpportunities
+      .take(5)
       .map((item) => {
             'id': item.id,
+            'project_id': item.projectId,
             'title': item.title,
             'description': item.description,
-            'finalScore': item.finalScore,
-            'opportunityType': item.opportunityType,
+            'final_score': item.finalScore,
+            'market_score': item.marketScore,
+            'revenue_score': item.revenueScore,
+            'competition_score': item.competitionScore,
+            'strategic_fit': item.strategicFit,
+            'synergy_score': item.synergyScore,
+            'opportunity_type': item.opportunityType,
             'status': item.status,
             'origin': item.originLabel,
             'confidence': item.confidence,
@@ -190,15 +218,18 @@ final iveContextDataProvider =
           })
       .toList();
 
-  final actionSummary = pendingActions
-      .take(3)
+  final actionSummary = rankedActions
+      .take(5)
       .map((item) => {
             'id': item.id,
+            'project_id': item.projectId,
             'title': item.title,
             'status': item.status,
             'priority': item.priority,
-            'impactScore': item.impactScore,
-            'effortScore': item.effortScore,
+            'impact_score': item.impactScore,
+            'effort_score': item.effortScore,
+            'roi_score': item.roiScore,
+            'market_score': item.marketScore,
             'origin': item.originLabel,
             if (item.rationale != null && item.rationale!.isNotEmpty)
               'rationale': item.rationale,
@@ -217,6 +248,12 @@ final iveContextDataProvider =
     activeProjectType: project.type,
     activeProjectStatus: project.status,
     healthScore: health,
+    opportunityScore: score?.opportunityScore ?? 0,
+    marketScore: score?.marketScore ?? 0,
+    strategicFit: score?.strategicFit ?? 0,
+    synergyScore: score?.synergyScore ?? 0,
+    roiScore: score?.roiScore ?? 0,
+    momentumScore: score?.momentumScore ?? 0,
     projectCount: 1,
     executionScore: score?.executionScore,
     pendingActionsCount: pendingActions.length,
