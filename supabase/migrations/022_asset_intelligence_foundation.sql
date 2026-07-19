@@ -126,6 +126,7 @@ CREATE OR REPLACE FUNCTION public.validate_asset_parent_ownership()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_catalog
 AS $$
 BEGIN
   IF NEW.parent_asset_id IS NOT NULL THEN

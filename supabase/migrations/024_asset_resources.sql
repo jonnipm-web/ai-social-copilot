@@ -82,10 +82,6 @@ COMMENT ON COLUMN public.asset_resources.resource_type IS
 COMMENT ON COLUMN public.asset_resources.fingerprint IS
   'SHA-256 do conteúdo original para de-duplicação.';
 
-COMMENT ON COLUMN public.asset_resources.provenance IS
-  'Provenance estruturada em metadata["provenance"] — source_type, '
-  'source_id, source_name, source_url, imported_at, parser_version, confidence.';
-
 
 -- ── 2. Índices ────────────────────────────────────────────────────────────────
 
@@ -148,6 +144,7 @@ CREATE OR REPLACE FUNCTION public.validate_asset_resource_ownership()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_catalog
 AS $$
 BEGIN
   IF NOT EXISTS (

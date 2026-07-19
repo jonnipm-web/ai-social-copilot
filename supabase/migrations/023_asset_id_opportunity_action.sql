@@ -78,6 +78,7 @@ CREATE OR REPLACE FUNCTION public.validate_asset_id_ownership()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_catalog
 AS $$
 DECLARE
   v_project_id UUID;
