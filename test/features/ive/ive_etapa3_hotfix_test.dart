@@ -84,19 +84,16 @@ class _ProjectServiceStub implements ProjectServiceInterface {
 }
 
 class _SelectedProjectStub extends SelectedProjectNotifier {
-  _SelectedProjectStub({Project? initial, this.delay = Duration.zero})
+  _SelectedProjectStub({Project? initial})
       : super(_ProjectServiceStub()) {
     state = initial;
   }
-
-  final Duration delay;
 
   Project _byId(String id) =>
       [_projectA, _projectB, _projectC].firstWhere((p) => p.id == id);
 
   @override
   Future<void> select(Project project) async {
-    if (delay > Duration.zero) await Future<void>.delayed(delay);
     state = project;
   }
 
@@ -155,7 +152,7 @@ List<Override> _overrides(_SelectedProjectStub selected, {_MemoryStub? memory}) 
       }),
     ];
 
-Future<void> pumpSurface(
+Future<void> _pumpSurface(
   WidgetTester tester,
   Widget child,
   _SelectedProjectStub selected, {
@@ -209,7 +206,7 @@ void main() {
   group('Grupo 1 — RCBO→TRAGO: label de projeto atualiza ao trocar', () {
     testWidgets('label mostra nome do novo projeto após troca', (tester) async {
       final selected = _SelectedProjectStub(initial: _projectA);
-      await pumpSurface(
+      await _pumpSurface(
         tester,
         Builder(
           builder: (ctx) => TextButton(
@@ -242,7 +239,7 @@ void main() {
 
     testWidgets('badge de projeto ativo também atualiza para TRAGO', (tester) async {
       final selected = _SelectedProjectStub(initial: _projectA);
-      await pumpSurface(
+      await _pumpSurface(
         tester,
         Builder(
           builder: (ctx) => TextButton(
@@ -277,7 +274,7 @@ void main() {
   group('Grupo 2 — Triple switch: tripla troca retém apenas o último projeto', () {
     testWidgets('A→B→A→B: label final é B', (tester) async {
       final selected = _SelectedProjectStub(initial: _projectA);
-      await pumpSurface(
+      await _pumpSurface(
         tester,
         Builder(
           builder: (ctx) => TextButton(
@@ -396,7 +393,7 @@ void main() {
     testWidgets('label "Oportunidade — X" desaparece após troca de projeto',
         (tester) async {
       final selected = _SelectedProjectStub(initial: _projectA);
-      await pumpSurface(
+      await _pumpSurface(
         tester,
         Builder(
           builder: (ctx) => TextButton(
@@ -430,7 +427,7 @@ void main() {
     testWidgets('label "Ação — X" desaparece após troca de projeto',
         (tester) async {
       final selected = _SelectedProjectStub(initial: _projectA);
-      await pumpSurface(
+      await _pumpSurface(
         tester,
         Builder(
           builder: (ctx) => TextButton(
@@ -592,7 +589,7 @@ void main() {
     testWidgets('troca de projeto invoca invalidateProposalForProjectChange via ref.listen',
         (tester) async {
       final selected = _SelectedProjectStub(initial: _projectA);
-      await pumpSurface(
+      await _pumpSurface(
         tester,
         Builder(
           builder: (ctx) => TextButton(
