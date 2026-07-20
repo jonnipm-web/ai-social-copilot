@@ -8,10 +8,13 @@ import '../../data/models/copilot_turn.dart';
 import '../../data/models/action_queue_item.dart';
 import '../../data/models/project.dart';
 import '../../features/ive/domain/ive_presentation_state.dart';
+import '../../providers/action_queue_provider.dart';
 import '../../providers/context_copilot_provider.dart';
 import '../../providers/ecosystem_intelligence_provider.dart';
 import '../../providers/ive_context_provider.dart';
 import '../../providers/ive_memory_provider.dart';
+import '../../providers/knowledge_provider.dart';
+import '../../providers/opportunity_lab_provider.dart';
 import '../../providers/project_provider.dart';
 import '../../providers/selected_project_provider.dart';
 import 'ive_action_confirmation_card.dart';
@@ -62,6 +65,13 @@ Future<Project?> synchronizeIveProjectContext(
     return current;
   }
 
+  // P0.3: invalida providers do projeto anterior antes de trocar
+  final oldId = current?.id;
+  if (oldId != null) {
+    container.invalidate(actionQueueByProjectProvider(oldId));
+    container.invalidate(opportunityLabByProjectProvider(oldId));
+    container.invalidate(knowledgeItemsByProjectProvider(oldId));
+  }
   await container.read(iveMemoryProvider.notifier).clearProjectContext();
   final notifier = container.read(selectedProjectProvider.notifier);
   final selected = project?.id == id
@@ -241,10 +251,13 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
   bool _initialMessageSent = false;
   bool _selectorVisible = false;
   bool _selectingProject = false;
+  // P0.4: label reativo — atualizado via ref.listen quando projeto muda
+  String? _resolvedEntityLabel;
 
   @override
   void initState() {
     super.initState();
+    _resolvedEntityLabel = widget.selectedEntityLabel;
     WidgetsBinding.instance.addPostFrameCallback((_) => _sendInitialMessage());
   }
 
@@ -358,10 +371,26 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
     final state = ref.watch(contextCopilotProvider(scope));
 
     ref.listen(selectedProjectProvider, (previous, next) {
-      if (previous?.id != null && previous?.id != next?.id && uid.isNotEmpty) {
-        ref
-            .read(contextCopilotProvider(_scope(uid, previous!.id)).notifier)
-            .invalidateProposalForProjectChange();
+      final prevId = previous?.id;
+      if (prevId != null && prevId != next?.id) {
+        // P0.4: label reativo independente de uid — atualiza sempre que o projeto muda
+        if (_resolvedEntityLabel != null) {
+          setState(() {
+            if (_resolvedEntityLabel!.startsWith('Projeto — ')) {
+              _resolvedEntityLabel =
+                  next != null ? 'Projeto — ${next.name}' : null;
+            } else {
+              // Contexto de entidade (Oportunidade/Ação) — limpa ao trocar projeto
+              _resolvedEntityLabel = null;
+            }
+          });
+        }
+        // Invalidação de proposta exige uid válido
+        if (uid.isNotEmpty) {
+          ref
+              .read(contextCopilotProvider(_scope(uid, prevId)).notifier)
+              .invalidateProposalForProjectChange();
+        }
       }
     });
 
@@ -386,13 +415,13 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
             _header(state, scope),
             _projectBadge(project?.name),
             if (project == null || _selectorVisible) _projectSelector(),
-            if (widget.selectedEntityLabel != null)
+            if (_resolvedEntityLabel != null)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    'Contexto: ${widget.selectedEntityLabel}',
+                    'Contexto: $_resolvedEntityLabel',
                     key: const ValueKey('ive-chat-entity-context'),
                     style: const TextStyle(
                       color: Color(0xFF9B8FFF),

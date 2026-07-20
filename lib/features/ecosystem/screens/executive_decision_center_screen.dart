@@ -702,7 +702,7 @@ class _EcosystemCardState extends State<_EcosystemCard> {
                   const SizedBox(height: 4),
                   _ScoreRow(label: 'Execução', value: s.executionScore),
                   const SizedBox(height: 4),
-                  _ScoreRow(label: 'ROI', value: s.roiScore),
+                  _ScoreRow(label: 'ROI', value: s.roiScore, showDash: !s.hasRoiData),
                   const SizedBox(height: 4),
                   _ScoreRow(label: 'Momentum', value: s.momentumScore),
                   const SizedBox(height: 8),
@@ -768,7 +768,8 @@ class _EcosystemCardState extends State<_EcosystemCard> {
 class _ScoreRow extends StatelessWidget {
   final String label;
   final int value;
-  const _ScoreRow({required this.label, required this.value});
+  final bool showDash;
+  const _ScoreRow({required this.label, required this.value, this.showDash = false});
 
   @override
   Widget build(BuildContext context) {
@@ -778,18 +779,27 @@ class _ScoreRow extends StatelessWidget {
         SizedBox(width: 90, child: Text(label,
             style: const TextStyle(color: Colors.white54, fontSize: 10))),
         Expanded(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(2),
-            child: LinearProgressIndicator(
-              value: value / 100,
-              backgroundColor: Colors.white10,
-              valueColor: AlwaysStoppedAnimation(color),
-              minHeight: 5,
-            ),
-          ),
+          child: showDash
+              ? const SizedBox.shrink()
+              : ClipRRect(
+                  borderRadius: BorderRadius.circular(2),
+                  child: LinearProgressIndicator(
+                    value: value / 100,
+                    backgroundColor: Colors.white10,
+                    valueColor: AlwaysStoppedAnimation(color),
+                    minHeight: 5,
+                  ),
+                ),
         ),
         const SizedBox(width: 6),
-        Text('$value', style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold)),
+        Text(
+          showDash ? '—' : '$value',
+          style: TextStyle(
+            color: showDash ? Colors.white38 : color,
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ],
     );
   }

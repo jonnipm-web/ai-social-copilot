@@ -774,7 +774,7 @@ class _ProjectDetailSheet extends StatelessWidget {
               _ScoreRow('Oportunidade',  s.opportunityScore),
               _ScoreRow('Fit Estratégico', s.strategicFit),
               _ScoreRow('Sinergia',       s.synergyScore),
-              _ScoreRow('ROI',            s.roiScore),
+              _ScoreRow('ROI', s.roiScore, showDash: !s.hasRoiData),
               _ScoreRow('Momentum',       s.momentumScore),
               _ScoreRow('Mercado',        s.marketScore),
               _ScoreRow('Execução',       s.executionScore),
@@ -1002,9 +1002,10 @@ class IveProjectAskButton extends StatelessWidget {
 // ── Score row com barra de progresso ─────────────────────────────────────────
 
 class _ScoreRow extends StatelessWidget {
-  const _ScoreRow(this.label, this.value);
+  const _ScoreRow(this.label, this.value, {this.showDash = false});
   final String label;
   final int value;
+  final bool showDash;
 
   Color get _color {
     if (value >= 70) return const Color(0xFF6BCB77);
@@ -1025,23 +1026,26 @@ class _ScoreRow extends StatelessWidget {
                     const TextStyle(color: Colors.white60, fontSize: 12)),
           ),
           Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: value / 100,
-                backgroundColor: const Color(0xFF333355),
-                valueColor: AlwaysStoppedAnimation(_color),
-                minHeight: 6,
-              ),
-            ),
+            child: showDash
+                ? const SizedBox.shrink()
+                : ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: value / 100,
+                      backgroundColor: const Color(0xFF333355),
+                      valueColor: AlwaysStoppedAnimation(_color),
+                      minHeight: 6,
+                    ),
+                  ),
           ),
           const SizedBox(width: 8),
           SizedBox(
             width: 30,
-            child: Text('$value',
+            child: Text(
+                showDash ? '—' : '$value',
                 textAlign: TextAlign.right,
                 style: TextStyle(
-                    color: _color,
+                    color: showDash ? Colors.white38 : _color,
                     fontSize: 12,
                     fontWeight: FontWeight.bold)),
           ),
