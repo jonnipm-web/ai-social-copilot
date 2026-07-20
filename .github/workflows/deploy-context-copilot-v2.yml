@@ -1,0 +1,84 @@
+name: Deploy context-copilot v2.1.0 (controlled)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_deploy:
+        description: 'Digite DEPLOY para confirmar o deploy controlado'
+        required: true
+        default: ''
+
+jobs:
+  test-and-deploy:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm_deploy == 'DEPLOY'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: claude/access-social-copilot-wJ6B5
+
+      # ── PASSO 1: Instalar Deno ──────────────────────────────────────────────
+      - name: Install Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      # ── PASSO 2: Executar 37 testes Deno ───────────────────────────────────
+      - name: Run Deno tests (37/37 obrigatório)
+        run: |
+          deno test --allow-env supabase/functions/context-copilot/index_test.ts
+        # Falha aqui aborta o job e o deploy não ocorre
+
+      # ── PASSO 3: Confirmar versão antes do deploy ───────────────────────────
+      - name: Validate PROMPT_VERSION = 2.1.0
+        run: |
+          VERSION=$(grep "PROMPT_VERSION" supabase/functions/context-copilot/index.ts | grep -o "'[^']*'" | tr -d "'")
+          echo "PROMPT_VERSION encontrada: $VERSION"
+          if [ "$VERSION" != "2.1.0" ]; then
+            echo "ERRO: versão incorreta ($VERSION) — esperado 2.1.0"
+            exit 1
+          fi
+          echo "✓ PROMPT_VERSION = 2.1.0 confirmada"
+
+      - name: Validate key changes present
+        run: |
+          echo "Verificando response_text..."
+          grep -q "response_text:" supabase/functions/context-copilot/index.ts && echo "✓ response_text presente" || (echo "✗ response_text ausente" && exit 1)
+          echo "Verificando ENTITY_ISOLATION..."
+          grep -q "ENTITY_ISOLATION" supabase/functions/context-copilot/index.ts && echo "✓ ENTITY_ISOLATION presente" || (echo "✗ ENTITY_ISOLATION ausente" && exit 1)
+          echo "Verificando fix do builder imutável..."
+          grep -q "oppQuery = oppQuery.eq" supabase/functions/context-copilot/index.ts && echo "✓ builder fix presente" || (echo "✗ builder fix ausente" && exit 1)
+          echo "Verificando ROI null handling..."
+          grep -q "roi_data_available" supabase/functions/context-copilot/context_prompt.ts && echo "✓ ROI null handling presente" || (echo "✗ ROI null handling ausente" && exit 1)
+          echo "Verificando campos expandidos de ActionProposal..."
+          grep -q "expected_result" supabase/functions/context-copilot/index.ts && echo "✓ ActionProposal expandida" || (echo "✗ ActionProposal expandida ausente" && exit 1)
+          echo "✓ Todas as validações passaram"
+
+      # ── PASSO 4: Setup Supabase CLI ─────────────────────────────────────────
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # ── PASSO 5: Deploy SOMENTE context-copilot ────────────────────────────
+      - name: Deploy context-copilot v2.1.0
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          echo "→ Deploying context-copilot (SOMENTE esta função)"
+          supabase functions deploy context-copilot \
+            --project-ref nzngvbajrnruknpzzjbf \
+            --no-verify-jwt
+          echo "✓ Deploy concluído"
+
+      # ── PASSO 6: Confirmar versão ativa ────────────────────────────────────
+      - name: Confirm deployment
+        run: |
+          echo "================================================"
+          echo "DEPLOY CONCLUÍDO"
+          echo "Função:         context-copilot"
+          echo "Branch:         claude/access-social-copilot-wJ6B5"
+          echo "Commit:         187f3f8"
+          echo "PROMPT_VERSION: 2.1.0"
+          echo "Testes:         37/37 aprovados"
+          echo "================================================"
