@@ -34,15 +34,12 @@ class SelectedProjectNotifier extends StateNotifier<Project?> {
 
   Future<void> _restore() async {
     try {
-      // Cede a microtask queue para garantir que a sessão de auth já foi
-      // totalmente inicializada antes de ler currentUser (corrige race P0.3)
-      await Future.delayed(Duration.zero);
-      var uid = Supabase.instance.client.auth.currentUser?.id;
-      if (uid == null) {
-        // Segunda tentativa com delay curto para cobrir inicialização lenta
-        await Future.delayed(const Duration(milliseconds: 150));
-        uid = Supabase.instance.client.auth.currentUser?.id;
-      }
+      // Cede a microtask queue (sem criar Timer) para a sessão de auth
+      // ser totalmente inicializada antes de ler currentUser (corrige race P0.3)
+      await Future.value();
+      if (!mounted) return;
+      final uid = Supabase.instance.client.auth.currentUser?.id;
+      // sem retry — auth listener chama _restore() em signedIn/tokenRefreshed
       if (uid == null) return;
 
       final prefs = await SharedPreferences.getInstance();

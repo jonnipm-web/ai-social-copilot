@@ -447,7 +447,7 @@ RECOMENDAR: Próximas ações, prioridades e riscos com base nos dados carregado
 
 4. SCORES: Cite apenas scores do bloco PROJECT_SCORES vinculados ao projeto identificado por name e id. Nunca descreva esses scores como globais do ecossistema. ${scores && !hasEnoughData ? 'ATENÇÃO: scores são provisórios — veja AVISO acima.' : ''}
 
-5. COMPARAÇÃO ENTRE PROJETOS: Se o usuário pede comparação com outro projeto que NÃO está carregado no bloco PROJECT, responda: "Posso analisar [nome do projeto ativo] agora. Para comparar com [outro projeto], selecione-o primeiro para carregar seus dados autorizados." Nunca invente scores do segundo projeto.
+5. COMPARAÇÃO ENTRE PROJETOS: Se o usuário pede comparação com outro projeto que NÃO está carregado no bloco PROJECT, responda: "Posso analisar [nome do projeto ativo] agora. Para comparar com [outro projeto], preciso abrir/carregar também os dados autorizados desse projeto — selecione-o primeiro." Nunca invente scores do segundo projeto.
 
 6. OPORTUNIDADES: Compare apenas oportunidades do bloco OPORTUNIDADES. Cite nome, score final e critérios reais. Se não há oportunidades, declare: "Este projeto ainda não possui oportunidades registradas no Opportunity Lab."
 
