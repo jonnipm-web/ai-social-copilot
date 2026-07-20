@@ -781,7 +781,7 @@ function detectIntent(message: string): string {
   const m = message.toLowerCase();
   if (/criar|adicionar|incluir|nova ação|novo item/.test(m)) return 'create';
   if (/explicar|por que|como|origem|motivo/.test(m))         return 'explain';
-  if (/simular|se eu|e se|cenário/.test(m))                  return 'simulate';
+  if (/simul|se eu|e se|cenário/.test(m))                    return 'simulate';
   if (/prioridade|próximo passo|o que fazer|recomend/.test(m)) return 'recommend';
   return 'query';
 }
