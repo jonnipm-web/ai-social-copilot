@@ -9,6 +9,7 @@ import '../../data/models/action_queue_item.dart';
 import '../../data/models/project.dart';
 import '../../features/ive/domain/ive_presentation_state.dart';
 import '../../providers/context_copilot_provider.dart';
+import '../../providers/ecosystem_intelligence_provider.dart';
 import '../../providers/ive_context_provider.dart';
 import '../../providers/ive_memory_provider.dart';
 import '../../providers/project_provider.dart';
@@ -69,8 +70,17 @@ Future<Project?> synchronizeIveProjectContext(
           return project;
         })()
       : await notifier.selectById(id);
+  // Invalida scores E contexto para evitar contaminação entre projetos (P0.2)
+  container.invalidate(ecosystemScoresProvider);
   container.invalidate(iveContextDataProvider);
   final context = await container.read(iveContextDataProvider.future);
+  _debugIve(
+    'IVE_CTX_SYNC: requested=$id '
+    'resolved=${context.activeProjectId} '
+    'uid=${context.userId} '
+    'hasRoi=${context.hasRoiData} '
+    'hasData=${context.hasEnoughData}',
+  );
   if (context.activeProjectId != id) {
     throw StateError('Contexto da IVE não sincronizado com o projeto $id');
   }

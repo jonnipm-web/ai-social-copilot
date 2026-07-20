@@ -36,14 +36,16 @@ class EcosystemIntelligenceService {
       final pRoi      = roiMetrics.where((r) => r.projectId == p.id).toList();
       final hasRoadmap = _projectHasRoadmap(p);
 
-      final marketPts = _marketScore(analysis, pLab);
-      final execPts   = _computeExecutionScore(pActions, pLab, hasRoadmap);
-      final oppScore  = _opportunityScore(p, analysis, pLab);
-      final roi       = _roiScore(pRoi, plan);
-      final strategic = _strategicFit(marketPts, roi, execPts.score, p);
-      final synergy   = _synergyScore(p, analysis, pLab, pActions);
-      final momentum  = _momentumScore(pActions, pLab, cutoff);
-      final ecosystem = _weighted(oppScore, strategic, synergy, roi, momentum);
+      final marketPts  = _marketScore(analysis, pLab);
+      final execPts    = _computeExecutionScore(pActions, pLab, hasRoadmap);
+      final oppScore   = _opportunityScore(p, analysis, pLab);
+      final hasRoiData = pRoi.isNotEmpty ||
+          (plan != null && plan.monthlyModerate > 0);
+      final roi        = _roiScore(pRoi, plan);
+      final strategic  = _strategicFit(marketPts, roi, execPts.score, p);
+      final synergy    = _synergyScore(p, analysis, pLab, pActions);
+      final momentum   = _momentumScore(pActions, pLab, cutoff);
+      final ecosystem  = _weighted(oppScore, strategic, synergy, roi, momentum);
 
       final enough = _hasEnoughData(analysis, plan, pActions, pLab);
       final rec    = _recommend(ecosystem, enough);
@@ -70,6 +72,7 @@ class EcosystemIntelligenceService {
         marketScore:      marketPts,
         executionScore:   execPts.score,
         hasEnoughData:    enough,
+        hasRoiData:       hasRoiData,
       );
     }).toList()
       ..sort((a, b) => b.ecosystemScore.compareTo(a.ecosystemScore));

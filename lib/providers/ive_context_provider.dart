@@ -29,6 +29,8 @@ class IveContextData {
   final int pendingActionsCount;
   final int pendingOpportunitiesCount;
   final int? executionScore;
+  final bool hasEnoughData;
+  final bool hasRoiData;
   final bool hasAlert;
   final String alertMessage;
   final String alertId;
@@ -56,6 +58,8 @@ class IveContextData {
     this.pendingActionsCount = 0,
     this.pendingOpportunitiesCount = 0,
     this.executionScore,
+    this.hasEnoughData = false,
+    this.hasRoiData = false,
     this.hasAlert = false,
     this.alertMessage = '',
     this.alertId = '',
@@ -92,7 +96,9 @@ class IveContextData {
                 'market': marketScore,
                 'strategic_fit': strategicFit,
                 'synergy': synergyScore,
-                'roi': roiScore,
+                'roi': hasRoiData ? roiScore : null,
+                'roi_data_available': hasRoiData,
+                'has_enough_data': hasEnoughData,
                 'momentum': momentumScore,
                 'recommendation': _recommendation(healthScore),
               }
@@ -256,6 +262,8 @@ final iveContextDataProvider =
     momentumScore: score?.momentumScore ?? 0,
     projectCount: 1,
     executionScore: score?.executionScore,
+    hasEnoughData: score?.hasEnoughData ?? false,
+    hasRoiData: score?.hasRoiData ?? false,
     pendingActionsCount: pendingActions.length,
     pendingOpportunitiesCount: pendingOpportunities.length,
     hasAlert: hasAlert,

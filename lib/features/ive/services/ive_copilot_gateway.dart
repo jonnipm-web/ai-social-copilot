@@ -20,10 +20,19 @@ class SupabaseIveCopilotGateway implements IveCopilotGateway {
   @override
   Future<Map<String, dynamic>> invoke(IveCopilotRequest request) async {
     try {
-      final response = await client.functions.invoke(
-        AppConstants.edgeFunctionContextCopilot,
-        body: request.toMap(),
-      );
+      final response = await client.functions
+          .invoke(
+            AppConstants.edgeFunctionContextCopilot,
+            body: request.toMap(),
+          )
+          .timeout(
+            const Duration(seconds: 45),
+            onTimeout: () => throw const IveCopilotHttpException(
+              status: 504,
+              code: 'TIMEOUT',
+              message: 'A IVE demorou para responder. Tente novamente.',
+            ),
+          );
       final data = _map(response.data);
       if (response.status < 200 || response.status >= 300) {
         throw _httpError(response.status, data);

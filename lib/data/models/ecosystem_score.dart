@@ -20,6 +20,8 @@ class EcosystemScore {
   final int marketScore;
   final int executionScore;
   final bool hasEnoughData;
+  // Hotfix: distingue "ROI calculado como 0" de "sem dados de ROI"
+  final bool hasRoiData;
 
   const EcosystemScore({
     required this.project,
@@ -40,6 +42,7 @@ class EcosystemScore {
     this.marketScore    = 0,
     this.executionScore = 0,
     this.hasEnoughData  = true,
+    this.hasRoiData     = false,
   });
 
   String get recommendationEmoji {
