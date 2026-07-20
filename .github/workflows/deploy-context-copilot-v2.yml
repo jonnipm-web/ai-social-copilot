@@ -24,8 +24,8 @@ jobs:
         with:
           deno-version: v2.x
 
-      # ── PASSO 2: Executar 36 testes Deno ───────────────────────────────────
-      - name: Run Deno tests (36/36 obrigatório)
+      # ── PASSO 2: Executar 37 testes Deno ───────────────────────────────────
+      - name: Run Deno tests (37/37 obrigatório)
         run: |
           deno test --allow-env supabase/functions/context-copilot/index_test.ts
         # Falha aqui aborta o job e o deploy não ocorre
@@ -80,5 +80,5 @@ jobs:
           echo "Branch:         claude/access-social-copilot-wJ6B5"
           echo "Commit:         187f3f8"
           echo "PROMPT_VERSION: 2.1.0"
-          echo "Testes:         36/36 aprovados"
+          echo "Testes:         37/37 aprovados"
           echo "================================================"
