@@ -72,7 +72,50 @@ function validateActionProposal(
   const rawIds = Array.isArray(a.evidence_ids) ? a.evidence_ids as unknown[] : [];
   const evidence_ids = rawIds.filter((id): id is string =>
     typeof id === 'string' && validEvidenceIds.has(id));
-  return { tool_name: 'action.create', project_id: projectId ?? '', title: a.title, priority, impact, effort, evidence_ids };
+  const modelConfidence = typeof a.confidence === 'number'
+    ? Math.min(100, Math.max(0, Math.round(a.confidence as number)))
+    : undefined;
+  return {
+    tool_name:       'action.create',
+    project_id:      projectId ?? '',
+    title:           a.title as string,
+    description:     typeof a.description === 'string' ? a.description : undefined,
+    why:             typeof a.why === 'string' ? (a.why as string).slice(0, 500) : undefined,
+    how:             typeof a.how === 'string' ? (a.how as string).slice(0, 500) : undefined,
+    expected_result: typeof a.expected_result === 'string' ? (a.expected_result as string).slice(0, 300) : undefined,
+    success_metric:  typeof a.success_metric === 'string' ? (a.success_metric as string).slice(0, 200) : undefined,
+    priority,
+    impact,
+    effort,
+    due_date:        typeof a.due_date === 'string' ? a.due_date : undefined,
+    rationale:       typeof a.rationale === 'string' ? a.rationale : undefined,
+    evidence_ids,
+    opportunity_id:  typeof a.opportunity_id === 'string' ? a.opportunity_id : undefined,
+    focus_entity_id: typeof a.focus_entity_id === 'string' ? a.focus_entity_id : undefined,
+    confidence:      modelConfidence,
+  };
+}
+
+// ── Entity isolation logic (mirrors loadServerContext audit step) ──────────────
+
+function applyEntityIsolation(
+  opps: Record<string, unknown>[],
+  acts: Record<string, unknown>[],
+  kbItems: Record<string, unknown>[],
+  projectId: string,
+  projectDbId: string,
+): {
+  opportunities: Record<string, unknown>[];
+  actions: Record<string, unknown>[];
+  evidence_ids: Set<string>;
+} {
+  const cleanOpps = opps.filter(o => o.project_id === projectId);
+  const cleanActs = acts.filter(a => a.project_id === projectId);
+  const ids = new Set<string>([projectDbId]);
+  cleanOpps.forEach(o => { if (o.id) ids.add(o.id as string); });
+  cleanActs.forEach(a => { if (a.id) ids.add(a.id as string); });
+  kbItems.forEach(k => { if (k.id) ids.add(k.id as string); });
+  return { opportunities: cleanOpps, actions: cleanActs, evidence_ids: ids };
 }
 
 interface ServerContext {
@@ -375,6 +418,153 @@ Deno.test('22. scores são vinculados explicitamente ao projeto', () => {
     'Project PROJETO RCBO BRASIL (project-rcbo) — Ecosystem Score: 45/100',
     'score deve pertencer explicitamente ao projeto',
   );
+});
+
+// ── Testes de isolamento e novos campos (P0.1 / Etapa 2) ─────────────────────
+
+Deno.test('23. buildProjectContextSection — roi null não exibe "0/100"', () => {
+  const section = buildProjectContextSection(
+    { id: 'proj-a', name: 'Projeto A' },
+    { roi: null, roi_data_available: false, ecosystem: 60 },
+  );
+  assert(!section.includes('ROI: 0/100'), 'roi null não deve exibir "0/100"');
+});
+
+Deno.test('24. buildProjectContextSection — roi_data_available=false exibe mensagem de ausência', () => {
+  const section = buildProjectContextSection(
+    { id: 'proj-a', name: 'Projeto A' },
+    { roi: null, roi_data_available: false, ecosystem: 70 },
+  );
+  assertContains(section, 'Dados indisponíveis', 'deve declarar ausência de dados de ROI');
+});
+
+Deno.test('25. Isolamento de entidades — oportunidade de projeto diferente é descartada', () => {
+  const opps = [
+    { id: 'opp-1', project_id: 'proj-alvo' },
+    { id: 'opp-2', project_id: 'proj-outro' },  // deve ser descartada
+  ];
+  const { opportunities } = applyEntityIsolation(opps, [], [], 'proj-alvo', 'proj-alvo');
+  assertEquals(opportunities.length, 1, 'apenas oportunidades do projeto correto são mantidas');
+  assertEquals(opportunities[0].id as string, 'opp-1', 'ID correto mantido');
+});
+
+Deno.test('26. Isolamento de entidades — oportunidades do projeto correto são mantidas', () => {
+  const opps = [
+    { id: 'opp-1', project_id: 'proj-alvo' },
+    { id: 'opp-2', project_id: 'proj-alvo' },
+  ];
+  const { opportunities } = applyEntityIsolation(opps, [], [], 'proj-alvo', 'proj-alvo');
+  assertEquals(opportunities.length, 2, 'todas as oportunidades corretas mantidas');
+});
+
+Deno.test('27. validateActionProposal — campos why/how/expected_result/success_metric preservados', () => {
+  const result = validateActionProposal(
+    {
+      tool_name:       'action.create',
+      title:           'Ação com campos completos',
+      why:             'Porque o score de mercado caiu 20%',
+      how:             'Executar campanha de re-engajamento em 3 etapas',
+      expected_result: 'Recuperar 15% do score em 30 dias',
+      success_metric:  'Score de mercado ≥ 75',
+    },
+    'proj-1',
+    new Set(),
+  );
+  assert(result !== null, 'proposta válida');
+  assertEquals(result!.why as string, 'Porque o score de mercado caiu 20%', 'why preservado');
+  assertEquals(result!.how as string, 'Executar campanha de re-engajamento em 3 etapas', 'how preservado');
+  assertEquals(result!.expected_result as string, 'Recuperar 15% do score em 30 dias', 'expected_result preservado');
+  assertEquals(result!.success_metric as string, 'Score de mercado ≥ 75', 'success_metric preservado');
+});
+
+Deno.test('28. validateActionProposal — confidence fora do range é clampado', () => {
+  const resultAlto = validateActionProposal(
+    { tool_name: 'action.create', title: 'Teste', confidence: 150 },
+    'proj-1', new Set(),
+  );
+  assertEquals(resultAlto!.confidence as number, 100, 'confidence > 100 clampado para 100');
+
+  const resultBaixo = validateActionProposal(
+    { tool_name: 'action.create', title: 'Teste', confidence: -10 },
+    'proj-1', new Set(),
+  );
+  assertEquals(resultBaixo!.confidence as number, 0, 'confidence < 0 clampado para 0');
+});
+
+Deno.test('29. validateActionProposal — focus_entity_id preservado quando string válida', () => {
+  const result = validateActionProposal(
+    { tool_name: 'action.create', title: 'Ação focada', focus_entity_id: 'opp-xyz' },
+    'proj-1', new Set(),
+  );
+  assert(result !== null, 'proposta aceita');
+  assertEquals(result!.focus_entity_id as string, 'opp-xyz', 'focus_entity_id preservado');
+});
+
+Deno.test('30. buildOpportunityContextSection — IDs de entidades citados explicitamente para grounding', () => {
+  const section = buildOpportunityContextSection([{
+    id: 'opp-grounding-test',
+    title: 'Oportunidade de Grounding',
+    status: 'active',
+    final_score: 78,
+    market_score: 70,
+    revenue_score: 65,
+    strategic_fit: 80,
+    synergy_score: 60,
+    competition_score: 45,
+    confidence: 72,
+    rationale: 'Alta demanda no nicho',
+  }], true);
+  assertContains(section, '[opp-grounding-test]', 'ID da entidade deve aparecer para grounding');
+});
+
+Deno.test('31. Isolamento — evidence_ids reconstruído a partir do conjunto limpo', () => {
+  const opps = [
+    { id: 'opp-ok', project_id: 'proj-correto' },
+    { id: 'opp-ruim', project_id: 'proj-outro' },
+  ];
+  const { evidence_ids } = applyEntityIsolation(opps, [], [], 'proj-correto', 'proj-correto');
+  assert(evidence_ids.has('opp-ok'), 'opp do projeto correto está em evidence_ids');
+  assert(!evidence_ids.has('opp-ruim'), 'opp de outro projeto não está em evidence_ids');
+});
+
+Deno.test('32. buildProjectContextSection — scores vinculados por nome E id juntos', () => {
+  const section = buildProjectContextSection(
+    { id: 'uuid-proj-test', name: 'Projeto Teste' },
+    { ecosystem: 55, opportunity: 70, roi: 40, roi_data_available: true },
+  );
+  assertContains(
+    section,
+    'Project Projeto Teste (uuid-proj-test) — Ecosystem Score: 55/100',
+    'score deve incluir nome E id do projeto explicitamente',
+  );
+});
+
+Deno.test('33. Isolamento — ação de projeto diferente é descartada', () => {
+  const acts = [
+    { id: 'act-1', project_id: 'proj-correto' },
+    { id: 'act-2', project_id: 'proj-invasor' },
+  ];
+  const { actions } = applyEntityIsolation([], acts, [], 'proj-correto', 'proj-correto');
+  assertEquals(actions.length, 1, 'apenas ações do projeto correto mantidas');
+  assertEquals(actions[0].id as string, 'act-1', 'ação correta mantida');
+});
+
+Deno.test('34. buildProjectContextSection — roi_data_available=true exibe valor numérico', () => {
+  const section = buildProjectContextSection(
+    { id: 'proj-roi', name: 'Projeto ROI' },
+    { roi: 65, roi_data_available: true },
+  );
+  assertContains(section, 'ROI: 65/100', 'roi disponível deve exibir valor numérico');
+});
+
+Deno.test('35. detectIntent — mensagem de simulação detectada', () => {
+  assertEquals(detectIntent('E se eu dobrasse o investimento?'), 'simulate', 'e se detectado');
+  assertEquals(detectIntent('Simule o impacto de expandir para o mercado B'), 'simulate', 'simular detectado');
+});
+
+Deno.test('36. buildOpportunityContextSection — sem projeto ativo retorna string vazia', () => {
+  const section = buildOpportunityContextSection([], false);
+  assertEquals(section, '', 'sem projeto ativo e sem oportunidades retorna string vazia');
 });
 
 console.log('\n✓ Todos os testes de lógica pura passaram\n');

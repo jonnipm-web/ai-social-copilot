@@ -44,7 +44,9 @@ export function buildProjectContextSection(
       `Project ${name} (${id}) — Opportunity Score: ${scores.opportunity ?? 0}/100`,
       `Project ${name} (${id}) — Strategic Fit: ${scores.strategic_fit ?? 0}/100`,
       `Project ${name} (${id}) — Synergy: ${scores.synergy ?? 0}/100`,
-      `Project ${name} (${id}) — ROI: ${scores.roi ?? 0}/100`,
+      (scores.roi_data_available === false || scores.roi === null)
+        ? `Project ${name} (${id}) — ROI: Dados indisponíveis (sem métricas registradas)`
+        : `Project ${name} (${id}) — ROI: ${scores.roi ?? 0}/100`,
       `Project ${name} (${id}) — Momentum: ${scores.momentum ?? 0}/100`,
       `Project ${name} (${id}) — Market Score: ${scores.market ?? 0}/100`,
       `Project ${name} (${id}) — Execution Score: ${scores.execution ?? 0}/100`,

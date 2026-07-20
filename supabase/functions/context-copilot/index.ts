@@ -29,7 +29,7 @@ import {
 
 const GROQ_URL        = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL      = 'llama-3.3-70b-versatile';
-const PROMPT_VERSION  = '2.0.1';
+const PROMPT_VERSION  = '2.1.0';
 
 const MAX_PAYLOAD_BYTES      = 64_000;   // 64 KB
 const MAX_MESSAGE_CHARS      = 2_000;
@@ -150,16 +150,21 @@ async function loadServerContext(
   }
 
   // ── Oportunidades ────────────────────────────────────────────────────────
-  const oppQuery = client
+  // IMPORTANTE: o builder do Supabase JS é imutável — .eq() retorna um novo
+  // objeto. Usamos let + reatribuição para que o filtro seja efetivamente aplicado.
+  let oppQuery = client
     .from('opportunity_lab')
     .select('id,project_id,title,description,status,opportunity_type,final_score,market_score,revenue_score,competition_score,synergy_score,strategic_fit,origin,rationale,confidence,risks,action_steps,created_at')
-    .eq('user_id', uid)
+    .eq('user_id', uid);
+
+  if (projectId && ctx.project) {
+    oppQuery = oppQuery.eq('project_id', projectId);
+  }
+
+  const { data: opps, error: oppsErr } = await oppQuery
     .order('final_score', { ascending: false })
     .limit(MAX_CONTEXT_ITEMS);
 
-  if (projectId && ctx.project) oppQuery.eq('project_id', projectId);
-
-  const { data: opps, error: oppsErr } = await oppQuery;
   if (oppsErr) ctx.limitations.push('oportunidades indisponíveis');
   else {
     ctx.opportunities = (opps ?? []) as Record<string, unknown>[];
@@ -167,16 +172,19 @@ async function loadServerContext(
   }
 
   // ── Ações ────────────────────────────────────────────────────────────────
-  const actQuery = client
+  let actQuery = client
     .from('action_queue')
     .select('id,project_id,opportunity_lab_id,title,description,status,priority,impact_score,effort_score,roi_score,market_score,origin,rationale,plan,risks,created_at')
-    .eq('user_id', uid)
+    .eq('user_id', uid);
+
+  if (projectId && ctx.project) {
+    actQuery = actQuery.eq('project_id', projectId);
+  }
+
+  const { data: acts, error: actsErr } = await actQuery
     .order('priority', { ascending: false })
     .limit(MAX_CONTEXT_ITEMS);
 
-  if (projectId && ctx.project) actQuery.eq('project_id', projectId);
-
-  const { data: acts, error: actsErr } = await actQuery;
   if (actsErr) ctx.limitations.push('ações indisponíveis');
   else {
     ctx.actions = (acts ?? []) as Record<string, unknown>[];
@@ -184,20 +192,54 @@ async function loadServerContext(
   }
 
   // ── Knowledge Base ───────────────────────────────────────────────────────
-  const kbQuery = client
+  let kbQuery = client
     .from('knowledge_items')
     .select('id,title,content,created_at')
-    .eq('user_id', uid)
+    .eq('user_id', uid);
+
+  if (projectId && ctx.project) {
+    kbQuery = kbQuery.eq('project_id', projectId);
+  }
+
+  const { data: kb, error: kbErr } = await kbQuery
     .order('created_at', { ascending: false })
     .limit(MAX_CONTEXT_ITEMS);
 
-  if (projectId && ctx.project) kbQuery.eq('project_id', projectId);
-
-  const { data: kb, error: kbErr } = await kbQuery;
   if (kbErr) ctx.limitations.push('base de conhecimento indisponível');
   else {
     ctx.kb_items = (kb ?? []) as Record<string, unknown>[];
     ctx.kb_items.forEach(k => ctx.evidence_ids.add(k.id as string));
+  }
+
+  // ── Auditoria de isolamento de entidades (ENTITY_ISOLATION) ──────────────
+  // Defesa secundária: após carregar, descarta qualquer entidade com project_id
+  // diferente do solicitado. Isso cobre cenários de dados corrompidos ou bugs
+  // de regressão no builder. Registra no log para rastreabilidade.
+  if (projectId && ctx.project) {
+    const validPid = projectId;
+
+    const badOpps = ctx.opportunities.filter(o => o.project_id !== validPid);
+    if (badOpps.length > 0) {
+      console.error(
+        `[ENTITY_ISOLATION] RETRIEVED_PROJECT_IDS mismatch: descartando ${badOpps.length} oportunidades de projeto diferente`,
+      );
+      ctx.opportunities = ctx.opportunities.filter(o => o.project_id === validPid);
+    }
+
+    const badActs = ctx.actions.filter(a => a.project_id !== validPid);
+    if (badActs.length > 0) {
+      console.error(
+        `[ENTITY_ISOLATION] RETRIEVED_PROJECT_IDS mismatch: descartando ${badActs.length} ações de projeto diferente`,
+      );
+      ctx.actions = ctx.actions.filter(a => a.project_id === validPid);
+    }
+
+    // Reconstrói evidence_ids a partir do conjunto limpo de entidades
+    ctx.evidence_ids = new Set<string>();
+    ctx.evidence_ids.add(ctx.project.id as string);
+    ctx.opportunities.forEach(o => { if (o.id) ctx.evidence_ids.add(o.id as string); });
+    ctx.actions.forEach(a => { if (a.id) ctx.evidence_ids.add(a.id as string); });
+    ctx.kb_items.forEach(k => { if (k.id) ctx.evidence_ids.add(k.id as string); });
   }
 
   return ctx;
@@ -222,17 +264,23 @@ function computeConfidence(ctx: ServerContext, clientCtxHints: Record<string, un
 // ── Validate action proposal ─────────────────────────────────────────────────
 
 interface ActionProposal {
-  tool_name:      string;
-  project_id:     string;
-  title:          string;
-  description?:   string;
-  priority?:      string;
-  impact?:        string;
-  effort?:        string;
-  due_date?:      string;
-  rationale?:     string;
-  evidence_ids?:  string[];
-  opportunity_id?: string;
+  tool_name:        string;
+  project_id:       string;
+  title:            string;
+  description?:     string;
+  why?:             string;
+  how?:             string;
+  expected_result?: string;
+  success_metric?:  string;
+  priority?:        string;
+  impact?:          string;
+  effort?:          string;
+  due_date?:        string;
+  rationale?:       string;
+  evidence_ids?:    string[];
+  opportunity_id?:  string;
+  focus_entity_id?: string;
+  confidence?:      number;
 }
 
 function validateActionProposal(
@@ -270,18 +318,29 @@ function validateActionProposal(
   const evidence_ids = rawIds
     .filter((id): id is string => typeof id === 'string' && validEvidenceIds.has(id));
 
+  // Confidence do modelo (não da função computeConfidence — é auto-avaliação)
+  const modelConfidence = typeof a.confidence === 'number'
+    ? Math.min(100, Math.max(0, Math.round(a.confidence as number)))
+    : undefined;
+
   return {
-    tool_name:      'action.create',
-    project_id:     projectId ?? '',
-    title:          a.title as string,
-    description:    a.description as string | undefined,
+    tool_name:        'action.create',
+    project_id:       projectId ?? '',
+    title:            a.title as string,
+    description:      typeof a.description === 'string' ? a.description : undefined,
+    why:              typeof a.why === 'string' ? a.why.slice(0, 500) : undefined,
+    how:              typeof a.how === 'string' ? a.how.slice(0, 500) : undefined,
+    expected_result:  typeof a.expected_result === 'string' ? a.expected_result.slice(0, 300) : undefined,
+    success_metric:   typeof a.success_metric === 'string' ? a.success_metric.slice(0, 200) : undefined,
     priority,
     impact,
     effort,
-    due_date:       typeof a.due_date === 'string' ? a.due_date : undefined,
-    rationale:      typeof a.rationale === 'string' ? a.rationale.slice(0, 500) : undefined,
+    due_date:         typeof a.due_date === 'string' ? a.due_date : undefined,
+    rationale:        typeof a.rationale === 'string' ? a.rationale.slice(0, 500) : undefined,
     evidence_ids,
-    opportunity_id: typeof a.opportunity_id === 'string' ? a.opportunity_id : undefined,
+    opportunity_id:   typeof a.opportunity_id === 'string' ? a.opportunity_id : undefined,
+    focus_entity_id:  typeof a.focus_entity_id === 'string' ? a.focus_entity_id : undefined,
+    confidence:       modelConfidence,
   };
 }
 
@@ -292,15 +351,36 @@ function buildSystemPrompt(
   clientHints: Record<string, unknown>,
   screenName: string,
 ): string {
+  // Extrai flags de qualidade de dados dos hints do cliente (enviados pelo Flutter)
+  const scores      = clientHints.scores as Record<string, unknown> | null ?? null;
+  const hasEnoughData = scores ? (scores.has_enough_data as boolean ?? true) : false;
+  const hasRoiData    = scores ? (scores.roi_data_available as boolean ?? false) : false;
+
   const lines: string[] = [`TELA ATUAL: ${screenName}`];
 
   const projectSection = buildProjectContextSection(
     serverCtx.project,
-    clientHints.scores
-      ? clientHints.scores as Record<string, unknown>
-      : null,
+    scores,
   );
   if (projectSection) lines.push(`\n${projectSection}`);
+
+  // Aviso de qualidade de dados: scores provisórios
+  if (scores && !hasEnoughData) {
+    lines.push(
+      '\n## AVISO: SCORES PROVISÓRIOS',
+      'Os PROJECT_SCORES acima são PROVISÓRIOS — dados insuficientes para cálculo completo.',
+      'Scores com valor 0 podem refletir ausência de dados, não desempenho real.',
+      'Ao mencionar scores, deixe claro que são estimativas iniciais, não valores calculados.',
+    );
+  }
+
+  if (scores && !hasRoiData) {
+    lines.push(
+      '\n## AVISO: ROI SEM DADOS',
+      'Nenhuma métrica de ROI foi registrada para este projeto.',
+      'Não mencione ROI como dado disponível; declare a ausência explicitamente se perguntado.',
+    );
+  }
 
   const opportunitySection = buildOpportunityContextSection(
     serverCtx.opportunities,
@@ -311,7 +391,11 @@ function buildSystemPrompt(
   if (serverCtx.actions.length) {
     const acts = serverCtx.actions
       .slice(0, 5)
-      .map(a => `• [${a.id}] ${a.title} [status=${a.status}, prioridade=${a.priority}, impacto=${a.impact_score}, esforço=${a.effort_score}, ROI=${a.roi_score}]`)
+      .map(a =>
+        `• [${a.id}] ${a.title}` +
+        ` [status=${a.status}, prioridade=${a.priority},` +
+        ` impacto=${a.impact_score}, esforço=${a.effort_score}, ROI=${a.roi_score}]`,
+      )
       .join('\n');
     lines.push(`\n## AÇÕES DO PROJETO (${serverCtx.actions.length} total, fonte: servidor)\n${acts}`);
   }
@@ -324,11 +408,8 @@ function buildSystemPrompt(
     lines.push(`\n## BASE DE CONHECIMENTO (${serverCtx.kb_items.length} itens, fonte: servidor)\n${kb}`);
   }
 
-  // Mercado vem dos hints do cliente. Scores já foram vinculados explicitamente
-  // ao PROJECT validado pelo servidor no bloco PROJECT_SCORES.
-  const hints = clientHints;
-  if (hints.market) {
-    const m = hints.market as Record<string, unknown>;
+  if (clientHints.market) {
+    const m = clientHints.market as Record<string, unknown>;
     lines.push(`\n## MERCADO (hint do cliente)\nNicho: ${m.niche || '—'}\nCompetição: ${m.competition || '—'}`);
   }
 
@@ -338,62 +419,83 @@ function buildSystemPrompt(
 
   const contextBlock = lines.join('\n');
 
+  const roiRule = hasRoiData
+    ? 'Se perguntado sobre ROI, use o valor do PROJECT_SCORES.'
+    : 'ROI: declare "Não há dados de ROI registrados para este projeto" se perguntado.';
+
   return `Você é o AI Social Copilot, assistente estratégico integrado à plataforma de gestão de projetos digitais.
 
-Seu papel é analisar os dados do contexto atual e responder às perguntas do usuário com precisão, clareza e ação.
-
-Quando houver oportunidades, compare apenas as oportunidades listadas para o projeto ativo. Para recomendar a melhor, informe nome, score final, critérios determinantes, risco e próxima ação. Nunca use dados de outro projeto nem invente oportunidades.
-
-O bloco PROJECT_SCORES pertence exclusivamente ao PROJECT identificado por id e name. Nunca descreva esses scores como globais ou como scores do ecossistema inteiro.
-
-Se o usuário pedir comparação com outro projeto que não esteja carregado no bloco PROJECT, responda precisamente: "Posso analisar o projeto ativo agora, mas para comparar com o outro projeto preciso abrir/carregar também os dados autorizados desse projeto." Não invente scores do segundo projeto.
+== ISOLAMENTO DE PROJETO ==
+Você recebeu dados EXCLUSIVAMENTE do projeto identificado no bloco PROJECT abaixo.
+Não misture dados de outros projetos. Não invente dados de projetos não carregados.
 
 ${contextBlock}
 
-## SUAS CAPACIDADES
+== SUAS CAPACIDADES ==
 
-EXPLICAR: Explique por que, como, origem e evidências de qualquer score, recomendação ou dado.
-SIMULAR: Simule cenários e impacto com base nos dados reais do contexto.
-RECOMENDAR: Sugira próximas ações, prioridades e identifique riscos com base nos dados.
+EXPLICAR: Por que, como, origem e evidências de qualquer score, recomendação ou dado.
+SIMULAR: Cenários e impacto com base nos dados reais do contexto.
+RECOMENDAR: Próximas ações, prioridades e riscos com base nos dados carregados.
 
-## REGRAS OBRIGATÓRIAS
+== REGRAS OBRIGATÓRIAS ==
 
-1. Baseie TODA resposta nos dados do contexto acima — nunca invente dados.
-2. Seja direto e objetivo — máximo 4 parágrafos curtos.
-3. Use dados numéricos do contexto sempre que possível.
-4. Quando citar oportunidades ou ações, use os IDs exatos fornecidos (ex: [abc-123]).
-5. Ao final da resposta, inclua EXATAMENTE este bloco JSON e nada mais após ele:
+1. ISOLAMENTO: Responda EXCLUSIVAMENTE com dados do PROJECT identificado acima. Nunca mencione dados de outro projeto que não esteja carregado.
+
+2. GROUNDING OBRIGATÓRIO: Toda afirmação estratégica deve citar a fonte exata (ID [uuid] ou seção do contexto). Nunca escreva "com base no contexto disponível" sem listar quais dados específicos foram usados. Cite: nome da entidade + ID + valor relevante.
+
+3. DADOS AUSENTES: Se os dados necessários para responder não estão no contexto, declare EXATAMENTE o que está faltando. Não invente dados para preencher lacunas.
+
+4. SCORES: Cite apenas scores do bloco PROJECT_SCORES vinculados ao projeto identificado por name e id. Nunca descreva esses scores como globais do ecossistema. ${scores && !hasEnoughData ? 'ATENÇÃO: scores são provisórios — veja AVISO acima.' : ''}
+
+5. COMPARAÇÃO ENTRE PROJETOS: Se o usuário pede comparação com outro projeto que NÃO está carregado no bloco PROJECT, responda: "Posso analisar [nome do projeto ativo] agora. Para comparar com [outro projeto], selecione-o primeiro para carregar seus dados autorizados." Nunca invente scores do segundo projeto.
+
+6. OPORTUNIDADES: Compare apenas oportunidades do bloco OPORTUNIDADES. Cite nome, score final e critérios reais. Se não há oportunidades, declare: "Este projeto ainda não possui oportunidades registradas no Opportunity Lab."
+
+7. ${roiRule}
+
+8. Seja direto e objetivo — máximo 4 parágrafos curtos. Use dados numéricos sempre que disponíveis.
+
+9. Quando citar entidades, use os IDs exatos do contexto: [uuid].
+
+10. Responda sempre em Português do Brasil.
+
+== FORMATO DA RESPOSTA ==
+
+Ao final da resposta, inclua EXATAMENTE este bloco JSON (nada após ele):
 
 \`\`\`json
 {
-  "sources": ["lista das fontes usadas — use apenas: Projeto, Oportunidades, Ações, Base de Conhecimento, Scores, Mercado"],
+  "sources": ["liste apenas: Projeto, Oportunidades, Ações, Base de Conhecimento, Scores, Mercado"],
   "entities": ["nomes de projetos/oportunidades/ações mencionados"],
   "action_proposal": null
 }
 \`\`\`
 
-Se e SOMENTE SE for muito claro que o usuário quer criar uma ação, substitua action_proposal por:
+Se e SOMENTE SE for claro que o usuário quer criar uma ação:
+
 \`\`\`json
 {
   "action_proposal": {
     "tool_name": "action.create",
     "title": "título conciso (máx 100 chars)",
-    "description": "descrição da ação",
+    "description": "o que será feito, de forma específica",
+    "why": "por que esta ação é necessária agora — cite a evidência",
+    "how": "como executar — passos concretos",
+    "expected_result": "resultado esperado e prazo estimado",
+    "success_metric": "como medir o sucesso desta ação",
     "priority": "medium",
     "impact": "medium",
     "effort": "medium",
-    "rationale": "por que esta ação é recomendada",
-    "evidence_ids": ["use apenas IDs reais do contexto acima"],
-    "opportunity_id": null
+    "rationale": "evidência do contexto que justifica esta ação",
+    "evidence_ids": ["use apenas IDs [uuid] reais do contexto"],
+    "opportunity_id": null,
+    "confidence": 75
   }
 }
 \`\`\`
 
-Valores válidos para priority/impact/effort: low, medium, high, critical (só priority).
-NÃO invente evidence_ids — use apenas os IDs [uuid] mostrados no contexto.
-NÃO proponha outras ferramentas além de action.create.
-
-Responda sempre em Português do Brasil.`;
+Valores válidos — priority: low/medium/high/critical; impact/effort: low/medium/high.
+NÃO invente evidence_ids. NÃO proponha outras ferramentas além de action.create.`;
 }
 
 // ── Main handler ──────────────────────────────────────────────────────────────
@@ -652,6 +754,7 @@ serve(async (req) => {
   return jsonResponse({
     // ── Campos backward-compatible (esperados pelo provider) ──
     answer:            answerText || '—',
+    response_text:     answerText || '—',
     sources:           modelSources,
     confidence,
     entities:          modelEntities,
