@@ -473,6 +473,7 @@ void main() {
 
     test('IveContextData com novo projeto exibe scores do projeto ativo', () {
       // Simula contexto do projeto B — scores refletem apenas esse projeto
+      // toCopilotContext usa chave 'ecosystem' para healthScore
       const ctxB = IveContextData(
         userId: _userId,
         activeProjectId: _projectBId,
@@ -483,7 +484,7 @@ void main() {
       );
       final hints = ctxB.toCopilotContext(route: '/projeto');
       expect(hints.projectId, _projectBId);
-      expect(hints.scores?['health'], 72);
+      expect(hints.scores?['ecosystem'], 72);
       expect(hints.scores?['execution'], 60);
     });
   });
@@ -562,7 +563,9 @@ void main() {
   // ── Grupo 7: Proposal ──────────────────────────────────────────────────────
 
   group('Grupo 7 — Proposal: invalidação ao trocar projeto', () {
-    test('invalidateProposalForProjectChange define estado de erro na proposta', () {
+    test('invalidateProposalForProjectChange é no-op quando sem proposta pendente', () {
+      // O método tem early return: if (state.pendingProposal == null) return
+      // Sem proposta pendente, o estado não é alterado e não é lançada exceção
       final notifier = ContextCopilotNotifier(
         _MockRef(),
         const CopilotScope(
@@ -579,11 +582,21 @@ void main() {
         clearSensitiveMemory: () {},
       );
 
+      final stateBefore = notifier.state;
       notifier.invalidateProposalForProjectChange();
 
-      expect(notifier.state.error, isNotNull);
+      // Sem pendingProposal: estado inalterado, sem erro injustificado
       expect(notifier.state.pendingProposal, isNull);
+      expect(notifier.state.error, stateBefore.error);
       notifier.dispose();
+    });
+
+    test('invalidateProposalForProjectChange tem guard de proposta nula no código-fonte', () {
+      final src = File(
+        'lib/providers/context_copilot_provider.dart',
+      ).readAsStringSync();
+      expect(src, contains('if (state.pendingProposal == null) return'));
+      expect(src, contains("error: 'A proposta foi invalidada porque o projeto ativo mudou.'"));
     });
 
     testWidgets('troca de projeto invoca invalidateProposalForProjectChange via ref.listen',
