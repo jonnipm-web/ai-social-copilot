@@ -36,8 +36,8 @@ const BASE_PROJECT: DbProject = {
   priority_score:           50,
   time_to_revenue_days:     null,
   market_analysis_id:       null,
-  url:                      null,
-  details:                  null,
+  url:                      undefined,
+  details:                  undefined,
 };
 
 function makeOpp(overrides: Partial<DbOpportunity> = {}): DbOpportunity {
@@ -56,7 +56,7 @@ function makeOpp(overrides: Partial<DbOpportunity> = {}): DbOpportunity {
     strategic_fit: 55,
     origin:        'manual',
     rationale:     'teste',
-    confidence:    70,
+    confidence:    'high',
     risks:         [],
     action_steps:  [],
     created_at:    new Date().toISOString(),
@@ -89,7 +89,6 @@ function makeRoi(value: number): DbRoiMetric {
     project_id:   BASE_PROJECT.id,
     metric_name:  'revenue',
     metric_value: value,
-    period:       'monthly',
     created_at:   new Date().toISOString(),
   };
 }

@@ -189,7 +189,7 @@ void main() {
       final evidence = IveEvidence.tryParse(
         {
           'source_type': 'action',
-          'source_id':   '12345678-1234-1234-1234-123456789012',
+          'source_id':   '12345678-1234-1234-8234-123456789012',
           'title':       'Ação de outro projeto',
           'project_id':  'outro-projeto-uuid',  // diverge do activeProjectId
           'relevance':   0.8,
@@ -203,7 +203,7 @@ void main() {
       final evidence = IveEvidence.tryParse(
         {
           'source_type': 'opportunity',
-          'source_id':   '12345678-1234-1234-1234-123456789012',
+          'source_id':   '12345678-1234-1234-8234-123456789012',
           'title':       'Oportunidade válida',
           'project_id':  'project-abc-123',
           'relevance':   0.9,
@@ -255,7 +255,7 @@ void main() {
     });
 
     test('4.3 IveProposedAction.tryParse() aceita evidence_ids válidos', () {
-      const validId = '12345678-1234-1234-1234-123456789012';
+      const validId = '12345678-1234-1234-8234-123456789012';
       final action = IveProposedAction.tryParse(
         {
           'tool_name':    'action.create',
@@ -587,7 +587,7 @@ void main() {
 
   group('Grupo 10 — Segurança: opportunity_id não autorizado', () {
     test('10.1 IveActionProposal.fromProposedAction() descarta opportunity_id fora do allowedSet', () {
-      const validOppId = '12345678-1234-1234-1234-123456789012';
+      const validOppId = '12345678-1234-1234-8234-123456789012';
 
       // action com opportunity_id que NÃO está no allowedOpportunityIds
       final proposedAction = IveProposedAction.tryParse(
@@ -611,7 +611,7 @@ void main() {
     });
 
     test('10.2 IveActionProposal.fromProposedAction() aceita opportunity_id autorizado', () {
-      const validOppId = '12345678-1234-1234-1234-123456789012';
+      const validOppId = '12345678-1234-1234-8234-123456789012';
 
       final proposedAction = IveProposedAction.tryParse(
         {
