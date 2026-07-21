@@ -4,6 +4,24 @@ on:
   workflow_dispatch:
 
 jobs:
+  validate-functions:
+    name: Testes Deno — Edge Functions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar código do repositório
+        uses: actions/checkout@v4
+
+      - name: Instalar Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v1.x
+
+      - name: Testes da Edge Function context-copilot
+        run: deno test --allow-env supabase/functions/context-copilot/index_test.ts
+
+      - name: Testes da Edge Function ive-agent-runner
+        run: deno test --allow-env supabase/functions/ive-agent-runner/index_test.ts
+
   validate:
     runs-on: ubuntu-latest
     steps:
@@ -34,7 +52,7 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
-    needs: validate
+    needs: [validate, validate-functions]
 
     steps:
       - name: Baixar código do repositório
@@ -93,7 +111,7 @@ jobs:
 
   build-web:
     runs-on: ubuntu-latest
-    needs: validate
+    needs: [validate, validate-functions]
 
     steps:
       - name: Baixar código do repositório

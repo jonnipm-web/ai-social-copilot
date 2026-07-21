@@ -16,12 +16,12 @@ final _iveAgentModeProvider = FutureProvider<bool>((ref) async {
   try {
     final res = await Supabase.instance.client
         .from('feature_flags')
-        .select('value')
-        .eq('key', 'ive_agent_mode')
+        .select('enabled')
+        .eq('feature_name', 'ive_agent_mode')
         .maybeSingle();
-    return (res.data as Map<String, dynamic>?)?['value'] == 'agent';
+    return (res.data as Map<String, dynamic>?)?['enabled'] == true;
   } catch (_) {
-    return false;
+    return false; // fail-safe: erro ou linha ausente → usa legado
   }
 });
 

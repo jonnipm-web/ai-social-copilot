@@ -202,14 +202,15 @@ export async function loadServerContext(
  */
 export async function isAgentModeEnabled(client: SupabaseClient): Promise<boolean> {
   try {
-    const { data } = await client
+    const { data, error } = await client
       .from('feature_flags')
-      .select('value')
-      .eq('key', 'ive_agent_mode')
+      .select('enabled')
+      .eq('feature_name', 'ive_agent_mode')
       .maybeSingle();
-    return data?.value === 'agent';
+    if (error) return false; // fail-safe: erro → legado
+    return data?.enabled === true;
   } catch {
-    return true; // fail-open: se a tabela não existe, deixa prosseguir
+    return false; // fail-safe: se a tabela não existe, usa legado
   }
 }
 
