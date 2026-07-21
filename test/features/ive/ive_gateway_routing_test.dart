@@ -15,6 +15,9 @@ import 'package:ai_social_copilot/features/ive/services/ive_copilot_gateway.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+// Função sem parâmetro uid — confirma contrato de IveCapabilityFetcher
+Future<bool> _noUidFetcher() async => false;
+
 ProviderContainer _container(IveCapabilityFetcher fetcher) =>
     ProviderContainer(
       overrides: [iveCapabilityFetcherProvider.overrideWithValue(fetcher)],
@@ -63,8 +66,7 @@ void main() {
     // Contrato arquitetural: IveCapabilityFetcher = Future<bool> Function()
     // sem parâmetro uid. O servidor resolve uid exclusivamente do JWT.
     // Este teste falha em compilação se alguém adicionar uid ao typedef.
-    IveCapabilityFetcher fetcher = () async => false;
-    expect(fetcher, isA<Future<bool> Function()>());
+    expect(_noUidFetcher, isA<IveCapabilityFetcher>());
     // Se o typedef mudasse para Function(String uid), esta linha não compilaria.
   });
 }
