@@ -137,8 +137,8 @@ serve(async (req) => {
   const clientCorrelationId = body.client_correlation_id ?? correlationId;
 
   // ── 4. Verificar feature flag (server-side check) ──────────────────────────
-  // Fail-open: se a flag não existir, deixa prosseguir (Flutter já selecionou este endpoint)
-  const agentEnabled = await isAgentModeEnabled(client);
+  // uid já validado do JWT — passado para isAgentModeEnabled para checar allowlist interna
+  const agentEnabled = await isAgentModeEnabled(client, uid);
   if (!agentEnabled) {
     // Retorna erro no formato do provider — Flutter faz fallback para context-copilot
     return errorResponse(

@@ -193,14 +193,37 @@ export async function loadServerContext(
 // ── Feature Flag ──────────────────────────────────────────────────────────────
 
 /**
- * Verifica se o agent mode está ativo para esta sessão.
- * Flag lida da tabela feature_flags no banco — controlada remotamente.
+ * Verifica se o uid está na lista de testers internos.
  *
- * Fail-open: se a tabela não existir ou houver erro, o edge function
- * continua executando (o Flutter já selecionou este endpoint via seu próprio
- * flag check). O servidor não bloqueia chamadas legítimas do Flutter.
+ * Lista definida em INTERNAL_TESTER_IDS (env var do servidor), separada por vírgulas.
+ * Resolvida exclusivamente do JWT — o uid nunca vem do payload do cliente Flutter.
+ * Sem migration: configuração 100% server-side via Supabase secret.
  */
-export async function isAgentModeEnabled(client: SupabaseClient): Promise<boolean> {
+export function isInternalTester(uid: string): boolean {
+  const raw = Deno.env.get('INTERNAL_TESTER_IDS') ?? '';
+  if (!raw.trim()) return false;
+  const ids = raw.split(',').map(s => s.trim()).filter(Boolean);
+  return ids.includes(uid);
+}
+
+/**
+ * Verifica se o agent mode está habilitado para este usuário.
+ *
+ * Lógica de acesso:
+ *   1. Internal tester (uid em INTERNAL_TESTER_IDS) → SEMPRE habilitado.
+ *      Permite teste controlado sem ativar flag global.
+ *   2. Demais usuários → depende da flag global ive_agent_mode na tabela feature_flags.
+ *
+ * Fail-safe para usuários comuns: erro ou flag ausente → usa legado (false).
+ * Fail-open para testers: se a tabela não existir, tester ainda entra.
+ */
+export async function isAgentModeEnabled(client: SupabaseClient, uid?: string): Promise<boolean> {
+  // Tester interno bypassa flag global — ativação exclusivamente server-side via JWT
+  if (uid && isInternalTester(uid)) {
+    console.log(`[agent-mode] internal tester uid=${uid.slice(0, 8)}...`);
+    return true;
+  }
+
   try {
     const { data, error } = await client
       .from('feature_flags')

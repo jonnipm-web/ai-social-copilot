@@ -618,6 +618,32 @@ Deno.test('8.4 feature_flags: enabled=true com feature_name correto ativa agent 
   assertEquals(data.enabled === true, true);
 });
 
+Deno.test('8.5 internal tester allowlist: uid na lista → habilitado', () => {
+  const allowlist = 'uid-a,uid-b,uid-c';
+  function checkAllowlist(uid: string, raw: string): boolean {
+    if (!raw.trim()) return false;
+    const ids = raw.split(',').map(s => s.trim()).filter(Boolean);
+    return ids.includes(uid);
+  }
+  assertEquals(checkAllowlist('uid-a', allowlist), true);   // uid presente → habilitado
+  assertEquals(checkAllowlist('uid-b', allowlist), true);
+  assertEquals(checkAllowlist('uid-z', allowlist), false);  // uid ausente → legado
+  assertEquals(checkAllowlist('uid-a', ''), false);         // lista vazia → legado
+  assertEquals(checkAllowlist('', allowlist), false);        // uid vazio → legado
+  // uid nunca vem do Flutter — sempre do JWT validado server-side
+});
+
+Deno.test('8.6 internal tester: uid com espaços na env var ainda resolve corretamente', () => {
+  const rawWithSpaces = ' uid-a , uid-b , uid-c ';
+  function checkAllowlist(uid: string, raw: string): boolean {
+    const ids = raw.split(',').map(s => s.trim()).filter(Boolean);
+    return ids.includes(uid);
+  }
+  assertEquals(checkAllowlist('uid-a', rawWithSpaces), true);
+  assertEquals(checkAllowlist('uid-b', rawWithSpaces), true);
+  assertEquals(checkAllowlist(' uid-a ', rawWithSpaces), false); // uid com espaço não bate
+});
+
 // ──────────────────────────────────────────────────────────────────────────────
 // GRUPO 9 — Backward Compatibility: Formato de Resposta
 // ──────────────────────────────────────────────────────────────────────────────
