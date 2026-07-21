@@ -135,6 +135,9 @@ class AppConstants {
   // Fase 10K — Context Copilot
   static const edgeFunctionContextCopilot = 'context-copilot';
 
+  // Fase 1B — IVE Agent Runner
+  static const edgeFunctionAgentRunner = 'ive-agent-runner';
+
   // Fase 10L — Decision Simulator (IVE v1.1)
   static const edgeFunctionDecisionSimulator = 'decision-simulator';
 

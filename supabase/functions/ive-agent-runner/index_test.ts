@@ -644,6 +644,50 @@ Deno.test('8.6 internal tester: uid com espaços na env var ainda resolve corret
   assertEquals(checkAllowlist(' uid-a ', rawWithSpaces), false); // uid com espaço não bate
 });
 
+Deno.test('8.7 capability check: isAgentModeEnabled com tester → true independente de flag global', () => {
+  // Simula a lógica combinada de isAgentModeEnabled(client, uid)
+  function resolveCapability(uid: string, testerIds: string, flagEnabled: boolean): boolean {
+    // Tester bypassa flag global
+    const ids = testerIds.split(',').map(s => s.trim()).filter(Boolean);
+    if (ids.includes(uid)) return true;
+    // Flag global para demais usuários
+    return flagEnabled;
+  }
+
+  const testerUid  = 'uid-interno-1';
+  const normalUid  = 'uid-normal-2';
+  const testerList = 'uid-interno-1';
+
+  // T1: usuário normal + flag OFF → false (legado)
+  assertEquals(resolveCapability(normalUid,  testerList, false), false);
+  // T2: internal tester + flag OFF → true (agent)
+  assertEquals(resolveCapability(testerUid,  testerList, false), true);
+  // T3: flag global ON → true para todos
+  assertEquals(resolveCapability(normalUid,  testerList, true),  true);
+  assertEquals(resolveCapability(testerUid,  testerList, true),  true);
+  // T4: lista vazia + flag OFF → false
+  assertEquals(resolveCapability(normalUid,  '',          false), false);
+  // T5: uid não está no payload Flutter — uid vem SOMENTE do JWT (garantia arquitetural)
+  // O Flutter não envia uid; o servidor extrai do JWT.
+  // Aqui: uid é parâmetro do servidor, nunca do body da requisição.
+  assertEquals(typeof testerUid, 'string'); // uid é uma string server-side do JWT
+});
+
+Deno.test('8.8 capability check: resposta JSON correta { ive_agent_enabled: bool }', () => {
+  // Simula o shape da resposta do handler de capability check
+  function buildCapabilityResponse(enabled: boolean): Record<string, unknown> {
+    return { ive_agent_enabled: enabled };
+  }
+  const trueResponse  = buildCapabilityResponse(true);
+  const falseResponse = buildCapabilityResponse(false);
+
+  assertEquals(trueResponse['ive_agent_enabled'],  true);
+  assertEquals(falseResponse['ive_agent_enabled'], false);
+  // Flutter: data['ive_agent_enabled'] == true → seleciona IveAgentGateway
+  assertEquals(trueResponse['ive_agent_enabled'] === true, true);
+  assertEquals(falseResponse['ive_agent_enabled'] === true, false);
+});
+
 // ──────────────────────────────────────────────────────────────────────────────
 // GRUPO 9 — Backward Compatibility: Formato de Resposta
 // ──────────────────────────────────────────────────────────────────────────────

@@ -129,6 +129,20 @@ serve(async (req) => {
     return errorResponse('BAD_REQUEST', 'body não é JSON válido', 400, correlationId);
   }
 
+  // ── 3b. Capability check (sem agent loop) ─────────────────────────────────
+  // Flutter pergunta: "esta sessão JWT pode usar o agent mode?"
+  // Servidor resolve uid (do JWT) + INTERNAL_TESTER_IDS + flag global.
+  // uid NUNCA vem do payload — é resolvido exclusivamente do JWT acima.
+  if (
+    rawBody !== null &&
+    typeof rawBody === 'object' &&
+    (rawBody as Record<string, unknown>).capability_check === true
+  ) {
+    const enabled = await isAgentModeEnabled(client, uid);
+    console.log(`[${correlationId}] capability_check uid=${uid.slice(0, 8)}... enabled=${enabled}`);
+    return jsonResponse({ ive_agent_enabled: enabled });
+  }
+
   const validation = validateRequest(rawBody);
   if ('error' in validation) {
     return errorResponse('BAD_REQUEST', validation.error, 400, correlationId);
