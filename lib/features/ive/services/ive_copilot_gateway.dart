@@ -3,12 +3,34 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../domain/ive_copilot_contract.dart';
+import 'ive_agent_gateway.dart';
 
-abstract interface class IveCopilotGateway {
-  Future<Map<String, dynamic>> invoke(IveCopilotRequest request);
-}
+/// Feature flag lida da tabela [feature_flags] no Supabase.
+/// Valor 'agent' → [IveAgentGateway]; qualquer outro → [SupabaseIveCopilotGateway].
+///
+/// Permite rollback sem novo APK: altere o valor no banco,
+/// o provider recarrega na próxima criação de instância.
+///
+/// Fail-safe: se a tabela não existir ou houver erro, usa legado.
+final _iveAgentModeProvider = FutureProvider<bool>((ref) async {
+  try {
+    final res = await Supabase.instance.client
+        .from('feature_flags')
+        .select('value')
+        .eq('key', 'ive_agent_mode')
+        .maybeSingle();
+    return (res.data as Map<String, dynamic>?)?['value'] == 'agent';
+  } catch (_) {
+    return false;
+  }
+});
 
+/// Seleciona o gateway correto baseado no feature flag.
+/// [SupabaseIveCopilotGateway] é o legado (context-copilot).
+/// [IveAgentGateway] é o novo agent runner (Phase 1B).
 final iveCopilotGatewayProvider = Provider<IveCopilotGateway>((ref) {
+  final useAgent = ref.watch(_iveAgentModeProvider).valueOrNull ?? false;
+  if (useAgent) return IveAgentGateway(Supabase.instance.client);
   return SupabaseIveCopilotGateway(Supabase.instance.client);
 });
 

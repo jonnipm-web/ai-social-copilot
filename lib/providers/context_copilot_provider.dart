@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -375,6 +376,9 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
   }
 
   void clearHistory() => state = const CopilotState();
+
+  @visibleForTesting
+  void overrideStateForTest(CopilotState s) => state = s;
 
   String _friendlyError(Object error) {
     if (error is IveCopilotHttpException) return error.message;

@@ -2,6 +2,10 @@ import '../../../core/utils/date_parser.dart';
 import '../../../data/models/copilot_context_data.dart';
 import '../../../data/models/copilot_turn.dart';
 
+abstract interface class IveCopilotGateway {
+  Future<Map<String, dynamic>> invoke(IveCopilotRequest request);
+}
+
 class IveCopilotRequest {
   static int _correlationSequence = 0;
 
