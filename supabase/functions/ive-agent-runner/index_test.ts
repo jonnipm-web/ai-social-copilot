@@ -98,11 +98,12 @@ function makeRoi(value: number): DbRoiMetric {
 // ──────────────────────────────────────────────────────────────────────────────
 
 Deno.test('1.1 projeto sem dados — insufficient_data, recomendação ANÁLISE INCOMPLETA', () => {
-  const result = computeEcosystemScores(BASE_PROJECT, [], [], []);
+  // priority_score e revenue_potential zerados para garantir scores=0 com arrays vazios
+  const emptyProject: DbProject = { ...BASE_PROJECT, priority_score: 0, revenue_potential: 0 };
+  const result = computeEcosystemScores(emptyProject, [], [], []);
   assertEquals(result.hasEnoughData, false);
   assertEquals(result.hasRoiData, false);
   assertEquals(result.recommendation, 'ANÁLISE INCOMPLETA');
-  // sem dados → ecosystem score deve ser 0 (cálculo com todos zeros)
   assertEquals(result.ecosystemScore, 0);
   assertEquals(result.opportunityScore, 0);
   assertEquals(result.marketScore, 0);
