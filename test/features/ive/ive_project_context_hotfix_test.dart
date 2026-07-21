@@ -7,7 +7,6 @@ import 'package:ai_social_copilot/data/models/project.dart';
 import 'package:ai_social_copilot/data/services/project_service.dart';
 import 'package:ai_social_copilot/features/action_engine/screens/action_detail_screen.dart';
 import 'package:ai_social_copilot/features/ive/domain/ive_copilot_contract.dart';
-import 'package:ai_social_copilot/features/ive/services/ive_copilot_gateway.dart';
 import 'package:ai_social_copilot/features/opportunity_lab/screens/opportunity_detail_screen.dart';
 import 'package:ai_social_copilot/providers/context_copilot_provider.dart';
 import 'package:ai_social_copilot/providers/ive_context_provider.dart';

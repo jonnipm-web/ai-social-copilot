@@ -1,6 +1,5 @@
 import 'package:ai_social_copilot/data/models/copilot_context_data.dart';
 import 'package:ai_social_copilot/features/ive/domain/ive_copilot_contract.dart';
-import 'package:ai_social_copilot/features/ive/services/ive_copilot_gateway.dart';
 import 'package:ai_social_copilot/providers/context_copilot_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

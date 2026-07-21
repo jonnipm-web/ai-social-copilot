@@ -19,7 +19,7 @@ final _iveAgentModeProvider = FutureProvider<bool>((ref) async {
         .select('enabled')
         .eq('feature_name', 'ive_agent_mode')
         .maybeSingle();
-    return (res.data as Map<String, dynamic>?)?['enabled'] == true;
+    return res?['enabled'] == true;
   } catch (_) {
     return false; // fail-safe: erro ou linha ausente → usa legado
   }

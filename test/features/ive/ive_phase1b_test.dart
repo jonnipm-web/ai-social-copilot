@@ -28,7 +28,7 @@ class _FakeGateway implements IveCopilotGateway {
   @override
   Future<Map<String, dynamic>> invoke(IveCopilotRequest request) async {
     callCount++;
-    if (_error != null) throw _error!;
+    if (_error != null) throw _error;
     return _response;
   }
 }
@@ -144,7 +144,6 @@ void main() {
 
     test('2.2 send() rejeita scope.userId diferente do uid atual', () async {
       final gateway = _FakeGateway(response: _validV2Response());
-      final notifier = _makeNotifier(gateway, userId: 'user-correto');
 
       // Forja: cria notifier que pensa ser user-correto mas currentUserId retorna outro
       final forgedNotifier = ContextCopilotNotifier(

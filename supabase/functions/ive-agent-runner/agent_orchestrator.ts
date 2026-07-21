@@ -21,7 +21,7 @@ import type {
 } from './types.ts';
 import type { AIProvider } from './ai_provider.ts';
 import { assistantMsg, systemMsg, toolResultMsg, userMsg } from './ai_provider.ts';
-import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import {
   executeTool,
   getToolDefinitions,

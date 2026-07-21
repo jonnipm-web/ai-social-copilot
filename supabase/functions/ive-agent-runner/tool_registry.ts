@@ -10,7 +10,7 @@
  *   - write tools: somente PROPOSE — EXECUTE requer confirmação do usuário no Flutter
  */
 
-import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import {
   computeEcosystemScores,
   compareScores,

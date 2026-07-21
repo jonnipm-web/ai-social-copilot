@@ -14,7 +14,7 @@
  *   6. Write tools: PROPOSE apenas — EXECUTE requer confirmação do usuário no Flutter
  */
 
-import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient, SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import type { DbProject, ServerContext, DbOpportunity, DbAction, DbKbItem } from './types.ts';
 
 export { SupabaseClient };
