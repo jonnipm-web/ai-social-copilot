@@ -24,12 +24,10 @@ final iveCapabilityFetcherProvider = Provider<IveCapabilityFetcher>((ref) {
 
 Future<bool> _defaultCapabilityFetcher() async {
   try {
-    final response = await Supabase.instance.client.functions
-        .invoke(
-          AppConstants.edgeFunctionAgentRunner,
-          body: const {'capability_check': true},
-        )
-        .timeout(const Duration(seconds: 5));
+    final response = await Supabase.instance.client.functions.invoke(
+      AppConstants.edgeFunctionAgentRunner,
+      body: const {'capability_check': true},
+    );
     final data = response.data;
     if (data is Map) return data['ive_agent_enabled'] == true;
     return false;
