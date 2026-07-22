@@ -35,31 +35,46 @@ jobs:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
       DEFAULT_PROJECT_REF: nzngvbajrnruknpzzjbf
-      TARGET_REF: ${{ inputs.mode == 'rollback' && inputs.rollback_ref != '' && inputs.rollback_ref || inputs.deploy_ref }}
 
     steps:
       - name: Resolve target ref
+        id: resolve_ref
         shell: bash
+        env:
+          DEPLOY_REF: ${{ inputs.deploy_ref }}
+          ROLLBACK_REF: ${{ inputs.rollback_ref }}
+          MODE: ${{ inputs.mode }}
+          CONFIRM_DEPLOY: ${{ inputs.confirm_deploy }}
         run: |
           set -euo pipefail
 
-          if [[ "${{ inputs.confirm_deploy }}" != "DEPLOY" ]]; then
+          if [[ "$CONFIRM_DEPLOY" != "DEPLOY" ]]; then
             echo "Confirmation failed. Use confirm_deploy=DEPLOY."
             exit 1
           fi
 
+          if [[ "$MODE" == "rollback" ]]; then
+            TARGET_REF="$ROLLBACK_REF"
+          else
+            TARGET_REF="$DEPLOY_REF"
+          fi
+
           if [[ -z "${TARGET_REF:-}" ]]; then
             echo "Target ref is empty."
+            echo "Mode: $MODE"
+            echo "Use deploy_ref for deploy mode or rollback_ref for rollback mode."
             exit 1
           fi
 
-          echo "MODE=${{ inputs.mode }}" >> "$GITHUB_ENV"
+          echo "target_ref=$TARGET_REF" >> "$GITHUB_OUTPUT"
+          echo "TARGET_REF=$TARGET_REF" >> "$GITHUB_ENV"
+          echo "MODE=$MODE" >> "$GITHUB_ENV"
 
       - name: Checkout exact ref
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ env.TARGET_REF }}
+          ref: ${{ steps.resolve_ref.outputs.target_ref }}
 
       - name: Resolve SHA and ref safety check
         shell: bash
