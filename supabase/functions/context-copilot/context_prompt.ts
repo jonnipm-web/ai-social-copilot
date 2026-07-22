@@ -5,7 +5,7 @@ export function buildOpportunityContextSection(
   if (opportunities.length) {
     const rows = opportunities
       .slice(0, 5)
-      .map((o) => `• [${o.id}] ${o.title}
+      .map((o) => `• ${o.title} [referência interna=${o.id}]
   Status: ${o.status} | Score final: ${o.final_score}/100 | Mercado: ${o.market_score}/100 | Receita/ROI: ${o.revenue_score}/100
   Fit estratégico: ${o.strategic_fit}/100 | Sinergia: ${o.synergy_score}/100 | Competição: ${o.competition_score}/100 | Confiança: ${o.confidence}/100
   Justificativa: ${o.rationale || o.description || '—'}
@@ -39,17 +39,17 @@ export function buildProjectContextSection(
   if (scores) {
     lines.push(
       '',
-      '## PROJECT_SCORES (hint do cliente vinculado ao PROJECT acima)',
-      `Project ${name} (${id}) — Ecosystem Score: ${scores.ecosystem ?? 0}/100`,
-      `Project ${name} (${id}) — Opportunity Score: ${scores.opportunity ?? 0}/100`,
-      `Project ${name} (${id}) — Strategic Fit: ${scores.strategic_fit ?? 0}/100`,
-      `Project ${name} (${id}) — Synergy: ${scores.synergy ?? 0}/100`,
+      '## INDICADORES ESTRATÉGICOS (hint do cliente vinculado ao projeto acima)',
+      `${name} — Ecosystem Score: ${scores.ecosystem ?? 0}/100`,
+      `${name} — Opportunity Score: ${scores.opportunity ?? 0}/100`,
+      `${name} — Strategic Fit: ${scores.strategic_fit ?? 0}/100`,
+      `${name} — Synergy: ${scores.synergy ?? 0}/100`,
       (scores.roi_data_available === false || scores.roi === null)
-        ? `Project ${name} (${id}) — ROI: Dados indisponíveis (sem métricas registradas)`
-        : `Project ${name} (${id}) — ROI: ${scores.roi ?? 0}/100`,
-      `Project ${name} (${id}) — Momentum: ${scores.momentum ?? 0}/100`,
-      `Project ${name} (${id}) — Market Score: ${scores.market ?? 0}/100`,
-      `Project ${name} (${id}) — Execution Score: ${scores.execution ?? 0}/100`,
+        ? `${name} — ROI: Dados indisponíveis (sem métricas registradas)`
+        : `${name} — ROI: ${scores.roi ?? 0}/100`,
+      `${name} — Momentum: ${scores.momentum ?? 0}/100`,
+      `${name} — Market Score: ${scores.market ?? 0}/100`,
+      `${name} — Execution Score: ${scores.execution ?? 0}/100`,
     );
   }
 

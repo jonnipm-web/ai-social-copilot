@@ -100,7 +100,10 @@ class _IveActionConfirmationCardState extends State<IveActionConfirmationCard> {
                 ),
               ),
             ),
-          Row(
+          Wrap(
+            spacing: 4,
+            runSpacing: 4,
+            alignment: WrapAlignment.end,
             children: [
               TextButton(
                 onPressed: widget.executing ? null : widget.onCancel,
@@ -110,7 +113,6 @@ class _IveActionConfirmationCardState extends State<IveActionConfirmationCard> {
                 onPressed: widget.executing ? null : () => _edit(context),
                 child: const Text('Editar'),
               ),
-              const Spacer(),
               FilledButton.icon(
                 onPressed: widget.executing ? null : widget.onConfirm,
                 icon: widget.executing

@@ -100,6 +100,7 @@ export interface DbRoiMetric {
   id:           string;
   project_id:   string;
   metric_name?: string;
+  metric_type?: string;
   metric_value: number;
   created_at?:  string;
 }
@@ -199,7 +200,7 @@ export interface ToolExecutionContext {
 
 export type ToolResult =
   | { ok: true;  data: Record<string, unknown>; summary: string }
-  | { ok: false; error: string };
+  | { ok: false; error: string; availability?: 'UNAVAILABLE' | 'UNAUTHORIZED' };
 
 // ── Agent Orchestrator ────────────────────────────────────────────────────────
 
@@ -235,4 +236,5 @@ export interface ServerContext {
   kb_items:      DbKbItem[];
   evidence_ids:  Set<string>;
   limitations:   string[];
+  source_status?: Record<string, 'AVAILABLE' | 'EMPTY' | 'UNAVAILABLE' | 'UNAUTHORIZED' | 'NOT_LINKED'>;
 }

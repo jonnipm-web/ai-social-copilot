@@ -55,17 +55,56 @@ final iveAgentModeProvider = FutureProvider<bool>((ref) async {
 
 // ── Gateway selector ───────────────────────────────────────────────────────────
 
-/// Seleciona o gateway correto baseado no resultado da capability check.
+/// Seleciona o gateway correto no momento da invocação, depois que a
+/// capability check terminou.
 ///
 /// [SupabaseIveCopilotGateway] (legado): flag global OFF e uid não em INTERNAL_TESTER_IDS.
 /// [IveAgentGateway]: flag global ON OU uid em INTERNAL_TESTER_IDS (servidor).
 ///
-/// Fail-safe: qualquer erro em [iveAgentModeProvider] → `valueOrNull ?? false` → legado.
+/// Fail-safe: qualquer erro na capability check resulta em `false` e usa o
+/// legado. Um AGENT_DISABLED retornado pelo servidor também recua ao legado.
 final iveCopilotGatewayProvider = Provider<IveCopilotGateway>((ref) {
-  final useAgent = ref.watch(iveAgentModeProvider).valueOrNull ?? false;
-  if (useAgent) return IveAgentGateway(Supabase.instance.client);
-  return SupabaseIveCopilotGateway(Supabase.instance.client);
+  final client = Supabase.instance.client;
+  return IveRoutingGateway(
+    resolveAgentMode: () => ref.read(iveAgentModeProvider.future),
+    agent: IveAgentGateway(client),
+    legacy: SupabaseIveCopilotGateway(client),
+  );
 });
+
+typedef IveAgentModeResolver = Future<bool> Function();
+
+/// Gateway observável e testável. A marca `gateway_used` é metadado interno
+/// de diagnóstico e não contém uid, token ou segredo.
+class IveRoutingGateway implements IveCopilotGateway {
+  final IveAgentModeResolver resolveAgentMode;
+  final IveCopilotGateway agent;
+  final IveCopilotGateway legacy;
+
+  const IveRoutingGateway({
+    required this.resolveAgentMode,
+    required this.agent,
+    required this.legacy,
+  });
+
+  @override
+  Future<Map<String, dynamic>> invoke(IveCopilotRequest request) async {
+    if (await resolveAgentMode()) {
+      try {
+        return _withGateway(await agent.invoke(request), 'ive-agent-runner');
+      } on IveCopilotHttpException catch (error) {
+        if (error.code != 'AGENT_DISABLED') rethrow;
+      }
+    }
+    return _withGateway(await legacy.invoke(request), 'context-copilot');
+  }
+
+  static Map<String, dynamic> _withGateway(
+    Map<String, dynamic> response,
+    String gateway,
+  ) =>
+      <String, dynamic>{...response, 'gateway_used': gateway};
+}
 
 // ── Legacy gateway (context-copilot) ──────────────────────────────────────────
 

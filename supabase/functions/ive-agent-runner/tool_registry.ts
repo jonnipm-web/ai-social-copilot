@@ -176,23 +176,40 @@ register({
       client.from('opportunity_lab').select('id,title,status,final_score,created_at').eq('project_id', targetId).eq('user_id', ctx.uid).order('final_score', { ascending: false }).limit(5),
       client.from('action_queue').select('id,title,status,priority,created_at').eq('project_id', targetId).eq('user_id', ctx.uid).order('priority', { ascending: false }).limit(5),
       client.from('knowledge_items').select('id,title,status').eq('project_id', targetId).eq('user_id', ctx.uid).limit(5),
-      client.from('assets').select('id,title,type,status').eq('project_id', targetId).eq('user_id', ctx.uid).limit(5),
-      client.from('roi_metrics').select('id,metric_name,metric_value').eq('project_id', targetId).eq('user_id', ctx.uid).limit(5),
+      client.from('assets').select('id,name,type,status,metadata').eq('project_id', targetId).eq('user_id', ctx.uid).limit(5),
+      client.from('roi_metrics').select('id,metric_type,metric_value').eq('project_id', targetId).eq('user_id', ctx.uid).limit(5),
     ]);
 
     const project = projRes.data as DbProject | null;
-    if (!project) return { ok: false, error: 'Projeto não encontrado.' };
+    if (projRes.error) return { ok: false, error: 'Projeto indisponível por falha técnica.', availability: 'UNAVAILABLE' };
+    if (!project) return { ok: false, error: 'Projeto não encontrado ou não autorizado.', availability: 'UNAUTHORIZED' };
 
     const opps   = (oppsRes.data  ?? []) as DbOpportunity[];
     const acts   = (actsRes.data  ?? []) as DbAction[];
-    const kbItems= (kbRes.data    ?? []) as DbKbItem[];
+    let kbItems = (kbRes.data ?? []) as DbKbItem[];
+    let kbAvailability = kbItems.length ? 'AVAILABLE' : 'EMPTY';
+    if (kbRes.error?.code === '42703') {
+      const { data: unlinkedKb, error: unlinkedKbError } = await client
+        .from('knowledge_items')
+        .select('id')
+        .eq('user_id', ctx.uid)
+        .limit(1);
+      kbItems = [];
+      kbAvailability = unlinkedKbError
+        ? 'UNAVAILABLE'
+        : (unlinkedKb?.length ?? 0) > 0 ? 'NOT_LINKED' : 'EMPTY';
+    } else if (kbRes.error) {
+      kbAvailability = 'UNAVAILABLE';
+    }
     const assets = (assetRes.data ?? []) as DbAsset[];
     const roi    = (roiRes.data   ?? []) as DbRoiMetric[];
 
     const missingData: string[] = [];
     if (opps.length   === 0) missingData.push('oportunidades (Opportunity Lab vazio)');
     if (acts.length   === 0) missingData.push('ações (Action Engine vazio)');
-    if (kbItems.length=== 0) missingData.push('knowledge base (sem documentos)');
+    if (kbAvailability === 'EMPTY') missingData.push('knowledge base (sem documentos)');
+    if (kbAvailability === 'NOT_LINKED') missingData.push('knowledge base (itens não vinculados ao projeto)');
+    if (kbAvailability === 'UNAVAILABLE') missingData.push('knowledge base (falha técnica)');
     if (assets.length === 0) missingData.push('assets');
     if (roi.length    === 0) missingData.push('métricas de ROI');
 
@@ -220,7 +237,14 @@ register({
         opportunities_summary:{ total: opps.length, top5: opps.map(o => ({ id: o.id, title: o.title, status: o.status, score: o.final_score })) },
         assets_summary:       summarizeAssets(assets),
         knowledge_summary:    summarizeKb(kbItems),
-        roi_metrics:          roi.map(r => ({ name: r.metric_name, value: r.metric_value })),
+        roi_metrics:          roi.map(r => ({ name: r.metric_type, value: r.metric_value })),
+        source_status: {
+          opportunities: oppsRes.error ? 'UNAVAILABLE' : opps.length ? 'AVAILABLE' : 'EMPTY',
+          actions: actsRes.error ? 'UNAVAILABLE' : acts.length ? 'AVAILABLE' : 'EMPTY',
+          knowledge: kbAvailability,
+          assets: assetRes.error ? 'UNAVAILABLE' : assets.length ? 'AVAILABLE' : 'EMPTY',
+          roi: roiRes.error ? 'UNAVAILABLE' : roi.length ? 'AVAILABLE' : 'EMPTY',
+        },
         missing_data:         missingData,
       },
       summary: `Visão geral de "${project.name}": ecosystem=${scores.ecosystemScore}/100, ${missingData.length} dado(s) ausente(s).`,
@@ -328,7 +352,10 @@ register({
       client.from('roi_metrics').select('id,metric_value').eq('project_id', targetId).eq('user_id', ctx.uid),
     ]);
 
-    if (!projRes.data) return { ok: false, error: 'Projeto não encontrado.' };
+    if (projRes.error || oppsRes.error || actsRes.error || roiRes.error) {
+      return { ok: false, error: 'Indicadores indisponíveis por falha técnica em uma das fontes.', availability: 'UNAVAILABLE' };
+    }
+    if (!projRes.data) return { ok: false, error: 'Projeto não encontrado ou não autorizado.', availability: 'UNAUTHORIZED' };
 
     const scores = computeEcosystemScores(
       projRes.data as DbProject,
@@ -353,6 +380,7 @@ register({
         has_enough_data:   scores.hasEnoughData,
         recommendation:    scores.recommendation,
         note:              'Scores calculados pela mesma fórmula do EcosystemIntelligenceService.',
+        availability:      'AVAILABLE',
       },
       summary: `Scores de "${(projRes.data as DbProject).name}": ecosystem=${scores.ecosystemScore}/100, recomendação=${scores.recommendation}`,
     };
@@ -391,10 +419,13 @@ register({
       client.from('projects').select('id,name,priority_score,revenue_potential,time_to_revenue_days,opportunity_score').eq('id', targetId).eq('user_id', ctx.uid).maybeSingle(),
       client.from('opportunity_lab').select('id,project_id,final_score,market_score,revenue_score,strategic_fit,status,created_at').eq('project_id', targetId).eq('user_id', ctx.uid).limit(50),
       client.from('action_queue').select('id,project_id,status,created_at').eq('project_id', targetId).eq('user_id', ctx.uid).limit(50),
-      client.from('roi_metrics').select('id,metric_name,metric_value').eq('project_id', targetId).eq('user_id', ctx.uid),
+      client.from('roi_metrics').select('id,metric_type,metric_value').eq('project_id', targetId).eq('user_id', ctx.uid),
     ]);
 
-    if (!projRes.data) return { ok: false, error: 'Projeto não encontrado.' };
+    if (projRes.error || oppsRes.error || actsRes.error || roiRes.error) {
+      return { ok: false, error: 'Explicação dos indicadores indisponível por falha técnica.', availability: 'UNAVAILABLE' };
+    }
+    if (!projRes.data) return { ok: false, error: 'Projeto não encontrado ou não autorizado.', availability: 'UNAUTHORIZED' };
 
     const project = projRes.data as DbProject;
     const opps    = ((oppsRes.data ?? []) as DbOpportunity[]).filter(o => o.project_id === targetId);
@@ -451,7 +482,7 @@ register({
 
     let query = client
       .from('action_queue')
-      .select('id,project_id,title,description,status,priority,impact_score,effort_score,roi_score,market_score,origin,rationale,created_at')
+      .select('id,project_id,opportunity_lab_id,title,status,priority,impact_score,effort_score,roi_score,created_at')
       .eq('project_id', ctx.projectId)
       .eq('user_id', ctx.uid)
       .order('priority', { ascending: false })
@@ -462,12 +493,12 @@ register({
     }
 
     const { data, error } = await query;
-    if (error) return { ok: false, error: 'Erro ao carregar ações.' };
+    if (error) return { ok: false, error: 'Action Engine indisponível por falha técnica.', availability: 'UNAVAILABLE' };
 
     const actions = ((data ?? []) as DbAction[]).filter(a => a.project_id === ctx.projectId);
     return {
       ok:   true,
-      data: { actions, total: actions.length },
+      data: { actions, total: actions.length, availability: actions.length ? 'AVAILABLE' : 'EMPTY' },
       summary: `${actions.length} ação(ões) encontrada(s)${status && status !== 'all' ? ` com status=${status}` : ''}.`,
     };
   },
@@ -564,7 +595,7 @@ register({
 
     let query = client
       .from('opportunity_lab')
-      .select('id,project_id,title,description,status,opportunity_type,final_score,market_score,revenue_score,competition_score,synergy_score,strategic_fit,confidence,rationale,origin,created_at')
+      .select('id,project_id,title,description,status,opportunity_type,final_score,market_score,revenue_score,competition_score,synergy_score,strategic_fit,created_at')
       .eq('project_id', ctx.projectId)
       .eq('user_id', ctx.uid)
       .order('final_score', { ascending: false })
@@ -575,12 +606,12 @@ register({
     }
 
     const { data, error } = await query;
-    if (error) return { ok: false, error: 'Erro ao carregar oportunidades.' };
+    if (error) return { ok: false, error: 'Opportunity Lab indisponível por falha técnica.', availability: 'UNAVAILABLE' };
 
     const opps = ((data ?? []) as DbOpportunity[]).filter(o => o.project_id === ctx.projectId);
     return {
       ok:   true,
-      data: { opportunities: opps, total: opps.length },
+      data: { opportunities: opps, total: opps.length, availability: opps.length ? 'AVAILABLE' : 'EMPTY' },
       summary: `${opps.length} oportunidade(s) encontrada(s).`,
     };
   },
@@ -617,7 +648,23 @@ register({
       .order('created_at', { ascending: false })
       .limit(50);  // carrega mais para filtrar em memória
 
-    if (error) return { ok: false, error: 'Erro ao buscar knowledge base.' };
+    if (error?.code === '42703') {
+      const { data: unlinked, error: unlinkedError } = await client
+        .from('knowledge_items')
+        .select('id')
+        .eq('user_id', ctx.uid)
+        .limit(1);
+      if (unlinkedError) return { ok: false, error: 'Knowledge Base indisponível por falha técnica.', availability: 'UNAVAILABLE' };
+      const availability = (unlinked?.length ?? 0) > 0 ? 'NOT_LINKED' : 'EMPTY';
+      return {
+        ok: true,
+        data: { items: [], total: 0, availability },
+        summary: availability === 'NOT_LINKED'
+          ? 'Existem itens na Knowledge Base, mas eles não estão vinculados ao projeto ativo.'
+          : 'A Knowledge Base está vazia.',
+      };
+    }
+    if (error) return { ok: false, error: 'Knowledge Base indisponível por falha técnica.', availability: 'UNAVAILABLE' };
 
     let items = ((data ?? []) as DbKbItem[]).filter(k => k.project_id === ctx.projectId);
     if (query) {
@@ -633,6 +680,7 @@ register({
       data: {
         items: items.map(k => ({ id: k.id, title: k.title, status: k.status, niche: k.niche })),
         total: items.length,
+        availability: items.length ? 'AVAILABLE' : 'EMPTY',
         limitation: 'Apenas metadados retornados. Conteúdo integral dos documentos não está disponível neste contexto.',
       },
       summary: `${items.length} item(ns) de knowledge${query ? ` para "${query}"` : ''}.`,
@@ -663,18 +711,18 @@ register({
 
     const { data, error } = await client
       .from('assets')
-      .select('id,project_id,title,type,status,score,created_at')
+      .select('id,project_id,name,type,status,metadata,created_at')
       .eq('project_id', ctx.projectId)
       .eq('user_id', ctx.uid)
       .order('created_at', { ascending: false })
       .limit(limit);
 
-    if (error) return { ok: false, error: 'Erro ao carregar assets.' };
+    if (error) return { ok: false, error: 'Library indisponível por falha técnica.', availability: 'UNAVAILABLE' };
 
     const assets = ((data ?? []) as DbAsset[]).filter(a => a.project_id === ctx.projectId);
     return {
       ok:   true,
-      data: { assets, summary: summarizeAssets(assets), total: assets.length },
+      data: { assets, summary: summarizeAssets(assets), total: assets.length, availability: assets.length ? 'AVAILABLE' : 'EMPTY' },
       summary: `${assets.length} asset(s) encontrado(s).`,
     };
   },

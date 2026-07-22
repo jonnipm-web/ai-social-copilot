@@ -78,7 +78,7 @@ export async function verifyProjectOwnership(
 ): Promise<DbProject> {
   const { data, error } = await client
     .from('projects')
-    .select('id,name,description,type,status,opportunity_score,revenue_potential,priority_score,time_to_revenue_days,market_analysis_id,url,details')
+    .select('id,name,description,type,status,opportunity_score,revenue_potential,priority_score,time_to_revenue_days,market_analysis_id,url,details_json')
     .eq('id', projectId)
     .eq('user_id', uid)   // ownership guard obrigatório
     .maybeSingle();
@@ -123,28 +123,39 @@ export async function loadServerContext(
 ): Promise<ServerContext> {
   const projectId = project.id;
   const limitations: string[] = [];
+  const source_status: NonNullable<ServerContext['source_status']> = {};
 
   // ── Oportunidades ────────────────────────────────────────────────────────
   const { data: opps, error: oppsErr } = await client
     .from('opportunity_lab')
-    .select('id,project_id,title,description,status,opportunity_type,final_score,market_score,revenue_score,competition_score,synergy_score,strategic_fit,origin,rationale,confidence,risks,action_steps,created_at')
+    .select('id,project_id,title,description,status,opportunity_type,final_score,market_score,revenue_score,competition_score,synergy_score,strategic_fit,created_at')
     .eq('user_id', uid)
     .eq('project_id', projectId)
     .order('final_score', { ascending: false })
     .limit(MAX_CONTEXT_ITEMS);
 
-  if (oppsErr) limitations.push('oportunidades indisponíveis');
+  if (oppsErr) {
+    source_status.opportunities = 'UNAVAILABLE';
+    limitations.push('Opportunity Lab: falha técnica ao consultar os dados.');
+  } else {
+    source_status.opportunities = (opps?.length ?? 0) > 0 ? 'AVAILABLE' : 'EMPTY';
+  }
 
   // ── Ações ────────────────────────────────────────────────────────────────
   const { data: acts, error: actsErr } = await client
     .from('action_queue')
-    .select('id,project_id,title,description,status,priority,impact_score,effort_score,roi_score,market_score,origin,rationale,created_at')
+    .select('id,project_id,opportunity_lab_id,title,status,priority,impact_score,effort_score,roi_score,created_at')
     .eq('user_id', uid)
     .eq('project_id', projectId)
     .order('priority', { ascending: false })
     .limit(MAX_CONTEXT_ITEMS);
 
-  if (actsErr) limitations.push('ações indisponíveis');
+  if (actsErr) {
+    source_status.actions = 'UNAVAILABLE';
+    limitations.push('Action Engine: falha técnica ao consultar os dados.');
+  } else {
+    source_status.actions = (acts?.length ?? 0) > 0 ? 'AVAILABLE' : 'EMPTY';
+  }
 
   // ── Knowledge Base ───────────────────────────────────────────────────────
   const { data: kb, error: kbErr } = await client
@@ -155,11 +166,33 @@ export async function loadServerContext(
     .order('created_at', { ascending: false })
     .limit(MAX_CONTEXT_ITEMS);
 
-  if (kbErr) limitations.push('base de conhecimento indisponível');
+  let safeKb = (kb ?? []) as DbKbItem[];
+  if (kbErr?.code === '42703') {
+    const { data: unlinkedKb, error: unlinkedKbErr } = await client
+      .from('knowledge_items')
+      .select('id')
+      .eq('user_id', uid)
+      .limit(1);
+    safeKb = [];
+    if (unlinkedKbErr) {
+      source_status.knowledge = 'UNAVAILABLE';
+      limitations.push('Knowledge Base: falha técnica ao consultar os dados.');
+    } else if ((unlinkedKb?.length ?? 0) > 0) {
+      source_status.knowledge = 'NOT_LINKED';
+      limitations.push('Knowledge Base: existem itens, mas ainda não estão vinculados a este projeto.');
+    } else {
+      source_status.knowledge = 'EMPTY';
+    }
+  } else if (kbErr) {
+    source_status.knowledge = 'UNAVAILABLE';
+    limitations.push('Knowledge Base: falha técnica ao consultar os dados.');
+  } else {
+    source_status.knowledge = safeKb.length > 0 ? 'AVAILABLE' : 'EMPTY';
+  }
 
   const opportunities = (opps ?? []) as DbOpportunity[];
   const actions       = (acts ?? []) as DbAction[];
-  const kb_items      = (kb   ?? []) as DbKbItem[];
+  const kb_items      = safeKb;
 
   // ── ENTITY_ISOLATION ────────────────────────────────────────────────────
   // Defesa secundária: descarta qualquer entidade com project_id divergente
@@ -187,6 +220,7 @@ export async function loadServerContext(
     kb_items,
     evidence_ids,
     limitations,
+    source_status,
   };
 }
 

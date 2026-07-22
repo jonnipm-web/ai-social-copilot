@@ -116,6 +116,7 @@ interface ServerContext {
   kb_items:      Record<string, unknown>[];
   evidence_ids:  Set<string>;
   limitations:   string[];
+  source_status: Record<string, 'AVAILABLE' | 'EMPTY' | 'UNAVAILABLE' | 'UNAUTHORIZED' | 'NOT_LINKED'>;
 }
 
 async function loadServerContext(
@@ -130,6 +131,7 @@ async function loadServerContext(
     kb_items:      [],
     evidence_ids:  new Set(),
     limitations:   [],
+    source_status: {},
   };
 
   // ── Projeto ───────────────────────────────────────────────────────────────
@@ -154,7 +156,7 @@ async function loadServerContext(
   // objeto. Usamos let + reatribuição para que o filtro seja efetivamente aplicado.
   let oppQuery = client
     .from('opportunity_lab')
-    .select('id,project_id,title,description,status,opportunity_type,final_score,market_score,revenue_score,competition_score,synergy_score,strategic_fit,origin,rationale,confidence,risks,action_steps,created_at')
+    .select('id,project_id,title,description,status,opportunity_type,final_score,market_score,revenue_score,competition_score,synergy_score,strategic_fit,created_at')
     .eq('user_id', uid);
 
   if (projectId && ctx.project) {
@@ -165,16 +167,20 @@ async function loadServerContext(
     .order('final_score', { ascending: false })
     .limit(MAX_CONTEXT_ITEMS);
 
-  if (oppsErr) ctx.limitations.push('oportunidades indisponíveis');
+  if (oppsErr) {
+    ctx.source_status.opportunities = 'UNAVAILABLE';
+    ctx.limitations.push('Opportunity Lab: falha técnica ao consultar os dados.');
+  }
   else {
     ctx.opportunities = (opps ?? []) as Record<string, unknown>[];
+    ctx.source_status.opportunities = ctx.opportunities.length ? 'AVAILABLE' : 'EMPTY';
     ctx.opportunities.forEach(o => ctx.evidence_ids.add(o.id as string));
   }
 
   // ── Ações ────────────────────────────────────────────────────────────────
   let actQuery = client
     .from('action_queue')
-    .select('id,project_id,opportunity_lab_id,title,description,status,priority,impact_score,effort_score,roi_score,market_score,origin,rationale,plan,risks,created_at')
+    .select('id,project_id,opportunity_lab_id,title,status,priority,impact_score,effort_score,roi_score,created_at')
     .eq('user_id', uid);
 
   if (projectId && ctx.project) {
@@ -185,9 +191,13 @@ async function loadServerContext(
     .order('priority', { ascending: false })
     .limit(MAX_CONTEXT_ITEMS);
 
-  if (actsErr) ctx.limitations.push('ações indisponíveis');
+  if (actsErr) {
+    ctx.source_status.actions = 'UNAVAILABLE';
+    ctx.limitations.push('Action Engine: falha técnica ao consultar os dados.');
+  }
   else {
     ctx.actions = (acts ?? []) as Record<string, unknown>[];
+    ctx.source_status.actions = ctx.actions.length ? 'AVAILABLE' : 'EMPTY';
     ctx.actions.forEach(a => ctx.evidence_ids.add(a.id as string));
   }
 
@@ -205,9 +215,27 @@ async function loadServerContext(
     .order('created_at', { ascending: false })
     .limit(MAX_CONTEXT_ITEMS);
 
-  if (kbErr) ctx.limitations.push('base de conhecimento indisponível');
-  else {
+  if (kbErr?.code === '42703') {
+    const { data: unlinkedKb, error: unlinkedKbErr } = await client
+      .from('knowledge_items')
+      .select('id')
+      .eq('user_id', uid)
+      .limit(1);
+    if (unlinkedKbErr) {
+      ctx.source_status.knowledge = 'UNAVAILABLE';
+      ctx.limitations.push('Knowledge Base: falha técnica ao consultar os dados.');
+    } else if ((unlinkedKb?.length ?? 0) > 0) {
+      ctx.source_status.knowledge = 'NOT_LINKED';
+      ctx.limitations.push('Knowledge Base: existem itens, mas ainda não estão vinculados a este projeto.');
+    } else {
+      ctx.source_status.knowledge = 'EMPTY';
+    }
+  } else if (kbErr) {
+    ctx.source_status.knowledge = 'UNAVAILABLE';
+    ctx.limitations.push('Knowledge Base: falha técnica ao consultar os dados.');
+  } else {
     ctx.kb_items = (kb ?? []) as Record<string, unknown>[];
+    ctx.source_status.knowledge = ctx.kb_items.length ? 'AVAILABLE' : 'EMPTY';
     ctx.kb_items.forEach(k => ctx.evidence_ids.add(k.id as string));
   }
 
@@ -392,7 +420,7 @@ function buildSystemPrompt(
     const acts = serverCtx.actions
       .slice(0, 5)
       .map(a =>
-        `• [${a.id}] ${a.title}` +
+        `• ${a.title} [referência interna=${a.id}]` +
         ` [status=${a.status}, prioridade=${a.priority},` +
         ` impacto=${a.impact_score}, esforço=${a.effort_score}, ROI=${a.roi_score}]`,
       )
@@ -403,7 +431,7 @@ function buildSystemPrompt(
   if (serverCtx.kb_items.length) {
     const kb = serverCtx.kb_items
       .slice(0, 3)
-      .map(k => `• [${k.id}] ${k.title}`)
+      .map(k => `• ${k.title} [referência interna=${k.id}]`)
       .join('\n');
     lines.push(`\n## BASE DE CONHECIMENTO (${serverCtx.kb_items.length} itens, fonte: servidor)\n${kb}`);
   }
@@ -441,11 +469,11 @@ RECOMENDAR: Próximas ações, prioridades e riscos com base nos dados carregado
 
 1. ISOLAMENTO: Responda EXCLUSIVAMENTE com dados do PROJECT identificado acima. Nunca mencione dados de outro projeto que não esteja carregado.
 
-2. GROUNDING OBRIGATÓRIO: Toda afirmação estratégica deve citar a fonte exata (ID [uuid] ou seção do contexto). Nunca escreva "com base no contexto disponível" sem listar quais dados específicos foram usados. Cite: nome da entidade + ID + valor relevante.
+2. GROUNDING OBRIGATÓRIO: Toda afirmação estratégica deve estar apoiada nas entidades e valores do contexto. IDs permanecem internos para auditoria; cite ao usuário o nome amigável da entidade, a fonte humana e o valor relevante.
 
 3. DADOS AUSENTES: Se os dados necessários para responder não estão no contexto, declare EXATAMENTE o que está faltando. Não invente dados para preencher lacunas.
 
-4. SCORES: Cite apenas scores do bloco PROJECT_SCORES vinculados ao projeto identificado por name e id. Nunca descreva esses scores como globais do ecossistema. ${scores && !hasEnoughData ? 'ATENÇÃO: scores são provisórios — veja AVISO acima.' : ''}
+4. SCORES: Cite apenas scores do bloco INDICADORES ESTRATÉGICOS vinculados ao projeto identificado. Nunca descreva esses scores como globais do ecossistema. ${scores && !hasEnoughData ? 'ATENÇÃO: scores são provisórios — veja AVISO acima.' : ''}
 
 5. COMPARAÇÃO ENTRE PROJETOS: Se o usuário pede comparação com outro projeto que NÃO está carregado no bloco PROJECT, responda: "Posso analisar [nome do projeto ativo] agora. Para comparar com [outro projeto], preciso abrir/carregar também os dados autorizados desse projeto — selecione-o primeiro." Nunca invente scores do segundo projeto.
 
@@ -455,7 +483,7 @@ RECOMENDAR: Próximas ações, prioridades e riscos com base nos dados carregado
 
 8. Seja direto e objetivo — máximo 4 parágrafos curtos. Use dados numéricos sempre que disponíveis.
 
-9. Quando citar entidades, use os IDs exatos do contexto: [uuid].
+9. Nunca exponha UUIDs, project_id, nomes de tabela, PROJECT_SCORES ou outros marcadores internos na resposta visual. Use nomes amigáveis e o label "Indicadores estratégicos". Preserve os IDs apenas no payload de evidência.
 
 10. Responda sempre em Português do Brasil.
 
@@ -768,6 +796,8 @@ serve(async (req) => {
     project_id:         serverCtx.project?.id ?? null,
     evidence,
     limitations:        serverCtx.limitations,
+    source_status:      serverCtx.source_status,
+    gateway_used:       'context-copilot',
     proposed_action:    actionProposal,
     prompt_version:     PROMPT_VERSION,
     model:              GROQ_MODEL,

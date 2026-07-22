@@ -291,6 +291,8 @@ class IveCopilotResponse {
   final IveProposedAction? proposedAction;
   final String? model;
   final String? promptVersion;
+  final String? gatewayUsed;
+  final Map<String, String> sourceStatus;
   final DateTime? serverTimestamp;
   final int confidence;
   final List<String> legacySources;
@@ -309,6 +311,8 @@ class IveCopilotResponse {
     this.proposedAction,
     this.model,
     this.promptVersion,
+    this.gatewayUsed,
+    this.sourceStatus = const {},
     this.serverTimestamp,
     required this.confidence,
     this.legacySources = const [],
@@ -399,6 +403,12 @@ class IveCopilotResponse {
       proposedAction: proposedAction,
       model: data['model'] as String?,
       promptVersion: data['prompt_version'] as String?,
+      gatewayUsed: data['gateway_used'] as String?,
+      sourceStatus: data['source_status'] is Map
+          ? Map<String, dynamic>.from(data['source_status'] as Map).map(
+              (key, value) => MapEntry(key, value.toString()),
+            )
+          : const {},
       serverTimestamp: DateParser.parseOrNull(
         data['server_timestamp'] ?? data['timestamp'],
       ),

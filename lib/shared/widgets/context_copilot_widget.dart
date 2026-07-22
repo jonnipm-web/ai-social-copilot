@@ -8,6 +8,7 @@ import '../../data/models/copilot_turn.dart';
 import '../../data/models/action_queue_item.dart';
 import '../../data/models/project.dart';
 import '../../features/ive/domain/ive_presentation_state.dart';
+import '../../features/ive/domain/ive_presentation_sanitizer.dart';
 import '../../providers/action_queue_provider.dart';
 import '../../providers/context_copilot_provider.dart';
 import '../../providers/ecosystem_intelligence_provider.dart';
@@ -247,7 +248,7 @@ class _CopilotSheet extends ConsumerStatefulWidget {
 
 class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
   final _controller = TextEditingController();
-  final _scrollController = ScrollController();
+  ScrollController? _scrollController;
   bool _initialMessageSent = false;
   bool _selectorVisible = false;
   bool _selectingProject = false;
@@ -264,7 +265,6 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
   @override
   void dispose() {
     _controller.dispose();
-    _scrollController.dispose();
     super.dispose();
   }
 
@@ -352,9 +352,10 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
   }
 
   void _scrollToBottom() {
-    if (!_scrollController.hasClients) return;
-    _scrollController.animateTo(
-      _scrollController.position.maxScrollExtent,
+    final scrollController = _scrollController;
+    if (scrollController == null || !scrollController.hasClients) return;
+    scrollController.animateTo(
+      scrollController.position.maxScrollExtent,
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOut,
     );
@@ -404,102 +405,112 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
       initialChildSize: 0.68,
       minChildSize: 0.42,
       maxChildSize: 0.94,
-      builder: (_, __) => Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFF1E1B2E),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          children: [
-            _handle(),
-            _header(state, scope),
-            _projectBadge(project?.name),
-            if (project == null || _selectorVisible) _projectSelector(),
-            if (_resolvedEntityLabel != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Contexto: $_resolvedEntityLabel',
-                    key: const ValueKey('ive-chat-entity-context'),
-                    style: const TextStyle(
-                      color: Color(0xFF9B8FFF),
-                      fontSize: 12,
+      builder: (_, sheetScrollController) {
+        _scrollController = sheetScrollController;
+        return Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFF1E1B2E),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              _handle(),
+              _header(state, scope),
+              _projectBadge(project?.name),
+              if (project == null || _selectorVisible) _projectSelector(),
+              if (_resolvedEntityLabel != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Contexto: $_resolvedEntityLabel',
+                      key: const ValueKey('ive-chat-entity-context'),
+                      style: const TextStyle(
+                        color: Color(0xFF9B8FFF),
+                        fontSize: 12,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            if (liveContext.isLoading)
-              const LinearProgressIndicator(
-                minHeight: 2,
-                color: Color(0xFF6C63FF),
-                backgroundColor: Colors.transparent,
-              ),
-            const Divider(color: Colors.white12, height: 1),
-            Expanded(
-              child: state.turns.isEmpty
-                  ? _empty(project != null)
-                  : _messages(state.turns),
-            ),
-            if (state.evidence.isNotEmpty || state.limitations.isNotEmpty)
-              IveResponseContextPanel(
-                evidence: state.evidence,
-                limitations: state.limitations,
-              ),
-            if (state.pendingProposal != null)
-              IveActionConfirmationCard(
-                proposal: state.pendingProposal!,
-                executing: state.executing,
-                onConfirm: () => ref
-                    .read(contextCopilotProvider(scope).notifier)
-                    .confirmProposal(),
-                onCancel: () => ref
-                    .read(contextCopilotProvider(scope).notifier)
-                    .cancelProposal(),
-                onEdit: ({
-                  required title,
-                  required description,
-                  required priority,
-                  required impact,
-                  required effort,
-                }) =>
-                    ref
-                        .read(contextCopilotProvider(scope).notifier)
-                        .reviseProposal(
-                          title: title,
-                          description: description,
-                          priority: priority,
-                          impact: impact,
-                          effort: effort,
-                        ),
-              ),
-            if (state.lastExecution != null)
-              _executionResult(context, state.lastExecution!.action),
-            if (state.error != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 6, 16, 2),
-                child: Row(
-                  children: [
-                    const Icon(Icons.error_outline_rounded,
-                        color: Colors.orangeAccent, size: 16),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        state.error!,
-                        style: const TextStyle(
-                            color: Colors.orangeAccent, fontSize: 12),
+              if (liveContext.isLoading)
+                const LinearProgressIndicator(
+                  minHeight: 2,
+                  color: Color(0xFF6C63FF),
+                  backgroundColor: Colors.transparent,
+                ),
+              const Divider(color: Colors.white12, height: 1),
+              Expanded(
+              child: IveConversationScroll(
+                controller: sheetScrollController,
+                children: [
+                    if (state.turns.isEmpty)
+                      _empty(project != null)
+                    else
+                      ...state.turns.map((turn) => _TurnBubble(turn: turn)),
+                    if (state.evidence.isNotEmpty ||
+                        state.limitations.isNotEmpty)
+                      IveResponseContextPanel(
+                        evidence: state.evidence,
+                        limitations: state.limitations,
                       ),
-                    ),
+                    if (state.pendingProposal != null)
+                      IveActionConfirmationCard(
+                        proposal: state.pendingProposal!,
+                        executing: state.executing,
+                        onConfirm: () => ref
+                            .read(contextCopilotProvider(scope).notifier)
+                            .confirmProposal(),
+                        onCancel: () => ref
+                            .read(contextCopilotProvider(scope).notifier)
+                            .cancelProposal(),
+                        onEdit: ({
+                          required title,
+                          required description,
+                          required priority,
+                          required impact,
+                          required effort,
+                        }) =>
+                            ref
+                                .read(contextCopilotProvider(scope).notifier)
+                                .reviseProposal(
+                                  title: title,
+                                  description: description,
+                                  priority: priority,
+                                  impact: impact,
+                                  effort: effort,
+                                ),
+                      ),
+                    if (state.lastExecution != null)
+                      _executionResult(context, state.lastExecution!.action),
+                    if (state.error != null) _errorMessage(state.error!),
+                    const SizedBox(height: 8),
                   ],
                 ),
               ),
-            _input(state.loading || state.executing, canChat),
-          ],
-        ),
-      ),
+              _input(state.loading || state.executing, canChat),
+            ],
+          ),
+        );
+      },
     );
   }
+
+  Widget _errorMessage(String message) => Padding(
+        padding: const EdgeInsets.fromLTRB(4, 6, 4, 2),
+        child: Row(
+          children: [
+            const Icon(Icons.error_outline_rounded,
+                color: Colors.orangeAccent, size: 16),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(message,
+                  style: const TextStyle(
+                      color: Colors.orangeAccent, fontSize: 12)),
+            ),
+          ],
+        ),
+      );
 
   Widget _handle() => Center(
         child: Container(
@@ -651,8 +662,8 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
     }
   }
 
-  Widget _empty(bool hasProject) => SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+  Widget _empty(bool hasProject) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -697,13 +708,6 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
               textAlign: TextAlign.center,
               style: const TextStyle(color: Color(0xFF9B8FFF), fontSize: 12)),
         ),
-      );
-
-  Widget _messages(List<CopilotTurn> turns) => ListView.builder(
-        controller: _scrollController,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        itemCount: turns.length,
-        itemBuilder: (_, index) => _TurnBubble(turn: turns[index]),
       );
 
   Widget _executionResult(BuildContext context, ActionQueueItem action) =>
@@ -832,7 +836,10 @@ class _TurnBubble extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(turn.content,
+            Text(
+                isUser
+                    ? turn.content
+                    : sanitizeIvePresentationText(turn.content),
                 style: const TextStyle(color: Colors.white, height: 1.4)),
             if (!isUser && turn.sources.isNotEmpty)
               Padding(
@@ -860,4 +867,24 @@ class _TurnBubble extends StatelessWidget {
       ),
     );
   }
+}
+
+@visibleForTesting
+class IveConversationScroll extends StatelessWidget {
+  final ScrollController controller;
+  final List<Widget> children;
+
+  const IveConversationScroll({
+    super.key,
+    required this.controller,
+    required this.children,
+  });
+
+  @override
+  Widget build(BuildContext context) => ListView(
+        key: const ValueKey('ive-conversation-scroll'),
+        controller: controller,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        children: children,
+      );
 }

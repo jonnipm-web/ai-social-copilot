@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter/foundation.dart' show debugPrint, visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -49,6 +49,8 @@ class CopilotState {
   final List<String> limitations;
   final String? responseId;
   final String? correlationId;
+  final String? gatewayUsed;
+  final Map<String, String> sourceStatus;
 
   const CopilotState({
     this.turns = const [],
@@ -61,6 +63,8 @@ class CopilotState {
     this.limitations = const [],
     this.responseId,
     this.correlationId,
+    this.gatewayUsed,
+    this.sourceStatus = const {},
   });
 
   CopilotState copyWith({
@@ -77,6 +81,8 @@ class CopilotState {
     List<String>? limitations,
     String? responseId,
     String? correlationId,
+    String? gatewayUsed,
+    Map<String, String>? sourceStatus,
     bool clearResponseContext = false,
   }) =>
       CopilotState(
@@ -95,6 +101,11 @@ class CopilotState {
             clearResponseContext ? null : (responseId ?? this.responseId),
         correlationId:
             clearResponseContext ? null : (correlationId ?? this.correlationId),
+        gatewayUsed:
+            clearResponseContext ? null : (gatewayUsed ?? this.gatewayUsed),
+        sourceStatus: clearResponseContext
+            ? const {}
+            : (sourceStatus ?? this.sourceStatus),
       );
 
   CopilotState preserveForFailure(String message) => copyWith(
@@ -218,6 +229,7 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
         requestCorrelationId: request.correlationId,
         allowedOpportunityIds: allowedOpportunityIds,
       );
+      debugPrint('IVE_GATEWAY_USED: ${response.gatewayUsed ?? 'unknown'}');
 
       IveActionProposal? proposal;
       if (response.proposedAction != null) {
@@ -262,6 +274,8 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
         limitations: response.limitations,
         responseId: response.responseId,
         correlationId: response.correlationId,
+        gatewayUsed: response.gatewayUsed,
+        sourceStatus: response.sourceStatus,
         clearError: true,
       );
     } on IveCopilotHttpException catch (error) {

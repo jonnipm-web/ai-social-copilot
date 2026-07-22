@@ -300,13 +300,14 @@ void main() {
     expect(_actionB.toInsertMap(), isNot(contains('confidence')));
   });
 
-  test('10. project scores são rotulados com id e nome', () {
+  test('10. indicadores usam nome amigável sem expor id', () {
     final source = File(
       'supabase/functions/context-copilot/context_prompt.ts',
     ).readAsStringSync();
     expect(source, contains('## PROJECT (validado pelo servidor)'));
-    expect(source, contains('## PROJECT_SCORES'));
-    expect(source, contains(r'Project ${name} (${id}) — Ecosystem Score'));
+    expect(source, contains('## INDICADORES ESTRATÉGICOS'));
+    expect(source, contains(r'${name} — Ecosystem Score'));
+    expect(source, isNot(contains(r'Project ${name} (${id})')));
   });
 
   test('11. prompt proíbe tratar score do projeto como global', () {

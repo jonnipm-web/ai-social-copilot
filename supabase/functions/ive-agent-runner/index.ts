@@ -306,6 +306,8 @@ serve(async (req) => {
     project_id:      project.id,
     evidence:        result.evidence,
     limitations:     result.limitations,
+    source_status:   serverCtx.source_status ?? {},
+    gateway_used:    'ive-agent-runner',
     proposed_action: result.proposedAction,
     prompt_version:  result.promptVersion,
     model:           result.model,

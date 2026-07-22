@@ -54,13 +54,13 @@ function buildAgentSystemPrompt(
 
   const opportunitiesCtx = serverCtx.opportunities.length > 0
     ? serverCtx.opportunities.slice(0, 5).map(o =>
-        `• [${o.id}] ${o.title} [score=${o.final_score}, status=${o.status}]`,
+        `• ${o.title} [referência interna=${o.id}, score=${o.final_score}, status=${o.status}]`,
       ).join('\n')
     : 'Nenhuma oportunidade registrada neste projeto.';
 
   const actionsCtx = serverCtx.actions.length > 0
     ? serverCtx.actions.slice(0, 5).map(a =>
-        `• [${a.id}] ${a.title} [status=${a.status}, prioridade=${a.priority}]`,
+        `• ${a.title} [referência interna=${a.id}, status=${a.status}, prioridade=${a.priority}]`,
       ).join('\n')
     : 'Nenhuma ação registrada neste projeto.';
 
@@ -114,6 +114,8 @@ FERRAMENTAS DISPONÍVEIS:
 3. DADOS AUSENTES: Se os dados não estão disponíveis, declare o que está faltando. Não invente. Use as ferramentas para buscar dados ausentes.
 
 4. SCORES: Cite apenas scores recuperados via score_get. O valor exibido é idêntico ao da UI. ${!hasEnoughData ? 'ATENÇÃO: scores são provisórios.' : ''}
+
+5. APRESENTAÇÃO: IDs, UUIDs, project_id, nomes de tabela e marcadores internos são apenas para grounding. Nunca os mostre na resposta ao usuário. Use nomes amigáveis das entidades e o label "Indicadores estratégicos".
 
 5. COMPARAÇÃO: Para comparar projetos, use project_find para localizar cada projeto, depois project_compare. Nunca invente scores de projetos não carregados.
 

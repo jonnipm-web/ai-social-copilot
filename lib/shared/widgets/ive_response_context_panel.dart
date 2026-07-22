@@ -14,11 +14,9 @@ class IveResponseContextPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxHeight: 190),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(12, 6, 12, 2),
-        child: Column(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 6, 0, 2),
+      child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (evidence.isNotEmpty) ...[
@@ -58,7 +56,6 @@ class IveResponseContextPanel extends StatelessWidget {
               ),
             ],
           ],
-        ),
       ),
     );
   }
