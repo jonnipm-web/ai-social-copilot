@@ -233,7 +233,9 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
               onTap: () {
                 if (_dragging) return;
                 _debugTap('IVE_AVATAR_TAP');
-                ref.read(iveProvider.notifier).dismissBubble();
+                if (state.bubbleVisible) {
+                  ref.read(iveProvider.notifier).dismissBubble();
+                }
                 _openChat(context, state.screenName);
               },
               child: SizedBox(
