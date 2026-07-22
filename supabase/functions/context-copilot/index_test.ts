@@ -397,7 +397,7 @@ Deno.test('21. contexto de oportunidades limita volume sem misturar fontes', () 
   assert(!section.includes('opp-5'), 'sexta oportunidade fica fora do limite');
 });
 
-Deno.test('22. scores são vinculados explicitamente ao projeto', () => {
+Deno.test('22. scores usam nome amigável e mantêm id apenas no contexto interno', () => {
   const section = buildProjectContextSection(
     { id: 'project-rcbo', name: 'PROJETO RCBO BRASIL', status: 'active' },
     {
@@ -415,9 +415,10 @@ Deno.test('22. scores são vinculados explicitamente ao projeto', () => {
   assertContains(section, 'name: PROJETO RCBO BRASIL', 'deve identificar projectName');
   assertContains(
     section,
-    'Project PROJETO RCBO BRASIL (project-rcbo) — Ecosystem Score: 45/100',
-    'score deve pertencer explicitamente ao projeto',
+    'PROJETO RCBO BRASIL — Ecosystem Score: 45/100',
+    'score deve usar o nome amigável do projeto',
   );
+  assert(!section.includes('Project PROJETO RCBO BRASIL (project-rcbo)'), 'score visual não repete o id');
 });
 
 // ── Testes de isolamento e novos campos (P0.1 / Etapa 2) ─────────────────────
@@ -500,7 +501,7 @@ Deno.test('29. validateActionProposal — focus_entity_id preservado quando stri
   assertEquals(result!.focus_entity_id as string, 'opp-xyz', 'focus_entity_id preservado');
 });
 
-Deno.test('30. buildOpportunityContextSection — IDs de entidades citados explicitamente para grounding', () => {
+Deno.test('30. buildOpportunityContextSection — ID preservado como referência interna', () => {
   const section = buildOpportunityContextSection([{
     id: 'opp-grounding-test',
     title: 'Oportunidade de Grounding',
@@ -514,7 +515,8 @@ Deno.test('30. buildOpportunityContextSection — IDs de entidades citados expli
     confidence: 72,
     rationale: 'Alta demanda no nicho',
   }], true);
-  assertContains(section, '[opp-grounding-test]', 'ID da entidade deve aparecer para grounding');
+  assertContains(section, 'referência interna=opp-grounding-test', 'ID permanece disponível para grounding interno');
+  assert(!section.includes('[opp-grounding-test]'), 'ID não usa formato de citação visual');
 });
 
 Deno.test('31. Isolamento — evidence_ids reconstruído a partir do conjunto limpo', () => {
@@ -527,16 +529,17 @@ Deno.test('31. Isolamento — evidence_ids reconstruído a partir do conjunto li
   assert(!evidence_ids.has('opp-ruim'), 'opp de outro projeto não está em evidence_ids');
 });
 
-Deno.test('32. buildProjectContextSection — scores vinculados por nome E id juntos', () => {
+Deno.test('32. buildProjectContextSection — score visual usa nome sem id', () => {
   const section = buildProjectContextSection(
     { id: 'uuid-proj-test', name: 'Projeto Teste' },
     { ecosystem: 55, opportunity: 70, roi: 40, roi_data_available: true },
   );
   assertContains(
     section,
-    'Project Projeto Teste (uuid-proj-test) — Ecosystem Score: 55/100',
-    'score deve incluir nome E id do projeto explicitamente',
+    'Projeto Teste — Ecosystem Score: 55/100',
+    'score deve incluir o nome amigável',
   );
+  assert(!section.includes('Project Projeto Teste (uuid-proj-test)'), 'score não deve expor id');
 });
 
 Deno.test('33. Isolamento — ação de projeto diferente é descartada', () => {

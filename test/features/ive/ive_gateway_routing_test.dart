@@ -20,11 +20,11 @@ import 'package:flutter_test/flutter_test.dart';
 Future<bool> _noUidFetcher() async => false;
 
 class _RecordingGateway implements IveCopilotGateway {
-  final Map<String, dynamic> response;
+  final Map<String, dynamic> response = const {'answer': 'ok'};
   final Object? error;
   int calls = 0;
 
-  _RecordingGateway({this.response = const {'answer': 'ok'}, this.error});
+  _RecordingGateway({this.error});
 
   @override
   Future<Map<String, dynamic>> invoke(IveCopilotRequest request) async {
