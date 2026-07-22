@@ -1,0 +1,187 @@
+name: Deploy IVE Backend — Controlled
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_ref:
+        description: Git ref ou SHA exato a implantar
+        required: true
+        type: string
+      confirm_deploy:
+        description: Digite DEPLOY para confirmar
+        required: true
+        type: string
+      mode:
+        description: Modo de operação
+        required: true
+        default: deploy
+        type: choice
+        options:
+          - deploy
+          - rollback
+      rollback_ref:
+        description: SHA ou ref conhecido para rollback determinístico
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-ive-backend:
+    runs-on: ubuntu-latest
+
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      DEFAULT_PROJECT_REF: nzngvbajrnruknpzzjbf
+      TARGET_REF: ${{ inputs.mode == 'rollback' && inputs.rollback_ref != '' && inputs.rollback_ref || inputs.deploy_ref }}
+
+    steps:
+      - name: Resolve target ref
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ inputs.confirm_deploy }}" != "DEPLOY" ]]; then
+            echo "Confirmation failed. Use confirm_deploy=DEPLOY."
+            exit 1
+          fi
+
+          if [[ -z "${TARGET_REF:-}" ]]; then
+            echo "Target ref is empty."
+            exit 1
+          fi
+
+          echo "MODE=${{ inputs.mode }}" >> "$GITHUB_ENV"
+
+      - name: Checkout exact ref
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ env.TARGET_REF }}
+
+      - name: Resolve SHA and ref safety check
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          REQUESTED_SHA="$(git rev-parse "$TARGET_REF")"
+          ACTUAL_SHA="$(git rev-parse HEAD)"
+          CURRENT_REF="$(git branch --show-current)"
+
+          if [[ "$REQUESTED_SHA" != "$ACTUAL_SHA" ]]; then
+            echo "HEAD mismatch."
+            echo "Requested: $REQUESTED_SHA"
+            echo "Actual:    $ACTUAL_SHA"
+            exit 1
+          fi
+
+          echo "DEPLOY_SHA=$ACTUAL_SHA" >> "$GITHUB_ENV"
+          echo "CHECKED_OUT_REF=$CURRENT_REF" >> "$GITHUB_ENV"
+
+          {
+            echo "Resolved SHA: $ACTUAL_SHA"
+            echo "Resolved ref: ${CURRENT_REF:-detached}"
+            echo "Functions:"
+            echo "- context-copilot"
+            echo "- ive-agent-runner"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Validate required files exist
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test -f supabase/functions/context-copilot/index.ts
+          test -f supabase/functions/context-copilot/index_test.ts
+          test -f supabase/functions/ive-agent-runner/index.ts
+          test -f supabase/functions/ive-agent-runner/index_test.ts
+
+      - name: Install Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Deno test context-copilot
+        id: deno_context
+        shell: bash
+        run: |
+          set -euo pipefail
+          deno test --allow-env supabase/functions/context-copilot/index_test.ts
+
+      - name: Deno test ive-agent-runner
+        id: deno_agent
+        shell: bash
+        run: |
+          set -euo pipefail
+          deno test --allow-env supabase/functions/ive-agent-runner/index_test.ts
+
+      - name: Resolve project ref
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -n "${SUPABASE_PROJECT_REF:-}" ]]; then
+            PROJECT_REF="$SUPABASE_PROJECT_REF"
+          else
+            PROJECT_REF="$DEFAULT_PROJECT_REF"
+          fi
+
+          echo "PROJECT_REF=$PROJECT_REF" >> "$GITHUB_ENV"
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Login and link to Supabase project
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase login --token "$SUPABASE_ACCESS_TOKEN"
+          supabase link --project-ref "$PROJECT_REF"
+
+      - name: Deploy context-copilot
+        id: deploy_context
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase functions deploy context-copilot \
+            --project-ref "$PROJECT_REF" \
+            --no-verify-jwt
+
+      - name: Deploy ive-agent-runner
+        id: deploy_agent
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase functions deploy ive-agent-runner \
+            --project-ref "$PROJECT_REF" \
+            --no-verify-jwt
+
+      - name: Final summary
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          TS="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          DENO_CONTEXT_STATUS="${{ steps.deno_context.outcome == 'success' && 'PASS' || 'FAIL' }}"
+          DENO_AGENT_STATUS="${{ steps.deno_agent.outcome == 'success' && 'PASS' || 'FAIL' }}"
+          DEPLOY_CONTEXT_STATUS="${{ steps.deploy_context.outcome == 'success' && 'PASS' || 'FAIL' }}"
+          DEPLOY_AGENT_STATUS="${{ steps.deploy_agent.outcome == 'success' && 'PASS' || 'FAIL' }}"
+          {
+            echo "Mode: ${MODE:-unknown}"
+            echo "Resolved SHA: ${DEPLOY_SHA:-unknown}"
+            echo "Resolved ref: ${CHECKED_OUT_REF:-detached}"
+            echo "Project ref: ${PROJECT_REF:-unknown}"
+            echo "Functions:"
+            echo "- context-copilot"
+            echo "- ive-agent-runner"
+            echo "Deno context-copilot: $DENO_CONTEXT_STATUS"
+            echo "Deno ive-agent-runner: $DENO_AGENT_STATUS"
+            echo "Deploy context-copilot: $DEPLOY_CONTEXT_STATUS"
+            echo "Deploy ive-agent-runner: $DEPLOY_AGENT_STATUS"
+            echo "Timestamp: $TS"
+            echo "JWT deploy mode: --no-verify-jwt"
+          } >> "$GITHUB_STEP_SUMMARY"
