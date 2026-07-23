@@ -52,6 +52,18 @@
 **Impacto:** Projetos novos têm ecosystem_score artificialmente baixo.
 **Resolução:** UI deve exibir claramente que o score é parcial quando has_enough_data=false.
 
+### KI-013: IveRoutingGateway não cobria fallback para exceções não-IveCopilotHttpException
+**Status:** RESOLVIDO (hotfix H2)
+**Descrição:** `IveRoutingGateway.invoke()` só capturava `IveCopilotHttpException`. Exceções inesperadas do agent (ex: `SocketException`, `FormatException`) propagavam para fora sem atingir o branch de fallback para o legado. Adicionalmente, se `resolveAgentMode()` lançasse, a exceção subia sem fallback.
+**Fix:** Adicionado `try-catch` ao redor de `resolveAgentMode()` (default: false → legado) e adicionado `catch (e)` genérico após o handler tipado para log + fallback a `context-copilot`.
+**Arquivos:** `lib/features/ive/services/ive_copilot_gateway.dart`
+
+### KI-014: saveAnalysis sobrescrevia análise anterior silenciosamente
+**Status:** RESOLVIDO (hotfix H1)
+**Descrição:** `KnowledgeService.saveAnalysis()` fazia upsert por `knowledge_item_id` (comportamento intencional — 1 análise por item), mas sem nenhum rastro da análise anterior.
+**Fix:** Antes do upsert, lê a análise existente e persiste `score_opportunity` + `replaced_at` em `scoreDetails['_prev']` (campo JSONB existente). Sem migration. O score anterior é rastreável via `knowledge_analysis.score_details._prev`.
+**Arquivos:** `lib/data/services/knowledge_service.dart`
+
 ### KI-007: Timeout .timeout(5s) removido da capability check
 **Status:** RESOLVIDO (commit 29b78a9)
 **Descrição:** O `.timeout(const Duration(seconds: 5))` em `_defaultCapabilityFetcher` causava timer leaking em widget tests (39 falhas). Removido em 29b78a9 e substituído por queries DB em 10fbc4f.

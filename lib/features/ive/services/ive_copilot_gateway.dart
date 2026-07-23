@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -101,11 +102,29 @@ class IveRoutingGateway implements IveCopilotGateway {
 
   @override
   Future<Map<String, dynamic>> invoke(IveCopilotRequest request) async {
-    if (await resolveAgentMode()) {
+    // Gap 1: resolveAgentMode() can throw if the Riverpod ref is disposed.
+    // Default to false so we reach legacy rather than surfacing a raw error.
+    bool agentEnabled = false;
+    try {
+      agentEnabled = await resolveAgentMode();
+    } catch (_) {
+      // capability check failed → legacy
+    }
+
+    if (agentEnabled) {
       try {
         return _withGateway(await agent.invoke(request), 'ive-agent-runner');
       } on IveCopilotHttpException catch (error) {
+        // AGENT_DISABLED (503): server says feature is off → fall through to legacy.
+        // All other IveCopilotHttpException (401, 404, TIMEOUT…) → rethrow so
+        // the caller receives a meaningful, typed error instead of a silent fallback.
         if (error.code != 'AGENT_DISABLED') rethrow;
+      } catch (e) {
+        // Gap 2: unexpected (non-IveCopilotHttpException) exceptions — e.g.
+        // SocketException, FormatException — were not caught by the typed handler
+        // above and would escape invoke() without reaching the legacy branch.
+        // Fall through to legacy and log so the issue is visible.
+        debugPrint('[IveRoutingGateway] unexpected agent error, falling back to legacy: $e');
       }
     }
     return _withGateway(await legacy.invoke(request), 'context-copilot');

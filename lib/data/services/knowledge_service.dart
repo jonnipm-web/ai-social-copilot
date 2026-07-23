@@ -84,13 +84,34 @@ class KnowledgeService {
     return (rows as List).map((r) => KnowledgeAnalysis.fromMap(r)).toList();
   }
 
+  // Design: one analysis per knowledge_item_id (UNIQUE constraint on DB).
+  // Re-analysis replaces the current result — this is intentional because the
+  // analysis always reflects the item's latest content.
+  // To preserve traceability without a migration, we embed the previous
+  // score_opportunity in scoreDetails['_prev'] before overwriting.
   Future<KnowledgeAnalysis> saveAnalysis(KnowledgeAnalysis analysis) async {
+    final existing = await _client
+        .from(_tableAnalysis)
+        .select('score_opportunity, updated_at')
+        .eq('knowledge_item_id', analysis.knowledgeItemId)
+        .maybeSingle();
+
+    final Map<String, dynamic> enrichedDetails =
+        Map<String, dynamic>.from(analysis.scoreDetails);
+
+    if (existing != null) {
+      enrichedDetails['_prev'] = {
+        'score_opportunity': existing['score_opportunity'],
+        'replaced_at': existing['updated_at'],
+      };
+    }
+
+    final insertMap = analysis.toInsertMap()
+      ..['score_details'] = enrichedDetails;
+
     final row = await _client
         .from(_tableAnalysis)
-        .upsert(
-          analysis.toInsertMap(),
-          onConflict: 'knowledge_item_id',
-        )
+        .upsert(insertMap, onConflict: 'knowledge_item_id')
         .select()
         .single();
     return KnowledgeAnalysis.fromMap(row);
