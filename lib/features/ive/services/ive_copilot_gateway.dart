@@ -12,25 +12,37 @@ typedef IveCapabilityFetcher = Future<bool> Function();
 
 /// Provider sobrescritível em testes.
 ///
-/// Implementação real: chama [AppConstants.edgeFunctionAgentRunner] com
-/// `capability_check: true`. O servidor valida o JWT, consulta INTERNAL_TESTER_IDS
-/// (env var server-side) e a flag global — retorna `{ ive_agent_enabled: bool }`.
+/// Implementação real: consulta `feature_flags` via DB.
+/// 1. Verifica flag por usuário: `ive_agent_mode_tester_<uid>` (internal testers).
+/// 2. Verifica flag global: `ive_agent_mode`.
+/// Fail-safe: qualquer erro → false → legado.
 ///
-/// O uid NUNCA é enviado pelo Flutter: é derivado exclusivamente do JWT pelo servidor.
-/// Nenhum dado do payload Flutter é usado como autoridade de identidade.
+/// uid é derivado da sessão local (client.auth.currentUser) — nunca enviado
+/// ao servidor como parâmetro de identidade. O servidor valida sempre pelo JWT.
 final iveCapabilityFetcherProvider = Provider<IveCapabilityFetcher>((ref) {
   return _defaultCapabilityFetcher;
 });
 
 Future<bool> _defaultCapabilityFetcher() async {
   try {
-    final response = await Supabase.instance.client.functions.invoke(
-      AppConstants.edgeFunctionAgentRunner,
-      body: const {'capability_check': true},
-    );
-    final data = response.data;
-    if (data is Map) return data['ive_agent_enabled'] == true;
-    return false;
+    final client = Supabase.instance.client;
+    final uid = client.auth.currentUser?.id;
+
+    if (uid != null) {
+      final testerRow = await client
+          .from('feature_flags')
+          .select('enabled')
+          .eq('feature_name', 'ive_agent_mode_tester_$uid')
+          .maybeSingle();
+      if (testerRow?['enabled'] == true) return true;
+    }
+
+    final globalRow = await client
+        .from('feature_flags')
+        .select('enabled')
+        .eq('feature_name', 'ive_agent_mode')
+        .maybeSingle();
+    return globalRow?['enabled'] == true;
   } catch (_) {
     return false; // fail-safe → context-copilot legado
   }
