@@ -67,8 +67,9 @@ jobs:
           MAIN=$(find android/app/src/main/kotlin -name "MainActivity.kt" 2>/dev/null | head -1)
           if [ -n "$MAIN" ]; then
             sed -i 's/import io\.flutter\.embedding\.android\.FlutterActivity/import io.flutter.embedding.android.FlutterFragmentActivity/g' "$MAIN"
-            sed -i 's/class MainActivity\s*:\s*FlutterActivity()/class MainActivity : FlutterFragmentActivity()/g' "$MAIN"
+            sed -i 's/: FlutterActivity()/: FlutterFragmentActivity()/g' "$MAIN"
             echo "=== $MAIN ===" && cat "$MAIN"
+            grep -q 'FlutterFragmentActivity' "$MAIN" && echo "PATCH OK" || echo "PATCH FALHOU — verificar manualmente"
           else
             echo "MainActivity.kt not found — skipping patch"
           fi

@@ -23,9 +23,34 @@ class KnowledgeService {
 
   Future<List<KnowledgeItem>> fetchAll({String? projectId}) async {
     final uid = _requireUid();
-    var query = _client.from(_tableItems).select().eq('user_id', uid);
-    if (projectId != null) query = query.eq('project_id', projectId);
-    final rows = await query.order('created_at', ascending: false);
+    if (projectId != null) {
+      try {
+        final rows = await _client
+            .from(_tableItems)
+            .select()
+            .eq('user_id', uid)
+            .eq('project_id', projectId)
+            .order('created_at', ascending: false);
+        return (rows as List).map((r) => KnowledgeItem.fromMap(r)).toList();
+      } catch (e) {
+        if (_isPgrst204(e)) {
+          // Migration 013 not yet applied — column project_id missing in production.
+          // Graceful fallback: return all items for the user (unfiltered).
+          final rows = await _client
+              .from(_tableItems)
+              .select()
+              .eq('user_id', uid)
+              .order('created_at', ascending: false);
+          return (rows as List).map((r) => KnowledgeItem.fromMap(r)).toList();
+        }
+        rethrow;
+      }
+    }
+    final rows = await _client
+        .from(_tableItems)
+        .select()
+        .eq('user_id', uid)
+        .order('created_at', ascending: false);
     return (rows as List).map((r) => KnowledgeItem.fromMap(r)).toList();
   }
 
@@ -40,6 +65,18 @@ class KnowledgeService {
 
   Future<KnowledgeItem> create(KnowledgeItem item) async {
     final uid = _requireUid();
+
+    // Dedup by source_url — return existing item if already ingested (P0-8)
+    if (item.sourceUrl != null && item.sourceUrl!.isNotEmpty) {
+      final existing = await _client
+          .from(_tableItems)
+          .select()
+          .eq('user_id', uid)
+          .eq('source_url', item.sourceUrl!)
+          .maybeSingle();
+      if (existing != null) return KnowledgeItem.fromMap(existing);
+    }
+
     final map = item.toInsertMap();
     map['user_id'] = uid;
     final row = await _client
@@ -76,12 +113,20 @@ class KnowledgeService {
   }
 
   Future<List<KnowledgeAnalysis>> fetchAnalysisByProject(String projectId) async {
-    final rows = await _client
-        .from(_tableAnalysis)
-        .select()
-        .eq('project_id', projectId)
-        .order('created_at', ascending: false);
-    return (rows as List).map((r) => KnowledgeAnalysis.fromMap(r)).toList();
+    try {
+      final rows = await _client
+          .from(_tableAnalysis)
+          .select()
+          .eq('project_id', projectId)
+          .order('created_at', ascending: false);
+      return (rows as List).map((r) => KnowledgeAnalysis.fromMap(r)).toList();
+    } catch (e) {
+      if (_isPgrst204(e)) {
+        // Migration 015 not yet applied — column project_id missing in knowledge_analysis.
+        return [];
+      }
+      rethrow;
+    }
   }
 
   // Design: one analysis per knowledge_item_id (UNIQUE constraint on DB).
@@ -278,6 +323,8 @@ class KnowledgeService {
       rethrow;
     }
   }
+
+  static bool _isPgrst204(Object e) => e.toString().contains('PGRST204');
 
   static List<String> _list(dynamic v) {
     if (v == null) return [];

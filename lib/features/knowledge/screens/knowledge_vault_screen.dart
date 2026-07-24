@@ -414,6 +414,13 @@ class _KnowledgeCard extends ConsumerWidget {
                   ),
                   const SizedBox(width: 8),
                   _ActionButton(
+                    label: item.projectId != null ? 'Mover' : 'Vincular',
+                    icon: Icons.account_tree_rounded,
+                    color: const Color(0xFF00BCD4),
+                    onTap: () => _showProjectLinker(context, ref),
+                  ),
+                  const SizedBox(width: 8),
+                  _ActionButton(
                     label: 'Editar',
                     icon: Icons.edit_rounded,
                     color: Colors.white24,
@@ -437,6 +444,110 @@ class _KnowledgeCard extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _showProjectLinker(BuildContext context, WidgetRef ref) async {
+    final projects = (ref.read(projectsNotifierProvider).valueOrNull ?? [])
+        .where((p) => !p.isIdea)
+        .toList();
+
+    if (projects.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Nenhum projeto real encontrado. Crie um projeto primeiro.'),
+            backgroundColor: Color(0xFF6C63FF),
+          ),
+        );
+      }
+      return;
+    }
+
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: const Color(0xFF1A1A2E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              'Vincular a Projeto',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const Divider(color: Colors.white12),
+          Flexible(
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: projects.length,
+              itemBuilder: (ctx, i) {
+                final p = projects[i];
+                final isLinked = item.projectId == p.id;
+                return ListTile(
+                  leading: Icon(
+                    Icons.rocket_launch_rounded,
+                    color: isLinked
+                        ? const Color(0xFF4CAF50)
+                        : const Color(0xFF6C63FF),
+                  ),
+                  title: Text(p.name,
+                      style: const TextStyle(color: Colors.white)),
+                  subtitle: isLinked
+                      ? const Text('Já vinculado',
+                          style: TextStyle(
+                              color: Color(0xFF4CAF50), fontSize: 11))
+                      : null,
+                  trailing: isLinked
+                      ? const Icon(Icons.check, color: Color(0xFF4CAF50))
+                      : null,
+                  onTap: () => Navigator.pop(ctx, p.id),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
+
+    if (selected == null || selected == item.projectId) return;
+
+    try {
+      await ref
+          .read(knowledgeItemNotifierProvider.notifier)
+          .update(item.id, {'project_id': selected});
+      onInvalidate();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Item vinculado ao projeto com sucesso.'),
+            backgroundColor: Color(0xFF4CAF50),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        final isMigration = e.toString().contains('PGRST204');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              isMigration
+                  ? 'Migration 013 necessária. Consulte MIGRATION_REQUIRED.md.'
+                  : 'Erro ao vincular: $e',
+            ),
+            backgroundColor: const Color(0xFFF44336),
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
