@@ -35,7 +35,7 @@ dependencies:
 
   # P1 — Login Biométrico Android
   local_auth: ^2.3.0
-  flutter_secure_storage: ^9.2.2
+  flutter_secure_storage: ^10.3.1
 
   # IVE Visual Runtime — Rive character integration
   rive: ^0.13.12
