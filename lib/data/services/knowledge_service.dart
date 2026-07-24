@@ -63,6 +63,17 @@ class KnowledgeService {
     return row == null ? null : KnowledgeItem.fromMap(row);
   }
 
+  Future<KnowledgeItem?> findBySourceUrl(String url) async {
+    final uid = _requireUid();
+    final row = await _client
+        .from(_tableItems)
+        .select()
+        .eq('user_id', uid)
+        .eq('source_url', url)
+        .maybeSingle();
+    return row == null ? null : KnowledgeItem.fromMap(row);
+  }
+
   Future<KnowledgeItem> create(KnowledgeItem item) async {
     final uid = _requireUid();
 

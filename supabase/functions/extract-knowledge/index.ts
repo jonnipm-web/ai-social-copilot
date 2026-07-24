@@ -99,6 +99,47 @@ score_hotmart avalia potencial como produto digital (ebook, curso, mentoria).
 score_shopify avalia potencial como produto e-commerce.
 Retorne apenas o JSON. Nenhum texto antes ou depois.`;
 
+// ── Binary text extractors (PDF / DOCX) ──────────────────────
+
+async function extractFromPdf(bytes: Uint8Array): Promise<string> {
+  try {
+    const { default: pdfParse } = await import("npm:pdf-parse/lib/pdf-parse.js");
+    const buffer = Buffer.from(bytes);
+    const data = await pdfParse(buffer);
+    return data.text ?? "";
+  } catch {
+    // Fallback: regex-based extraction for simple PDFs
+    const latin = new TextDecoder("latin1").decode(bytes);
+    const blocks: string[] = [];
+    const btEtMatches = latin.match(/BT[\s\S]*?ET/g) ?? [];
+    for (const block of btEtMatches) {
+      const strings = block.match(/\(([^)\\]*(?:\\.[^)\\]*)*)\)/g) ?? [];
+      for (const s of strings) {
+        const text = s.slice(1, -1)
+          .replace(/\\n/g, " ").replace(/\\r/g, "").replace(/\\t/g, " ")
+          .replace(/\\\\/g, "\\").replace(/\\([()])/g, "$1");
+        if (text.trim().length > 0) blocks.push(text.trim());
+      }
+    }
+    return blocks.join(" ").trim();
+  }
+}
+
+async function extractFromDocx(bytes: Uint8Array): Promise<string> {
+  const { unzipSync } = await import("npm:fflate");
+  const unzipped = unzipSync(bytes);
+  const docXmlBytes = unzipped["word/document.xml"];
+  if (!docXmlBytes) throw new Error("word/document.xml não encontrado no arquivo DOCX.");
+  const xml = new TextDecoder("utf-8").decode(docXmlBytes);
+  return xml
+    .replace(/<w:br[^>]*\/>/g, "\n")
+    .replace(/<w:p[ >][^>]*>/g, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"').replace(/&#x27;/g, "'")
+    .replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+}
+
 // ── Fetch content from a URL ──────────────────────────────────
 
 async function fetchUrlContent(url: string): Promise<string> {
@@ -112,65 +153,99 @@ async function fetchUrlContent(url: string): Promise<string> {
     });
     if (!res.ok) {
       throw new Error(
-        `Google Doc inacessível (${res.status}). Verifique se está compartilhado como 'Qualquer pessoa com o link pode visualizar'.`
+        `Google Doc inacessível (${res.status}). Verifique se está compartilhado como 'Qualquer pessoa com o link pode visualizar'. [ACCESS_DENIED]`
       );
     }
-    return await res.text();
+    const text = await res.text();
+    if (text.trim().length < 20) throw new Error("Google Doc vazio ou inacessível. [EMPTY_CONTENT]");
+    return text;
   }
 
-  // Google Drive file (PDF/DOCX) → download attempt
+  // Google Drive file (PDF/DOCX) shared link → attempt direct download
   const driveMatch = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
   if (driveMatch) {
     const fileId = driveMatch[1];
-    // Try the export as plain text (works for Google Docs stored as Drive files)
-    const exportUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
-    const res = await fetch(exportUrl, {
+    const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+    const res = await fetch(downloadUrl, {
       headers: { "User-Agent": "Mozilla/5.0" },
       redirect: "follow",
     });
     if (!res.ok) {
       throw new Error(
-        `Arquivo do Google Drive inacessível. Use um Google Doc (não PDF) e compartilhe como 'Qualquer pessoa com o link'.`
+        `Arquivo do Google Drive inacessível (${res.status}). Compartilhe como 'Qualquer pessoa com o link' ou use o botão Google Drive. [ACCESS_DENIED]`
       );
     }
     const contentType = res.headers.get("content-type") ?? "";
     if (contentType.includes("text/html")) {
-      // Google Drive shows a confirmation page for large files — treat as error
+      // Drive shows confirmation page for large files
       throw new Error(
-        `Não foi possível baixar o arquivo diretamente. Converta para Google Docs e use o link de edição.`
+        `Arquivo Drive muito grande para download direto. Converta para Google Doc e use o link de edição (docs.google.com/document/d/...). [DOWNLOAD_FAILED]`
       );
     }
-    const text = await res.text();
-    if (text.trim().length < 20) {
-      throw new Error("Arquivo vazio ou binário. Use um Google Doc com o link de edição.");
+    if (contentType.includes("application/pdf")) {
+      const bytes = new Uint8Array(await res.arrayBuffer());
+      const text = await extractFromPdf(bytes);
+      if (text.trim().length < 20) throw new Error("PDF do Drive vazio ou protegido. [EMPTY_CONTENT]");
+      return text;
     }
+    if (contentType.includes("wordprocessingml") || contentType.includes("docx")) {
+      const bytes = new Uint8Array(await res.arrayBuffer());
+      const text = await extractFromDocx(bytes);
+      if (text.trim().length < 20) throw new Error("DOCX do Drive vazio ou protegido. [EMPTY_CONTENT]");
+      return text;
+    }
+    const text = await res.text();
+    if (text.trim().length < 20) throw new Error("Arquivo do Drive vazio ou binário não suportado. Use um Google Doc. [UNSUPPORTED_TYPE]");
     return text;
   }
 
-  // Generic public URL → fetch HTML and strip tags
+  // Generic public URL
   const res = await fetch(url, {
     headers: { "User-Agent": "Mozilla/5.0" },
     redirect: "follow",
   });
   if (!res.ok) {
-    throw new Error(`URL inacessível (${res.status}). Verifique se o endereço é público.`);
+    throw new Error(`URL inacessível (${res.status}). Verifique se o endereço é público. [DOWNLOAD_FAILED]`);
   }
 
   const contentType = res.headers.get("content-type") ?? "";
+
+  // PDF served from any URL (not necessarily .pdf extension)
+  if (contentType.includes("application/pdf")) {
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    const text = await extractFromPdf(bytes);
+    if (text.trim().length < 20) {
+      throw new Error("Não foi possível extrair texto do PDF. O arquivo pode estar protegido ou sem texto selecionável. [EXTRACTION_FAILED]");
+    }
+    return text;
+  }
+
+  // DOCX served from any URL
+  if (contentType.includes("wordprocessingml") || contentType.includes("docx")) {
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    const text = await extractFromDocx(bytes);
+    if (text.trim().length < 20) {
+      throw new Error("Não foi possível extrair texto do DOCX. O arquivo pode estar corrompido. [EXTRACTION_FAILED]");
+    }
+    return text;
+  }
+
+  // HTML / plain text
   if (contentType.includes("text/html") || contentType.includes("text/plain")) {
     const raw = await res.text();
-    // Strip HTML tags
     const text = raw
       .replace(/<script[\s\S]*?<\/script>/gi, "")
       .replace(/<style[\s\S]*?<\/style>/gi, "")
       .replace(/<[^>]+>/g, " ")
       .replace(/\s+/g, " ")
       .trim();
-    if (text.length < 20) throw new Error("Conteúdo da URL muito curto para análise.");
+    if (text.length < 20) throw new Error("Conteúdo da URL muito curto para análise. [EMPTY_CONTENT]");
     return text;
   }
 
-  throw new Error("Tipo de arquivo não suportado para análise automática. Use Texto Manual.");
+  throw new Error(
+    `Tipo de conteúdo não suportado: '${contentType}'. Suportados: Google Docs, PDF, DOCX, HTML. [UNSUPPORTED_TYPE]`
+  );
 }
 
 // ── Main handler ──────────────────────────────────────────────

@@ -61,7 +61,16 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
       });
       await _loadFiles();
     } catch (e) {
-      setState(() { _signing = false; _error = 'Erro ao conectar: $e'; });
+      final msg = e.toString();
+      final isCode10 = msg.contains(': 10') || msg.contains('sign_in_failed');
+      setState(() {
+        _signing = false;
+        _error = isCode10
+            ? 'Erro de autenticação Google (código 10).\n'
+              'O SHA-1 do APK não está registrado no Google Cloud Console.\n'
+              'Peça ao administrador para seguir o guia GOOGLE_DRIVE_OAUTH_FIX_INSTRUCTIONS.md.'
+            : 'Erro ao conectar: $msg';
+      });
     }
   }
 

@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../data/models/knowledge_item.dart';
 import '../../../data/services/file_import_service.dart';
+import '../../../data/utils/url_classifier.dart';
 import '../../../providers/knowledge_provider.dart';
 import '../../../providers/project_provider.dart';
 import 'drive_picker_screen.dart';
@@ -37,11 +38,24 @@ class _KnowledgeItemFormScreenState
   String? _importedFileName;
 
   KnowledgeItem? _existing;
+  UrlType _urlType = UrlType.unknown;
 
   bool get _isEdit => widget.itemId != null;
 
   @override
+  void initState() {
+    super.initState();
+    _urlCtrl.addListener(_onUrlChanged);
+  }
+
+  void _onUrlChanged() {
+    final detected = UrlClassifier.classify(_urlCtrl.text);
+    if (detected != _urlType) setState(() => _urlType = detected);
+  }
+
+  @override
   void dispose() {
+    _urlCtrl.removeListener(_onUrlChanged);
     _titleCtrl.dispose();
     _contentCtrl.dispose();
     _urlCtrl.dispose();
@@ -107,6 +121,24 @@ class _KnowledgeItemFormScreenState
     setState(() => _loading = true);
 
     try {
+      // Idempotency check — show dialog if URL already in Cofre
+      if (_sourceType == 'url' && !_isEdit) {
+        final url = _urlCtrl.text.trim();
+        final existing = await ref.read(knowledgeServiceProvider).findBySourceUrl(url);
+        if (existing != null && mounted) {
+          final choice = await _showDuplicateDialog(existing.title);
+          if (!mounted) return;
+          if (choice == 'use_existing') {
+            ref.invalidate(knowledgeItemsProvider);
+            context.pop();
+            return;
+          }
+          // 'cancel' or dismissed — stay in form
+          setState(() => _loading = false);
+          return;
+        }
+      }
+
       final notifier = ref.read(knowledgeItemNotifierProvider.notifier);
 
       if (_isEdit && _existing != null) {
@@ -159,6 +191,39 @@ class _KnowledgeItemFormScreenState
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<String?> _showDuplicateDialog(String existingTitle) {
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A2E),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Ativo já no Cofre',
+          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Esta URL já foi salva como:\n"$existingTitle"\n\nO que deseja fazer?',
+          style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'cancel'),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.white38)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, 'use_existing'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF6C63FF),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Usar Existente'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -282,32 +347,50 @@ class _KnowledgeItemFormScreenState
                     return null;
                   },
                 ),
+                if (_urlCtrl.text.trim().isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _UrlTypeChip(urlType: _urlType),
+                ],
                 const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF6C63FF).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFF6C63FF).withOpacity(0.3)),
+                if (_urlType != UrlType.youtube)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF6C63FF).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFF6C63FF).withOpacity(0.3)),
+                    ),
+                    child: const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Para Google Docs / Livros:',
+                          style: TextStyle(color: Color(0xFF6C63FF), fontSize: 12, fontWeight: FontWeight.w600),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          '1. Abra o documento no Google Docs\n'
+                          '2. Clique em Compartilhar\n'
+                          '3. Mude para "Qualquer pessoa com o link pode visualizar"\n'
+                          '4. Copie o link e cole aqui',
+                          style: TextStyle(color: Colors.white54, fontSize: 12, height: 1.5),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF9800).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFFF9800).withOpacity(0.4)),
+                    ),
+                    child: const Text(
+                      'YouTube não é suportado pela ingesta de URL. Cole a transcrição do vídeo na opção "Texto Manual".',
+                      style: TextStyle(color: Color(0xFFFF9800), fontSize: 12, height: 1.5),
+                    ),
                   ),
-                  child: const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '📄 Para Google Docs / Livros:',
-                        style: TextStyle(color: Color(0xFF6C63FF), fontSize: 12, fontWeight: FontWeight.w600),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        '1. Abra o documento no Google Docs\n'
-                        '2. Clique em Compartilhar\n'
-                        '3. Mude para "Qualquer pessoa com o link pode visualizar"\n'
-                        '4. Copie o link e cole aqui',
-                        style: TextStyle(color: Colors.white54, fontSize: 12, height: 1.5),
-                      ),
-                    ],
-                  ),
-                ),
               ] else ...[
                 const _Label('Conteúdo *'),
                 const SizedBox(height: 8),
@@ -779,6 +862,40 @@ class _ProjectSelector extends ConsumerWidget {
           onChanged: onChanged,
         ),
       ],
+    );
+  }
+}
+
+class _UrlTypeChip extends StatelessWidget {
+  const _UrlTypeChip({required this.urlType});
+  final UrlType urlType;
+
+  @override
+  Widget build(BuildContext context) {
+    final supported = UrlClassifier.isSupported(urlType);
+    final color = supported ? const Color(0xFF4CAF50) : const Color(0xFFFF9800);
+    final icon  = supported ? Icons.check_circle_outline_rounded : Icons.warning_amber_rounded;
+
+    if (urlType == UrlType.unknown) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 14),
+          const SizedBox(width: 6),
+          Text(
+            UrlClassifier.label(urlType),
+            style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w500),
+          ),
+        ],
+      ),
     );
   }
 }
