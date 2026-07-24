@@ -98,6 +98,35 @@ jobs:
             echo "MainActivity.kt not found — skipping patch"
           fi
 
+      - name: Configurar keystore release persistente
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
+          KEYSTORE_KEY_ALIAS: ${{ secrets.KEYSTORE_KEY_ALIAS }}
+          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
+          echo "Keystore decodificado com sucesso"
+          GRADLE=android/app/build.gradle.kts
+          sed -i 's/    buildTypes {/    signingConfigs {\n        create("release") {\n            storeFile = file("release.keystore")\n            storePassword = System.getenv("KEYSTORE_STORE_PASSWORD")\n            keyAlias = System.getenv("KEYSTORE_KEY_ALIAS")\n            keyPassword = System.getenv("KEYSTORE_KEY_PASSWORD")\n        }\n    }\n    buildTypes {/' "$GRADLE"
+          sed -i 's/signingConfig = signingConfigs.getByName("debug")/signingConfig = signingConfigs.getByName("release")/' "$GRADLE"
+          echo "=== build.gradle.kts ===" && cat "$GRADLE"
+
+      - name: Imprimir fingerprint SHA-1 e SHA-256 da keystore release
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
+          KEYSTORE_KEY_ALIAS: ${{ secrets.KEYSTORE_KEY_ALIAS }}
+        run: |
+          echo "=== CERTIFICATE FINGERPRINTS — registrar no Google Cloud Console ==="
+          keytool -list -v \
+            -keystore android/app/release.keystore \
+            -alias "$KEYSTORE_KEY_ALIAS" \
+            -storepass "$KEYSTORE_STORE_PASSWORD" \
+            2>/dev/null | grep -E "SHA1:|SHA256:"
+          echo "=== APPLICATION ID ==="
+          grep -r "applicationId\|namespace" android/app/build.gradle.kts | head -5
+
       - name: Instalar dependências
         run: flutter pub get
 
@@ -112,6 +141,10 @@ jobs:
           done
 
       - name: Build do APK
+        env:
+          KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
+          KEYSTORE_KEY_ALIAS: ${{ secrets.KEYSTORE_KEY_ALIAS }}
+          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
         run: flutter build apk --release
 
       - name: Salvar APK como artefato para download
