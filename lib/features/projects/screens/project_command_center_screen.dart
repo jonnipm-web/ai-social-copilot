@@ -993,7 +993,7 @@ class _ProjectDetailSheetState extends ConsumerState<_ProjectDetailSheet> {
               _ScoreRow('Sinergia',        s.synergyScore,
                   showDash: !s.hasEnoughData),
               _ScoreRow('ROI',             s.roiScore,
-                  showDash: !s.hasEnoughData || !s.hasRoiData),
+                  showDash: !s.hasRoiData || !s.hasEnoughData),
               _ScoreRow('Momentum',        s.momentumScore,
                   showDash: !s.hasEnoughData),
               _ScoreRow('Mercado',         s.marketScore,
