@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/constants/app_constants.dart';
+import '../../core/services/biometric_auth_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -23,8 +24,21 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
 
     final session = Supabase.instance.client.auth.currentSession;
+    if (session == null) {
+      context.go(AppConstants.routeLogin);
+      return;
+    }
+
+    // Session exists — check whether biometric gate is required.
+    final uid = session.user.id;
+    final biometric = BiometricAuthService();
+    final gateRequired = await biometric.isEnabled(userId: uid);
+
+    if (!mounted) return;
     context.go(
-      session != null ? AppConstants.routeDashboard : AppConstants.routeLogin,
+      gateRequired
+          ? AppConstants.routeBiometricGate
+          : AppConstants.routeExecutiveDashboard,
     );
   }
 

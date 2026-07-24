@@ -8,6 +8,7 @@ import 'core/theme/app_theme.dart';
 import 'shared/widgets/ive_overlay.dart';
 import 'shared/widgets/context_copilot_widget.dart' show iveRootNavigatorKey;
 import 'features/admin/screens/admin_panel_screen.dart';
+import 'features/auth/screens/biometric_gate_screen.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/calendar/screens/calendar_screen.dart';
 import 'features/content/screens/content_form_screen.dart';
@@ -63,10 +64,12 @@ final _router = GoRouter(
   observers: [_iveObserver],
   redirect: (context, state) {
     final session = Supabase.instance.client.auth.currentSession;
-    final goingToAuth = state.fullPath == AppConstants.routeLogin;
-    final goingToSplash = state.fullPath == AppConstants.routeSplash;
+    final path = state.fullPath;
+    final goingToAuth    = path == AppConstants.routeLogin;
+    final goingToSplash  = path == AppConstants.routeSplash;
+    final goingToGate    = path == AppConstants.routeBiometricGate;
 
-    if (goingToSplash) return null;
+    if (goingToSplash || goingToGate) return null;
     if (session == null && !goingToAuth) return AppConstants.routeLogin;
     if (session != null && goingToAuth)
       return AppConstants.routeExecutiveDashboard;
@@ -80,6 +83,10 @@ final _router = GoRouter(
     GoRoute(
       path: AppConstants.routeLogin,
       builder: (_, __) => const LoginScreen(),
+    ),
+    GoRoute(
+      path: AppConstants.routeBiometricGate,
+      builder: (_, __) => const BiometricGateScreen(),
     ),
     GoRoute(
       path: AppConstants.routeDashboard,

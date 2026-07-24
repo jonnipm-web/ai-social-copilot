@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/services/biometric_auth_service.dart';
 import '../../../core/utils/snackbar_utils.dart' show showErrorSnack, extractErrorMessage;
 import '../../../providers/auth_provider.dart';
+import '../../../providers/biometric_auth_provider.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/loading_button.dart';
+import '../widgets/biometric_enrollment_sheet.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -51,14 +55,79 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final authState = ref.read(authNotifierProvider);
     authState.whenOrNull(
       error: (e, _) => showErrorSnack(context, extractErrorMessage(e)),
-      data: (_) => context.go(AppConstants.routeHome),
+      data: (_) async {
+        // Offer biometric enrollment after first successful sign-in (not sign-up).
+        if (!_isSignUp) {
+          await _offerBiometricEnrollment();
+        }
+        if (mounted) context.go(AppConstants.routeHome);
+      },
     );
+  }
+
+  Future<void> _offerBiometricEnrollment() async {
+    final uid = Supabase.instance.client.auth.currentUser?.id;
+    if (uid == null) return;
+
+    final biometric = BiometricAuthService();
+    final available = await biometric.isAvailable();
+    if (!available) return;
+
+    final alreadyEnabled = await biometric.isEnabled(userId: uid);
+    if (alreadyEnabled) return;
+
+    if (!mounted) return;
+    await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: const Color(0xFF0F0F1A),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => BiometricEnrollmentSheet(userId: uid),
+    );
+    if (mounted) ref.invalidate(biometricEnabledProvider);
+  }
+
+  Future<void> _signInWithBiometrics() async {
+    final uid = Supabase.instance.client.auth.currentUser?.id;
+    // Biometric sign-in is only valid when a session already exists (persisted
+    // by Supabase Flutter). This button is shown in that case.
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session == null || uid == null) return;
+
+    final biometric = BiometricAuthService();
+    final status = await biometric.authenticate(
+      localizedReason: 'Confirme sua identidade para entrar',
+      userId: uid,
+    );
+
+    if (!mounted) return;
+
+    switch (status) {
+      case BiometricStatus.success:
+        context.go(AppConstants.routeExecutiveDashboard);
+      case BiometricStatus.lockout:
+        showErrorSnack(context, 'Muitas tentativas. Aguarde e tente novamente.');
+      case BiometricStatus.lockoutPermanent:
+        showErrorSnack(context, 'Biometria bloqueada. Use PIN/senha no dispositivo.');
+      case BiometricStatus.noneEnrolled:
+        await biometric.disable(userId: uid);
+        ref.invalidate(biometricEnabledProvider);
+        showErrorSnack(context, 'Dados biométricos alterados. Reative o login biométrico.');
+      default:
+        break;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authNotifierProvider);
     final isLoading = authState.isLoading;
+
+    // Show biometric button on sign-in form only when biometric is enabled.
+    final biometricEnabled = !_isSignUp
+        ? ref.watch(biometricEnabledProvider).valueOrNull ?? false
+        : false;
 
     return Scaffold(
       body: SafeArea(
@@ -135,6 +204,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     isLoading: isLoading,
                     onPressed: _submit,
                   ),
+                  if (biometricEnabled) ...[
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: isLoading ? null : _signInWithBiometrics,
+                      icon: const Icon(Icons.fingerprint_rounded),
+                      label: const Text('Entrar com biometria'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Theme.of(context).colorScheme.primary,
+                        side: BorderSide(
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   TextButton(
                     onPressed: isLoading

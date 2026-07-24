@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/constants/app_constants.dart';
+import '../../core/services/biometric_auth_service.dart';
 import '../../data/models/profile.dart';
+import '../../features/auth/widgets/biometric_enrollment_sheet.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/biometric_auth_provider.dart';
 import '../../providers/profile_provider.dart';
 
 class AppDrawer extends ConsumerWidget {
@@ -258,6 +262,10 @@ class _DrawerContent extends ConsumerWidget {
             ),
           ),
 
+          // Segurança
+          const Divider(color: Colors.white12, height: 1),
+          const _BiometricSecurityTile(),
+
           // Sair
           const Divider(color: Colors.white12, height: 1),
           ListTile(
@@ -268,6 +276,12 @@ class _DrawerContent extends ConsumerWidget {
             ),
             onTap: () async {
               Navigator.of(context).pop();
+              // Disable biometric on logout — user must re-enable after next login.
+              final uid = Supabase.instance.client.auth.currentUser?.id;
+              if (uid != null) {
+                await BiometricAuthService().disable(userId: uid);
+                ref.invalidate(biometricEnabledProvider);
+              }
               await ref.read(authNotifierProvider.notifier).signOut();
               if (context.mounted) context.go(AppConstants.routeLogin);
             },
@@ -275,6 +289,88 @@ class _DrawerContent extends ConsumerWidget {
           const SizedBox(height: 8),
         ],
       ),
+    );
+  }
+}
+
+class _BiometricSecurityTile extends ConsumerStatefulWidget {
+  const _BiometricSecurityTile();
+
+  @override
+  ConsumerState<_BiometricSecurityTile> createState() =>
+      _BiometricSecurityTileState();
+}
+
+class _BiometricSecurityTileState
+    extends ConsumerState<_BiometricSecurityTile> {
+  bool _toggling = false;
+
+  Future<void> _toggle(bool currentEnabled) async {
+    if (_toggling) return;
+    final uid = Supabase.instance.client.auth.currentUser?.id;
+    if (uid == null) return;
+    setState(() => _toggling = true);
+
+    final biometric = BiometricAuthService();
+
+    if (currentEnabled) {
+      // Disable — no challenge needed; user is already in the app.
+      await biometric.disable(userId: uid);
+      ref.invalidate(biometricEnabledProvider);
+    } else {
+      // Enable — show enrollment sheet (includes biometric challenge).
+      final available = await biometric.isAvailable();
+      if (!available) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Nenhuma biometria cadastrada no dispositivo.'),
+            ),
+          );
+        }
+      } else if (mounted) {
+        await showModalBottomSheet<bool>(
+          context: context,
+          backgroundColor: const Color(0xFF0F0F1A),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+          builder: (_) => BiometricEnrollmentSheet(userId: uid),
+        );
+        ref.invalidate(biometricEnabledProvider);
+      }
+    }
+
+    if (mounted) setState(() => _toggling = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final biometricAsync = ref.watch(biometricEnabledProvider);
+    final enabled = biometricAsync.valueOrNull ?? false;
+
+    return ListTile(
+      leading: Icon(
+        Icons.fingerprint_rounded,
+        color: enabled ? const Color(0xFF6C63FF) : Colors.white38,
+        size: 20,
+      ),
+      title: const Text(
+        'Login biométrico',
+        style: TextStyle(color: Colors.white70, fontSize: 14),
+      ),
+      trailing: _toggling
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Switch(
+              value: enabled,
+              onChanged: biometricAsync.isLoading ? null : (_) => _toggle(enabled),
+              activeColor: const Color(0xFF6C63FF),
+            ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
     );
   }
 }

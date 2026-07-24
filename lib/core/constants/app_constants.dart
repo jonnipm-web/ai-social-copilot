@@ -21,6 +21,7 @@ class AppConstants {
   // Rotas
   static const routeSplash         = '/';
   static const routeLogin          = '/login';
+  static const routeBiometricGate  = '/biometric-gate';
   static const routeDashboard      = '/dashboard';
   static const routeHome           = '/home';
   static const routeGenerate       = '/generate';
