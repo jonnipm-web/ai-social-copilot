@@ -29,6 +29,8 @@ class _ProjectCommandCenterScreenState
     extends ConsumerState<ProjectCommandCenterScreen> {
   bool _showForm = false;
   bool _refreshing = false;
+  bool _isIdeaMode = false;
+  String _filter = 'all';
   final _nameCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   final _urlCtrl  = TextEditingController();
@@ -61,16 +63,17 @@ class _ProjectCommandCenterScreenState
     setState(() => _saving = true);
     try {
       await ref.read(projectsNotifierProvider.notifier).create({
-        'name':        name,
-        'description': _descCtrl.text.trim(),
-        'url':         _urlCtrl.text.trim().isNotEmpty ? _urlCtrl.text.trim() : null,
-        'type':        _type,
-        'status':      'idea',
+        'name':         name,
+        'description':  _descCtrl.text.trim(),
+        'url':          _urlCtrl.text.trim().isNotEmpty ? _urlCtrl.text.trim() : null,
+        'type':         _type,
+        'status':       'idea',
+        'details_json': {'is_idea': _isIdeaMode},
       });
       _nameCtrl.clear();
       _descCtrl.clear();
       _urlCtrl.clear();
-      setState(() { _showForm = false; _type = 'website'; });
+      setState(() { _showForm = false; _type = 'website'; _isIdeaMode = false; });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -150,6 +153,122 @@ class _ProjectCommandCenterScreenState
     );
   }
 
+  void _showEntityChoice() {
+    showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A2E),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: const Text('O que deseja criar?',
+            style: TextStyle(color: Colors.white, fontSize: 16)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.rocket_launch_rounded,
+                  color: Color(0xFF6BCB77)),
+              title: const Text('Projeto Real',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+              subtitle: const Text('Algo que você vai executar agora',
+                  style: TextStyle(color: Colors.white54, fontSize: 12)),
+              onTap: () => Navigator.of(ctx).pop('project'),
+            ),
+            const Divider(color: Color(0xFF333355), height: 1),
+            ListTile(
+              leading: const Text('💡',
+                  style: TextStyle(fontSize: 22)),
+              title: const Text('Somente uma Ideia',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+              subtitle: const Text('Capture para avaliar depois com a IVE',
+                  style: TextStyle(color: Colors.white54, fontSize: 12)),
+              onTap: () => Navigator.of(ctx).pop('idea'),
+            ),
+          ],
+        ),
+      ),
+    ).then((choice) {
+      if (choice != null && mounted) {
+        setState(() {
+          _isIdeaMode = choice == 'idea';
+          _showForm = true;
+        });
+      }
+    });
+  }
+
+  Widget _buildFilterBar() {
+    const filters = [
+      ('all', 'TODOS'),
+      ('projects', 'PROJETOS'),
+      ('ideas', 'IDEIAS'),
+      ('active', 'ATIVOS'),
+      ('paused', 'PAUSADOS'),
+      ('completed', 'CONCLUÍDOS'),
+    ];
+    return SizedBox(
+      height: 38,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        children: filters.map((rec) {
+          final (key, label) = rec;
+          final selected = _filter == key;
+          return Padding(
+            padding: const EdgeInsets.only(right: 6, top: 4, bottom: 4),
+            child: GestureDetector(
+              onTap: () => setState(() => _filter = key),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? const Color(0xFF6BCB77).withOpacity(0.12)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: selected
+                        ? const Color(0xFF6BCB77)
+                        : const Color(0xFF333355),
+                  ),
+                ),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: selected
+                        ? const Color(0xFF6BCB77)
+                        : Colors.white38,
+                    fontSize: 11,
+                    fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                    letterSpacing: 0.4,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildFilteredEmpty() {
+    final labels = {
+      'projects': 'projetos',
+      'ideas': 'ideias',
+      'active': 'projetos ativos',
+      'paused': 'projetos pausados',
+      'completed': 'projetos concluídos',
+    };
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Text(
+          'Nenhum ${labels[_filter] ?? 'item'} encontrado.',
+          style: const TextStyle(color: Colors.white38, fontSize: 14),
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final asyncProjects = ref.watch(projectsNotifierProvider);
@@ -193,13 +312,18 @@ class _ProjectCommandCenterScreenState
             tooltip: 'Atualizar',
             onPressed: _refreshing ? null : _refresh,
           ),
-          // Novo projeto
+          // Novo projeto / ideia
           IconButton(
             icon: Icon(
               _showForm ? Icons.close_rounded : Icons.add_rounded,
               color: const Color(0xFF6BCB77),
             ),
-            onPressed: () => setState(() => _showForm = !_showForm),
+            onPressed: _showForm
+                ? () => setState(() {
+                      _showForm = false;
+                      _isIdeaMode = false;
+                    })
+                : _showEntityChoice,
           ),
         ],
       ),
@@ -207,6 +331,7 @@ class _ProjectCommandCenterScreenState
       body: Column(
         children: [
           if (_showForm) _buildForm(),
+          _buildFilterBar(),
           Expanded(
             child: asyncProjects.when(
               loading: () => const Center(
@@ -243,9 +368,9 @@ class _ProjectCommandCenterScreenState
                 style: TextStyle(color: Colors.white24, fontSize: 13)),
             const SizedBox(height: 20),
             ElevatedButton.icon(
-              onPressed: () => setState(() => _showForm = true),
+              onPressed: _showEntityChoice,
               icon: const Icon(Icons.add_rounded),
-              label: const Text('Novo Projeto'),
+              label: const Text('Criar Projeto ou Ideia'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF6BCB77),
                 foregroundColor: Colors.black,
@@ -256,21 +381,32 @@ class _ProjectCommandCenterScreenState
       );
 
   Widget _buildForm() {
+    final accentColor =
+        _isIdeaMode ? const Color(0xFFAB83FF) : const Color(0xFF6BCB77);
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A2E),
         borderRadius: BorderRadius.circular(12),
-        border:
-            Border.all(color: const Color(0xFF6BCB77).withOpacity(0.3)),
+        border: Border.all(color: accentColor.withOpacity(0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Novo Projeto',
-              style: TextStyle(
-                  color: Color(0xFF6BCB77), fontWeight: FontWeight.bold)),
+          Row(
+            children: [
+              if (_isIdeaMode) ...[
+                const Text('💡 ', style: TextStyle(fontSize: 16)),
+                const SizedBox(width: 4),
+              ],
+              Text(
+                _isIdeaMode ? 'Nova Ideia' : 'Novo Projeto',
+                style: TextStyle(
+                    color: accentColor, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
           const SizedBox(height: 12),
           _Field(
               controller: _nameCtrl,
@@ -315,7 +451,10 @@ class _ProjectCommandCenterScreenState
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () => setState(() => _showForm = false),
+                  onPressed: () => setState(() {
+                    _showForm = false;
+                    _isIdeaMode = false;
+                  }),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.white54,
                     side: const BorderSide(color: Color(0xFF333355)),
@@ -328,8 +467,10 @@ class _ProjectCommandCenterScreenState
                 child: ElevatedButton(
                   onPressed: _saving ? null : _save,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6BCB77),
-                    foregroundColor: Colors.black,
+                    backgroundColor: _isIdeaMode
+                        ? const Color(0xFFAB83FF)
+                        : const Color(0xFF6BCB77),
+                    foregroundColor: Colors.white,
                   ),
                   child: _saving
                       ? const SizedBox(
@@ -352,8 +493,23 @@ class _ProjectCommandCenterScreenState
     List<Project> projects,
     Map<String, EcosystemScore> scoresMap,
   ) {
+    // Apply active filter
+    final filtered = _filter == 'projects'
+        ? projects.where((p) => !p.isIdea).toList()
+        : _filter == 'ideas'
+            ? projects.where((p) => p.isIdea).toList()
+            : _filter == 'active'
+                ? projects.where((p) => p.status == 'active').toList()
+                : _filter == 'paused'
+                    ? projects.where((p) => p.status == 'paused').toList()
+                    : _filter == 'completed'
+                        ? projects.where((p) => p.status == 'completed').toList()
+                        : projects;
+
+    if (filtered.isEmpty) return _buildFilteredEmpty();
+
     // Ordena por ecosystemScore quando disponível, fallback para priorityScore
-    final sorted = [...projects]..sort((a, b) {
+    final sorted = [...filtered]..sort((a, b) {
         final sa = scoresMap[a.id]?.ecosystemScore ?? a.priorityScore;
         final sb = scoresMap[b.id]?.ecosystemScore ?? b.priorityScore;
         return sb.compareTo(sa);
@@ -443,6 +599,7 @@ class _ProjectCard extends StatelessWidget {
   final VoidCallback? onAnalyze;
 
   Color get _statusColor {
+    if (project.isIdea) return const Color(0xFFAB83FF);
     switch (project.status) {
       case 'active':    return const Color(0xFF6BCB77);
       case 'completed': return const Color(0xFF4D96FF);
@@ -452,6 +609,14 @@ class _ProjectCard extends StatelessWidget {
   }
 
   String get _statusLabel {
+    if (project.isIdea) {
+      switch (project.ideaState) {
+        case 'evaluated': return 'Avaliada';
+        case 'promoted':  return 'Promovida';
+        case 'linked':    return 'Vinculada';
+        default:          return 'Ideia';
+      }
+    }
     switch (project.status) {
       case 'active':    return 'Ativo';
       case 'completed': return 'Concluído';
@@ -493,21 +658,30 @@ class _ProjectCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Container(
-                        width: 28,
-                        height: 28,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF6BCB77).withOpacity(0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Text('#$rank',
-                              style: const TextStyle(
-                                  color: Color(0xFF6BCB77),
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold)),
-                        ),
-                      ),
+                      project.isIdea
+                          ? const SizedBox(
+                              width: 28,
+                              height: 28,
+                              child: Center(
+                                child: Text('💡',
+                                    style: TextStyle(fontSize: 18)),
+                              ),
+                            )
+                          : Container(
+                              width: 28,
+                              height: 28,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF6BCB77).withOpacity(0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Text('#$rank',
+                                    style: const TextStyle(
+                                        color: Color(0xFF6BCB77),
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold)),
+                              ),
+                            ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(project.name,
@@ -670,6 +844,11 @@ class _ProjectDetailSheetState extends ConsumerState<_ProjectDetailSheet> {
   bool _analyzing = false;
   String? _analysisError;
   String? _analysisSuccess;
+
+  // Idea lifecycle
+  bool _evaluating = false;
+  String? _evaluationError;
+  Map<String, dynamic>? _localEvaluation;
 
   Color _ecoScoreColor(int score) {
     if (score >= 70) return const Color(0xFF6BCB77);
@@ -834,6 +1013,135 @@ class _ProjectDetailSheetState extends ConsumerState<_ProjectDetailSheet> {
     );
   }
 
+  Future<void> _evaluateIdea() async {
+    if (_evaluating) return;
+    setState(() { _evaluating = true; _evaluationError = null; });
+    try {
+      final allProjects = ref.read(projectsNotifierProvider).valueOrNull ?? [];
+      final context = allProjects
+          .where((p) => p.id != widget.project.id && !p.isIdea)
+          .take(5)
+          .map((p) => {'title': p.name, 'content': p.description})
+          .toList();
+
+      final response = await Supabase.instance.client.functions.invoke(
+        'generate-project-opportunities',
+        body: {
+          'project_name':        widget.project.name,
+          'project_description': widget.project.description,
+          'project_type':        widget.project.type,
+          'documents':           context,
+          'market_context':
+              'Esta é uma ideia em avaliação estratégica. Compare com os projetos existentes.',
+        },
+      );
+
+      if (response.data == null) throw Exception('Sem resposta da IVE');
+
+      final data = Map<String, dynamic>.from(response.data as Map);
+      await ref
+          .read(projectsNotifierProvider.notifier)
+          .saveIveEvaluation(widget.project.id, data);
+
+      if (mounted) setState(() => _localEvaluation = data);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _evaluationError =
+            'Erro na avaliação: ${e.toString().replaceAll('Exception: ', '')}');
+      }
+    } finally {
+      if (mounted) setState(() => _evaluating = false);
+    }
+  }
+
+  Future<void> _promoteToProject() async {
+    try {
+      await ref
+          .read(projectsNotifierProvider.notifier)
+          .promoteToProject(widget.project.id);
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (mounted) setState(() => _analysisError = 'Erro ao promover: $e');
+    }
+  }
+
+  void _showProjectLinker() {
+    final allProjects = ref.read(projectsNotifierProvider).valueOrNull ?? [];
+    final realProjects =
+        allProjects.where((p) => !p.isIdea && p.id != widget.project.id).toList();
+
+    if (realProjects.isEmpty) {
+      setState(() => _analysisError =
+          'Nenhum projeto real disponível para vincular. Crie um projeto primeiro.');
+      return;
+    }
+
+    showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: const Color(0xFF1E1B2E),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 10),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2)),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: Text('Vincular ideia a qual projeto?',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold)),
+            ),
+            const Divider(color: Color(0xFF333355), height: 1),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: realProjects
+                    .map((p) => ListTile(
+                          leading: const Icon(Icons.rocket_launch_rounded,
+                              color: Color(0xFF6BCB77), size: 20),
+                          title: Text(p.name,
+                              style: const TextStyle(
+                                  color: Colors.white, fontSize: 13)),
+                          subtitle: p.description.isNotEmpty
+                              ? Text(p.description,
+                                  style: const TextStyle(
+                                      color: Colors.white54, fontSize: 11),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis)
+                              : null,
+                          onTap: () => Navigator.of(ctx).pop(p.id),
+                        ))
+                    .toList(),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    ).then((linkedId) async {
+      if (linkedId != null && mounted) {
+        try {
+          await ref
+              .read(projectsNotifierProvider.notifier)
+              .linkIdeaToProject(widget.project.id, linkedId);
+          if (mounted) Navigator.of(context).pop();
+        } catch (e) {
+          if (mounted) setState(() => _analysisError = 'Erro ao vincular: $e');
+        }
+      }
+    });
+  }
+
   Widget _sectionTitle(String title) => Padding(
         padding: const EdgeInsets.only(bottom: 8),
         child: Text(title,
@@ -916,11 +1224,37 @@ class _ProjectDetailSheetState extends ConsumerState<_ProjectDetailSheet> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: Text(widget.project.name,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (widget.project.isIdea)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFAB83FF).withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                  color:
+                                      const Color(0xFFAB83FF).withOpacity(0.4)),
+                            ),
+                            child: const Text('💡 SOMENTE IDEIA',
+                                style: TextStyle(
+                                    color: Color(0xFFAB83FF),
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.4)),
+                          ),
+                        ),
+                      Text(widget.project.name,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18)),
+                    ],
+                  ),
                 ),
                 if (s != null && s.hasEnoughData)
                   Column(
@@ -1309,9 +1643,170 @@ class _ProjectDetailSheetState extends ConsumerState<_ProjectDetailSheet> {
               ],
             ),
             const SizedBox(height: 8),
+            // ── Ideia — Avaliação e Decisão ──────────────────────
+            if (widget.project.isIdea) ...[
+              const SizedBox(height: 4),
+              const Divider(color: Color(0xFF333355)),
+              const SizedBox(height: 8),
+              const Text('AVALIAÇÃO DA IDEIA',
+                  style: TextStyle(
+                      color: Colors.white54,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.8)),
+              const SizedBox(height: 8),
+              if (_evaluating)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Column(
+                      children: [
+                        CircularProgressIndicator(color: Color(0xFFAB83FF)),
+                        SizedBox(height: 8),
+                        Text('IVE avaliando ideia...',
+                            style: TextStyle(
+                                color: Colors.white54, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                )
+              else if (_evaluationError != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF6B6B).withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                          color: const Color(0xFFFF6B6B).withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.error_outline_rounded,
+                            color: Color(0xFFFF6B6B), size: 16),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(_evaluationError!,
+                              style: const TextStyle(
+                                  color: Color(0xFFFF6B6B), fontSize: 12)),
+                        ),
+                        GestureDetector(
+                          onTap: () => setState(() => _evaluationError = null),
+                          child: const Icon(Icons.close_rounded,
+                              color: Colors.white38, size: 14),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                Builder(builder: (_) {
+                  final eval =
+                      _localEvaluation ?? widget.project.iveEvaluation;
+                  final opps =
+                      (eval['opportunities'] as List<dynamic>?) ?? [];
+                  if (opps.isEmpty) {
+                    return _SheetButton(
+                      icon: Icons.psychology_rounded,
+                      label: 'AVALIAR IDEIA COM IVE',
+                      color: const Color(0xFFAB83FF),
+                      onTap: _evaluateIdea,
+                    );
+                  }
+                  return Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFAB83FF).withOpacity(0.06),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                          color: const Color(0xFFAB83FF).withOpacity(0.3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.auto_awesome_rounded,
+                                color: Color(0xFFAB83FF), size: 14),
+                            SizedBox(width: 6),
+                            Text('Avaliação da IVE',
+                                style: TextStyle(
+                                    color: Color(0xFFAB83FF),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        ...opps.take(3).map((raw) {
+                          final opp = raw as Map<String, dynamic>;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('⚡ ',
+                                    style: TextStyle(fontSize: 11)),
+                                Expanded(
+                                  child: Text(
+                                    opp['title'] as String? ?? '',
+                                    style: const TextStyle(
+                                        color: Colors.white70, fontSize: 12),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                        const SizedBox(height: 8),
+                        TextButton(
+                          onPressed: _evaluateIdea,
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: const Text('Reavaliar',
+                              style: TextStyle(
+                                  color: Color(0xFFAB83FF), fontSize: 11)),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              const SizedBox(height: 12),
+              const Text('DECISÃO',
+                  style: TextStyle(
+                      color: Colors.white54,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.8)),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: _SheetButton(
+                      icon: Icons.rocket_launch_rounded,
+                      label: 'Transformar',
+                      color: const Color(0xFF6BCB77),
+                      onTap: _promoteToProject,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _SheetButton(
+                      icon: Icons.link_rounded,
+                      label: 'Vincular',
+                      color: const Color(0xFF00BCD4),
+                      onTap: _showProjectLinker,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ],
             _SheetButton(
               icon: Icons.delete_outline_rounded,
-              label: 'Excluir Projeto',
+              label: widget.project.isIdea ? 'Excluir Ideia' : 'Excluir Projeto',
               color: const Color(0xFFFF6B6B),
               onTap: widget.onDelete,
             ),

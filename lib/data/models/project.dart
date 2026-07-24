@@ -41,6 +41,13 @@ class Project {
   List<String> get risks => _list(detailsJson['risks']);
   String get summary => detailsJson['summary'] as String? ?? '';
 
+  bool get isIdea => detailsJson['is_idea'] == true;
+  String get ideaState => detailsJson['idea_state'] as String? ?? 'captured';
+  Map<String, dynamic> get iveEvaluation =>
+      detailsJson['ive_evaluation'] is Map
+          ? Map<String, dynamic>.from(detailsJson['ive_evaluation'] as Map)
+          : {};
+
   static List<String> _list(dynamic v) {
     if (v is List) return v.map((e) => e.toString()).toList();
     return [];
@@ -91,7 +98,11 @@ class Project {
     'details_json':          detailsJson,
   };
 
-  Project copyWith({String? status, int? priorityScore}) {
+  Project copyWith({
+    String? status,
+    int? priorityScore,
+    Map<String, dynamic>? detailsJson,
+  }) {
     return Project(
       id:                  id,
       userId:              userId,
@@ -106,7 +117,7 @@ class Project {
       timeToRevenueDays:   timeToRevenueDays,
       status:              status ?? this.status,
       marketAnalysisId:    marketAnalysisId,
-      detailsJson:         detailsJson,
+      detailsJson:         detailsJson ?? this.detailsJson,
       createdAt:           createdAt,
       updatedAt:           updatedAt,
     );

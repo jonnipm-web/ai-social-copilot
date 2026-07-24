@@ -105,4 +105,44 @@ class ContentService {
           .insert(data);
     }
   }
+
+  Future<void> upsertFromProject({
+    required String userId,
+    required String projectId,
+    required String title,
+    String? description,
+  }) async {
+    final existing = await _client
+        .from(AppConstants.tableContentItems)
+        .select('id')
+        .eq('user_id', userId)
+        .eq('project_id', projectId)
+        .eq('type', 'idea')
+        .isFilter('knowledge_item_id', null)
+        .maybeSingle();
+
+    final data = <String, dynamic>{
+      'user_id':           userId,
+      'project_id':        projectId,
+      'title':             title,
+      'type':              'idea',
+      'description':       description,
+      'auto_generated':    false,
+      'keywords':          <String>[],
+      'opportunity_score': 0,
+      'status':            'active',
+      'updated_at':        DateTime.now().toUtc().toIso8601String(),
+    };
+
+    if (existing != null) {
+      await _client
+          .from(AppConstants.tableContentItems)
+          .update(data)
+          .eq('id', existing['id'] as String);
+    } else {
+      await _client
+          .from(AppConstants.tableContentItems)
+          .insert(data);
+    }
+  }
 }

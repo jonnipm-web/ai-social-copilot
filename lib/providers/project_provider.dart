@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/services/ive_event_bus.dart';
 import '../data/models/ive_event.dart';
 import '../data/models/project.dart';
+import '../data/services/content_service.dart';
 import '../data/services/project_service.dart';
 import 'action_queue_provider.dart';
 import 'market_analysis_provider.dart';
@@ -43,6 +44,18 @@ class ProjectsNotifier extends AsyncNotifier<List<Project>> {
 
   Future<Project> create(Map<String, dynamic> data) async {
     final project = await ref.read(projectServiceProvider).create(data);
+
+    // Auto-index ideas in Library (non-blocking — errors are suppressed)
+    if (project.isIdea) {
+      try {
+        await ContentService().upsertFromProject(
+          userId: project.userId,
+          projectId: project.id,
+          title: project.name,
+          description: project.description.isNotEmpty ? project.description : null,
+        );
+      } catch (_) {}
+    }
 
     // Atualização otimista — UI vê o novo projeto imediatamente
     state = AsyncData([...?state.valueOrNull, project]);
@@ -93,6 +106,43 @@ class ProjectsNotifier extends AsyncNotifier<List<Project>> {
     IveEventBus.instance.emit(
       IveEvent.projectUpdated(projectId: id, projectName: project.name),
     );
+  }
+
+  // ── Idea lifecycle ────────────────────────────────────────────────────────
+
+  Future<void> promoteToProject(String id) async {
+    final project =
+        (state.valueOrNull ?? []).firstWhere((p) => p.id == id);
+    final newDetails = {
+      ...project.detailsJson,
+      'is_idea': false,
+      'idea_state': 'promoted',
+      'promoted_at': DateTime.now().toUtc().toIso8601String(),
+    };
+    await updateFields(id, {'details_json': newDetails});
+  }
+
+  Future<void> saveIveEvaluation(
+      String id, Map<String, dynamic> evaluation) async {
+    final project =
+        (state.valueOrNull ?? []).firstWhere((p) => p.id == id);
+    final newDetails = {
+      ...project.detailsJson,
+      'ive_evaluation': evaluation,
+      'idea_state': 'evaluated',
+    };
+    await updateFields(id, {'details_json': newDetails});
+  }
+
+  Future<void> linkIdeaToProject(String ideaId, String linkedProjectId) async {
+    final idea =
+        (state.valueOrNull ?? []).firstWhere((p) => p.id == ideaId);
+    final newDetails = {
+      ...idea.detailsJson,
+      'linked_project_id': linkedProjectId,
+      'idea_state': 'linked',
+    };
+    await updateFields(ideaId, {'details_json': newDetails, 'status': 'completed'});
   }
 
   // ── Delete ────────────────────────────────────────────────────────────────
