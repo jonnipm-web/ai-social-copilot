@@ -11,6 +11,11 @@ import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/context_copilot_widget.dart'
     show openIveWithContext, synchronizeIveProjectContext;
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../data/models/knowledge_item.dart';
+import '../../../data/models/opportunity_lab_item.dart';
+import '../../../providers/knowledge_provider.dart';
+import '../../../providers/opportunity_lab_provider.dart';
 
 class ProjectCommandCenterScreen extends ConsumerStatefulWidget {
   const ProjectCommandCenterScreen({super.key});
@@ -126,7 +131,6 @@ class _ProjectCommandCenterScreenState
       backgroundColor: Colors.transparent,
       builder: (_) => _ProjectDetailSheet(
         project:        project,
-        ecosystemScore: score,
         onStatusChange: (s) {
           Navigator.of(context).pop();
           ref.read(projectsNotifierProvider.notifier).updateStatus(project.id, s);
@@ -645,20 +649,25 @@ class _ProjectCard extends StatelessWidget {
 
 // ── Project Detail Bottom Sheet ───────────────────────────────────────────────
 
-class _ProjectDetailSheet extends StatelessWidget {
+class _ProjectDetailSheet extends ConsumerStatefulWidget {
   const _ProjectDetailSheet({
     required this.project,
     required this.onStatusChange,
     required this.onDelete,
-    this.ecosystemScore,
     this.onAnalyze,
   });
 
   final Project project;
-  final EcosystemScore? ecosystemScore;
   final void Function(String) onStatusChange;
   final VoidCallback onDelete;
   final VoidCallback? onAnalyze;
+
+  @override
+  ConsumerState<_ProjectDetailSheet> createState() => _ProjectDetailSheetState();
+}
+
+class _ProjectDetailSheetState extends ConsumerState<_ProjectDetailSheet> {
+  bool _analyzing = false;
 
   Color _ecoScoreColor(int score) {
     if (score >= 70) return const Color(0xFF6BCB77);
@@ -672,9 +681,178 @@ class _ProjectDetailSheet extends StatelessWidget {
     return 'R\$ ${v.toStringAsFixed(0)}';
   }
 
+  Future<void> _analyzeProject() async {
+    if (_analyzing) return;
+    setState(() => _analyzing = true);
+    try {
+      final items = await ref.read(
+          knowledgeItemsByProjectProvider(widget.project.id).future);
+      final documents = items
+          .where((i) => i.content.isNotEmpty)
+          .map((i) => {'title': i.title, 'content': i.content})
+          .toList();
+
+      final response = await Supabase.instance.client.functions.invoke(
+        'generate-project-opportunities',
+        body: {
+          'project_name':        widget.project.name,
+          'project_description': widget.project.description,
+          'project_type':        widget.project.type,
+          'documents':           documents,
+          'market_context':      '',
+        },
+      );
+
+      if (response.data == null) throw Exception('Sem resposta da IA');
+
+      final data          = response.data as Map<String, dynamic>;
+      final opportunities = (data['opportunities'] as List<dynamic>?) ?? [];
+      final uid           = Supabase.instance.client.auth.currentUser!.id;
+      final labNotifier   = ref.read(opportunityLabNotifierProvider.notifier);
+
+      for (final raw in opportunities) {
+        final opp = raw as Map<String, dynamic>;
+        await labNotifier.add(OpportunityLabItem(
+          id:               '',
+          userId:           uid,
+          projectId:        widget.project.id,
+          opportunityType:  opp['opportunity_type'] as String? ?? 'expansão',
+          title:            opp['title'] as String? ?? '',
+          description:      opp['description'] as String? ?? '',
+          marketScore:      (opp['market_score'] as num?)?.toInt() ?? 0,
+          revenueScore:     (opp['revenue_score'] as num?)?.toInt() ?? 0,
+          competitionScore: (opp['competition_score'] as num?)?.toInt() ?? 0,
+          synergyScore:     (opp['synergy_score'] as num?)?.toInt() ?? 0,
+          strategicFit:     (opp['strategic_fit'] as num?)?.toInt() ?? 0,
+          finalScore:       (opp['final_score'] as num?)?.toInt() ?? 0,
+          status:           'pending',
+          createdAt:        DateTime.now(),
+          origin:           'ia-project-analysis',
+        ));
+      }
+
+      if (mounted) {
+        ref.invalidate(ecosystemScoresProvider);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Análise concluída! Scores atualizados.'),
+            backgroundColor: Color(0xFF6BCB77),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro na análise: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _analyzing = false);
+    }
+  }
+
+  Future<void> _showKnowledgeSelector(List<KnowledgeItem> linked) async {
+    List<KnowledgeItem> all;
+    try {
+      all = await ref.read(knowledgeItemsProvider.future);
+    } catch (_) {
+      all = const [];
+    }
+    final linkedIds = linked.map((i) => i.id).toSet();
+    final unlinked  = all
+        .where((i) => i.projectId == null && !linkedIds.contains(i.id))
+        .toList();
+
+    if (!mounted) return;
+
+    if (unlinked.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Nenhum item disponível no Cofre para vincular.')),
+      );
+      return;
+    }
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF1E1B2E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => _KnowledgeSelectorSheet(
+        items: unlinked,
+        onSelect: (item) async {
+          Navigator.of(ctx).pop();
+          await ref
+              .read(knowledgeServiceProvider)
+              .update(item.id, {'project_id': widget.project.id});
+          ref.invalidate(knowledgeItemsByProjectProvider(widget.project.id));
+        },
+      ),
+    );
+  }
+
+  Future<void> _unlinkItem(KnowledgeItem item) async {
+    await ref
+        .read(knowledgeServiceProvider)
+        .update(item.id, {'project_id': null});
+    ref.invalidate(knowledgeItemsByProjectProvider(widget.project.id));
+  }
+
+  Widget _sectionTitle(String title) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Text(title,
+            style: const TextStyle(
+                color: Colors.white54,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.8)),
+      );
+
+  List<Widget> _bullets(List<String> items, Color color, String prefix) =>
+      items
+          .map((item) => Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(prefix, style: TextStyle(color: color, fontSize: 12)),
+                    Expanded(
+                        child: Text(item,
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 12))),
+                  ],
+                ),
+              ))
+          .toList();
+
   @override
   Widget build(BuildContext context) {
-    final s = ecosystemScore;
+    // Reactive: sheet updates automatically after _analyzeProject invalidates.
+    final asyncScores = ref.watch(ecosystemScoresProvider);
+    final allScores   = asyncScores.valueOrNull ?? const <EcosystemScore>[];
+    EcosystemScore? s;
+    for (final score in allScores) {
+      if (score.project.id == widget.project.id) {
+        s = score;
+        break;
+      }
+    }
+
+    final asyncKnowledge = ref.watch(
+        knowledgeItemsByProjectProvider(widget.project.id));
+    final linkedItems = asyncKnowledge.valueOrNull ?? const <KnowledgeItem>[];
+
+    final bool noData = s == null || !s.hasEnoughData;
+
+    final String analyzeLabel = s == null
+        ? 'ANALISAR PROJETO'
+        : !s.hasEnoughData
+            ? 'COMPLETAR ANÁLISE'
+            : 'REANALISAR';
 
     return DraggableScrollableSheet(
       initialChildSize: 0.65,
@@ -706,13 +884,13 @@ class _ProjectDetailSheet extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: Text(project.name,
+                  child: Text(widget.project.name,
                       style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                           fontSize: 18)),
                 ),
-                if (s != null)
+                if (s != null && s.hasEnoughData)
                   Column(
                     children: [
                       Text('${s.ecosystemScore}',
@@ -721,27 +899,64 @@ class _ProjectDetailSheet extends StatelessWidget {
                               fontSize: 28,
                               fontWeight: FontWeight.bold)),
                       const Text('eco score',
-                          style: TextStyle(
-                              color: Colors.white38, fontSize: 10)),
+                          style:
+                              TextStyle(color: Colors.white38, fontSize: 10)),
                     ],
                   ),
               ],
             ),
-            if (project.description.isNotEmpty) ...[
+            if (widget.project.description.isNotEmpty) ...[
               const SizedBox(height: 8),
-              Text(project.description,
+              Text(widget.project.description,
                   style:
                       const TextStyle(color: Colors.white60, fontSize: 13)),
             ],
-            if (project.url != null) ...[
+            if (widget.project.url != null) ...[
               const SizedBox(height: 4),
-              Text(project.url!,
+              Text(widget.project.url!,
                   style: const TextStyle(
                       color: Color(0xFF6C63FF), fontSize: 12)),
             ],
             const SizedBox(height: 16),
 
-            // Recomendação
+            // ── Aviso de dados insuficientes ──────────────────────
+            if (noData) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFD93D).withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                      color: const Color(0xFFFFD93D).withOpacity(0.3)),
+                ),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.info_outline_rounded,
+                            color: Color(0xFFFFD93D), size: 16),
+                        SizedBox(width: 6),
+                        Text('Dados insuficientes para análise',
+                            style: TextStyle(
+                                color: Color(0xFFFFD93D),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13)),
+                      ],
+                    ),
+                    SizedBox(height: 6),
+                    Text(
+                      'Vincule itens do Cofre de Conhecimento a este projeto '
+                      'e toque em "Analisar Projeto" para gerar scores reais.',
+                      style: TextStyle(color: Colors.white54, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // ── Recomendação ──────────────────────────────────────
             if (s != null) ...[
               _sectionTitle('Recomendação IA'),
               Container(
@@ -771,13 +986,20 @@ class _ProjectDetailSheet extends StatelessWidget {
 
               // Score breakdown
               _sectionTitle('Scores do Ecossistema'),
-              _ScoreRow('Oportunidade',  s.opportunityScore),
-              _ScoreRow('Fit Estratégico', s.strategicFit),
-              _ScoreRow('Sinergia',       s.synergyScore),
-              _ScoreRow('ROI', s.roiScore, showDash: !s.hasRoiData),
-              _ScoreRow('Momentum',       s.momentumScore),
-              _ScoreRow('Mercado',        s.marketScore),
-              _ScoreRow('Execução',       s.executionScore),
+              _ScoreRow('Oportunidade',    s.opportunityScore,
+                  showDash: !s.hasEnoughData),
+              _ScoreRow('Fit Estratégico', s.strategicFit,
+                  showDash: !s.hasEnoughData),
+              _ScoreRow('Sinergia',        s.synergyScore,
+                  showDash: !s.hasEnoughData),
+              _ScoreRow('ROI',             s.roiScore,
+                  showDash: !s.hasEnoughData || !s.hasRoiData),
+              _ScoreRow('Momentum',        s.momentumScore,
+                  showDash: !s.hasEnoughData),
+              _ScoreRow('Mercado',         s.marketScore,
+                  showDash: !s.hasEnoughData),
+              _ScoreRow('Execução',        s.executionScore,
+                  showDash: !s.hasEnoughData),
               const SizedBox(height: 8),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -805,21 +1027,21 @@ class _ProjectDetailSheet extends StatelessWidget {
                   Expanded(
                     child: _MetricTile(
                         label: 'Oportunidade',
-                        value: '${project.opportunityScore}',
+                        value: '${widget.project.opportunityScore}',
                         color: const Color(0xFF00BCD4)),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: _MetricTile(
                         label: 'Complexidade',
-                        value: '${project.complexityScore}',
+                        value: '${widget.project.complexityScore}',
                         color: const Color(0xFFFFD93D)),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: _MetricTile(
                         label: 'Potencial',
-                        value: _fmtRevenue(project.revenuePotential),
+                        value: _fmtRevenue(widget.project.revenuePotential),
                         color: const Color(0xFF6BCB77)),
                   ),
                 ],
@@ -849,25 +1071,104 @@ class _ProjectDetailSheet extends StatelessWidget {
             ],
 
             // Next actions (from detailsJson)
-            if (project.nextActions.isNotEmpty) ...[
+            if (widget.project.nextActions.isNotEmpty) ...[
               _sectionTitle('Próximas Ações'),
-              ..._bullets(project.nextActions, const Color(0xFFAB83FF), '→ '),
+              ..._bullets(
+                  widget.project.nextActions, const Color(0xFFAB83FF), '→ '),
               const SizedBox(height: 12),
             ],
 
+            // ── Conhecimento Vinculado ────────────────────────────
+            const Divider(color: Color(0xFF333355)),
             const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('CONHECIMENTO VINCULADO',
+                    style: TextStyle(
+                        color: Colors.white54,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.8)),
+                TextButton.icon(
+                  onPressed: () => _showKnowledgeSelector(linkedItems),
+                  icon: const Icon(Icons.add_rounded,
+                      size: 14, color: Color(0xFF6BCB77)),
+                  label: const Text('ADICIONAR',
+                      style: TextStyle(
+                          color: Color(0xFF6BCB77), fontSize: 11)),
+                  style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            if (asyncKnowledge.isLoading)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            else if (linkedItems.isEmpty)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 8),
+                child: Text(
+                  'Nenhum item vinculado. Adicione itens do Cofre para enriquecer a análise.',
+                  style:
+                      TextStyle(color: Colors.white38, fontSize: 12),
+                ),
+              )
+            else
+              ...linkedItems.map((item) => _KnowledgeItemTile(
+                    item: item,
+                    onRemove: () => _unlinkItem(item),
+                  )),
+            const SizedBox(height: 12),
+
             const Divider(color: Color(0xFF333355)),
             const SizedBox(height: 12),
 
-            // Action buttons
-            IveProjectAskButton(project: project, ecosystemScore: s),
+            // ── Action buttons ────────────────────────────────────
+            IveProjectAskButton(
+              project: widget.project,
+              ecosystemScore: s,
+              knowledgeItems: linkedItems,
+            ),
             const SizedBox(height: 8),
-            if (onAnalyze != null)
+
+            // Analisar / Reanalisar
+            _analyzing
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: Column(
+                        children: [
+                          CircularProgressIndicator(
+                              color: Color(0xFF6BCB77)),
+                          SizedBox(height: 8),
+                          Text('Analisando com IA...',
+                              style: TextStyle(
+                                  color: Colors.white54, fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                  )
+                : _SheetButton(
+                    icon: Icons.auto_awesome_rounded,
+                    label: analyzeLabel,
+                    color: const Color(0xFF6BCB77),
+                    onTap: _analyzeProject,
+                  ),
+            const SizedBox(height: 8),
+            if (widget.onAnalyze != null)
               _SheetButton(
                 icon: Icons.analytics_rounded,
                 label: 'Ver Análise de Mercado',
                 color: const Color(0xFF00BCD4),
-                onTap: onAnalyze!,
+                onTap: widget.onAnalyze!,
               ),
             const SizedBox(height: 8),
             Row(
@@ -877,7 +1178,7 @@ class _ProjectDetailSheet extends StatelessWidget {
                     icon: Icons.play_arrow_rounded,
                     label: 'Ativar',
                     color: const Color(0xFF6BCB77),
-                    onTap: () => onStatusChange('active'),
+                    onTap: () => widget.onStatusChange('active'),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -886,7 +1187,7 @@ class _ProjectDetailSheet extends StatelessWidget {
                     icon: Icons.pause_rounded,
                     label: 'Pausar',
                     color: const Color(0xFFFFD93D),
-                    onTap: () => onStatusChange('paused'),
+                    onTap: () => widget.onStatusChange('paused'),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -895,7 +1196,7 @@ class _ProjectDetailSheet extends StatelessWidget {
                     icon: Icons.check_circle_outline_rounded,
                     label: 'Concluir',
                     color: const Color(0xFF4D96FF),
-                    onTap: () => onStatusChange('completed'),
+                    onTap: () => widget.onStatusChange('completed'),
                   ),
                 ),
               ],
@@ -905,41 +1206,13 @@ class _ProjectDetailSheet extends StatelessWidget {
               icon: Icons.delete_outline_rounded,
               label: 'Excluir Projeto',
               color: const Color(0xFFFF6B6B),
-              onTap: onDelete,
+              onTap: widget.onDelete,
             ),
           ],
         ),
       ),
     );
   }
-
-  Widget _sectionTitle(String title) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Text(title,
-            style: const TextStyle(
-                color: Colors.white54,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.8)),
-      );
-
-  List<Widget> _bullets(List<String> items, Color color, String prefix) =>
-      items
-          .map((item) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(prefix,
-                        style: TextStyle(color: color, fontSize: 12)),
-                    Expanded(
-                        child: Text(item,
-                            style: const TextStyle(
-                                color: Colors.white70, fontSize: 12))),
-                  ],
-                ),
-              ))
-          .toList();
 }
 
 @visibleForTesting
@@ -948,14 +1221,28 @@ class IveProjectAskButton extends StatelessWidget {
     super.key,
     required this.project,
     this.ecosystemScore,
+    this.knowledgeItems = const [],
   });
 
   final Project project;
   final EcosystemScore? ecosystemScore;
+  final List<KnowledgeItem> knowledgeItems;
 
   @override
   Widget build(BuildContext context) {
     final score = ecosystemScore;
+    final knowledgeContext = knowledgeItems.isEmpty
+        ? null
+        : knowledgeItems
+            .take(3)
+            .map((i) => {
+                  'title': i.title,
+                  'excerpt': i.content.length > 200
+                      ? i.content.substring(0, 200)
+                      : i.content,
+                })
+            .toList();
+
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton.icon(
@@ -973,6 +1260,8 @@ class IveProjectAskButton extends StatelessWidget {
               'id': project.id,
               'name': project.name,
               'status': project.status,
+              if (knowledgeContext != null)
+                'knowledge_context': knowledgeContext,
             },
             scores: score == null
                 ? null
@@ -1177,6 +1466,121 @@ class _ActionBtn extends StatelessWidget {
         icon: Icon(icon, color: color, size: 14),
         label: Text(label, style: TextStyle(color: color, fontSize: 11)),
         style: TextButton.styleFrom(padding: EdgeInsets.zero),
+      ),
+    );
+  }
+}
+
+// ── Knowledge item tile (linked items list) ───────────────────────────────────
+
+class _KnowledgeItemTile extends StatelessWidget {
+  const _KnowledgeItemTile({required this.item, required this.onRemove});
+
+  final KnowledgeItem item;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          const Icon(Icons.auto_stories_rounded,
+              color: Color(0xFF6C63FF), size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              item.title,
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          InkWell(
+            onTap: onRemove,
+            borderRadius: BorderRadius.circular(4),
+            child: const Padding(
+              padding: EdgeInsets.all(4),
+              child: Row(
+                children: [
+                  Icon(Icons.link_off_rounded,
+                      color: Colors.white38, size: 14),
+                  SizedBox(width: 2),
+                  Text('remover',
+                      style:
+                          TextStyle(color: Colors.white38, fontSize: 10)),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Knowledge selector bottom sheet ──────────────────────────────────────────
+
+class _KnowledgeSelectorSheet extends StatelessWidget {
+  const _KnowledgeSelectorSheet({
+    required this.items,
+    required this.onSelect,
+  });
+
+  final List<KnowledgeItem> items;
+  final Future<void> Function(KnowledgeItem) onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 8, 12),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text('Vincular ao Projeto',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold)),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white54),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+          ),
+          const Divider(color: Color(0xFF333355), height: 1),
+          Flexible(
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: items.length,
+              itemBuilder: (_, i) {
+                final item = items[i];
+                return ListTile(
+                  leading: const Icon(Icons.auto_stories_rounded,
+                      color: Color(0xFF6C63FF), size: 20),
+                  title: Text(item.title,
+                      style: const TextStyle(
+                          color: Colors.white, fontSize: 13)),
+                  subtitle: item.sourceType.isNotEmpty
+                      ? Text(item.sourceType,
+                          style: const TextStyle(
+                              color: Colors.white38, fontSize: 11))
+                      : null,
+                  trailing: const Icon(Icons.add_link_rounded,
+                      color: Color(0xFF6BCB77), size: 18),
+                  onTap: () => onSelect(item),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
       ),
     );
   }
