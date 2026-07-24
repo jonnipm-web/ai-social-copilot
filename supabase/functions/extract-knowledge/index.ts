@@ -102,27 +102,20 @@ Retorne apenas o JSON. Nenhum texto antes ou depois.`;
 // ── Binary text extractors (PDF / DOCX) ──────────────────────
 
 async function extractFromPdf(bytes: Uint8Array): Promise<string> {
-  try {
-    const { default: pdfParse } = await import("npm:pdf-parse/lib/pdf-parse.js");
-    const buffer = Buffer.from(bytes);
-    const data = await pdfParse(buffer);
-    return data.text ?? "";
-  } catch {
-    // Fallback: regex-based extraction for simple PDFs
-    const latin = new TextDecoder("latin1").decode(bytes);
-    const blocks: string[] = [];
-    const btEtMatches = latin.match(/BT[\s\S]*?ET/g) ?? [];
-    for (const block of btEtMatches) {
-      const strings = block.match(/\(([^)\\]*(?:\\.[^)\\]*)*)\)/g) ?? [];
-      for (const s of strings) {
-        const text = s.slice(1, -1)
-          .replace(/\\n/g, " ").replace(/\\r/g, "").replace(/\\t/g, " ")
-          .replace(/\\\\/g, "\\").replace(/\\([()])/g, "$1");
-        if (text.trim().length > 0) blocks.push(text.trim());
-      }
+  // Regex-based extraction for text-based PDFs (no npm dependency — keeps bundle small)
+  const latin = new TextDecoder("latin1").decode(bytes);
+  const blocks: string[] = [];
+  const btEtMatches = latin.match(/BT[\s\S]*?ET/g) ?? [];
+  for (const block of btEtMatches) {
+    const strings = block.match(/\(([^)\\]*(?:\\.[^)\\]*)*)\)/g) ?? [];
+    for (const s of strings) {
+      const text = s.slice(1, -1)
+        .replace(/\\n/g, " ").replace(/\\r/g, "").replace(/\\t/g, " ")
+        .replace(/\\\\/g, "\\").replace(/\\([()])/g, "$1");
+      if (text.trim().length > 0) blocks.push(text.trim());
     }
-    return blocks.join(" ").trim();
   }
+  return blocks.join(" ").trim();
 }
 
 async function extractFromDocx(bytes: Uint8Array): Promise<string> {
