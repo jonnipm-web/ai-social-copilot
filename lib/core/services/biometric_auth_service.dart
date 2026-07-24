@@ -27,6 +27,10 @@ class BiometricAuthService {
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
 
+  /// Last PlatformException code — populated on every auth failure.
+  /// Useful for diagnostic display in the UI (e.g. BiometricEnrollmentSheet).
+  String? lastErrorCode;
+
   /// True if device has biometric hardware AND enrolled biometrics.
   Future<bool> isAvailable() async {
     if (kIsWeb) return false;
@@ -131,6 +135,7 @@ class BiometricAuthService {
   }
 
   BiometricStatus _map(PlatformException e) {
+    lastErrorCode = e.code;
     switch (e.code) {
       case auth_error.lockedOut:
         return BiometricStatus.lockout;
@@ -141,6 +146,11 @@ class BiometricAuthService {
       case auth_error.notEnrolled:
       case auth_error.passcodeNotSet:
         return BiometricStatus.noneEnrolled;
+      // local_auth requires FlutterFragmentActivity instead of FlutterActivity.
+      // Patch applied in build workflow (see "Patch MainActivity" step).
+      // If this code still appears, the APK was built without the patch.
+      case 'no_fragment_activity':
+        return BiometricStatus.noHardware;
       default:
         return BiometricStatus.failed;
     }

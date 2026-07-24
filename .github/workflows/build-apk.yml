@@ -86,6 +86,17 @@ jobs:
             echo "=== settings.gradle.kts ===" && cat android/settings.gradle.kts
           fi
 
+      - name: Patch MainActivity — FlutterFragmentActivity (local_auth)
+        run: |
+          MAIN=$(find android/app/src/main/kotlin -name "MainActivity.kt" 2>/dev/null | head -1)
+          if [ -n "$MAIN" ]; then
+            sed -i 's/import io\.flutter\.embedding\.android\.FlutterActivity/import io.flutter.embedding.android.FlutterFragmentActivity/g' "$MAIN"
+            sed -i 's/class MainActivity\s*:\s*FlutterActivity()/class MainActivity : FlutterFragmentActivity()/g' "$MAIN"
+            echo "=== $MAIN ===" && cat "$MAIN"
+          else
+            echo "MainActivity.kt not found — skipping patch"
+          fi
+
       - name: Instalar dependências
         run: flutter pub get
 

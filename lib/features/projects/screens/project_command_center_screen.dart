@@ -668,6 +668,8 @@ class _ProjectDetailSheet extends ConsumerStatefulWidget {
 
 class _ProjectDetailSheetState extends ConsumerState<_ProjectDetailSheet> {
   bool _analyzing = false;
+  String? _analysisError;
+  String? _analysisSuccess;
 
   Color _ecoScoreColor(int score) {
     if (score >= 70) return const Color(0xFF6BCB77);
@@ -683,7 +685,11 @@ class _ProjectDetailSheetState extends ConsumerState<_ProjectDetailSheet> {
 
   Future<void> _analyzeProject() async {
     if (_analyzing) return;
-    setState(() => _analyzing = true);
+    setState(() {
+      _analyzing = true;
+      _analysisError = null;
+      _analysisSuccess = null;
+    });
     try {
       final items = await ref.read(
           knowledgeItemsByProjectProvider(widget.project.id).future);
@@ -733,21 +739,13 @@ class _ProjectDetailSheetState extends ConsumerState<_ProjectDetailSheet> {
 
       if (mounted) {
         ref.invalidate(ecosystemScoresProvider);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Análise concluída! Scores atualizados.'),
-            backgroundColor: Color(0xFF6BCB77),
-          ),
-        );
+        setState(() => _analysisSuccess =
+            '${opportunities.length} oportunidade(s) gerada(s). Scores atualizados.');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erro na análise: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        setState(() => _analysisError =
+            'Erro na análise: ${e.toString().replaceAll('Exception: ', '')}');
       }
     } finally {
       if (mounted) setState(() => _analyzing = false);
@@ -758,21 +756,22 @@ class _ProjectDetailSheetState extends ConsumerState<_ProjectDetailSheet> {
     List<KnowledgeItem> all;
     try {
       all = await ref.read(knowledgeItemsProvider.future);
-    } catch (_) {
-      all = const [];
+    } catch (e) {
+      if (mounted) setState(() => _analysisError = 'Erro ao carregar Cofre: $e');
+      return;
     }
     final linkedIds = linked.map((i) => i.id).toSet();
-    final unlinked  = all
-        .where((i) => i.projectId == null && !linkedIds.contains(i.id))
+    // Show ALL items not already linked to THIS project (including those
+    // linked to other projects — user may want to move them).
+    final available = all
+        .where((i) => !linkedIds.contains(i.id))
         .toList();
 
     if (!mounted) return;
 
-    if (unlinked.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Nenhum item disponível no Cofre para vincular.')),
-      );
+    if (available.isEmpty) {
+      setState(() => _analysisError =
+          'Nenhum item disponível. Adicione itens no Cofre de Conhecimento primeiro.');
       return;
     }
 
@@ -782,24 +781,57 @@ class _ProjectDetailSheetState extends ConsumerState<_ProjectDetailSheet> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
+      isScrollControlled: true,
       builder: (ctx) => _KnowledgeSelectorSheet(
-        items: unlinked,
+        items: available,
+        currentProjectId: widget.project.id,
         onSelect: (item) async {
           Navigator.of(ctx).pop();
-          await ref
-              .read(knowledgeServiceProvider)
-              .update(item.id, {'project_id': widget.project.id});
-          ref.invalidate(knowledgeItemsByProjectProvider(widget.project.id));
+          try {
+            await ref
+                .read(knowledgeServiceProvider)
+                .update(item.id, {'project_id': widget.project.id});
+            ref.invalidate(knowledgeItemsByProjectProvider(widget.project.id));
+            if (mounted) setState(() => _analysisError = null);
+          } catch (e) {
+            if (mounted) setState(() => _analysisError = 'Erro ao vincular: $e');
+          }
         },
       ),
     );
   }
 
   Future<void> _unlinkItem(KnowledgeItem item) async {
-    await ref
-        .read(knowledgeServiceProvider)
-        .update(item.id, {'project_id': null});
-    ref.invalidate(knowledgeItemsByProjectProvider(widget.project.id));
+    try {
+      await ref
+          .read(knowledgeServiceProvider)
+          .update(item.id, {'project_id': null});
+      ref.invalidate(knowledgeItemsByProjectProvider(widget.project.id));
+    } catch (e) {
+      if (mounted) setState(() => _analysisError = 'Erro ao desvincular: $e');
+    }
+  }
+
+  void _openIdeaIntake() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF1E1B2E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _IdeaIntakeSheet(
+        project: widget.project,
+        onIdeaSaved: () {
+          ref.invalidate(knowledgeItemsByProjectProvider(widget.project.id));
+          if (mounted) setState(() => _analysisSuccess = 'Ideia salva no Cofre.');
+        },
+        onOpportunitiesGenerated: () {
+          ref.invalidate(ecosystemScoresProvider);
+          if (mounted) setState(() => _analysisSuccess = 'Ideia analisada. Scores atualizados.');
+        },
+      ),
+    );
   }
 
   Widget _sectionTitle(String title) => Padding(
@@ -1078,6 +1110,63 @@ class _ProjectDetailSheetState extends ConsumerState<_ProjectDetailSheet> {
               const SizedBox(height: 12),
             ],
 
+            // ── Feedback inline análise ──────────────────────────
+            if (_analysisError != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF6B6B).withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                        color: const Color(0xFFFF6B6B).withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error_outline_rounded,
+                          color: Color(0xFFFF6B6B), size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(_analysisError!,
+                            style: const TextStyle(
+                                color: Color(0xFFFF6B6B), fontSize: 12)),
+                      ),
+                      GestureDetector(
+                        onTap: () => setState(() => _analysisError = null),
+                        child: const Icon(Icons.close_rounded,
+                            color: Colors.white38, size: 14),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            if (_analysisSuccess != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6BCB77).withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                        color: const Color(0xFF6BCB77).withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.check_circle_outline_rounded,
+                          color: Color(0xFF6BCB77), size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(_analysisSuccess!,
+                            style: const TextStyle(
+                                color: Color(0xFF6BCB77), fontSize: 12)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
             // ── Conhecimento Vinculado ────────────────────────────
             const Divider(color: Color(0xFF333355)),
             const SizedBox(height: 8),
@@ -1090,17 +1179,26 @@ class _ProjectDetailSheetState extends ConsumerState<_ProjectDetailSheet> {
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 0.8)),
-                TextButton.icon(
-                  onPressed: () => _showKnowledgeSelector(linkedItems),
-                  icon: const Icon(Icons.add_rounded,
-                      size: 14, color: Color(0xFF6BCB77)),
-                  label: const Text('ADICIONAR',
-                      style: TextStyle(
-                          color: Color(0xFF6BCB77), fontSize: 11)),
-                  style: TextButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                // Tap target mínimo de 44x44 para uso em dispositivo real.
+                InkWell(
+                  onTap: () => _showKnowledgeSelector(linkedItems),
+                  borderRadius: BorderRadius.circular(8),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.add_rounded,
+                            size: 14, color: Color(0xFF6BCB77)),
+                        SizedBox(width: 4),
+                        Text('ADICIONAR',
+                            style: TextStyle(
+                                color: Color(0xFF6BCB77),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -1136,6 +1234,15 @@ class _ProjectDetailSheetState extends ConsumerState<_ProjectDetailSheet> {
               project: widget.project,
               ecosystemScore: s,
               knowledgeItems: linkedItems,
+            ),
+            const SizedBox(height: 8),
+
+            // IVE Idea Intake
+            _SheetButton(
+              icon: Icons.lightbulb_outline_rounded,
+              label: 'ANALISAR IDEIA COM IVE',
+              color: const Color(0xFFAB83FF),
+              onTap: () => _openIdeaIntake(),
             ),
             const SizedBox(height: 8),
 
@@ -1525,62 +1632,414 @@ class _KnowledgeSelectorSheet extends StatelessWidget {
   const _KnowledgeSelectorSheet({
     required this.items,
     required this.onSelect,
+    this.currentProjectId,
   });
 
   final List<KnowledgeItem> items;
   final Future<void> Function(KnowledgeItem) onSelect;
+  final String? currentProjectId;
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 8, 12),
-            child: Row(
-              children: [
-                const Expanded(
-                  child: Text('Vincular ao Projeto',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold)),
+      child: DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.6,
+        minChildSize: 0.3,
+        maxChildSize: 0.9,
+        builder: (_, ctrl) => Column(
+          children: [
+            // Handle
+            Center(
+              child: Container(
+                margin: const EdgeInsets.symmetric(vertical: 10),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white54),
-                  onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 8, 12),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text('Selecionar do Cofre',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold)),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white54),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(color: Color(0xFF333355), height: 1),
+            Expanded(
+              child: ListView.builder(
+                controller: ctrl,
+                itemCount: items.length,
+                itemBuilder: (_, i) {
+                  final item = items[i];
+                  final isElsewhere =
+                      item.projectId != null &&
+                      item.projectId != currentProjectId;
+                  return ListTile(
+                    leading: const Icon(Icons.auto_stories_rounded,
+                        color: Color(0xFF6C63FF), size: 20),
+                    title: Text(item.title,
+                        style: const TextStyle(
+                            color: Colors.white, fontSize: 13)),
+                    subtitle: isElsewhere
+                        ? const Text('Vinculado a outro projeto — será movido',
+                            style: TextStyle(
+                                color: Color(0xFFFFD93D), fontSize: 10))
+                        : item.sourceType.isNotEmpty
+                            ? Text(item.sourceType,
+                                style: const TextStyle(
+                                    color: Colors.white38, fontSize: 11))
+                            : null,
+                    trailing: const Icon(Icons.add_link_rounded,
+                        color: Color(0xFF6BCB77), size: 18),
+                    onTap: () => onSelect(item),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── IVE Idea Intake Sheet ─────────────────────────────────────────────────────
+
+class _IdeaIntakeSheet extends ConsumerStatefulWidget {
+  const _IdeaIntakeSheet({
+    required this.project,
+    required this.onIdeaSaved,
+    required this.onOpportunitiesGenerated,
+  });
+
+  final Project project;
+  final VoidCallback onIdeaSaved;
+  final VoidCallback onOpportunitiesGenerated;
+
+  @override
+  ConsumerState<_IdeaIntakeSheet> createState() => _IdeaIntakeSheetState();
+}
+
+class _IdeaIntakeSheetState extends ConsumerState<_IdeaIntakeSheet> {
+  final _ideaCtrl = TextEditingController();
+  bool _loading = false;
+  String? _error;
+  Map<String, dynamic>? _result;
+
+  @override
+  void dispose() {
+    _ideaCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _analyze() async {
+    final text = _ideaCtrl.text.trim();
+    if (text.isEmpty) return;
+    setState(() { _loading = true; _error = null; _result = null; });
+
+    try {
+      final response = await Supabase.instance.client.functions.invoke(
+        'generate-project-opportunities',
+        body: {
+          'project_name':        widget.project.name,
+          'project_description': text,
+          'project_type':        widget.project.type,
+          'documents':           [],
+          'market_context':      'Ideia submetida pelo usuário para análise estratégica.',
+        },
+      );
+      if (response.data == null) throw Exception('Sem resposta da IA');
+      setState(() => _result = Map<String, dynamic>.from(response.data as Map));
+    } catch (e) {
+      setState(() => _error = e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _saveAsIdea() async {
+    final text = _ideaCtrl.text.trim();
+    if (text.isEmpty) return;
+    setState(() { _loading = true; _error = null; });
+    try {
+      final uid = Supabase.instance.client.auth.currentUser!.id;
+      await ref.read(knowledgeServiceProvider).create(KnowledgeItem(
+        id:        '',
+        userId:    uid,
+        projectId: widget.project.id,
+        title:     text.length > 60 ? '${text.substring(0, 57)}...' : text,
+        sourceType: 'manual',
+        content:   text,
+        status:    'pending',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ));
+      widget.onIdeaSaved();
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (mounted) setState(() => _error = 'Erro ao salvar: $e');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _saveOpportunities() async {
+    final data = _result;
+    if (data == null) return;
+    setState(() { _loading = true; _error = null; });
+    try {
+      final uid  = Supabase.instance.client.auth.currentUser!.id;
+      final text = _ideaCtrl.text.trim();
+      // Save idea as knowledge item
+      await ref.read(knowledgeServiceProvider).create(KnowledgeItem(
+        id:        '',
+        userId:    uid,
+        projectId: widget.project.id,
+        title:     text.length > 60 ? '${text.substring(0, 57)}...' : text,
+        sourceType: 'manual',
+        content:   text,
+        status:    'pending',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ));
+      // Save opportunities to lab
+      final opps = (data['opportunities'] as List<dynamic>?) ?? [];
+      final lab  = ref.read(opportunityLabNotifierProvider.notifier);
+      for (final raw in opps) {
+        final opp = raw as Map<String, dynamic>;
+        await lab.add(OpportunityLabItem(
+          id:               '',
+          userId:           uid,
+          projectId:        widget.project.id,
+          opportunityType:  opp['opportunity_type'] as String? ?? 'ideia',
+          title:            opp['title'] as String? ?? '',
+          description:      opp['description'] as String? ?? '',
+          marketScore:      (opp['market_score'] as num?)?.toInt() ?? 0,
+          revenueScore:     (opp['revenue_score'] as num?)?.toInt() ?? 0,
+          competitionScore: (opp['competition_score'] as num?)?.toInt() ?? 0,
+          synergyScore:     (opp['synergy_score'] as num?)?.toInt() ?? 0,
+          strategicFit:     (opp['strategic_fit'] as num?)?.toInt() ?? 0,
+          finalScore:       (opp['final_score'] as num?)?.toInt() ?? 0,
+          status:           'pending',
+          createdAt:        DateTime.now(),
+          origin:           'ia-idea-intake',
+        ));
+      }
+      widget.onOpportunitiesGenerated();
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (mounted) setState(() => _error = 'Erro ao salvar: $e');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 20, right: 20, top: 20,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.lightbulb_outline_rounded,
+                      color: Color(0xFFAB83FF), size: 20),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text('Analisar Ideia com IVE',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold)),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white54),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Projeto: ${widget.project.name}',
+                style: const TextStyle(color: Colors.white38, fontSize: 12),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _ideaCtrl,
+                maxLines: 5,
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: 'Descreva sua ideia em detalhes...',
+                  hintStyle: const TextStyle(color: Colors.white24, fontSize: 13),
+                  filled: true,
+                  fillColor: const Color(0xFF0F0F1A),
+                  contentPadding: const EdgeInsets.all(14),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFF333355)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFFAB83FF)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              if (_error != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Text(_error!,
+                      style: const TextStyle(
+                          color: Color(0xFFFF6B6B), fontSize: 12)),
+                ),
+              if (_loading)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Column(
+                      children: [
+                        CircularProgressIndicator(color: Color(0xFFAB83FF)),
+                        SizedBox(height: 8),
+                        Text('IVE analisando ideia...',
+                            style: TextStyle(color: Colors.white54, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                )
+              else if (_result != null) ...[
+                // Show analysis result
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFAB83FF).withOpacity(0.06),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                        color: const Color(0xFFAB83FF).withOpacity(0.3)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.auto_awesome_rounded,
+                              color: Color(0xFFAB83FF), size: 14),
+                          SizedBox(width: 6),
+                          Text('Análise da IVE',
+                              style: TextStyle(
+                                  color: Color(0xFFAB83FF),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      ...(_result!['opportunities'] as List<dynamic>? ?? [])
+                          .take(3)
+                          .map((raw) {
+                        final opp = raw as Map<String, dynamic>;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('⚡ ',
+                                  style: TextStyle(fontSize: 12)),
+                              Expanded(
+                                child: Text(
+                                  opp['title'] as String? ?? '',
+                                  style: const TextStyle(
+                                      color: Colors.white70, fontSize: 12),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _saveAsIdea,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white54,
+                          side: const BorderSide(color: Color(0xFF333355)),
+                        ),
+                        child: const Text('Salvar Ideia', style: TextStyle(fontSize: 12)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton.icon(
+                        onPressed: _saveOpportunities,
+                        icon: const Icon(Icons.rocket_launch_rounded, size: 14),
+                        label: const Text('Vincular ao Projeto',
+                            style: TextStyle(fontSize: 12)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFAB83FF),
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ] else ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _ideaCtrl.text.trim().isEmpty ? null : _analyze,
+                    icon: const Icon(Icons.auto_awesome_rounded, size: 14),
+                    label: const Text('Analisar com IVE'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFAB83FF),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: _ideaCtrl.text.trim().isEmpty ? null : _saveAsIdea,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white54,
+                      side: const BorderSide(color: Color(0xFF333355)),
+                    ),
+                    child: const Text('Salvar como Ideia no Cofre'),
+                  ),
                 ),
               ],
-            ),
+            ],
           ),
-          const Divider(color: Color(0xFF333355), height: 1),
-          Flexible(
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: items.length,
-              itemBuilder: (_, i) {
-                final item = items[i];
-                return ListTile(
-                  leading: const Icon(Icons.auto_stories_rounded,
-                      color: Color(0xFF6C63FF), size: 20),
-                  title: Text(item.title,
-                      style: const TextStyle(
-                          color: Colors.white, fontSize: 13)),
-                  subtitle: item.sourceType.isNotEmpty
-                      ? Text(item.sourceType,
-                          style: const TextStyle(
-                              color: Colors.white38, fontSize: 11))
-                      : null,
-                  trailing: const Icon(Icons.add_link_rounded,
-                      color: Color(0xFF6BCB77), size: 18),
-                  onTap: () => onSelect(item),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 8),
-        ],
+        ),
       ),
     );
   }

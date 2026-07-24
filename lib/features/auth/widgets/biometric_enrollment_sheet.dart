@@ -62,10 +62,19 @@ class _BiometricEnrollmentSheetState
           _loading = false;
           _error = 'Nenhuma biometria cadastrada no dispositivo.';
         });
+      case BiometricStatus.noHardware:
+        setState(() {
+          _loading = false;
+          _error = 'Biometria não disponível neste dispositivo.\n'
+              'Código: ${service.lastErrorCode ?? 'no_hardware'}';
+        });
       default:
         setState(() {
           _loading = false;
-          _error = 'Não foi possível ativar. Tente novamente mais tarde.';
+          _error = 'Não foi possível ativar.\n'
+              'Código: ${service.lastErrorCode ?? 'desconhecido'}\n'
+              'Verifique se o app foi instalado em modo debug; '
+              'o APK release corrige este problema.';
         });
     }
   }
