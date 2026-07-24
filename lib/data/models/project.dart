@@ -43,6 +43,9 @@ class Project {
 
   bool get isIdea => detailsJson['is_idea'] == true;
   String get ideaState => detailsJson['idea_state'] as String? ?? 'captured';
+  // 'pending' | 'analyzing' | 'completed' | 'failed' | 'draft'
+  String get analysisStatus =>
+      detailsJson['analysis_status'] as String? ?? 'pending';
   Map<String, dynamic> get iveEvaluation =>
       detailsJson['ive_evaluation'] is Map
           ? Map<String, dynamic>.from(detailsJson['ive_evaluation'] as Map)

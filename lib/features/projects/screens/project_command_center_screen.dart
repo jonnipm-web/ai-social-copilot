@@ -67,7 +67,7 @@ class _ProjectCommandCenterScreenState
         'description':  _descCtrl.text.trim(),
         'url':          _urlCtrl.text.trim().isNotEmpty ? _urlCtrl.text.trim() : null,
         'type':         _type,
-        'status':       'idea',
+        'status':       _isIdeaMode ? 'idea' : 'active',
         'details_json': {'is_idea': _isIdeaMode},
       });
       _nameCtrl.clear();
@@ -614,6 +614,7 @@ class _ProjectCard extends StatelessWidget {
         case 'evaluated': return 'Avaliada';
         case 'promoted':  return 'Promovida';
         case 'linked':    return 'Vinculada';
+        case 'draft':     return 'Rascunho';
         default:          return 'Ideia';
       }
     }
@@ -1011,6 +1012,66 @@ class _ProjectDetailSheetState extends ConsumerState<_ProjectDetailSheet> {
         },
       ),
     );
+  }
+
+  // Saves idea with analysis_status='failed' and idea_state='draft' — entity type UNCHANGED.
+  Future<void> _saveIdeaAsDraft() async {
+    final newDetails = {
+      ...widget.project.detailsJson,
+      'analysis_status': 'failed',
+      'idea_state': 'draft',
+    };
+    try {
+      await ref.read(projectsNotifierProvider.notifier).updateFields(
+        widget.project.id,
+        {'details_json': newDetails},
+      );
+      if (mounted) setState(() => _evaluationError = null);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _evaluationError = 'Erro ao salvar rascunho: $e');
+      }
+    }
+  }
+
+  // Rollback: deletes the idea record and closes the sheet.
+  // Only offered when analysis failed immediately after creation.
+  Future<void> _deleteIdeaAndClose() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A2E),
+        title: const Text('Excluir ideia?',
+            style: TextStyle(color: Colors.white)),
+        content: const Text(
+          'A avaliação falhou. Deseja excluir esta ideia e começar do zero?',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Não',
+                style: TextStyle(color: Colors.white54)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Excluir',
+                style: TextStyle(color: Color(0xFFFF6B6B))),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    try {
+      await ref
+          .read(projectsNotifierProvider.notifier)
+          .delete(widget.project.id);
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (mounted) {
+        setState(() => _evaluationError = 'Erro ao excluir: $e');
+      }
+    }
   }
 
   Future<void> _evaluateIdea() async {
@@ -1449,27 +1510,43 @@ class _ProjectDetailSheetState extends ConsumerState<_ProjectDetailSheet> {
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFF6B6B).withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(10),
                     border: Border.all(
                         color: const Color(0xFFFF6B6B).withOpacity(0.3)),
                   ),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.error_outline_rounded,
-                          color: Color(0xFFFF6B6B), size: 16),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(_analysisError!,
-                            style: const TextStyle(
-                                color: Color(0xFFFF6B6B), fontSize: 12)),
+                      Row(
+                        children: [
+                          const Icon(Icons.error_outline_rounded,
+                              color: Color(0xFFFF6B6B), size: 16),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(_analysisError!,
+                                style: const TextStyle(
+                                    color: Color(0xFFFF6B6B), fontSize: 12)),
+                          ),
+                          GestureDetector(
+                            onTap: () =>
+                                setState(() => _analysisError = null),
+                            child: const Icon(Icons.close_rounded,
+                                color: Colors.white38, size: 14),
+                          ),
+                        ],
                       ),
-                      GestureDetector(
-                        onTap: () => setState(() => _analysisError = null),
-                        child: const Icon(Icons.close_rounded,
-                            color: Colors.white38, size: 14),
+                      const SizedBox(height: 8),
+                      _RecoveryButton(
+                        icon: Icons.refresh_rounded,
+                        label: 'Tentar Novamente',
+                        color: const Color(0xFF6BCB77),
+                        onTap: () {
+                          setState(() => _analysisError = null);
+                          _analyzeProject();
+                        },
                       ),
                     ],
                   ),
@@ -1674,27 +1751,60 @@ class _ProjectDetailSheetState extends ConsumerState<_ProjectDetailSheet> {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Container(
-                    padding: const EdgeInsets.all(10),
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFF6B6B).withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                           color: const Color(0xFFFF6B6B).withOpacity(0.3)),
                     ),
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.error_outline_rounded,
-                            color: Color(0xFFFF6B6B), size: 16),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(_evaluationError!,
-                              style: const TextStyle(
-                                  color: Color(0xFFFF6B6B), fontSize: 12)),
+                        Row(
+                          children: [
+                            const Icon(Icons.error_outline_rounded,
+                                color: Color(0xFFFF6B6B), size: 16),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(_evaluationError!,
+                                  style: const TextStyle(
+                                      color: Color(0xFFFF6B6B), fontSize: 12)),
+                            ),
+                          ],
                         ),
-                        GestureDetector(
-                          onTap: () => setState(() => _evaluationError = null),
-                          child: const Icon(Icons.close_rounded,
-                              color: Colors.white38, size: 14),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'AVALIAÇÃO FALHOU — A ideia foi salva. O que deseja fazer?',
+                          style: TextStyle(
+                              color: Colors.white54,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _RecoveryButton(
+                              icon: Icons.refresh_rounded,
+                              label: 'Tentar Novamente',
+                              color: const Color(0xFFAB83FF),
+                              onTap: _evaluateIdea,
+                            ),
+                            _RecoveryButton(
+                              icon: Icons.save_outlined,
+                              label: 'Salvar como Rascunho',
+                              color: const Color(0xFFFFD93D),
+                              onTap: _saveIdeaAsDraft,
+                            ),
+                            _RecoveryButton(
+                              icon: Icons.delete_outline_rounded,
+                              label: 'Excluir Ideia',
+                              color: const Color(0xFFFF6B6B),
+                              onTap: _deleteIdeaAndClose,
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -2207,6 +2317,49 @@ class _KnowledgeSelectorSheet extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Recovery button — shown when analysis/evaluation fails ────────────────────
+
+class _RecoveryButton extends StatelessWidget {
+  const _RecoveryButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  final IconData     icon;
+  final String       label;
+  final Color        color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color.withOpacity(0.35)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 13),
+            const SizedBox(width: 5),
+            Text(label,
+                style: TextStyle(
+                    color: color,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600)),
           ],
         ),
       ),
