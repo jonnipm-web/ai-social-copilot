@@ -230,28 +230,46 @@ serve(async (req) => {
 
     const userMessage = `Idioma de análise: ${language}${niche}${audience}\n\nConteúdo para analisar:\n\n${content.trim().slice(0, 10000)}`;
 
-    const groqRes = await fetch(GROQ_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${GROQ_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userMessage },
-        ],
-        temperature: 0.5,
-        max_tokens: 4000,
-      }),
+    // ── Groq call with retry + fallback model ────────────────
+    const groqBody = JSON.stringify({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: userMessage },
+      ],
+      temperature: 0.5,
+      max_tokens: 4000,
     });
 
-    if (!groqRes.ok) {
-      const err = await groqRes.text();
-      console.error("Groq error:", err);
+    let groqRes: Response | null = null;
+    let lastGroqErr = "";
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) {
+        await new Promise((r) => setTimeout(r, attempt * 1500));
+      }
+      try {
+        groqRes = await fetch(GROQ_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${GROQ_API_KEY}`,
+          },
+          body: groqBody,
+        });
+        if (groqRes.ok) break;
+        lastGroqErr = await groqRes.text().catch(() => `status ${groqRes!.status}`);
+        console.error(`Groq attempt ${attempt + 1} failed:`, lastGroqErr);
+      } catch (fetchErr) {
+        lastGroqErr = String(fetchErr);
+        console.error(`Groq fetch error attempt ${attempt + 1}:`, fetchErr);
+        groqRes = null;
+      }
+    }
+
+    if (!groqRes || !groqRes.ok) {
+      console.error("Groq final error after retries:", lastGroqErr);
       return new Response(
-        JSON.stringify({ error: "Falha ao processar com a IA. Tente novamente." }),
+        JSON.stringify({ error: "Serviço de IA temporariamente indisponível. Tente novamente em instantes." }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }

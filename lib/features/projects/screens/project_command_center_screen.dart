@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../data/models/ecosystem_score.dart';
+import '../../../data/models/opportunity_lab_item.dart';
 import '../../../data/models/project.dart';
 import '../../../providers/ecosystem_intelligence_provider.dart';
+import '../../../providers/knowledge_provider.dart';
+import '../../../providers/opportunity_lab_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 
@@ -110,6 +114,119 @@ class _ProjectCommandCenterScreenState
     }
   }
 
+  Future<void> _analyzeWithKnowledge(Project project) async {
+    Navigator.of(context).pop();
+
+    // Busca knowledge items do projeto
+    final items = await ref.read(knowledgeServiceProvider)
+        .fetchAll(projectId: project.id);
+
+    if (!mounted) return;
+
+    if (items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Adicione conhecimentos ao projeto antes de analisar.',
+          ),
+          backgroundColor: const Color(0xFFFF9800),
+          action: SnackBarAction(
+            label: 'Adicionar',
+            textColor: Colors.white,
+            onPressed: () => context.push(
+              AppConstants.routeKnowledgeNew,
+              extra: {'projectId': project.id},
+            ),
+          ),
+          duration: const Duration(seconds: 5),
+        ),
+      );
+      return;
+    }
+
+    // Mostra progresso
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Analisando projeto "${project.name}" com ${items.length} conhecimento(s)…'),
+        backgroundColor: const Color(0xFF6C63FF),
+        duration: const Duration(seconds: 30),
+      ),
+    );
+
+    try {
+      final docs = items
+          .where((i) => i.content.trim().length >= 20)
+          .take(6)
+          .map((i) => {
+                'title':   i.title,
+                'content': i.content.substring(0, i.content.length.clamp(0, 400)),
+              })
+          .toList();
+
+      final response = await Supabase.instance.client.functions.invoke(
+        AppConstants.edgeFunctionGenerateOpportunities,
+        body: {
+          'project_name':        project.name,
+          'project_description': project.description,
+          'project_type':        project.type,
+          'documents':           docs,
+        },
+      );
+
+      if (response.data == null) throw Exception('Resposta vazia.');
+      final data = response.data as Map<String, dynamic>;
+      if (data.containsKey('error')) throw Exception(data['error']);
+
+      final opportunities = (data['opportunities'] as List? ?? []);
+      final notifier = ref.read(opportunityLabNotifierProvider.notifier);
+
+      for (final opp in opportunities) {
+        final item = OpportunityLabItem(
+          id:              '',
+          userId:          '',
+          projectId:       project.id,
+          opportunityType: opp['opportunity_type'] as String? ?? 'expansão',
+          title:           opp['title'] as String? ?? '',
+          description:     opp['description'] as String? ?? '',
+          marketScore:     (opp['market_score'] as num?)?.toInt() ?? 0,
+          revenueScore:    (opp['revenue_score'] as num?)?.toInt() ?? 0,
+          competitionScore:(opp['competition_score'] as num?)?.toInt() ?? 0,
+          synergyScore:    (opp['synergy_score'] as num?)?.toInt() ?? 0,
+          strategicFit:    (opp['strategic_fit'] as num?)?.toInt() ?? 0,
+          finalScore:      (opp['final_score'] as num?)?.toInt() ?? 0,
+          origin:          'knowledge_engine',
+          sources:         items.map((i) => i.title).toList(),
+          createdAt:       DateTime.now(),
+        );
+        await notifier.add(item);
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${opportunities.length} oportunidade(s) gerada(s) para "${project.name}"!'),
+          backgroundColor: const Color(0xFF4CAF50),
+          action: SnackBarAction(
+            label: 'Ver',
+            textColor: Colors.white,
+            onPressed: () => context.go(AppConstants.routeOpportunityLab),
+          ),
+          duration: const Duration(seconds: 6),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao analisar: $e'),
+          backgroundColor: const Color(0xFFF44336),
+        ),
+      );
+    }
+  }
+
   void _openDetail(Project project, EcosystemScore? score) {
     showModalBottomSheet(
       context: context,
@@ -133,6 +250,14 @@ class _ProjectCommandCenterScreenState
                     .replaceFirst(':id', project.marketAnalysisId!));
               }
             : null,
+        onAnalyzeKnowledge: () => _analyzeWithKnowledge(project),
+        onViewKnowledge: () {
+          Navigator.of(context).pop();
+          context.push(
+            AppConstants.routeKnowledge,
+            extra: {'projectId': project.id},
+          );
+        },
       ),
     );
   }
@@ -643,6 +768,8 @@ class _ProjectDetailSheet extends StatelessWidget {
     required this.onDelete,
     this.ecosystemScore,
     this.onAnalyze,
+    this.onAnalyzeKnowledge,
+    this.onViewKnowledge,
   });
 
   final Project project;
@@ -650,6 +777,8 @@ class _ProjectDetailSheet extends StatelessWidget {
   final void Function(String) onStatusChange;
   final VoidCallback onDelete;
   final VoidCallback? onAnalyze;
+  final VoidCallback? onAnalyzeKnowledge;
+  final VoidCallback? onViewKnowledge;
 
   Color _ecoScoreColor(int score) {
     if (score >= 70) return const Color(0xFF6BCB77);
@@ -858,6 +987,31 @@ class _ProjectDetailSheet extends StatelessWidget {
                 color: const Color(0xFF00BCD4),
                 onTap: onAnalyze!,
               ),
+            if (onAnalyze != null) const SizedBox(height: 8),
+            Row(
+              children: [
+                if (onViewKnowledge != null)
+                  Expanded(
+                    child: _SheetButton(
+                      icon: Icons.menu_book_rounded,
+                      label: 'Ver Conhecimentos',
+                      color: const Color(0xFF00BCD4),
+                      onTap: onViewKnowledge!,
+                    ),
+                  ),
+                if (onViewKnowledge != null && onAnalyzeKnowledge != null)
+                  const SizedBox(width: 8),
+                if (onAnalyzeKnowledge != null)
+                  Expanded(
+                    child: _SheetButton(
+                      icon: Icons.psychology_rounded,
+                      label: 'Analisar com IA',
+                      color: const Color(0xFF6C63FF),
+                      onTap: onAnalyzeKnowledge!,
+                    ),
+                  ),
+              ],
+            ),
             const SizedBox(height: 8),
             Row(
               children: [
