@@ -220,7 +220,16 @@ class _LabBody extends ConsumerWidget {
                               ),
                             ));
                           }
-                        } catch (_) {}
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Aprovada, mas erro ao criar ação: $e'),
+                                backgroundColor: Colors.orange,
+                              ),
+                            );
+                          }
+                        }
                       });
                     },
                     onDelete: () =>

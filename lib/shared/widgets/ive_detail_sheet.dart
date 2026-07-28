@@ -257,7 +257,7 @@ class IveDetailSheet extends StatelessWidget {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
           icon: const Text('💬', style: TextStyle(fontSize: 16)),
-          label: const Text('Perguntar mais ao Copilot'),
+          label: const Text('Perguntar à IVE'),
           onPressed: () {
             Navigator.of(context).pop();
             showModalBottomSheet(
