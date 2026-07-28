@@ -44,7 +44,7 @@ class ContextCopilotButton extends ConsumerWidget {
       heroTag: 'copilot_$screenName',
       onPressed: () => _openCopilot(ctx, ref),
       backgroundColor: const Color(0xFF6C63FF),
-      tooltip: 'Pergunte ao Copilot',
+      tooltip: 'Pergunte à IVE',
       child: const Text('💬', style: TextStyle(fontSize: 22)),
     );
   }
@@ -193,7 +193,7 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
             const SizedBox(width: 8),
             const Expanded(
               child: Text(
-                'AI Copilot',
+                'IVE',
                 style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
               ),
             ),
@@ -222,7 +222,7 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
             const Text('💬', style: TextStyle(fontSize: 48)),
             const SizedBox(height: 12),
             const Text(
-              'Pergunte ao Copilot',
+              'Pergunte à IVE',
               style: TextStyle(color: Colors.white70, fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),
@@ -298,7 +298,7 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
                   maxLines:      null,
                   style:         const TextStyle(color: Colors.white, fontSize: 14),
                   decoration:    InputDecoration(
-                    hintText:       'Pergunte ao Copilot…',
+                    hintText:       'Pergunte à IVE…',
                     hintStyle:      const TextStyle(color: Colors.white38),
                     filled:         true,
                     fillColor:      const Color(0xFF2A2740),

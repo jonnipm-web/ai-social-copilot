@@ -81,67 +81,140 @@ class _BriefingBody extends StatelessWidget {
     final day   = briefing.generatedAt.day.toString().padLeft(2, '0');
     final month = briefing.generatedAt.month.toString().padLeft(2, '0');
     final year  = briefing.generatedAt.year;
-
     final bottomPad = MediaQuery.of(context).padding.bottom;
-    return ListView(
-      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomPad),
-      children: [
-        // Header
-        _Header(briefing: briefing, dateStr: '$day/$month/$year'),
-        const SizedBox(height: 10),
 
-        // Metadados — projetos analisados, origem dos dados, data de geração
-        _DataOriginCard(briefing: briefing),
-        const SizedBox(height: 16),
+    return LayoutBuilder(
+      builder: (ctx, constraints) {
+        final isDesktop = constraints.maxWidth >= 1024;
+        final hPad = isDesktop ? 32.0 : 16.0;
 
-        // Executive summary
-        _SummaryCard(text: briefing.executiveSummary),
-        const SizedBox(height: 16),
+        final header = _Header(briefing: briefing, dateStr: '$day/$month/$year');
+        final dataOrigin = _DataOriginCard(briefing: briefing);
+        final summary = _SummaryCard(text: briefing.executiveSummary);
 
-        // Sections
-        _Section(
-          title: '🔄 O que mudou',
-          color: _kCyan,
-          items: briefing.whatChanged,
-        ),
-        const SizedBox(height: 12),
-        _Section(
-          title: '📈 O que cresceu',
-          color: _kGreen,
-          items: briefing.whatGrew,
-        ),
-        const SizedBox(height: 12),
-        _Section(
-          title: '📉 O que piorou',
-          color: _kRed,
-          items: briefing.whatDeclined,
-        ),
-        const SizedBox(height: 12),
-        _Section(
-          title: '🎯 O que priorizar',
-          color: _kGold,
-          items: briefing.topPriorities,
-        ),
-        const SizedBox(height: 12),
-        _Section(
-          title: '⏸️ O que pausar',
-          color: _kOrange,
-          items: briefing.toPause,
-        ),
-        const SizedBox(height: 12),
-        _Section(
-          title: '💡 Oportunidades novas',
-          color: _kCyan,
-          items: briefing.newOpportunities,
-        ),
-        const SizedBox(height: 12),
-        _Section(
-          title: '⚠️ Riscos identificados',
-          color: _kRed,
-          items: briefing.risks,
-        ),
-        const SizedBox(height: 24),
-      ],
+        final mainSections = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _Section(title: '🔄 O que mudou',        color: _kCyan,   items: briefing.whatChanged),
+            const SizedBox(height: 12),
+            _Section(title: '📈 O que cresceu',       color: _kGreen,  items: briefing.whatGrew),
+            const SizedBox(height: 12),
+            _Section(title: '📉 O que piorou',        color: _kRed,    items: briefing.whatDeclined),
+            const SizedBox(height: 12),
+            _Section(title: '🎯 O que priorizar',     color: _kGold,   items: briefing.topPriorities),
+            const SizedBox(height: 12),
+            _Section(title: '⏸️ O que pausar',        color: _kOrange, items: briefing.toPause),
+            const SizedBox(height: 12),
+            _Section(title: '💡 Oportunidades novas', color: _kCyan,   items: briefing.newOpportunities),
+          ],
+        );
+
+        final sidebar = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _HealthSideCard(briefing: briefing),
+            const SizedBox(height: 12),
+            _Section(title: '⚠️ Riscos',              color: _kRed,    items: briefing.risks),
+          ],
+        );
+
+        Widget body;
+        if (isDesktop) {
+          body = Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(flex: 7, child: mainSections),
+              const SizedBox(width: 20),
+              SizedBox(width: 300, child: sidebar),
+            ],
+          );
+        } else {
+          body = Column(
+            children: [
+              mainSections,
+              const SizedBox(height: 12),
+              _Section(title: '⚠️ Riscos identificados', color: _kRed, items: briefing.risks),
+            ],
+          );
+        }
+
+        return SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(hPad, 16, hPad, 16 + bottomPad),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1400),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  header,
+                  const SizedBox(height: 10),
+                  dataOrigin,
+                  const SizedBox(height: 16),
+                  summary,
+                  const SizedBox(height: 16),
+                  body,
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _HealthSideCard extends StatelessWidget {
+  const _HealthSideCard({required this.briefing});
+  final WeeklyBriefing briefing;
+
+  Color _healthColor(int h) {
+    if (h >= 70) return _kGreen;
+    if (h >= 45) return _kOrange;
+    return _kRed;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hc = _healthColor(briefing.overallHealthScore);
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF12121E),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: hc.withOpacity(0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(briefing.healthEmoji, style: const TextStyle(fontSize: 20)),
+              const SizedBox(width: 8),
+              Text('Saúde Geral',
+                  style: TextStyle(color: hc, fontSize: 13, fontWeight: FontWeight.bold)),
+              const Spacer(),
+              Text('${briefing.overallHealthScore}/100',
+                  style: TextStyle(color: hc, fontSize: 22, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          const SizedBox(height: 10),
+          LinearProgressIndicator(
+            value: briefing.overallHealthScore / 100,
+            backgroundColor: Colors.white12,
+            valueColor: AlwaysStoppedAnimation(hc),
+            borderRadius: BorderRadius.circular(4),
+            minHeight: 6,
+          ),
+          if (briefing.overallHealthScore < 50) ...[
+            const SizedBox(height: 8),
+            const Text(
+              '⚠ Score baixo. Veja os riscos identificados e as prioridades abaixo para melhorar.',
+              style: TextStyle(color: Colors.orange, fontSize: 11, height: 1.4),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

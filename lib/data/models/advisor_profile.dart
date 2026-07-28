@@ -21,7 +21,7 @@ class AdvisorProfile {
 
   static const List<String> nameOptions = [
     'Atlas',
-    'Aurora',
+    'Iris',
     'Mentor',
     'Nexus',
   ];

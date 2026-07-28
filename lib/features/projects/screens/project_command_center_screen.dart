@@ -7,11 +7,14 @@ import '../../../core/constants/app_constants.dart';
 import '../../../data/models/ecosystem_score.dart';
 import '../../../data/models/opportunity_lab_item.dart';
 import '../../../data/models/project.dart';
+import '../../../data/models/project_intelligence_profile.dart';
 import '../../../providers/ecosystem_intelligence_provider.dart';
 import '../../../providers/knowledge_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
+import '../../../providers/project_intelligence_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import '../../../shared/widgets/context_copilot_widget.dart' show showCopilotChat;
 
 class ProjectCommandCenterScreen extends ConsumerStatefulWidget {
   const ProjectCommandCenterScreen({super.key});
@@ -228,13 +231,18 @@ class _ProjectCommandCenterScreenState
   }
 
   void _openDetail(Project project, EcosystemScore? score) {
+    final profile = ref.read(projectIntelligenceProfilesProvider).valueOrNull
+        ?.where((p) => p.project.id == project.id)
+        .firstOrNull;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _ProjectDetailSheet(
-        project:        project,
-        ecosystemScore: score,
+        project:             project,
+        ecosystemScore:      score,
+        intelligenceProfile: profile,
         onStatusChange: (s) {
           Navigator.of(context).pop();
           ref.read(projectsNotifierProvider.notifier).updateStatus(project.id, s);
@@ -573,9 +581,17 @@ class _ProjectCard extends StatelessWidget {
   }
 
   String _fmtRevenue(double v) {
-    if (v >= 1000000) return 'R\$ ${(v / 1000000).toStringAsFixed(1)}M';
-    if (v >= 1000)    return 'R\$ ${(v / 1000).toStringAsFixed(0)}K';
+    if (v <= 0)        return 'Não estimado';
+    if (v >= 1000000)  return 'R\$ ${(v / 1000000).toStringAsFixed(1)}M';
+    if (v >= 1000)     return 'R\$ ${(v / 1000).toStringAsFixed(0)}K';
     return 'R\$ ${v.toStringAsFixed(0)}';
+  }
+
+  String _fmtPrazo(int days) {
+    if (days <= 0) return '—';
+    if (days >= 365) return '${(days / 365).round()}a';
+    if (days >= 30)  return '${(days / 30).round()}m';
+    return '${days}d';
   }
 
   @override
@@ -706,7 +722,7 @@ class _ProjectCard extends StatelessWidget {
                       const SizedBox(width: 8),
                       _StatChip(
                           label: 'Prazo',
-                          value: '${project.timeToRevenueDays}d',
+                          value: _fmtPrazo(project.timeToRevenueDays),
                           color: const Color(0xFFAB83FF)),
                     ],
                   ),
@@ -767,6 +783,7 @@ class _ProjectDetailSheet extends StatelessWidget {
     required this.onStatusChange,
     required this.onDelete,
     this.ecosystemScore,
+    this.intelligenceProfile,
     this.onAnalyze,
     this.onAnalyzeKnowledge,
     this.onViewKnowledge,
@@ -774,6 +791,7 @@ class _ProjectDetailSheet extends StatelessWidget {
 
   final Project project;
   final EcosystemScore? ecosystemScore;
+  final ProjectIntelligenceProfile? intelligenceProfile;
   final void Function(String) onStatusChange;
   final VoidCallback onDelete;
   final VoidCallback? onAnalyze;
@@ -787,8 +805,9 @@ class _ProjectDetailSheet extends StatelessWidget {
   }
 
   String _fmtRevenue(double v) {
-    if (v >= 1000000) return 'R\$ ${(v / 1000000).toStringAsFixed(1)}M';
-    if (v >= 1000)    return 'R\$ ${(v / 1000).toStringAsFixed(0)}K';
+    if (v <= 0)        return 'Ainda não estimado';
+    if (v >= 1000000)  return 'R\$ ${(v / 1000000).toStringAsFixed(1)}M';
+    if (v >= 1000)     return 'R\$ ${(v / 1000).toStringAsFixed(0)}K';
     return 'R\$ ${v.toStringAsFixed(0)}';
   }
 
@@ -976,6 +995,16 @@ class _ProjectDetailSheet extends StatelessWidget {
             ],
 
             const SizedBox(height: 8),
+
+            // Intelligence Profile section
+            if (intelligenceProfile != null) ...[
+              const Divider(color: Color(0xFF333355)),
+              const SizedBox(height: 12),
+              _sectionTitle('Perfil de Inteligência'),
+              _intelligenceSection(context, intelligenceProfile!),
+              const SizedBox(height: 8),
+            ],
+
             const Divider(color: Color(0xFF333355)),
             const SizedBox(height: 12),
 
@@ -1055,6 +1084,157 @@ class _ProjectDetailSheet extends StatelessWidget {
       ),
     );
   }
+
+  Widget _intelligenceSection(BuildContext context, ProjectIntelligenceProfile p) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Maturity card
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF6C63FF).withOpacity(0.07),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFF6C63FF).withOpacity(0.25)),
+          ),
+          child: Row(
+            children: [
+              Text(p.maturityEmoji, style: const TextStyle(fontSize: 26)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Maturidade: ${p.maturityLabel}',
+                      style: const TextStyle(
+                        color: Color(0xFF6C63FF),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                    if (p.dataWarning != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          p.dataWarning!,
+                          style: const TextStyle(color: Colors.orange, fontSize: 11),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+
+        // Identity: niche, audience, monetization
+        if (p.niche != 'Não definido') ...[
+          _infoRow('🎯 Nicho', p.niche),
+        ],
+        if (p.targetAudience != 'Não definido') ...[
+          _infoRow('👥 Público', p.targetAudience),
+        ],
+        if (p.monetizationModel != 'Não definido') ...[
+          _infoRow('💰 Monetização', p.monetizationModel),
+        ],
+        if (p.valueProposition.isNotEmpty) ...[
+          _infoRow('✨ Proposta', p.valueProposition),
+        ],
+
+        // Identified topics
+        if (p.identifiedTopics.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          const Text('Tópicos identificados',
+              style: TextStyle(color: Colors.white38, fontSize: 10, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 4),
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: p.identifiedTopics.map((t) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: const Color(0xFF00BCD4).withOpacity(0.12),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFF00BCD4).withOpacity(0.3)),
+              ),
+              child: Text(t, style: const TextStyle(color: Color(0xFF00BCD4), fontSize: 10)),
+            )).toList(),
+          ),
+        ],
+
+        // Missing knowledge gaps
+        if (p.missingKnowledge.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          const Text('Lacunas de conhecimento',
+              style: TextStyle(color: Colors.white38, fontSize: 10, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 4),
+          ...p.missingKnowledge.take(3).map((gap) => Padding(
+            padding: const EdgeInsets.only(bottom: 2),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('⚠ ', style: TextStyle(color: Colors.orange, fontSize: 11)),
+                Expanded(child: Text(gap, style: const TextStyle(color: Colors.white54, fontSize: 11))),
+              ],
+            ),
+          )),
+        ],
+
+        // Related projects
+        if (p.relatedProjectNames.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          _infoRow('🔗 Relacionados', p.relatedProjectNames.take(3).join(', ')),
+        ],
+
+        const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFF6C63FF),
+              side: const BorderSide(color: Color(0xFF6C63FF)),
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            icon: const Text('🧠', style: TextStyle(fontSize: 14)),
+            label: const Text('Perguntar à IVE sobre este perfil', style: TextStyle(fontSize: 13)),
+            onPressed: () {
+              Navigator.of(context).pop();
+              showCopilotChat(
+                context,
+                screenName:     'Projetos',
+                initialMessage: 'Analise o perfil de inteligência do projeto "${p.project.name}": '
+                    'nicho ${p.niche}, público ${p.targetAudience}, maturidade ${p.maturityLabel}. '
+                    '${p.missingKnowledge.isNotEmpty ? "Lacunas: ${p.missingKnowledge.join(", ")}." : ""} '
+                    'O que devo priorizar agora?',
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _infoRow(String label, String value) => Padding(
+        padding: const EdgeInsets.only(bottom: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 90,
+              child: Text(label, style: const TextStyle(color: Colors.white38, fontSize: 11)),
+            ),
+            Expanded(
+              child: Text(value,
+                  style: const TextStyle(color: Colors.white70, fontSize: 11),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis),
+            ),
+          ],
+        ),
+      );
 
   Widget _sectionTitle(String title) => Padding(
         padding: const EdgeInsets.only(bottom: 8),

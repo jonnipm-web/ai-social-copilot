@@ -52,8 +52,16 @@ jobs:
             echo "=== $f ===" && cat "$f"
           done
 
-      - name: Build do APK
-        run: flutter build apk --release
+      - name: Decodificar keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/keystore.jks
+
+      - name: Build do APK assinado
+        run: |
+          flutter build apk --release \
+            -Pandroid.injected.signing.store.file="$(pwd)/android/keystore.jks" \
+            -Pandroid.injected.signing.store.password="${{ secrets.KEYSTORE_STORE_PASSWORD }}" \
+            -Pandroid.injected.signing.key.alias="${{ secrets.KEYSTORE_KEY_ALIAS }}" \
+            -Pandroid.injected.signing.key.password="${{ secrets.KEYSTORE_KEY_PASSWORD }}"
 
       - name: Salvar APK como artefato para download
         uses: actions/upload-artifact@v4

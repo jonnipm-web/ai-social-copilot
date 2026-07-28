@@ -353,6 +353,31 @@ class _Top5Tab extends ConsumerWidget {
                     subtitle: l.opportunityType,
                     score: l.finalScore,
                     badge: l.status,
+                    onTap: () => IveDetailSheet.show(
+                      context,
+                      title: l.title,
+                      emoji: '💡',
+                      humanExplanation:
+                          'Oportunidade do tipo "${l.opportunityType}" com score ${l.finalScore}/100. '
+                          'Status atual: ${l.status}.',
+                      evidence: [
+                        IveEvidence(emoji: '📊', label: 'Tipo',        value: l.opportunityType),
+                        IveEvidence(emoji: '🎯', label: 'Score Final', value: '${l.finalScore}/100'),
+                        IveEvidence(emoji: '📋', label: 'Status',      value: l.status),
+                      ],
+                      suggestedActions: [
+                        IveAction(
+                          emoji: '💬',
+                          label: 'Perguntar à IVE sobre esta oportunidade',
+                          onTap: () => showCopilotChat(
+                            context,
+                            screenName:     'Decisões',
+                            initialMessage: 'Analise a oportunidade "${l.title}" (score ${l.finalScore}) e diga como aproveitá-la.',
+                          ),
+                        ),
+                      ],
+                      screenName: 'Decisões',
+                    ),
                   )).toList(),
                 );
               },
@@ -393,6 +418,20 @@ class _Top5Tab extends ConsumerWidget {
                         subtitle: 'Impacto ${a.impactScore} / Esforço ${a.effortScore}',
                         score: a.impactScore - a.effortScore + 50,
                         badge: a.actionType,
+                        onTap: () => IveDetailSheet.show(
+                          context,
+                          title: a.title,
+                          emoji: '⚡',
+                          humanExplanation:
+                              'Ganho rápido: alto impacto (${a.impactScore}/100) e baixo esforço (${a.effortScore}/100). '
+                              'Priorize esta ação para resultados imediatos.',
+                          evidence: [
+                            IveEvidence(emoji: '🎯', label: 'Impacto', value: '${a.impactScore}/100'),
+                            IveEvidence(emoji: '⚙️', label: 'Esforço', value: '${a.effortScore}/100'),
+                            IveEvidence(emoji: '📋', label: 'Tipo',    value: a.actionType),
+                          ],
+                          screenName: 'Decisões',
+                        ),
                       )).toList(),
                     ),
                     const SizedBox(height: 20),
@@ -405,6 +444,20 @@ class _Top5Tab extends ConsumerWidget {
                         score: 100 - a.impactScore,
                         badge: 'risco',
                         scoreColor: _kRed,
+                        onTap: () => IveDetailSheet.show(
+                          context,
+                          title: a.title,
+                          emoji: '⚠️',
+                          humanExplanation:
+                              'Esta ação está em um projeto com Ecosystem Score crítico (abaixo de 30). '
+                              'Requer atenção urgente para evitar perda de oportunidade.',
+                          evidence: [
+                            IveEvidence(emoji: '🎯', label: 'Impacto', value: '${a.impactScore}/100'),
+                            IveEvidence(emoji: '📋', label: 'Status',  value: a.status),
+                            IveEvidence(emoji: '⚙️', label: 'Tipo',    value: a.actionType),
+                          ],
+                          screenName: 'Decisões',
+                        ),
                       )).toList(),
                     ),
                     const SizedBox(height: 20),
@@ -417,6 +470,20 @@ class _Top5Tab extends ConsumerWidget {
                         score: a.impactScore,
                         badge: 'rever',
                         scoreColor: _kOrange,
+                        onTap: () => IveDetailSheet.show(
+                          context,
+                          title: a.title,
+                          emoji: '🗑️',
+                          humanExplanation:
+                              'Desperdício: baixo impacto (${a.impactScore}/100) e alto esforço (${a.effortScore}/100). '
+                              'Considere remover ou reformular esta ação para liberar capacidade.',
+                          evidence: [
+                            IveEvidence(emoji: '🎯', label: 'Impacto', value: '${a.impactScore}/100'),
+                            IveEvidence(emoji: '⚙️', label: 'Esforço', value: '${a.effortScore}/100'),
+                            IveEvidence(emoji: '📋', label: 'Tipo',    value: a.actionType),
+                          ],
+                          screenName: 'Decisões',
+                        ),
                       )).toList(),
                     ),
                   ],
@@ -488,6 +555,11 @@ class _ProjectCard extends StatelessWidget {
           emoji:       '💬',
           label:       'Perguntar à IVE como melhorar este score',
           description: 'Abrir chat com contexto deste projeto',
+          onTap: () => showCopilotChat(
+            context,
+            screenName:     'Decisões',
+            initialMessage: 'Como posso melhorar o Ecosystem Score do projeto "${score.project.name}" que está em ${score.ecosystemScore}/100? Explique cada componente e quais ações têm maior impacto.',
+          ),
         ),
       ],
       screenName: 'Decisões',
@@ -568,24 +640,28 @@ class _SimpleCard extends StatelessWidget {
   final int score;
   final String badge;
   final Color? scoreColor;
+  final VoidCallback? onTap;
   const _SimpleCard({
     required this.title,
     required this.subtitle,
     required this.score,
     required this.badge,
     this.scoreColor,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final color = scoreColor ?? _scoreColor(score);
-    return Container(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: _kCard,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: _kBorder),
+        border: Border.all(color: onTap != null ? color.withOpacity(0.25) : _kBorder),
       ),
       child: Row(
         children: [
@@ -616,7 +692,12 @@ class _SimpleCard extends StatelessWidget {
             ),
             child: Text(badge, style: const TextStyle(color: Colors.white54, fontSize: 9)),
           ),
+          if (onTap != null) ...[
+            const SizedBox(width: 4),
+            const Icon(Icons.chevron_right_rounded, color: Colors.white24, size: 14),
+          ],
         ],
+      ),
       ),
     );
   }
@@ -987,19 +1068,59 @@ class _RecCard extends StatelessWidget {
 
   Color get _typeColor {
     switch (rec.type) {
-      case RecommendationType.investProject:     return _kGold;
+      case RecommendationType.investProject:      return _kGold;
       case RecommendationType.executeOpportunity: return _kCyan;
-      case RecommendationType.runAction:         return _kPrimary;
-      case RecommendationType.pauseProject:      return _kOrange;
-      case RecommendationType.mitigateRisk:      return _kRed;
-      case RecommendationType.quickWin:          return _kGreen;
-      case RecommendationType.waste:             return Colors.grey;
+      case RecommendationType.runAction:          return _kPrimary;
+      case RecommendationType.pauseProject:       return _kOrange;
+      case RecommendationType.mitigateRisk:       return _kRed;
+      case RecommendationType.quickWin:           return _kGreen;
+      case RecommendationType.waste:              return Colors.grey;
     }
+  }
+
+  String get _typeEmoji {
+    switch (rec.type) {
+      case RecommendationType.investProject:      return '💰';
+      case RecommendationType.executeOpportunity: return '🚀';
+      case RecommendationType.runAction:          return '⚡';
+      case RecommendationType.pauseProject:       return '⏸️';
+      case RecommendationType.mitigateRisk:       return '🛡️';
+      case RecommendationType.quickWin:           return '✅';
+      case RecommendationType.waste:              return '🗑️';
+    }
+  }
+
+  void _showDetail(BuildContext context) {
+    IveDetailSheet.show(
+      context,
+      title:            rec.title,
+      emoji:            _typeEmoji,
+      humanExplanation: '${rec.reason}\n\nImpacto esperado: ${rec.expectedImpact}',
+      evidence: [
+        IveEvidence(emoji: '📊', label: 'Tipo',        value: rec.typeLabel),
+        IveEvidence(emoji: '🎯', label: 'Confiança',   value: '${rec.confidence}%'),
+        IveEvidence(emoji: '💡', label: 'Dados usados', value: rec.dataUsed),
+      ],
+      suggestedActions: [
+        IveAction(
+          emoji: '💬',
+          label: 'Perguntar à IVE sobre esta recomendação',
+          onTap: () => showCopilotChat(
+            context,
+            screenName:     'Decisões',
+            initialMessage: 'Explique a recomendação "${rec.title}" e me dê um plano de ação concreto.',
+          ),
+        ),
+      ],
+      screenName: 'Decisões',
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GestureDetector(
+      onTap: () => _showDetail(context),
+      child: Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: _kCard,
@@ -1023,6 +1144,8 @@ class _RecCard extends StatelessWidget {
               const Spacer(),
               Text('${rec.confidence}% confiança',
                 style: const TextStyle(color: Colors.white38, fontSize: 10)),
+              const SizedBox(width: 4),
+              const Icon(Icons.chevron_right_rounded, color: Colors.white24, size: 14),
             ],
           ),
           const SizedBox(height: 8),
@@ -1039,6 +1162,7 @@ class _RecCard extends StatelessWidget {
           Text('Dados: ${rec.dataUsed}',
             style: const TextStyle(color: Colors.white24, fontSize: 10)),
         ],
+      ),
       ),
     );
   }

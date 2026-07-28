@@ -192,7 +192,7 @@ class _StepName extends StatelessWidget {
 
   static const _avatars = {
     'Atlas':  '🌐',
-    'Aurora': '🌅',
+    'Iris': '🔮',
     'Mentor': '🎓',
     'Nexus':  '⚡',
   };

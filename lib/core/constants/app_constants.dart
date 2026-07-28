@@ -1,7 +1,7 @@
 class AppConstants {
   AppConstants._();
 
-  static const appName = 'AI Social Copilot';
+  static const appName = 'InsightValues';
   static const minTextLength = 10;
   static const maxTextLength = 5000;
   static const freeTierLimit = 9999;
