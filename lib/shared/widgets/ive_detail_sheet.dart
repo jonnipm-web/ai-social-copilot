@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../data/models/ive_state.dart';
-import 'context_copilot_widget.dart';
+import 'context_copilot_widget.dart' show showCopilotChat;
 import '../../data/models/copilot_context_data.dart';
 
 /// Generic drill-down sheet IVE opens when user taps any data item.
@@ -260,14 +260,10 @@ class IveDetailSheet extends StatelessWidget {
           label: const Text('Perguntar à IVE'),
           onPressed: () {
             Navigator.of(context).pop();
-            showModalBottomSheet(
-              context:            context,
-              isScrollControlled: true,
-              backgroundColor:    Colors.transparent,
-              builder: (_) => ContextCopilotButton(
-                screenName: screenName.isNotEmpty ? screenName : title,
-                context:    CopilotContextData(),
-              ),
+            showCopilotChat(
+              context,
+              screenName:  screenName.isNotEmpty ? screenName : title,
+              contextData: CopilotContextData(),
             );
           },
         ),
