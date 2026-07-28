@@ -4,10 +4,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../data/models/action_queue_item.dart';
+import '../../../data/models/advisor_profile.dart';
 import '../../../data/models/market_analysis.dart';
 import '../../../data/models/opportunity_lab_item.dart';
 import '../../../data/models/project.dart';
 import '../../../providers/action_queue_provider.dart';
+import '../../../providers/advisor_provider.dart';
 import '../../../providers/feature_flag_provider.dart';
 import '../../../providers/market_analysis_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
@@ -61,6 +63,8 @@ class ExecutiveDashboardScreen extends ConsumerWidget {
     final actionsAsync   = ref.watch(pendingActionsProvider);
     final flagsAsync     = ref.watch(featureFlagsProvider);
     final labAsync       = ref.watch(opportunityLabProvider);
+    final advisorAsync   = ref.watch(advisorProfileProvider);
+    final setupAsync     = ref.watch(advisorSetupProvider);
 
     final projects  = projectsAsync.value  ?? [];
     final analyses  = analysesAsync.value  ?? [];
@@ -68,6 +72,8 @@ class ExecutiveDashboardScreen extends ConsumerWidget {
     final labItems  = labAsync.value       ?? [];
     final roiMap    = roiAsync.value       ?? {};
     final flags     = flagsAsync.value     ?? {};
+    final advisor   = advisorAsync.value;
+    final hasSetup  = setupAsync.value     ?? false;
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -119,6 +125,8 @@ class ExecutiveDashboardScreen extends ConsumerWidget {
             labItems:  labItems,
             roiMap:    roiMap,
             flags:     flags,
+            advisor:   advisor,
+            hasSetup:  hasSetup,
             isDesktop: _Bp.isDesktop(w),
             isTablet:  _Bp.isTablet(w),
             isWide:    _Bp.isWide(w),
@@ -138,6 +146,8 @@ class _DashboardBody extends StatelessWidget {
     required this.labItems,
     required this.roiMap,
     required this.flags,
+    required this.advisor,
+    required this.hasSetup,
     required this.isDesktop,
     required this.isTablet,
     required this.isWide,
@@ -149,6 +159,8 @@ class _DashboardBody extends StatelessWidget {
   final List<OpportunityLabItem> labItems;
   final Map<String, double>      roiMap;
   final Map<String, bool>        flags;
+  final AdvisorProfile?          advisor;
+  final bool                     hasSetup;
   final bool isDesktop;
   final bool isTablet;
   final bool isWide;
@@ -196,6 +208,10 @@ class _DashboardBody extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // IVE Profile Card
+        _IveProfileCard(profile: advisor, hasSetup: hasSetup),
+        const SizedBox(height: 16),
+
         // Executive Module Cards
         _ExecModuleGrid(
           projects:  projects,
@@ -580,6 +596,108 @@ class _QuickNavCard extends StatelessWidget {
               ),
             );
           }),
+        ],
+      ),
+    );
+  }
+}
+
+// ── IVE Profile Card ──────────────────────────────────────────────────────────
+class _IveProfileCard extends StatelessWidget {
+  const _IveProfileCard({required this.profile, required this.hasSetup});
+  final AdvisorProfile? profile;
+  final bool hasSetup;
+
+  static const _avatars = {
+    'Atlas': '🌐', 'Iris': '🔮', 'Mentor': '🎓', 'Nexus': '⚡',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    if (!hasSetup || profile == null) {
+      return GestureDetector(
+        onTap: () => context.push(AppConstants.routeAdvisorOnboarding),
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: _kCard,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: _kPrimary.withOpacity(0.3)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: _kPrimary.withOpacity(0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Text('🤖', style: TextStyle(fontSize: 20)),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('IVE',
+                          style: TextStyle(color: _kPrimary, fontSize: 13, fontWeight: FontWeight.bold)),
+                      Text('Configure o Perfil IVE para análises personalizadas.',
+                          style: TextStyle(color: Colors.white54, fontSize: 11, height: 1.4)),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: _kPrimary.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text('Configurar Perfil IVE',
+                      style: TextStyle(color: _kPrimary, fontSize: 11, fontWeight: FontWeight.w600)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    final avatar = _avatars[profile!.advisorName] ?? '🤖';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: _kCard,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _kPrimary.withOpacity(0.2)),
+      ),
+      child: Row(
+        children: [
+          Text(avatar, style: const TextStyle(fontSize: 22)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('IVE — Perfil ${profile!.advisorName}',
+                    style: const TextStyle(color: _kPrimary, fontSize: 13, fontWeight: FontWeight.bold)),
+                Text('${profile!.advisorRole} · ${profile!.advisorStyle}',
+                    style: const TextStyle(color: Colors.white54, fontSize: 11)),
+              ],
+            ),
+          ),
+          GestureDetector(
+            onTap: () => context.push(AppConstants.routeAdvisorOnboarding),
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: const Tooltip(
+                message: 'Editar Perfil IVE',
+                child: Icon(Icons.edit_rounded, color: Colors.white38, size: 16),
+              ),
+            ),
+          ),
         ],
       ),
     );

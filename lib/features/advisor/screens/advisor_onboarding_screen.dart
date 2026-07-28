@@ -165,7 +165,7 @@ class _AdvisorOnboardingState extends ConsumerState<AdvisorOnboardingScreen> {
                     child: CircularProgressIndicator(
                         strokeWidth: 2, color: Colors.white),
                   )
-                : Text(_step < 2 ? 'Próximo' : 'Ativar Advisor',
+                : Text(_step < 2 ? 'Próximo' : 'Ativar Perfil IVE',
                     style: const TextStyle(
                         fontSize: 15, fontWeight: FontWeight.bold)),
           ),
@@ -203,13 +203,13 @@ class _StepName extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Escolha o nome do seu\nPersonal AI Advisor',
+          'Escolha o Perfil da\nsua IVE',
           style: TextStyle(
               color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, height: 1.3),
         ),
         const SizedBox(height: 8),
         const Text(
-          'Este será seu parceiro estratégico de negócios.',
+          'Define como a IVE se apresenta e se comunica com você.',
           style: TextStyle(color: Colors.white54, fontSize: 14),
         ),
         const SizedBox(height: 32),
@@ -304,7 +304,7 @@ class _StepRole extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Qual será a especialidade\ndo seu Advisor?',
+          'Qual será a especialidade\ndo Perfil IVE?',
           style: TextStyle(
               color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, height: 1.3),
         ),
@@ -395,7 +395,7 @@ class _StepStyle extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Como $name deve\nse comunicar?',
+          'Como o Perfil $name\ndeve se comunicar?',
           style: const TextStyle(
               color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, height: 1.3),
         ),
