@@ -55,9 +55,9 @@ jobs:
       - name: Configurar assinatura consistente do APK
         env:
           KEYSTORE_BASE64:     ${{ secrets.KEYSTORE_BASE64 }}
-          KEY_ALIAS:           ${{ secrets.KEY_ALIAS }}
-          KEY_STORE_PASSWORD:  ${{ secrets.KEY_STORE_PASSWORD }}
-          KEY_PASSWORD:        ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS:           ${{ secrets.KEYSTORE_KEY_ALIAS }}
+          KEY_STORE_PASSWORD:  ${{ secrets.KEYSTORE_STORE_PASSWORD }}
+          KEY_PASSWORD:        ${{ secrets.KEYSTORE_KEY_PASSWORD }}
         run: |
           # Decodifica o keystore salvo como secret
           echo "$KEYSTORE_BASE64" | base64 -d > android/keystore.jks
