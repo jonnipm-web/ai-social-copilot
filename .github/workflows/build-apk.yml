@@ -52,73 +52,16 @@ jobs:
             echo "=== $f ===" && cat "$f"
           done
 
-      - name: Configurar assinatura consistente do APK
-        env:
-          KEYSTORE_BASE64:     ${{ secrets.KEYSTORE_BASE64 }}
-          KEY_ALIAS:           ${{ secrets.KEYSTORE_KEY_ALIAS }}
-          KEY_STORE_PASSWORD:  ${{ secrets.KEYSTORE_STORE_PASSWORD }}
-          KEY_PASSWORD:        ${{ secrets.KEYSTORE_KEY_PASSWORD }}
-        run: |
-          # Decodifica o keystore salvo como secret
-          echo "$KEYSTORE_BASE64" | base64 -d > android/keystore.jks
-
-          # Cria o arquivo key.properties que o Gradle vai ler
-          cat > android/key.properties << EOF
-          storePassword=${KEY_STORE_PASSWORD}
-          keyPassword=${KEY_PASSWORD}
-          keyAlias=${KEY_ALIAS}
-          storeFile=../keystore.jks
-          EOF
-
-          # Injeta signingConfig no build.gradle.kts gerado pelo flutter create
-          python3 << 'PYEOF'
-          with open('android/app/build.gradle.kts', 'r') as f:
-              content = f.read()
-
-          # Imports necessários para ler key.properties
-          imports = 'import java.util.Properties\nimport java.io.FileInputStream\n\n'
-          if 'import java.util.Properties' not in content:
-              content = imports + content
-
-          # Bloco que carrega o keystore antes do bloco android {}
-          keystore_loader = '''
-          val keystorePropertiesFile = rootProject.file("key.properties")
-          val keystoreProperties = Properties().apply {
-              if (keystorePropertiesFile.exists()) load(FileInputStream(keystorePropertiesFile))
-          }
-
-          '''
-          if 'keystoreProperties' not in content:
-              content = content.replace('android {', keystore_loader + 'android {', 1)
-
-          # Bloco signingConfigs inserido antes de buildTypes
-          signing_block = '''
-              signingConfigs {
-                  create("release") {
-                      keyAlias = keystoreProperties["keyAlias"] as String
-                      keyPassword = keystoreProperties["keyPassword"] as String
-                      storeFile = keystoreProperties["storeFile"]?.let { file(it) }
-                      storePassword = keystoreProperties["storePassword"] as String
-                  }
-              }
-          '''
-          if 'signingConfigs' not in content:
-              content = content.replace('    buildTypes {', signing_block + '    buildTypes {', 1)
-
-          # Substitui a chave debug pela chave release
-          content = content.replace(
-              'signingConfig = signingConfigs.getByName("debug")',
-              'signingConfig = signingConfigs.getByName("release")'
-          )
-
-          with open('android/app/build.gradle.kts', 'w') as f:
-              f.write(content)
-
-          print('✓ build.gradle.kts configurado com assinatura de release')
-          PYEOF
+      - name: Decodificar keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/keystore.jks
 
       - name: Build do APK assinado
-        run: flutter build apk --release
+        run: |
+          flutter build apk --release \
+            -Pandroid.injected.signing.store.file="$(pwd)/android/keystore.jks" \
+            -Pandroid.injected.signing.store.password="${{ secrets.KEYSTORE_STORE_PASSWORD }}" \
+            -Pandroid.injected.signing.key.alias="${{ secrets.KEYSTORE_KEY_ALIAS }}" \
+            -Pandroid.injected.signing.key.password="${{ secrets.KEYSTORE_KEY_PASSWORD }}"
 
       - name: Salvar APK como artefato para download
         uses: actions/upload-artifact@v4
