@@ -40,7 +40,7 @@ class HomeScreen extends ConsumerWidget {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: const [
-            Text('AI Social Copilot OS',
+            Text('InsightValues',
                 style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,

@@ -581,9 +581,17 @@ class _ProjectCard extends StatelessWidget {
   }
 
   String _fmtRevenue(double v) {
-    if (v >= 1000000) return 'R\$ ${(v / 1000000).toStringAsFixed(1)}M';
-    if (v >= 1000)    return 'R\$ ${(v / 1000).toStringAsFixed(0)}K';
+    if (v <= 0)        return 'Não estimado';
+    if (v >= 1000000)  return 'R\$ ${(v / 1000000).toStringAsFixed(1)}M';
+    if (v >= 1000)     return 'R\$ ${(v / 1000).toStringAsFixed(0)}K';
     return 'R\$ ${v.toStringAsFixed(0)}';
+  }
+
+  String _fmtPrazo(int days) {
+    if (days <= 0) return '—';
+    if (days >= 365) return '${(days / 365).round()}a';
+    if (days >= 30)  return '${(days / 30).round()}m';
+    return '${days}d';
   }
 
   @override
@@ -714,7 +722,7 @@ class _ProjectCard extends StatelessWidget {
                       const SizedBox(width: 8),
                       _StatChip(
                           label: 'Prazo',
-                          value: '${project.timeToRevenueDays}d',
+                          value: _fmtPrazo(project.timeToRevenueDays),
                           color: const Color(0xFFAB83FF)),
                     ],
                   ),
@@ -797,8 +805,9 @@ class _ProjectDetailSheet extends StatelessWidget {
   }
 
   String _fmtRevenue(double v) {
-    if (v >= 1000000) return 'R\$ ${(v / 1000000).toStringAsFixed(1)}M';
-    if (v >= 1000)    return 'R\$ ${(v / 1000).toStringAsFixed(0)}K';
+    if (v <= 0)        return 'Ainda não estimado';
+    if (v >= 1000000)  return 'R\$ ${(v / 1000000).toStringAsFixed(1)}M';
+    if (v >= 1000)     return 'R\$ ${(v / 1000).toStringAsFixed(0)}K';
     return 'R\$ ${v.toStringAsFixed(0)}';
   }
 

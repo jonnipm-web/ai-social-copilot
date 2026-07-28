@@ -65,14 +65,27 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
     ref.read(iveMemoryProvider.notifier).setRoute(route);
   }
 
-  Offset _defaultPosition(Size screen) =>
-      Offset(screen.width - 80, screen.height - 200);
+  bool get _isDesktop => MediaQuery.of(context).size.width >= 1024;
+
+  Offset _defaultPosition(Size screen) {
+    if (_isDesktop) {
+      // Desktop: safe corner — bottom-right with extra margin to avoid overlapping content
+      return Offset(screen.width - 88, screen.height - 220);
+    }
+    return Offset(screen.width - 80, screen.height - 200);
+  }
 
   @override
   Widget build(BuildContext context) {
     final state  = ref.watch(iveProvider);
     final screen = MediaQuery.of(context).size;
+    final safeBottom = MediaQuery.of(context).padding.bottom;
     _position ??= _defaultPosition(screen);
+
+    // On desktop clamp to avoid navigation bars / toolbars
+    final maxY = _isDesktop
+        ? screen.height - 140 - safeBottom
+        : screen.height - 100;
 
     return Positioned(
       left: _position!.dx,
@@ -82,7 +95,7 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
         onPanUpdate: (d) => setState(() {
           _position = (_position! + d.delta).clamp(
             Offset.zero,
-            Offset(screen.width - 72, screen.height - 100),
+            Offset(screen.width - 72, maxY),
           );
         }),
         onPanEnd: (_) => setState(() => _dragging = false),
