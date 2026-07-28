@@ -61,7 +61,19 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
       });
       await _loadFiles();
     } catch (e) {
-      setState(() { _signing = false; _error = 'Erro ao conectar: $e'; });
+      final msg = e.toString();
+      String errorMsg;
+      if (msg.contains('error 10') || msg.contains('sign_in_failed')) {
+        errorMsg =
+            'Não foi possível conectar ao Google (erro de configuração).\n'
+            'Use o tipo "URL" e cole o link de compartilhamento do Google Docs, '
+            'ou use o tipo "Arquivo" para importar PDFs locais.';
+      } else if (msg.contains('network') || msg.contains('Network')) {
+        errorMsg = 'Sem conexão com a internet. Verifique sua rede e tente novamente.';
+      } else {
+        errorMsg = 'Erro ao conectar: $msg';
+      }
+      setState(() { _signing = false; _error = errorMsg; });
     }
   }
 

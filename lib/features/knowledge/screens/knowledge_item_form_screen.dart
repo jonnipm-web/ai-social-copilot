@@ -146,7 +146,30 @@ class _KnowledgeItemFormScreenState
       }
 
       ref.invalidate(knowledgeItemsProvider);
-      if (mounted) context.pop();
+
+      // Confirmação com nome do projeto
+      if (mounted) {
+        final projects = ref.read(projectsNotifierProvider).valueOrNull ?? [];
+        final projectName = _projectId == null
+            ? null
+            : projects
+                .where((p) => p.id == _projectId)
+                .map((p) => p.name)
+                .firstOrNull;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              projectName != null
+                  ? 'Conhecimento adicionado ao projeto "$projectName"'
+                  : 'Conhecimento salvo sem projeto',
+            ),
+            backgroundColor: const Color(0xFF4CAF50),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        context.pop();
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../data/models/knowledge_item.dart';
+import '../../../data/models/project.dart';
 import '../../../providers/knowledge_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
@@ -108,6 +109,7 @@ class _KnowledgeVaultScreenState extends ConsumerState<KnowledgeVaultScreen> {
                   : _ItemList(
                       items: items,
                       onInvalidate: _invalidateItems,
+                      projects:    projects,
                       projectsMap: {for (final p in projects) p.id: p.name},
                     ),
             ),
@@ -258,11 +260,13 @@ class _ItemList extends StatelessWidget {
     required this.items,
     required this.onInvalidate,
     required this.projectsMap,
+    required this.projects,
   });
 
   final List<KnowledgeItem>  items;
   final VoidCallback          onInvalidate;
   final Map<String, String>   projectsMap;
+  final List<Project>         projects;
 
   @override
   Widget build(BuildContext context) {
@@ -272,9 +276,188 @@ class _ItemList extends StatelessWidget {
       itemBuilder: (ctx, i) => _KnowledgeCard(
         item:        items[i],
         onInvalidate: onInvalidate,
+        projects:    projects,
         projectName: items[i].projectId == null
             ? null
             : projectsMap[items[i].projectId],
+      ),
+    );
+  }
+}
+
+// ── Project picker bottom sheet ───────────────────────────────────────────────
+
+Future<void> _showProjectPicker(
+  BuildContext context,
+  WidgetRef ref,
+  KnowledgeItem item,
+  List<Project> projects,
+  VoidCallback onInvalidate,
+) async {
+  await showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.transparent,
+    isScrollControlled: true,
+    builder: (_) => _ProjectPickerSheet(
+      item:         item,
+      projects:     projects,
+      onInvalidate: onInvalidate,
+    ),
+  );
+}
+
+class _ProjectPickerSheet extends ConsumerWidget {
+  const _ProjectPickerSheet({
+    required this.item,
+    required this.projects,
+    required this.onInvalidate,
+  });
+
+  final KnowledgeItem  item;
+  final List<Project>  projects;
+  final VoidCallback   onInvalidate;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFF1A1A2E),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Vincular "${item.title}" a projeto',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (item.projectId != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                'Projeto atual: ${projects.where((p) => p.id == item.projectId).map((p) => p.name).firstOrNull ?? item.projectId}',
+                style: const TextStyle(color: Color(0xFF6C63FF), fontSize: 12),
+              ),
+            ),
+          const SizedBox(height: 16),
+          // Opção "Sem projeto"
+          _ProjectTile(
+            name:     'Sem projeto',
+            icon:     Icons.folder_off_rounded,
+            selected: item.projectId == null,
+            onTap: () async {
+              Navigator.pop(context);
+              await ref.read(knowledgeItemNotifierProvider.notifier)
+                  .update(item.id, {'project_id': null});
+              onInvalidate();
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Vínculo com projeto removido.'),
+                    backgroundColor: Color(0xFF6C63FF),
+                  ),
+                );
+              }
+            },
+          ),
+          const SizedBox(height: 8),
+          ...projects.map((p) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: _ProjectTile(
+              name:     p.name,
+              icon:     Icons.folder_rounded,
+              selected: item.projectId == p.id,
+              onTap: () async {
+                Navigator.pop(context);
+                await ref.read(knowledgeItemNotifierProvider.notifier)
+                    .update(item.id, {'project_id': p.id});
+                onInvalidate();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Vinculado ao projeto "${p.name}"'),
+                      backgroundColor: const Color(0xFF4CAF50),
+                    ),
+                  );
+                }
+              },
+            ),
+          )),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProjectTile extends StatelessWidget {
+  const _ProjectTile({
+    required this.name,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String    name;
+  final IconData  icon;
+  final bool      selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: selected
+              ? const Color(0xFF6C63FF).withOpacity(0.15)
+              : const Color(0xFF0F0F1A),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: selected
+                ? const Color(0xFF6C63FF)
+                : Colors.white12,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(icon,
+                color: selected ? const Color(0xFF6C63FF) : Colors.white38,
+                size: 18),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                name,
+                style: TextStyle(
+                  color: selected ? const Color(0xFF6C63FF) : Colors.white70,
+                  fontSize: 14,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                ),
+              ),
+            ),
+            if (selected)
+              const Icon(Icons.check_rounded,
+                  color: Color(0xFF6C63FF), size: 18),
+          ],
+        ),
       ),
     );
   }
@@ -286,12 +469,14 @@ class _KnowledgeCard extends ConsumerWidget {
   const _KnowledgeCard({
     required this.item,
     required this.onInvalidate,
+    required this.projects,
     this.projectName,
   });
 
-  final KnowledgeItem item;
-  final VoidCallback  onInvalidate;
-  final String?       projectName;
+  final KnowledgeItem  item;
+  final VoidCallback   onInvalidate;
+  final List<Project>  projects;
+  final String?        projectName;
 
   Color get _statusColor {
     switch (item.status) {
@@ -420,6 +605,17 @@ class _KnowledgeCard extends ConsumerWidget {
                     onTap: () => context.push(
                       AppConstants.routeKnowledgeEdit
                           .replaceFirst(':id', item.id),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  _ActionButton(
+                    label: item.projectId == null
+                        ? 'Adicionar a Projeto'
+                        : 'Trocar Projeto',
+                    icon: Icons.folder_special_rounded,
+                    color: const Color(0xFF00BCD4),
+                    onTap: () => _showProjectPicker(
+                      context, ref, item, projects, onInvalidate,
                     ),
                   ),
                   const Spacer(),

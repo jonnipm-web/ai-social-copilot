@@ -6,12 +6,19 @@ on:
     paths:
       - 'supabase/functions/**'
   workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch ou commit para deploy (padrão: main)'
+        required: false
+        default: 'main'
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
 
       - uses: supabase/setup-cli@v1
         with:
