@@ -13,13 +13,18 @@ void showCopilotChat(
   CopilotContextData? contextData,
   String? initialMessage,
 }) {
+  // FIX-1: Capture ProviderContainer BEFORE the builder closure.
+  // The builder runs after showModalBottomSheet returns, possibly after the
+  // calling widget's element has been deactivated (e.g. when called right after
+  // Navigator.pop). Capturing here guarantees context is still active.
+  final container = ProviderScope.containerOf(context);
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
     backgroundColor: Colors.transparent,
     builder: (_) => ProviderScope(
-      parent: ProviderScope.containerOf(context),
+      parent: container,
       child: _CopilotSheet(
         screenName: screenName,
         context: contextData ?? CopilotContextData(),
@@ -43,21 +48,23 @@ class ContextCopilotButton extends ConsumerWidget {
   Widget build(BuildContext ctx, WidgetRef ref) {
     return FloatingActionButton(
       heroTag: 'copilot_$screenName',
-      onPressed: () => _openCopilot(ctx, ref),
+      onPressed: () => _openCopilot(ctx),
       backgroundColor: const Color(0xFF6C63FF),
       tooltip: 'Pergunte à IVE',
       child: const Text('💬', style: TextStyle(fontSize: 22)),
     );
   }
 
-  void _openCopilot(BuildContext ctx, WidgetRef ref) {
+  void _openCopilot(BuildContext ctx) {
+    // FIX-1 (same as showCopilotChat): capture before builder closure.
+    final container = ProviderScope.containerOf(ctx);
     showModalBottomSheet(
       context: ctx,
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (_) => ProviderScope(
-        parent: ProviderScope.containerOf(ctx),
+        parent: container,
         child: _CopilotSheet(
           screenName: screenName,
           context: context,
@@ -86,7 +93,13 @@ class _CopilotSheet extends ConsumerStatefulWidget {
 
 class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
   final _ctrl = TextEditingController();
-  final _scroll = ScrollController();
+
+  // FIX-2: _listCtrl is a REFERENCE to the ScrollController owned by
+  // DraggableScrollableSheet — we must NOT create or dispose it.
+  // The previous code created a separate _scroll controller and passed it to
+  // ListView.builder, leaving DraggableScrollableSheet's scrollCtrl unattached
+  // (hasClients == false), which caused the drag-to-expand crash.
+  ScrollController? _listCtrl;
 
   @override
   void initState() {
@@ -99,7 +112,10 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
               screenName: widget.screenName,
               context: widget.context,
             );
-        Future.delayed(const Duration(milliseconds: 400), _scrollToBottom);
+        Future.delayed(const Duration(milliseconds: 400), () {
+          if (!mounted) return;
+          _scrollToBottom();
+        });
       });
     }
   }
@@ -107,7 +123,7 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
   @override
   void dispose() {
     _ctrl.dispose();
-    _scroll.dispose();
+    // Do NOT dispose _listCtrl — DraggableScrollableSheet owns it.
     super.dispose();
   }
 
@@ -120,13 +136,17 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
           screenName: widget.screenName,
           context: widget.context,
         );
-    Future.delayed(const Duration(milliseconds: 300), _scrollToBottom);
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      _scrollToBottom();
+    });
   }
 
   void _scrollToBottom() {
-    if (_scroll.hasClients) {
-      _scroll.animateTo(
-        _scroll.position.maxScrollExtent,
+    final ctrl = _listCtrl;
+    if (ctrl != null && ctrl.hasClients) {
+      ctrl.animateTo(
+        ctrl.position.maxScrollExtent,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut,
       );
@@ -137,40 +157,57 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
   Widget build(BuildContext ctx) {
     final state = ref.watch(contextCopilotProvider(widget.screenName));
 
-    if (state.turns.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
-    }
-
+    // FIX-3: expand: false is required when DraggableScrollableSheet is used
+    // inside showModalBottomSheet — without it the sheet tries to fill the full
+    // viewport before the modal has sized itself, causing layout errors on drag.
     return DraggableScrollableSheet(
+      expand: false,
       initialChildSize: 0.55,
       minChildSize: 0.35,
       maxChildSize: 0.92,
-      builder: (_, scrollCtrl) => Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFF1E1B2E),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          children: [
-            _handle(),
-            _header(state),
-            const Divider(color: Colors.white12, height: 1),
-            Expanded(
-              child: state.turns.isEmpty ? _empty() : _messages(state.turns),
-            ),
-            if (state.error != null)
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                child: Text(
-                  'Erro: ${state.error}',
-                  style: const TextStyle(color: Colors.redAccent, fontSize: 12),
-                ),
+      builder: (_, scrollCtrl) {
+        // Store DraggableScrollableSheet's controller for _scrollToBottom.
+        // This is reassigned on each builder call (same instance in practice).
+        _listCtrl = scrollCtrl;
+
+        // FIX-4: post-frame callback must check mounted before using state/ref.
+        if (state.turns.isNotEmpty) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            _scrollToBottom();
+          });
+        }
+
+        return Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFF1E1B2E),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              _handle(),
+              _header(state),
+              const Divider(color: Colors.white12, height: 1),
+              Expanded(
+                child: state.turns.isEmpty
+                    ? _empty()
+                    : _messages(state.turns, scrollCtrl),
               ),
-            _input(state.loading),
-          ],
-        ),
-      ),
+              if (state.error != null)
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: Text(
+                    'Erro: ${state.error}',
+                    style: const TextStyle(
+                        color: Colors.redAccent, fontSize: 12),
+                  ),
+                ),
+              _input(state.loading),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -293,8 +330,11 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
         ),
       );
 
-  Widget _messages(List<CopilotTurn> turns) => ListView.builder(
-        controller: _scroll,
+  // FIX-2 (continued): scrollCtrl from DraggableScrollableSheet.builder is
+  // now connected to ListView, so drag gestures coordinate correctly.
+  Widget _messages(List<CopilotTurn> turns, ScrollController scrollCtrl) =>
+      ListView.builder(
+        controller: scrollCtrl,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         itemCount: turns.length,
         itemBuilder: (_, i) => _TurnBubble(turn: turns[i]),

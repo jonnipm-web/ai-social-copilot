@@ -37,7 +37,8 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
   ContextCopilotNotifier(this._ref) : super(const CopilotState());
 
   final Ref _ref;
-  final _client = Supabase.instance.client;
+  // late: initialized on first use; test subclasses that override send() never trigger this
+  late final _client = Supabase.instance.client;
 
   Future<void> send({
     required String message,
