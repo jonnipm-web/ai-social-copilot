@@ -5,17 +5,21 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../data/models/ecosystem_score.dart';
+import '../../../data/models/executive_relationship.dart';
 import '../../../data/models/opportunity_lab_item.dart';
 import '../../../data/models/project.dart';
 import '../../../data/models/project_intelligence_profile.dart';
 import '../../../providers/ecosystem_intelligence_provider.dart';
+import '../../../providers/executive_relationship_provider.dart';
 import '../../../providers/knowledge_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
+import '../../../providers/project_event_provider.dart';
 import '../../../providers/project_intelligence_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/context_copilot_widget.dart' show showCopilotChat;
 import '../../../shared/widgets/ive_detail_sheet.dart';
+import '../widgets/idea_interview_dialog.dart';
 
 class ProjectCommandCenterScreen extends ConsumerStatefulWidget {
   const ProjectCommandCenterScreen({super.key});
@@ -236,6 +240,31 @@ class _ProjectCommandCenterScreenState
         ?.where((p) => p.project.id == project.id)
         .firstOrNull;
 
+    // Fase 11 — dispara entrevista se projeto sem contexto suficiente
+    if (profile != null && profile.shouldInterview) {
+      IdeaInterviewDialog.show(
+        context, ref,
+        project: project,
+        onCompleted: () {
+          ref.invalidate(projectIntelligenceProfilesProvider);
+          _openDetailSheet(project, score, profile);
+        },
+      );
+      return;
+    }
+
+    _openDetailSheet(project, score, profile);
+  }
+
+  void _openDetailSheet(
+    Project project,
+    EcosystemScore? score,
+    ProjectIntelligenceProfile? profile,
+  ) {
+    final relationships = ref
+        .read(projectRelationshipsProvider(project.id))
+        .valueOrNull ?? [];
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -244,6 +273,7 @@ class _ProjectCommandCenterScreenState
         project:             project,
         ecosystemScore:      score,
         intelligenceProfile: profile,
+        relationships:       relationships,
         onStatusChange: (s) {
           Navigator.of(context).pop();
           ref.read(projectsNotifierProvider.notifier).updateStatus(project.id, s);
@@ -785,6 +815,7 @@ class _ProjectDetailSheet extends StatelessWidget {
     required this.onDelete,
     this.ecosystemScore,
     this.intelligenceProfile,
+    this.relationships = const [],
     this.onAnalyze,
     this.onAnalyzeKnowledge,
     this.onViewKnowledge,
@@ -793,6 +824,7 @@ class _ProjectDetailSheet extends StatelessWidget {
   final Project project;
   final EcosystemScore? ecosystemScore;
   final ProjectIntelligenceProfile? intelligenceProfile;
+  final List<ExecutiveRelationship> relationships;
   final void Function(String) onStatusChange;
   final VoidCallback onDelete;
   final VoidCallback? onAnalyze;
@@ -1162,7 +1194,32 @@ class _ProjectDetailSheet extends StatelessWidget {
               const SizedBox(height: 8),
             ],
 
-            const Divider(color: Color(0xFF333355)),
+            // Fase 11 — Executive Health pilares
+            if (intelligenceProfile?.executiveHealth != null) ...[
+              const Divider(color: Color(0xFF333355)),
+              const SizedBox(height: 12),
+              _sectionTitle('Saúde Executiva'),
+              _executiveHealthSection(context, intelligenceProfile!),
+              const SizedBox(height: 8),
+            ],
+
+            // Fase 11 — Executive Check-In banner
+            if (intelligenceProfile?.checkInDue == true) ...[
+              const SizedBox(height: 4),
+              _checkInBanner(context),
+              const SizedBox(height: 8),
+            ],
+
+            // Fase 11 — Executive Relationships
+            if (relationships.isNotEmpty) ...[
+              const Divider(color: Color(0xFF333355)),
+              const SizedBox(height: 12),
+              _sectionTitle('Relações do Portfólio'),
+              _relationsSection(context),
+              const SizedBox(height: 8),
+            ],
+
+            const Divider(color: Color(0xFF333355));
             const SizedBox(height: 12),
 
             // Action buttons
@@ -1543,6 +1600,236 @@ class _ProjectDetailSheet extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  // ── Fase 11 — Executive Health Pillars ─────────────────────────────────────
+
+  Widget _executiveHealthSection(BuildContext context, ProjectIntelligenceProfile p) {
+    final health = p.executiveHealth!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Score geral: ${health.overallScore}/100',
+              style: TextStyle(
+                color: health.overallScore >= 70
+                    ? const Color(0xFF6BCB77)
+                    : health.overallScore >= 40
+                        ? const Color(0xFFFFD93D)
+                        : const Color(0xFFFF6B6B),
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              'Fraco: ${health.weakestPillar.emoji} ${health.weakestPillar.name}',
+              style: const TextStyle(color: Colors.white38, fontSize: 11),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: health.pillars.map((pillar) {
+            final color = pillar.score >= 70
+                ? const Color(0xFF6BCB77)
+                : pillar.score >= 40
+                    ? const Color(0xFFFFD93D)
+                    : const Color(0xFFFF6B6B);
+            return GestureDetector(
+              onTap: () => IveDetailSheet.show(
+                context,
+                title: '${pillar.emoji} ${pillar.name}',
+                emoji: pillar.emoji,
+                humanExplanation:
+                    'O pilar ${pillar.name} tem score ${pillar.score}/100 (${pillar.status}).\n\n'
+                    '${pillar.recommendation}',
+                evidence: [
+                  IveEvidence(emoji: '📊', label: 'Score',   value: '${pillar.score}/100'),
+                  IveEvidence(emoji: pillar.statusEmoji, label: 'Status', value: pillar.status),
+                  ...pillar.strengths.take(2).map((s) =>
+                      IveEvidence(emoji: '✅', label: 'Ponto forte', value: s)),
+                  ...pillar.gaps.take(2).map((g) =>
+                      IveEvidence(emoji: '⚠️', label: 'Gap', value: g)),
+                ],
+                expandedData: {
+                  'Recomendação': pillar.recommendation,
+                },
+                screenName: 'Projetos',
+              ),
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: color.withOpacity(0.25)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(pillar.emoji, style: const TextStyle(fontSize: 12)),
+                      const SizedBox(width: 4),
+                      Text(
+                        pillar.name,
+                        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${pillar.score}',
+                        style: TextStyle(color: color.withOpacity(0.8), fontSize: 10),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  // ── Fase 11 — Check-In Banner ───────────────────────────────────────────────
+
+  Widget _checkInBanner(BuildContext context) => GestureDetector(
+        onTap: () => IveDetailSheet.show(
+          context,
+          title: 'Check-In do Projeto',
+          emoji: '🔄',
+          humanExplanation:
+              'Este projeto está sem atualizações há mais de 21 dias.\n\n'
+              'A IVE recomenda uma revisão para garantir que as análises e prioridades '
+              'estejam alinhadas com o estado atual do mercado.',
+          evidence: [
+            IveEvidence(emoji: '⏱️', label: 'Último update', value: '> 21 dias atrás'),
+            IveEvidence(emoji: '📋', label: 'Projeto',       value: project.name),
+          ],
+          suggestedActions: [
+            IveAction(emoji: '📊', label: 'Atualizar análise de mercado', description: 'Reanalize o nicho e concorrência'),
+            IveAction(emoji: '🎯', label: 'Revisar oportunidades', description: 'Verifique o Opportunity Lab'),
+            IveAction(emoji: '💰', label: 'Revisar monetização', description: 'Atualize o modelo de receita'),
+          ],
+          screenName: 'Projetos',
+        ),
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.orange.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.orange.withOpacity(0.3)),
+            ),
+            child: Row(
+              children: [
+                const Text('🔄', style: TextStyle(fontSize: 16)),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Check-In recomendado — projeto sem atualização há 21+ dias',
+                    style: TextStyle(color: Colors.orange, fontSize: 12),
+                  ),
+                ),
+                const Icon(Icons.info_outline_rounded, color: Colors.orange, size: 14),
+              ],
+            ),
+          ),
+        ),
+      );
+
+  // ── Fase 11 — Executive Relationships ──────────────────────────────────────
+
+  Widget _relationsSection(BuildContext context) {
+    return Column(
+      children: relationships.take(3).map((rel) {
+        final otherName =
+            rel.projectAId == project.id ? rel.projectBName : rel.projectAName;
+        return GestureDetector(
+          onTap: () => IveDetailSheet.show(
+            context,
+            title: '${rel.typeEmoji} ${rel.typeLabel}',
+            emoji: rel.typeEmoji,
+            humanExplanation: rel.description,
+            evidence: [
+              IveEvidence(emoji: '📁', label: 'Projeto A',      value: rel.projectAName),
+              IveEvidence(emoji: '📁', label: 'Projeto B',      value: rel.projectBName),
+              IveEvidence(emoji: '🔗', label: 'Tipo',           value: rel.typeLabel),
+              IveEvidence(emoji: '📊', label: 'Similaridade',   value: '${rel.similarityPercent}%'),
+              ...rel.sharedTopics.take(2).map(
+                    (t) => IveEvidence(emoji: '🏷️', label: 'Tópico compartilhado', value: t),
+                  ),
+            ],
+            expandedData: {
+              if (rel.synergies.isNotEmpty) 'Sinergias': rel.synergies.join('; '),
+              if (rel.conflicts.isNotEmpty) 'Conflitos':  rel.conflicts.join('; '),
+              'Recomendação': rel.recommendation,
+            },
+            suggestedActions: [
+              IveAction(
+                emoji: '🧠',
+                label: 'Perguntar à IVE',
+                description: 'Analise como "${rel.projectAName}" e "${rel.projectBName}" podem ser integrados',
+              ),
+            ],
+            screenName: 'Projetos',
+          ),
+          child: MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: rel.requiresAttention
+                    ? const Color(0xFFFF6B6B).withOpacity(0.06)
+                    : const Color(0xFF00BCD4).withOpacity(0.06),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: rel.requiresAttention
+                      ? const Color(0xFFFF6B6B).withOpacity(0.2)
+                      : const Color(0xFF00BCD4).withOpacity(0.2),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Text(rel.typeEmoji, style: const TextStyle(fontSize: 14)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          otherName,
+                          style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
+                        ),
+                        Text(
+                          rel.typeLabel,
+                          style: TextStyle(
+                            color: rel.requiresAttention ? const Color(0xFFFF6B6B) : const Color(0xFF00BCD4),
+                            fontSize: 10,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    '${rel.similarityPercent}%',
+                    style: const TextStyle(color: Colors.white38, fontSize: 11),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.info_outline_rounded, size: 12, color: Colors.white24),
+                ],
+              ),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 

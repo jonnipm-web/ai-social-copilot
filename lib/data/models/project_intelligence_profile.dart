@@ -1,3 +1,5 @@
+import 'executive_context.dart';
+import 'executive_relationship.dart';
 import 'knowledge_coverage.dart';
 import 'market_analysis.dart';
 import 'project.dart';
@@ -16,6 +18,13 @@ class ProjectIntelligenceProfile {
   final String valueProposition;
   final DateTime computedAt;
 
+  // Fase 11 — Executive Intelligence
+  final ExecutiveHealth? executiveHealth;
+  final List<ExecutiveRelationship> relationships;
+  final bool checkInDue;
+  final DateTime? lastAnalysisAt;
+  final int executivePriorityScore;
+
   const ProjectIntelligenceProfile({
     required this.project,
     this.analysis,
@@ -29,6 +38,11 @@ class ProjectIntelligenceProfile {
     required this.monetizationModel,
     required this.valueProposition,
     required this.computedAt,
+    this.executiveHealth,
+    this.relationships           = const [],
+    this.checkInDue              = false,
+    this.lastAnalysisAt,
+    this.executivePriorityScore  = 0,
   });
 
   String get maturityLabel {
@@ -55,5 +69,28 @@ class ProjectIntelligenceProfile {
     if (analysis == null) return 'Execute uma análise de mercado para obter inteligência.';
     if (coverage.score < 20) return 'Dados insuficientes. Adicione ações e oportunidades.';
     return null;
+  }
+
+  // Fase 11 — Idea Interview Engine trigger
+  bool get shouldInterview =>
+      coverage.score < 30 &&
+      niche == 'Não definido' &&
+      targetAudience == 'Não definido';
+
+  // Relações que requerem atenção imediata
+  List<ExecutiveRelationship> get criticalRelationships =>
+      relationships.where((r) => r.requiresAttention).toList();
+
+  // Score de prioridade dinâmica (0-100)
+  int get dynamicPriority {
+    if (executivePriorityScore > 0) return executivePriorityScore;
+    var score = 0;
+    score += (project.opportunityScore * 0.4).round();
+    score += (coverage.score * 0.2).round();
+    if (analysis != null) score += ((analysis!.scoreGrowth ?? 0) * 0.2).round();
+    if (maturityStage == 'crescendo') score += 10;
+    if (maturityStage == 'validando') score += 5;
+    if (checkInDue) score -= 10;
+    return score.clamp(0, 100);
   }
 }

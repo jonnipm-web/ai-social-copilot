@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import '../models/action_queue_item.dart';
+import '../models/executive_context.dart';
 import '../models/knowledge_coverage.dart';
 import '../models/knowledge_graph.dart';
 import '../models/market_analysis.dart';
@@ -11,8 +12,11 @@ import '../models/persona_training.dart';
 import '../models/project.dart';
 import '../models/project_intelligence_profile.dart';
 import '../models/revenue_plan.dart';
+import 'executive_health_service.dart';
 
 class ProjectIntelligenceService {
+  final _healthService = ExecutiveHealthService();
+
   // ── Public API ─────────────────────────────────────────────────────────────
 
   List<ProjectIntelligenceProfile> computeProfiles({
@@ -43,19 +47,34 @@ class ProjectIntelligenceService {
         trainedPersonaCount: trainedPersonaCount,
       );
 
+      final executiveHealth = _healthService.compute(
+        project:            p,
+        coverage:           coverage,
+        analysis:           analysis,
+        actions:            pActions,
+        labItems:           pLab,
+        knowledgeItemCount: totalKnowledgeItems,
+      );
+
+      final checkInDue = _isCheckInDue(p, analysis, pActions);
+
       return ProjectIntelligenceProfile(
-        project:             p,
-        analysis:            analysis,
-        coverage:            coverage,
-        maturityStage:       _maturityStage(p, analysis, pActions, pLab, plan),
-        relatedProjectNames: _relatedProjects(p, analysis, projects, analyses),
-        identifiedTopics:    _identifiedTopics(analysis, pLab),
-        missingKnowledge:    coverage.gaps,
-        niche:               analysis?.niche ?? 'Não definido',
-        targetAudience:      analysis?.targetAudience ?? 'Não definido',
-        monetizationModel:   analysis?.monetizationModel ?? 'Não definido',
-        valueProposition:    analysis?.valueProposition ?? p.description,
-        computedAt:          DateTime.now(),
+        project:                p,
+        analysis:               analysis,
+        coverage:               coverage,
+        maturityStage:          _maturityStage(p, analysis, pActions, pLab, plan),
+        relatedProjectNames:    _relatedProjects(p, analysis, projects, analyses),
+        identifiedTopics:       _identifiedTopics(analysis, pLab),
+        missingKnowledge:       coverage.gaps,
+        niche:                  analysis?.niche ?? 'Não definido',
+        targetAudience:         analysis?.targetAudience ?? 'Não definido',
+        monetizationModel:      analysis?.monetizationModel ?? 'Não definido',
+        valueProposition:       analysis?.valueProposition ?? p.description,
+        computedAt:             DateTime.now(),
+        executiveHealth:        executiveHealth,
+        checkInDue:             checkInDue,
+        lastAnalysisAt:         analysis?.createdAt,
+        executivePriorityScore: _executivePriority(p, analysis, coverage, pActions, pLab),
       );
     }).toList();
   }
@@ -263,5 +282,61 @@ class ProjectIntelligenceService {
     final common = words1.intersection(words2).length;
     if (common == 0) return 0;
     return common / math.max(words1.length, words2.length);
+  }
+
+  // ── Fase 11 helpers ─────────────────────────────────────────────────────────
+
+  bool _isCheckInDue(
+    Project p,
+    MarketAnalysis? analysis,
+    List<ActionQueueItem> actions,
+  ) {
+    final lastActivity = [
+      p.updatedAt,
+      if (analysis != null) analysis.createdAt,
+      ...actions.map((a) => a.updatedAt ?? a.createdAt),
+    ].reduce((a, b) => a.isAfter(b) ? a : b);
+
+    return DateTime.now().difference(lastActivity).inDays > 21;
+  }
+
+  int _executivePriority(
+    Project p,
+    MarketAnalysis? analysis,
+    KnowledgeCoverage coverage,
+    List<ActionQueueItem> actions,
+    List<OpportunityLabItem> labItems,
+  ) {
+    var score = 0;
+
+    // Potencial (40%)
+    score += (p.opportunityScore * 0.40).round();
+
+    // Maturidade (15%): crescendo tem mais valor que ideia ou maduro estagnado
+    switch (_maturityStage(p, analysis, actions, labItems, null)) {
+      case 'crescendo': score += 15; break;
+      case 'validando': score += 10; break;
+      case 'maduro':    score += 8;  break;
+      default:          score += 3;  break;
+    }
+
+    // Execução (15%)
+    final completed = actions.where((a) => a.status == 'completed').length;
+    final momentum  = actions.isEmpty ? 0 : (completed / actions.length * 15).round();
+    score += momentum;
+
+    // Cobertura de dados (15%)
+    score += (coverage.score * 0.15).round();
+
+    // Mercado (15%)
+    if (analysis != null) {
+      score += ((analysis.scoreGrowth ?? 0) * 0.10).round();
+      score += ((analysis.scoreMonetization ?? 0) * 0.05).round();
+    }
+
+    // Penalidade por falta de atualização
+    if (_isCheckInDue(p, analysis, actions)) score -= 10;
+
+    return score.clamp(0, 100);
   }
 }
