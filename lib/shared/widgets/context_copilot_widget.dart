@@ -16,6 +16,7 @@ void showCopilotChat(
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
+    useSafeArea: true,
     backgroundColor: Colors.transparent,
     builder: (_) => ProviderScope(
       parent: ProviderScope.containerOf(context),
@@ -53,6 +54,7 @@ class ContextCopilotButton extends ConsumerWidget {
     showModalBottomSheet(
       context: ctx,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (_) => ProviderScope(
         parent: ProviderScope.containerOf(ctx),

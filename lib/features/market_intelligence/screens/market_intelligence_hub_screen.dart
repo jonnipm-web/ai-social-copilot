@@ -366,7 +366,7 @@ class _ExecScoreCard extends StatelessWidget {
                   Icon(Icons.analytics_rounded, color: color, size: 18),
                   const SizedBox(width: 6),
                   const Text(
-                    'OPPORTUNITY SCORE',
+                    'PONTUAÇÃO DE OPORTUNIDADE',
                     style: TextStyle(
                       color: Colors.white54,
                       fontSize: 11,

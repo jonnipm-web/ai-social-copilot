@@ -31,8 +31,14 @@ final marketAnalysesByProjectProvider = FutureProvider.autoDispose
 // Single market analysis by id
 final marketAnalysisByIdProvider =
     FutureProvider.autoDispose.family<MarketAnalysis, String>((ref, id) async {
-  final result = await ref.read(marketAnalysisServiceProvider).fetchById(id);
-  if (result == null) throw Exception('Análise não encontrada');
+  final result = await ref
+      .read(marketAnalysisServiceProvider)
+      .fetchById(id)
+      .timeout(
+        const Duration(seconds: 15),
+        onTimeout: () => null,
+      );
+  if (result == null) throw Exception('Análise não encontrada ou tempo de carregamento excedido. Tente novamente.');
   return result;
 });
 

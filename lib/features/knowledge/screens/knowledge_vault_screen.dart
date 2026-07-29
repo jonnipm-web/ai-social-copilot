@@ -299,6 +299,7 @@ Future<void> _showProjectPicker(
     context: context,
     backgroundColor: Colors.transparent,
     isScrollControlled: true,
+    useSafeArea: true,
     builder: (_) => _ProjectPickerSheet(
       item: item,
       projects: projects,
@@ -320,13 +321,20 @@ class _ProjectPickerSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
+    return DraggableScrollableSheet(
+      initialChildSize: 0.55,
+      minChildSize: 0.35,
+      maxChildSize: 0.85,
+      expand: false,
+      builder: (_, scrollCtrl) => Container(
       decoration: const BoxDecoration(
         color: Color(0xFF1A1A2E),
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-      child: Column(
+      child: SingleChildScrollView(
+        controller: scrollCtrl,
+        child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -406,6 +414,8 @@ class _ProjectPickerSheet extends ConsumerWidget {
                 ),
               )),
         ],
+        ),
+      ),
       ),
     );
   }

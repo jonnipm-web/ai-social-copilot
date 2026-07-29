@@ -57,12 +57,16 @@ class HomeScreen extends ConsumerWidget {
           ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: Colors.white38),
-            tooltip: 'Atualizar',
+            tooltip: 'Atualizar todos os dados',
             onPressed: () {
+              ref.invalidate(projectsProvider);
               ref.invalidate(projectIntelligenceProfilesProvider);
               ref.invalidate(personaLearningProfilesProvider);
               ref.invalidate(knowledgeGraphProvider);
               ref.invalidate(ecosystemScoresProvider);
+              ref.invalidate(ecosystemHealthProvider);
+              ref.invalidate(actionQueueProvider);
+              ref.invalidate(opportunityLabProvider);
             },
           ),
         ],
@@ -163,7 +167,7 @@ class _ExecutiveCommandCard extends ConsumerWidget {
                   icon: Icons.auto_stories_rounded,
                   color: _coverageColor(coverage)),
               _MetricChip(
-                  label: 'Learning Score',
+                  label: 'Aprendizado',
                   value: '$learning%',
                   icon: Icons.psychology_rounded,
                   color: _learningColor(learning)),
@@ -173,7 +177,7 @@ class _ExecutiveCommandCard extends ConsumerWidget {
           // Quick navigation row
           Row(children: [
             _QuickAction(
-                label: 'Decision Center',
+                label: 'Central de Decisões',
                 icon: Icons.speed_rounded,
                 onTap: () => context.push(AppConstants.routeEcosystem)),
             const SizedBox(width: 8),

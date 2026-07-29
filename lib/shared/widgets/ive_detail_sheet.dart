@@ -38,6 +38,7 @@ class IveDetailSheet extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (_) => IveDetailSheet(
         title: title,
@@ -54,9 +55,10 @@ class IveDetailSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DraggableScrollableSheet(
-      initialChildSize: 0.60,
+      initialChildSize: 0.75,
       minChildSize: 0.40,
-      maxChildSize: 0.92,
+      maxChildSize: 0.95,
+      expand: false,
       builder: (_, ctrl) => Container(
         decoration: const BoxDecoration(
           color: Color(0xFF1A1635),

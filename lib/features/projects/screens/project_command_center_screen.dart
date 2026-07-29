@@ -54,6 +54,8 @@ class _ProjectCommandCenterScreenState
     setState(() => _refreshing = true);
     ref.invalidate(projectsNotifierProvider);
     ref.invalidate(ecosystemScoresProvider);
+    ref.invalidate(projectIntelligenceProfilesProvider);
+    ref.invalidate(opportunityLabProvider);
     // Aguarda nova leitura para completar o indicador
     await Future.wait([
       ref.read(projectsNotifierProvider.future).catchError((_) => <Project>[]),

@@ -196,7 +196,7 @@ class _DrawerContent extends ConsumerWidget {
                 ),
                 _NavItem(
                   icon: Icons.hub_rounded,
-                  label: 'Decision Center',
+                  label: 'Central de Decisões',
                   route: AppConstants.routeEcosystem,
                   current: current,
                 ),

@@ -60,7 +60,10 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
     super.dispose();
   }
 
+  static const _hiddenRoutes = {'/login', '/', ''};
+
   void _onRouteChange() {
+    setState(() {});
     final route = iveRouteNotifier.value;
     ref.read(iveProvider.notifier).setRoute(route);
     ref.read(iveMemoryProvider.notifier).setRoute(route);
@@ -78,6 +81,9 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
 
   @override
   Widget build(BuildContext context) {
+    final route = iveRouteNotifier.value;
+    if (_hiddenRoutes.contains(route)) return const SizedBox.shrink();
+
     final state = ref.watch(iveProvider);
     final screen = MediaQuery.of(context).size;
     final safeBottom = MediaQuery.of(context).padding.bottom;

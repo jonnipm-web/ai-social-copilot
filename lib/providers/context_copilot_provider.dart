@@ -50,13 +50,33 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
       timestamp: DateTime.now(),
     );
 
-    // Persiste pergunta na memória da IVE — alimenta contexto futuro
     _ref.read(iveMemoryProvider.notifier).addQuestion(message);
 
     state = state.copyWith(
       turns: [...state.turns, userTurn],
       loading: true,
     );
+
+    // Guard: responder localmente quando não há dados suficientes
+    if (context.isEmpty) {
+      await Future.delayed(const Duration(milliseconds: 300));
+      final noDataTurn = CopilotTurn(
+        role: 'assistant',
+        content: 'Ainda não possuo dados suficientes para gerar uma recomendação confiável.\n\n'
+            'O que falta:\n'
+            '• Adicionar projetos ao seu portfólio\n'
+            '• Executar análises de mercado\n'
+            '• Registrar ações e oportunidades\n\n'
+            'Configure seu perfil e adicione projetos para que eu possa ajudar com precisão.',
+        confidence: 0,
+        timestamp: DateTime.now(),
+      );
+      state = state.copyWith(
+        turns: [...state.turns, noDataTurn],
+        loading: false,
+      );
+      return;
+    }
 
     try {
       final history = state.turns
@@ -109,9 +129,26 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
     } catch (e) {
       state = state.copyWith(
         loading: false,
-        error: e.toString(),
+        error: _friendlyError(e.toString()),
       );
     }
+  }
+
+  static String _friendlyError(String raw) {
+    final l = raw.toLowerCase();
+    if (l.contains('429') || l.contains('rate limit') || l.contains('too many requests')) {
+      return 'Serviço temporariamente indisponível. Tente novamente em alguns instantes.';
+    }
+    if (l.contains('401') || l.contains('unauthorized') || l.contains('jwt')) {
+      return 'Sessão expirada. Saia e entre novamente no aplicativo.';
+    }
+    if (l.contains('timeout') || l.contains('timed out')) {
+      return 'A resposta demorou muito. Tente novamente.';
+    }
+    if (l.contains('network') || l.contains('socket') || l.contains('connection')) {
+      return 'Sem conexão. Verifique sua internet e tente novamente.';
+    }
+    return 'Não foi possível obter resposta. Tente novamente.';
   }
 
   void clearHistory() => state = const CopilotState();

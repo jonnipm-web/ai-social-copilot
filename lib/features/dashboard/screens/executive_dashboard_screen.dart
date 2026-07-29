@@ -611,7 +611,7 @@ class _QuickNavCard extends StatelessWidget {
     final navItems = [
       (
         Icons.hub_rounded,
-        'Decision Center',
+        'Central de Decisões',
         AppConstants.routeEcosystem,
         _kPrimary
       ),

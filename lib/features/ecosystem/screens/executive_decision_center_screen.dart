@@ -116,7 +116,7 @@ class _ExecutiveDecisionCenterScreenState
               ? context.pop()
               : context.go(AppConstants.routeDashboard),
         ),
-        title: const Text('Decision Center',
+        title: const Text('Central de Decisões',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         iconTheme: const IconThemeData(color: Colors.white),
         bottom: TabBar(
@@ -1384,15 +1384,15 @@ class _ValidationGateCard extends StatelessWidget {
                         fontWeight: FontWeight.w600)),
                 const SizedBox(height: 10),
                 _GateMetricRow(
-                    label: 'Knowledge Coverage',
+                    label: 'Cobertura de Conhecimento',
                     value: validation.coverageLabel,
                     onTap: () => _showCoverage(context)),
                 _GateMetricRow(
-                    label: 'Learning Score',
+                    label: 'Índice de Aprendizado',
                     value: validation.learningLabel,
                     onTap: () => _showLearning(context)),
                 _GateMetricRow(
-                    label: 'Intelligence Profile',
+                    label: 'Perfil de Inteligência',
                     value: validation.profileLabel,
                     onTap: () => _showProfile(context)),
                 const Divider(color: Colors.white12, height: 16),
@@ -1419,6 +1419,25 @@ class _ValidationGateCard extends StatelessWidget {
                                 color: Colors.white38, fontSize: 10)),
                       )),
                 ],
+                const Divider(color: Colors.white12, height: 16),
+                const Row(
+                  children: [
+                    Icon(Icons.lock_open_rounded,
+                        size: 11, color: Color(0xFF4CAF50)),
+                    SizedBox(width: 6),
+                    Text('Ao desbloquear:',
+                        style:
+                            TextStyle(color: Color(0xFF4CAF50), fontSize: 10)),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  rec.expectedImpact.isNotEmpty
+                      ? rec.expectedImpact
+                      : 'A IVE poderá gerar esta recomendação com dados reais do seu projeto.',
+                  style:
+                      const TextStyle(color: Colors.white38, fontSize: 10),
+                ),
               ],
             ),
           ),
@@ -1522,6 +1541,8 @@ class _RecCard extends StatelessWidget {
         IveEvidence(
             emoji: '🎯', label: 'Confiança', value: '${rec.confidence}%'),
         IveEvidence(emoji: '💡', label: 'Dados usados', value: rec.dataUsed),
+        if (rec.entityName != null && rec.entityName!.isNotEmpty)
+          IveEvidence(emoji: '📁', label: 'Projeto', value: rec.entityName!),
       ],
       suggestedActions: [
         IveAction(
@@ -1583,6 +1604,12 @@ class _RecCard extends StatelessWidget {
                     color: Colors.white,
                     fontWeight: FontWeight.w600,
                     fontSize: 13)),
+            if (rec.entityName != null && rec.entityName!.isNotEmpty) ...[
+              const SizedBox(height: 2),
+              Text('Projeto: ${rec.entityName}',
+                  style:
+                      const TextStyle(color: Colors.white54, fontSize: 10)),
+            ],
             const SizedBox(height: 6),
             Text(rec.reason,
                 style: const TextStyle(color: Colors.white70, fontSize: 11)),

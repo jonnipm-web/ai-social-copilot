@@ -1063,8 +1063,8 @@ class _TestsTab extends ConsumerWidget {
     }
 
     if (reportAsync.hasError) {
-      return _empty(
-          'Erro ao executar validação.', reportAsync.error.toString());
+      return _empty('Erro ao executar validação.',
+          _sanitizeDebugError(reportAsync.error));
     }
 
     final report = reportAsync.valueOrNull;
@@ -1731,6 +1731,13 @@ Widget _graphNodeRow(String type, String name, String id) => Row(children: [
               style: const TextStyle(color: Colors.white, fontSize: 12))),
       Text(id.substring(0, 8), style: _kMono),
     ]);
+
+String _sanitizeDebugError(Object? err) {
+  final msg = err?.toString() ?? 'Erro desconhecido';
+  final firstLine = msg.split('\n').first.trim();
+  if (firstLine.length > 120) return '${firstLine.substring(0, 120)}…';
+  return firstLine.isNotEmpty ? firstLine : 'Erro inesperado. Verifique o Supabase Dashboard.';
+}
 
 Widget _empty(String msg, String hint) => Center(
       child: Padding(

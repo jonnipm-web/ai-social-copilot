@@ -271,8 +271,10 @@ class _MarketIntelligenceScreenState
               analyses.when(
                 loading: () => const Center(
                     child: CircularProgressIndicator(color: Color(0xFF00BCD4))),
-                error: (e, _) => Text('Erro: $e',
-                    style: const TextStyle(color: Colors.redAccent)),
+                error: (e, _) => Text(
+                    _friendlyError(e.toString()),
+                    style: const TextStyle(
+                        color: Colors.redAccent, fontSize: 12)),
                 data: (list) => list.isEmpty
                     ? const Text('Nenhuma análise ainda.',
                         style: TextStyle(color: Colors.white38))

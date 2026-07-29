@@ -38,19 +38,23 @@ class OpportunityLabNotifier
 
   Future<void> load({String? projectId}) async {
     _activeProjectId = projectId;
+    if (!mounted) return;
     state = const AsyncValue.loading();
     try {
       final list = await _svc.fetchAll(projectId: projectId);
+      if (!mounted) return;
       state = AsyncValue.data(list);
     } catch (e, st) {
+      if (!mounted) return;
       state = AsyncValue.error(e, st);
     }
   }
 
   Future<void> add(OpportunityLabItem item) async {
     await _svc.create(item);
+    if (!mounted) return;
     await load(projectId: _activeProjectId);
-    // Emite evento na timeline executiva se a oportunidade tem projectId
+    if (!mounted) return;
     if (item.projectId != null && item.id.isNotEmpty) {
       ExecutiveContextOrchestrator().onOpportunityCreated(
         projectId: item.projectId!,
@@ -61,11 +65,12 @@ class OpportunityLabNotifier
   }
 
   Future<void> approve(String id) async {
-    // Busca o item antes de atualizar para ter o projectId
     final existing =
         (state.valueOrNull ?? []).where((i) => i.id == id).firstOrNull;
     await _svc.updateStatus(id, 'approved');
+    if (!mounted) return;
     await load(projectId: _activeProjectId);
+    if (!mounted) return;
     if (existing != null && existing.projectId != null) {
       ExecutiveContextOrchestrator().onDecisionTaken(
         projectId: existing.projectId!,
@@ -77,6 +82,7 @@ class OpportunityLabNotifier
 
   Future<void> delete(String id) async {
     await _svc.delete(id);
+    if (!mounted) return;
     await load(projectId: _activeProjectId);
   }
 }
