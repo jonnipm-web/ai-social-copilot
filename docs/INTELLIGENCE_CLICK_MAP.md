@@ -51,8 +51,10 @@
 |----------|---------|------|
 | Badge de Maturidade | ✅ 🔗 | IveDetailSheet com linha do tempo de estágios |
 | Cada tópico identificado | ✅ 🔗 | IveDetailSheet com por que foi classificado assim |
-| Lacunas de conhecimento | ⬜ | — |
-| Nicho / Público / Monetização | ⬜ | — |
+| Lacunas de conhecimento | ✅ 🔗 | IveDetailSheet com impacto, origem, 3 ações: Adicionar Doc, Nova Análise, Action Engine |
+| Nicho | ✅ 🔗 | IveDetailSheet com como foi identificado, influência nos scores, como refinar |
+| Público-Alvo | ✅ 🔗 | IveDetailSheet com segmentação, monetização, como refinar |
+| Monetização | ✅ 🔗 | IveDetailSheet com modelo identificado, impacto no ROI, como documentar |
 
 ---
 
@@ -73,16 +75,13 @@
 
 | Elemento | Clicável | Tipo |
 |----------|---------|------|
-| Receita potencial | ⬜ | — |
-| Prazo | ⬜ | — |
-| Confiança | ⬜ | — |
+| Card inteiro (Revenue Potential) | ✅ 🔗 | IveDetailSheet com estimativa min/max, prazo, confiança, score monetização, premissas |
 
 ### M7 — Investment Card
 
 | Elemento | Clicável | Tipo |
 |----------|---------|------|
-| SIM/NÃO/CONDICIONAL badge | ⬜ | — |
-| Investment Score | ⬜ | — |
+| Card inteiro (Vale a Pena Investir?) | ✅ 🔗 | IveDetailSheet com recomendação, justificativa, 3 cenários (otimista/conservador/pessimista) |
 
 ---
 
@@ -94,7 +93,7 @@
 | Elemento | Clicável | Tipo |
 |----------|---------|------|
 | Health Score circular | ✅ 🔗 | IveDetailSheet com composição do score |
-| Texto "Saúde Geral: X/100" | ⬜ | — |
+| Texto "Saúde Geral: X/100" | ✅ 🔗 | IveDetailSheet com status, componentes, meta, comparação |
 
 ### Sidebar (desktop)
 
@@ -153,18 +152,20 @@
 
 | Área | Total | Implementado | Pendente |
 |------|-------|-------------|---------|
-| Project Command Center | 16 | 12 | 4 |
-| Market Intelligence Hub | 7 | 5 | 2 |
-| Weekly Briefing | 6 | 4 | 2 |
-| Decision Center | 6 | 6 | 0 |
-| Opportunity Detail | 7 | 7 | 0 |
-| **TOTAL** | **42** | **34** | **8** |
+| Project Command Center | 16 | 16 | 0 ✅ |
+| Market Intelligence Hub | 7 | 7 | 0 ✅ |
+| Weekly Briefing | 6 | 6 | 0 ✅ |
+| Decision Center | 6 | 6 | 0 ✅ |
+| Opportunity Detail | 7 | 7 | 0 ✅ |
+| **TOTAL** | **42** | **42** | **0** |
+
+### 🎯 100% — Nenhum indicador sem explicação.
 
 ---
 
-## PRÓXIMAS IMPLEMENTAÇÕES (FASE 10H+)
+## HISTÓRICO DE FASES
 
-1. `weekly_briefing_screen.dart` — data origin counts clicáveis (2 itens)
-2. `market_intelligence_hub_screen.dart` — investment card + revenue card (3 itens)
-3. `project_command_center_screen.dart` — lacunas de conhecimento clicáveis (1 item)
-4. `project_command_center_screen.dart` — 4 itens pendentes (ver seção PCC)
+| Fase | Data | Implementado |
+|------|------|-------------|
+| FASE 10H | 2026-07-28 | 34/42 |
+| FASE 10H.1 | 2026-07-29 | 42/42 (100%) |

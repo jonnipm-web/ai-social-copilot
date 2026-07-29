@@ -1328,15 +1328,95 @@ class _ProjectDetailSheet extends StatelessWidget {
         ),
         const SizedBox(height: 10),
 
-        // Identity: niche, audience, monetization
+        // Identity: niche, audience, monetization — clicáveis
         if (p.niche != 'Não definido') ...[
-          _infoRow('🎯 Nicho', p.niche),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => IveDetailSheet.show(
+              context,
+              title: 'Nicho Identificado',
+              emoji: '🎯',
+              humanExplanation:
+                  'Identifiquei "${p.niche}" como nicho principal deste projeto '
+                  'com base nos documentos de conhecimento, análises de mercado e dados do portfólio.\n\n'
+                  'O nicho influencia diretamente o Opportunity Score e o Fit Estratégico, '
+                  'determinando o segmento de mercado onde o projeto está posicionado.',
+              evidence: <IveEvidence>[
+                IveEvidence(emoji: '🎯', label: 'Nicho',           value: p.niche),
+                IveEvidence(emoji: '👥', label: 'Público-alvo',    value: p.targetAudience),
+                IveEvidence(emoji: '📊', label: 'Cobertura',       value: '${p.coverage.score}/100'),
+                IveEvidence(emoji: '📁', label: 'Projeto',         value: p.project.name),
+              ],
+              suggestedActions: <IveAction>[
+                IveAction(emoji: '🔍', label: 'Analisar este nicho', description: 'Execute análise de MI para ${p.niche}'),
+                IveAction(emoji: '📄', label: 'Adicionar Documentos', description: 'Aprimore o perfil do nicho com novos conhecimentos'),
+              ],
+              screenName: 'Projetos',
+            ),
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: _infoRow('🎯 Nicho', p.niche),
+            ),
+          ),
         ],
         if (p.targetAudience != 'Não definido') ...[
-          _infoRow('👥 Público', p.targetAudience),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => IveDetailSheet.show(
+              context,
+              title: 'Público-Alvo',
+              emoji: '👥',
+              humanExplanation:
+                  'O público-alvo identificado para este projeto é "${p.targetAudience}".\n\n'
+                  'Esta segmentação foi derivada das análises de mercado e documentos de '
+                  'conhecimento. Conhecer o público influencia a estratégia de monetização e posicionamento.',
+              evidence: <IveEvidence>[
+                IveEvidence(emoji: '👥', label: 'Público-alvo', value: p.targetAudience),
+                IveEvidence(emoji: '🎯', label: 'Nicho',        value: p.niche),
+                IveEvidence(emoji: '💰', label: 'Monetização',  value: p.monetizationModel),
+                IveEvidence(emoji: '📊', label: 'Cobertura',    value: '${p.coverage.score}/100'),
+              ],
+              suggestedActions: <IveAction>[
+                IveAction(emoji: '📄', label: 'Refinar perfil do público', description: 'Adicione pesquisas de mercado e entrevistas com clientes'),
+                IveAction(emoji: '🔍', label: 'Analisar concorrentes', description: 'Veja como os concorrentes se comunicam com este público'),
+              ],
+              screenName: 'Projetos',
+            ),
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: _infoRow('👥 Público', p.targetAudience),
+            ),
+          ),
         ],
         if (p.monetizationModel != 'Não definido') ...[
-          _infoRow('💰 Monetização', p.monetizationModel),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => IveDetailSheet.show(
+              context,
+              title: 'Modelo de Monetização',
+              emoji: '💰',
+              humanExplanation:
+                  'O modelo de monetização identificado é "${p.monetizationModel}".\n\n'
+                  'Este modelo define como o projeto vai gerar receita e influencia o '
+                  'Score de ROI e o Potencial Financeiro. '
+                  'Um modelo bem documentado aumenta a precisão das estimativas de receita.',
+              evidence: <IveEvidence>[
+                IveEvidence(emoji: '💰', label: 'Modelo',    value: p.monetizationModel),
+                IveEvidence(emoji: '🎯', label: 'Nicho',     value: p.niche),
+                IveEvidence(emoji: '👥', label: 'Público',   value: p.targetAudience),
+                IveEvidence(emoji: '📊', label: 'Cobertura', value: '${p.coverage.score}/100'),
+              ],
+              suggestedActions: <IveAction>[
+                IveAction(emoji: '📊', label: 'Revenue Planner', description: 'Execute estimativa de receita no Market Intelligence Hub'),
+                IveAction(emoji: '📄', label: 'Documentar modelo', description: 'Adicione um documento detalhando o modelo de negócio e premissas'),
+              ],
+              screenName: 'Projetos',
+            ),
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: _infoRow('💰 Monetização', p.monetizationModel),
+            ),
+          ),
         ],
         if (p.valueProposition.isNotEmpty) ...[
           _infoRow('✨ Proposta', p.valueProposition),
@@ -1385,20 +1465,48 @@ class _ProjectDetailSheet extends StatelessWidget {
           ),
         ],
 
-        // Missing knowledge gaps
+        // Missing knowledge gaps — clicáveis
         if (p.missingKnowledge.isNotEmpty) ...[
           const SizedBox(height: 8),
           const Text('Lacunas de conhecimento',
               style: TextStyle(color: Colors.white38, fontSize: 10, fontWeight: FontWeight.w600)),
           const SizedBox(height: 4),
-          ...p.missingKnowledge.take(3).map((gap) => Padding(
-            padding: const EdgeInsets.only(bottom: 2),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('⚠ ', style: TextStyle(color: Colors.orange, fontSize: 11)),
-                Expanded(child: Text(gap, style: const TextStyle(color: Colors.white54, fontSize: 11))),
+          ...p.missingKnowledge.take(3).map((gap) => GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => IveDetailSheet.show(
+              context,
+              title: 'Lacuna: $gap',
+              emoji: '⚠️',
+              humanExplanation:
+                  'Identifiquei uma lacuna de conhecimento em "${p.project.name}": "$gap".\n\n'
+                  'Esta lacuna reduz a precisão das análises e pode limitar as recomendações da IVE. '
+                  'Cada lacuna reduz o score de cobertura e torna o Ecosystem Score menos confiável.',
+              evidence: <IveEvidence>[
+                IveEvidence(emoji: '⚠️', label: 'Lacuna identificada', value: gap),
+                IveEvidence(emoji: '📊', label: 'Cobertura atual',     value: '${p.coverage.score}/100'),
+                IveEvidence(emoji: '📋', label: 'Total de lacunas',    value: '${p.missingKnowledge.length}'),
+                IveEvidence(emoji: '📁', label: 'Projeto',             value: p.project.name),
               ],
+              suggestedActions: <IveAction>[
+                IveAction(emoji: '📄', label: 'Adicionar Documento', description: 'Adicione um documento que cubra "$gap"'),
+                IveAction(emoji: '🔍', label: 'Executar Nova Análise', description: 'Execute análise de MI focada nesta área de conhecimento'),
+                IveAction(emoji: '⚡', label: 'Enviar para Action Engine', description: 'Crie uma ação para cobrir esta lacuna de conhecimento'),
+              ],
+              screenName: 'Projetos',
+            ),
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('⚠ ', style: TextStyle(color: Colors.orange, fontSize: 11)),
+                    Expanded(child: Text(gap, style: const TextStyle(color: Colors.white54, fontSize: 11))),
+                    const Icon(Icons.info_outline_rounded, size: 10, color: Colors.orange),
+                  ],
+                ),
+              ),
             ),
           )),
         ],

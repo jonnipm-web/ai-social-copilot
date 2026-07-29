@@ -585,58 +585,100 @@ class _RevenuePotentialCard extends StatelessWidget {
     final conf    = plan != null ? 88 : analysis.revenueConfidence;
     final hasData = minVal > 0 || maxVal > 0;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _kCyan.withOpacity(0.3)),
+    return GestureDetector(
+      onTap: () => IveDetailSheet.show(
+        context,
+        title: 'Revenue Potential',
+        emoji: '💰',
+        humanExplanation: hasData
+            ? 'Identifiquei um potencial de receita de '
+              '${_formatBRL(minVal)} a ${_formatBRL(maxVal)} por mês '
+              'para o nicho "${analysis.niche ?? analysis.input}".\n\n'
+              'Esta estimativa é baseada no modelo de monetização do nicho, '
+              'ticket médio identificado e tamanho do mercado. '
+              'Score de Monetização: ${analysis.scoreMonetization}/100. '
+              'Confiança: $conf%.'
+            : 'Ainda não há dados suficientes para estimar o Revenue Potential. '
+              'Execute o Revenue Planner para obter estimativas baseadas '
+              'em modelos de monetização específicos do nicho.',
+        evidence: <IveEvidence>[
+          IveEvidence(emoji: '💰', label: 'Receita mínima',    value: _formatBRL(minVal)),
+          IveEvidence(emoji: '🚀', label: 'Receita máxima',    value: _formatBRL(maxVal)),
+          IveEvidence(emoji: '⏱️', label: 'Prazo estimado',    value: '$months meses'),
+          IveEvidence(emoji: '📊', label: 'Confiança',         value: '$conf%'),
+          IveEvidence(emoji: '💡', label: 'Score Monetização', value: '${analysis.scoreMonetization}/100'),
+        ],
+        expandedData: hasData ? {
+          'Estimativa conservadora': _formatBRL(minVal),
+          'Estimativa agressiva':    _formatBRL(maxVal),
+          'Prazo para receita':      '$months meses',
+          'Base de cálculo':         'Score de monetização × TAM estimado do nicho',
+          'Nível de confiança':      '$conf%',
+        } : {},
+        suggestedActions: <IveAction>[
+          IveAction(emoji: '📊', label: 'Revenue Planner', description: 'Execute o Revenue Planner para refinar estimativas detalhadas'),
+          IveAction(emoji: '📄', label: 'Documentar premissas', description: 'Adicione benchmarks de receita do nicho à biblioteca'),
+        ],
+        screenName: 'Market Intelligence',
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: _kCard,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: _kCyan.withOpacity(0.3)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.attach_money_rounded, color: _kCyan, size: 18),
-              const SizedBox(width: 6),
-              const Flexible(
-                child: Text(
-                  'Revenue Potential',
-                  style: TextStyle(
-                      color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
-                ),
+              Row(
+                children: [
+                  const Icon(Icons.attach_money_rounded, color: _kCyan, size: 18),
+                  const SizedBox(width: 6),
+                  const Flexible(
+                    child: Text(
+                      'Revenue Potential',
+                      style: TextStyle(
+                          color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  const Spacer(),
+                  const Icon(Icons.info_outline_rounded, color: _kCyan, size: 14),
+                ],
               ),
+              const SizedBox(height: 14),
+              if (!hasData) ...[
+                const Icon(Icons.bar_chart_rounded, color: Colors.white24, size: 28),
+                const SizedBox(height: 6),
+                const Text(
+                  'Execute o Revenue Planner para estimativas detalhadas.',
+                  style: TextStyle(color: Colors.white38, fontSize: 11, height: 1.4),
+                ),
+              ] else ...[
+                Text(
+                  minVal > 0
+                      ? '${_formatBRL(minVal)} – ${_formatBRL(maxVal)}/mês'
+                      : '${_formatBRL(maxVal)}/mês',
+                  style: const TextStyle(
+                      color: _kCyan, fontSize: 14, fontWeight: FontWeight.bold, height: 1.2),
+                ),
+                if (plan != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Anual: ${_formatBRL(plan!.annualModerate)}',
+                    style: TextStyle(color: _kCyan.withOpacity(0.6), fontSize: 11),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                _InfoRow2(icon: Icons.timer_rounded,    label: 'Prazo',     value: '$months meses'),
+                const SizedBox(height: 6),
+                _InfoRow2(icon: Icons.verified_rounded, label: 'Confiança', value: '$conf%'),
+              ],
             ],
           ),
-          const SizedBox(height: 14),
-          if (!hasData) ...[
-            const Icon(Icons.bar_chart_rounded, color: Colors.white24, size: 28),
-            const SizedBox(height: 6),
-            const Text(
-              'Execute o Revenue Planner para estimativas detalhadas.',
-              style: TextStyle(color: Colors.white38, fontSize: 11, height: 1.4),
-            ),
-          ] else ...[
-            Text(
-              minVal > 0
-                  ? '${_formatBRL(minVal)} – ${_formatBRL(maxVal)}/mês'
-                  : '${_formatBRL(maxVal)}/mês',
-              style: const TextStyle(
-                  color: _kCyan, fontSize: 14, fontWeight: FontWeight.bold, height: 1.2),
-            ),
-            if (plan != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                'Anual: ${_formatBRL(plan!.annualModerate)}',
-                style: TextStyle(color: _kCyan.withOpacity(0.6), fontSize: 11),
-              ),
-            ],
-            const SizedBox(height: 12),
-            _InfoRow2(icon: Icons.timer_rounded,   label: 'Prazo',     value: '$months meses'),
-            const SizedBox(height: 6),
-            _InfoRow2(icon: Icons.verified_rounded, label: 'Confiança', value: '$conf%'),
-          ],
-        ],
+        ),
       ),
     );
   }
@@ -660,48 +702,89 @@ class _InvestmentCard extends StatelessWidget {
         : rec == 'NÃO'
             ? Icons.thumb_down_alt_rounded
             : Icons.thumbs_up_down_rounded;
+    final recEmoji = rec == 'SIM' ? '✅' : rec == 'NÃO' ? '❌' : '⚠️';
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.35)),
+    return GestureDetector(
+      onTap: () => IveDetailSheet.show(
+        context,
+        title: 'Vale a Pena Investir? $rec',
+        emoji: recEmoji,
+        humanExplanation:
+            'A IVE recomenda: $rec para investir neste mercado.\n\n'
+            '${just.isNotEmpty ? just : "Análise baseada nos scores de oportunidade, monetização e crescimento."}\n\n'
+            '${rec == "SIM" ? "O mercado apresenta boa oportunidade: monetização forte, concorrência administrável e crescimento sólido." : rec == "NÃO" ? "Os dados indicam que o risco supera o retorno esperado no momento." : "Há oportunidade, mas existem condições que precisam ser atendidas antes de investir."}',
+        evidence: <IveEvidence>[
+          IveEvidence(emoji: recEmoji, label: 'Recomendação',    value: rec),
+          IveEvidence(emoji: '📊',     label: 'Investment Score', value: '$score/100'),
+          IveEvidence(emoji: '💰',     label: 'Monetização',      value: '${analysis.scoreMonetization}/100'),
+          IveEvidence(emoji: '📈',     label: 'Crescimento',      value: '${analysis.scoreGrowth}/100'),
+          IveEvidence(emoji: '🥊',     label: 'Concorrência',     value: '${analysis.scoreCompetition}/100'),
+        ],
+        expandedData: {
+          'Cenário Otimista':     rec == 'SIM' ? 'Mercado capturado, receita recorrente em prazo curto' : 'Condições melhoram, oportunidade surge',
+          'Cenário Conservador':  'Crescimento moderado, retorno em médio prazo',
+          'Cenário Pessimista':   rec == 'NÃO' ? 'Baixo retorno, esforço elevado sem retorno claro' : 'Condições não se concretizam, postergação necessária',
+          'Score de investimento': '$score/100',
+        },
+        suggestedActions: <IveAction>[
+          if (rec == 'SIM') IveAction(emoji: '🚀', label: 'Priorizar este mercado', description: 'Adicione ao portfolio e crie projeto focado neste nicho'),
+          if (rec == 'CONDICIONAL') IveAction(emoji: '🔍', label: 'Avaliar condições', description: 'Identifique quais premissas precisam ser validadas antes de investir'),
+          IveAction(emoji: '📊', label: 'Ver análise completa', description: 'Explore todos os scores no Executive Score Card'),
+        ],
+        screenName: 'Market Intelligence',
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Vale a Pena Investir?',
-            style: TextStyle(
-                color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: _kCard,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: color.withOpacity(0.35)),
           ),
-          const SizedBox(height: 14),
-          Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, color: color, size: 26),
-              const SizedBox(width: 8),
-              Text(
-                rec,
-                style: TextStyle(
-                    color: color, fontSize: 22, fontWeight: FontWeight.w900),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Vale a Pena Investir?',
+                      style: const TextStyle(
+                          color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  Icon(Icons.info_outline_rounded, color: color.withOpacity(0.7), size: 14),
+                ],
               ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Icon(icon, color: color, size: 26),
+                  const SizedBox(width: 8),
+                  Text(
+                    rec,
+                    style: TextStyle(
+                        color: color, fontSize: 22, fontWeight: FontWeight.w900),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text('Score: $score/100',
+                  style: TextStyle(color: color.withOpacity(0.7), fontSize: 11)),
+              if (just.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Text(
+                  just,
+                  style: const TextStyle(
+                      color: Colors.white54, fontSize: 11, height: 1.5),
+                  maxLines: 6,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ],
           ),
-          const SizedBox(height: 4),
-          Text('Score: $score/100',
-              style: TextStyle(color: color.withOpacity(0.7), fontSize: 11)),
-          if (just.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Text(
-              just,
-              style: const TextStyle(
-                  color: Colors.white54, fontSize: 11, height: 1.5),
-              maxLines: 6,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }

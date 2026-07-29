@@ -295,9 +295,47 @@ class _Header extends StatelessWidget {
                 Text('Semana de $dateStr',
                   style: const TextStyle(color: Colors.white54, fontSize: 12)),
                 const SizedBox(height: 8),
-                Text(briefing.healthEmoji + '  Saúde Geral: ${briefing.overallHealthScore}/100',
-                  style: const TextStyle(color: Colors.white, fontSize: 15,
-                      fontWeight: FontWeight.bold)),
+                GestureDetector(
+                  onTap: () {
+                    final h = briefing.overallHealthScore;
+                    final label = h >= 70 ? 'Saudável 🟢' : h >= 45 ? 'Atenção 🟡' : 'Crítico 🔴';
+                    IveDetailSheet.show(
+                      context,
+                      title: 'Saúde Geral: $h/100',
+                      emoji: briefing.healthEmoji,
+                      humanExplanation:
+                          'A Saúde Geral do portfólio está em $h/100 — $label.\n\n'
+                          '${h >= 70 ? "O ecossistema está saudável. Continue executando as prioridades desta semana." : h >= 45 ? "Há pontos de atenção. Priorize os riscos e execute as recomendações." : "Score crítico. Priorize projetos ativos e execute ações pendentes imediatamente."}\n\n'
+                          'Componentes desta semana:\n'
+                          '• ${briefing.projectCount} projeto(s) no portfólio\n'
+                          '• ${briefing.analysisCount} análise(s) de mercado\n'
+                          '• ${briefing.actionsCount} ação(ões) no pipeline\n'
+                          '• ${briefing.opportunitiesCount} oportunidade(s) identificada(s)',
+                      evidence: <IveEvidence>[
+                        IveEvidence(emoji: briefing.healthEmoji, label: 'Saúde Geral',  value: '$h/100'),
+                        IveEvidence(emoji: '🏷️',                 label: 'Status',        value: label),
+                        IveEvidence(emoji: '📋',                 label: 'Projetos',      value: '${briefing.projectCount}'),
+                        IveEvidence(emoji: '📊',                 label: 'Análises MI',   value: '${briefing.analysisCount}'),
+                        IveEvidence(emoji: '⚡',                 label: 'Ações',         value: '${briefing.actionsCount}'),
+                        IveEvidence(emoji: '💡',                 label: 'Oportunidades', value: '${briefing.opportunitiesCount}'),
+                      ],
+                      expandedData: {
+                        'Meta recomendada': '>= 70 (Saudável)',
+                        'Fórmula': 'Ponderação de projetos ativos, execução, análises e receita',
+                        'Gerado em': '${briefing.generatedAt.day}/${briefing.generatedAt.month}/${briefing.generatedAt.year}',
+                      },
+                      screenName: 'Briefing Semanal',
+                    );
+                  },
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: Text(
+                      briefing.healthEmoji + '  Saúde Geral: ${briefing.overallHealthScore}/100',
+                      style: const TextStyle(color: Colors.white, fontSize: 15,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -515,31 +553,102 @@ class _DataOriginCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
 
-          // Contadores de origem
+          // Contadores de origem — clicáveis
           Row(
             children: [
               _CountChip(
                 label: 'Projetos',
                 value: briefing.projectCount,
                 color: _kCyan,
+                onTap: () => IveDetailSheet.show(
+                  context,
+                  title: 'Projetos Analisados: ${briefing.projectCount}',
+                  emoji: '📋',
+                  humanExplanation:
+                      'Este briefing foi gerado com base em ${briefing.projectCount} projeto(s) do portfólio.\n\n'
+                      'Os projetos são a principal fonte de dados para o Ecosystem Score, Health Score '
+                      'e as recomendações semanais da IVE.',
+                  evidence: <IveEvidence>[
+                    IveEvidence(emoji: '📋', label: 'Total de projetos',     value: '${briefing.projectCount}'),
+                    IveEvidence(emoji: '📊', label: 'Análises disponíveis',  value: '${briefing.analysisCount}'),
+                    IveEvidence(emoji: '📅', label: 'Gerado em',             value: '${briefing.generatedAt.day}/${briefing.generatedAt.month}/${briefing.generatedAt.year}'),
+                  ],
+                  suggestedActions: <IveAction>[
+                    IveAction(emoji: '📋', label: 'Ver Projetos', description: 'Acesse o Project Command Center para gerenciar projetos'),
+                  ],
+                  screenName: 'Briefing Semanal',
+                ),
               ),
               const SizedBox(width: 8),
               _CountChip(
                 label: 'Análises',
                 value: briefing.analysisCount,
                 color: _kGold,
+                onTap: () => IveDetailSheet.show(
+                  context,
+                  title: 'Análises de Mercado: ${briefing.analysisCount}',
+                  emoji: '📊',
+                  humanExplanation:
+                      'Há ${briefing.analysisCount} análise(s) de Market Intelligence disponíveis no portfólio.\n\n'
+                      'As análises de mercado alimentam os scores de Oportunidade, Mercado e ROI do Ecosystem Score.',
+                  evidence: <IveEvidence>[
+                    IveEvidence(emoji: '📊', label: 'Total de análises',  value: '${briefing.analysisCount}'),
+                    IveEvidence(emoji: '📋', label: 'Projetos',           value: '${briefing.projectCount}'),
+                    IveEvidence(emoji: '💡', label: 'Oportunidades',      value: '${briefing.opportunitiesCount}'),
+                  ],
+                  suggestedActions: <IveAction>[
+                    IveAction(emoji: '📊', label: 'Market Intelligence', description: 'Execute novas análises de mercado para projetos sem cobertura'),
+                  ],
+                  screenName: 'Briefing Semanal',
+                ),
               ),
               const SizedBox(width: 8),
               _CountChip(
                 label: 'Ações',
                 value: briefing.actionsCount,
                 color: _kOrange,
+                onTap: () => IveDetailSheet.show(
+                  context,
+                  title: 'Ações no Pipeline: ${briefing.actionsCount}',
+                  emoji: '⚡',
+                  humanExplanation:
+                      'Há ${briefing.actionsCount} ação(ões) no Action Engine do portfólio.\n\n'
+                      'As ações executadas influenciam o Score de Momentum, Execução e ROI. '
+                      'Mais ações concluídas = Health Score mais alto.',
+                  evidence: <IveEvidence>[
+                    IveEvidence(emoji: '⚡',  label: 'Total de ações',   value: '${briefing.actionsCount}'),
+                    IveEvidence(emoji: '📋',  label: 'Projetos ativos',  value: '${briefing.projectCount}'),
+                    IveEvidence(emoji: '💡',  label: 'Oportunidades',    value: '${briefing.opportunitiesCount}'),
+                  ],
+                  suggestedActions: <IveAction>[
+                    IveAction(emoji: '⚡', label: 'Action Engine', description: 'Acesse o Action Engine para executar e registrar ações'),
+                  ],
+                  screenName: 'Briefing Semanal',
+                ),
               ),
               const SizedBox(width: 8),
               _CountChip(
                 label: 'Oportunidades',
                 value: briefing.opportunitiesCount,
                 color: _kGreen,
+                onTap: () => IveDetailSheet.show(
+                  context,
+                  title: 'Oportunidades: ${briefing.opportunitiesCount}',
+                  emoji: '💡',
+                  humanExplanation:
+                      'Há ${briefing.opportunitiesCount} oportunidade(s) identificadas no portfólio.\n\n'
+                      'As oportunidades são geradas pelas análises de Market Intelligence e pelo '
+                      'Opportunity Lab. Cada oportunidade aprovada aumenta o Score de Execução e ROI.',
+                  evidence: <IveEvidence>[
+                    IveEvidence(emoji: '💡', label: 'Total de oportunidades', value: '${briefing.opportunitiesCount}'),
+                    IveEvidence(emoji: '📊', label: 'Análises de mercado',    value: '${briefing.analysisCount}'),
+                    IveEvidence(emoji: '📋', label: 'Projetos',               value: '${briefing.projectCount}'),
+                  ],
+                  suggestedActions: <IveAction>[
+                    IveAction(emoji: '💡', label: 'Opportunity Lab', description: 'Acesse o Opportunity Lab para explorar e aprovar oportunidades'),
+                  ],
+                  screenName: 'Briefing Semanal',
+                ),
               ),
             ],
           ),
@@ -576,14 +685,15 @@ class _DataOriginCard extends StatelessWidget {
 }
 
 class _CountChip extends StatelessWidget {
-  const _CountChip({required this.label, required this.value, required this.color});
+  const _CountChip({required this.label, required this.value, required this.color, this.onTap});
   final String label;
   final int    value;
   final Color  color;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
+    final chip = Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
@@ -610,6 +720,11 @@ class _CountChip extends StatelessWidget {
           ],
         ),
       ),
+    );
+    if (onTap == null) return chip;
+    return GestureDetector(
+      onTap: onTap,
+      child: MouseRegion(cursor: SystemMouseCursors.click, child: chip),
     );
   }
 }
