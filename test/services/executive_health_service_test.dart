@@ -9,15 +9,26 @@ import 'package:ai_social_copilot/data/models/project.dart';
 import 'package:ai_social_copilot/data/services/executive_health_service.dart';
 
 Project _project({String? url}) => Project(
-      id: 'proj-1', userId: 'user-1', name: 'Teste', status: 'active',
-      createdAt: DateTime(2026, 1, 1), updatedAt: DateTime(2026, 1, 1),
+      id: 'proj-1',
+      userId: 'user-1',
+      name: 'Teste',
+      status: 'active',
+      createdAt: DateTime(2026, 1, 1),
+      updatedAt: DateTime(2026, 1, 1),
       url: url,
     );
 
 KnowledgeCoverage _coverage({int score = 50, List<String> gaps = const []}) =>
     KnowledgeCoverage(
+      projectId: 'proj-1',
+      projectName: 'Teste',
       score: score,
-      coverageLabel: score >= 70 ? 'Alta' : score >= 40 ? 'Média' : 'Baixa',
+      docPoints: 0,
+      oppPoints: 0,
+      actionPoints: 0,
+      roadmapPoints: 0,
+      revenuePoints: 0,
+      personaPoints: 0,
       gaps: gaps,
       strengths: [],
     );
@@ -40,9 +51,9 @@ MarketAnalysis _analysis({
       opportunityScore: opportunity ?? 75,
       monetizationModel: monetizationModel,
       analysisJson: {
-        'score_seo':          seo ?? 60,
-        'score_growth':       growth ?? 65,
-        'score_competition':  competition ?? 55,
+        'score_seo': seo ?? 60,
+        'score_growth': growth ?? 65,
+        'score_competition': competition ?? 55,
         'score_monetization': monetization ?? 70,
         if (weaknesses != null) 'weaknesses': weaknesses,
       },
@@ -52,18 +63,30 @@ MarketAnalysis _analysis({
 
 ActionQueueItem _action({String status = 'pending', String id = 'a1'}) =>
     ActionQueueItem(
-      id: id, userId: 'user-1', title: 'Ação $id',
-      actionType: 'generic', status: status, priority: 50,
+      id: id,
+      userId: 'user-1',
+      title: 'Ação $id',
+      actionType: 'generic',
+      status: status,
+      priority: 50,
       createdAt: DateTime(2026, 1, 1),
     );
 
 OpportunityLabItem _opp({String status = 'pending', String id = 'o1'}) =>
     OpportunityLabItem(
-      id: id, userId: 'user-1', title: 'Opp $id',
-      opportunityType: 'expansão', status: status,
-      marketScore: 60, revenueScore: 60, competitionScore: 50,
-      synergyScore: 50, strategicFit: 50, finalScore: 55,
-      origin: 'test', createdAt: DateTime(2026, 1, 1),
+      id: id,
+      userId: 'user-1',
+      title: 'Opp $id',
+      opportunityType: 'expansão',
+      status: status,
+      marketScore: 60,
+      revenueScore: 60,
+      competitionScore: 50,
+      synergyScore: 50,
+      strategicFit: 50,
+      finalScore: 55,
+      origin: 'test',
+      createdAt: DateTime(2026, 1, 1),
     );
 
 void main() {
@@ -117,8 +140,11 @@ void main() {
           project: _project(url: 'https://test.com'),
           coverage: _coverage(score: 100),
           analysis: _analysis(
-            opportunity: 100, seo: 100, growth: 100,
-            competition: 100, monetization: 100,
+            opportunity: 100,
+            seo: 100,
+            growth: 100,
+            competition: 100,
+            monetization: 100,
           ),
           actions: [
             _action(status: 'completed', id: 'a1'),
@@ -168,7 +194,8 @@ void main() {
           labItems: [],
           knowledgeItemCount: 10,
         );
-        expect(resultMany.knowledge.score, greaterThanOrEqualTo(resultFew.knowledge.score));
+        expect(resultMany.knowledge.score,
+            greaterThanOrEqualTo(resultFew.knowledge.score));
       });
     });
 
@@ -190,14 +217,16 @@ void main() {
         final resultLow = svc.compute(
           project: _project(),
           coverage: _coverage(),
-          analysis: _analysis(opportunity: 10, seo: 10, growth: 10, competition: 10),
+          analysis:
+              _analysis(opportunity: 10, seo: 10, growth: 10, competition: 10),
           actions: [],
           labItems: [],
         );
         final resultHigh = svc.compute(
           project: _project(),
           coverage: _coverage(),
-          analysis: _analysis(opportunity: 90, seo: 90, growth: 90, competition: 90),
+          analysis:
+              _analysis(opportunity: 90, seo: 90, growth: 90, competition: 90),
           actions: [],
           labItems: [],
         );
@@ -237,7 +266,8 @@ void main() {
           ],
           labItems: [],
         );
-        expect(resultAll.execution.score, greaterThan(resultNone.execution.score));
+        expect(
+            resultAll.execution.score, greaterThan(resultNone.execution.score));
       });
     });
 
@@ -260,7 +290,8 @@ void main() {
         final result = svc.compute(
           project: _project(url: 'https://test.com'),
           coverage: _coverage(score: 80),
-          analysis: _analysis(opportunity: 90, seo: 85, growth: 80, competition: 70),
+          analysis:
+              _analysis(opportunity: 90, seo: 85, growth: 80, competition: 70),
           actions: [_action(status: 'completed')],
           labItems: [_opp()],
           knowledgeItemCount: 10,
@@ -278,7 +309,12 @@ void main() {
         final result = svc.compute(
           project: _project(url: 'https://test.com'),
           coverage: _coverage(score: 100),
-          analysis: _analysis(opportunity: 100, seo: 100, growth: 100, competition: 100, monetization: 100),
+          analysis: _analysis(
+              opportunity: 100,
+              seo: 100,
+              growth: 100,
+              competition: 100,
+              monetization: 100),
           actions: [
             for (var i = 0; i < 8; i++) _action(status: 'completed', id: 'a$i'),
           ],
@@ -299,8 +335,11 @@ void main() {
     group('trend computation', () {
       test('trend is positive when score > previousScore', () {
         const pillar = HealthPillar(
-          name: 'Test', emoji: '📊', score: 80,
-          previousScore: 50, status: 'forte',
+          name: 'Test',
+          emoji: '📊',
+          score: 80,
+          previousScore: 50,
+          status: 'forte',
         );
         expect(pillar.trend, 30);
         expect(pillar.trendEmoji, '📈');
@@ -308,8 +347,11 @@ void main() {
 
       test('trend is negative when score < previousScore', () {
         const pillar = HealthPillar(
-          name: 'Test', emoji: '📊', score: 30,
-          previousScore: 60, status: 'crítico',
+          name: 'Test',
+          emoji: '📊',
+          score: 30,
+          previousScore: 60,
+          status: 'crítico',
         );
         expect(pillar.trend, -30);
         expect(pillar.trendEmoji, '📉');
@@ -317,8 +359,11 @@ void main() {
 
       test('trend is neutral when score equals previousScore', () {
         const pillar = HealthPillar(
-          name: 'Test', emoji: '📊', score: 55,
-          previousScore: 55, status: 'atenção',
+          name: 'Test',
+          emoji: '📊',
+          score: 55,
+          previousScore: 55,
+          status: 'atenção',
         );
         expect(pillar.trend, 0);
         expect(pillar.trendEmoji, '➡️');
@@ -332,12 +377,14 @@ void main() {
       });
 
       test('atenção returns yellow circle', () {
-        const p = HealthPillar(name: '', emoji: '', score: 50, status: 'atenção');
+        const p =
+            HealthPillar(name: '', emoji: '', score: 50, status: 'atenção');
         expect(p.statusEmoji, '🟡');
       });
 
       test('crítico returns red circle', () {
-        const p = HealthPillar(name: '', emoji: '', score: 20, status: 'crítico');
+        const p =
+            HealthPillar(name: '', emoji: '', score: 20, status: 'crítico');
         expect(p.statusEmoji, '🔴');
       });
     });

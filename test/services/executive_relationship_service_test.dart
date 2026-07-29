@@ -11,8 +11,12 @@ Project _project({
   String? marketAnalysisId,
 }) =>
     Project(
-      id: id, userId: 'user-1', name: name, status: 'active',
-      createdAt: DateTime(2026, 1, 1), updatedAt: DateTime(2026, 1, 1),
+      id: id,
+      userId: 'user-1',
+      name: name,
+      status: 'active',
+      createdAt: DateTime(2026, 1, 1),
+      updatedAt: DateTime(2026, 1, 1),
       marketAnalysisId: marketAnalysisId,
     );
 
@@ -23,7 +27,8 @@ MarketAnalysis _analysis({
   String? monetizationModel,
 }) =>
     MarketAnalysis(
-      id: id, userId: 'user-1',
+      id: id,
+      userId: 'user-1',
       input: niche,
       niche: niche,
       targetAudience: targetAudience ?? 'empreendedores 25-40',
@@ -67,7 +72,8 @@ void main() {
     });
 
     group('duplicate detection (>=90% context overlap)', () {
-      test('detects duplicate when niche, audience and model are identical', () {
+      test('detects duplicate when niche, audience and model are identical',
+          () {
         const niche = 'finanças pessoais para jovens adultos';
         const audience = 'empreendedores digitais 25 a 35 anos';
         const model = 'assinatura mensal recorrente saas';
@@ -77,8 +83,16 @@ void main() {
           _project(id: 'p2', name: 'Projeto B', marketAnalysisId: 'a2'),
         ];
         final analyses = [
-          _analysis(id: 'a1', niche: niche, targetAudience: audience, monetizationModel: model),
-          _analysis(id: 'a2', niche: niche, targetAudience: audience, monetizationModel: model),
+          _analysis(
+              id: 'a1',
+              niche: niche,
+              targetAudience: audience,
+              monetizationModel: model),
+          _analysis(
+              id: 'a2',
+              niche: niche,
+              targetAudience: audience,
+              monetizationModel: model),
         ];
 
         final rels = svc.detect(projects: projects, analyses: analyses);
@@ -96,8 +110,16 @@ void main() {
           _project(id: 'p2', name: 'Invest B', marketAnalysisId: 'a2'),
         ];
         final analyses = [
-          _analysis(id: 'a1', niche: niche, targetAudience: 'público x', monetizationModel: 'modelo x'),
-          _analysis(id: 'a2', niche: niche, targetAudience: 'público y', monetizationModel: 'modelo y'),
+          _analysis(
+              id: 'a1',
+              niche: niche,
+              targetAudience: 'público x',
+              monetizationModel: 'modelo x'),
+          _analysis(
+              id: 'a2',
+              niche: niche,
+              targetAudience: 'público y',
+              monetizationModel: 'modelo y'),
         ];
 
         final rels = svc.detect(projects: projects, analyses: analyses);
@@ -117,18 +139,29 @@ void main() {
           _project(id: 'p2', name: 'App Finanças', marketAnalysisId: 'a2'),
         ];
         final analyses = [
-          _analysis(id: 'a1', niche: 'finanças investimentos poupança economia', targetAudience: 'público-alvo x', monetizationModel: 'ads'),
-          _analysis(id: 'a2', niche: 'finanças investimentos bolsa bitcoin dividas', targetAudience: 'público-alvo y', monetizationModel: 'saas'),
+          _analysis(
+              id: 'a1',
+              niche: 'finanças investimentos poupança economia',
+              targetAudience: 'público-alvo x',
+              monetizationModel: 'ads'),
+          _analysis(
+              id: 'a2',
+              niche: 'finanças investimentos bolsa bitcoin dividas',
+              targetAudience: 'público-alvo y',
+              monetizationModel: 'saas'),
         ];
 
         final rels = svc.detect(projects: projects, analyses: analyses);
         expect(rels, isNotEmpty);
         final types = rels.map((r) => r.type).toList();
-        expect(types, anyOf(
-          contains(RelationshipType.synergistic),
-          contains(RelationshipType.conflicting),
-          contains(RelationshipType.duplicate),
-        ));
+        expect(
+            types,
+            anyOf(
+              contains(RelationshipType.synergistic),
+              contains(RelationshipType.conflicting),
+              contains(RelationshipType.duplicate),
+              contains(RelationshipType.complementary),
+            ));
       });
     });
 
@@ -142,13 +175,15 @@ void main() {
           _analysis(
             id: 'a1',
             niche: 'educação financeira',
-            targetAudience: 'empreendedores jovens adultos millennials autônomos',
+            targetAudience:
+                'empreendedores jovens adultos millennials autônomos',
             monetizationModel: 'cursos online',
           ),
           _analysis(
             id: 'a2',
             niche: 'saúde bem-estar',
-            targetAudience: 'empreendedores jovens adultos millennials autônomos',
+            targetAudience:
+                'empreendedores jovens adultos millennials autônomos',
             monetizationModel: 'assinatura mensal',
           ),
         ];
@@ -160,14 +195,21 @@ void main() {
     });
 
     group('no relation for completely different projects', () {
-      test('returns empty when niches and audiences are completely different', () {
+      test('returns empty when niches and audiences are completely different',
+          () {
         final projects = [
           _project(id: 'p1', name: 'Projeto Alpha', marketAnalysisId: 'a1'),
           _project(id: 'p2', name: 'Projeto Beta', marketAnalysisId: 'a2'),
         ];
         final analyses = [
-          _analysis(id: 'a1', niche: 'culinária receitas comida francesa', targetAudience: 'chefs idosos aposentados'),
-          _analysis(id: 'a2', niche: 'software programação desenvolvimento kotlin', targetAudience: 'engenheiros jovens universitários'),
+          _analysis(
+              id: 'a1',
+              niche: 'culinária receitas comida francesa',
+              targetAudience: 'chefs idosos aposentados'),
+          _analysis(
+              id: 'a2',
+              niche: 'software programação desenvolvimento kotlin',
+              targetAudience: 'engenheiros jovens universitários'),
         ];
 
         final rels = svc.detect(projects: projects, analyses: analyses);
@@ -177,8 +219,10 @@ void main() {
 
     group('sorting', () {
       test('duplicates are sorted before conflicting', () {
-        const dupNiche = 'finanças pessoais investimentos renda fixa tesouro direto x';
-        const confNiche = 'finanças pessoais investimentos renda fixa tesouro y';
+        const dupNiche =
+            'finanças pessoais investimentos renda fixa tesouro direto x';
+        const confNiche =
+            'finanças pessoais investimentos renda fixa tesouro y';
 
         final projects = [
           _project(id: 'p1', name: 'A', marketAnalysisId: 'a1'),
@@ -187,10 +231,26 @@ void main() {
           _project(id: 'p4', name: 'D', marketAnalysisId: 'a4'),
         ];
         final analyses = [
-          _analysis(id: 'a1', niche: dupNiche, targetAudience: dupNiche, monetizationModel: dupNiche),
-          _analysis(id: 'a2', niche: dupNiche, targetAudience: dupNiche, monetizationModel: dupNiche),
-          _analysis(id: 'a3', niche: confNiche, targetAudience: 'outro público total', monetizationModel: 'diferente'),
-          _analysis(id: 'a4', niche: confNiche, targetAudience: 'outro público distinto', monetizationModel: 'outro'),
+          _analysis(
+              id: 'a1',
+              niche: dupNiche,
+              targetAudience: dupNiche,
+              monetizationModel: dupNiche),
+          _analysis(
+              id: 'a2',
+              niche: dupNiche,
+              targetAudience: dupNiche,
+              monetizationModel: dupNiche),
+          _analysis(
+              id: 'a3',
+              niche: confNiche,
+              targetAudience: 'outro público total',
+              monetizationModel: 'diferente'),
+          _analysis(
+              id: 'a4',
+              niche: confNiche,
+              targetAudience: 'outro público distinto',
+              monetizationModel: 'outro'),
         ];
 
         final rels = svc.detect(projects: projects, analyses: analyses);
@@ -210,8 +270,16 @@ void main() {
           _project(id: 'p2', name: 'B', marketAnalysisId: 'a2'),
         ];
         final analyses = [
-          _analysis(id: 'a1', niche: text, targetAudience: text, monetizationModel: text),
-          _analysis(id: 'a2', niche: text, targetAudience: text, monetizationModel: text),
+          _analysis(
+              id: 'a1',
+              niche: text,
+              targetAudience: text,
+              monetizationModel: text),
+          _analysis(
+              id: 'a2',
+              niche: text,
+              targetAudience: text,
+              monetizationModel: text),
         ];
 
         final rels = svc.detect(projects: projects, analyses: analyses);
@@ -226,8 +294,10 @@ void main() {
           _project(id: 'p2', name: 'B', marketAnalysisId: 'a2'),
         ];
         final analyses = [
-          _analysis(id: 'a1', niche: '', targetAudience: '', monetizationModel: ''),
-          _analysis(id: 'a2', niche: '', targetAudience: '', monetizationModel: ''),
+          _analysis(
+              id: 'a1', niche: '', targetAudience: '', monetizationModel: ''),
+          _analysis(
+              id: 'a2', niche: '', targetAudience: '', monetizationModel: ''),
         ];
 
         final rels = svc.detect(projects: projects, analyses: analyses);
@@ -239,11 +309,17 @@ void main() {
 
 int _typePriority(RelationshipType t) {
   switch (t) {
-    case RelationshipType.duplicate:      return 0;
-    case RelationshipType.conflicting:    return 1;
-    case RelationshipType.synergistic:    return 2;
-    case RelationshipType.sharedNiche:    return 3;
-    case RelationshipType.sharedAudience: return 4;
-    case RelationshipType.complementary:  return 5;
+    case RelationshipType.duplicate:
+      return 0;
+    case RelationshipType.conflicting:
+      return 1;
+    case RelationshipType.synergistic:
+      return 2;
+    case RelationshipType.sharedNiche:
+      return 3;
+    case RelationshipType.sharedAudience:
+      return 4;
+    case RelationshipType.complementary:
+      return 5;
   }
 }

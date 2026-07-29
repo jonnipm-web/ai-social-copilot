@@ -13,13 +13,13 @@ import '../../../shared/widgets/ive_detail_sheet.dart';
 import '../../action_engine/screens/action_detail_screen.dart';
 
 // ── Colors ────────────────────────────────────────────────────────────────────
-const _kBg      = Color(0xFF0F0F1A);
-const _kCard    = Color(0xFF1A1A2E);
+const _kBg = Color(0xFF0F0F1A);
+const _kCard = Color(0xFF1A1A2E);
 const _kPrimary = Color(0xFF6C63FF);
-const _kGreen   = Color(0xFF4CAF50);
-const _kOrange  = Color(0xFFFF9800);
-const _kRed     = Color(0xFFF44336);
-const _kTeal    = Color(0xFF00BCD4);
+const _kGreen = Color(0xFF4CAF50);
+const _kOrange = Color(0xFFFF9800);
+const _kRed = Color(0xFFF44336);
+const _kTeal = Color(0xFF00BCD4);
 
 Color _scoreColor(int s) {
   if (s >= 80) return _kGreen;
@@ -45,7 +45,8 @@ class OpportunityDetailScreen extends ConsumerWidget {
         backgroundColor: _kBg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          icon:
+              const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
           onPressed: () => context.canPop()
               ? context.pop()
               : context.go(AppConstants.routeOpportunityLab),
@@ -68,8 +69,8 @@ class OpportunityDetailScreen extends ConsumerWidget {
         loading: () =>
             const Center(child: CircularProgressIndicator(color: _kPrimary)),
         error: (e, _) => Center(
-          child: Text('Erro: $e',
-              style: const TextStyle(color: Colors.white54)),
+          child:
+              Text('Erro: $e', style: const TextStyle(color: Colors.white54)),
         ),
         data: (item) => item == null
             ? const Center(
@@ -86,7 +87,7 @@ class _StatusMenu extends StatelessWidget {
   const _StatusMenu({required this.item, required this.ref});
 
   final OpportunityLabItem item;
-  final WidgetRef          ref;
+  final WidgetRef ref;
 
   @override
   Widget build(BuildContext context) {
@@ -145,8 +146,8 @@ class _StatusMenu extends StatelessWidget {
                         style: TextStyle(color: Colors.white54))),
                 TextButton(
                     onPressed: () => Navigator.pop(context, true),
-                    child: const Text('Excluir',
-                        style: TextStyle(color: _kRed))),
+                    child:
+                        const Text('Excluir', style: TextStyle(color: _kRed))),
               ],
             ),
           );
@@ -162,7 +163,8 @@ class _StatusMenu extends StatelessWidget {
         if (item.status == 'pending')
           const PopupMenuItem(
             value: 'approve',
-            child: Text('Aprovar e criar ação', style: TextStyle(color: _kGreen)),
+            child:
+                Text('Aprovar e criar ação', style: TextStyle(color: _kGreen)),
           ),
         const PopupMenuItem(
           value: 'delete',
@@ -178,7 +180,7 @@ class _DetailBody extends StatelessWidget {
   const _DetailBody({required this.item, required this.ref});
 
   final OpportunityLabItem item;
-  final WidgetRef          ref;
+  final WidgetRef ref;
 
   @override
   Widget build(BuildContext context) {
@@ -186,7 +188,10 @@ class _DetailBody extends StatelessWidget {
     final projects = projectsAsync.valueOrNull ?? [];
     final projectName = item.projectId == null
         ? null
-        : projects.where((p) => p.id == item.projectId).map((p) => p.name).firstOrNull;
+        : projects
+            .where((p) => p.id == item.projectId)
+            .map((p) => p.name)
+            .firstOrNull;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
@@ -275,7 +280,11 @@ class _HeroHeader extends StatelessWidget {
 
   void _showFinalScoreExplain(BuildContext context) {
     final score = item.finalScore;
-    final label = score >= 80 ? 'Alta' : score >= 60 ? 'Média' : 'Baixa';
+    final label = score >= 80
+        ? 'Alta'
+        : score >= 60
+            ? 'Média'
+            : 'Baixa';
     IveDetailSheet.show(
       context,
       title: 'Final Score — ${item.title}',
@@ -285,12 +294,24 @@ class _HeroHeader extends StatelessWidget {
           'oportunidade com base em 5 dimensões ponderadas. '
           'A prioridade de execução é $label.',
       evidence: [
-        IveEvidence('📈', 'Mercado', '${item.marketScore}/100'),
-        IveEvidence('💰', 'Receita', '${item.revenueScore}/100'),
-        IveEvidence('⚔️', 'Competição', '${item.competitionScore}/100'),
-        IveEvidence('🔗', 'Sinergia', '${item.synergyScore}/100'),
-        IveEvidence('🎯', 'Fit Estratégico', '${item.strategicFit}/100'),
-        IveEvidence('📊', 'Confiança da análise', '${item.confidence}%'),
+        IveEvidence(
+            emoji: '📈', label: 'Mercado', value: '${item.marketScore}/100'),
+        IveEvidence(
+            emoji: '💰', label: 'Receita', value: '${item.revenueScore}/100'),
+        IveEvidence(
+            emoji: '⚔️',
+            label: 'Competição',
+            value: '${item.competitionScore}/100'),
+        IveEvidence(
+            emoji: '🔗', label: 'Sinergia', value: '${item.synergyScore}/100'),
+        IveEvidence(
+            emoji: '🎯',
+            label: 'Fit Estratégico',
+            value: '${item.strategicFit}/100'),
+        IveEvidence(
+            emoji: '📊',
+            label: 'Confiança da análise',
+            value: '${item.confidence}%'),
       ],
       suggestedActions: [
         IveAction(
@@ -390,7 +411,7 @@ class _HeroHeader extends StatelessWidget {
 class _RingPainter extends CustomPainter {
   const _RingPainter({required this.score, required this.color});
 
-  final int   score;
+  final int score;
   final Color color;
 
   @override
@@ -430,7 +451,11 @@ class _ScoreBreakdown extends StatelessWidget {
 
   void _show(BuildContext context, String label, String emoji, int value,
       String explanation, String howTo, List<IveEvidence> evidence) {
-    final qual = value >= 80 ? 'Alto' : value >= 60 ? 'Médio' : 'Baixo';
+    final qual = value >= 80
+        ? 'Alto'
+        : value >= 60
+            ? 'Médio'
+            : 'Baixo';
     IveDetailSheet.show(
       context,
       title: '$label — $qual ($value/100)',
@@ -459,54 +484,99 @@ class _ScoreBreakdown extends StatelessWidget {
   Widget build(BuildContext context) {
     final dims = [
       (
-        'Mercado', item.marketScore, const Color(0xFF6C63FF), '📈',
+        'Mercado',
+        item.marketScore,
+        const Color(0xFF6C63FF),
+        '📈',
         'O score de Mercado avalia o tamanho, crescimento e '
             'atratividade do nicho para esta oportunidade. '
             'Score alto indica mercado grande com boa demanda.',
         'Pesquise volume de busca, tendências e TAM do nicho.',
         <IveEvidence>[
-          IveEvidence('📊', 'Tamanho do mercado', item.marketScore >= 70 ? 'Grande' : 'Médio'),
-          IveEvidence('📈', 'Tendência', item.marketScore >= 60 ? 'Crescendo' : 'Estável'),
+          IveEvidence(
+              emoji: '📊',
+              label: 'Tamanho do mercado',
+              value: item.marketScore >= 70 ? 'Grande' : 'Médio'),
+          IveEvidence(
+              emoji: '📈',
+              label: 'Tendência',
+              value: item.marketScore >= 60 ? 'Crescendo' : 'Estável'),
         ],
       ),
       (
-        'Receita', item.revenueScore, const Color(0xFF4CAF50), '💰',
+        'Receita',
+        item.revenueScore,
+        const Color(0xFF4CAF50),
+        '💰',
         'O score de Receita estima o potencial de monetização desta '
             'oportunidade com base no modelo de negócio e ticket médio do mercado.',
         'Defina claramente seu modelo de receita e teste o ticket médio com clientes.',
         <IveEvidence>[
-          IveEvidence('💰', 'Potencial de receita', item.revenueScore >= 70 ? 'Alto' : 'Médio'),
-          IveEvidence('🎫', 'Ticket médio estimado', item.revenueScore >= 60 ? 'Bom' : 'Baixo'),
+          IveEvidence(
+              emoji: '💰',
+              label: 'Potencial de receita',
+              value: item.revenueScore >= 70 ? 'Alto' : 'Médio'),
+          IveEvidence(
+              emoji: '🎫',
+              label: 'Ticket médio estimado',
+              value: item.revenueScore >= 60 ? 'Bom' : 'Baixo'),
         ],
       ),
       (
-        'Competição', item.competitionScore, const Color(0xFFFF9800), '⚔️',
+        'Competição',
+        item.competitionScore,
+        const Color(0xFFFF9800),
+        '⚔️',
         'O score de Competição mede o nível de saturação do mercado. '
             'Score ALTO significa MENOR concorrência — é uma janela de oportunidade.',
         'Identifique seu diferencial único em relação aos players existentes.',
         <IveEvidence>[
-          IveEvidence('⚔️', 'Saturação', item.competitionScore >= 70 ? 'Baixa (boa)' : 'Média'),
-          IveEvidence('🏁', 'Janela de oportunidade', item.competitionScore >= 60 ? 'Aberta' : 'Estreita'),
+          IveEvidence(
+              emoji: '⚔️',
+              label: 'Saturação',
+              value: item.competitionScore >= 70 ? 'Baixa (boa)' : 'Média'),
+          IveEvidence(
+              emoji: '🏁',
+              label: 'Janela de oportunidade',
+              value: item.competitionScore >= 60 ? 'Aberta' : 'Estreita'),
         ],
       ),
       (
-        'Sinergia', item.synergyScore, const Color(0xFF00BCD4), '🔗',
+        'Sinergia',
+        item.synergyScore,
+        const Color(0xFF00BCD4),
+        '🔗',
         'O score de Sinergia mede como esta oportunidade se complementa '
             'com seus outros projetos e habilidades existentes.',
         'Identifique recursos e conhecimentos dos seus projetos atuais que podem ser aproveitados.',
         <IveEvidence>[
-          IveEvidence('🔗', 'Complementaridade', item.synergyScore >= 70 ? 'Alta' : 'Média'),
-          IveEvidence('♻️', 'Reuso de recursos', item.synergyScore >= 60 ? 'Alto' : 'Baixo'),
+          IveEvidence(
+              emoji: '🔗',
+              label: 'Complementaridade',
+              value: item.synergyScore >= 70 ? 'Alta' : 'Média'),
+          IveEvidence(
+              emoji: '♻️',
+              label: 'Reuso de recursos',
+              value: item.synergyScore >= 60 ? 'Alto' : 'Baixo'),
         ],
       ),
       (
-        'Fit Estratégico', item.strategicFit, const Color(0xFFB44FE8), '🎯',
+        'Fit Estratégico',
+        item.strategicFit,
+        const Color(0xFFB44FE8),
+        '🎯',
         'O Fit Estratégico avalia o alinhamento desta oportunidade '
             'com seus objetivos de longo prazo, habilidades e recursos disponíveis.',
         'Revise seus objetivos estratégicos e verifique se este projeto os avança.',
         <IveEvidence>[
-          IveEvidence('🎯', 'Alinhamento de objetivos', item.strategicFit >= 70 ? 'Alto' : 'Médio'),
-          IveEvidence('🛠️', 'Fit de habilidades', item.strategicFit >= 60 ? 'Bom' : 'Parcial'),
+          IveEvidence(
+              emoji: '🎯',
+              label: 'Alinhamento de objetivos',
+              value: item.strategicFit >= 70 ? 'Alto' : 'Médio'),
+          IveEvidence(
+              emoji: '🛠️',
+              label: 'Fit de habilidades',
+              value: item.strategicFit >= 60 ? 'Bom' : 'Parcial'),
         ],
       ),
     ];
@@ -532,9 +602,9 @@ class _ScoreRow extends StatelessWidget {
     this.onTap,
   });
 
-  final String       label;
-  final int          value;
-  final Color        color;
+  final String label;
+  final int value;
+  final Color color;
   final VoidCallback? onTap;
 
   @override
@@ -566,14 +636,13 @@ class _ScoreRow extends StatelessWidget {
               '$value',
               textAlign: TextAlign.right,
               style: TextStyle(
-                  color: color,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold),
+                  color: color, fontSize: 12, fontWeight: FontWeight.bold),
             ),
           ),
           if (onTap != null) ...[
             const SizedBox(width: 4),
-            Icon(Icons.info_outline_rounded, color: color.withOpacity(0.6), size: 13),
+            Icon(Icons.info_outline_rounded,
+                color: color.withOpacity(0.6), size: 13),
           ],
         ],
       ),
@@ -596,7 +665,7 @@ class _OriginSection extends StatelessWidget {
   const _OriginSection({required this.item, this.projectName});
 
   final OpportunityLabItem item;
-  final String?            projectName;
+  final String? projectName;
 
   @override
   Widget build(BuildContext context) {
@@ -644,8 +713,8 @@ class _InfoRow extends StatelessWidget {
   });
 
   final IconData icon;
-  final String   label;
-  final String   value;
+  final String label;
+  final String value;
 
   @override
   Widget build(BuildContext context) {
@@ -660,7 +729,9 @@ class _InfoRow extends StatelessWidget {
           Expanded(
             child: Text(value,
                 style: const TextStyle(
-                    color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500)),
           ),
         ],
       ),
@@ -691,12 +762,10 @@ class _SourcesList extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.link_rounded,
-                        color: _kPrimary, size: 12),
+                    const Icon(Icons.link_rounded, color: _kPrimary, size: 12),
                     const SizedBox(width: 4),
                     Text(s,
-                        style: const TextStyle(
-                            color: _kPrimary, fontSize: 11)),
+                        style: const TextStyle(color: _kPrimary, fontSize: 11)),
                   ],
                 ),
               ))
@@ -723,8 +792,7 @@ class _RationaleCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.format_quote_rounded,
-              color: _kPrimary, size: 20),
+          const Icon(Icons.format_quote_rounded, color: _kPrimary, size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -746,45 +814,51 @@ class _ConfidenceMeter extends StatelessWidget {
   final int value;
 
   void _showConfidenceExplain(BuildContext context) {
-    final label = value >= 80 ? 'Alta' : value >= 60 ? 'Média' : 'Baixa';
+    final label = value >= 80
+        ? 'Alta'
+        : value >= 60
+            ? 'Média'
+            : 'Baixa';
     IveDetailSheet.show(
       context,
       title: 'Confiança da Análise — $label ($value%)',
       emoji: '🔍',
-      humanExplanation:
-          'A IVE tem $label confiança ($value%) nesta análise. '
+      humanExplanation: 'A IVE tem $label confiança ($value%) nesta análise. '
           'Quanto mais dados disponíveis (fontes, histórico, análises de mercado), '
           'maior a precisão da avaliação. '
           '${value < 60 ? 'Para aumentar a confiança, adicione mais informações ao projeto e execute novas análises de mercado.' : ''}',
       evidence: [
-        IveEvidence('📊', 'Nível de confiança', '$value% ($label)'),
         IveEvidence(
-            '📚',
-            'Qualidade dos dados',
-            value >= 80
+            emoji: '📊',
+            label: 'Nível de confiança',
+            value: '$value% ($label)'),
+        IveEvidence(
+            emoji: '📚',
+            label: 'Qualidade dos dados',
+            value: value >= 80
                 ? 'Muitas fontes disponíveis'
                 : value >= 60
                     ? 'Fontes parciais'
                     : 'Dados limitados'),
         IveEvidence(
-            '🕐',
-            'Impacto na análise',
-            value >= 80
-                ? 'Alta precisão esperada'
-                : 'Margem de erro maior'),
+            emoji: '🕐',
+            label: 'Impacto na análise',
+            value: value >= 80 ? 'Alta precisão esperada' : 'Margem de erro maior'),
       ],
       suggestedActions: [
         if (value < 80)
           IveAction(
             emoji: '📝',
             label: 'Melhorar dados',
-            description: 'Adicione mais informações ao projeto para aumentar a confiança',
+            description:
+                'Adicione mais informações ao projeto para aumentar a confiança',
             onTap: () {},
           ),
         IveAction(
           emoji: '💬',
           label: 'Perguntar à IVE',
-          description: 'Entender quais dados aumentariam a confiança desta análise',
+          description:
+              'Entender quais dados aumentariam a confiança desta análise',
           onTap: () {},
         ),
       ],
@@ -822,11 +896,10 @@ class _ConfidenceMeter extends StatelessWidget {
             const SizedBox(width: 12),
             Text('$value% $label',
                 style: TextStyle(
-                    color: color,
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold)),
+                    color: color, fontSize: 13, fontWeight: FontWeight.bold)),
             const SizedBox(width: 6),
-            Icon(Icons.info_outline_rounded, color: color.withOpacity(0.6), size: 14),
+            Icon(Icons.info_outline_rounded,
+                color: color.withOpacity(0.6), size: 14),
           ],
         ),
       ),
@@ -855,7 +928,9 @@ class _RisksList extends StatelessWidget {
                     Expanded(
                       child: Text(r,
                           style: const TextStyle(
-                              color: Colors.white70, fontSize: 12, height: 1.4)),
+                              color: Colors.white70,
+                              fontSize: 12,
+                              height: 1.4)),
                     ),
                   ],
                 ),
@@ -924,8 +999,8 @@ class _Section extends StatelessWidget {
   });
 
   final IconData icon;
-  final String   title;
-  final Widget   child;
+  final String title;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
@@ -988,9 +1063,9 @@ class _StatusBadge extends StatelessWidget {
 
   static Color _color(String s) {
     const m = {
-      'approved':  _kGreen,
+      'approved': _kGreen,
       'executing': _kTeal,
-      'rejected':  _kRed,
+      'rejected': _kRed,
     };
     return m[s] ?? _kOrange;
   }
@@ -1006,8 +1081,7 @@ class _StatusBadge extends StatelessWidget {
       ),
       child: Text(
         status,
-        style: TextStyle(
-            color: c, fontSize: 9, fontWeight: FontWeight.bold),
+        style: TextStyle(color: c, fontSize: 9, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -1018,7 +1092,7 @@ class _ActionButtons extends StatelessWidget {
   const _ActionButtons({required this.item, required this.ref});
 
   final OpportunityLabItem item;
-  final WidgetRef          ref;
+  final WidgetRef ref;
 
   @override
   Widget build(BuildContext context) {
@@ -1065,7 +1139,6 @@ class _ActionButtons extends StatelessWidget {
               },
             ),
           ),
-
         if (item.status == 'approved') ...[
           SizedBox(
             width: double.infinity,
@@ -1103,9 +1176,7 @@ class _ActionButtons extends StatelessWidget {
             ),
           ),
         ],
-
         const SizedBox(height: 10),
-
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(

@@ -14,10 +14,35 @@ import 'package:mocktail/mocktail.dart';
 import 'package:ai_social_copilot/core/services/ive_event_bus.dart';
 import 'package:ai_social_copilot/data/models/ive_event.dart';
 import 'package:ai_social_copilot/data/models/project.dart';
+import 'package:ai_social_copilot/data/services/executive_context_orchestrator.dart';
 import 'package:ai_social_copilot/data/services/project_service.dart';
 import 'package:ai_social_copilot/providers/project_provider.dart';
 
 class MockProjectService extends Mock implements ProjectServiceInterface {}
+
+class MockOrchestrator extends Mock implements ExecutiveContextOrchestrator {
+  @override
+  Future<void> onProjectCreated(
+          {required String projectId, required String projectName}) async {}
+
+  @override
+  Future<void> onStageChanged(
+      {required String projectId,
+      required String projectName,
+      required String newStatus}) async {}
+
+  @override
+  Future<void> onDocumentAdded(
+      {required String projectId,
+      required String knowledgeItemId,
+      required String documentTitle}) async {}
+
+  @override
+  Future<void> onActionCompleted(
+      {required String projectId,
+      required String actionId,
+      required String actionTitle}) async {}
+}
 
 Project _p(String id, String name) => Project(
       id: id,
@@ -34,13 +59,17 @@ void main() {
       final p1 = _p('p1', 'Projeto Existente');
       final p2 = _p('p2', 'Novo Projeto');
 
-      when(() => svc.fetchAll())
-          .thenAnswer((_) async => [p1])
-          .thenAnswer((_) async => [p1, p2]);
+      var fetchCount = 0;
+      when(() => svc.fetchAll()).thenAnswer((_) async {
+        fetchCount++;
+        return fetchCount == 1 ? [p1] : [p1, p2];
+      });
       when(() => svc.create(any())).thenAnswer((_) async => p2);
 
       final container = ProviderContainer(overrides: [
         projectServiceProvider.overrideWithValue(svc),
+        executiveContextOrchestratorProvider
+            .overrideWithValue(MockOrchestrator()),
       ]);
       addTearDown(container.dispose);
 
@@ -91,6 +120,8 @@ void main() {
 
       final container = ProviderContainer(overrides: [
         projectServiceProvider.overrideWithValue(svc),
+        executiveContextOrchestratorProvider
+            .overrideWithValue(MockOrchestrator()),
       ]);
       addTearDown(container.dispose);
 
@@ -102,7 +133,8 @@ void main() {
       expect(result.map((p) => p.name), containsAll(['A', 'B']));
     });
 
-    test('invalidate dispara rebuild (como weekly_briefing_screen faz)', () async {
+    test('invalidate dispara rebuild (como weekly_briefing_screen faz)',
+        () async {
       final svc = MockProjectService();
       var callCount = 0;
       when(() => svc.fetchAll()).thenAnswer((_) async {
@@ -112,6 +144,8 @@ void main() {
 
       final container = ProviderContainer(overrides: [
         projectServiceProvider.overrideWithValue(svc),
+        executiveContextOrchestratorProvider
+            .overrideWithValue(MockOrchestrator()),
       ]);
       addTearDown(container.dispose);
 
@@ -127,18 +161,23 @@ void main() {
   });
 
   group('Cadeia reativa — Deletar projeto', () {
-    test('delete → optimistic remove → evento emitido → refetch confirma', () async {
+    test('delete → optimistic remove → evento emitido → refetch confirma',
+        () async {
       final svc = MockProjectService();
       final p1 = _p('p1', 'A Manter');
       final p2 = _p('p2', 'A Excluir');
 
-      when(() => svc.fetchAll())
-          .thenAnswer((_) async => [p1, p2])
-          .thenAnswer((_) async => [p1]);
+      var deleteCount = 0;
+      when(() => svc.fetchAll()).thenAnswer((_) async {
+        deleteCount++;
+        return deleteCount == 1 ? [p1, p2] : [p1];
+      });
       when(() => svc.delete('p2')).thenAnswer((_) async {});
 
       final container = ProviderContainer(overrides: [
         projectServiceProvider.overrideWithValue(svc),
+        executiveContextOrchestratorProvider
+            .overrideWithValue(MockOrchestrator()),
       ]);
       addTearDown(container.dispose);
 
@@ -147,9 +186,7 @@ void main() {
       final events = <IveEvent>[];
       final sub = IveEventBus.instance.stream.listen(events.add);
 
-      await container
-          .read(projectsNotifierProvider.notifier)
-          .delete('p2');
+      await container.read(projectsNotifierProvider.notifier).delete('p2');
 
       await container.read(projectsNotifierProvider.future);
       await sub.cancel();
@@ -191,6 +228,8 @@ void main() {
 
       final container = ProviderContainer(overrides: [
         projectServiceProvider.overrideWithValue(svc),
+        executiveContextOrchestratorProvider
+            .overrideWithValue(MockOrchestrator()),
       ]);
       addTearDown(container.dispose);
 

@@ -20,15 +20,15 @@ import '../../../shared/widgets/ive_explain_button.dart';
 import '../../../data/models/copilot_context_data.dart';
 
 // ── Colors ────────────────────────────────────────────────────────────────
-const _kBg      = Color(0xFF0A0A14);
-const _kCard    = Color(0xFF12121E);
-const _kBorder  = Color(0xFF1E1E30);
+const _kBg = Color(0xFF0A0A14);
+const _kCard = Color(0xFF12121E);
+const _kBorder = Color(0xFF1E1E30);
 const _kPrimary = Color(0xFF7C4DFF);
-const _kGold    = Color(0xFFFFD700);
-const _kGreen   = Color(0xFF00E676);
-const _kOrange  = Color(0xFFFF9100);
-const _kRed     = Color(0xFFFF1744);
-const _kCyan    = Color(0xFF00E5FF);
+const _kGold = Color(0xFFFFD700);
+const _kGreen = Color(0xFF00E676);
+const _kOrange = Color(0xFFFF9100);
+const _kRed = Color(0xFFFF1744);
+const _kCyan = Color(0xFF00E5FF);
 
 Color _scoreColor(int s) {
   if (s >= 80) return _kGreen;
@@ -40,12 +40,18 @@ Color _scoreColor(int s) {
 
 Color _recColor(String rec) {
   switch (rec) {
-    case 'ESCALAR':            return _kGreen;
-    case 'ACELERAR':           return const Color(0xFF00C853);
-    case 'MANTER':             return _kOrange;
-    case 'VALIDAR':            return Colors.amber;
-    case 'ANÁLISE INCOMPLETA': return const Color(0xFF9E9E9E);
-    default:                   return _kRed; // PAUSAR
+    case 'ESCALAR':
+      return _kGreen;
+    case 'ACELERAR':
+      return const Color(0xFF00C853);
+    case 'MANTER':
+      return _kOrange;
+    case 'VALIDAR':
+      return Colors.amber;
+    case 'ANÁLISE INCOMPLETA':
+      return const Color(0xFF9E9E9E);
+    default:
+      return _kRed; // PAUSAR
   }
 }
 
@@ -76,9 +82,9 @@ class _ExecutiveDecisionCenterScreenState
         final risky = scores.where((s) => s.ecosystemScore < 40).toList();
         if (risky.isNotEmpty) {
           ref.read(iveProvider.notifier).showMessage(
-            'Atenção: ${risky.length} projeto(s) com score crítico. Posso ajudar a resolver.',
-            expression: IveExpression.thinking,
-          );
+                'Atenção: ${risky.length} projeto(s) com score crítico. Posso ajudar a resolver.',
+                expression: IveExpression.thinking,
+              );
         }
       }).catchError((_) {});
     });
@@ -92,10 +98,10 @@ class _ExecutiveDecisionCenterScreenState
 
   @override
   Widget build(BuildContext context) {
-    final scoresAsync        = ref.watch(ecosystemScoresProvider);
-    final healthAsync        = ref.watch(ecosystemHealthProvider);
+    final scoresAsync = ref.watch(ecosystemScoresProvider);
+    final healthAsync = ref.watch(ecosystemHealthProvider);
     final needsBootstrapAsync = ref.watch(projectsNeedingBootstrapProvider);
-    final bootstrapState     = ref.watch(autoBootstrapNotifierProvider);
+    final bootstrapState = ref.watch(autoBootstrapNotifierProvider);
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -104,11 +110,14 @@ class _ExecutiveDecisionCenterScreenState
         backgroundColor: _kBg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-          onPressed: () =>
-              context.canPop() ? context.pop() : context.go(AppConstants.routeDashboard),
+          icon:
+              const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          onPressed: () => context.canPop()
+              ? context.pop()
+              : context.go(AppConstants.routeDashboard),
         ),
-        title: const Text('Decision Center', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text('Decision Center',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         iconTheme: const IconThemeData(color: Colors.white),
         bottom: TabBar(
           controller: _tab,
@@ -137,39 +146,40 @@ class _ExecutiveDecisionCenterScreenState
       body: SafeArea(
         top: false,
         child: Column(
-        children: [
-          // Health banner
-          healthAsync.when(
-            loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
-            data: (h) => _HealthBanner(health: h),
-          ),
-          // Bootstrap banner
-          needsBootstrapAsync.when(
-            loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
-            data: (projects) {
-              if (projects.isEmpty && !bootstrapState.isRunning) {
-                return const SizedBox.shrink();
-              }
-              return _BootstrapBanner(
-                pendingCount: projects.length,
-                bootstrapState: bootstrapState,
-                onTap: () => context.push(AppConstants.routeIntelligenceDebug),
-              );
-            },
-          ),
-          Expanded(
-            child: TabBarView(
-              controller: _tab,
-              children: [
-                _Top5Tab(scoresAsync: scoresAsync),
-                _EcosystemTab(scoresAsync: scoresAsync),
-                const _RecsTab(),
-              ],
+          children: [
+            // Health banner
+            healthAsync.when(
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+              data: (h) => _HealthBanner(health: h),
             ),
-          ),
-        ],
+            // Bootstrap banner
+            needsBootstrapAsync.when(
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+              data: (projects) {
+                if (projects.isEmpty && !bootstrapState.isRunning) {
+                  return const SizedBox.shrink();
+                }
+                return _BootstrapBanner(
+                  pendingCount: projects.length,
+                  bootstrapState: bootstrapState,
+                  onTap: () =>
+                      context.push(AppConstants.routeIntelligenceDebug),
+                );
+              },
+            ),
+            Expanded(
+              child: TabBarView(
+                controller: _tab,
+                children: [
+                  _Top5Tab(scoresAsync: scoresAsync),
+                  _EcosystemTab(scoresAsync: scoresAsync),
+                  const _RecsTab(),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -247,7 +257,8 @@ class _HealthBanner extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 48, height: 48,
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
               color: color.withOpacity(0.15),
               shape: BoxShape.circle,
@@ -255,7 +266,8 @@ class _HealthBanner extends StatelessWidget {
             ),
             child: Center(
               child: Text('$health',
-                style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 14)),
+                  style: TextStyle(
+                      color: color, fontWeight: FontWeight.bold, fontSize: 14)),
             ),
           ),
           const SizedBox(width: 12),
@@ -264,14 +276,19 @@ class _HealthBanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Saúde do Ecossistema',
-                  style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
+                    style: TextStyle(
+                        color: color,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13)),
                 Text(_healthNarrative(health),
-                  style: const TextStyle(color: Colors.white70, fontSize: 12, height: 1.35)),
+                    style: const TextStyle(
+                        color: Colors.white70, fontSize: 12, height: 1.35)),
                 const SizedBox(height: 4),
                 IveExplainButton(
-                  question:   'Por que minha saúde do ecossistema está em $health? O que está limitando e como posso melhorar?',
+                  question:
+                      'Por que minha saúde do ecossistema está em $health? O que está limitando e como posso melhorar?',
                   screenName: 'Decisões',
-                  compact:    true,
+                  compact: true,
                 ),
               ],
             ),
@@ -283,10 +300,14 @@ class _HealthBanner extends StatelessWidget {
   }
 
   String _healthNarrative(int h) {
-    if (h >= 80) return 'Seu ecossistema está operando no máximo potencial. Os projetos estão sincronizados e escalando.';
-    if (h >= 60) return 'Seu ecossistema está saudável e crescendo. Existem alavancas prontas para acelerar.';
-    if (h >= 40) return 'Seu ecossistema está estável. Algumas áreas precisam de atenção para desbloquear crescimento.';
-    if (h >= 20) return 'Seu ecossistema está em fase de validação. Adicione mais análises para elevar a inteligência.';
+    if (h >= 80)
+      return 'Seu ecossistema está operando no máximo potencial. Os projetos estão sincronizados e escalando.';
+    if (h >= 60)
+      return 'Seu ecossistema está saudável e crescendo. Existem alavancas prontas para acelerar.';
+    if (h >= 40)
+      return 'Seu ecossistema está estável. Algumas áreas precisam de atenção para desbloquear crescimento.';
+    if (h >= 20)
+      return 'Seu ecossistema está em fase de validação. Adicione mais análises para elevar a inteligência.';
     return 'Seu ecossistema precisa de revisão estratégica. A IVE pode ajudar a identificar os bloqueios.';
   }
 }
@@ -298,16 +319,17 @@ class _HealthBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-    width: 80, height: 6,
-    child: ClipRRect(
-      borderRadius: BorderRadius.circular(3),
-      child: LinearProgressIndicator(
-        value: value,
-        backgroundColor: Colors.white12,
-        valueColor: AlwaysStoppedAnimation(color),
-      ),
-    ),
-  );
+        width: 80,
+        height: 6,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(3),
+          child: LinearProgressIndicator(
+            value: value,
+            backgroundColor: Colors.white12,
+            valueColor: AlwaysStoppedAnimation(color),
+          ),
+        ),
+      );
 }
 
 // ── Tab 1: TOP 5 ──────────────────────────────────────────────────────────
@@ -317,26 +339,31 @@ class _Top5Tab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final labAsync     = ref.watch(opportunityLabProvider);
+    final labAsync = ref.watch(opportunityLabProvider);
     final actionsAsync = ref.watch(actionQueueProvider);
 
     return scoresAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator(color: _kPrimary)),
-      error: (e, _) => Center(child: Text('Erro: $e', style: const TextStyle(color: _kRed))),
+      loading: () =>
+          const Center(child: CircularProgressIndicator(color: _kPrimary)),
+      error: (e, _) =>
+          Center(child: Text('Erro: $e', style: const TextStyle(color: _kRed))),
       data: (scores) {
         if (scores.isEmpty) {
           return const Center(
-            child: Text('Nenhum projeto encontrado.\nAdicionetextos no Cofre e crie projetos.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white54)));
+              child: Text(
+                  'Nenhum projeto encontrado.\nAdicionetextos no Cofre e crie projetos.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white54)));
         }
         return ListView(
-          padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
+          padding: EdgeInsets.fromLTRB(
+              16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
           children: [
             _Top5Section(
               title: '🚀 TOP 5 PROJETOS',
               subtitle: 'Ranqueados por Ecosystem Score',
-              children: scores.take(5).map((s) => _ProjectCard(score: s)).toList(),
+              children:
+                  scores.take(5).map((s) => _ProjectCard(score: s)).toList(),
             ),
             const SizedBox(height: 20),
             labAsync.when(
@@ -348,37 +375,51 @@ class _Top5Tab extends ConsumerWidget {
                 return _Top5Section(
                   title: '💡 TOP 5 OPORTUNIDADES',
                   subtitle: 'Maior potencial do Opportunity Lab',
-                  children: top.take(5).map((l) => _SimpleCard(
-                    title: l.title,
-                    subtitle: l.opportunityType,
-                    score: l.finalScore,
-                    badge: l.status,
-                    onTap: () => IveDetailSheet.show(
-                      context,
-                      title: l.title,
-                      emoji: '💡',
-                      humanExplanation:
-                          'Oportunidade do tipo "${l.opportunityType}" com score ${l.finalScore}/100. '
-                          'Status atual: ${l.status}.',
-                      evidence: [
-                        IveEvidence(emoji: '📊', label: 'Tipo',        value: l.opportunityType),
-                        IveEvidence(emoji: '🎯', label: 'Score Final', value: '${l.finalScore}/100'),
-                        IveEvidence(emoji: '📋', label: 'Status',      value: l.status),
-                      ],
-                      suggestedActions: [
-                        IveAction(
-                          emoji: '💬',
-                          label: 'Perguntar à IVE sobre esta oportunidade',
-                          onTap: () => showCopilotChat(
-                            context,
-                            screenName:     'Decisões',
-                            initialMessage: 'Analise a oportunidade "${l.title}" (score ${l.finalScore}) e diga como aproveitá-la.',
-                          ),
-                        ),
-                      ],
-                      screenName: 'Decisões',
-                    ),
-                  )).toList(),
+                  children: top
+                      .take(5)
+                      .map((l) => _SimpleCard(
+                            title: l.title,
+                            subtitle: l.opportunityType,
+                            score: l.finalScore,
+                            badge: l.status,
+                            onTap: () => IveDetailSheet.show(
+                              context,
+                              title: l.title,
+                              emoji: '💡',
+                              humanExplanation:
+                                  'Oportunidade do tipo "${l.opportunityType}" com score ${l.finalScore}/100. '
+                                  'Status atual: ${l.status}.',
+                              evidence: [
+                                IveEvidence(
+                                    emoji: '📊',
+                                    label: 'Tipo',
+                                    value: l.opportunityType),
+                                IveEvidence(
+                                    emoji: '🎯',
+                                    label: 'Score Final',
+                                    value: '${l.finalScore}/100'),
+                                IveEvidence(
+                                    emoji: '📋',
+                                    label: 'Status',
+                                    value: l.status),
+                              ],
+                              suggestedActions: [
+                                IveAction(
+                                  emoji: '💬',
+                                  label:
+                                      'Perguntar à IVE sobre esta oportunidade',
+                                  onTap: () => showCopilotChat(
+                                    context,
+                                    screenName: 'Decisões',
+                                    initialMessage:
+                                        'Analise a oportunidade "${l.title}" (score ${l.finalScore}) e diga como aproveitá-la.',
+                                  ),
+                                ),
+                              ],
+                              screenName: 'Decisões',
+                            ),
+                          ))
+                      .toList(),
                 );
               },
             ),
@@ -388,24 +429,33 @@ class _Top5Tab extends ConsumerWidget {
               error: (_, __) => const SizedBox.shrink(),
               data: (actions) {
                 // Quick wins: high impact, low effort
-                final qw = actions.where((a) =>
-                    a.status == 'pending' && a.impactScore >= 60 && a.effortScore <= 50)
+                final qw = actions
+                    .where((a) =>
+                        a.status == 'pending' &&
+                        a.impactScore >= 60 &&
+                        a.effortScore <= 50)
                     .toList()
-                  ..sort((a, b) =>
-                      (b.impactScore - b.effortScore).compareTo(a.impactScore - a.effortScore));
+                  ..sort((a, b) => (b.impactScore - b.effortScore)
+                      .compareTo(a.impactScore - a.effortScore));
 
                 // Wastes: many pending + low impact
-                final wastes = actions.where((a) =>
-                    a.status == 'pending' && a.impactScore < 40 && a.effortScore >= 60)
+                final wastes = actions
+                    .where((a) =>
+                        a.status == 'pending' &&
+                        a.impactScore < 40 &&
+                        a.effortScore >= 60)
                     .toList();
 
                 // Risks (pending actions from projects with low ecosystem score)
                 final riskProjects = scoresAsync.value
-                    ?.where((s) => s.ecosystemScore < 30)
-                    .map((s) => s.project.id)
-                    .toSet() ?? {};
-                final risks = actions.where((a) =>
-                    a.projectId != null && riskProjects.contains(a.projectId))
+                        ?.where((s) => s.ecosystemScore < 30)
+                        .map((s) => s.project.id)
+                        .toSet() ??
+                    {};
+                final risks = actions
+                    .where((a) =>
+                        a.projectId != null &&
+                        riskProjects.contains(a.projectId))
                     .toList();
 
                 return Column(
@@ -413,78 +463,116 @@ class _Top5Tab extends ConsumerWidget {
                     _Top5Section(
                       title: '⚡ TOP 5 GANHOS RÁPIDOS',
                       subtitle: 'Alto impacto, baixo esforço',
-                      children: qw.take(5).map((a) => _SimpleCard(
-                        title: a.title,
-                        subtitle: 'Impacto ${a.impactScore} / Esforço ${a.effortScore}',
-                        score: a.impactScore - a.effortScore + 50,
-                        badge: a.actionType,
-                        onTap: () => IveDetailSheet.show(
-                          context,
-                          title: a.title,
-                          emoji: '⚡',
-                          humanExplanation:
-                              'Ganho rápido: alto impacto (${a.impactScore}/100) e baixo esforço (${a.effortScore}/100). '
-                              'Priorize esta ação para resultados imediatos.',
-                          evidence: [
-                            IveEvidence(emoji: '🎯', label: 'Impacto', value: '${a.impactScore}/100'),
-                            IveEvidence(emoji: '⚙️', label: 'Esforço', value: '${a.effortScore}/100'),
-                            IveEvidence(emoji: '📋', label: 'Tipo',    value: a.actionType),
-                          ],
-                          screenName: 'Decisões',
-                        ),
-                      )).toList(),
+                      children: qw
+                          .take(5)
+                          .map((a) => _SimpleCard(
+                                title: a.title,
+                                subtitle:
+                                    'Impacto ${a.impactScore} / Esforço ${a.effortScore}',
+                                score: a.impactScore - a.effortScore + 50,
+                                badge: a.actionType,
+                                onTap: () => IveDetailSheet.show(
+                                  context,
+                                  title: a.title,
+                                  emoji: '⚡',
+                                  humanExplanation:
+                                      'Ganho rápido: alto impacto (${a.impactScore}/100) e baixo esforço (${a.effortScore}/100). '
+                                      'Priorize esta ação para resultados imediatos.',
+                                  evidence: [
+                                    IveEvidence(
+                                        emoji: '🎯',
+                                        label: 'Impacto',
+                                        value: '${a.impactScore}/100'),
+                                    IveEvidence(
+                                        emoji: '⚙️',
+                                        label: 'Esforço',
+                                        value: '${a.effortScore}/100'),
+                                    IveEvidence(
+                                        emoji: '📋',
+                                        label: 'Tipo',
+                                        value: a.actionType),
+                                  ],
+                                  screenName: 'Decisões',
+                                ),
+                              ))
+                          .toList(),
                     ),
                     const SizedBox(height: 20),
                     _Top5Section(
                       title: '⚠️ TOP 5 RISCOS',
                       subtitle: 'Ações em projetos de baixo score',
-                      children: risks.take(5).map((a) => _SimpleCard(
-                        title: a.title,
-                        subtitle: a.status,
-                        score: 100 - a.impactScore,
-                        badge: 'risco',
-                        scoreColor: _kRed,
-                        onTap: () => IveDetailSheet.show(
-                          context,
-                          title: a.title,
-                          emoji: '⚠️',
-                          humanExplanation:
-                              'Esta ação está em um projeto com Ecosystem Score crítico (abaixo de 30). '
-                              'Requer atenção urgente para evitar perda de oportunidade.',
-                          evidence: [
-                            IveEvidence(emoji: '🎯', label: 'Impacto', value: '${a.impactScore}/100'),
-                            IveEvidence(emoji: '📋', label: 'Status',  value: a.status),
-                            IveEvidence(emoji: '⚙️', label: 'Tipo',    value: a.actionType),
-                          ],
-                          screenName: 'Decisões',
-                        ),
-                      )).toList(),
+                      children: risks
+                          .take(5)
+                          .map((a) => _SimpleCard(
+                                title: a.title,
+                                subtitle: a.status,
+                                score: 100 - a.impactScore,
+                                badge: 'risco',
+                                scoreColor: _kRed,
+                                onTap: () => IveDetailSheet.show(
+                                  context,
+                                  title: a.title,
+                                  emoji: '⚠️',
+                                  humanExplanation:
+                                      'Esta ação está em um projeto com Ecosystem Score crítico (abaixo de 30). '
+                                      'Requer atenção urgente para evitar perda de oportunidade.',
+                                  evidence: [
+                                    IveEvidence(
+                                        emoji: '🎯',
+                                        label: 'Impacto',
+                                        value: '${a.impactScore}/100'),
+                                    IveEvidence(
+                                        emoji: '📋',
+                                        label: 'Status',
+                                        value: a.status),
+                                    IveEvidence(
+                                        emoji: '⚙️',
+                                        label: 'Tipo',
+                                        value: a.actionType),
+                                  ],
+                                  screenName: 'Decisões',
+                                ),
+                              ))
+                          .toList(),
                     ),
                     const SizedBox(height: 20),
                     _Top5Section(
                       title: '🗑️ TOP 5 DESPERDÍCIOS',
                       subtitle: 'Baixo impacto, alto esforço',
-                      children: wastes.take(5).map((a) => _SimpleCard(
-                        title: a.title,
-                        subtitle: 'Impacto ${a.impactScore} / Esforço ${a.effortScore}',
-                        score: a.impactScore,
-                        badge: 'rever',
-                        scoreColor: _kOrange,
-                        onTap: () => IveDetailSheet.show(
-                          context,
-                          title: a.title,
-                          emoji: '🗑️',
-                          humanExplanation:
-                              'Desperdício: baixo impacto (${a.impactScore}/100) e alto esforço (${a.effortScore}/100). '
-                              'Considere remover ou reformular esta ação para liberar capacidade.',
-                          evidence: [
-                            IveEvidence(emoji: '🎯', label: 'Impacto', value: '${a.impactScore}/100'),
-                            IveEvidence(emoji: '⚙️', label: 'Esforço', value: '${a.effortScore}/100'),
-                            IveEvidence(emoji: '📋', label: 'Tipo',    value: a.actionType),
-                          ],
-                          screenName: 'Decisões',
-                        ),
-                      )).toList(),
+                      children: wastes
+                          .take(5)
+                          .map((a) => _SimpleCard(
+                                title: a.title,
+                                subtitle:
+                                    'Impacto ${a.impactScore} / Esforço ${a.effortScore}',
+                                score: a.impactScore,
+                                badge: 'rever',
+                                scoreColor: _kOrange,
+                                onTap: () => IveDetailSheet.show(
+                                  context,
+                                  title: a.title,
+                                  emoji: '🗑️',
+                                  humanExplanation:
+                                      'Desperdício: baixo impacto (${a.impactScore}/100) e alto esforço (${a.effortScore}/100). '
+                                      'Considere remover ou reformular esta ação para liberar capacidade.',
+                                  evidence: [
+                                    IveEvidence(
+                                        emoji: '🎯',
+                                        label: 'Impacto',
+                                        value: '${a.impactScore}/100'),
+                                    IveEvidence(
+                                        emoji: '⚙️',
+                                        label: 'Esforço',
+                                        value: '${a.effortScore}/100'),
+                                    IveEvidence(
+                                        emoji: '📋',
+                                        label: 'Tipo',
+                                        value: a.actionType),
+                                  ],
+                                  screenName: 'Decisões',
+                                ),
+                              ))
+                          .toList(),
                     ),
                   ],
                 );
@@ -501,21 +589,28 @@ class _Top5Section extends StatelessWidget {
   final String title;
   final String subtitle;
   final List<Widget> children;
-  const _Top5Section({required this.title, required this.subtitle, required this.children});
+  const _Top5Section(
+      {required this.title, required this.subtitle, required this.children});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+        Text(title,
+            style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 15)),
         const SizedBox(height: 2),
-        Text(subtitle, style: const TextStyle(color: Colors.white38, fontSize: 11)),
+        Text(subtitle,
+            style: const TextStyle(color: Colors.white38, fontSize: 11)),
         const SizedBox(height: 10),
         if (children.isEmpty)
           const Padding(
             padding: EdgeInsets.only(left: 8),
-            child: Text('Nenhum item ainda', style: TextStyle(color: Colors.white38, fontSize: 12)),
+            child: Text('Nenhum item ainda',
+                style: TextStyle(color: Colors.white38, fontSize: 12)),
           )
         else
           ...children,
@@ -531,34 +626,46 @@ class _ProjectCard extends StatelessWidget {
   void _showDetail(BuildContext context) {
     IveDetailSheet.show(
       context,
-      title:            score.project.name,
-      emoji:            score.recommendationEmoji,
+      title: score.project.name,
+      emoji: score.recommendationEmoji,
       humanExplanation:
           '${score.project.name} tem um Ecosystem Score de ${score.ecosystemScore}/100. '
           'Isso significa que o projeto está classificado como "${score.recommendation}". '
           'O score combina oportunidades de mercado, fit estratégico, ROI potencial e capacidade de execução.',
       evidence: [
-        IveEvidence(emoji: '🎯', label: 'Oportunidade',   value: '${score.opportunityScore}/100'),
-        IveEvidence(emoji: '🔗', label: 'Strategic Fit',  value: '${score.strategicFit}/100'),
-        IveEvidence(emoji: '💰', label: 'ROI Score',      value: '${score.roiScore}/100'),
-        IveEvidence(emoji: '⚡', label: 'Mercado',        value: '${score.marketScore}/100'),
-        IveEvidence(emoji: '🏃', label: 'Execução',       value: '${score.executionScore}/100'),
+        IveEvidence(
+            emoji: '🎯',
+            label: 'Oportunidade',
+            value: '${score.opportunityScore}/100'),
+        IveEvidence(
+            emoji: '🔗',
+            label: 'Strategic Fit',
+            value: '${score.strategicFit}/100'),
+        IveEvidence(
+            emoji: '💰', label: 'ROI Score', value: '${score.roiScore}/100'),
+        IveEvidence(
+            emoji: '⚡', label: 'Mercado', value: '${score.marketScore}/100'),
+        IveEvidence(
+            emoji: '🏃',
+            label: 'Execução',
+            value: '${score.executionScore}/100'),
       ],
       expandedData: {
-        'Momentum':    '${score.momentumScore}/100',
-        'Sinergia':    '${score.synergyScore}/100',
-        'ROI Total':   'R\$${score.totalRoi.toStringAsFixed(0)}',
-        'Ecosystem':   '${score.ecosystemScore}/100',
+        'Momentum': '${score.momentumScore}/100',
+        'Sinergia': '${score.synergyScore}/100',
+        'ROI Total': 'R\$${score.totalRoi.toStringAsFixed(0)}',
+        'Ecosystem': '${score.ecosystemScore}/100',
       },
       suggestedActions: [
         IveAction(
-          emoji:       '💬',
-          label:       'Perguntar à IVE como melhorar este score',
+          emoji: '💬',
+          label: 'Perguntar à IVE como melhorar este score',
           description: 'Abrir chat com contexto deste projeto',
           onTap: () => showCopilotChat(
             context,
-            screenName:     'Decisões',
-            initialMessage: 'Como posso melhorar o Ecosystem Score do projeto "${score.project.name}" que está em ${score.ecosystemScore}/100? Explique cada componente e quais ações têm maior impacto.',
+            screenName: 'Decisões',
+            initialMessage:
+                'Como posso melhorar o Ecosystem Score do projeto "${score.project.name}" que está em ${score.ecosystemScore}/100? Explique cada componente e quais ações têm maior impacto.',
           ),
         ),
       ],
@@ -572,63 +679,76 @@ class _ProjectCard extends StatelessWidget {
     return GestureDetector(
       onTap: () => _showDetail(context),
       child: Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 44, height: 44,
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.15),
-                  shape: BoxShape.circle,
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: _kCard,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text('${score.ecosystemScore}',
+                        style: TextStyle(
+                            color: color,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13)),
+                  ),
                 ),
-                child: Center(
-                  child: Text('${score.ecosystemScore}',
-                    style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(score.project.name,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13)),
+                      const SizedBox(height: 2),
+                      Text(
+                          '${score.recommendationEmoji} ${score.recommendation}  •  ROI R\$${score.totalRoi.toStringAsFixed(0)}',
+                          style: const TextStyle(
+                              color: Colors.white54, fontSize: 11)),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(score.project.name,
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
-                    const SizedBox(height: 2),
-                    Text('${score.recommendationEmoji} ${score.recommendation}  •  ROI R\$${score.totalRoi.toStringAsFixed(0)}',
-                      style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                    Text('Mkt ${score.marketScore}',
+                        style: const TextStyle(
+                            color: Colors.white38, fontSize: 10)),
+                    Text('Fit ${score.strategicFit}',
+                        style: const TextStyle(
+                            color: Colors.white38, fontSize: 10)),
+                    Text('Exec ${score.executionScore}',
+                        style: const TextStyle(
+                            color: Colors.white38, fontSize: 10)),
                   ],
                 ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text('Mkt ${score.marketScore}',
-                    style: const TextStyle(color: Colors.white38, fontSize: 10)),
-                  Text('Fit ${score.strategicFit}',
-                    style: const TextStyle(color: Colors.white38, fontSize: 10)),
-                  Text('Exec ${score.executionScore}',
-                    style: const TextStyle(color: Colors.white38, fontSize: 10)),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          IveExplainButton(
-            question:   'Por que o projeto ${score.project.name} tem score ${score.ecosystemScore}? Explique cada componente e como melhorar.',
-            screenName: 'Decisões',
-            compact:    true,
-          ),
-        ],
-      ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            IveExplainButton(
+              question:
+                  'Por que o projeto ${score.project.name} tem score ${score.ecosystemScore}? Explique cada componente e como melhorar.',
+              screenName: 'Decisões',
+              compact: true,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -656,48 +776,60 @@ class _SimpleCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: onTap != null ? color.withOpacity(0.25) : _kBorder),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(4),
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: _kCard,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+              color: onTap != null ? color.withOpacity(0.25) : _kBorder),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text('$score',
+                  style: TextStyle(
+                      color: color, fontSize: 11, fontWeight: FontWeight.bold)),
             ),
-            child: Text('$score', style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500),
-                  maxLines: 1, overflow: TextOverflow.ellipsis),
-                Text(subtitle, style: const TextStyle(color: Colors.white38, fontSize: 10)),
-              ],
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                  Text(subtitle,
+                      style:
+                          const TextStyle(color: Colors.white38, fontSize: 10)),
+                ],
+              ),
             ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: Colors.white10,
-              borderRadius: BorderRadius.circular(4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.white10,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(badge,
+                  style: const TextStyle(color: Colors.white54, fontSize: 9)),
             ),
-            child: Text(badge, style: const TextStyle(color: Colors.white54, fontSize: 9)),
-          ),
-          if (onTap != null) ...[
-            const SizedBox(width: 4),
-            const Icon(Icons.chevron_right_rounded, color: Colors.white24, size: 14),
+            if (onTap != null) ...[
+              const SizedBox(width: 4),
+              const Icon(Icons.chevron_right_rounded,
+                  color: Colors.white24, size: 14),
+            ],
           ],
-        ],
-      ),
+        ),
       ),
     );
   }
@@ -711,17 +843,20 @@ class _EcosystemTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return scoresAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator(color: _kPrimary)),
-      error: (e, _) => Center(child: Text('Erro: $e', style: const TextStyle(color: _kRed))),
+      loading: () =>
+          const Center(child: CircularProgressIndicator(color: _kPrimary)),
+      error: (e, _) =>
+          Center(child: Text('Erro: $e', style: const TextStyle(color: _kRed))),
       data: (scores) {
         if (scores.isEmpty) {
           return const Center(
-            child: Text('Adicione projetos para ver o Ecosystem Score.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white54)));
+              child: Text('Adicione projetos para ver o Ecosystem Score.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white54)));
         }
         return ListView.separated(
-          padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
+          padding: EdgeInsets.fromLTRB(
+              16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
           itemCount: scores.length,
           separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (_, i) => _EcosystemCard(score: scores[i]),
@@ -768,24 +903,33 @@ class _EcosystemCardState extends State<_EcosystemCard> {
                     children: [
                       Expanded(
                         child: Text(s.project.name,
-                          style: const TextStyle(color: Colors.white,
-                              fontWeight: FontWeight.bold, fontSize: 14)),
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14)),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: color.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(color: color.withOpacity(0.5)),
                         ),
                         child: Text('${s.ecosystemScore}',
-                          style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 14)),
+                            style: TextStyle(
+                                color: color,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14)),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Text('${s.recommendationEmoji} ${s.recommendation}',
-                    style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
+                      style: TextStyle(
+                          color: color,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600)),
                   const SizedBox(height: 10),
                   _ScoreRow(label: 'Mercado', value: s.marketScore),
                   const SizedBox(height: 4),
@@ -801,11 +945,13 @@ class _EcosystemCardState extends State<_EcosystemCard> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Text('${s.actionCount} ações  •  ${s.completionRate}% concluídas  •  R\$${s.totalRoi.toStringAsFixed(0)} ROI',
-                        style: const TextStyle(color: Colors.white38, fontSize: 10)),
+                      Text(
+                          '${s.actionCount} ações  •  ${s.completionRate}% concluídas  •  R\$${s.totalRoi.toStringAsFixed(0)} ROI',
+                          style: const TextStyle(
+                              color: Colors.white38, fontSize: 10)),
                       const Spacer(),
                       Icon(_expanded ? Icons.expand_less : Icons.expand_more,
-                        color: Colors.white38, size: 18),
+                          color: Colors.white38, size: 18),
                     ],
                   ),
                 ],
@@ -820,33 +966,48 @@ class _EcosystemCardState extends State<_EcosystemCard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (s.strengths.isNotEmpty) ...[
-                    const Text('Pontos Fortes', style: TextStyle(color: _kGreen,
-                        fontWeight: FontWeight.w600, fontSize: 12)),
+                    const Text('Pontos Fortes',
+                        style: TextStyle(
+                            color: _kGreen,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12)),
                     const SizedBox(height: 4),
                     ...s.strengths.map((st) => Padding(
-                      padding: const EdgeInsets.only(bottom: 2, left: 4),
-                      child: Text('• $st', style: const TextStyle(color: Colors.white70, fontSize: 11)),
-                    )),
+                          padding: const EdgeInsets.only(bottom: 2, left: 4),
+                          child: Text('• $st',
+                              style: const TextStyle(
+                                  color: Colors.white70, fontSize: 11)),
+                        )),
                     const SizedBox(height: 10),
                   ],
                   if (s.risks.isNotEmpty) ...[
-                    const Text('Riscos', style: TextStyle(color: _kOrange,
-                        fontWeight: FontWeight.w600, fontSize: 12)),
+                    const Text('Riscos',
+                        style: TextStyle(
+                            color: _kOrange,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12)),
                     const SizedBox(height: 4),
                     ...s.risks.map((r) => Padding(
-                      padding: const EdgeInsets.only(bottom: 2, left: 4),
-                      child: Text('• $r', style: const TextStyle(color: Colors.white70, fontSize: 11)),
-                    )),
+                          padding: const EdgeInsets.only(bottom: 2, left: 4),
+                          child: Text('• $r',
+                              style: const TextStyle(
+                                  color: Colors.white70, fontSize: 11)),
+                        )),
                     const SizedBox(height: 10),
                   ],
                   if (s.quickWins.isNotEmpty) ...[
-                    const Text('Ganhos Rápidos', style: TextStyle(color: _kCyan,
-                        fontWeight: FontWeight.w600, fontSize: 12)),
+                    const Text('Ganhos Rápidos',
+                        style: TextStyle(
+                            color: _kCyan,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12)),
                     const SizedBox(height: 4),
                     ...s.quickWins.map((q) => Padding(
-                      padding: const EdgeInsets.only(bottom: 2, left: 4),
-                      child: Text('⚡ $q', style: const TextStyle(color: Colors.white70, fontSize: 11)),
-                    )),
+                          padding: const EdgeInsets.only(bottom: 2, left: 4),
+                          child: Text('⚡ $q',
+                              style: const TextStyle(
+                                  color: Colors.white70, fontSize: 11)),
+                        )),
                   ],
                 ],
               ),
@@ -868,8 +1029,10 @@ class _ScoreRow extends StatelessWidget {
     final color = _scoreColor(value);
     return Row(
       children: [
-        SizedBox(width: 90, child: Text(label,
-            style: const TextStyle(color: Colors.white54, fontSize: 10))),
+        SizedBox(
+            width: 90,
+            child: Text(label,
+                style: const TextStyle(color: Colors.white54, fontSize: 10))),
         Expanded(
           child: ClipRRect(
             borderRadius: BorderRadius.circular(2),
@@ -882,7 +1045,9 @@ class _ScoreRow extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 6),
-        Text('$value', style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold)),
+        Text('$value',
+            style: TextStyle(
+                color: color, fontSize: 10, fontWeight: FontWeight.bold)),
       ],
     );
   }
@@ -900,26 +1065,30 @@ class _RecsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final recsAsync       = ref.watch(priorityRecommendationsProvider);
+    final recsAsync = ref.watch(priorityRecommendationsProvider);
     final validationAsync = ref.watch(decisionValidationMapProvider);
-    final labAsync        = ref.watch(opportunityLabProvider);
+    final labAsync = ref.watch(opportunityLabProvider);
 
     return recsAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator(color: _kPrimary)),
-      error: (e, _) => Center(child: Text('Erro: $e', style: const TextStyle(color: _kRed))),
+      loading: () =>
+          const Center(child: CircularProgressIndicator(color: _kPrimary)),
+      error: (e, _) =>
+          Center(child: Text('Erro: $e', style: const TextStyle(color: _kRed))),
       data: (recs) {
         if (recs.isEmpty) {
           return const Center(
-            child: Text('Adicione projetos e análises para gerar recomendações.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white54)));
+              child: Text(
+                  'Adicione projetos e análises para gerar recomendações.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white54)));
         }
 
         final validationMap = validationAsync.value ?? {};
-        final labItems      = labAsync.value ?? [];
+        final labItems = labAsync.value ?? [];
 
         return ListView.separated(
-          padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
+          padding: EdgeInsets.fromLTRB(
+              16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
           itemCount: recs.length,
           separatorBuilder: (_, __) => const SizedBox(height: 10),
           itemBuilder: (_, i) {
@@ -963,28 +1132,43 @@ class _ValidationGateCard extends StatelessWidget {
       emoji: '📚',
       humanExplanation: ok
           ? 'O Knowledge Coverage de ${validation.coverageScore}% está acima do mínimo de ${DecisionValidation.minCoverage}%. '
-            'A IVE possui conhecimento suficiente sobre este projeto para gerar recomendações estratégicas.'
+              'A IVE possui conhecimento suficiente sobre este projeto para gerar recomendações estratégicas.'
           : 'O Knowledge Coverage está em ${validation.coverageScore}%, abaixo do mínimo de ${DecisionValidation.minCoverage}% exigido. '
-            'Isso significa que a IVE não tem dados suficientes para confiar em suas análises sobre este projeto. '
-            'Quanto mais documentos e análises você adicionar, maior a cobertura.',
+              'Isso significa que a IVE não tem dados suficientes para confiar em suas análises sobre este projeto. '
+              'Quanto mais documentos e análises você adicionar, maior a cobertura.',
       evidence: <IveEvidence>[
-        IveEvidence('📊', 'Score atual', '${validation.coverageScore}%'),
-        IveEvidence('🎯', 'Mínimo exigido', '${DecisionValidation.minCoverage}%'),
-        IveEvidence('📄', 'Documentos indexados', '${validation.indexedDocuments}/${validation.documentCount}'),
-        IveEvidence(ok ? '✅' : '❌', 'Status', ok ? 'Aprovado' : 'Bloqueado'),
+        IveEvidence(
+            emoji: '📊',
+            label: 'Score atual',
+            value: '${validation.coverageScore}%'),
+        IveEvidence(
+            emoji: '🎯',
+            label: 'Mínimo exigido',
+            value: '${DecisionValidation.minCoverage}%'),
+        IveEvidence(
+            emoji: '📄',
+            label: 'Documentos indexados',
+            value:
+                '${validation.indexedDocuments}/${validation.documentCount}'),
+        IveEvidence(
+            emoji: ok ? '✅' : '❌',
+            label: 'Status',
+            value: ok ? 'Aprovado' : 'Bloqueado'),
       ],
       suggestedActions: <IveAction>[
         if (!ok)
           IveAction(
             emoji: '📝',
             label: 'Como melhorar',
-            description: 'Adicione documentos ao projeto: análises, pesquisas, notas e referências aumentam a cobertura.',
+            description:
+                'Adicione documentos ao projeto: análises, pesquisas, notas e referências aumentam a cobertura.',
             onTap: () {},
           ),
         IveAction(
           emoji: '💬',
           label: 'Perguntar à IVE',
-          description: 'O que falta para atingir ${DecisionValidation.minCoverage}% de cobertura?',
+          description:
+              'O que falta para atingir ${DecisionValidation.minCoverage}% de cobertura?',
           onTap: () {},
         ),
       ],
@@ -1000,28 +1184,42 @@ class _ValidationGateCard extends StatelessWidget {
       emoji: '🧠',
       humanExplanation: ok
           ? 'O Learning Score de ${validation.learningScore}% indica que a IVE aprendeu o suficiente sobre este projeto. '
-            'As análises geradas têm alta aderência ao contexto real.'
+              'As análises geradas têm alta aderência ao contexto real.'
           : 'O Learning Score de ${validation.learningScore}% está abaixo do mínimo de ${DecisionValidation.minLearning}%. '
-            'A IVE ainda está aprendendo sobre este projeto. '
-            'Execute análises de mercado e adicione mais contexto para acelerar o aprendizado.',
+              'A IVE ainda está aprendendo sobre este projeto. '
+              'Execute análises de mercado e adicione mais contexto para acelerar o aprendizado.',
       evidence: <IveEvidence>[
-        IveEvidence('🧠', 'Score atual', '${validation.learningScore}%'),
-        IveEvidence('🎯', 'Mínimo exigido', '${DecisionValidation.minLearning}%'),
-        IveEvidence('📈', 'Progresso', ok ? 'Suficiente' : 'Em progresso'),
-        IveEvidence(ok ? '✅' : '❌', 'Status', ok ? 'Aprovado' : 'Treinamento incompleto'),
+        IveEvidence(
+            emoji: '🧠',
+            label: 'Score atual',
+            value: '${validation.learningScore}%'),
+        IveEvidence(
+            emoji: '🎯',
+            label: 'Mínimo exigido',
+            value: '${DecisionValidation.minLearning}%'),
+        IveEvidence(
+            emoji: '📈',
+            label: 'Progresso',
+            value: ok ? 'Suficiente' : 'Em progresso'),
+        IveEvidence(
+            emoji: ok ? '✅' : '❌',
+            label: 'Status',
+            value: ok ? 'Aprovado' : 'Treinamento incompleto'),
       ],
       suggestedActions: <IveAction>[
         if (!ok)
           IveAction(
             emoji: '🔬',
             label: 'Executar análise',
-            description: 'Rode uma análise de mercado completa para treinar a IVE com dados atualizados.',
+            description:
+                'Rode uma análise de mercado completa para treinar a IVE com dados atualizados.',
             onTap: () {},
           ),
         IveAction(
           emoji: '💬',
           label: 'Perguntar à IVE',
-          description: 'Quais análises devo executar para aumentar o Learning Score?',
+          description:
+              'Quais análises devo executar para aumentar o Learning Score?',
           onTap: () {},
         ),
       ],
@@ -1032,35 +1230,45 @@ class _ValidationGateCard extends StatelessWidget {
   void _showProfile(BuildContext context) {
     IveDetailSheet.show(
       context,
-      title: 'Intelligence Profile — ${validation.profileComplete ? "Completo" : "Incompleto"}',
+      title:
+          'Intelligence Profile — ${validation.profileComplete ? "Completo" : "Incompleto"}',
       emoji: '🎯',
       humanExplanation: validation.profileComplete
           ? 'O Intelligence Profile está completo. '
-            'A IVE tem todos os dados necessários para gerar recomendações estratégicas personalizadas.'
+              'A IVE tem todos os dados necessários para gerar recomendações estratégicas personalizadas.'
           : 'O Intelligence Profile está incompleto. '
-            'Para que a IVE possa gerar recomendações estratégicas, é necessário vincular uma análise de mercado ao projeto. '
-            'Isso permite à IVE entender o contexto de mercado antes de sugerir ações.',
+              'Para que a IVE possa gerar recomendações estratégicas, é necessário vincular uma análise de mercado ao projeto. '
+              'Isso permite à IVE entender o contexto de mercado antes de sugerir ações.',
       evidence: <IveEvidence>[
         IveEvidence(
-            validation.profileComplete ? '✅' : '❌',
-            'Status do perfil',
-            validation.profileComplete ? 'Completo' : 'Incompleto'),
-        IveEvidence('📄', 'Documentos', '${validation.documentCount}'),
-        IveEvidence('💡', 'Oportunidades', '${validation.opportunityCount}'),
-        IveEvidence('📦', 'Ativos', '${validation.assetCount}'),
+            emoji: validation.profileComplete ? '✅' : '❌',
+            label: 'Status do perfil',
+            value: validation.profileComplete ? 'Completo' : 'Incompleto'),
+        IveEvidence(
+            emoji: '📄',
+            label: 'Documentos',
+            value: '${validation.documentCount}'),
+        IveEvidence(
+            emoji: '💡',
+            label: 'Oportunidades',
+            value: '${validation.opportunityCount}'),
+        IveEvidence(
+            emoji: '📦', label: 'Ativos', value: '${validation.assetCount}'),
       ],
       suggestedActions: <IveAction>[
         if (!validation.profileComplete)
           IveAction(
             emoji: '🔗',
             label: 'Vincular análise de mercado',
-            description: 'Acesse Market Intelligence e vincule uma análise existente ou crie uma nova.',
+            description:
+                'Acesse Market Intelligence e vincule uma análise existente ou crie uma nova.',
             onTap: () {},
           ),
         IveAction(
           emoji: '💬',
           label: 'Perguntar à IVE',
-          description: 'O que preciso fazer para completar o Intelligence Profile?',
+          description:
+              'O que preciso fazer para completar o Intelligence Profile?',
           onTap: () {},
         ),
       ],
@@ -1076,27 +1284,34 @@ class _ValidationGateCard extends StatelessWidget {
       emoji: '🔍',
       humanExplanation: validation.documentCount == 0
           ? 'Nenhum documento foi adicionado ainda. '
-            'A indexação permite à IVE ler e compreender seus documentos para gerar análises.'
+              'A indexação permite à IVE ler e compreender seus documentos para gerar análises.'
           : allIndexed
               ? 'Todos os ${validation.documentCount} documentos estão indexados. '
-                'A IVE tem acesso completo ao conteúdo para suas análises.'
+                  'A IVE tem acesso completo ao conteúdo para suas análises.'
               : '${validation.indexedDocuments} de ${validation.documentCount} documentos estão indexados. '
-                'Documentos não indexados não são lidos pela IVE nas análises. '
-                'Aguarde a indexação automática ou force uma re-indexação.',
+                  'Documentos não indexados não são lidos pela IVE nas análises. '
+                  'Aguarde a indexação automática ou force uma re-indexação.',
       evidence: <IveEvidence>[
-        IveEvidence('📄', 'Total de documentos', '${validation.documentCount}'),
-        IveEvidence('✅', 'Indexados', '${validation.indexedDocuments}'),
         IveEvidence(
-            allIndexed ? '✅' : '⏳',
-            'Status',
-            allIndexed ? 'Completo' : 'Parcial'),
+            emoji: '📄',
+            label: 'Total de documentos',
+            value: '${validation.documentCount}'),
+        IveEvidence(
+            emoji: '✅',
+            label: 'Indexados',
+            value: '${validation.indexedDocuments}'),
+        IveEvidence(
+            emoji: allIndexed ? '✅' : '⏳',
+            label: 'Status',
+            value: allIndexed ? 'Completo' : 'Parcial'),
       ],
       suggestedActions: <IveAction>[
         if (!allIndexed && validation.documentCount > 0)
           IveAction(
             emoji: '🔄',
             label: 'Forçar re-indexação',
-            description: 'Acione a indexação manual para atualizar os documentos pendentes.',
+            description:
+                'Acione a indexação manual para atualizar os documentos pendentes.',
             onTap: () {},
           ),
         IveAction(
@@ -1131,12 +1346,16 @@ class _ValidationGateCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: const Text('🔒 BLOQUEADO',
-                    style: TextStyle(color: _kOrange, fontSize: 10, fontWeight: FontWeight.bold)),
+                    style: TextStyle(
+                        color: _kOrange,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold)),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(rec.typeLabel,
-                    style: const TextStyle(color: Colors.white38, fontSize: 10)),
+                    style:
+                        const TextStyle(color: Colors.white38, fontSize: 10)),
               ),
             ],
           ),
@@ -1160,7 +1379,9 @@ class _ValidationGateCard extends StatelessWidget {
               children: [
                 Text('⚠️ ${validation.blockMessage}',
                     style: const TextStyle(
-                        color: _kOrange, fontSize: 12, fontWeight: FontWeight.w600)),
+                        color: _kOrange,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600)),
                 const SizedBox(height: 10),
                 _GateMetricRow(
                     label: 'Knowledge Coverage',
@@ -1175,13 +1396,17 @@ class _ValidationGateCard extends StatelessWidget {
                     value: validation.profileLabel,
                     onTap: () => _showProfile(context)),
                 const Divider(color: Colors.white12, height: 16),
-                _GateMetricRow(label: 'Documentos', value: '${validation.documentCount}'),
+                _GateMetricRow(
+                    label: 'Documentos', value: '${validation.documentCount}'),
                 _GateMetricRow(
                     label: 'Indexação',
                     value: validation.indexingStatus,
                     onTap: () => _showIndexing(context)),
-                _GateMetricRow(label: 'Ativos', value: '${validation.assetCount}'),
-                _GateMetricRow(label: 'Oportunidades', value: '${validation.opportunityCount}'),
+                _GateMetricRow(
+                    label: 'Ativos', value: '${validation.assetCount}'),
+                _GateMetricRow(
+                    label: 'Oportunidades',
+                    value: '${validation.opportunityCount}'),
                 if (validation.blockReasons.isNotEmpty) ...[
                   const Divider(color: Colors.white12, height: 16),
                   const Text('Motivos do bloqueio:',
@@ -1190,7 +1415,8 @@ class _ValidationGateCard extends StatelessWidget {
                   ...validation.blockReasons.map((r) => Padding(
                         padding: const EdgeInsets.only(bottom: 2),
                         child: Text('• $r',
-                            style: const TextStyle(color: Colors.white38, fontSize: 10)),
+                            style: const TextStyle(
+                                color: Colors.white38, fontSize: 10)),
                       )),
                 ],
               ],
@@ -1203,8 +1429,8 @@ class _ValidationGateCard extends StatelessWidget {
 }
 
 class _GateMetricRow extends StatelessWidget {
-  final String       label;
-  final String       value;
+  final String label;
+  final String value;
   final VoidCallback? onTap;
   const _GateMetricRow({required this.label, required this.value, this.onTap});
 
@@ -1248,37 +1474,53 @@ class _RecCard extends StatelessWidget {
 
   Color get _typeColor {
     switch (rec.type) {
-      case RecommendationType.investProject:      return _kGold;
-      case RecommendationType.executeOpportunity: return _kCyan;
-      case RecommendationType.runAction:          return _kPrimary;
-      case RecommendationType.pauseProject:       return _kOrange;
-      case RecommendationType.mitigateRisk:       return _kRed;
-      case RecommendationType.quickWin:           return _kGreen;
-      case RecommendationType.waste:              return Colors.grey;
+      case RecommendationType.investProject:
+        return _kGold;
+      case RecommendationType.executeOpportunity:
+        return _kCyan;
+      case RecommendationType.runAction:
+        return _kPrimary;
+      case RecommendationType.pauseProject:
+        return _kOrange;
+      case RecommendationType.mitigateRisk:
+        return _kRed;
+      case RecommendationType.quickWin:
+        return _kGreen;
+      case RecommendationType.waste:
+        return Colors.grey;
     }
   }
 
   String get _typeEmoji {
     switch (rec.type) {
-      case RecommendationType.investProject:      return '💰';
-      case RecommendationType.executeOpportunity: return '🚀';
-      case RecommendationType.runAction:          return '⚡';
-      case RecommendationType.pauseProject:       return '⏸️';
-      case RecommendationType.mitigateRisk:       return '🛡️';
-      case RecommendationType.quickWin:           return '✅';
-      case RecommendationType.waste:              return '🗑️';
+      case RecommendationType.investProject:
+        return '💰';
+      case RecommendationType.executeOpportunity:
+        return '🚀';
+      case RecommendationType.runAction:
+        return '⚡';
+      case RecommendationType.pauseProject:
+        return '⏸️';
+      case RecommendationType.mitigateRisk:
+        return '🛡️';
+      case RecommendationType.quickWin:
+        return '✅';
+      case RecommendationType.waste:
+        return '🗑️';
     }
   }
 
   void _showDetail(BuildContext context) {
     IveDetailSheet.show(
       context,
-      title:            rec.title,
-      emoji:            _typeEmoji,
-      humanExplanation: '${rec.reason}\n\nImpacto esperado: ${rec.expectedImpact}',
+      title: rec.title,
+      emoji: _typeEmoji,
+      humanExplanation:
+          '${rec.reason}\n\nImpacto esperado: ${rec.expectedImpact}',
       evidence: [
-        IveEvidence(emoji: '📊', label: 'Tipo',        value: rec.typeLabel),
-        IveEvidence(emoji: '🎯', label: 'Confiança',   value: '${rec.confidence}%'),
+        IveEvidence(emoji: '📊', label: 'Tipo', value: rec.typeLabel),
+        IveEvidence(
+            emoji: '🎯', label: 'Confiança', value: '${rec.confidence}%'),
         IveEvidence(emoji: '💡', label: 'Dados usados', value: rec.dataUsed),
       ],
       suggestedActions: [
@@ -1287,8 +1529,9 @@ class _RecCard extends StatelessWidget {
           label: 'Perguntar à IVE sobre esta recomendação',
           onTap: () => showCopilotChat(
             context,
-            screenName:     'Decisões',
-            initialMessage: 'Explique a recomendação "${rec.title}" e me dê um plano de ação concreto.',
+            screenName: 'Decisões',
+            initialMessage:
+                'Explique a recomendação "${rec.title}" e me dê um plano de ação concreto.',
           ),
         ),
       ],
@@ -1301,48 +1544,57 @@ class _RecCard extends StatelessWidget {
     return GestureDetector(
       onTap: () => _showDetail(context),
       child: Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(12),
-        border: Border(left: BorderSide(color: _typeColor, width: 3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: _typeColor.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(4),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: _kCard,
+          borderRadius: BorderRadius.circular(12),
+          border: Border(left: BorderSide(color: _typeColor, width: 3)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: _typeColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(rec.typeLabel,
+                      style: TextStyle(
+                          color: _typeColor,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold)),
                 ),
-                child: Text(rec.typeLabel,
-                  style: TextStyle(color: _typeColor, fontSize: 10, fontWeight: FontWeight.bold)),
-              ),
-              const Spacer(),
-              Text('${rec.confidence}% confiança',
+                const Spacer(),
+                Text('${rec.confidence}% confiança',
+                    style:
+                        const TextStyle(color: Colors.white38, fontSize: 10)),
+                const SizedBox(width: 4),
+                const Icon(Icons.chevron_right_rounded,
+                    color: Colors.white24, size: 14),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(rec.title,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13)),
+            const SizedBox(height: 6),
+            Text(rec.reason,
+                style: const TextStyle(color: Colors.white70, fontSize: 11)),
+            const SizedBox(height: 6),
+            const Divider(color: Colors.white12, height: 1),
+            const SizedBox(height: 6),
+            Text('Impacto esperado: ${rec.expectedImpact}',
                 style: const TextStyle(color: Colors.white38, fontSize: 10)),
-              const SizedBox(width: 4),
-              const Icon(Icons.chevron_right_rounded, color: Colors.white24, size: 14),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(rec.title,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
-          const SizedBox(height: 6),
-          Text(rec.reason,
-            style: const TextStyle(color: Colors.white70, fontSize: 11)),
-          const SizedBox(height: 6),
-          const Divider(color: Colors.white12, height: 1),
-          const SizedBox(height: 6),
-          Text('Impacto esperado: ${rec.expectedImpact}',
-            style: const TextStyle(color: Colors.white38, fontSize: 10)),
-          Text('Dados: ${rec.dataUsed}',
-            style: const TextStyle(color: Colors.white24, fontSize: 10)),
-        ],
-      ),
+            Text('Dados: ${rec.dataUsed}',
+                style: const TextStyle(color: Colors.white24, fontSize: 10)),
+          ],
+        ),
       ),
     );
   }

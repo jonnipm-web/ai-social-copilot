@@ -7,12 +7,59 @@ import 'package:mocktail/mocktail.dart';
 import 'package:ai_social_copilot/core/services/ive_event_bus.dart';
 import 'package:ai_social_copilot/data/models/ive_event.dart';
 import 'package:ai_social_copilot/data/models/project.dart';
+import 'package:ai_social_copilot/data/services/executive_context_orchestrator.dart';
 import 'package:ai_social_copilot/data/services/project_service.dart';
 import 'package:ai_social_copilot/providers/project_provider.dart';
 
-// ── Fake service ─────────────────────────────────────────────────────────────
+// ── Fake services ─────────────────────────────────────────────────────────────
 
 class MockProjectService extends Mock implements ProjectServiceInterface {}
+
+class MockOrchestrator extends Mock implements ExecutiveContextOrchestrator {
+  @override
+  Future<void> onProjectCreated(
+          {required String projectId, required String projectName}) async {}
+
+  @override
+  Future<void> onStageChanged(
+      {required String projectId,
+      required String projectName,
+      required String newStatus}) async {}
+
+  @override
+  Future<void> onAnalysisCompleted(
+      {required String projectId,
+      required String? marketAnalysisId,
+      required int opportunityScore}) async {}
+
+  @override
+  Future<void> onOpportunityCreated(
+      {required String projectId,
+      required String opportunityId,
+      required String opportunityTitle}) async {}
+
+  @override
+  Future<void> onDecisionTaken(
+      {required String projectId,
+      required String opportunityId,
+      required String opportunityTitle}) async {}
+
+  @override
+  Future<void> onDocumentAdded(
+      {required String projectId,
+      required String knowledgeItemId,
+      required String documentTitle}) async {}
+
+  @override
+  Future<void> onActionCompleted(
+      {required String projectId,
+      required String actionId,
+      required String actionTitle}) async {}
+
+  @override
+  Future<void> onCheckInCompleted(
+      {required String projectId, required String projectName}) async {}
+}
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 
@@ -33,6 +80,8 @@ Project _project({
 ProviderContainer _container(MockProjectService svc) => ProviderContainer(
       overrides: [
         projectServiceProvider.overrideWithValue(svc),
+        executiveContextOrchestratorProvider
+            .overrideWithValue(MockOrchestrator()),
       ],
     );
 
@@ -69,13 +118,14 @@ void main() {
 
       expect(result, [p]);
       expect(
-        container.read(projectsNotifierProvider),
-        AsyncData([p]),
+        container.read(projectsNotifierProvider).valueOrNull,
+        [p],
       );
       verify(() => svc.fetchAll()).called(1);
     });
 
-    test('projectsProvider é o mesmo provider que projectsNotifierProvider', () {
+    test('projectsProvider é o mesmo provider que projectsNotifierProvider',
+        () {
       // Garante que o alias aponta para a mesma instância
       expect(identical(projectsProvider, projectsNotifierProvider), isTrue);
     });
@@ -86,12 +136,15 @@ void main() {
       final container = _container(svc);
       addTearDown(container.dispose);
 
-      final state = await container
+      Object? caughtError;
+      await container
           .read(projectsNotifierProvider.future)
-          .then(AsyncData.new)
-          .onError((e, st) => AsyncError<List<Project>>(e!, st));
+          .catchError((e, st) {
+        caughtError = e;
+        return <Project>[];
+      });
 
-      expect(state, isA<AsyncError<List<Project>>>());
+      expect(caughtError, isNotNull);
     });
   });
 
@@ -102,9 +155,11 @@ void main() {
       final created = _project(id: 'p2', name: 'Novo Projeto');
       final afterCreate = [...initial, created];
 
-      when(() => svc.fetchAll())
-          .thenAnswer((_) async => initial)
-          .thenAnswer((_) async => afterCreate);
+      var createFetchCount = 0;
+      when(() => svc.fetchAll()).thenAnswer((_) async {
+        createFetchCount++;
+        return createFetchCount == 1 ? initial : afterCreate;
+      });
       when(() => svc.create(any())).thenAnswer((_) async => created);
 
       final container = _container(svc);
@@ -138,8 +193,7 @@ void main() {
       await container.read(projectsNotifierProvider.future);
 
       IveEvent? received;
-      final sub =
-          IveEventBus.instance.stream.listen((e) => received = e);
+      final sub = IveEventBus.instance.stream.listen((e) => received = e);
 
       await container
           .read(projectsNotifierProvider.notifier)
@@ -177,11 +231,12 @@ void main() {
       final original = _project(id: 'p1', status: 'idea');
       final updated = _project(id: 'p1', status: 'active');
 
-      when(() => svc.fetchAll())
-          .thenAnswer((_) async => [original])
-          .thenAnswer((_) async => [updated]);
-      when(() => svc.update('p1', any()))
-          .thenAnswer((_) async => updated);
+      var statusFetchCount = 0;
+      when(() => svc.fetchAll()).thenAnswer((_) async {
+        statusFetchCount++;
+        return statusFetchCount == 1 ? [original] : [updated];
+      });
+      when(() => svc.update('p1', any())).thenAnswer((_) async => updated);
 
       final container = _container(svc);
       addTearDown(container.dispose);
@@ -239,9 +294,8 @@ void main() {
       await container.read(projectsNotifierProvider.future);
 
       // Não aguarda — verifica estado otimista imediato
-      final future = container
-          .read(projectsNotifierProvider.notifier)
-          .delete('p1');
+      final future =
+          container.read(projectsNotifierProvider.notifier).delete('p1');
 
       // Imediatamente após chamar delete, o estado já não tem 'p1'
       final stateOptimistic =
@@ -285,9 +339,7 @@ void main() {
       IveEvent? received;
       final sub = IveEventBus.instance.stream.listen((e) => received = e);
 
-      await container
-          .read(projectsNotifierProvider.notifier)
-          .delete('p1');
+      await container.read(projectsNotifierProvider.notifier).delete('p1');
 
       await Future<void>.delayed(Duration.zero);
       await sub.cancel();
