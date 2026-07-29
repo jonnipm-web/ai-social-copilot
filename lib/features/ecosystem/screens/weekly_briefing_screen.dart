@@ -10,6 +10,7 @@ import '../../../providers/market_analysis_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import '../../../shared/widgets/ive_detail_sheet.dart';
 
 const _kBg      = Color(0xFF0A0A14);
 const _kCard    = Color(0xFF12121E);
@@ -174,46 +175,90 @@ class _HealthSideCard extends StatelessWidget {
     return _kRed;
   }
 
+  void _showHealthExplain(BuildContext context) {
+    final h = briefing.overallHealthScore;
+    final hc = _healthColor(h);
+    final label = h >= 70 ? 'Saudável 🟢' : h >= 45 ? 'Atenção 🟡' : 'Crítico 🔴';
+    IveDetailSheet.show(
+      context,
+      title: 'Health Score: $h/100',
+      emoji: briefing.healthEmoji,
+      humanExplanation:
+          'A Saúde Geral do portfólio está em $h/100 — $label.\n\n'
+          'O Health Score é calculado com base em:\n'
+          '• Projetos ativos vs. em ideia\n'
+          '• Oportunidades aprovadas e em execução\n'
+          '• Ações concluídas na semana\n'
+          '• Análises de mercado disponíveis\n'
+          '• Receita registrada no ROI Tracker\n\n'
+          '${h < 50 ? "⚠ Score baixo indica que há poucos projetos ativos, "
+              "ações executadas ou análises de mercado. "
+              "Priorize as recomendações desta semana." : "Score positivo — continue executando as prioridades identificadas."}',
+      evidence: [
+        IveEvidence(emoji: briefing.healthEmoji, label: 'Saúde Geral',     value: '$h/100'),
+        IveEvidence(emoji: '🏷️',                 label: 'Classificação',    value: label),
+        IveEvidence(emoji: '📋',                 label: 'Projetos',         value: '${briefing.projectCount}'),
+        IveEvidence(emoji: '📊',                 label: 'Análises',         value: '${briefing.analysisCount}'),
+        IveEvidence(emoji: '⚡',                 label: 'Ações',            value: '${briefing.actionsCount}'),
+        IveEvidence(emoji: '💡',                 label: 'Oportunidades',    value: '${briefing.opportunitiesCount}'),
+      ],
+      expandedData: {
+        'Fórmula': 'Ponderação de projetos ativos, execução, análises e receita',
+        'Meta recomendada': '>= 70 (Saudável)',
+        'Gerado em': '${briefing.generatedAt.day}/${briefing.generatedAt.month}/${briefing.generatedAt.year}',
+      },
+      screenName: 'Briefing Semanal',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final hc = _healthColor(briefing.overallHealthScore);
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF12121E),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: hc.withOpacity(0.35)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return GestureDetector(
+      onTap: () => _showHealthExplain(context),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF12121E),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: hc.withOpacity(0.35)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(briefing.healthEmoji, style: const TextStyle(fontSize: 20)),
-              const SizedBox(width: 8),
-              Text('Saúde Geral',
-                  style: TextStyle(color: hc, fontSize: 13, fontWeight: FontWeight.bold)),
-              const Spacer(),
-              Text('${briefing.overallHealthScore}/100',
-                  style: TextStyle(color: hc, fontSize: 22, fontWeight: FontWeight.bold)),
+              Row(
+                children: [
+                  Text(briefing.healthEmoji, style: const TextStyle(fontSize: 20)),
+                  const SizedBox(width: 8),
+                  Text('Saúde Geral',
+                      style: TextStyle(color: hc, fontSize: 13, fontWeight: FontWeight.bold)),
+                  const Spacer(),
+                  Text('${briefing.overallHealthScore}/100',
+                      style: TextStyle(color: hc, fontSize: 22, fontWeight: FontWeight.bold)),
+                  const SizedBox(width: 6),
+                  Icon(Icons.info_outline_rounded, color: hc.withOpacity(0.6), size: 14),
+                ],
+              ),
+              const SizedBox(height: 10),
+              LinearProgressIndicator(
+                value: briefing.overallHealthScore / 100,
+                backgroundColor: Colors.white12,
+                valueColor: AlwaysStoppedAnimation(hc),
+                borderRadius: BorderRadius.circular(4),
+                minHeight: 6,
+              ),
+              if (briefing.overallHealthScore < 50) ...[
+                const SizedBox(height: 8),
+                const Text(
+                  '⚠ Score baixo. Toque para ver a análise completa.',
+                  style: TextStyle(color: Colors.orange, fontSize: 11, height: 1.4),
+                ),
+              ],
             ],
           ),
-          const SizedBox(height: 10),
-          LinearProgressIndicator(
-            value: briefing.overallHealthScore / 100,
-            backgroundColor: Colors.white12,
-            valueColor: AlwaysStoppedAnimation(hc),
-            borderRadius: BorderRadius.circular(4),
-            minHeight: 6,
-          ),
-          if (briefing.overallHealthScore < 50) ...[
-            const SizedBox(height: 8),
-            const Text(
-              '⚠ Score baixo. Veja os riscos identificados e as prioridades abaixo para melhorar.',
-              style: TextStyle(color: Colors.orange, fontSize: 11, height: 1.4),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }
@@ -256,25 +301,53 @@ class _Header extends StatelessWidget {
               ],
             ),
           ),
-          SizedBox(
-            width: 72,
-            height: 72,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                CircularProgressIndicator(
-                  value: briefing.overallHealthScore / 100,
-                  strokeWidth: 6,
-                  backgroundColor: Colors.white10,
-                  valueColor: AlwaysStoppedAnimation(_healthColor(briefing.overallHealthScore)),
+          GestureDetector(
+            onTap: () {
+              final h = briefing.overallHealthScore;
+              final hc = _healthColor(h);
+              final label = h >= 70 ? 'Saudável 🟢' : h >= 45 ? 'Atenção 🟡' : 'Crítico 🔴';
+              IveDetailSheet.show(
+                context,
+                title: 'Health Score: $h/100',
+                emoji: briefing.healthEmoji,
+                humanExplanation:
+                    'Saúde Geral do portfólio: $h/100 — $label.\n\n'
+                    'Calculado com base em projetos ativos, ações executadas, '
+                    'análises de mercado, oportunidades aprovadas e receita registrada.',
+                evidence: [
+                  IveEvidence(emoji: briefing.healthEmoji, label: 'Saúde Geral',  value: '$h/100'),
+                  IveEvidence(emoji: '🏷️',                 label: 'Status',        value: label),
+                  IveEvidence(emoji: '📋',                 label: 'Projetos',      value: '${briefing.projectCount}'),
+                  IveEvidence(emoji: '📊',                 label: 'Análises',      value: '${briefing.analysisCount}'),
+                  IveEvidence(emoji: '⚡',                 label: 'Ações',         value: '${briefing.actionsCount}'),
+                  IveEvidence(emoji: '💡',                 label: 'Oportunidades', value: '${briefing.opportunitiesCount}'),
+                ],
+                screenName: 'Briefing Semanal',
+              );
+            },
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: SizedBox(
+                width: 72,
+                height: 72,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    CircularProgressIndicator(
+                      value: briefing.overallHealthScore / 100,
+                      strokeWidth: 6,
+                      backgroundColor: Colors.white10,
+                      valueColor: AlwaysStoppedAnimation(_healthColor(briefing.overallHealthScore)),
+                    ),
+                    Text('${briefing.overallHealthScore}',
+                      style: TextStyle(
+                        color: _healthColor(briefing.overallHealthScore),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      )),
+                  ],
                 ),
-                Text('${briefing.overallHealthScore}',
-                  style: TextStyle(
-                    color: _healthColor(briefing.overallHealthScore),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  )),
-              ],
+              ),
             ),
           ),
         ],
@@ -350,7 +423,7 @@ class _BriefingRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final card = Container(
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
@@ -358,18 +431,41 @@ class _BriefingRow extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         border: Border(left: BorderSide(color: color, width: 3)),
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(item.title,
-            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
-          if (item.detail.isNotEmpty) ...[
-            const SizedBox(height: 2),
-            Text(item.detail,
-              style: const TextStyle(color: Colors.white54, fontSize: 11)),
-          ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(item.title,
+                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+                if (item.detail.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(item.detail,
+                    style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                ],
+              ],
+            ),
+          ),
+          Icon(Icons.info_outline_rounded, size: 12, color: color.withOpacity(0.5)),
         ],
       ),
+    );
+
+    if (item.detail.isEmpty) return card;
+    return GestureDetector(
+      onTap: () => IveDetailSheet.show(
+        context,
+        title: item.title,
+        emoji: '📋',
+        humanExplanation: item.detail.isNotEmpty ? item.detail : item.title,
+        evidence: [
+          IveEvidence(emoji: '📋', label: 'Insight da semana', value: item.title),
+        ],
+        screenName: 'Briefing Semanal',
+      ),
+      child: MouseRegion(cursor: SystemMouseCursors.click, child: card),
     );
   }
 }

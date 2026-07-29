@@ -10,6 +10,7 @@ import '../../../data/models/opportunity.dart';
 import '../../../data/models/revenue_plan.dart';
 import '../../../providers/market_analysis_provider.dart';
 import '../../../providers/roi_metric_provider.dart';
+import '../../../shared/widgets/ive_detail_sheet.dart';
 
 // ── Colors ───────────────────────────────────────────────────────────────────
 const _kBg      = Color(0xFF0F0F1A);
@@ -289,149 +290,256 @@ class _ExecScoreCard extends StatelessWidget {
     final score = analysis.opportunityScore;
     final color = _scoreColor(score);
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: LinearGradient(
-          colors: [_kCard, color.withOpacity(0.10)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        border: Border.all(color: color.withOpacity(0.45), width: 1.5),
+    return GestureDetector(
+      onTap: () => IveDetailSheet.show(
+        context,
+        title: 'Opportunity Score',
+        emoji: '📊',
+        humanExplanation:
+            'Score de Oportunidade: $score/100 — ${_scoreLabel(score)}.\n\n'
+            '${_desc()}\n\n'
+            'Calculado combinando 4 dimensões: SEO (tráfego orgânico), '
+            'Monetização (potencial de receita), Concorrência (nível de saturação) '
+            'e Crescimento (tendência do mercado).',
+        evidence: [
+          IveEvidence(emoji: '📊', label: 'Score total',    value: '$score/100'),
+          IveEvidence(emoji: '🔍', label: 'SEO',            value: '${analysis.scoreSeo}/100'),
+          IveEvidence(emoji: '💰', label: 'Monetização',    value: '${analysis.scoreMonetization}/100'),
+          IveEvidence(emoji: '🥊', label: 'Concorrência',   value: '${analysis.scoreCompetition}/100'),
+          IveEvidence(emoji: '📈', label: 'Crescimento',    value: '${analysis.scoreGrowth}/100'),
+          IveEvidence(emoji: '🎯', label: 'Nicho',          value: analysis.niche ?? analysis.input),
+        ],
+        expandedData: {
+          'Fórmula': 'Média ponderada de SEO, Monetização, Concorrência e Crescimento',
+          'Recomendação': _rec(),
+          'Receita estimada': '${_formatBRL(analysis.revenueMonthlyMin)}–${_formatBRL(analysis.revenueMonthlyMax)}/mês',
+        },
+        screenName: 'Market Intelligence',
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.analytics_rounded, color: color, size: 18),
-              const SizedBox(width: 6),
-              const Text(
-                'OPPORTUNITY SCORE',
-                style: TextStyle(
-                  color: Colors.white54,
-                  fontSize: 11,
-                  letterSpacing: 1.4,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const Spacer(),
-              if (analysis.niche != null)
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 130),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: _kPrimary.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: _kPrimary.withOpacity(0.35)),
-                    ),
-                    child: Text(
-                      analysis.niche!,
-                      style: const TextStyle(
-                          color: _kPrimary, fontSize: 10, fontWeight: FontWeight.w600),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
-            ],
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              colors: [_kCard, color.withOpacity(0.10)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            border: Border.all(color: color.withOpacity(0.45), width: 1.5),
           ),
-          const SizedBox(height: 14),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                '$score',
-                style: TextStyle(
-                  fontSize: 68,
-                  fontWeight: FontWeight.w900,
-                  color: color,
-                  height: 1,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Text(
-                  '/100',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w300,
-                    color: color.withOpacity(0.55),
+              Row(
+                children: [
+                  Icon(Icons.analytics_rounded, color: color, size: 18),
+                  const SizedBox(width: 6),
+                  const Text(
+                    'OPPORTUNITY SCORE',
+                    style: TextStyle(
+                      color: Colors.white54,
+                      fontSize: 11,
+                      letterSpacing: 1.4,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
+                  const Spacer(),
+                  if (analysis.niche != null)
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 130),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: _kPrimary.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: _kPrimary.withOpacity(0.35)),
+                        ),
+                        child: Text(
+                          analysis.niche!,
+                          style: const TextStyle(
+                              color: _kPrimary, fontSize: 10, fontWeight: FontWeight.w600),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(width: 6),
+                  const Icon(Icons.info_outline_rounded, color: _kPrimary, size: 14),
+                ],
               ),
-              const Spacer(),
-              Column(
+              const SizedBox(height: 14),
+              Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 140),
-                    child: Text(
-                      analysis.input,
-                      style: const TextStyle(
-                          color: Colors.white60, fontSize: 11, fontWeight: FontWeight.w500),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 2,
-                      textAlign: TextAlign.end,
+                  Text(
+                    '$score',
+                    style: TextStyle(
+                      fontSize: 68,
+                      fontWeight: FontWeight.w900,
+                      color: color,
+                      height: 1,
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
                     child: Text(
-                      _rec(),
+                      '/100',
                       style: TextStyle(
-                          color: color, fontSize: 11, fontWeight: FontWeight.w700),
+                        fontSize: 20,
+                        fontWeight: FontWeight.w300,
+                        color: color.withOpacity(0.55),
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 140),
+                        child: Text(
+                          analysis.input,
+                          style: const TextStyle(
+                              color: Colors.white60, fontSize: 11, fontWeight: FontWeight.w500),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 2,
+                          textAlign: TextAlign.end,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          _rec(),
+                          style: TextStyle(
+                              color: color, fontSize: 11, fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  _ScoreBar(
+                    label: 'SEO',
+                    score: analysis.scoreSeo,
+                    onTap: () => IveDetailSheet.show(
+                      context,
+                      title: 'Score SEO',
+                      emoji: '🔍',
+                      humanExplanation:
+                          'Score SEO: ${analysis.scoreSeo}/100 — ${_scoreLabel(analysis.scoreSeo)}.\n\n'
+                          'Mede o potencial de tráfego orgânico do nicho: '
+                          'volume de buscas, palavras-chave disponíveis, '
+                          'dificuldade de rankeamento e oportunidades de conteúdo.',
+                      evidence: [
+                        IveEvidence(emoji: '🔍', label: 'Score SEO',    value: '${analysis.scoreSeo}/100'),
+                        IveEvidence(emoji: '🎯', label: 'Nicho',        value: analysis.niche ?? analysis.input),
+                        IveEvidence(emoji: '🏷️', label: 'Classificação', value: _scoreLabel(analysis.scoreSeo)),
+                      ],
+                      screenName: 'Market Intelligence',
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  _ScoreBar(
+                    label: 'Monetização',
+                    score: analysis.scoreMonetization,
+                    onTap: () => IveDetailSheet.show(
+                      context,
+                      title: 'Score Monetização',
+                      emoji: '💰',
+                      humanExplanation:
+                          'Score de Monetização: ${analysis.scoreMonetization}/100 — ${_scoreLabel(analysis.scoreMonetization)}.\n\n'
+                          'Avalia o potencial de receita do nicho: '
+                          'modelos de monetização disponíveis, ticket médio, '
+                          'disponibilidade do cliente para pagar e canais de receita.',
+                      evidence: [
+                        IveEvidence(emoji: '💰', label: 'Score Monetização',  value: '${analysis.scoreMonetization}/100'),
+                        IveEvidence(emoji: '📈', label: 'Receita potencial',   value: '${_formatBRL(analysis.revenueMonthlyMin)}–${_formatBRL(analysis.revenueMonthlyMax)}/mês'),
+                        IveEvidence(emoji: '🏷️', label: 'Classificação',       value: _scoreLabel(analysis.scoreMonetization)),
+                      ],
+                      screenName: 'Market Intelligence',
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  _ScoreBar(
+                    label: 'Concorrência',
+                    score: analysis.scoreCompetition,
+                    onTap: () => IveDetailSheet.show(
+                      context,
+                      title: 'Score Concorrência',
+                      emoji: '🥊',
+                      humanExplanation:
+                          'Score de Concorrência: ${analysis.scoreCompetition}/100 — ${_scoreLabel(analysis.scoreCompetition)}.\n\n'
+                          'Avalia o nível de saturação do mercado. '
+                          'Score alto = menos concorrência = mais oportunidade. '
+                          'Considera número de players, autoridade dos concorrentes e gaps de mercado.',
+                      evidence: [
+                        IveEvidence(emoji: '🥊', label: 'Score Concorrência', value: '${analysis.scoreCompetition}/100'),
+                        IveEvidence(emoji: '🏷️', label: 'Classificação',      value: _scoreLabel(analysis.scoreCompetition)),
+                      ],
+                      screenName: 'Market Intelligence',
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  _ScoreBar(
+                    label: 'Crescimento',
+                    score: analysis.scoreGrowth,
+                    onTap: () => IveDetailSheet.show(
+                      context,
+                      title: 'Score Crescimento',
+                      emoji: '📈',
+                      humanExplanation:
+                          'Score de Crescimento: ${analysis.scoreGrowth}/100 — ${_scoreLabel(analysis.scoreGrowth)}.\n\n'
+                          'Mede a trajetória de crescimento do mercado: '
+                          'tendência de buscas, novos competidores entrando, '
+                          'maturidade do nicho e sinais de crescimento recentes.',
+                      evidence: [
+                        IveEvidence(emoji: '📈', label: 'Score Crescimento', value: '${analysis.scoreGrowth}/100'),
+                        IveEvidence(emoji: '🏷️', label: 'Classificação',     value: _scoreLabel(analysis.scoreGrowth)),
+                      ],
+                      screenName: 'Market Intelligence',
                     ),
                   ),
                 ],
               ),
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.04),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  _desc(),
+                  style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              _ScoreBar(label: 'SEO',          score: analysis.scoreSeo),
-              const SizedBox(width: 8),
-              _ScoreBar(label: 'Monetização',  score: analysis.scoreMonetization),
-              const SizedBox(width: 8),
-              _ScoreBar(label: 'Concorrência', score: analysis.scoreCompetition),
-              const SizedBox(width: 8),
-              _ScoreBar(label: 'Crescimento',  score: analysis.scoreGrowth),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.04),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              _desc(),
-              style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 }
 
 class _ScoreBar extends StatelessWidget {
-  const _ScoreBar({required this.label, required this.score});
+  const _ScoreBar({required this.label, required this.score, this.onTap});
   final String label;
   final int score;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final c = _scoreColor(score);
-    return Expanded(
+    final bar = Expanded(
       child: Column(
         children: [
           Text('$score',
@@ -452,6 +560,11 @@ class _ScoreBar extends StatelessWidget {
               textAlign: TextAlign.center),
         ],
       ),
+    );
+    if (onTap == null) return bar;
+    return GestureDetector(
+      onTap: onTap,
+      child: MouseRegion(cursor: SystemMouseCursors.click, child: bar),
     );
   }
 }

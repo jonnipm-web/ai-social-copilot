@@ -15,6 +15,7 @@ import '../../../providers/project_intelligence_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/context_copilot_widget.dart' show showCopilotChat;
+import '../../../shared/widgets/ive_detail_sheet.dart';
 
 class ProjectCommandCenterScreen extends ConsumerStatefulWidget {
   const ProjectCommandCenterScreen({super.key});
@@ -804,6 +805,37 @@ class _ProjectDetailSheet extends StatelessWidget {
     return const Color(0xFFFF6B6B);
   }
 
+  String _classify(int v) => v >= 70 ? 'Alto ✓' : v >= 40 ? 'Médio ⚡' : 'Baixo ⚠';
+
+  void _showScoreExplain(
+    BuildContext context,
+    String emoji,
+    String label,
+    int value,
+    String weight,
+    String explanation,
+    String howToImprove, [
+    List<IveAction> actions = const [],
+  ]) {
+    IveDetailSheet.show(
+      context,
+      title:            label,
+      emoji:            emoji,
+      humanExplanation: '$explanation\n\nComo melhorar: $howToImprove',
+      evidence: [
+        IveEvidence(emoji: '📊', label: 'Score atual',          value: '$value/100'),
+        IveEvidence(emoji: '🏷️', label: 'Classificação',        value: _classify(value)),
+        IveEvidence(emoji: '⚡', label: 'Peso no Ecosystem',     value: weight),
+      ],
+      expandedData: {
+        'Peso no Ecosystem Score': weight,
+        'Meta recomendada':       '>= 70 (Alto)',
+      },
+      suggestedActions: actions,
+      screenName: 'Projetos',
+    );
+  }
+
   String _fmtRevenue(double v) {
     if (v <= 0)        return 'Ainda não estimado';
     if (v >= 1000000)  return 'R\$ ${(v / 1000000).toStringAsFixed(1)}M';
@@ -852,17 +884,47 @@ class _ProjectDetailSheet extends StatelessWidget {
                           fontSize: 18)),
                 ),
                 if (s != null)
-                  Column(
-                    children: [
-                      Text('${s.ecosystemScore}',
-                          style: TextStyle(
-                              color: _ecoScoreColor(s.ecosystemScore),
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold)),
-                      const Text('eco score',
-                          style: TextStyle(
-                              color: Colors.white38, fontSize: 10)),
-                    ],
+                  GestureDetector(
+                    onTap: () => IveDetailSheet.show(
+                      context,
+                      title: 'Ecosystem Score',
+                      emoji: '🌐',
+                      humanExplanation:
+                          'O Ecosystem Score é o indicador geral de saúde e potencial deste projeto. '
+                          'Score ${s.ecosystemScore}/100 — ${_classify(s.ecosystemScore)}.\n\n'
+                          'É calculado pela combinação ponderada de 5 dimensões: '
+                          'Oportunidade (25%), Fit Estratégico (25%), Sinergia (20%), ROI (20%) e Momentum (10%).',
+                      evidence: [
+                        IveEvidence(emoji: '📊', label: 'Score total',       value: '${s.ecosystemScore}/100'),
+                        IveEvidence(emoji: '🏷️', label: 'Classificação',     value: _classify(s.ecosystemScore)),
+                        IveEvidence(emoji: '⚡', label: 'Recomendação',       value: s.recommendation),
+                        IveEvidence(emoji: '✅', label: 'Ações concluídas',   value: '${s.completedActions}/${s.actionCount} (${s.completionRate}%)'),
+                        IveEvidence(emoji: '💰', label: 'ROI total',          value: _fmtRevenue(s.totalRoi)),
+                      ],
+                      expandedData: {
+                        'Fórmula': 'Opp×25% + Fit×25% + Sin×20% + ROI×20% + Mom×10%',
+                        'Oportunidade': '${s.opportunityScore} × 0.25 = ${(s.opportunityScore * 0.25).round()}',
+                        'Fit Estratégico': '${s.strategicFit} × 0.25 = ${(s.strategicFit * 0.25).round()}',
+                        'Sinergia': '${s.synergyScore} × 0.20 = ${(s.synergyScore * 0.20).round()}',
+                        'ROI': '${s.roiScore} × 0.20 = ${(s.roiScore * 0.20).round()}',
+                        'Momentum': '${s.momentumScore} × 0.10 = ${(s.momentumScore * 0.10).round()}',
+                      },
+                      screenName: 'Projetos',
+                    ),
+                    child: MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: Column(
+                        children: [
+                          Text('${s.ecosystemScore}',
+                              style: TextStyle(
+                                  color: _ecoScoreColor(s.ecosystemScore),
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold)),
+                          const Text('eco score',
+                              style: TextStyle(color: Colors.white38, fontSize: 10)),
+                        ],
+                      ),
+                    ),
                   ),
               ],
             ),
@@ -883,40 +945,107 @@ class _ProjectDetailSheet extends StatelessWidget {
             // Recomendação
             if (s != null) ...[
               _sectionTitle('Recomendação IA'),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFAB83FF).withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                      color: const Color(0xFFAB83FF).withOpacity(0.3)),
-                ),
-                child: Row(
-                  children: [
-                    Text(s.recommendationEmoji,
-                        style: const TextStyle(fontSize: 22)),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(s.recommendation,
-                          style: const TextStyle(
-                              color: Color(0xFFAB83FF),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14)),
-                    ),
+              GestureDetector(
+                onTap: () => IveDetailSheet.show(
+                  context,
+                  title: 'Recomendação: ${s.recommendation}',
+                  emoji: s.recommendationEmoji,
+                  humanExplanation: 'A IVE analisou os 5 scores do ecossistema e '
+                      'recomenda: ${s.recommendation}.\n\n'
+                      'Esta recomendação é gerada quando o Ecosystem Score '
+                      '${s.ecosystemScore >= 70 ? "está alto (≥70)" : s.ecosystemScore >= 40 ? "está moderado (40–69)" : "está baixo (<40)"} '
+                      'e considera a combinação de oportunidade, '
+                      'fit estratégico, sinergia, ROI e momentum.',
+                  evidence: [
+                    IveEvidence(emoji: '🌐', label: 'Ecosystem Score', value: '${s.ecosystemScore}/100'),
+                    IveEvidence(emoji: '🎯', label: 'Oportunidade',    value: '${s.opportunityScore}/100'),
+                    IveEvidence(emoji: '🔗', label: 'Fit Estratégico', value: '${s.strategicFit}/100'),
+                    IveEvidence(emoji: '⚡', label: 'Momentum',         value: '${s.momentumScore}/100'),
                   ],
+                  screenName: 'Projetos',
+                ),
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFAB83FF).withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFAB83FF).withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        Text(s.recommendationEmoji,
+                            style: const TextStyle(fontSize: 22)),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(s.recommendation,
+                              style: const TextStyle(
+                                  color: Color(0xFFAB83FF),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14)),
+                        ),
+                        const Icon(Icons.info_outline_rounded, color: Color(0xFF6C63FF), size: 14),
+                      ],
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
 
               // Score breakdown
               _sectionTitle('Scores do Ecossistema'),
-              _ScoreRow('Oportunidade',  s.opportunityScore),
-              _ScoreRow('Fit Estratégico', s.strategicFit),
-              _ScoreRow('Sinergia',       s.synergyScore),
-              _ScoreRow('ROI',            s.roiScore),
-              _ScoreRow('Momentum',       s.momentumScore),
-              _ScoreRow('Mercado',        s.marketScore),
-              _ScoreRow('Execução',       s.executionScore),
+              _ScoreRow('Oportunidade', s.opportunityScore, onTap: () => _showScoreExplain(
+                context, '🎯', 'Oportunidade', s.opportunityScore, '25%',
+                'Mede o potencial de oportunidade de mercado: demanda de busca, '
+                'monetização, concorrência e crescimento do nicho. '
+                'Gerado a partir das análises de Market Intelligence.',
+                'Execute uma análise detalhada no Market Intelligence e conecte ao projeto.',
+                [if (onAnalyze != null) IveAction(emoji: '📊', label: 'Ver Análise de Mercado', onTap: onAnalyze)],
+              )),
+              _ScoreRow('Fit Estratégico', s.strategicFit, onTap: () => _showScoreExplain(
+                context, '🔗', 'Fit Estratégico', s.strategicFit, '25%',
+                'Avalia o alinhamento deste projeto com seu portfólio, '
+                'habilidades existentes e objetivos de negócio. '
+                'Quanto maior, mais este projeto se encaixa na sua estratégia atual.',
+                'Adicione conhecimentos e oportunidades relacionadas ao projeto para aumentar o fit.',
+              )),
+              _ScoreRow('Sinergia', s.synergyScore, onTap: () => _showScoreExplain(
+                context, '🤝', 'Sinergia', s.synergyScore, '20%',
+                'Mede a complementaridade deste projeto com os outros projetos do portfólio. '
+                'Alta sinergia significa que projetos se beneficiam mutuamente '
+                '(audiência compartilhada, conteúdo reutilizável, canais em comum).',
+                'Crie projetos complementares ou vincule análises de mercado para aumentar a sinergia.',
+              )),
+              _ScoreRow('ROI', s.roiScore, onTap: () => _showScoreExplain(
+                context, '💰', 'ROI', s.roiScore, '20%',
+                'Potencial de retorno sobre investimento de tempo e recursos. '
+                'Considera receita potencial estimada, receita já registrada '
+                'e o esforço de execução nas ações do Action Engine.',
+                'Registre entradas no ROI Tracker e aprove mais oportunidades de alta receita.',
+              )),
+              _ScoreRow('Momentum', s.momentumScore, onTap: () => _showScoreExplain(
+                context, '⚡', 'Momentum', s.momentumScore, '10%',
+                'Velocidade e ritmo de progresso no projeto. '
+                'Calculado com base em ações executadas, taxa de conclusão '
+                'e frequência de atualizações recentes.',
+                'Complete ações pendentes no Action Engine e mantenha atualização regular do projeto.',
+              )),
+              _ScoreRow('Mercado', s.marketScore, onTap: () => _showScoreExplain(
+                context, '📈', 'Mercado', s.marketScore, '—',
+                'Atratividade do mercado-alvo. Baseado em tamanho do mercado, '
+                'tendências de crescimento, concorrência e monetização identificada '
+                'nas análises de Market Intelligence.',
+                'Execute análise de mercado atualizada e pesquise nichos com maior potencial.',
+                [if (onAnalyze != null) IveAction(emoji: '📊', label: 'Ver Análise de Mercado', onTap: onAnalyze)],
+              )),
+              _ScoreRow('Execução', s.executionScore, onTap: () => _showScoreExplain(
+                context, '🚀', 'Execução', s.executionScore, '—',
+                'Qualidade e ritmo da execução. Considera ações concluídas, '
+                'oportunidades aprovadas, existência de roadmap '
+                'e taxa de progresso geral do projeto.',
+                'Aprove e execute ações no Action Engine. Defina roadmap e prazos claros.',
+              )),
               const SizedBox(height: 8),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -969,21 +1098,49 @@ class _ProjectDetailSheet extends StatelessWidget {
             // Pontos fortes
             if (s != null && s.strengths.isNotEmpty) ...[
               _sectionTitle('Pontos Fortes'),
-              ..._bullets(s.strengths, const Color(0xFF6BCB77), '✓ '),
+              ..._tappableBullets(
+                context,
+                s.strengths,
+                const Color(0xFF6BCB77),
+                '✓ ',
+                '💪',
+                'Ponto Forte',
+                'Identificado com base nas análises de mercado, '
+                'histórico de execução e dados do portfólio.',
+                'Continue investindo neste diferencial. Explore oportunidades que amplificam este ponto forte.',
+              ),
               const SizedBox(height: 12),
             ],
 
             // Riscos
             if (s != null && s.risks.isNotEmpty) ...[
               _sectionTitle('Riscos'),
-              ..._bullets(s.risks, const Color(0xFFFF6B6B), '⚠ '),
+              ..._tappableBullets(
+                context,
+                s.risks,
+                const Color(0xFFFF6B6B),
+                '⚠ ',
+                '⚠️',
+                'Risco',
+                'Identificado nas análises de mercado e no histórico de execução do projeto.',
+                'Crie um plano de mitigação e defina ações preventivas no Action Engine.',
+              ),
               const SizedBox(height: 12),
             ],
 
             // Quick wins
             if (s != null && s.quickWins.isNotEmpty) ...[
               _sectionTitle('Quick Wins'),
-              ..._bullets(s.quickWins, const Color(0xFFFFD93D), '⚡ '),
+              ..._tappableBullets(
+                context,
+                s.quickWins,
+                const Color(0xFFFFD93D),
+                '⚡ ',
+                '⚡',
+                'Quick Win',
+                'Oportunidade de alto impacto e baixo esforço identificada pela IVE.',
+                'Envie para o Action Engine e priorize para execução imediata.',
+              ),
               const SizedBox(height: 12),
             ],
 
@@ -1089,42 +1246,84 @@ class _ProjectDetailSheet extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Maturity card
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: const Color(0xFF6C63FF).withOpacity(0.07),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFF6C63FF).withOpacity(0.25)),
-          ),
-          child: Row(
-            children: [
-              Text(p.maturityEmoji, style: const TextStyle(fontSize: 26)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Maturidade: ${p.maturityLabel}',
-                      style: const TextStyle(
-                        color: Color(0xFF6C63FF),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                    ),
-                    if (p.dataWarning != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text(
-                          p.dataWarning!,
-                          style: const TextStyle(color: Colors.orange, fontSize: 11),
-                        ),
-                      ),
-                  ],
-                ),
+        // Maturity card — clicável
+        GestureDetector(
+          onTap: () {
+            final stages = ['💡 Ideia', '🔬 Validando', '🌱 Crescendo', '🌳 Maduro'];
+            final stageDesc = {
+              'ideia':     'O projeto existe como conceito. Tem proposta de valor mas ainda não foi validado no mercado.',
+              'validando': 'Primeiras análises realizadas. Testando hipóteses com análises de mercado e primeiras ações.',
+              'crescendo': 'Validado no mercado com tração inicial. Receita ou usuários crescendo.',
+              'maduro':    'Operação estável com crescimento consistente, receita recorrente e processos definidos.',
+            };
+            final nextStage = {
+              'ideia':     '🔬 Validando — Execute análise de mercado, defina ICP e crie primeiras ações.',
+              'validando': '🌱 Crescendo — Valide hipóteses, conquiste primeiros clientes e registre receita.',
+              'crescendo': '🌳 Maduro — Estabilize operação, documente processos e escale canais que funcionam.',
+              'maduro':    '🌎 Escala — Expanda para novos mercados e maximize o ROI.',
+            };
+            IveDetailSheet.show(
+              context,
+              title: 'Maturidade: ${p.maturityLabel}',
+              emoji: p.maturityEmoji,
+              humanExplanation:
+                  '${stageDesc[p.maturityStage] ?? "Estágio de maturidade do projeto."}\n\n'
+                  'Score de cobertura de dados: ${p.coverage.score}/100 (${p.coverage.coverageLabel}).\n'
+                  '${p.dataWarning != null ? "⚠ ${p.dataWarning}" : ""}',
+              evidence: [
+                IveEvidence(emoji: p.maturityEmoji, label: 'Estágio atual',     value: p.maturityLabel),
+                IveEvidence(emoji: '📊', label: 'Cobertura de dados',           value: '${p.coverage.score}/100'),
+                IveEvidence(emoji: '🔍', label: 'Análise de mercado',           value: p.analysis != null ? 'Disponível ✓' : 'Ausente ✗'),
+                IveEvidence(emoji: '📝', label: 'Próximo estágio',              value: nextStage[p.maturityStage] ?? '—'),
+              ],
+              expandedData: {
+                'Linha do tempo': stages.join(' → '),
+                'Estágio atual':  p.maturityLabel,
+                'Cobertura mín. para avançar': '>= 30 + análise de mercado',
+              },
+              screenName: 'Projetos',
+            );
+          },
+          child: MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF6C63FF).withOpacity(0.07),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFF6C63FF).withOpacity(0.25)),
               ),
-            ],
+              child: Row(
+                children: [
+                  Text(p.maturityEmoji, style: const TextStyle(fontSize: 26)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Maturidade: ${p.maturityLabel}',
+                          style: const TextStyle(
+                            color: Color(0xFF6C63FF),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                        if (p.dataWarning != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              p.dataWarning!,
+                              style: const TextStyle(color: Colors.orange, fontSize: 11),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.info_outline_rounded, color: Color(0xFF6C63FF), size: 14),
+                ],
+              ),
+            ),
           ),
         ),
         const SizedBox(height: 10),
@@ -1143,7 +1342,7 @@ class _ProjectDetailSheet extends StatelessWidget {
           _infoRow('✨ Proposta', p.valueProposition),
         ],
 
-        // Identified topics
+        // Identified topics — clicáveis
         if (p.identifiedTopics.isNotEmpty) ...[
           const SizedBox(height: 8),
           const Text('Tópicos identificados',
@@ -1152,14 +1351,36 @@ class _ProjectDetailSheet extends StatelessWidget {
           Wrap(
             spacing: 6,
             runSpacing: 4,
-            children: p.identifiedTopics.map((t) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: const Color(0xFF00BCD4).withOpacity(0.12),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFF00BCD4).withOpacity(0.3)),
+            children: p.identifiedTopics.map((t) => GestureDetector(
+              onTap: () => IveDetailSheet.show(
+                context,
+                title: t,
+                emoji: '🏷️',
+                humanExplanation:
+                    'A IVE classificou este projeto com o tópico "$t" com base nos '
+                    'conhecimentos, análises e documentos associados ao projeto.\n\n'
+                    'Este tópico indica que o conteúdo, mercado ou estratégia do projeto '
+                    'tem relação com $t.',
+                evidence: [
+                  IveEvidence(emoji: '📁', label: 'Projeto',         value: p.project.name),
+                  IveEvidence(emoji: '🎯', label: 'Nicho',           value: p.niche),
+                  IveEvidence(emoji: '📊', label: 'Cobertura',       value: '${p.coverage.score}/100'),
+                  IveEvidence(emoji: '🏷️', label: 'Total de tópicos', value: '${p.identifiedTopics.length}'),
+                ],
+                screenName: 'Projetos',
               ),
-              child: Text(t, style: const TextStyle(color: Color(0xFF00BCD4), fontSize: 10)),
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00BCD4).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFF00BCD4).withOpacity(0.3)),
+                  ),
+                  child: Text(t, style: const TextStyle(color: Color(0xFF00BCD4), fontSize: 10)),
+                ),
+              ),
             )).toList(),
           ),
         ],
@@ -1253,13 +1474,54 @@ class _ProjectDetailSheet extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(prefix,
-                        style: TextStyle(color: color, fontSize: 12)),
+                    Text(prefix, style: TextStyle(color: color, fontSize: 12)),
                     Expanded(
                         child: Text(item,
-                            style: const TextStyle(
-                                color: Colors.white70, fontSize: 12))),
+                            style: const TextStyle(color: Colors.white70, fontSize: 12))),
                   ],
+                ),
+              ))
+          .toList();
+
+  List<Widget> _tappableBullets(
+    BuildContext context,
+    List<String> items,
+    Color color,
+    String prefix,
+    String emoji,
+    String kind,
+    String sourceExplanation,
+    String howToImprove,
+  ) =>
+      items
+          .map((item) => GestureDetector(
+                onTap: () => IveDetailSheet.show(
+                  context,
+                  title: '$kind identificado',
+                  emoji: emoji,
+                  humanExplanation: '"$item"\n\n$sourceExplanation',
+                  evidence: [
+                    IveEvidence(emoji: emoji,  label: kind,               value: item),
+                    IveEvidence(emoji: '📋',   label: 'Projeto',          value: project.name),
+                  ],
+                  expandedData: {'Como agir': howToImprove},
+                  screenName: 'Projetos',
+                ),
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(prefix, style: TextStyle(color: color, fontSize: 12)),
+                        Expanded(
+                            child: Text(item,
+                                style: const TextStyle(color: Colors.white70, fontSize: 12))),
+                        Icon(Icons.info_outline_rounded, size: 11, color: color.withOpacity(0.5)),
+                      ],
+                    ),
+                  ),
                 ),
               ))
           .toList();
@@ -1268,9 +1530,10 @@ class _ProjectDetailSheet extends StatelessWidget {
 // ── Score row com barra de progresso ─────────────────────────────────────────
 
 class _ScoreRow extends StatelessWidget {
-  const _ScoreRow(this.label, this.value);
+  const _ScoreRow(this.label, this.value, {this.onTap});
   final String label;
   final int value;
+  final VoidCallback? onTap;
 
   Color get _color {
     if (value >= 70) return const Color(0xFF6BCB77);
@@ -1280,15 +1543,14 @@ class _ScoreRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    final row = Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
           SizedBox(
             width: 110,
             child: Text(label,
-                style:
-                    const TextStyle(color: Colors.white60, fontSize: 12)),
+                style: const TextStyle(color: Colors.white60, fontSize: 12)),
           ),
           Expanded(
             child: ClipRRect(
@@ -1307,12 +1569,20 @@ class _ScoreRow extends StatelessWidget {
             child: Text('$value',
                 textAlign: TextAlign.right,
                 style: TextStyle(
-                    color: _color,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold)),
+                    color: _color, fontSize: 12, fontWeight: FontWeight.bold)),
           ),
+          if (onTap != null)
+            const SizedBox(
+              width: 20,
+              child: Icon(Icons.info_outline_rounded, size: 12, color: Color(0xFF6C63FF)),
+            ),
         ],
       ),
+    );
+    if (onTap == null) return row;
+    return GestureDetector(
+      onTap: onTap,
+      child: MouseRegion(cursor: SystemMouseCursors.click, child: row),
     );
   }
 }

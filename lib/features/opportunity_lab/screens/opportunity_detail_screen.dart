@@ -9,6 +9,7 @@ import '../../../data/models/opportunity_lab_item.dart';
 import '../../../providers/action_queue_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
 import '../../../providers/project_provider.dart';
+import '../../../shared/widgets/ive_detail_sheet.dart';
 import '../../action_engine/screens/action_detail_screen.dart';
 
 // ── Colors ────────────────────────────────────────────────────────────────────
@@ -272,6 +273,43 @@ class _HeroHeader extends StatelessWidget {
 
   final OpportunityLabItem item;
 
+  void _showFinalScoreExplain(BuildContext context) {
+    final score = item.finalScore;
+    final label = score >= 80 ? 'Alta' : score >= 60 ? 'Média' : 'Baixa';
+    IveDetailSheet.show(
+      context,
+      title: 'Final Score — ${item.title}',
+      emoji: '🎯',
+      humanExplanation:
+          'O Final Score de $score representa a pontuação consolidada desta '
+          'oportunidade com base em 5 dimensões ponderadas. '
+          'A prioridade de execução é $label.',
+      evidence: [
+        IveEvidence('📈', 'Mercado', '${item.marketScore}/100'),
+        IveEvidence('💰', 'Receita', '${item.revenueScore}/100'),
+        IveEvidence('⚔️', 'Competição', '${item.competitionScore}/100'),
+        IveEvidence('🔗', 'Sinergia', '${item.synergyScore}/100'),
+        IveEvidence('🎯', 'Fit Estratégico', '${item.strategicFit}/100'),
+        IveEvidence('📊', 'Confiança da análise', '${item.confidence}%'),
+      ],
+      suggestedActions: [
+        IveAction(
+          emoji: '⚡',
+          label: 'Enviar para Action Engine',
+          description: 'Criar plano de execução para esta oportunidade',
+          onTap: () {},
+        ),
+        IveAction(
+          emoji: '💬',
+          label: 'Perguntar à IVE',
+          description: 'Aprofundar a análise desta oportunidade',
+          onTap: () {},
+        ),
+      ],
+      screenName: 'opportunity_detail',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final score = item.finalScore;
@@ -286,19 +324,25 @@ class _HeroHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Score ring
-          SizedBox(
-            width: 72,
-            height: 72,
-            child: CustomPaint(
-              painter: _RingPainter(score: score, color: scoreC),
-              child: Center(
-                child: Text(
-                  '$score',
-                  style: TextStyle(
-                      color: scoreC,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold),
+          // Score ring — tappable
+          MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: () => _showFinalScoreExplain(context),
+              child: SizedBox(
+                width: 72,
+                height: 72,
+                child: CustomPaint(
+                  painter: _RingPainter(score: score, color: scoreC),
+                  child: Center(
+                    child: Text(
+                      '$score',
+                      style: TextStyle(
+                          color: scoreC,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -384,18 +428,98 @@ class _ScoreBreakdown extends StatelessWidget {
 
   final OpportunityLabItem item;
 
+  void _show(BuildContext context, String label, String emoji, int value,
+      String explanation, String howTo, List<IveEvidence> evidence) {
+    final qual = value >= 80 ? 'Alto' : value >= 60 ? 'Médio' : 'Baixo';
+    IveDetailSheet.show(
+      context,
+      title: '$label — $qual ($value/100)',
+      emoji: emoji,
+      humanExplanation: explanation,
+      evidence: evidence,
+      suggestedActions: [
+        IveAction(
+          emoji: '📈',
+          label: 'Como melhorar',
+          description: howTo,
+          onTap: () {},
+        ),
+        IveAction(
+          emoji: '💬',
+          label: 'Perguntar à IVE',
+          description: 'Obter insights mais detalhados sobre $label',
+          onTap: () {},
+        ),
+      ],
+      screenName: 'opportunity_detail',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final dims = [
-      ('Mercado',          item.marketScore,      const Color(0xFF6C63FF)),
-      ('Receita',          item.revenueScore,     const Color(0xFF4CAF50)),
-      ('Competição',       item.competitionScore, const Color(0xFFFF9800)),
-      ('Sinergia',         item.synergyScore,     const Color(0xFF00BCD4)),
-      ('Fit Estratégico',  item.strategicFit,     const Color(0xFFB44FE8)),
+      (
+        'Mercado', item.marketScore, const Color(0xFF6C63FF), '📈',
+        'O score de Mercado avalia o tamanho, crescimento e '
+            'atratividade do nicho para esta oportunidade. '
+            'Score alto indica mercado grande com boa demanda.',
+        'Pesquise volume de busca, tendências e TAM do nicho.',
+        <IveEvidence>[
+          IveEvidence('📊', 'Tamanho do mercado', item.marketScore >= 70 ? 'Grande' : 'Médio'),
+          IveEvidence('📈', 'Tendência', item.marketScore >= 60 ? 'Crescendo' : 'Estável'),
+        ],
+      ),
+      (
+        'Receita', item.revenueScore, const Color(0xFF4CAF50), '💰',
+        'O score de Receita estima o potencial de monetização desta '
+            'oportunidade com base no modelo de negócio e ticket médio do mercado.',
+        'Defina claramente seu modelo de receita e teste o ticket médio com clientes.',
+        <IveEvidence>[
+          IveEvidence('💰', 'Potencial de receita', item.revenueScore >= 70 ? 'Alto' : 'Médio'),
+          IveEvidence('🎫', 'Ticket médio estimado', item.revenueScore >= 60 ? 'Bom' : 'Baixo'),
+        ],
+      ),
+      (
+        'Competição', item.competitionScore, const Color(0xFFFF9800), '⚔️',
+        'O score de Competição mede o nível de saturação do mercado. '
+            'Score ALTO significa MENOR concorrência — é uma janela de oportunidade.',
+        'Identifique seu diferencial único em relação aos players existentes.',
+        <IveEvidence>[
+          IveEvidence('⚔️', 'Saturação', item.competitionScore >= 70 ? 'Baixa (boa)' : 'Média'),
+          IveEvidence('🏁', 'Janela de oportunidade', item.competitionScore >= 60 ? 'Aberta' : 'Estreita'),
+        ],
+      ),
+      (
+        'Sinergia', item.synergyScore, const Color(0xFF00BCD4), '🔗',
+        'O score de Sinergia mede como esta oportunidade se complementa '
+            'com seus outros projetos e habilidades existentes.',
+        'Identifique recursos e conhecimentos dos seus projetos atuais que podem ser aproveitados.',
+        <IveEvidence>[
+          IveEvidence('🔗', 'Complementaridade', item.synergyScore >= 70 ? 'Alta' : 'Média'),
+          IveEvidence('♻️', 'Reuso de recursos', item.synergyScore >= 60 ? 'Alto' : 'Baixo'),
+        ],
+      ),
+      (
+        'Fit Estratégico', item.strategicFit, const Color(0xFFB44FE8), '🎯',
+        'O Fit Estratégico avalia o alinhamento desta oportunidade '
+            'com seus objetivos de longo prazo, habilidades e recursos disponíveis.',
+        'Revise seus objetivos estratégicos e verifique se este projeto os avança.',
+        <IveEvidence>[
+          IveEvidence('🎯', 'Alinhamento de objetivos', item.strategicFit >= 70 ? 'Alto' : 'Médio'),
+          IveEvidence('🛠️', 'Fit de habilidades', item.strategicFit >= 60 ? 'Bom' : 'Parcial'),
+        ],
+      ),
     ];
 
     return Column(
-      children: dims.map((d) => _ScoreRow(label: d.$1, value: d.$2, color: d.$3)).toList(),
+      children: dims
+          .map((d) => _ScoreRow(
+                label: d.$1,
+                value: d.$2,
+                color: d.$3,
+                onTap: () => _show(context, d.$1, d.$4, d.$2, d.$5, d.$6, d.$7),
+              ))
+          .toList(),
     );
   }
 }
@@ -405,15 +529,17 @@ class _ScoreRow extends StatelessWidget {
     required this.label,
     required this.value,
     required this.color,
+    this.onTap,
   });
 
-  final String label;
-  final int    value;
-  final Color  color;
+  final String       label;
+  final int          value;
+  final Color        color;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    final row = Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         children: [
@@ -445,7 +571,21 @@ class _ScoreRow extends StatelessWidget {
                   fontWeight: FontWeight.bold),
             ),
           ),
+          if (onTap != null) ...[
+            const SizedBox(width: 4),
+            Icon(Icons.info_outline_rounded, color: color.withOpacity(0.6), size: 13),
+          ],
         ],
+      ),
+    );
+
+    if (onTap == null) return row;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: row,
       ),
     );
   }
@@ -605,6 +745,53 @@ class _ConfidenceMeter extends StatelessWidget {
 
   final int value;
 
+  void _showConfidenceExplain(BuildContext context) {
+    final label = value >= 80 ? 'Alta' : value >= 60 ? 'Média' : 'Baixa';
+    IveDetailSheet.show(
+      context,
+      title: 'Confiança da Análise — $label ($value%)',
+      emoji: '🔍',
+      humanExplanation:
+          'A IVE tem $label confiança ($value%) nesta análise. '
+          'Quanto mais dados disponíveis (fontes, histórico, análises de mercado), '
+          'maior a precisão da avaliação. '
+          '${value < 60 ? 'Para aumentar a confiança, adicione mais informações ao projeto e execute novas análises de mercado.' : ''}',
+      evidence: [
+        IveEvidence('📊', 'Nível de confiança', '$value% ($label)'),
+        IveEvidence(
+            '📚',
+            'Qualidade dos dados',
+            value >= 80
+                ? 'Muitas fontes disponíveis'
+                : value >= 60
+                    ? 'Fontes parciais'
+                    : 'Dados limitados'),
+        IveEvidence(
+            '🕐',
+            'Impacto na análise',
+            value >= 80
+                ? 'Alta precisão esperada'
+                : 'Margem de erro maior'),
+      ],
+      suggestedActions: [
+        if (value < 80)
+          IveAction(
+            emoji: '📝',
+            label: 'Melhorar dados',
+            description: 'Adicione mais informações ao projeto para aumentar a confiança',
+            onTap: () {},
+          ),
+        IveAction(
+          emoji: '💬',
+          label: 'Perguntar à IVE',
+          description: 'Entender quais dados aumentariam a confiança desta análise',
+          onTap: () {},
+        ),
+      ],
+      screenName: 'opportunity_detail',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final color = _scoreColor(value);
@@ -614,26 +801,35 @@ class _ConfidenceMeter extends StatelessWidget {
             ? 'Média'
             : 'Baixa';
 
-    return Row(
-      children: [
-        Expanded(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: LinearProgressIndicator(
-              value: value / 100,
-              backgroundColor: Colors.white12,
-              valueColor: AlwaysStoppedAnimation(color),
-              minHeight: 12,
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () => _showConfidenceExplain(context),
+        behavior: HitTestBehavior.opaque,
+        child: Row(
+          children: [
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  value: value / 100,
+                  backgroundColor: Colors.white12,
+                  valueColor: AlwaysStoppedAnimation(color),
+                  minHeight: 12,
+                ),
+              ),
             ),
-          ),
+            const SizedBox(width: 12),
+            Text('$value% $label',
+                style: TextStyle(
+                    color: color,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold)),
+            const SizedBox(width: 6),
+            Icon(Icons.info_outline_rounded, color: color.withOpacity(0.6), size: 14),
+          ],
         ),
-        const SizedBox(width: 12),
-        Text('$value% $label',
-            style: TextStyle(
-                color: color,
-                fontSize: 13,
-                fontWeight: FontWeight.bold)),
-      ],
+      ),
     );
   }
 }
