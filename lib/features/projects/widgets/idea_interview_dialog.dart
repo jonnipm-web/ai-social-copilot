@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../data/models/knowledge_item.dart';
 import '../../../data/models/project.dart';
 import '../../../data/models/project_event.dart';
 import '../../../providers/knowledge_provider.dart';
@@ -141,15 +143,25 @@ class _IdeaInterviewDialogState extends ConsumerState<IdeaInterviewDialog> {
   }
 
   Future<void> _saveAsKnowledge() async {
+    final uid = Supabase.instance.client.auth.currentUser?.id ?? '';
     final content = _buildKnowledgeContent();
-    await ref.read(knowledgeItemNotifierProvider.notifier).create({
-      'title':      'Entrevista de Ideia — ${widget.project.name}',
-      'content':    content,
-      'source_type': 'manual',
-      'status':     'analyzed',
-      'project_id': widget.project.id,
-      'niche':      _answers[0] ?? '',
-    });
+
+    // Extrai nicho da resposta 1 (Problema) — proxy mais próximo disponível
+    // O campo niche real será enriquecido pela análise de mercado posterior
+    final niche = _answers[0]?.isNotEmpty == true ? _answers[0] : null;
+
+    await ref.read(knowledgeItemNotifierProvider.notifier).create(KnowledgeItem(
+      id:         '',
+      userId:     uid,
+      projectId:  widget.project.id,
+      title:      'Entrevista de Ideia — ${widget.project.name}',
+      content:    content,
+      sourceType: 'manual',
+      status:     'analyzed',
+      niche:      niche,
+      createdAt:  DateTime.now(),
+      updatedAt:  DateTime.now(),
+    ));
 
     await ref.read(projectEventNotifierProvider(widget.project.id).notifier).emit(
       ProjectEventType.interviewCompleted,

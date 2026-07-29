@@ -13,12 +13,14 @@ import '../../../providers/ecosystem_intelligence_provider.dart';
 import '../../../providers/executive_relationship_provider.dart';
 import '../../../providers/knowledge_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
+import '../../../data/services/executive_context_orchestrator.dart';
 import '../../../providers/project_event_provider.dart';
 import '../../../providers/project_intelligence_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/context_copilot_widget.dart' show showCopilotChat;
 import '../../../shared/widgets/ive_detail_sheet.dart';
+import '../widgets/executive_timeline_widget.dart';
 import '../widgets/idea_interview_dialog.dart';
 
 class ProjectCommandCenterScreen extends ConsumerStatefulWidget {
@@ -296,6 +298,14 @@ class _ProjectCommandCenterScreenState
             AppConstants.routeKnowledge,
             extra: {'projectId': project.id},
           );
+        },
+        onCheckInCompleted: () {
+          ref.read(executiveContextOrchestratorProvider).onCheckInCompleted(
+            projectId:   project.id,
+            projectName: project.name,
+          );
+          ref.invalidate(projectIntelligenceProfilesProvider);
+          ref.invalidate(projectEventsProvider(project.id));
         },
       ),
     );
@@ -819,6 +829,7 @@ class _ProjectDetailSheet extends StatelessWidget {
     this.onAnalyze,
     this.onAnalyzeKnowledge,
     this.onViewKnowledge,
+    this.onCheckInCompleted,
   });
 
   final Project project;
@@ -830,6 +841,7 @@ class _ProjectDetailSheet extends StatelessWidget {
   final VoidCallback? onAnalyze;
   final VoidCallback? onAnalyzeKnowledge;
   final VoidCallback? onViewKnowledge;
+  final VoidCallback? onCheckInCompleted;
 
   Color _ecoScoreColor(int score) {
     if (score >= 70) return const Color(0xFF6BCB77);
@@ -1219,7 +1231,15 @@ class _ProjectDetailSheet extends StatelessWidget {
               const SizedBox(height: 8),
             ],
 
-            const Divider(color: Color(0xFF333355));
+            // Fase 11 — Executive Timeline
+            const Divider(color: Color(0xFF333355)),
+            const SizedBox(height: 12),
+            _sectionTitle('Timeline do Projeto'),
+            const SizedBox(height: 8),
+            ExecutiveTimelineWidget(projectId: project.id),
+            const SizedBox(height: 8),
+
+            const Divider(color: Color(0xFF333355)),
             const SizedBox(height: 12),
 
             // Action buttons
@@ -1698,49 +1718,71 @@ class _ProjectDetailSheet extends StatelessWidget {
 
   // ── Fase 11 — Check-In Banner ───────────────────────────────────────────────
 
-  Widget _checkInBanner(BuildContext context) => GestureDetector(
-        onTap: () => IveDetailSheet.show(
-          context,
-          title: 'Check-In do Projeto',
-          emoji: '🔄',
-          humanExplanation:
-              'Este projeto está sem atualizações há mais de 21 dias.\n\n'
-              'A IVE recomenda uma revisão para garantir que as análises e prioridades '
-              'estejam alinhadas com o estado atual do mercado.',
-          evidence: [
-            IveEvidence(emoji: '⏱️', label: 'Último update', value: '> 21 dias atrás'),
-            IveEvidence(emoji: '📋', label: 'Projeto',       value: project.name),
-          ],
-          suggestedActions: [
-            IveAction(emoji: '📊', label: 'Atualizar análise de mercado', description: 'Reanalize o nicho e concorrência'),
-            IveAction(emoji: '🎯', label: 'Revisar oportunidades', description: 'Verifique o Opportunity Lab'),
-            IveAction(emoji: '💰', label: 'Revisar monetização', description: 'Atualize o modelo de receita'),
-          ],
-          screenName: 'Projetos',
+  Widget _checkInBanner(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.orange.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.orange.withOpacity(0.3)),
         ),
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.orange.withOpacity(0.3)),
-            ),
-            child: Row(
-              children: [
-                const Text('🔄', style: TextStyle(fontSize: 16)),
-                const SizedBox(width: 8),
-                const Expanded(
-                  child: Text(
-                    'Check-In recomendado — projeto sem atualização há 21+ dias',
-                    style: TextStyle(color: Colors.orange, fontSize: 12),
-                  ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            GestureDetector(
+              onTap: () => IveDetailSheet.show(
+                context,
+                title: 'Check-In do Projeto',
+                emoji: '🔄',
+                humanExplanation:
+                    'Este projeto está sem atualizações há mais de 21 dias.\n\n'
+                    'A IVE recomenda uma revisão para garantir que as análises e prioridades '
+                    'estejam alinhadas com o estado atual do mercado.',
+                evidence: [
+                  IveEvidence(emoji: '⏱️', label: 'Último update', value: '> 21 dias atrás'),
+                  IveEvidence(emoji: '📋', label: 'Projeto',       value: project.name),
+                ],
+                suggestedActions: [
+                  IveAction(emoji: '📊', label: 'Atualizar análise de mercado', description: 'Reanalize o nicho e concorrência'),
+                  IveAction(emoji: '🎯', label: 'Revisar oportunidades', description: 'Verifique o Opportunity Lab'),
+                  IveAction(emoji: '💰', label: 'Revisar monetização', description: 'Atualize o modelo de receita'),
+                ],
+                screenName: 'Projetos',
+              ),
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: Row(
+                  children: [
+                    const Text('🔄', style: TextStyle(fontSize: 16)),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'Check-In recomendado — projeto sem atualização há 21+ dias',
+                        style: TextStyle(color: Colors.orange, fontSize: 12),
+                      ),
+                    ),
+                    const Icon(Icons.info_outline_rounded, color: Colors.orange, size: 14),
+                  ],
                 ),
-                const Icon(Icons.info_outline_rounded, color: Colors.orange, size: 14),
-              ],
+              ),
             ),
-          ),
+            if (onCheckInCompleted != null) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: onCheckInCompleted,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.orange,
+                    side: BorderSide(color: Colors.orange.withOpacity(0.5)),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                  ),
+                  icon: const Icon(Icons.check_circle_outline_rounded, size: 14),
+                  label: const Text('Marcar revisão concluída', style: TextStyle(fontSize: 12)),
+                ),
+              ),
+            ],
+          ],
         ),
       );
 

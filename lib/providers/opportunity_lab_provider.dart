@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/models/opportunity_lab_item.dart';
+import '../data/services/executive_context_orchestrator.dart';
 import '../data/services/opportunity_lab_service.dart';
 
 final opportunityLabServiceProvider =
@@ -49,11 +50,28 @@ class OpportunityLabNotifier
   Future<void> add(OpportunityLabItem item) async {
     await _svc.create(item);
     await load(projectId: _activeProjectId);
+    // Emite evento na timeline executiva se a oportunidade tem projectId
+    if (item.projectId != null && item.id.isNotEmpty) {
+      ExecutiveContextOrchestrator().onOpportunityCreated(
+        projectId:        item.projectId!,
+        opportunityId:    item.id,
+        opportunityTitle: item.title,
+      );
+    }
   }
 
   Future<void> approve(String id) async {
+    // Busca o item antes de atualizar para ter o projectId
+    final existing = (state.valueOrNull ?? []).where((i) => i.id == id).firstOrNull;
     await _svc.updateStatus(id, 'approved');
     await load(projectId: _activeProjectId);
+    if (existing != null && existing.projectId != null) {
+      ExecutiveContextOrchestrator().onDecisionTaken(
+        projectId:        existing.projectId!,
+        opportunityId:    id,
+        opportunityTitle: existing.title,
+      );
+    }
   }
 
   Future<void> delete(String id) async {

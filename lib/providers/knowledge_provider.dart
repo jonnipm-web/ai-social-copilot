@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/models/knowledge_analysis.dart';
 import '../data/models/knowledge_item.dart';
+import '../data/services/executive_context_orchestrator.dart';
 import '../data/services/knowledge_service.dart';
 
 final knowledgeServiceProvider =
@@ -46,6 +47,14 @@ class KnowledgeItemNotifier extends StateNotifier<AsyncValue<KnowledgeItem?>> {
     try {
       final result = await _service.create(item);
       state = AsyncValue.data(result);
+      // Emite evento na timeline executiva se o item tem projectId
+      if (result != null && result.projectId != null && result.id.isNotEmpty) {
+        ExecutiveContextOrchestrator().onDocumentAdded(
+          projectId:       result.projectId!,
+          knowledgeItemId: result.id,
+          documentTitle:   result.title,
+        );
+      }
       return result;
     } catch (e, st) {
       state = AsyncValue.error(e, st);

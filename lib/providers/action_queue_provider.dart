@@ -5,6 +5,7 @@ import '../data/models/action_queue_item.dart';
 import '../data/models/ive_event.dart';
 import '../data/models/opportunity_lab_item.dart';
 import '../data/services/action_queue_service.dart';
+import '../data/services/executive_context_orchestrator.dart';
 
 final actionQueueServiceProvider =
     Provider<ActionQueueService>((_) => ActionQueueService());
@@ -101,9 +102,19 @@ class ActionQueueNotifier
   }
 
   Future<void> complete(String id, {String title = 'Ação'}) async {
+    // Captura projectId antes de atualizar o status
+    final existing = (state.valueOrNull ?? []).where((i) => i.id == id).firstOrNull;
     try {
       await _svc.updateStatus(id, 'completed');
       await load(projectId: _activeProjectId);
+      // Emite evento na timeline executiva se a ação tem projectId
+      if (existing?.projectId != null) {
+        ExecutiveContextOrchestrator().onActionCompleted(
+          projectId:   existing!.projectId!,
+          actionId:    id,
+          actionTitle: title,
+        );
+      }
     } catch (e) {
       IveEventBus.instance.emit(
         IveEvent.actionMutationFailed(

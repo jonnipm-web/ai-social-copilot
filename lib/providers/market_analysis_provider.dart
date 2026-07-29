@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../data/models/market_analysis.dart';
 import '../data/models/competitor.dart';
 import '../data/models/gap_analysis.dart';
@@ -7,9 +8,9 @@ import '../data/models/niche_ranking.dart';
 import '../data/models/content_cluster.dart';
 import '../data/models/revenue_plan.dart';
 import '../data/models/opportunity_lab_item.dart';
+import '../data/services/executive_context_orchestrator.dart';
 import '../data/services/market_analysis_service.dart';
 import '../data/services/opportunity_lab_service.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 final marketAnalysisServiceProvider = Provider<MarketAnalysisService>(
   (_) => MarketAnalysisService(),
@@ -103,6 +104,15 @@ class MarketAnalysisNotifier extends StateNotifier<AsyncValue<MarketAnalysis?>> 
 
       // Auto-seed Opportunity Lab com as top ações da análise
       await _seedOpportunityLab(result, projectId: projectId);
+
+      // Emite evento na timeline executiva
+      if (projectId != null && result != null) {
+        ExecutiveContextOrchestrator().onAnalysisCompleted(
+          projectId:        projectId,
+          marketAnalysisId: result.id.isNotEmpty ? result.id : null,
+          opportunityScore: result.opportunityScore,
+        );
+      }
 
       return result;
     } catch (e, st) {

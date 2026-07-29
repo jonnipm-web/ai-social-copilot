@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/services/ive_event_bus.dart';
 import '../data/models/ive_event.dart';
 import '../data/models/project.dart';
+import '../data/services/executive_context_orchestrator.dart';
 import '../data/services/project_service.dart';
 import 'action_queue_provider.dart';
 import 'market_analysis_provider.dart';
@@ -54,6 +55,13 @@ class ProjectsNotifier extends AsyncNotifier<List<Project>> {
     IveEventBus.instance.emit(
       IveEvent.projectCreated(projectId: project.id, projectName: project.name),
     );
+
+    // Emite evento na timeline executiva persistida (não lança exceção)
+    ref.read(executiveContextOrchestratorProvider).onProjectCreated(
+      projectId:   project.id,
+      projectName: project.name,
+    );
+
     return project;
   }
 
@@ -75,6 +83,13 @@ class ProjectsNotifier extends AsyncNotifier<List<Project>> {
         projectName: project.name,
         status: status,
       ),
+    );
+
+    // Emite evento de mudança de estágio na timeline executiva
+    ref.read(executiveContextOrchestratorProvider).onStageChanged(
+      projectId:   id,
+      projectName: project.name,
+      newStatus:   status,
     );
   }
 
