@@ -32,8 +32,8 @@ class IveExplainButton extends StatelessWidget {
             Text(
               label ?? 'Entender',
               style: const TextStyle(
-                color:      Color(0xFF9B8FFF),
-                fontSize:   11,
+                color: Color(0xFF9B8FFF),
+                fontSize: 11,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -54,7 +54,8 @@ class IveExplainButton extends StatelessWidget {
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
       icon: const Text('💬', style: TextStyle(fontSize: 13)),
-      label: Text(label ?? 'Explicar com IVE', style: const TextStyle(fontSize: 12)),
+      label: Text(label ?? 'Explicar com IVE',
+          style: const TextStyle(fontSize: 12)),
       onPressed: () => _open(context),
     );
   }
@@ -62,7 +63,7 @@ class IveExplainButton extends StatelessWidget {
   void _open(BuildContext context) {
     showCopilotChat(
       context,
-      screenName:     screenName,
+      screenName: screenName,
       initialMessage: question,
     );
   }

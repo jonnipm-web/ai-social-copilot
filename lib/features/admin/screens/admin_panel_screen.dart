@@ -71,8 +71,10 @@ class _UsersTab extends ConsumerWidget {
 
     return usersAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error:   (e, _) => Center(child: Text('Erro: $e', style: const TextStyle(color: Colors.white54))),
-      data:    (users) {
+      error: (e, _) => Center(
+          child:
+              Text('Erro: $e', style: const TextStyle(color: Colors.white54))),
+      data: (users) {
         if (users.isEmpty) {
           return const Center(
             child: Text('Nenhum usuário encontrado.',
@@ -82,7 +84,8 @@ class _UsersTab extends ConsumerWidget {
         return ListView.separated(
           padding: const EdgeInsets.all(16),
           itemCount: users.length,
-          separatorBuilder: (_, __) => const Divider(color: Colors.white12, height: 1),
+          separatorBuilder: (_, __) =>
+              const Divider(color: Colors.white12, height: 1),
           itemBuilder: (context, i) => _UserTile(user: users[i], ref: ref),
         );
       },
@@ -92,7 +95,7 @@ class _UsersTab extends ConsumerWidget {
 
 class _UserTile extends StatelessWidget {
   const _UserTile({required this.user, required this.ref});
-  final Profile   user;
+  final Profile user;
   final WidgetRef ref;
 
   @override
@@ -131,17 +134,31 @@ class _UserTile extends StatelessWidget {
           }
         },
         itemBuilder: (_) => [
-          const PopupMenuItem(value: 'free',        child: Text('→ Free',         style: TextStyle(color: Colors.white70))),
-          const PopupMenuItem(value: 'pro',         child: Text('→ Pro',          style: TextStyle(color: Colors.white70))),
-          const PopupMenuItem(value: 'premium',     child: Text('→ Premium',      style: TextStyle(color: Colors.white70))),
-          const PopupMenuItem(value: 'beta_tester', child: Text('→ Beta Tester',  style: TextStyle(color: Colors.white70))),
-          const PopupMenuItem(value: 'admin',       child: Text('→ Admin',        style: TextStyle(color: Color(0xFFFFD700)))),
+          const PopupMenuItem(
+              value: 'free',
+              child: Text('→ Free', style: TextStyle(color: Colors.white70))),
+          const PopupMenuItem(
+              value: 'pro',
+              child: Text('→ Pro', style: TextStyle(color: Colors.white70))),
+          const PopupMenuItem(
+              value: 'premium',
+              child:
+                  Text('→ Premium', style: TextStyle(color: Colors.white70))),
+          const PopupMenuItem(
+              value: 'beta_tester',
+              child: Text('→ Beta Tester',
+                  style: TextStyle(color: Colors.white70))),
+          const PopupMenuItem(
+              value: 'admin',
+              child:
+                  Text('→ Admin', style: TextStyle(color: Color(0xFFFFD700)))),
           const PopupMenuDivider(),
           PopupMenuItem(
             value: 'toggle',
             child: Text(
               user.isActive ? 'Desativar' : 'Ativar',
-              style: TextStyle(color: user.isActive ? Colors.red : Colors.green),
+              style:
+                  TextStyle(color: user.isActive ? Colors.red : Colors.green),
             ),
           ),
         ],
@@ -151,11 +168,16 @@ class _UserTile extends StatelessWidget {
 
   Color _roleColor(String role) {
     switch (role) {
-      case 'admin':       return const Color(0xFFFFD700);
-      case 'premium':     return const Color(0xFFB44FE8);
-      case 'pro':         return const Color(0xFF6C63FF);
-      case 'beta_tester': return Colors.teal;
-      default:            return Colors.white38;
+      case 'admin':
+        return const Color(0xFFFFD700);
+      case 'premium':
+        return const Color(0xFFB44FE8);
+      case 'pro':
+        return const Color(0xFF6C63FF);
+      case 'beta_tester':
+        return Colors.teal;
+      default:
+        return Colors.white38;
     }
   }
 }
@@ -185,7 +207,8 @@ class _PersonasAdminTab extends ConsumerWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFFFD700),
                   foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   textStyle: const TextStyle(fontSize: 13),
                 ),
               ),
@@ -226,7 +249,8 @@ class _OverviewTab extends ConsumerWidget {
         children: [
           const Text(
             'Distribuição de Usuários',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+            style: TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
           ),
           const SizedBox(height: 16),
           ...['admin', 'premium', 'pro', 'beta_tester', 'free'].map((role) {
@@ -256,23 +280,30 @@ class _OverviewTab extends ConsumerWidget {
 }
 
 class _RoleBar extends StatelessWidget {
-  const _RoleBar({required this.role, required this.count, required this.total});
+  const _RoleBar(
+      {required this.role, required this.count, required this.total});
   final String role;
-  final int    count;
-  final int    total;
+  final int count;
+  final int total;
 
   @override
   Widget build(BuildContext context) {
     final labels = {
-      'admin': 'Admin', 'premium': 'Premium',
-      'pro': 'Pro', 'beta_tester': 'Beta', 'free': 'Free',
+      'admin': 'Admin',
+      'premium': 'Premium',
+      'pro': 'Pro',
+      'beta_tester': 'Beta',
+      'free': 'Free',
     };
     final colors = {
-      'admin': const Color(0xFFFFD700), 'premium': const Color(0xFFB44FE8),
-      'pro': const Color(0xFF6C63FF), 'beta_tester': Colors.teal, 'free': Colors.white38,
+      'admin': const Color(0xFFFFD700),
+      'premium': const Color(0xFFB44FE8),
+      'pro': const Color(0xFF6C63FF),
+      'beta_tester': Colors.teal,
+      'free': Colors.white38,
     };
     final color = colors[role] ?? Colors.white38;
-    final pct   = total > 0 ? count / total : 0.0;
+    final pct = total > 0 ? count / total : 0.0;
 
     return Row(
       children: [

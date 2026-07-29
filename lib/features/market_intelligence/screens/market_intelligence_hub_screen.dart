@@ -13,15 +13,15 @@ import '../../../providers/roi_metric_provider.dart';
 import '../../../shared/widgets/ive_detail_sheet.dart';
 
 // ── Colors ───────────────────────────────────────────────────────────────────
-const _kBg      = Color(0xFF0F0F1A);
-const _kCard    = Color(0xFF1A1A2E);
+const _kBg = Color(0xFF0F0F1A);
+const _kCard = Color(0xFF1A1A2E);
 const _kPrimary = Color(0xFF6C63FF);
-const _kGreen   = Color(0xFF4CAF50);
-const _kOrange  = Color(0xFFFF9800);
-const _kRed     = Color(0xFFF44336);
-const _kGold    = Color(0xFFFFD700);
-const _kCyan    = Color(0xFF00BCD4);
-const _kPink    = Color(0xFFE91E63);
+const _kGreen = Color(0xFF4CAF50);
+const _kOrange = Color(0xFFFF9800);
+const _kRed = Color(0xFFF44336);
+const _kGold = Color(0xFFFFD700);
+const _kCyan = Color(0xFF00BCD4);
+const _kPink = Color(0xFFE91E63);
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 Color _scoreColor(int score) {
@@ -68,7 +68,7 @@ class MarketIntelligenceHubScreen extends ConsumerStatefulWidget {
 
 class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
   bool _roiSaving = false;
-  bool _roiSaved  = false;
+  bool _roiSaved = false;
 
   Future<void> _saveToRoi(
     MarketAnalysis analysis,
@@ -81,9 +81,9 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
 
       if (analysis.opportunityScore > 0) {
         await svc.create(
-          metricType:  'opportunity_score',
+          metricType: 'opportunity_score',
           metricValue: analysis.opportunityScore.toDouble(),
-          notes:       'Market Intelligence: ${analysis.input}',
+          notes: 'Market Intelligence: ${analysis.input}',
         );
       }
 
@@ -93,28 +93,33 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
                 .reduce((a, b) => a + b) /
             opportunities.length;
         await svc.create(
-          metricType:  'avg_opportunity_score',
+          metricType: 'avg_opportunity_score',
           metricValue: avg,
-          notes:       '${opportunities.length} oportunidades — ${analysis.input}',
+          notes: '${opportunities.length} oportunidades — ${analysis.input}',
         );
       }
 
       final monthly = plan?.monthlyModerate ?? analysis.revenueMonthlyMax;
       if (monthly > 0) {
         await svc.create(
-          metricType:  'revenue_potential',
+          metricType: 'revenue_potential',
           metricValue: monthly,
-          notes:       'Market Intelligence: ${analysis.niche ?? analysis.input}',
+          notes: 'Market Intelligence: ${analysis.niche ?? analysis.input}',
         );
       }
 
       ref.invalidate(roiMetricsProvider);
-      if (mounted) setState(() { _roiSaved = true; _roiSaving = false; });
+      if (mounted)
+        setState(() {
+          _roiSaved = true;
+          _roiSaving = false;
+        });
     } catch (e) {
       if (mounted) {
         setState(() => _roiSaving = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao registrar: $e'), backgroundColor: _kRed),
+          SnackBar(
+              content: Text('Erro ao registrar: $e'), backgroundColor: _kRed),
         );
       }
     }
@@ -122,11 +127,16 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final analysisAsync      = ref.watch(marketAnalysisByIdProvider(widget.analysisId));
-    final competitorsAsync   = ref.watch(competitorsByAnalysisProvider(widget.analysisId));
-    final gapAsync           = ref.watch(gapAnalysisByAnalysisProvider(widget.analysisId));
-    final opportunitiesAsync = ref.watch(opportunitiesByAnalysisProvider(widget.analysisId));
-    final revenuePlanAsync   = ref.watch(revenuePlanByAnalysisProvider(widget.analysisId));
+    final analysisAsync =
+        ref.watch(marketAnalysisByIdProvider(widget.analysisId));
+    final competitorsAsync =
+        ref.watch(competitorsByAnalysisProvider(widget.analysisId));
+    final gapAsync =
+        ref.watch(gapAnalysisByAnalysisProvider(widget.analysisId));
+    final opportunitiesAsync =
+        ref.watch(opportunitiesByAnalysisProvider(widget.analysisId));
+    final revenuePlanAsync =
+        ref.watch(revenuePlanByAnalysisProvider(widget.analysisId));
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -134,14 +144,16 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
         backgroundColor: _kBg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          icon:
+              const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
           onPressed: () => context.canPop()
               ? context.pop()
               : context.go(AppConstants.routeMarketIntelligence),
         ),
         title: const Text(
           'Inteligência de Mercado',
-          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+          style: TextStyle(
+              color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
@@ -152,7 +164,8 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
               ref.invalidate(marketAnalysisByIdProvider(widget.analysisId));
               ref.invalidate(competitorsByAnalysisProvider(widget.analysisId));
               ref.invalidate(gapAnalysisByAnalysisProvider(widget.analysisId));
-              ref.invalidate(opportunitiesByAnalysisProvider(widget.analysisId));
+              ref.invalidate(
+                  opportunitiesByAnalysisProvider(widget.analysisId));
               ref.invalidate(revenuePlanByAnalysisProvider(widget.analysisId));
             },
           ),
@@ -181,12 +194,11 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
         data: (analysis) {
           final competitors = (competitorsAsync.value ?? <Competitor>[])
               .toList()
-              ..sort((a, b) => b.overallScore.compareTo(a.overallScore));
-          final gap   = gapAsync.value;
-          final opps  = (opportunitiesAsync.value ?? <Opportunity>[])
-              .toList()
-              ..sort((a, b) => b.opportunityScore.compareTo(a.opportunityScore));
-          final plan  = revenuePlanAsync.value;
+            ..sort((a, b) => b.overallScore.compareTo(a.overallScore));
+          final gap = gapAsync.value;
+          final opps = (opportunitiesAsync.value ?? <Opportunity>[]).toList()
+            ..sort((a, b) => b.opportunityScore.compareTo(a.opportunityScore));
+          final plan = revenuePlanAsync.value;
 
           return SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
@@ -202,7 +214,9 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Expanded(child: _RevenuePotentialCard(analysis: analysis, plan: plan)),
+                      Expanded(
+                          child: _RevenuePotentialCard(
+                              analysis: analysis, plan: plan)),
                       const SizedBox(width: 10),
                       Expanded(child: _InvestmentCard(analysis: analysis)),
                     ],
@@ -217,15 +231,15 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
                 // M3 — Competitor Discovery Visual
                 _CompetitorRankingCard(
                   competitors: competitors,
-                  isLoading:   competitorsAsync.isLoading,
-                  analysisId:  widget.analysisId,
+                  isLoading: competitorsAsync.isLoading,
+                  analysisId: widget.analysisId,
                 ),
                 const SizedBox(height: 12),
 
                 // M4 — Gap Summary
                 _GapSummaryCard(
-                  gap:        gap,
-                  isLoading:  gapAsync.isLoading,
+                  gap: gap,
+                  isLoading: gapAsync.isLoading,
                   analysisId: widget.analysisId,
                 ),
                 const SizedBox(height: 12),
@@ -233,8 +247,8 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
                 // M5 — Opportunities Panel
                 _OpportunitiesCard(
                   opportunities: opps,
-                  isLoading:     opportunitiesAsync.isLoading,
-                  analysisId:    widget.analysisId,
+                  isLoading: opportunitiesAsync.isLoading,
+                  analysisId: widget.analysisId,
                 ),
                 const SizedBox(height: 12),
 
@@ -244,11 +258,11 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
 
                 // M8 — ROI Tracker Integration
                 _RoiIntegrationCard(
-                  analysis:      analysis,
+                  analysis: analysis,
                   opportunities: opps,
-                  plan:          plan,
-                  isSaving:      _roiSaving,
-                  isSaved:       _roiSaved,
+                  plan: plan,
+                  isSaving: _roiSaving,
+                  isSaved: _roiSaved,
                   onSave: () => _saveToRoi(analysis, opps, plan),
                 ),
               ],
@@ -302,17 +316,32 @@ class _ExecScoreCard extends StatelessWidget {
             'Monetização (potencial de receita), Concorrência (nível de saturação) '
             'e Crescimento (tendência do mercado).',
         evidence: [
-          IveEvidence(emoji: '📊', label: 'Score total',    value: '$score/100'),
-          IveEvidence(emoji: '🔍', label: 'SEO',            value: '${analysis.scoreSeo}/100'),
-          IveEvidence(emoji: '💰', label: 'Monetização',    value: '${analysis.scoreMonetization}/100'),
-          IveEvidence(emoji: '🥊', label: 'Concorrência',   value: '${analysis.scoreCompetition}/100'),
-          IveEvidence(emoji: '📈', label: 'Crescimento',    value: '${analysis.scoreGrowth}/100'),
-          IveEvidence(emoji: '🎯', label: 'Nicho',          value: analysis.niche ?? analysis.input),
+          IveEvidence(emoji: '📊', label: 'Score total', value: '$score/100'),
+          IveEvidence(
+              emoji: '🔍', label: 'SEO', value: '${analysis.scoreSeo}/100'),
+          IveEvidence(
+              emoji: '💰',
+              label: 'Monetização',
+              value: '${analysis.scoreMonetization}/100'),
+          IveEvidence(
+              emoji: '🥊',
+              label: 'Concorrência',
+              value: '${analysis.scoreCompetition}/100'),
+          IveEvidence(
+              emoji: '📈',
+              label: 'Crescimento',
+              value: '${analysis.scoreGrowth}/100'),
+          IveEvidence(
+              emoji: '🎯',
+              label: 'Nicho',
+              value: analysis.niche ?? analysis.input),
         ],
         expandedData: {
-          'Fórmula': 'Média ponderada de SEO, Monetização, Concorrência e Crescimento',
+          'Fórmula':
+              'Média ponderada de SEO, Monetização, Concorrência e Crescimento',
           'Recomendação': _rec(),
-          'Receita estimada': '${_formatBRL(analysis.revenueMonthlyMin)}–${_formatBRL(analysis.revenueMonthlyMax)}/mês',
+          'Receita estimada':
+              '${_formatBRL(analysis.revenueMonthlyMin)}–${_formatBRL(analysis.revenueMonthlyMax)}/mês',
         },
         screenName: 'Market Intelligence',
       ),
@@ -350,22 +379,27 @@ class _ExecScoreCard extends StatelessWidget {
                     ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 130),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
                           color: _kPrimary.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: _kPrimary.withOpacity(0.35)),
+                          border:
+                              Border.all(color: _kPrimary.withOpacity(0.35)),
                         ),
                         child: Text(
                           analysis.niche!,
                           style: const TextStyle(
-                              color: _kPrimary, fontSize: 10, fontWeight: FontWeight.w600),
+                              color: _kPrimary,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ),
                   const SizedBox(width: 6),
-                  const Icon(Icons.info_outline_rounded, color: _kPrimary, size: 14),
+                  const Icon(Icons.info_outline_rounded,
+                      color: _kPrimary, size: 14),
                 ],
               ),
               const SizedBox(height: 14),
@@ -401,7 +435,9 @@ class _ExecScoreCard extends StatelessWidget {
                         child: Text(
                           analysis.input,
                           style: const TextStyle(
-                              color: Colors.white60, fontSize: 11, fontWeight: FontWeight.w500),
+                              color: Colors.white60,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500),
                           overflow: TextOverflow.ellipsis,
                           maxLines: 2,
                           textAlign: TextAlign.end,
@@ -409,7 +445,8 @@ class _ExecScoreCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: color.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(20),
@@ -417,7 +454,9 @@ class _ExecScoreCard extends StatelessWidget {
                         child: Text(
                           _rec(),
                           style: TextStyle(
-                              color: color, fontSize: 11, fontWeight: FontWeight.w700),
+                              color: color,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700),
                         ),
                       ),
                     ],
@@ -440,9 +479,18 @@ class _ExecScoreCard extends StatelessWidget {
                           'volume de buscas, palavras-chave disponíveis, '
                           'dificuldade de rankeamento e oportunidades de conteúdo.',
                       evidence: [
-                        IveEvidence(emoji: '🔍', label: 'Score SEO',    value: '${analysis.scoreSeo}/100'),
-                        IveEvidence(emoji: '🎯', label: 'Nicho',        value: analysis.niche ?? analysis.input),
-                        IveEvidence(emoji: '🏷️', label: 'Classificação', value: _scoreLabel(analysis.scoreSeo)),
+                        IveEvidence(
+                            emoji: '🔍',
+                            label: 'Score SEO',
+                            value: '${analysis.scoreSeo}/100'),
+                        IveEvidence(
+                            emoji: '🎯',
+                            label: 'Nicho',
+                            value: analysis.niche ?? analysis.input),
+                        IveEvidence(
+                            emoji: '🏷️',
+                            label: 'Classificação',
+                            value: _scoreLabel(analysis.scoreSeo)),
                       ],
                       screenName: 'Market Intelligence',
                     ),
@@ -461,9 +509,19 @@ class _ExecScoreCard extends StatelessWidget {
                           'modelos de monetização disponíveis, ticket médio, '
                           'disponibilidade do cliente para pagar e canais de receita.',
                       evidence: [
-                        IveEvidence(emoji: '💰', label: 'Score Monetização',  value: '${analysis.scoreMonetization}/100'),
-                        IveEvidence(emoji: '📈', label: 'Receita potencial',   value: '${_formatBRL(analysis.revenueMonthlyMin)}–${_formatBRL(analysis.revenueMonthlyMax)}/mês'),
-                        IveEvidence(emoji: '🏷️', label: 'Classificação',       value: _scoreLabel(analysis.scoreMonetization)),
+                        IveEvidence(
+                            emoji: '💰',
+                            label: 'Score Monetização',
+                            value: '${analysis.scoreMonetization}/100'),
+                        IveEvidence(
+                            emoji: '📈',
+                            label: 'Receita potencial',
+                            value:
+                                '${_formatBRL(analysis.revenueMonthlyMin)}–${_formatBRL(analysis.revenueMonthlyMax)}/mês'),
+                        IveEvidence(
+                            emoji: '🏷️',
+                            label: 'Classificação',
+                            value: _scoreLabel(analysis.scoreMonetization)),
                       ],
                       screenName: 'Market Intelligence',
                     ),
@@ -482,8 +540,14 @@ class _ExecScoreCard extends StatelessWidget {
                           'Score alto = menos concorrência = mais oportunidade. '
                           'Considera número de players, autoridade dos concorrentes e gaps de mercado.',
                       evidence: [
-                        IveEvidence(emoji: '🥊', label: 'Score Concorrência', value: '${analysis.scoreCompetition}/100'),
-                        IveEvidence(emoji: '🏷️', label: 'Classificação',      value: _scoreLabel(analysis.scoreCompetition)),
+                        IveEvidence(
+                            emoji: '🥊',
+                            label: 'Score Concorrência',
+                            value: '${analysis.scoreCompetition}/100'),
+                        IveEvidence(
+                            emoji: '🏷️',
+                            label: 'Classificação',
+                            value: _scoreLabel(analysis.scoreCompetition)),
                       ],
                       screenName: 'Market Intelligence',
                     ),
@@ -502,8 +566,14 @@ class _ExecScoreCard extends StatelessWidget {
                           'tendência de buscas, novos competidores entrando, '
                           'maturidade do nicho e sinais de crescimento recentes.',
                       evidence: [
-                        IveEvidence(emoji: '📈', label: 'Score Crescimento', value: '${analysis.scoreGrowth}/100'),
-                        IveEvidence(emoji: '🏷️', label: 'Classificação',     value: _scoreLabel(analysis.scoreGrowth)),
+                        IveEvidence(
+                            emoji: '📈',
+                            label: 'Score Crescimento',
+                            value: '${analysis.scoreGrowth}/100'),
+                        IveEvidence(
+                            emoji: '🏷️',
+                            label: 'Classificação',
+                            value: _scoreLabel(analysis.scoreGrowth)),
                       ],
                       screenName: 'Market Intelligence',
                     ),
@@ -519,7 +589,8 @@ class _ExecScoreCard extends StatelessWidget {
                 ),
                 child: Text(
                   _desc(),
-                  style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
+                  style: const TextStyle(
+                      color: Colors.white70, fontSize: 13, height: 1.5),
                 ),
               ),
             ],
@@ -543,7 +614,8 @@ class _ScoreBar extends StatelessWidget {
       child: Column(
         children: [
           Text('$score',
-              style: TextStyle(color: c, fontSize: 13, fontWeight: FontWeight.bold)),
+              style: TextStyle(
+                  color: c, fontSize: 13, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
@@ -579,10 +651,10 @@ class _RevenuePotentialCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final minVal  = plan?.monthlyConservative ?? analysis.revenueMonthlyMin;
-    final maxVal  = plan?.monthlyAggressive   ?? analysis.revenueMonthlyMax;
-    final months  = analysis.monthsToRevenue;
-    final conf    = plan != null ? 88 : analysis.revenueConfidence;
+    final minVal = plan?.monthlyConservative ?? analysis.revenueMonthlyMin;
+    final maxVal = plan?.monthlyAggressive ?? analysis.revenueMonthlyMax;
+    final months = analysis.monthsToRevenue;
+    final conf = plan != null ? 88 : analysis.revenueConfidence;
     final hasData = minVal > 0 || maxVal > 0;
 
     return GestureDetector(
@@ -592,32 +664,49 @@ class _RevenuePotentialCard extends StatelessWidget {
         emoji: '💰',
         humanExplanation: hasData
             ? 'Identifiquei um potencial de receita de '
-              '${_formatBRL(minVal)} a ${_formatBRL(maxVal)} por mês '
-              'para o nicho "${analysis.niche ?? analysis.input}".\n\n'
-              'Esta estimativa é baseada no modelo de monetização do nicho, '
-              'ticket médio identificado e tamanho do mercado. '
-              'Score de Monetização: ${analysis.scoreMonetization}/100. '
-              'Confiança: $conf%.'
+                '${_formatBRL(minVal)} a ${_formatBRL(maxVal)} por mês '
+                'para o nicho "${analysis.niche ?? analysis.input}".\n\n'
+                'Esta estimativa é baseada no modelo de monetização do nicho, '
+                'ticket médio identificado e tamanho do mercado. '
+                'Score de Monetização: ${analysis.scoreMonetization}/100. '
+                'Confiança: $conf%.'
             : 'Ainda não há dados suficientes para estimar o Revenue Potential. '
-              'Execute o Revenue Planner para obter estimativas baseadas '
-              'em modelos de monetização específicos do nicho.',
+                'Execute o Revenue Planner para obter estimativas baseadas '
+                'em modelos de monetização específicos do nicho.',
         evidence: <IveEvidence>[
-          IveEvidence(emoji: '💰', label: 'Receita mínima',    value: _formatBRL(minVal)),
-          IveEvidence(emoji: '🚀', label: 'Receita máxima',    value: _formatBRL(maxVal)),
-          IveEvidence(emoji: '⏱️', label: 'Prazo estimado',    value: '$months meses'),
-          IveEvidence(emoji: '📊', label: 'Confiança',         value: '$conf%'),
-          IveEvidence(emoji: '💡', label: 'Score Monetização', value: '${analysis.scoreMonetization}/100'),
+          IveEvidence(
+              emoji: '💰', label: 'Receita mínima', value: _formatBRL(minVal)),
+          IveEvidence(
+              emoji: '🚀', label: 'Receita máxima', value: _formatBRL(maxVal)),
+          IveEvidence(
+              emoji: '⏱️', label: 'Prazo estimado', value: '$months meses'),
+          IveEvidence(emoji: '📊', label: 'Confiança', value: '$conf%'),
+          IveEvidence(
+              emoji: '💡',
+              label: 'Score Monetização',
+              value: '${analysis.scoreMonetization}/100'),
         ],
-        expandedData: hasData ? {
-          'Estimativa conservadora': _formatBRL(minVal),
-          'Estimativa agressiva':    _formatBRL(maxVal),
-          'Prazo para receita':      '$months meses',
-          'Base de cálculo':         'Score de monetização × TAM estimado do nicho',
-          'Nível de confiança':      '$conf%',
-        } : {},
+        expandedData: hasData
+            ? {
+                'Estimativa conservadora': _formatBRL(minVal),
+                'Estimativa agressiva': _formatBRL(maxVal),
+                'Prazo para receita': '$months meses',
+                'Base de cálculo':
+                    'Score de monetização × TAM estimado do nicho',
+                'Nível de confiança': '$conf%',
+              }
+            : {},
         suggestedActions: <IveAction>[
-          IveAction(emoji: '📊', label: 'Revenue Planner', description: 'Execute o Revenue Planner para refinar estimativas detalhadas'),
-          IveAction(emoji: '📄', label: 'Documentar premissas', description: 'Adicione benchmarks de receita do nicho à biblioteca'),
+          IveAction(
+              emoji: '📊',
+              label: 'Revenue Planner',
+              description:
+                  'Execute o Revenue Planner para refinar estimativas detalhadas'),
+          IveAction(
+              emoji: '📄',
+              label: 'Documentar premissas',
+              description:
+                  'Adicione benchmarks de receita do nicho à biblioteca'),
         ],
         screenName: 'Market Intelligence',
       ),
@@ -635,26 +724,32 @@ class _RevenuePotentialCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.attach_money_rounded, color: _kCyan, size: 18),
+                  const Icon(Icons.attach_money_rounded,
+                      color: _kCyan, size: 18),
                   const SizedBox(width: 6),
                   const Flexible(
                     child: Text(
                       'Revenue Potential',
                       style: TextStyle(
-                          color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
+                          color: Colors.white70,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600),
                     ),
                   ),
                   const Spacer(),
-                  const Icon(Icons.info_outline_rounded, color: _kCyan, size: 14),
+                  const Icon(Icons.info_outline_rounded,
+                      color: _kCyan, size: 14),
                 ],
               ),
               const SizedBox(height: 14),
               if (!hasData) ...[
-                const Icon(Icons.bar_chart_rounded, color: Colors.white24, size: 28),
+                const Icon(Icons.bar_chart_rounded,
+                    color: Colors.white24, size: 28),
                 const SizedBox(height: 6),
                 const Text(
                   'Execute o Revenue Planner para estimativas detalhadas.',
-                  style: TextStyle(color: Colors.white38, fontSize: 11, height: 1.4),
+                  style: TextStyle(
+                      color: Colors.white38, fontSize: 11, height: 1.4),
                 ),
               ] else ...[
                 Text(
@@ -662,19 +757,29 @@ class _RevenuePotentialCard extends StatelessWidget {
                       ? '${_formatBRL(minVal)} – ${_formatBRL(maxVal)}/mês'
                       : '${_formatBRL(maxVal)}/mês',
                   style: const TextStyle(
-                      color: _kCyan, fontSize: 14, fontWeight: FontWeight.bold, height: 1.2),
+                      color: _kCyan,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      height: 1.2),
                 ),
                 if (plan != null) ...[
                   const SizedBox(height: 4),
                   Text(
                     'Anual: ${_formatBRL(plan!.annualModerate)}',
-                    style: TextStyle(color: _kCyan.withOpacity(0.6), fontSize: 11),
+                    style:
+                        TextStyle(color: _kCyan.withOpacity(0.6), fontSize: 11),
                   ),
                 ],
                 const SizedBox(height: 12),
-                _InfoRow2(icon: Icons.timer_rounded,    label: 'Prazo',     value: '$months meses'),
+                _InfoRow2(
+                    icon: Icons.timer_rounded,
+                    label: 'Prazo',
+                    value: '$months meses'),
                 const SizedBox(height: 6),
-                _InfoRow2(icon: Icons.verified_rounded, label: 'Confiança', value: '$conf%'),
+                _InfoRow2(
+                    icon: Icons.verified_rounded,
+                    label: 'Confiança',
+                    value: '$conf%'),
               ],
             ],
           ),
@@ -693,16 +798,24 @@ class _InvestmentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final rec   = analysis.investmentRecommendation;
+    final rec = analysis.investmentRecommendation;
     final score = analysis.investmentScore;
-    final just  = analysis.investmentJustification;
-    final color = rec == 'SIM' ? _kGreen : rec == 'NÃO' ? _kRed : _kOrange;
-    final icon  = rec == 'SIM'
+    final just = analysis.investmentJustification;
+    final color = rec == 'SIM'
+        ? _kGreen
+        : rec == 'NÃO'
+            ? _kRed
+            : _kOrange;
+    final icon = rec == 'SIM'
         ? Icons.thumb_up_alt_rounded
         : rec == 'NÃO'
             ? Icons.thumb_down_alt_rounded
             : Icons.thumbs_up_down_rounded;
-    final recEmoji = rec == 'SIM' ? '✅' : rec == 'NÃO' ? '❌' : '⚠️';
+    final recEmoji = rec == 'SIM'
+        ? '✅'
+        : rec == 'NÃO'
+            ? '❌'
+            : '⚠️';
 
     return GestureDetector(
       onTap: () => IveDetailSheet.show(
@@ -714,22 +827,49 @@ class _InvestmentCard extends StatelessWidget {
             '${just.isNotEmpty ? just : "Análise baseada nos scores de oportunidade, monetização e crescimento."}\n\n'
             '${rec == "SIM" ? "O mercado apresenta boa oportunidade: monetização forte, concorrência administrável e crescimento sólido." : rec == "NÃO" ? "Os dados indicam que o risco supera o retorno esperado no momento." : "Há oportunidade, mas existem condições que precisam ser atendidas antes de investir."}',
         evidence: <IveEvidence>[
-          IveEvidence(emoji: recEmoji, label: 'Recomendação',    value: rec),
-          IveEvidence(emoji: '📊',     label: 'Investment Score', value: '$score/100'),
-          IveEvidence(emoji: '💰',     label: 'Monetização',      value: '${analysis.scoreMonetization}/100'),
-          IveEvidence(emoji: '📈',     label: 'Crescimento',      value: '${analysis.scoreGrowth}/100'),
-          IveEvidence(emoji: '🥊',     label: 'Concorrência',     value: '${analysis.scoreCompetition}/100'),
+          IveEvidence(emoji: recEmoji, label: 'Recomendação', value: rec),
+          IveEvidence(
+              emoji: '📊', label: 'Investment Score', value: '$score/100'),
+          IveEvidence(
+              emoji: '💰',
+              label: 'Monetização',
+              value: '${analysis.scoreMonetization}/100'),
+          IveEvidence(
+              emoji: '📈',
+              label: 'Crescimento',
+              value: '${analysis.scoreGrowth}/100'),
+          IveEvidence(
+              emoji: '🥊',
+              label: 'Concorrência',
+              value: '${analysis.scoreCompetition}/100'),
         ],
         expandedData: {
-          'Cenário Otimista':     rec == 'SIM' ? 'Mercado capturado, receita recorrente em prazo curto' : 'Condições melhoram, oportunidade surge',
-          'Cenário Conservador':  'Crescimento moderado, retorno em médio prazo',
-          'Cenário Pessimista':   rec == 'NÃO' ? 'Baixo retorno, esforço elevado sem retorno claro' : 'Condições não se concretizam, postergação necessária',
+          'Cenário Otimista': rec == 'SIM'
+              ? 'Mercado capturado, receita recorrente em prazo curto'
+              : 'Condições melhoram, oportunidade surge',
+          'Cenário Conservador': 'Crescimento moderado, retorno em médio prazo',
+          'Cenário Pessimista': rec == 'NÃO'
+              ? 'Baixo retorno, esforço elevado sem retorno claro'
+              : 'Condições não se concretizam, postergação necessária',
           'Score de investimento': '$score/100',
         },
         suggestedActions: <IveAction>[
-          if (rec == 'SIM') IveAction(emoji: '🚀', label: 'Priorizar este mercado', description: 'Adicione ao portfolio e crie projeto focado neste nicho'),
-          if (rec == 'CONDICIONAL') IveAction(emoji: '🔍', label: 'Avaliar condições', description: 'Identifique quais premissas precisam ser validadas antes de investir'),
-          IveAction(emoji: '📊', label: 'Ver análise completa', description: 'Explore todos os scores no Executive Score Card'),
+          if (rec == 'SIM')
+            IveAction(
+                emoji: '🚀',
+                label: 'Priorizar este mercado',
+                description:
+                    'Adicione ao portfolio e crie projeto focado neste nicho'),
+          if (rec == 'CONDICIONAL')
+            IveAction(
+                emoji: '🔍',
+                label: 'Avaliar condições',
+                description:
+                    'Identifique quais premissas precisam ser validadas antes de investir'),
+          IveAction(
+              emoji: '📊',
+              label: 'Ver análise completa',
+              description: 'Explore todos os scores no Executive Score Card'),
         ],
         screenName: 'Market Intelligence',
       ),
@@ -751,10 +891,13 @@ class _InvestmentCard extends StatelessWidget {
                     child: Text(
                       'Vale a Pena Investir?',
                       style: const TextStyle(
-                          color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
+                          color: Colors.white70,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600),
                     ),
                   ),
-                  Icon(Icons.info_outline_rounded, color: color.withOpacity(0.7), size: 14),
+                  Icon(Icons.info_outline_rounded,
+                      color: color.withOpacity(0.7), size: 14),
                 ],
               ),
               const SizedBox(height: 14),
@@ -765,13 +908,16 @@ class _InvestmentCard extends StatelessWidget {
                   Text(
                     rec,
                     style: TextStyle(
-                        color: color, fontSize: 22, fontWeight: FontWeight.w900),
+                        color: color,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900),
                   ),
                 ],
               ),
               const SizedBox(height: 4),
               Text('Score: $score/100',
-                  style: TextStyle(color: color.withOpacity(0.7), fontSize: 11)),
+                  style:
+                      TextStyle(color: color.withOpacity(0.7), fontSize: 11)),
               if (just.isNotEmpty) ...[
                 const SizedBox(height: 10),
                 Text(
@@ -821,25 +967,28 @@ class _PriorityActionsCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.rocket_launch_rounded, color: _kPrimary, size: 18),
+              const Icon(Icons.rocket_launch_rounded,
+                  color: _kPrimary, size: 18),
               const SizedBox(width: 8),
               const Flexible(
                 child: Text(
                   'Próximas Ações Recomendadas',
                   style: TextStyle(
-                      color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 16),
           ...actions.asMap().entries.map((e) {
-            final action   = e.value;
-            final name     = action['action']       as String? ?? '';
-            final impact   = action['impact']       as String? ?? 'Médio';
-            final effort   = action['effort']       as String? ?? 'Médio';
-            final roi      = action['roi_expected'] as String? ?? '';
-            final priority = action['priority']     as int?    ?? (e.key + 1);
+            final action = e.value;
+            final name = action['action'] as String? ?? '';
+            final impact = action['impact'] as String? ?? 'Médio';
+            final effort = action['effort'] as String? ?? 'Médio';
+            final roi = action['roi_expected'] as String? ?? '';
+            final priority = action['priority'] as int? ?? (e.key + 1);
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 14),
@@ -858,7 +1007,9 @@ class _PriorityActionsCard extends StatelessWidget {
                     child: Text(
                       '$priority',
                       style: const TextStyle(
-                          color: _kPrimary, fontSize: 12, fontWeight: FontWeight.bold),
+                          color: _kPrimary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -879,7 +1030,7 @@ class _PriorityActionsCard extends StatelessWidget {
                           runSpacing: 4,
                           children: [
                             _Badge('Impacto: $impact', _impactColor(impact)),
-                            _Badge('Esforço: $effort',  Colors.white38),
+                            _Badge('Esforço: $effort', Colors.white38),
                             if (roi.isNotEmpty) _Badge('ROI: $roi', _kCyan),
                           ],
                         ),
@@ -911,9 +1062,9 @@ class _CompetitorRankingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final top   = competitors.take(5).toList();
-    final route = _routeFor(
-        AppConstants.routeMarketIntelligenceCompetitors, analysisId);
+    final top = competitors.take(5).toList();
+    final route =
+        _routeFor(AppConstants.routeMarketIntelligenceCompetitors, analysisId);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -933,7 +1084,9 @@ class _CompetitorRankingCard extends StatelessWidget {
                 child: Text(
                   'Principais Concorrentes',
                   style: TextStyle(
-                      color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold),
                 ),
               ),
               TextButton(
@@ -951,15 +1104,16 @@ class _CompetitorRankingCard extends StatelessWidget {
             const Center(
               child: Padding(
                 padding: EdgeInsets.all(20),
-                child: CircularProgressIndicator(color: _kPrimary, strokeWidth: 2),
+                child:
+                    CircularProgressIndicator(color: _kPrimary, strokeWidth: 2),
               ),
             )
           else if (top.isEmpty)
             _EmptyState(
-              icon:        Icons.manage_search_rounded,
-              message:     'Concorrentes ainda não descobertos.',
+              icon: Icons.manage_search_rounded,
+              message: 'Concorrentes ainda não descobertos.',
               buttonLabel: 'Descobrir Concorrentes',
-              onTap:       () => context.push(route),
+              onTap: () => context.push(route),
             )
           else ...[
             const Row(
@@ -973,7 +1127,7 @@ class _CompetitorRankingCard extends StatelessWidget {
             const Divider(color: Colors.white12, height: 14),
             ...top.asMap().entries.map((e) {
               final idx = e.key;
-              final c   = e.value;
+              final c = e.value;
               return Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Row(
@@ -1037,13 +1191,16 @@ class _CompetitorRankingCard extends StatelessWidget {
             const SizedBox(height: 6),
             OutlinedButton.icon(
               onPressed: () => context.push(route),
-              icon:  const Icon(Icons.search_rounded, size: 14),
-              label: const Text('Analisar Concorrente', style: TextStyle(fontSize: 12)),
+              icon: const Icon(Icons.search_rounded, size: 14),
+              label: const Text('Analisar Concorrente',
+                  style: TextStyle(fontSize: 12)),
               style: OutlinedButton.styleFrom(
                 foregroundColor: _kOrange,
                 side: const BorderSide(color: _kOrange, width: 0.8),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
               ),
             ),
           ],
@@ -1089,7 +1246,9 @@ class _GapSummaryCard extends StatelessWidget {
                 child: Text(
                   'Resumo dos Gaps',
                   style: TextStyle(
-                      color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold),
                 ),
               ),
               TextButton(
@@ -1107,22 +1266,27 @@ class _GapSummaryCard extends StatelessWidget {
             const Center(
               child: Padding(
                 padding: EdgeInsets.all(20),
-                child: CircularProgressIndicator(color: _kPrimary, strokeWidth: 2),
+                child:
+                    CircularProgressIndicator(color: _kPrimary, strokeWidth: 2),
               ),
             )
           else if (gap == null)
             _EmptyState(
-              icon:        Icons.analytics_outlined,
-              message:     'Gap Analysis ainda não executada.',
+              icon: Icons.analytics_outlined,
+              message: 'Gap Analysis ainda não executada.',
               buttonLabel: 'Executar Gap Analysis',
-              onTap:       () => context.push(route),
+              onTap: () => context.push(route),
             )
           else ...[
-            _GapRow(Icons.search_rounded,         'SEO Gap',           gap!.seoGaps,          _kCyan),
-            _GapRow(Icons.article_rounded,        'Content Gap',       gap!.contentGaps,      _kOrange),
-            _GapRow(Icons.verified_user_rounded,  'Authority Gap',     gap!.authorityGaps,    _kPrimary),
-            _GapRow(Icons.attach_money_rounded,   'Monetization Gap',  gap!.monetizationGaps, _kGreen),
-            _GapRow(Icons.inventory_2_rounded,    'Product Gap',       gap!.productGaps,      _kGold),
+            _GapRow(Icons.search_rounded, 'SEO Gap', gap!.seoGaps, _kCyan),
+            _GapRow(Icons.article_rounded, 'Content Gap', gap!.contentGaps,
+                _kOrange),
+            _GapRow(Icons.verified_user_rounded, 'Authority Gap',
+                gap!.authorityGaps, _kPrimary),
+            _GapRow(Icons.attach_money_rounded, 'Monetization Gap',
+                gap!.monetizationGaps, _kGreen),
+            _GapRow(Icons.inventory_2_rounded, 'Product Gap', gap!.productGaps,
+                _kGold),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -1172,7 +1336,8 @@ class _GapRow extends StatelessWidget {
                             fontWeight: FontWeight.w600)),
                     const SizedBox(width: 6),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 1),
                       decoration: BoxDecoration(
                         color: color.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(10),
@@ -1180,7 +1345,9 @@ class _GapRow extends StatelessWidget {
                       child: Text(
                         '${items.length}',
                         style: TextStyle(
-                            color: color, fontSize: 10, fontWeight: FontWeight.bold),
+                            color: color,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold),
                       ),
                     ),
                   ],
@@ -1190,7 +1357,8 @@ class _GapRow extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 2),
                     child: Text(
                       items.first,
-                      style: const TextStyle(color: Colors.white54, fontSize: 11),
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 11),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -1219,7 +1387,7 @@ class _OpportunitiesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final top   = opportunities.take(3).toList();
+    final top = opportunities.take(3).toList();
     final route = _routeFor(
         AppConstants.routeMarketIntelligenceOpportunities, analysisId);
 
@@ -1241,7 +1409,9 @@ class _OpportunitiesCard extends StatelessWidget {
                 child: Text(
                   'Oportunidades Detectadas',
                   style: TextStyle(
-                      color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold),
                 ),
               ),
               TextButton(
@@ -1259,15 +1429,16 @@ class _OpportunitiesCard extends StatelessWidget {
             const Center(
               child: Padding(
                 padding: EdgeInsets.all(20),
-                child: CircularProgressIndicator(color: _kPrimary, strokeWidth: 2),
+                child:
+                    CircularProgressIndicator(color: _kPrimary, strokeWidth: 2),
               ),
             )
           else if (top.isEmpty)
             _EmptyState(
-              icon:        Icons.lightbulb_outline_rounded,
-              message:     'Oportunidades ainda não mapeadas.',
+              icon: Icons.lightbulb_outline_rounded,
+              message: 'Oportunidades ainda não mapeadas.',
               buttonLabel: 'Descobrir Oportunidades',
-              onTap:       () => context.push(route),
+              onTap: () => context.push(route),
             )
           else
             ...top.map((o) {
@@ -1325,7 +1496,8 @@ class _OpportunitiesCard extends StatelessWidget {
                         spacing: 6,
                         runSpacing: 4,
                         children: [
-                          if (o.timeframe.isNotEmpty) _Badge(o.timeframe, _kCyan),
+                          if (o.timeframe.isNotEmpty)
+                            _Badge(o.timeframe, _kCyan),
                           if (o.effort.isNotEmpty)
                             _Badge('Esforço: ${o.effort}', Colors.white38),
                           _Badge(
@@ -1358,14 +1530,29 @@ class _ModuleNavGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final id   = analysisId;
+    final id = analysisId;
     final mods = [
-      _Mod(Icons.people_alt_rounded,   'Concorrentes',    _routeFor(AppConstants.routeMarketIntelligenceCompetitors,  id), _kOrange),
-      _Mod(Icons.find_in_page_rounded, 'Gap Analysis',    _routeFor(AppConstants.routeMarketIntelligenceGaps,         id), _kGold),
-      _Mod(Icons.lightbulb_rounded,    'Oportunidades',   _routeFor(AppConstants.routeMarketIntelligenceOpportunities,id), _kGreen),
-      _Mod(Icons.trending_up_rounded,  'Nichos',          _routeFor(AppConstants.routeMarketIntelligenceNiches,       id), _kCyan),
-      _Mod(Icons.account_tree_rounded, 'Content Cluster', _routeFor(AppConstants.routeMarketIntelligenceCluster,      id), _kPrimary),
-      _Mod(Icons.bar_chart_rounded,    'Revenue Planner', _routeFor(AppConstants.routeMarketIntelligenceRevenue,      id), _kPink),
+      _Mod(
+          Icons.people_alt_rounded,
+          'Concorrentes',
+          _routeFor(AppConstants.routeMarketIntelligenceCompetitors, id),
+          _kOrange),
+      _Mod(Icons.find_in_page_rounded, 'Gap Analysis',
+          _routeFor(AppConstants.routeMarketIntelligenceGaps, id), _kGold),
+      _Mod(
+          Icons.lightbulb_rounded,
+          'Oportunidades',
+          _routeFor(AppConstants.routeMarketIntelligenceOpportunities, id),
+          _kGreen),
+      _Mod(Icons.trending_up_rounded, 'Nichos',
+          _routeFor(AppConstants.routeMarketIntelligenceNiches, id), _kCyan),
+      _Mod(
+          Icons.account_tree_rounded,
+          'Content Cluster',
+          _routeFor(AppConstants.routeMarketIntelligenceCluster, id),
+          _kPrimary),
+      _Mod(Icons.bar_chart_rounded, 'Revenue Planner',
+          _routeFor(AppConstants.routeMarketIntelligenceRevenue, id), _kPink),
     ];
 
     return Column(
@@ -1381,15 +1568,15 @@ class _ModuleNavGrid extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         GridView.count(
-          crossAxisCount:   3,
+          crossAxisCount: 3,
           crossAxisSpacing: 8,
-          mainAxisSpacing:  8,
-          shrinkWrap:       true,
+          mainAxisSpacing: 8,
+          shrinkWrap: true,
           childAspectRatio: 1.55,
           physics: const NeverScrollableScrollPhysics(),
           children: mods
               .map((m) => _CompactTile(
-                    icon:  m.icon,
+                    icon: m.icon,
                     label: m.label,
                     color: m.color,
                     onTap: () => context.push(m.route),
@@ -1467,9 +1654,7 @@ class _RoiIntegrationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final avgScore = opportunities.isEmpty
         ? 0.0
-        : opportunities
-                .map((o) => o.opportunityScore)
-                .reduce((a, b) => a + b) /
+        : opportunities.map((o) => o.opportunityScore).reduce((a, b) => a + b) /
             opportunities.length;
     final revenue = plan?.monthlyModerate ?? analysis.revenueMonthlyMax;
 
@@ -1490,7 +1675,9 @@ class _RoiIntegrationCard extends StatelessWidget {
               const Text(
                 'ROI Tracker',
                 style: TextStyle(
-                    color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -1527,7 +1714,9 @@ class _RoiIntegrationCard extends StatelessWidget {
                   Text(
                     'Dados registrados no ROI Tracker!',
                     style: TextStyle(
-                        color: _kGreen, fontSize: 13, fontWeight: FontWeight.w600),
+                        color: _kGreen,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -1590,7 +1779,9 @@ class _InfoRow2 extends StatelessWidget {
         Flexible(
           child: Text(value,
               style: const TextStyle(
-                  color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w600)),
+                  color: Colors.white70,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600)),
         ),
       ],
     );
@@ -1617,7 +1808,9 @@ class _ScoreTxt extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text('$score',
         style: TextStyle(
-            color: _scoreColor(score), fontSize: 12, fontWeight: FontWeight.w600));
+            color: _scoreColor(score),
+            fontSize: 12,
+            fontWeight: FontWeight.w600));
   }
 }
 

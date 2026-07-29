@@ -12,15 +12,15 @@ import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/ive_detail_sheet.dart';
 
-const _kBg      = Color(0xFF0A0A14);
-const _kCard    = Color(0xFF12121E);
-const _kBorder  = Color(0xFF1E1E30);
+const _kBg = Color(0xFF0A0A14);
+const _kCard = Color(0xFF12121E);
+const _kBorder = Color(0xFF1E1E30);
 const _kPrimary = Color(0xFF7C4DFF);
-const _kGreen   = Color(0xFF00E676);
-const _kOrange  = Color(0xFFFF9100);
-const _kRed     = Color(0xFFFF1744);
-const _kGold    = Color(0xFFFFD700);
-const _kCyan    = Color(0xFF00E5FF);
+const _kGreen = Color(0xFF00E676);
+const _kOrange = Color(0xFFFF9100);
+const _kRed = Color(0xFFFF1744);
+const _kGold = Color(0xFFFFD700);
+const _kCyan = Color(0xFF00E5FF);
 
 // ════════════════════════════════════════════════════════════════════════════
 // Weekly Executive Briefing Screen — Módulo 7
@@ -39,12 +39,14 @@ class WeeklyBriefingScreen extends ConsumerWidget {
         backgroundColor: _kBg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-          onPressed: () =>
-              context.canPop() ? context.pop() : context.go(AppConstants.routeEcosystem),
+          icon:
+              const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          onPressed: () => context.canPop()
+              ? context.pop()
+              : context.go(AppConstants.routeEcosystem),
         ),
         title: const Text('Briefing Executivo Semanal',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: Colors.white54),
@@ -62,10 +64,12 @@ class WeeklyBriefingScreen extends ConsumerWidget {
       body: SafeArea(
         top: false,
         child: briefingAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator(color: _kPrimary)),
+          loading: () =>
+              const Center(child: CircularProgressIndicator(color: _kPrimary)),
           error: (e, _) => Center(
-            child: Text('Erro ao gerar briefing: $e',
-              style: const TextStyle(color: _kRed), textAlign: TextAlign.center)),
+              child: Text('Erro ao gerar briefing: $e',
+                  style: const TextStyle(color: _kRed),
+                  textAlign: TextAlign.center)),
           data: (b) => _BriefingBody(briefing: b),
         ),
       ),
@@ -79,9 +83,9 @@ class _BriefingBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final day   = briefing.generatedAt.day.toString().padLeft(2, '0');
+    final day = briefing.generatedAt.day.toString().padLeft(2, '0');
     final month = briefing.generatedAt.month.toString().padLeft(2, '0');
-    final year  = briefing.generatedAt.year;
+    final year = briefing.generatedAt.year;
     final bottomPad = MediaQuery.of(context).padding.bottom;
 
     return LayoutBuilder(
@@ -89,24 +93,43 @@ class _BriefingBody extends StatelessWidget {
         final isDesktop = constraints.maxWidth >= 1024;
         final hPad = isDesktop ? 32.0 : 16.0;
 
-        final header = _Header(briefing: briefing, dateStr: '$day/$month/$year');
+        final header =
+            _Header(briefing: briefing, dateStr: '$day/$month/$year');
         final dataOrigin = _DataOriginCard(briefing: briefing);
         final summary = _SummaryCard(text: briefing.executiveSummary);
 
         final mainSections = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _Section(title: '🔄 O que mudou',        color: _kCyan,   items: briefing.whatChanged),
+            _Section(
+                title: '🔄 O que mudou',
+                color: _kCyan,
+                items: briefing.whatChanged),
             const SizedBox(height: 12),
-            _Section(title: '📈 O que cresceu',       color: _kGreen,  items: briefing.whatGrew),
+            _Section(
+                title: '📈 O que cresceu',
+                color: _kGreen,
+                items: briefing.whatGrew),
             const SizedBox(height: 12),
-            _Section(title: '📉 O que piorou',        color: _kRed,    items: briefing.whatDeclined),
+            _Section(
+                title: '📉 O que piorou',
+                color: _kRed,
+                items: briefing.whatDeclined),
             const SizedBox(height: 12),
-            _Section(title: '🎯 O que priorizar',     color: _kGold,   items: briefing.topPriorities),
+            _Section(
+                title: '🎯 O que priorizar',
+                color: _kGold,
+                items: briefing.topPriorities),
             const SizedBox(height: 12),
-            _Section(title: '⏸️ O que pausar',        color: _kOrange, items: briefing.toPause),
+            _Section(
+                title: '⏸️ O que pausar',
+                color: _kOrange,
+                items: briefing.toPause),
             const SizedBox(height: 12),
-            _Section(title: '💡 Oportunidades novas', color: _kCyan,   items: briefing.newOpportunities),
+            _Section(
+                title: '💡 Oportunidades novas',
+                color: _kCyan,
+                items: briefing.newOpportunities),
           ],
         );
 
@@ -115,7 +138,7 @@ class _BriefingBody extends StatelessWidget {
           children: [
             _HealthSideCard(briefing: briefing),
             const SizedBox(height: 12),
-            _Section(title: '⚠️ Riscos',              color: _kRed,    items: briefing.risks),
+            _Section(title: '⚠️ Riscos', color: _kRed, items: briefing.risks),
           ],
         );
 
@@ -134,7 +157,10 @@ class _BriefingBody extends StatelessWidget {
             children: [
               mainSections,
               const SizedBox(height: 12),
-              _Section(title: '⚠️ Riscos identificados', color: _kRed, items: briefing.risks),
+              _Section(
+                  title: '⚠️ Riscos identificados',
+                  color: _kRed,
+                  items: briefing.risks),
             ],
           );
         }
@@ -178,7 +204,11 @@ class _HealthSideCard extends StatelessWidget {
   void _showHealthExplain(BuildContext context) {
     final h = briefing.overallHealthScore;
     final hc = _healthColor(h);
-    final label = h >= 70 ? 'Saudável 🟢' : h >= 45 ? 'Atenção 🟡' : 'Crítico 🔴';
+    final label = h >= 70
+        ? 'Saudável 🟢'
+        : h >= 45
+            ? 'Atenção 🟡'
+            : 'Crítico 🔴';
     IveDetailSheet.show(
       context,
       title: 'Health Score: $h/100',
@@ -195,17 +225,26 @@ class _HealthSideCard extends StatelessWidget {
               "ações executadas ou análises de mercado. "
               "Priorize as recomendações desta semana." : "Score positivo — continue executando as prioridades identificadas."}',
       evidence: [
-        IveEvidence(emoji: briefing.healthEmoji, label: 'Saúde Geral',     value: '$h/100'),
-        IveEvidence(emoji: '🏷️',                 label: 'Classificação',    value: label),
-        IveEvidence(emoji: '📋',                 label: 'Projetos',         value: '${briefing.projectCount}'),
-        IveEvidence(emoji: '📊',                 label: 'Análises',         value: '${briefing.analysisCount}'),
-        IveEvidence(emoji: '⚡',                 label: 'Ações',            value: '${briefing.actionsCount}'),
-        IveEvidence(emoji: '💡',                 label: 'Oportunidades',    value: '${briefing.opportunitiesCount}'),
+        IveEvidence(
+            emoji: briefing.healthEmoji, label: 'Saúde Geral', value: '$h/100'),
+        IveEvidence(emoji: '🏷️', label: 'Classificação', value: label),
+        IveEvidence(
+            emoji: '📋', label: 'Projetos', value: '${briefing.projectCount}'),
+        IveEvidence(
+            emoji: '📊', label: 'Análises', value: '${briefing.analysisCount}'),
+        IveEvidence(
+            emoji: '⚡', label: 'Ações', value: '${briefing.actionsCount}'),
+        IveEvidence(
+            emoji: '💡',
+            label: 'Oportunidades',
+            value: '${briefing.opportunitiesCount}'),
       ],
       expandedData: {
-        'Fórmula': 'Ponderação de projetos ativos, execução, análises e receita',
+        'Fórmula':
+            'Ponderação de projetos ativos, execução, análises e receita',
         'Meta recomendada': '>= 70 (Saudável)',
-        'Gerado em': '${briefing.generatedAt.day}/${briefing.generatedAt.month}/${briefing.generatedAt.year}',
+        'Gerado em':
+            '${briefing.generatedAt.day}/${briefing.generatedAt.month}/${briefing.generatedAt.year}',
       },
       screenName: 'Briefing Semanal',
     );
@@ -230,15 +269,23 @@ class _HealthSideCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Text(briefing.healthEmoji, style: const TextStyle(fontSize: 20)),
+                  Text(briefing.healthEmoji,
+                      style: const TextStyle(fontSize: 20)),
                   const SizedBox(width: 8),
                   Text('Saúde Geral',
-                      style: TextStyle(color: hc, fontSize: 13, fontWeight: FontWeight.bold)),
+                      style: TextStyle(
+                          color: hc,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold)),
                   const Spacer(),
                   Text('${briefing.overallHealthScore}/100',
-                      style: TextStyle(color: hc, fontSize: 22, fontWeight: FontWeight.bold)),
+                      style: TextStyle(
+                          color: hc,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold)),
                   const SizedBox(width: 6),
-                  Icon(Icons.info_outline_rounded, color: hc.withOpacity(0.6), size: 14),
+                  Icon(Icons.info_outline_rounded,
+                      color: hc.withOpacity(0.6), size: 14),
                 ],
               ),
               const SizedBox(height: 10),
@@ -253,7 +300,8 @@ class _HealthSideCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 const Text(
                   '⚠ Score baixo. Toque para ver a análise completa.',
-                  style: TextStyle(color: Colors.orange, fontSize: 11, height: 1.4),
+                  style: TextStyle(
+                      color: Colors.orange, fontSize: 11, height: 1.4),
                 ),
               ],
             ],
@@ -289,16 +337,24 @@ class _Header extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text('BRIEFING EXECUTIVO',
-                  style: TextStyle(color: _kPrimary, fontWeight: FontWeight.bold,
-                      fontSize: 11, letterSpacing: 1.5)),
+                    style: TextStyle(
+                        color: _kPrimary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11,
+                        letterSpacing: 1.5)),
                 const SizedBox(height: 4),
                 Text('Semana de $dateStr',
-                  style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                    style:
+                        const TextStyle(color: Colors.white54, fontSize: 12)),
                 const SizedBox(height: 8),
                 GestureDetector(
                   onTap: () {
                     final h = briefing.overallHealthScore;
-                    final label = h >= 70 ? 'Saudável 🟢' : h >= 45 ? 'Atenção 🟡' : 'Crítico 🔴';
+                    final label = h >= 70
+                        ? 'Saudável 🟢'
+                        : h >= 45
+                            ? 'Atenção 🟡'
+                            : 'Crítico 🔴';
                     IveDetailSheet.show(
                       context,
                       title: 'Saúde Geral: $h/100',
@@ -312,17 +368,35 @@ class _Header extends StatelessWidget {
                           '• ${briefing.actionsCount} ação(ões) no pipeline\n'
                           '• ${briefing.opportunitiesCount} oportunidade(s) identificada(s)',
                       evidence: <IveEvidence>[
-                        IveEvidence(emoji: briefing.healthEmoji, label: 'Saúde Geral',  value: '$h/100'),
-                        IveEvidence(emoji: '🏷️',                 label: 'Status',        value: label),
-                        IveEvidence(emoji: '📋',                 label: 'Projetos',      value: '${briefing.projectCount}'),
-                        IveEvidence(emoji: '📊',                 label: 'Análises MI',   value: '${briefing.analysisCount}'),
-                        IveEvidence(emoji: '⚡',                 label: 'Ações',         value: '${briefing.actionsCount}'),
-                        IveEvidence(emoji: '💡',                 label: 'Oportunidades', value: '${briefing.opportunitiesCount}'),
+                        IveEvidence(
+                            emoji: briefing.healthEmoji,
+                            label: 'Saúde Geral',
+                            value: '$h/100'),
+                        IveEvidence(
+                            emoji: '🏷️', label: 'Status', value: label),
+                        IveEvidence(
+                            emoji: '📋',
+                            label: 'Projetos',
+                            value: '${briefing.projectCount}'),
+                        IveEvidence(
+                            emoji: '📊',
+                            label: 'Análises MI',
+                            value: '${briefing.analysisCount}'),
+                        IveEvidence(
+                            emoji: '⚡',
+                            label: 'Ações',
+                            value: '${briefing.actionsCount}'),
+                        IveEvidence(
+                            emoji: '💡',
+                            label: 'Oportunidades',
+                            value: '${briefing.opportunitiesCount}'),
                       ],
                       expandedData: {
                         'Meta recomendada': '>= 70 (Saudável)',
-                        'Fórmula': 'Ponderação de projetos ativos, execução, análises e receita',
-                        'Gerado em': '${briefing.generatedAt.day}/${briefing.generatedAt.month}/${briefing.generatedAt.year}',
+                        'Fórmula':
+                            'Ponderação de projetos ativos, execução, análises e receita',
+                        'Gerado em':
+                            '${briefing.generatedAt.day}/${briefing.generatedAt.month}/${briefing.generatedAt.year}',
                       },
                       screenName: 'Briefing Semanal',
                     );
@@ -330,8 +404,11 @@ class _Header extends StatelessWidget {
                   child: MouseRegion(
                     cursor: SystemMouseCursors.click,
                     child: Text(
-                      briefing.healthEmoji + '  Saúde Geral: ${briefing.overallHealthScore}/100',
-                      style: const TextStyle(color: Colors.white, fontSize: 15,
+                      briefing.healthEmoji +
+                          '  Saúde Geral: ${briefing.overallHealthScore}/100',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
                           fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -343,7 +420,11 @@ class _Header extends StatelessWidget {
             onTap: () {
               final h = briefing.overallHealthScore;
               final hc = _healthColor(h);
-              final label = h >= 70 ? 'Saudável 🟢' : h >= 45 ? 'Atenção 🟡' : 'Crítico 🔴';
+              final label = h >= 70
+                  ? 'Saudável 🟢'
+                  : h >= 45
+                      ? 'Atenção 🟡'
+                      : 'Crítico 🔴';
               IveDetailSheet.show(
                 context,
                 title: 'Health Score: $h/100',
@@ -353,12 +434,27 @@ class _Header extends StatelessWidget {
                     'Calculado com base em projetos ativos, ações executadas, '
                     'análises de mercado, oportunidades aprovadas e receita registrada.',
                 evidence: [
-                  IveEvidence(emoji: briefing.healthEmoji, label: 'Saúde Geral',  value: '$h/100'),
-                  IveEvidence(emoji: '🏷️',                 label: 'Status',        value: label),
-                  IveEvidence(emoji: '📋',                 label: 'Projetos',      value: '${briefing.projectCount}'),
-                  IveEvidence(emoji: '📊',                 label: 'Análises',      value: '${briefing.analysisCount}'),
-                  IveEvidence(emoji: '⚡',                 label: 'Ações',         value: '${briefing.actionsCount}'),
-                  IveEvidence(emoji: '💡',                 label: 'Oportunidades', value: '${briefing.opportunitiesCount}'),
+                  IveEvidence(
+                      emoji: briefing.healthEmoji,
+                      label: 'Saúde Geral',
+                      value: '$h/100'),
+                  IveEvidence(emoji: '🏷️', label: 'Status', value: label),
+                  IveEvidence(
+                      emoji: '📋',
+                      label: 'Projetos',
+                      value: '${briefing.projectCount}'),
+                  IveEvidence(
+                      emoji: '📊',
+                      label: 'Análises',
+                      value: '${briefing.analysisCount}'),
+                  IveEvidence(
+                      emoji: '⚡',
+                      label: 'Ações',
+                      value: '${briefing.actionsCount}'),
+                  IveEvidence(
+                      emoji: '💡',
+                      label: 'Oportunidades',
+                      value: '${briefing.opportunitiesCount}'),
                 ],
                 screenName: 'Briefing Semanal',
               );
@@ -375,14 +471,15 @@ class _Header extends StatelessWidget {
                       value: briefing.overallHealthScore / 100,
                       strokeWidth: 6,
                       backgroundColor: Colors.white10,
-                      valueColor: AlwaysStoppedAnimation(_healthColor(briefing.overallHealthScore)),
+                      valueColor: AlwaysStoppedAnimation(
+                          _healthColor(briefing.overallHealthScore)),
                     ),
                     Text('${briefing.overallHealthScore}',
-                      style: TextStyle(
-                        color: _healthColor(briefing.overallHealthScore),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      )),
+                        style: TextStyle(
+                          color: _healthColor(briefing.overallHealthScore),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        )),
                   ],
                 ),
               ),
@@ -417,10 +514,15 @@ class _SummaryCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text('Resumo Executivo',
-            style: TextStyle(color: Colors.white54, fontSize: 11,
-                fontWeight: FontWeight.w600, letterSpacing: 0.5)),
+              style: TextStyle(
+                  color: Colors.white54,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5)),
           const SizedBox(height: 6),
-          Text(text, style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.5)),
+          Text(text,
+              style: const TextStyle(
+                  color: Colors.white, fontSize: 13, height: 1.5)),
         ],
       ),
     );
@@ -431,7 +533,8 @@ class _Section extends StatelessWidget {
   final String title;
   final Color color;
   final List<BriefingItem> items;
-  const _Section({required this.title, required this.color, required this.items});
+  const _Section(
+      {required this.title, required this.color, required this.items});
 
   @override
   Widget build(BuildContext context) {
@@ -439,13 +542,14 @@ class _Section extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(title,
-          style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 14)),
+            style: TextStyle(
+                color: color, fontWeight: FontWeight.bold, fontSize: 14)),
         const SizedBox(height: 8),
         if (items.isEmpty)
           Padding(
             padding: const EdgeInsets.only(left: 8),
             child: Text('Nenhum item nesta semana',
-              style: TextStyle(color: color.withOpacity(0.4), fontSize: 12)),
+                style: TextStyle(color: color.withOpacity(0.4), fontSize: 12)),
           )
         else
           ...items.map((item) => _BriefingRow(item: item, color: color)),
@@ -477,16 +581,21 @@ class _BriefingRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(item.title,
-                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500)),
                 if (item.detail.isNotEmpty) ...[
                   const SizedBox(height: 2),
                   Text(item.detail,
-                    style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 11)),
                 ],
               ],
             ),
           ),
-          Icon(Icons.info_outline_rounded, size: 12, color: color.withOpacity(0.5)),
+          Icon(Icons.info_outline_rounded,
+              size: 12, color: color.withOpacity(0.5)),
         ],
       ),
     );
@@ -499,7 +608,8 @@ class _BriefingRow extends StatelessWidget {
         emoji: '📋',
         humanExplanation: item.detail.isNotEmpty ? item.detail : item.title,
         evidence: [
-          IveEvidence(emoji: '📋', label: 'Insight da semana', value: item.title),
+          IveEvidence(
+              emoji: '📋', label: 'Insight da semana', value: item.title),
         ],
         screenName: 'Briefing Semanal',
       ),
@@ -515,11 +625,11 @@ class _DataOriginCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final h  = briefing.generatedAt.hour.toString().padLeft(2, '0');
-    final m  = briefing.generatedAt.minute.toString().padLeft(2, '0');
-    final d  = briefing.generatedAt.day.toString().padLeft(2, '0');
+    final h = briefing.generatedAt.hour.toString().padLeft(2, '0');
+    final m = briefing.generatedAt.minute.toString().padLeft(2, '0');
+    final d = briefing.generatedAt.day.toString().padLeft(2, '0');
     final mo = briefing.generatedAt.month.toString().padLeft(2, '0');
-    final y  = briefing.generatedAt.year;
+    final y = briefing.generatedAt.year;
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -569,12 +679,26 @@ class _DataOriginCard extends StatelessWidget {
                       'Os projetos são a principal fonte de dados para o Ecosystem Score, Health Score '
                       'e as recomendações semanais da IVE.',
                   evidence: <IveEvidence>[
-                    IveEvidence(emoji: '📋', label: 'Total de projetos',     value: '${briefing.projectCount}'),
-                    IveEvidence(emoji: '📊', label: 'Análises disponíveis',  value: '${briefing.analysisCount}'),
-                    IveEvidence(emoji: '📅', label: 'Gerado em',             value: '${briefing.generatedAt.day}/${briefing.generatedAt.month}/${briefing.generatedAt.year}'),
+                    IveEvidence(
+                        emoji: '📋',
+                        label: 'Total de projetos',
+                        value: '${briefing.projectCount}'),
+                    IveEvidence(
+                        emoji: '📊',
+                        label: 'Análises disponíveis',
+                        value: '${briefing.analysisCount}'),
+                    IveEvidence(
+                        emoji: '📅',
+                        label: 'Gerado em',
+                        value:
+                            '${briefing.generatedAt.day}/${briefing.generatedAt.month}/${briefing.generatedAt.year}'),
                   ],
                   suggestedActions: <IveAction>[
-                    IveAction(emoji: '📋', label: 'Ver Projetos', description: 'Acesse o Project Command Center para gerenciar projetos'),
+                    IveAction(
+                        emoji: '📋',
+                        label: 'Ver Projetos',
+                        description:
+                            'Acesse o Project Command Center para gerenciar projetos'),
                   ],
                   screenName: 'Briefing Semanal',
                 ),
@@ -592,12 +716,25 @@ class _DataOriginCard extends StatelessWidget {
                       'Há ${briefing.analysisCount} análise(s) de Market Intelligence disponíveis no portfólio.\n\n'
                       'As análises de mercado alimentam os scores de Oportunidade, Mercado e ROI do Ecosystem Score.',
                   evidence: <IveEvidence>[
-                    IveEvidence(emoji: '📊', label: 'Total de análises',  value: '${briefing.analysisCount}'),
-                    IveEvidence(emoji: '📋', label: 'Projetos',           value: '${briefing.projectCount}'),
-                    IveEvidence(emoji: '💡', label: 'Oportunidades',      value: '${briefing.opportunitiesCount}'),
+                    IveEvidence(
+                        emoji: '📊',
+                        label: 'Total de análises',
+                        value: '${briefing.analysisCount}'),
+                    IveEvidence(
+                        emoji: '📋',
+                        label: 'Projetos',
+                        value: '${briefing.projectCount}'),
+                    IveEvidence(
+                        emoji: '💡',
+                        label: 'Oportunidades',
+                        value: '${briefing.opportunitiesCount}'),
                   ],
                   suggestedActions: <IveAction>[
-                    IveAction(emoji: '📊', label: 'Market Intelligence', description: 'Execute novas análises de mercado para projetos sem cobertura'),
+                    IveAction(
+                        emoji: '📊',
+                        label: 'Market Intelligence',
+                        description:
+                            'Execute novas análises de mercado para projetos sem cobertura'),
                   ],
                   screenName: 'Briefing Semanal',
                 ),
@@ -616,12 +753,25 @@ class _DataOriginCard extends StatelessWidget {
                       'As ações executadas influenciam o Score de Momentum, Execução e ROI. '
                       'Mais ações concluídas = Health Score mais alto.',
                   evidence: <IveEvidence>[
-                    IveEvidence(emoji: '⚡',  label: 'Total de ações',   value: '${briefing.actionsCount}'),
-                    IveEvidence(emoji: '📋',  label: 'Projetos ativos',  value: '${briefing.projectCount}'),
-                    IveEvidence(emoji: '💡',  label: 'Oportunidades',    value: '${briefing.opportunitiesCount}'),
+                    IveEvidence(
+                        emoji: '⚡',
+                        label: 'Total de ações',
+                        value: '${briefing.actionsCount}'),
+                    IveEvidence(
+                        emoji: '📋',
+                        label: 'Projetos ativos',
+                        value: '${briefing.projectCount}'),
+                    IveEvidence(
+                        emoji: '💡',
+                        label: 'Oportunidades',
+                        value: '${briefing.opportunitiesCount}'),
                   ],
                   suggestedActions: <IveAction>[
-                    IveAction(emoji: '⚡', label: 'Action Engine', description: 'Acesse o Action Engine para executar e registrar ações'),
+                    IveAction(
+                        emoji: '⚡',
+                        label: 'Action Engine',
+                        description:
+                            'Acesse o Action Engine para executar e registrar ações'),
                   ],
                   screenName: 'Briefing Semanal',
                 ),
@@ -640,12 +790,25 @@ class _DataOriginCard extends StatelessWidget {
                       'As oportunidades são geradas pelas análises de Market Intelligence e pelo '
                       'Opportunity Lab. Cada oportunidade aprovada aumenta o Score de Execução e ROI.',
                   evidence: <IveEvidence>[
-                    IveEvidence(emoji: '💡', label: 'Total de oportunidades', value: '${briefing.opportunitiesCount}'),
-                    IveEvidence(emoji: '📊', label: 'Análises de mercado',    value: '${briefing.analysisCount}'),
-                    IveEvidence(emoji: '📋', label: 'Projetos',               value: '${briefing.projectCount}'),
+                    IveEvidence(
+                        emoji: '💡',
+                        label: 'Total de oportunidades',
+                        value: '${briefing.opportunitiesCount}'),
+                    IveEvidence(
+                        emoji: '📊',
+                        label: 'Análises de mercado',
+                        value: '${briefing.analysisCount}'),
+                    IveEvidence(
+                        emoji: '📋',
+                        label: 'Projetos',
+                        value: '${briefing.projectCount}'),
                   ],
                   suggestedActions: <IveAction>[
-                    IveAction(emoji: '💡', label: 'Opportunity Lab', description: 'Acesse o Opportunity Lab para explorar e aprovar oportunidades'),
+                    IveAction(
+                        emoji: '💡',
+                        label: 'Opportunity Lab',
+                        description:
+                            'Acesse o Opportunity Lab para explorar e aprovar oportunidades'),
                   ],
                   screenName: 'Briefing Semanal',
                 ),
@@ -664,18 +827,23 @@ class _DataOriginCard extends StatelessWidget {
             Wrap(
               spacing: 6,
               runSpacing: 4,
-              children: briefing.analyzedProjectNames.map((name) => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: _kPrimary.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: _kPrimary.withOpacity(0.25)),
-                ),
-                child: Text(
-                  name,
-                  style: const TextStyle(color: Colors.white70, fontSize: 10),
-                ),
-              )).toList(),
+              children: briefing.analyzedProjectNames
+                  .map((name) => Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: _kPrimary.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(20),
+                          border:
+                              Border.all(color: _kPrimary.withOpacity(0.25)),
+                        ),
+                        child: Text(
+                          name,
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 10),
+                        ),
+                      ))
+                  .toList(),
             ),
           ],
         ],
@@ -685,10 +853,14 @@ class _DataOriginCard extends StatelessWidget {
 }
 
 class _CountChip extends StatelessWidget {
-  const _CountChip({required this.label, required this.value, required this.color, this.onTap});
+  const _CountChip(
+      {required this.label,
+      required this.value,
+      required this.color,
+      this.onTap});
   final String label;
-  final int    value;
-  final Color  color;
+  final int value;
+  final Color color;
   final VoidCallback? onTap;
 
   @override

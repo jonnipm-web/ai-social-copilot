@@ -52,7 +52,7 @@ class ExecutiveContextService {
     try {
       final payload = {
         ...data,
-        'user_id':    uid,
+        'user_id': uid,
         'updated_at': DateTime.now().toIso8601String(),
       };
       final row = await _client
@@ -75,9 +75,9 @@ class ExecutiveContextService {
       await _client
           .from(_table)
           .update({
-            'check_in_due':    false,
+            'check_in_due': false,
             'last_activity_at': DateTime.now().toIso8601String(),
-            'updated_at':      DateTime.now().toIso8601String(),
+            'updated_at': DateTime.now().toIso8601String(),
           })
           .eq('project_id', projectId)
           .eq('user_id', uid);
@@ -95,10 +95,10 @@ class ExecutiveContextService {
       await _client
           .from(_table)
           .upsert({
-            'project_id':      projectId,
-            'user_id':         uid,
+            'project_id': projectId,
+            'user_id': uid,
             'last_activity_at': now,
-            'updated_at':       now,
+            'updated_at': now,
           }, onConflict: 'project_id')
           .select()
           .maybeSingle();
@@ -122,23 +122,23 @@ class ExecutiveContextService {
   }
 
   ExecutiveContext _fromRow(Map<String, dynamic> row) => ExecutiveContext(
-        projectId:       row['project_id'] as String,
-        userId:          row['user_id'] as String,
+        projectId: row['project_id'] as String,
+        userId: row['user_id'] as String,
         executiveSummary: row['executive_summary'] as String? ?? '',
-        keyDecisions:    _parseStringList(row['decisions']),
-        openRisks:       _parseStringList(row['risks']),
-        synergies:       _parseStringList(row['relationships']),
-        currentStage:    'ideia',
-        lastAnalysisAt:  row['last_analysis_at'] != null
+        keyDecisions: _parseStringList(row['decisions']),
+        openRisks: _parseStringList(row['risks']),
+        synergies: _parseStringList(row['relationships']),
+        currentStage: 'ideia',
+        lastAnalysisAt: row['last_analysis_at'] != null
             ? DateTime.tryParse(row['last_analysis_at'] as String)
             : null,
-        lastCheckInAt:   row['last_activity_at'] != null
+        lastCheckInAt: row['last_activity_at'] != null
             ? DateTime.tryParse(row['last_activity_at'] as String)
             : null,
-        checkInDueAt:    null,
-        priorityScore:   row['priority_score'] as int? ?? 0,
-        metadata:        (row['health'] as Map<String, dynamic>?) ?? {},
-        updatedAt:       DateTime.tryParse(row['updated_at'] as String? ?? '') ??
+        checkInDueAt: null,
+        priorityScore: row['priority_score'] as int? ?? 0,
+        metadata: (row['health'] as Map<String, dynamic>?) ?? {},
+        updatedAt: DateTime.tryParse(row['updated_at'] as String? ?? '') ??
             DateTime.now(),
       );
 

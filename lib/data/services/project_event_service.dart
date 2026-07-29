@@ -34,7 +34,8 @@ class ProjectEventService {
     }
   }
 
-  Future<List<ProjectEvent>> fetchByUser(String userId, {int limit = 100}) async {
+  Future<List<ProjectEvent>> fetchByUser(String userId,
+      {int limit = 100}) async {
     try {
       final rows = await _client
           .from(_table)
@@ -53,11 +54,8 @@ class ProjectEventService {
 
   Future<ProjectEvent?> add(ProjectEvent event) async {
     try {
-      final row = await _client
-          .from(_table)
-          .insert(event.toJson())
-          .select()
-          .single();
+      final row =
+          await _client.from(_table).insert(event.toJson()).select().single();
       return ProjectEvent.fromJson(row as Map<String, dynamic>);
     } on PostgrestException catch (e) {
       // 23505 = unique_violation — evento idempotente já existe, não é erro
@@ -110,17 +108,17 @@ class ProjectEventService {
             : null);
 
     await add(ProjectEvent(
-      id:             '',
-      projectId:      projectId,
-      userId:         uid,
-      eventType:      type,
-      title:          title,
-      description:    description,
-      metadata:       metadata,
-      sourceModule:   sourceModule,
+      id: '',
+      projectId: projectId,
+      userId: uid,
+      eventType: type,
+      title: title,
+      description: description,
+      metadata: metadata,
+      sourceModule: sourceModule,
       sourceEntityId: sourceEntityId,
       idempotencyKey: key,
-      createdAt:      DateTime.now(),
+      createdAt: DateTime.now(),
     ));
   }
 

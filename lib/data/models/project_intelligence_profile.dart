@@ -8,7 +8,7 @@ class ProjectIntelligenceProfile {
   final Project project;
   final MarketAnalysis? analysis;
   final KnowledgeCoverage coverage;
-  final String maturityStage;        // 'ideia' | 'validando' | 'crescendo' | 'maduro'
+  final String maturityStage; // 'ideia' | 'validando' | 'crescendo' | 'maduro'
   final List<String> relatedProjectNames;
   final List<String> identifiedTopics;
   final List<String> missingKnowledge;
@@ -39,35 +39,45 @@ class ProjectIntelligenceProfile {
     required this.valueProposition,
     required this.computedAt,
     this.executiveHealth,
-    this.relationships           = const [],
-    this.checkInDue              = false,
+    this.relationships = const [],
+    this.checkInDue = false,
     this.lastAnalysisAt,
-    this.executivePriorityScore  = 0,
+    this.executivePriorityScore = 0,
   });
 
   String get maturityLabel {
     switch (maturityStage) {
-      case 'maduro':    return 'Maduro';
-      case 'crescendo': return 'Crescendo';
-      case 'validando': return 'Validando';
-      default:          return 'Ideia';
+      case 'maduro':
+        return 'Maduro';
+      case 'crescendo':
+        return 'Crescendo';
+      case 'validando':
+        return 'Validando';
+      default:
+        return 'Ideia';
     }
   }
 
   String get maturityEmoji {
     switch (maturityStage) {
-      case 'maduro':    return '🌳';
-      case 'crescendo': return '🌱';
-      case 'validando': return '🔬';
-      default:          return '💡';
+      case 'maduro':
+        return '🌳';
+      case 'crescendo':
+        return '🌱';
+      case 'validando':
+        return '🔬';
+      default:
+        return '💡';
     }
   }
 
   bool get hasEnoughData => coverage.score >= 30 && analysis != null;
 
   String? get dataWarning {
-    if (analysis == null) return 'Execute uma análise de mercado para obter inteligência.';
-    if (coverage.score < 20) return 'Dados insuficientes. Adicione ações e oportunidades.';
+    if (analysis == null)
+      return 'Execute uma análise de mercado para obter inteligência.';
+    if (coverage.score < 20)
+      return 'Dados insuficientes. Adicione ações e oportunidades.';
     return null;
   }
 

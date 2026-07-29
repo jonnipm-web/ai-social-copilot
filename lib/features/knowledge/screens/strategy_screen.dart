@@ -15,7 +15,7 @@ class StrategyScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final itemAsync     = ref.watch(knowledgeItemByIdProvider(itemId));
+    final itemAsync = ref.watch(knowledgeItemByIdProvider(itemId));
     final analysisAsync = ref.watch(knowledgeAnalysisProvider(itemId));
     final strategyAsync = ref.watch(knowledgeStrategyProvider(itemId));
 
@@ -51,10 +51,12 @@ class StrategyScreen extends ConsumerWidget {
               }
               return strategyAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error:   (e, _) => _GeneratePrompt(item: item, analysis: analysis, error: e.toString()),
-                data:    (strategy) => strategy == null
+                error: (e, _) => _GeneratePrompt(
+                    item: item, analysis: analysis, error: e.toString()),
+                data: (strategy) => strategy == null
                     ? _GeneratePrompt(item: item, analysis: analysis)
-                    : _StrategyContent(item: item, strategy: strategy, analysis: analysis),
+                    : _StrategyContent(
+                        item: item, strategy: strategy, analysis: analysis),
               );
             },
           );
@@ -76,11 +78,15 @@ class _NoAnalysis extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.analytics_outlined, size: 64, color: Color(0xFF6C63FF)),
+            const Icon(Icons.analytics_outlined,
+                size: 64, color: Color(0xFF6C63FF)),
             const SizedBox(height: 16),
             const Text(
               'Análise necessária',
-              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             const Text(
@@ -106,10 +112,11 @@ class _NoAnalysis extends StatelessWidget {
 }
 
 class _GeneratePrompt extends ConsumerWidget {
-  const _GeneratePrompt({required this.item, required this.analysis, this.error});
-  final KnowledgeItem     item;
+  const _GeneratePrompt(
+      {required this.item, required this.analysis, this.error});
+  final KnowledgeItem item;
   final KnowledgeAnalysis analysis;
-  final String?           error;
+  final String? error;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -127,7 +134,8 @@ class _GeneratePrompt extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: const Color(0xFF6C63FF).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFF6C63FF).withOpacity(0.3)),
+                border:
+                    Border.all(color: const Color(0xFF6C63FF).withOpacity(0.3)),
               ),
               child: const Icon(Icons.rocket_launch_rounded,
                   size: 48, color: Color(0xFF6C63FF)),
@@ -135,13 +143,17 @@ class _GeneratePrompt extends ConsumerWidget {
             const SizedBox(height: 20),
             const Text(
               'Gerar Estratégia Completa',
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             const Text(
               'A IA vai criar um plano estratégico completo com público-alvo, posicionamento, canais, funil, oportunidades comerciais e plano de crescimento.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white54, fontSize: 13, height: 1.5),
+              style:
+                  TextStyle(color: Colors.white54, fontSize: 13, height: 1.5),
             ),
             if (error != null) ...[
               const SizedBox(height: 12),
@@ -162,12 +174,14 @@ class _GeneratePrompt extends ConsumerWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF6C63FF),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                 ),
                 icon: const Icon(Icons.rocket_launch_rounded),
-                label: const Text('Gerar Estratégia', style: TextStyle(fontSize: 15)),
+                label: const Text('Gerar Estratégia',
+                    style: TextStyle(fontSize: 15)),
                 onPressed: () async {
                   final strategy = await ref
                       .read(strategyNotifierProvider.notifier)
@@ -191,7 +205,7 @@ class _StrategyContent extends ConsumerWidget {
     required this.analysis,
   });
 
-  final KnowledgeItem     item;
+  final KnowledgeItem item;
   final KnowledgeStrategy strategy;
   final KnowledgeAnalysis analysis;
 
@@ -208,21 +222,24 @@ class _StrategyContent extends ConsumerWidget {
 
         // Resumo estratégico
         if (strategy.strategicSummary.isNotEmpty) ...[
-          _Section('Resumo Estratégico', Icons.summarize_rounded, const Color(0xFF6C63FF)),
+          _Section('Resumo Estratégico', Icons.summarize_rounded,
+              const Color(0xFF6C63FF)),
           _HighlightCard(strategy.strategicSummary, const Color(0xFF6C63FF)),
           const SizedBox(height: 16),
         ],
 
         // Proposta de valor
         if (strategy.valueProposition.isNotEmpty) ...[
-          _Section('Proposta de Valor', Icons.diamond_rounded, const Color(0xFFFFD700)),
+          _Section('Proposta de Valor', Icons.diamond_rounded,
+              const Color(0xFFFFD700)),
           _HighlightCard(strategy.valueProposition, const Color(0xFFFFD700)),
           const SizedBox(height: 16),
         ],
 
         // Posicionamento
         if (strategy.positioning.isNotEmpty) ...[
-          _Section('Posicionamento', Icons.flag_rounded, const Color(0xFF00BCD4)),
+          _Section(
+              'Posicionamento', Icons.flag_rounded, const Color(0xFF00BCD4)),
           _HighlightCard(strategy.positioning, const Color(0xFF00BCD4)),
           const SizedBox(height: 16),
         ],
@@ -232,7 +249,8 @@ class _StrategyContent extends ConsumerWidget {
 
         // Canais recomendados
         if (strategy.recommendedChannels.isNotEmpty) ...[
-          _Section('Canais Recomendados', Icons.broadcast_on_personal_rounded, const Color(0xFF4CAF50)),
+          _Section('Canais Recomendados', Icons.broadcast_on_personal_rounded,
+              const Color(0xFF4CAF50)),
           const SizedBox(height: 8),
           ...strategy.recommendedChannels.map((ch) => _ChannelTile(ch)),
           const SizedBox(height: 16),
@@ -240,7 +258,8 @@ class _StrategyContent extends ConsumerWidget {
 
         // Funil
         if (strategy.funnel.isNotEmpty) ...[
-          _Section('Funil de Marketing', Icons.filter_alt_rounded, const Color(0xFFFF9800)),
+          _Section('Funil de Marketing', Icons.filter_alt_rounded,
+              const Color(0xFFFF9800)),
           const SizedBox(height: 8),
           _FunnelCard(strategy.funnel),
           const SizedBox(height: 16),
@@ -248,7 +267,8 @@ class _StrategyContent extends ConsumerWidget {
 
         // Oportunidades comerciais
         if (strategy.commercialOpportunities.isNotEmpty) ...[
-          _Section('Oportunidades Comerciais', Icons.monetization_on_rounded, const Color(0xFFFFD700)),
+          _Section('Oportunidades Comerciais', Icons.monetization_on_rounded,
+              const Color(0xFFFFD700)),
           const SizedBox(height: 8),
           ...strategy.commercialOpportunities.map((op) => _OpportunityTile(op)),
           const SizedBox(height: 16),
@@ -256,7 +276,8 @@ class _StrategyContent extends ConsumerWidget {
 
         // Keywords prioritárias
         if (strategy.priorityKeywords.isNotEmpty) ...[
-          _Section('Keywords Prioritárias', Icons.key_rounded, const Color(0xFF9C27B0)),
+          _Section('Keywords Prioritárias', Icons.key_rounded,
+              const Color(0xFF9C27B0)),
           const SizedBox(height: 8),
           _ChipRow(strategy.priorityKeywords, const Color(0xFF9C27B0)),
           const SizedBox(height: 16),
@@ -264,15 +285,18 @@ class _StrategyContent extends ConsumerWidget {
 
         // Quick wins
         if (strategy.quickWins.isNotEmpty) ...[
-          _Section('Ações Rápidas', Icons.bolt_rounded, const Color(0xFFFF5722)),
+          _Section(
+              'Ações Rápidas', Icons.bolt_rounded, const Color(0xFFFF5722)),
           const SizedBox(height: 8),
-          ...strategy.quickWins.map((w) => _BulletItem(w, const Color(0xFFFF5722))),
+          ...strategy.quickWins
+              .map((w) => _BulletItem(w, const Color(0xFFFF5722))),
           const SizedBox(height: 16),
         ],
 
         // Plano de crescimento
         if (strategy.growthPlan.isNotEmpty) ...[
-          _Section('Plano de Crescimento', Icons.trending_up_rounded, const Color(0xFF4CAF50)),
+          _Section('Plano de Crescimento', Icons.trending_up_rounded,
+              const Color(0xFF4CAF50)),
           const SizedBox(height: 8),
           _GrowthCard(strategy.growthPlan),
           const SizedBox(height: 16),
@@ -287,7 +311,8 @@ class _StrategyContent extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(vertical: 12),
           ),
           icon: const Icon(Icons.refresh_rounded, size: 16),
-          label: const Text('Regenerar Estratégia', style: TextStyle(fontSize: 13)),
+          label: const Text('Regenerar Estratégia',
+              style: TextStyle(fontSize: 13)),
           onPressed: () async {
             ref.invalidate(knowledgeStrategyProvider(item.id));
             await ref
@@ -303,7 +328,9 @@ class _StrategyContent extends ConsumerWidget {
   Widget _buildAudience(Map<String, dynamic> s) {
     final audience = s['target_audience'];
     if (audience == null) return const SizedBox.shrink();
-    final a = audience is Map ? Map<String, dynamic>.from(audience) : <String, dynamic>{};
+    final a = audience is Map
+        ? Map<String, dynamic>.from(audience)
+        : <String, dynamic>{};
     if (a.isEmpty) return const SizedBox.shrink();
 
     return Column(
@@ -321,11 +348,14 @@ class _StrategyContent extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (a['primary'] != null)
-                _AudienceRow('Primário', a['primary'].toString(), const Color(0xFFE91E63)),
+                _AudienceRow('Primário', a['primary'].toString(),
+                    const Color(0xFFE91E63)),
               if (a['secondary'] != null)
-                _AudienceRow('Secundário', a['secondary'].toString(), Colors.white54),
+                _AudienceRow(
+                    'Secundário', a['secondary'].toString(), Colors.white54),
               if (a['age_range'] != null)
-                _AudienceRow('Faixa etária', a['age_range'].toString(), Colors.white38),
+                _AudienceRow(
+                    'Faixa etária', a['age_range'].toString(), Colors.white38),
             ],
           ),
         ),
@@ -337,7 +367,7 @@ class _StrategyContent extends ConsumerWidget {
 
 class _StratHeader extends StatelessWidget {
   const _StratHeader({required this.title, this.niche});
-  final String  title;
+  final String title;
   final String? niche;
 
   @override
@@ -356,7 +386,8 @@ class _StratHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.rocket_launch_rounded, color: Color(0xFF6C63FF), size: 28),
+          const Icon(Icons.rocket_launch_rounded,
+              color: Color(0xFF6C63FF), size: 28),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -369,7 +400,8 @@ class _StratHeader extends StatelessWidget {
                         fontWeight: FontWeight.bold)),
                 if (niche != null)
                   Text(niche!,
-                      style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 12)),
               ],
             ),
           ),
@@ -381,9 +413,9 @@ class _StratHeader extends StatelessWidget {
 
 class _Section extends StatelessWidget {
   const _Section(this.title, this.icon, this.color);
-  final String   title;
+  final String title;
   final IconData icon;
-  final Color    color;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -407,7 +439,7 @@ class _Section extends StatelessWidget {
 class _HighlightCard extends StatelessWidget {
   const _HighlightCard(this.text, this.color);
   final String text;
-  final Color  color;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -455,18 +487,21 @@ class _ChannelTile extends StatelessWidget {
 
   Color _priorityColor(String p) {
     switch (p.toLowerCase()) {
-      case 'alta':  return const Color(0xFF4CAF50);
-      case 'média': return const Color(0xFFFF9800);
-      default:      return Colors.white38;
+      case 'alta':
+        return const Color(0xFF4CAF50);
+      case 'média':
+        return const Color(0xFFFF9800);
+      default:
+        return Colors.white38;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final channel  = data['channel'] as String? ?? '';
+    final channel = data['channel'] as String? ?? '';
     final priority = data['priority'] as String? ?? '';
-    final reason   = data['reason'] as String? ?? '';
-    final color    = _priorityColor(priority);
+    final reason = data['reason'] as String? ?? '';
+    final color = _priorityColor(priority);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
@@ -500,7 +535,8 @@ class _ChannelTile extends StatelessWidget {
                         fontWeight: FontWeight.w600)),
                 if (reason.isNotEmpty)
                   Text(reason,
-                      style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                      style:
+                          const TextStyle(color: Colors.white38, fontSize: 11)),
               ],
             ),
           ),
@@ -548,7 +584,9 @@ class _FunnelCard extends StatelessWidget {
                     Expanded(
                       child: Text(s.$2.toString(),
                           style: const TextStyle(
-                              color: Colors.white60, fontSize: 12, height: 1.4)),
+                              color: Colors.white60,
+                              fontSize: 12,
+                              height: 1.4)),
                     ),
                   ],
                 ),
@@ -564,18 +602,21 @@ class _OpportunityTile extends StatelessWidget {
 
   Color _potentialColor(String p) {
     switch (p.toLowerCase()) {
-      case 'alto':  return const Color(0xFF4CAF50);
-      case 'médio': return const Color(0xFFFF9800);
-      default:      return Colors.white38;
+      case 'alto':
+        return const Color(0xFF4CAF50);
+      case 'médio':
+        return const Color(0xFFFF9800);
+      default:
+        return Colors.white38;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final type        = data['type'] as String? ?? '';
+    final type = data['type'] as String? ?? '';
     final description = data['description'] as String? ?? '';
-    final potential   = data['potential'] as String? ?? '';
-    final color       = _potentialColor(potential);
+    final potential = data['potential'] as String? ?? '';
+    final color = _potentialColor(potential);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
@@ -601,7 +642,8 @@ class _OpportunityTile extends StatelessWidget {
                         fontWeight: FontWeight.w600)),
                 if (description.isNotEmpty)
                   Text(description,
-                      style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 12)),
               ],
             ),
           ),
@@ -625,7 +667,7 @@ class _OpportunityTile extends StatelessWidget {
 class _ChipRow extends StatelessWidget {
   const _ChipRow(this.items, this.color);
   final List<String> items;
-  final Color        color;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -645,7 +687,8 @@ class _ChipRow extends StatelessWidget {
                   );
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: color.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
@@ -666,7 +709,7 @@ class _ChipRow extends StatelessWidget {
 class _BulletItem extends StatelessWidget {
   const _BulletItem(this.text, this.color);
   final String text;
-  final Color  color;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -703,7 +746,8 @@ class _GrowthCard extends StatelessWidget {
     ];
 
     final kpis = plan['kpis'];
-    final kpiList = kpis is List ? kpis.map((e) => e.toString()).toList() : <String>[];
+    final kpiList =
+        kpis is List ? kpis.map((e) => e.toString()).toList() : <String>[];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -772,7 +816,7 @@ class _AudienceRow extends StatelessWidget {
   const _AudienceRow(this.label, this.value, this.color);
   final String label;
   final String value;
-  final Color  color;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {

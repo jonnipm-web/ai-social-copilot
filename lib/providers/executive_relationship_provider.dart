@@ -10,8 +10,8 @@ final _relationshipService = ExecutiveRelationshipService();
 /// Todas as relações detectadas entre projetos do portfólio.
 final executiveRelationshipsProvider =
     FutureProvider.autoDispose<List<ExecutiveRelationship>>((ref) async {
-  final projects  = await ref.watch(projectsProvider.future);
-  final analyses  = await ref.watch(marketAnalysesProvider.future);
+  final projects = await ref.watch(projectsProvider.future);
+  final analyses = await ref.watch(marketAnalysesProvider.future);
   return _relationshipService.detect(projects: projects, analyses: analyses);
 });
 
@@ -20,7 +20,9 @@ final projectRelationshipsProvider =
     FutureProvider.autoDispose.family<List<ExecutiveRelationship>, String>(
   (ref, projectId) async {
     final all = await ref.watch(executiveRelationshipsProvider.future);
-    return all.where((r) => r.projectAId == projectId || r.projectBId == projectId).toList();
+    return all
+        .where((r) => r.projectAId == projectId || r.projectBId == projectId)
+        .toList();
   },
 );
 

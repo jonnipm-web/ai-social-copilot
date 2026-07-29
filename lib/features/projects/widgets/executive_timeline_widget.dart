@@ -5,7 +5,15 @@ import '../../../data/models/project_event.dart';
 import '../../../providers/project_event_provider.dart';
 import '../../../shared/widgets/ive_detail_sheet.dart';
 
-const _kFilters = ['Todos', 'Análises', 'Conhecimento', 'Decisões', 'Oportunidades', 'Ações', 'Projeto'];
+const _kFilters = [
+  'Todos',
+  'Análises',
+  'Conhecimento',
+  'Decisões',
+  'Oportunidades',
+  'Ações',
+  'Projeto'
+];
 
 class ExecutiveTimelineWidget extends ConsumerStatefulWidget {
   final String projectId;
@@ -13,10 +21,12 @@ class ExecutiveTimelineWidget extends ConsumerStatefulWidget {
   const ExecutiveTimelineWidget({super.key, required this.projectId});
 
   @override
-  ConsumerState<ExecutiveTimelineWidget> createState() => _ExecutiveTimelineWidgetState();
+  ConsumerState<ExecutiveTimelineWidget> createState() =>
+      _ExecutiveTimelineWidgetState();
 }
 
-class _ExecutiveTimelineWidgetState extends ConsumerState<ExecutiveTimelineWidget> {
+class _ExecutiveTimelineWidgetState
+    extends ConsumerState<ExecutiveTimelineWidget> {
   String _activeFilter = 'Todos';
 
   @override
@@ -31,7 +41,7 @@ class _ExecutiveTimelineWidgetState extends ConsumerState<ExecutiveTimelineWidge
           height: 36,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            itemCount:       _kFilters.length,
+            itemCount: _kFilters.length,
             separatorBuilder: (_, __) => const SizedBox(width: 6),
             itemBuilder: (_, i) {
               final f = _kFilters[i];
@@ -40,20 +50,26 @@ class _ExecutiveTimelineWidgetState extends ConsumerState<ExecutiveTimelineWidge
                 onTap: () => setState(() => _activeFilter = f),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 150),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color:  selected ? const Color(0xFF00BCD4).withOpacity(0.15) : Colors.white10,
+                    color: selected
+                        ? const Color(0xFF00BCD4).withOpacity(0.15)
+                        : Colors.white10,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: selected ? const Color(0xFF00BCD4) : Colors.white24,
+                      color:
+                          selected ? const Color(0xFF00BCD4) : Colors.white24,
                     ),
                   ),
                   child: Text(
                     f,
                     style: TextStyle(
-                      color:      selected ? const Color(0xFF00BCD4) : Colors.white54,
-                      fontSize:   12,
-                      fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                      color:
+                          selected ? const Color(0xFF00BCD4) : Colors.white54,
+                      fontSize: 12,
+                      fontWeight:
+                          selected ? FontWeight.w600 : FontWeight.normal,
                     ),
                   ),
                 ),
@@ -67,7 +83,9 @@ class _ExecutiveTimelineWidgetState extends ConsumerState<ExecutiveTimelineWidge
         eventsAsync.when(
           loading: () => const Padding(
             padding: EdgeInsets.symmetric(vertical: 24),
-            child: Center(child: CircularProgressIndicator(color: Color(0xFF00BCD4), strokeWidth: 2)),
+            child: Center(
+                child: CircularProgressIndicator(
+                    color: Color(0xFF00BCD4), strokeWidth: 2)),
           ),
           error: (e, _) => _errorState(context, e.toString()),
           data: (events) {
@@ -77,7 +95,8 @@ class _ExecutiveTimelineWidgetState extends ConsumerState<ExecutiveTimelineWidge
             if (filtered.isEmpty) return _emptyState();
             return Column(
               children: filtered
-                  .map((e) => _EventTile(event: e, onTap: () => _showDetail(context, e)))
+                  .map((e) => _EventTile(
+                      event: e, onTap: () => _showDetail(context, e)))
                   .toList(),
             );
           },
@@ -107,11 +126,14 @@ class _ExecutiveTimelineWidgetState extends ConsumerState<ExecutiveTimelineWidge
         padding: const EdgeInsets.symmetric(vertical: 16),
         child: Column(
           children: [
-            const Text('⚠️ Falha ao carregar a timeline.', style: TextStyle(color: Colors.orange, fontSize: 13)),
+            const Text('⚠️ Falha ao carregar a timeline.',
+                style: TextStyle(color: Colors.orange, fontSize: 13)),
             const SizedBox(height: 8),
             TextButton(
-              onPressed: () => ref.invalidate(projectEventsProvider(widget.projectId)),
-              child: const Text('Tentar novamente', style: TextStyle(color: Color(0xFF00BCD4))),
+              onPressed: () =>
+                  ref.invalidate(projectEventsProvider(widget.projectId)),
+              child: const Text('Tentar novamente',
+                  style: TextStyle(color: Color(0xFF00BCD4))),
             ),
           ],
         ),
@@ -121,22 +143,24 @@ class _ExecutiveTimelineWidgetState extends ConsumerState<ExecutiveTimelineWidge
     final meta = event.metadata;
     IveDetailSheet.show(
       context,
-      title:            '${event.emoji} ${event.typeLabel}',
-      emoji:            event.emoji,
+      title: '${event.emoji} ${event.typeLabel}',
+      emoji: event.emoji,
       humanExplanation: event.title,
       evidence: [
-        IveEvidence(emoji: '📝', label: 'O que aconteceu',  value: event.title),
+        IveEvidence(emoji: '📝', label: 'O que aconteceu', value: event.title),
         if (event.description.isNotEmpty)
-          IveEvidence(emoji: '💬', label: 'Detalhes',       value: event.description),
+          IveEvidence(emoji: '💬', label: 'Detalhes', value: event.description),
         if (event.sourceModule != null)
-          IveEvidence(emoji: '📦', label: 'Módulo',         value: event.sourceModule!),
-        IveEvidence(emoji: '🕐', label: 'Quando',           value: _formatDate(event.createdAt)),
+          IveEvidence(emoji: '📦', label: 'Módulo', value: event.sourceModule!),
+        IveEvidence(
+            emoji: '🕐', label: 'Quando', value: _formatDate(event.createdAt)),
         ...meta.entries.take(4).map(
-              (e) => IveEvidence(emoji: '📊', label: e.key, value: e.value.toString()),
+              (e) => IveEvidence(
+                  emoji: '📊', label: e.key, value: e.value.toString()),
             ),
       ],
       expandedData: {
-        'Tipo':   event.typeLabel,
+        'Tipo': event.typeLabel,
         'Quando': _formatDate(event.createdAt),
         if (event.sourceModule != null) 'Módulo': event.sourceModule!,
       },
@@ -147,10 +171,11 @@ class _ExecutiveTimelineWidgetState extends ConsumerState<ExecutiveTimelineWidge
   String _formatDate(DateTime dt) {
     final now = DateTime.now();
     final diff = now.difference(dt);
-    if (diff.inMinutes < 1)  return 'Agora mesmo';
+    if (diff.inMinutes < 1) return 'Agora mesmo';
     if (diff.inMinutes < 60) return 'Há ${diff.inMinutes} min';
-    if (diff.inHours < 24)   return 'Há ${diff.inHours}h';
-    if (diff.inDays < 7)     return 'Há ${diff.inDays} dia${diff.inDays > 1 ? 's' : ''}';
+    if (diff.inHours < 24) return 'Há ${diff.inHours}h';
+    if (diff.inDays < 7)
+      return 'Há ${diff.inDays} dia${diff.inDays > 1 ? 's' : ''}';
     return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
   }
 }
@@ -180,12 +205,13 @@ class _EventTile extends StatelessWidget {
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color:        const Color(0xFF1E1E3A),
+                      color: const Color(0xFF1E1E3A),
                       borderRadius: BorderRadius.circular(8),
-                      border:       Border.all(color: Colors.white12),
+                      border: Border.all(color: Colors.white12),
                     ),
                     child: Center(
-                      child: Text(event.emoji, style: const TextStyle(fontSize: 14)),
+                      child: Text(event.emoji,
+                          style: const TextStyle(fontSize: 14)),
                     ),
                   ),
                   Container(width: 1, height: 20, color: Colors.white10),
@@ -203,8 +229,8 @@ class _EventTile extends StatelessWidget {
                           child: Text(
                             event.title,
                             style: const TextStyle(
-                              color:     Colors.white,
-                              fontSize:  13,
+                              color: Colors.white,
+                              fontSize: 13,
                               fontWeight: FontWeight.w500,
                             ),
                             maxLines: 2,
@@ -214,7 +240,8 @@ class _EventTile extends StatelessWidget {
                         const SizedBox(width: 8),
                         Text(
                           _shortDate(event.createdAt),
-                          style: const TextStyle(color: Colors.white38, fontSize: 11),
+                          style: const TextStyle(
+                              color: Colors.white38, fontSize: 11),
                         ),
                       ],
                     ),
@@ -222,7 +249,8 @@ class _EventTile extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         event.description,
-                        style: const TextStyle(color: Colors.white54, fontSize: 12),
+                        style: const TextStyle(
+                            color: Colors.white54, fontSize: 12),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -244,8 +272,8 @@ class _EventTile extends StatelessWidget {
     final now = DateTime.now();
     final diff = now.difference(dt);
     if (diff.inMinutes < 60) return '${diff.inMinutes}m';
-    if (diff.inHours < 24)   return '${diff.inHours}h';
-    if (diff.inDays < 7)     return '${diff.inDays}d';
+    if (diff.inHours < 24) return '${diff.inHours}h';
+    if (diff.inDays < 7) return '${diff.inDays}d';
     return '${dt.day}/${dt.month}';
   }
 }
@@ -255,12 +283,12 @@ class _FilterChip extends StatelessWidget {
   const _FilterChip({required this.label});
 
   static const _colors = {
-    'Análises':     Color(0xFF6C63FF),
+    'Análises': Color(0xFF6C63FF),
     'Conhecimento': Color(0xFF00BCD4),
-    'Decisões':     Color(0xFF6BCB77),
+    'Decisões': Color(0xFF6BCB77),
     'Oportunidades': Color(0xFFFFD93D),
-    'Ações':        Color(0xFFFF9F43),
-    'Projeto':      Color(0xFFFF6B6B),
+    'Ações': Color(0xFFFF9F43),
+    'Projeto': Color(0xFFFF6B6B),
   };
 
   @override
@@ -269,11 +297,13 @@ class _FilterChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color:        color.withOpacity(0.1),
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(4),
-        border:       Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withOpacity(0.3)),
       ),
-      child: Text(label, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w500)),
+      child: Text(label,
+          style: TextStyle(
+              color: color, fontSize: 10, fontWeight: FontWeight.w500)),
     );
   }
 }

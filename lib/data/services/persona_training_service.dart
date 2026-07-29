@@ -61,22 +61,22 @@ class PersonaTrainingService {
     final row = await _client
         .from(_table)
         .insert({
-          'user_id':            uid,
-          'persona_id':         personaId,
-          'knowledge_item_id':  item.id,
-          'training_summary':   summary,
-          'tone_profile_json':  toneProfile,
-          'vocabulary_json':    vocab,
-          'brand_values_json':  values,
-          'positioning_json':   {
-            'niche':    item.niche ?? '',
+          'user_id': uid,
+          'persona_id': personaId,
+          'knowledge_item_id': item.id,
+          'training_summary': summary,
+          'tone_profile_json': toneProfile,
+          'vocabulary_json': vocab,
+          'brand_values_json': values,
+          'positioning_json': {
+            'niche': item.niche ?? '',
             'audience': item.targetAudience ?? '',
           },
-          'audience_json':      {
-            'target':   item.targetAudience ?? '',
+          'audience_json': {
+            'target': item.targetAudience ?? '',
             'language': item.language,
           },
-          'examples_json':      analysis.postIdeas.take(3).toList(),
+          'examples_json': analysis.postIdeas.take(3).toList(),
         })
         .select()
         .single();

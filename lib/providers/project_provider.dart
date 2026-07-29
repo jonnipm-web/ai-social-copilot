@@ -58,9 +58,9 @@ class ProjectsNotifier extends AsyncNotifier<List<Project>> {
 
     // Emite evento na timeline executiva persistida (não lança exceção)
     ref.read(executiveContextOrchestratorProvider).onProjectCreated(
-      projectId:   project.id,
-      projectName: project.name,
-    );
+          projectId: project.id,
+          projectName: project.name,
+        );
 
     return project;
   }
@@ -87,10 +87,10 @@ class ProjectsNotifier extends AsyncNotifier<List<Project>> {
 
     // Emite evento de mudança de estágio na timeline executiva
     ref.read(executiveContextOrchestratorProvider).onStageChanged(
-      projectId:   id,
-      projectName: project.name,
-      newStatus:   status,
-    );
+          projectId: id,
+          projectName: project.name,
+          newStatus: status,
+        );
   }
 
   // ── Update arbitrary fields ───────────────────────────────────────────────

@@ -43,10 +43,7 @@ class ContentService {
   }
 
   Future<void> delete(String id) async {
-    await _client
-        .from(AppConstants.tableContentItems)
-        .delete()
-        .eq('id', id);
+    await _client.from(AppConstants.tableContentItems).delete().eq('id', id);
   }
 
   Future<void> upsertFromKnowledge({
@@ -71,21 +68,21 @@ class ContentService {
         .maybeSingle();
 
     final data = {
-      'user_id':            userId,
+      'user_id': userId,
       if (projectId != null) 'project_id': projectId,
-      'knowledge_item_id':  knowledgeItemId,
-      'title':              title,
-      'type':               type,
-      'description':        description,
-      'base_text':          baseText,
-      'niche':              niche,
-      'target_audience':    targetAudience,
-      'language':           language,
-      'auto_generated':     true,
-      'keywords':           keywords,
-      'opportunity_score':  opportunityScore,
-      'status':             'active',
-      'updated_at':         DateTime.now().toUtc().toIso8601String(),
+      'knowledge_item_id': knowledgeItemId,
+      'title': title,
+      'type': type,
+      'description': description,
+      'base_text': baseText,
+      'niche': niche,
+      'target_audience': targetAudience,
+      'language': language,
+      'auto_generated': true,
+      'keywords': keywords,
+      'opportunity_score': opportunityScore,
+      'status': 'active',
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
     };
 
     if (existing != null) {
@@ -94,9 +91,7 @@ class ContentService {
           .update(data)
           .eq('id', existing['id'] as String);
     } else {
-      await _client
-          .from(AppConstants.tableContentItems)
-          .insert(data);
+      await _client.from(AppConstants.tableContentItems).insert(data);
     }
   }
 }

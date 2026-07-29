@@ -14,7 +14,7 @@ class CopilotState {
   final String? error;
 
   const CopilotState({
-    this.turns   = const [],
+    this.turns = const [],
     this.loading = false,
     this.error,
   });
@@ -25,9 +25,9 @@ class CopilotState {
     String? error,
   }) =>
       CopilotState(
-        turns:   turns   ?? this.turns,
+        turns: turns ?? this.turns,
         loading: loading ?? this.loading,
-        error:   error,
+        error: error,
       );
 }
 
@@ -45,8 +45,8 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
     required CopilotContextData context,
   }) async {
     final userTurn = CopilotTurn(
-      role:      'user',
-      content:   message,
+      role: 'user',
+      content: message,
       timestamp: DateTime.now(),
     );
 
@@ -54,7 +54,7 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
     _ref.read(iveMemoryProvider.notifier).addQuestion(message);
 
     state = state.copyWith(
-      turns:   [...state.turns, userTurn],
+      turns: [...state.turns, userTurn],
       loading: true,
     );
 
@@ -70,19 +70,20 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
       final res = await _client.functions.invoke(
         AppConstants.edgeFunctionContextCopilot,
         body: {
-          'message':          message,
-          'screen_name':      screenName,
-          'context':          context.toMap(),
-          'history':          history,
-          if (recentQuestions.isNotEmpty)
-            'recent_questions': recentQuestions,
+          'message': message,
+          'screen_name': screenName,
+          'context': context.toMap(),
+          'history': history,
+          if (recentQuestions.isNotEmpty) 'recent_questions': recentQuestions,
         },
       );
 
       final data = res.data as Map<String, dynamic>? ?? {};
 
-      final sources  = (data['sources']  as List?)?.map((e) => e.toString()).toList() ?? [];
-      final entities = (data['entities'] as List?)?.map((e) => e.toString()).toList() ?? [];
+      final sources =
+          (data['sources'] as List?)?.map((e) => e.toString()).toList() ?? [];
+      final entities =
+          (data['entities'] as List?)?.map((e) => e.toString()).toList() ?? [];
 
       CopilotActionSuggestion? actionSuggestion;
       if (data['action_suggestion'] is Map) {
@@ -92,23 +93,23 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
       }
 
       final assistantTurn = CopilotTurn(
-        role:             'assistant',
-        content:          data['answer'] as String? ?? '—',
-        sources:          sources,
-        entities:         entities,
-        confidence:       (data['confidence'] as num?)?.toInt() ?? 70,
+        role: 'assistant',
+        content: data['answer'] as String? ?? '—',
+        sources: sources,
+        entities: entities,
+        confidence: (data['confidence'] as num?)?.toInt() ?? 70,
         actionSuggestion: actionSuggestion,
-        timestamp:        DateTime.now(),
+        timestamp: DateTime.now(),
       );
 
       state = state.copyWith(
-        turns:   [...state.turns, assistantTurn],
+        turns: [...state.turns, assistantTurn],
         loading: false,
       );
     } catch (e) {
       state = state.copyWith(
         loading: false,
-        error:   e.toString(),
+        error: e.toString(),
       );
     }
   }
@@ -119,7 +120,7 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
 // ── Provider ──────────────────────────────────────────────────────────────────
 // Sem autoDispose: histórico do chat persiste enquanto o app estiver aberto.
 // Family key = screenName → um estado por tela, nunca compartilhado.
-final contextCopilotProvider = StateNotifierProvider.family<
-    ContextCopilotNotifier, CopilotState, String>(
+final contextCopilotProvider =
+    StateNotifierProvider.family<ContextCopilotNotifier, CopilotState, String>(
   (ref, screenName) => ContextCopilotNotifier(ref),
 );

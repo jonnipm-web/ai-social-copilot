@@ -50,9 +50,9 @@ class _ContentGenerationScreenState
       return;
     }
 
-    final usage   = ref.read(monthlyUsageProvider).valueOrNull ?? 0;
+    final usage = ref.read(monthlyUsageProvider).valueOrNull ?? 0;
     final profile = ref.read(currentProfileProvider).valueOrNull;
-    final limit   = profile?.monthlyLimit ?? AppConstants.freeTierLimit;
+    final limit = profile?.monthlyLimit ?? AppConstants.freeTierLimit;
     if (usage >= limit) {
       showErrorSnack(
         context,
@@ -80,22 +80,22 @@ class _ContentGenerationScreenState
           : null;
       if (mounted) showSuccessSnack(context, 'Resultado gerado com sucesso!');
       context.push(AppConstants.routeResult, extra: {
-        'originalText':     text,
-        'result':           _generationToMap(result),
+        'originalText': text,
+        'result': _generationToMap(result),
         'processingSeconds': elapsed,
       });
     }
   }
 
   Map<String, dynamic> _generationToMap(PostGeneration g) => {
-        'improved_text':        g.improvedText,
+        'improved_text': g.improvedText,
         'professional_version': g.professionalVersion,
-        'casual_version':       g.casualVersion,
-        'persuasive_version':   g.persuasiveVersion,
-        'comment_reply':        g.commentReply,
+        'casual_version': g.casualVersion,
+        'persuasive_version': g.persuasiveVersion,
+        'comment_reply': g.commentReply,
         'scores': {
-          'clarity':    g.clarityScore,
-          'impact':     g.impactScore,
+          'clarity': g.clarityScore,
+          'impact': g.impactScore,
           'engagement': g.engagementScore,
         },
         '_generation': g,
@@ -115,8 +115,8 @@ class _ContentGenerationScreenState
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Limpar',
-                style: TextStyle(color: Colors.redAccent)),
+            child:
+                const Text('Limpar', style: TextStyle(color: Colors.redAccent)),
           ),
         ],
       ),
@@ -173,10 +173,9 @@ class _ContentGenerationScreenState
             onPressed: () => context.push(AppConstants.routeUpgrade),
             style: TextButton.styleFrom(
               foregroundColor: color,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              textStyle: const TextStyle(
-                  fontSize: 12, fontWeight: FontWeight.w700),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              textStyle:
+                  const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
             ),
             child: Text(isFull ? 'Upgrade' : 'Ver planos'),
           ),
@@ -187,19 +186,20 @@ class _ContentGenerationScreenState
 
   @override
   Widget build(BuildContext context) {
-    final postState  = ref.watch(postNotifierProvider);
-    final isLoading  = postState.isLoading;
+    final postState = ref.watch(postNotifierProvider);
+    final isLoading = postState.isLoading;
     final usageAsync = ref.watch(monthlyUsageProvider);
-    final profile    = ref.watch(currentProfileProvider).valueOrNull;
-    final limit      = profile?.monthlyLimit ?? AppConstants.freeTierLimit;
+    final profile = ref.watch(currentProfileProvider).valueOrNull;
+    final limit = profile?.monthlyLimit ?? AppConstants.freeTierLimit;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Melhorar Post'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
-          onPressed: () =>
-              context.canPop() ? context.pop() : context.go(AppConstants.routeHome),
+          onPressed: () => context.canPop()
+              ? context.pop()
+              : context.go(AppConstants.routeHome),
         ),
         actions: [
           IconButton(
@@ -232,7 +232,7 @@ class _ContentGenerationScreenState
                     ],
                   ),
                   loading: () => const SizedBox.shrink(),
-                  error:   (_, __) => const SizedBox.shrink(),
+                  error: (_, __) => const SizedBox.shrink(),
                 ),
                 Text(
                   'Cole ou escreva seu post',
@@ -249,7 +249,8 @@ class _ContentGenerationScreenState
                     expands: true,
                     textAlignVertical: TextAlignVertical.top,
                     maxLength: AppConstants.maxTextLength,
-                    buildCounter: (_, {required currentLength,
+                    buildCounter: (_,
+                            {required currentLength,
                             required isFocused,
                             maxLength}) =>
                         const SizedBox.shrink(),
@@ -266,8 +267,7 @@ class _ContentGenerationScreenState
                   children: [
                     Text(
                       '$_charCount / ${AppConstants.maxTextLength} caracteres',
-                      style:
-                          TextStyle(fontSize: 12, color: _counterColor()),
+                      style: TextStyle(fontSize: 12, color: _counterColor()),
                     ),
                     const Spacer(),
                     if (_charCount > 0)

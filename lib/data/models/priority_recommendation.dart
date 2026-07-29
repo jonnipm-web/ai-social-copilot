@@ -21,7 +21,7 @@ class PriorityRecommendation {
   // Fase 11 — Executive Decision fields
   final String costOfIgnoring;
   final List<String> evidences;
-  final String priority;   // 'alta' | 'média' | 'baixa'
+  final String priority; // 'alta' | 'média' | 'baixa'
 
   const PriorityRecommendation({
     required this.title,
@@ -33,27 +33,37 @@ class PriorityRecommendation {
     this.entityId,
     this.entityName,
     this.costOfIgnoring = '',
-    this.evidences      = const [],
-    this.priority       = 'média',
+    this.evidences = const [],
+    this.priority = 'média',
   });
 
   String get typeLabel {
     switch (type) {
-      case RecommendationType.investProject:      return 'Investir';
-      case RecommendationType.executeOpportunity: return 'Executar';
-      case RecommendationType.runAction:          return 'Ação';
-      case RecommendationType.pauseProject:       return 'Pausar';
-      case RecommendationType.mitigateRisk:       return 'Risco';
-      case RecommendationType.quickWin:           return 'Ganho Rápido';
-      case RecommendationType.waste:              return 'Desperdício';
+      case RecommendationType.investProject:
+        return 'Investir';
+      case RecommendationType.executeOpportunity:
+        return 'Executar';
+      case RecommendationType.runAction:
+        return 'Ação';
+      case RecommendationType.pauseProject:
+        return 'Pausar';
+      case RecommendationType.mitigateRisk:
+        return 'Risco';
+      case RecommendationType.quickWin:
+        return 'Ganho Rápido';
+      case RecommendationType.waste:
+        return 'Desperdício';
     }
   }
 
   String get priorityEmoji {
     switch (priority) {
-      case 'alta':  return '🔴';
-      case 'baixa': return '🟢';
-      default:      return '🟡';
+      case 'alta':
+        return '🔴';
+      case 'baixa':
+        return '🟢';
+      default:
+        return '🟡';
     }
   }
 }

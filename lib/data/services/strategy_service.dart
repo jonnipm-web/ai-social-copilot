@@ -7,7 +7,7 @@ import '../models/knowledge_strategy.dart';
 class StrategyService {
   final _client = Supabase.instance.client;
 
-  static const _table        = 'knowledge_strategies';
+  static const _table = 'knowledge_strategies';
   static const _edgeFunction = 'generate-strategy';
 
   Future<KnowledgeStrategy?> fetchByItemId(String itemId) async {
@@ -43,18 +43,18 @@ class StrategyService {
     final response = await _client.functions.invoke(
       _edgeFunction,
       body: {
-        'title':             item.title,
-        'content':           item.content.length > 3000
+        'title': item.title,
+        'content': item.content.length > 3000
             ? item.content.substring(0, 3000)
             : item.content,
-        'summary':           analysis.summary ?? '',
-        'niche':             item.niche ?? '',
-        'target_audience':   item.targetAudience ?? '',
-        'language':          item.language,
-        'keywords_primary':  analysis.keywordsPrimary,
-        'pain_points':       analysis.audiencePainPoints,
-        'desires':           analysis.audienceDesires,
-        'topics':            analysis.topics,
+        'summary': analysis.summary ?? '',
+        'niche': item.niche ?? '',
+        'target_audience': item.targetAudience ?? '',
+        'language': item.language,
+        'keywords_primary': analysis.keywordsPrimary,
+        'pain_points': analysis.audiencePainPoints,
+        'desires': analysis.audienceDesires,
+        'topics': analysis.topics,
       },
     );
 
@@ -66,12 +66,12 @@ class StrategyService {
     if (data.containsKey('error')) throw Exception(data['error']);
 
     final strategy = KnowledgeStrategy(
-      id:               '',
-      knowledgeItemId:  item.id,
-      userId:           uid,
-      strategyJson:     data,
-      createdAt:        DateTime.now(),
-      updatedAt:        DateTime.now(),
+      id: '',
+      knowledgeItemId: item.id,
+      userId: uid,
+      strategyJson: data,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
     );
 
     return save(strategy);

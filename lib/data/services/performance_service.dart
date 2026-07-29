@@ -30,23 +30,16 @@ class PerformanceService {
     final data = metrics.toInsertMap();
     data['user_id'] = uid;
 
-    final row = await _client
-        .from(_table)
-        .insert(data)
-        .select()
-        .single();
+    final row = await _client.from(_table).insert(data).select().single();
 
     return PerformanceMetrics.fromMap(row);
   }
 
-  Future<PerformanceMetrics> update(String id, Map<String, dynamic> data) async {
+  Future<PerformanceMetrics> update(
+      String id, Map<String, dynamic> data) async {
     data['updated_at'] = DateTime.now().toUtc().toIso8601String();
-    final row = await _client
-        .from(_table)
-        .update(data)
-        .eq('id', id)
-        .select()
-        .single();
+    final row =
+        await _client.from(_table).update(data).eq('id', id).select().single();
     return PerformanceMetrics.fromMap(row);
   }
 

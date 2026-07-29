@@ -16,7 +16,8 @@ final projectEventsProvider = FutureProvider.autoDispose
 
 /// Eventos de um projeto filtrados por grupo (ex: 'Análises', 'Ações', 'Todos').
 final projectEventsFilteredProvider = FutureProvider.autoDispose
-    .family<List<ProjectEvent>, ({String projectId, String filter})>((ref, args) async {
+    .family<List<ProjectEvent>, ({String projectId, String filter})>(
+        (ref, args) async {
   final user = Supabase.instance.client.auth.currentUser;
   if (user == null) return [];
   return _service.fetchByProject(args.projectId, filterGroup: args.filter);
@@ -31,9 +32,8 @@ final allProjectEventsProvider =
 });
 
 /// Notifier para adicionar eventos programaticamente.
-final projectEventNotifierProvider =
-    StateNotifierProvider.autoDispose
-        .family<ProjectEventNotifier, AsyncValue<void>, String>(
+final projectEventNotifierProvider = StateNotifierProvider.autoDispose
+    .family<ProjectEventNotifier, AsyncValue<void>, String>(
   (ref, projectId) => ProjectEventNotifier(projectId, ref),
 );
 
@@ -42,7 +42,7 @@ class ProjectEventNotifier extends StateNotifier<AsyncValue<void>> {
       : super(const AsyncValue.data(null));
 
   final String _projectId;
-  final Ref    _ref;
+  final Ref _ref;
 
   Future<void> emit(
     ProjectEventType type,
@@ -58,12 +58,12 @@ class ProjectEventNotifier extends StateNotifier<AsyncValue<void>> {
     state = const AsyncValue.loading();
     try {
       await _service.emit(
-        projectId:      _projectId,
-        type:           type,
-        title:          title,
-        description:    description,
-        metadata:       metadata,
-        sourceModule:   sourceModule,
+        projectId: _projectId,
+        type: type,
+        title: title,
+        description: description,
+        metadata: metadata,
+        sourceModule: sourceModule,
         sourceEntityId: sourceEntityId,
         idempotencyKey: idempotencyKey,
       );

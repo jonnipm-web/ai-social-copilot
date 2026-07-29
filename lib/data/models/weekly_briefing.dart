@@ -43,10 +43,10 @@ class WeeklyBriefing {
     required this.risks,
     required this.executiveSummary,
     this.analyzedProjectNames = const [],
-    this.projectCount         = 0,
-    this.analysisCount        = 0,
-    this.actionsCount         = 0,
-    this.opportunitiesCount   = 0,
+    this.projectCount = 0,
+    this.analysisCount = 0,
+    this.actionsCount = 0,
+    this.opportunitiesCount = 0,
   });
 
   String get healthEmoji {

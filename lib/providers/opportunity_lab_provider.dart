@@ -12,8 +12,8 @@ final opportunityLabProvider =
   return ref.read(opportunityLabServiceProvider).fetchAll();
 });
 
-final opportunityLabByProjectProvider =
-    FutureProvider.autoDispose.family<List<OpportunityLabItem>, String>((ref, projectId) {
+final opportunityLabByProjectProvider = FutureProvider.autoDispose
+    .family<List<OpportunityLabItem>, String>((ref, projectId) {
   return ref.read(opportunityLabServiceProvider).fetchAll(projectId: projectId);
 });
 
@@ -53,8 +53,8 @@ class OpportunityLabNotifier
     // Emite evento na timeline executiva se a oportunidade tem projectId
     if (item.projectId != null && item.id.isNotEmpty) {
       ExecutiveContextOrchestrator().onOpportunityCreated(
-        projectId:        item.projectId!,
-        opportunityId:    item.id,
+        projectId: item.projectId!,
+        opportunityId: item.id,
         opportunityTitle: item.title,
       );
     }
@@ -62,13 +62,14 @@ class OpportunityLabNotifier
 
   Future<void> approve(String id) async {
     // Busca o item antes de atualizar para ter o projectId
-    final existing = (state.valueOrNull ?? []).where((i) => i.id == id).firstOrNull;
+    final existing =
+        (state.valueOrNull ?? []).where((i) => i.id == id).firstOrNull;
     await _svc.updateStatus(id, 'approved');
     await load(projectId: _activeProjectId);
     if (existing != null && existing.projectId != null) {
       ExecutiveContextOrchestrator().onDecisionTaken(
-        projectId:        existing.projectId!,
-        opportunityId:    id,
+        projectId: existing.projectId!,
+        opportunityId: id,
         opportunityTitle: existing.title,
       );
     }

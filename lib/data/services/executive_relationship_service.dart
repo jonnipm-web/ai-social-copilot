@@ -36,31 +36,34 @@ class ExecutiveRelationshipService {
   }
 
   ExecutiveRelationship? _evaluate(
-    Project pA, MarketAnalysis? aA,
-    Project pB, MarketAnalysis? aB,
+    Project pA,
+    MarketAnalysis? aA,
+    Project pB,
+    MarketAnalysis? aB,
   ) {
-    final nicheA    = (aA?.niche          ?? '').toLowerCase().trim();
-    final nicheB    = (aB?.niche          ?? '').toLowerCase().trim();
+    final nicheA = (aA?.niche ?? '').toLowerCase().trim();
+    final nicheB = (aB?.niche ?? '').toLowerCase().trim();
     final audienceA = (aA?.targetAudience ?? '').toLowerCase().trim();
     final audienceB = (aB?.targetAudience ?? '').toLowerCase().trim();
-    final modelA    = (aA?.monetizationModel ?? '').toLowerCase().trim();
-    final modelB    = (aB?.monetizationModel ?? '').toLowerCase().trim();
+    final modelA = (aA?.monetizationModel ?? '').toLowerCase().trim();
+    final modelB = (aB?.monetizationModel ?? '').toLowerCase().trim();
 
-    final nicheOverlap    = _overlap(nicheA, nicheB);
+    final nicheOverlap = _overlap(nicheA, nicheB);
     final audienceOverlap = _overlap(audienceA, audienceB);
-    final modelOverlap    = _overlap(modelA, modelB);
-    final contextOverlap  = (nicheOverlap + audienceOverlap + modelOverlap) / 3;
+    final modelOverlap = _overlap(modelA, modelB);
+    final contextOverlap = (nicheOverlap + audienceOverlap + modelOverlap) / 3;
 
-    final sharedTopics = _sharedWords(nicheA + ' ' + audienceA, nicheB + ' ' + audienceB);
+    final sharedTopics =
+        _sharedWords(nicheA + ' ' + audienceA, nicheB + ' ' + audienceB);
 
     if (contextOverlap >= 0.90) {
       return ExecutiveRelationship(
-        projectAId:   pA.id,
+        projectAId: pA.id,
         projectAName: pA.name,
-        projectBId:   pB.id,
+        projectBId: pB.id,
         projectBName: pB.name,
-        type:         RelationshipType.duplicate,
-        similarity:   contextOverlap,
+        type: RelationshipType.duplicate,
+        similarity: contextOverlap,
         description:
             '"${pA.name}" e "${pB.name}" compartilham ${(contextOverlap * 100).round()}% do contexto. '
             'Possível duplicata detectada.',
@@ -76,12 +79,12 @@ class ExecutiveRelationshipService {
 
     if (nicheOverlap >= 0.80 || contextOverlap >= 0.75) {
       return ExecutiveRelationship(
-        projectAId:   pA.id,
+        projectAId: pA.id,
         projectAName: pA.name,
-        projectBId:   pB.id,
+        projectBId: pB.id,
         projectBName: pB.name,
-        type:         RelationshipType.conflicting,
-        similarity:   nicheOverlap,
+        type: RelationshipType.conflicting,
+        similarity: nicheOverlap,
         description:
             '"${pA.name}" e "${pB.name}" atuam no mesmo nicho e competem pelos mesmos recursos.',
         sharedTopics: sharedTopics,
@@ -96,21 +99,23 @@ class ExecutiveRelationshipService {
 
     if (nicheOverlap >= 0.40) {
       final synergies = <String>[];
-      if (modelOverlap < 0.3) synergies.add('Modelos de monetização complementares');
-      if (audienceOverlap > 0.4) synergies.add('Audiência compartilhada pode ser cross-sold');
+      if (modelOverlap < 0.3)
+        synergies.add('Modelos de monetização complementares');
+      if (audienceOverlap > 0.4)
+        synergies.add('Audiência compartilhada pode ser cross-sold');
       synergies.add('Conhecimento de nicho pode ser reutilizado');
 
       return ExecutiveRelationship(
-        projectAId:   pA.id,
+        projectAId: pA.id,
         projectAName: pA.name,
-        projectBId:   pB.id,
+        projectBId: pB.id,
         projectBName: pB.name,
-        type:         RelationshipType.synergistic,
-        similarity:   nicheOverlap,
+        type: RelationshipType.synergistic,
+        similarity: nicheOverlap,
         description:
             '"${pA.name}" e "${pB.name}" operam em nichos relacionados com ${(nicheOverlap * 100).round()}% de sobreposição.',
         sharedTopics: sharedTopics,
-        synergies:    synergies,
+        synergies: synergies,
         recommendation:
             'Reutilize documentos e análises entre os projetos para economizar tempo.',
       );
@@ -118,16 +123,19 @@ class ExecutiveRelationshipService {
 
     if (audienceOverlap >= 0.50) {
       return ExecutiveRelationship(
-        projectAId:   pA.id,
+        projectAId: pA.id,
         projectAName: pA.name,
-        projectBId:   pB.id,
+        projectBId: pB.id,
         projectBName: pB.name,
-        type:         RelationshipType.sharedAudience,
-        similarity:   audienceOverlap,
+        type: RelationshipType.sharedAudience,
+        similarity: audienceOverlap,
         description:
             '"${pA.name}" e "${pB.name}" atendem ao mesmo público-alvo em nichos diferentes.',
         sharedTopics: sharedTopics,
-        synergies: ['Cross-sell para mesma base de clientes', 'Persona unificada possível'],
+        synergies: [
+          'Cross-sell para mesma base de clientes',
+          'Persona unificada possível'
+        ],
         recommendation:
             'Crie uma persona unificada para ambos e explore cross-sell.',
       );
@@ -135,16 +143,19 @@ class ExecutiveRelationshipService {
 
     if (nicheOverlap >= 0.20 && audienceOverlap >= 0.20) {
       return ExecutiveRelationship(
-        projectAId:   pA.id,
+        projectAId: pA.id,
         projectAName: pA.name,
-        projectBId:   pB.id,
+        projectBId: pB.id,
         projectBName: pB.name,
-        type:         RelationshipType.complementary,
-        similarity:   (nicheOverlap + audienceOverlap) / 2,
+        type: RelationshipType.complementary,
+        similarity: (nicheOverlap + audienceOverlap) / 2,
         description:
             '"${pA.name}" e "${pB.name}" se complementam e podem gerar valor combinados.',
         sharedTopics: sharedTopics,
-        synergies: ['Portfólio coeso para o mesmo cliente', 'Redução de CAC compartilhado'],
+        synergies: [
+          'Portfólio coeso para o mesmo cliente',
+          'Redução de CAC compartilhado'
+        ],
         recommendation:
             'Considere criar uma oferta bundle ou cross-sell entre os dois projetos.',
       );
@@ -164,8 +175,10 @@ class ExecutiveRelationshipService {
   }
 
   List<String> _sharedWords(String textA, String textB) {
-    final wordsA = textA.split(RegExp(r'\s+')).where((w) => w.length > 3).toSet();
-    final wordsB = textB.split(RegExp(r'\s+')).where((w) => w.length > 3).toSet();
+    final wordsA =
+        textA.split(RegExp(r'\s+')).where((w) => w.length > 3).toSet();
+    final wordsB =
+        textB.split(RegExp(r'\s+')).where((w) => w.length > 3).toSet();
     return wordsA.intersection(wordsB).take(5).toList();
   }
 
@@ -180,12 +193,18 @@ class ExecutiveRelationshipService {
 
   int _typePriority(RelationshipType t) {
     switch (t) {
-      case RelationshipType.duplicate:      return 0;
-      case RelationshipType.conflicting:    return 1;
-      case RelationshipType.synergistic:    return 2;
-      case RelationshipType.sharedNiche:    return 3;
-      case RelationshipType.sharedAudience: return 4;
-      case RelationshipType.complementary:  return 5;
+      case RelationshipType.duplicate:
+        return 0;
+      case RelationshipType.conflicting:
+        return 1;
+      case RelationshipType.synergistic:
+        return 2;
+      case RelationshipType.sharedNiche:
+        return 3;
+      case RelationshipType.sharedAudience:
+        return 4;
+      case RelationshipType.complementary:
+        return 5;
     }
   }
 }

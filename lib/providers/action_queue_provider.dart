@@ -31,8 +31,8 @@ final actionQueueItemByIdProvider =
 });
 
 // Action queue filtered by project_id (real Supabase filter)
-final actionQueueByProjectProvider =
-    FutureProvider.autoDispose.family<List<ActionQueueItem>, String>((ref, projectId) {
+final actionQueueByProjectProvider = FutureProvider.autoDispose
+    .family<List<ActionQueueItem>, String>((ref, projectId) {
   return ref.read(actionQueueServiceProvider).fetchAll(projectId: projectId);
 });
 
@@ -63,7 +63,7 @@ class ActionQueueNotifier
     } catch (e) {
       IveEventBus.instance.emit(
         IveEvent.actionMutationFailed(
-          actionTitle:    item.title,
+          actionTitle: item.title,
           technicalError: e.toString(),
         ),
       );
@@ -78,7 +78,7 @@ class ActionQueueNotifier
     } catch (e) {
       IveEventBus.instance.emit(
         IveEvent.actionMutationFailed(
-          actionTitle:    title,
+          actionTitle: title,
           technicalError: e.toString(),
         ),
       );
@@ -93,7 +93,7 @@ class ActionQueueNotifier
     } catch (e) {
       IveEventBus.instance.emit(
         IveEvent.actionMutationFailed(
-          actionTitle:    title,
+          actionTitle: title,
           technicalError: e.toString(),
         ),
       );
@@ -103,22 +103,23 @@ class ActionQueueNotifier
 
   Future<void> complete(String id, {String title = 'Ação'}) async {
     // Captura projectId antes de atualizar o status
-    final existing = (state.valueOrNull ?? []).where((i) => i.id == id).firstOrNull;
+    final existing =
+        (state.valueOrNull ?? []).where((i) => i.id == id).firstOrNull;
     try {
       await _svc.updateStatus(id, 'completed');
       await load(projectId: _activeProjectId);
       // Emite evento na timeline executiva se a ação tem projectId
       if (existing?.projectId != null) {
         ExecutiveContextOrchestrator().onActionCompleted(
-          projectId:   existing!.projectId!,
-          actionId:    id,
+          projectId: existing!.projectId!,
+          actionId: id,
           actionTitle: title,
         );
       }
     } catch (e) {
       IveEventBus.instance.emit(
         IveEvent.actionMutationFailed(
-          actionTitle:    title,
+          actionTitle: title,
           technicalError: e.toString(),
         ),
       );
@@ -133,7 +134,7 @@ class ActionQueueNotifier
     } catch (e) {
       IveEventBus.instance.emit(
         IveEvent.actionMutationFailed(
-          actionTitle:    title,
+          actionTitle: title,
           technicalError: e.toString(),
         ),
       );
@@ -147,42 +148,42 @@ class ActionQueueNotifier
     String? projectId,
     String? opportunityLabId,
     String? marketAnalysisId,
-    int priority    = 50,
+    int priority = 50,
     int impactScore = 60,
     int effortScore = 50,
-    int roiScore    = 0,
+    int roiScore = 0,
     int marketScore = 0,
-    int confidence  = 0,
-    String       origin  = 'opportunity_lab',
+    int confidence = 0,
+    String origin = 'opportunity_lab',
     List<String> sources = const [],
-    String?      rationale,
-    List<String> plan    = const [],
-    List<String> risks   = const [],
+    String? rationale,
+    List<String> plan = const [],
+    List<String> risks = const [],
   }) async {
     final uid = _svc.currentUserId;
     if (uid == null) throw Exception('Não autenticado');
     final item = ActionQueueItem(
-      id:               '',
-      userId:           uid,
-      projectId:        projectId,
+      id: '',
+      userId: uid,
+      projectId: projectId,
       opportunityLabId: opportunityLabId,
       marketAnalysisId: marketAnalysisId,
-      actionType:       'opportunity',
-      title:            '[Lab] $title',
-      priority:         priority,
-      impactScore:      impactScore,
-      effortScore:      effortScore,
-      roiScore:         roiScore,
-      marketScore:      marketScore,
-      confidence:       confidence,
-      status:           'pending',
-      createdAt:        DateTime.now(),
-      description:      description.isNotEmpty ? description : null,
-      origin:           origin,
-      sources:          sources,
-      rationale:        rationale,
-      plan:             plan,
-      risks:            risks,
+      actionType: 'opportunity',
+      title: '[Lab] $title',
+      priority: priority,
+      impactScore: impactScore,
+      effortScore: effortScore,
+      roiScore: roiScore,
+      marketScore: marketScore,
+      confidence: confidence,
+      status: 'pending',
+      createdAt: DateTime.now(),
+      description: description.isNotEmpty ? description : null,
+      origin: origin,
+      sources: sources,
+      rationale: rationale,
+      plan: plan,
+      risks: risks,
     );
     try {
       final created = await _svc.create(item);
@@ -191,7 +192,7 @@ class ActionQueueNotifier
     } catch (e) {
       IveEventBus.instance.emit(
         IveEvent.actionMutationFailed(
-          actionTitle:    '[Lab] $title',
+          actionTitle: '[Lab] $title',
           technicalError: e.toString(),
         ),
       );
@@ -201,22 +202,22 @@ class ActionQueueNotifier
 
   Future<ActionQueueItem> addFromOpportunityItem(OpportunityLabItem opp) {
     return addFromOpportunity(
-      title:            opp.title,
-      description:      opp.description,
-      projectId:        opp.projectId,
+      title: opp.title,
+      description: opp.description,
+      projectId: opp.projectId,
       opportunityLabId: opp.id,
       marketAnalysisId: opp.marketAnalysisId,
-      priority:         opp.finalScore > 0 ? opp.finalScore : 50,
-      impactScore:      opp.revenueScore > 0 ? opp.revenueScore : 60,
-      effortScore:      50,
-      roiScore:         opp.finalScore,
-      marketScore:      opp.marketScore,
-      confidence:       opp.confidence,
-      origin:           'opportunity_lab',
-      sources:          opp.sources.isNotEmpty ? opp.sources : [opp.title],
-      rationale:        opp.rationale,
-      plan:             opp.actionSteps,
-      risks:            opp.risks,
+      priority: opp.finalScore > 0 ? opp.finalScore : 50,
+      impactScore: opp.revenueScore > 0 ? opp.revenueScore : 60,
+      effortScore: 50,
+      roiScore: opp.finalScore,
+      marketScore: opp.marketScore,
+      confidence: opp.confidence,
+      origin: 'opportunity_lab',
+      sources: opp.sources.isNotEmpty ? opp.sources : [opp.title],
+      rationale: opp.rationale,
+      plan: opp.actionSteps,
+      risks: opp.risks,
     );
   }
 
@@ -227,7 +228,7 @@ class ActionQueueNotifier
     } catch (e) {
       IveEventBus.instance.emit(
         IveEvent.actionMutationFailed(
-          actionTitle:    title,
+          actionTitle: title,
           technicalError: e.toString(),
         ),
       );

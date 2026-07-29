@@ -29,40 +29,80 @@ class _Question {
 }
 
 const _questions = <_Question>[
-  _Question(1,  'Problema',     'Qual problema específico este projeto resolve?',
+  _Question(
+      1,
+      'Problema',
+      'Qual problema específico este projeto resolve?',
       'Ex: Pequenos empreendedores perdem tempo gerenciando redes sociais manualmente.',
       _QuestionType.freeText),
-  _Question(2,  'Público',      'Quem é o cliente ideal? (idade, cargo, situação)',
+  _Question(
+      2,
+      'Público',
+      'Quem é o cliente ideal? (idade, cargo, situação)',
       'Ex: Freelancers de 25-40 anos que vendem serviços digitais.',
       _QuestionType.freeText),
-  _Question(3,  'Competição',   'Quais são os 3 principais concorrentes ou alternativas?',
+  _Question(
+      3,
+      'Competição',
+      'Quais são os 3 principais concorrentes ou alternativas?',
       'Ex: Buffer, Hootsuite, agendamento manual em planilhas.',
       _QuestionType.freeText),
-  _Question(4,  'Monetização',  'Como o projeto vai gerar receita?',
-      'Selecione o modelo principal.',
-      _QuestionType.multiChoice,
-      choices: ['Assinatura (SaaS)', 'Venda única', 'Publicidade/Ads', 'Serviço/Consultoria', 'Marketplace', 'Freemium']),
-  _Question(5,  'Mercado',      'Qual o mercado-alvo?',
-      'Selecione o foco geográfico principal.',
-      _QuestionType.multiChoice,
-      choices: ['Brasil', 'EUA', 'Europa', 'América Latina', 'Global', 'Outro']),
-  _Question(6,  'Estágio',      'Em que estágio está o projeto?',
-      'Selecione o estágio atual.',
-      _QuestionType.multiChoice,
-      choices: ['Ideia (apenas conceito)', 'Validando (pesquisando)', 'MVP pronto (funciona)', 'Com primeiros clientes', 'Escalando']),
-  _Question(7,  'MVP',          'O que seria o MVP mínimo para testar a ideia?',
+  _Question(4, 'Monetização', 'Como o projeto vai gerar receita?',
+      'Selecione o modelo principal.', _QuestionType.multiChoice,
+      choices: [
+        'Assinatura (SaaS)',
+        'Venda única',
+        'Publicidade/Ads',
+        'Serviço/Consultoria',
+        'Marketplace',
+        'Freemium'
+      ]),
+  _Question(5, 'Mercado', 'Qual o mercado-alvo?',
+      'Selecione o foco geográfico principal.', _QuestionType.multiChoice,
+      choices: [
+        'Brasil',
+        'EUA',
+        'Europa',
+        'América Latina',
+        'Global',
+        'Outro'
+      ]),
+  _Question(6, 'Estágio', 'Em que estágio está o projeto?',
+      'Selecione o estágio atual.', _QuestionType.multiChoice,
+      choices: [
+        'Ideia (apenas conceito)',
+        'Validando (pesquisando)',
+        'MVP pronto (funciona)',
+        'Com primeiros clientes',
+        'Escalando'
+      ]),
+  _Question(
+      7,
+      'MVP',
+      'O que seria o MVP mínimo para testar a ideia?',
       'Ex: Landing page + lista de espera, app com 3 funcionalidades, piloto com 10 clientes.',
       _QuestionType.freeText),
-  _Question(8,  'Clientes',     'Já tem clientes ou usuários? Se sim, quantos?',
+  _Question(
+      8,
+      'Clientes',
+      'Já tem clientes ou usuários? Se sim, quantos?',
       'Ex: 0 ainda, 50 usuários beta, 3 clientes pagantes.',
       _QuestionType.textAndNumber),
-  _Question(9,  'Link',         'Tem um site, app ou link para o projeto? (opcional)',
+  _Question(
+      9,
+      'Link',
+      'Tem um site, app ou link para o projeto? (opcional)',
       'Ex: https://meu-projeto.com — deixe em branco se ainda não tem.',
       _QuestionType.urlOptional),
-  _Question(10, 'Intenção',     'Qual o objetivo principal deste projeto?',
-      'Selecione o objetivo mais importante.',
-      _QuestionType.multiChoice,
-      choices: ['Gerar receita pessoal', 'Aprendizado/experimento', 'Impacto social', 'Vender a empresa (exit)', 'Complementar trabalho atual']),
+  _Question(10, 'Intenção', 'Qual o objetivo principal deste projeto?',
+      'Selecione o objetivo mais importante.', _QuestionType.multiChoice,
+      choices: [
+        'Gerar receita pessoal',
+        'Aprendizado/experimento',
+        'Impacto social',
+        'Vender a empresa (exit)',
+        'Complementar trabalho atual'
+      ]),
 ];
 
 class IdeaInterviewDialog extends ConsumerStatefulWidget {
@@ -82,13 +122,15 @@ class IdeaInterviewDialog extends ConsumerStatefulWidget {
     required VoidCallback onCompleted,
   }) =>
       showDialog<void>(
-        context:    context,
+        context: context,
         barrierDismissible: false,
-        builder:    (_) => IdeaInterviewDialog(project: project, onCompleted: onCompleted),
+        builder: (_) =>
+            IdeaInterviewDialog(project: project, onCompleted: onCompleted),
       );
 
   @override
-  ConsumerState<IdeaInterviewDialog> createState() => _IdeaInterviewDialogState();
+  ConsumerState<IdeaInterviewDialog> createState() =>
+      _IdeaInterviewDialogState();
 }
 
 class _IdeaInterviewDialogState extends ConsumerState<IdeaInterviewDialog> {
@@ -151,29 +193,34 @@ class _IdeaInterviewDialogState extends ConsumerState<IdeaInterviewDialog> {
     final niche = _answers[0]?.isNotEmpty == true ? _answers[0] : null;
 
     await ref.read(knowledgeItemNotifierProvider.notifier).create(KnowledgeItem(
-      id:         '',
-      userId:     uid,
-      projectId:  widget.project.id,
-      title:      'Entrevista de Ideia — ${widget.project.name}',
-      content:    content,
-      sourceType: 'manual',
-      status:     'analyzed',
-      niche:      niche,
-      createdAt:  DateTime.now(),
-      updatedAt:  DateTime.now(),
-    ));
+          id: '',
+          userId: uid,
+          projectId: widget.project.id,
+          title: 'Entrevista de Ideia — ${widget.project.name}',
+          content: content,
+          sourceType: 'manual',
+          status: 'analyzed',
+          niche: niche,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ));
 
-    await ref.read(projectEventNotifierProvider(widget.project.id).notifier).emit(
-      ProjectEventType.interviewCompleted,
-      'Entrevista de Ideia concluída',
-      description: '10 perguntas respondidas. Perfil do projeto enriquecido.',
-    );
+    await ref
+        .read(projectEventNotifierProvider(widget.project.id).notifier)
+        .emit(
+          ProjectEventType.interviewCompleted,
+          'Entrevista de Ideia concluída',
+          description:
+              '10 perguntas respondidas. Perfil do projeto enriquecido.',
+        );
   }
 
   String _buildKnowledgeContent() {
     final buffer = StringBuffer();
-    buffer.writeln('ENTREVISTA DE IDEIA — ${widget.project.name.toUpperCase()}');
-    buffer.writeln('Data: ${DateTime.now().toIso8601String().substring(0, 10)}');
+    buffer
+        .writeln('ENTREVISTA DE IDEIA — ${widget.project.name.toUpperCase()}');
+    buffer
+        .writeln('Data: ${DateTime.now().toIso8601String().substring(0, 10)}');
     buffer.writeln('');
     for (var i = 0; i < _questions.length; i++) {
       final q = _questions[i];
@@ -226,7 +273,8 @@ class _IdeaInterviewDialogState extends ConsumerState<IdeaInterviewDialog> {
             Expanded(
               child: Text(
                 'IVE precisa entender melhor "${widget.project.name}"',
-                style: theme.textTheme.titleMedium?.copyWith(color: Colors.white),
+                style:
+                    theme.textTheme.titleMedium?.copyWith(color: Colors.white),
               ),
             ),
             TextButton(
@@ -235,7 +283,8 @@ class _IdeaInterviewDialogState extends ConsumerState<IdeaInterviewDialog> {
                 Navigator.of(context).pop();
                 widget.onCompleted();
               },
-              child: const Text('Pular', style: TextStyle(color: Colors.white38, fontSize: 12)),
+              child: const Text('Pular',
+                  style: TextStyle(color: Colors.white38, fontSize: 12)),
             ),
           ],
         ),
@@ -282,13 +331,15 @@ class _IdeaInterviewDialogState extends ConsumerState<IdeaInterviewDialog> {
           ),
           child: Text(
             _q.category.toUpperCase(),
-            style: const TextStyle(color: Color(0xFF00BCD4), fontSize: 10, letterSpacing: 1.2),
+            style: const TextStyle(
+                color: Color(0xFF00BCD4), fontSize: 10, letterSpacing: 1.2),
           ),
         ),
         const SizedBox(height: 8),
         Text(
           _q.text,
-          style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
+          style: const TextStyle(
+              color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 4),
         Text(
@@ -312,7 +363,9 @@ class _IdeaInterviewDialogState extends ConsumerState<IdeaInterviewDialog> {
               duration: const Duration(milliseconds: 150),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: selected ? const Color(0xFF00BCD4).withOpacity(0.2) : Colors.white10,
+                color: selected
+                    ? const Color(0xFF00BCD4).withOpacity(0.2)
+                    : Colors.white10,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: selected ? const Color(0xFF00BCD4) : Colors.white24,
@@ -332,25 +385,25 @@ class _IdeaInterviewDialogState extends ConsumerState<IdeaInterviewDialog> {
     }
 
     return TextField(
-      controller:  _ctrl,
-      autofocus:   true,
-      maxLines:    _q.type == _QuestionType.freeText ? 3 : 1,
-      style:       const TextStyle(color: Colors.white),
+      controller: _ctrl,
+      autofocus: true,
+      maxLines: _q.type == _QuestionType.freeText ? 3 : 1,
+      style: const TextStyle(color: Colors.white),
       keyboardType: _q.type == _QuestionType.urlOptional
           ? TextInputType.url
           : TextInputType.multiline,
       decoration: InputDecoration(
-        hintText:        _q.hint,
-        hintStyle:       const TextStyle(color: Colors.white24, fontSize: 12),
-        filled:          true,
-        fillColor:       Colors.white10,
-        border:          OutlineInputBorder(
+        hintText: _q.hint,
+        hintStyle: const TextStyle(color: Colors.white24, fontSize: 12),
+        filled: true,
+        fillColor: Colors.white10,
+        border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide:   BorderSide.none,
+          borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide:   const BorderSide(color: Color(0xFF00BCD4)),
+          borderSide: const BorderSide(color: Color(0xFF00BCD4)),
         ),
         contentPadding: const EdgeInsets.all(12),
         suffixText: _q.type == _QuestionType.urlOptional ? 'opcional' : null,
@@ -372,7 +425,8 @@ class _IdeaInterviewDialogState extends ConsumerState<IdeaInterviewDialog> {
                 _ctrl.text = _answers[_current] ?? '';
               });
             },
-            child: const Text('← Anterior', style: TextStyle(color: Colors.white54)),
+            child: const Text('← Anterior',
+                style: TextStyle(color: Colors.white54)),
           )
         else
           const SizedBox.shrink(),
@@ -381,13 +435,16 @@ class _IdeaInterviewDialogState extends ConsumerState<IdeaInterviewDialog> {
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF00BCD4),
             foregroundColor: Colors.black,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           ),
           child: _saving
               ? const SizedBox(
-                  width: 16, height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Colors.black),
                 )
               : Text(
                   _isLast ? 'Concluir Entrevista ✓' : 'Próxima →',

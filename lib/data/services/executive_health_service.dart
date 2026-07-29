@@ -17,29 +17,30 @@ class ExecutiveHealthService {
     int knowledgeItemCount = 0,
   }) {
     return ExecutiveHealth(
-      knowledge:    _knowledgePillar(coverage, knowledgeItemCount),
-      market:       _marketPillar(analysis),
-      execution:    _executionPillar(actions),
+      knowledge: _knowledgePillar(coverage, knowledgeItemCount),
+      market: _marketPillar(analysis),
+      execution: _executionPillar(actions),
       monetization: _monetizationPillar(analysis),
-      validation:   _validationPillar(project, analysis, labItems),
-      risks:        _riskPillar(analysis, actions),
-      technology:   _technologyPillar(project, coverage),
-      strategy:     _strategyPillar(project, analysis, coverage, labItems),
-      computedAt:   DateTime.now(),
+      validation: _validationPillar(project, analysis, labItems),
+      risks: _riskPillar(analysis, actions),
+      technology: _technologyPillar(project, coverage),
+      strategy: _strategyPillar(project, analysis, coverage, labItems),
+      computedAt: DateTime.now(),
     );
   }
 
   // ── Pilares ──────────────────────────────────────────────────────────────────
 
   HealthPillar _knowledgePillar(KnowledgeCoverage coverage, int itemCount) {
-    final score = _clamp((coverage.score * 0.7 + _min(itemCount * 5, 30)).round());
+    final score =
+        _clamp((coverage.score * 0.7 + _min(itemCount * 5, 30)).round());
     return HealthPillar(
-      name:           'Conhecimento',
-      emoji:          '📚',
-      score:          score,
-      status:         _status(score),
-      strengths:      coverage.strengths,
-      gaps:           coverage.gaps.take(3).toList(),
+      name: 'Conhecimento',
+      emoji: '📚',
+      score: score,
+      status: _status(score),
+      strengths: coverage.strengths,
+      gaps: coverage.gaps.take(3).toList(),
       recommendation: score < 50
           ? 'Adicione mais documentos de conhecimento para melhorar a precisão das análises.'
           : 'Base de conhecimento sólida. Continue adicionando dados de mercado.',
@@ -49,35 +50,37 @@ class ExecutiveHealthService {
   HealthPillar _marketPillar(MarketAnalysis? a) {
     if (a == null) {
       return HealthPillar(
-        name:           'Mercado',
-        emoji:          '📊',
-        score:          0,
-        status:         'crítico',
-        gaps:           ['Nenhuma análise de mercado executada'],
-        recommendation: 'Execute uma análise de mercado para desbloquear inteligência de mercado.',
+        name: 'Mercado',
+        emoji: '📊',
+        score: 0,
+        status: 'crítico',
+        gaps: ['Nenhuma análise de mercado executada'],
+        recommendation:
+            'Execute uma análise de mercado para desbloquear inteligência de mercado.',
       );
     }
     final score = _clamp(
       ((a.opportunityScore ?? 0) * 0.4 +
-          (a.scoreSeo        ?? 0) * 0.2 +
-          (a.scoreGrowth     ?? 0) * 0.2 +
-          (a.scoreCompetition?? 0) * 0.2)
+              (a.scoreSeo ?? 0) * 0.2 +
+              (a.scoreGrowth ?? 0) * 0.2 +
+              (a.scoreCompetition ?? 0) * 0.2)
           .round(),
     );
     return HealthPillar(
-      name:      'Mercado',
-      emoji:     '📊',
-      score:     score,
-      status:    _status(score),
+      name: 'Mercado',
+      emoji: '📊',
+      score: score,
+      status: _status(score),
       strengths: [
         if ((a.opportunityScore ?? 0) >= 70) 'Alto Opportunity Score',
-        if ((a.scoreGrowth      ?? 0) >= 70) 'Mercado em crescimento',
+        if ((a.scoreGrowth ?? 0) >= 70) 'Mercado em crescimento',
         if ((a.scoreCompetition ?? 0) >= 70) 'Pouca concorrência',
       ],
       gaps: [
-        if ((a.scoreSeo        ?? 0) < 50) 'SEO fraco — baixo tráfego orgânico esperado',
-        if ((a.scoreGrowth     ?? 0) < 50) 'Mercado com crescimento lento',
-        if ((a.scoreCompetition?? 0) < 50) 'Mercado saturado',
+        if ((a.scoreSeo ?? 0) < 50)
+          'SEO fraco — baixo tráfego orgânico esperado',
+        if ((a.scoreGrowth ?? 0) < 50) 'Mercado com crescimento lento',
+        if ((a.scoreCompetition ?? 0) < 50) 'Mercado saturado',
       ],
       recommendation: score < 50
           ? 'Revise o nicho ou busque um segmento com menor concorrência.'
@@ -88,22 +91,23 @@ class ExecutiveHealthService {
   HealthPillar _executionPillar(List<ActionQueueItem> actions) {
     if (actions.isEmpty) {
       return HealthPillar(
-        name:           'Execução',
-        emoji:          '⚡',
-        score:          0,
-        status:         'crítico',
-        gaps:           ['Nenhuma ação no pipeline'],
-        recommendation: 'Crie ações executáveis para iniciar o momentum do projeto.',
+        name: 'Execução',
+        emoji: '⚡',
+        score: 0,
+        status: 'crítico',
+        gaps: ['Nenhuma ação no pipeline'],
+        recommendation:
+            'Crie ações executáveis para iniciar o momentum do projeto.',
       );
     }
     final completed = actions.where((a) => a.status == 'completed').length;
-    final rate      = (completed / actions.length * 100).round();
-    final pending   = actions.where((a) => a.status == 'pending').length;
-    final score     = _clamp((rate * 0.6 + _min(actions.length * 5, 40)).round());
+    final rate = (completed / actions.length * 100).round();
+    final pending = actions.where((a) => a.status == 'pending').length;
+    final score = _clamp((rate * 0.6 + _min(actions.length * 5, 40)).round());
     return HealthPillar(
-      name:   'Execução',
-      emoji:  '⚡',
-      score:  score,
+      name: 'Execução',
+      emoji: '⚡',
+      score: score,
       status: _status(score),
       strengths: [
         if (rate >= 50) '$rate% das ações concluídas',
@@ -122,18 +126,20 @@ class ExecutiveHealthService {
   HealthPillar _monetizationPillar(MarketAnalysis? a) {
     final score = a == null ? 0 : _clamp(a.scoreMonetization ?? 0);
     return HealthPillar(
-      name:   'Monetização',
-      emoji:  '💰',
-      score:  score,
+      name: 'Monetização',
+      emoji: '💰',
+      score: score,
       status: _status(score),
       strengths: [
         if (score >= 70) 'Forte potencial de monetização identificado',
-        if (a?.monetizationModel != null && (a!.monetizationModel ?? '').isNotEmpty)
+        if (a?.monetizationModel != null &&
+            (a!.monetizationModel ?? '').isNotEmpty)
           'Modelo de receita definido: ${a?.monetizationModel}',
       ],
       gaps: [
         if (a == null) 'Sem análise de monetização',
-        if (score < 50 && a != null) 'Modelo de monetização com baixa viabilidade',
+        if (score < 50 && a != null)
+          'Modelo de monetização com baixa viabilidade',
       ],
       recommendation: score < 50
           ? 'Execute o Revenue Planner para modelar diferentes cenários de receita.'
@@ -141,23 +147,27 @@ class ExecutiveHealthService {
     );
   }
 
-  HealthPillar _validationPillar(Project p, MarketAnalysis? a, List<OpportunityLabItem> lab) {
+  HealthPillar _validationPillar(
+      Project p, MarketAnalysis? a, List<OpportunityLabItem> lab) {
     var score = 0;
-    if (a != null)           score += 30;
-    if (lab.isNotEmpty)      score += 25;
+    if (a != null) score += 30;
+    if (lab.isNotEmpty) score += 25;
     if (p.url != null && (p.url ?? '').isNotEmpty) score += 20;
-    final approved = lab.where((l) => l.status == 'approved' || l.status == 'executing').length;
+    final approved = lab
+        .where((l) => l.status == 'approved' || l.status == 'executing')
+        .length;
     score += _min(approved * 10, 25);
     score = _clamp(score);
     return HealthPillar(
-      name:   'Validação',
-      emoji:  '🔬',
-      score:  score,
+      name: 'Validação',
+      emoji: '🔬',
+      score: score,
       status: _status(score),
       strengths: [
-        if (a != null)      'Análise de mercado executada',
+        if (a != null) 'Análise de mercado executada',
         if (lab.isNotEmpty) '${lab.length} oportunidades no Opportunity Lab',
-        if (p.url != null && (p.url ?? '').isNotEmpty) 'Projeto tem presença digital',
+        if (p.url != null && (p.url ?? '').isNotEmpty)
+          'Projeto tem presença digital',
       ],
       gaps: [
         if (a == null) 'Sem validação de mercado',
@@ -178,18 +188,18 @@ class ExecutiveHealthService {
     if (a == null) score -= 30;
     score = _clamp(score);
     return HealthPillar(
-      name:   'Riscos',
-      emoji:  '🛡️',
-      score:  score,
+      name: 'Riscos',
+      emoji: '🛡️',
+      score: score,
       status: _status(score),
       strengths: [
-        if (risks == 0)     'Sem fraquezas identificadas',
+        if (risks == 0) 'Sem fraquezas identificadas',
         if (cancelled == 0) 'Nenhuma ação cancelada',
       ],
       gaps: [
-        if (risks > 2)     '$risks fraquezas/riscos identificados na análise',
+        if (risks > 2) '$risks fraquezas/riscos identificados na análise',
         if (cancelled > 0) '$cancelled ações canceladas',
-        if (a == null)     'Sem análise de riscos executada',
+        if (a == null) 'Sem análise de riscos executada',
       ],
       recommendation: score < 50
           ? 'Mitigue os principais riscos identificados criando ações preventivas.'
@@ -199,23 +209,25 @@ class ExecutiveHealthService {
 
   HealthPillar _technologyPillar(Project p, KnowledgeCoverage coverage) {
     var score = 0;
-    if (p.url != null && (p.url ?? '').isNotEmpty)       score += 30;
-    if (p.type == 'website' || p.type == 'saas')         score += 20;
-    if (coverage.docPoints > 0)                          score += 30;
+    if (p.url != null && (p.url ?? '').isNotEmpty) score += 30;
+    if (p.type == 'website' || p.type == 'saas') score += 20;
+    if (coverage.docPoints > 0) score += 30;
     score += _min(coverage.oppPoints, 20);
     score = _clamp(score);
     return HealthPillar(
-      name:   'Tecnologia',
-      emoji:  '🛠️',
-      score:  score,
+      name: 'Tecnologia',
+      emoji: '🛠️',
+      score: score,
       status: _status(score),
       strengths: [
-        if (p.url != null && (p.url ?? '').isNotEmpty) 'Presença digital existente',
-        if (coverage.docPoints > 0)                   'Documentação técnica presente',
+        if (p.url != null && (p.url ?? '').isNotEmpty)
+          'Presença digital existente',
+        if (coverage.docPoints > 0) 'Documentação técnica presente',
       ],
       gaps: [
-        if (p.url == null || (p.url ?? '').isEmpty) 'Sem presença digital documentada',
-        if (coverage.docPoints == 0)                'Sem documentação técnica',
+        if (p.url == null || (p.url ?? '').isEmpty)
+          'Sem presença digital documentada',
+        if (coverage.docPoints == 0) 'Sem documentação técnica',
       ],
       recommendation: score < 50
           ? 'Documente a stack tecnológica e adicione o link do projeto.'
@@ -224,31 +236,34 @@ class ExecutiveHealthService {
   }
 
   HealthPillar _strategyPillar(
-    Project p, MarketAnalysis? a,
+    Project p,
+    MarketAnalysis? a,
     KnowledgeCoverage coverage,
     List<OpportunityLabItem> lab,
   ) {
     var score = 0;
-    if (a?.valueProposition != null && (a!.valueProposition ?? '').isNotEmpty) score += 25;
-    if (a?.positioning != null && (a?.positioning ?? '').isNotEmpty)           score += 20;
-    if (lab.any((l) => l.status == 'approved'))                                score += 20;
-    if (p.opportunityScore >= 60)                                              score += 20;
+    if (a?.valueProposition != null && (a!.valueProposition ?? '').isNotEmpty)
+      score += 25;
+    if (a?.positioning != null && (a?.positioning ?? '').isNotEmpty)
+      score += 20;
+    if (lab.any((l) => l.status == 'approved')) score += 20;
+    if (p.opportunityScore >= 60) score += 20;
     score += _min(coverage.score ~/ 5, 15);
     score = _clamp(score);
     return HealthPillar(
-      name:   'Estratégia',
-      emoji:  '🎯',
-      score:  score,
+      name: 'Estratégia',
+      emoji: '🎯',
+      score: score,
       status: _status(score),
       strengths: [
         if (a?.valueProposition != null) 'Proposta de valor definida',
-        if (a?.positioning != null)      'Posicionamento estratégico definido',
-        if (p.opportunityScore >= 60)    'Alto Opportunity Score estratégico',
+        if (a?.positioning != null) 'Posicionamento estratégico definido',
+        if (p.opportunityScore >= 60) 'Alto Opportunity Score estratégico',
       ],
       gaps: [
-        if (a == null)                   'Sem estratégia de mercado definida',
+        if (a == null) 'Sem estratégia de mercado definida',
         if (a?.valueProposition == null) 'Proposta de valor não documentada',
-        if (a?.positioning == null)      'Posicionamento estratégico indefinido',
+        if (a?.positioning == null) 'Posicionamento estratégico indefinido',
       ],
       recommendation: score < 50
           ? 'Defina a proposta de valor e o posicionamento estratégico do projeto.'

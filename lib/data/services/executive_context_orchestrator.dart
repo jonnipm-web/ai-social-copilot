@@ -23,7 +23,7 @@ class ExecutiveContextOrchestrator {
     ExecutiveContextService? contextSvc,
     ProjectEventService? eventSvc,
   })  : _contextSvc = contextSvc ?? ExecutiveContextService(),
-        _eventSvc   = eventSvc   ?? ProjectEventService();
+        _eventSvc = eventSvc ?? ProjectEventService();
 
   // ── Eventos de projeto ─────────────────────────────────────────────────────
 
@@ -32,12 +32,12 @@ class ExecutiveContextOrchestrator {
     required String projectName,
   }) async {
     await _emitAndUpdate(
-      projectId:    projectId,
-      type:         ProjectEventType.projectCreated,
-      title:        'Projeto "$projectName" criado',
-      description:  'Projeto adicionado ao portfólio.',
+      projectId: projectId,
+      type: ProjectEventType.projectCreated,
+      title: 'Projeto "$projectName" criado',
+      description: 'Projeto adicionado ao portfólio.',
       sourceModule: 'projects',
-      metadata:     {'project_name': projectName},
+      metadata: {'project_name': projectName},
     );
   }
 
@@ -47,12 +47,12 @@ class ExecutiveContextOrchestrator {
     required String newStatus,
   }) async {
     await _emitAndUpdate(
-      projectId:    projectId,
-      type:         ProjectEventType.stageChanged,
-      title:        'Estágio alterado: $newStatus',
-      description:  'Projeto "$projectName" mudou para o estágio "$newStatus".',
+      projectId: projectId,
+      type: ProjectEventType.stageChanged,
+      title: 'Estágio alterado: $newStatus',
+      description: 'Projeto "$projectName" mudou para o estágio "$newStatus".',
       sourceModule: 'projects',
-      metadata:     {'status': newStatus, 'project_name': projectName},
+      metadata: {'status': newStatus, 'project_name': projectName},
     );
   }
 
@@ -62,20 +62,20 @@ class ExecutiveContextOrchestrator {
     required int opportunityScore,
   }) async {
     await _emitAndUpdate(
-      projectId:      projectId,
-      type:           ProjectEventType.analysisCompleted,
-      title:          'Análise de mercado concluída',
-      description:    'Opportunity Score: $opportunityScore/100.',
-      sourceModule:   'market_intelligence',
+      projectId: projectId,
+      type: ProjectEventType.analysisCompleted,
+      title: 'Análise de mercado concluída',
+      description: 'Opportunity Score: $opportunityScore/100.',
+      sourceModule: 'market_intelligence',
       sourceEntityId: marketAnalysisId,
       idempotencyKey: marketAnalysisId != null
           ? '${projectId}_analysisCompleted_$marketAnalysisId'
           : null,
-      metadata:       {'opportunity_score': opportunityScore},
+      metadata: {'opportunity_score': opportunityScore},
     );
     if (marketAnalysisId != null) {
       await _contextSvc.upsert({
-        'project_id':       projectId,
+        'project_id': projectId,
         'last_analysis_at': DateTime.now().toIso8601String(),
       });
     }
@@ -87,13 +87,13 @@ class ExecutiveContextOrchestrator {
     required String opportunityTitle,
   }) async {
     await _emitAndUpdate(
-      projectId:      projectId,
-      type:           ProjectEventType.opportunityCreated,
-      title:          'Nova oportunidade: $opportunityTitle',
-      description:    'Oportunidade adicionada ao Lab.',
-      sourceModule:   'opportunity_lab',
+      projectId: projectId,
+      type: ProjectEventType.opportunityCreated,
+      title: 'Nova oportunidade: $opportunityTitle',
+      description: 'Oportunidade adicionada ao Lab.',
+      sourceModule: 'opportunity_lab',
       sourceEntityId: opportunityId,
-      metadata:       {'opportunity_title': opportunityTitle},
+      metadata: {'opportunity_title': opportunityTitle},
     );
   }
 
@@ -103,14 +103,14 @@ class ExecutiveContextOrchestrator {
     required String opportunityTitle,
   }) async {
     await _emitAndUpdate(
-      projectId:      projectId,
-      type:           ProjectEventType.decisionTaken,
-      title:          'Oportunidade aprovada: $opportunityTitle',
-      description:    'Decisão executiva registrada.',
-      sourceModule:   'opportunity_lab',
+      projectId: projectId,
+      type: ProjectEventType.decisionTaken,
+      title: 'Oportunidade aprovada: $opportunityTitle',
+      description: 'Decisão executiva registrada.',
+      sourceModule: 'opportunity_lab',
       sourceEntityId: opportunityId,
       idempotencyKey: '${projectId}_decisionTaken_$opportunityId',
-      metadata:       {'opportunity_title': opportunityTitle},
+      metadata: {'opportunity_title': opportunityTitle},
     );
   }
 
@@ -120,14 +120,14 @@ class ExecutiveContextOrchestrator {
     required String documentTitle,
   }) async {
     await _emitAndUpdate(
-      projectId:      projectId,
-      type:           ProjectEventType.documentAdded,
-      title:          'Documento adicionado: $documentTitle',
-      description:    'Novo item de conhecimento indexado.',
-      sourceModule:   'knowledge_vault',
+      projectId: projectId,
+      type: ProjectEventType.documentAdded,
+      title: 'Documento adicionado: $documentTitle',
+      description: 'Novo item de conhecimento indexado.',
+      sourceModule: 'knowledge_vault',
       sourceEntityId: knowledgeItemId,
       idempotencyKey: '${projectId}_documentAdded_$knowledgeItemId',
-      metadata:       {'title': documentTitle},
+      metadata: {'title': documentTitle},
     );
   }
 
@@ -137,14 +137,14 @@ class ExecutiveContextOrchestrator {
     required String actionTitle,
   }) async {
     await _emitAndUpdate(
-      projectId:      projectId,
-      type:           ProjectEventType.actionCompleted,
-      title:          'Ação concluída: $actionTitle',
-      description:    'Progresso de execução atualizado.',
-      sourceModule:   'action_engine',
+      projectId: projectId,
+      type: ProjectEventType.actionCompleted,
+      title: 'Ação concluída: $actionTitle',
+      description: 'Progresso de execução atualizado.',
+      sourceModule: 'action_engine',
       sourceEntityId: actionId,
       idempotencyKey: '${projectId}_actionCompleted_$actionId',
-      metadata:       {'action_title': actionTitle},
+      metadata: {'action_title': actionTitle},
     );
   }
 
@@ -153,12 +153,12 @@ class ExecutiveContextOrchestrator {
     required String projectName,
   }) async {
     await _emitAndUpdate(
-      projectId:    projectId,
-      type:         ProjectEventType.checkIn,
-      title:        'Check-In executivo realizado',
-      description:  'Revisão de "$projectName" concluída.',
+      projectId: projectId,
+      type: ProjectEventType.checkIn,
+      title: 'Check-In executivo realizado',
+      description: 'Revisão de "$projectName" concluída.',
       sourceModule: 'executive_intelligence',
-      metadata:     {'project_name': projectName},
+      metadata: {'project_name': projectName},
     );
     await _contextSvc.markCheckInCompleted(projectId);
   }
@@ -177,12 +177,12 @@ class ExecutiveContextOrchestrator {
   }) async {
     // Emite evento na timeline persistida
     await _eventSvc.emit(
-      projectId:      projectId,
-      type:           type,
-      title:          title,
-      description:    description,
-      metadata:       metadata,
-      sourceModule:   sourceModule,
+      projectId: projectId,
+      type: type,
+      title: title,
+      description: description,
+      metadata: metadata,
+      sourceModule: sourceModule,
       sourceEntityId: sourceEntityId,
       idempotencyKey: idempotencyKey,
     );
@@ -198,7 +198,8 @@ final executiveContextServiceProvider =
     Provider<ExecutiveContextService>((_) => ExecutiveContextService());
 
 final executiveContextOrchestratorProvider =
-    Provider<ExecutiveContextOrchestrator>((ref) => ExecutiveContextOrchestrator(
-          contextSvc: ref.read(executiveContextServiceProvider),
-          eventSvc:   ProjectEventService(),
-        ));
+    Provider<ExecutiveContextOrchestrator>(
+        (ref) => ExecutiveContextOrchestrator(
+              contextSvc: ref.read(executiveContextServiceProvider),
+              eventSvc: ProjectEventService(),
+            ));

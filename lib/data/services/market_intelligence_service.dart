@@ -28,9 +28,9 @@ class MarketIntelligenceService {
     required List<RevenuePlan> revenuePlans,
   }) =>
       _ecoSvc.computeRevenueIntelligence(
-        projects:      projects,
-        analyses:      analyses,
-        revenuePlans:  revenuePlans,
+        projects: projects,
+        analyses: analyses,
+        revenuePlans: revenuePlans,
       );
 
   List<ExecutionScore> computeExecutionScores({
@@ -39,8 +39,8 @@ class MarketIntelligenceService {
     required List<OpportunityLabItem> labItems,
   }) =>
       _ecoSvc.computeExecutionScores(
-        projects:  projects,
-        actions:   actions,
-        labItems:  labItems,
+        projects: projects,
+        actions: actions,
+        labItems: labItems,
       );
 }

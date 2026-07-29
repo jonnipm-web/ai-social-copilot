@@ -5,8 +5,8 @@ import '../data/services/executive_context_orchestrator.dart';
 import '../data/services/executive_context_service.dart';
 
 // Contexto executivo de um projeto específico
-final executiveContextByProjectProvider =
-    FutureProvider.autoDispose.family<ExecutiveContext?, String>((ref, projectId) {
+final executiveContextByProjectProvider = FutureProvider.autoDispose
+    .family<ExecutiveContext?, String>((ref, projectId) {
   return ref.read(executiveContextServiceProvider).fetchByProject(projectId);
 });
 
@@ -40,7 +40,7 @@ class ExecutiveContextNotifier extends StateNotifier<AsyncValue<void>> {
     state = const AsyncValue.loading();
     try {
       await _orchestrator.onCheckInCompleted(
-        projectId:   projectId,
+        projectId: projectId,
         projectName: projectName,
       );
       ref.invalidate(executiveContextByProjectProvider(projectId));
@@ -69,8 +69,8 @@ class ExecutiveContextNotifier extends StateNotifier<AsyncValue<void>> {
   }
 }
 
-final executiveContextNotifierProvider =
-    StateNotifierProvider.autoDispose<ExecutiveContextNotifier, AsyncValue<void>>(
+final executiveContextNotifierProvider = StateNotifierProvider.autoDispose<
+    ExecutiveContextNotifier, AsyncValue<void>>(
   (ref) => ExecutiveContextNotifier(
     ref.read(executiveContextServiceProvider),
     ref.read(executiveContextOrchestratorProvider),

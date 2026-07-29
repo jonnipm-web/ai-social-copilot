@@ -22,18 +22,18 @@ class KnowledgeItemFormScreen extends ConsumerStatefulWidget {
 class _KnowledgeItemFormScreenState
     extends ConsumerState<KnowledgeItemFormScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _titleCtrl          = TextEditingController();
-  final _contentCtrl        = TextEditingController();
-  final _urlCtrl            = TextEditingController();
-  final _nicheCtrl          = TextEditingController();
-  final _audienceCtrl       = TextEditingController();
+  final _titleCtrl = TextEditingController();
+  final _contentCtrl = TextEditingController();
+  final _urlCtrl = TextEditingController();
+  final _nicheCtrl = TextEditingController();
+  final _audienceCtrl = TextEditingController();
 
-  String  _sourceType = 'manual';
-  String  _language   = 'pt-BR';
+  String _sourceType = 'manual';
+  String _language = 'pt-BR';
   String? _projectId;
-  bool    _loading    = false;
-  bool    _init       = false;
-  bool    _importing  = false;
+  bool _loading = false;
+  bool _init = false;
+  bool _importing = false;
   String? _importedFileName;
 
   KnowledgeItem? _existing;
@@ -63,21 +63,20 @@ class _KnowledgeItemFormScreenState
       return;
     }
 
-    final item = await ref
-        .read(knowledgeServiceProvider)
-        .fetchById(widget.itemId!);
+    final item =
+        await ref.read(knowledgeServiceProvider).fetchById(widget.itemId!);
     if (item == null || !mounted) return;
 
     _existing = item;
-    _titleCtrl.text    = item.title;
-    _contentCtrl.text  = item.content;
-    _urlCtrl.text      = item.sourceUrl ?? '';
-    _nicheCtrl.text    = item.niche ?? '';
+    _titleCtrl.text = item.title;
+    _contentCtrl.text = item.content;
+    _urlCtrl.text = item.sourceUrl ?? '';
+    _nicheCtrl.text = item.niche ?? '';
     _audienceCtrl.text = item.targetAudience ?? '';
     setState(() {
       _sourceType = item.sourceType;
-      _language   = item.language;
-      _projectId  = item.projectId;
+      _language = item.language;
+      _projectId = item.projectId;
     });
   }
 
@@ -87,12 +86,10 @@ class _KnowledgeItemFormScreenState
     final uid = Supabase.instance.client.auth.currentUser?.id;
     if (uid == null) return;
 
-    final content = _sourceType == 'url'
-        ? _urlCtrl.text.trim()
-        : _contentCtrl.text.trim();
+    final content =
+        _sourceType == 'url' ? _urlCtrl.text.trim() : _contentCtrl.text.trim();
 
-    final sourceTypeToSave =
-        _sourceType == 'drive' ? 'file' : _sourceType;
+    final sourceTypeToSave = _sourceType == 'drive' ? 'file' : _sourceType;
 
     if (content.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -111,37 +108,34 @@ class _KnowledgeItemFormScreenState
 
       if (_isEdit && _existing != null) {
         await notifier.update(_existing!.id, {
-          'title':           _titleCtrl.text.trim(),
-          'source_type':     sourceTypeToSave,
-          'source_url':      _sourceType == 'url' ? _urlCtrl.text.trim() : null,
-          'content':         content,
-          'niche':           _nicheCtrl.text.trim().isEmpty
-              ? null
-              : _nicheCtrl.text.trim(),
+          'title': _titleCtrl.text.trim(),
+          'source_type': sourceTypeToSave,
+          'source_url': _sourceType == 'url' ? _urlCtrl.text.trim() : null,
+          'content': content,
+          'niche':
+              _nicheCtrl.text.trim().isEmpty ? null : _nicheCtrl.text.trim(),
           'target_audience': _audienceCtrl.text.trim().isEmpty
               ? null
               : _audienceCtrl.text.trim(),
-          'language':        _language,
-          'status':          'pending',
+          'language': _language,
+          'status': 'pending',
         });
       } else {
         await notifier.create(KnowledgeItem(
-          id:             '',
-          userId:         uid,
-          projectId:      _projectId,
-          title:          _titleCtrl.text.trim(),
-          sourceType:     sourceTypeToSave,
-          sourceUrl:      _sourceType == 'url' ? _urlCtrl.text.trim() : null,
-          content:        _sourceType == 'url' ? _urlCtrl.text.trim() : content,
-          niche:          _nicheCtrl.text.trim().isEmpty
-              ? null
-              : _nicheCtrl.text.trim(),
+          id: '',
+          userId: uid,
+          projectId: _projectId,
+          title: _titleCtrl.text.trim(),
+          sourceType: sourceTypeToSave,
+          sourceUrl: _sourceType == 'url' ? _urlCtrl.text.trim() : null,
+          content: _sourceType == 'url' ? _urlCtrl.text.trim() : content,
+          niche: _nicheCtrl.text.trim().isEmpty ? null : _nicheCtrl.text.trim(),
           targetAudience: _audienceCtrl.text.trim().isEmpty
               ? null
               : _audienceCtrl.text.trim(),
-          language:       _language,
-          createdAt:      DateTime.now(),
-          updatedAt:      DateTime.now(),
+          language: _language,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
         ));
       }
 
@@ -221,28 +215,28 @@ class _KnowledgeItemFormScreenState
                 runSpacing: 8,
                 children: [
                   _SourceTypeButton(
-                    icon:  Icons.edit_note_rounded,
+                    icon: Icons.edit_note_rounded,
                     label: 'Texto Manual',
                     value: 'manual',
                     current: _sourceType,
                     onTap: (v) => setState(() => _sourceType = v),
                   ),
                   _SourceTypeButton(
-                    icon:  Icons.link_rounded,
+                    icon: Icons.link_rounded,
                     label: 'URL',
                     value: 'url',
                     current: _sourceType,
                     onTap: (v) => setState(() => _sourceType = v),
                   ),
                   _SourceTypeButton(
-                    icon:  Icons.upload_file_rounded,
+                    icon: Icons.upload_file_rounded,
                     label: 'Arquivo',
                     value: 'file',
                     current: _sourceType,
                     onTap: (v) => setState(() => _sourceType = v),
                   ),
                   _SourceTypeButton(
-                    icon:  Icons.add_to_drive_rounded,
+                    icon: Icons.add_to_drive_rounded,
                     label: 'Google Drive',
                     value: 'drive',
                     current: _sourceType,
@@ -271,18 +265,19 @@ class _KnowledgeItemFormScreenState
                 const SizedBox(height: 8),
                 _DriveImportSection(
                   importedFileName: _importedFileName,
-                  contentCtrl:     _contentCtrl,
-                  titleCtrl:       _titleCtrl,
-                  onImported: (name) => setState(() => _importedFileName = name),
+                  contentCtrl: _contentCtrl,
+                  titleCtrl: _titleCtrl,
+                  onImported: (name) =>
+                      setState(() => _importedFileName = name),
                 ),
               ] else if (_sourceType == 'file') ...[
                 const _Label('Importar Arquivo (PDF, DOCX, TXT)'),
                 const SizedBox(height: 8),
                 _FileImportSection(
-                  importing:        _importing,
+                  importing: _importing,
                   importedFileName: _importedFileName,
-                  contentCtrl:      _contentCtrl,
-                  titleCtrl:        _titleCtrl,
+                  contentCtrl: _contentCtrl,
+                  titleCtrl: _titleCtrl,
                   onImport: (fileName) => setState(() {
                     _importedFileName = fileName;
                     _importing = false;
@@ -311,14 +306,18 @@ class _KnowledgeItemFormScreenState
                   decoration: BoxDecoration(
                     color: const Color(0xFF6C63FF).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFF6C63FF).withOpacity(0.3)),
+                    border: Border.all(
+                        color: const Color(0xFF6C63FF).withOpacity(0.3)),
                   ),
                   child: const Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         '📄 Para Google Docs / Livros:',
-                        style: TextStyle(color: Color(0xFF6C63FF), fontSize: 12, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                            color: Color(0xFF6C63FF),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600),
                       ),
                       SizedBox(height: 4),
                       Text(
@@ -326,7 +325,8 @@ class _KnowledgeItemFormScreenState
                         '2. Clique em Compartilhar\n'
                         '3. Mude para "Qualquer pessoa com o link pode visualizar"\n'
                         '4. Copie o link e cole aqui',
-                        style: TextStyle(color: Colors.white54, fontSize: 12, height: 1.5),
+                        style: TextStyle(
+                            color: Colors.white54, fontSize: 12, height: 1.5),
                       ),
                     ],
                   ),
@@ -386,9 +386,10 @@ class _KnowledgeItemFormScreenState
                   ),
                 ),
                 items: const [
-                  DropdownMenuItem(value: 'pt-BR', child: Text('Português (BR)')),
+                  DropdownMenuItem(
+                      value: 'pt-BR', child: Text('Português (BR)')),
                   DropdownMenuItem(value: 'en-US', child: Text('English (US)')),
-                  DropdownMenuItem(value: 'es',    child: Text('Español')),
+                  DropdownMenuItem(value: 'es', child: Text('Español')),
                 ],
                 onChanged: (v) => setState(() => _language = v ?? 'pt-BR'),
               ),
@@ -414,8 +415,9 @@ class _KnowledgeItemFormScreenState
                               strokeWidth: 2, color: Colors.white),
                         )
                       : const Icon(Icons.save_rounded),
-                  label:
-                      Text(_loading ? 'Salvando…' : (_isEdit ? 'Salvar' : 'Adicionar ao Cofre')),
+                  label: Text(_loading
+                      ? 'Salvando…'
+                      : (_isEdit ? 'Salvar' : 'Adicionar ao Cofre')),
                   onPressed: _loading ? null : _save,
                 ),
               ),
@@ -455,27 +457,27 @@ class _Field extends StatelessWidget {
   });
 
   final TextEditingController controller;
-  final String?               hint;
-  final int                   maxLines;
-  final TextInputType?        keyboardType;
+  final String? hint;
+  final int maxLines;
+  final TextInputType? keyboardType;
   final FormFieldValidator<String>? validator;
 
   @override
   Widget build(BuildContext context) {
     return TextFormField(
-      controller:    controller,
-      maxLines:      maxLines,
-      keyboardType:  keyboardType,
-      validator:     validator,
+      controller: controller,
+      maxLines: maxLines,
+      keyboardType: keyboardType,
+      validator: validator,
       style: const TextStyle(color: Colors.white, fontSize: 14),
       decoration: InputDecoration(
-        hintText:        hint,
-        hintStyle:       const TextStyle(color: Colors.white30, fontSize: 13),
-        filled:          true,
-        fillColor:       const Color(0xFF1A1A2E),
+        hintText: hint,
+        hintStyle: const TextStyle(color: Colors.white30, fontSize: 13),
+        filled: true,
+        fillColor: const Color(0xFF1A1A2E),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide:   BorderSide.none,
+          borderSide: BorderSide.none,
         ),
         errorStyle: const TextStyle(color: Color(0xFFF44336)),
       ),
@@ -494,13 +496,13 @@ class _FileImportSection extends StatelessWidget {
     required this.onError,
   });
 
-  final bool                    importing;
-  final String?                 importedFileName;
-  final TextEditingController   contentCtrl;
-  final TextEditingController   titleCtrl;
-  final void Function(String)   onImport;
-  final VoidCallback            onImporting;
-  final VoidCallback            onError;
+  final bool importing;
+  final String? importedFileName;
+  final TextEditingController contentCtrl;
+  final TextEditingController titleCtrl;
+  final void Function(String) onImport;
+  final VoidCallback onImporting;
+  final VoidCallback onError;
 
   @override
   Widget build(BuildContext context) {
@@ -517,7 +519,8 @@ class _FileImportSection extends StatelessWidget {
             SizedBox(
               width: 18,
               height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF6C63FF)),
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: Color(0xFF6C63FF)),
             ),
             SizedBox(width: 12),
             Text('Extraindo texto…', style: TextStyle(color: Colors.white54)),
@@ -608,8 +611,8 @@ class _FileImportSection extends StatelessWidget {
           decoration: BoxDecoration(
             color: const Color(0xFFFF9800).withOpacity(0.08),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-                color: const Color(0xFFFF9800).withOpacity(0.25)),
+            border:
+                Border.all(color: const Color(0xFFFF9800).withOpacity(0.25)),
           ),
           child: const Text(
             'PDF deve ter texto selecionável (não imagem escaneada). Para melhores resultados, use TXT ou DOCX.',
@@ -624,7 +627,7 @@ class _FileImportSection extends StatelessWidget {
     onImporting();
     try {
       final service = FileImportService();
-      final result  = await service.pickAndExtract();
+      final result = await service.pickAndExtract();
       if (result == null) {
         onError();
         return;
@@ -657,10 +660,10 @@ class _DriveImportSection extends StatelessWidget {
     required this.onImported,
   });
 
-  final String?                importedFileName;
-  final TextEditingController  contentCtrl;
-  final TextEditingController  titleCtrl;
-  final void Function(String)  onImported;
+  final String? importedFileName;
+  final TextEditingController contentCtrl;
+  final TextEditingController titleCtrl;
+  final void Function(String) onImported;
 
   Future<void> _openPicker(BuildContext context) async {
     final result = await Navigator.of(context).push<Map<String, String>>(
@@ -702,8 +705,7 @@ class _DriveImportSection extends StatelessWidget {
                           fontWeight: FontWeight.w500)),
                   Text(
                     '${contentCtrl.text.length} caracteres extraídos',
-                    style:
-                        const TextStyle(color: Colors.white38, fontSize: 11),
+                    style: const TextStyle(color: Colors.white38, fontSize: 11),
                   ),
                 ],
               ),
@@ -790,13 +792,13 @@ class _ProjectSelector extends ConsumerWidget {
           items: [
             const DropdownMenuItem<String?>(
               value: null,
-              child: Text('Sem projeto',
-                  style: TextStyle(color: Colors.white54)),
+              child:
+                  Text('Sem projeto', style: TextStyle(color: Colors.white54)),
             ),
             ...projects.map((p) => DropdownMenuItem<String?>(
                   value: p.id,
-                  child: Text(p.name,
-                      style: const TextStyle(color: Colors.white)),
+                  child:
+                      Text(p.name, style: const TextStyle(color: Colors.white)),
                 )),
           ],
           onChanged: onChanged,
@@ -816,9 +818,9 @@ class _SourceTypeButton extends StatelessWidget {
   });
 
   final IconData icon;
-  final String   label;
-  final String   value;
-  final String   current;
+  final String label;
+  final String value;
+  final String current;
   final void Function(String) onTap;
 
   @override
@@ -835,9 +837,7 @@ class _SourceTypeButton extends StatelessWidget {
               : const Color(0xFF1A1A2E),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: selected
-                ? const Color(0xFF6C63FF)
-                : Colors.white12,
+            color: selected ? const Color(0xFF6C63FF) : Colors.white12,
           ),
         ),
         child: Row(
@@ -852,8 +852,7 @@ class _SourceTypeButton extends StatelessWidget {
               style: TextStyle(
                 color: selected ? const Color(0xFF6C63FF) : Colors.white54,
                 fontSize: 13,
-                fontWeight:
-                    selected ? FontWeight.w600 : FontWeight.normal,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
               ),
             ),
           ],
