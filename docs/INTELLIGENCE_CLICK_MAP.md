@@ -127,10 +127,10 @@
 
 | Elemento | Clicável | Tipo |
 |----------|---------|------|
-| Knowledge Coverage % | ⬜ | — |
-| Learning Score % | ⬜ | — |
-| Profile Complete | ⬜ | — |
-| Indexing Status | ⬜ | — |
+| Knowledge Coverage % | ✅ 🔗 | IveDetailSheet com score, mínimo, documentos, como melhorar |
+| Learning Score % | ✅ 🔗 | IveDetailSheet com score, mínimo, como treinar a IVE |
+| Profile Complete | ✅ 🔗 | IveDetailSheet com status, o que falta, como vincular análise |
+| Indexing Status | ✅ 🔗 | IveDetailSheet com total/indexados, status, como re-indexar |
 
 ---
 
@@ -139,13 +139,13 @@
 
 | Elemento | Clicável | Tipo |
 |----------|---------|------|
-| Final Score (ring chart) | ⬜ | — |
-| Score Mercado | ⬜ | — |
-| Score Receita | ⬜ | — |
-| Score Competição | ⬜ | — |
-| Score Sinergia | ⬜ | — |
-| Score Fit Estratégico | ⬜ | — |
-| Confiança % | ⬜ | — |
+| Final Score (ring chart) | ✅ 🔗 | IveDetailSheet com todos os 5 sub-scores + confiança |
+| Score Mercado | ✅ 🔗 | IveDetailSheet com tamanho, tendência, como melhorar |
+| Score Receita | ✅ 🔗 | IveDetailSheet com potencial de monetização, ticket médio |
+| Score Competição | ✅ 🔗 | IveDetailSheet com saturação, janela de oportunidade |
+| Score Sinergia | ✅ 🔗 | IveDetailSheet com complementaridade, reuso de recursos |
+| Score Fit Estratégico | ✅ 🔗 | IveDetailSheet com alinhamento de objetivos e habilidades |
+| Confiança % | ✅ 🔗 | IveDetailSheet com nível, fontes, como aumentar precisão |
 
 ---
 
@@ -156,16 +156,15 @@
 | Project Command Center | 16 | 12 | 4 |
 | Market Intelligence Hub | 7 | 5 | 2 |
 | Weekly Briefing | 6 | 4 | 2 |
-| Decision Center | 6 | 4 | 2 |
-| Opportunity Detail | 6 | 0 | 6 |
-| **TOTAL** | **41** | **25** | **16** |
+| Decision Center | 6 | 6 | 0 |
+| Opportunity Detail | 7 | 7 | 0 |
+| **TOTAL** | **42** | **34** | **8** |
 
 ---
 
 ## PRÓXIMAS IMPLEMENTAÇÕES (FASE 10H+)
 
-1. `opportunity_detail_screen.dart` — score breakdown clicável (6 itens)
-2. `executive_decision_center_screen.dart` — validation gate clicável (4 itens)
-3. `weekly_briefing_screen.dart` — data origin counts clicáveis (2 itens)
-4. `market_intelligence_hub_screen.dart` — investment card + revenue card (3 itens)
-5. `project_command_center_screen.dart` — lacunas de conhecimento clicáveis (1 item)
+1. `weekly_briefing_screen.dart` — data origin counts clicáveis (2 itens)
+2. `market_intelligence_hub_screen.dart` — investment card + revenue card (3 itens)
+3. `project_command_center_screen.dart` — lacunas de conhecimento clicáveis (1 item)
+4. `project_command_center_screen.dart` — 4 itens pendentes (ver seção PCC)

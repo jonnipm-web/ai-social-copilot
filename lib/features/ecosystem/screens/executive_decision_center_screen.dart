@@ -955,6 +955,161 @@ class _ValidationGateCard extends StatelessWidget {
   final DecisionValidation validation;
   const _ValidationGateCard({required this.rec, required this.validation});
 
+  void _showCoverage(BuildContext context) {
+    final ok = validation.coverageScore >= DecisionValidation.minCoverage;
+    IveDetailSheet.show(
+      context,
+      title: 'Knowledge Coverage — ${validation.coverageScore}%',
+      emoji: '📚',
+      humanExplanation: ok
+          ? 'O Knowledge Coverage de ${validation.coverageScore}% está acima do mínimo de ${DecisionValidation.minCoverage}%. '
+            'A IVE possui conhecimento suficiente sobre este projeto para gerar recomendações estratégicas.'
+          : 'O Knowledge Coverage está em ${validation.coverageScore}%, abaixo do mínimo de ${DecisionValidation.minCoverage}% exigido. '
+            'Isso significa que a IVE não tem dados suficientes para confiar em suas análises sobre este projeto. '
+            'Quanto mais documentos e análises você adicionar, maior a cobertura.',
+      evidence: <IveEvidence>[
+        IveEvidence('📊', 'Score atual', '${validation.coverageScore}%'),
+        IveEvidence('🎯', 'Mínimo exigido', '${DecisionValidation.minCoverage}%'),
+        IveEvidence('📄', 'Documentos indexados', '${validation.indexedDocuments}/${validation.documentCount}'),
+        IveEvidence(ok ? '✅' : '❌', 'Status', ok ? 'Aprovado' : 'Bloqueado'),
+      ],
+      suggestedActions: <IveAction>[
+        if (!ok)
+          IveAction(
+            emoji: '📝',
+            label: 'Como melhorar',
+            description: 'Adicione documentos ao projeto: análises, pesquisas, notas e referências aumentam a cobertura.',
+            onTap: () {},
+          ),
+        IveAction(
+          emoji: '💬',
+          label: 'Perguntar à IVE',
+          description: 'O que falta para atingir ${DecisionValidation.minCoverage}% de cobertura?',
+          onTap: () {},
+        ),
+      ],
+      screenName: 'executive_decision_center',
+    );
+  }
+
+  void _showLearning(BuildContext context) {
+    final ok = validation.learningScore >= DecisionValidation.minLearning;
+    IveDetailSheet.show(
+      context,
+      title: 'Learning Score — ${validation.learningScore}%',
+      emoji: '🧠',
+      humanExplanation: ok
+          ? 'O Learning Score de ${validation.learningScore}% indica que a IVE aprendeu o suficiente sobre este projeto. '
+            'As análises geradas têm alta aderência ao contexto real.'
+          : 'O Learning Score de ${validation.learningScore}% está abaixo do mínimo de ${DecisionValidation.minLearning}%. '
+            'A IVE ainda está aprendendo sobre este projeto. '
+            'Execute análises de mercado e adicione mais contexto para acelerar o aprendizado.',
+      evidence: <IveEvidence>[
+        IveEvidence('🧠', 'Score atual', '${validation.learningScore}%'),
+        IveEvidence('🎯', 'Mínimo exigido', '${DecisionValidation.minLearning}%'),
+        IveEvidence('📈', 'Progresso', ok ? 'Suficiente' : 'Em progresso'),
+        IveEvidence(ok ? '✅' : '❌', 'Status', ok ? 'Aprovado' : 'Treinamento incompleto'),
+      ],
+      suggestedActions: <IveAction>[
+        if (!ok)
+          IveAction(
+            emoji: '🔬',
+            label: 'Executar análise',
+            description: 'Rode uma análise de mercado completa para treinar a IVE com dados atualizados.',
+            onTap: () {},
+          ),
+        IveAction(
+          emoji: '💬',
+          label: 'Perguntar à IVE',
+          description: 'Quais análises devo executar para aumentar o Learning Score?',
+          onTap: () {},
+        ),
+      ],
+      screenName: 'executive_decision_center',
+    );
+  }
+
+  void _showProfile(BuildContext context) {
+    IveDetailSheet.show(
+      context,
+      title: 'Intelligence Profile — ${validation.profileComplete ? "Completo" : "Incompleto"}',
+      emoji: '🎯',
+      humanExplanation: validation.profileComplete
+          ? 'O Intelligence Profile está completo. '
+            'A IVE tem todos os dados necessários para gerar recomendações estratégicas personalizadas.'
+          : 'O Intelligence Profile está incompleto. '
+            'Para que a IVE possa gerar recomendações estratégicas, é necessário vincular uma análise de mercado ao projeto. '
+            'Isso permite à IVE entender o contexto de mercado antes de sugerir ações.',
+      evidence: <IveEvidence>[
+        IveEvidence(
+            validation.profileComplete ? '✅' : '❌',
+            'Status do perfil',
+            validation.profileComplete ? 'Completo' : 'Incompleto'),
+        IveEvidence('📄', 'Documentos', '${validation.documentCount}'),
+        IveEvidence('💡', 'Oportunidades', '${validation.opportunityCount}'),
+        IveEvidence('📦', 'Ativos', '${validation.assetCount}'),
+      ],
+      suggestedActions: <IveAction>[
+        if (!validation.profileComplete)
+          IveAction(
+            emoji: '🔗',
+            label: 'Vincular análise de mercado',
+            description: 'Acesse Market Intelligence e vincule uma análise existente ou crie uma nova.',
+            onTap: () {},
+          ),
+        IveAction(
+          emoji: '💬',
+          label: 'Perguntar à IVE',
+          description: 'O que preciso fazer para completar o Intelligence Profile?',
+          onTap: () {},
+        ),
+      ],
+      screenName: 'executive_decision_center',
+    );
+  }
+
+  void _showIndexing(BuildContext context) {
+    final allIndexed = validation.indexedDocuments == validation.documentCount;
+    IveDetailSheet.show(
+      context,
+      title: 'Indexação — ${validation.indexingStatus}',
+      emoji: '🔍',
+      humanExplanation: validation.documentCount == 0
+          ? 'Nenhum documento foi adicionado ainda. '
+            'A indexação permite à IVE ler e compreender seus documentos para gerar análises.'
+          : allIndexed
+              ? 'Todos os ${validation.documentCount} documentos estão indexados. '
+                'A IVE tem acesso completo ao conteúdo para suas análises.'
+              : '${validation.indexedDocuments} de ${validation.documentCount} documentos estão indexados. '
+                'Documentos não indexados não são lidos pela IVE nas análises. '
+                'Aguarde a indexação automática ou force uma re-indexação.',
+      evidence: <IveEvidence>[
+        IveEvidence('📄', 'Total de documentos', '${validation.documentCount}'),
+        IveEvidence('✅', 'Indexados', '${validation.indexedDocuments}'),
+        IveEvidence(
+            allIndexed ? '✅' : '⏳',
+            'Status',
+            allIndexed ? 'Completo' : 'Parcial'),
+      ],
+      suggestedActions: <IveAction>[
+        if (!allIndexed && validation.documentCount > 0)
+          IveAction(
+            emoji: '🔄',
+            label: 'Forçar re-indexação',
+            description: 'Acione a indexação manual para atualizar os documentos pendentes.',
+            onTap: () {},
+          ),
+        IveAction(
+          emoji: '💬',
+          label: 'Perguntar à IVE',
+          description: 'Por que alguns documentos não foram indexados?',
+          onTap: () {},
+        ),
+      ],
+      screenName: 'executive_decision_center',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -1007,12 +1162,24 @@ class _ValidationGateCard extends StatelessWidget {
                     style: const TextStyle(
                         color: _kOrange, fontSize: 12, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 10),
-                _GateMetricRow(label: 'Knowledge Coverage', value: validation.coverageLabel),
-                _GateMetricRow(label: 'Learning Score', value: validation.learningLabel),
-                _GateMetricRow(label: 'Intelligence Profile', value: validation.profileLabel),
+                _GateMetricRow(
+                    label: 'Knowledge Coverage',
+                    value: validation.coverageLabel,
+                    onTap: () => _showCoverage(context)),
+                _GateMetricRow(
+                    label: 'Learning Score',
+                    value: validation.learningLabel,
+                    onTap: () => _showLearning(context)),
+                _GateMetricRow(
+                    label: 'Intelligence Profile',
+                    value: validation.profileLabel,
+                    onTap: () => _showProfile(context)),
                 const Divider(color: Colors.white12, height: 16),
                 _GateMetricRow(label: 'Documentos', value: '${validation.documentCount}'),
-                _GateMetricRow(label: 'Indexação', value: validation.indexingStatus),
+                _GateMetricRow(
+                    label: 'Indexação',
+                    value: validation.indexingStatus,
+                    onTap: () => _showIndexing(context)),
                 _GateMetricRow(label: 'Ativos', value: '${validation.assetCount}'),
                 _GateMetricRow(label: 'Oportunidades', value: '${validation.opportunityCount}'),
                 if (validation.blockReasons.isNotEmpty) ...[
@@ -1036,13 +1203,14 @@ class _ValidationGateCard extends StatelessWidget {
 }
 
 class _GateMetricRow extends StatelessWidget {
-  final String label;
-  final String value;
-  const _GateMetricRow({required this.label, required this.value});
+  final String       label;
+  final String       value;
+  final VoidCallback? onTap;
+  const _GateMetricRow({required this.label, required this.value, this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    final row = Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1056,7 +1224,19 @@ class _GateMetricRow extends StatelessWidget {
             child: Text(value,
                 style: const TextStyle(color: Colors.white70, fontSize: 10)),
           ),
+          if (onTap != null)
+            const Icon(Icons.info_outline_rounded, color: _kOrange, size: 11),
         ],
+      ),
+    );
+
+    if (onTap == null) return row;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: row,
       ),
     );
   }
