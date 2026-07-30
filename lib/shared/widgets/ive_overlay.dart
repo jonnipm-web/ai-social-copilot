@@ -24,6 +24,11 @@ class IveRouteObserver extends NavigatorObserver {
   @override
   void didPush(Route route, Route? previousRoute) => _notify(route);
 
+  // didAdd fires for the initial route and when GoRouter programmatically adds
+  // routes to the stack — not covered by didPush.
+  @override
+  void didAdd(Route route, Route? previousRoute) => _notify(route);
+
   @override
   void didPop(Route route, Route? previousRoute) {
     if (previousRoute != null) _notify(previousRoute);
@@ -60,7 +65,7 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
     super.dispose();
   }
 
-  static const _hiddenRoutes = {'/login', '/', ''};
+  static const _hiddenRoutes = {'/login', '/', '', '/advisor-onboarding'};
 
   void _onRouteChange() {
     setState(() {});

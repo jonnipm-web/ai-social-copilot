@@ -488,43 +488,41 @@ class _ExecModule extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               if (isEmpty)
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(icon, color: color.withOpacity(0.2), size: 28),
-                      const SizedBox(height: 6),
-                      Text(emptyMessage,
-                          style: const TextStyle(
-                              color: Colors.white38, fontSize: 10, height: 1.4),
-                          textAlign: TextAlign.center),
-                    ],
-                  ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(icon, color: color.withOpacity(0.2), size: 28),
+                    const SizedBox(height: 6),
+                    Text(emptyMessage,
+                        style: const TextStyle(
+                            color: Colors.white38, fontSize: 10, height: 1.4),
+                        textAlign: TextAlign.center),
+                  ],
                 )
               else ...[
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: items.map((item) {
-                      final (label, value) = item;
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 5),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(label,
-                                style: const TextStyle(
-                                    color: Colors.white54, fontSize: 11)),
-                            Text(value,
-                                style: TextStyle(
-                                    color: color,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                  ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: items.map((item) {
+                    final (label, value) = item;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 5),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(label,
+                              style: const TextStyle(
+                                  color: Colors.white54, fontSize: 11)),
+                          Text(value,
+                              style: TextStyle(
+                                  color: color,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    );
+                  }).toList(),
                 ),
               ],
               const SizedBox(height: 6),
