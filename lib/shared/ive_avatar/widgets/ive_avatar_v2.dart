@@ -25,11 +25,11 @@ import '_ive_avatar_face.dart';
 // widget to be displayed in production routes. The showcase bypasses the flag.
 
 class IveAvatarV2 extends ConsumerStatefulWidget {
-  final IveAvatarStateV2?      overrideState;
-  final IveAvatarContext?      overrideContext;
+  final IveAvatarStateV2? overrideState;
+  final IveAvatarContext? overrideContext;
   final IveAvatarConfiguration configuration;
-  final VoidCallback?          onTap;
-  final VoidCallback?          onLongPress;
+  final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
 
   const IveAvatarV2({
     super.key,
@@ -53,10 +53,10 @@ class _IveAvatarV2State extends ConsumerState<IveAvatarV2>
   void initState() {
     super.initState();
     final state = widget.overrideState ?? IveAvatarStateV2.idle;
-    _lastState  = state;
+    _lastState = state;
     _animCtrl.initialize(
-      vsync:        this,
-      state:        state,
+      vsync: this,
+      state: state,
       motionPolicy: IveMotionPolicy.fullMotion,
     );
   }
@@ -66,9 +66,9 @@ class _IveAvatarV2State extends ConsumerState<IveAvatarV2>
     super.didChangeDependencies();
     final policy = IveMotionPolicyResolver.resolve(context);
     _animCtrl.updateState(
-      state:        _lastState,
+      state: _lastState,
       motionPolicy: policy,
-      vsync:        this,
+      vsync: this,
     );
   }
 
@@ -88,37 +88,36 @@ class _IveAvatarV2State extends ConsumerState<IveAvatarV2>
   @override
   Widget build(BuildContext context) {
     final providerState = ref.watch(iveAvatarV2StateProvider);
-    final avatarState   = widget.overrideState ?? providerState;
-    final avatarContext = widget.overrideContext ??
-        ref.watch(iveAvatarV2ContextProvider);
+    final avatarState = widget.overrideState ?? providerState;
 
     _maybeUpdateAnim(avatarState);
 
     final policy = IveMotionPolicyResolver.resolve(context);
-    final size   = widget.configuration.size;
+    final size = widget.configuration.size;
     final config = IveAvatarStateConfigV2.forState(avatarState);
-    final theme  = IveAvatarTheme.forState(avatarState);
+    final theme = IveAvatarTheme.forState(avatarState);
 
     Widget avatar = RepaintBoundary(
       child: SizedBox(
-        width:  size,
+        width: size,
         height: size,
         child: widget.configuration.showStatusRing
             ? Stack(
                 alignment: Alignment.center,
                 children: [
                   IveAvatarStatusIndicator(
-                    state:       avatarState,
-                    size:        size,
+                    state: avatarState,
+                    size: size,
                     motionPolicy: policy,
-                    animation:   _animCtrl.animation,
+                    animation: _animCtrl.animation,
                   ),
                   Padding(
-                    padding: EdgeInsets.all(size * IveAvatarTokens.ringGapRatio),
+                    padding:
+                        EdgeInsets.all(size * IveAvatarTokens.ringGapRatio),
                     child: ClipOval(
                       child: IveAvatarFacePlaceholder(
                         state: avatarState,
-                        size:  size,
+                        size: size,
                       ),
                     ),
                   ),
@@ -127,7 +126,7 @@ class _IveAvatarV2State extends ConsumerState<IveAvatarV2>
             : ClipOval(
                 child: IveAvatarFacePlaceholder(
                   state: avatarState,
-                  size:  size,
+                  size: size,
                 ),
               ),
       ),
@@ -144,7 +143,7 @@ class _IveAvatarV2State extends ConsumerState<IveAvatarV2>
             duration: IveAvatarTokens.stateChangeFade,
             child: Text(
               config.fallbackLabel,
-              key:   ValueKey(avatarState),
+              key: ValueKey(avatarState),
               style: theme.labelStyle.copyWith(
                 fontSize: IveAvatarTokens.labelFontSizeMedium,
               ),
@@ -156,7 +155,7 @@ class _IveAvatarV2State extends ConsumerState<IveAvatarV2>
 
     // Disabled dimming
     avatar = AnimatedOpacity(
-      opacity:  avatarState == IveAvatarStateV2.disabled
+      opacity: avatarState == IveAvatarStateV2.disabled
           ? IveAvatarTokens.disabledOpacity
           : 1.0,
       duration: IveAvatarTokens.transitionDuration,
@@ -166,9 +165,9 @@ class _IveAvatarV2State extends ConsumerState<IveAvatarV2>
     if (!widget.configuration.interactive) return avatar;
 
     return IveAvatarSemanticWrapper(
-      state:       avatarState,
+      state: avatarState,
       interactive: true,
-      onTap:       widget.onTap,
+      onTap: widget.onTap,
       onLongPress: widget.onLongPress,
       child: avatar,
     );

@@ -16,10 +16,10 @@ import '_ive_avatar_face.dart';
 
 class IveAvatarAssistantButton extends StatefulWidget {
   final IveAvatarStateV2 state;
-  final VoidCallback?    onTap;
-  final VoidCallback?    onLongPress;
-  final bool             hasNotification;
-  final double           size;
+  final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
+  final bool hasNotification;
+  final double size;
   final EdgeInsetsGeometry margin;
 
   const IveAvatarAssistantButton({
@@ -28,7 +28,7 @@ class IveAvatarAssistantButton extends StatefulWidget {
     this.onTap,
     this.onLongPress,
     this.hasNotification = false,
-    this.size   = IveAvatarTokens.assistantButtonSize,
+    this.size = IveAvatarTokens.assistantButtonSize,
     this.margin = const EdgeInsets.only(bottom: 16, right: 16),
   });
 
@@ -37,8 +37,7 @@ class IveAvatarAssistantButton extends StatefulWidget {
       _IveAvatarAssistantButtonState();
 }
 
-class _IveAvatarAssistantButtonState
-    extends State<IveAvatarAssistantButton>
+class _IveAvatarAssistantButtonState extends State<IveAvatarAssistantButton>
     with SingleTickerProviderStateMixin {
   final _animCtrl = IveAvatarAnimationControllerV2();
 
@@ -46,8 +45,8 @@ class _IveAvatarAssistantButtonState
   void initState() {
     super.initState();
     _animCtrl.initialize(
-      vsync:        this,
-      state:        widget.state,
+      vsync: this,
+      state: widget.state,
       motionPolicy: IveMotionPolicy.fullMotion,
     );
   }
@@ -57,9 +56,9 @@ class _IveAvatarAssistantButtonState
     super.didChangeDependencies();
     final policy = IveMotionPolicyResolver.resolve(context);
     _animCtrl.updateState(
-      state:        widget.state,
+      state: widget.state,
       motionPolicy: policy,
-      vsync:        this,
+      vsync: this,
     );
   }
 
@@ -69,9 +68,9 @@ class _IveAvatarAssistantButtonState
     if (old.state != widget.state) {
       final policy = IveMotionPolicyResolver.resolve(context);
       _animCtrl.updateState(
-        state:        widget.state,
+        state: widget.state,
         motionPolicy: policy,
-        vsync:        this,
+        vsync: this,
       );
     }
   }
@@ -90,12 +89,12 @@ class _IveAvatarAssistantButtonState
       padding: widget.margin,
       child: RepaintBoundary(
         child: IveAvatarSemanticWrapper(
-          state:       widget.state,
+          state: widget.state,
           interactive: true,
-          onTap:       widget.onTap,
+          onTap: widget.onTap,
           onLongPress: widget.onLongPress,
           child: AnimatedOpacity(
-            opacity:  widget.state == IveAvatarStateV2.disabled
+            opacity: widget.state == IveAvatarStateV2.disabled
                 ? IveAvatarTokens.disabledOpacity
                 : 1.0,
             duration: IveAvatarTokens.transitionDuration,
@@ -104,16 +103,16 @@ class _IveAvatarAssistantButtonState
               children: [
                 // Status ring
                 SizedBox(
-                  width:  widget.size,
+                  width: widget.size,
                   height: widget.size,
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
                       IveAvatarStatusIndicator(
-                        state:       widget.state,
-                        size:        widget.size,
+                        state: widget.state,
+                        size: widget.size,
                         motionPolicy: policy,
-                        animation:   _animCtrl.animation,
+                        animation: _animCtrl.animation,
                       ),
                       Padding(
                         padding: EdgeInsets.all(
@@ -122,7 +121,7 @@ class _IveAvatarAssistantButtonState
                         child: ClipOval(
                           child: IveAvatarFacePlaceholder(
                             state: widget.state,
-                            size:  widget.size,
+                            size: widget.size,
                           ),
                         ),
                       ),
@@ -132,10 +131,11 @@ class _IveAvatarAssistantButtonState
                 // Notification dot
                 if (widget.hasNotification)
                   Positioned(
-                    top:   4,
+                    top: 4,
                     right: 4,
                     child: _NotificationDot(
-                      color: IveAvatarStateConfigV2.forState(widget.state).ringColor,
+                      color: IveAvatarStateConfigV2.forState(widget.state)
+                          .ringColor,
                     ),
                   ),
               ],
@@ -154,11 +154,11 @@ class _NotificationDot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width:  10,
+      width: 10,
       height: 10,
       decoration: BoxDecoration(
-        color:  color,
-        shape:  BoxShape.circle,
+        color: color,
+        shape: BoxShape.circle,
         border: Border.all(color: IveAvatarTokens.backgroundDark, width: 1.5),
       ),
     );
