@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -372,10 +373,11 @@ final _router = GoRouter(
     ),
 
     // ── IVE Avatar System V2 — showcase (debug / dev only) ───────────────
-    GoRoute(
-      path: AppConstants.routeIveAvatarShowcase,
-      builder: (_, __) => const IveAvatarShowcasePage(),
-    ),
+    if (kDebugMode)
+      GoRoute(
+        path: AppConstants.routeIveAvatarShowcase,
+        builder: (_, __) => const IveAvatarShowcasePage(),
+      ),
   ],
 );
 

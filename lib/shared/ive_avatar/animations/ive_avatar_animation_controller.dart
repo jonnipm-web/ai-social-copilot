@@ -10,7 +10,7 @@ import 'ive_avatar_motion_policy.dart';
 // Call dispose() in State.dispose().
 
 class IveAvatarAnimationControllerV2 {
-  IveAvatarAnimationControllerV2._();
+  IveAvatarAnimationControllerV2();
 
   AnimationController? _ctrl;
   Animation<double>?   _animation;

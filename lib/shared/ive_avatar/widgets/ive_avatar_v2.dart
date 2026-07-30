@@ -62,6 +62,17 @@ class _IveAvatarV2State extends ConsumerState<IveAvatarV2>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final policy = IveMotionPolicyResolver.resolve(context);
+    _animCtrl.updateState(
+      state:        _lastState,
+      motionPolicy: policy,
+      vsync:        this,
+    );
+  }
+
+  @override
   void dispose() {
     _animCtrl.dispose();
     super.dispose();

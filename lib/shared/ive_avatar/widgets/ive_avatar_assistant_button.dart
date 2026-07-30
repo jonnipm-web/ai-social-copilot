@@ -53,6 +53,17 @@ class _IveAvatarAssistantButtonState
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final policy = IveMotionPolicyResolver.resolve(context);
+    _animCtrl.updateState(
+      state:        widget.state,
+      motionPolicy: policy,
+      vsync:        this,
+    );
+  }
+
+  @override
   void didUpdateWidget(IveAvatarAssistantButton old) {
     super.didUpdateWidget(old);
     if (old.state != widget.state) {
