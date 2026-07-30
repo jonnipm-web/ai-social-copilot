@@ -52,6 +52,7 @@ import 'features/action_engine/screens/action_engine_screen.dart';
 import 'features/action_engine/screens/action_detail_screen.dart';
 import 'features/dashboard/screens/executive_dashboard_screen.dart';
 import 'features/debug/screens/intelligence_debug_hub_screen.dart';
+import 'shared/ive_avatar/showcase/ive_avatar_showcase_page.dart';
 
 final _iveObserver = IveRouteObserver();
 
@@ -368,6 +369,12 @@ final _router = GoRouter(
     GoRoute(
       path: AppConstants.routeIntelligenceDebug,
       builder: (_, __) => const IntelligenceDebugHubScreen(),
+    ),
+
+    // ── IVE Avatar System V2 — showcase (debug / dev only) ───────────────
+    GoRoute(
+      path: AppConstants.routeIveAvatarShowcase,
+      builder: (_, __) => const IveAvatarShowcasePage(),
     ),
   ],
 );

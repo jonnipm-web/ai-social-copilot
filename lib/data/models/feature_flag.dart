@@ -24,4 +24,6 @@ class FeatureFlag {
   static const opportunityLabEnabled = 'opportunity_lab_enabled';
   static const actionEngineEnabled   = 'action_engine_enabled';
   static const copilotEnabled        = 'copilot_enabled';
+  // IVE Avatar V2 — disabled by default; requires explicit approval to activate
+  static const iveAvatarV2Enabled    = 'ive_avatar_v2_enabled';
 }

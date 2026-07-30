@@ -77,6 +77,9 @@ class AppConstants {
   // Fase 10F — Intelligence Debug & Observability
   static const routeIntelligenceDebug    = '/intelligence-debug';
 
+  // IVE Avatar System V2 — showcase (debug only, not activated in production)
+  static const routeIveAvatarShowcase    = '/debug/ive-avatar-v2';
+
   // Tabelas Supabase
   static const tablePostGenerations   = 'post_generations';
   static const tableProfiles          = 'profiles';
