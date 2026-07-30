@@ -1,7 +1,5 @@
 name: IVE Avatar V2 Validation
 
-# Triggers: push to validation branch, PRs targeting main or the validation
-# branch, and manual dispatch for on-demand re-audit runs.
 on:
   push:
     branches:
@@ -9,16 +7,22 @@ on:
   pull_request:
     branches:
       - main
-      - claude/ive-avatar-v2-final-fix
   workflow_dispatch:
     inputs:
       expected_commit:
-        description: 'Expected HEAD commit SHA (optional — used for audit traceability)'
+        description: 'Expected HEAD commit SHA (optional — for audit traceability)'
         required: false
-        default: '8a1bb53'
+
+concurrency:
+  group: ive-avatar-v2-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
-  validate:
+  # ── PRIMARY VALIDATION JOB ──────────────────────────────────────────────────
+  validation:
     name: IVE Avatar V2 — Format · Analyze · Test · APK
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -26,7 +30,7 @@ jobs:
     steps:
       # ── 1. CHECKOUT ─────────────────────────────────────────────────────────
 
-      - name: Checkout — full history
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -40,20 +44,17 @@ jobs:
           echo "Branch : $BRANCH"
           echo "Commit : $COMMIT"
           echo ""
-          echo "=== Recent log ==="
           git log -3 --oneline
           echo ""
-          echo "=== Working tree ==="
           git status --short
-          echo ""
           echo "BRANCH=$BRANCH" >> "$GITHUB_ENV"
           echo "COMMIT=$COMMIT" >> "$GITHUB_ENV"
 
-          # When triggered manually with an expected commit, fail fast if mismatch
           if [ -n "${{ inputs.expected_commit }}" ]; then
             EXPECTED="${{ inputs.expected_commit }}"
             if [[ "$COMMIT" != "$EXPECTED"* ]]; then
-              echo "FAIL: HEAD $COMMIT does not match expected $EXPECTED"
+              echo ""
+              echo "FAIL: HEAD is $COMMIT but expected $EXPECTED"
               exit 1
             fi
             echo "PASS: commit matches expected prefix $EXPECTED"
@@ -67,7 +68,9 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Setup Flutter (stable channel)
+      # flutter-version not pinned: no existing workflow in this project pins a
+      # specific version. Pin here when a verified Flutter version is identified.
+      - name: Setup Flutter (stable)
         uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -78,15 +81,32 @@ jobs:
           flutter --version
           dart --version
           java -version 2>&1
-          echo ""
-          echo "HEAD: $(git rev-parse HEAD)"
 
-      # ── 4. CREDENTIALS ──────────────────────────────────────────────────────
+      # ── 4. DEPENDENCIES ─────────────────────────────────────────────────────
 
-      - name: Create .env file
+      # Safe placeholders — no production secrets needed for format/analyze/test/
+      # debug build. Service role keys are never written here.
+      - name: Create .env with safe placeholders
         run: |
-          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" > .env
-          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
+          echo "SUPABASE_URL=https://example.supabase.co"            > .env
+          echo "SUPABASE_ANON_KEY=placeholder-safe-anon-key"        >> .env
+          echo "GOOGLE_CLIENT_ID=placeholder.apps.googleusercontent.com" >> .env
+
+      - name: flutter pub get
+        run: flutter pub get
+
+      - name: Verify workspace clean after pub get
+        run: |
+          echo "=== git status after pub get ==="
+          git status --short
+          DIRTY=$(git status --short | grep -v "^??" | head -5)
+          if [ -n "$DIRTY" ]; then
+            echo ""
+            echo "FAIL: tracked files unexpectedly modified by flutter pub get:"
+            echo "$DIRTY"
+            exit 1
+          fi
+          echo "PASS: no tracked files modified"
 
       # ── 5. ASSET VERIFICATION ───────────────────────────────────────────────
 
@@ -95,76 +115,49 @@ jobs:
           echo "=== git-tracked ive assets ==="
           git ls-files assets/ive
           echo ""
-          echo "=== filesystem ==="
-          find assets/ive -maxdepth 3 -type f -print
-          echo ""
-          echo "=== pubspec.yaml asset declarations ==="
+          echo "=== pubspec.yaml declarations ==="
           grep -n "assets/ive" pubspec.yaml
           echo ""
 
           if [ -f assets/ive/rive/.gitkeep ]; then
-            echo "PASS: assets/ive/rive/.gitkeep is present"
+            echo "PASS: assets/ive/rive/.gitkeep present"
           else
-            echo "FAIL: assets/ive/rive/.gitkeep is missing"
+            echo "FAIL: assets/ive/rive/.gitkeep missing"
             exit 1
           fi
 
           RIV_COUNT=$(find assets/ive/rive -name "*.riv" 2>/dev/null | wc -l)
           if [ "$RIV_COUNT" -eq 0 ]; then
-            echo "PASS: no fake .riv files committed"
+            echo "PASS: no fake .riv files"
           else
             echo "FAIL: found $RIV_COUNT unexpected .riv file(s)"
             find assets/ive/rive -name "*.riv"
             exit 1
           fi
 
-      # ── 6. DEPENDENCIES ─────────────────────────────────────────────────────
-
-      - name: flutter pub get
-        run: flutter pub get
-
-      # ── 7. GATE — DART FORMAT ───────────────────────────────────────────────
-
-      - name: GATE — dart format (hotfix scope only)
+      # ── 6. GATE — DART FORMAT ───────────────────────────────────────────────
+      # Checks only the 4 files modified in the hotfix commits.
+      # On failure: fix locally with `dart format <files>` and push.
+      - name: GATE — dart format (4 hotfix files)
         id: format
         run: |
-          FORMAT_FILES=(
-            lib/app.dart
-            lib/shared/ive_avatar/animations/ive_avatar_animation_controller.dart
-            lib/shared/ive_avatar/widgets/ive_avatar_assistant_button.dart
+          dart format --output=none --set-exit-if-changed \
+            lib/app.dart \
+            lib/shared/ive_avatar/animations/ive_avatar_animation_controller.dart \
+            lib/shared/ive_avatar/widgets/ive_avatar_assistant_button.dart \
             lib/shared/ive_avatar/widgets/ive_avatar_v2.dart
-          )
 
-          if ! dart format --output=none --set-exit-if-changed "${FORMAT_FILES[@]}"; then
-            echo ""
-            echo "=== Files that require formatting changes ==="
-            echo "Applying dart format to show diff (CI workspace is ephemeral):"
-            dart format "${FORMAT_FILES[@]}"
-            git diff
-            echo ""
-            echo "FAIL: dart format gate did not pass — see diff above"
-            echo "Do NOT auto-format in CI. Fix locally and push."
-            exit 1
-          fi
-
-          echo "PASS: all 4 hotfix files are correctly formatted"
-          echo "FORMAT_STATUS=PASS" >> "$GITHUB_ENV"
-
-      # ── 8. GATE — STATIC ANALYSIS ───────────────────────────────────────────
+      # ── 7. GATE — STATIC ANALYSIS ───────────────────────────────────────────
 
       - name: GATE — dart analyze ive_avatar module
         id: analyze_dart
-        run: |
-          dart analyze lib/shared/ive_avatar test/features/ive
-          echo "ANALYZE_DART_STATUS=PASS" >> "$GITHUB_ENV"
+        run: dart analyze lib/shared/ive_avatar test/features/ive
 
       - name: GATE — flutter analyze --fatal-warnings
         id: analyze_flutter
-        run: |
-          flutter analyze --fatal-warnings
-          echo "ANALYZE_FLUTTER_STATUS=PASS" >> "$GITHUB_ENV"
+        run: flutter analyze --fatal-warnings
 
-      # ── 9. ISOLATION VERIFICATION ───────────────────────────────────────────
+      # ── 8. ISOLATION CHECKS ─────────────────────────────────────────────────
 
       - name: Verify isolation guarantees
         id: isolation
@@ -172,12 +165,11 @@ jobs:
           FAIL=0
 
           echo "=== [1] Feature flag default value ==="
-          if grep "iveAvatarV2EnabledProvider\s*=" \
-            lib/shared/ive_avatar/providers/ive_avatar_provider_v2.dart \
-            | grep -q "false"; then
-            echo "PASS: iveAvatarV2EnabledProvider = false (hardcoded)"
+          if grep -q "return false" \
+            lib/shared/ive_avatar/providers/ive_avatar_provider_v2.dart; then
+            echo "PASS: iveAvatarV2 flag returns false by default"
           else
-            echo "FAIL: feature flag is not false"
+            echo "FAIL: could not confirm feature flag is false"
             FAIL=1
           fi
 
@@ -189,31 +181,27 @@ jobs:
             --include="*.dart" \
             | grep -v "lib/shared/ive_avatar/" \
             | grep -v "lib/app.dart" \
-            | grep -v "lib/data/models/feature_flag.dart" \
-            | grep -v "lib/providers/feature_flag_provider.dart" \
-            | grep -v "lib/core/constants/app_constants.dart" \
             || true)
           if [ -z "$PROD_REFS" ]; then
-            echo "PASS: no unauthorized production V2 references"
+            echo "PASS: no unauthorized V2 references in production code"
           else
-            echo "FAIL: unexpected V2 references in production files:"
+            echo "FAIL: unexpected V2 references:"
             echo "$PROD_REFS"
             FAIL=1
           fi
 
           echo ""
           echo "=== [3] kDebugMode guard on showcase route ==="
-          GUARD=$(grep -n "kDebugMode" lib/app.dart | grep -v "^.*import" || true)
-          if [ -n "$GUARD" ]; then
-            echo "Found: $GUARD"
-            echo "PASS: showcase route is guarded by kDebugMode"
+          if grep -q "kDebugMode" lib/app.dart; then
+            grep -n "kDebugMode" lib/app.dart
+            echo "PASS: kDebugMode guard present in app.dart"
           else
             echo "FAIL: kDebugMode guard not found in app.dart"
             FAIL=1
           fi
 
           echo ""
-          echo "=== [4] Legacy IveOverlay exists and is uncontaminated ==="
+          echo "=== [4] ive_overlay.dart present and uncontaminated ==="
           if [ -f lib/shared/widgets/ive_overlay.dart ]; then
             echo "PASS: ive_overlay.dart present"
           else
@@ -225,25 +213,22 @@ jobs:
             echo "FAIL: ive_overlay.dart contains V2 references"
             FAIL=1
           else
-            echo "PASS: ive_overlay.dart has no V2 references"
+            echo "PASS: ive_overlay.dart clean"
           fi
 
           echo ""
-          echo "=== [5] main.dart not touched by Avatar V2 commits ==="
-          MAIN_LOG=$(git log --oneline -- lib/main.dart | head -3)
-          echo "$MAIN_LOG"
-          echo "PASS: main.dart history shown above (V2 branch did not modify it)"
+          echo "=== [5] main.dart not modified by V2 commits ==="
+          git log --oneline -- lib/main.dart | head -3
 
           echo ""
           if [ $FAIL -eq 0 ]; then
             echo "All isolation checks passed."
-            echo "ISOLATION_STATUS=PASS" >> "$GITHUB_ENV"
           else
             echo "FAIL: one or more isolation checks failed."
             exit 1
           fi
 
-      # ── 10. SMOKE TEST ──────────────────────────────────────────────────────
+      # ── 9. SMOKE TEST ───────────────────────────────────────────────────────
 
       - name: Create test-results directory
         run: mkdir -p test-results
@@ -260,11 +245,10 @@ jobs:
             --timeout 60s \
             -n "iveAvatarV2EnabledProvider is false by default" \
             2>&1 | tee test-results/smoke-test.txt
-          echo "SMOKE_TEST_STATUS=PASS" >> "$GITHUB_ENV"
 
-      # ── 11. AVATAR V2 TEST SUITE ────────────────────────────────────────────
+      # ── 10. AVATAR V2 TEST SUITE ────────────────────────────────────────────
 
-      - name: SUITE — Avatar V2 (39 tests expected)
+      - name: SUITE — Avatar V2
         id: v2_tests
         timeout-minutes: 15
         run: |
@@ -276,12 +260,7 @@ jobs:
             --timeout 120s \
             2>&1 | tee test-results/ive-avatar-v2-tests.txt
 
-          # Count results from log
-          PASS_COUNT=$(grep -c "^\s*+\|All tests passed" test-results/ive-avatar-v2-tests.txt 2>/dev/null || echo "see log")
-          echo "Passed: $PASS_COUNT (target: 39)"
-          echo "V2_TEST_STATUS=PASS" >> "$GITHUB_ENV"
-
-      # ── 12. FULL PROJECT TEST SUITE ─────────────────────────────────────────
+      # ── 11. FULL PROJECT TEST SUITE ─────────────────────────────────────────
 
       - name: SUITE — Full project
         id: full_tests
@@ -293,153 +272,61 @@ jobs:
             --reporter expanded \
             --timeout 120s \
             2>&1 | tee test-results/full-suite.txt
-          echo "FULL_TEST_STATUS=PASS" >> "$GITHUB_ENV"
 
-      # ── 13. ANDROID BOOTSTRAP ───────────────────────────────────────────────
-
-      - name: Bootstrap Android platform
-        run: |
-          flutter create --platforms android --project-name ai_social_copilot .
-
-      - name: Fix AGP to 8.11.1
-        run: |
-          if [ -f android/settings.gradle.kts ]; then
-            sed -i \
-              's/id("com.android.application") version "[^"]*"/id("com.android.application") version "8.11.1"/g' \
-              android/settings.gradle.kts
-            sed -i \
-              's/id("com.android.library") version "[^"]*"/id("com.android.library") version "8.11.1"/g' \
-              android/settings.gradle.kts
-            echo "=== settings.gradle.kts ==="
-            cat android/settings.gradle.kts
-          fi
-
-      - name: Fix file_picker for AGP 8.x
-        run: |
-          find ~/.pub-cache -path "*/file_picker-*/android/build.gradle" | \
-          while read -r f; do
-            sed -i 's/jcenter()/mavenCentral()/g' "$f"
-            if ! grep -q 'namespace' "$f"; then
-              sed -i '/^android {/a\    namespace "com.mr.flutter.plugin.filepicker"' "$f"
-            fi
-          done
-
-      - name: Configure Google Sign-In strings
-        run: |
-          mkdir -p android/app/src/main/res/values
-          printf '%s\n' \
-            '<?xml version="1.0" encoding="utf-8"?>' \
-            '<resources>' \
-            '    <string name="app_name">AI Social Copilot</string>' \
-            '    <string name="default_web_client_id">221504834589-jll1257ccns2sprai9ps949rv21gf7p2.apps.googleusercontent.com</string>' \
-            '</resources>' \
-            > android/app/src/main/res/values/strings.xml
-
-      - name: Cache Gradle
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('android/**/*.gradle.kts', 'android/**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      # ── 14. BUILD APK DEBUG ─────────────────────────────────────────────────
-
+      # ── 12. BUILD DEBUG APK ─────────────────────────────────────────────────
+      # The project android/ directory must be committed to the repository.
+      # If it is missing, this step will fail — fix: commit android/ in a
+      # separate commit; do not run flutter create here.
       - name: Build APK debug
         id: debug_apk
+        run: flutter build apk --debug
+
+      - name: Verify workspace clean after build
         run: |
-          flutter build apk --debug
+          echo "=== git status after build ==="
+          git status --short
+          DIRTY=$(git status --short | grep -v "^??" | head -5)
+          if [ -n "$DIRTY" ]; then
+            echo ""
+            echo "FAIL: tracked files unexpectedly modified during build:"
+            echo "$DIRTY"
+            echo "Investigate and commit these changes or add them to .gitignore."
+            exit 1
+          fi
+          echo "PASS: no tracked files modified by build"
+
+      - name: Verify and hash debug APK
+        id: apk_hash
+        run: |
           APK=build/app/outputs/flutter-apk/app-debug.apk
+          test -f "$APK"
           ls -lh "$APK"
           SHA=$(sha256sum "$APK" | awk '{print $1}')
           SIZE=$(du -sh "$APK" | cut -f1)
-          echo "DEBUG_APK_PATH=$APK"   >> "$GITHUB_ENV"
-          echo "DEBUG_APK_SHA=$SHA"    >> "$GITHUB_ENV"
-          echo "DEBUG_APK_SIZE=$SIZE"  >> "$GITHUB_ENV"
+          echo "DEBUG_APK_SHA=$SHA"   >> "$GITHUB_ENV"
+          echo "DEBUG_APK_SIZE=$SIZE" >> "$GITHUB_ENV"
+          echo "SHA-256 : $SHA"
+          echo "Size    : $SIZE"
+
+      - name: Verify kDebugMode guard (static)
+        run: |
+          echo "=== kDebugMode guard in lib/app.dart ==="
+          grep -B1 -A4 "kDebugMode" lib/app.dart
           echo ""
-          echo "Debug APK: $SIZE / SHA-256: $SHA"
-          echo "DEBUG_APK_STATUS=PASS" >> "$GITHUB_ENV"
+          echo "Dart semantics: kDebugMode is a compile-time const bool."
+          echo "In release builds its value is false, eliminating the if block."
+          echo "The GoRoute for the showcase path is never constructed in release."
+          echo "Static confirmation only. Final proof requires a signed release build."
+
+      # ── 13. UPLOAD ARTIFACTS ────────────────────────────────────────────────
 
       - name: Upload debug APK
+        if: steps.debug_apk.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: ive-avatar-v2-debug-apk
           path: build/app/outputs/flutter-apk/app-debug.apk
           retention-days: 7
-
-      # ── 15. BUILD APK RELEASE ───────────────────────────────────────────────
-
-      - name: Setup release signing
-        id: signing
-        run: |
-          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
-            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore
-            GRADLE=android/app/build.gradle.kts
-            sed -i 's/    buildTypes {/    signingConfigs {\n        create("release") {\n            storeFile = file("release.keystore")\n            storePassword = System.getenv("KEYSTORE_STORE_PASSWORD")\n            keyAlias = System.getenv("KEYSTORE_KEY_ALIAS")\n            keyPassword = System.getenv("KEYSTORE_KEY_PASSWORD")\n        }\n    }\n    buildTypes {/' "$GRADLE"
-            sed -i 's/signingConfig = signingConfigs.getByName("debug")/signingConfig = signingConfigs.getByName("release")/' "$GRADLE"
-            echo "SIGNING_AVAILABLE=true"  >> "$GITHUB_OUTPUT"
-            echo "SIGNING_AVAILABLE=true"  >> "$GITHUB_ENV"
-            echo "Keystore configured for release signing"
-          else
-            echo "SIGNING_AVAILABLE=false" >> "$GITHUB_OUTPUT"
-            echo "SIGNING_AVAILABLE=false" >> "$GITHUB_ENV"
-            echo "Note: KEYSTORE_BASE64 secret not set — release build uses debug signing"
-          fi
-
-      - name: Build APK release
-        id: release_apk
-        env:
-          KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
-          KEYSTORE_KEY_ALIAS: ${{ secrets.KEYSTORE_KEY_ALIAS }}
-          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
-        run: |
-          flutter build apk --release
-          APK=build/app/outputs/flutter-apk/app-release.apk
-          ls -lh "$APK"
-          SHA=$(sha256sum "$APK" | awk '{print $1}')
-          SIZE=$(du -sh "$APK" | cut -f1)
-          echo "RELEASE_APK_SHA=$SHA"   >> "$GITHUB_ENV"
-          echo "RELEASE_APK_SIZE=$SIZE" >> "$GITHUB_ENV"
-          echo ""
-          echo "Release APK: $SIZE / SHA-256: $SHA"
-          echo "RELEASE_APK_STATUS=PASS" >> "$GITHUB_ENV"
-
-      # ── 16. VALIDATE kDebugMode EXCLUSION ──────────────────────────────────
-
-      - name: Validate showcase route excluded from release
-        if: steps.release_apk.outcome == 'success'
-        run: |
-          echo "=== kDebugMode compile-time exclusion proof ==="
-          echo ""
-          echo "Source guard in lib/app.dart:"
-          grep -B1 -A4 "kDebugMode" lib/app.dart | grep -v "^--$"
-          echo ""
-          echo "Dart semantics:"
-          echo "  kDebugMode is declared as:"
-          echo "    const bool kDebugMode = bool.fromEnvironment('dart.vm.product') == false"
-          echo "  In release builds: kDebugMode == false at compile time."
-          echo "  The Dart compiler performs dead-code elimination on if(false) branches."
-          echo "  The GoRoute for /debug/ive-avatar-v2 is inside if(kDebugMode){}."
-          echo "  That route object is never constructed in a release build."
-          echo ""
-          echo "  Note: string-searching the APK binary for the route path is NOT"
-          echo "  used as proof. Route strings may appear in symbol tables or debug"
-          echo "  metadata while the route itself is unreachable at runtime."
-          echo "  The compile-time constant elimination is the authoritative mechanism."
-          echo ""
-          echo "SHOWCASE_PROTECTION=kDebugMode_compile_time_constant" >> "$GITHUB_ENV"
-
-      - name: Upload release APK
-        if: steps.release_apk.outcome == 'success'
-        uses: actions/upload-artifact@v4
-        with:
-          name: ive-avatar-v2-release-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 7
-
-      # ── 17. ARTIFACTS ───────────────────────────────────────────────────────
 
       - name: Upload test results
         if: always()
@@ -449,17 +336,24 @@ jobs:
           path: test-results/
           retention-days: 7
 
-      # ── 18. JOB SUMMARY ─────────────────────────────────────────────────────
+      # ── 14. JOB SUMMARY ─────────────────────────────────────────────────────
 
       - name: Generate job summary
         if: always()
         run: |
-          FLUTTER_VER=$(flutter --version 2>&1 | head -1)
-          DART_VER=$(dart --version 2>&1 | head -1)
+          FLUTTER_VER=$(flutter --version 2>&1 | head -1 || echo "unavailable")
 
-          # Determine final result from step outcomes
-          RESULT="PASS"
-          CRITICAL_STEPS=(
+          icon() {
+            case "$1" in
+              success) printf "✅ PASS" ;;
+              failure) printf "❌ FAIL" ;;
+              skipped) printf "⏭ SKIPPED" ;;
+              *)       printf "⚠️ %s" "$1" ;;
+            esac
+          }
+
+          # Final result — derived from step exit codes only
+          MANDATORY=(
             "${{ steps.format.outcome }}"
             "${{ steps.analyze_dart.outcome }}"
             "${{ steps.analyze_flutter.outcome }}"
@@ -468,80 +362,165 @@ jobs:
             "${{ steps.v2_tests.outcome }}"
             "${{ steps.debug_apk.outcome }}"
           )
-          for outcome in "${CRITICAL_STEPS[@]}"; do
-            if [ "$outcome" != "success" ] && [ "$outcome" != "skipped" ]; then
+          RESULT="PASS"
+          for o in "${MANDATORY[@]}"; do
+            if [ "$o" != "success" ]; then
               RESULT="FAIL"
               break
             fi
           done
-
-          # Full suite failure degrades to LIMITATIONS (not FAIL) if core passed
           if [ "$RESULT" = "PASS" ] && \
-             [ "${{ steps.full_tests.outcome }}" != "success" ] && \
-             [ "${{ steps.full_tests.outcome }}" != "skipped" ]; then
-            RESULT="PASS WITH LIMITATIONS"
+             [ "${{ steps.full_tests.outcome }}" != "success" ]; then
+            RESULT="PASS WITH LIMITATIONS (full suite: ${{ steps.full_tests.outcome }})"
           fi
 
-          STATUS_ICON() {
-            case "$1" in
-              success) echo "✅ PASS" ;;
-              failure) echo "❌ FAIL" ;;
-              skipped) echo "⏭ SKIPPED" ;;
-              *)       echo "⚠️ $1" ;;
+          {
+            echo "## IVE Avatar V2 Validation"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| **Branch** | \`${BRANCH}\` |"
+            echo "| **Commit** | \`${COMMIT}\` |"
+            echo "| **Flutter** | ${FLUTTER_VER} |"
+            echo ""
+            echo "### Gates"
+            echo "| Gate | Result |"
+            echo "|------|--------|"
+            echo "| dart format (4 hotfix files) | $(icon '${{ steps.format.outcome }}') |"
+            echo "| dart analyze ive_avatar + tests | $(icon '${{ steps.analyze_dart.outcome }}') |"
+            echo "| flutter analyze --fatal-warnings | $(icon '${{ steps.analyze_flutter.outcome }}') |"
+            echo "| Isolation checks | $(icon '${{ steps.isolation.outcome }}') |"
+            echo ""
+            echo "### Tests"
+            echo "| Suite | Result |"
+            echo "|-------|--------|"
+            echo "| Smoke — feature flag default | $(icon '${{ steps.smoke_test.outcome }}') |"
+            echo "| Avatar V2 suite | $(icon '${{ steps.v2_tests.outcome }}') |"
+            echo "| Full project suite | $(icon '${{ steps.full_tests.outcome }}') |"
+            echo ""
+            echo "### Build"
+            echo "| Item | Value |"
+            echo "|------|-------|"
+            echo "| Debug APK | $(icon '${{ steps.debug_apk.outcome }}') |"
+            echo "| SHA-256 | \`${DEBUG_APK_SHA:-N/A}\` |"
+            echo "| Size | ${DEBUG_APK_SIZE:-N/A} |"
+            echo ""
+            echo "### Final Result"
+            echo "\`\`\`"
+            echo "${RESULT}"
+            echo "\`\`\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ── OPTIONAL RELEASE JOB (manual dispatch only) ─────────────────────────────
+  release:
+    name: IVE Avatar V2 — Release APK
+    needs: validation
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check signing secrets
+        id: signing_check
+        run: |
+          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ] && \
+             [ -n "${{ secrets.KEY_ALIAS }}" ] && \
+             [ -n "${{ secrets.KEY_PASSWORD }}" ] && \
+             [ -n "${{ secrets.STORE_PASSWORD }}" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo "Signing secrets present — proceeding with signed release build."
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "SKIPPED: one or more signing secrets not configured."
+            echo "Set KEYSTORE_BASE64, KEY_ALIAS, KEY_PASSWORD, STORE_PASSWORD to enable."
+          fi
+
+      - name: Setup Java 17 (Temurin)
+        if: steps.signing_check.outputs.available == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter (stable)
+        if: steps.signing_check.outputs.available == 'true'
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Create .env with safe placeholders
+        if: steps.signing_check.outputs.available == 'true'
+        run: |
+          echo "SUPABASE_URL=https://example.supabase.co"            > .env
+          echo "SUPABASE_ANON_KEY=placeholder-safe-anon-key"        >> .env
+          echo "GOOGLE_CLIENT_ID=placeholder.apps.googleusercontent.com" >> .env
+
+      - name: flutter pub get
+        if: steps.signing_check.outputs.available == 'true'
+        run: flutter pub get
+
+      - name: Decode release keystore
+        if: steps.signing_check.outputs.available == 'true'
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > /tmp/release.keystore
+
+      - name: Build APK release
+        if: steps.signing_check.outputs.available == 'true'
+        id: release_build
+        env:
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          flutter build apk --release
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          test -f "$APK"
+          ls -lh "$APK"
+          SHA=$(sha256sum "$APK" | awk '{print $1}')
+          SIZE=$(du -sh "$APK" | cut -f1)
+          echo "RELEASE_APK_SHA=$SHA"   >> "$GITHUB_ENV"
+          echo "RELEASE_APK_SIZE=$SIZE" >> "$GITHUB_ENV"
+          echo "SHA-256 : $SHA"
+          echo "Size    : $SIZE"
+
+      - name: Remove keystore
+        if: always()
+        run: rm -f /tmp/release.keystore
+
+      - name: Upload release APK
+        if: steps.release_build.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ive-avatar-v2-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 7
+
+      - name: Release job summary
+        if: always()
+        run: |
+          SIGNING="${{ steps.signing_check.outputs.available }}"
+          if [ "$SIGNING" = "true" ]; then
+            case "${{ steps.release_build.outcome }}" in
+              success) LABEL="SIGNED RELEASE — PASS" ;;
+              failure) LABEL="SIGNED RELEASE — FAIL" ;;
+              *)       LABEL="SIGNED RELEASE — ${{ steps.release_build.outcome }}" ;;
             esac
-          }
-
-          cat >> "$GITHUB_STEP_SUMMARY" << EOF
-          ## IVE Avatar V2 Validation — Job Summary
-
-          | | |
-          |---|---|
-          | **Branch** | \`$BRANCH\` |
-          | **Commit** | \`$COMMIT\` |
-          | **Flutter** | $FLUTTER_VER |
-          | **Dart** | $DART_VER |
-
-          ---
-
-          ### Gates
-
-          | Gate | Result |
-          |------|--------|
-          | dart format (4 hotfix files) | $(STATUS_ICON "${{ steps.format.outcome }}") |
-          | dart analyze ive_avatar + tests | $(STATUS_ICON "${{ steps.analyze_dart.outcome }}") |
-          | flutter analyze --fatal-warnings | $(STATUS_ICON "${{ steps.analyze_flutter.outcome }}") |
-          | Isolation checks (12 guarantees) | $(STATUS_ICON "${{ steps.isolation.outcome }}") |
-
-          ### Tests
-
-          | Suite | Result |
-          |-------|--------|
-          | Smoke test — feature flag | $(STATUS_ICON "${{ steps.smoke_test.outcome }}") |
-          | Avatar V2 suite (target: 39) | $(STATUS_ICON "${{ steps.v2_tests.outcome }}") |
-          | Full project suite | $(STATUS_ICON "${{ steps.full_tests.outcome }}") |
-
-          ### Build
-
-          | Artifact | Result | Details |
-          |----------|--------|---------|
-          | Debug APK | $(STATUS_ICON "${{ steps.debug_apk.outcome }}") | ${DEBUG_APK_SIZE:-N/A} |
-          | Debug APK SHA-256 | — | \`${DEBUG_APK_SHA:-N/A}\` |
-          | Release APK | $(STATUS_ICON "${{ steps.release_apk.outcome }}") | ${RELEASE_APK_SIZE:-N/A} |
-          | Release APK SHA-256 | — | \`${RELEASE_APK_SHA:-N/A}\` |
-
-          ### Security
-
-          | Check | Result |
-          |-------|--------|
-          | Feature flag remains false | ${ISOLATION_STATUS:-see above} |
-          | Showcase route (kDebugMode) | ${SHOWCASE_PROTECTION:-N/A} |
-          | Signing available | ${SIGNING_AVAILABLE:-N/A} |
-
-          ---
-
-          ### Final Result
-
-          \`\`\`
-          $RESULT
-          \`\`\`
-          EOF
+          else
+            LABEL="RELEASE SKIPPED (signing secrets not configured)"
+          fi
+          {
+            echo "## IVE Avatar V2 — Release Job"
+            echo ""
+            echo "| Item | Result |"
+            echo "|------|--------|"
+            echo "| Signing secrets | ${SIGNING} |"
+            echo "| Build | ${LABEL} |"
+            echo "| SHA-256 | \`${RELEASE_APK_SHA:-N/A}\` |"
+            echo "| Size | ${RELEASE_APK_SIZE:-N/A} |"
+          } >> "$GITHUB_STEP_SUMMARY"
