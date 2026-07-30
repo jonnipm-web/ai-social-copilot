@@ -121,10 +121,12 @@ class MarketAnalysisNotifier
         inputType: inputType,
         projectId: projectId,
       );
+      if (!mounted) return result;
       state = AsyncValue.data(result);
 
       // Auto-seed Opportunity Lab com as top ações da análise
       await _seedOpportunityLab(result, projectId: projectId);
+      if (!mounted) return result;
 
       // Emite evento na timeline executiva
       if (projectId != null && result != null) {
@@ -137,6 +139,7 @@ class MarketAnalysisNotifier
 
       return result;
     } catch (e, st) {
+      if (!mounted) return null;
       state = AsyncValue.error(e, st);
       return null;
     }

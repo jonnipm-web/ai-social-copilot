@@ -6,8 +6,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../data/models/action_queue_item.dart';
+import '../../../data/models/copilot_context_data.dart';
 import '../../../providers/action_queue_provider.dart';
 import '../../../providers/project_provider.dart';
+import '../../../shared/widgets/context_copilot_widget.dart' show showCopilotChat;
 
 // ── Colors ────────────────────────────────────────────────────────────────────
 const _kBg = Color(0xFF0F0F1A);
@@ -277,7 +279,7 @@ class _DetailBody extends StatelessWidget {
         const SizedBox(height: 20),
 
         // ── Status actions ─────────────────────────────────────
-        _StatusButtons(item: item, ref: ref),
+        _StatusButtons(item: item, ref: ref, projectName: projectName),
       ],
     );
   }
@@ -791,10 +793,11 @@ class _StatusBadge extends StatelessWidget {
 
 // ── Status buttons ────────────────────────────────────────────────────────────
 class _StatusButtons extends StatelessWidget {
-  const _StatusButtons({required this.item, required this.ref});
+  const _StatusButtons({required this.item, required this.ref, this.projectName});
 
   final ActionQueueItem item;
   final WidgetRef ref;
+  final String? projectName;
 
   Future<void> _run(BuildContext context, Future<void> Function() fn) async {
     try {
@@ -890,7 +893,26 @@ class _StatusButtons extends StatelessWidget {
           ),
           icon: const Icon(Icons.auto_awesome_rounded),
           label: const Text('Perguntar à IVE sobre esta ação'),
-          onPressed: () => context.go(AppConstants.routeActionEngine),
+          onPressed: () => showCopilotChat(
+                context,
+                screenName: 'Ações',
+                contextData: CopilotContextData(
+                  actions: [
+                    {
+                      'id': item.id,
+                      'title': item.title,
+                      'status': item.status,
+                      'origin': item.origin,
+                      if (item.rationale != null) 'rationale': item.rationale,
+                      if (projectName != null) 'project': projectName,
+                      'priority': item.priority,
+                      'impact_score': item.impactScore,
+                      'effort_score': item.effortScore,
+                      'roi_score': item.roiScore,
+                    }
+                  ],
+                ),
+              ),
         ),
       ],
     );

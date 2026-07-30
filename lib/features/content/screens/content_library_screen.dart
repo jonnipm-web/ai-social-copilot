@@ -403,10 +403,14 @@ class _ContentCard extends StatelessWidget {
                     const Icon(Icons.tag_rounded,
                         color: Colors.white24, size: 12),
                     const SizedBox(width: 4),
-                    Text(
-                      item.niche!,
-                      style:
-                          const TextStyle(color: Colors.white38, fontSize: 11),
+                    Flexible(
+                      child: Text(
+                        item.niche!,
+                        style: const TextStyle(
+                            color: Colors.white38, fontSize: 11),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
                     ),
                   ],
                 ),

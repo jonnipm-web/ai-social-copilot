@@ -132,6 +132,19 @@ class _ExecutiveDecisionCenterScreenState
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.refresh_rounded, color: Colors.white54),
+            tooltip: 'Recarregar',
+            onPressed: () {
+              ref.invalidate(ecosystemScoresProvider);
+              ref.invalidate(ecosystemHealthProvider);
+              ref.invalidate(projectsNeedingBootstrapProvider);
+              ref.invalidate(opportunityLabProvider);
+              ref.invalidate(actionQueueProvider);
+              ref.invalidate(priorityRecommendationsProvider);
+              ref.invalidate(decisionValidationMapProvider);
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.schedule_rounded, color: Colors.white54),
             tooltip: 'Alocação de Recursos',
             onPressed: () => context.push(AppConstants.routeEcosystemResources),

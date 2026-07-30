@@ -67,6 +67,9 @@ class HomeScreen extends ConsumerWidget {
               ref.invalidate(ecosystemHealthProvider);
               ref.invalidate(actionQueueProvider);
               ref.invalidate(opportunityLabProvider);
+              ref.invalidate(priorityRecommendationsProvider);
+              ref.invalidate(portfolioCoverageScoreProvider);
+              ref.invalidate(avgLearningScoreProvider);
             },
           ),
         ],
@@ -623,14 +626,21 @@ class _ProjectRow extends StatelessWidget {
                       fontSize: 13)),
               const SizedBox(height: 2),
               Row(children: [
-                Text(profile.maturityLabel,
-                    style:
-                        const TextStyle(color: Colors.white38, fontSize: 10)),
+                Flexible(
+                  child: Text(profile.maturityLabel,
+                      style: const TextStyle(color: Colors.white38, fontSize: 10),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1),
+                ),
                 const Text(' · ',
                     style: TextStyle(color: Colors.white24, fontSize: 10)),
-                Text(
-                  '${profile.coverage.coverageEmoji} ${profile.coverage.score}% coverage',
-                  style: const TextStyle(color: Colors.white38, fontSize: 10),
+                Flexible(
+                  child: Text(
+                    '${profile.coverage.coverageEmoji} ${profile.coverage.score}% coverage',
+                    style: const TextStyle(color: Colors.white38, fontSize: 10),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
                 ),
               ]),
             ]),

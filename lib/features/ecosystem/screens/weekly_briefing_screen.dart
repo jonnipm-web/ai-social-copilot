@@ -865,38 +865,39 @@ class _CountChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final chip = Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.07),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withOpacity(0.2)),
-        ),
-        child: Column(
-          children: [
-            Text(
-              '$value',
-              style: TextStyle(
-                color: color,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+    final content = Container(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.07),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Column(
+        children: [
+          Text(
+            '$value',
+            style: TextStyle(
+              color: color,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
             ),
-            const SizedBox(height: 1),
-            Text(
-              label,
-              style: const TextStyle(color: Colors.white38, fontSize: 9),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 1),
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white38, fontSize: 9),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
-    if (onTap == null) return chip;
-    return GestureDetector(
-      onTap: onTap,
-      child: MouseRegion(cursor: SystemMouseCursors.click, child: chip),
+    if (onTap == null) return Expanded(child: content);
+    // Expanded must be the outermost widget so the Row can flex it correctly.
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: MouseRegion(cursor: SystemMouseCursors.click, child: content),
+      ),
     );
   }
 }

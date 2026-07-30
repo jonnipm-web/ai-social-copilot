@@ -207,6 +207,7 @@ class _PerformanceScreenState extends ConsumerState<PerformanceScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _AddMetricSheet(
         onSaved: () {
@@ -397,6 +398,7 @@ class _MetricCard extends StatelessWidget {
   void _showContextMenu(BuildContext context) {
     showModalBottomSheet(
       context: context,
+      useSafeArea: true,
       backgroundColor: _cardColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
