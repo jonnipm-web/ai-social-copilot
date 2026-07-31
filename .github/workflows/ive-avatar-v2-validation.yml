@@ -248,7 +248,7 @@ jobs:
             -j 1 \
             --reporter expanded \
             --timeout 60s \
-            -n "iveAvatarV2EnabledProvider is false by default" \
+            --name "iveAvatarV2EnabledProvider is false by default" \
             2>&1 | tee test-results/smoke-test.txt
 
       # ── 10. AVATAR V2 TEST SUITE ────────────────────────────────────────────
