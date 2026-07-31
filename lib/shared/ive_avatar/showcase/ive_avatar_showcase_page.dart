@@ -492,23 +492,25 @@ class _AllStatesGrid extends StatelessWidget {
       mainAxisSpacing:  16,
       children: IveAvatarStateV2.values.map((s) {
         final label = IveAvatarStateConfigV2.forState(s).fallbackLabel;
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IveAvatarCompact(
-              state:       s,
-              size:        IveAvatarTokens.sizeSmall,
-              interactive: interactive,
-              onTap:       interactive ? () => onTap(s) : null,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: const TextStyle(color: Colors.white54, fontSize: 8.5),
-              textAlign: TextAlign.center,
-              overflow:  TextOverflow.ellipsis,
-            ),
-          ],
+        return ClipRect(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IveAvatarCompact(
+                state:       s,
+                size:        IveAvatarTokens.sizeSmall,
+                interactive: interactive,
+                onTap:       interactive ? () => onTap(s) : null,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: const TextStyle(color: Colors.white54, fontSize: 8.5),
+                textAlign: TextAlign.center,
+                overflow:  TextOverflow.ellipsis,
+              ),
+            ],
+          ),
         );
       }).toList(),
     );

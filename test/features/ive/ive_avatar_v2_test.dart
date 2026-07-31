@@ -238,6 +238,10 @@ void main() {
       IveAvatarStateV2.thinking,
     );
 
+    // Flush Riverpod's ProviderScheduler zero-duration timer that batches
+    // dependent-provider re-evaluation after a StateNotifier state change.
+    await tester.pump();
+
     expect(
       container.read(iveAvatarV2StateProvider),
       IveAvatarStateV2.thinking,
