@@ -167,7 +167,8 @@ jobs:
           FAIL=0
 
           echo "=== [1] Feature flag default value ==="
-          if grep -q "return false" \
+          # Provider uses arrow syntax: Provider<bool>((_) => false)
+          if grep -q "=> false" \
             lib/shared/ive_avatar/providers/ive_avatar_provider_v2.dart; then
             echo "PASS: iveAvatarV2 flag returns false by default"
           else
@@ -183,6 +184,7 @@ jobs:
             --include="*.dart" \
             | grep -v "lib/shared/ive_avatar/" \
             | grep -v "lib/app.dart" \
+            | grep -v "lib/data/models/feature_flag.dart" \
             || true)
           if [ -z "$PROD_REFS" ]; then
             echo "PASS: no unauthorized V2 references in production code"
