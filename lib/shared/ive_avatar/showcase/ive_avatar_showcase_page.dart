@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../animations/ive_avatar_motion_policy.dart';
 import '../models/ive_avatar_configuration.dart';
 import '../models/ive_avatar_context.dart';
 import '../models/ive_avatar_state_v2.dart';
