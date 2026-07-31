@@ -88,8 +88,9 @@ class _IveVisualFallbackState extends State<IveVisualFallback>
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 500),
                       decoration: BoxDecoration(
-                        color: config.overlayColor.withOpacity(
-                          config.overlayOpacity * (0.6 + _pulse.value * 0.4),
+                        color: config.overlayColor.withValues(
+                          alpha: config.overlayOpacity *
+                              (0.6 + _pulse.value * 0.4),
                         ),
                       ),
                     ),
@@ -140,7 +141,7 @@ class _Placeholder extends StatelessWidget {
       child: Center(
         child: Icon(
           Icons.person_rounded,
-          color: config.ringColor.withOpacity(0.4),
+          color: config.ringColor.withValues(alpha: 0.4),
           size: 24,
         ),
       ),
