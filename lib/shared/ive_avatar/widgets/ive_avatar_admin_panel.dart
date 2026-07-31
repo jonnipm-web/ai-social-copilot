@@ -54,9 +54,9 @@ class IveAvatarAdminPanel extends ConsumerWidget {
                 Text(
                   'Avatar da IVE',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
                 const Spacer(),
                 Container(
@@ -314,9 +314,8 @@ class _OverrideButton extends StatelessWidget {
               : const Color(0xFF1A1B38),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: _selected
-                ? const Color(0xFF7B5CF6)
-                : const Color(0xFF2A2B55),
+            color:
+                _selected ? const Color(0xFF7B5CF6) : const Color(0xFF2A2B55),
           ),
         ),
         child: Row(

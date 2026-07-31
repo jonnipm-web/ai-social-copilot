@@ -71,11 +71,9 @@ class IveAvatarLocalOverrideNotifier
   bool get _canOverride => kDebugMode;
 }
 
-final iveAvatarLocalOverrideProvider =
-    StateNotifierProvider<
-      IveAvatarLocalOverrideNotifier,
-      IveAvatarLocalOverride
-    >((_) => IveAvatarLocalOverrideNotifier());
+final iveAvatarLocalOverrideProvider = StateNotifierProvider<
+    IveAvatarLocalOverrideNotifier,
+    IveAvatarLocalOverride>((_) => IveAvatarLocalOverrideNotifier());
 
 // ── Remote flag provider ──────────────────────────────────────────────────────
 //

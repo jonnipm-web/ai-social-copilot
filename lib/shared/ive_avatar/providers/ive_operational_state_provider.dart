@@ -146,5 +146,5 @@ class IveOperationalStateNotifier extends StateNotifier<IveAvatarStateV2> {
 
 final iveOperationalStateProvider =
     StateNotifierProvider<IveOperationalStateNotifier, IveAvatarStateV2>(
-      (_) => IveOperationalStateNotifier(),
-    );
+  (_) => IveOperationalStateNotifier(),
+);
