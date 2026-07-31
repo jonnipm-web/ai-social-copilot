@@ -30,7 +30,7 @@ class _IveAvatarShowcasePageState extends State<IveAvatarShowcasePage> {
   bool             _showKeyboard  = false;
   bool             _darkMode      = true;
   double           _textScale     = 1.0;
-  double           _screenWidth   = 390;
+  double           _screenWidth   = 420;
   bool             _interactive   = true;
   bool             _showLabel     = true;
 
@@ -492,25 +492,23 @@ class _AllStatesGrid extends StatelessWidget {
       mainAxisSpacing:  16,
       children: IveAvatarStateV2.values.map((s) {
         final label = IveAvatarStateConfigV2.forState(s).fallbackLabel;
-        return ClipRect(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IveAvatarCompact(
-                state:       s,
-                size:        IveAvatarTokens.sizeSmall,
-                interactive: interactive,
-                onTap:       interactive ? () => onTap(s) : null,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: const TextStyle(color: Colors.white54, fontSize: 8.5),
-                textAlign: TextAlign.center,
-                overflow:  TextOverflow.ellipsis,
-              ),
-            ],
-          ),
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IveAvatarCompact(
+              state:       s,
+              size:        IveAvatarTokens.sizeSmall,
+              interactive: interactive,
+              onTap:       interactive ? () => onTap(s) : null,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: const TextStyle(color: Colors.white54, fontSize: 8.5),
+              textAlign: TextAlign.center,
+              overflow:  TextOverflow.ellipsis,
+            ),
+          ],
         );
       }).toList(),
     );

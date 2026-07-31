@@ -238,9 +238,11 @@ void main() {
       IveAvatarStateV2.thinking,
     );
 
-    // Flush Riverpod's ProviderScheduler zero-duration timer that batches
-    // dependent-provider re-evaluation after a StateNotifier state change.
-    await tester.pump();
+    // pump(1ms) advances FakeAsync past the Duration.zero timer that Riverpod's
+    // ProviderScheduler creates when it invalidates iveAvatarV2StateProvider.
+    // tester.pump() with no args does NOT advance the clock, so the timer stays
+    // pending and _verifyInvariants() fails.
+    await tester.pump(const Duration(milliseconds: 1));
 
     expect(
       container.read(iveAvatarV2StateProvider),
