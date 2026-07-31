@@ -32,18 +32,19 @@ class IveVisualFallback extends StatefulWidget {
 class _IveVisualFallbackState extends State<IveVisualFallback>
     with SingleTickerProviderStateMixin {
   late final AnimationController _pulseCtrl;
-  late final Animation<double>   _pulse;
+  late final Animation<double> _pulse;
 
   @override
   void initState() {
     super.initState();
     _pulseCtrl = AnimationController(
-      vsync:    this,
+      vsync: this,
       duration: const Duration(milliseconds: 2200),
     )..repeat(reverse: true);
-    _pulse = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
-    );
+    _pulse = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
   }
 
   @override
@@ -54,18 +55,18 @@ class _IveVisualFallbackState extends State<IveVisualFallback>
 
   @override
   Widget build(BuildContext context) {
-    final config  = IveVisualStateConfig.forState(widget.state);
+    final config = IveVisualStateConfig.forState(widget.state);
     final padding = widget.size * 0.055;
 
     return AnimatedBuilder(
       animation: _pulse,
       builder: (_, __) {
         return SizedBox(
-          width:  widget.size,
+          width: widget.size,
           height: widget.size,
           child: CustomPaint(
             painter: IveStatusRingPainter(
-              state:     widget.state,
+              state: widget.state,
               glowPulse: _pulse.value,
             ),
             child: Padding(
@@ -79,7 +80,8 @@ class _IveVisualFallbackState extends State<IveVisualFallback>
                       IveAssetPaths.referenceImage,
                       fit: BoxFit.cover,
                       alignment: Alignment.topCenter,
-                      errorBuilder: (_, __, ___) => _Placeholder(state: widget.state),
+                      errorBuilder: (_, __, ___) =>
+                          _Placeholder(state: widget.state),
                     ),
 
                     // Subtle state color overlay
@@ -96,8 +98,8 @@ class _IveVisualFallbackState extends State<IveVisualFallback>
                     if (kDebugMode && widget.showDebugBadge)
                       Positioned(
                         bottom: 0,
-                        left:   0,
-                        right:  0,
+                        left: 0,
+                        right: 0,
                         child: Container(
                           color: Colors.black87,
                           padding: const EdgeInsets.symmetric(vertical: 1.5),
@@ -105,9 +107,9 @@ class _IveVisualFallbackState extends State<IveVisualFallback>
                             'RIVE ASSET PENDING',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              color:       Color(0xFFFFB020),
-                              fontSize:    6.5,
-                              fontWeight:  FontWeight.bold,
+                              color: Color(0xFFFFB020),
+                              fontSize: 6.5,
+                              fontWeight: FontWeight.bold,
                               letterSpacing: 0.4,
                             ),
                           ),
@@ -139,7 +141,7 @@ class _Placeholder extends StatelessWidget {
         child: Icon(
           Icons.person_rounded,
           color: config.ringColor.withOpacity(0.4),
-          size:  24,
+          size: 24,
         ),
       ),
     );

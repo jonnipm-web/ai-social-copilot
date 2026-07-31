@@ -54,14 +54,16 @@ class IveAvatarAdminPanel extends ConsumerWidget {
                 Text(
                   'Avatar da IVE',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const Spacer(),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFF1E1F40),
                     borderRadius: BorderRadius.circular(6),
@@ -89,8 +91,7 @@ class IveAvatarAdminPanel extends ConsumerWidget {
             _InfoRow(
               label: 'Flag remota (Supabase)',
               value: remoteFlag ? 'ativada' : 'desativada (padrão)',
-              valueColor:
-                  remoteFlag ? const Color(0xFF00E875) : Colors.white54,
+              valueColor: remoteFlag ? const Color(0xFF00E875) : Colors.white54,
             ),
             _InfoRow(
               label: 'Override local',
@@ -175,9 +176,9 @@ class IveAvatarAdminPanel extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(vertical: 10),
                   ),
                   onPressed: () {
-                    Navigator.of(context).pushNamed(
-                      AppConstants.routeIveAvatarShowcase,
-                    );
+                    Navigator.of(
+                      context,
+                    ).pushNamed(AppConstants.routeIveAvatarShowcase);
                   },
                 ),
               ),

@@ -101,8 +101,7 @@ class IveOperationalStateNotifier extends StateNotifier<IveAvatarStateV2> {
       if (_priority(s) > _priority(top)) top = s;
     }
     // If triggered state has higher priority than active ones, use it
-    final candidate =
-        _priority(triggered) >= _priority(top) ? triggered : top;
+    final candidate = _priority(triggered) >= _priority(top) ? triggered : top;
 
     if (state == candidate) return;
     state = candidate;
@@ -147,5 +146,5 @@ class IveOperationalStateNotifier extends StateNotifier<IveAvatarStateV2> {
 
 final iveOperationalStateProvider =
     StateNotifierProvider<IveOperationalStateNotifier, IveAvatarStateV2>(
-  (_) => IveOperationalStateNotifier(),
-);
+      (_) => IveOperationalStateNotifier(),
+    );

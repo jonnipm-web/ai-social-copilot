@@ -72,9 +72,10 @@ class IveAvatarLocalOverrideNotifier
 }
 
 final iveAvatarLocalOverrideProvider =
-    StateNotifierProvider<IveAvatarLocalOverrideNotifier, IveAvatarLocalOverride>(
-  (_) => IveAvatarLocalOverrideNotifier(),
-);
+    StateNotifierProvider<
+      IveAvatarLocalOverrideNotifier,
+      IveAvatarLocalOverride
+    >((_) => IveAvatarLocalOverrideNotifier());
 
 // ── Remote flag provider ──────────────────────────────────────────────────────
 //

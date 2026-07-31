@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/context_copilot_widget.dart' show showCopilotChat;
-import '../../../shared/widgets/ive_overlay.dart' show IveOverlay, iveRouteNotifier;
+import '../../../shared/widgets/context_copilot_widget.dart'
+    show showCopilotChat;
+import '../../../shared/widgets/ive_overlay.dart'
+    show IveOverlay, iveRouteNotifier;
 import '../models/ive_avatar_configuration.dart';
 import '../models/ive_avatar_state_v2.dart';
 import '../providers/effective_avatar_version_provider.dart';
@@ -12,7 +14,11 @@ import '../theme/ive_avatar_tokens.dart';
 import 'ive_avatar_v2.dart';
 
 export '../providers/effective_avatar_version_provider.dart'
-    show IveAvatarVersion, IveAvatarLocalOverride, iveIsHiddenRoute, iveIsAuthenticated;
+    show
+        IveAvatarVersion,
+        IveAvatarLocalOverride,
+        iveIsHiddenRoute,
+        iveIsAuthenticated;
 
 // ── IveAvatarResolver ─────────────────────────────────────────────────────────
 //
@@ -36,14 +42,14 @@ class IveAvatarResolver extends ConsumerStatefulWidget {
 }
 
 class _IveAvatarResolverState extends ConsumerState<IveAvatarResolver> {
-  String _route         = '';
-  bool   _authenticated = false;
+  String _route = '';
+  bool _authenticated = false;
 
   @override
   void initState() {
     super.initState();
     iveRouteNotifier.addListener(_onRouteChange);
-    _route         = iveRouteNotifier.value;
+    _route = iveRouteNotifier.value;
     _authenticated = iveIsAuthenticated();
   }
 
@@ -55,16 +61,15 @@ class _IveAvatarResolverState extends ConsumerState<IveAvatarResolver> {
 
   void _onRouteChange() {
     final route = iveRouteNotifier.value;
-    final auth  = iveIsAuthenticated();
+    final auth = iveIsAuthenticated();
     if (route == _route && auth == _authenticated) return;
     setState(() {
-      _route         = route;
+      _route = route;
       _authenticated = auth;
     });
   }
 
-  bool get _shouldHide =>
-      !_authenticated || iveIsHiddenRoute(_route);
+  bool get _shouldHide => !_authenticated || iveIsHiddenRoute(_route);
 
   @override
   Widget build(BuildContext context) {
@@ -93,10 +98,7 @@ class _IveAvatarResolverState extends ConsumerState<IveAvatarResolver> {
 // Draggable V2 avatar overlay. Mirrors IveOverlay drag behaviour.
 
 class _IveOverlayV2 extends StatefulWidget {
-  const _IveOverlayV2({
-    required this.operationalState,
-    required this.route,
-  });
+  const _IveOverlayV2({required this.operationalState, required this.route});
   final IveAvatarStateV2 operationalState;
   final String route;
 
@@ -106,7 +108,7 @@ class _IveOverlayV2 extends StatefulWidget {
 
 class _IveOverlayV2State extends State<_IveOverlayV2> {
   Offset? _position;
-  bool    _dragging = false;
+  bool _dragging = false;
 
   bool get _isDesktop => MediaQuery.of(context).size.width >= 1024;
 
@@ -117,7 +119,7 @@ class _IveOverlayV2State extends State<_IveOverlayV2> {
 
   @override
   Widget build(BuildContext context) {
-    final screen     = MediaQuery.of(context).size;
+    final screen = MediaQuery.of(context).size;
     final safeBottom = MediaQuery.of(context).padding.bottom;
     _position ??= _defaultPosition(screen);
 
@@ -127,7 +129,7 @@ class _IveOverlayV2State extends State<_IveOverlayV2> {
       left: _position!.dx,
       top: _position!.dy,
       child: GestureDetector(
-        onPanStart:  (_) => setState(() => _dragging = true),
+        onPanStart: (_) => setState(() => _dragging = true),
         onPanUpdate: (d) => setState(() {
           _position = (_position! + d.delta).clamp(
             Offset.zero,
@@ -137,7 +139,7 @@ class _IveOverlayV2State extends State<_IveOverlayV2> {
         onPanEnd: (_) => setState(() => _dragging = false),
         onTap: _dragging ? null : _handleTap,
         child: AnimatedScale(
-          scale:    _dragging ? 0.92 : 1.0,
+          scale: _dragging ? 0.92 : 1.0,
           duration: const Duration(milliseconds: 150),
           child: IveAvatarV2(
             configuration: const IveAvatarConfiguration(
@@ -186,8 +188,6 @@ String _routeToName(String route) {
 }
 
 extension on Offset {
-  Offset clamp(Offset min, Offset max) => Offset(
-        dx.clamp(min.dx, max.dx),
-        dy.clamp(min.dy, max.dy),
-      );
+  Offset clamp(Offset min, Offset max) =>
+      Offset(dx.clamp(min.dx, max.dx), dy.clamp(min.dy, max.dy));
 }
