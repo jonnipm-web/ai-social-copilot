@@ -20,9 +20,12 @@ ProviderContainer _container({
     overrides: [
       if (version != null)
         effectiveIveAvatarVersionProvider.overrideWithValue(version),
-      if (localOverride != null)
-        iveAvatarLocalOverrideProvider
-            .overrideWith((_) => _FixedOverrideNotifier(localOverride)),
+      // Always override to prevent SharedPreferences platform channel in tests.
+      iveAvatarLocalOverrideProvider.overrideWith(
+        (_) => _FixedOverrideNotifier(
+          localOverride ?? IveAvatarLocalOverride.automatic,
+        ),
+      ),
       iveAvatarV2FlagProvider.overrideWithValue(v2FlagEnabled),
       if (opState != null)
         iveOperationalStateProvider.overrideWith((_) => _FixedOpState(opState)),

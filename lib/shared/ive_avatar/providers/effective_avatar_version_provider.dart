@@ -118,8 +118,13 @@ final effectiveIveAvatarVersionProvider = Provider<IveAvatarVersion>((ref) {
 
 // ── Auth helper ───────────────────────────────────────────────────────────────
 
-bool iveIsAuthenticated() =>
-    Supabase.instance.client.auth.currentSession != null;
+bool iveIsAuthenticated() {
+  try {
+    return Supabase.instance.client.auth.currentSession != null;
+  } catch (_) {
+    return false;
+  }
+}
 
 // ── Hidden routes ─────────────────────────────────────────────────────────────
 
