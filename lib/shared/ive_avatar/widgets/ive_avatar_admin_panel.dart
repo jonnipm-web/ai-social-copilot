@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_constants.dart';
-import '../models/ive_avatar_state_v2.dart';
 import '../providers/effective_avatar_version_provider.dart';
 import '../providers/ive_avatar_provider_v2.dart';
 import '../providers/ive_operational_state_provider.dart';
@@ -71,7 +70,7 @@ class IveAvatarAdminPanel extends ConsumerWidget {
                   child: Text(
                     'Admin · Debug',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.4),
+                      color: Colors.white.withValues(alpha: 0.4),
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
                     ),
@@ -117,7 +116,7 @@ class IveAvatarAdminPanel extends ConsumerWidget {
             Text(
               'Override local (este dispositivo)',
               style: TextStyle(
-                color: Colors.white.withOpacity(0.55),
+                color: Colors.white.withValues(alpha: 0.55),
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
@@ -197,7 +196,7 @@ class IveAvatarAdminPanel extends ConsumerWidget {
                     Text(
                       'Override local ativo — afeta apenas este dispositivo',
                       style: TextStyle(
-                        color: const Color(0xFFFFB020).withOpacity(0.8),
+                        color: const Color(0xFFFFB020).withValues(alpha: 0.8),
                         fontSize: 11,
                       ),
                     ),
@@ -267,7 +266,7 @@ class _InfoRow extends StatelessWidget {
           Text(
             '$label: ',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.45),
+              color: Colors.white.withValues(alpha: 0.45),
               fontSize: 12,
             ),
           ),
@@ -310,7 +309,7 @@ class _OverrideButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: _selected
-              ? const Color(0xFF7B5CF6).withOpacity(0.15)
+              ? const Color(0xFF7B5CF6).withValues(alpha: 0.15)
               : const Color(0xFF1A1B38),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
@@ -343,7 +342,7 @@ class _OverrideButton extends StatelessWidget {
                   Text(
                     subtitle,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.4),
+                      color: Colors.white.withValues(alpha: 0.4),
                       fontSize: 11,
                     ),
                   ),

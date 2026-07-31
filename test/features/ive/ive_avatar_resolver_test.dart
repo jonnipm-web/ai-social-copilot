@@ -4,32 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:ai_social_copilot/shared/ive_avatar/models/ive_avatar_state_v2.dart';
 import 'package:ai_social_copilot/shared/ive_avatar/providers/effective_avatar_version_provider.dart';
-import 'package:ai_social_copilot/shared/ive_avatar/providers/ive_avatar_provider_v2.dart';
 import 'package:ai_social_copilot/shared/ive_avatar/providers/ive_operational_state_provider.dart';
 import 'package:ai_social_copilot/shared/ive_avatar/widgets/ive_avatar_resolver.dart';
 import 'package:ai_social_copilot/shared/widgets/ive_overlay.dart' show iveRouteNotifier;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-Widget _wrap(
-  Widget child, {
-  List<Override> overrides = const [],
-}) {
-  return ProviderScope(
-    overrides: overrides,
-    child: MaterialApp(home: Scaffold(body: child)),
-  );
-}
-
-// Simulates authenticated state for resolver tests
-// (resolver reads iveIsAuthenticated() which checks Supabase session).
-// We bypass auth by always returning true via override in tests that need it.
-// For hidden-when-unauthenticated tests, we leave auth as-is (no session in test).
-
-// Provider override that forces a specific version (bypasses flag + override logic)
-final _forceVersionProvider = Provider<IveAvatarVersion>(
-  (_) => IveAvatarVersion.legacy,
-);
 
 ProviderContainer _container({
   IveAvatarVersion? version,
@@ -51,16 +30,19 @@ ProviderContainer _container({
   );
 }
 
-class _FixedOverrideNotifier
-    extends StateNotifier<IveAvatarLocalOverride> {
-  _FixedOverrideNotifier(super.state);
+class _FixedOverrideNotifier extends IveAvatarLocalOverrideNotifier {
+  _FixedOverrideNotifier(IveAvatarLocalOverride fixed) {
+    state = fixed;
+  }
+
   @override
   Future<void> set(IveAvatarLocalOverride o) async => state = o;
 }
 
-class _FixedOpState
-    extends StateNotifier<IveAvatarStateV2> {
-  _FixedOpState(super.state);
+class _FixedOpState extends IveOperationalStateNotifier {
+  _FixedOpState(IveAvatarStateV2 fixed) {
+    state = fixed;
+  }
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -87,8 +69,8 @@ void main() {
 
     test('3 — override legacy → legacy regardless of flag', () {
       final c = _container(
-        v2FlagEnabled:  true,
-        localOverride:  IveAvatarLocalOverride.legacy,
+        v2FlagEnabled: true,
+        localOverride: IveAvatarLocalOverride.legacy,
       );
       addTearDown(c.dispose);
       expect(c.read(effectiveIveAvatarVersionProvider), IveAvatarVersion.legacy);
@@ -97,7 +79,7 @@ void main() {
     test('4 — override v2 → v2 regardless of flag', () {
       final c = _container(
         v2FlagEnabled: false,
-        localOverride:  IveAvatarLocalOverride.v2,
+        localOverride: IveAvatarLocalOverride.v2,
       );
       addTearDown(c.dispose);
       expect(c.read(effectiveIveAvatarVersionProvider), IveAvatarVersion.v2);
@@ -172,7 +154,8 @@ void main() {
     test('19 — setOperationState analyzing updates state', () {
       final c = ProviderContainer();
       addTearDown(c.dispose);
-      c.read(iveOperationalStateProvider.notifier)
+      c
+          .read(iveOperationalStateProvider.notifier)
           .setOperationState('op-1', IveAvatarStateV2.analyzing);
       expect(c.read(iveOperationalStateProvider), IveAvatarStateV2.analyzing);
     });
@@ -180,7 +163,8 @@ void main() {
     test('20 — clearOperation returns to idle', () {
       final c = ProviderContainer();
       addTearDown(c.dispose);
-      c.read(iveOperationalStateProvider.notifier)
+      c
+          .read(iveOperationalStateProvider.notifier)
           .setOperationState('op-1', IveAvatarStateV2.analyzing);
       c.read(iveOperationalStateProvider.notifier).clearOperation('op-1');
       expect(c.read(iveOperationalStateProvider), IveAvatarStateV2.idle);
@@ -206,7 +190,8 @@ void main() {
 
     test('23 — dispose is safe', () {
       final c = ProviderContainer();
-      c.read(iveOperationalStateProvider.notifier)
+      c
+          .read(iveOperationalStateProvider.notifier)
           .setOperationState('op-1', IveAvatarStateV2.analyzing);
       expect(() => c.dispose(), returnsNormally);
     });
