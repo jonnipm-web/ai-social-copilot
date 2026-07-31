@@ -36,7 +36,7 @@ class IveAvatarStatusRingV2 extends CustomPainter {
       center,
       radius + 4,
       Paint()
-        ..color      = color.withOpacity(0.18 * intensity)
+        ..color      = color.withValues(alpha: 0.18 * intensity)
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, 12 * intensity),
     );
 
@@ -45,7 +45,7 @@ class IveAvatarStatusRingV2 extends CustomPainter {
       center,
       radius,
       Paint()
-        ..color      = color.withOpacity(0.30 * intensity)
+        ..color      = color.withValues(alpha: 0.30 * intensity)
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, 5 * intensity),
     );
 
@@ -54,14 +54,14 @@ class IveAvatarStatusRingV2 extends CustomPainter {
       center,
       radius,
       Paint()
-        ..color       = color.withOpacity(0.85)
+        ..color       = color.withValues(alpha: 0.85)
         ..style       = PaintingStyle.stroke
         ..strokeWidth = strokeWidth,
     );
 
     // Cardinal tick marks
     final tickPaint = Paint()
-      ..color       = color.withOpacity(0.55)
+      ..color       = color.withValues(alpha: 0.55)
       ..strokeWidth = 1.5
       ..strokeCap   = StrokeCap.round;
 

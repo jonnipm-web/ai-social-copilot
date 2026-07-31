@@ -37,7 +37,7 @@ class IveAvatarCard extends StatelessWidget {
         color:        IveAvatarTokens.surfaceDark,
         borderRadius: BorderRadius.circular(IveAvatarTokens.cardRadius),
         border: Border.all(
-          color: theme.ringColor.withOpacity(0.25),
+          color: theme.ringColor.withValues(alpha: 0.25),
           width: 1.0,
         ),
       ),
@@ -77,7 +77,7 @@ class IveAvatarCard extends StatelessWidget {
                   Text(
                     avatarContext.currentTask!,
                     style: TextStyle(
-                      color:    Colors.white.withOpacity(0.55),
+                      color:    Colors.white.withValues(alpha: 0.55),
                       fontSize: 11,
                     ),
                     maxLines: 1,
@@ -136,9 +136,9 @@ class _InsightBadge extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
         decoration: BoxDecoration(
-          color:        color.withOpacity(0.15),
+          color:        color.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(8),
-          border:       Border.all(color: color.withOpacity(0.4), width: 1),
+          border:       Border.all(color: color.withValues(alpha: 0.4), width: 1),
         ),
         child: Text(
           'Novo',

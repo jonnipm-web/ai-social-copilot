@@ -7,7 +7,6 @@ import 'package:ai_social_copilot/features/ive/visual/ive_avatar.dart';
 import 'package:ai_social_copilot/features/ive/visual/ive_avatar_controller.dart';
 import 'package:ai_social_copilot/features/ive/visual/ive_avatar_state.dart';
 import 'package:ai_social_copilot/features/ive/visual/ive_status_ring.dart';
-import 'package:ai_social_copilot/features/ive/visual/ive_visual_config.dart';
 import 'package:ai_social_copilot/features/ive/visual/ive_visual_fallback.dart';
 
 void main() {
@@ -136,13 +135,13 @@ void main() {
   group('IveVisualStateConfig', () {
     test('error state has red ring', () {
       final cfg = IveVisualStateConfig.forState(IveVisualState.error);
-      expect(cfg.ringColor.red, greaterThan(200));
-      expect(cfg.ringColor.green, lessThan(100));
+      expect((cfg.ringColor.r * 255.0).round().clamp(0, 255), greaterThan(200));
+      expect((cfg.ringColor.g * 255.0).round().clamp(0, 255), lessThan(100));
     });
 
     test('success state has green ring', () {
       final cfg = IveVisualStateConfig.forState(IveVisualState.success);
-      expect(cfg.ringColor.green, greaterThan(200));
+      expect((cfg.ringColor.g * 255.0).round().clamp(0, 255), greaterThan(200));
     });
 
     test('all states have valid glowIntensity', () {

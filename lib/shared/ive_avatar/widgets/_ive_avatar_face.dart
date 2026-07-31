@@ -40,7 +40,7 @@ class IveAvatarFacePlaceholder extends StatelessWidget {
         // State color overlay
         AnimatedContainer(
           duration: const Duration(milliseconds: 500),
-          color:    config.overlayColor.withOpacity(config.overlayOpacity),
+          color:    config.overlayColor.withValues(alpha: config.overlayOpacity),
         ),
         // V2 badge in debug builds
         if (kDebugMode)
@@ -97,7 +97,7 @@ class _IvePlaceholderPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = color.withOpacity(0.7)
+      ..color = color.withValues(alpha: 0.7)
       ..style = PaintingStyle.fill;
 
     // Simple geometric IVE silhouette: circle head + rectangle body

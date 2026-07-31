@@ -188,10 +188,10 @@ class _IveAvatarShowcasePageState extends State<IveAvatarShowcasePage> {
                                 Container(
                                   height:           200,
                                   decoration:       BoxDecoration(
-                                    color:         Colors.grey.withOpacity(0.15),
+                                    color:         Colors.grey.withValues(alpha: 0.15),
                                     borderRadius:  BorderRadius.circular(12),
                                     border:        Border.all(
-                                      color: Colors.grey.withOpacity(0.3),
+                                      color: Colors.grey.withValues(alpha: 0.3),
                                     ),
                                   ),
                                   child: const Center(
@@ -349,7 +349,7 @@ class _StateChip extends StatelessWidget {
         margin:   const EdgeInsets.only(bottom: 4),
         padding:  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color:        selected ? color.withOpacity(0.15) : Colors.transparent,
+          color:        selected ? color.withValues(alpha: 0.15) : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
           border:       Border.all(
             color: selected ? color : Colors.white12,
@@ -396,7 +396,7 @@ class _Switch extends StatelessWidget {
         Switch(
           value:           value,
           onChanged:       onChanged,
-          activeColor:     const Color(0xFF6C63FF),
+          activeThumbColor: const Color(0xFF6C63FF),
           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
         ),
       ],
