@@ -211,6 +211,8 @@ void main() {
     });
 
     testWidgets('has semantics label for screen readers', (tester) async {
+      final handle = tester.ensureSemantics();
+      addTearDown(handle.dispose);
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
