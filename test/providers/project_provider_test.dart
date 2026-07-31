@@ -68,10 +68,9 @@ void main() {
       final result = await container.read(projectsNotifierProvider.future);
 
       expect(result, [p]);
-      expect(
-        container.read(projectsNotifierProvider),
-        AsyncData([p]),
-      );
+      final state = container.read(projectsNotifierProvider);
+      expect(state, isA<AsyncData<List<Project>>>());
+      expect(state.valueOrNull, [p]);
       verify(() => svc.fetchAll()).called(1);
     });
 
