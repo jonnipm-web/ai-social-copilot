@@ -34,9 +34,7 @@ ProviderContainer _container({
 }
 
 class _FixedOverrideNotifier extends IveAvatarLocalOverrideNotifier {
-  _FixedOverrideNotifier(IveAvatarLocalOverride fixed) {
-    state = fixed;
-  }
+  _FixedOverrideNotifier(IveAvatarLocalOverride fixed) : super.fixed(fixed);
 
   @override
   Future<void> set(IveAvatarLocalOverride o) async => state = o;
