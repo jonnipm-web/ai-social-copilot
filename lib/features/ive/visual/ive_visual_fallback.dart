@@ -13,10 +13,10 @@ import 'ive_visual_config.dart';
 
 class IveVisualFallback extends StatefulWidget {
   final IveVisualState state;
-  final double         size;
+  final double size;
   // Set true only in showcase/debug screens.
   // Production avatar paths leave this false so no technical text leaks.
-  final bool           showDebugBadge;
+  final bool showDebugBadge;
 
   const IveVisualFallback({
     super.key,

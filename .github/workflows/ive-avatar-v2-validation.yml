@@ -151,8 +151,7 @@ jobs:
             lib/shared/ive_avatar/widgets/ive_avatar_admin_panel.dart \
             lib/shared/ive_avatar/providers/effective_avatar_version_provider.dart \
             lib/shared/ive_avatar/providers/ive_operational_state_provider.dart \
-            lib/features/ive/visual/ive_visual_fallback.dart \
-            lib/features/admin/screens/admin_panel_screen.dart
+            lib/features/ive/visual/ive_visual_fallback.dart
 
       # ── 7. GATE — STATIC ANALYSIS ───────────────────────────────────────────
 

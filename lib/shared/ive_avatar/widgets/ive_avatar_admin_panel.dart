@@ -25,10 +25,10 @@ class IveAvatarAdminPanel extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    final localOverride  = ref.watch(iveAvatarLocalOverrideProvider);
-    final effectiveVer   = ref.watch(effectiveIveAvatarVersionProvider);
-    final remoteFlag     = ref.watch(iveAvatarV2FlagProvider);
-    final opState        = ref.watch(iveOperationalStateProvider);
+    final localOverride = ref.watch(iveAvatarLocalOverrideProvider);
+    final effectiveVer = ref.watch(effectiveIveAvatarVersionProvider);
+    final remoteFlag = ref.watch(iveAvatarV2FlagProvider);
+    final opState = ref.watch(iveOperationalStateProvider);
     final controllerState = ref.watch(iveAvatarV2Provider);
 
     return Card(
@@ -45,18 +45,23 @@ class IveAvatarAdminPanel extends ConsumerWidget {
             // Header
             Row(
               children: [
-                const Icon(Icons.smart_toy_rounded, color: Color(0xFF7B5CF6), size: 20),
+                const Icon(
+                  Icons.smart_toy_rounded,
+                  color: Color(0xFF7B5CF6),
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   'Avatar da IVE',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: const Color(0xFF1E1F40),
                     borderRadius: BorderRadius.circular(6),
@@ -76,23 +81,34 @@ class IveAvatarAdminPanel extends ConsumerWidget {
             const SizedBox(height: 16),
 
             // Status info
-            _InfoRow(label: 'Versão ativa',
-                value: _versionLabel(effectiveVer),
-                valueColor: _versionColor(effectiveVer)),
-            _InfoRow(label: 'Flag remota (Supabase)',
-                value: remoteFlag ? 'ativada' : 'desativada (padrão)',
-                valueColor: remoteFlag ? const Color(0xFF00E875) : Colors.white54),
-            _InfoRow(label: 'Override local',
-                value: _overrideLabel(localOverride),
-                valueColor: localOverride != IveAvatarLocalOverride.automatic
-                    ? const Color(0xFFFFB020)
-                    : Colors.white54),
-            _InfoRow(label: 'Estado operacional',
-                value: opState.name,
-                valueColor: Colors.white70),
-            _InfoRow(label: 'Estado V2 provider',
-                value: controllerState.avatarState.name,
-                valueColor: Colors.white70),
+            _InfoRow(
+              label: 'Versão ativa',
+              value: _versionLabel(effectiveVer),
+              valueColor: _versionColor(effectiveVer),
+            ),
+            _InfoRow(
+              label: 'Flag remota (Supabase)',
+              value: remoteFlag ? 'ativada' : 'desativada (padrão)',
+              valueColor:
+                  remoteFlag ? const Color(0xFF00E875) : Colors.white54,
+            ),
+            _InfoRow(
+              label: 'Override local',
+              value: _overrideLabel(localOverride),
+              valueColor: localOverride != IveAvatarLocalOverride.automatic
+                  ? const Color(0xFFFFB020)
+                  : Colors.white54,
+            ),
+            _InfoRow(
+              label: 'Estado operacional',
+              value: opState.name,
+              valueColor: Colors.white70,
+            ),
+            _InfoRow(
+              label: 'Estado V2 provider',
+              value: controllerState.avatarState.name,
+              valueColor: Colors.white70,
+            ),
 
             const Divider(color: Color(0xFF2A2B55), height: 24),
 
@@ -108,36 +124,40 @@ class IveAvatarAdminPanel extends ConsumerWidget {
             const SizedBox(height: 8),
 
             _OverrideButton(
-              label:    'Automático',
+              label: 'Automático',
               subtitle: 'Segue a feature flag remota',
-              value:    IveAvatarLocalOverride.automatic,
-              current:  localOverride,
-              onTap:    () => ref.read(iveAvatarLocalOverrideProvider.notifier)
-                              .set(IveAvatarLocalOverride.automatic),
+              value: IveAvatarLocalOverride.automatic,
+              current: localOverride,
+              onTap: () => ref
+                  .read(iveAvatarLocalOverrideProvider.notifier)
+                  .set(IveAvatarLocalOverride.automatic),
             ),
             _OverrideButton(
-              label:    'Avatar Legado',
+              label: 'Avatar Legado',
               subtitle: 'Força widget legado (IveOverlay)',
-              value:    IveAvatarLocalOverride.legacy,
-              current:  localOverride,
-              onTap:    () => ref.read(iveAvatarLocalOverrideProvider.notifier)
-                              .set(IveAvatarLocalOverride.legacy),
+              value: IveAvatarLocalOverride.legacy,
+              current: localOverride,
+              onTap: () => ref
+                  .read(iveAvatarLocalOverrideProvider.notifier)
+                  .set(IveAvatarLocalOverride.legacy),
             ),
             _OverrideButton(
-              label:    'Avatar V2',
+              label: 'Avatar V2',
               subtitle: 'Força Avatar V2 neste dispositivo',
-              value:    IveAvatarLocalOverride.v2,
-              current:  localOverride,
-              onTap:    () => ref.read(iveAvatarLocalOverrideProvider.notifier)
-                              .set(IveAvatarLocalOverride.v2),
+              value: IveAvatarLocalOverride.v2,
+              current: localOverride,
+              onTap: () => ref
+                  .read(iveAvatarLocalOverrideProvider.notifier)
+                  .set(IveAvatarLocalOverride.v2),
             ),
             _OverrideButton(
-              label:    'Ocultar Avatar',
+              label: 'Ocultar Avatar',
               subtitle: 'Remove avatar deste dispositivo',
-              value:    IveAvatarLocalOverride.hidden,
-              current:  localOverride,
-              onTap:    () => ref.read(iveAvatarLocalOverrideProvider.notifier)
-                              .set(IveAvatarLocalOverride.hidden),
+              value: IveAvatarLocalOverride.hidden,
+              current: localOverride,
+              onTap: () => ref
+                  .read(iveAvatarLocalOverrideProvider.notifier)
+                  .set(IveAvatarLocalOverride.hidden),
             ),
 
             const SizedBox(height: 12),
@@ -167,8 +187,11 @@ class IveAvatarAdminPanel extends ConsumerWidget {
                 padding: const EdgeInsets.only(top: 8),
                 child: Row(
                   children: [
-                    const Icon(Icons.warning_amber_rounded,
-                        size: 14, color: Color(0xFFFFB020)),
+                    const Icon(
+                      Icons.warning_amber_rounded,
+                      size: 14,
+                      color: Color(0xFFFFB020),
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       'Override local ativo — afeta apenas este dispositivo',
@@ -188,26 +211,36 @@ class IveAvatarAdminPanel extends ConsumerWidget {
 
   String _versionLabel(IveAvatarVersion v) {
     switch (v) {
-      case IveAvatarVersion.legacy: return 'Legado';
-      case IveAvatarVersion.v2:     return 'V2';
-      case IveAvatarVersion.hidden: return 'Oculto';
+      case IveAvatarVersion.legacy:
+        return 'Legado';
+      case IveAvatarVersion.v2:
+        return 'V2';
+      case IveAvatarVersion.hidden:
+        return 'Oculto';
     }
   }
 
   Color _versionColor(IveAvatarVersion v) {
     switch (v) {
-      case IveAvatarVersion.legacy: return Colors.white70;
-      case IveAvatarVersion.v2:     return const Color(0xFF7B5CF6);
-      case IveAvatarVersion.hidden: return Colors.white38;
+      case IveAvatarVersion.legacy:
+        return Colors.white70;
+      case IveAvatarVersion.v2:
+        return const Color(0xFF7B5CF6);
+      case IveAvatarVersion.hidden:
+        return Colors.white38;
     }
   }
 
   String _overrideLabel(IveAvatarLocalOverride o) {
     switch (o) {
-      case IveAvatarLocalOverride.automatic: return 'automático';
-      case IveAvatarLocalOverride.legacy:    return 'legado';
-      case IveAvatarLocalOverride.v2:        return 'V2';
-      case IveAvatarLocalOverride.hidden:    return 'oculto';
+      case IveAvatarLocalOverride.automatic:
+        return 'automático';
+      case IveAvatarLocalOverride.legacy:
+        return 'legado';
+      case IveAvatarLocalOverride.v2:
+        return 'V2';
+      case IveAvatarLocalOverride.hidden:
+        return 'oculto';
     }
   }
 }
@@ -222,7 +255,7 @@ class _InfoRow extends StatelessWidget {
   });
   final String label;
   final String value;
-  final Color  valueColor;
+  final Color valueColor;
 
   @override
   Widget build(BuildContext context) {
@@ -259,11 +292,11 @@ class _OverrideButton extends StatelessWidget {
     required this.current,
     required this.onTap,
   });
-  final String                  label;
-  final String                  subtitle;
-  final IveAvatarLocalOverride  value;
-  final IveAvatarLocalOverride  current;
-  final VoidCallback            onTap;
+  final String label;
+  final String subtitle;
+  final IveAvatarLocalOverride value;
+  final IveAvatarLocalOverride current;
+  final VoidCallback onTap;
 
   bool get _selected => value == current;
 
@@ -292,9 +325,7 @@ class _OverrideButton extends StatelessWidget {
                   ? Icons.radio_button_checked_rounded
                   : Icons.radio_button_unchecked_rounded,
               size: 18,
-              color: _selected
-                  ? const Color(0xFF7B5CF6)
-                  : Colors.white38,
+              color: _selected ? const Color(0xFF7B5CF6) : Colors.white38,
             ),
             const SizedBox(width: 10),
             Expanded(

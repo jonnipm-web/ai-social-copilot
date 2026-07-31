@@ -11,20 +11,20 @@ import '../models/ive_avatar_state_v2.dart';
 // Higher number = higher priority (wins when multiple operations overlap).
 
 const _kStatePriority = <IveAvatarStateV2, int>{
-  IveAvatarStateV2.idle:          0,
-  IveAvatarStateV2.speaking:      1,
-  IveAvatarStateV2.listening:     2,
-  IveAvatarStateV2.thinking:      2,
-  IveAvatarStateV2.success:       3,
-  IveAvatarStateV2.attention:     4,
-  IveAvatarStateV2.generating:    5,
-  IveAvatarStateV2.researching:   5,
-  IveAvatarStateV2.analyzing:     5,
+  IveAvatarStateV2.idle: 0,
+  IveAvatarStateV2.speaking: 1,
+  IveAvatarStateV2.listening: 2,
+  IveAvatarStateV2.thinking: 2,
+  IveAvatarStateV2.success: 3,
+  IveAvatarStateV2.attention: 4,
+  IveAvatarStateV2.generating: 5,
+  IveAvatarStateV2.researching: 5,
+  IveAvatarStateV2.analyzing: 5,
   IveAvatarStateV2.waitingForUser: 6,
-  IveAvatarStateV2.warning:       7,
-  IveAvatarStateV2.error:         8,
-  IveAvatarStateV2.offline:       0,
-  IveAvatarStateV2.disabled:      0,
+  IveAvatarStateV2.warning: 7,
+  IveAvatarStateV2.error: 8,
+  IveAvatarStateV2.offline: 0,
+  IveAvatarStateV2.disabled: 0,
 };
 
 int _priority(IveAvatarStateV2 s) => _kStatePriority[s] ?? 0;
@@ -32,7 +32,7 @@ int _priority(IveAvatarStateV2 s) => _kStatePriority[s] ?? 0;
 // Auto-dismiss durations for terminal states (null = no auto-dismiss).
 const _kAutoDismiss = <IveAvatarStateV2, Duration>{
   IveAvatarStateV2.success: Duration(seconds: 3),
-  IveAvatarStateV2.error:   Duration(seconds: 5),
+  IveAvatarStateV2.error: Duration(seconds: 5),
 };
 
 // ── Event → state mapping ─────────────────────────────────────────────────────

@@ -9,27 +9,31 @@ import '../../../providers/feature_flag_provider.dart';
 // ── Avatar version enum ───────────────────────────────────────────────────────
 
 enum IveAvatarVersion {
-  legacy,  // render IveOverlay (legado — padrão)
-  v2,      // render IveAvatarV2 overlay
-  hidden,  // render nothing
+  legacy, // render IveOverlay (legado — padrão)
+  v2, // render IveAvatarV2 overlay
+  hidden, // render nothing
 }
 
 // ── Local override enum ───────────────────────────────────────────────────────
 
 enum IveAvatarLocalOverride {
   automatic, // follow remote feature flag
-  legacy,    // force legacy regardless of flag
-  v2,        // force V2 regardless of flag
-  hidden;    // force hidden on this device
+  legacy, // force legacy regardless of flag
+  v2, // force V2 regardless of flag
+  hidden; // force hidden on this device
 
   static const _prefKey = 'ive_avatar_local_override';
 
   static IveAvatarLocalOverride fromString(String? v) {
     switch (v) {
-      case 'legacy':    return legacy;
-      case 'v2':        return v2;
-      case 'hidden':    return hidden;
-      default:          return automatic;
+      case 'legacy':
+        return legacy;
+      case 'v2':
+        return v2;
+      case 'hidden':
+        return hidden;
+      default:
+        return automatic;
     }
   }
 

@@ -98,7 +98,7 @@ class _IveOverlayV2 extends StatefulWidget {
     required this.route,
   });
   final IveAvatarStateV2 operationalState;
-  final String           route;
+  final String route;
 
   @override
   State<_IveOverlayV2> createState() => _IveOverlayV2State();
@@ -125,7 +125,7 @@ class _IveOverlayV2State extends State<_IveOverlayV2> {
 
     return Positioned(
       left: _position!.dx,
-      top:  _position!.dy,
+      top: _position!.dy,
       child: GestureDetector(
         onPanStart:  (_) => setState(() => _dragging = true),
         onPanUpdate: (d) => setState(() {
@@ -141,11 +141,11 @@ class _IveOverlayV2State extends State<_IveOverlayV2> {
           duration: const Duration(milliseconds: 150),
           child: IveAvatarV2(
             configuration: const IveAvatarConfiguration(
-              displayMode:    IveAvatarDisplayMode.compact,
-              size:           IveAvatarTokens.sizeSmall,
+              displayMode: IveAvatarDisplayMode.compact,
+              size: IveAvatarTokens.sizeSmall,
               showStatusRing: true,
-              showLabel:      false,
-              interactive:    false, // overlay owns the gesture
+              showLabel: false,
+              interactive: false, // overlay owns the gesture
             ),
           ),
         ),
@@ -163,24 +163,24 @@ class _IveOverlayV2State extends State<_IveOverlayV2> {
 
 String _routeToName(String route) {
   const map = <String, String>{
-    '/projects':             'Projetos',
-    '/opportunity-lab':      'Oportunidades',
-    '/ecosystem':            'Decisões',
-    '/ecosystem/briefing':   'Briefing',
-    '/ecosystem/resources':  'Recursos',
-    '/personas':             'Personas',
-    '/knowledge':            'Conhecimento',
-    '/action-engine':        'Ações',
-    '/intelligence-debug':   'Debug Hub',
-    '/market-intelligence':  'Inteligência de Mercado',
-    '/roi-tracker':          'ROI Tracker',
-    '/dashboard':            'Business OS',
-    '/executive-dashboard':  'Dashboard Executivo',
-    '/generate':             'Geração',
-    '/content':              'Conteúdo',
-    '/campaigns':            'Campanhas',
-    '/calendar':             'Calendário',
-    '/performance':          'Performance',
+    '/projects': 'Projetos',
+    '/opportunity-lab': 'Oportunidades',
+    '/ecosystem': 'Decisões',
+    '/ecosystem/briefing': 'Briefing',
+    '/ecosystem/resources': 'Recursos',
+    '/personas': 'Personas',
+    '/knowledge': 'Conhecimento',
+    '/action-engine': 'Ações',
+    '/intelligence-debug': 'Debug Hub',
+    '/market-intelligence': 'Inteligência de Mercado',
+    '/roi-tracker': 'ROI Tracker',
+    '/dashboard': 'Business OS',
+    '/executive-dashboard': 'Dashboard Executivo',
+    '/generate': 'Geração',
+    '/content': 'Conteúdo',
+    '/campaigns': 'Campanhas',
+    '/calendar': 'Calendário',
+    '/performance': 'Performance',
   };
   return map[route] ?? route;
 }
