@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
 import 'shared/widgets/ive_overlay.dart';
+import 'shared/ive_avatar/widgets/ive_avatar_resolver.dart';
 import 'features/admin/screens/admin_panel_screen.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/calendar/screens/calendar_screen.dart';
@@ -401,7 +402,7 @@ class App extends ConsumerWidget {
           builder: (ctx, ref, _) => Stack(
             children: [
               child!,
-              const IveOverlay(),
+              const IveAvatarResolver(),
             ],
           ),
         ),

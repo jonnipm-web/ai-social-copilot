@@ -14,11 +14,15 @@ import 'ive_visual_config.dart';
 class IveVisualFallback extends StatefulWidget {
   final IveVisualState state;
   final double         size;
+  // Set true only in showcase/debug screens.
+  // Production avatar paths leave this false so no technical text leaks.
+  final bool           showDebugBadge;
 
   const IveVisualFallback({
     super.key,
     required this.state,
     required this.size,
+    this.showDebugBadge = false,
   });
 
   @override
@@ -88,8 +92,8 @@ class _IveVisualFallbackState extends State<IveVisualFallback>
                       ),
                     ),
 
-                    // TEMPORARY_REFERENCE_FALLBACK badge (debug builds only)
-                    if (kDebugMode)
+                    // Debug badge — only shown when explicitly requested (showcase)
+                    if (kDebugMode && widget.showDebugBadge)
                       Positioned(
                         bottom: 0,
                         left:   0,

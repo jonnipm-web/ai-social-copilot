@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - claude/ive-avatar-v2-final-fix
+      - claude/ive-avatar-v2-production-integration
   pull_request:
     branches:
       - main
@@ -136,16 +137,22 @@ jobs:
           fi
 
       # ── 6. GATE — DART FORMAT ───────────────────────────────────────────────
-      # Checks only the 4 files modified in the hotfix commits.
+      # Checks files modified in hotfix + phase 11F commits.
       # On failure: fix locally with `dart format <files>` and push.
-      - name: GATE — dart format (4 hotfix files)
+      - name: GATE — dart format (phase 11F files)
         id: format
         run: |
           dart format --output=none --set-exit-if-changed \
             lib/app.dart \
             lib/shared/ive_avatar/animations/ive_avatar_animation_controller.dart \
             lib/shared/ive_avatar/widgets/ive_avatar_assistant_button.dart \
-            lib/shared/ive_avatar/widgets/ive_avatar_v2.dart
+            lib/shared/ive_avatar/widgets/ive_avatar_v2.dart \
+            lib/shared/ive_avatar/widgets/ive_avatar_resolver.dart \
+            lib/shared/ive_avatar/widgets/ive_avatar_admin_panel.dart \
+            lib/shared/ive_avatar/providers/effective_avatar_version_provider.dart \
+            lib/shared/ive_avatar/providers/ive_operational_state_provider.dart \
+            lib/features/ive/visual/ive_visual_fallback.dart \
+            lib/features/admin/screens/admin_panel_screen.dart
 
       # ── 7. GATE — STATIC ANALYSIS ───────────────────────────────────────────
 
@@ -155,9 +162,14 @@ jobs:
 
       - name: GATE — flutter analyze --fatal-warnings (V2 scope)
         id: analyze_flutter
-        # Scoped to V2 paths only — pre-existing warnings in unrelated files
+        # Scoped to V2 + phase 11F paths — pre-existing warnings in unrelated files
         # must not block V2 validation (fixing them would be global refactoring).
-        run: flutter analyze lib/shared/ive_avatar test/features/ive lib/app.dart --fatal-warnings
+        run: |
+          flutter analyze \
+            lib/shared/ive_avatar \
+            lib/features/ive \
+            lib/app.dart \
+            --fatal-warnings
 
       # ── 8. ISOLATION CHECKS ─────────────────────────────────────────────────
 
@@ -260,6 +272,8 @@ jobs:
           set -o pipefail
           flutter test \
             test/features/ive/ive_avatar_v2_test.dart \
+            test/features/ive/ive_visual_runtime_test.dart \
+            test/features/ive/ive_avatar_resolver_test.dart \
             --no-pub \
             -j 1 \
             --reporter expanded \
