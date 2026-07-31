@@ -38,7 +38,7 @@ class IveAvatarAssistantButton extends StatefulWidget {
 }
 
 class _IveAvatarAssistantButtonState extends State<IveAvatarAssistantButton>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final _animCtrl = IveAvatarAnimationControllerV2();
 
   @override

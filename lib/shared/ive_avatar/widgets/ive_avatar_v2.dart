@@ -45,7 +45,7 @@ class IveAvatarV2 extends ConsumerStatefulWidget {
 }
 
 class _IveAvatarV2State extends ConsumerState<IveAvatarV2>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final _animCtrl = IveAvatarAnimationControllerV2();
   IveAvatarStateV2 _lastState = IveAvatarStateV2.idle;
 
