@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../data/models/profile.dart';
 import '../../../providers/profile_provider.dart';
+import '../../../shared/ive_avatar/widgets/ive_avatar_admin_panel.dart';
 import '../../../shared/widgets/app_drawer.dart';
 
 class AdminPanelScreen extends ConsumerWidget {
@@ -249,6 +250,8 @@ class _OverviewTab extends ConsumerWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
+          const SizedBox(height: 32),
+          const IveAvatarAdminPanel(),
         ],
       ),
     );
