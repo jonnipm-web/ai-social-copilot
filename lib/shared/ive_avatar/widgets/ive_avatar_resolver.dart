@@ -141,8 +141,8 @@ class _IveOverlayV2State extends State<_IveOverlayV2> {
         child: AnimatedScale(
           scale: _dragging ? 0.92 : 1.0,
           duration: const Duration(milliseconds: 150),
-          child: IveAvatarV2(
-            configuration: const IveAvatarConfiguration(
+          child: const IveAvatarV2(
+            configuration: IveAvatarConfiguration(
               displayMode: IveAvatarDisplayMode.compact,
               size: IveAvatarTokens.sizeSmall,
               showStatusRing: true,

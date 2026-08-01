@@ -108,7 +108,7 @@ class _IveAvatarShowcasePageState extends State<IveAvatarShowcasePage> {
                               const SizedBox(height: 16),
 
                               // Full mode
-                              _SectionHeader('Modo Full'),
+                              const _SectionHeader('Modo Full'),
                               const SizedBox(height: 12),
                               Center(
                                 child: IveAvatarV2(
@@ -132,7 +132,7 @@ class _IveAvatarShowcasePageState extends State<IveAvatarShowcasePage> {
                               const SizedBox(height: 32),
 
                               // Card mode
-                              _SectionHeader('Modo Card'),
+                              const _SectionHeader('Modo Card'),
                               const SizedBox(height: 12),
                               IveAvatarCard(
                                 state: _selectedState,
@@ -151,7 +151,7 @@ class _IveAvatarShowcasePageState extends State<IveAvatarShowcasePage> {
                               const SizedBox(height: 32),
 
                               // Compact mode — all sizes
-                              _SectionHeader('Modo Compact — Tamanhos'),
+                              const _SectionHeader('Modo Compact — Tamanhos'),
                               const SizedBox(height: 12),
                               _AllSizesRow(
                                 state: _selectedState,
@@ -161,7 +161,7 @@ class _IveAvatarShowcasePageState extends State<IveAvatarShowcasePage> {
                               const SizedBox(height: 32),
 
                               // All states grid
-                              _SectionHeader('Todos os Estados'),
+                              const _SectionHeader('Todos os Estados'),
                               const SizedBox(height: 12),
                               _AllStatesGrid(
                                 interactive: _interactive,
@@ -173,7 +173,7 @@ class _IveAvatarShowcasePageState extends State<IveAvatarShowcasePage> {
                               const SizedBox(height: 32),
 
                               // Assistant button
-                              _SectionHeader('Botão Assistente'),
+                              const _SectionHeader('Botão Assistente'),
                               const SizedBox(height: 12),
                               Center(
                                 child: IveAvatarAssistantButton(

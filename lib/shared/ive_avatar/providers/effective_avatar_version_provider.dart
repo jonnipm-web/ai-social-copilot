@@ -56,8 +56,7 @@ class IveAvatarLocalOverrideNotifier
   }
 
   @visibleForTesting
-  IveAvatarLocalOverrideNotifier.fixed(IveAvatarLocalOverride initial)
-      : super(initial);
+  IveAvatarLocalOverrideNotifier.fixed(super.initial);
 
   Future<void> _load() async {
     if (!_canOverride) return;
