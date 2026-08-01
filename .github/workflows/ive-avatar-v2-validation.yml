@@ -5,6 +5,7 @@ on:
     branches:
       - claude/ive-avatar-v2-final-fix
       - claude/ive-avatar-v2-production-integration
+      - claude/ive-avatar-v2-build-recovery
   pull_request:
     branches:
       - main
@@ -294,25 +295,18 @@ jobs:
             2>&1 | tee test-results/full-suite.txt
 
       # ── 12. BUILD DEBUG APK ─────────────────────────────────────────────────
-      # Requires a complete android/ directory committed to the repository.
-      # The android/ project is not part of the V2 avatar module — if it is
-      # absent or incomplete this step documents the gap and exits cleanly.
-      # Do NOT run flutter create in CI to fill the gap.
+      # The android/ project must be committed. A missing build file is a CI error.
       - name: Build APK debug
         id: debug_apk
         run: |
-          if [ ! -f android/app/build.gradle ]; then
-            echo "INFO: android/app/build.gradle not found."
-            echo "INFO: The android project has not been committed."
-            echo "INFO: APK build skipped — commit the full android/ directory to enable."
-            echo "DEBUG_APK_SHA=N/A (android project not committed)" >> "$GITHUB_ENV"
-            echo "DEBUG_APK_SIZE=N/A" >> "$GITHUB_ENV"
-            exit 0
+          if [ ! -f android/app/build.gradle.kts ]; then
+            echo "FAIL: android/app/build.gradle.kts not found."
+            echo "FAIL: The android project must be committed to this branch."
+            exit 1
           fi
           flutter build apk --debug
 
       - name: Verify workspace clean after build
-        if: env.DEBUG_APK_SIZE != 'N/A'
         run: |
           echo "=== git status after build ==="
           git status --short
@@ -328,7 +322,6 @@ jobs:
 
       - name: Verify and hash debug APK
         id: apk_hash
-        if: env.DEBUG_APK_SIZE != 'N/A'
         run: |
           APK=build/app/outputs/flutter-apk/app-debug.apk
           test -f "$APK"
@@ -353,12 +346,13 @@ jobs:
       # ── 13. UPLOAD ARTIFACTS ────────────────────────────────────────────────
 
       - name: Upload debug APK
-        if: steps.debug_apk.outcome == 'success' && env.DEBUG_APK_SIZE != 'N/A'
+        if: steps.debug_apk.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: ive-avatar-v2-debug-apk
           path: build/app/outputs/flutter-apk/app-debug.apk
           retention-days: 7
+          if-no-files-found: error
 
       - name: Upload test results
         if: always()
@@ -393,6 +387,7 @@ jobs:
             "${{ steps.smoke_test.outcome }}"
             "${{ steps.v2_tests.outcome }}"
             "${{ steps.debug_apk.outcome }}"
+            "${{ steps.apk_hash.outcome }}"
           )
           RESULT="PASS"
           for o in "${MANDATORY[@]}"; do
