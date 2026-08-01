@@ -1,9 +1,13 @@
 # IVE Avatar V2 — Device Test Plan
-**Fase 11F | Samsung Galaxy S25 Ultra (Android 16)**
+**Fase 11G | Samsung Galaxy S25 Ultra (Android 16)**
+
+> **Nota:** O APK de referência vem da branch `claude/ive-avatar-v2-build-recovery`
+> (Fase 11G). O artifact da Fase 11F continha `DEBUG_APK_SHA=N/A` — APK não real.
+> Usar exclusivamente o artifact gerado pelo CI da Fase 11G.
 
 ## Pré-requisitos
 
-1. Instalar APK debug gerado pelo CI (artifact `ive-avatar-v2-debug-apk`)
+1. Instalar APK debug gerado pelo CI da Fase 11G (artifact `ive-avatar-v2-debug-apk`, branch `claude/ive-avatar-v2-build-recovery`)
 2. Ativar opção de desenvolvedor no dispositivo
 3. Garantir conta de teste com acesso ao Supabase de staging
 4. Ativar override admin: Configurações → Inteligência e IVE → Avatar da IVE → **Avatar V2**

@@ -7,6 +7,8 @@
 **Run ID:** `30672361268`
 **Resultado:** ✅ PASS — todos os gates obrigatórios aprovados
 
+> **⚠️ CORREÇÃO (Fase 11G — 2026-08-01):** O gate "Build APK debug" neste run foi um **falso positivo**. O step verificava `android/app/build.gradle` (DSL Groovy), mas Flutter 3.x gera `build.gradle.kts` (KTS). Como o arquivo não existia, o step saiu com exit 0 e gravou `DEBUG_APK_SHA=N/A`. Nenhum APK real foi produzido. O problema foi corrigido na Fase 11G (`claude/ive-avatar-v2-build-recovery`): o projeto Android completo foi comitado, o guard foi atualizado para `build.gradle.kts`, e a build tornou-se obrigatória. O APK verificável está disponível no artifact da Fase 11G.
+
 ---
 
 ## Resultado dos Gates
@@ -20,7 +22,7 @@
 | SMOKE TEST — feature flag false por padrão | 16 | ✅ PASS |
 | SUITE — Avatar V2 (93 testes) | 17 | ✅ PASS |
 | SUITE — Full project | 18 | ✅ PASS |
-| Build APK debug | 19 | ✅ PASS (android/ não comitado — saída limpa documentada) |
+| Build APK debug | 19 | ⚠️ FALSO POSITIVO — exit 0, mas APK não gerado (corrigido na Fase 11G) |
 | Verify kDebugMode guard (static) | 22 | ✅ PASS |
 
 **Toolchain:** Flutter 3.44.8 / Dart 3.12.2 / Java 17 (Temurin) / Ubuntu latest
@@ -181,7 +183,7 @@ test/providers/project_provider_test.dart          (correções de teste pré-ex
 |------|--------|
 | Asset `assets/ive/rive/ive_executive_v1.riv` | Não existe — `IveVisualFallback` ativo por design |
 | APK release assinado | Depende de signing secrets — job `release` separado |
-| android/ project comitado | Não comitado — APK debug skipped com saída limpa |
+| android/ project comitado | ⚠️ Não comitado na Fase 11F — APK debug falso positivo. Comitado e corrigido na Fase 11G. |
 | Ativação da feature flag em produção | Requer aprovação do auditor Codex + merge na main |
 | Telemetria (Phase L) | Fora do escopo desta Fase |
 | Auditoria independente Codex | A cargo do Codex — não substituível por este relatório |
