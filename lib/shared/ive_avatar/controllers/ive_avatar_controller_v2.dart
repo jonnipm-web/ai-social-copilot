@@ -7,29 +7,29 @@ import '../models/ive_personality_profile.dart';
 // ── V2 Controller state ───────────────────────────────────────────────────────
 
 class IveAvatarControllerState {
-  final IveAvatarStateV2      avatarState;
-  final IveAvatarContext      context;
+  final IveAvatarStateV2 avatarState;
+  final IveAvatarContext context;
   final IvePersonalityProfile profile;
-  final bool                  isVisible;
+  final bool isVisible;
 
   const IveAvatarControllerState({
     this.avatarState = IveAvatarStateV2.idle,
-    this.context     = IveAvatarContext.empty,
-    this.profile     = IvePersonalityProfile.executive,
-    this.isVisible   = false,
+    this.context = IveAvatarContext.empty,
+    this.profile = IvePersonalityProfile.executive,
+    this.isVisible = false,
   });
 
   IveAvatarControllerState copyWith({
-    IveAvatarStateV2?      avatarState,
-    IveAvatarContext?      context,
+    IveAvatarStateV2? avatarState,
+    IveAvatarContext? context,
     IvePersonalityProfile? profile,
-    bool?                  isVisible,
+    bool? isVisible,
   }) {
     return IveAvatarControllerState(
       avatarState: avatarState ?? this.avatarState,
-      context:     context     ?? this.context,
-      profile:     profile     ?? this.profile,
-      isVisible:   isVisible   ?? this.isVisible,
+      context: context ?? this.context,
+      profile: profile ?? this.profile,
+      isVisible: isVisible ?? this.isVisible,
     );
   }
 
@@ -38,9 +38,9 @@ class IveAvatarControllerState {
       identical(this, other) ||
       other is IveAvatarControllerState &&
           avatarState == other.avatarState &&
-          context     == other.context     &&
-          profile     == other.profile     &&
-          isVisible   == other.isVisible;
+          context == other.context &&
+          profile == other.profile &&
+          isVisible == other.isVisible;
 
   @override
   int get hashCode => Object.hash(avatarState, context, profile, isVisible);
@@ -80,9 +80,9 @@ class IveAvatarControllerV2 extends ChangeNotifier {
     IveAvatarContext? context,
   }) {
     setState(_state.copyWith(
-      avatarState: state   ?? _state.avatarState,
-      context:     context ?? _state.context,
-      isVisible:   true,
+      avatarState: state ?? _state.avatarState,
+      context: context ?? _state.context,
+      isVisible: true,
     ));
   }
 

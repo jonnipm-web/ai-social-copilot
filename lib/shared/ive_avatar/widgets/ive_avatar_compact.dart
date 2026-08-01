@@ -15,19 +15,19 @@ import '_ive_avatar_face.dart';
 
 class IveAvatarCompact extends StatefulWidget {
   final IveAvatarStateV2 state;
-  final double           size;
-  final bool             showRing;
-  final bool             interactive;
-  final VoidCallback?    onTap;
-  final VoidCallback?    onLongPress;
-  final String?          overrideSemanticLabel;
+  final double size;
+  final bool showRing;
+  final bool interactive;
+  final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
+  final String? overrideSemanticLabel;
 
   const IveAvatarCompact({
     super.key,
     required this.state,
-    this.size                  = IveAvatarTokens.sizeSmall,
-    this.showRing              = true,
-    this.interactive           = true,
+    this.size = IveAvatarTokens.sizeSmall,
+    this.showRing = true,
+    this.interactive = true,
     this.onTap,
     this.onLongPress,
     this.overrideSemanticLabel,
@@ -46,8 +46,8 @@ class _IveAvatarCompactState extends State<IveAvatarCompact>
     super.initState();
     // Use fullMotion as default — actual policy is read in didChangeDependencies
     _animCtrl.initialize(
-      vsync:        this,
-      state:        widget.state,
+      vsync: this,
+      state: widget.state,
       motionPolicy: IveMotionPolicy.fullMotion,
     );
   }
@@ -57,9 +57,9 @@ class _IveAvatarCompactState extends State<IveAvatarCompact>
     super.didChangeDependencies();
     final policy = IveMotionPolicyResolver.resolve(context);
     _animCtrl.updateState(
-      state:        widget.state,
+      state: widget.state,
       motionPolicy: policy,
-      vsync:        this,
+      vsync: this,
     );
   }
 
@@ -68,9 +68,9 @@ class _IveAvatarCompactState extends State<IveAvatarCompact>
     super.didUpdateWidget(old);
     if (old.state != widget.state) {
       _animCtrl.updateState(
-        state:        widget.state,
+        state: widget.state,
         motionPolicy: IveMotionPolicyResolver.resolve(context),
-        vsync:        this,
+        vsync: this,
       );
     }
   }
@@ -87,24 +87,25 @@ class _IveAvatarCompactState extends State<IveAvatarCompact>
 
     final face = RepaintBoundary(
       child: SizedBox(
-        width:  widget.size,
+        width: widget.size,
         height: widget.size,
         child: widget.showRing
             ? Stack(
                 alignment: Alignment.center,
                 children: [
                   IveAvatarStatusIndicator(
-                    state:       widget.state,
-                    size:        widget.size,
+                    state: widget.state,
+                    size: widget.size,
                     motionPolicy: policy,
-                    animation:   _animCtrl.animation,
+                    animation: _animCtrl.animation,
                   ),
                   Padding(
-                    padding: EdgeInsets.all(widget.size * IveAvatarTokens.ringGapRatio),
+                    padding: EdgeInsets.all(
+                        widget.size * IveAvatarTokens.ringGapRatio),
                     child: ClipOval(
                       child: IveAvatarFacePlaceholder(
                         state: widget.state,
-                        size:  widget.size,
+                        size: widget.size,
                       ),
                     ),
                   ),
@@ -113,20 +114,20 @@ class _IveAvatarCompactState extends State<IveAvatarCompact>
             : ClipOval(
                 child: IveAvatarFacePlaceholder(
                   state: widget.state,
-                  size:  widget.size,
+                  size: widget.size,
                 ),
               ),
       ),
     );
 
     return IveAvatarSemanticWrapper(
-      state:         widget.state,
-      interactive:   widget.interactive,
-      onTap:         widget.onTap,
-      onLongPress:   widget.onLongPress,
+      state: widget.state,
+      interactive: widget.interactive,
+      onTap: widget.onTap,
+      onLongPress: widget.onLongPress,
       overrideLabel: widget.overrideSemanticLabel,
       child: AnimatedOpacity(
-        opacity:  widget.state == IveAvatarStateV2.disabled
+        opacity: widget.state == IveAvatarStateV2.disabled
             ? IveAvatarTokens.disabledOpacity
             : 1.0,
         duration: IveAvatarTokens.transitionDuration,

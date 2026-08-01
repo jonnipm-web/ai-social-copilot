@@ -6,10 +6,10 @@ import 'ive_avatar_tokens.dart';
 // ── IveAvatarThemeData — resolved theme for a given state ─────────────────────
 
 class IveAvatarThemeData {
-  final Color  ringColor;
-  final Color  glowColor;
-  final Color  backgroundColor;
-  final Color  labelColor;
+  final Color ringColor;
+  final Color glowColor;
+  final Color backgroundColor;
+  final Color labelColor;
   final double glowIntensity;
   final TextStyle labelStyle;
 
@@ -30,14 +30,14 @@ abstract final class IveAvatarTheme {
     final config = IveAvatarStateConfigV2.forState(state);
 
     return IveAvatarThemeData(
-      ringColor:       config.ringColor,
-      glowColor:       config.glowColor,
+      ringColor: config.ringColor,
+      glowColor: config.glowColor,
       backgroundColor: IveAvatarTokens.backgroundDark,
-      labelColor:      config.ringColor,
-      glowIntensity:   config.glowIntensity,
+      labelColor: config.ringColor,
+      glowIntensity: config.glowIntensity,
       labelStyle: TextStyle(
-        color:      config.ringColor,
-        fontSize:   IveAvatarTokens.labelFontSizeSmall,
+        color: config.ringColor,
+        fontSize: IveAvatarTokens.labelFontSizeSmall,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.3,
       ),

@@ -22,7 +22,8 @@ abstract final class IveMotionPolicyResolver {
       case IveMotionPolicy.fullMotion:
         return base;
       case IveMotionPolicy.reducedMotion:
-        return Duration(milliseconds: (base.inMilliseconds * 0.4).round().clamp(200, 800));
+        return Duration(
+            milliseconds: (base.inMilliseconds * 0.4).round().clamp(200, 800));
       case IveMotionPolicy.staticOnly:
         return Duration.zero;
     }

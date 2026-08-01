@@ -26,17 +26,19 @@ class IveAvatarShowcasePage extends StatefulWidget {
 
 class _IveAvatarShowcasePageState extends State<IveAvatarShowcasePage> {
   IveAvatarStateV2 _selectedState = IveAvatarStateV2.idle;
-  bool             _reducedMotion = false;
-  bool             _showKeyboard  = false;
-  bool             _darkMode      = true;
-  double           _textScale     = 1.0;
-  double           _screenWidth   = 420;
-  bool             _interactive   = true;
-  bool             _showLabel     = true;
+  bool _reducedMotion = false;
+  bool _showKeyboard = false;
+  bool _darkMode = true;
+  double _textScale = 1.0;
+  double _screenWidth = 420;
+  bool _interactive = true;
+  bool _showLabel = true;
 
   @override
   Widget build(BuildContext context) {
-    final theme = _darkMode ? ThemeData.dark(useMaterial3: true) : ThemeData.light(useMaterial3: true);
+    final theme = _darkMode
+        ? ThemeData.dark(useMaterial3: true)
+        : ThemeData.light(useMaterial3: true);
 
     return Theme(
       data: theme,
@@ -56,13 +58,12 @@ class _IveAvatarShowcasePageState extends State<IveAvatarShowcasePage> {
             ),
           ],
         ),
-        backgroundColor: _darkMode
-            ? IveAvatarTokens.backgroundDark
-            : Colors.grey[100],
+        backgroundColor:
+            _darkMode ? IveAvatarTokens.backgroundDark : Colors.grey[100],
         body: MediaQuery(
           data: MediaQuery.of(context).copyWith(
-            textScaler:          TextScaler.linear(_textScale),
-            disableAnimations:   _reducedMotion,
+            textScaler: TextScaler.linear(_textScale),
+            disableAnimations: _reducedMotion,
           ),
           child: Row(
             children: [
@@ -70,20 +71,20 @@ class _IveAvatarShowcasePageState extends State<IveAvatarShowcasePage> {
               SizedBox(
                 width: 220,
                 child: _ControlsPanel(
-                  selectedState:  _selectedState,
-                  reducedMotion:  _reducedMotion,
-                  showKeyboard:   _showKeyboard,
-                  textScale:      _textScale,
-                  screenWidth:    _screenWidth,
-                  interactive:    _interactive,
-                  showLabel:      _showLabel,
-                  onStateChanged: (s)  => setState(() => _selectedState = s),
-                  onReducedMotion: (v) => setState(() => _reducedMotion  = v),
-                  onShowKeyboard:  (v) => setState(() => _showKeyboard   = v),
-                  onTextScale:     (v) => setState(() => _textScale      = v),
-                  onScreenWidth:   (v) => setState(() => _screenWidth    = v),
-                  onInteractive:   (v) => setState(() => _interactive    = v),
-                  onShowLabel:     (v) => setState(() => _showLabel      = v),
+                  selectedState: _selectedState,
+                  reducedMotion: _reducedMotion,
+                  showKeyboard: _showKeyboard,
+                  textScale: _textScale,
+                  screenWidth: _screenWidth,
+                  interactive: _interactive,
+                  showLabel: _showLabel,
+                  onStateChanged: (s) => setState(() => _selectedState = s),
+                  onReducedMotion: (v) => setState(() => _reducedMotion = v),
+                  onShowKeyboard: (v) => setState(() => _showKeyboard = v),
+                  onTextScale: (v) => setState(() => _textScale = v),
+                  onScreenWidth: (v) => setState(() => _screenWidth = v),
+                  onInteractive: (v) => setState(() => _interactive = v),
+                  onShowLabel: (v) => setState(() => _showLabel = v),
                 ),
               ),
               // ── Preview area ───────────────────────────────────────────
@@ -96,7 +97,8 @@ class _IveAvatarShowcasePageState extends State<IveAvatarShowcasePage> {
                         child: ConstrainedBox(
                           constraints: BoxConstraints(
                             maxWidth: _screenWidth.clamp(
-                              300, constraints.maxWidth,
+                              300,
+                              constraints.maxWidth,
                             ),
                           ),
                           child: Column(
@@ -113,12 +115,13 @@ class _IveAvatarShowcasePageState extends State<IveAvatarShowcasePage> {
                                   overrideState: _selectedState,
                                   overrideContext: IveAvatarContext(
                                     isAuthenticated: true,
-                                    routeName:      '/showcase',
-                                    title:          'IVE',
-                                    currentTask:    _selectedState.name,
+                                    routeName: '/showcase',
+                                    title: 'IVE',
+                                    currentTask: _selectedState.name,
                                   ),
-                                  configuration: IveAvatarConfiguration.full.copyWith(
-                                    showLabel:   _showLabel,
+                                  configuration:
+                                      IveAvatarConfiguration.full.copyWith(
+                                    showLabel: _showLabel,
                                     interactive: _interactive,
                                   ),
                                   onTap: _interactive
@@ -132,13 +135,14 @@ class _IveAvatarShowcasePageState extends State<IveAvatarShowcasePage> {
                               _SectionHeader('Modo Card'),
                               const SizedBox(height: 12),
                               IveAvatarCard(
-                                state:   _selectedState,
+                                state: _selectedState,
                                 context: IveAvatarContext(
                                   isAuthenticated: true,
-                                  routeName:       '/showcase',
-                                  title:           'Business OS',
-                                  currentTask:     _selectedState.name,
-                                  hasUnreadInsight: _selectedState == IveAvatarStateV2.attention,
+                                  routeName: '/showcase',
+                                  title: 'Business OS',
+                                  currentTask: _selectedState.name,
+                                  hasUnreadInsight: _selectedState ==
+                                      IveAvatarStateV2.attention,
                                 ),
                                 onTap: _interactive
                                     ? () => _showSnack('IVE tapped (card)')
@@ -150,7 +154,7 @@ class _IveAvatarShowcasePageState extends State<IveAvatarShowcasePage> {
                               _SectionHeader('Modo Compact — Tamanhos'),
                               const SizedBox(height: 12),
                               _AllSizesRow(
-                                state:       _selectedState,
+                                state: _selectedState,
                                 interactive: _interactive,
                                 onTap: () => _showSnack('IVE tapped (compact)'),
                               ),
@@ -173,10 +177,12 @@ class _IveAvatarShowcasePageState extends State<IveAvatarShowcasePage> {
                               const SizedBox(height: 12),
                               Center(
                                 child: IveAvatarAssistantButton(
-                                  state:           _selectedState,
-                                  hasNotification: _selectedState == IveAvatarStateV2.attention,
+                                  state: _selectedState,
+                                  hasNotification: _selectedState ==
+                                      IveAvatarStateV2.attention,
                                   onTap: _interactive
-                                      ? () => _showSnack('IVE tapped (assistant)')
+                                      ? () =>
+                                          _showSnack('IVE tapped (assistant)')
                                       : null,
                                   margin: EdgeInsets.zero,
                                 ),
@@ -186,11 +192,11 @@ class _IveAvatarShowcasePageState extends State<IveAvatarShowcasePage> {
                               // Keyboard simulation indicator
                               if (_showKeyboard)
                                 Container(
-                                  height:           200,
-                                  decoration:       BoxDecoration(
-                                    color:         Colors.grey.withValues(alpha: 0.15),
-                                    borderRadius:  BorderRadius.circular(12),
-                                    border:        Border.all(
+                                  height: 200,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
                                       color: Colors.grey.withValues(alpha: 0.3),
                                     ),
                                   ),
@@ -198,7 +204,7 @@ class _IveAvatarShowcasePageState extends State<IveAvatarShowcasePage> {
                                     child: Text(
                                       '⌨  Teclado simulado (200dp)',
                                       style: TextStyle(
-                                        color:    Colors.white54,
+                                        color: Colors.white54,
                                         fontSize: 13,
                                       ),
                                     ),
@@ -224,7 +230,7 @@ class _IveAvatarShowcasePageState extends State<IveAvatarShowcasePage> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content:  Text(msg),
+        content: Text(msg),
         duration: const Duration(seconds: 1),
       ),
     );
@@ -234,20 +240,20 @@ class _IveAvatarShowcasePageState extends State<IveAvatarShowcasePage> {
 // ── Controls panel ────────────────────────────────────────────────────────────
 
 class _ControlsPanel extends StatelessWidget {
-  final IveAvatarStateV2      selectedState;
-  final bool                  reducedMotion;
-  final bool                  showKeyboard;
-  final double                textScale;
-  final double                screenWidth;
-  final bool                  interactive;
-  final bool                  showLabel;
+  final IveAvatarStateV2 selectedState;
+  final bool reducedMotion;
+  final bool showKeyboard;
+  final double textScale;
+  final double screenWidth;
+  final bool interactive;
+  final bool showLabel;
   final ValueChanged<IveAvatarStateV2> onStateChanged;
-  final ValueChanged<bool>             onReducedMotion;
-  final ValueChanged<bool>             onShowKeyboard;
-  final ValueChanged<double>           onTextScale;
-  final ValueChanged<double>           onScreenWidth;
-  final ValueChanged<bool>             onInteractive;
-  final ValueChanged<bool>             onShowLabel;
+  final ValueChanged<bool> onReducedMotion;
+  final ValueChanged<bool> onShowKeyboard;
+  final ValueChanged<double> onTextScale;
+  final ValueChanged<double> onScreenWidth;
+  final ValueChanged<bool> onInteractive;
+  final ValueChanged<bool> onShowLabel;
 
   const _ControlsPanel({
     required this.selectedState,
@@ -276,9 +282,9 @@ class _ControlsPanel extends StatelessWidget {
           const Text(
             'CONTROLES',
             style: TextStyle(
-              color:         Color(0xFF6C63FF),
-              fontSize:      10,
-              fontWeight:    FontWeight.bold,
+              color: Color(0xFF6C63FF),
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
               letterSpacing: 1.5,
             ),
           ),
@@ -287,34 +293,34 @@ class _ControlsPanel extends StatelessWidget {
           const SizedBox(height: 6),
           ...IveAvatarStateV2.values.map(
             (s) => _StateChip(
-              state:    s,
+              state: s,
               selected: s == selectedState,
-              onTap:    () => onStateChanged(s),
+              onTap: () => onStateChanged(s),
             ),
           ),
           const Divider(height: 24, color: Colors.white12),
           _Switch('Reduced Motion', reducedMotion, onReducedMotion),
-          _Switch('Teclado aberto', showKeyboard,  onShowKeyboard),
-          _Switch('Interativo',     interactive,   onInteractive),
-          _Switch('Mostrar label',  showLabel,     onShowLabel),
+          _Switch('Teclado aberto', showKeyboard, onShowKeyboard),
+          _Switch('Interativo', interactive, onInteractive),
+          _Switch('Mostrar label', showLabel, onShowLabel),
           const Divider(height: 24, color: Colors.white12),
           const Text('Text scale', style: _labelStyle),
           Slider(
-            value:    textScale,
-            min:      0.8,
-            max:      2.0,
+            value: textScale,
+            min: 0.8,
+            max: 2.0,
             divisions: 12,
-            label:    textScale.toStringAsFixed(1),
+            label: textScale.toStringAsFixed(1),
             onChanged: onTextScale,
             activeColor: const Color(0xFF6C63FF),
           ),
           const Text('Largura (dp)', style: _labelStyle),
           Slider(
-            value:    screenWidth,
-            min:      300,
-            max:      900,
+            value: screenWidth,
+            min: 300,
+            max: 900,
             divisions: 30,
-            label:    screenWidth.toInt().toString(),
+            label: screenWidth.toInt().toString(),
             onChanged: onScreenWidth,
             activeColor: const Color(0xFF6C63FF),
           ),
@@ -324,15 +330,15 @@ class _ControlsPanel extends StatelessWidget {
   }
 
   static const _labelStyle = TextStyle(
-    color:    Colors.white54,
+    color: Colors.white54,
     fontSize: 11,
   );
 }
 
 class _StateChip extends StatelessWidget {
   final IveAvatarStateV2 state;
-  final bool             selected;
-  final VoidCallback     onTap;
+  final bool selected;
+  final VoidCallback onTap;
 
   const _StateChip({
     required this.state,
@@ -346,12 +352,12 @@ class _StateChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin:   const EdgeInsets.only(bottom: 4),
-        padding:  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        margin: const EdgeInsets.only(bottom: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color:        selected ? color.withValues(alpha: 0.15) : Colors.transparent,
+          color: selected ? color.withValues(alpha: 0.15) : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
-          border:       Border.all(
+          border: Border.all(
             color: selected ? color : Colors.white12,
             width: 1,
           ),
@@ -359,7 +365,7 @@ class _StateChip extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              width:  6,
+              width: 6,
               height: 6,
               decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             ),
@@ -367,8 +373,8 @@ class _StateChip extends StatelessWidget {
             Text(
               state.name,
               style: TextStyle(
-                color:      selected ? color : Colors.white54,
-                fontSize:   11,
+                color: selected ? color : Colors.white54,
+                fontSize: 11,
                 fontWeight: selected ? FontWeight.bold : FontWeight.normal,
               ),
             ),
@@ -380,8 +386,8 @@ class _StateChip extends StatelessWidget {
 }
 
 class _Switch extends StatelessWidget {
-  final String           label;
-  final bool             value;
+  final String label;
+  final bool value;
   final ValueChanged<bool> onChanged;
 
   const _Switch(this.label, this.value, this.onChanged);
@@ -391,11 +397,12 @@ class _Switch extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          child: Text(label,
+              style: const TextStyle(color: Colors.white70, fontSize: 12)),
         ),
         Switch(
-          value:           value,
-          onChanged:       onChanged,
+          value: value,
+          onChanged: onChanged,
           activeThumbColor: const Color(0xFF6C63FF),
           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
         ),
@@ -415,9 +422,9 @@ class _SectionHeader extends StatelessWidget {
     return Text(
       text,
       style: const TextStyle(
-        color:         Color(0xFF6C63FF),
-        fontSize:      11,
-        fontWeight:    FontWeight.bold,
+        color: Color(0xFF6C63FF),
+        fontSize: 11,
+        fontWeight: FontWeight.bold,
         letterSpacing: 1.2,
       ),
     );
@@ -428,8 +435,8 @@ class _SectionHeader extends StatelessWidget {
 
 class _AllSizesRow extends StatelessWidget {
   final IveAvatarStateV2 state;
-  final bool             interactive;
-  final VoidCallback     onTap;
+  final bool interactive;
+  final VoidCallback onTap;
 
   const _AllSizesRow({
     required this.state,
@@ -438,11 +445,11 @@ class _AllSizesRow extends StatelessWidget {
   });
 
   static const _sizes = [
-    (IveAvatarTokens.sizeCompact,  'xs'),
-    (IveAvatarTokens.sizeSmall,    'sm'),
+    (IveAvatarTokens.sizeCompact, 'xs'),
+    (IveAvatarTokens.sizeSmall, 'sm'),
     (IveAvatarTokens.sizeStandard, 'md'),
-    (IveAvatarTokens.sizeLarge,    'lg'),
-    (IveAvatarTokens.sizeChat,     'xl'),
+    (IveAvatarTokens.sizeLarge, 'lg'),
+    (IveAvatarTokens.sizeChat, 'xl'),
   ];
 
   @override
@@ -454,10 +461,10 @@ class _AllSizesRow extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             IveAvatarCompact(
-              state:       state,
-              size:        pair.$1,
+              state: state,
+              size: pair.$1,
               interactive: interactive,
-              onTap:       interactive ? onTap : null,
+              onTap: interactive ? onTap : null,
             ),
             const SizedBox(height: 6),
             Text(
@@ -474,7 +481,7 @@ class _AllSizesRow extends StatelessWidget {
 // ── All states grid ───────────────────────────────────────────────────────────
 
 class _AllStatesGrid extends StatelessWidget {
-  final bool                  interactive;
+  final bool interactive;
   final ValueChanged<IveAvatarStateV2> onTap;
 
   const _AllStatesGrid({
@@ -485,28 +492,28 @@ class _AllStatesGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GridView.count(
-      crossAxisCount:   5,
-      shrinkWrap:       true,
-      physics:          const NeverScrollableScrollPhysics(),
+      crossAxisCount: 5,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       crossAxisSpacing: 12,
-      mainAxisSpacing:  16,
+      mainAxisSpacing: 16,
       children: IveAvatarStateV2.values.map((s) {
         final label = IveAvatarStateConfigV2.forState(s).fallbackLabel;
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             IveAvatarCompact(
-              state:       s,
-              size:        IveAvatarTokens.sizeSmall,
+              state: s,
+              size: IveAvatarTokens.sizeSmall,
               interactive: interactive,
-              onTap:       interactive ? () => onTap(s) : null,
+              onTap: interactive ? () => onTap(s) : null,
             ),
             const SizedBox(height: 4),
             Text(
               label,
               style: const TextStyle(color: Colors.white54, fontSize: 8.5),
               textAlign: TextAlign.center,
-              overflow:  TextOverflow.ellipsis,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         );

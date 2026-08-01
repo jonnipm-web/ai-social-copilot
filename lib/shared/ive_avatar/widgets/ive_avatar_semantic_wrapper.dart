@@ -9,18 +9,18 @@ import '../theme/ive_avatar_tokens.dart';
 // Uses state-specific labels so screen readers announce the current IVE status.
 
 class IveAvatarSemanticWrapper extends StatelessWidget {
-  final Widget           child;
+  final Widget child;
   final IveAvatarStateV2 state;
-  final bool             interactive;
-  final VoidCallback?    onTap;
-  final VoidCallback?    onLongPress;
-  final String?          overrideLabel;
+  final bool interactive;
+  final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
+  final String? overrideLabel;
 
   const IveAvatarSemanticWrapper({
     super.key,
     required this.child,
     required this.state,
-    this.interactive  = true,
+    this.interactive = true,
     this.onTap,
     this.onLongPress,
     this.overrideLabel,
@@ -34,11 +34,11 @@ class IveAvatarSemanticWrapper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget widget = Semantics(
-      label:   _label,
-      button:  interactive && onTap != null,
+      label: _label,
+      button: interactive && onTap != null,
       enabled: state != IveAvatarStateV2.disabled,
       tooltip: interactive ? 'Abrir assistente IVE' : null,
-      child:   child,
+      child: child,
     );
 
     if (!interactive || (onTap == null && onLongPress == null)) {
@@ -46,12 +46,12 @@ class IveAvatarSemanticWrapper extends StatelessWidget {
     }
 
     return GestureDetector(
-      onTap:      onTap,
+      onTap: onTap,
       onLongPress: onLongPress,
-      behavior:   HitTestBehavior.opaque,
+      behavior: HitTestBehavior.opaque,
       child: ConstrainedBox(
         constraints: const BoxConstraints(
-          minWidth:  IveAvatarTokens.minTouchTarget,
+          minWidth: IveAvatarTokens.minTouchTarget,
           minHeight: IveAvatarTokens.minTouchTarget,
         ),
         child: widget,

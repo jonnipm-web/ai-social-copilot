@@ -11,30 +11,30 @@ class IveAvatarContextService {
 
   IveAvatarContext buildForRoute({
     required String routeName,
-    required bool   isAuthenticated,
-    String?         projectId,
-    String?         title,
-    String?         currentTask,
-    bool            hasActiveAnalysis = false,
-    bool            hasUnreadInsight  = false,
+    required bool isAuthenticated,
+    String? projectId,
+    String? title,
+    String? currentTask,
+    bool hasActiveAnalysis = false,
+    bool hasUnreadInsight = false,
   }) {
-    final module    = _moduleForRoute(routeName);
+    final module = _moduleForRoute(routeName);
     final placement = _placementForRoute(routeName);
-    final compact   = _isCompactRoute(routeName);
+    final compact = _isCompactRoute(routeName);
 
     return IveAvatarContext(
-      routeName:          routeName,
-      sourceType:         'route',
-      projectId:          projectId,
-      module:             module,
-      title:              title,
-      currentTask:        currentTask,
-      isAuthenticated:    isAuthenticated,
-      hasActiveAnalysis:  hasActiveAnalysis,
-      hasUnreadInsight:   hasUnreadInsight,
-      compactMode:        compact,
+      routeName: routeName,
+      sourceType: 'route',
+      projectId: projectId,
+      module: module,
+      title: title,
+      currentTask: currentTask,
+      isAuthenticated: isAuthenticated,
+      hasActiveAnalysis: hasActiveAnalysis,
+      hasUnreadInsight: hasUnreadInsight,
+      compactMode: compact,
       preferredPlacement: placement,
-      canInteract:        isAuthenticated,
+      canInteract: isAuthenticated,
     );
   }
 
@@ -42,33 +42,33 @@ class IveAvatarContextService {
     required String routeName,
     required String sourceId,
     required String sourceType,
-    required bool   isAuthenticated,
-    String?         title,
-    String?         projectId,
+    required bool isAuthenticated,
+    String? title,
+    String? projectId,
   }) {
     return IveAvatarContext(
-      routeName:          routeName,
-      sourceType:         sourceType,
-      sourceId:           sourceId,
-      projectId:          projectId,
-      title:              title,
-      isAuthenticated:    isAuthenticated,
-      compactMode:        true,
+      routeName: routeName,
+      sourceType: sourceType,
+      sourceId: sourceId,
+      projectId: projectId,
+      title: title,
+      isAuthenticated: isAuthenticated,
+      compactMode: true,
       preferredPlacement: IveAvatarPlacement.cardHeader,
-      canInteract:        isAuthenticated,
+      canInteract: isAuthenticated,
     );
   }
 
   String _moduleForRoute(String route) {
-    if (route.startsWith('/projects'))            return 'projects';
-    if (route.startsWith('/opportunity-lab'))     return 'opportunity_lab';
-    if (route.startsWith('/action-engine'))       return 'action_engine';
-    if (route.startsWith('/ecosystem'))           return 'ecosystem';
+    if (route.startsWith('/projects')) return 'projects';
+    if (route.startsWith('/opportunity-lab')) return 'opportunity_lab';
+    if (route.startsWith('/action-engine')) return 'action_engine';
+    if (route.startsWith('/ecosystem')) return 'ecosystem';
     if (route.startsWith('/market-intelligence')) return 'market_intelligence';
-    if (route.startsWith('/knowledge'))           return 'knowledge';
-    if (route.startsWith('/dashboard'))           return 'dashboard';
-    if (route.startsWith('/personas'))            return 'personas';
-    if (route.startsWith('/campaigns'))           return 'campaigns';
+    if (route.startsWith('/knowledge')) return 'knowledge';
+    if (route.startsWith('/dashboard')) return 'dashboard';
+    if (route.startsWith('/personas')) return 'personas';
+    if (route.startsWith('/campaigns')) return 'campaigns';
     return 'general';
   }
 
@@ -81,7 +81,10 @@ class IveAvatarContextService {
 
   bool _isCompactRoute(String route) {
     const compactRoutes = {
-      '/knowledge', '/calendar', '/history', '/admin',
+      '/knowledge',
+      '/calendar',
+      '/history',
+      '/admin',
     };
     return compactRoutes.contains(route);
   }

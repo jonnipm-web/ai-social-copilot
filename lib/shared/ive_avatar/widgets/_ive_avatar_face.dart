@@ -13,7 +13,7 @@ const _kReferenceImage = 'assets/ive/reference/ive_character_reference.png';
 
 class IveAvatarFacePlaceholder extends StatelessWidget {
   final IveAvatarStateV2 state;
-  final double           size;
+  final double size;
 
   const IveAvatarFacePlaceholder({
     super.key,
@@ -30,24 +30,24 @@ class IveAvatarFacePlaceholder extends StatelessWidget {
       children: [
         Image.asset(
           _kReferenceImage,
-          fit:       BoxFit.cover,
+          fit: BoxFit.cover,
           alignment: Alignment.topCenter,
           errorBuilder: (_, __, ___) => _GeometricPlaceholder(
             color: config.ringColor,
-            size:  size,
+            size: size,
           ),
         ),
         // State color overlay
         AnimatedContainer(
           duration: const Duration(milliseconds: 500),
-          color:    config.overlayColor.withValues(alpha: config.overlayOpacity),
+          color: config.overlayColor.withValues(alpha: config.overlayOpacity),
         ),
         // V2 badge in debug builds
         if (kDebugMode)
           Positioned(
             bottom: 0,
-            left:   0,
-            right:  0,
+            left: 0,
+            right: 0,
             child: Container(
               color: Colors.black87,
               padding: const EdgeInsets.symmetric(vertical: 1.5),
@@ -55,9 +55,9 @@ class IveAvatarFacePlaceholder extends StatelessWidget {
                 'V2 PREVIEW',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color:         Color(0xFF6C63FF),
-                  fontSize:      6.0,
-                  fontWeight:    FontWeight.bold,
+                  color: Color(0xFF6C63FF),
+                  fontSize: 6.0,
+                  fontWeight: FontWeight.bold,
                   letterSpacing: 0.4,
                 ),
               ),
@@ -73,7 +73,7 @@ class IveAvatarFacePlaceholder extends StatelessWidget {
 class _GeometricPlaceholder extends StatelessWidget {
   const _GeometricPlaceholder({required this.color, required this.size});
 
-  final Color  color;
+  final Color color;
   final double size;
 
   @override
@@ -82,7 +82,7 @@ class _GeometricPlaceholder extends StatelessWidget {
       color: const Color(0xFF0A0B1A),
       child: Center(
         child: CustomPaint(
-          size:    Size(size * 0.55, size * 0.55),
+          size: Size(size * 0.55, size * 0.55),
           painter: _IvePlaceholderPainter(color: color),
         ),
       ),
@@ -108,7 +108,7 @@ class _IvePlaceholderPainter extends CustomPainter {
     final bodyRect = RRect.fromRectAndRadius(
       Rect.fromCenter(
         center: Offset(size.width / 2, size.height * 0.72),
-        width:  size.width * 0.52,
+        width: size.width * 0.52,
         height: size.height * 0.36,
       ),
       const Radius.circular(8),

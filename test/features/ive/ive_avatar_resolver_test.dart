@@ -6,7 +6,8 @@ import 'package:ai_social_copilot/shared/ive_avatar/models/ive_avatar_state_v2.d
 import 'package:ai_social_copilot/shared/ive_avatar/providers/effective_avatar_version_provider.dart';
 import 'package:ai_social_copilot/shared/ive_avatar/providers/ive_operational_state_provider.dart';
 import 'package:ai_social_copilot/shared/ive_avatar/widgets/ive_avatar_resolver.dart';
-import 'package:ai_social_copilot/shared/widgets/ive_overlay.dart' show iveRouteNotifier;
+import 'package:ai_social_copilot/shared/widgets/ive_overlay.dart'
+    show iveRouteNotifier;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -59,7 +60,8 @@ void main() {
     test('1 — flag false + override automatic → legacy', () {
       final c = _container(v2FlagEnabled: false);
       addTearDown(c.dispose);
-      expect(c.read(effectiveIveAvatarVersionProvider), IveAvatarVersion.legacy);
+      expect(
+          c.read(effectiveIveAvatarVersionProvider), IveAvatarVersion.legacy);
     });
 
     test('2 — flag true + override automatic → v2', () {
@@ -74,7 +76,8 @@ void main() {
         localOverride: IveAvatarLocalOverride.legacy,
       );
       addTearDown(c.dispose);
-      expect(c.read(effectiveIveAvatarVersionProvider), IveAvatarVersion.legacy);
+      expect(
+          c.read(effectiveIveAvatarVersionProvider), IveAvatarVersion.legacy);
     });
 
     test('4 — override v2 → v2 regardless of flag', () {
@@ -89,7 +92,8 @@ void main() {
     test('5 — override hidden → hidden', () {
       final c = _container(localOverride: IveAvatarLocalOverride.hidden);
       addTearDown(c.dispose);
-      expect(c.read(effectiveIveAvatarVersionProvider), IveAvatarVersion.hidden);
+      expect(
+          c.read(effectiveIveAvatarVersionProvider), IveAvatarVersion.hidden);
     });
   });
 
@@ -200,7 +204,8 @@ void main() {
 
   // ── IveAvatarResolver widget ──────────────────────────────────────────────
   group('IveAvatarResolver widget', () {
-    testWidgets('24 — renders without crash with version=legacy', (tester) async {
+    testWidgets('24 — renders without crash with version=legacy',
+        (tester) async {
       // Route notifier empty → resolver hides (no auth in test)
       await tester.pumpWidget(
         ProviderScope(
@@ -220,7 +225,8 @@ void main() {
       expect(find.byType(IveAvatarResolver), findsOneWidget);
     });
 
-    testWidgets('25 — renders without crash with version=hidden', (tester) async {
+    testWidgets('25 — renders without crash with version=hidden',
+        (tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [

@@ -14,16 +14,16 @@ import 'ive_avatar_compact.dart';
 class IveAvatarCard extends StatelessWidget {
   final IveAvatarStateV2 state;
   final IveAvatarContext avatarContext;
-  final VoidCallback?    onTap;
-  final bool             showLabel;
-  final bool             showStatus;
+  final VoidCallback? onTap;
+  final bool showLabel;
+  final bool showStatus;
 
   const IveAvatarCard({
     super.key,
     required this.state,
     required IveAvatarContext context,
     this.onTap,
-    this.showLabel  = true,
+    this.showLabel = true,
     this.showStatus = true,
   }) : avatarContext = context;
 
@@ -34,7 +34,7 @@ class IveAvatarCard extends StatelessWidget {
     return AnimatedContainer(
       duration: IveAvatarTokens.stateChangeFade,
       decoration: BoxDecoration(
-        color:        IveAvatarTokens.surfaceDark,
+        color: IveAvatarTokens.surfaceDark,
         borderRadius: BorderRadius.circular(IveAvatarTokens.cardRadius),
         border: Border.all(
           color: theme.ringColor.withValues(alpha: 0.25),
@@ -46,27 +46,27 @@ class IveAvatarCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           IveAvatarCompact(
-            state:       state,
-            size:        IveAvatarTokens.sizeStandard,
-            showRing:    true,
+            state: state,
+            size: IveAvatarTokens.sizeStandard,
+            showRing: true,
             interactive: onTap != null,
-            onTap:       onTap,
+            onTap: onTap,
           ),
           const SizedBox(width: 12),
           Flexible(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize:       MainAxisSize.min,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   avatarContext.title ?? 'IVE',
                   style: const TextStyle(
-                    color:      Colors.white,
-                    fontSize:   14,
+                    color: Colors.white,
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
-                  maxLines:  1,
-                  overflow:  TextOverflow.ellipsis,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 if (showStatus) ...[
                   const SizedBox(height: 4),
@@ -77,7 +77,7 @@ class IveAvatarCard extends StatelessWidget {
                   Text(
                     avatarContext.currentTask!,
                     style: TextStyle(
-                      color:    Colors.white.withValues(alpha: 0.55),
+                      color: Colors.white.withValues(alpha: 0.55),
                       fontSize: 11,
                     ),
                     maxLines: 1,
@@ -96,7 +96,7 @@ class IveAvatarCard extends StatelessWidget {
 }
 
 class _StatusRow extends StatelessWidget {
-  final IveAvatarStateV2   state;
+  final IveAvatarStateV2 state;
   final IveAvatarThemeData theme;
 
   const _StatusRow({required this.state, required this.theme});
@@ -108,11 +108,11 @@ class _StatusRow extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width:  6,
+          width: 6,
           height: 6,
           decoration: BoxDecoration(
-            color:  theme.ringColor,
-            shape:  BoxShape.circle,
+            color: theme.ringColor,
+            shape: BoxShape.circle,
           ),
         ),
         const SizedBox(width: 6),
@@ -136,15 +136,15 @@ class _InsightBadge extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
         decoration: BoxDecoration(
-          color:        color.withValues(alpha: 0.15),
+          color: color.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(8),
-          border:       Border.all(color: color.withValues(alpha: 0.4), width: 1),
+          border: Border.all(color: color.withValues(alpha: 0.4), width: 1),
         ),
         child: Text(
           'Novo',
           style: TextStyle(
-            color:      color,
-            fontSize:   9,
+            color: color,
+            fontSize: 9,
             fontWeight: FontWeight.bold,
           ),
         ),
