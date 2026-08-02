@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../data/models/competitor.dart';
 import '../../../data/models/copilot_context_data.dart';
+import '../../../data/services/project_intelligence_context_service.dart';
 import '../../../providers/market_analysis_provider.dart';
 import '../../../shared/widgets/context_copilot_widget.dart' show showCopilotChat;
 
@@ -26,9 +27,12 @@ class _CompetitorDiscoveryScreenState
     setState(() { _running = true; _error = null; });
     try {
       final analysis = await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
+      final ctx = analysis.projectId != null
+          ? await ProjectIntelligenceContextService().buildForProject(analysis.projectId!)
+          : await ProjectIntelligenceContextService().buildForInput(analysis.input);
       await ref
           .read(marketAnalysisServiceProvider)
-          .discoverCompetitors(widget.analysisId, analysis.input);
+          .discoverCompetitors(widget.analysisId, analysis.input, context: ctx);
       ref.invalidate(competitorsByAnalysisProvider(widget.analysisId));
     } catch (e) {
       setState(() => _error = e.toString().replaceFirst('Exception: ', ''));

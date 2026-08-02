@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../data/services/project_intelligence_context_service.dart';
 import '../../../providers/market_analysis_provider.dart';
 
 class ContentClusterScreen extends ConsumerStatefulWidget {
@@ -35,7 +36,10 @@ class _ContentClusterScreenState extends ConsumerState<ContentClusterScreen> {
     setState(() { _running = true; _error = null; });
     try {
       final analysis = await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
-      await ref.read(marketAnalysisServiceProvider).buildContentCluster(widget.analysisId, analysis.input, kw);
+      final ctx = analysis.projectId != null
+          ? await ProjectIntelligenceContextService().buildForProject(analysis.projectId!)
+          : await ProjectIntelligenceContextService().buildForInput(analysis.input);
+      await ref.read(marketAnalysisServiceProvider).buildContentCluster(widget.analysisId, analysis.input, kw, context: ctx);
       ref.invalidate(contentClusterByAnalysisProvider(widget.analysisId));
     } catch (e) {
       setState(() => _error = e.toString().replaceFirst('Exception: ', ''));

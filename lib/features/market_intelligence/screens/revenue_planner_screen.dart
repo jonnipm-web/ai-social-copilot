@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../data/services/project_intelligence_context_service.dart';
 import '../../../data/services/project_service.dart';
 import '../../../providers/market_analysis_provider.dart';
 
@@ -54,7 +55,17 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
     setState(() { _running = true; _error = null; });
     try {
       final analysis = await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
-      await ref.read(marketAnalysisServiceProvider).buildRevenuePlan(widget.analysisId, analysis.input, name);
+      final projectId = analysis.projectId;
+      final ctx = projectId != null
+          ? await ProjectIntelligenceContextService().buildForProject(projectId)
+          : await ProjectIntelligenceContextService().buildForInput(analysis.input);
+      await ref.read(marketAnalysisServiceProvider).buildRevenuePlan(
+            widget.analysisId,
+            analysis.input,
+            name,
+            projectId: projectId,
+            context: ctx,
+          );
       ref.invalidate(revenuePlanByAnalysisProvider(widget.analysisId));
     } catch (e) {
       setState(() => _error = e.toString().replaceFirst('Exception: ', ''));

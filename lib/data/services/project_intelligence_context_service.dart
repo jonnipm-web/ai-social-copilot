@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/content_item.dart';
+import '../models/knowledge_analysis.dart';
 import '../models/knowledge_item.dart';
 import '../models/market_analysis.dart';
 import '../models/project.dart';
@@ -31,12 +32,14 @@ class ProjectIntelligenceContextService {
       _knowledgeService.fetchAll(projectId: projectId).catchError((_) => <KnowledgeItem>[]),
       _contentService.fetchAll(projectId: projectId).catchError((_) => <ContentItem>[]),
       _marketService.fetchAll(projectId: projectId).catchError((_) => <MarketAnalysis>[]),
+      _knowledgeService.fetchAnalysisByProject(projectId).catchError((_) => <KnowledgeAnalysis>[]),
     ]);
 
     final project = results[0] as Project?;
     final knowledgeItems = results[1] as List<KnowledgeItem>;
     final contentItems = results[2] as List<ContentItem>;
     final analyses = results[3] as List<MarketAnalysis>;
+    final vaultAnalyses = results[4] as List<KnowledgeAnalysis>;
 
     // Também busca personas (lightweight)
     final personaNames = await _fetchPersonaNames(projectId);
@@ -71,7 +74,16 @@ class ProjectIntelligenceContextService {
                 sourceType: 'knowledge',
               ))
           .toList(),
-      vaultItems: [],
+      vaultItems: vaultAnalyses
+          .where((ka) => ka.summary != null && ka.summary!.isNotEmpty)
+          .take(6)
+          .map((ka) => ContextSourceItem(
+                id: ka.id,
+                title: 'Análise: ${ka.knowledgeItemId}',
+                summary: _truncate(ka.summary!, 250),
+                sourceType: 'vault',
+              ))
+          .toList(),
       libraryItems: contentItems
           .take(5)
           .map((c) => ContextSourceItem(
@@ -141,6 +153,7 @@ class ProjectIntelligenceContextService {
           .from('personas')
           .select('name')
           .eq('user_id', _client.auth.currentUser?.id ?? '')
+          .eq('project_id', projectId)
           .limit(5);
       return (rows as List).map((r) => r['name'] as String).toList();
     } catch (_) {

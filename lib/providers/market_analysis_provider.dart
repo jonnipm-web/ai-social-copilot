@@ -5,6 +5,7 @@ import '../data/models/gap_analysis.dart';
 import '../data/models/opportunity.dart';
 import '../data/models/niche_ranking.dart';
 import '../data/models/content_cluster.dart';
+import '../data/models/project_intelligence_context.dart';
 import '../data/models/revenue_plan.dart';
 import '../data/models/opportunity_lab_item.dart';
 import '../data/services/market_analysis_service.dart';
@@ -91,6 +92,7 @@ class MarketAnalysisNotifier extends StateNotifier<AsyncValue<MarketAnalysis?>> 
     String input, {
     String inputType = 'url',
     String? projectId,
+    ProjectIntelligenceContext? context,
   }) async {
     state = const AsyncValue.loading();
     try {
@@ -98,6 +100,7 @@ class MarketAnalysisNotifier extends StateNotifier<AsyncValue<MarketAnalysis?>> 
         input,
         inputType: inputType,
         projectId: projectId,
+        context: context,
       );
       state = AsyncValue.data(result);
 

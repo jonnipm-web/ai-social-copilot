@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../data/models/niche_ranking.dart';
+import '../../../data/services/project_intelligence_context_service.dart';
 import '../../../providers/market_analysis_provider.dart';
 
 class NicheDiscoveryScreen extends ConsumerStatefulWidget {
@@ -22,7 +23,10 @@ class _NicheDiscoveryScreenState extends ConsumerState<NicheDiscoveryScreen> {
     setState(() { _running = true; _error = null; });
     try {
       final analysis = await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
-      await ref.read(marketAnalysisServiceProvider).discoverNiches(widget.analysisId, analysis.input);
+      final ctx = analysis.projectId != null
+          ? await ProjectIntelligenceContextService().buildForProject(analysis.projectId!)
+          : await ProjectIntelligenceContextService().buildForInput(analysis.input);
+      await ref.read(marketAnalysisServiceProvider).discoverNiches(widget.analysisId, analysis.input, context: ctx);
       ref.invalidate(nichesByAnalysisProvider(widget.analysisId));
     } catch (e) {
       setState(() => _error = e.toString().replaceFirst('Exception: ', ''));

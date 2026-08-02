@@ -8,6 +8,7 @@ import '../../../data/models/ecosystem_score.dart';
 import '../../../data/models/opportunity_lab_item.dart';
 import '../../../data/models/project.dart';
 import '../../../data/models/project_intelligence_profile.dart';
+import '../../../data/services/project_intelligence_context_service.dart';
 import '../../../providers/ecosystem_intelligence_provider.dart';
 import '../../../providers/knowledge_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
@@ -166,14 +167,20 @@ class _ProjectCommandCenterScreenState
               })
           .toList();
 
+      final ctx = await ProjectIntelligenceContextService()
+          .buildForProject(project.id);
+
+      final body = <String, dynamic>{
+        'project_name':        project.name,
+        'project_description': project.description,
+        'project_type':        project.type,
+        'documents':           docs,
+        'context_snapshot':    ctx.toPromptSnapshot(),
+      };
+
       final response = await Supabase.instance.client.functions.invoke(
         AppConstants.edgeFunctionGenerateOpportunities,
-        body: {
-          'project_name':        project.name,
-          'project_description': project.description,
-          'project_type':        project.type,
-          'documents':           docs,
-        },
+        body: body,
       );
 
       if (response.data == null) throw Exception('Resposta vazia.');

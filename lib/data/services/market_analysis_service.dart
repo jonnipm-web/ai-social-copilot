@@ -15,7 +15,8 @@ class MarketAnalysisService {
   Future<List<MarketAnalysis>> fetchAll({String? projectId}) async {
     var query = _client
         .from(AppConstants.tableMarketAnalyses)
-        .select();
+        .select()
+        .isFilter('deleted_at', null);
     if (projectId != null) query = query.eq('project_id', projectId);
     final rows = await query.order('created_at', ascending: false);
     return (rows as List).map((r) => MarketAnalysis.fromMap(r)).toList();
@@ -31,7 +32,10 @@ class MarketAnalysisService {
   }
 
   Future<void> delete(String id) async {
-    await _client.from(AppConstants.tableMarketAnalyses).delete().eq('id', id);
+    await _client
+        .from(AppConstants.tableMarketAnalyses)
+        .update({'deleted_at': DateTime.now().toIso8601String()})
+        .eq('id', id);
   }
 
   Future<MarketAnalysis> analyze(
@@ -80,6 +84,11 @@ class MarketAnalysisService {
           'opportunity_score':  _int(data['opportunity_score']),
           'status':             'completed',
           'analysis_json':      data,
+          'version':            1,
+          if (context != null) 'context_snapshot': context.toPromptSnapshot(),
+          if (context != null) 'source_ids':        context.sourceIds,
+          if (context != null) 'coverage':          context.coverage,
+          if (context != null) 'generated_at':      context.generatedAt.toIso8601String(),
         })
         .select()
         .single();
@@ -330,13 +339,25 @@ class MarketAnalysisService {
     return row == null ? null : ContentCluster.fromMap(row);
   }
 
-  Future<ContentCluster> buildContentCluster(String marketAnalysisId, String input, String mainKeyword) async {
+  Future<ContentCluster> buildContentCluster(
+    String marketAnalysisId,
+    String input,
+    String mainKeyword, {
+    ProjectIntelligenceContext? context,
+  }) async {
     final uid = _client.auth.currentUser?.id;
     if (uid == null) throw Exception('Usuário não autenticado.');
 
+    final body = <String, dynamic>{
+      'market_analysis_id': marketAnalysisId,
+      'input': input,
+      'main_keyword': mainKeyword,
+    };
+    if (context != null) body['context_snapshot'] = context.toPromptSnapshot();
+
     final response = await _client.functions.invoke(
       AppConstants.edgeFunctionCluster,
-      body: {'market_analysis_id': marketAnalysisId, 'input': input, 'main_keyword': mainKeyword},
+      body: body,
     );
 
     if (response.data == null) throw Exception('Resposta vazia do Content Cluster.');
