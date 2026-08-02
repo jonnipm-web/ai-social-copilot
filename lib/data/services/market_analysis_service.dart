@@ -28,6 +28,7 @@ class MarketAnalysisService {
         .from(AppConstants.tableMarketAnalyses)
         .select()
         .eq('id', id)
+        .isFilter('deleted_at', null)
         .maybeSingle();
     return row == null ? null : MarketAnalysis.fromMap(row);
   }
@@ -93,6 +94,8 @@ class MarketAnalysisService {
           if (context != null) 'context_snapshot': context.toPromptSnapshot(),
           if (context != null) 'source_ids': context.sourceIds,
           if (context != null) 'coverage': context.coverage,
+          if (context != null && context.missingData.isNotEmpty)
+            'missing_data': context.missingData,
           if (context != null)
             'generated_at': context.generatedAt.toIso8601String(),
           if (context?.coverageDetails != null)
