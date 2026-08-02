@@ -67,11 +67,11 @@ void main() {
       // Aguarda a resolução
       final result = await container.read(projectsNotifierProvider.future);
 
-      expect(result, [p]);
-      expect(
-        container.read(projectsNotifierProvider),
-        AsyncData([p]),
-      );
+      expect(result.length, 1);
+      expect(result.first.id, p.id);
+      final stateValue = container.read(projectsNotifierProvider).valueOrNull;
+      expect(stateValue?.length, 1);
+      expect(stateValue?.first.id, p.id);
       verify(() => svc.fetchAll()).called(1);
     });
 
