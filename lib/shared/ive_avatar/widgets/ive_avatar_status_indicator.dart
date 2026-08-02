@@ -36,7 +36,7 @@ class IveAvatarStatusRingV2 extends CustomPainter {
       center,
       radius + 4,
       Paint()
-        ..color = color.withOpacity(0.18 * intensity)
+        ..color = color.withValues(alpha: 0.18 * intensity)
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, 12 * intensity),
     );
 
@@ -45,7 +45,7 @@ class IveAvatarStatusRingV2 extends CustomPainter {
       center,
       radius,
       Paint()
-        ..color = color.withOpacity(0.30 * intensity)
+        ..color = color.withValues(alpha: 0.30 * intensity)
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, 5 * intensity),
     );
 
@@ -54,14 +54,14 @@ class IveAvatarStatusRingV2 extends CustomPainter {
       center,
       radius,
       Paint()
-        ..color = color.withOpacity(0.85)
+        ..color = color.withValues(alpha: 0.85)
         ..style = PaintingStyle.stroke
         ..strokeWidth = strokeWidth,
     );
 
-    // Cardinal tick marks
+    // Cardinal tick marks — subtle reference marks at N/S/E/W
     final tickPaint = Paint()
-      ..color = color.withOpacity(0.55)
+      ..color = color.withValues(alpha: 0.35)
       ..strokeWidth = 1.5
       ..strokeCap = StrokeCap.round;
 
@@ -105,16 +105,22 @@ class IveAvatarStatusIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final anim = animation ?? const AlwaysStoppedAnimation(0.5);
+    final ringAnim = animation ?? const AlwaysStoppedAnimation(0.5);
 
-    return AnimatedBuilder(
-      animation: anim,
-      builder: (_, __) => CustomPaint(
-        size: Size(size, size),
-        painter: IveAvatarStatusRingV2(
-          state: state,
-          glowPulse: anim.value,
-          motionPolicy: motionPolicy,
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 350),
+      transitionBuilder: (child, switchAnim) =>
+          FadeTransition(opacity: switchAnim, child: child),
+      child: AnimatedBuilder(
+        key: ValueKey(state),
+        animation: ringAnim,
+        builder: (_, __) => CustomPaint(
+          size: Size(size, size),
+          painter: IveAvatarStatusRingV2(
+            state: state,
+            glowPulse: ringAnim.value,
+            motionPolicy: motionPolicy,
+          ),
         ),
       ),
     );

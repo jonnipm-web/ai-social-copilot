@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../models/ive_avatar_lab_scope.dart';
 import '../models/ive_avatar_state_v2.dart';
 
 // ── IveAvatarFacePlaceholder ──────────────────────────────────────────────────
@@ -40,25 +41,27 @@ class IveAvatarFacePlaceholder extends StatelessWidget {
         // State color overlay
         AnimatedContainer(
           duration: const Duration(milliseconds: 500),
-          color: config.overlayColor.withOpacity(config.overlayOpacity),
+          color: config.overlayColor.withValues(alpha: config.overlayOpacity),
         ),
-        // V2 badge in debug builds
-        if (kDebugMode)
+        // V2 badge — debug builds only, hidden in presentation mode
+        if (kDebugMode && !IveAvatarLabScope.isPresentationMode(context))
           Positioned(
             bottom: 0,
             left: 0,
             right: 0,
-            child: Container(
-              color: Colors.black87,
-              padding: const EdgeInsets.symmetric(vertical: 1.5),
-              child: const Text(
-                'V2 PREVIEW',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Color(0xFF6C63FF),
-                  fontSize: 6.0,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.4,
+            child: ExcludeSemantics(
+              child: Container(
+                color: Colors.black87,
+                padding: const EdgeInsets.symmetric(vertical: 1.5),
+                child: const Text(
+                  'V2 PREVIEW',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Color(0xFF6C63FF),
+                    fontSize: 6.0,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.4,
+                  ),
                 ),
               ),
             ),
@@ -97,7 +100,7 @@ class _IvePlaceholderPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = color.withOpacity(0.7)
+      ..color = color.withValues(alpha: 0.7)
       ..style = PaintingStyle.fill;
 
     // Simple geometric IVE silhouette: circle head + rectangle body

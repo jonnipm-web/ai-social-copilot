@@ -78,8 +78,6 @@ class _IveAvatarV2State extends ConsumerState<IveAvatarV2>
   Widget build(BuildContext context) {
     final providerState = ref.watch(iveAvatarV2StateProvider);
     final avatarState = widget.overrideState ?? providerState;
-    final avatarContext =
-        widget.overrideContext ?? ref.watch(iveAvatarV2ContextProvider);
 
     _maybeUpdateAnim(avatarState);
 

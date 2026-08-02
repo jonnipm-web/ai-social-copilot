@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/semantics.dart';
 
 import '../models/ive_avatar_state_v2.dart';
 import '../theme/ive_avatar_tokens.dart';

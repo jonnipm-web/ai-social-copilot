@@ -48,5 +48,5 @@ abstract final class IveAvatarTheme {
     return IveAvatarStateConfigV2.forState(state).ringColor;
   }
 
-  static Color disabledColor(Color base) => base.withOpacity(0.3);
+  static Color disabledColor(Color base) => base.withValues(alpha: 0.3);
 }

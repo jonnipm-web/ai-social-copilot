@@ -11,7 +11,6 @@ import 'ive_avatar_motion_policy.dart';
 
 class IveAvatarAnimationControllerV2 {
   IveAvatarAnimationControllerV2();
-  IveAvatarAnimationControllerV2._();
 
   AnimationController? _ctrl;
   Animation<double>? _animation;
@@ -46,6 +45,9 @@ class IveAvatarAnimationControllerV2 {
     _animation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _ctrl!, curve: Curves.easeInOut),
     );
+
+    // Start at mid-point so state transitions feel immediate, not a ramp from zero
+    _ctrl!.value = 0.5;
 
     final shouldLoop = IveMotionPolicyResolver.shouldLoop(motionPolicy);
     if (shouldLoop) {
