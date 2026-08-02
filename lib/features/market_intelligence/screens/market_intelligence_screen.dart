@@ -40,19 +40,27 @@ class _MarketIntelligenceScreenState
 
   static String _friendlyError(String raw) {
     final lower = raw.toLowerCase();
-    if (lower.contains('404') || lower.contains('not_found') || lower.contains('not found')) {
+    if (lower.contains('404') ||
+        lower.contains('not_found') ||
+        lower.contains('not found')) {
       return 'A função de análise não foi encontrada no servidor. Verifique se as Edge Functions estão implantadas no Supabase Dashboard.';
     }
-    if (lower.contains('401') || lower.contains('unauthorized') || lower.contains('jwt')) {
+    if (lower.contains('401') ||
+        lower.contains('unauthorized') ||
+        lower.contains('jwt')) {
       return 'Sessão expirada. Saia e entre novamente no aplicativo.';
     }
     if (lower.contains('timeout') || lower.contains('timed out')) {
       return 'A análise demorou demais. Tente novamente em alguns instantes.';
     }
-    if (lower.contains('network') || lower.contains('socket') || lower.contains('connection')) {
+    if (lower.contains('network') ||
+        lower.contains('socket') ||
+        lower.contains('connection')) {
       return 'Sem conexão com a internet. Verifique sua rede e tente novamente.';
     }
-    if (lower.contains('groq') || lower.contains('api key') || lower.contains('apikey')) {
+    if (lower.contains('groq') ||
+        lower.contains('api key') ||
+        lower.contains('apikey')) {
       return 'Chave de API não configurada no servidor. Configure GROQ_API_KEY nos secrets do Supabase.';
     }
     return 'Tente novamente em alguns instantes. Se o erro persistir, verifique o Supabase Dashboard.';
@@ -77,7 +85,8 @@ class _MarketIntelligenceScreenState
           },
         ),
         backgroundColor: const Color(0xFF0F0F1A),
-        title: const Text('Market Intelligence', style: TextStyle(color: Colors.white)),
+        title: const Text('Market Intelligence',
+            style: TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       drawer: const AppDrawer(),
@@ -95,14 +104,16 @@ class _MarketIntelligenceScreenState
                     colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
                   ),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFF00BCD4).withOpacity(0.3)),
+                  border: Border.all(
+                      color: const Color(0xFF00BCD4).withOpacity(0.3)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: const [
-                        Icon(Icons.analytics_rounded, color: Color(0xFF00BCD4), size: 28),
+                        Icon(Icons.analytics_rounded,
+                            color: Color(0xFF00BCD4), size: 28),
                         SizedBox(width: 12),
                         Text(
                           'Market Intelligence Engine',
@@ -125,15 +136,28 @@ class _MarketIntelligenceScreenState
               const SizedBox(height: 24),
 
               // Input type selector
-              const Text('Tipo de entrada', style: TextStyle(color: Colors.white70, fontSize: 13)),
+              const Text('Tipo de entrada',
+                  style: TextStyle(color: Colors.white70, fontSize: 13)),
               const SizedBox(height: 8),
               Row(
                 children: [
-                  _TypeChip(label: 'URL / Domínio', value: 'url', selected: _inputType, onTap: (v) => setState(() => _inputType = v)),
+                  _TypeChip(
+                      label: 'URL / Domínio',
+                      value: 'url',
+                      selected: _inputType,
+                      onTap: (v) => setState(() => _inputType = v)),
                   const SizedBox(width: 8),
-                  _TypeChip(label: 'Nicho', value: 'niche', selected: _inputType, onTap: (v) => setState(() => _inputType = v)),
+                  _TypeChip(
+                      label: 'Nicho',
+                      value: 'niche',
+                      selected: _inputType,
+                      onTap: (v) => setState(() => _inputType = v)),
                   const SizedBox(width: 8),
-                  _TypeChip(label: 'Projeto', value: 'project', selected: _inputType, onTap: (v) => setState(() => _inputType = v)),
+                  _TypeChip(
+                      label: 'Projeto',
+                      value: 'project',
+                      selected: _inputType,
+                      onTap: (v) => setState(() => _inputType = v)),
                 ],
               ),
               const SizedBox(height: 16),
@@ -163,7 +187,8 @@ class _MarketIntelligenceScreenState
                     borderRadius: BorderRadius.circular(12),
                     borderSide: const BorderSide(color: Color(0xFF00BCD4)),
                   ),
-                  prefixIcon: const Icon(Icons.search_rounded, color: Colors.white38),
+                  prefixIcon:
+                      const Icon(Icons.search_rounded, color: Colors.white38),
                 ),
               ),
               const SizedBox(height: 16),
@@ -178,17 +203,22 @@ class _MarketIntelligenceScreenState
                       ? const SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2),
                         )
                       : const Icon(Icons.rocket_launch_rounded),
                   label: Text(
-                    state is AsyncLoading ? 'Analisando...' : 'Analisar Mercado',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                    state is AsyncLoading
+                        ? 'Analisando...'
+                        : 'Analisar Mercado',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 15),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00BCD4),
                     foregroundColor: Colors.black,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
               ),
@@ -207,16 +237,22 @@ class _MarketIntelligenceScreenState
                     children: [
                       const Row(
                         children: [
-                          Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 16),
+                          Icon(Icons.error_outline_rounded,
+                              color: Colors.redAccent, size: 16),
                           SizedBox(width: 6),
-                          Text('Não foi possível conectar ao mecanismo de análise',
-                              style: TextStyle(color: Colors.redAccent, fontSize: 13, fontWeight: FontWeight.w600)),
+                          Text(
+                              'Não foi possível conectar ao mecanismo de análise',
+                              style: TextStyle(
+                                  color: Colors.redAccent,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600)),
                         ],
                       ),
                       const SizedBox(height: 6),
                       Text(
                         _friendlyError(state.error.toString()),
-                        style: const TextStyle(color: Colors.white54, fontSize: 12),
+                        style: const TextStyle(
+                            color: Colors.white54, fontSize: 12),
                       ),
                     ],
                   ),
@@ -226,15 +262,24 @@ class _MarketIntelligenceScreenState
               const SizedBox(height: 32),
 
               // History
-              const Text('Análises anteriores', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+              const Text('Análises anteriores',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
               analyses.when(
-                loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFF00BCD4))),
-                error: (e, _) => Text('Erro: $e', style: const TextStyle(color: Colors.redAccent)),
+                loading: () => const Center(
+                    child: CircularProgressIndicator(color: Color(0xFF00BCD4))),
+                error: (e, _) => Text('Erro: $e',
+                    style: const TextStyle(color: Colors.redAccent)),
                 data: (list) => list.isEmpty
-                    ? const Text('Nenhuma análise ainda.', style: TextStyle(color: Colors.white38))
+                    ? const Text('Nenhuma análise ainda.',
+                        style: TextStyle(color: Colors.white38))
                     : Column(
-                        children: list.map((a) => _AnalysisCard(analysis: a)).toList(),
+                        children: list
+                            .map((a) => _AnalysisCard(analysis: a))
+                            .toList(),
                       ),
               ),
             ],
@@ -269,7 +314,8 @@ class _TypeChip extends StatelessWidget {
           color: isSelected ? const Color(0xFF00BCD4) : const Color(0xFF1A1A2E),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? const Color(0xFF00BCD4) : const Color(0xFF333355),
+            color:
+                isSelected ? const Color(0xFF00BCD4) : const Color(0xFF333355),
           ),
         ),
         child: Text(
@@ -293,7 +339,8 @@ class _AnalysisCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => context.go(
-        AppConstants.routeMarketIntelligenceHub.replaceFirst(':id', analysis.id),
+        AppConstants.routeMarketIntelligenceHub
+            .replaceFirst(':id', analysis.id),
       ),
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
@@ -330,7 +377,8 @@ class _AnalysisCard extends StatelessWidget {
                 children: [
                   Text(
                     analysis.input,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.w600),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),

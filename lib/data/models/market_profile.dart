@@ -3,6 +3,7 @@ import 'opportunity_lab_item.dart';
 import 'project.dart';
 
 enum CompetitionLevel { alta, moderada, baixa }
+
 enum MarketMaturity { emergente, crescendo, maduro, saturado }
 
 class MarketProfile {
@@ -48,18 +49,25 @@ class MarketProfile {
 
   String get competitionLabel {
     switch (competitionLevel) {
-      case CompetitionLevel.alta:     return 'Alta';
-      case CompetitionLevel.moderada: return 'Moderada';
-      case CompetitionLevel.baixa:    return 'Baixa';
+      case CompetitionLevel.alta:
+        return 'Alta';
+      case CompetitionLevel.moderada:
+        return 'Moderada';
+      case CompetitionLevel.baixa:
+        return 'Baixa';
     }
   }
 
   String get maturityLabel {
     switch (marketMaturity) {
-      case MarketMaturity.emergente:  return 'Emergente';
-      case MarketMaturity.crescendo:  return 'Crescendo';
-      case MarketMaturity.maduro:     return 'Maduro';
-      case MarketMaturity.saturado:   return 'Saturado';
+      case MarketMaturity.emergente:
+        return 'Emergente';
+      case MarketMaturity.crescendo:
+        return 'Crescendo';
+      case MarketMaturity.maduro:
+        return 'Maduro';
+      case MarketMaturity.saturado:
+        return 'Saturado';
     }
   }
 
@@ -89,63 +97,76 @@ class MarketProfile {
 
     if (analysis != null) {
       // Rich data from market analysis
-      market         = _inferMarket(analysis.niche ?? project.name);
-      niche          = analysis.niche ?? project.name;
-      subNiche       = analysis.subNiche ?? '';
+      market = _inferMarket(analysis.niche ?? project.name);
+      niche = analysis.niche ?? project.name;
+      subNiche = analysis.subNiche ?? '';
       targetAudience = analysis.targetAudience ?? '';
-      businessModel  = analysis.monetizationModel ?? _inferBizModel(project);
+      businessModel = analysis.monetizationModel ?? _inferBizModel(project);
       growthPotential = analysis.scoreGrowth;
-      marketSize      = _inferMarketSize(analysis);
+      marketSize = _inferMarketSize(analysis);
       globalPotential = _inferGlobalPotential(analysis);
-      localPotential  = _inferLocalPotential(analysis);
+      localPotential = _inferLocalPotential(analysis);
       competitionLevel = _competitionFromScore(analysis.scoreCompetition);
-      marketMaturity   = _maturityFromGrowth(analysis.scoreGrowth);
-      profileSource    = 'analysis';
-      confidence       = 85;
+      marketMaturity = _maturityFromGrowth(analysis.scoreGrowth);
+      profileSource = 'analysis';
+      confidence = 85;
     } else if (pLab.isNotEmpty) {
       // Derive from opportunity lab items
-      market         = _inferMarket(project.name);
-      niche          = project.description?.isNotEmpty == true
+      market = _inferMarket(project.name);
+      niche = project.description?.isNotEmpty == true
           ? project.description!.split(' ').take(3).join(' ')
           : project.name;
-      subNiche       = project.type ?? '';
+      subNiche = project.type ?? '';
       targetAudience = '';
-      businessModel  = _inferBizModel(project);
-      final avgMarket   = pLab.map((l) => l.marketScore).fold(0, (a, b) => a + b) ~/ pLab.length;
-      final avgRevenue  = pLab.map((l) => l.revenueScore).fold(0, (a, b) => a + b) ~/ pLab.length;
-      final avgComp     = pLab.map((l) => l.competitionScore).fold(0, (a, b) => a + b) ~/ pLab.length;
-      growthPotential   = ((avgMarket + avgRevenue) ~/ 2).clamp(0, 100);
-      marketSize        = avgRevenue.clamp(0, 100);
-      globalPotential   = (avgMarket * 0.7).round().clamp(0, 100);
-      localPotential    = (avgMarket * 0.9).round().clamp(0, 100);
-      competitionLevel  = _competitionFromScore(avgComp);
-      marketMaturity    = _maturityFromGrowth(growthPotential);
-      profileSource     = 'opportunities';
-      confidence        = 60;
+      businessModel = _inferBizModel(project);
+      final avgMarket =
+          pLab.map((l) => l.marketScore).fold(0, (a, b) => a + b) ~/
+              pLab.length;
+      final avgRevenue =
+          pLab.map((l) => l.revenueScore).fold(0, (a, b) => a + b) ~/
+              pLab.length;
+      final avgComp =
+          pLab.map((l) => l.competitionScore).fold(0, (a, b) => a + b) ~/
+              pLab.length;
+      growthPotential = ((avgMarket + avgRevenue) ~/ 2).clamp(0, 100);
+      marketSize = avgRevenue.clamp(0, 100);
+      globalPotential = (avgMarket * 0.7).round().clamp(0, 100);
+      localPotential = (avgMarket * 0.9).round().clamp(0, 100);
+      competitionLevel = _competitionFromScore(avgComp);
+      marketMaturity = _maturityFromGrowth(growthPotential);
+      profileSource = 'opportunities';
+      confidence = 60;
     } else {
       // Minimum viable — inferred from project name/type only
-      market         = _inferMarket(project.name);
-      niche          = project.name;
-      subNiche       = project.type ?? '';
+      market = _inferMarket(project.name);
+      niche = project.name;
+      subNiche = project.type ?? '';
       targetAudience = '';
-      businessModel  = _inferBizModel(project);
+      businessModel = _inferBizModel(project);
       growthPotential = 40;
-      marketSize      = 40;
+      marketSize = 40;
       globalPotential = 30;
-      localPotential  = 50;
+      localPotential = 50;
       competitionLevel = CompetitionLevel.moderada;
-      marketMaturity   = MarketMaturity.crescendo;
-      profileSource    = 'inferred';
-      confidence       = 25;
+      marketMaturity = MarketMaturity.crescendo;
+      profileSource = 'inferred';
+      confidence = 25;
     }
 
     // Market Score = composite 0–100
-    final compAdv     = competitionLevel == CompetitionLevel.baixa ? 80
-                      : competitionLevel == CompetitionLevel.moderada ? 55 : 30;
+    final compAdv = competitionLevel == CompetitionLevel.baixa
+        ? 80
+        : competitionLevel == CompetitionLevel.moderada
+            ? 55
+            : 30;
     final scalability = ((globalPotential + localPotential) ~/ 2).clamp(0, 100);
-    final marketScore = (growthPotential * 0.30 + marketSize * 0.20 +
-                         compAdv * 0.20 + scalability * 0.15 +
-                         globalPotential * 0.15).round().clamp(0, 100);
+    final marketScore = (growthPotential * 0.30 +
+            marketSize * 0.20 +
+            compAdv * 0.20 +
+            scalability * 0.15 +
+            globalPotential * 0.15)
+        .round()
+        .clamp(0, 100);
 
     final explanation = <String>[
       'Crescimento: $growthPotential pts × 0.30 = ${(growthPotential * 0.30).round()} pts',
@@ -157,24 +178,24 @@ class MarketProfile {
     ];
 
     return MarketProfile(
-      projectId:       project.id,
-      projectName:     project.name,
-      market:          market,
-      niche:           niche,
-      subNiche:        subNiche,
-      targetAudience:  targetAudience,
-      businessModel:   businessModel,
+      projectId: project.id,
+      projectName: project.name,
+      market: market,
+      niche: niche,
+      subNiche: subNiche,
+      targetAudience: targetAudience,
+      businessModel: businessModel,
       competitionLevel: competitionLevel,
-      marketSize:       marketSize,
-      growthPotential:  growthPotential,
-      globalPotential:  globalPotential,
-      localPotential:   localPotential,
-      marketMaturity:   marketMaturity,
-      marketScore:      marketScore,
-      confidence:       confidence,
-      profileSource:    profileSource,
+      marketSize: marketSize,
+      growthPotential: growthPotential,
+      globalPotential: globalPotential,
+      localPotential: localPotential,
+      marketMaturity: marketMaturity,
+      marketScore: marketScore,
+      confidence: confidence,
+      profileSource: profileSource,
       scoreExplanation: explanation,
-      computedAt:       DateTime.now(),
+      computedAt: DateTime.now(),
     );
   }
 
@@ -182,16 +203,20 @@ class MarketProfile {
 
   static String _inferMarket(String name) {
     final lower = name.toLowerCase();
-    if (lower.contains('social') || lower.contains('copilot') || lower.contains('ia') || lower.contains('ai'))
-      return 'IA & Automação de Marketing';
-    if (lower.contains('rcbo') || lower.contains('elétri') || lower.contains('eletri'))
-      return 'Material Elétrico & Infraestrutura';
-    if (lower.contains('insight') || lower.contains('inteligência') || lower.contains('dados'))
-      return 'Inteligência de Mercado & Dados';
-    if (lower.contains('offline') || lower.contains('saas') || lower.contains('software'))
-      return 'Software SaaS';
-    if (lower.contains('trago'))
-      return 'Software SaaS Mobile';
+    if (lower.contains('social') ||
+        lower.contains('copilot') ||
+        lower.contains('ia') ||
+        lower.contains('ai')) return 'IA & Automação de Marketing';
+    if (lower.contains('rcbo') ||
+        lower.contains('elétri') ||
+        lower.contains('eletri')) return 'Material Elétrico & Infraestrutura';
+    if (lower.contains('insight') ||
+        lower.contains('inteligência') ||
+        lower.contains('dados')) return 'Inteligência de Mercado & Dados';
+    if (lower.contains('offline') ||
+        lower.contains('saas') ||
+        lower.contains('software')) return 'Software SaaS';
+    if (lower.contains('trago')) return 'Software SaaS Mobile';
     return 'Tecnologia & Negócios Digitais';
   }
 
@@ -210,7 +235,9 @@ class MarketProfile {
   }
 
   static int _inferGlobalPotential(MarketAnalysis a) {
-    return (a.scoreGrowth * 0.7 + a.scoreMonetization * 0.3).round().clamp(0, 100);
+    return (a.scoreGrowth * 0.7 + a.scoreMonetization * 0.3)
+        .round()
+        .clamp(0, 100);
   }
 
   static int _inferLocalPotential(MarketAnalysis a) {

@@ -4,10 +4,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../data/models/ive_memory.dart';
 
 // ── Chaves SharedPreferences ───────────────────────────────────────────────────
-const _kLastRoute        = 'ive_last_route';
-const _kLastProjectId    = 'ive_last_project_id';
-const _kLastProjectName  = 'ive_last_project_name';
-const _kRecentQuestions  = 'ive_recent_questions';
+const _kLastRoute = 'ive_last_route';
+const _kLastProjectId = 'ive_last_project_id';
+const _kLastProjectName = 'ive_last_project_name';
+const _kRecentQuestions = 'ive_recent_questions';
 const _kInteractionCount = 'ive_interaction_count';
 
 class IveMemoryNotifier extends StateNotifier<IveMemory> {
@@ -20,11 +20,11 @@ class IveMemoryNotifier extends StateNotifier<IveMemory> {
     try {
       final prefs = await SharedPreferences.getInstance();
       state = state.copyWith(
-        lastRoute:        prefs.getString(_kLastRoute)        ?? '',
-        lastProjectId:    prefs.getString(_kLastProjectId),
-        lastProjectName:  prefs.getString(_kLastProjectName),
-        recentQuestions:  prefs.getStringList(_kRecentQuestions) ?? [],
-        interactionCount: prefs.getInt(_kInteractionCount)    ?? 0,
+        lastRoute: prefs.getString(_kLastRoute) ?? '',
+        lastProjectId: prefs.getString(_kLastProjectId),
+        lastProjectName: prefs.getString(_kLastProjectName),
+        recentQuestions: prefs.getStringList(_kRecentQuestions) ?? [],
+        interactionCount: prefs.getInt(_kInteractionCount) ?? 0,
       );
     } catch (_) {
       // SharedPreferences pode falhar em ambiente de teste — ignora
@@ -49,9 +49,8 @@ class IveMemoryNotifier extends StateNotifier<IveMemory> {
 
   Future<void> addQuestion(String question) async {
     if (question.trim().isEmpty) return;
-    final updated = [question.trim(), ...state.recentQuestions]
-        .take(5)
-        .toList();
+    final updated =
+        [question.trim(), ...state.recentQuestions].take(5).toList();
     state = state.copyWith(recentQuestions: updated);
     _persist((prefs) => prefs.setStringList(_kRecentQuestions, updated));
   }
@@ -62,7 +61,7 @@ class IveMemoryNotifier extends StateNotifier<IveMemory> {
   }) {
     state = state.copyWith(
       overallHealthScore: health,
-      ecosystemSnapshot:  scores,
+      ecosystemSnapshot: scores,
     );
     // health e snapshot são sessão apenas — não persistem
   }

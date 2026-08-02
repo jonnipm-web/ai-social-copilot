@@ -34,7 +34,8 @@ class NicheRanking {
   });
 
   List<String> get keywords => _list(detailsJson['keywords']);
-  List<String> get monetizationMethods => _list(detailsJson['monetization_methods']);
+  List<String> get monetizationMethods =>
+      _list(detailsJson['monetization_methods']);
   String get why => detailsJson['why'] as String? ?? '';
 
   static List<String> _list(dynamic v) {
@@ -44,20 +45,20 @@ class NicheRanking {
 
   factory NicheRanking.fromMap(Map<String, dynamic> map) {
     return NicheRanking(
-      id:                 map['id'] as String,
-      userId:             map['user_id'] as String,
-      marketAnalysisId:   map['market_analysis_id'] as String?,
-      name:               map['name'] as String,
-      level:              map['level'] as String? ?? 'niche',
-      description:        map['description'] as String? ?? '',
-      competitionScore:   map['competition_score'] as int? ?? 0,
-      potentialScore:     map['potential_score'] as int? ?? 0,
-      growthScore:        map['growth_score'] as int? ?? 0,
-      monetizationScore:  map['monetization_score'] as int? ?? 0,
-      difficultyScore:    map['difficulty_score'] as int? ?? 0,
-      trendScore:         map['trend_score'] as int? ?? 0,
-      overallScore:       map['overall_score'] as int? ?? 0,
-      detailsJson:        map['details_json'] is Map
+      id: map['id'] as String,
+      userId: map['user_id'] as String,
+      marketAnalysisId: map['market_analysis_id'] as String?,
+      name: map['name'] as String,
+      level: map['level'] as String? ?? 'niche',
+      description: map['description'] as String? ?? '',
+      competitionScore: map['competition_score'] as int? ?? 0,
+      potentialScore: map['potential_score'] as int? ?? 0,
+      growthScore: map['growth_score'] as int? ?? 0,
+      monetizationScore: map['monetization_score'] as int? ?? 0,
+      difficultyScore: map['difficulty_score'] as int? ?? 0,
+      trendScore: map['trend_score'] as int? ?? 0,
+      overallScore: map['overall_score'] as int? ?? 0,
+      detailsJson: map['details_json'] is Map
           ? Map<String, dynamic>.from(map['details_json'] as Map)
           : {},
       createdAt: DateTime.parse(map['created_at'] as String),
@@ -65,18 +66,18 @@ class NicheRanking {
   }
 
   Map<String, dynamic> toInsertMap() => {
-    'user_id':            userId,
-    'market_analysis_id': marketAnalysisId,
-    'name':               name,
-    'level':              level,
-    'description':        description,
-    'competition_score':  competitionScore,
-    'potential_score':    potentialScore,
-    'growth_score':       growthScore,
-    'monetization_score': monetizationScore,
-    'difficulty_score':   difficultyScore,
-    'trend_score':        trendScore,
-    'overall_score':      overallScore,
-    'details_json':       detailsJson,
-  };
+        'user_id': userId,
+        'market_analysis_id': marketAnalysisId,
+        'name': name,
+        'level': level,
+        'description': description,
+        'competition_score': competitionScore,
+        'potential_score': potentialScore,
+        'growth_score': growthScore,
+        'monetization_score': monetizationScore,
+        'difficulty_score': difficultyScore,
+        'trend_score': trendScore,
+        'overall_score': overallScore,
+        'details_json': detailsJson,
+      };
 }

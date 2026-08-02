@@ -14,9 +14,9 @@ final _miService = MarketIntelligenceService();
 // ── Market Profiles ───────────────────────────────────────────────────────
 final marketProfilesProvider =
     FutureProvider.autoDispose<List<MarketProfile>>((ref) async {
-  final projects  = await ref.watch(projectsProvider.future);
-  final analyses  = await ref.watch(marketAnalysesProvider.future);
-  final labItems  = await ref.watch(opportunityLabProvider.future);
+  final projects = await ref.watch(projectsProvider.future);
+  final analyses = await ref.watch(marketAnalysesProvider.future);
+  final labItems = await ref.watch(opportunityLabProvider.future);
 
   return _miService.computeMarketProfiles(
     projects: projects,
@@ -28,13 +28,13 @@ final marketProfilesProvider =
 // ── Revenue Intelligence ──────────────────────────────────────────────────
 final revenueIntelligenceProvider =
     FutureProvider.autoDispose<List<RevenueIntelligence>>((ref) async {
-  final projects     = await ref.watch(projectsProvider.future);
-  final analyses     = await ref.watch(marketAnalysesProvider.future);
+  final projects = await ref.watch(projectsProvider.future);
+  final analyses = await ref.watch(marketAnalysesProvider.future);
   final revenuePlans = await ref.watch(allRevenuePlansProvider.future);
 
   return _miService.computeRevenueIntelligence(
-    projects:     projects,
-    analyses:     analyses,
+    projects: projects,
+    analyses: analyses,
     revenuePlans: revenuePlans,
   );
 });
@@ -43,12 +43,12 @@ final revenueIntelligenceProvider =
 final executionScoresProvider =
     FutureProvider.autoDispose<List<ExecutionScore>>((ref) async {
   final projects = await ref.watch(projectsProvider.future);
-  final actions  = await ref.watch(actionQueueProvider.future);
+  final actions = await ref.watch(actionQueueProvider.future);
   final labItems = await ref.watch(opportunityLabProvider.future);
 
   return _miService.computeExecutionScores(
     projects: projects,
-    actions:  actions,
+    actions: actions,
     labItems: labItems,
   );
 });
@@ -62,8 +62,7 @@ final portfolioMarketHealthProvider =
 });
 
 // ── Portfolio ROI Health (projects with revenue plans vs total) ───────────
-final portfolioRoiHealthProvider =
-    FutureProvider.autoDispose<int>((ref) async {
+final portfolioRoiHealthProvider = FutureProvider.autoDispose<int>((ref) async {
   final intel = await ref.watch(revenueIntelligenceProvider.future);
   if (intel.isEmpty) return 0;
   final withPlan = intel.where((i) => i.hasRealPlan).length;

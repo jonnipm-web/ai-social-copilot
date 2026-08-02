@@ -16,11 +16,7 @@ class WebsiteAnalyzerService {
   }
 
   Future<WebsiteAnalysis?> fetchById(String id) async {
-    final row = await _client
-        .from(_table)
-        .select()
-        .eq('id', id)
-        .maybeSingle();
+    final row = await _client.from(_table).select().eq('id', id).maybeSingle();
     return row == null ? null : WebsiteAnalysis.fromMap(row);
   }
 
@@ -46,21 +42,21 @@ class WebsiteAnalyzerService {
 
     final int scoreWebsite = _int(data['score_website']);
     final int scoreAdsense = _int(data['score_adsense']);
-    final int scoreSeo     = _int(data['score_seo']);
+    final int scoreSeo = _int(data['score_seo']);
     final int scoreMonetization = _int(data['score_monetization']);
 
     final row = await _client
         .from(_table)
         .insert({
-          'user_id':            uid,
-          'url':                url,
-          'title':              data['title'] as String?,
-          'description':        data['description'] as String?,
-          'score_website':      scoreWebsite,
-          'score_adsense':      scoreAdsense,
-          'score_seo':          scoreSeo,
+          'user_id': uid,
+          'url': url,
+          'title': data['title'] as String?,
+          'description': data['description'] as String?,
+          'score_website': scoreWebsite,
+          'score_adsense': scoreAdsense,
+          'score_seo': scoreSeo,
           'score_monetization': scoreMonetization,
-          'analysis_json':      data,
+          'analysis_json': data,
         })
         .select()
         .single();

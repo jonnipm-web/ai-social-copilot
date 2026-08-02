@@ -27,7 +27,8 @@ class UpgradeScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(20),
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
+            constraints:
+                const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -130,7 +131,8 @@ class _UsageBanner extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.bolt_rounded, size: 18, color: Color(0xFF6C63FF)),
+              const Icon(Icons.bolt_rounded,
+                  size: 18, color: Color(0xFF6C63FF)),
               const SizedBox(width: 6),
               Text(
                 'Uso este mês',

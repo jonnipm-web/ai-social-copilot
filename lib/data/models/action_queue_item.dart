@@ -13,17 +13,17 @@ class ActionQueueItem {
   final DateTime createdAt;
 
   // ── Audit fields ──────────────────────────────────────────────
-  final String?      description;
-  final String       origin;
+  final String? description;
+  final String origin;
   final List<String> sources;
-  final String?      rationale;
+  final String? rationale;
   final List<String> plan;
   final List<String> risks;
-  final DateTime?    updatedAt;
+  final DateTime? updatedAt;
 
   // ── Opportunity scores (preserved from OpportunityLabItem) ────
-  final int     marketScore;
-  final int     confidence;
+  final int marketScore;
+  final int confidence;
   final String? marketAnalysisId;
 
   const ActionQueueItem({
@@ -46,8 +46,8 @@ class ActionQueueItem {
     this.plan = const [],
     this.risks = const [],
     this.updatedAt,
-    this.marketScore     = 0,
-    this.confidence      = 0,
+    this.marketScore = 0,
+    this.confidence = 0,
     this.marketAnalysisId,
   });
 
@@ -60,10 +60,10 @@ class ActionQueueItem {
   ];
 
   static const Map<String, String> originLabels = {
-    'manual':           'Adicionado manualmente',
-    'opportunity_lab':  'Opportunity Lab',
-    'market_analysis':  'Análise de Mercado',
-    'auto_bootstrap':   'Bootstrap Automático',
+    'manual': 'Adicionado manualmente',
+    'opportunity_lab': 'Opportunity Lab',
+    'market_analysis': 'Análise de Mercado',
+    'auto_bootstrap': 'Bootstrap Automático',
     'knowledge_engine': 'Knowledge Engine',
   };
 
@@ -76,51 +76,51 @@ class ActionQueueItem {
   }
 
   factory ActionQueueItem.fromMap(Map<String, dynamic> map) => ActionQueueItem(
-        id:               map['id'] as String,
-        userId:           map['user_id'] as String,
-        projectId:        map['project_id'] as String?,
+        id: map['id'] as String,
+        userId: map['user_id'] as String,
+        projectId: map['project_id'] as String?,
         opportunityLabId: map['opportunity_lab_id'] as String?,
-        actionType:       map['action_type'] as String? ?? 'task',
-        title:            map['title'] as String? ?? '',
-        priority:         map['priority'] as int? ?? 0,
-        impactScore:      map['impact_score'] as int? ?? 0,
-        effortScore:      map['effort_score'] as int? ?? 0,
-        roiScore:         map['roi_score'] as int? ?? 0,
-        status:           map['status'] as String? ?? 'pending',
-        createdAt:        DateTime.parse(map['created_at'] as String),
-        description:      map['description'] as String?,
-        origin:           map['origin'] as String? ?? 'manual',
-        sources:          _parseList(map['sources']),
-        rationale:        map['rationale'] as String?,
-        plan:             _parseList(map['plan']),
-        risks:            _parseList(map['risks']),
+        actionType: map['action_type'] as String? ?? 'task',
+        title: map['title'] as String? ?? '',
+        priority: map['priority'] as int? ?? 0,
+        impactScore: map['impact_score'] as int? ?? 0,
+        effortScore: map['effort_score'] as int? ?? 0,
+        roiScore: map['roi_score'] as int? ?? 0,
+        status: map['status'] as String? ?? 'pending',
+        createdAt: DateTime.parse(map['created_at'] as String),
+        description: map['description'] as String?,
+        origin: map['origin'] as String? ?? 'manual',
+        sources: _parseList(map['sources']),
+        rationale: map['rationale'] as String?,
+        plan: _parseList(map['plan']),
+        risks: _parseList(map['risks']),
         updatedAt: map['updated_at'] != null
             ? DateTime.parse(map['updated_at'] as String)
             : null,
-        marketScore:      map['market_score'] as int? ?? 0,
-        confidence:       map['confidence'] as int? ?? 0,
+        marketScore: map['market_score'] as int? ?? 0,
+        confidence: map['confidence'] as int? ?? 0,
         marketAnalysisId: map['market_analysis_id'] as String?,
       );
 
   Map<String, dynamic> toInsertMap() => {
-        'user_id':            userId,
-        'project_id':         projectId,
+        'user_id': userId,
+        'project_id': projectId,
         'opportunity_lab_id': opportunityLabId,
-        'action_type':        actionType,
-        'title':              title,
-        'priority':           priority,
-        'impact_score':       impactScore,
-        'effort_score':       effortScore,
-        'roi_score':          roiScore,
-        'status':             status,
+        'action_type': actionType,
+        'title': title,
+        'priority': priority,
+        'impact_score': impactScore,
+        'effort_score': effortScore,
+        'roi_score': roiScore,
+        'status': status,
         if (description != null) 'description': description,
-        'origin':             origin,
-        'sources':            sources,
+        'origin': origin,
+        'sources': sources,
         if (rationale != null) 'rationale': rationale,
-        'plan':               plan,
-        'risks':              risks,
-        'market_score':       marketScore,
-        'confidence':         confidence,
+        'plan': plan,
+        'risks': risks,
+        'market_score': marketScore,
+        'confidence': confidence,
         if (marketAnalysisId != null) 'market_analysis_id': marketAnalysisId,
       };
 }

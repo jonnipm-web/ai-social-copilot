@@ -15,8 +15,8 @@ final iveAvatarV2EnabledProvider = Provider<bool>((_) => false);
 
 // ── Services ──────────────────────────────────────────────────────────────────
 
-final iveAvatarVisibilityServiceProvider =
-    Provider<IveAvatarVisibilityService>((_) => const IveAvatarVisibilityService());
+final iveAvatarVisibilityServiceProvider = Provider<IveAvatarVisibilityService>(
+    (_) => const IveAvatarVisibilityService());
 
 final iveAvatarContextServiceProvider =
     Provider<IveAvatarContextService>((_) => const IveAvatarContextService());
@@ -38,7 +38,7 @@ class IveAvatarV2Notifier extends StateNotifier<IveAvatarControllerState> {
   void show({IveAvatarStateV2? avatarState}) {
     state = state.copyWith(
       avatarState: avatarState ?? state.avatarState,
-      isVisible:   true,
+      isVisible: true,
     );
   }
 

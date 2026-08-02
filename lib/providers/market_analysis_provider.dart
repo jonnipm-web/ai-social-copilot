@@ -16,13 +16,14 @@ final marketAnalysisServiceProvider = Provider<MarketAnalysisService>(
 );
 
 // List of all market analyses
-final marketAnalysesProvider = FutureProvider.autoDispose<List<MarketAnalysis>>((ref) {
+final marketAnalysesProvider =
+    FutureProvider.autoDispose<List<MarketAnalysis>>((ref) {
   return ref.read(marketAnalysisServiceProvider).fetchAll();
 });
 
 // Market analyses filtered by project_id
-final marketAnalysesByProjectProvider =
-    FutureProvider.autoDispose.family<List<MarketAnalysis>, String>((ref, projectId) {
+final marketAnalysesByProjectProvider = FutureProvider.autoDispose
+    .family<List<MarketAnalysis>, String>((ref, projectId) {
   return ref.read(marketAnalysisServiceProvider).fetchAll(projectId: projectId);
 });
 
@@ -35,54 +36,68 @@ final marketAnalysisByIdProvider =
 });
 
 // Competitors for a market analysis
-final competitorsByAnalysisProvider =
-    FutureProvider.autoDispose.family<List<Competitor>, String>((ref, marketAnalysisId) {
-  return ref.read(marketAnalysisServiceProvider).fetchCompetitors(marketAnalysisId);
+final competitorsByAnalysisProvider = FutureProvider.autoDispose
+    .family<List<Competitor>, String>((ref, marketAnalysisId) {
+  return ref
+      .read(marketAnalysisServiceProvider)
+      .fetchCompetitors(marketAnalysisId);
 });
 
 // Gap analysis for a market analysis
-final gapAnalysisByAnalysisProvider =
-    FutureProvider.autoDispose.family<GapAnalysis?, String>((ref, marketAnalysisId) {
-  return ref.read(marketAnalysisServiceProvider).fetchGapAnalysis(marketAnalysisId);
+final gapAnalysisByAnalysisProvider = FutureProvider.autoDispose
+    .family<GapAnalysis?, String>((ref, marketAnalysisId) {
+  return ref
+      .read(marketAnalysisServiceProvider)
+      .fetchGapAnalysis(marketAnalysisId);
 });
 
 // Opportunities for a market analysis
-final opportunitiesByAnalysisProvider =
-    FutureProvider.autoDispose.family<List<Opportunity>, String>((ref, marketAnalysisId) {
-  return ref.read(marketAnalysisServiceProvider).fetchOpportunities(marketAnalysisId);
+final opportunitiesByAnalysisProvider = FutureProvider.autoDispose
+    .family<List<Opportunity>, String>((ref, marketAnalysisId) {
+  return ref
+      .read(marketAnalysisServiceProvider)
+      .fetchOpportunities(marketAnalysisId);
 });
 
 // Niches for a market analysis
-final nichesByAnalysisProvider =
-    FutureProvider.autoDispose.family<List<NicheRanking>, String>((ref, marketAnalysisId) {
+final nichesByAnalysisProvider = FutureProvider.autoDispose
+    .family<List<NicheRanking>, String>((ref, marketAnalysisId) {
   return ref.read(marketAnalysisServiceProvider).fetchNiches(marketAnalysisId);
 });
 
 // Content cluster for a market analysis
-final contentClusterByAnalysisProvider =
-    FutureProvider.autoDispose.family<ContentCluster?, String>((ref, marketAnalysisId) {
-  return ref.read(marketAnalysisServiceProvider).fetchContentCluster(marketAnalysisId);
+final contentClusterByAnalysisProvider = FutureProvider.autoDispose
+    .family<ContentCluster?, String>((ref, marketAnalysisId) {
+  return ref
+      .read(marketAnalysisServiceProvider)
+      .fetchContentCluster(marketAnalysisId);
 });
 
 // Revenue plan for a market analysis
-final revenuePlanByAnalysisProvider =
-    FutureProvider.autoDispose.family<RevenuePlan?, String>((ref, marketAnalysisId) {
-  return ref.read(marketAnalysisServiceProvider).fetchRevenuePlan(marketAnalysisId);
+final revenuePlanByAnalysisProvider = FutureProvider.autoDispose
+    .family<RevenuePlan?, String>((ref, marketAnalysisId) {
+  return ref
+      .read(marketAnalysisServiceProvider)
+      .fetchRevenuePlan(marketAnalysisId);
 });
 
 // All revenue plans — used by ecosystem scoring
-final allRevenuePlansProvider = FutureProvider.autoDispose<List<RevenuePlan>>((ref) {
+final allRevenuePlansProvider =
+    FutureProvider.autoDispose<List<RevenuePlan>>((ref) {
   return ref.read(marketAnalysisServiceProvider).fetchAllRevenuePlans();
 });
 
 // Revenue plans filtered by project_id
-final revenuePlansByProjectProvider =
-    FutureProvider.autoDispose.family<List<RevenuePlan>, String>((ref, projectId) {
-  return ref.read(marketAnalysisServiceProvider).fetchAllRevenuePlans(projectId: projectId);
+final revenuePlansByProjectProvider = FutureProvider.autoDispose
+    .family<List<RevenuePlan>, String>((ref, projectId) {
+  return ref
+      .read(marketAnalysisServiceProvider)
+      .fetchAllRevenuePlans(projectId: projectId);
 });
 
 // Notifier for running market analysis
-class MarketAnalysisNotifier extends StateNotifier<AsyncValue<MarketAnalysis?>> {
+class MarketAnalysisNotifier
+    extends StateNotifier<AsyncValue<MarketAnalysis?>> {
   MarketAnalysisNotifier(this._service) : super(const AsyncValue.data(null));
 
   final MarketAnalysisService _service;
@@ -120,7 +135,7 @@ class MarketAnalysisNotifier extends StateNotifier<AsyncValue<MarketAnalysis?>> 
     final uid = Supabase.instance.client.auth.currentUser?.id;
     if (uid == null) return;
 
-    final json    = analysis.analysisJson;
+    final json = analysis.analysisJson;
     final actions = json['priority_actions'] as List<dynamic>? ?? [];
     if (actions.isEmpty) return;
 
@@ -133,24 +148,26 @@ class MarketAnalysisNotifier extends StateNotifier<AsyncValue<MarketAnalysis?>> 
       final score = _parseScore(a['roi_expected'] as String?);
 
       final item = OpportunityLabItem(
-        id:               '',
-        userId:           uid,
-        projectId:        projectId ?? analysis.projectId,
+        id: '',
+        userId: uid,
+        projectId: projectId ?? analysis.projectId,
         marketAnalysisId: analysis.id,
-        opportunityType:  'content',
-        title:            title,
-        description:      'Impacto: ${a['impact'] ?? 'N/A'} · Esforço: ${a['effort'] ?? 'N/A'}',
-        marketScore:      analysis.opportunityScore,
-        revenueScore:     score,
-        finalScore:       analysis.opportunityScore,
-        createdAt:        DateTime.now(),
-        origin:           'market_analysis',
-        sources:          [analysis.id],
-        rationale:        a['rationale'] as String? ??
+        opportunityType: 'content',
+        title: title,
+        description:
+            'Impacto: ${a['impact'] ?? 'N/A'} · Esforço: ${a['effort'] ?? 'N/A'}',
+        marketScore: analysis.opportunityScore,
+        revenueScore: score,
+        finalScore: analysis.opportunityScore,
+        createdAt: DateTime.now(),
+        origin: 'market_analysis',
+        sources: [analysis.id],
+        rationale: a['rationale'] as String? ??
             'Identificado pelo Market Intelligence com base na análise de ${analysis.input}.',
-        confidence:       (score * 0.8).round().clamp(0, 100),
-        risks:            a['effort'] != null ? ['Esforço: ${a['effort']}'] : [],
-        actionSteps:      a['timeframe'] != null ? ['Prazo estimado: ${a['timeframe']}'] : [],
+        confidence: (score * 0.8).round().clamp(0, 100),
+        risks: a['effort'] != null ? ['Esforço: ${a['effort']}'] : [],
+        actionSteps:
+            a['timeframe'] != null ? ['Prazo estimado: ${a['timeframe']}'] : [],
       );
       try {
         await svc.create(item);
@@ -172,7 +189,7 @@ class MarketAnalysisNotifier extends StateNotifier<AsyncValue<MarketAnalysis?>> 
   }
 }
 
-final marketAnalysisNotifierProvider =
-    StateNotifierProvider.autoDispose<MarketAnalysisNotifier, AsyncValue<MarketAnalysis?>>(
+final marketAnalysisNotifierProvider = StateNotifierProvider.autoDispose<
+    MarketAnalysisNotifier, AsyncValue<MarketAnalysis?>>(
   (ref) => MarketAnalysisNotifier(ref.read(marketAnalysisServiceProvider)),
 );

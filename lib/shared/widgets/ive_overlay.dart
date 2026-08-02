@@ -21,7 +21,8 @@ class IveRouteObserver extends NavigatorObserver {
     if (name.isNotEmpty) iveRouteNotifier.value = name;
   }
 
-  @override void didPush(Route route, Route? previousRoute) => _notify(route);
+  @override
+  void didPush(Route route, Route? previousRoute) => _notify(route);
 
   @override
   void didPop(Route route, Route? previousRoute) {
@@ -45,7 +46,7 @@ class IveOverlay extends ConsumerStatefulWidget {
 
 class _IveOverlayState extends ConsumerState<IveOverlay> {
   Offset? _position;
-  bool    _dragging = false;
+  bool _dragging = false;
 
   @override
   void initState() {
@@ -77,21 +78,20 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
 
   @override
   Widget build(BuildContext context) {
-    final state  = ref.watch(iveProvider);
+    final state = ref.watch(iveProvider);
     final screen = MediaQuery.of(context).size;
     final safeBottom = MediaQuery.of(context).padding.bottom;
     _position ??= _defaultPosition(screen);
 
     // On desktop clamp to avoid navigation bars / toolbars
-    final maxY = _isDesktop
-        ? screen.height - 140 - safeBottom
-        : screen.height - 100;
+    final maxY =
+        _isDesktop ? screen.height - 140 - safeBottom : screen.height - 100;
 
     return Positioned(
       left: _position!.dx,
-      top:  _position!.dy,
+      top: _position!.dy,
       child: GestureDetector(
-        onPanStart:  (_) => setState(() => _dragging = true),
+        onPanStart: (_) => setState(() => _dragging = true),
         onPanUpdate: (d) => setState(() {
           _position = (_position! + d.delta).clamp(
             Offset.zero,
@@ -100,7 +100,7 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
         }),
         onPanEnd: (_) => setState(() => _dragging = false),
         child: Column(
-          mainAxisSize:       MainAxisSize.min,
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             // Speech bubble — IgnorePointer evita hitbox invisível quando opacity=0
@@ -108,21 +108,23 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
               ignoring: !state.bubbleVisible || _dragging,
               child: AnimatedOpacity(
                 duration: const Duration(milliseconds: 350),
-                opacity:  state.bubbleVisible && !_dragging ? 1.0 : 0.0,
+                opacity: state.bubbleVisible && !_dragging ? 1.0 : 0.0,
                 child: AnimatedSlide(
                   duration: const Duration(milliseconds: 350),
-                  offset:   state.bubbleVisible && !_dragging
+                  offset: state.bubbleVisible && !_dragging
                       ? Offset.zero
                       : const Offset(0, 0.15),
-                  curve:    Curves.easeOut,
+                  curve: Curves.easeOut,
                   child: _IveBubble(
-                    message:     state.message,
-                    expression:  state.expression,
+                    message: state.message,
+                    expression: state.expression,
                     activeIssue: state.activeIssue,
                     onDismiss: () {
                       final ctx = ref.read(iveContextDataProvider).valueOrNull;
                       if (ctx != null && ctx.alertId.isNotEmpty) {
-                        ref.read(iveMemoryProvider.notifier).dismissAlert(ctx.alertId);
+                        ref
+                            .read(iveMemoryProvider.notifier)
+                            .dismissAlert(ctx.alertId);
                       }
                       ref.read(iveProvider.notifier).dismissBubble();
                     },
@@ -146,12 +148,12 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
                 }
               },
               child: AnimatedScale(
-                scale:    _dragging ? 0.92 : 1.0,
+                scale: _dragging ? 0.92 : 1.0,
                 duration: const Duration(milliseconds: 150),
                 child: IveAvatar(
-                  size:           IveAvatarSize.compact,
+                  size: IveAvatarSize.compact,
                   showStatusRing: true,
-                  interactive:    false, // overlay owns the tap
+                  interactive: false, // overlay owns the tap
                 ),
               ),
             ),
@@ -163,11 +165,12 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
 
   void _openChat(BuildContext context, String screenName) {
     ref.read(iveMemoryProvider.notifier).incrementInteraction();
-    final ctx         = ref.read(iveContextDataProvider).valueOrNull;
-    final contextData = ctx != null ? _buildCopilotContext(ctx) : CopilotContextData();
+    final ctx = ref.read(iveContextDataProvider).valueOrNull;
+    final contextData =
+        ctx != null ? _buildCopilotContext(ctx) : CopilotContextData();
     showCopilotChat(
       context,
-      screenName:  _routeToName(screenName),
+      screenName: _routeToName(screenName),
       contextData: contextData,
     );
   }
@@ -175,37 +178,43 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
   CopilotContextData _buildCopilotContext(IveContextData ctx) =>
       CopilotContextData(
         scores: {
-          'ecosystem_health':           ctx.healthScore,
-          'total_projects':             ctx.projectCount,
-          'pending_actions':            ctx.pendingActionsCount,
-          'pending_opportunities':      ctx.pendingOpportunitiesCount,
-          if (ctx.topProjectName         != null) 'top_project_name':            ctx.topProjectName,
-          if (ctx.topProjectDescription  != null) 'top_project_description':     ctx.topProjectDescription,
-          if (ctx.topProjectType         != null) 'top_project_type':            ctx.topProjectType,
-          if (ctx.topProjectScore        != null) 'top_project_score':           ctx.topProjectScore,
-          if (ctx.mainBottleneckName     != null) 'main_bottleneck':             ctx.mainBottleneckName,
-          if (ctx.mainBottleneckScore    != null) 'bottleneck_execution_score':  ctx.mainBottleneckScore,
+          'ecosystem_health': ctx.healthScore,
+          'total_projects': ctx.projectCount,
+          'pending_actions': ctx.pendingActionsCount,
+          'pending_opportunities': ctx.pendingOpportunitiesCount,
+          if (ctx.topProjectName != null)
+            'top_project_name': ctx.topProjectName,
+          if (ctx.topProjectDescription != null)
+            'top_project_description': ctx.topProjectDescription,
+          if (ctx.topProjectType != null)
+            'top_project_type': ctx.topProjectType,
+          if (ctx.topProjectScore != null)
+            'top_project_score': ctx.topProjectScore,
+          if (ctx.mainBottleneckName != null)
+            'main_bottleneck': ctx.mainBottleneckName,
+          if (ctx.mainBottleneckScore != null)
+            'bottleneck_execution_score': ctx.mainBottleneckScore,
         },
         project: ctx.topProjectsSnapshot.isNotEmpty
             ? {'projects': ctx.topProjectsSnapshot}
             : null,
-        documents:     ctx.knowledgeItemsSummary,
+        documents: ctx.knowledgeItemsSummary,
         opportunities: ctx.pendingOpportunitiesSummary,
       );
 
   String _routeToName(String route) {
     const map = <String, String>{
-      '/projects':            'Projetos',
-      '/opportunity-lab':     'Oportunidades',
-      '/ecosystem':           'Decisões',
-      '/ecosystem/briefing':  'Briefing',
+      '/projects': 'Projetos',
+      '/opportunity-lab': 'Oportunidades',
+      '/ecosystem': 'Decisões',
+      '/ecosystem/briefing': 'Briefing',
       '/ecosystem/resources': 'Recursos',
-      '/personas':            'Personas',
-      '/knowledge':           'Conhecimento',
-      '/action-engine':       'Ações',
-      '/intelligence-debug':  'Debug Hub',
+      '/personas': 'Personas',
+      '/knowledge': 'Conhecimento',
+      '/action-engine': 'Ações',
+      '/intelligence-debug': 'Debug Hub',
       '/market-intelligence': 'Inteligência de Mercado',
-      '/roi-tracker':         'ROI Tracker',
+      '/roi-tracker': 'ROI Tracker',
     };
     return map[route] ?? route;
   }
@@ -214,10 +223,10 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
 // ── Speech bubble ─────────────────────────────────────────────────────────────
 
 class _IveBubble extends StatelessWidget {
-  final String        message;
+  final String message;
   final IveExpression expression;
-  final IveIssue?     activeIssue;
-  final VoidCallback  onDismiss;
+  final IveIssue? activeIssue;
+  final VoidCallback onDismiss;
   final VoidCallback? onChat;
 
   const _IveBubble({
@@ -233,12 +242,17 @@ class _IveBubble extends StatelessWidget {
   String get _moodIcon {
     if (_hasIssue) return '⚠';
     switch (expression) {
-      case IveExpression.excited:  return '✦';
-      case IveExpression.thinking: return '◈';
-      case IveExpression.winking:  return '◉';
-      case IveExpression.neutral:  return '⬡';
+      case IveExpression.excited:
+        return '✦';
+      case IveExpression.thinking:
+        return '◈';
+      case IveExpression.winking:
+        return '◉';
+      case IveExpression.neutral:
+        return '⬡';
       case IveExpression.happy:
-      default:                     return '◈';
+      default:
+        return '◈';
     }
   }
 
@@ -259,26 +273,26 @@ class _IveBubble extends StatelessWidget {
           decoration: BoxDecoration(
             color: const Color(0xFF1A1535),
             borderRadius: const BorderRadius.only(
-              topLeft:     Radius.circular(14),
-              topRight:    Radius.circular(14),
-              bottomLeft:  Radius.circular(14),
+              topLeft: Radius.circular(14),
+              topRight: Radius.circular(14),
+              bottomLeft: Radius.circular(14),
               bottomRight: Radius.circular(4),
             ),
             boxShadow: [
               BoxShadow(
-                color:      Colors.black.withOpacity(0.4),
+                color: Colors.black.withOpacity(0.4),
                 blurRadius: 16,
-                offset:     const Offset(0, 4),
+                offset: const Offset(0, 4),
               ),
             ],
             border: Border.all(color: _accentColor.withOpacity(0.45)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize:       MainAxisSize.min,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Row(
-                mainAxisSize:       MainAxisSize.min,
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Flexible(
@@ -286,15 +300,15 @@ class _IveBubble extends StatelessWidget {
                       text: TextSpan(
                         children: [
                           TextSpan(
-                            text:  '$_moodIcon ',
+                            text: '$_moodIcon ',
                             style: TextStyle(color: _iconColor, fontSize: 11),
                           ),
                           TextSpan(
-                            text:  message,
+                            text: message,
                             style: const TextStyle(
-                              color:    Colors.white,
+                              color: Colors.white,
                               fontSize: 12,
-                              height:   1.45,
+                              height: 1.45,
                             ),
                           ),
                         ],
@@ -303,8 +317,9 @@ class _IveBubble extends StatelessWidget {
                   ),
                   const SizedBox(width: 4),
                   GestureDetector(
-                    onTap:  onDismiss,
-                    child:  const Icon(Icons.close_rounded, size: 14, color: Colors.white24),
+                    onTap: onDismiss,
+                    child: const Icon(Icons.close_rounded,
+                        size: 14, color: Colors.white24),
                   ),
                 ],
               ),
@@ -318,7 +333,8 @@ class _IveBubble extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        width: 4, height: 4,
+                        width: 4,
+                        height: 4,
                         decoration: const BoxDecoration(
                           color: Color(0xFF7B5CF6),
                           shape: BoxShape.circle,
@@ -328,8 +344,8 @@ class _IveBubble extends StatelessWidget {
                       const Text(
                         'Conversar com a IVE',
                         style: TextStyle(
-                          color:      Color(0xFF9B8FFF),
-                          fontSize:   11,
+                          color: Color(0xFF9B8FFF),
+                          fontSize: 11,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -355,9 +371,9 @@ class _IssueActions extends StatelessWidget {
     final actions = issue.recommendedActions;
     if (actions.isEmpty) return const SizedBox.shrink();
     return Wrap(
-      spacing:    6,
+      spacing: 6,
       runSpacing: 4,
-      children:   actions.map((a) => _IssueActionChip(action: a)).toList(),
+      children: actions.map((a) => _IssueActionChip(action: a)).toList(),
     );
   }
 }
@@ -379,15 +395,15 @@ class _IssueActionChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color:        _color.withOpacity(0.12),
+          color: _color.withOpacity(0.12),
           borderRadius: BorderRadius.circular(6),
-          border:       Border.all(color: _color.withOpacity(0.4)),
+          border: Border.all(color: _color.withOpacity(0.4)),
         ),
         child: Text(
           action.label,
           style: const TextStyle(
-            color:      _color,
-            fontSize:   10,
+            color: _color,
+            fontSize: 10,
             fontWeight: FontWeight.w600,
           ),
         ),

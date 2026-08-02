@@ -43,19 +43,19 @@ class Opportunity {
 
   factory Opportunity.fromMap(Map<String, dynamic> map) {
     return Opportunity(
-      id:                 map['id'] as String,
-      userId:             map['user_id'] as String,
-      marketAnalysisId:   map['market_analysis_id'] as String?,
-      title:              map['title'] as String,
-      type:               map['type'] as String? ?? 'content',
-      description:        map['description'] as String? ?? '',
-      opportunityScore:   map['opportunity_score'] as int? ?? 0,
-      marketScore:        map['market_score'] as int? ?? 0,
-      growthScore:        map['growth_score'] as int? ?? 0,
-      competitionScore:   map['competition_score'] as int? ?? 0,
-      monetizationScore:  map['monetization_score'] as int? ?? 0,
-      difficultyScore:    map['difficulty_score'] as int? ?? 0,
-      detailsJson:        map['details_json'] is Map
+      id: map['id'] as String,
+      userId: map['user_id'] as String,
+      marketAnalysisId: map['market_analysis_id'] as String?,
+      title: map['title'] as String,
+      type: map['type'] as String? ?? 'content',
+      description: map['description'] as String? ?? '',
+      opportunityScore: map['opportunity_score'] as int? ?? 0,
+      marketScore: map['market_score'] as int? ?? 0,
+      growthScore: map['growth_score'] as int? ?? 0,
+      competitionScore: map['competition_score'] as int? ?? 0,
+      monetizationScore: map['monetization_score'] as int? ?? 0,
+      difficultyScore: map['difficulty_score'] as int? ?? 0,
+      detailsJson: map['details_json'] is Map
           ? Map<String, dynamic>.from(map['details_json'] as Map)
           : {},
       createdAt: DateTime.parse(map['created_at'] as String),
@@ -63,17 +63,17 @@ class Opportunity {
   }
 
   Map<String, dynamic> toInsertMap() => {
-    'user_id':            userId,
-    'market_analysis_id': marketAnalysisId,
-    'title':              title,
-    'type':               type,
-    'description':        description,
-    'opportunity_score':  opportunityScore,
-    'market_score':       marketScore,
-    'growth_score':       growthScore,
-    'competition_score':  competitionScore,
-    'monetization_score': monetizationScore,
-    'difficulty_score':   difficultyScore,
-    'details_json':       detailsJson,
-  };
+        'user_id': userId,
+        'market_analysis_id': marketAnalysisId,
+        'title': title,
+        'type': type,
+        'description': description,
+        'opportunity_score': opportunityScore,
+        'market_score': marketScore,
+        'growth_score': growthScore,
+        'competition_score': competitionScore,
+        'monetization_score': monetizationScore,
+        'difficulty_score': difficultyScore,
+        'details_json': detailsJson,
+      };
 }

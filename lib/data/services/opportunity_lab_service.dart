@@ -6,13 +6,12 @@ import '../../core/constants/app_constants.dart';
 class OpportunityLabService {
   final _client = Supabase.instance.client;
 
-  Future<List<OpportunityLabItem>> fetchAll({String? projectId, String? status}) async {
-    var filter = _client
-        .from(AppConstants.tableOpportunityLab)
-        .select();
+  Future<List<OpportunityLabItem>> fetchAll(
+      {String? projectId, String? status}) async {
+    var filter = _client.from(AppConstants.tableOpportunityLab).select();
 
     if (projectId != null) filter = filter.eq('project_id', projectId);
-    if (status != null)    filter = filter.eq('status', status);
+    if (status != null) filter = filter.eq('status', status);
 
     final rows = await filter.order('final_score', ascending: false);
     return rows.map((r) => OpportunityLabItem.fromMap(r)).toList();
@@ -59,9 +58,9 @@ class OpportunityLabService {
   Future<Map<String, int>> summary() async {
     final list = await fetchAll();
     return {
-      'total':     list.length,
-      'pending':   list.where((i) => i.status == 'pending').length,
-      'approved':  list.where((i) => i.status == 'approved').length,
+      'total': list.length,
+      'pending': list.where((i) => i.status == 'pending').length,
+      'approved': list.where((i) => i.status == 'approved').length,
       'executing': list.where((i) => i.status == 'executing').length,
     };
   }

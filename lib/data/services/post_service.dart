@@ -36,14 +36,13 @@ class PostService {
         .order('created_at', ascending: false)
         .limit(50);
 
-    return rows
-        .map((row) => PostGeneration.fromMap(row))
-        .toList();
+    return rows.map((row) => PostGeneration.fromMap(row)).toList();
   }
 
   Future<int> countMonthlyGenerations() async {
     final now = DateTime.now();
-    final firstOfMonth = DateTime(now.year, now.month, 1).toUtc().toIso8601String();
+    final firstOfMonth =
+        DateTime(now.year, now.month, 1).toUtc().toIso8601String();
 
     final rows = await _client
         .from(AppConstants.tablePostGenerations)

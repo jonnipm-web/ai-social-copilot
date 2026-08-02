@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/calendar_item.dart';
 import '../data/services/calendar_service.dart';
 
-final calendarServiceProvider = Provider<CalendarService>((_) => CalendarService());
+final calendarServiceProvider =
+    Provider<CalendarService>((_) => CalendarService());
 
-final calendarItemsProvider = FutureProvider.autoDispose<List<CalendarItem>>((ref) {
+final calendarItemsProvider =
+    FutureProvider.autoDispose<List<CalendarItem>>((ref) {
   return ref.watch(calendarServiceProvider).fetchAll();
 });
 
@@ -42,6 +44,6 @@ class CalendarNotifier extends StateNotifier<AsyncValue<CalendarItem?>> {
   }
 }
 
-final calendarNotifierProvider =
-    StateNotifierProvider.autoDispose<CalendarNotifier, AsyncValue<CalendarItem?>>(
-        (ref) => CalendarNotifier(ref.watch(calendarServiceProvider)));
+final calendarNotifierProvider = StateNotifierProvider.autoDispose<
+        CalendarNotifier, AsyncValue<CalendarItem?>>(
+    (ref) => CalendarNotifier(ref.watch(calendarServiceProvider)));

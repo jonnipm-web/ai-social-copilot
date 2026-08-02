@@ -26,17 +26,17 @@ Widget _wrap(Widget child, {List<Override> overrides = const []}) {
 
 const _authCtx = IveAvatarContext(
   isAuthenticated: true,
-  routeName:       '/dashboard',
+  routeName: '/dashboard',
 );
 
 const _unauthCtx = IveAvatarContext(
   isAuthenticated: false,
-  routeName:       '/dashboard',
+  routeName: '/dashboard',
 );
 
 const _loginCtx = IveAvatarContext(
   isAuthenticated: false,
-  routeName:       '/login',
+  routeName: '/login',
 );
 
 const _service = IveAvatarVisibilityService();
@@ -48,8 +48,8 @@ void main() {
   group('Visibility — login route', () {
     test('avatar is hidden on /login', () {
       final result = _service.evaluate(
-        context:         _loginCtx,
-        isKeyboardOpen:  false,
+        context: _loginCtx,
+        isKeyboardOpen: false,
         availableHeight: 800,
         isCriticalDialog: false,
         isNavigatingAway: false,
@@ -63,8 +63,8 @@ void main() {
   group('Visibility — unauthenticated', () {
     test('avatar is hidden when not authenticated', () {
       final result = _service.evaluate(
-        context:         _unauthCtx,
-        isKeyboardOpen:  false,
+        context: _unauthCtx,
+        isKeyboardOpen: false,
         availableHeight: 800,
         isCriticalDialog: false,
         isNavigatingAway: false,
@@ -84,8 +84,8 @@ void main() {
   group('Visibility — authorised', () {
     test('avatar is visible in authenticated authorised route', () {
       final result = _service.evaluate(
-        context:         _authCtx,
-        isKeyboardOpen:  false,
+        context: _authCtx,
+        isKeyboardOpen: false,
         availableHeight: 800,
         isCriticalDialog: false,
         isNavigatingAway: false,
@@ -102,7 +102,8 @@ void main() {
   });
 
   // 4 — Fallback when asset does not exist (widget test — checks no crash)
-  testWidgets('4 — compact renders without throwing on missing asset', (tester) async {
+  testWidgets('4 — compact renders without throwing on missing asset',
+      (tester) async {
     await tester.pumpWidget(
       _wrap(IveAvatarCompact(state: IveAvatarStateV2.idle)),
     );
@@ -123,7 +124,7 @@ void main() {
   testWidgets('6 — IveAvatarCard renders', (tester) async {
     await tester.pumpWidget(
       _wrap(IveAvatarCard(
-        state:   IveAvatarStateV2.thinking,
+        state: IveAvatarStateV2.thinking,
         context: _authCtx,
       )),
     );
@@ -135,9 +136,9 @@ void main() {
   testWidgets('7 — IveAvatarV2 renders in full mode', (tester) async {
     await tester.pumpWidget(
       _wrap(IveAvatarV2(
-        overrideState:   IveAvatarStateV2.idle,
+        overrideState: IveAvatarStateV2.idle,
         overrideContext: _authCtx,
-        configuration:   IveAvatarConfiguration.full,
+        configuration: IveAvatarConfiguration.full,
       )),
     );
     await tester.pump();
@@ -156,9 +157,9 @@ void main() {
   // 9 — Keyboard open with insufficient space → hidden
   test('9 — keyboard open with small height hides avatar', () {
     final result = _service.evaluate(
-      context:         _authCtx,
-      isKeyboardOpen:  true,
-      availableHeight: 100,   // below threshold
+      context: _authCtx,
+      isKeyboardOpen: true,
+      availableHeight: 100, // below threshold
       isCriticalDialog: false,
       isNavigatingAway: false,
     );
@@ -168,8 +169,8 @@ void main() {
   // 10 — Small available height but keyboard closed → visible
   test('10 — keyboard closed, small screen still shows avatar', () {
     final result = _service.evaluate(
-      context:         _authCtx,
-      isKeyboardOpen:  false,
+      context: _authCtx,
+      isKeyboardOpen: false,
       availableHeight: 150,
       isCriticalDialog: false,
       isNavigatingAway: false,
@@ -180,8 +181,8 @@ void main() {
   // 11 — Landscape: visibility service agnostic to orientation → visible when auth
   test('11 — visibility service allows landscape (orientation-agnostic)', () {
     final result = _service.evaluate(
-      context:         _authCtx.copyWith(compactMode: true),
-      isKeyboardOpen:  false,
+      context: _authCtx.copyWith(compactMode: true),
+      isKeyboardOpen: false,
       availableHeight: 400,
       isCriticalDialog: false,
       isNavigatingAway: false,
@@ -190,7 +191,8 @@ void main() {
   });
 
   // 12 — Text scale: widget does not overflow
-  testWidgets('12 — compact does not overflow at 2x text scale', (tester) async {
+  testWidgets('12 — compact does not overflow at 2x text scale',
+      (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     addTearDown(tester.view.reset);
 
@@ -206,7 +208,7 @@ void main() {
 
   // 13 — Reduced motion policy
   test('13 — reducedMotion scales duration to ≤ 800ms', () {
-    const base   = Duration(milliseconds: 2400);
+    const base = Duration(milliseconds: 2400);
     final scaled = IveMotionPolicyResolver.scaleDuration(
       base,
       IveMotionPolicy.reducedMotion,
@@ -216,7 +218,7 @@ void main() {
   });
 
   test('13b — staticOnly returns zero duration', () {
-    const base   = Duration(milliseconds: 2400);
+    const base = Duration(milliseconds: 2400);
     final scaled = IveMotionPolicyResolver.scaleDuration(
       base,
       IveMotionPolicy.staticOnly,
@@ -235,8 +237,10 @@ void main() {
     );
 
     container.read(iveAvatarV2Provider.notifier).updateAvatarState(
-      IveAvatarStateV2.thinking,
-    );
+          IveAvatarStateV2.thinking,
+        );
+
+    await tester.pumpAndSettle();
 
     expect(
       container.read(iveAvatarV2StateProvider),
@@ -260,7 +264,8 @@ void main() {
 
   // 16 — Closing during animation: no exception
   testWidgets('16 — compact disposes cleanly during animation', (tester) async {
-    await tester.pumpWidget(_wrap(IveAvatarCompact(state: IveAvatarStateV2.listening)));
+    await tester
+        .pumpWidget(_wrap(IveAvatarCompact(state: IveAvatarStateV2.listening)));
     await tester.pump(const Duration(milliseconds: 50));
     await tester.pumpWidget(_wrap(const SizedBox()));
     expect(tester.takeException(), isNull);
@@ -277,17 +282,17 @@ void main() {
         child: MaterialApp(
           home: Scaffold(
             body: IveAvatarV2(
-              overrideState:   IveAvatarStateV2.idle,
+              overrideState: IveAvatarStateV2.idle,
               overrideContext: _authCtx,
-              configuration:   IveAvatarConfiguration.full,
+              configuration: IveAvatarConfiguration.full,
             ),
           ),
         ),
       ),
     );
     container.read(iveAvatarV2Provider.notifier).updateAvatarState(
-      IveAvatarStateV2.analyzing,
-    );
+          IveAvatarStateV2.analyzing,
+        );
     await tester.pump();
     expect(tester.takeException(), isNull);
   });
@@ -301,7 +306,8 @@ void main() {
 
   // 19 — No setState after dispose: compact widget
   testWidgets('19 — no setState after dispose on compact', (tester) async {
-    await tester.pumpWidget(_wrap(IveAvatarCompact(state: IveAvatarStateV2.listening)));
+    await tester
+        .pumpWidget(_wrap(IveAvatarCompact(state: IveAvatarStateV2.listening)));
     await tester.pump(const Duration(milliseconds: 10));
     await tester.pumpWidget(_wrap(const Placeholder()));
     await tester.pump(const Duration(milliseconds: 200));
@@ -309,12 +315,13 @@ void main() {
   });
 
   // 20 — No overflow in compact
-  testWidgets('20 — compact in tight 48×48 box does not overflow', (tester) async {
+  testWidgets('20 — compact in tight 48×48 box does not overflow',
+      (tester) async {
     await tester.pumpWidget(
       _wrap(SizedBox(
-        width:  48,
+        width: 48,
         height: 48,
-        child:  IveAvatarCompact(state: IveAvatarStateV2.idle, size: 40),
+        child: IveAvatarCompact(state: IveAvatarStateV2.idle, size: 40),
       )),
     );
     await tester.pump();
@@ -322,12 +329,13 @@ void main() {
   });
 
   // 21 — No asset build failure: IveAvatarFacePlaceholder uses errorBuilder
-  testWidgets('21 — face placeholder does not crash on missing image', (tester) async {
+  testWidgets('21 — face placeholder does not crash on missing image',
+      (tester) async {
     await tester.pumpWidget(
       _wrap(IveAvatarV2(
-        overrideState:   IveAvatarStateV2.idle,
+        overrideState: IveAvatarStateV2.idle,
         overrideContext: _authCtx,
-        configuration:   IveAvatarConfiguration.full,
+        configuration: IveAvatarConfiguration.full,
       )),
     );
     await tester.pump(const Duration(milliseconds: 300));
@@ -356,9 +364,9 @@ void main() {
   testWidgets('24 — IveAvatarCompact has semantic label', (tester) async {
     await tester.pumpWidget(
       _wrap(IveAvatarCompact(
-        state:       IveAvatarStateV2.idle,
+        state: IveAvatarStateV2.idle,
         interactive: true,
-        onTap:       () {},
+        onTap: () {},
       )),
     );
     await tester.pump();
@@ -381,8 +389,8 @@ void main() {
 
     // Update context only — state selector must NOT fire
     container.read(iveAvatarV2Provider.notifier).updateContext(
-      _authCtx.copyWith(title: 'New title'),
-    );
+          _authCtx.copyWith(title: 'New title'),
+        );
 
     expect(stateRebuildCount, 0);
     sub.close();

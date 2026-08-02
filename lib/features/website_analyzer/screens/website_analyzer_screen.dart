@@ -39,9 +39,8 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
 
     final url = _urlController.text.trim();
     try {
-      final analysis = await ref
-          .read(websiteAnalyzerNotifierProvider.notifier)
-          .analyze(url);
+      final analysis =
+          await ref.read(websiteAnalyzerNotifierProvider.notifier).analyze(url);
       if (mounted && analysis != null) {
         context.go('/website-analyzer/${analysis.id}');
       }
@@ -140,9 +139,11 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                     keyboardType: TextInputType.url,
                     decoration: InputDecoration(
                       labelText: 'URL do site (ex: https://meusite.com)',
-                      labelStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
+                      labelStyle:
+                          TextStyle(color: Colors.white.withOpacity(0.6)),
                       hintText: 'https://meusite.com',
-                      hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
+                      hintStyle:
+                          TextStyle(color: Colors.white.withOpacity(0.3)),
                       prefixIcon: Icon(Icons.link, color: _accent),
                       filled: true,
                       fillColor: _cardColor,
@@ -160,7 +161,8 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                       ),
                       focusedErrorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Colors.red, width: 2),
+                        borderSide:
+                            const BorderSide(color: Colors.red, width: 2),
                       ),
                     ),
                     validator: (value) {
@@ -190,7 +192,9 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                             )
                           : const Icon(Icons.search),
                       label: Text(
-                        analyzerState.isLoading ? 'Analisando...' : 'Analisar Site',
+                        analyzerState.isLoading
+                            ? 'Analisando...'
+                            : 'Analisar Site',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -301,7 +305,8 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                     final dateStr = _formatDate(analysis.createdAt);
 
                     return InkWell(
-                      onTap: () => context.go('/website-analyzer/${analysis.id}'),
+                      onTap: () =>
+                          context.go('/website-analyzer/${analysis.id}'),
                       borderRadius: BorderRadius.circular(12),
                       child: Container(
                         padding: const EdgeInsets.all(16),
@@ -331,12 +336,12 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                                   ),
                                 ),
                                 Text(
-                                    dateStr,
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.4),
-                                      fontSize: 12,
-                                    ),
+                                  dateStr,
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.4),
+                                    fontSize: 12,
                                   ),
+                                ),
                                 const SizedBox(width: 4),
                                 Icon(
                                   Icons.chevron_right,

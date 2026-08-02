@@ -29,41 +29,46 @@ void main() {
   group('IveVisualStateMapper', () {
     IveState makeState({
       IveExpression expression = IveExpression.happy,
-      bool bubbleVisible       = false,
+      bool bubbleVisible = false,
     }) =>
         IveState(expression: expression, bubbleVisible: bubbleVisible);
 
     test('happy → idle', () {
       expect(
-        IveVisualStateMapper.fromIveState(makeState(expression: IveExpression.happy)),
+        IveVisualStateMapper.fromIveState(
+            makeState(expression: IveExpression.happy)),
         IveVisualState.idle,
       );
     });
 
     test('thinking → thinking', () {
       expect(
-        IveVisualStateMapper.fromIveState(makeState(expression: IveExpression.thinking)),
+        IveVisualStateMapper.fromIveState(
+            makeState(expression: IveExpression.thinking)),
         IveVisualState.thinking,
       );
     });
 
     test('excited → success', () {
       expect(
-        IveVisualStateMapper.fromIveState(makeState(expression: IveExpression.excited)),
+        IveVisualStateMapper.fromIveState(
+            makeState(expression: IveExpression.excited)),
         IveVisualState.success,
       );
     });
 
     test('neutral → attentive', () {
       expect(
-        IveVisualStateMapper.fromIveState(makeState(expression: IveExpression.neutral)),
+        IveVisualStateMapper.fromIveState(
+            makeState(expression: IveExpression.neutral)),
         IveVisualState.attentive,
       );
     });
 
     test('winking → opportunity', () {
       expect(
-        IveVisualStateMapper.fromIveState(makeState(expression: IveExpression.winking)),
+        IveVisualStateMapper.fromIveState(
+            makeState(expression: IveExpression.winking)),
         IveVisualState.opportunity,
       );
     });
@@ -113,21 +118,25 @@ void main() {
     test('controller is safe after dispose', () {
       ctrl.dispose();
       // Should not throw
-      expect(() => ctrl.applyVisualState(IveVisualState.success), returnsNormally);
+      expect(
+          () => ctrl.applyVisualState(IveVisualState.success), returnsNormally);
     });
   });
 
   // ── IveStatusRingPainter ──────────────────────────────────────────────────
   group('IveStatusRingPainter', () {
     test('shouldRepaint true on state change', () {
-      const p1 = IveStatusRingPainter(state: IveVisualState.idle,    glowPulse: 0);
-      const p2 = IveStatusRingPainter(state: IveVisualState.error,   glowPulse: 0);
+      const p1 = IveStatusRingPainter(state: IveVisualState.idle, glowPulse: 0);
+      const p2 =
+          IveStatusRingPainter(state: IveVisualState.error, glowPulse: 0);
       expect(p1.shouldRepaint(p2), isTrue);
     });
 
     test('shouldRepaint false on identical params', () {
-      const p1 = IveStatusRingPainter(state: IveVisualState.warning, glowPulse: 0.5);
-      const p2 = IveStatusRingPainter(state: IveVisualState.warning, glowPulse: 0.5);
+      const p1 =
+          IveStatusRingPainter(state: IveVisualState.warning, glowPulse: 0.5);
+      const p2 =
+          IveStatusRingPainter(state: IveVisualState.warning, glowPulse: 0.5);
       expect(p1.shouldRepaint(p2), isFalse);
     });
   });
@@ -161,7 +170,7 @@ void main() {
           home: Scaffold(
             body: IveVisualFallback(
               state: IveVisualState.idle,
-              size:  72,
+              size: 72,
             ),
           ),
         ),
@@ -179,9 +188,9 @@ void main() {
           child: MaterialApp(
             home: Scaffold(
               body: IveAvatar(
-                size:           IveAvatarSize.compact,
+                size: IveAvatarSize.compact,
                 showStatusRing: true,
-                interactive:    false,
+                interactive: false,
               ),
             ),
           ),
@@ -198,9 +207,9 @@ void main() {
           child: MaterialApp(
             home: Scaffold(
               body: IveAvatar(
-                size:        IveAvatarSize.compact,
+                size: IveAvatarSize.compact,
                 interactive: true,
-                onTap:       () => tapped = true,
+                onTap: () => tapped = true,
               ),
             ),
           ),
@@ -217,7 +226,7 @@ void main() {
           child: MaterialApp(
             home: Scaffold(
               body: IveAvatar(
-                size:        IveAvatarSize.standard,
+                size: IveAvatarSize.standard,
                 interactive: true,
               ),
             ),
@@ -228,8 +237,9 @@ void main() {
       expect(
         tester.getSemantics(find.byType(IveAvatar)),
         matchesSemantics(
-          label:  'IVE, assistente executiva',
+          label: 'IVE, assistente executiva',
           isButton: true,
+          isImage: true,
         ),
       );
     });

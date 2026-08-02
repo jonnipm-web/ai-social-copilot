@@ -34,7 +34,7 @@ class KnowledgeCoverage {
   });
 
   // Legacy aliases used by existing widgets
-  int get analysisPoints  => 0;
+  int get analysisPoints => 0;
   int get knowledgePoints => docPoints;
   int get opportunityPoints => oppPoints;
 
@@ -64,51 +64,57 @@ class KnowledgeCoverage {
   // Total       100 pts
   static KnowledgeCoverage compute({
     required Project project,
-    required MarketAnalysis? analysis,       // kept for compat; no longer scores
+    required MarketAnalysis? analysis, // kept for compat; no longer scores
     required int knowledgeItemCount,
     required List<ActionQueueItem> actions,
     required List<OpportunityLabItem> labItems,
     required RevenuePlan? revenuePlan,
     int trainedPersonaCount = 0,
   }) {
-    final docPts      = math.min(25, knowledgeItemCount * 5);
-    final oppPts      = math.min(20, labItems.length * 7);
-    final actionPts   = math.min(20, actions.length * 4);
-    final hasRoadmap  = _projectHasRoadmap(project);
-    final roadmapPts  = hasRoadmap ? 15 : 0;
-    final revenuePts  = revenuePlan != null ? 10 : 0;
-    final personaPts  = math.min(10, trainedPersonaCount * 5);
+    final docPts = math.min(25, knowledgeItemCount * 5);
+    final oppPts = math.min(20, labItems.length * 7);
+    final actionPts = math.min(20, actions.length * 4);
+    final hasRoadmap = _projectHasRoadmap(project);
+    final roadmapPts = hasRoadmap ? 15 : 0;
+    final revenuePts = revenuePlan != null ? 10 : 0;
+    final personaPts = math.min(10, trainedPersonaCount * 5);
 
-    final total = docPts + oppPts + actionPts + roadmapPts + revenuePts + personaPts;
+    final total =
+        docPts + oppPts + actionPts + roadmapPts + revenuePts + personaPts;
 
     final gaps = <String>[];
-    if (knowledgeItemCount == 0) gaps.add('Adicione documentos ao Cofre de Conhecimento');
-    if (labItems.isEmpty)        gaps.add('Sem oportunidades — execute o Knowledge → Action Engine');
-    if (actions.isEmpty)         gaps.add('Sem ações definidas para o projeto');
-    if (!hasRoadmap)             gaps.add('Roadmap não gerado — execute o Bootstrap');
-    if (revenuePlan == null)     gaps.add('Plano de receita não criado');
-    if (trainedPersonaCount == 0) gaps.add('Personas sem treinamento de conhecimento');
+    if (knowledgeItemCount == 0)
+      gaps.add('Adicione documentos ao Cofre de Conhecimento');
+    if (labItems.isEmpty)
+      gaps.add('Sem oportunidades — execute o Knowledge → Action Engine');
+    if (actions.isEmpty) gaps.add('Sem ações definidas para o projeto');
+    if (!hasRoadmap) gaps.add('Roadmap não gerado — execute o Bootstrap');
+    if (revenuePlan == null) gaps.add('Plano de receita não criado');
+    if (trainedPersonaCount == 0)
+      gaps.add('Personas sem treinamento de conhecimento');
 
     final strengths = <String>[];
-    if (knowledgeItemCount >= 3) strengths.add('Base de conhecimento estabelecida');
-    if (labItems.length >= 3)    strengths.add('Oportunidades mapeadas');
-    if (actions.length >= 3)     strengths.add('Ações planejadas');
-    if (hasRoadmap)              strengths.add('Roadmap estruturado');
-    if (revenuePlan != null)     strengths.add('Plano de receita projetado');
-    if (trainedPersonaCount > 0) strengths.add('Personas com conhecimento treinado');
+    if (knowledgeItemCount >= 3)
+      strengths.add('Base de conhecimento estabelecida');
+    if (labItems.length >= 3) strengths.add('Oportunidades mapeadas');
+    if (actions.length >= 3) strengths.add('Ações planejadas');
+    if (hasRoadmap) strengths.add('Roadmap estruturado');
+    if (revenuePlan != null) strengths.add('Plano de receita projetado');
+    if (trainedPersonaCount > 0)
+      strengths.add('Personas com conhecimento treinado');
 
     return KnowledgeCoverage(
-      projectId:      project.id,
-      projectName:    project.name,
-      score:          total.clamp(0, 100),
-      docPoints:      docPts,
-      oppPoints:      oppPts,
-      actionPoints:   actionPts,
-      roadmapPoints:  roadmapPts,
-      revenuePoints:  revenuePts,
-      personaPoints:  personaPts,
-      gaps:           gaps,
-      strengths:      strengths,
+      projectId: project.id,
+      projectName: project.name,
+      score: total.clamp(0, 100),
+      docPoints: docPts,
+      oppPoints: oppPts,
+      actionPoints: actionPts,
+      roadmapPoints: roadmapPts,
+      revenuePoints: revenuePts,
+      personaPoints: personaPts,
+      gaps: gaps,
+      strengths: strengths,
     );
   }
 

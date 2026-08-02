@@ -4,9 +4,9 @@ import '../models/ive_avatar_state_v2.dart';
 // ── Visibility result ─────────────────────────────────────────────────────────
 
 class IveAvatarVisibilityResult {
-  final bool                 visible;
-  final IveAvatarPlacement   placement;
-  final String               reason;
+  final bool visible;
+  final IveAvatarPlacement placement;
+  final String reason;
 
   const IveAvatarVisibilityResult({
     required this.visible,
@@ -15,7 +15,7 @@ class IveAvatarVisibilityResult {
   });
 
   static const hidden = IveAvatarVisibilityResult(
-    visible:   false,
+    visible: false,
     placement: IveAvatarPlacement.hidden,
   );
 }
@@ -23,7 +23,7 @@ class IveAvatarVisibilityResult {
 // ── Routes where avatar is never shown ───────────────────────────────────────
 
 const _kHiddenRoutes = <String>{
-  '/',           // splash
+  '/', // splash
   '/login',
   '/signup',
   '/forgot-password',
@@ -37,10 +37,10 @@ class IveAvatarVisibilityService {
 
   IveAvatarVisibilityResult evaluate({
     required IveAvatarContext context,
-    required bool             isKeyboardOpen,
-    required double           availableHeight,
-    required bool             isCriticalDialog,
-    required bool             isNavigatingAway,
+    required bool isKeyboardOpen,
+    required double availableHeight,
+    required bool isCriticalDialog,
+    required bool isNavigatingAway,
   }) {
     // Must be authenticated
     if (!context.isAuthenticated) {
@@ -81,9 +81,9 @@ class IveAvatarVisibilityService {
     final placement = _resolvePlacement(context, isKeyboardOpen);
 
     return IveAvatarVisibilityResult(
-      visible:   true,
+      visible: true,
       placement: placement,
-      reason:    'visible',
+      reason: 'visible',
     );
   }
 
@@ -96,21 +96,20 @@ class IveAvatarVisibilityService {
     }
 
     if (context.compactMode) return IveAvatarPlacement.appBar;
-    if (isKeyboardOpen)      return IveAvatarPlacement.inline;
+    if (isKeyboardOpen) return IveAvatarPlacement.inline;
 
     return IveAvatarPlacement.floatingBottomRight;
   }
 
-  IveAvatarVisibilityResult _hidden(String reason) =>
-      IveAvatarVisibilityResult(
-        visible:   false,
+  IveAvatarVisibilityResult _hidden(String reason) => IveAvatarVisibilityResult(
+        visible: false,
         placement: IveAvatarPlacement.hidden,
-        reason:    reason,
+        reason: reason,
       );
 
   bool shouldShow({
     required String routeName,
-    required bool   isAuthenticated,
+    required bool isAuthenticated,
   }) {
     if (!isAuthenticated) return false;
     if (_kHiddenRoutes.contains(routeName)) return false;

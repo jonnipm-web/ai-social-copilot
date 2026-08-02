@@ -14,7 +14,8 @@ import '../../../providers/opportunity_lab_provider.dart';
 import '../../../providers/project_intelligence_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
-import '../../../shared/widgets/context_copilot_widget.dart' show showCopilotChat;
+import '../../../shared/widgets/context_copilot_widget.dart'
+    show showCopilotChat;
 
 class ProjectCommandCenterScreen extends ConsumerStatefulWidget {
   const ProjectCommandCenterScreen({super.key});
@@ -30,9 +31,9 @@ class _ProjectCommandCenterScreenState
   bool _refreshing = false;
   final _nameCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
-  final _urlCtrl  = TextEditingController();
-  String _type    = 'website';
-  bool   _saving  = false;
+  final _urlCtrl = TextEditingController();
+  String _type = 'website';
+  bool _saving = false;
 
   @override
   void dispose() {
@@ -49,7 +50,9 @@ class _ProjectCommandCenterScreenState
     // Aguarda nova leitura para completar o indicador
     await Future.wait([
       ref.read(projectsNotifierProvider.future).catchError((_) => <Project>[]),
-      ref.read(ecosystemScoresProvider.future).catchError((_) => <EcosystemScore>[]),
+      ref
+          .read(ecosystemScoresProvider.future)
+          .catchError((_) => <EcosystemScore>[]),
     ]);
     if (mounted) setState(() => _refreshing = false);
   }
@@ -60,16 +63,19 @@ class _ProjectCommandCenterScreenState
     setState(() => _saving = true);
     try {
       await ref.read(projectsNotifierProvider.notifier).create({
-        'name':        name,
+        'name': name,
         'description': _descCtrl.text.trim(),
-        'url':         _urlCtrl.text.trim().isNotEmpty ? _urlCtrl.text.trim() : null,
-        'type':        _type,
-        'status':      'idea',
+        'url': _urlCtrl.text.trim().isNotEmpty ? _urlCtrl.text.trim() : null,
+        'type': _type,
+        'status': 'idea',
       });
       _nameCtrl.clear();
       _descCtrl.clear();
       _urlCtrl.clear();
-      setState(() { _showForm = false; _type = 'website'; });
+      setState(() {
+        _showForm = false;
+        _type = 'website';
+      });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -86,7 +92,8 @@ class _ProjectCommandCenterScreenState
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A2E),
-        title: const Text('Confirmar exclusão', style: TextStyle(color: Colors.white)),
+        title: const Text('Confirmar exclusão',
+            style: TextStyle(color: Colors.white)),
         content: Text(
           'Excluir "${project.name}"?\nEsta ação não pode ser desfeita.',
           style: const TextStyle(color: Colors.white70),
@@ -94,11 +101,13 @@ class _ProjectCommandCenterScreenState
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancelar', style: TextStyle(color: Colors.white54)),
+            child:
+                const Text('Cancelar', style: TextStyle(color: Colors.white54)),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            style: TextButton.styleFrom(foregroundColor: const Color(0xFFFF6B6B)),
+            style:
+                TextButton.styleFrom(foregroundColor: const Color(0xFFFF6B6B)),
             child: const Text('Excluir'),
           ),
         ],
@@ -110,7 +119,9 @@ class _ProjectCommandCenterScreenState
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Erro ao excluir: $e'), backgroundColor: Colors.red),
+            SnackBar(
+                content: Text('Erro ao excluir: $e'),
+                backgroundColor: Colors.red),
           );
         }
       }
@@ -121,7 +132,8 @@ class _ProjectCommandCenterScreenState
     Navigator.of(context).pop();
 
     // Busca knowledge items do projeto
-    final items = await ref.read(knowledgeServiceProvider)
+    final items = await ref
+        .read(knowledgeServiceProvider)
         .fetchAll(projectId: project.id);
 
     if (!mounted) return;
@@ -150,7 +162,8 @@ class _ProjectCommandCenterScreenState
     // Mostra progresso
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Analisando projeto "${project.name}" com ${items.length} conhecimento(s)…'),
+        content: Text(
+            'Analisando projeto "${project.name}" com ${items.length} conhecimento(s)…'),
         backgroundColor: const Color(0xFF6C63FF),
         duration: const Duration(seconds: 30),
       ),
@@ -161,18 +174,19 @@ class _ProjectCommandCenterScreenState
           .where((i) => i.content.trim().length >= 20)
           .take(6)
           .map((i) => {
-                'title':   i.title,
-                'content': i.content.substring(0, i.content.length.clamp(0, 400)),
+                'title': i.title,
+                'content':
+                    i.content.substring(0, i.content.length.clamp(0, 400)),
               })
           .toList();
 
       final response = await Supabase.instance.client.functions.invoke(
         AppConstants.edgeFunctionGenerateOpportunities,
         body: {
-          'project_name':        project.name,
+          'project_name': project.name,
           'project_description': project.description,
-          'project_type':        project.type,
-          'documents':           docs,
+          'project_type': project.type,
+          'documents': docs,
         },
       );
 
@@ -185,21 +199,21 @@ class _ProjectCommandCenterScreenState
 
       for (final opp in opportunities) {
         final item = OpportunityLabItem(
-          id:              '',
-          userId:          '',
-          projectId:       project.id,
+          id: '',
+          userId: '',
+          projectId: project.id,
           opportunityType: opp['opportunity_type'] as String? ?? 'expansão',
-          title:           opp['title'] as String? ?? '',
-          description:     opp['description'] as String? ?? '',
-          marketScore:     (opp['market_score'] as num?)?.toInt() ?? 0,
-          revenueScore:    (opp['revenue_score'] as num?)?.toInt() ?? 0,
-          competitionScore:(opp['competition_score'] as num?)?.toInt() ?? 0,
-          synergyScore:    (opp['synergy_score'] as num?)?.toInt() ?? 0,
-          strategicFit:    (opp['strategic_fit'] as num?)?.toInt() ?? 0,
-          finalScore:      (opp['final_score'] as num?)?.toInt() ?? 0,
-          origin:          'knowledge_engine',
-          sources:         items.map((i) => i.title).toList(),
-          createdAt:       DateTime.now(),
+          title: opp['title'] as String? ?? '',
+          description: opp['description'] as String? ?? '',
+          marketScore: (opp['market_score'] as num?)?.toInt() ?? 0,
+          revenueScore: (opp['revenue_score'] as num?)?.toInt() ?? 0,
+          competitionScore: (opp['competition_score'] as num?)?.toInt() ?? 0,
+          synergyScore: (opp['synergy_score'] as num?)?.toInt() ?? 0,
+          strategicFit: (opp['strategic_fit'] as num?)?.toInt() ?? 0,
+          finalScore: (opp['final_score'] as num?)?.toInt() ?? 0,
+          origin: 'knowledge_engine',
+          sources: items.map((i) => i.title).toList(),
+          createdAt: DateTime.now(),
         );
         await notifier.add(item);
       }
@@ -208,7 +222,8 @@ class _ProjectCommandCenterScreenState
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${opportunities.length} oportunidade(s) gerada(s) para "${project.name}"!'),
+          content: Text(
+              '${opportunities.length} oportunidade(s) gerada(s) para "${project.name}"!'),
           backgroundColor: const Color(0xFF4CAF50),
           action: SnackBarAction(
             label: 'Ver',
@@ -231,7 +246,9 @@ class _ProjectCommandCenterScreenState
   }
 
   void _openDetail(Project project, EcosystemScore? score) {
-    final profile = ref.read(projectIntelligenceProfilesProvider).valueOrNull
+    final profile = ref
+        .read(projectIntelligenceProfilesProvider)
+        .valueOrNull
         ?.where((p) => p.project.id == project.id)
         .firstOrNull;
 
@@ -240,12 +257,14 @@ class _ProjectCommandCenterScreenState
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _ProjectDetailSheet(
-        project:             project,
-        ecosystemScore:      score,
+        project: project,
+        ecosystemScore: score,
         intelligenceProfile: profile,
         onStatusChange: (s) {
           Navigator.of(context).pop();
-          ref.read(projectsNotifierProvider.notifier).updateStatus(project.id, s);
+          ref
+              .read(projectsNotifierProvider.notifier)
+              .updateStatus(project.id, s);
         },
         onDelete: () {
           Navigator.of(context).pop();
@@ -273,7 +292,7 @@ class _ProjectCommandCenterScreenState
   @override
   Widget build(BuildContext context) {
     final asyncProjects = ref.watch(projectsNotifierProvider);
-    final asyncScores   = ref.watch(ecosystemScoresProvider);
+    final asyncScores = ref.watch(ecosystemScoresProvider);
 
     // Mapa projectId → EcosystemScore para lookup O(1)
     final scoresMap = asyncScores.valueOrNull != null
@@ -382,8 +401,7 @@ class _ProjectCommandCenterScreenState
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A2E),
         borderRadius: BorderRadius.circular(12),
-        border:
-            Border.all(color: const Color(0xFF6BCB77).withOpacity(0.3)),
+        border: Border.all(color: const Color(0xFF6BCB77).withOpacity(0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -412,23 +430,24 @@ class _ProjectCommandCenterScreenState
           const SizedBox(height: 6),
           Wrap(
             spacing: 8,
-            children:
-                ['website', 'app', 'product', 'service', 'content'].map(
-              (t) => ChoiceChip(
-                label: Text(t),
-                selected: _type == t,
-                onSelected: (_) => setState(() => _type = t),
-                selectedColor: const Color(0xFF6BCB77),
-                labelStyle: TextStyle(
-                    color: _type == t ? Colors.black : Colors.white60,
-                    fontSize: 12),
-                backgroundColor: const Color(0xFF0F0F1A),
-                side: BorderSide(
-                    color: _type == t
-                        ? const Color(0xFF6BCB77)
-                        : const Color(0xFF333355)),
-              ),
-            ).toList(),
+            children: ['website', 'app', 'product', 'service', 'content']
+                .map(
+                  (t) => ChoiceChip(
+                    label: Text(t),
+                    selected: _type == t,
+                    onSelected: (_) => setState(() => _type = t),
+                    selectedColor: const Color(0xFF6BCB77),
+                    labelStyle: TextStyle(
+                        color: _type == t ? Colors.black : Colors.white60,
+                        fontSize: 12),
+                    backgroundColor: const Color(0xFF0F0F1A),
+                    side: BorderSide(
+                        color: _type == t
+                            ? const Color(0xFF6BCB77)
+                            : const Color(0xFF333355)),
+                  ),
+                )
+                .toList(),
           ),
           const SizedBox(height: 14),
           Row(
@@ -484,16 +503,16 @@ class _ProjectCommandCenterScreenState
       padding: const EdgeInsets.all(16),
       itemCount: sorted.length,
       itemBuilder: (_, i) {
-        final p     = sorted[i];
+        final p = sorted[i];
         final score = scoresMap[p.id];
         return _ProjectCard(
-          project:        p,
-          rank:           i + 1,
+          project: p,
+          rank: i + 1,
           ecosystemScore: score,
-          onTap:          () => _openDetail(p, score),
+          onTap: () => _openDetail(p, score),
           onStatusChange: (s) =>
               ref.read(projectsNotifierProvider.notifier).updateStatus(p.id, s),
-          onDelete:  () => _confirmDelete(p),
+          onDelete: () => _confirmDelete(p),
           onAnalyze: p.marketAnalysisId != null
               ? () => context.go(AppConstants.routeMarketIntelligenceHub
                   .replaceFirst(':id', p.marketAnalysisId!))
@@ -564,41 +583,49 @@ class _ProjectCard extends StatelessWidget {
 
   Color get _statusColor {
     switch (project.status) {
-      case 'active':    return const Color(0xFF6BCB77);
-      case 'completed': return const Color(0xFF4D96FF);
-      case 'paused':    return const Color(0xFFFFD93D);
-      default:          return Colors.white38;
+      case 'active':
+        return const Color(0xFF6BCB77);
+      case 'completed':
+        return const Color(0xFF4D96FF);
+      case 'paused':
+        return const Color(0xFFFFD93D);
+      default:
+        return Colors.white38;
     }
   }
 
   String get _statusLabel {
     switch (project.status) {
-      case 'active':    return 'Ativo';
-      case 'completed': return 'Concluído';
-      case 'paused':    return 'Pausado';
-      default:          return 'Ideia';
+      case 'active':
+        return 'Ativo';
+      case 'completed':
+        return 'Concluído';
+      case 'paused':
+        return 'Pausado';
+      default:
+        return 'Ideia';
     }
   }
 
   String _fmtRevenue(double v) {
-    if (v <= 0)        return 'Não estimado';
-    if (v >= 1000000)  return 'R\$ ${(v / 1000000).toStringAsFixed(1)}M';
-    if (v >= 1000)     return 'R\$ ${(v / 1000).toStringAsFixed(0)}K';
+    if (v <= 0) return 'Não estimado';
+    if (v >= 1000000) return 'R\$ ${(v / 1000000).toStringAsFixed(1)}M';
+    if (v >= 1000) return 'R\$ ${(v / 1000).toStringAsFixed(0)}K';
     return 'R\$ ${v.toStringAsFixed(0)}';
   }
 
   String _fmtPrazo(int days) {
     if (days <= 0) return '—';
     if (days >= 365) return '${(days / 365).round()}a';
-    if (days >= 30)  return '${(days / 30).round()}m';
+    if (days >= 30) return '${(days / 30).round()}m';
     return '${days}d';
   }
 
   @override
   Widget build(BuildContext context) {
-    final s        = ecosystemScore;
+    final s = ecosystemScore;
     final oppScore = s?.opportunityScore ?? project.opportunityScore;
-    final revenue  = s?.totalRoi != null && s!.totalRoi > 0
+    final revenue = s?.totalRoi != null && s!.totalRoi > 0
         ? _fmtRevenue(s.totalRoi)
         : _fmtRevenue(project.revenuePotential);
     final ecoScore = s?.ecosystemScore;
@@ -731,8 +758,7 @@ class _ProjectCard extends StatelessWidget {
             ),
             const Divider(color: Color(0xFF333355), height: 1),
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: Row(
                 children: [
                   _ActionBtn(
@@ -805,9 +831,9 @@ class _ProjectDetailSheet extends StatelessWidget {
   }
 
   String _fmtRevenue(double v) {
-    if (v <= 0)        return 'Ainda não estimado';
-    if (v >= 1000000)  return 'R\$ ${(v / 1000000).toStringAsFixed(1)}M';
-    if (v >= 1000)     return 'R\$ ${(v / 1000).toStringAsFixed(0)}K';
+    if (v <= 0) return 'Ainda não estimado';
+    if (v >= 1000000) return 'R\$ ${(v / 1000000).toStringAsFixed(1)}M';
+    if (v >= 1000) return 'R\$ ${(v / 1000).toStringAsFixed(0)}K';
     return 'R\$ ${v.toStringAsFixed(0)}';
   }
 
@@ -817,8 +843,8 @@ class _ProjectDetailSheet extends StatelessWidget {
 
     return DraggableScrollableSheet(
       initialChildSize: 0.65,
-      minChildSize:     0.4,
-      maxChildSize:     0.95,
+      minChildSize: 0.4,
+      maxChildSize: 0.95,
       builder: (_, ctrl) => Container(
         decoration: const BoxDecoration(
           color: Color(0xFF1E1B2E),
@@ -860,8 +886,8 @@ class _ProjectDetailSheet extends StatelessWidget {
                               fontSize: 28,
                               fontWeight: FontWeight.bold)),
                       const Text('eco score',
-                          style: TextStyle(
-                              color: Colors.white38, fontSize: 10)),
+                          style:
+                              TextStyle(color: Colors.white38, fontSize: 10)),
                     ],
                   ),
               ],
@@ -869,14 +895,13 @@ class _ProjectDetailSheet extends StatelessWidget {
             if (project.description.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(project.description,
-                  style:
-                      const TextStyle(color: Colors.white60, fontSize: 13)),
+                  style: const TextStyle(color: Colors.white60, fontSize: 13)),
             ],
             if (project.url != null) ...[
               const SizedBox(height: 4),
               Text(project.url!,
-                  style: const TextStyle(
-                      color: Color(0xFF6C63FF), fontSize: 12)),
+                  style:
+                      const TextStyle(color: Color(0xFF6C63FF), fontSize: 12)),
             ],
             const SizedBox(height: 16),
 
@@ -910,26 +935,24 @@ class _ProjectDetailSheet extends StatelessWidget {
 
               // Score breakdown
               _sectionTitle('Scores do Ecossistema'),
-              _ScoreRow('Oportunidade',  s.opportunityScore),
+              _ScoreRow('Oportunidade', s.opportunityScore),
               _ScoreRow('Fit Estratégico', s.strategicFit),
-              _ScoreRow('Sinergia',       s.synergyScore),
-              _ScoreRow('ROI',            s.roiScore),
-              _ScoreRow('Momentum',       s.momentumScore),
-              _ScoreRow('Mercado',        s.marketScore),
-              _ScoreRow('Execução',       s.executionScore),
+              _ScoreRow('Sinergia', s.synergyScore),
+              _ScoreRow('ROI', s.roiScore),
+              _ScoreRow('Momentum', s.momentumScore),
+              _ScoreRow('Mercado', s.marketScore),
+              _ScoreRow('Execução', s.executionScore),
               const SizedBox(height: 8),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     'Ações: ${s.completedActions}/${s.actionCount} (${s.completionRate}%)',
-                    style:
-                        const TextStyle(color: Colors.white54, fontSize: 12),
+                    style: const TextStyle(color: Colors.white54, fontSize: 12),
                   ),
                   Text(
                     'ROI total: ${_fmtRevenue(s.totalRoi)}',
-                    style:
-                        const TextStyle(color: Colors.white54, fontSize: 12),
+                    style: const TextStyle(color: Colors.white54, fontSize: 12),
                   ),
                 ],
               ),
@@ -1085,7 +1108,8 @@ class _ProjectDetailSheet extends StatelessWidget {
     );
   }
 
-  Widget _intelligenceSection(BuildContext context, ProjectIntelligenceProfile p) {
+  Widget _intelligenceSection(
+      BuildContext context, ProjectIntelligenceProfile p) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1095,7 +1119,8 @@ class _ProjectDetailSheet extends StatelessWidget {
           decoration: BoxDecoration(
             color: const Color(0xFF6C63FF).withOpacity(0.07),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFF6C63FF).withOpacity(0.25)),
+            border:
+                Border.all(color: const Color(0xFF6C63FF).withOpacity(0.25)),
           ),
           child: Row(
             children: [
@@ -1118,7 +1143,8 @@ class _ProjectDetailSheet extends StatelessWidget {
                         padding: const EdgeInsets.only(top: 4),
                         child: Text(
                           p.dataWarning!,
-                          style: const TextStyle(color: Colors.orange, fontSize: 11),
+                          style: const TextStyle(
+                              color: Colors.orange, fontSize: 11),
                         ),
                       ),
                   ],
@@ -1147,20 +1173,29 @@ class _ProjectDetailSheet extends StatelessWidget {
         if (p.identifiedTopics.isNotEmpty) ...[
           const SizedBox(height: 8),
           const Text('Tópicos identificados',
-              style: TextStyle(color: Colors.white38, fontSize: 10, fontWeight: FontWeight.w600)),
+              style: TextStyle(
+                  color: Colors.white38,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600)),
           const SizedBox(height: 4),
           Wrap(
             spacing: 6,
             runSpacing: 4,
-            children: p.identifiedTopics.map((t) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: const Color(0xFF00BCD4).withOpacity(0.12),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFF00BCD4).withOpacity(0.3)),
-              ),
-              child: Text(t, style: const TextStyle(color: Color(0xFF00BCD4), fontSize: 10)),
-            )).toList(),
+            children: p.identifiedTopics
+                .map((t) => Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00BCD4).withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                            color: const Color(0xFF00BCD4).withOpacity(0.3)),
+                      ),
+                      child: Text(t,
+                          style: const TextStyle(
+                              color: Color(0xFF00BCD4), fontSize: 10)),
+                    ))
+                .toList(),
           ),
         ],
 
@@ -1168,18 +1203,25 @@ class _ProjectDetailSheet extends StatelessWidget {
         if (p.missingKnowledge.isNotEmpty) ...[
           const SizedBox(height: 8),
           const Text('Lacunas de conhecimento',
-              style: TextStyle(color: Colors.white38, fontSize: 10, fontWeight: FontWeight.w600)),
+              style: TextStyle(
+                  color: Colors.white38,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600)),
           const SizedBox(height: 4),
           ...p.missingKnowledge.take(3).map((gap) => Padding(
-            padding: const EdgeInsets.only(bottom: 2),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('⚠ ', style: TextStyle(color: Colors.orange, fontSize: 11)),
-                Expanded(child: Text(gap, style: const TextStyle(color: Colors.white54, fontSize: 11))),
-              ],
-            ),
-          )),
+                padding: const EdgeInsets.only(bottom: 2),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('⚠ ',
+                        style: TextStyle(color: Colors.orange, fontSize: 11)),
+                    Expanded(
+                        child: Text(gap,
+                            style: const TextStyle(
+                                color: Colors.white54, fontSize: 11))),
+                  ],
+                ),
+              )),
         ],
 
         // Related projects
@@ -1196,16 +1238,19 @@ class _ProjectDetailSheet extends StatelessWidget {
               foregroundColor: const Color(0xFF6C63FF),
               side: const BorderSide(color: Color(0xFF6C63FF)),
               padding: const EdgeInsets.symmetric(vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
             icon: const Text('🧠', style: TextStyle(fontSize: 14)),
-            label: const Text('Perguntar à IVE sobre este perfil', style: TextStyle(fontSize: 13)),
+            label: const Text('Perguntar à IVE sobre este perfil',
+                style: TextStyle(fontSize: 13)),
             onPressed: () {
               Navigator.of(context).pop();
               showCopilotChat(
                 context,
-                screenName:     'Projetos',
-                initialMessage: 'Analise o perfil de inteligência do projeto "${p.project.name}": '
+                screenName: 'Projetos',
+                initialMessage:
+                    'Analise o perfil de inteligência do projeto "${p.project.name}": '
                     'nicho ${p.niche}, público ${p.targetAudience}, maturidade ${p.maturityLabel}. '
                     '${p.missingKnowledge.isNotEmpty ? "Lacunas: ${p.missingKnowledge.join(", ")}." : ""} '
                     'O que devo priorizar agora?',
@@ -1224,7 +1269,8 @@ class _ProjectDetailSheet extends StatelessWidget {
           children: [
             SizedBox(
               width: 90,
-              child: Text(label, style: const TextStyle(color: Colors.white38, fontSize: 11)),
+              child: Text(label,
+                  style: const TextStyle(color: Colors.white38, fontSize: 11)),
             ),
             Expanded(
               child: Text(value,
@@ -1246,23 +1292,21 @@ class _ProjectDetailSheet extends StatelessWidget {
                 letterSpacing: 0.8)),
       );
 
-  List<Widget> _bullets(List<String> items, Color color, String prefix) =>
-      items
-          .map((item) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(prefix,
-                        style: TextStyle(color: color, fontSize: 12)),
-                    Expanded(
-                        child: Text(item,
-                            style: const TextStyle(
-                                color: Colors.white70, fontSize: 12))),
-                  ],
-                ),
-              ))
-          .toList();
+  List<Widget> _bullets(List<String> items, Color color, String prefix) => items
+      .map((item) => Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(prefix, style: TextStyle(color: color, fontSize: 12)),
+                Expanded(
+                    child: Text(item,
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 12))),
+              ],
+            ),
+          ))
+      .toList();
 }
 
 // ── Score row com barra de progresso ─────────────────────────────────────────
@@ -1287,8 +1331,7 @@ class _ScoreRow extends StatelessWidget {
           SizedBox(
             width: 110,
             child: Text(label,
-                style:
-                    const TextStyle(color: Colors.white60, fontSize: 12)),
+                style: const TextStyle(color: Colors.white60, fontSize: 12)),
           ),
           Expanded(
             child: ClipRRect(
@@ -1307,9 +1350,7 @@ class _ScoreRow extends StatelessWidget {
             child: Text('$value',
                 textAlign: TextAlign.right,
                 style: TextStyle(
-                    color: _color,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold)),
+                    color: _color, fontSize: 12, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -1339,13 +1380,10 @@ class _MetricTile extends StatelessWidget {
         children: [
           Text(value,
               style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14)),
+                  color: color, fontWeight: FontWeight.bold, fontSize: 14)),
           const SizedBox(height: 2),
           Text(label,
-              style:
-                  const TextStyle(color: Colors.white38, fontSize: 10)),
+              style: const TextStyle(color: Colors.white38, fontSize: 10)),
         ],
       ),
     );
@@ -1372,11 +1410,9 @@ class _SheetButton extends StatelessWidget {
       icon: Icon(icon, size: 16, color: color),
       label: Text(label, style: TextStyle(color: color, fontSize: 13)),
       style: OutlinedButton.styleFrom(
-        padding:
-            const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
         side: BorderSide(color: color.withOpacity(0.4)),
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
@@ -1405,12 +1441,9 @@ class _StatChip extends StatelessWidget {
           children: [
             Text(value,
                 style: TextStyle(
-                    color: color,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12)),
+                    color: color, fontWeight: FontWeight.bold, fontSize: 12)),
             Text(label,
-                style: const TextStyle(
-                    color: Colors.white38, fontSize: 10)),
+                style: const TextStyle(color: Colors.white38, fontSize: 10)),
           ],
         ),
       ),

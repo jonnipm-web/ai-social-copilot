@@ -37,19 +37,25 @@ class EcosystemScore {
     required this.actionCount,
     required this.completedActions,
     required this.labItemCount,
-    this.marketScore    = 0,
+    this.marketScore = 0,
     this.executionScore = 0,
-    this.hasEnoughData  = true,
+    this.hasEnoughData = true,
   });
 
   String get recommendationEmoji {
     switch (recommendation) {
-      case 'ESCALAR':              return '⚡';
-      case 'ACELERAR':             return '🚀';
-      case 'MANTER':               return '✅';
-      case 'VALIDAR':              return '🔍';
-      case 'ANÁLISE INCOMPLETA':   return '📊';
-      default:                     return '⏸️'; // PAUSAR
+      case 'ESCALAR':
+        return '⚡';
+      case 'ACELERAR':
+        return '🚀';
+      case 'MANTER':
+        return '✅';
+      case 'VALIDAR':
+        return '🔍';
+      case 'ANÁLISE INCOMPLETA':
+        return '📊';
+      default:
+        return '⏸️'; // PAUSAR
     }
   }
 

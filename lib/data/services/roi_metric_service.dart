@@ -19,7 +19,9 @@ class RoiMetricService {
           .select()
           .order('created_at', ascending: false);
     }
-    return rows.map((r) => RoiMetric.fromMap(r as Map<String, dynamic>)).toList();
+    return rows
+        .map((r) => RoiMetric.fromMap(r as Map<String, dynamic>))
+        .toList();
   }
 
   Future<RoiMetric> create({
@@ -34,11 +36,11 @@ class RoiMetricService {
     final row = await _client
         .from(AppConstants.tableRoiMetrics)
         .insert({
-          'user_id':      uid,
-          'project_id':   projectId,
-          'metric_type':  metricType,
+          'user_id': uid,
+          'project_id': projectId,
+          'metric_type': metricType,
           'metric_value': metricValue,
-          'notes':        notes,
+          'notes': notes,
         })
         .select()
         .single();

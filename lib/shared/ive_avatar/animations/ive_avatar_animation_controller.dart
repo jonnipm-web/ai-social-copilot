@@ -10,13 +10,15 @@ import 'ive_avatar_motion_policy.dart';
 // Call dispose() in State.dispose().
 
 class IveAvatarAnimationControllerV2 {
+  IveAvatarAnimationControllerV2();
   IveAvatarAnimationControllerV2._();
 
   AnimationController? _ctrl;
-  Animation<double>?   _animation;
-  bool                 _disposed = false;
+  Animation<double>? _animation;
+  bool _disposed = false;
 
-  Animation<double> get animation => _animation ?? const AlwaysStoppedAnimation(0.0);
+  Animation<double> get animation =>
+      _animation ?? const AlwaysStoppedAnimation(0.0);
   bool get isActive => _ctrl?.isAnimating ?? false;
 
   void initialize({
@@ -27,14 +29,15 @@ class IveAvatarAnimationControllerV2 {
     _ctrl?.dispose();
     _disposed = false;
 
-    final config   = IveAvatarStateConfigV2.forState(state);
+    final config = IveAvatarStateConfigV2.forState(state);
     final duration = IveMotionPolicyResolver.scaleDuration(
       config.animationDuration,
       motionPolicy,
     );
 
-    if (motionPolicy == IveMotionPolicy.staticOnly || duration == Duration.zero) {
-      _ctrl      = null;
+    if (motionPolicy == IveMotionPolicy.staticOnly ||
+        duration == Duration.zero) {
+      _ctrl = null;
       _animation = const AlwaysStoppedAnimation(0.5);
       return;
     }
@@ -74,7 +77,7 @@ class IveAvatarAnimationControllerV2 {
   void dispose() {
     _disposed = true;
     _ctrl?.dispose();
-    _ctrl      = null;
+    _ctrl = null;
     _animation = null;
   }
 }

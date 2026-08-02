@@ -19,30 +19,44 @@ class CampaignBuilderScreen extends ConsumerStatefulWidget {
       _CampaignBuilderScreenState();
 }
 
-class _CampaignBuilderScreenState
-    extends ConsumerState<CampaignBuilderScreen> {
-  String _objective   = 'Venda';
-  int    _duration    = 30;
-  final  _channels    = <String>{};
-  bool   _generating  = false;
+class _CampaignBuilderScreenState extends ConsumerState<CampaignBuilderScreen> {
+  String _objective = 'Venda';
+  int _duration = 30;
+  final _channels = <String>{};
+  bool _generating = false;
 
   static const _objectives = [
-    'Venda', 'Autoridade', 'Leads', 'Engajamento',
-    'Lançamento', 'Tráfego', 'Venda Hotmart',
-    'Venda Shopify', 'Venda Amazon', 'Assinatura',
+    'Venda',
+    'Autoridade',
+    'Leads',
+    'Engajamento',
+    'Lançamento',
+    'Tráfego',
+    'Venda Hotmart',
+    'Venda Shopify',
+    'Venda Amazon',
+    'Assinatura',
   ];
 
   static const _durations = [7, 15, 30, 60, 90];
 
   static const _allChannels = [
-    'Instagram', 'Facebook', 'LinkedIn', 'Google',
-    'Blog', 'YouTube', 'TikTok', 'Email',
-    'Hotmart', 'Shopify', 'Amazon',
+    'Instagram',
+    'Facebook',
+    'LinkedIn',
+    'Google',
+    'Blog',
+    'YouTube',
+    'TikTok',
+    'Email',
+    'Hotmart',
+    'Shopify',
+    'Amazon',
   ];
 
   @override
   Widget build(BuildContext context) {
-    final itemAsync     = ref.watch(knowledgeItemByIdProvider(widget.itemId));
+    final itemAsync = ref.watch(knowledgeItemByIdProvider(widget.itemId));
     final analysisAsync = ref.watch(knowledgeAnalysisProvider(widget.itemId));
 
     return Scaffold(
@@ -126,8 +140,8 @@ class _CampaignBuilderScreenState
             decoration: BoxDecoration(
               color: const Color(0xFF6C63FF).withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                  color: const Color(0xFF6C63FF).withOpacity(0.3)),
+              border:
+                  Border.all(color: const Color(0xFF6C63FF).withOpacity(0.3)),
             ),
             child: Row(
               children: [
@@ -160,29 +174,23 @@ class _CampaignBuilderScreenState
               return GestureDetector(
                 onTap: () => setState(() => _objective = obj),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 7),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                   decoration: BoxDecoration(
                     color: sel
                         ? const Color(0xFF6C63FF).withOpacity(0.2)
                         : const Color(0xFF1A1A2E),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: sel
-                          ? const Color(0xFF6C63FF)
-                          : Colors.white12,
+                      color: sel ? const Color(0xFF6C63FF) : Colors.white12,
                     ),
                   ),
                   child: Text(
                     obj,
                     style: TextStyle(
-                      color: sel
-                          ? const Color(0xFF6C63FF)
-                          : Colors.white54,
+                      color: sel ? const Color(0xFF6C63FF) : Colors.white54,
                       fontSize: 12,
-                      fontWeight: sel
-                          ? FontWeight.w600
-                          : FontWeight.normal,
+                      fontWeight: sel ? FontWeight.w600 : FontWeight.normal,
                     ),
                   ),
                 ),
@@ -210,22 +218,16 @@ class _CampaignBuilderScreenState
                           : const Color(0xFF1A1A2E),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: sel
-                            ? const Color(0xFF6C63FF)
-                            : Colors.white12,
+                        color: sel ? const Color(0xFF6C63FF) : Colors.white12,
                       ),
                     ),
                     child: Text(
                       '${d}d',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: sel
-                            ? const Color(0xFF6C63FF)
-                            : Colors.white54,
+                        color: sel ? const Color(0xFF6C63FF) : Colors.white54,
                         fontSize: 12,
-                        fontWeight: sel
-                            ? FontWeight.w600
-                            : FontWeight.normal,
+                        fontWeight: sel ? FontWeight.w600 : FontWeight.normal,
                       ),
                     ),
                   ),
@@ -255,17 +257,15 @@ class _CampaignBuilderScreenState
                   });
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 7),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                   decoration: BoxDecoration(
                     color: sel
                         ? const Color(0xFF00BCD4).withOpacity(0.15)
                         : const Color(0xFF1A1A2E),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: sel
-                          ? const Color(0xFF00BCD4)
-                          : Colors.white12,
+                      color: sel ? const Color(0xFF00BCD4) : Colors.white12,
                     ),
                   ),
                   child: Row(
@@ -278,13 +278,9 @@ class _CampaignBuilderScreenState
                       Text(
                         ch,
                         style: TextStyle(
-                          color: sel
-                              ? const Color(0xFF00BCD4)
-                              : Colors.white54,
+                          color: sel ? const Color(0xFF00BCD4) : Colors.white54,
                           fontSize: 12,
-                          fontWeight: sel
-                              ? FontWeight.w600
-                              : FontWeight.normal,
+                          fontWeight: sel ? FontWeight.w600 : FontWeight.normal,
                         ),
                       ),
                     ],
@@ -348,18 +344,17 @@ class _CampaignBuilderScreenState
 
     try {
       final strategyAsync = ref.read(knowledgeStrategyProvider(item.id));
-      final strategy      = strategyAsync.valueOrNull;
+      final strategy = strategyAsync.valueOrNull;
 
-      final campaign = await ref
-          .read(campaignNotifierProvider.notifier)
-          .generate(
-            item:         item,
-            analysis:     analysis,
-            strategy:     strategy,
-            objective:    _objective,
-            durationDays: _duration,
-            channels:     _channels.toList(),
-          );
+      final campaign =
+          await ref.read(campaignNotifierProvider.notifier).generate(
+                item: item,
+                analysis: analysis,
+                strategy: strategy,
+                objective: _objective,
+                durationDays: _duration,
+                channels: _channels.toList(),
+              );
 
       if (!mounted) return;
 
@@ -386,9 +381,7 @@ class _CampaignBuilderScreenState
     return Text(
       text,
       style: const TextStyle(
-          color: Colors.white70,
-          fontSize: 13,
-          fontWeight: FontWeight.w600),
+          color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600),
     );
   }
 }

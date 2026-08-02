@@ -31,13 +31,20 @@ class PriorityRecommendation {
 
   String get typeLabel {
     switch (type) {
-      case RecommendationType.investProject:    return 'Investir';
-      case RecommendationType.executeOpportunity: return 'Executar';
-      case RecommendationType.runAction:        return 'Ação';
-      case RecommendationType.pauseProject:     return 'Pausar';
-      case RecommendationType.mitigateRisk:     return 'Risco';
-      case RecommendationType.quickWin:         return 'Ganho Rápido';
-      case RecommendationType.waste:            return 'Desperdício';
+      case RecommendationType.investProject:
+        return 'Investir';
+      case RecommendationType.executeOpportunity:
+        return 'Executar';
+      case RecommendationType.runAction:
+        return 'Ação';
+      case RecommendationType.pauseProject:
+        return 'Pausar';
+      case RecommendationType.mitigateRisk:
+        return 'Risco';
+      case RecommendationType.quickWin:
+        return 'Ganho Rápido';
+      case RecommendationType.waste:
+        return 'Desperdício';
     }
   }
 }
