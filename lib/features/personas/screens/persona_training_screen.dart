@@ -50,7 +50,8 @@ class PersonaTrainingScreen extends ConsumerWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
+                const Icon(Icons.error_outline,
+                    color: Colors.redAccent, size: 48),
                 const SizedBox(height: 16),
                 Text(
                   'Erro ao carregar treinamentos: $error',
@@ -191,7 +192,8 @@ class _SummaryCard extends StatelessWidget {
                   color: _primaryColor.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.psychology, color: _primaryColor, size: 22),
+                child: const Icon(Icons.psychology,
+                    color: _primaryColor, size: 22),
               ),
               const SizedBox(width: 12),
               const Text(
@@ -404,11 +406,13 @@ class _TrainingItemCard extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancelar', style: TextStyle(color: _textSecondary)),
+            child:
+                const Text('Cancelar', style: TextStyle(color: _textSecondary)),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Remover', style: TextStyle(color: Colors.redAccent)),
+            child: const Text('Remover',
+                style: TextStyle(color: Colors.redAccent)),
           ),
         ],
       ),
@@ -423,7 +427,7 @@ class _TrainingItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vocabulary = training.vocabularyJson;
-    final tone = training.tone ?? '';
+    final tone = training.tone;
 
     return Dismissible(
       key: Key(training.id),
@@ -437,7 +441,8 @@ class _TrainingItemCard extends StatelessWidget {
         ),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 28),
+        child:
+            const Icon(Icons.delete_outline, color: Colors.redAccent, size: 28),
       ),
       confirmDismiss: (_) async {
         await _delete(context);
@@ -501,10 +506,12 @@ class _TrainingItemCard extends StatelessWidget {
                   ),
                   IconButton(
                     onPressed: () => _delete(context),
-                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                    icon: const Icon(Icons.delete_outline,
+                        color: Colors.redAccent, size: 20),
                     tooltip: 'Remover',
                     padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    constraints:
+                        const BoxConstraints(minWidth: 32, minHeight: 32),
                   ),
                 ],
               ),
@@ -512,18 +519,21 @@ class _TrainingItemCard extends StatelessWidget {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    const Icon(Icons.record_voice_over, color: _textSecondary, size: 14),
+                    const Icon(Icons.record_voice_over,
+                        color: _textSecondary, size: 14),
                     const SizedBox(width: 6),
                     const Text(
                       'Tom: ',
                       style: TextStyle(color: _textSecondary, fontSize: 12),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 3),
                       decoration: BoxDecoration(
                         color: _primaryColor.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: _primaryColor.withOpacity(0.4)),
+                        border:
+                            Border.all(color: _primaryColor.withOpacity(0.4)),
                       ),
                       child: Text(
                         tone,

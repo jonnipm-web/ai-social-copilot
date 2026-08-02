@@ -44,12 +44,12 @@ class AdvisorProfile {
   ];
 
   factory AdvisorProfile.fromMap(Map<String, dynamic> map) => AdvisorProfile(
-        id:                    map['id'] as String,
-        userId:                map['user_id'] as String,
-        advisorName:           map['advisor_name'] as String? ?? 'Atlas',
-        advisorRole:           map['advisor_role'] as String? ?? 'Geral',
-        advisorStyle:          map['advisor_style'] as String? ?? 'Executivo',
-        advisorAvatar:         map['advisor_avatar'] as String? ?? '',
+        id: map['id'] as String,
+        userId: map['user_id'] as String,
+        advisorName: map['advisor_name'] as String? ?? 'Atlas',
+        advisorRole: map['advisor_role'] as String? ?? 'Geral',
+        advisorStyle: map['advisor_style'] as String? ?? 'Executivo',
+        advisorAvatar: map['advisor_avatar'] as String? ?? '',
         advisorPersonalityJson: map['advisor_personality_json'] is Map
             ? Map<String, dynamic>.from(map['advisor_personality_json'] as Map)
             : {},
@@ -57,11 +57,11 @@ class AdvisorProfile {
       );
 
   Map<String, dynamic> toInsertMap() => {
-        'user_id':                  userId,
-        'advisor_name':             advisorName,
-        'advisor_role':             advisorRole,
-        'advisor_style':            advisorStyle,
-        'advisor_avatar':           advisorAvatar,
+        'user_id': userId,
+        'advisor_name': advisorName,
+        'advisor_role': advisorRole,
+        'advisor_style': advisorStyle,
+        'advisor_avatar': advisorAvatar,
         'advisor_personality_json': advisorPersonalityJson,
       };
 }

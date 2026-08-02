@@ -17,33 +17,33 @@ final _piService = ProjectIntelligenceService();
 // ── Project Intelligence Profiles ─────────────────────────────────────────
 final projectIntelligenceProfilesProvider =
     FutureProvider.autoDispose<List<ProjectIntelligenceProfile>>((ref) async {
-  final projects      = await ref.watch(projectsProvider.future);
-  final analyses      = await ref.watch(marketAnalysesProvider.future);
-  final actions       = await ref.watch(actionQueueProvider.future);
-  final labItems      = await ref.watch(opportunityLabProvider.future);
-  final revenuePlans  = await ref.watch(allRevenuePlansProvider.future);
+  final projects = await ref.watch(projectsProvider.future);
+  final analyses = await ref.watch(marketAnalysesProvider.future);
+  final actions = await ref.watch(actionQueueProvider.future);
+  final labItems = await ref.watch(opportunityLabProvider.future);
+  final revenuePlans = await ref.watch(allRevenuePlansProvider.future);
   final knowledgeList = await ref.watch(knowledgeItemsProvider.future);
-  final trainings     = await ref.watch(allPersonaTrainingsProvider.future);
+  final trainings = await ref.watch(allPersonaTrainingsProvider.future);
 
   return _piService.computeProfiles(
-    projects:            projects,
-    analyses:            analyses,
-    actions:             actions,
-    labItems:            labItems,
-    revenuePlans:        revenuePlans,
+    projects: projects,
+    analyses: analyses,
+    actions: actions,
+    labItems: labItems,
+    revenuePlans: revenuePlans,
     totalKnowledgeItems: knowledgeList.length,
-    trainings:           trainings,
+    trainings: trainings,
   );
 });
 
 // ── Persona Learning Profiles ──────────────────────────────────────────────
 final personaLearningProfilesProvider =
     FutureProvider.autoDispose<List<PersonaLearningProfile>>((ref) async {
-  final personas  = await ref.watch(personasProvider.future);
+  final personas = await ref.watch(personasProvider.future);
   final trainings = await ref.watch(allPersonaTrainingsProvider.future);
 
   return _piService.computeLearningProfiles(
-    personas:     personas,
+    personas: personas,
     allTrainings: trainings,
   );
 });
@@ -57,10 +57,10 @@ final knowledgeGraphProvider =
   final labItems = await ref.watch(opportunityLabProvider.future);
 
   return _piService.buildGraph(
-    projects:  projects,
-    analyses:  analyses,
-    personas:  personas,
-    labItems:  labItems,
+    projects: projects,
+    analyses: analyses,
+    personas: personas,
+    labItems: labItems,
   );
 });
 
@@ -72,8 +72,7 @@ final portfolioCoverageScoreProvider =
 });
 
 // ── Average Persona Learning Score ────────────────────────────────────────
-final avgLearningScoreProvider =
-    FutureProvider.autoDispose<int>((ref) async {
+final avgLearningScoreProvider = FutureProvider.autoDispose<int>((ref) async {
   final profiles = await ref.watch(personaLearningProfilesProvider.future);
   if (profiles.isEmpty) return 0;
   return profiles.fold(0, (s, p) => s + p.learningScore) ~/ profiles.length;

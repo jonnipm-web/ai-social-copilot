@@ -7,7 +7,8 @@ import '../../../data/models/competitor.dart';
 import '../../../data/models/copilot_context_data.dart';
 import '../../../data/services/project_intelligence_context_service.dart';
 import '../../../providers/market_analysis_provider.dart';
-import '../../../shared/widgets/context_copilot_widget.dart' show showCopilotChat;
+import '../../../shared/widgets/context_copilot_widget.dart'
+    show showCopilotChat;
 
 class CompetitorDiscoveryScreen extends ConsumerStatefulWidget {
   const CompetitorDiscoveryScreen({super.key, required this.analysisId});
@@ -24,12 +25,18 @@ class _CompetitorDiscoveryScreenState
   String? _error;
 
   Future<void> _discover() async {
-    setState(() { _running = true; _error = null; });
+    setState(() {
+      _running = true;
+      _error = null;
+    });
     try {
-      final analysis = await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
+      final analysis =
+          await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
       final ctx = analysis.projectId != null
-          ? await ProjectIntelligenceContextService().buildForProject(analysis.projectId!)
-          : await ProjectIntelligenceContextService().buildForInput(analysis.input);
+          ? await ProjectIntelligenceContextService()
+              .buildForProject(analysis.projectId!)
+          : await ProjectIntelligenceContextService()
+              .buildForInput(analysis.input);
       await ref
           .read(marketAnalysisServiceProvider)
           .discoverCompetitors(widget.analysisId, analysis.input, context: ctx);
@@ -52,18 +59,21 @@ class _CompetitorDiscoveryScreenState
 
   @override
   Widget build(BuildContext context) {
-    final asyncList = ref.watch(competitorsByAnalysisProvider(widget.analysisId));
+    final asyncList =
+        ref.watch(competitorsByAnalysisProvider(widget.analysisId));
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F1A),
       appBar: AppBar(
         backgroundColor: const Color(0xFF0F0F1A),
-        title: const Text('Concorrentes', style: TextStyle(color: Colors.white)),
+        title:
+            const Text('Concorrentes', style: TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go(
-            AppConstants.routeMarketIntelligenceHub.replaceFirst(':id', widget.analysisId),
+            AppConstants.routeMarketIntelligenceHub
+                .replaceFirst(':id', widget.analysisId),
           ),
         ),
         actions: [
@@ -73,7 +83,8 @@ class _CompetitorDiscoveryScreenState
                 ? const SizedBox(
                     width: 16,
                     height: 16,
-                    child: CircularProgressIndicator(color: Color(0xFFFF6B6B), strokeWidth: 2),
+                    child: CircularProgressIndicator(
+                        color: Color(0xFFFF6B6B), strokeWidth: 2),
                   )
                 : const Icon(Icons.search_rounded, color: Color(0xFFFF6B6B)),
             label: Text(
@@ -94,20 +105,27 @@ class _CompetitorDiscoveryScreenState
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.red.withOpacity(0.3)),
               ),
-              child: Text(_error!, style: const TextStyle(color: Colors.redAccent, fontSize: 13)),
+              child: Text(_error!,
+                  style:
+                      const TextStyle(color: Colors.redAccent, fontSize: 13)),
             ),
           Expanded(
             child: asyncList.when(
-              loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFFFF6B6B))),
-              error: (e, _) => Center(child: Text('Erro: $e', style: const TextStyle(color: Colors.redAccent))),
+              loading: () => const Center(
+                  child: CircularProgressIndicator(color: Color(0xFFFF6B6B))),
+              error: (e, _) => Center(
+                  child: Text('Erro: $e',
+                      style: const TextStyle(color: Colors.redAccent))),
               data: (competitors) => competitors.isEmpty
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.people_alt_outlined, color: Colors.white24, size: 64),
+                          const Icon(Icons.people_alt_outlined,
+                              color: Colors.white24, size: 64),
                           const SizedBox(height: 16),
-                          const Text('Nenhum concorrente ainda', style: TextStyle(color: Colors.white38)),
+                          const Text('Nenhum concorrente ainda',
+                              style: TextStyle(color: Colors.white38)),
                           const SizedBox(height: 8),
                           ElevatedButton(
                             onPressed: _running ? null : _discover,
@@ -145,9 +163,12 @@ class _CompetitorCard extends StatelessWidget {
 
   Color get _typeColor {
     switch (competitor.type) {
-      case 'direct': return const Color(0xFFFF6B6B);
-      case 'indirect': return const Color(0xFFFFD93D);
-      default: return const Color(0xFF6BCB77);
+      case 'direct':
+        return const Color(0xFFFF6B6B);
+      case 'indirect':
+        return const Color(0xFFFFD93D);
+      default:
+        return const Color(0xFF6BCB77);
     }
   }
 
@@ -174,17 +195,22 @@ class _CompetitorCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(competitor.name,
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15)),
                       const SizedBox(height: 2),
                       Text(competitor.url,
-                          style: const TextStyle(color: Colors.white54, fontSize: 12),
+                          style: const TextStyle(
+                              color: Colors.white54, fontSize: 12),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis),
                     ],
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: _typeColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
@@ -192,29 +218,46 @@ class _CompetitorCard extends StatelessWidget {
                   ),
                   child: Text(
                     competitor.type.toUpperCase(),
-                    style: TextStyle(color: _typeColor, fontSize: 10, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        color: _typeColor,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold),
                   ),
                 ),
                 const SizedBox(width: 8),
-                const Icon(Icons.chevron_right_rounded, color: Colors.white24, size: 18),
+                const Icon(Icons.chevron_right_rounded,
+                    color: Colors.white24, size: 18),
               ],
             ),
             const SizedBox(height: 12),
             Row(
               children: [
-                _ScoreItem(label: 'Simil.', value: competitor.similarityScore, color: const Color(0xFF4D96FF)),
+                _ScoreItem(
+                    label: 'Simil.',
+                    value: competitor.similarityScore,
+                    color: const Color(0xFF4D96FF)),
                 const SizedBox(width: 12),
-                _ScoreItem(label: 'Autor.', value: competitor.authorityScore, color: const Color(0xFFFFD93D)),
+                _ScoreItem(
+                    label: 'Autor.',
+                    value: competitor.authorityScore,
+                    color: const Color(0xFFFFD93D)),
                 const SizedBox(width: 12),
-                _ScoreItem(label: 'Relev.', value: competitor.relevanceScore, color: const Color(0xFF6BCB77)),
+                _ScoreItem(
+                    label: 'Relev.',
+                    value: competitor.relevanceScore,
+                    color: const Color(0xFF6BCB77)),
                 const SizedBox(width: 12),
-                _ScoreItem(label: 'Geral', value: competitor.overallScore, color: const Color(0xFFFF6B6B)),
+                _ScoreItem(
+                    label: 'Geral',
+                    value: competitor.overallScore,
+                    color: const Color(0xFFFF6B6B)),
               ],
             ),
             if (competitor.description.isNotEmpty) ...[
               const SizedBox(height: 10),
               Text(competitor.description,
-                  style: const TextStyle(color: Colors.white60, fontSize: 12, height: 1.4),
+                  style: const TextStyle(
+                      color: Colors.white60, fontSize: 12, height: 1.4),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis),
             ],
@@ -233,17 +276,23 @@ class _CompetitorDetailSheet extends StatelessWidget {
 
   Color get _typeColor {
     switch (competitor.type) {
-      case 'direct': return const Color(0xFFFF6B6B);
-      case 'indirect': return const Color(0xFFFFD93D);
-      default: return const Color(0xFF6BCB77);
+      case 'direct':
+        return const Color(0xFFFF6B6B);
+      case 'indirect':
+        return const Color(0xFFFFD93D);
+      default:
+        return const Color(0xFF6BCB77);
     }
   }
 
   String get _typeLabel {
     switch (competitor.type) {
-      case 'direct': return 'Concorrente Direto';
-      case 'indirect': return 'Concorrente Indireto';
-      default: return 'Referência de Mercado';
+      case 'direct':
+        return 'Concorrente Direto';
+      case 'indirect':
+        return 'Concorrente Indireto';
+      default:
+        return 'Referência de Mercado';
     }
   }
 
@@ -280,22 +329,30 @@ class _CompetitorDetailSheet extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(competitor.name,
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18)),
                         const SizedBox(height: 4),
                         Text(competitor.url,
-                            style: const TextStyle(color: Colors.white54, fontSize: 13)),
+                            style: const TextStyle(
+                                color: Colors.white54, fontSize: 13)),
                       ],
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       color: _typeColor.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(color: _typeColor.withOpacity(0.5)),
                     ),
                     child: Text(_typeLabel,
-                        style: TextStyle(color: _typeColor, fontSize: 11, fontWeight: FontWeight.bold)),
+                        style: TextStyle(
+                            color: _typeColor,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),
@@ -311,18 +368,35 @@ class _CompetitorDetailSheet extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _DetailScore(label: 'Similaridade', value: competitor.similarityScore, color: const Color(0xFF4D96FF)),
-                      _DetailScore(label: 'Autoridade', value: competitor.authorityScore, color: const Color(0xFFFFD93D)),
-                      _DetailScore(label: 'Relevância', value: competitor.relevanceScore, color: const Color(0xFF6BCB77)),
-                      _DetailScore(label: 'Geral', value: competitor.overallScore, color: const Color(0xFFFF6B6B)),
+                      _DetailScore(
+                          label: 'Similaridade',
+                          value: competitor.similarityScore,
+                          color: const Color(0xFF4D96FF)),
+                      _DetailScore(
+                          label: 'Autoridade',
+                          value: competitor.authorityScore,
+                          color: const Color(0xFFFFD93D)),
+                      _DetailScore(
+                          label: 'Relevância',
+                          value: competitor.relevanceScore,
+                          color: const Color(0xFF6BCB77)),
+                      _DetailScore(
+                          label: 'Geral',
+                          value: competitor.overallScore,
+                          color: const Color(0xFFFF6B6B)),
                     ],
                   ),
                   const SizedBox(height: 20),
                   if (competitor.description.isNotEmpty) ...[
-                    const Text('Sobre', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold)),
+                    const Text('Sobre',
+                        style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold)),
                     const SizedBox(height: 6),
                     Text(competitor.description,
-                        style: const TextStyle(color: Colors.white60, fontSize: 13, height: 1.5)),
+                        style: const TextStyle(
+                            color: Colors.white60, fontSize: 13, height: 1.5)),
                     const SizedBox(height: 16),
                   ],
                   if (competitor.strengths.isNotEmpty) ...[
@@ -380,11 +454,13 @@ class _CompetitorDetailSheet extends StatelessWidget {
                         );
                       },
                       icon: const Icon(Icons.psychology_rounded),
-                      label: const Text('Perguntar à IVE sobre este concorrente'),
+                      label:
+                          const Text('Perguntar à IVE sobre este concorrente'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF00BCD4),
                         foregroundColor: Colors.black,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
                   ),
@@ -399,7 +475,8 @@ class _CompetitorDetailSheet extends StatelessWidget {
 }
 
 class _DetailScore extends StatelessWidget {
-  const _DetailScore({required this.label, required this.value, required this.color});
+  const _DetailScore(
+      {required this.label, required this.value, required this.color});
   final String label;
   final int value;
   final Color color;
@@ -418,11 +495,13 @@ class _DetailScore extends StatelessWidget {
           ),
           child: Center(
             child: Text('$value',
-                style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 18)),
+                style: TextStyle(
+                    color: color, fontWeight: FontWeight.bold, fontSize: 18)),
           ),
         ),
         const SizedBox(height: 6),
-        Text(label, style: const TextStyle(color: Colors.white54, fontSize: 11)),
+        Text(label,
+            style: const TextStyle(color: Colors.white54, fontSize: 11)),
       ],
     );
   }
@@ -449,7 +528,9 @@ class _ListSection extends StatelessWidget {
           children: [
             Icon(icon, color: color, size: 16),
             const SizedBox(width: 6),
-            Text(title, style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.bold)),
+            Text(title,
+                style: TextStyle(
+                    color: color, fontSize: 13, fontWeight: FontWeight.bold)),
           ],
         ),
         const SizedBox(height: 8),
@@ -463,7 +544,8 @@ class _ListSection extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(item,
-                      style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.4)),
+                      style: const TextStyle(
+                          color: Colors.white70, fontSize: 13, height: 1.4)),
                 ),
               ],
             ),
@@ -477,7 +559,8 @@ class _ListSection extends StatelessWidget {
 // ── Score chip (list card) ────────────────────────────────────────────────────
 
 class _ScoreItem extends StatelessWidget {
-  const _ScoreItem({required this.label, required this.value, required this.color});
+  const _ScoreItem(
+      {required this.label, required this.value, required this.color});
   final String label;
   final int value;
   final Color color;
@@ -486,8 +569,11 @@ class _ScoreItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text('$value', style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 16)),
-        Text(label, style: const TextStyle(color: Colors.white38, fontSize: 10)),
+        Text('$value',
+            style: TextStyle(
+                color: color, fontWeight: FontWeight.bold, fontSize: 16)),
+        Text(label,
+            style: const TextStyle(color: Colors.white38, fontSize: 10)),
       ],
     );
   }

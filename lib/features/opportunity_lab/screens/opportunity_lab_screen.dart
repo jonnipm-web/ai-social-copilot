@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
-import '../../../data/models/action_queue_item.dart';
 import '../../../data/models/opportunity_lab_item.dart';
 import '../../../providers/action_queue_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
@@ -14,13 +13,13 @@ import '../../action_engine/screens/action_detail_screen.dart';
 import 'opportunity_detail_screen.dart';
 
 // ── Colors ───────────────────────────────────────────────────────────────────
-const _kBg      = Color(0xFF0F0F1A);
-const _kCard    = Color(0xFF1A1A2E);
+const _kBg = Color(0xFF0F0F1A);
+const _kCard = Color(0xFF1A1A2E);
 const _kPrimary = Color(0xFF6C63FF);
-const _kGreen   = Color(0xFF4CAF50);
-const _kOrange  = Color(0xFFFF9800);
-const _kRed     = Color(0xFFF44336);
-const _kGold    = Color(0xFFFFD700);
+const _kGreen = Color(0xFF4CAF50);
+const _kOrange = Color(0xFFFF9800);
+const _kRed = Color(0xFFF44336);
+const _kGold = Color(0xFFFFD700);
 
 Color _scoreColor(int s) {
   if (s >= 80) return _kGreen;
@@ -35,7 +34,8 @@ class OpportunityLabScreen extends ConsumerStatefulWidget {
   const OpportunityLabScreen({super.key});
 
   @override
-  ConsumerState<OpportunityLabScreen> createState() => _OpportunityLabScreenState();
+  ConsumerState<OpportunityLabScreen> createState() =>
+      _OpportunityLabScreenState();
 }
 
 class _OpportunityLabScreenState extends ConsumerState<OpportunityLabScreen> {
@@ -57,7 +57,8 @@ class _OpportunityLabScreenState extends ConsumerState<OpportunityLabScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final flagAsync = ref.watch(featureFlagProvider(FeatureFlag.opportunityLabEnabled));
+    final flagAsync =
+        ref.watch(featureFlagProvider(FeatureFlag.opportunityLabEnabled));
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -65,13 +66,16 @@ class _OpportunityLabScreenState extends ConsumerState<OpportunityLabScreen> {
         backgroundColor: _kBg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-          onPressed: () =>
-              context.canPop() ? context.pop() : context.go(AppConstants.routeDashboard),
+          icon:
+              const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          onPressed: () => context.canPop()
+              ? context.pop()
+              : context.go(AppConstants.routeDashboard),
         ),
         title: const Text(
           'Opportunity Lab',
-          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+          style: TextStyle(
+              color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
         ),
       ),
       drawer: const AppDrawer(),
@@ -85,7 +89,8 @@ class _OpportunityLabScreenState extends ConsumerState<OpportunityLabScreen> {
       body: flagAsync.when(
         loading: () =>
             const Center(child: CircularProgressIndicator(color: _kPrimary)),
-        error: (_, __) => _LabBody(projectId: _projectId, onProjectChange: _setProject),
+        error: (_, __) =>
+            _LabBody(projectId: _projectId, onProjectChange: _setProject),
         data: (enabled) => enabled
             ? _LabBody(projectId: _projectId, onProjectChange: _setProject)
             : const _FeatureGated(),
@@ -110,12 +115,15 @@ class _FeatureGated extends StatelessWidget {
             const Text(
               'Opportunity Lab',
               style: TextStyle(
-                  color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             const Text(
               'O Opportunity Lab está sendo preparado para lançamento.\nEm breve você poderá gerar e avaliar oportunidades de negócio de forma massiva e inteligente.',
-              style: TextStyle(color: Colors.white54, fontSize: 13, height: 1.5),
+              style:
+                  TextStyle(color: Colors.white54, fontSize: 13, height: 1.5),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
@@ -147,8 +155,8 @@ class _FeatureGated extends StatelessWidget {
 
 class _LabBody extends ConsumerWidget {
   const _LabBody({required this.projectId, required this.onProjectChange});
-  final String?                 projectId;
-  final void Function(String?)  onProjectChange;
+  final String? projectId;
+  final void Function(String?) onProjectChange;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -158,8 +166,7 @@ class _LabBody extends ConsumerWidget {
       loading: () =>
           const Center(child: CircularProgressIndicator(color: _kPrimary)),
       error: (e, _) => Center(
-        child: Text('Erro: $e',
-            style: const TextStyle(color: Colors.white54)),
+        child: Text('Erro: $e', style: const TextStyle(color: Colors.white54)),
       ),
       data: (items) {
         if (items.isEmpty) {
@@ -170,8 +177,8 @@ class _LabBody extends ConsumerWidget {
                 child: _EmptyLab(
                   onAdd: () => showDialog(
                     context: context,
-                    builder: (ctx) =>
-                        Consumer(builder: (ctx, r, _) => _AddOpportunityDialog(ref: r)),
+                    builder: (ctx) => Consumer(
+                        builder: (ctx, r, _) => _AddOpportunityDialog(ref: r)),
                   ),
                 ),
               ),
@@ -191,7 +198,8 @@ class _LabBody extends ConsumerWidget {
                     item: items[i],
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => OpportunityDetailScreen(itemId: items[i].id),
+                        builder: (_) =>
+                            OpportunityDetailScreen(itemId: items[i].id),
                       ),
                     ),
                     onApprove: () {
@@ -207,14 +215,16 @@ class _LabBody extends ConsumerWidget {
                               .addFromOpportunityItem(opp);
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                              content: const Text('Aprovada e enviada ao Action Engine!'),
+                              content: const Text(
+                                  'Aprovada e enviada ao Action Engine!'),
                               backgroundColor: const Color(0xFF4CAF50),
                               action: SnackBarAction(
                                 label: 'Ver Ação',
                                 textColor: Colors.white,
                                 onPressed: () => Navigator.of(context).push(
                                   MaterialPageRoute(
-                                    builder: (_) => ActionDetailScreen(itemId: action.id),
+                                    builder: (_) =>
+                                        ActionDetailScreen(itemId: action.id),
                                   ),
                                 ),
                               ),
@@ -224,7 +234,8 @@ class _LabBody extends ConsumerWidget {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('Aprovada, mas erro ao criar ação: $e'),
+                                content: Text(
+                                    'Aprovada, mas erro ao criar ação: $e'),
                                 backgroundColor: Colors.orange,
                               ),
                             );
@@ -232,8 +243,9 @@ class _LabBody extends ConsumerWidget {
                         }
                       });
                     },
-                    onDelete: () =>
-                        ref.read(opportunityLabNotifierProvider.notifier).delete(items[i].id),
+                    onDelete: () => ref
+                        .read(opportunityLabNotifierProvider.notifier)
+                        .delete(items[i].id),
                     onConvertToAction: items[i].status == 'approved'
                         ? () async {
                             try {
@@ -241,15 +253,18 @@ class _LabBody extends ConsumerWidget {
                                   .read(actionQueueNotifierProvider.notifier)
                                   .addFromOpportunityItem(items[i]);
                               if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                  content: const Text('Ação criada no Action Engine!'),
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(SnackBar(
+                                  content: const Text(
+                                      'Ação criada no Action Engine!'),
                                   backgroundColor: const Color(0xFF4CAF50),
                                   action: SnackBarAction(
                                     label: 'Ver',
                                     textColor: Colors.white,
                                     onPressed: () => Navigator.of(context).push(
                                       MaterialPageRoute(
-                                        builder: (_) => ActionDetailScreen(itemId: action.id),
+                                        builder: (_) => ActionDetailScreen(
+                                            itemId: action.id),
                                       ),
                                     ),
                                   ),
@@ -258,7 +273,9 @@ class _LabBody extends ConsumerWidget {
                             } catch (e) {
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red),
+                                  SnackBar(
+                                      content: Text('Erro: $e'),
+                                      backgroundColor: Colors.red),
                                 );
                               }
                             }
@@ -284,16 +301,16 @@ class _LabItemCard extends StatelessWidget {
     this.onConvertToAction,
   });
   final OpportunityLabItem item;
-  final VoidCallback        onTap;
-  final VoidCallback        onApprove;
-  final VoidCallback        onDelete;
-  final VoidCallback?       onConvertToAction;
+  final VoidCallback onTap;
+  final VoidCallback onApprove;
+  final VoidCallback onDelete;
+  final VoidCallback? onConvertToAction;
 
   static Color _statusColor(String s) {
     const m = {
-      'approved':  Color(0xFF4CAF50),
+      'approved': Color(0xFF4CAF50),
       'executing': Color(0xFF00BCD4),
-      'rejected':  Color(0xFFF44336),
+      'rejected': Color(0xFFF44336),
     };
     return m[s] ?? const Color(0xFFFF9800);
   }
@@ -301,118 +318,126 @@ class _LabItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final score = item.finalScore;
-    final c     = _scoreColor(score);
+    final c = _scoreColor(score);
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.07)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: _kPrimary.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  item.opportunityType.toUpperCase(),
-                  style: const TextStyle(
-                      color: _kPrimary, fontSize: 9, fontWeight: FontWeight.bold),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  item.title,
-                  style: const TextStyle(
-                      color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (score > 0) ...[
-                const SizedBox(width: 8),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: _kCard,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withOpacity(0.07)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: c.withOpacity(0.15),
+                    color: _kPrimary.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: Text('$score',
-                      style: TextStyle(
-                          color: c,
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold)),
+                  child: Text(
+                    item.opportunityType.toUpperCase(),
+                    style: const TextStyle(
+                        color: _kPrimary,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold),
+                  ),
                 ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    item.title,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (score > 0) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: c.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text('$score',
+                        style: TextStyle(
+                            color: c,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold)),
+                  ),
+                ],
               ],
+            ),
+            if (item.description.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(item.description,
+                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis),
             ],
-          ),
-          if (item.description.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(item.description,
-                style: const TextStyle(color: Colors.white54, fontSize: 12),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis),
-          ],
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: _statusColor(item.status).withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(6),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: _statusColor(item.status).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    item.status,
+                    style: TextStyle(
+                        color: _statusColor(item.status),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600),
+                  ),
                 ),
-                child: Text(
-                  item.status,
-                  style: TextStyle(
-                      color: _statusColor(item.status),
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600),
+                const Spacer(),
+                if (item.status == 'pending')
+                  TextButton(
+                    onPressed: onApprove,
+                    style: TextButton.styleFrom(
+                        foregroundColor: _kGreen,
+                        minimumSize: Size.zero,
+                        padding: const EdgeInsets.symmetric(horizontal: 8)),
+                    child:
+                        const Text('Aprovar', style: TextStyle(fontSize: 12)),
+                  ),
+                if (item.status == 'approved' && onConvertToAction != null)
+                  TextButton(
+                    onPressed: onConvertToAction,
+                    style: TextButton.styleFrom(
+                        foregroundColor: const Color(0xFF00BCD4),
+                        minimumSize: Size.zero,
+                        padding: const EdgeInsets.symmetric(horizontal: 8)),
+                    child: const Text('→ Ação', style: TextStyle(fontSize: 12)),
+                  ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline_rounded,
+                      color: Colors.white24, size: 18),
+                  onPressed: onDelete,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
-              ),
-              const Spacer(),
-              if (item.status == 'pending')
-                TextButton(
-                  onPressed: onApprove,
-                  style: TextButton.styleFrom(
-                      foregroundColor: _kGreen,
-                      minimumSize: Size.zero,
-                      padding: const EdgeInsets.symmetric(horizontal: 8)),
-                  child: const Text('Aprovar', style: TextStyle(fontSize: 12)),
-                ),
-              if (item.status == 'approved' && onConvertToAction != null)
-                TextButton(
-                  onPressed: onConvertToAction,
-                  style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFF00BCD4),
-                      minimumSize: Size.zero,
-                      padding: const EdgeInsets.symmetric(horizontal: 8)),
-                  child: const Text('→ Ação', style: TextStyle(fontSize: 12)),
-                ),
-              IconButton(
-                icon: const Icon(Icons.delete_outline_rounded,
+                const SizedBox(width: 4),
+                const Icon(Icons.chevron_right_rounded,
                     color: Colors.white24, size: 18),
-                onPressed: onDelete,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-              const SizedBox(width: 4),
-              const Icon(Icons.chevron_right_rounded,
-                  color: Colors.white24, size: 18),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
-    ),
     );
   }
 }
@@ -441,8 +466,8 @@ class _EmptyLab extends StatelessWidget {
             const SizedBox(height: 12),
             const Text(
               'Adicione oportunidades para analisar, priorizar e executar.',
-              style: TextStyle(
-                  color: Colors.white38, fontSize: 13, height: 1.5),
+              style:
+                  TextStyle(color: Colors.white38, fontSize: 13, height: 1.5),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -470,7 +495,7 @@ class _EmptyLab extends StatelessWidget {
 
 class _ProjectFilter extends ConsumerWidget {
   const _ProjectFilter({required this.selected, required this.onSelect});
-  final String?                selected;
+  final String? selected;
   final void Function(String?) onSelect;
 
   @override
@@ -505,9 +530,10 @@ class _ProjectFilter extends ConsumerWidget {
 }
 
 class _Chip extends StatelessWidget {
-  const _Chip({required this.label, required this.selected, required this.onTap});
-  final String       label;
-  final bool         selected;
+  const _Chip(
+      {required this.label, required this.selected, required this.onTap});
+  final String label;
+  final bool selected;
   final VoidCallback onTap;
 
   @override
@@ -550,10 +576,9 @@ class _AddOpportunityDialog extends ConsumerStatefulWidget {
       _AddOpportunityDialogState();
 }
 
-class _AddOpportunityDialogState
-    extends ConsumerState<_AddOpportunityDialog> {
+class _AddOpportunityDialogState extends ConsumerState<_AddOpportunityDialog> {
   final _titleCtrl = TextEditingController();
-  final _descCtrl  = TextEditingController();
+  final _descCtrl = TextEditingController();
   String _type = OpportunityLabItem.types.first;
   bool _saving = false;
 
@@ -628,7 +653,8 @@ class _AddOpportunityDialogState
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancelar', style: TextStyle(color: Colors.white54)),
+          child:
+              const Text('Cancelar', style: TextStyle(color: Colors.white54)),
         ),
         ElevatedButton(
           onPressed: _saving || _titleCtrl.text.trim().isEmpty
@@ -636,12 +662,12 @@ class _AddOpportunityDialogState
               : () async {
                   setState(() => _saving = true);
                   final item = OpportunityLabItem(
-                    id:              '',
-                    userId:          '',
+                    id: '',
+                    userId: '',
                     opportunityType: _type,
-                    title:           _titleCtrl.text.trim(),
-                    description:     _descCtrl.text.trim(),
-                    createdAt:       DateTime.now(),
+                    title: _titleCtrl.text.trim(),
+                    description: _descCtrl.text.trim(),
+                    createdAt: DateTime.now(),
                   );
                   await ref
                       .read(opportunityLabNotifierProvider.notifier)

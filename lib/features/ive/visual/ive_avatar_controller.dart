@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import '../domain/ive_visual_event.dart';
 import 'ive_avatar_state.dart';
 import 'ive_rive_runtime.dart';
-import 'ive_visual_runtime.dart';
 
 // ── Avatar Controller ─────────────────────────────────────────────────────────
 // Bridge between the IVE Context Engine (business logic / IveProvider) and the
@@ -11,12 +10,12 @@ import 'ive_visual_runtime.dart';
 
 class IveAvatarController extends ChangeNotifier {
   IveRiveRuntime? _riveRuntime;
-  IveVisualState  _currentState   = IveVisualState.idle;
-  bool            _riveReady      = false;
-  bool            _disposed       = false;
+  IveVisualState _currentState = IveVisualState.idle;
+  bool _riveReady = false;
+  bool _disposed = false;
 
   IveVisualState get currentState => _currentState;
-  bool           get isRiveReady  => _riveReady;
+  bool get isRiveReady => _riveReady;
 
   /// Returns the Rive runtime (for the Rive widget to access the artboard).
   IveRiveRuntime? get riveRuntime => _riveRuntime;
@@ -35,7 +34,7 @@ class IveAvatarController extends ChangeNotifier {
     } catch (_) {
       // .riv asset missing or malformed — fallback will be used
       _riveRuntime = null;
-      _riveReady   = false;
+      _riveReady = false;
       return false;
     }
   }
@@ -91,6 +90,7 @@ class IveAvatarController extends ChangeNotifier {
 
   @override
   void dispose() {
+    if (_disposed) return;
     _disposed = true;
     _riveRuntime?.dispose();
     super.dispose();

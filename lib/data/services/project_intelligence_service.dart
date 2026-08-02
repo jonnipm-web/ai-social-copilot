@@ -29,33 +29,33 @@ class ProjectIntelligenceService {
 
     return projects.map((p) {
       final analysis = _findAnalysis(p, analyses);
-      final plan     = _findRevenuePlan(p, analysis, revenuePlans);
+      final plan = _findRevenuePlan(p, analysis, revenuePlans);
       final pActions = actions.where((a) => a.projectId == p.id).toList();
-      final pLab     = labItems.where((l) => l.projectId == p.id).toList();
+      final pLab = labItems.where((l) => l.projectId == p.id).toList();
 
       final coverage = KnowledgeCoverage.compute(
-        project:            p,
-        analysis:           analysis,
+        project: p,
+        analysis: analysis,
         knowledgeItemCount: totalKnowledgeItems,
-        actions:            pActions,
-        labItems:           pLab,
-        revenuePlan:        plan,
+        actions: pActions,
+        labItems: pLab,
+        revenuePlan: plan,
         trainedPersonaCount: trainedPersonaCount,
       );
 
       return ProjectIntelligenceProfile(
-        project:             p,
-        analysis:            analysis,
-        coverage:            coverage,
-        maturityStage:       _maturityStage(p, analysis, pActions, pLab, plan),
+        project: p,
+        analysis: analysis,
+        coverage: coverage,
+        maturityStage: _maturityStage(p, analysis, pActions, pLab, plan),
         relatedProjectNames: _relatedProjects(p, analysis, projects, analyses),
-        identifiedTopics:    _identifiedTopics(analysis, pLab),
-        missingKnowledge:    coverage.gaps,
-        niche:               analysis?.niche ?? 'Não definido',
-        targetAudience:      analysis?.targetAudience ?? 'Não definido',
-        monetizationModel:   analysis?.monetizationModel ?? 'Não definido',
-        valueProposition:    analysis?.valueProposition ?? p.description,
-        computedAt:          DateTime.now(),
+        identifiedTopics: _identifiedTopics(analysis, pLab),
+        missingKnowledge: coverage.gaps,
+        niche: analysis?.niche ?? 'Não definido',
+        targetAudience: analysis?.targetAudience ?? 'Não definido',
+        monetizationModel: analysis?.monetizationModel ?? 'Não definido',
+        valueProposition: analysis?.valueProposition ?? p.description,
+        computedAt: DateTime.now(),
       );
     }).toList();
   }
@@ -65,8 +65,10 @@ class ProjectIntelligenceService {
     required List<PersonaTraining> allTrainings,
   }) {
     return personas.map((persona) {
-      final pTrainings = allTrainings.where((t) => t.personaId == persona.id).toList();
-      return PersonaLearningProfile.compute(persona: persona, trainings: pTrainings);
+      final pTrainings =
+          allTrainings.where((t) => t.personaId == persona.id).toList();
+      return PersonaLearningProfile.compute(
+          persona: persona, trainings: pTrainings);
     }).toList()
       ..sort((a, b) => b.learningScore.compareTo(a.learningScore));
   }
@@ -95,14 +97,14 @@ class ProjectIntelligenceService {
         final overlap = _nicheOverlap(nicheA, nicheB);
         if (overlap > 0.2) {
           edges.add(GraphEdge(
-            sourceType:   'project',
-            sourceId:     pA.id,
-            sourceName:   pA.name,
-            targetType:   'project',
-            targetId:     pB.id,
-            targetName:   pB.name,
+            sourceType: 'project',
+            sourceId: pA.id,
+            sourceName: pA.name,
+            targetType: 'project',
+            targetId: pB.id,
+            targetName: pB.name,
             relationship: 'compartilha_nicho',
-            weight:       overlap,
+            weight: overlap,
           ));
         }
       }
@@ -113,14 +115,14 @@ class ProjectIntelligenceService {
       final project = projects.where((p) => p.id == lab.projectId).toList();
       if (project.isEmpty) continue;
       edges.add(GraphEdge(
-        sourceType:   'project',
-        sourceId:     project.first.id,
-        sourceName:   project.first.name,
-        targetType:   'opportunity',
-        targetId:     lab.id,
-        targetName:   lab.title,
+        sourceType: 'project',
+        sourceId: project.first.id,
+        sourceName: project.first.name,
+        targetType: 'opportunity',
+        targetId: lab.id,
+        targetName: lab.title,
         relationship: 'oportunidade_de',
-        weight:       lab.finalScore / 100,
+        weight: lab.finalScore / 100,
       ));
     }
 
@@ -131,17 +133,18 @@ class ProjectIntelligenceService {
       for (final p in projects) {
         final a = _findAnalysis(p, analyses);
         if (a == null) continue;
-        final overlap = _nicheOverlap(personaNiche, (a.niche ?? '').toLowerCase());
+        final overlap =
+            _nicheOverlap(personaNiche, (a.niche ?? '').toLowerCase());
         if (overlap > 0.3) {
           edges.add(GraphEdge(
-            sourceType:   'persona',
-            sourceId:     persona.id,
-            sourceName:   persona.name,
-            targetType:   'project',
-            targetId:     p.id,
-            targetName:   p.name,
+            sourceType: 'persona',
+            sourceId: persona.id,
+            sourceName: persona.name,
+            targetType: 'project',
+            targetId: p.id,
+            targetName: p.name,
             relationship: 'persona_conhece',
-            weight:       overlap,
+            weight: overlap,
           ));
         }
       }
@@ -154,8 +157,8 @@ class ProjectIntelligenceService {
     }
 
     return KnowledgeGraph(
-      edges:      edges,
-      nodeCount:  nodes.length,
+      edges: edges,
+      nodeCount: nodes.length,
       computedAt: DateTime.now(),
     );
   }
@@ -183,10 +186,12 @@ class ProjectIntelligenceService {
     return null;
   }
 
-  RevenuePlan? _findRevenuePlan(Project p, MarketAnalysis? a, List<RevenuePlan> plans) {
+  RevenuePlan? _findRevenuePlan(
+      Project p, MarketAnalysis? a, List<RevenuePlan> plans) {
     if (plans.isEmpty) return null;
     if (p.marketAnalysisId != null) {
-      final d = plans.where((r) => r.marketAnalysisId == p.marketAnalysisId).toList();
+      final d =
+          plans.where((r) => r.marketAnalysisId == p.marketAnalysisId).toList();
       if (d.isNotEmpty) return d.first;
     }
     if (a != null) {
@@ -206,7 +211,8 @@ class ProjectIntelligenceService {
       .replaceAll(RegExp(r'^https?://'), '')
       .replaceAll(RegExp(r'^www\.'), '')
       .replaceAll(RegExp(r'/$'), '')
-      .split('?').first;
+      .split('?')
+      .first;
 
   String _maturityStage(
     Project p,
@@ -215,8 +221,10 @@ class ProjectIntelligenceService {
     List<OpportunityLabItem> lab,
     RevenuePlan? plan,
   ) {
-    if (a != null && actions.length >= 5 && lab.isNotEmpty && plan != null) return 'maduro';
-    if (a != null && (actions.length >= 2 || lab.isNotEmpty)) return 'crescendo';
+    if (a != null && actions.length >= 5 && lab.isNotEmpty && plan != null)
+      return 'maduro';
+    if (a != null && (actions.length >= 2 || lab.isNotEmpty))
+      return 'crescendo';
     if (a != null) return 'validando';
     return 'ideia';
   }
@@ -242,12 +250,15 @@ class ProjectIntelligenceService {
         .toList();
   }
 
-  List<String> _identifiedTopics(MarketAnalysis? a, List<OpportunityLabItem> lab) {
+  List<String> _identifiedTopics(
+      MarketAnalysis? a, List<OpportunityLabItem> lab) {
     final topics = <String>{};
     if (a != null) {
-      if (a.niche != null && a.niche!.isNotEmpty)              topics.add(a.niche!);
-      if (a.businessType != null && a.businessType!.isNotEmpty) topics.add(a.businessType!);
-      if (a.monetizationModel != null && a.monetizationModel!.isNotEmpty) topics.add(a.monetizationModel!);
+      if (a.niche != null && a.niche!.isNotEmpty) topics.add(a.niche!);
+      if (a.businessType != null && a.businessType!.isNotEmpty)
+        topics.add(a.businessType!);
+      if (a.monetizationModel != null && a.monetizationModel!.isNotEmpty)
+        topics.add(a.monetizationModel!);
     }
     for (final l in lab.take(3)) {
       if (l.opportunityType.isNotEmpty) topics.add(l.opportunityType);
@@ -258,8 +269,10 @@ class ProjectIntelligenceService {
   double _nicheOverlap(String n1, String n2) {
     if (n1.isEmpty || n2.isEmpty) return 0;
     if (n1 == n2) return 1.0;
-    final words1 = n1.split(RegExp(r'[\s,/]+')).where((w) => w.length > 3).toSet();
-    final words2 = n2.split(RegExp(r'[\s,/]+')).where((w) => w.length > 3).toSet();
+    final words1 =
+        n1.split(RegExp(r'[\s,/]+')).where((w) => w.length > 3).toSet();
+    final words2 =
+        n2.split(RegExp(r'[\s,/]+')).where((w) => w.length > 3).toSet();
     final common = words1.intersection(words2).length;
     if (common == 0) return 0;
     return common / math.max(words1.length, words2.length);

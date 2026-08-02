@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../models/context_coverage_details.dart';
 import '../models/market_analysis.dart';
 import '../models/competitor.dart';
 import '../models/gap_analysis.dart';
@@ -34,8 +35,7 @@ class MarketAnalysisService {
   Future<void> delete(String id) async {
     await _client
         .from(AppConstants.tableMarketAnalyses)
-        .update({'deleted_at': DateTime.now().toIso8601String()})
-        .eq('id', id);
+        .update({'deleted_at': DateTime.now().toIso8601String()}).eq('id', id);
   }
 
   Future<MarketAnalysis> analyze(
@@ -63,32 +63,41 @@ class MarketAnalysisService {
     );
 
     _checkRateLimit(response);
-    if (response.data == null) throw Exception('Resposta vazia da análise de mercado.');
+    if (response.data == null)
+      throw Exception('Resposta vazia da análise de mercado.');
     final data = response.data as Map<String, dynamic>;
-    if (data.containsKey('error')) throw Exception(_semanticError(data['error'].toString()));
+    if (data.containsKey('error'))
+      throw Exception(_semanticError(data['error'].toString()));
+
+    final contextUsage = data['context_usage'] as Map<String, dynamic>?;
 
     final row = await _client
         .from(AppConstants.tableMarketAnalyses)
         .insert({
-          'user_id':            uid,
+          'user_id': uid,
           if (projectId != null) 'project_id': projectId,
-          'input':              input,
-          'input_type':         inputType,
-          'niche':              data['niche'] as String?,
-          'sub_niche':          data['sub_niche'] as String?,
-          'target_audience':    data['target_audience'] as String?,
-          'business_type':      data['business_type'] as String?,
-          'value_proposition':  data['value_proposition'] as String?,
-          'positioning':        data['positioning'] as String?,
+          'input': input,
+          'input_type': inputType,
+          'niche': data['niche'] as String?,
+          'sub_niche': data['sub_niche'] as String?,
+          'target_audience': data['target_audience'] as String?,
+          'business_type': data['business_type'] as String?,
+          'value_proposition': data['value_proposition'] as String?,
+          'positioning': data['positioning'] as String?,
           'monetization_model': data['monetization_model'] as String?,
-          'opportunity_score':  _int(data['opportunity_score']),
-          'status':             'completed',
-          'analysis_json':      data,
-          'version':            1,
+          'opportunity_score': _int(data['opportunity_score']),
+          'status': 'completed',
+          'analysis_json': data,
+          'version': 1,
+          'methodology_version': ContextCoverageDetails.methodologyVersion,
           if (context != null) 'context_snapshot': context.toPromptSnapshot(),
-          if (context != null) 'source_ids':        context.sourceIds,
-          if (context != null) 'coverage':          context.coverage,
-          if (context != null) 'generated_at':      context.generatedAt.toIso8601String(),
+          if (context != null) 'source_ids': context.sourceIds,
+          if (context != null) 'coverage': context.coverage,
+          if (context != null)
+            'generated_at': context.generatedAt.toIso8601String(),
+          if (context?.coverageDetails != null)
+            'coverage_details': context!.coverageDetails!.toJson(),
+          if (contextUsage != null) 'context_usage': contextUsage,
         })
         .select()
         .single();
@@ -126,9 +135,11 @@ class MarketAnalysisService {
     );
 
     _checkRateLimit(response);
-    if (response.data == null) throw Exception('Resposta vazia da descoberta de concorrentes.');
+    if (response.data == null)
+      throw Exception('Resposta vazia da descoberta de concorrentes.');
     final data = response.data as Map<String, dynamic>;
-    if (data.containsKey('error')) throw Exception(_semanticError(data['error'].toString()));
+    if (data.containsKey('error'))
+      throw Exception(_semanticError(data['error'].toString()));
 
     final competitorsList = data['competitors'] as List? ?? [];
     final inserted = <Competitor>[];
@@ -137,15 +148,15 @@ class MarketAnalysisService {
       final row = await _client
           .from(AppConstants.tableCompetitors)
           .insert({
-            'user_id':            uid,
+            'user_id': uid,
             'market_analysis_id': marketAnalysisId,
-            'name':               m['name'] as String? ?? '',
-            'url':                m['url'] as String? ?? '',
-            'type':               m['type'] as String? ?? 'direct',
-            'similarity_score':   _int(m['similarity_score']),
-            'authority_score':    _int(m['authority_score']),
-            'relevance_score':    _int(m['relevance_score']),
-            'details_json':       m,
+            'name': m['name'] as String? ?? '',
+            'url': m['url'] as String? ?? '',
+            'type': m['type'] as String? ?? 'direct',
+            'similarity_score': _int(m['similarity_score']),
+            'authority_score': _int(m['authority_score']),
+            'relevance_score': _int(m['relevance_score']),
+            'details_json': m,
           })
           .select()
           .single();
@@ -184,21 +195,23 @@ class MarketAnalysisService {
     );
 
     _checkRateLimit(response);
-    if (response.data == null) throw Exception('Resposta vazia da análise de gaps.');
+    if (response.data == null)
+      throw Exception('Resposta vazia da análise de gaps.');
     final data = response.data as Map<String, dynamic>;
-    if (data.containsKey('error')) throw Exception(_semanticError(data['error'].toString()));
+    if (data.containsKey('error'))
+      throw Exception(_semanticError(data['error'].toString()));
 
     final row = await _client
         .from(AppConstants.tableGapAnalyses)
         .insert({
-          'user_id':            uid,
+          'user_id': uid,
           'market_analysis_id': marketAnalysisId,
-          'content_gaps':       data['content_gaps'] ?? [],
-          'seo_gaps':           data['seo_gaps'] ?? [],
-          'authority_gaps':     data['authority_gaps'] ?? [],
-          'monetization_gaps':  data['monetization_gaps'] ?? [],
-          'product_gaps':       data['product_gaps'] ?? [],
-          'analysis_json':      data,
+          'content_gaps': data['content_gaps'] ?? [],
+          'seo_gaps': data['seo_gaps'] ?? [],
+          'authority_gaps': data['authority_gaps'] ?? [],
+          'monetization_gaps': data['monetization_gaps'] ?? [],
+          'product_gaps': data['product_gaps'] ?? [],
+          'analysis_json': data,
         })
         .select()
         .single();
@@ -236,9 +249,11 @@ class MarketAnalysisService {
     );
 
     _checkRateLimit(response);
-    if (response.data == null) throw Exception('Resposta vazia da descoberta de oportunidades.');
+    if (response.data == null)
+      throw Exception('Resposta vazia da descoberta de oportunidades.');
     final data = response.data as Map<String, dynamic>;
-    if (data.containsKey('error')) throw Exception(_semanticError(data['error'].toString()));
+    if (data.containsKey('error'))
+      throw Exception(_semanticError(data['error'].toString()));
 
     final list = data['opportunities'] as List? ?? [];
     final inserted = <Opportunity>[];
@@ -247,18 +262,18 @@ class MarketAnalysisService {
       final row = await _client
           .from(AppConstants.tableOpportunities)
           .insert({
-            'user_id':            uid,
+            'user_id': uid,
             'market_analysis_id': marketAnalysisId,
-            'title':              m['title'] as String? ?? '',
-            'type':               m['type'] as String? ?? 'content',
-            'description':        m['description'] as String? ?? '',
-            'opportunity_score':  _int(m['opportunity_score']),
-            'market_score':       _int(m['market_score']),
-            'growth_score':       _int(m['growth_score']),
-            'competition_score':  _int(m['competition_score']),
+            'title': m['title'] as String? ?? '',
+            'type': m['type'] as String? ?? 'content',
+            'description': m['description'] as String? ?? '',
+            'opportunity_score': _int(m['opportunity_score']),
+            'market_score': _int(m['market_score']),
+            'growth_score': _int(m['growth_score']),
+            'competition_score': _int(m['competition_score']),
             'monetization_score': _int(m['monetization_score']),
-            'difficulty_score':   _int(m['difficulty_score']),
-            'details_json':       m,
+            'difficulty_score': _int(m['difficulty_score']),
+            'details_json': m,
           })
           .select()
           .single();
@@ -297,9 +312,11 @@ class MarketAnalysisService {
     );
 
     _checkRateLimit(response);
-    if (response.data == null) throw Exception('Resposta vazia da descoberta de nichos.');
+    if (response.data == null)
+      throw Exception('Resposta vazia da descoberta de nichos.');
     final data = response.data as Map<String, dynamic>;
-    if (data.containsKey('error')) throw Exception(_semanticError(data['error'].toString()));
+    if (data.containsKey('error'))
+      throw Exception(_semanticError(data['error'].toString()));
 
     final list = data['niches'] as List? ?? [];
     final inserted = <NicheRanking>[];
@@ -308,19 +325,19 @@ class MarketAnalysisService {
       final row = await _client
           .from(AppConstants.tableNicheRankings)
           .insert({
-            'user_id':            uid,
+            'user_id': uid,
             'market_analysis_id': marketAnalysisId,
-            'name':               m['name'] as String? ?? '',
-            'level':              m['level'] as String? ?? 'niche',
-            'description':        m['description'] as String? ?? '',
-            'competition_score':  _int(m['competition_score']),
-            'potential_score':    _int(m['potential_score']),
-            'growth_score':       _int(m['growth_score']),
+            'name': m['name'] as String? ?? '',
+            'level': m['level'] as String? ?? 'niche',
+            'description': m['description'] as String? ?? '',
+            'competition_score': _int(m['competition_score']),
+            'potential_score': _int(m['potential_score']),
+            'growth_score': _int(m['growth_score']),
             'monetization_score': _int(m['monetization_score']),
-            'difficulty_score':   _int(m['difficulty_score']),
-            'trend_score':        _int(m['trend_score']),
-            'overall_score':      _int(m['overall_score']),
-            'details_json':       m,
+            'difficulty_score': _int(m['difficulty_score']),
+            'trend_score': _int(m['trend_score']),
+            'overall_score': _int(m['overall_score']),
+            'details_json': m,
           })
           .select()
           .single();
@@ -360,21 +377,22 @@ class MarketAnalysisService {
       body: body,
     );
 
-    if (response.data == null) throw Exception('Resposta vazia do Content Cluster.');
+    if (response.data == null)
+      throw Exception('Resposta vazia do Content Cluster.');
     final data = response.data as Map<String, dynamic>;
     if (data.containsKey('error')) throw Exception(data['error']);
 
     final row = await _client
         .from(AppConstants.tableContentClusters)
         .insert({
-          'user_id':            uid,
+          'user_id': uid,
           'market_analysis_id': marketAnalysisId,
-          'main_keyword':       mainKeyword,
-          'clusters':           data['clusters'] ?? [],
-          'silos':              data['silos'] ?? [],
-          'articles':           data['articles'] ?? [],
-          'editorial_roadmap':  data['editorial_roadmap'] ?? [],
-          'seo_structure':      data['seo_structure'] ?? {},
+          'main_keyword': mainKeyword,
+          'clusters': data['clusters'] ?? [],
+          'silos': data['silos'] ?? [],
+          'articles': data['articles'] ?? [],
+          'editorial_roadmap': data['editorial_roadmap'] ?? [],
+          'seo_structure': data['seo_structure'] ?? {},
         })
         .select()
         .single();
@@ -423,9 +441,11 @@ class MarketAnalysisService {
     );
 
     _checkRateLimit(response);
-    if (response.data == null) throw Exception('Resposta vazia do Revenue Planner.');
+    if (response.data == null)
+      throw Exception('Resposta vazia do Revenue Planner.');
     final data = response.data as Map<String, dynamic>;
-    if (data.containsKey('error')) throw Exception(_semanticError(data['error'].toString()));
+    if (data.containsKey('error'))
+      throw Exception(_semanticError(data['error'].toString()));
 
     double _d(dynamic v) {
       if (v is num) return v.toDouble();
@@ -436,17 +456,17 @@ class MarketAnalysisService {
     final row = await _client
         .from(AppConstants.tableRevenuePlans)
         .insert({
-          'user_id':              uid,
+          'user_id': uid,
           if (projectId != null) 'project_id': projectId,
-          'market_analysis_id':   marketAnalysisId,
-          'project_name':         projectName,
+          'market_analysis_id': marketAnalysisId,
+          'project_name': projectName,
           'monthly_conservative': _d(data['monthly_conservative']),
-          'monthly_moderate':     _d(data['monthly_moderate']),
-          'monthly_aggressive':   _d(data['monthly_aggressive']),
-          'annual_conservative':  _d(data['annual_conservative']),
-          'annual_moderate':      _d(data['annual_moderate']),
-          'annual_aggressive':    _d(data['annual_aggressive']),
-          'plan_json':            data,
+          'monthly_moderate': _d(data['monthly_moderate']),
+          'monthly_aggressive': _d(data['monthly_aggressive']),
+          'annual_conservative': _d(data['annual_conservative']),
+          'annual_moderate': _d(data['annual_moderate']),
+          'annual_aggressive': _d(data['annual_aggressive']),
+          'plan_json': data,
         })
         .select()
         .single();
@@ -475,14 +495,18 @@ class MarketAnalysisService {
 
   static String _semanticError(String raw) {
     final lower = raw.toLowerCase();
-    if (lower.contains('rate') || lower.contains('429') || lower.contains('limit')) {
+    if (lower.contains('rate') ||
+        lower.contains('429') ||
+        lower.contains('limit')) {
       return '[RATE_LIMITED] A análise foi pausada porque o provedor de IA '
           'atingiu o limite temporário. Aguarde alguns segundos e tente novamente.';
     }
     if (lower.contains('timeout') || lower.contains('timed out')) {
       return 'A análise demorou demais. Tente novamente em alguns instantes.';
     }
-    if (lower.contains('groq') || lower.contains('api key') || lower.contains('apikey')) {
+    if (lower.contains('groq') ||
+        lower.contains('api key') ||
+        lower.contains('apikey')) {
       return 'Chave de API não configurada no servidor. Configure GROQ_API_KEY nos secrets do Supabase.';
     }
     if (lower.contains('network') || lower.contains('socket')) {

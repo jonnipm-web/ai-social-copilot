@@ -14,8 +14,8 @@ class PersonasScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final personasAsync = ref.watch(personasProvider);
-    final profile       = ref.watch(currentProfileProvider).valueOrNull;
-    final isAdmin       = profile?.isAdmin ?? false;
+    final profile = ref.watch(currentProfileProvider).valueOrNull;
+    final isAdmin = profile?.isAdmin ?? false;
 
     return Scaffold(
       appBar: AppBar(
@@ -40,14 +40,17 @@ class PersonasScreen extends ConsumerWidget {
       ),
       body: personasAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error:   (e, _) => Center(child: Text('Erro: $e', style: const TextStyle(color: Colors.white54))),
-        data:    (personas) {
+        error: (e, _) => Center(
+            child: Text('Erro: $e',
+                style: const TextStyle(color: Colors.white54))),
+        data: (personas) {
           if (personas.isEmpty) {
             return const Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.person_pin_rounded, size: 64, color: Colors.white24),
+                  Icon(Icons.person_pin_rounded,
+                      size: 64, color: Colors.white24),
                   SizedBox(height: 12),
                   Text('Nenhuma persona ainda.',
                       style: TextStyle(color: Colors.white54)),
@@ -60,7 +63,7 @@ class PersonasScreen extends ConsumerWidget {
           }
 
           final globals = personas.where((p) => p.isGlobal).toList();
-          final mine    = personas.where((p) => !p.isGlobal).toList();
+          final mine = personas.where((p) => !p.isGlobal).toList();
 
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -72,7 +75,8 @@ class PersonasScreen extends ConsumerWidget {
                   color: const Color(0xFFFFD700),
                 ),
                 const SizedBox(height: 8),
-                ...globals.map((p) => _PersonaCard(persona: p, isAdmin: isAdmin, ref: ref)),
+                ...globals.map((p) =>
+                    _PersonaCard(persona: p, isAdmin: isAdmin, ref: ref)),
                 const SizedBox(height: 20),
               ],
               if (mine.isNotEmpty) ...[
@@ -82,7 +86,8 @@ class PersonasScreen extends ConsumerWidget {
                   color: const Color(0xFF6C63FF),
                 ),
                 const SizedBox(height: 8),
-                ...mine.map((p) => _PersonaCard(persona: p, isAdmin: isAdmin, ref: ref)),
+                ...mine.map((p) =>
+                    _PersonaCard(persona: p, isAdmin: isAdmin, ref: ref)),
               ],
             ],
           );
@@ -93,10 +98,11 @@ class PersonasScreen extends ConsumerWidget {
 }
 
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.label, required this.icon, required this.color});
-  final String   label;
+  const _SectionHeader(
+      {required this.label, required this.icon, required this.color});
+  final String label;
   final IconData icon;
-  final Color    color;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -124,8 +130,8 @@ class _PersonaCard extends ConsumerWidget {
     required this.isAdmin,
     required this.ref,
   });
-  final Persona  persona;
-  final bool     isAdmin;
+  final Persona persona;
+  final bool isAdmin;
   final WidgetRef ref;
 
   @override
@@ -155,13 +161,15 @@ class _PersonaCard extends ConsumerWidget {
         ),
         title: Text(
           persona.name,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+          style:
+              const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (persona.niche != null)
-              Text(persona.niche!, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+              Text(persona.niche!,
+                  style: const TextStyle(color: Colors.white54, fontSize: 12)),
             if (persona.voiceTone != null)
               Text('Tom: ${persona.voiceTone}',
                   style: const TextStyle(color: Colors.white38, fontSize: 11)),
@@ -169,7 +177,8 @@ class _PersonaCard extends ConsumerWidget {
         ),
         trailing: (isAdmin || !persona.isGlobal)
             ? PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert, color: Colors.white38, size: 20),
+                icon: const Icon(Icons.more_vert,
+                    color: Colors.white38, size: 20),
                 color: const Color(0xFF1A1A2E),
                 onSelected: (value) async {
                   if (value == 'delete') {
@@ -179,23 +188,30 @@ class _PersonaCard extends ConsumerWidget {
                         title: const Text('Excluir persona'),
                         content: Text('Deseja excluir "${persona.name}"?'),
                         actions: [
-                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+                          TextButton(
+                              onPressed: () => Navigator.pop(ctx, false),
+                              child: const Text('Cancelar')),
                           TextButton(
                             onPressed: () => Navigator.pop(ctx, true),
-                            child: const Text('Excluir', style: TextStyle(color: Colors.red)),
+                            child: const Text('Excluir',
+                                style: TextStyle(color: Colors.red)),
                           ),
                         ],
                       ),
                     );
                     if (ok == true) {
-                      await ref.read(personaNotifierProvider.notifier).delete(persona.id);
+                      await ref
+                          .read(personaNotifierProvider.notifier)
+                          .delete(persona.id);
                       ref.invalidate(personasProvider);
                     }
                   }
                 },
                 itemBuilder: (_) => [
-                  const PopupMenuItem(value: 'delete',
-                      child: Text('Excluir', style: TextStyle(color: Colors.red))),
+                  const PopupMenuItem(
+                      value: 'delete',
+                      child:
+                          Text('Excluir', style: TextStyle(color: Colors.red))),
                 ],
               )
             : null,

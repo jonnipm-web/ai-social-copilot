@@ -39,14 +39,14 @@ class FileImportService {
     if (bytes == null) throw Exception('Não foi possível ler o arquivo.');
 
     final extension = (file.extension ?? 'txt').toLowerCase();
-    final fileName  = file.name;
+    final fileName = file.name;
 
     if (extension == 'txt') {
       final text = utf8.decode(bytes, allowMalformed: true);
       return FileImportResult(
-        text:      text,
-        fileName:  fileName,
-        fileType:  'txt',
+        text: text,
+        fileName: fileName,
+        fileType: 'txt',
         charCount: text.length,
       );
     }
@@ -65,7 +65,7 @@ class FileImportService {
       _processFileFunction,
       body: {
         'file_base64': base64Content,
-        'file_type':   extension,
+        'file_type': extension,
       },
     );
 
@@ -84,9 +84,9 @@ class FileImportService {
     }
 
     return FileImportResult(
-      text:      text,
-      fileName:  fileName,
-      fileType:  extension,
+      text: text,
+      fileName: fileName,
+      fileType: extension,
       charCount: (data['char_count'] as int?) ?? text.length,
     );
   }

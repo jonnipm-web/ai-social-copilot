@@ -7,7 +7,6 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/snackbar_utils.dart';
 import '../../../data/models/knowledge_analysis.dart';
 import '../../../data/models/knowledge_item.dart';
-import '../../../data/services/persona_training_service.dart';
 import '../../../providers/knowledge_provider.dart';
 import '../../../providers/persona_provider.dart';
 import '../../../providers/persona_training_provider.dart';
@@ -19,7 +18,7 @@ class KnowledgeAnalysisScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final itemAsync     = ref.watch(knowledgeItemByIdProvider(itemId));
+    final itemAsync = ref.watch(knowledgeItemByIdProvider(itemId));
     final analysisAsync = ref.watch(knowledgeAnalysisProvider(itemId));
 
     return Scaffold(
@@ -66,7 +65,8 @@ class KnowledgeAnalysisScreen extends ConsumerWidget {
       body: itemAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
-          child: Text('Erro: $e', style: const TextStyle(color: Colors.white70)),
+          child:
+              Text('Erro: $e', style: const TextStyle(color: Colors.white70)),
         ),
         data: (item) {
           if (item == null) {
@@ -94,11 +94,12 @@ class _NoAnalysis extends ConsumerWidget {
   const _NoAnalysis({required this.item, this.error});
 
   final KnowledgeItem item;
-  final String?       error;
+  final String? error;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(knowledgeAnalysisNotifierProvider) is AsyncLoading;
+    final isLoading =
+        ref.watch(knowledgeAnalysisNotifierProvider) is AsyncLoading;
 
     return Center(
       child: Padding(
@@ -156,7 +157,7 @@ class _NoAnalysis extends ConsumerWidget {
 class _AnalysisContent extends StatelessWidget {
   const _AnalysisContent({required this.item, required this.analysis});
 
-  final KnowledgeItem     item;
+  final KnowledgeItem item;
   final KnowledgeAnalysis analysis;
 
   @override
@@ -191,14 +192,14 @@ class _AnalysisContent extends StatelessWidget {
         _SectionTitle('Palavras-chave'),
         const SizedBox(height: 8),
         if (analysis.keywordsPrimary.isNotEmpty)
-          _ChipSection('Primárias', analysis.keywordsPrimary,
-              const Color(0xFF6C63FF)),
+          _ChipSection(
+              'Primárias', analysis.keywordsPrimary, const Color(0xFF6C63FF)),
         if (analysis.keywordsSecondary.isNotEmpty)
           _ChipSection('Secundárias', analysis.keywordsSecondary,
               const Color(0xFF00BCD4)),
         if (analysis.keywordsLongtail.isNotEmpty)
-          _ChipSection('Long-tail', analysis.keywordsLongtail,
-              const Color(0xFF4CAF50)),
+          _ChipSection(
+              'Long-tail', analysis.keywordsLongtail, const Color(0xFF4CAF50)),
         const SizedBox(height: 8),
 
         if (analysis.audiencePainPoints.isNotEmpty) ...[
@@ -307,7 +308,7 @@ class _AnalysisContent extends StatelessWidget {
 class _ActionButtons extends ConsumerWidget {
   const _ActionButtons({required this.item, required this.analysis});
 
-  final KnowledgeItem     item;
+  final KnowledgeItem item;
   final KnowledgeAnalysis analysis;
 
   @override
@@ -319,7 +320,7 @@ class _ActionButtons extends ConsumerWidget {
       runSpacing: 8,
       children: [
         _ActionChip(
-          icon:  Icons.rocket_launch_rounded,
+          icon: Icons.rocket_launch_rounded,
           label: 'Gerar Estratégia',
           color: const Color(0xFF6C63FF),
           onTap: () => context.push(
@@ -327,7 +328,7 @@ class _ActionButtons extends ConsumerWidget {
           ),
         ),
         _ActionChip(
-          icon:  Icons.campaign_rounded,
+          icon: Icons.campaign_rounded,
           label: 'Criar Campanha',
           color: const Color(0xFF00BCD4),
           onTap: () => context.push(
@@ -336,7 +337,7 @@ class _ActionButtons extends ConsumerWidget {
           ),
         ),
         _ActionChip(
-          icon:  Icons.person_pin_rounded,
+          icon: Icons.person_pin_rounded,
           label: 'Treinar Persona',
           color: const Color(0xFFFF9800),
           onTap: () => _trainPersona(context, ref, personas),
@@ -345,9 +346,11 @@ class _ActionButtons extends ConsumerWidget {
     );
   }
 
-  Future<void> _trainPersona(BuildContext context, WidgetRef ref, List personas) async {
+  Future<void> _trainPersona(
+      BuildContext context, WidgetRef ref, List personas) async {
     if (personas.isEmpty) {
-      showErrorSnack(context, 'Nenhuma persona encontrada. Crie uma persona primeiro.');
+      showErrorSnack(
+          context, 'Nenhuma persona encontrada. Crie uma persona primeiro.');
       return;
     }
     String? selectedPersonaId;
@@ -356,16 +359,20 @@ class _ActionButtons extends ConsumerWidget {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx2, setState) => AlertDialog(
           backgroundColor: const Color(0xFF1A1A2E),
-          title: const Text('Treinar Persona', style: TextStyle(color: Colors.white)),
+          title: const Text('Treinar Persona',
+              style: TextStyle(color: Colors.white)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
-            children: personas.map((p) => RadioListTile<String>(
-              title: Text(p.name, style: const TextStyle(color: Colors.white70)),
-              value: p.id as String,
-              groupValue: selectedPersonaId,
-              onChanged: (v) => setState(() => selectedPersonaId = v),
-              activeColor: const Color(0xFF6C63FF),
-            )).toList(),
+            children: personas
+                .map((p) => RadioListTile<String>(
+                      title: Text(p.name,
+                          style: const TextStyle(color: Colors.white70)),
+                      value: p.id as String,
+                      groupValue: selectedPersonaId,
+                      onChanged: (v) => setState(() => selectedPersonaId = v),
+                      activeColor: const Color(0xFF6C63FF),
+                    ))
+                .toList(),
           ),
           actions: [
             TextButton(
@@ -386,7 +393,8 @@ class _ActionButtons extends ConsumerWidget {
                               analysis: analysis,
                             );
                         if (context.mounted) {
-                          showSuccessSnack(context, 'Persona treinada com sucesso!');
+                          showSuccessSnack(
+                              context, 'Persona treinada com sucesso!');
                         }
                       } catch (e) {
                         if (context.mounted) {
@@ -414,8 +422,8 @@ class _ActionChip extends StatelessWidget {
   });
 
   final IconData icon;
-  final String   label;
-  final Color    color;
+  final String label;
+  final Color color;
   final VoidCallback onTap;
 
   @override
@@ -436,9 +444,7 @@ class _ActionChip extends StatelessWidget {
             const SizedBox(width: 6),
             Text(label,
                 style: TextStyle(
-                    color: color,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600)),
+                    color: color, fontSize: 12, fontWeight: FontWeight.w600)),
           ],
         ),
       ),
@@ -492,9 +498,7 @@ class _OpportunityScoreCard extends StatelessWidget {
               child: Text(
                 '$score',
                 style: TextStyle(
-                    color: _color,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold),
+                    color: _color, fontSize: 22, fontWeight: FontWeight.bold),
               ),
             ),
           ),
@@ -512,7 +516,9 @@ class _OpportunityScoreCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(_label,
-                    style: TextStyle(color: _color, fontSize: 12,
+                    style: TextStyle(
+                        color: _color,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600)),
                 const SizedBox(height: 6),
                 LinearProgressIndicator(
@@ -535,7 +541,7 @@ class _OpportunityScoreCard extends StatelessWidget {
 
 class _HotmartCard extends StatelessWidget {
   const _HotmartCard({required this.score, required this.data});
-  final int                  score;
+  final int score;
   final Map<String, dynamic> data;
 
   @override
@@ -569,12 +575,13 @@ class _HotmartCard extends StatelessWidget {
             const Divider(color: Colors.white12, height: 1),
             const SizedBox(height: 10),
             ...{
-              'Produto':    data['product_name'],
-              'Promessa':   data['promise'],
-              'Formato':    data['format'],
-              'Preço':      data['price_range'],
-              'Upsell':     data['upsell'],
-            }.entries
+              'Produto': data['product_name'],
+              'Promessa': data['promise'],
+              'Formato': data['format'],
+              'Preço': data['price_range'],
+              'Upsell': data['upsell'],
+            }
+                .entries
                 .where((e) => e.value != null && e.value.toString().isNotEmpty)
                 .map((e) => _DataRow(e.key, e.value.toString())),
           ],
@@ -588,7 +595,7 @@ class _HotmartCard extends StatelessWidget {
 
 class _ShopifyCard extends StatelessWidget {
   const _ShopifyCard({required this.score, required this.data});
-  final int                  score;
+  final int score;
   final Map<String, dynamic> data;
 
   @override
@@ -622,10 +629,11 @@ class _ShopifyCard extends StatelessWidget {
             const Divider(color: Colors.white12, height: 1),
             const SizedBox(height: 10),
             ...{
-              'Produto':   data['product_name'],
+              'Produto': data['product_name'],
               'Descrição': data['short_description'],
-              'Preço':     data['price_range'],
-            }.entries
+              'Preço': data['price_range'],
+            }
+                .entries
                 .where((e) => e.value != null && e.value.toString().isNotEmpty)
                 .map((e) => _DataRow(e.key, e.value.toString())),
             if (data['categories'] is List) ...[
@@ -640,12 +648,10 @@ class _ShopifyCard extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: color.withOpacity(0.12),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                                color: color.withOpacity(0.3)),
+                            border: Border.all(color: color.withOpacity(0.3)),
                           ),
                           child: Text(c.toString(),
-                              style: TextStyle(
-                                  color: color, fontSize: 11)),
+                              style: TextStyle(color: color, fontSize: 11)),
                         ))
                     .toList(),
               ),
@@ -659,7 +665,7 @@ class _ShopifyCard extends StatelessWidget {
 
 class _ScoreBadge extends StatelessWidget {
   const _ScoreBadge(this.score, this.color);
-  final int   score;
+  final int score;
   final Color color;
 
   @override
@@ -673,8 +679,8 @@ class _ScoreBadge extends StatelessWidget {
       ),
       child: Text(
         '$score/100',
-        style: TextStyle(
-            color: color, fontSize: 12, fontWeight: FontWeight.bold),
+        style:
+            TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -752,7 +758,8 @@ class _ItemHeader extends StatelessWidget {
                 ),
                 if (item.niche != null)
                   Text(item.niche!,
-                      style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 12)),
               ],
             ),
           ),
@@ -817,8 +824,8 @@ class _ScoreGrid extends StatelessWidget {
           Icons.search_rounded),
       _ScoreData('AdSense', analysis.scoreAdsense, const Color(0xFF8BC34A),
           Icons.attach_money_rounded),
-      _ScoreData('Amazon KDP', analysis.scoreAmazonKdp,
-          const Color(0xFFFF5722), Icons.book_rounded),
+      _ScoreData('Amazon KDP', analysis.scoreAmazonKdp, const Color(0xFFFF5722),
+          Icons.book_rounded),
       _ScoreData('LinkedIn', analysis.scoreLinkedin, const Color(0xFF0077B5),
           Icons.business_rounded),
       _ScoreData('Social', analysis.scoreSocial, const Color(0xFFE91E63),
@@ -835,9 +842,9 @@ class _ScoreGrid extends StatelessWidget {
 
 class _ScoreData {
   _ScoreData(this.label, this.score, this.color, this.icon);
-  final String   label;
-  final int      score;
-  final Color    color;
+  final String label;
+  final int score;
+  final Color color;
   final IconData icon;
 }
 
@@ -894,9 +901,9 @@ class _ScoreCard extends StatelessWidget {
 class _ChipSection extends StatelessWidget {
   const _ChipSection(this.label, this.items, this.color);
 
-  final String       label;
+  final String label;
   final List<String> items;
-  final Color        color;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -908,9 +915,7 @@ class _ChipSection extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 4),
             child: Text(label,
                 style: TextStyle(
-                    color: color,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600)),
+                    color: color, fontSize: 11, fontWeight: FontWeight.w600)),
           ),
         Wrap(
           spacing: 6,
@@ -929,8 +934,8 @@ class _ChipSection extends StatelessWidget {
                     );
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: color.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(20),
@@ -956,8 +961,8 @@ class _ListCards extends StatelessWidget {
   const _ListCards(this.items, this.icon, this.color);
 
   final List<String> items;
-  final IconData     icon;
-  final Color        color;
+  final IconData icon;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -1010,11 +1015,11 @@ class _ScoreDetailsSection extends StatelessWidget {
   final Map<String, dynamic> details;
 
   static const _channelLabels = {
-    'seo':        'SEO',
-    'adsense':    'AdSense',
+    'seo': 'SEO',
+    'adsense': 'AdSense',
     'amazon_kdp': 'Amazon KDP',
-    'linkedin':   'LinkedIn',
-    'social':     'Social Media',
+    'linkedin': 'LinkedIn',
+    'social': 'Social Media',
   };
 
   @override
@@ -1035,7 +1040,7 @@ class _ScoreDetailsSection extends StatelessWidget {
 class _ChannelDetail extends StatefulWidget {
   const _ChannelDetail({required this.label, required this.data});
 
-  final String               label;
+  final String label;
   final Map<String, dynamic> data;
 
   @override
@@ -1047,8 +1052,8 @@ class _ChannelDetailState extends State<_ChannelDetail> {
 
   @override
   Widget build(BuildContext context) {
-    final strengths    = _list(widget.data['strengths']);
-    final weaknesses   = _list(widget.data['weaknesses']);
+    final strengths = _list(widget.data['strengths']);
+    final weaknesses = _list(widget.data['weaknesses']);
     final improvements = _list(widget.data['improvements']);
 
     return Container(
@@ -1066,9 +1071,7 @@ class _ChannelDetailState extends State<_ChannelDetail> {
                     fontSize: 14,
                     fontWeight: FontWeight.w600)),
             trailing: Icon(
-              _expanded
-                  ? Icons.expand_less_rounded
-                  : Icons.expand_more_rounded,
+              _expanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
               color: Colors.white38,
             ),
             onTap: () => setState(() => _expanded = !_expanded),
@@ -1081,17 +1084,20 @@ class _ChannelDetailState extends State<_ChannelDetail> {
                 children: [
                   if (strengths.isNotEmpty) ...[
                     _SubLabel('Pontos Fortes', const Color(0xFF4CAF50)),
-                    ...strengths.map((s) => _DetailItem(s, const Color(0xFF4CAF50))),
+                    ...strengths
+                        .map((s) => _DetailItem(s, const Color(0xFF4CAF50))),
                     const SizedBox(height: 6),
                   ],
                   if (weaknesses.isNotEmpty) ...[
                     _SubLabel('Pontos Fracos', const Color(0xFFF44336)),
-                    ...weaknesses.map((s) => _DetailItem(s, const Color(0xFFF44336))),
+                    ...weaknesses
+                        .map((s) => _DetailItem(s, const Color(0xFFF44336))),
                     const SizedBox(height: 6),
                   ],
                   if (improvements.isNotEmpty) ...[
                     _SubLabel('Melhorias', const Color(0xFF6C63FF)),
-                    ...improvements.map((s) => _DetailItem(s, const Color(0xFF6C63FF))),
+                    ...improvements
+                        .map((s) => _DetailItem(s, const Color(0xFF6C63FF))),
                   ],
                 ],
               ),
@@ -1111,7 +1117,7 @@ class _SubLabel extends StatelessWidget {
   const _SubLabel(this.text, this.color);
 
   final String text;
-  final Color  color;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -1128,7 +1134,7 @@ class _DetailItem extends StatelessWidget {
   const _DetailItem(this.text, this.color);
 
   final String text;
-  final Color  color;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {

@@ -30,7 +30,7 @@ class RevenueIntelligence {
   });
 
   String get monthlyLabel => 'R\$ ${monthlyModerate.toStringAsFixed(0)}';
-  String get annualLabel  => 'R\$ ${annualModerate.toStringAsFixed(0)}';
+  String get annualLabel => 'R\$ ${annualModerate.toStringAsFixed(0)}';
 
   int get roiScoreFromPlan {
     if (monthlyModerate <= 0) return 0;
@@ -50,23 +50,20 @@ class RevenueIntelligence {
     final milestones = plan.milestones;
     String firstMilestone = '';
     if (milestones.isNotEmpty) {
-      final first = milestones.first;
-      if (first is Map) {
-        firstMilestone = (first['description'] as String?) ?? '';
-      }
+      firstMilestone = (milestones.first['description'] as String?) ?? '';
     }
 
     return RevenueIntelligence(
-      projectId:            plan.marketAnalysisId ?? plan.projectName,
-      projectName:          plan.projectName,
-      monthlyConservative:  plan.monthlyConservative,
-      monthlyModerate:      plan.monthlyModerate,
-      monthlyAggressive:    plan.monthlyAggressive,
-      annualModerate:       plan.annualModerate,
-      estimatedTicket:      _estimateTicket(plan),
-      estimatedClients:     _estimateClients(plan),
-      confidence:           plan.monthlyModerate > 0 ? 70 : 30,
-      hasRealPlan:          true,
+      projectId: plan.marketAnalysisId ?? plan.projectName,
+      projectName: plan.projectName,
+      monthlyConservative: plan.monthlyConservative,
+      monthlyModerate: plan.monthlyModerate,
+      monthlyAggressive: plan.monthlyAggressive,
+      annualModerate: plan.annualModerate,
+      estimatedTicket: _estimateTicket(plan),
+      estimatedClients: _estimateClients(plan),
+      confidence: plan.monthlyModerate > 0 ? 70 : 30,
+      hasRealPlan: true,
       explanation:
           'Plano de receita moderado: R\$${plan.monthlyModerate.toStringAsFixed(0)}/mês.'
           '${firstMilestone.isNotEmpty ? " Marco: $firstMilestone." : ""}',
@@ -76,18 +73,18 @@ class RevenueIntelligence {
 
   static RevenueIntelligence empty(String projectId, String projectName) =>
       RevenueIntelligence(
-        projectId:            projectId,
-        projectName:          projectName,
-        monthlyConservative:  0,
-        monthlyModerate:      0,
-        monthlyAggressive:    0,
-        annualModerate:       0,
-        estimatedTicket:      0,
-        estimatedClients:     0,
-        confidence:           0,
-        hasRealPlan:          false,
-        explanation:          'Nenhum plano de receita encontrado.',
-        revenueSources:       [],
+        projectId: projectId,
+        projectName: projectName,
+        monthlyConservative: 0,
+        monthlyModerate: 0,
+        monthlyAggressive: 0,
+        annualModerate: 0,
+        estimatedTicket: 0,
+        estimatedClients: 0,
+        confidence: 0,
+        hasRealPlan: false,
+        explanation: 'Nenhum plano de receita encontrado.',
+        revenueSources: [],
       );
 
   static double _estimateTicket(RevenuePlan plan) {
@@ -104,7 +101,9 @@ class RevenueIntelligence {
 
   static int _estimateClients(RevenuePlan plan) {
     if (_estimateTicket(plan) > 0) {
-      return (plan.monthlyModerate / _estimateTicket(plan)).round().clamp(0, 9999);
+      return (plan.monthlyModerate / _estimateTicket(plan))
+          .round()
+          .clamp(0, 9999);
     }
     return 0;
   }

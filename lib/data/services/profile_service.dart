@@ -23,8 +23,7 @@ class ProfileService {
     if (profile.email == AppConstants.adminEmail && profile.role != 'admin') {
       await _client
           .from(AppConstants.tableProfiles)
-          .update({'role': 'admin', 'monthly_limit': 99999})
-          .eq('id', uid);
+          .update({'role': 'admin', 'monthly_limit': 99999}).eq('id', uid);
       return profile.copyWith(role: 'admin', monthlyLimit: 99999);
     }
 
@@ -39,9 +38,9 @@ class ProfileService {
     final limit = email == AppConstants.adminEmail ? 99999 : 5;
 
     await _client.from(AppConstants.tableProfiles).upsert({
-      'id':            id,
-      'email':         email,
-      'role':          role,
+      'id': id,
+      'email': email,
+      'role': role,
       'monthly_limit': limit,
     }, onConflict: 'id');
   }
@@ -60,15 +59,13 @@ class ProfileService {
     final limit = AppConstants.limitForRole(role);
     await _client
         .from(AppConstants.tableProfiles)
-        .update({'role': role, 'monthly_limit': limit})
-        .eq('id', userId);
+        .update({'role': role, 'monthly_limit': limit}).eq('id', userId);
   }
 
   // Admin: ativar/desativar usuário
   Future<void> setActive(String userId, bool isActive) async {
     await _client
         .from(AppConstants.tableProfiles)
-        .update({'is_active': isActive})
-        .eq('id', userId);
+        .update({'is_active': isActive}).eq('id', userId);
   }
 }

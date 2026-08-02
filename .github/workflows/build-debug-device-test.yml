@@ -1,18 +1,19 @@
 name: Build APK Debug — Device Test
 
 on:
+  push:
+    branches:
+      - claude/phase-11h-market-intelligence-integration-p0
   workflow_dispatch:
 
 jobs:
   build:
-    name: Build debug APK com credenciais reais
+    name: Validate, Test e Build APK Debug
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: claude/ive-avatar-v2-build-recovery
 
       - name: Setup Java 17 (Temurin)
         uses: actions/setup-java@v4
@@ -35,13 +36,48 @@ jobs:
       - name: flutter pub get
         run: flutter pub get
 
+      - name: dart format check
+        run: dart format --output=none --set-exit-if-changed lib test
+
+      - name: flutter analyze
+        run: flutter analyze --fatal-warnings
+
+      - name: flutter test
+        run: flutter test -j 1 --reporter expanded
+
+      - name: Adicionar suporte Android (estrutura incompleta no repo)
+        run: flutter create --platforms android --project-name ai_social_copilot .
+
+      - name: Fixar AGP para 8.11.1
+        run: |
+          if [ -f android/settings.gradle.kts ]; then
+            sed -i 's/id("com.android.application") version "[^"]*"/id("com.android.application") version "8.11.1"/g' android/settings.gradle.kts
+            sed -i 's/id("com.android.library") version "[^"]*"/id("com.android.library") version "8.11.1"/g' android/settings.gradle.kts
+          fi
+
       - name: Build APK debug
         run: flutter build apk --debug
+
+      - name: SHA-256 do APK
+        run: |
+          APK=build/app/outputs/flutter-apk/app-debug.apk
+          echo "APK_SIZE=$(stat -c%s $APK)" >> $GITHUB_ENV
+          echo "APK_SHA256=$(sha256sum $APK | cut -d' ' -f1)" >> $GITHUB_ENV
+          echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+      - name: Job Summary
+        run: |
+          echo "## Build APK Debug — Phase 11H.2" >> $GITHUB_STEP_SUMMARY
+          echo "| Campo | Valor |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`$SHORT_SHA\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| APK tamanho | \`$APK_SIZE bytes\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| SHA-256 | \`$APK_SHA256\` |" >> $GITHUB_STEP_SUMMARY
 
       - name: Upload APK debug
         uses: actions/upload-artifact@v4
         with:
-          name: ive-avatar-v2-device-test-apk
+          name: insightvalues-phase11h2-debug-apk-${{ env.SHORT_SHA }}
           path: build/app/outputs/flutter-apk/app-debug.apk
-          retention-days: 30
+          retention-days: 3
           if-no-files-found: error

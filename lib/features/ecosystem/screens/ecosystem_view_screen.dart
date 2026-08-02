@@ -10,14 +10,13 @@ import '../../../providers/market_analysis_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 
 // ── Colors ───────────────────────────────────────────────────────────────────
-const _kBg      = Color(0xFF0F0F1A);
-const _kCard    = Color(0xFF1A1A2E);
+const _kBg = Color(0xFF0F0F1A);
+const _kCard = Color(0xFF1A1A2E);
 const _kPrimary = Color(0xFF6C63FF);
-const _kGreen   = Color(0xFF4CAF50);
-const _kOrange  = Color(0xFFFF9800);
-const _kRed     = Color(0xFFF44336);
-const _kCyan    = Color(0xFF00BCD4);
-const _kGold    = Color(0xFFFFD700);
+const _kGreen = Color(0xFF4CAF50);
+const _kOrange = Color(0xFFFF9800);
+const _kRed = Color(0xFFF44336);
+const _kCyan = Color(0xFF00BCD4);
 
 Color _scoreColor(int s) {
   if (s >= 80) return _kGreen;
@@ -31,14 +30,10 @@ Color _scoreColor(int s) {
 class EcosystemViewScreen extends ConsumerWidget {
   const EcosystemViewScreen({super.key});
 
-  static const List<String> _projectTypes = [
-    'Blog', 'SaaS', 'App', 'Livro', 'Curso', 'E-commerce',
-  ];
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final projectsAsync  = ref.watch(projectsProvider);
-    final analysesAsync  = ref.watch(marketAnalysesProvider);
+    final projectsAsync = ref.watch(projectsProvider);
+    final analysesAsync = ref.watch(marketAnalysesProvider);
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -46,13 +41,16 @@ class EcosystemViewScreen extends ConsumerWidget {
         backgroundColor: _kBg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-          onPressed: () =>
-              context.canPop() ? context.pop() : context.go(AppConstants.routeDashboard),
+          icon:
+              const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          onPressed: () => context.canPop()
+              ? context.pop()
+              : context.go(AppConstants.routeDashboard),
         ),
         title: const Text(
           'Ecosystem View',
-          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+          style: TextStyle(
+              color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
@@ -67,13 +65,15 @@ class EcosystemViewScreen extends ConsumerWidget {
         loading: () =>
             const Center(child: CircularProgressIndicator(color: _kPrimary)),
         error: (e, _) => Center(
-          child: Text('Erro: $e', style: const TextStyle(color: Colors.white54)),
+          child:
+              Text('Erro: $e', style: const TextStyle(color: Colors.white54)),
         ),
         data: (projects) {
           final analyses = analysesAsync.value ?? <MarketAnalysis>[];
 
           if (projects.isEmpty) {
-            return _EmptyEcosystem(onTap: () => context.go(AppConstants.routeProjects));
+            return _EmptyEcosystem(
+                onTap: () => context.go(AppConstants.routeProjects));
           }
 
           return SingleChildScrollView(
@@ -82,7 +82,9 @@ class EcosystemViewScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Summary row
-                _EcosystemSummaryRow(projects: projects, analyses: analyses.cast<MarketAnalysis>()),
+                _EcosystemSummaryRow(
+                    projects: projects,
+                    analyses: analyses.cast<MarketAnalysis>()),
                 const SizedBox(height: 20),
 
                 // Project type filter chips (visual only for now)
@@ -100,13 +102,15 @@ class EcosystemViewScreen extends ConsumerWidget {
                 // Project cards
                 ...projects.map((p) {
                   final analysis = analyses
-                      .where((a) => a.input.contains(p.name) ||
-                          (p.marketAnalysisId != null && a.id == p.marketAnalysisId))
+                      .where((a) =>
+                          a.input.contains(p.name) ||
+                          (p.marketAnalysisId != null &&
+                              a.id == p.marketAnalysisId))
                       .firstOrNull;
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: _ProjectCard(
-                      project:  p,
+                      project: p,
                       analysis: analysis,
                       onTap: () => context.go(AppConstants.routeProjects),
                       onMarketTap: analysis != null
@@ -145,11 +149,11 @@ class _EcosystemSummaryRow extends StatelessWidget {
 
     return Row(
       children: [
-        _StatChip('Projetos',        '${projects.length}',  _kPrimary),
+        _StatChip('Projetos', '${projects.length}', _kPrimary),
         const SizedBox(width: 10),
-        _StatChip('Análises',        '${analyses.length}',  _kCyan),
+        _StatChip('Análises', '${analyses.length}', _kCyan),
         const SizedBox(width: 10),
-        _StatChip('Score Médio',     '$avgScore',            _scoreColor(avgScore)),
+        _StatChip('Score Médio', '$avgScore', _scoreColor(avgScore)),
       ],
     );
   }
@@ -178,8 +182,7 @@ class _StatChip extends StatelessWidget {
                     color: color, fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 2),
             Text(label,
-                style:
-                    const TextStyle(color: Colors.white38, fontSize: 10)),
+                style: const TextStyle(color: Colors.white38, fontSize: 10)),
           ],
         ),
       ),
@@ -204,7 +207,8 @@ class _ProjectCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final score = analysis?.opportunityScore ?? 0;
     final color = _scoreColor(score);
-    final typeColor = _typeColor(project.type ?? 'projeto');
+    final typeColor =
+        _typeColor(project.type.isEmpty ? 'projeto' : project.type);
 
     return GestureDetector(
       onTap: onTap,
@@ -221,15 +225,19 @@ class _ProjectCard extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: typeColor.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    (project.type ?? 'Projeto').toUpperCase(),
+                    (project.type.isEmpty ? 'Projeto' : project.type)
+                        .toUpperCase(),
                     style: TextStyle(
-                        color: typeColor, fontSize: 9, fontWeight: FontWeight.bold),
+                        color: typeColor,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -245,7 +253,8 @@ class _ProjectCard extends StatelessWidget {
                 ),
                 if (score > 0) ...[
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: color.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(8),
@@ -276,8 +285,8 @@ class _ProjectCard extends StatelessWidget {
                 if (project.type.isNotEmpty)
                   _InfoBadge(Icons.category_rounded, project.type, _kPrimary),
                 const SizedBox(width: 8),
-                _InfoBadge(Icons.radio_button_checked_rounded,
-                    project.status, _kGreen),
+                _InfoBadge(Icons.radio_button_checked_rounded, project.status,
+                    _kGreen),
                 const Spacer(),
                 if (onMarketTap != null)
                   TextButton.icon(
@@ -286,8 +295,8 @@ class _ProjectCard extends StatelessWidget {
                     label: const Text('Intel.', style: TextStyle(fontSize: 11)),
                     style: TextButton.styleFrom(
                       foregroundColor: _kCyan,
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       minimumSize: Size.zero,
                     ),
                   ),
@@ -350,12 +359,15 @@ class _EmptyEcosystem extends StatelessWidget {
             const Text(
               'Seu Ecossistema está vazio',
               style: TextStyle(
-                  color: Colors.white70, fontSize: 18, fontWeight: FontWeight.bold),
+                  color: Colors.white70,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             const Text(
               'Crie projetos no Project Command Center para visualizar seu ecossistema de negócios.',
-              style: TextStyle(color: Colors.white38, fontSize: 13, height: 1.5),
+              style:
+                  TextStyle(color: Colors.white38, fontSize: 13, height: 1.5),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -366,7 +378,8 @@ class _EmptyEcosystem extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: _kPrimary,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
               ),

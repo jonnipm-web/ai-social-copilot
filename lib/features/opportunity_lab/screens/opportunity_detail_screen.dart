@@ -12,13 +12,13 @@ import '../../../providers/project_provider.dart';
 import '../../action_engine/screens/action_detail_screen.dart';
 
 // ── Colors ────────────────────────────────────────────────────────────────────
-const _kBg      = Color(0xFF0F0F1A);
-const _kCard    = Color(0xFF1A1A2E);
+const _kBg = Color(0xFF0F0F1A);
+const _kCard = Color(0xFF1A1A2E);
 const _kPrimary = Color(0xFF6C63FF);
-const _kGreen   = Color(0xFF4CAF50);
-const _kOrange  = Color(0xFFFF9800);
-const _kRed     = Color(0xFFF44336);
-const _kTeal    = Color(0xFF00BCD4);
+const _kGreen = Color(0xFF4CAF50);
+const _kOrange = Color(0xFFFF9800);
+const _kRed = Color(0xFFF44336);
+const _kTeal = Color(0xFF00BCD4);
 
 Color _scoreColor(int s) {
   if (s >= 80) return _kGreen;
@@ -44,7 +44,8 @@ class OpportunityDetailScreen extends ConsumerWidget {
         backgroundColor: _kBg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          icon:
+              const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
           onPressed: () => context.canPop()
               ? context.pop()
               : context.go(AppConstants.routeOpportunityLab),
@@ -67,8 +68,8 @@ class OpportunityDetailScreen extends ConsumerWidget {
         loading: () =>
             const Center(child: CircularProgressIndicator(color: _kPrimary)),
         error: (e, _) => Center(
-          child: Text('Erro: $e',
-              style: const TextStyle(color: Colors.white54)),
+          child:
+              Text('Erro: $e', style: const TextStyle(color: Colors.white54)),
         ),
         data: (item) => item == null
             ? const Center(
@@ -85,7 +86,7 @@ class _StatusMenu extends StatelessWidget {
   const _StatusMenu({required this.item, required this.ref});
 
   final OpportunityLabItem item;
-  final WidgetRef          ref;
+  final WidgetRef ref;
 
   @override
   Widget build(BuildContext context) {
@@ -144,8 +145,8 @@ class _StatusMenu extends StatelessWidget {
                         style: TextStyle(color: Colors.white54))),
                 TextButton(
                     onPressed: () => Navigator.pop(context, true),
-                    child: const Text('Excluir',
-                        style: TextStyle(color: _kRed))),
+                    child:
+                        const Text('Excluir', style: TextStyle(color: _kRed))),
               ],
             ),
           );
@@ -161,7 +162,8 @@ class _StatusMenu extends StatelessWidget {
         if (item.status == 'pending')
           const PopupMenuItem(
             value: 'approve',
-            child: Text('Aprovar e criar ação', style: TextStyle(color: _kGreen)),
+            child:
+                Text('Aprovar e criar ação', style: TextStyle(color: _kGreen)),
           ),
         const PopupMenuItem(
           value: 'delete',
@@ -177,7 +179,7 @@ class _DetailBody extends StatelessWidget {
   const _DetailBody({required this.item, required this.ref});
 
   final OpportunityLabItem item;
-  final WidgetRef          ref;
+  final WidgetRef ref;
 
   @override
   Widget build(BuildContext context) {
@@ -185,7 +187,10 @@ class _DetailBody extends StatelessWidget {
     final projects = projectsAsync.valueOrNull ?? [];
     final projectName = item.projectId == null
         ? null
-        : projects.where((p) => p.id == item.projectId).map((p) => p.name).firstOrNull;
+        : projects
+            .where((p) => p.id == item.projectId)
+            .map((p) => p.name)
+            .firstOrNull;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
@@ -296,9 +301,7 @@ class _HeroHeader extends StatelessWidget {
                 child: Text(
                   '$score',
                   style: TextStyle(
-                      color: scoreC,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold),
+                      color: scoreC, fontSize: 20, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -346,7 +349,7 @@ class _HeroHeader extends StatelessWidget {
 class _RingPainter extends CustomPainter {
   const _RingPainter({required this.score, required this.color});
 
-  final int   score;
+  final int score;
   final Color color;
 
   @override
@@ -387,15 +390,17 @@ class _ScoreBreakdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dims = [
-      ('Mercado',          item.marketScore,      const Color(0xFF6C63FF)),
-      ('Receita',          item.revenueScore,     const Color(0xFF4CAF50)),
-      ('Competição',       item.competitionScore, const Color(0xFFFF9800)),
-      ('Sinergia',         item.synergyScore,     const Color(0xFF00BCD4)),
-      ('Fit Estratégico',  item.strategicFit,     const Color(0xFFB44FE8)),
+      ('Mercado', item.marketScore, const Color(0xFF6C63FF)),
+      ('Receita', item.revenueScore, const Color(0xFF4CAF50)),
+      ('Competição', item.competitionScore, const Color(0xFFFF9800)),
+      ('Sinergia', item.synergyScore, const Color(0xFF00BCD4)),
+      ('Fit Estratégico', item.strategicFit, const Color(0xFFB44FE8)),
     ];
 
     return Column(
-      children: dims.map((d) => _ScoreRow(label: d.$1, value: d.$2, color: d.$3)).toList(),
+      children: dims
+          .map((d) => _ScoreRow(label: d.$1, value: d.$2, color: d.$3))
+          .toList(),
     );
   }
 }
@@ -408,8 +413,8 @@ class _ScoreRow extends StatelessWidget {
   });
 
   final String label;
-  final int    value;
-  final Color  color;
+  final int value;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -440,9 +445,7 @@ class _ScoreRow extends StatelessWidget {
               '$value',
               textAlign: TextAlign.right,
               style: TextStyle(
-                  color: color,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold),
+                  color: color, fontSize: 12, fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -456,7 +459,7 @@ class _OriginSection extends StatelessWidget {
   const _OriginSection({required this.item, this.projectName});
 
   final OpportunityLabItem item;
-  final String?            projectName;
+  final String? projectName;
 
   @override
   Widget build(BuildContext context) {
@@ -504,8 +507,8 @@ class _InfoRow extends StatelessWidget {
   });
 
   final IconData icon;
-  final String   label;
-  final String   value;
+  final String label;
+  final String value;
 
   @override
   Widget build(BuildContext context) {
@@ -520,7 +523,9 @@ class _InfoRow extends StatelessWidget {
           Expanded(
             child: Text(value,
                 style: const TextStyle(
-                    color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500)),
           ),
         ],
       ),
@@ -551,12 +556,10 @@ class _SourcesList extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.link_rounded,
-                        color: _kPrimary, size: 12),
+                    const Icon(Icons.link_rounded, color: _kPrimary, size: 12),
                     const SizedBox(width: 4),
                     Text(s,
-                        style: const TextStyle(
-                            color: _kPrimary, fontSize: 11)),
+                        style: const TextStyle(color: _kPrimary, fontSize: 11)),
                   ],
                 ),
               ))
@@ -583,8 +586,7 @@ class _RationaleCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.format_quote_rounded,
-              color: _kPrimary, size: 20),
+          const Icon(Icons.format_quote_rounded, color: _kPrimary, size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -630,9 +632,7 @@ class _ConfidenceMeter extends StatelessWidget {
         const SizedBox(width: 12),
         Text('$value% $label',
             style: TextStyle(
-                color: color,
-                fontSize: 13,
-                fontWeight: FontWeight.bold)),
+                color: color, fontSize: 13, fontWeight: FontWeight.bold)),
       ],
     );
   }
@@ -659,7 +659,9 @@ class _RisksList extends StatelessWidget {
                     Expanded(
                       child: Text(r,
                           style: const TextStyle(
-                              color: Colors.white70, fontSize: 12, height: 1.4)),
+                              color: Colors.white70,
+                              fontSize: 12,
+                              height: 1.4)),
                     ),
                   ],
                 ),
@@ -728,8 +730,8 @@ class _Section extends StatelessWidget {
   });
 
   final IconData icon;
-  final String   title;
-  final Widget   child;
+  final String title;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
@@ -792,9 +794,9 @@ class _StatusBadge extends StatelessWidget {
 
   static Color _color(String s) {
     const m = {
-      'approved':  _kGreen,
+      'approved': _kGreen,
       'executing': _kTeal,
-      'rejected':  _kRed,
+      'rejected': _kRed,
     };
     return m[s] ?? _kOrange;
   }
@@ -810,8 +812,7 @@ class _StatusBadge extends StatelessWidget {
       ),
       child: Text(
         status,
-        style: TextStyle(
-            color: c, fontSize: 9, fontWeight: FontWeight.bold),
+        style: TextStyle(color: c, fontSize: 9, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -822,7 +823,7 @@ class _ActionButtons extends StatelessWidget {
   const _ActionButtons({required this.item, required this.ref});
 
   final OpportunityLabItem item;
-  final WidgetRef          ref;
+  final WidgetRef ref;
 
   @override
   Widget build(BuildContext context) {
@@ -869,7 +870,6 @@ class _ActionButtons extends StatelessWidget {
               },
             ),
           ),
-
         if (item.status == 'approved') ...[
           SizedBox(
             width: double.infinity,
@@ -907,9 +907,7 @@ class _ActionButtons extends StatelessWidget {
             ),
           ),
         ],
-
         const SizedBox(height: 10),
-
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(

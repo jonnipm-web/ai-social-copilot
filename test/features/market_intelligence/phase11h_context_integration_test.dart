@@ -7,7 +7,6 @@
 // - Screen-level context-building logic (pure unit)
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:ai_social_copilot/data/models/market_analysis.dart';
 import 'package:ai_social_copilot/data/models/project.dart';
@@ -44,17 +43,37 @@ ProjectIntelligenceContext _fullCtx({String projectId = 'p1'}) {
     positioning: 'premium',
     stage: 'active',
     knowledgeItems: [
-      ContextSourceItem(id: 'k1', title: 'Artigo 1', summary: 'Resumo 1', sourceType: 'knowledge'),
-      ContextSourceItem(id: 'k2', title: 'Artigo 2', summary: 'Resumo 2', sourceType: 'knowledge'),
+      ContextSourceItem(
+          id: 'k1',
+          title: 'Artigo 1',
+          summary: 'Resumo 1',
+          sourceType: 'knowledge'),
+      ContextSourceItem(
+          id: 'k2',
+          title: 'Artigo 2',
+          summary: 'Resumo 2',
+          sourceType: 'knowledge'),
     ],
     vaultItems: [
-      ContextSourceItem(id: 'v1', title: 'Análise: ki1', summary: 'Vault summary', sourceType: 'vault'),
+      ContextSourceItem(
+          id: 'v1',
+          title: 'Análise: ki1',
+          summary: 'Vault summary',
+          sourceType: 'vault'),
     ],
     libraryItems: [
-      ContextSourceItem(id: 'l1', title: 'Post 1', summary: 'Library item', sourceType: 'content'),
+      ContextSourceItem(
+          id: 'l1',
+          title: 'Post 1',
+          summary: 'Library item',
+          sourceType: 'content'),
     ],
     previousAnalyses: [
-      ContextAnalysisSummary(id: 'a1', niche: 'marketing', opportunityScore: 78, date: DateTime(2025, 6, 1)),
+      ContextAnalysisSummary(
+          id: 'a1',
+          niche: 'marketing',
+          opportunityScore: 78,
+          date: DateTime(2025, 6, 1)),
     ],
     personaNames: ['Maria', 'João'],
     coverage: 0.85,
@@ -190,7 +209,10 @@ void main() {
       final ctx = ProjectIntelligenceContext(
         inputText: 'x',
         knowledgeItems: [ContextSourceItem(id: 'k1', title: 'T', summary: 'S')],
-        vaultItems: [ContextSourceItem(id: 'v1', title: 'T', summary: 'S', sourceType: 'vault')],
+        vaultItems: [
+          ContextSourceItem(
+              id: 'v1', title: 'T', summary: 'S', sourceType: 'vault')
+        ],
         generatedAt: DateTime(2026),
       );
       expect(ctx.sourceIds, containsAll(['k1', 'v1']));
@@ -224,7 +246,10 @@ void main() {
     test('hasKnowledgeContext true when only vaultItems present', () {
       final ctx = ProjectIntelligenceContext(
         inputText: 'x',
-        vaultItems: [ContextSourceItem(id: 'v1', title: 'T', summary: 'S', sourceType: 'vault')],
+        vaultItems: [
+          ContextSourceItem(
+              id: 'v1', title: 'T', summary: 'S', sourceType: 'vault')
+        ],
         generatedAt: DateTime(2026),
       );
       expect(ctx.hasKnowledgeContext, isTrue);
@@ -331,7 +356,8 @@ void main() {
     });
 
     test('vault sourceType is preserved', () {
-      const item = ContextSourceItem(id: 'v1', title: 'T', summary: 'S', sourceType: 'vault');
+      const item = ContextSourceItem(
+          id: 'v1', title: 'T', summary: 'S', sourceType: 'vault');
       expect(item.sourceType, 'vault');
     });
   });
@@ -339,7 +365,8 @@ void main() {
   // ── Soft delete — model expectation ──────────────────────────────────────
 
   group('Soft delete expectation', () {
-    test('MarketAnalysis can be constructed (soft delete fields in DB only)', () {
+    test('MarketAnalysis can be constructed (soft delete fields in DB only)',
+        () {
       final ma = MarketAnalysis(
         id: 'ma1',
         userId: 'u1',

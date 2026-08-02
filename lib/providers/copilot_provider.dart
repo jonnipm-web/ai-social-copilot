@@ -13,6 +13,5 @@ final copilotSessionsProvider =
 
 final copilotMessagesProvider =
     FutureProvider.autoDispose.family<List<CopilotMessage>, String>(
-  (ref, sessionId) =>
-      ref.read(copilotServiceProvider).fetchMessages(sessionId),
+  (ref, sessionId) => ref.read(copilotServiceProvider).fetchMessages(sessionId),
 );

@@ -44,19 +44,20 @@ class HistoryDetailScreen extends ConsumerWidget {
         title: const Text('Detalhe'),
         actions: [
           detailAsync.whenOrNull(
-            data: (gen) => TextButton.icon(
-              onPressed: () => _copyAll(context, gen),
-              icon: const Icon(Icons.copy_all_rounded, size: 16),
-              label: const Text('Copiar Tudo'),
-              style: TextButton.styleFrom(foregroundColor: Colors.white70),
-            ),
-          ) ??
+                data: (gen) => TextButton.icon(
+                  onPressed: () => _copyAll(context, gen),
+                  icon: const Icon(Icons.copy_all_rounded, size: 16),
+                  label: const Text('Copiar Tudo'),
+                  style: TextButton.styleFrom(foregroundColor: Colors.white70),
+                ),
+              ) ??
               const SizedBox.shrink(),
         ],
       ),
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
+          constraints:
+              const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
           child: detailAsync.when(
             loading: () => _buildShimmer(),
             error: (e, _) => Center(

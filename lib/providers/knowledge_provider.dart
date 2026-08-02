@@ -12,8 +12,8 @@ final knowledgeItemsProvider =
   return ref.watch(knowledgeServiceProvider).fetchAll();
 });
 
-final knowledgeItemsByProjectProvider =
-    FutureProvider.autoDispose.family<List<KnowledgeItem>, String>((ref, projectId) {
+final knowledgeItemsByProjectProvider = FutureProvider.autoDispose
+    .family<List<KnowledgeItem>, String>((ref, projectId) {
   return ref.watch(knowledgeServiceProvider).fetchAll(projectId: projectId);
 });
 
@@ -22,15 +22,13 @@ final knowledgeItemByIdProvider =
   return ref.watch(knowledgeServiceProvider).fetchById(id);
 });
 
-final knowledgeAnalysisProvider =
-    FutureProvider.autoDispose.family<KnowledgeAnalysis?, String>(
-        (ref, itemId) {
+final knowledgeAnalysisProvider = FutureProvider.autoDispose
+    .family<KnowledgeAnalysis?, String>((ref, itemId) {
   return ref.watch(knowledgeServiceProvider).fetchAnalysis(itemId);
 });
 
-final knowledgeAnalysisByProjectProvider =
-    FutureProvider.autoDispose.family<List<KnowledgeAnalysis>, String>(
-        (ref, projectId) {
+final knowledgeAnalysisByProjectProvider = FutureProvider.autoDispose
+    .family<List<KnowledgeAnalysis>, String>((ref, projectId) {
   return ref.watch(knowledgeServiceProvider).fetchAnalysisByProject(projectId);
 });
 
@@ -86,8 +84,7 @@ final knowledgeItemNotifierProvider = StateNotifierProvider.autoDispose<
 
 class KnowledgeAnalysisNotifier
     extends StateNotifier<AsyncValue<KnowledgeAnalysis?>> {
-  KnowledgeAnalysisNotifier(this._service)
-      : super(const AsyncValue.data(null));
+  KnowledgeAnalysisNotifier(this._service) : super(const AsyncValue.data(null));
 
   final KnowledgeService _service;
 

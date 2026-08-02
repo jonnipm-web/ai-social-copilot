@@ -69,16 +69,14 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           Expanded(
             child: itemsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error:   (e, _) => Center(
+              error: (e, _) => Center(
                 child: Text('Erro: $e',
                     style: const TextStyle(color: Colors.white54)),
               ),
               data: (items) {
                 final filtered = _filterStatus == null
                     ? items
-                    : items
-                        .where((i) => i.status == _filterStatus)
-                        .toList();
+                    : items.where((i) => i.status == _filterStatus).toList();
 
                 if (filtered.isEmpty) {
                   return const Center(
@@ -92,8 +90,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                             style: TextStyle(color: Colors.white54)),
                         SizedBox(height: 4),
                         Text('Crie seu primeiro post usando o botão abaixo.',
-                            style: TextStyle(
-                                color: Colors.white38, fontSize: 12)),
+                            style:
+                                TextStyle(color: Colors.white38, fontSize: 12)),
                       ],
                     ),
                   );
@@ -126,16 +124,16 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
     if (result != null && mounted) {
       final item = CalendarItem(
-        id:           '',
-        userId:       '',
-        theme:        result['theme'] as String,
-        platform:     result['platform'] as String?,
-        format:       result['format'] as String?,
-        objective:    result['objective'] as String?,
-        status:       'ideia',
+        id: '',
+        userId: '',
+        theme: result['theme'] as String,
+        platform: result['platform'] as String?,
+        format: result['format'] as String?,
+        objective: result['objective'] as String?,
+        status: 'ideia',
         suggestedDate: result['suggestedDate'] as DateTime?,
-        createdAt:    DateTime.now(),
-        updatedAt:    DateTime.now(),
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
       );
       await ref.read(calendarNotifierProvider.notifier).create(item);
       ref.invalidate(calendarItemsProvider);
@@ -146,7 +144,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 class _CalendarCard extends StatelessWidget {
   const _CalendarCard({required this.item, required this.ref});
   final CalendarItem item;
-  final WidgetRef    ref;
+  final WidgetRef ref;
 
   @override
   Widget build(BuildContext context) {
@@ -195,8 +193,8 @@ class _CalendarCard extends StatelessWidget {
                     ),
                     child: Text(
                       item.platform!,
-                      style: const TextStyle(
-                          color: Colors.white54, fontSize: 10),
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 10),
                     ),
                   ),
                 ],
@@ -232,8 +230,8 @@ class _CalendarCard extends StatelessWidget {
                     const PopupMenuDivider(),
                     const PopupMenuItem(
                       value: 'delete',
-                      child: Text('Excluir',
-                          style: TextStyle(color: Colors.red)),
+                      child:
+                          Text('Excluir', style: TextStyle(color: Colors.red)),
                     ),
                   ],
                 ),
@@ -266,8 +264,7 @@ class _CalendarCard extends StatelessWidget {
                   const SizedBox(width: 4),
                   Text(
                     CalendarItem.formatLabels[item.format] ?? item.format!,
-                    style: const TextStyle(
-                        color: Colors.white38, fontSize: 11),
+                    style: const TextStyle(color: Colors.white38, fontSize: 11),
                   ),
                 ],
               ),
@@ -281,8 +278,7 @@ class _CalendarCard extends StatelessWidget {
                   const SizedBox(width: 4),
                   Text(
                     _formatDate(item.suggestedDate!),
-                    style: const TextStyle(
-                        color: Colors.white38, fontSize: 11),
+                    style: const TextStyle(color: Colors.white38, fontSize: 11),
                   ),
                 ],
               ),
@@ -302,12 +298,18 @@ class _CalendarCard extends StatelessWidget {
 
 Color _statusColor(String status) {
   switch (status) {
-    case 'publicado': return Colors.green;
-    case 'aprovado':  return Colors.teal;
-    case 'gerado':    return const Color(0xFF6C63FF);
-    case 'planejado': return const Color(0xFFB44FE8);
-    case 'arquivado': return Colors.white24;
-    default:          return Colors.orange;
+    case 'publicado':
+      return Colors.green;
+    case 'aprovado':
+      return Colors.teal;
+    case 'gerado':
+      return const Color(0xFF6C63FF);
+    case 'planejado':
+      return const Color(0xFFB44FE8);
+    case 'arquivado':
+      return Colors.white24;
+    default:
+      return Colors.orange;
   }
 }
 
@@ -319,9 +321,9 @@ class _StatusChip extends StatelessWidget {
     required this.onTap,
   });
 
-  final String  label;
-  final bool    selected;
-  final Color   color;
+  final String label;
+  final bool selected;
+  final Color color;
   final VoidCallback onTap;
 
   @override
@@ -358,12 +360,11 @@ class _CreateCalendarItemSheet extends StatefulWidget {
       _CreateCalendarItemSheetState();
 }
 
-class _CreateCalendarItemSheetState
-    extends State<_CreateCalendarItemSheet> {
-  final _themeCtrl    = TextEditingController();
+class _CreateCalendarItemSheetState extends State<_CreateCalendarItemSheet> {
+  final _themeCtrl = TextEditingController();
   final _objectiveCtrl = TextEditingController();
-  String?   _platform;
-  String?   _format;
+  String? _platform;
+  String? _format;
   DateTime? _suggestedDate;
 
   @override
@@ -462,12 +463,12 @@ class _CreateCalendarItemSheetState
             onPressed: () {
               if (_themeCtrl.text.trim().isEmpty) return;
               Navigator.pop(context, {
-                'theme':         _themeCtrl.text.trim(),
-                'objective':     _objectiveCtrl.text.trim().isEmpty
+                'theme': _themeCtrl.text.trim(),
+                'objective': _objectiveCtrl.text.trim().isEmpty
                     ? null
                     : _objectiveCtrl.text.trim(),
-                'platform':      _platform,
-                'format':        _format,
+                'platform': _platform,
+                'format': _format,
                 'suggestedDate': _suggestedDate,
               });
             },
@@ -489,10 +490,10 @@ class _CreateCalendarItemSheetState
 
   InputDecoration _dropDecoration(String label) {
     return InputDecoration(
-      labelText:  label,
+      labelText: label,
       labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
-      filled:     true,
-      fillColor:  Colors.white.withOpacity(0.05),
+      filled: true,
+      fillColor: Colors.white.withOpacity(0.05),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
         borderSide: const BorderSide(color: Colors.white12),
@@ -510,27 +511,25 @@ class _SheetField extends StatelessWidget {
     required this.controller,
     required this.label,
     this.hint,
-    this.maxLines = 1,
   });
 
   final TextEditingController controller;
   final String label;
   final String? hint;
-  final int maxLines;
 
   @override
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
-      maxLines:   maxLines,
+      maxLines: 1,
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         labelText: label,
-        hintText:  hint,
+        hintText: hint,
         labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
-        hintStyle:  const TextStyle(color: Colors.white24, fontSize: 12),
-        filled:     true,
-        fillColor:  Colors.white.withOpacity(0.05),
+        hintStyle: const TextStyle(color: Colors.white24, fontSize: 12),
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.05),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: Colors.white12),

@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../../data/services/drive_service.dart';
 
-const _kBg      = Color(0xFF0F0F1A);
-const _kCard    = Color(0xFF1A1A2E);
+const _kBg = Color(0xFF0F0F1A);
+const _kCard = Color(0xFF1A1A2E);
 const _kPrimary = Color(0xFF6C63FF);
-const _kGreen   = Color(0xFF4CAF50);
-const _kRed     = Color(0xFFF44336);
+const _kGreen = Color(0xFF4CAF50);
+const _kRed = Color(0xFFF44336);
 
 class DrivePickerScreen extends StatefulWidget {
   const DrivePickerScreen({super.key});
@@ -16,16 +16,16 @@ class DrivePickerScreen extends StatefulWidget {
 }
 
 class _DrivePickerScreenState extends State<DrivePickerScreen> {
-  final _drive          = DriveService();
-  final _searchCtrl     = TextEditingController();
+  final _drive = DriveService();
+  final _searchCtrl = TextEditingController();
 
-  bool             _signing  = false;
-  bool             _loading  = false;
-  bool             _downloading = false;
-  bool             _signedIn = false;
-  String?          _userName;
-  List<DriveFile>  _files    = [];
-  String?          _error;
+  bool _signing = false;
+  bool _loading = false;
+  bool _downloading = false;
+  bool _signedIn = false;
+  String? _userName;
+  List<DriveFile> _files = [];
+  String? _error;
 
   @override
   void initState() {
@@ -47,16 +47,22 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
   }
 
   Future<void> _signIn() async {
-    setState(() { _signing = true; _error = null; });
+    setState(() {
+      _signing = true;
+      _error = null;
+    });
     try {
       final account = await _drive.signIn();
       if (account == null) {
-        setState(() { _signing = false; _error = 'Login cancelado.'; });
+        setState(() {
+          _signing = false;
+          _error = 'Login cancelado.';
+        });
         return;
       }
       setState(() {
         _signedIn = true;
-        _signing  = false;
+        _signing = false;
         _userName = account.displayName ?? account.email;
       });
       await _loadFiles();
@@ -69,26 +75,43 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
             'Use o tipo "URL" e cole o link de compartilhamento do Google Docs, '
             'ou use o tipo "Arquivo" para importar PDFs locais.';
       } else if (msg.contains('network') || msg.contains('Network')) {
-        errorMsg = 'Sem conexão com a internet. Verifique sua rede e tente novamente.';
+        errorMsg =
+            'Sem conexão com a internet. Verifique sua rede e tente novamente.';
       } else {
         errorMsg = 'Erro ao conectar: $msg';
       }
-      setState(() { _signing = false; _error = errorMsg; });
+      setState(() {
+        _signing = false;
+        _error = errorMsg;
+      });
     }
   }
 
   Future<void> _signOut() async {
     await _drive.signOut();
-    setState(() { _signedIn = false; _files = []; _userName = null; });
+    setState(() {
+      _signedIn = false;
+      _files = [];
+      _userName = null;
+    });
   }
 
   Future<void> _loadFiles({String search = ''}) async {
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       final files = await _drive.listFiles(search: search);
-      setState(() { _files = files; _loading = false; });
+      setState(() {
+        _files = files;
+        _loading = false;
+      });
     } catch (e) {
-      setState(() { _loading = false; _error = 'Erro ao carregar: $e'; });
+      setState(() {
+        _loading = false;
+        _error = 'Erro ao carregar: $e';
+      });
     }
   }
 
@@ -97,8 +120,7 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
     try {
       final content = await _drive.downloadContent(file);
       if (mounted) {
-        Navigator.of(context)
-            .pop({'name': file.name, 'content': content});
+        Navigator.of(context).pop({'name': file.name, 'content': content});
       }
     } catch (e) {
       if (mounted) {
@@ -130,8 +152,10 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
               if (_signedIn)
                 TextButton.icon(
                   onPressed: _signOut,
-                  icon: const Icon(Icons.logout_rounded, size: 16, color: Colors.white54),
-                  label: const Text('Sair', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                  icon: const Icon(Icons.logout_rounded,
+                      size: 16, color: Colors.white54),
+                  label: const Text('Sair',
+                      style: TextStyle(color: Colors.white54, fontSize: 12)),
                 ),
             ],
           ),
@@ -191,7 +215,8 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
                   const SizedBox(height: 8),
                   const Text(
                     'Importe PDFs, Google Docs e documentos de texto diretamente para o Cofre de Conhecimento.',
-                    style: TextStyle(color: Colors.white54, fontSize: 13, height: 1.5),
+                    style: TextStyle(
+                        color: Colors.white54, fontSize: 13, height: 1.5),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 24),
@@ -213,7 +238,8 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
                                   strokeWidth: 2, color: Colors.white),
                             )
                           : const Icon(Icons.login_rounded),
-                      label: Text(_signing ? 'Conectando…' : 'Entrar com Google'),
+                      label:
+                          Text(_signing ? 'Conectando…' : 'Entrar com Google'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _kPrimary,
                         foregroundColor: Colors.white,
@@ -248,7 +274,8 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
                     const SizedBox(width: 6),
                     Text(
                       'Conectado como $_userName',
-                      style: const TextStyle(color: Colors.white54, fontSize: 12),
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 12),
                     ),
                   ],
                 ),
@@ -259,7 +286,8 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
                 decoration: InputDecoration(
                   hintText: 'Buscar arquivo no Drive…',
                   hintStyle: const TextStyle(color: Colors.white38),
-                  prefixIcon: const Icon(Icons.search_rounded, color: Colors.white38),
+                  prefixIcon:
+                      const Icon(Icons.search_rounded, color: Colors.white38),
                   suffixIcon: _searchCtrl.text.isNotEmpty
                       ? IconButton(
                           icon: const Icon(Icons.clear_rounded,
@@ -311,7 +339,8 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
                       ? const Center(
                           child: Text(
                             'Nenhum arquivo encontrado.\nSão suportados: Google Docs, PDF, DOCX e TXT.',
-                            style: TextStyle(color: Colors.white38, height: 1.6),
+                            style:
+                                TextStyle(color: Colors.white38, height: 1.6),
                             textAlign: TextAlign.center,
                           ),
                         )
@@ -333,7 +362,7 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
 
 class _FileTile extends StatelessWidget {
   const _FileTile({required this.file, required this.onTap});
-  final DriveFile  file;
+  final DriveFile file;
   final VoidCallback onTap;
 
   @override

@@ -17,10 +17,10 @@ class KnowledgeStrategy {
 
   factory KnowledgeStrategy.fromMap(Map<String, dynamic> map) {
     return KnowledgeStrategy(
-      id:               map['id'] as String,
-      knowledgeItemId:  map['knowledge_item_id'] as String,
-      userId:           map['user_id'] as String,
-      strategyJson:     map['strategy_json'] is Map
+      id: map['id'] as String,
+      knowledgeItemId: map['knowledge_item_id'] as String,
+      userId: map['user_id'] as String,
+      strategyJson: map['strategy_json'] is Map
           ? Map<String, dynamic>.from(map['strategy_json'] as Map)
           : {},
       createdAt: map['created_at'] != null
@@ -33,10 +33,10 @@ class KnowledgeStrategy {
   }
 
   Map<String, dynamic> toInsertMap() => {
-    'knowledge_item_id': knowledgeItemId,
-    'user_id':           userId,
-    'strategy_json':     strategyJson,
-  };
+        'knowledge_item_id': knowledgeItemId,
+        'user_id': userId,
+        'strategy_json': strategyJson,
+      };
 
   String get strategicSummary =>
       strategyJson['strategic_summary'] as String? ?? '';
@@ -44,8 +44,7 @@ class KnowledgeStrategy {
   String get valueProposition =>
       strategyJson['value_proposition'] as String? ?? '';
 
-  String get positioning =>
-      strategyJson['positioning'] as String? ?? '';
+  String get positioning => strategyJson['positioning'] as String? ?? '';
 
   List<String> get quickWins {
     final v = strategyJson['quick_wins'];
@@ -62,7 +61,10 @@ class KnowledgeStrategy {
   List<Map<String, dynamic>> get recommendedChannels {
     final v = strategyJson['recommended_channels'];
     if (v is List) {
-      return v.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+      return v
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
     }
     return [];
   }
@@ -82,7 +84,10 @@ class KnowledgeStrategy {
   List<Map<String, dynamic>> get commercialOpportunities {
     final v = strategyJson['commercial_opportunities'];
     if (v is List) {
-      return v.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+      return v
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
     }
     return [];
   }

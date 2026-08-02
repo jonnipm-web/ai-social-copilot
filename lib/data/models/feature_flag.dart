@@ -12,16 +12,16 @@ class FeatureFlag {
   });
 
   factory FeatureFlag.fromMap(Map<String, dynamic> map) => FeatureFlag(
-        featureName:  map['feature_name'] as String,
-        enabled:      map['enabled'] as bool? ?? false,
+        featureName: map['feature_name'] as String,
+        enabled: map['enabled'] as bool? ?? false,
         planRequired: map['plan_required'] as String? ?? 'free',
-        createdAt:    DateTime.parse(map['created_at'] as String),
+        createdAt: DateTime.parse(map['created_at'] as String),
       );
 
-  static const advisorEnabled        = 'advisor_enabled';
+  static const advisorEnabled = 'advisor_enabled';
   static const businessMemoryEnabled = 'business_memory_enabled';
-  static const ecosystemViewEnabled  = 'ecosystem_view_enabled';
+  static const ecosystemViewEnabled = 'ecosystem_view_enabled';
   static const opportunityLabEnabled = 'opportunity_lab_enabled';
-  static const actionEngineEnabled   = 'action_engine_enabled';
-  static const copilotEnabled        = 'copilot_enabled';
+  static const actionEngineEnabled = 'action_engine_enabled';
+  static const copilotEnabled = 'copilot_enabled';
 }

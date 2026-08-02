@@ -12,7 +12,8 @@ class RevenuePlannerScreen extends ConsumerStatefulWidget {
   final String analysisId;
 
   @override
-  ConsumerState<RevenuePlannerScreen> createState() => _RevenuePlannerScreenState();
+  ConsumerState<RevenuePlannerScreen> createState() =>
+      _RevenuePlannerScreenState();
 }
 
 class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
@@ -28,7 +29,8 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
 
   Future<void> _autoFillProjectName() async {
     try {
-      final analysis = await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
+      final analysis =
+          await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
       final projectId = analysis.projectId;
       if (projectId == null || !mounted) return;
       final project = await ProjectService().fetchById(projectId);
@@ -48,17 +50,24 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
     final name = _projectCtrl.text.trim();
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Digite o nome do projeto'), backgroundColor: Colors.orange),
+        const SnackBar(
+            content: Text('Digite o nome do projeto'),
+            backgroundColor: Colors.orange),
       );
       return;
     }
-    setState(() { _running = true; _error = null; });
+    setState(() {
+      _running = true;
+      _error = null;
+    });
     try {
-      final analysis = await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
+      final analysis =
+          await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
       final projectId = analysis.projectId;
       final ctx = projectId != null
           ? await ProjectIntelligenceContextService().buildForProject(projectId)
-          : await ProjectIntelligenceContextService().buildForInput(analysis.input);
+          : await ProjectIntelligenceContextService()
+              .buildForInput(analysis.input);
       await ref.read(marketAnalysisServiceProvider).buildRevenuePlan(
             widget.analysisId,
             analysis.input,
@@ -82,32 +91,40 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final asyncPlan = ref.watch(revenuePlanByAnalysisProvider(widget.analysisId));
+    final asyncPlan =
+        ref.watch(revenuePlanByAnalysisProvider(widget.analysisId));
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F1A),
       appBar: AppBar(
         backgroundColor: const Color(0xFF0F0F1A),
-        title: const Text('Revenue Planner', style: TextStyle(color: Colors.white)),
+        title: const Text('Revenue Planner',
+            style: TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go(
-            AppConstants.routeMarketIntelligenceHub.replaceFirst(':id', widget.analysisId),
+            AppConstants.routeMarketIntelligenceHub
+                .replaceFirst(':id', widget.analysisId),
           ),
         ),
       ),
       body: asyncPlan.when(
-        loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFF00BCD4))),
-        error: (e, _) => Center(child: Text('Erro: $e', style: const TextStyle(color: Colors.redAccent))),
+        loading: () => const Center(
+            child: CircularProgressIndicator(color: Color(0xFF00BCD4))),
+        error: (e, _) => Center(
+            child: Text('Erro: $e',
+                style: const TextStyle(color: Colors.redAccent))),
         data: (plan) => plan == null
             ? SingleChildScrollView(
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   children: [
-                    const Icon(Icons.attach_money_outlined, color: Colors.white24, size: 64),
+                    const Icon(Icons.attach_money_outlined,
+                        color: Colors.white24, size: 64),
                     const SizedBox(height: 16),
-                    const Text('Nenhum plano de receita ainda', style: TextStyle(color: Colors.white38)),
+                    const Text('Nenhum plano de receita ainda',
+                        style: TextStyle(color: Colors.white38)),
                     const SizedBox(height: 24),
                     TextField(
                       controller: _projectCtrl,
@@ -117,14 +134,17 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                         labelStyle: const TextStyle(color: Colors.white54),
                         filled: true,
                         fillColor: const Color(0xFF1A1A2E),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFF333355)),
+                          borderSide:
+                              const BorderSide(color: Color(0xFF333355)),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFF00BCD4)),
+                          borderSide:
+                              const BorderSide(color: Color(0xFF00BCD4)),
                         ),
                       ),
                     ),
@@ -132,7 +152,9 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                     if (_error != null)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 12),
-                        child: Text(_error!, style: const TextStyle(color: Colors.redAccent, fontSize: 13)),
+                        child: Text(_error!,
+                            style: const TextStyle(
+                                color: Colors.redAccent, fontSize: 13)),
                       ),
                     SizedBox(
                       width: double.infinity,
@@ -140,13 +162,19 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                       child: ElevatedButton.icon(
                         onPressed: _running ? null : _build,
                         icon: _running
-                            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                    color: Colors.white, strokeWidth: 2))
                             : const Icon(Icons.calculate_rounded),
-                        label: Text(_running ? 'Calculando...' : 'Gerar Revenue Plan'),
+                        label: Text(
+                            _running ? 'Calculando...' : 'Gerar Revenue Plan'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF00BCD4),
                           foregroundColor: Colors.black,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
                         ),
                       ),
                     ),
@@ -161,7 +189,10 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                     // Project name
                     Text(
                       plan.projectName,
-                      style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 16),
 
@@ -197,7 +228,10 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                     if (plan.revenueSources.isNotEmpty) ...[
                       const SizedBox(height: 24),
                       const Text('Fontes de Receita',
-                          style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold)),
                       const SizedBox(height: 10),
                       ...plan.revenueSources.map(
                         (s) => Container(
@@ -210,17 +244,23 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.attach_money_rounded, color: Color(0xFFFFD93D), size: 18),
+                              const Icon(Icons.attach_money_rounded,
+                                  color: Color(0xFFFFD93D), size: 18),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(s['name']?.toString() ?? '',
-                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 13)),
                                     if (s['description'] != null)
                                       Text(s['description'].toString(),
-                                          style: const TextStyle(color: Colors.white54, fontSize: 12),
+                                          style: const TextStyle(
+                                              color: Colors.white54,
+                                              fontSize: 12),
                                           maxLines: 2,
                                           overflow: TextOverflow.ellipsis),
                                   ],
@@ -228,7 +268,9 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                               ),
                               if (s['percentage'] != null)
                                 Text('${s['percentage']}%',
-                                    style: const TextStyle(color: Color(0xFFFFD93D), fontWeight: FontWeight.bold)),
+                                    style: const TextStyle(
+                                        color: Color(0xFFFFD93D),
+                                        fontWeight: FontWeight.bold)),
                             ],
                           ),
                         ),
@@ -239,55 +281,74 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                     if (plan.milestones.isNotEmpty) ...[
                       const SizedBox(height: 24),
                       const Text('Marcos de Receita',
-                          style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold)),
                       const SizedBox(height: 10),
                       ...plan.milestones.asMap().entries.map(
-                        (e) => Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF1A1A2E),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xFF00BCD4).withOpacity(0.2)),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 28,
-                                height: 28,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF00BCD4).withOpacity(0.1),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Center(
-                                  child: Text('${e.key + 1}',
-                                      style: const TextStyle(color: Color(0xFF00BCD4), fontSize: 12, fontWeight: FontWeight.bold)),
-                                ),
+                            (e) => Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1A1A2E),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                    color: const Color(0xFF00BCD4)
+                                        .withOpacity(0.2)),
                               ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(e.value['title']?.toString() ?? '',
-                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
-                                    if (e.value['target'] != null)
-                                      Text('Meta: ${_fmt((e.value['target'] as num).toDouble())}',
-                                          style: const TextStyle(color: Color(0xFF00BCD4), fontSize: 12)),
-                                  ],
-                                ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 28,
+                                    height: 28,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF00BCD4)
+                                          .withOpacity(0.1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Center(
+                                      child: Text('${e.key + 1}',
+                                          style: const TextStyle(
+                                              color: Color(0xFF00BCD4),
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold)),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(e.value['title']?.toString() ?? '',
+                                            style: const TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 13)),
+                                        if (e.value['target'] != null)
+                                          Text(
+                                              'Meta: ${_fmt((e.value['target'] as num).toDouble())}',
+                                              style: const TextStyle(
+                                                  color: Color(0xFF00BCD4),
+                                                  fontSize: 12)),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
-                        ),
-                      ),
                     ],
 
                     // Assumptions
                     if (plan.assumptions.isNotEmpty) ...[
                       const SizedBox(height: 24),
                       const Text('Premissas',
-                          style: TextStyle(color: Colors.white54, fontSize: 13, fontWeight: FontWeight.bold)),
+                          style: TextStyle(
+                              color: Colors.white54,
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
                       ...plan.assumptions.map(
                         (a) => Padding(
@@ -295,8 +356,13 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('• ', style: TextStyle(color: Colors.white38)),
-                              Expanded(child: Text(a, style: const TextStyle(color: Colors.white38, fontSize: 12))),
+                              const Text('• ',
+                                  style: TextStyle(color: Colors.white38)),
+                              Expanded(
+                                  child: Text(a,
+                                      style: const TextStyle(
+                                          color: Colors.white38,
+                                          fontSize: 12))),
                             ],
                           ),
                         ),
@@ -352,16 +418,25 @@ class _ScenarioCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 14)),
-                Text('Mensal: ${fmt(monthly)}', style: const TextStyle(color: Colors.white, fontSize: 13)),
+                Text(label,
+                    style: TextStyle(
+                        color: color,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14)),
+                Text('Mensal: ${fmt(monthly)}',
+                    style: const TextStyle(color: Colors.white, fontSize: 13)),
               ],
             ),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text('Anual', style: TextStyle(color: color.withOpacity(0.7), fontSize: 11)),
-              Text(fmt(annual), style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 16)),
+              Text('Anual',
+                  style:
+                      TextStyle(color: color.withOpacity(0.7), fontSize: 11)),
+              Text(fmt(annual),
+                  style: TextStyle(
+                      color: color, fontWeight: FontWeight.bold, fontSize: 16)),
             ],
           ),
         ],

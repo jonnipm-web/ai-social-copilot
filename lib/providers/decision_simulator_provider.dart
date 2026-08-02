@@ -11,38 +11,36 @@ import 'ecosystem_intelligence_provider.dart';
 // ── Estado da simulação ────────────────────────────────────────────────────────
 
 class DecisionSimulatorState {
-  final bool              isLoading;
+  final bool isLoading;
   final SimulationResult? result;
-  final String?           error;
-  final String            lastScenario;
+  final String? error;
+  final String lastScenario;
 
   const DecisionSimulatorState({
-    this.isLoading    = false,
+    this.isLoading = false,
     this.result,
     this.error,
     this.lastScenario = '',
   });
 
   DecisionSimulatorState copyWith({
-    bool?              isLoading,
-    SimulationResult?  result,
-    String?            error,
-    String?            lastScenario,
+    bool? isLoading,
+    SimulationResult? result,
+    String? error,
+    String? lastScenario,
   }) =>
       DecisionSimulatorState(
-        isLoading:    isLoading    ?? this.isLoading,
-        result:       result       ?? this.result,
-        error:        error        ?? this.error,
+        isLoading: isLoading ?? this.isLoading,
+        result: result ?? this.result,
+        error: error ?? this.error,
         lastScenario: lastScenario ?? this.lastScenario,
       );
 }
 
 // ── Notifier ──────────────────────────────────────────────────────────────────
 
-class DecisionSimulatorNotifier
-    extends StateNotifier<DecisionSimulatorState> {
-  DecisionSimulatorNotifier(this._ref)
-      : super(const DecisionSimulatorState());
+class DecisionSimulatorNotifier extends StateNotifier<DecisionSimulatorState> {
+  DecisionSimulatorNotifier(this._ref) : super(const DecisionSimulatorState());
 
   final Ref _ref;
 
@@ -50,8 +48,8 @@ class DecisionSimulatorNotifier
     if (scenario.trim().isEmpty) return;
 
     state = state.copyWith(
-      isLoading:    true,
-      error:        null,
+      isLoading: true,
+      error: null,
       lastScenario: scenario,
     );
 
@@ -61,25 +59,27 @@ class DecisionSimulatorNotifier
       final scores = await _ref.read(ecosystemScoresProvider.future);
 
       final ecosystemPayload = {
-        'healthScore':           ctx?.healthScore            ?? 0,
-        'projectCount':          ctx?.projectCount           ?? 0,
-        'pendingActions':        ctx?.pendingActionsCount    ?? 0,
-        'pendingOpportunities':  ctx?.pendingOpportunitiesCount ?? 0,
+        'healthScore': ctx?.healthScore ?? 0,
+        'projectCount': ctx?.projectCount ?? 0,
+        'pendingActions': ctx?.pendingActionsCount ?? 0,
+        'pendingOpportunities': ctx?.pendingOpportunitiesCount ?? 0,
       };
 
-      final projectsPayload = scores.map((s) => {
-        'name':              s.project.name,
-        'ecosystemScore':    s.ecosystemScore,
-        'executionScore':    s.executionScore,
-        'opportunityScore':  s.opportunityScore,
-      }).toList();
+      final projectsPayload = scores
+          .map((s) => {
+                'name': s.project.name,
+                'ecosystemScore': s.ecosystemScore,
+                'executionScore': s.executionScore,
+                'opportunityScore': s.opportunityScore,
+              })
+          .toList();
 
       final response = await Supabase.instance.client.functions.invoke(
         AppConstants.edgeFunctionDecisionSimulator,
         body: {
-          'scenario':  scenario,
+          'scenario': scenario,
           'ecosystem': ecosystemPayload,
-          'projects':  projectsPayload,
+          'projects': projectsPayload,
         },
       );
 
@@ -95,12 +95,12 @@ class DecisionSimulatorNotifier
 
       state = state.copyWith(
         isLoading: false,
-        result:    SimulationResult.fromJson(data),
+        result: SimulationResult.fromJson(data),
       );
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error:     e.toString(),
+        error: e.toString(),
       );
     }
   }

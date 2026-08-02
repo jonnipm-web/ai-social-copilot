@@ -18,8 +18,8 @@ class AppDrawer extends ConsumerWidget {
       backgroundColor: const Color(0xFF0F0F1A),
       child: profileAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error:   (_, __) => _DrawerContent(profile: null),
-        data:    (profile) => _DrawerContent(profile: profile),
+        error: (_, __) => _DrawerContent(profile: null),
+        data: (profile) => _DrawerContent(profile: profile),
       ),
     );
   }
@@ -33,7 +33,7 @@ class _DrawerContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isAdmin = profile?.isAdmin ?? false;
-    final isPro   = profile?.isPro   ?? false;
+    final isPro = profile?.isPro ?? false;
     final current = GoRouterState.of(context).fullPath ?? '';
 
     return SafeArea(
@@ -70,7 +70,8 @@ class _DrawerContent extends ConsumerWidget {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(12),
@@ -261,7 +262,8 @@ class _DrawerContent extends ConsumerWidget {
           // Sair
           const Divider(color: Colors.white12, height: 1),
           ListTile(
-            leading: const Icon(Icons.logout_rounded, color: Colors.white54, size: 20),
+            leading: const Icon(Icons.logout_rounded,
+                color: Colors.white54, size: 20),
             title: const Text(
               'Sair',
               style: TextStyle(color: Colors.white54, fontSize: 14),
@@ -285,16 +287,16 @@ class _NavItem extends StatelessWidget {
     required this.label,
     required this.route,
     required this.current,
-    this.locked  = false,
+    this.locked = false,
     this.isAdmin = false,
   });
 
   final IconData icon;
-  final String   label;
-  final String   route;
-  final String   current;
-  final bool     locked;
-  final bool     isAdmin;
+  final String label;
+  final String route;
+  final String current;
+  final bool locked;
+  final bool isAdmin;
 
   @override
   Widget build(BuildContext context) {

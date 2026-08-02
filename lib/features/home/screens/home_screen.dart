@@ -13,15 +13,15 @@ import '../../../providers/project_intelligence_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 
-const _kBg      = Color(0xFF0A0A14);
-const _kCard    = Color(0xFF12121E);
-const _kBorder  = Color(0xFF1E1E30);
+const _kBg = Color(0xFF0A0A14);
+const _kCard = Color(0xFF12121E);
+const _kBorder = Color(0xFF1E1E30);
 const _kPrimary = Color(0xFF7C4DFF);
-const _kGreen   = Color(0xFF00E676);
-const _kOrange  = Color(0xFFFF9100);
-const _kRed     = Color(0xFFFF1744);
-const _kGold    = Color(0xFFFFD700);
-const _kCyan    = Color(0xFF00E5FF);
+const _kGreen = Color(0xFF00E676);
+const _kOrange = Color(0xFFFF9100);
+const _kRed = Color(0xFFFF1744);
+const _kGold = Color(0xFFFFD700);
+const _kCyan = Color(0xFF00E5FF);
 
 // ════════════════════════════════════════════════════════════════════════════
 // AI Social Copilot OS — Home Command Center
@@ -95,20 +95,21 @@ class _ExecutiveCommandCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final projectsAsync  = ref.watch(projectsProvider);
-    final healthAsync    = ref.watch(ecosystemHealthProvider);
-    final actionsAsync   = ref.watch(actionQueueProvider);
-    final labAsync       = ref.watch(opportunityLabProvider);
-    final coverageAsync  = ref.watch(portfolioCoverageScoreProvider);
-    final learningAsync  = ref.watch(avgLearningScoreProvider);
+    final projectsAsync = ref.watch(projectsProvider);
+    final healthAsync = ref.watch(ecosystemHealthProvider);
+    final actionsAsync = ref.watch(actionQueueProvider);
+    final labAsync = ref.watch(opportunityLabProvider);
+    final coverageAsync = ref.watch(portfolioCoverageScoreProvider);
+    final learningAsync = ref.watch(avgLearningScoreProvider);
 
-    final projectCount  = projectsAsync.valueOrNull?.length ?? 0;
-    final health        = healthAsync.valueOrNull ?? 0;
+    final projectCount = projectsAsync.valueOrNull?.length ?? 0;
+    final health = healthAsync.valueOrNull ?? 0;
     final pendingActions = (actionsAsync.valueOrNull ?? [])
-        .where((a) => a.status == 'pending').length;
+        .where((a) => a.status == 'pending')
+        .length;
     final opportunities = (labAsync.valueOrNull ?? []).length;
-    final coverage      = coverageAsync.valueOrNull ?? 0;
-    final learning      = learningAsync.valueOrNull ?? 0;
+    final coverage = coverageAsync.valueOrNull ?? 0;
+    final learning = learningAsync.valueOrNull ?? 0;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -211,7 +212,7 @@ class _PriorityProjectsCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profilesAsync = ref.watch(projectIntelligenceProfilesProvider);
-    final scoresAsync   = ref.watch(ecosystemScoresProvider);
+    final scoresAsync = ref.watch(ecosystemScoresProvider);
 
     return _OsCard(
       title: 'Projetos Prioritários',
@@ -220,7 +221,7 @@ class _PriorityProjectsCard extends ConsumerWidget {
       onSeeAll: () => context.push(AppConstants.routeProjects),
       child: profilesAsync.when(
         loading: () => const _CardLoader(),
-        error:   (e, _) => _CardError('$e'),
+        error: (e, _) => _CardError('$e'),
         data: (profiles) {
           if (profiles.isEmpty) {
             return _EmptyHint(
@@ -235,7 +236,8 @@ class _PriorityProjectsCard extends ConsumerWidget {
               final score = scores
                   .where((s) => s.project.id == profile.project.id)
                   .toList();
-              final ecoscore = score.isNotEmpty ? score.first.ecosystemScore : 0;
+              final ecoscore =
+                  score.isNotEmpty ? score.first.ecosystemScore : 0;
               final rec = score.isNotEmpty ? score.first.recommendation : '—';
               return _ProjectRow(
                   profile: profile,
@@ -265,7 +267,7 @@ class _NextBestActionCard extends ConsumerWidget {
       onSeeAll: () => context.push(AppConstants.routeActionEngine),
       child: recsAsync.when(
         loading: () => const _CardLoader(),
-        error:   (e, _) => _CardError('$e'),
+        error: (e, _) => _CardError('$e'),
         data: (recs) {
           if (recs.isEmpty) {
             return _EmptyHint(
@@ -287,20 +289,19 @@ class _NextBestActionCard extends ConsumerWidget {
               children: [
                 Row(children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: _kGold.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(top.typeLabel,
-                        style: const TextStyle(
-                            color: _kGold, fontSize: 10)),
+                        style: const TextStyle(color: _kGold, fontSize: 10)),
                   ),
                   const Spacer(),
                   Text('${top.confidence}% confiança',
-                      style: const TextStyle(
-                          color: Colors.white38, fontSize: 10)),
+                      style:
+                          const TextStyle(color: Colors.white38, fontSize: 10)),
                 ]),
                 const SizedBox(height: 8),
                 Text(top.title,
@@ -314,8 +315,7 @@ class _NextBestActionCard extends ConsumerWidget {
                         color: Colors.white54, fontSize: 12, height: 1.4)),
                 const SizedBox(height: 8),
                 Text('Impacto esperado: ${top.expectedImpact}',
-                    style: const TextStyle(
-                        color: _kGold, fontSize: 11)),
+                    style: const TextStyle(color: _kGold, fontSize: 11)),
               ],
             ),
           );
@@ -340,7 +340,7 @@ class _PersonasCard extends ConsumerWidget {
       onSeeAll: () => context.push(AppConstants.routePersonas),
       child: profilesAsync.when(
         loading: () => const _CardLoader(),
-        error:   (e, _) => _CardError('$e'),
+        error: (e, _) => _CardError('$e'),
         data: (profiles) {
           if (profiles.isEmpty) {
             return _EmptyHint(
@@ -350,8 +350,8 @@ class _PersonasCard extends ConsumerWidget {
             );
           }
           return Column(
-            children: profiles.take(4).map((p) =>
-                _PersonaRow(profile: p)).toList(),
+            children:
+                profiles.take(4).map((p) => _PersonaRow(profile: p)).toList(),
           );
         },
       ),
@@ -365,12 +365,12 @@ class _EcosystemIntelligenceCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final graphAsync    = ref.watch(knowledgeGraphProvider);
-    final labAsync      = ref.watch(opportunityLabProvider);
-    final actionsAsync  = ref.watch(actionQueueProvider);
+    final graphAsync = ref.watch(knowledgeGraphProvider);
+    final labAsync = ref.watch(opportunityLabProvider);
+    final actionsAsync = ref.watch(actionQueueProvider);
     final profilesAsync = ref.watch(projectIntelligenceProfilesProvider);
 
-    final labCount    = (labAsync.valueOrNull ?? []).length;
+    final labCount = (labAsync.valueOrNull ?? []).length;
     final actionCount = (actionsAsync.valueOrNull ?? []).length;
 
     return _OsCard(
@@ -379,7 +379,7 @@ class _EcosystemIntelligenceCard extends ConsumerWidget {
       iconColor: _kGreen,
       child: graphAsync.when(
         loading: () => const _CardLoader(),
-        error:   (e, _) => _CardError('$e'),
+        error: (e, _) => _CardError('$e'),
         data: (graph) {
           final profileCount = profilesAsync.valueOrNull?.length ?? 0;
           return Column(
@@ -387,14 +387,13 @@ class _EcosystemIntelligenceCard extends ConsumerWidget {
             children: [
               // Stats row
               Wrap(spacing: 8, runSpacing: 8, children: [
-                _StatPill('$profileCount projetos',
-                    Icons.rocket_launch_rounded, _kPrimary),
-                _StatPill('$labCount oportunidades',
-                    Icons.science_rounded, _kCyan),
-                _StatPill('$actionCount ações',
-                    Icons.bolt_rounded, _kOrange),
-                _StatPill('${graph.edges.length} conexões',
-                    Icons.share_rounded, _kGreen),
+                _StatPill('$profileCount projetos', Icons.rocket_launch_rounded,
+                    _kPrimary),
+                _StatPill(
+                    '$labCount oportunidades', Icons.science_rounded, _kCyan),
+                _StatPill('$actionCount ações', Icons.bolt_rounded, _kOrange),
+                _StatPill('${graph.edges.length} conexões', Icons.share_rounded,
+                    _kGreen),
               ]),
               if (graph.edges.isNotEmpty) ...[
                 const SizedBox(height: 12),
@@ -404,11 +403,13 @@ class _EcosystemIntelligenceCard extends ConsumerWidget {
                         fontSize: 11,
                         fontWeight: FontWeight.w600)),
                 const SizedBox(height: 6),
-                ...graph.projectConnections.take(3).map((e) =>
-                    _ConnectionRow(edge: e)),
+                ...graph.projectConnections
+                    .take(3)
+                    .map((e) => _ConnectionRow(edge: e)),
                 if (graph.personaConnections.isNotEmpty)
-                  ...graph.personaConnections.take(2).map((e) =>
-                      _ConnectionRow(edge: e)),
+                  ...graph.personaConnections
+                      .take(2)
+                      .map((e) => _ConnectionRow(edge: e)),
               ] else ...[
                 const SizedBox(height: 12),
                 const Text(
@@ -468,9 +469,7 @@ class _OsCard extends StatelessWidget {
               GestureDetector(
                 onTap: onSeeAll,
                 child: const Text('ver todos',
-                    style: TextStyle(
-                        color: Colors.white38,
-                        fontSize: 11)),
+                    style: TextStyle(color: Colors.white38, fontSize: 11)),
               ),
           ]),
           const SizedBox(height: 12),
@@ -567,8 +566,7 @@ class _QuickAction extends StatelessWidget {
             Icon(icon, color: _kPrimary, size: 16),
             const SizedBox(height: 3),
             Text(label,
-                style: const TextStyle(
-                    color: Colors.white54, fontSize: 10),
+                style: const TextStyle(color: Colors.white54, fontSize: 10),
                 textAlign: TextAlign.center),
           ]),
         ),
@@ -612,29 +610,26 @@ class _ProjectRow extends StatelessWidget {
           Text(profile.maturityEmoji, style: const TextStyle(fontSize: 18)),
           const SizedBox(width: 10),
           Expanded(
-            child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(profile.project.name,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13)),
-                  const SizedBox(height: 2),
-                  Row(children: [
-                    Text(profile.maturityLabel,
-                        style: const TextStyle(
-                            color: Colors.white38, fontSize: 10)),
-                    const Text(' · ',
-                        style: TextStyle(
-                            color: Colors.white24, fontSize: 10)),
-                    Text(
-                      '${profile.coverage.coverageEmoji} ${profile.coverage.score}% coverage',
-                      style: const TextStyle(
-                          color: Colors.white38, fontSize: 10),
-                    ),
-                  ]),
-                ]),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(profile.project.name,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13)),
+              const SizedBox(height: 2),
+              Row(children: [
+                Text(profile.maturityLabel,
+                    style:
+                        const TextStyle(color: Colors.white38, fontSize: 10)),
+                const Text(' · ',
+                    style: TextStyle(color: Colors.white24, fontSize: 10)),
+                Text(
+                  '${profile.coverage.coverageEmoji} ${profile.coverage.score}% coverage',
+                  style: const TextStyle(color: Colors.white38, fontSize: 10),
+                ),
+              ]),
+            ]),
           ),
           Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
             Text('$ecosystemScore',
@@ -666,37 +661,31 @@ class _PersonaRow extends StatelessWidget {
         border: Border.all(color: _kBorder),
       ),
       child: Row(children: [
-        Text(profile.learningEmoji,
-            style: const TextStyle(fontSize: 18)),
+        Text(profile.learningEmoji, style: const TextStyle(fontSize: 18)),
         const SizedBox(width: 10),
         Expanded(
-          child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(profile.persona.name,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w500,
-                        fontSize: 13)),
-                const SizedBox(height: 2),
-                Text(
-                  '${profile.trainingCount} treinamentos · ${profile.vocabularySize} palavras',
-                  style: const TextStyle(
-                      color: Colors.white38, fontSize: 10),
-                ),
-              ]),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(profile.persona.name,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 13)),
+            const SizedBox(height: 2),
+            Text(
+              '${profile.trainingCount} treinamentos · ${profile.vocabularySize} palavras',
+              style: const TextStyle(color: Colors.white38, fontSize: 10),
+            ),
+          ]),
         ),
         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
           Text('${profile.learningScore}%',
               style: TextStyle(
-                  color: profile.learningScore >= 40
-                      ? _kCyan
-                      : Colors.white38,
+                  color: profile.learningScore >= 40 ? _kCyan : Colors.white38,
                   fontWeight: FontWeight.bold,
                   fontSize: 14)),
           Text(profile.learningLabel,
-              style: const TextStyle(
-                  color: Colors.white38, fontSize: 9)),
+              style: const TextStyle(color: Colors.white38, fontSize: 9)),
         ]),
       ]),
     );
@@ -715,8 +704,8 @@ class _ConnectionRow extends StatelessWidget {
       decoration: BoxDecoration(
         color: _kGreen.withOpacity(0.05),
         borderRadius: BorderRadius.circular(6),
-        border: Border(
-            left: BorderSide(color: _kGreen.withOpacity(0.4), width: 2)),
+        border:
+            Border(left: BorderSide(color: _kGreen.withOpacity(0.4), width: 2)),
       ),
       child: Text(
         edge.fullDescription,
@@ -745,9 +734,7 @@ class _StatPill extends StatelessWidget {
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         Icon(icon, color: color, size: 11),
         const SizedBox(width: 4),
-        Text(label,
-            style:
-                TextStyle(color: color, fontSize: 11)),
+        Text(label, style: TextStyle(color: color, fontSize: 11)),
       ]),
     );
   }
@@ -757,8 +744,8 @@ class _CardLoader extends StatelessWidget {
   const _CardLoader();
 
   @override
-  Widget build(BuildContext context) =>
-      const Center(child: CircularProgressIndicator(color: _kPrimary, strokeWidth: 2));
+  Widget build(BuildContext context) => const Center(
+      child: CircularProgressIndicator(color: _kPrimary, strokeWidth: 2));
 }
 
 class _CardError extends StatelessWidget {
@@ -766,9 +753,8 @@ class _CardError extends StatelessWidget {
   const _CardError(this.message);
 
   @override
-  Widget build(BuildContext context) =>
-      Text('Erro: $message',
-          style: const TextStyle(color: _kRed, fontSize: 11));
+  Widget build(BuildContext context) => Text('Erro: $message',
+      style: const TextStyle(color: _kRed, fontSize: 11));
 }
 
 class _EmptyHint extends StatelessWidget {

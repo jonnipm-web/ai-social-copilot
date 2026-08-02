@@ -9,8 +9,7 @@ import '../data/services/campaign_service.dart';
 final campaignServiceProvider =
     Provider<CampaignService>((_) => CampaignService());
 
-final campaignsProvider =
-    FutureProvider.autoDispose<List<Campaign>>((ref) {
+final campaignsProvider = FutureProvider.autoDispose<List<Campaign>>((ref) {
   return ref.watch(campaignServiceProvider).fetchAll();
 });
 
@@ -40,12 +39,12 @@ class CampaignNotifier extends StateNotifier<AsyncValue<Campaign?>> {
     state = const AsyncValue.loading();
     try {
       final result = await _service.generate(
-        item:          item,
-        analysis:      analysis,
-        strategy:      strategy,
-        objective:     objective,
-        durationDays:  durationDays,
-        channels:      channels,
+        item: item,
+        analysis: analysis,
+        strategy: strategy,
+        objective: objective,
+        durationDays: durationDays,
+        channels: channels,
       );
       state = AsyncValue.data(result);
       return result;
@@ -66,7 +65,7 @@ class CampaignNotifier extends StateNotifier<AsyncValue<Campaign?>> {
   }
 }
 
-final campaignNotifierProvider = StateNotifierProvider.autoDispose<
-    CampaignNotifier, AsyncValue<Campaign?>>(
+final campaignNotifierProvider =
+    StateNotifierProvider.autoDispose<CampaignNotifier, AsyncValue<Campaign?>>(
   (ref) => CampaignNotifier(ref.watch(campaignServiceProvider)),
 );

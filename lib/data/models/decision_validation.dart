@@ -4,7 +4,7 @@ class DecisionValidation {
   static const int minCoverage = 60;
   static const int minLearning = 50;
 
-  final String? projectId;   // null = portfolio-level
+  final String? projectId; // null = portfolio-level
   final String entityName;
   final DecisionValidationStatus status;
 
@@ -46,19 +46,23 @@ class DecisionValidation {
       ? 'Projeto ainda em fase de estruturação. Conhecimento disponível, mas inteligência operacional insuficiente para recomendação estratégica.'
       : 'Dados insuficientes para decisão estratégica.';
 
-  String get indexingStatus =>
-      documentCount == 0 ? 'Sem documentos' : '$indexedDocuments/$documentCount indexados';
+  String get indexingStatus => documentCount == 0
+      ? 'Sem documentos'
+      : '$indexedDocuments/$documentCount indexados';
 
   String get coverageLabel {
-    if (coverageScore >= minCoverage) return '✅ $coverageScore% (mínimo $minCoverage%)';
+    if (coverageScore >= minCoverage)
+      return '✅ $coverageScore% (mínimo $minCoverage%)';
     return '❌ $coverageScore% (mínimo $minCoverage%)';
   }
 
   String get learningLabel {
-    if (learningScore >= minLearning) return '✅ $learningScore% (mínimo $minLearning%)';
+    if (learningScore >= minLearning)
+      return '✅ $learningScore% (mínimo $minLearning%)';
     return '❌ $learningScore% (mínimo $minLearning%)';
   }
 
-  String get profileLabel =>
-      profileComplete ? '✅ Completo' : '❌ Incompleto — vincule uma análise de mercado';
+  String get profileLabel => profileComplete
+      ? '✅ Completo'
+      : '❌ Incompleto — vincule uma análise de mercado';
 }

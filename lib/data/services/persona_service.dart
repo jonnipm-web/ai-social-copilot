@@ -52,16 +52,13 @@ class PersonaService {
   Future<void> delete(String id) async {
     await _client
         .from(AppConstants.tablePersonas)
-        .update({'is_active': false})
-        .eq('id', id);
+        .update({'is_active': false}).eq('id', id);
   }
 
   // Admin: buscar todas (globais + de qualquer usuário)
   Future<List<Persona>> fetchAllAdmin() async {
-    final rows = await _client
-        .from(AppConstants.tablePersonas)
-        .select()
-        .order('name');
+    final rows =
+        await _client.from(AppConstants.tablePersonas).select().order('name');
     return (rows as List).map((r) => Persona.fromMap(r)).toList();
   }
 }

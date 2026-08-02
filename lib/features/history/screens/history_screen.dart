@@ -30,7 +30,8 @@ class HistoryScreen extends ConsumerWidget {
       ),
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
+          constraints:
+              const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
           child: historyAsync.when(
             loading: () => _buildShimmer(),
             error: (e, _) => Center(

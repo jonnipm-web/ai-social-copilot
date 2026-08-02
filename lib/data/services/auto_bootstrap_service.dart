@@ -17,9 +17,9 @@ import 'opportunity_lab_service.dart';
 import 'persona_training_service.dart';
 
 class AutoBootstrapService {
-  final _client  = Supabase.instance.client;
-  final _oppSvc  = OpportunityLabService();
-  final _actSvc  = ActionQueueService();
+  final _client = Supabase.instance.client;
+  final _oppSvc = OpportunityLabService();
+  final _actSvc = ActionQueueService();
   final _trainSvc = PersonaTrainingService();
 
   // ── Detect which projects need bootstrapping ────────────────────────────
@@ -33,7 +33,7 @@ class AutoBootstrapService {
     if (knowledgeItems.isEmpty) return [];
     return projects.where((p) {
       final hasActions = actions.any((a) => a.projectId == p.id);
-      final hasOpps    = labItems.any((l) => l.projectId == p.id);
+      final hasOpps = labItems.any((l) => l.projectId == p.id);
       return !hasActions && !hasOpps;
     }).toList();
   }
@@ -61,19 +61,23 @@ class AutoBootstrapService {
 
       // ── Step 1: Generate opportunities + roadmap ──────────────────────
       onStep?.call('Gerando oportunidades');
-      final docSummaries = knowledgeItems.take(6).map((k) => {
-        'title':   k.title,
-        'content': k.content.substring(0, math.min(400, k.content.length)),
-      }).toList();
+      final docSummaries = knowledgeItems
+          .take(6)
+          .map((k) => {
+                'title': k.title,
+                'content':
+                    k.content.substring(0, math.min(400, k.content.length)),
+              })
+          .toList();
 
       final oppResp = await _client.functions.invoke(
         AppConstants.edgeFunctionGenerateOpportunities,
         body: {
-          'project_name':        project.name,
-          'project_description': project.description ?? '',
-          'project_type':        project.type ?? '',
-          'documents':           docSummaries,
-          'market_context':      linkedAnalysis?.niche ?? '',
+          'project_name': project.name,
+          'project_description': project.description,
+          'project_type': project.type,
+          'documents': docSummaries,
+          'market_context': linkedAnalysis?.niche ?? '',
         },
       );
 
@@ -89,25 +93,25 @@ class AutoBootstrapService {
           final rawSteps = raw['action_steps'];
 
           final item = OpportunityLabItem(
-            id:               '',
-            userId:           uid,
-            projectId:        project.id,
+            id: '',
+            userId: uid,
+            projectId: project.id,
             marketAnalysisId: null,
-            opportunityType:  (raw['opportunity_type'] as String?) ?? 'expansão',
-            title:            (raw['title'] as String?) ?? '',
-            description:      (raw['description'] as String?) ?? '',
-            marketScore:      _toInt(raw['market_score']),
-            revenueScore:     _toInt(raw['revenue_score']),
+            opportunityType: (raw['opportunity_type'] as String?) ?? 'expansão',
+            title: (raw['title'] as String?) ?? '',
+            description: (raw['description'] as String?) ?? '',
+            marketScore: _toInt(raw['market_score']),
+            revenueScore: _toInt(raw['revenue_score']),
             competitionScore: _toInt(raw['competition_score']),
-            synergyScore:     _toInt(raw['synergy_score']),
-            strategicFit:     _toInt(raw['strategic_fit']),
-            finalScore:       _toInt(raw['final_score']),
-            status:           'pending',
-            createdAt:        DateTime.now(),
-            origin:           'auto_bootstrap',
-            sources:          [project.name],
-            rationale:        raw['rationale'] as String?,
-            confidence:       _toInt(raw['confidence']),
+            synergyScore: _toInt(raw['synergy_score']),
+            strategicFit: _toInt(raw['strategic_fit']),
+            finalScore: _toInt(raw['final_score']),
+            status: 'pending',
+            createdAt: DateTime.now(),
+            origin: 'auto_bootstrap',
+            sources: [project.name],
+            rationale: raw['rationale'] as String?,
+            confidence: _toInt(raw['confidence']),
             risks: rawRisks is List
                 ? rawRisks.map((e) => e.toString()).toList()
                 : const [],
@@ -125,18 +129,18 @@ class AutoBootstrapService {
         final roadmap = oppData['roadmap'];
         if (roadmap is Map<String, dynamic>) {
           final hasItems = [
-            ...((roadmap['short_term']  as List?) ?? []),
+            ...((roadmap['short_term'] as List?) ?? []),
             ...((roadmap['medium_term'] as List?) ?? []),
-            ...((roadmap['long_term']   as List?) ?? []),
+            ...((roadmap['long_term'] as List?) ?? []),
           ].isNotEmpty;
 
           if (hasItems) {
-            final currentDetails = Map<String, dynamic>.from(project.detailsJson);
+            final currentDetails =
+                Map<String, dynamic>.from(project.detailsJson);
             final updatedDetails = currentDetails..['roadmap'] = roadmap;
             await _client
                 .from(AppConstants.tableProjects)
-                .update({'details_json': updatedDetails})
-                .eq('id', project.id);
+                .update({'details_json': updatedDetails}).eq('id', project.id);
             roadmapCreated = true;
           }
         }
@@ -144,15 +148,18 @@ class AutoBootstrapService {
         // ── Step 2: Generate actions ────────────────────────────────────
         if (savedOpps.isNotEmpty) {
           onStep?.call('Gerando ações');
-          final oppList = savedOpps.take(3).map((o) => {
-            'title':       o.title,
-            'description': o.description,
-          }).toList();
+          final oppList = savedOpps
+              .take(3)
+              .map((o) => {
+                    'title': o.title,
+                    'description': o.description,
+                  })
+              .toList();
 
           final actResp = await _client.functions.invoke(
             AppConstants.edgeFunctionGenerateActions,
             body: {
-              'project_name':  project.name,
+              'project_name': project.name,
               'opportunities': oppList,
             },
           );
@@ -163,20 +170,21 @@ class AutoBootstrapService {
             for (int i = 0; i < rawActs.length; i++) {
               final a = rawActs[i];
               if (a is! Map<String, dynamic>) continue;
-              final oppId = i < savedOpps.length ? savedOpps[i].id : savedOpps.first.id;
+              final oppId =
+                  i < savedOpps.length ? savedOpps[i].id : savedOpps.first.id;
               final item = ActionQueueItem(
-                id:             '',
-                userId:         uid,
-                projectId:      project.id,
+                id: '',
+                userId: uid,
+                projectId: project.id,
                 opportunityLabId: oppId,
-                actionType:     (a['action_type'] as String?) ?? 'tarefa',
-                title:          (a['title'] as String?) ?? '',
-                priority:       _toInt(a['priority']),
-                impactScore:    _toInt(a['impact_score']),
-                effortScore:    _toInt(a['effort_score']),
-                roiScore:       _toInt(a['roi_score']),
-                status:         'pending',
-                createdAt:      DateTime.now(),
+                actionType: (a['action_type'] as String?) ?? 'tarefa',
+                title: (a['title'] as String?) ?? '',
+                priority: _toInt(a['priority']),
+                impactScore: _toInt(a['impact_score']),
+                effortScore: _toInt(a['effort_score']),
+                roiScore: _toInt(a['roi_score']),
+                status: 'pending',
+                createdAt: DateTime.now(),
               );
               if (item.title.isEmpty) continue;
               await _actSvc.create(item);
@@ -189,14 +197,15 @@ class AutoBootstrapService {
       // ── Step 3: Revenue plan ──────────────────────────────────────────
       onStep?.call('Gerando plano de receita');
       try {
-        final docContext = knowledgeItems.take(3).map((k) => k.title).join(', ');
+        final docContext =
+            knowledgeItems.take(3).map((k) => k.title).join(', ');
         final revenueInput =
-            '${project.name}: ${project.description ?? ""}. Documentos: $docContext.';
+            '${project.name}: ${project.description}. Documentos: $docContext.';
 
         final revResp = await _client.functions.invoke(
           AppConstants.edgeFunctionRevenue,
           body: {
-            'input':        revenueInput,
+            'input': revenueInput,
             'project_name': project.name,
           },
         );
@@ -204,16 +213,16 @@ class AutoBootstrapService {
         final revData = revResp.data as Map<String, dynamic>?;
         if (revData != null && !revData.containsKey('error')) {
           await _client.from(AppConstants.tableRevenuePlans).insert({
-            'user_id':              uid,
-            'project_name':         project.name,
-            'market_analysis_id':   null,
+            'user_id': uid,
+            'project_name': project.name,
+            'market_analysis_id': null,
             'monthly_conservative': _toDouble(revData['monthly_conservative']),
-            'monthly_moderate':     _toDouble(revData['monthly_moderate']),
-            'monthly_aggressive':   _toDouble(revData['monthly_aggressive']),
-            'annual_conservative':  _toDouble(revData['annual_conservative']),
-            'annual_moderate':      _toDouble(revData['annual_moderate']),
-            'annual_aggressive':    _toDouble(revData['annual_aggressive']),
-            'plan_json':            revData,
+            'monthly_moderate': _toDouble(revData['monthly_moderate']),
+            'monthly_aggressive': _toDouble(revData['monthly_aggressive']),
+            'annual_conservative': _toDouble(revData['annual_conservative']),
+            'annual_moderate': _toDouble(revData['annual_moderate']),
+            'annual_aggressive': _toDouble(revData['annual_aggressive']),
+            'plan_json': revData,
           });
           revenuePlanCreated = true;
         }
@@ -223,26 +232,28 @@ class AutoBootstrapService {
 
       // ── Step 4: Train untrained personas ─────────────────────────────
       onStep?.call('Treinando personas');
-      final trainedIds   = existingTrainings.map((t) => t.personaId).toSet();
-      final untrained    = personas.where((p) => !trainedIds.contains(p.id)).toList();
+      final trainedIds = existingTrainings.map((t) => t.personaId).toSet();
+      final untrained =
+          personas.where((p) => !trainedIds.contains(p.id)).toList();
       final withAnalysis = analyses.isNotEmpty;
 
       if (untrained.isNotEmpty && withAnalysis && knowledgeItems.isNotEmpty) {
         // Find the best analysis (highest opportunity score)
-        final bestAnalysis = analyses.reduce(
-            (a, b) => a.scoreOpportunity >= b.scoreOpportunity ? a : b);
+        final bestAnalysis = analyses
+            .reduce((a, b) => a.scoreOpportunity >= b.scoreOpportunity ? a : b);
         // Find the matching knowledge item
         final matchedItems = knowledgeItems
             .where((k) => k.id == bestAnalysis.knowledgeItemId)
             .toList();
-        final item = matchedItems.isNotEmpty ? matchedItems.first : knowledgeItems.first;
+        final item =
+            matchedItems.isNotEmpty ? matchedItems.first : knowledgeItems.first;
 
         for (final persona in untrained.take(4)) {
           try {
             await _trainSvc.trainFromAnalysis(
               personaId: persona.id,
-              item:      item,
-              analysis:  bestAnalysis,
+              item: item,
+              analysis: bestAnalysis,
             );
             personasTrained++;
           } catch (_) {
@@ -252,21 +263,21 @@ class AutoBootstrapService {
       }
 
       return BootstrapProjectResult(
-        projectId:           project.id,
-        projectName:         project.name,
-        success:             true,
+        projectId: project.id,
+        projectName: project.name,
+        success: true,
         opportunitiesCreated: oppsCreated,
-        actionsCreated:      actionsCreated,
-        revenuePlanCreated:  revenuePlanCreated,
-        roadmapCreated:      roadmapCreated,
-        personasTrained:     personasTrained,
+        actionsCreated: actionsCreated,
+        revenuePlanCreated: revenuePlanCreated,
+        roadmapCreated: roadmapCreated,
+        personasTrained: personasTrained,
       );
     } catch (e) {
       return BootstrapProjectResult(
-        projectId:   project.id,
+        projectId: project.id,
         projectName: project.name,
-        success:     false,
-        error:       e.toString(),
+        success: false,
+        error: e.toString(),
       );
     }
   }

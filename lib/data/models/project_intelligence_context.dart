@@ -1,39 +1,39 @@
+import 'context_coverage_details.dart';
+import 'evidence_origin.dart';
 import 'market_analysis.dart';
 import 'project.dart';
 
-// ── ProjectIntelligenceContext ────────────────────────────────────────────────
-//
-// Snapshot consolidado de um projeto para uso pelas Edge Functions de IA.
-// Montado pelo ProjectIntelligenceContextService antes de cada chamada de análise.
-// Nunca envia documentos completos — apenas resumos + sourceIds.
+// Limits (configurable constants, not magic numbers)
+const int kCtxMaxKnowledgeInSnapshot = 5;
+const int kCtxMaxVaultInSnapshot = 5;
+const int kCtxMaxLibraryInSnapshot = 5;
+const int kCtxMaxAnalysesInSnapshot = 2;
+const int kCtxMaxPersonasInSnapshot = 3;
 
 class ProjectIntelligenceContext {
   final Project? project;
   final String inputText;
   final String inputType;
 
-  // Dados estruturados do projeto
   final String? niche;
   final String? audience;
   final String? monetization;
   final String? valueProposition;
   final String? positioning;
-  final String? stage; // status do projeto
+  final String? stage;
 
-  // Conhecimento indexado (vault + knowledge items) — apenas resumos
   final List<ContextSourceItem> knowledgeItems;
   final List<ContextSourceItem> vaultItems;
   final List<ContextSourceItem> libraryItems;
 
-  // Análises anteriores — apenas headline scores
   final List<ContextAnalysisSummary> previousAnalyses;
-
-  // Personas
   final List<String> personaNames;
 
-  // Cobertura
-  final double coverage; // 0.0 – 1.0
+  final double coverage;
   final List<String> missingData;
+
+  // Detailed breakdown of coverage by dimension (nullable: absent for input-only contexts)
+  final ContextCoverageDetails? coverageDetails;
 
   final DateTime generatedAt;
 
@@ -54,10 +54,11 @@ class ProjectIntelligenceContext {
     this.personaNames = const [],
     this.coverage = 0.0,
     this.missingData = const [],
+    this.coverageDetails,
     required this.generatedAt,
   });
 
-  // Snapshot compacto para injetar no prompt da IA (sem exceder tokens)
+  // Compact snapshot injected into AI prompt — includes source IDs for traceability
   Map<String, dynamic> toPromptSnapshot() {
     final buf = <String, dynamic>{
       'input': inputText,
@@ -79,22 +80,43 @@ class ProjectIntelligenceContext {
 
     if (knowledgeItems.isNotEmpty) {
       buf['knowledge_context'] = knowledgeItems
-          .take(5)
-          .map((k) => {'title': k.title, 'summary': k.summary})
+          .take(kCtxMaxKnowledgeInSnapshot)
+          .map((k) => {
+                'id': k.id,
+                'title': _sanitize(k.title),
+                'summary': _sanitize(k.summary),
+                'type': k.sourceType,
+              })
           .toList();
     }
 
     if (vaultItems.isNotEmpty) {
       buf['vault_context'] = vaultItems
-          .take(5)
-          .map((v) => {'title': v.title, 'summary': v.summary})
+          .take(kCtxMaxVaultInSnapshot)
+          .map((v) => {
+                'id': v.id,
+                'title': _sanitize(v.title),
+                'summary': _sanitize(v.summary),
+              })
+          .toList();
+    }
+
+    if (libraryItems.isNotEmpty) {
+      buf['library_context'] = libraryItems
+          .take(kCtxMaxLibraryInSnapshot)
+          .map((l) => {
+                'id': l.id,
+                'title': _sanitize(l.title),
+                'summary': _sanitize(l.summary),
+              })
           .toList();
     }
 
     if (previousAnalyses.isNotEmpty) {
       buf['previous_analyses'] = previousAnalyses
-          .take(2)
+          .take(kCtxMaxAnalysesInSnapshot)
           .map((a) => {
+                'id': a.id,
                 'niche': a.niche,
                 'score': a.opportunityScore,
                 'date': a.date.toIso8601String().substring(0, 10),
@@ -103,7 +125,7 @@ class ProjectIntelligenceContext {
     }
 
     if (personaNames.isNotEmpty) {
-      buf['personas'] = personaNames.take(3).toList();
+      buf['personas'] = personaNames.take(kCtxMaxPersonasInSnapshot).toList();
     }
 
     if (missingData.isNotEmpty) {
@@ -116,7 +138,6 @@ class ProjectIntelligenceContext {
     return buf;
   }
 
-  // IDs das fontes usadas (para rastreabilidade)
   List<String> get sourceIds => [
         ...knowledgeItems.map((k) => k.id),
         ...vaultItems.map((v) => v.id),
@@ -128,7 +149,18 @@ class ProjectIntelligenceContext {
   bool get hasKnowledgeContext =>
       knowledgeItems.isNotEmpty || vaultItems.isNotEmpty;
 
-  bool get isSufficientForAnalysis => hasProjectContext || inputText.length > 50;
+  bool get isSufficientForAnalysis =>
+      hasProjectContext || inputText.length > 50;
+
+  // Minimal sanitizer: removes LLM-specific token patterns that could act as
+  // prompt delimiters inside external content (documents, summaries).
+  static String _sanitize(String text) {
+    if (text.isEmpty) return text;
+    return text
+        .replaceAll(RegExp(r'<\|.*?\|>'), '')
+        .replaceAll(RegExp(r'\[/?INST\]', caseSensitive: false), '')
+        .replaceAll(RegExp(r'<</?SYS>>', caseSensitive: false), '');
+  }
 }
 
 // ── ContextSourceItem ─────────────────────────────────────────────────────────
@@ -138,12 +170,24 @@ class ContextSourceItem {
   final String title;
   final String summary;
   final String sourceType;
+  final String? projectId;
+  final double relevanceScore;
+  final double confidenceScore;
+  final double freshnessScore;
+  final EvidenceOrigin evidenceOrigin;
+  final DateTime? createdAt;
 
   const ContextSourceItem({
     required this.id,
     required this.title,
     required this.summary,
     this.sourceType = 'knowledge',
+    this.projectId,
+    this.relevanceScore = 0.5,
+    this.confidenceScore = 0.5,
+    this.freshnessScore = 0.5,
+    this.evidenceOrigin = EvidenceOrigin.documentExtracted,
+    this.createdAt,
   });
 }
 

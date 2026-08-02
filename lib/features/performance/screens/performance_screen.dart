@@ -96,7 +96,8 @@ class _PerformanceScreenState extends ConsumerState<PerformanceScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
+              const Icon(Icons.error_outline,
+                  color: Colors.redAccent, size: 48),
               const SizedBox(height: 12),
               Text(
                 'Erro ao carregar métricas:\n$error',
@@ -118,7 +119,8 @@ class _PerformanceScreenState extends ConsumerState<PerformanceScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.bar_chart, size: 72, color: _primaryColor.withOpacity(0.4)),
+                  Icon(Icons.bar_chart,
+                      size: 72, color: _primaryColor.withOpacity(0.4)),
                   const SizedBox(height: 16),
                   const Text(
                     'Nenhuma métrica registrada ainda.',
@@ -155,7 +157,8 @@ class _PerformanceScreenState extends ConsumerState<PerformanceScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: _cardColor,
-        title: const Text('Excluir métrica', style: TextStyle(color: Colors.white)),
+        title: const Text('Excluir métrica',
+            style: TextStyle(color: Colors.white)),
         content: Text(
           'Deseja excluir a métrica de ${metric.platform}?',
           style: const TextStyle(color: Colors.white70),
@@ -163,7 +166,8 @@ class _PerformanceScreenState extends ConsumerState<PerformanceScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar', style: TextStyle(color: Colors.white54)),
+            child:
+                const Text('Cancelar', style: TextStyle(color: Colors.white54)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
@@ -262,7 +266,8 @@ class _MetricCard extends StatelessWidget {
         child: Card(
           color: _cardColor,
           margin: const EdgeInsets.only(bottom: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Column(
@@ -297,13 +302,15 @@ class _MetricCard extends StatelessWidget {
                           ),
                           Text(
                             dateStr,
-                            style: const TextStyle(color: Colors.white38, fontSize: 12),
+                            style: const TextStyle(
+                                color: Colors.white38, fontSize: 12),
                           ),
                         ],
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: scoreColor.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(20),
@@ -322,13 +329,17 @@ class _MetricCard extends StatelessWidget {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    _MetricChip(label: 'Impressões', value: _formatNumber(impressions)),
+                    _MetricChip(
+                        label: 'Impressões', value: _formatNumber(impressions)),
                     const SizedBox(width: 8),
                     _MetricChip(label: 'Cliques', value: _formatNumber(clicks)),
                     const SizedBox(width: 8),
-                    _MetricChip(label: 'Eng%', value: '${engRate.toStringAsFixed(1)}%'),
+                    _MetricChip(
+                        label: 'Eng%', value: '${engRate.toStringAsFixed(1)}%'),
                     const SizedBox(width: 8),
-                    _MetricChip(label: 'Conv%', value: '${convRate.toStringAsFixed(2)}%'),
+                    _MetricChip(
+                        label: 'Conv%',
+                        value: '${convRate.toStringAsFixed(2)}%'),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -353,7 +364,10 @@ class _MetricCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Text(
                       '${score.toStringAsFixed(0)}/100',
-                      style: TextStyle(color: scoreColor, fontSize: 11, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                          color: scoreColor,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -403,7 +417,8 @@ class _MetricCard extends StatelessWidget {
             const SizedBox(height: 12),
             ListTile(
               leading: const Icon(Icons.delete, color: Colors.redAccent),
-              title: const Text('Excluir métrica', style: TextStyle(color: Colors.white)),
+              title: const Text('Excluir métrica',
+                  style: TextStyle(color: Colors.white)),
               onTap: () {
                 Navigator.pop(context);
                 onDelete();
@@ -517,22 +532,22 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
 
     try {
       final metrics = PerformanceMetrics(
-            id:             '',
-            userId:         '',
-            platform:       _selectedPlatform!,
-            impressions:    _parseInt(_impressoesCtrl),
-            clicks:         _parseInt(_cliquesCtrl),
-            likes:          _parseInt(_curtidasCtrl),
-            comments:       _parseInt(_comentariosCtrl),
-            shares:         _parseInt(_compartilhamentosCtrl),
-            saves:          _parseInt(_salvamentosCtrl),
-            leads:          _parseInt(_leadsCtrl),
-            sales:          _parseInt(_vendasCtrl),
-            revenue:        _parseDouble(_receitaCtrl),
-            notes:          _notasCtrl.text.trim().isEmpty ? null : _notasCtrl.text.trim(),
-            createdAt:      DateTime.now(),
-            updatedAt:      DateTime.now(),
-          );
+        id: '',
+        userId: '',
+        platform: _selectedPlatform!,
+        impressions: _parseInt(_impressoesCtrl),
+        clicks: _parseInt(_cliquesCtrl),
+        likes: _parseInt(_curtidasCtrl),
+        comments: _parseInt(_comentariosCtrl),
+        shares: _parseInt(_compartilhamentosCtrl),
+        saves: _parseInt(_salvamentosCtrl),
+        leads: _parseInt(_leadsCtrl),
+        sales: _parseInt(_vendasCtrl),
+        revenue: _parseDouble(_receitaCtrl),
+        notes: _notasCtrl.text.trim().isEmpty ? null : _notasCtrl.text.trim(),
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
       await ref.read(performanceNotifierProvider.notifier).create(metrics);
 
       if (mounted) {
@@ -616,9 +631,11 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
               // Int fields — 2 columns
               _intRow('Impressões', _impressoesCtrl, 'Cliques', _cliquesCtrl),
               const SizedBox(height: 12),
-              _intRow('Curtidas', _curtidasCtrl, 'Comentários', _comentariosCtrl),
+              _intRow(
+                  'Curtidas', _curtidasCtrl, 'Comentários', _comentariosCtrl),
               const SizedBox(height: 12),
-              _intRow('Compartilhamentos', _compartilhamentosCtrl, 'Salvamentos', _salvamentosCtrl),
+              _intRow('Compartilhamentos', _compartilhamentosCtrl,
+                  'Salvamentos', _salvamentosCtrl),
               const SizedBox(height: 12),
               _intRow('Leads', _leadsCtrl, 'Vendas', _vendasCtrl),
               const SizedBox(height: 12),
@@ -626,7 +643,8 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
               // Revenue
               TextFormField(
                 controller: _receitaCtrl,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 style: const TextStyle(color: Colors.white),
                 decoration: _inputDecoration('Receita (R\$)'),
               ),
@@ -665,7 +683,8 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
                         )
                       : const Text(
                           'Salvar',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                 ),
               ),
