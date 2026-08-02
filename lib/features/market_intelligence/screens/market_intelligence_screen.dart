@@ -26,6 +26,41 @@ class _MarketIntelligenceScreenState
     super.dispose();
   }
 
+  Future<void> _confirmDelete(String analysisId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A2E),
+        title: const Text('Excluir análise?', style: TextStyle(color: Colors.white)),
+        content: const Text(
+          'Esta ação remove a análise e todos os dados associados (concorrentes, gaps, receita). Não pode ser desfeita.',
+          style: TextStyle(color: Colors.white60, fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.white54)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Excluir', style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await ref.read(marketAnalysisServiceProvider).delete(analysisId);
+      ref.invalidate(marketAnalysesProvider);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao excluir: $e'), backgroundColor: Colors.redAccent),
+        );
+      }
+    }
+  }
+
   Future<void> _analyze() async {
     final input = _inputCtrl.text.trim();
     if (input.isEmpty) return;
@@ -234,7 +269,10 @@ class _MarketIntelligenceScreenState
                 data: (list) => list.isEmpty
                     ? const Text('Nenhuma análise ainda.', style: TextStyle(color: Colors.white38))
                     : Column(
-                        children: list.map((a) => _AnalysisCard(analysis: a)).toList(),
+                        children: list.map((a) => _AnalysisCard(
+                          analysis: a,
+                          onDelete: () => _confirmDelete(a.id),
+                        )).toList(),
                       ),
               ),
             ],
@@ -286,66 +324,76 @@ class _TypeChip extends StatelessWidget {
 }
 
 class _AnalysisCard extends StatelessWidget {
-  const _AnalysisCard({required this.analysis});
+  const _AnalysisCard({required this.analysis, required this.onDelete});
   final MarketAnalysis analysis;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => context.go(
-        AppConstants.routeMarketIntelligenceHub.replaceFirst(':id', analysis.id),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A2E),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF333355)),
       ),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1A1A2E),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFF333355)),
+      child: InkWell(
+        onTap: () => context.go(
+          AppConstants.routeMarketIntelligenceHub.replaceFirst(':id', analysis.id),
         ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: const Color(0xFF00BCD4).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Center(
-                child: Text(
-                  '${analysis.opportunityScore}',
-                  style: const TextStyle(
-                    color: Color(0xFF00BCD4),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00BCD4).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Center(
+                  child: Text(
+                    '${analysis.opportunityScore}',
+                    style: const TextStyle(
+                      color: Color(0xFF00BCD4),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    analysis.input,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    analysis.niche ?? analysis.inputType,
-                    style: const TextStyle(color: Colors.white54, fontSize: 12),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      analysis.input,
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      analysis.niche ?? analysis.inputType,
+                      style: const TextStyle(color: Colors.white54, fontSize: 12),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const Icon(Icons.chevron_right_rounded, color: Colors.white38),
-          ],
+              IconButton(
+                icon: const Icon(Icons.delete_outline_rounded, color: Colors.white24, size: 20),
+                onPressed: onDelete,
+                tooltip: 'Excluir análise',
+                visualDensity: VisualDensity.compact,
+              ),
+              const Icon(Icons.chevron_right_rounded, color: Colors.white38),
+            ],
+          ),
         ),
       ),
     );

@@ -144,7 +144,6 @@ class _BudgetSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = mode == 'hours' ? 'horas' : 'R\$';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -187,7 +186,6 @@ class _AllocationResult extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = alloc.budgetType == 'hours' ? 'horas' : 'R\$';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -227,7 +225,10 @@ class _AllocationResult extends StatelessWidget {
           const Text('Adicione projetos com análises para ver a alocação.',
             style: TextStyle(color: Colors.white54))
         else ...[
-          Text('Distribuição das ${alloc.totalBudget.round()} $label',
+          Text(
+            alloc.budgetType == 'hours'
+                ? 'Distribuição de ${alloc.totalBudget.round()} horas'
+                : 'Distribuição de R\$ ${alloc.totalBudget.round()}',
             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
           const SizedBox(height: 12),
           ...alloc.items.map((item) => _AllocationItem(item: item, budgetType: alloc.budgetType)),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../data/services/project_service.dart';
 import '../../../providers/market_analysis_provider.dart';
 
 class RevenuePlannerScreen extends ConsumerStatefulWidget {
@@ -17,6 +18,24 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
   bool _running = false;
   String? _error;
   final _projectCtrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _autoFillProjectName());
+  }
+
+  Future<void> _autoFillProjectName() async {
+    try {
+      final analysis = await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
+      final projectId = analysis.projectId;
+      if (projectId == null || !mounted) return;
+      final project = await ProjectService().fetchById(projectId);
+      if (project != null && mounted && _projectCtrl.text.isEmpty) {
+        setState(() => _projectCtrl.text = project.name);
+      }
+    } catch (_) {}
+  }
 
   @override
   void dispose() {

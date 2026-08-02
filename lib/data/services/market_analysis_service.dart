@@ -5,6 +5,7 @@ import '../models/gap_analysis.dart';
 import '../models/opportunity.dart';
 import '../models/niche_ranking.dart';
 import '../models/content_cluster.dart';
+import '../models/project_intelligence_context.dart';
 import '../models/revenue_plan.dart';
 import '../../core/constants/app_constants.dart';
 
@@ -37,18 +38,30 @@ class MarketAnalysisService {
     String input, {
     String inputType = 'url',
     String? projectId,
+    ProjectIntelligenceContext? context,
   }) async {
     final uid = _client.auth.currentUser?.id;
     if (uid == null) throw Exception('Usuário não autenticado.');
 
+    final body = <String, dynamic>{
+      'input': input,
+      'input_type': inputType,
+    };
+    if (context != null) {
+      body['context_snapshot'] = context.toPromptSnapshot();
+      body['source_ids'] = context.sourceIds;
+      body['coverage'] = context.coverage;
+    }
+
     final response = await _client.functions.invoke(
       AppConstants.edgeFunctionMarket,
-      body: {'input': input, 'input_type': inputType},
+      body: body,
     );
 
+    _checkRateLimit(response);
     if (response.data == null) throw Exception('Resposta vazia da análise de mercado.');
     final data = response.data as Map<String, dynamic>;
-    if (data.containsKey('error')) throw Exception(data['error']);
+    if (data.containsKey('error')) throw Exception(_semanticError(data['error'].toString()));
 
     final row = await _client
         .from(AppConstants.tableMarketAnalyses)
@@ -84,18 +97,29 @@ class MarketAnalysisService {
     return (rows as List).map((r) => Competitor.fromMap(r)).toList();
   }
 
-  Future<List<Competitor>> discoverCompetitors(String marketAnalysisId, String input) async {
+  Future<List<Competitor>> discoverCompetitors(
+    String marketAnalysisId,
+    String input, {
+    ProjectIntelligenceContext? context,
+  }) async {
     final uid = _client.auth.currentUser?.id;
     if (uid == null) throw Exception('Usuário não autenticado.');
 
+    final body = <String, dynamic>{
+      'market_analysis_id': marketAnalysisId,
+      'input': input,
+    };
+    if (context != null) body['context_snapshot'] = context.toPromptSnapshot();
+
     final response = await _client.functions.invoke(
       AppConstants.edgeFunctionCompetitor,
-      body: {'market_analysis_id': marketAnalysisId, 'input': input},
+      body: body,
     );
 
+    _checkRateLimit(response);
     if (response.data == null) throw Exception('Resposta vazia da descoberta de concorrentes.');
     final data = response.data as Map<String, dynamic>;
-    if (data.containsKey('error')) throw Exception(data['error']);
+    if (data.containsKey('error')) throw Exception(_semanticError(data['error'].toString()));
 
     final competitorsList = data['competitors'] as List? ?? [];
     final inserted = <Competitor>[];
@@ -131,18 +155,29 @@ class MarketAnalysisService {
     return row == null ? null : GapAnalysis.fromMap(row);
   }
 
-  Future<GapAnalysis> runGapAnalysis(String marketAnalysisId, String input) async {
+  Future<GapAnalysis> runGapAnalysis(
+    String marketAnalysisId,
+    String input, {
+    ProjectIntelligenceContext? context,
+  }) async {
     final uid = _client.auth.currentUser?.id;
     if (uid == null) throw Exception('Usuário não autenticado.');
 
+    final body = <String, dynamic>{
+      'market_analysis_id': marketAnalysisId,
+      'input': input,
+    };
+    if (context != null) body['context_snapshot'] = context.toPromptSnapshot();
+
     final response = await _client.functions.invoke(
       AppConstants.edgeFunctionGap,
-      body: {'market_analysis_id': marketAnalysisId, 'input': input},
+      body: body,
     );
 
+    _checkRateLimit(response);
     if (response.data == null) throw Exception('Resposta vazia da análise de gaps.');
     final data = response.data as Map<String, dynamic>;
-    if (data.containsKey('error')) throw Exception(data['error']);
+    if (data.containsKey('error')) throw Exception(_semanticError(data['error'].toString()));
 
     final row = await _client
         .from(AppConstants.tableGapAnalyses)
@@ -172,18 +207,29 @@ class MarketAnalysisService {
     return (rows as List).map((r) => Opportunity.fromMap(r)).toList();
   }
 
-  Future<List<Opportunity>> discoverOpportunities(String marketAnalysisId, String input) async {
+  Future<List<Opportunity>> discoverOpportunities(
+    String marketAnalysisId,
+    String input, {
+    ProjectIntelligenceContext? context,
+  }) async {
     final uid = _client.auth.currentUser?.id;
     if (uid == null) throw Exception('Usuário não autenticado.');
 
+    final body = <String, dynamic>{
+      'market_analysis_id': marketAnalysisId,
+      'input': input,
+    };
+    if (context != null) body['context_snapshot'] = context.toPromptSnapshot();
+
     final response = await _client.functions.invoke(
       AppConstants.edgeFunctionOpportunity,
-      body: {'market_analysis_id': marketAnalysisId, 'input': input},
+      body: body,
     );
 
+    _checkRateLimit(response);
     if (response.data == null) throw Exception('Resposta vazia da descoberta de oportunidades.');
     final data = response.data as Map<String, dynamic>;
-    if (data.containsKey('error')) throw Exception(data['error']);
+    if (data.containsKey('error')) throw Exception(_semanticError(data['error'].toString()));
 
     final list = data['opportunities'] as List? ?? [];
     final inserted = <Opportunity>[];
@@ -222,18 +268,29 @@ class MarketAnalysisService {
     return (rows as List).map((r) => NicheRanking.fromMap(r)).toList();
   }
 
-  Future<List<NicheRanking>> discoverNiches(String marketAnalysisId, String input) async {
+  Future<List<NicheRanking>> discoverNiches(
+    String marketAnalysisId,
+    String input, {
+    ProjectIntelligenceContext? context,
+  }) async {
     final uid = _client.auth.currentUser?.id;
     if (uid == null) throw Exception('Usuário não autenticado.');
 
+    final body = <String, dynamic>{
+      'market_analysis_id': marketAnalysisId,
+      'input': input,
+    };
+    if (context != null) body['context_snapshot'] = context.toPromptSnapshot();
+
     final response = await _client.functions.invoke(
       AppConstants.edgeFunctionNiche,
-      body: {'market_analysis_id': marketAnalysisId, 'input': input},
+      body: body,
     );
 
+    _checkRateLimit(response);
     if (response.data == null) throw Exception('Resposta vazia da descoberta de nichos.');
     final data = response.data as Map<String, dynamic>;
-    if (data.containsKey('error')) throw Exception(data['error']);
+    if (data.containsKey('error')) throw Exception(_semanticError(data['error'].toString()));
 
     final list = data['niches'] as List? ?? [];
     final inserted = <NicheRanking>[];
@@ -327,18 +384,27 @@ class MarketAnalysisService {
     String input,
     String projectName, {
     String? projectId,
+    ProjectIntelligenceContext? context,
   }) async {
     final uid = _client.auth.currentUser?.id;
     if (uid == null) throw Exception('Usuário não autenticado.');
 
+    final body = <String, dynamic>{
+      'market_analysis_id': marketAnalysisId,
+      'input': input,
+      'project_name': projectName,
+    };
+    if (context != null) body['context_snapshot'] = context.toPromptSnapshot();
+
     final response = await _client.functions.invoke(
       AppConstants.edgeFunctionRevenue,
-      body: {'market_analysis_id': marketAnalysisId, 'input': input, 'project_name': projectName},
+      body: body,
     );
 
+    _checkRateLimit(response);
     if (response.data == null) throw Exception('Resposta vazia do Revenue Planner.');
     final data = response.data as Map<String, dynamic>;
-    if (data.containsKey('error')) throw Exception(data['error']);
+    if (data.containsKey('error')) throw Exception(_semanticError(data['error'].toString()));
 
     double _d(dynamic v) {
       if (v is num) return v.toDouble();
@@ -365,6 +431,43 @@ class MarketAnalysisService {
         .single();
 
     return RevenuePlan.fromMap(row);
+  }
+
+  // ── Rate limit + error helpers ────────────────────────────────────────────
+
+  void _checkRateLimit(dynamic response) {
+    if (response == null) return;
+    final status = response.status as int? ?? 200;
+    if (status == 429) {
+      throw Exception(
+        '[RATE_LIMITED] A análise foi pausada porque o provedor de IA '
+        'atingiu o limite temporário. Aguarde alguns segundos e tente novamente.',
+      );
+    }
+    if (status >= 500) {
+      throw Exception(
+        'Erro temporário no servidor de análise (código $status). '
+        'Tente novamente em alguns instantes.',
+      );
+    }
+  }
+
+  static String _semanticError(String raw) {
+    final lower = raw.toLowerCase();
+    if (lower.contains('rate') || lower.contains('429') || lower.contains('limit')) {
+      return '[RATE_LIMITED] A análise foi pausada porque o provedor de IA '
+          'atingiu o limite temporário. Aguarde alguns segundos e tente novamente.';
+    }
+    if (lower.contains('timeout') || lower.contains('timed out')) {
+      return 'A análise demorou demais. Tente novamente em alguns instantes.';
+    }
+    if (lower.contains('groq') || lower.contains('api key') || lower.contains('apikey')) {
+      return 'Chave de API não configurada no servidor. Configure GROQ_API_KEY nos secrets do Supabase.';
+    }
+    if (lower.contains('network') || lower.contains('socket')) {
+      return 'Sem conexão com o servidor. Verifique sua rede e tente novamente.';
+    }
+    return raw;
   }
 
   static int _int(dynamic v) {

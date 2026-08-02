@@ -12,6 +12,8 @@ const SYSTEM_PROMPT = `Você é um especialista em planejamento financeiro para 
 
 Crie um plano de receita realista para o projeto fornecido e retorne SOMENTE um JSON válido.
 
+Se houver contexto adicional do projeto (nicho, público, monetização atual, estágio, conhecimentos), use para calibrar os valores e fontes de receita — seja específico ao projeto, não genérico.
+
 O JSON deve ter exatamente esta estrutura:
 
 {
@@ -45,7 +47,7 @@ O JSON deve ter exatamente esta estrutura:
 }
 
 Regras:
-- Os valores devem ser realistas para o mercado brasileiro
+- Os valores devem ser realistas para o mercado brasileiro e para o estágio do projeto
 - Cenário conservador: crescimento orgânico lento, sem investimento em tráfego pago
 - Cenário moderado: crescimento consistente com algum investimento
 - Cenário agressivo: com investimento significativo em tráfego e produto
@@ -54,13 +56,63 @@ Regras:
 - Todas as respostas em português brasileiro
 - Valores em Reais (BRL)`;
 
+type ContextSnapshot = Record<string, unknown>;
+
+function buildContextBlock(snapshot: ContextSnapshot | null | undefined): string {
+  if (!snapshot) return "";
+  const lines: string[] = ["\n--- CONTEXTO DO PROJETO ---"];
+  const project = snapshot.project as Record<string, string> | undefined;
+  if (project?.name) {
+    lines.push(`Projeto: ${project.name}`);
+    if (project.description) lines.push(`Descrição: ${project.description}`);
+    if (project.niche) lines.push(`Nicho: ${project.niche}`);
+    if (project.audience) lines.push(`Público-alvo: ${project.audience}`);
+    if (project.monetization) lines.push(`Modelo de monetização atual: ${project.monetization}`);
+    if (project.value_proposition) lines.push(`Proposta de valor: ${project.value_proposition}`);
+    if (project.stage) lines.push(`Estágio: ${project.stage}`);
+  }
+  const knowledge = snapshot.knowledge_context as Array<{ title: string; summary: string }> | undefined;
+  if (knowledge?.length) {
+    lines.push("", "Ativos de conhecimento do projeto:");
+    for (const k of knowledge.slice(0, 3)) {
+      lines.push(`• ${k.title}: ${k.summary}`);
+    }
+  }
+  const prevAnalyses = snapshot.previous_analyses as Array<{ niche?: string; score: number; date: string }> | undefined;
+  if (prevAnalyses?.length) {
+    lines.push("", "Análises de mercado realizadas:");
+    for (const a of prevAnalyses.slice(0, 2)) {
+      lines.push(`• Nicho: ${a.niche ?? "N/A"} | Score: ${a.score} | Data: ${a.date}`);
+    }
+  }
+  lines.push("--- FIM DO CONTEXTO ---\n");
+  return lines.join("\n");
+}
+
+async function callGroq(body: object, retries = 1): Promise<Response> {
+  const response = await fetch(GROQ_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${GROQ_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  if (response.status === 429 && retries > 0) {
+    const retryAfter = parseInt(response.headers.get("Retry-After") ?? "10", 10);
+    await new Promise((r) => setTimeout(r, Math.min(retryAfter * 1000, 30_000)));
+    return callGroq(body, retries - 1);
+  }
+  return response;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const { input, project_name } = await req.json();
+    const { input, project_name, context_snapshot } = await req.json();
 
     if (!input) {
       return new Response(JSON.stringify({ error: "Input obrigatório" }), {
@@ -69,25 +121,32 @@ serve(async (req) => {
       });
     }
 
-    const groqResponse = await fetch(GROQ_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${GROQ_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          {
-            role: "user",
-            content: `Projeto: ${project_name || "Projeto Digital"}\nInput/nicho/mercado: ${input}\n\nCrie o plano de receita e retorne o JSON.`,
-          },
-        ],
-        temperature: 0.3,
-        max_tokens: 3000,
-      }),
+    // Prefer explicit project_name; fallback to context_snapshot.project.name
+    const resolvedProjectName =
+      project_name ||
+      (context_snapshot?.project as Record<string, string> | undefined)?.name ||
+      "Projeto Digital";
+
+    const contextBlock = buildContextBlock(context_snapshot as ContextSnapshot);
+    const userMessage = `Projeto: ${resolvedProjectName}\nInput/nicho/mercado: ${input}${contextBlock}\nCrie o plano de receita e retorne o JSON.`;
+
+    const groqResponse = await callGroq({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: userMessage },
+      ],
+      temperature: 0.3,
+      max_tokens: 3000,
     });
+
+    if (!groqResponse.ok) {
+      if (groqResponse.status === 429) {
+        throw new Error("[RATE_LIMITED] Limite de requisições atingido. Aguarde alguns segundos.");
+      }
+      const errBody = await groqResponse.text();
+      throw new Error(`Groq error ${groqResponse.status}: ${errBody}`);
+    }
 
     const groqData = await groqResponse.json();
     const content = groqData.choices?.[0]?.message?.content ?? "";
@@ -101,8 +160,10 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }), {
-      status: 500,
+    const msg = String(err);
+    const status = msg.includes("[RATE_LIMITED]") ? 429 : 500;
+    return new Response(JSON.stringify({ error: msg }), {
+      status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
