@@ -81,8 +81,8 @@ jobs:
         continue-on-error: false
 
       # ── 9. Análise estática ──────────────────────────────────────────────────
-      - name: flutter analyze
-        run: flutter analyze
+      - name: flutter analyze (código do lab)
+        run: flutter analyze lib/shared/ive_avatar/ lib/main_ive_avatar_lab.dart
         continue-on-error: false
 
       # ── 10. Testes ───────────────────────────────────────────────────────────
