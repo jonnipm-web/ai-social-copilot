@@ -75,6 +75,13 @@ jobs:
       - name: flutter pub get
         run: flutter pub get
 
+      # ── 7b. Criar .env vazio ──────────────────────────────────────────────────
+      # pubspec.yaml declara .env como asset (usado via flutter_dotenv em produção).
+      # O lab não usa variáveis de ambiente externas — um .env vazio satisfaz o
+      # bundler sem expor nenhum secret.
+      - name: Criar .env vazio (lab não usa variáveis de ambiente)
+        run: touch .env
+
       # ── 8. Formatação ────────────────────────────────────────────────────────
       - name: dart format (verificar conformidade)
         run: dart format --set-exit-if-changed lib/ test/
@@ -88,16 +95,19 @@ jobs:
       # ── 10. Testes ───────────────────────────────────────────────────────────
       - name: "Testes do Avatar V2 (suíte isolada)"
         run: |
+          set -o pipefail
           flutter test test/features/ive/ive_avatar_v2_test.dart \
             --reporter=compact 2>&1 | tail -5
 
       - name: "Testes do Lab (entrypoint isolado)"
         run: |
+          set -o pipefail
           flutter test test/features/ive/lab/ive_avatar_lab_app_test.dart \
             --reporter=compact 2>&1 | tail -5
 
       - name: "Todos os testes do repositório"
         run: |
+          set -o pipefail
           flutter test --reporter=compact 2>&1 | tail -5
 
       # ── 11. Build APK do laboratório ─────────────────────────────────────────
@@ -106,6 +116,7 @@ jobs:
       # O scaffold Android está versionado na source_ref — sem reconstrução dinâmica.
       - name: Build APK debug — flavor iveAvatarLab
         run: |
+          set -o pipefail
           flutter build apk \
             --debug \
             --flavor ${{ env.FLAVOR }} \
