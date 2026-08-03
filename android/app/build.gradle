@@ -41,7 +41,7 @@ android {
         production {
             dimension "variant"
             applicationId "com.insightvalues.aisocialcopilot"
-            resValue "string", "app_name", "InsightValues"
+            // app_name is in src/main/res/values/strings.xml
         }
 
         iveAvatarLab {
@@ -49,7 +49,7 @@ android {
             applicationId "com.insightvalues.iveavatarlab"
             versionName "0.1.0"
             versionCode 1
-            resValue "string", "app_name", "IVE Avatar Lab"
+            // app_name is in src/iveAvatarLab/res/values/strings.xml (overrides main)
         }
     }
 
