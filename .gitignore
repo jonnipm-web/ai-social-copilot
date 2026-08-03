@@ -58,3 +58,6 @@ supabase/.temp/
 # OS
 .DS_Store
 Thumbs.db
+
+# Flutter SDK local (instalado pelo ambiente de CI)
+flutter/
