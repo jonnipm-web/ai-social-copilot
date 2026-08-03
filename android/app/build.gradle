@@ -1,0 +1,73 @@
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin"
+    id "com.google.gms.google-services"
+}
+
+android {
+    namespace "com.insightvalues.aisocialcopilot"
+    compileSdk = flutter.compileSdkVersion
+    ndkVersion = flutter.ndkVersion
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_11
+    }
+
+    defaultConfig {
+        // applicationId de produção — sobrescrito pelo flavor iveAvatarLab
+        applicationId "com.insightvalues.aisocialcopilot"
+        minSdk = flutter.minSdkVersion
+        targetSdk = flutter.targetSdkVersion
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+    }
+
+    // ── Flavors ────────────────────────────────────────────────────────────────
+    // Dois flavors:
+    //   production  — InsightValues principal (applicationId de produção)
+    //   iveAvatarLab — APK isolado de avaliação (applicationId separado, seguro)
+    //
+    // Para construir o APK de laboratório:
+    //   flutter build apk --debug \
+    //     --flavor iveAvatarLab \
+    //     --target lib/main_ive_avatar_lab.dart
+
+    flavorDimensions "variant"
+
+    productFlavors {
+        production {
+            dimension "variant"
+            applicationId "com.insightvalues.aisocialcopilot"
+            resValue "string", "app_name", "InsightValues"
+        }
+
+        iveAvatarLab {
+            dimension "variant"
+            applicationId "com.insightvalues.iveavatarlab"
+            versionName "0.1.0"
+            versionCode 1
+            resValue "string", "app_name", "IVE Avatar Lab"
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.debug
+        }
+    }
+}
+
+flutter {
+    source "../.."
+}
+
+dependencies {
+    implementation platform("com.google.firebase:firebase-bom:33.7.0")
+    implementation "com.google.firebase:firebase-analytics"
+}
