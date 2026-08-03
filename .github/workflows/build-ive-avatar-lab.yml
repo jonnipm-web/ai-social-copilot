@@ -116,13 +116,11 @@ jobs:
       # O scaffold Android está versionado na source_ref — sem reconstrução dinâmica.
       - name: Build APK debug — flavor iveAvatarLab
         run: |
-          set -o pipefail
           flutter build apk \
             --debug \
             --flavor ${{ env.FLAVOR }} \
             --target ${{ env.TARGET }} \
-            --dart-define=APP_FLAVOR=iveAvatarLab \
-            --verbose 2>&1 | tail -30
+            --dart-define=APP_FLAVOR=iveAvatarLab
 
       # ── 12. Validação do APK ──────────────────────────────────────────────────
       - name: Validar APK gerado
