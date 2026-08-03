@@ -1,6 +1,5 @@
-// Root build.gradle — configuração de nível de projeto
-// O Flutter plugin gerencia a maior parte das dependências.
-// Não adicione configurações de aplicativo aqui; use android/app/build.gradle.
+// Root build.gradle — configuração de nível de projeto.
+// O Flutter Gradle plugin gerencia a maior parte das dependências.
 
 allprojects {
     repositories {
@@ -9,14 +8,6 @@ allprojects {
     }
 }
 
-rootProject.buildDir = layout.buildDirectory.dir("../build").get().asFile
-subprojects {
-    project.buildDir = layout.buildDirectory.dir("${rootProject.buildDir}/${project.name}").get().asFile
-}
-subprojects {
-    project.evaluationDependsOn(':app')
-}
-
 tasks.register("clean", Delete) {
-    delete rootProject.buildDir
+    delete rootProject.layout.buildDirectory
 }

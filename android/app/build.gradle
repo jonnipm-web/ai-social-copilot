@@ -2,7 +2,6 @@ plugins {
     id "com.android.application"
     id "kotlin-android"
     id "dev.flutter.flutter-gradle-plugin"
-    id "com.google.gms.google-services"
 }
 
 android {
@@ -20,7 +19,6 @@ android {
     }
 
     defaultConfig {
-        // applicationId de produção — sobrescrito pelo flavor iveAvatarLab
         applicationId "com.insightvalues.aisocialcopilot"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
@@ -29,11 +27,10 @@ android {
     }
 
     // ── Flavors ────────────────────────────────────────────────────────────────
-    // Dois flavors:
-    //   production  — InsightValues principal (applicationId de produção)
-    //   iveAvatarLab — APK isolado de avaliação (applicationId separado, seguro)
+    // production  — InsightValues principal
+    // iveAvatarLab — APK isolado de avaliação (applicationId separado)
     //
-    // Para construir o APK de laboratório:
+    // Build do laboratório (sem keystore, sem secrets de produção):
     //   flutter build apk --debug \
     //     --flavor iveAvatarLab \
     //     --target lib/main_ive_avatar_lab.dart
@@ -67,7 +64,28 @@ flutter {
     source "../.."
 }
 
+// ── Google Services e Firebase ────────────────────────────────────────────────
+// O plugin google-services é aplicado apenas para o flavor production.
+// O flavor iveAvatarLab não usa Firebase: sem Auth, sem Analytics, sem Drive.
+// A task processGoogleServices é suprimida para o flavor iveAvatarLab.
+
+apply plugin: "com.google.gms.google-services"
+
+afterEvaluate {
+    // Desabilitar processamento de google-services para todas as variantes do lab
+    android.applicationVariants.all { variant ->
+        if (variant.flavorName == "iveAvatarLab") {
+            def taskName = "process${variant.name.capitalize()}GoogleServices"
+            def task = tasks.findByName(taskName)
+            if (task != null) {
+                task.enabled = false
+            }
+        }
+    }
+}
+
 dependencies {
-    implementation platform("com.google.firebase:firebase-bom:33.7.0")
-    implementation "com.google.firebase:firebase-analytics"
+    // Firebase BOM — compilado apenas para production via configuração de variant
+    productionImplementation platform("com.google.firebase:firebase-bom:33.7.0")
+    productionImplementation "com.google.firebase:firebase-analytics"
 }

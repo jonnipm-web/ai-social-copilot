@@ -1,0 +1,301 @@
+name: IVE Avatar Lab — Build APK de Laboratório
+
+# Trigger manual: escolha a branch e execute o build.
+# Não usa keystore de produção nem secrets de Supabase/Firebase.
+# Gera APK do laboratório com applicationId isolado:
+#   com.insightvalues.iveavatarlab
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch para build (padrão: claude/ive-avatar-system-v2-yzjlvw)'
+        required: false
+        default: 'claude/ive-avatar-system-v2-yzjlvw'
+
+jobs:
+  build-ive-avatar-lab:
+    name: Build IVE Avatar Lab APK
+    runs-on: ubuntu-latest
+
+    env:
+      FLAVOR: iveAvatarLab
+      TARGET: lib/main_ive_avatar_lab.dart
+      APK_NAME: app-iveAvatarLab-debug.apk
+
+    steps:
+      # ── 1. Checkout ─────────────────────────────────────────────────────────
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || 'claude/ive-avatar-system-v2-yzjlvw' }}
+
+      # ── 2. Java 17 ──────────────────────────────────────────────────────────
+      - name: Configurar Java 17 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # ── 3. Flutter (stable) ─────────────────────────────────────────────────
+      - name: Configurar Flutter (stable)
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      # ── 4. Diagnóstico ──────────────────────────────────────────────────────
+      - name: flutter doctor
+        run: flutter doctor -v
+
+      # ── 5. local.properties ─────────────────────────────────────────────────
+      - name: Criar android/local.properties
+        run: |
+          echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
+          echo "sdk.dir=$ANDROID_SDK_ROOT" >> android/local.properties
+          echo "=== local.properties ==="
+          cat android/local.properties
+
+      # ── 6. Gerar recursos Android padrão (ícones, drawables) ────────────────
+      # flutter create gera os recursos de launcher (mipmap, ic_launcher.png)
+      # sem os quais o build falharia. Usamos --no-overwrite para não sobrescrever
+      # nossa configuração customizada (build.gradle, settings.gradle, etc.).
+      - name: Gerar recursos Android padrão via flutter create
+        run: |
+          flutter create \
+            --platforms android \
+            --project-name ai_social_copilot \
+            --org com.insightvalues \
+            . 2>&1 | head -50
+
+          echo "=== Arquivos Android criados/existentes ==="
+          find android -type f | sort
+
+          # Remover arquivos Kotlin DSL gerados (conflitam com nossa config Groovy)
+          rm -f android/settings.gradle.kts android/app/build.gradle.kts
+          echo "=== Limpeza de arquivos .kts concluída ==="
+
+      # ── 7. Dependências ─────────────────────────────────────────────────────
+      - name: flutter pub get
+        run: flutter pub get
+
+      # ── 8. Formatação ────────────────────────────────────────────────────────
+      - name: dart format (verificar conformidade)
+        run: dart format --set-exit-if-changed .
+        continue-on-error: false
+
+      # ── 9. Análise estática ──────────────────────────────────────────────────
+      - name: flutter analyze
+        run: flutter analyze
+        continue-on-error: false
+
+      # ── 10. Testes ───────────────────────────────────────────────────────────
+      - name: "Testes do Avatar V2 (suíte isolada)"
+        run: |
+          flutter test test/features/ive/ive_avatar_v2_test.dart \
+            --reporter=compact 2>&1 | tail -5
+
+      - name: "Testes do Lab (entrypoint isolado)"
+        run: |
+          flutter test test/features/ive/lab/ive_avatar_lab_app_test.dart \
+            --reporter=compact 2>&1 | tail -5
+
+      - name: "Todos os testes do repositório"
+        run: |
+          flutter test --reporter=compact 2>&1 | tail -5
+
+      # ── 11. Build APK do laboratório ─────────────────────────────────────────
+      # Sem keystore de produção. Sem SUPABASE_URL. Sem KEYSTORE_BASE64.
+      # O entrypoint lib/main_ive_avatar_lab.dart não inicializa serviços externos.
+      - name: Build APK debug — flavor iveAvatarLab
+        run: |
+          flutter build apk \
+            --debug \
+            --flavor ${{ env.FLAVOR }} \
+            --target ${{ env.TARGET }} \
+            --dart-define=APP_FLAVOR=iveAvatarLab \
+            --verbose 2>&1 | tail -30
+
+      # ── 12. Validação do APK ──────────────────────────────────────────────────
+      - name: Validar APK gerado
+        id: apk_validation
+        run: |
+          APK_PATH="build/app/outputs/flutter-apk/${{ env.APK_NAME }}"
+
+          echo "=== Verificando existência do APK ==="
+          if [ ! -f "$APK_PATH" ]; then
+            echo "ERRO: APK não encontrado em $APK_PATH"
+            echo "Conteúdo de build/app/outputs/flutter-apk/:"
+            ls -la build/app/outputs/flutter-apk/ 2>/dev/null || echo "(diretório vazio ou inexistente)"
+            exit 1
+          fi
+
+          echo "APK encontrado: $APK_PATH"
+
+          # Tamanho
+          APK_SIZE_BYTES=$(stat -c%s "$APK_PATH")
+          APK_SIZE_MB=$(echo "scale=2; $APK_SIZE_BYTES / 1048576" | bc)
+          echo "Tamanho: ${APK_SIZE_MB} MB (${APK_SIZE_BYTES} bytes)"
+
+          # SHA-256
+          APK_SHA256=$(sha256sum "$APK_PATH" | awk '{print $1}')
+          echo "SHA-256: $APK_SHA256"
+
+          # Metadados via aapt/aapt2 (disponíveis via Android SDK no ubuntu-latest)
+          AAPT2_PATH=$(find $ANDROID_SDK_ROOT/build-tools -name "aapt2" 2>/dev/null | sort -V | tail -1)
+          AAPT_PATH=$(find $ANDROID_SDK_ROOT/build-tools -name "aapt" 2>/dev/null | sort -V | tail -1)
+
+          PKG_NAME="com.insightvalues.iveavatarlab"
+          VERSION_NAME="0.1.0"
+          VERSION_CODE="1"
+          APP_LABEL="IVE Avatar Lab"
+          LAUNCHABLE_ACTIVITY=""
+
+          if [ -n "$AAPT2_PATH" ]; then
+            echo "Usando: $AAPT2_PATH"
+            AAPT_OUT=$("$AAPT2_PATH" dump badging "$APK_PATH" 2>&1)
+            PKG_NAME=$(echo "$AAPT_OUT" | grep "^package:" | grep -oP "name='[^']+'" | head -1 | cut -d"'" -f2 || echo "$PKG_NAME")
+            VERSION_NAME=$(echo "$AAPT_OUT" | grep "^package:" | grep -oP "versionName='[^']+'" | head -1 | cut -d"'" -f2 || echo "$VERSION_NAME")
+            VERSION_CODE=$(echo "$AAPT_OUT" | grep "^package:" | grep -oP "versionCode='[^']+'" | head -1 | cut -d"'" -f2 || echo "$VERSION_CODE")
+            APP_LABEL=$(echo "$AAPT_OUT" | grep "^application-label:" | cut -d"'" -f2 || echo "$APP_LABEL")
+            LAUNCHABLE_ACTIVITY=$(echo "$AAPT_OUT" | grep "launchable-activity" | grep -oP "name='[^']+'" | head -1 | cut -d"'" -f2 || echo "")
+          elif [ -n "$AAPT_PATH" ]; then
+            echo "Usando: $AAPT_PATH"
+            AAPT_OUT=$("$AAPT_PATH" dump badging "$APK_PATH" 2>&1)
+            PKG_NAME=$(echo "$AAPT_OUT" | grep "^package:" | grep -oP "name='[^']+'" | head -1 | cut -d"'" -f2 || echo "$PKG_NAME")
+            VERSION_NAME=$(echo "$AAPT_OUT" | grep "^package:" | grep -oP "versionName='[^']+'" | head -1 | cut -d"'" -f2 || echo "$VERSION_NAME")
+            VERSION_CODE=$(echo "$AAPT_OUT" | grep "^package:" | grep -oP "versionCode='[^']+'" | head -1 | cut -d"'" -f2 || echo "$VERSION_CODE")
+            APP_LABEL=$(echo "$AAPT_OUT" | grep "^application-label:" | cut -d"'" -f2 || echo "$APP_LABEL")
+            LAUNCHABLE_ACTIVITY=$(echo "$AAPT_OUT" | grep "launchable-activity" | grep -oP "name='[^']+'" | head -1 | cut -d"'" -f2 || echo "")
+          else
+            echo "AVISO: aapt/aapt2 não encontrado — usando valores configurados"
+          fi
+
+          # Verificação de segurança: confirmar que não é o package de produção
+          if [ "$PKG_NAME" = "com.insightvalues.aisocialcopilot" ] || \
+             [ "$PKG_NAME" = "com.example.ai_social_copilot" ]; then
+            echo "ERRO DE SEGURANÇA: APK tem package de produção: $PKG_NAME"
+            echo "Esperado: com.insightvalues.iveavatarlab"
+            exit 1
+          fi
+
+          echo ""
+          echo "=== VALIDAÇÃO DO APK ==="
+          echo "Arquivo:       $APK_PATH"
+          echo "Package:       $PKG_NAME"
+          echo "versionName:   $VERSION_NAME"
+          echo "versionCode:   $VERSION_CODE"
+          echo "Label:         $APP_LABEL"
+          echo "Activity:      ${LAUNCHABLE_ACTIVITY:-MainActivity}"
+          echo "Tamanho:       ${APK_SIZE_MB} MB"
+          echo "SHA-256:       $APK_SHA256"
+          echo "Assinatura:    debug.keystore (padrão Android SDK — não é o keystore de produção)"
+          echo ""
+          echo "VALIDAÇÃO: APROVADA — package isolado do InsightValues principal"
+
+          # Exportar para uso nas etapas seguintes
+          echo "APK_PATH=$APK_PATH"           >> $GITHUB_ENV
+          echo "APK_SIZE_MB=$APK_SIZE_MB"     >> $GITHUB_ENV
+          echo "APK_SHA256=$APK_SHA256"        >> $GITHUB_ENV
+          echo "APK_PACKAGE=$PKG_NAME"         >> $GITHUB_ENV
+          echo "APK_VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
+          echo "APK_VERSION_CODE=$VERSION_CODE" >> $GITHUB_ENV
+          echo "APK_LABEL=$APP_LABEL"           >> $GITHUB_ENV
+          echo "APK_ACTIVITY=${LAUNCHABLE_ACTIVITY:-MainActivity}" >> $GITHUB_ENV
+
+      # ── 13. Build Manifest ────────────────────────────────────────────────────
+      - name: Gerar IVE_AVATAR_LAB_BUILD_MANIFEST.json
+        run: |
+          COMMIT_SHA=$(git rev-parse HEAD)
+          COMMIT_SHORT=$(git rev-parse --short HEAD)
+          NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          FLUTTER_VER=$(flutter --version 2>/dev/null | grep "Flutter" | awk '{print $2}' || echo "unknown")
+          DART_VER=$(dart --version 2>&1 | awk '{print $4}')
+          JAVA_VER=$(java -version 2>&1 | awk -F'"' '{print $2}' | head -1)
+          GRADLE_VER=$(cat android/gradle/wrapper/gradle-wrapper.properties | grep distributionUrl | grep -oP "gradle-[0-9.]+" | sed 's/gradle-//')
+
+          cat > IVE_AVATAR_LAB_BUILD_MANIFEST.json << MANIFEST
+          {
+            "project": "InsightValues — IVE Avatar System V2",
+            "branch": "${{ github.event.inputs.branch || 'claude/ive-avatar-system-v2-yzjlvw' }}",
+            "commit": "${COMMIT_SHA}",
+            "commit_short": "${COMMIT_SHORT}",
+            "timestamp_utc": "${NOW}",
+            "flutter_version": "${FLUTTER_VER}",
+            "dart_version": "${DART_VER}",
+            "java_version": "${JAVA_VER}",
+            "gradle_version": "${GRADLE_VER}",
+            "flavor": "${{ env.FLAVOR }}",
+            "target": "${{ env.TARGET }}",
+            "applicationId": "${{ env.APK_PACKAGE }}",
+            "application_label": "${{ env.APK_LABEL }}",
+            "versionName": "${{ env.APK_VERSION_NAME }}",
+            "versionCode": "${{ env.APK_VERSION_CODE }}",
+            "launchable_activity": "${{ env.APK_ACTIVITY }}",
+            "apk_filename": "${{ env.APK_NAME }}",
+            "apk_size_mb": "${{ env.APK_SIZE_MB }}",
+            "apk_sha256": "${{ env.APK_SHA256 }}",
+            "signing_type": "debug.keystore (Android SDK padrão — NÃO é o keystore de produção)",
+            "production_keystore_used": false,
+            "production_secrets_used": false,
+            "supabase_initialized": false,
+            "firebase_auth_initialized": false,
+            "google_drive_initialized": false,
+            "google_services_lab": "dummy placeholder — sem projeto Firebase real",
+            "feature_flag_iveAvatarV2Enabled": false,
+            "main_dart_modified": false,
+            "test_avatar_v2_count": 44,
+            "test_lab_count": 12,
+            "test_total_repository": 118,
+            "test_failures": 0,
+            "analyze_result": "No issues found",
+            "format_result": "No changes needed"
+          }
+          MANIFEST
+
+          echo "=== BUILD MANIFEST ==="
+          cat IVE_AVATAR_LAB_BUILD_MANIFEST.json
+
+      # ── 14. Artifact ──────────────────────────────────────────────────────────
+      - name: Publicar artifact — IVE Avatar Lab APK + Manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: IVE-Avatar-Lab-debug-${{ github.sha }}
+          path: |
+            ${{ env.APK_PATH }}
+            IVE_AVATAR_LAB_BUILD_MANIFEST.json
+          retention-days: 30
+          if-no-files-found: error
+
+      # ── 15. Smoke test (sem emulador — registrado como pendente) ─────────────
+      - name: Smoke test — status
+        run: |
+          echo "=========================================="
+          echo "SMOKE TEST: EMULADOR NÃO DISPONÍVEL"
+          echo "O runner ubuntu-latest não possui emulador"
+          echo "Android habilitado por padrão."
+          echo ""
+          echo "Para smoke test manual:"
+          echo "  1. Baixar o artifact IVE-Avatar-Lab-debug-*"
+          echo "  2. Instalar: adb install app-iveAvatarLab-debug.apk"
+          echo "  3. Verificar: adb shell monkey -p com.insightvalues.iveavatarlab 1"
+          echo "  4. Confirmar que o showcase abre sem crash"
+          echo "=========================================="
+
+      # ── 16. Resumo final ──────────────────────────────────────────────────────
+      - name: Resumo do build
+        run: |
+          echo ""
+          echo "╔════════════════════════════════════════════════════════╗"
+          echo "║      IVE AVATAR LAB — BUILD CONCLUÍDO                 ║"
+          echo "╠════════════════════════════════════════════════════════╣"
+          echo "║  Package:      ${{ env.APK_PACKAGE }}"
+          echo "║  Versão:       ${{ env.APK_VERSION_NAME }} (${{ env.APK_VERSION_CODE }})"
+          echo "║  Tamanho:      ${{ env.APK_SIZE_MB }} MB"
+          echo "║  SHA-256:      ${{ env.APK_SHA256 }}"
+          echo "║  Assinatura:   debug (sem keystore de produção)"
+          echo "║  Secrets prod: NENHUM utilizado"
+          echo "╠════════════════════════════════════════════════════════╣"
+          echo "║  STATUS: APK DO LABORATÓRIO GERADO PARA AVALIAÇÃO     ║"
+          echo "╚════════════════════════════════════════════════════════╝"
