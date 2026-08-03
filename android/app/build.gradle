@@ -65,27 +65,25 @@ flutter {
 }
 
 // ── Google Services e Firebase ────────────────────────────────────────────────
-// O plugin google-services é aplicado apenas para o flavor production.
-// O flavor iveAvatarLab não usa Firebase: sem Auth, sem Analytics, sem Drive.
-// A task processGoogleServices é suprimida para o flavor iveAvatarLab.
+// Aplicado apenas para o flavor production.
+// O flavor iveAvatarLab não inicializa Firebase: sem Auth, Analytics ou Drive.
+// Nenhum google-services.json é necessário para o flavor iveAvatarLab.
+//
+// tasks.configureEach captura tasks registradas de forma lazy (gms plugin 4.x+),
+// garantindo que processGoogleServices seja desabilitado antes de ser executado.
 
 apply plugin: "com.google.gms.google-services"
 
-afterEvaluate {
-    // Desabilitar processamento de google-services para todas as variantes do lab
-    android.applicationVariants.all { variant ->
-        if (variant.flavorName == "iveAvatarLab") {
-            def taskName = "process${variant.name.capitalize()}GoogleServices"
-            def task = tasks.findByName(taskName)
-            if (task != null) {
-                task.enabled = false
-            }
-        }
+tasks.configureEach { task ->
+    if (task.name.startsWith("process") &&
+        task.name.contains("IveAvatarLab") &&
+        task.name.endsWith("GoogleServices")) {
+        task.enabled = false
     }
 }
 
 dependencies {
-    // Firebase BOM — compilado apenas para production via configuração de variant
+    // Firebase compilado apenas para o flavor production
     productionImplementation platform("com.google.firebase:firebase-bom:33.7.0")
     productionImplementation "com.google.firebase:firebase-analytics"
 }
