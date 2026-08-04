@@ -120,7 +120,8 @@ jobs:
             --debug \
             --flavor ${{ env.FLAVOR }} \
             --target ${{ env.TARGET }} \
-            --dart-define=APP_FLAVOR=iveAvatarLab
+            --dart-define=APP_FLAVOR=iveAvatarLab \
+            --verbose
 
       # ── 12. Validação do APK ──────────────────────────────────────────────────
       - name: Validar APK gerado
