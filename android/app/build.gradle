@@ -58,6 +58,18 @@ android {
             signingConfig signingConfigs.debug
         }
     }
+
+    // ── APK output naming ─────────────────────────────────────────────────────
+    // AGP 8.x mudou nomenclatura padrão: app-{variantName}.apk (camelCase)
+    // ex: iveAvatarLab + Debug → app-iveAvatarLabDebug.apk
+    // Flutter CLI espera: app-{flavorName}-{buildType}.apk → app-iveAvatarLab-debug.apk
+    // applicationVariants.configureEach é a API oficial do AGP para ajustar o nome
+    // de saída — não é renomeação pós-build, é configuração do próprio sistema de build.
+    applicationVariants.configureEach { variant ->
+        variant.outputs.configureEach { output ->
+            outputFileName = "app-${variant.flavorName}-${variant.buildType.name}.apk"
+        }
+    }
 }
 
 flutter {
