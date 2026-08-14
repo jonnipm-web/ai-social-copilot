@@ -43,11 +43,23 @@ serve(async (req) => {
     }
 
     if (ctx.documents?.length) {
-      const docs = (ctx.documents as Array<{title:string;status:string}>)
+      type DocEntry = { title: string; status: string; content_excerpt?: string };
+      const groundedCount = (ctx.documents as DocEntry[]).filter(d => d.content_excerpt).length;
+      const docs = (ctx.documents as DocEntry[])
         .slice(0, 5)
-        .map(d => `• ${d.title} [${d.status}]`)
+        .map(d => {
+          if (d.content_excerpt) {
+            return `• ${d.title} [${d.status}] ✓ grounded\n  Trecho: "${d.content_excerpt.substring(0, 300)}"`;
+          }
+          return `• ${d.title} [${d.status}] ⚠ sem conteúdo processado`;
+        })
         .join('\n');
-      lines.push(`\n## DOCUMENTOS INDEXADOS (${ctx.documents.length} total)\n${docs}`);
+      lines.push(`\n## DOCUMENTOS (${ctx.documents.length} vinculados, ${groundedCount} com conteúdo analisado)\n${docs}`);
+    }
+
+    if (ctx.document_warnings?.length) {
+      const warns = (ctx.document_warnings as string[]).join('; ');
+      lines.push(`\n## AVISOS DE COBERTURA\n${warns}`);
     }
 
     if (ctx.personas?.length) {
@@ -78,6 +90,17 @@ serve(async (req) => {
 Seu papel é analisar os dados do contexto atual e responder às perguntas do usuário com precisão, clareza e ação.
 
 ${contextBlock}
+
+## CONTRATO DE GROUNDING — REGRA ABSOLUTA
+
+Você SOMENTE pode afirmar que analisou ou leu o conteúdo de um documento se esse conteúdo aparecer explicitamente na seção "DOCUMENTOS" acima, marcado com ✓ grounded e com um trecho visível.
+
+Documentos marcados com ⚠ sem conteúdo processado estão REGISTRADOS mas NÃO ANALISADOS. Nunca afirme ou implique que analisou esses documentos.
+
+Se o usuário perguntar sobre um documento sem conteúdo, diga exatamente:
+"Este documento está registrado no Knowledge Vault mas seu conteúdo não foi processado nesta análise. Para analisá-lo, acesse o Conhecimento e confirme o processamento."
+
+DOCUMENT EXISTS ≠ DOCUMENT ANALYZED. METADATA ≠ KNOWLEDGE.
 
 ## SUAS CAPACIDADES
 

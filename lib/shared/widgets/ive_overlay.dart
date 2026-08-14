@@ -189,8 +189,10 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
         project: ctx.topProjectsSnapshot.isNotEmpty
             ? {'projects': ctx.topProjectsSnapshot}
             : null,
-        documents:     ctx.knowledgeItemsSummary,
-        opportunities: ctx.pendingOpportunitiesSummary,
+        documents:        ctx.knowledgeItemsSummary,
+        documentCoverage: ctx.documentCoverage.isNotEmpty ? ctx.documentCoverage : null,
+        documentWarnings: ctx.documentWarnings,
+        opportunities:    ctx.pendingOpportunitiesSummary,
       );
 
   String _routeToName(String route) {

@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/models/knowledge_item.dart';
+import '../data/services/document_context_builder.dart';
 import 'ecosystem_intelligence_provider.dart';
 import 'action_queue_provider.dart';
 import 'opportunity_lab_provider.dart';
@@ -23,8 +25,12 @@ class IveContextData {
   final String alertId;
   // Snapshot das top 3 projetos para contexto rico no chat
   final List<Map<String, dynamic>> topProjectsSnapshot;
-  // Top 5 knowledge items por score — alimenta documentos no chat
+  // Top knowledge items filtrados pelo projeto ativo, com content_excerpt grounded
   final List<Map<String, dynamic>> knowledgeItemsSummary;
+  // Cobertura de grounding: quantos docs vinculados, processados, usados
+  final Map<String, dynamic> documentCoverage;
+  // Avisos de grounding (conteúdo vazio, budget excedido, etc.)
+  final List<String> documentWarnings;
   // Top 3 oportunidades pendentes — alimenta opportunities no chat
   final List<Map<String, dynamic>> pendingOpportunitiesSummary;
   // Top 3 ações pendentes com campos de auditoria
@@ -46,6 +52,8 @@ class IveContextData {
     this.alertId                    = '',
     this.topProjectsSnapshot        = const [],
     this.knowledgeItemsSummary      = const [],
+    this.documentCoverage           = const {},
+    this.documentWarnings           = const [],
     this.pendingOpportunitiesSummary = const [],
     this.pendingActionsSummary       = const [],
   });
@@ -55,26 +63,63 @@ class IveContextData {
 
 final iveContextDataProvider = FutureProvider.autoDispose<IveContextData>((ref) async {
   // Lê dados existentes — não cria nova lógica, apenas agrega
-  final health    = await ref.watch(ecosystemHealthProvider.future);
-  final scores    = await ref.watch(ecosystemScoresProvider.future);
-  final pending   = await ref.watch(pendingActionsProvider.future);
+  final health     = await ref.watch(ecosystemHealthProvider.future);
+  final scores     = await ref.watch(ecosystemScoresProvider.future);
+  final pending    = await ref.watch(pendingActionsProvider.future);
   final labSummary = await ref.watch(opportunityLabSummaryProvider.future);
 
-  // Knowledge items — top 5 por opportunityScore
+  // ── Projeto de maior score (computado antes dos knowledge items para filtrar) ─
+  final sorted = [...scores]
+    ..sort((a, b) => b.ecosystemScore.compareTo(a.ecosystemScore));
+  final top = sorted.isNotEmpty ? sorted.first : null;
+
+  // ── Knowledge items — filtrados pelo projeto ativo quando disponível ──────────
   final knowledgeRaw = await ref.watch(knowledgeItemsProvider.future).then(
     (v) => v,
     onError: (_, __) => <dynamic>[],
   );
-  final knowledgeSorted = [...knowledgeRaw]
+
+  // Filtra por projeto ativo; fallback para todos os itens se nenhum vinculado
+  final projectId = top?.project.id;
+  final projectItems = projectId != null
+      ? knowledgeRaw.where((k) => k.projectId == projectId).toList()
+      : <dynamic>[];
+  final knowledgeForGrounding = projectItems.isNotEmpty ? projectItems : knowledgeRaw;
+
+  final knowledgeSorted = [...knowledgeForGrounding]
     ..sort((a, b) => b.opportunityScore.compareTo(a.opportunityScore));
-  final knowledgeSummary = knowledgeSorted.take(5).map((k) => {
-    'title':  k.title,
-    'score':  k.opportunityScore,
-    'status': k.status,
-    if (k.niche != null) 'niche': k.niche,
+
+  // Contexto textual do projeto para seleção de chunks relevantes
+  final projectContext = [
+    top?.project.name ?? '',
+    top?.project.description ?? '',
+  ].where((s) => s.isNotEmpty).join(' ');
+
+  // Grounding: escolhe melhor chunk de cada documento, respeita budget de chars
+  final grounding = DocumentContextBuilder.buildGrounding(
+    knowledgeSorted.cast<KnowledgeItem>(),
+    projectContext: projectContext,
+  );
+
+  // Mapa rápido: documentId → excerpt (para enriquecer knowledgeSummary)
+  final excerptById = {for (final e in grounding.excerpts) e.documentId: e};
+
+  // Top 5 com content_excerpt quando grounded; sem excerpt: apenas metadados
+  final knowledgeSummary = knowledgeSorted.take(5).map((k) {
+    final excerpt = excerptById[k.id];
+    return <String, dynamic>{
+      'title':  k.title,
+      'score':  k.opportunityScore,
+      'status': k.status,
+      if (k.niche != null) 'niche': k.niche,
+      if (excerpt != null) 'content_excerpt': excerpt.text,
+    };
   }).toList();
 
-  // Oportunidades pendentes — top 3 por finalScore
+  final documentCoverage = grounding.coverage.toMap();
+  final documentWarnings = grounding.warnings.map((w) => w.message).toList();
+
+  // ── Oportunidades pendentes — top 3 por finalScore ───────────────────────────
   final opportunities = await ref.watch(opportunityLabProvider.future).then(
     (v) => v,
     onError: (_, __) => <dynamic>[],
@@ -90,11 +135,11 @@ final iveContextDataProvider = FutureProvider.autoDispose<IveContextData>((ref) 
     'confidence':   o.confidence,
     if (o.rationale != null && o.rationale!.isNotEmpty)
       'rationale': o.rationale,
-    if (o.risks.isNotEmpty)   'risks':        o.risks.take(3).toList(),
-    if (o.actionSteps.isNotEmpty) 'next_steps': o.actionSteps.take(3).toList(),
+    if (o.risks.isNotEmpty)        'risks':      o.risks.take(3).toList(),
+    if (o.actionSteps.isNotEmpty)  'next_steps': o.actionSteps.take(3).toList(),
   }).toList();
 
-  // Ações pendentes — top 3 por prioridade com campos de auditoria
+  // ── Ações pendentes — top 3 por prioridade com campos de auditoria ───────────
   final pendingActionsSorted = [...pending]
     ..sort((a, b) => b.priority.compareTo(a.priority));
   final actionsSummary = pendingActionsSorted.take(3).map((a) => {
@@ -104,16 +149,11 @@ final iveContextDataProvider = FutureProvider.autoDispose<IveContextData>((ref) 
     'origin':   a.originLabel,
     if (a.rationale != null && a.rationale!.isNotEmpty)
       'rationale': a.rationale,
-    if (a.plan.isNotEmpty)  'plan': a.plan.take(2).toList(),
-    if (a.risks.isNotEmpty) 'risks': a.risks.take(2).toList(),
+    if (a.plan.isNotEmpty)   'plan':  a.plan.take(2).toList(),
+    if (a.risks.isNotEmpty)  'risks': a.risks.take(2).toList(),
   }).toList();
 
-  // Projeto de maior score
-  final sorted = [...scores]
-    ..sort((a, b) => b.ecosystemScore.compareTo(a.ecosystemScore));
-  final top = sorted.isNotEmpty ? sorted.first : null;
-
-  // Projeto com pior execução (principal gargalo)
+  // ── Projeto com pior execução (principal gargalo) ────────────────────────────
   final bottleneck = scores.isNotEmpty
       ? scores.reduce(
           (a, b) => a.executionScore < b.executionScore ? a : b)
@@ -121,29 +161,29 @@ final iveContextDataProvider = FutureProvider.autoDispose<IveContextData>((ref) 
 
   final pendingLab = labSummary['pending'] ?? 0;
 
-  // ── Detecção de alertas ───────────────────────────────────────────────────
-  bool hasAlert     = false;
-  String alertMsg   = '';
-  String alertId    = '';
+  // ── Detecção de alertas ───────────────────────────────────────────────────────
+  bool   hasAlert  = false;
+  String alertMsg  = '';
+  String alertId   = '';
 
   final criticals = scores.where((s) => s.ecosystemScore < 30).toList();
 
   if (health < 40) {
-    hasAlert  = true;
-    alertId   = 'health_low_$health';
-    alertMsg  = 'Saúde do ecossistema em $health/100. '
-                'Ação imediata recomendada.';
+    hasAlert = true;
+    alertId  = 'health_low_$health';
+    alertMsg = 'Saúde do ecossistema em $health/100. '
+               'Ação imediata recomendada.';
   } else if (criticals.isNotEmpty) {
-    final c   = criticals.first;
-    hasAlert  = true;
-    alertId   = 'score_critical_${c.project.id}';
-    alertMsg  = '${c.project.name} com score crítico (${c.ecosystemScore}/100). '
-                'Posso identificar o que está limitando.';
+    final c  = criticals.first;
+    hasAlert = true;
+    alertId  = 'score_critical_${c.project.id}';
+    alertMsg = '${c.project.name} com score crítico (${c.ecosystemScore}/100). '
+               'Posso identificar o que está limitando.';
   } else if (pending.length > 5) {
-    hasAlert  = true;
-    alertId   = 'actions_overdue_${pending.length}';
-    alertMsg  = '${pending.length} ações pendentes acumuladas. '
-                'Isso está impactando seu score de execução.';
+    hasAlert = true;
+    alertId  = 'actions_overdue_${pending.length}';
+    alertMsg = '${pending.length} ações pendentes acumuladas. '
+               'Isso está impactando seu score de execução.';
   }
 
   final topThree = sorted.take(3).map((s) => {
@@ -171,6 +211,8 @@ final iveContextDataProvider = FutureProvider.autoDispose<IveContextData>((ref) 
     alertId:                     alertId,
     topProjectsSnapshot:         topThree,
     knowledgeItemsSummary:       knowledgeSummary,
+    documentCoverage:            documentCoverage,
+    documentWarnings:            documentWarnings,
     pendingOpportunitiesSummary: opportunitiesSummary,
     pendingActionsSummary:       actionsSummary,
   );

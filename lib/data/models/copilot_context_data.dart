@@ -7,16 +7,22 @@ class CopilotContextData {
   final List<Map<String, dynamic>> personas;
   final Map<String, dynamic>? revenue;
   final Map<String, dynamic>? market;
+  // Métricas de grounding: quantos docs vinculados vs processados vs usados
+  final Map<String, dynamic>? documentCoverage;
+  // Avisos de grounding enviados ao LLM para instrução de honestidade epistêmica
+  final List<String> documentWarnings;
 
   const CopilotContextData({
     this.project,
     this.scores,
-    this.opportunities = const [],
-    this.actions       = const [],
-    this.documents     = const [],
-    this.personas      = const [],
+    this.opportunities      = const [],
+    this.actions            = const [],
+    this.documents          = const [],
+    this.personas           = const [],
     this.revenue,
     this.market,
+    this.documentCoverage,
+    this.documentWarnings   = const [],
   });
 
   Map<String, dynamic> toMap() => {
@@ -28,6 +34,8 @@ class CopilotContextData {
     if (personas.isNotEmpty)      'personas':      personas,
     if (revenue      != null) 'revenue':       revenue,
     if (market       != null) 'market':        market,
+    if (documentCoverage != null)         'document_coverage':  documentCoverage,
+    if (documentWarnings.isNotEmpty)      'document_warnings':  documentWarnings,
   };
 
   bool get isEmpty =>
