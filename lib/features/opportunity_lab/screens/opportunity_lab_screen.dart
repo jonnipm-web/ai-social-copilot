@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
-import '../../../data/models/action_queue_item.dart';
 import '../../../data/models/opportunity_lab_item.dart';
 import '../../../providers/action_queue_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';

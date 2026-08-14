@@ -86,10 +86,13 @@ void main() {
       final container = _container(svc);
       addTearDown(container.dispose);
 
-      final state = await container
-          .read(projectsNotifierProvider.future)
-          .then(AsyncData.new)
-          .onError((e, st) => AsyncError<List<Project>>(e!, st));
+      late final AsyncValue<List<Project>> state;
+      try {
+        final list = await container.read(projectsNotifierProvider.future);
+        state = AsyncData(list);
+      } catch (e, st) {
+        state = AsyncError<List<Project>>(e, st);
+      }
 
       expect(state, isA<AsyncError<List<Project>>>());
     });
@@ -102,9 +105,11 @@ void main() {
       final created = _project(id: 'p2', name: 'Novo Projeto');
       final afterCreate = [...initial, created];
 
-      when(() => svc.fetchAll())
-          .thenAnswer((_) async => initial)
-          .thenAnswer((_) async => afterCreate);
+      var fetchCountA = 0;
+      when(() => svc.fetchAll()).thenAnswer((_) async {
+        fetchCountA++;
+        return fetchCountA == 1 ? initial : afterCreate;
+      });
       when(() => svc.create(any())).thenAnswer((_) async => created);
 
       final container = _container(svc);
@@ -177,9 +182,11 @@ void main() {
       final original = _project(id: 'p1', status: 'idea');
       final updated = _project(id: 'p1', status: 'active');
 
-      when(() => svc.fetchAll())
-          .thenAnswer((_) async => [original])
-          .thenAnswer((_) async => [updated]);
+      var fetchCountB = 0;
+      when(() => svc.fetchAll()).thenAnswer((_) async {
+        fetchCountB++;
+        return fetchCountB == 1 ? [original] : [updated];
+      });
       when(() => svc.update('p1', any()))
           .thenAnswer((_) async => updated);
 

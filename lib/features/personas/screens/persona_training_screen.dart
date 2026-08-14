@@ -423,7 +423,7 @@ class _TrainingItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vocabulary = training.vocabularyJson;
-    final tone = training.tone ?? '';
+    final tone = training.tone;
 
     return Dismissible(
       key: Key(training.id),

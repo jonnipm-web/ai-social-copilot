@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/constants/app_constants.dart';
 import '../../../data/models/website_analysis.dart';
 import '../../../providers/website_analyzer_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
@@ -774,7 +773,7 @@ class _MapContent extends StatelessWidget {
               if (value is List)
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: (value as List).map((item) {
+                  children: value.map((item) {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 4),
                       child: Row(

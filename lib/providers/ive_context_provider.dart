@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/models/knowledge_item.dart';
+import '../data/models/opportunity_lab_item.dart';
 import '../data/services/document_context_builder.dart';
 import 'ecosystem_intelligence_provider.dart';
 import 'action_queue_provider.dart';
@@ -76,14 +77,14 @@ final iveContextDataProvider = FutureProvider.autoDispose<IveContextData>((ref) 
   // ── Knowledge items — filtrados pelo projeto ativo quando disponível ──────────
   final knowledgeRaw = await ref.watch(knowledgeItemsProvider.future).then(
     (v) => v,
-    onError: (_, __) => <dynamic>[],
+    onError: (_, __) => <KnowledgeItem>[],
   );
 
   // Filtra por projeto ativo; fallback para todos os itens se nenhum vinculado
   final projectId = top?.project.id;
   final projectItems = projectId != null
       ? knowledgeRaw.where((k) => k.projectId == projectId).toList()
-      : <dynamic>[];
+      : <KnowledgeItem>[];
   final knowledgeForGrounding = projectItems.isNotEmpty ? projectItems : knowledgeRaw;
 
   final knowledgeSorted = [...knowledgeForGrounding]
@@ -143,7 +144,7 @@ final iveContextDataProvider = FutureProvider.autoDispose<IveContextData>((ref) 
   // ── Oportunidades pendentes — top 3 por finalScore ───────────────────────────
   final opportunities = await ref.watch(opportunityLabProvider.future).then(
     (v) => v,
-    onError: (_, __) => <dynamic>[],
+    onError: (_, __) => <OpportunityLabItem>[],
   );
   final pendingOpportunities = [...opportunities.where((o) => o.status == 'pending')]
     ..sort((a, b) => b.finalScore.compareTo(a.finalScore));
