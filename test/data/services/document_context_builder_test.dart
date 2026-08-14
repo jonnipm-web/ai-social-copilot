@@ -226,4 +226,41 @@ void main() {
     ]);
     expect(filled.hasContent, isTrue);
   });
+
+  // T21 — Source Manifest Invariant
+  // SET(excerpts in manifest) == SET(docs with content that entered LLM prompt)
+  // Garante: nenhuma fonte aparece como "usada" se seu trecho não entrou no contexto.
+  test('T21: Source Manifest Invariant — excerpts correspond exactly to items passed in', () {
+    final items = [
+      _item(id: 'si1', title: 'Doc 1', content: 'Conteúdo real do documento um'),
+      _item(id: 'si2', title: 'Doc 2', content: ''),              // sem content
+      _item(id: 'si3', title: 'Doc 3', content: 'Conteúdo real do documento três'),
+    ];
+
+    final g = DocumentContextBuilder.buildGrounding(items);
+
+    // IDs que efetivamente têm excerpt no manifest
+    final excerptIds = g.excerpts.map((e) => e.documentId).toSet();
+
+    // IDs que têm content e deveriam estar no manifest
+    final usableIds = items
+        .where((i) => i.content.trim().isNotEmpty)
+        .map((i) => i.id)
+        .toSet();
+
+    // Invariant: todos os usable items cujo excerpt foi criado estão no manifest
+    // e todos os itens no manifest vieram dos items passados
+    for (final id in excerptIds) {
+      expect(usableIds, contains(id),
+          reason: 'Excerpt para "$id" não veio dos items passados ao builder');
+    }
+
+    // Itens sem content NÃO aparecem no manifest
+    expect(excerptIds, isNot(contains('si2')),
+        reason: 'Item si2 tem content vazio e não deve aparecer no manifest');
+
+    // coverage.used == número de excerpts gerados
+    expect(g.coverage.used, g.excerpts.length,
+        reason: 'coverage.used deve ser igual ao número de excerpts no manifest');
+  });
 }

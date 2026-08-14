@@ -95,17 +95,25 @@ final iveContextDataProvider = FutureProvider.autoDispose<IveContextData>((ref) 
     top?.project.description ?? '',
   ].where((s) => s.isNotEmpty).join(' ');
 
-  // Grounding: escolhe melhor chunk de cada documento, respeita budget de chars
+  // Total de documentos vinculados ao projeto (para coverage real, antes de take(5))
+  final totalLinkedCount = knowledgeSorted.length;
+
+  // Grounding apenas nos top-5 que serão exibidos no summary.
+  // Garante Source Manifest invariant:
+  //   SET(grounding.excerpts) == SET(docs com content_excerpt no prompt do LLM)
+  final topItems = knowledgeSorted.take(5).toList();
+
   final grounding = DocumentContextBuilder.buildGrounding(
-    knowledgeSorted.cast<KnowledgeItem>(),
+    topItems.cast<KnowledgeItem>(),
     projectContext: projectContext,
   );
 
   // Mapa rápido: documentId → excerpt (para enriquecer knowledgeSummary)
   final excerptById = {for (final e in grounding.excerpts) e.documentId: e};
 
-  // Top 5 com content_excerpt quando grounded; sem excerpt: apenas metadados
-  final knowledgeSummary = knowledgeSorted.take(5).map((k) {
+  // Top 5 com content_excerpt quando grounded; sem excerpt: apenas metadados.
+  // Mesmo conjunto passado ao buildGrounding — invariant mantido.
+  final knowledgeSummary = topItems.map((k) {
     final excerpt = excerptById[k.id];
     return <String, dynamic>{
       'title':  k.title,
@@ -116,7 +124,11 @@ final iveContextDataProvider = FutureProvider.autoDispose<IveContextData>((ref) 
     };
   }).toList();
 
-  final documentCoverage = grounding.coverage.toMap();
+  // Coverage: total_linked reflete TODOS os docs do projeto, não só os top-5
+  final documentCoverage = {
+    ...grounding.coverage.toMap(),
+    'total_linked': totalLinkedCount,
+  };
   final documentWarnings = grounding.warnings.map((w) => w.message).toList();
 
   // ── Oportunidades pendentes — top 3 por finalScore ───────────────────────────
