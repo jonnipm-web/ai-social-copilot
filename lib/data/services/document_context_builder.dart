@@ -201,13 +201,16 @@ class DocumentContextBuilder {
     final total            = items.length;
 
     final coverage = GroundingCoverage(
-      totalLinked:              total,
-      processed:                processed,
-      usable:                   usable,
-      used:                     used,
-      documentUsageCoverage:    total > 0 ? used / total : 0.0,
-      selectedCharacterCount:   selectedChars,
+      totalLinked:               total,
+      processed:                 processed,
+      usable:                    usable,
+      used:                      used,
+      documentUsageCoverage:     total > 0 ? used / total : 0.0,
+      selectedCharacterCount:    selectedChars,
       availableContentCharCount: availableChars,
+      // O builder entrega integralmente o que selecionou.
+      // A edge function usa GROUNDING_DELIVERY_BUDGET_CHARS para eventual cap downstream.
+      deliveredCharacterCount:   selectedChars,
     );
 
     return DocumentGrounding(

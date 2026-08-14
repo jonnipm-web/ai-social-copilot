@@ -1,6 +1,12 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
+
+// Budget de entrega do grounding — deve ser igual a maxDocumentContextChars no Dart.
+// Garante que o conteúdo selecionado pelo DocumentContextBuilder chega integralmente
+// ao prompt, sem segundo truncamento silencioso.
+// SELECTED ≠ DELIVERED era uma inconsistência arquitetural (§5.1 de SHOW-01A.3).
+const GROUNDING_DELIVERY_BUDGET_CHARS = 8000;
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -42,14 +48,25 @@ serve(async (req) => {
       lines.push(`\n## AÇÕES (${ctx.actions.length} total)\n${acts}`);
     }
 
+    let groundingDeliveredChars = 0;
     if (ctx.documents?.length) {
       type DocEntry = { title: string; status: string; content_excerpt?: string };
-      const groundedCount = (ctx.documents as DocEntry[]).filter(d => d.content_excerpt).length;
-      const docs = (ctx.documents as DocEntry[])
+      const allDocs = ctx.documents as DocEntry[];
+      const groundedCount = allDocs.filter(d => d.content_excerpt).length;
+      const docs = allDocs
         .slice(0, 5)
         .map(d => {
           if (d.content_excerpt) {
-            return `• ${d.title} [${d.status}] ✓ grounded\n  Trecho: "${d.content_excerpt.substring(0, 300)}"`;
+            const remaining = GROUNDING_DELIVERY_BUDGET_CHARS - groundingDeliveredChars;
+            if (remaining <= 0) {
+              // Budget global de entrega atingido — documento registrado mas não entregue.
+              return `• ${d.title} [${d.status}] ✓ selecionado — budget de entrega atingido`;
+            }
+            const text = d.content_excerpt.length > remaining
+              ? d.content_excerpt.substring(0, remaining)
+              : d.content_excerpt;
+            groundingDeliveredChars += text.length;
+            return `• ${d.title} [${d.status}] ✓ grounded\n  Trecho: "${text}"`;
           }
           return `• ${d.title} [${d.status}] ⚠ sem conteúdo processado`;
         })
@@ -189,12 +206,13 @@ Responda sempre em Português do Brasil.`;
 
     return new Response(
       JSON.stringify({
-        answer:            answerText,
+        answer:                answerText,
         sources,
         confidence,
         entities,
-        action_suggestion: actionSuggestion,
-        timestamp:         new Date().toISOString(),
+        action_suggestion:     actionSuggestion,
+        timestamp:             new Date().toISOString(),
+        grounding_delivered_chars: groundingDeliveredChars,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
