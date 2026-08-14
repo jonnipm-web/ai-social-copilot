@@ -123,8 +123,9 @@ class _IveAvatarState extends ConsumerState<IveAvatar>
     if (!widget.interactive) return avatar;
 
     return Semantics(
-      label:  'IVE, assistente executiva',
-      button: true,
+      label:            'IVE, assistente executiva',
+      button:           true,
+      excludeSemantics: true,
       child: GestureDetector(
         onTap:      widget.onTap,
         onLongPress: widget.onLongPress,

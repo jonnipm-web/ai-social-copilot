@@ -287,6 +287,7 @@ void main() {
         _item(id: 'lr1', content: lowRelevance),
       ],
       projectContext: 'flutter mobile android',
+      maxChars: 2500,
     );
     final hrChars = g.excerpts
         .where((e) => e.documentId == 'hr1')

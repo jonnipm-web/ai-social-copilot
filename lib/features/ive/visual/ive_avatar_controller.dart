@@ -90,6 +90,7 @@ class IveAvatarController extends ChangeNotifier {
 
   @override
   void dispose() {
+    if (_disposed) return;
     _disposed = true;
     _riveRuntime?.dispose();
     super.dispose();
