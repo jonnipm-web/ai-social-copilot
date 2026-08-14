@@ -17,8 +17,6 @@ import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/context_copilot_widget.dart';
 import '../../../shared/widgets/ive_detail_sheet.dart';
 import '../../../shared/widgets/ive_explain_button.dart';
-import '../../../data/models/copilot_context_data.dart';
-
 // ── Colors ────────────────────────────────────────────────────────────────
 const _kBg      = Color(0xFF0A0A14);
 const _kCard    = Color(0xFF12121E);
@@ -36,17 +34,6 @@ Color _scoreColor(int s) {
   if (s >= 40) return _kOrange;
   if (s >= 20) return Colors.amber;
   return _kRed;
-}
-
-Color _recColor(String rec) {
-  switch (rec) {
-    case 'ESCALAR':            return _kGreen;
-    case 'ACELERAR':           return const Color(0xFF00C853);
-    case 'MANTER':             return _kOrange;
-    case 'VALIDAR':            return Colors.amber;
-    case 'ANÁLISE INCOMPLETA': return const Color(0xFF9E9E9E);
-    default:                   return _kRed; // PAUSAR
-  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════

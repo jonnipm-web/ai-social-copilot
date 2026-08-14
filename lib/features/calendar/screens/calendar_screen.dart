@@ -510,19 +510,17 @@ class _SheetField extends StatelessWidget {
     required this.controller,
     required this.label,
     this.hint,
-    this.maxLines = 1,
   });
 
   final TextEditingController controller;
   final String label;
   final String? hint;
-  final int maxLines;
 
   @override
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
-      maxLines:   maxLines,
+      maxLines:   1,
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         labelText: label,

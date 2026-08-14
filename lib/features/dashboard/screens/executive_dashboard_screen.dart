@@ -586,53 +586,6 @@ class _QuickNavCard extends StatelessWidget {
   }
 }
 
-// ── Revenue Potential ─────────────────────────────────────────────────────────
-class _RevenuePotentialBanner extends StatelessWidget {
-  const _RevenuePotentialBanner({required this.analyses});
-  final List<MarketAnalysis> analyses;
-
-  @override
-  Widget build(BuildContext context) {
-    if (analyses.isEmpty) return const SizedBox.shrink();
-    final totalMax = analyses.map((a) => a.revenueMonthlyMax).fold<double>(0, (s, v) => s + v);
-    final totalMin = analyses.map((a) => a.revenueMonthlyMin).fold<double>(0, (s, v) => s + v);
-    if (totalMax <= 0) return const SizedBox.shrink();
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _kGreen.withOpacity(0.3)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.trending_up_rounded, color: _kGreen, size: 28),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Receita Potencial Total',
-                    style: TextStyle(color: Colors.white54, fontSize: 11)),
-                const SizedBox(height: 4),
-                Text(
-                  totalMin > 0
-                      ? '${_fmtBRL(totalMin)} – ${_fmtBRL(totalMax)}/mês'
-                      : '${_fmtBRL(totalMax)}/mês',
-                  style: const TextStyle(color: _kGreen, fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                Text('Baseado em ${analyses.length} análise${analyses.length != 1 ? 's' : ''}',
-                    style: const TextStyle(color: Colors.white38, fontSize: 11)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // ── Pending Actions ───────────────────────────────────────────────────────────
 class _PendingActionsCard extends StatelessWidget {
   const _PendingActionsCard({required this.actions});
