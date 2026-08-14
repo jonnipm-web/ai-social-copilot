@@ -31,6 +31,10 @@ class GroundingCoverage {
   final int usable;
   final int used;
   final double documentUsageCoverage;
+  // Chars efectivamente selecionados dos documentos (soma de excerpt.charCount).
+  final int selectedCharacterCount;
+  // Chars disponíveis em todos os documentos usáveis (content.trim().length).
+  final int availableContentCharCount;
 
   const GroundingCoverage({
     required this.totalLinked,
@@ -38,22 +42,28 @@ class GroundingCoverage {
     required this.usable,
     required this.used,
     required this.documentUsageCoverage,
+    this.selectedCharacterCount    = 0,
+    this.availableContentCharCount = 0,
   });
 
   Map<String, dynamic> toMap() => {
-    'total_linked':            totalLinked,
-    'processed':               processed,
-    'usable':                  usable,
-    'used':                    used,
-    'document_usage_coverage': documentUsageCoverage,
+    'total_linked':              totalLinked,
+    'processed':                 processed,
+    'usable':                    usable,
+    'used':                      used,
+    'document_usage_coverage':   documentUsageCoverage,
+    'selected_char_count':       selectedCharacterCount,
+    'available_content_chars':   availableContentCharCount,
   };
 
   static const GroundingCoverage empty = GroundingCoverage(
-    totalLinked: 0,
-    processed: 0,
-    usable: 0,
-    used: 0,
-    documentUsageCoverage: 0.0,
+    totalLinked:             0,
+    processed:               0,
+    usable:                  0,
+    used:                    0,
+    documentUsageCoverage:   0.0,
+    selectedCharacterCount:  0,
+    availableContentCharCount: 0,
   );
 }
 

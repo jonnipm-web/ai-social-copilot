@@ -125,14 +125,17 @@ void main() {
     expect(g.hasContent, isTrue);
   });
 
-  // T12
-  test('T12: buildGrounding() — excerpt é truncado a maxExcerptChars', () {
-    final longContent = 'palavra ' * 200; // ~1400 chars
+  // T12 — budget adaptativo: cada excerpt usa até maxChunkSize chars (sem cota fixa por documento)
+  test('T12: buildGrounding() — excerpt usa até maxChunkSize chars (budget adaptativo)', () {
+    final longContent = 'palavra ' * 200; // ~1400 chars → múltiplos chunks
     final g = DocumentContextBuilder.buildGrounding([
       _item(id: 'c', content: longContent),
     ]);
-    expect(g.excerpts.first.charCount,
-        lessThanOrEqualTo(DocumentContextBuilder.maxExcerptChars));
+    // Cada excerpt individual é no máximo um chunk (maxChunkSize)
+    for (final e in g.excerpts) {
+      expect(e.charCount, lessThanOrEqualTo(DocumentContextBuilder.maxChunkSize));
+    }
+    expect(g.hasContent, isTrue);
   });
 
   // T13
@@ -225,6 +228,145 @@ void main() {
       _item(id: 'f1', content: 'Conteúdo real presente e processável'),
     ]);
     expect(filled.hasContent, isTrue);
+  });
+
+  // ── Budget Adaptativo (SHOW-01A.2) ───────────────────────────────────────────
+
+  // T22
+  test('T22: adaptive budget — sem cota fixa, excerpt pode exceder 500 chars', () {
+    // Conteúdo de ~960 chars → primeiro chunk = 800 chars (maxChunkSize)
+    final content = 'palavra ' * 120; // 8 chars × 120 = 960 chars
+    final g = DocumentContextBuilder.buildGrounding([
+      _item(id: 'ad1', content: content),
+    ]);
+    // No algoritmo antigo o excerpt seria truncado a 500 chars.
+    // No novo, usa o chunk completo (até maxChunkSize = 800 chars).
+    expect(g.excerpts.first.charCount, greaterThan(500));
+    expect(g.excerpts.first.charCount,
+        lessThanOrEqualTo(DocumentContextBuilder.maxChunkSize));
+    expect(g.hasContent, isTrue);
+  });
+
+  // T23
+  test('T23: Pass 1 cobre todos os docs usáveis antes do Pass 2', () {
+    final items = [
+      _item(id: 'd1', content: 'flutter mobile desenvolvimento android ios apps'),
+      _item(id: 'd2', content: 'receita bolo chocolate delicioso sobremesa doce'),
+      _item(id: 'd3', content: 'investimento renda variável bolsa valores fundos'),
+    ];
+    final g = DocumentContextBuilder.buildGrounding(
+      items,
+      projectContext: 'flutter mobile',
+    );
+    // Todos os 3 docs têm content → todos devem ter excerpt (diversidade de Pass 1)
+    final excerptIds = g.excerpts.map((e) => e.documentId).toSet();
+    expect(excerptIds, containsAll({'d1', 'd2', 'd3'}));
+    expect(g.coverage.used, 3);
+  });
+
+  // T24
+  test('T24: Pass 2 adiciona chunks extras quando budget sobra após Pass 1', () {
+    // Conteúdo longo → gera múltiplos chunks; budget amplo → Pass 2 adiciona chunk extra
+    final content = 'flutter mobile android desenvolvimento ' * 35; // ~1330 chars → 2 chunks
+    final g = DocumentContextBuilder.buildGrounding(
+      [_item(id: 'p2a', content: content)],
+      projectContext: 'flutter mobile',
+    );
+    // Pass 1 adiciona chunk 0; Pass 2 adiciona chunk 1 (budget restante = ~7200 chars)
+    expect(g.excerpts.length, greaterThan(1));
+    expect(g.excerpts.every((e) => e.documentId == 'p2a'), isTrue);
+  });
+
+  // T25
+  test('T25: Pass 2 — doc altamente relevante acumula mais chars que doc irrelevante', () {
+    final highRelevance = 'flutter mobile android desenvolvimento ios ' * 32; // ~1344 chars
+    final lowRelevance  = 'receita bolo chocolate sobremesa doce culinária ' * 32;
+    final g = DocumentContextBuilder.buildGrounding(
+      [
+        _item(id: 'hr1', content: highRelevance),
+        _item(id: 'lr1', content: lowRelevance),
+      ],
+      projectContext: 'flutter mobile android',
+    );
+    final hrChars = g.excerpts
+        .where((e) => e.documentId == 'hr1')
+        .fold(0, (s, e) => s + e.charCount);
+    final lrChars = g.excerpts
+        .where((e) => e.documentId == 'lr1')
+        .fold(0, (s, e) => s + e.charCount);
+    // Após Pass 2, o doc mais relevante deve ter mais ou igual chars
+    expect(hrChars, greaterThanOrEqualTo(lrChars));
+  });
+
+  // T26 — Source Manifest Invariant com multi-excerpt
+  test('T26: Source Manifest Invariant com multi-excerpt', () {
+    final items = [
+      _item(id: 'sm1', content: 'conteúdo real do documento um para análise grounded'),
+      _item(id: 'sm2', content: ''), // vazio — não deve aparecer no manifest
+      _item(id: 'sm3', content: 'conteúdo real do documento três para análise grounded'),
+    ];
+    final g = DocumentContextBuilder.buildGrounding(items);
+    final excerptIds  = g.excerpts.map((e) => e.documentId).toSet();
+    final usableIds   = items
+        .where((i) => i.content.trim().isNotEmpty)
+        .map((i) => i.id)
+        .toSet();
+    // Todos os excerpts devem vir de items com content
+    for (final id in excerptIds) {
+      expect(usableIds, contains(id));
+    }
+    // Item sem content NÃO deve aparecer no manifest
+    expect(excerptIds, isNot(contains('sm2')));
+    // coverage.used == docs únicos com excerpt (não total de excerpts)
+    expect(g.coverage.used, excerptIds.length);
+  });
+
+  // T27
+  test('T27: coverage.used conta documentos únicos, não número de excerpts', () {
+    // Documento com múltiplos chunks → gera múltiplos excerpts, mas used = 1
+    final content = 'flutter mobile android desenvolvimento ' * 35; // ~1330 chars → 2 chunks
+    final g = DocumentContextBuilder.buildGrounding(
+      [_item(id: 'cu1', content: content)],
+      projectContext: 'flutter mobile',
+    );
+    expect(g.coverage.used, 1); // 1 doc único, não importa quantos excerpts
+    expect(g.excerpts.every((e) => e.documentId == 'cu1'), isTrue);
+  });
+
+  // T28
+  test('T28: selectedCharacterCount == soma dos charCounts dos excerpts', () {
+    final g = DocumentContextBuilder.buildGrounding([
+      _item(id: 'sc1', content: 'Conteúdo real para verificar selectedCharacterCount no coverage'),
+      _item(id: 'sc2', content: 'Outro conteúdo real também para verificar o campo selectedCharCount'),
+    ]);
+    final totalExcerptChars = g.excerpts.fold(0, (s, e) => s + e.charCount);
+    expect(g.coverage.selectedCharacterCount, totalExcerptChars);
+  });
+
+  // T29
+  test('T29: availableContentCharCount == soma do content.trim().length dos itens usáveis', () {
+    final items = [
+      _item(id: 'ac1', content: 'Conteúdo um com texto real e mensurável para teste'),
+      _item(id: 'ac2', content: ''), // vazio — não conta
+      _item(id: 'ac3', content: 'Conteúdo três com texto real e mensurável para teste'),
+    ];
+    final g = DocumentContextBuilder.buildGrounding(items);
+    final expectedAvailable = items
+        .where((i) => i.content.trim().isNotEmpty)
+        .fold(0, (s, i) => s + i.content.trim().length);
+    expect(g.coverage.availableContentCharCount, expectedAvailable);
+  });
+
+  // T30
+  test('T30: BUDGET_EXCEEDED gerado quando budget é insuficiente para todos os docs', () {
+    final items = List.generate(
+      10,
+      (i) => _item(id: 'be$i', title: 'Doc $i', content: 'a' * 300),
+    );
+    // Budget = 600 chars → cabe apenas 2 docs de 300 chars cada
+    final g = DocumentContextBuilder.buildGrounding(items, maxChars: 600);
+    expect(g.warnings.any((w) => w.code == 'BUDGET_EXCEEDED'), isTrue);
+    expect(g.coverage.used, lessThan(items.length));
   });
 
   // T21 — Source Manifest Invariant

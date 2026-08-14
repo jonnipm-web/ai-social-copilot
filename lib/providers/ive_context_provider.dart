@@ -108,19 +108,28 @@ final iveContextDataProvider = FutureProvider.autoDispose<IveContextData>((ref) 
     projectContext: projectContext,
   );
 
-  // Mapa rápido: documentId → excerpt (para enriquecer knowledgeSummary)
-  final excerptById = {for (final e in grounding.excerpts) e.documentId: e};
+  // Mapa documentId → texto concatenado de todos os excerpts (Pass 2 pode gerar
+  // múltiplos excerpts por documento; separados por "[...]" para o LLM).
+  final excerptTextByDoc = <String, String>{};
+  for (final e in grounding.excerpts) {
+    if (excerptTextByDoc.containsKey(e.documentId)) {
+      excerptTextByDoc[e.documentId] =
+          '${excerptTextByDoc[e.documentId]!}\n\n[...]\n\n${e.text}';
+    } else {
+      excerptTextByDoc[e.documentId] = e.text;
+    }
+  }
 
   // Top 5 com content_excerpt quando grounded; sem excerpt: apenas metadados.
   // Mesmo conjunto passado ao buildGrounding — invariant mantido.
   final knowledgeSummary = topItems.map((k) {
-    final excerpt = excerptById[k.id];
+    final excerptText = excerptTextByDoc[k.id];
     return <String, dynamic>{
       'title':  k.title,
       'score':  k.opportunityScore,
       'status': k.status,
       if (k.niche != null) 'niche': k.niche,
-      if (excerpt != null) 'content_excerpt': excerpt.text,
+      if (excerptText != null) 'content_excerpt': excerptText,
     };
   }).toList();
 
