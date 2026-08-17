@@ -58,24 +58,6 @@ android {
             signingConfig signingConfigs.debug
         }
     }
-
-    // ── APK output naming ─────────────────────────────────────────────────────
-    // AGP 8.x mudou nomenclatura padrão: app-{variantName}.apk (camelCase)
-    // ex: iveAvatarLab + Debug → app-iveAvatarLabDebug.apk
-    //
-    // O Flutter Gradle plugin (flutter-gradle-plugin) copia o APK de saída para
-    // flutter-apk/ usando a lógica: "{baseName}-{buildType}.apk"
-    // onde baseName = outputFileName sem a extensão .apk.
-    //
-    // Portanto: outputFileName deve ser apenas "app-{flavorName}.apk" (sem buildType).
-    // O plugin adiciona "-debug" automaticamente → app-iveAvatarLab-debug.apk ✓
-    // Se incluíssemos "-debug" no outputFileName, o resultado seria o duplo
-    // app-iveAvatarLab-debug-debug.apk, que o Flutter CLI não encontra.
-    applicationVariants.configureEach { variant ->
-        variant.outputs.configureEach { output ->
-            outputFileName = "app-${variant.flavorName}.apk"
-        }
-    }
 }
 
 flutter {
@@ -97,6 +79,30 @@ tasks.configureEach { task ->
         task.name.contains("IveAvatarLab") &&
         task.name.endsWith("GoogleServices")) {
         task.enabled = false
+    }
+
+    // ── APK rename para o Flutter CLI ─────────────────────────────────────────
+    // AGP 8.11.1 nomeia o APK como app-iveAvatarLabDebug.apk (camelCase).
+    // O Flutter Gradle plugin copia para flutter-apk/ e adiciona -debug:
+    //   flutter-apk/app-iveAvatarLabDebug-debug.apk
+    // O Flutter CLI (gradle.dart) procura por:
+    //   flutter-apk/app-iveAvatarLab-debug.apk
+    //
+    // O doLast roda DEPOIS de packageIveAvatarLabDebug (onde o Flutter plugin copia)
+    // e ANTES do Gradle encerrar — quando o Flutter CLI verifica o arquivo.
+    // Assim garante que o nome esperado exista em flutter-apk/ sem mv/cp no workflow.
+    if (task.name == "assembleIveAvatarLabDebug") {
+        task.doLast {
+            def apkDir = new File("${project.buildDir}/outputs/flutter-apk")
+            def target = new File(apkDir, "app-iveAvatarLab-debug.apk")
+            if (apkDir.exists() && !target.exists()) {
+                def candidate = apkDir.listFiles()?.find { it.name.endsWith(".apk") }
+                if (candidate) {
+                    candidate.renameTo(target)
+                    println "[lab] APK: ${candidate.name} → app-iveAvatarLab-debug.apk"
+                }
+            }
+        }
     }
 }
 
