@@ -34,9 +34,11 @@ void main() {
       final p1 = _p('p1', 'Projeto Existente');
       final p2 = _p('p2', 'Novo Projeto');
 
-      when(() => svc.fetchAll())
-          .thenAnswer((_) async => [p1])
-          .thenAnswer((_) async => [p1, p2]);
+      var fetchCallCount = 0;
+      when(() => svc.fetchAll()).thenAnswer((_) async {
+        fetchCallCount++;
+        return fetchCallCount == 1 ? [p1] : [p1, p2];
+      });
       when(() => svc.create(any())).thenAnswer((_) async => p2);
 
       final container = ProviderContainer(overrides: [
@@ -102,7 +104,8 @@ void main() {
       expect(result.map((p) => p.name), containsAll(['A', 'B']));
     });
 
-    test('invalidate dispara rebuild (como weekly_briefing_screen faz)', () async {
+    test('invalidate dispara rebuild (como weekly_briefing_screen faz)',
+        () async {
       final svc = MockProjectService();
       var callCount = 0;
       when(() => svc.fetchAll()).thenAnswer((_) async {
@@ -127,14 +130,17 @@ void main() {
   });
 
   group('Cadeia reativa — Deletar projeto', () {
-    test('delete → optimistic remove → evento emitido → refetch confirma', () async {
+    test('delete → optimistic remove → evento emitido → refetch confirma',
+        () async {
       final svc = MockProjectService();
       final p1 = _p('p1', 'A Manter');
       final p2 = _p('p2', 'A Excluir');
 
-      when(() => svc.fetchAll())
-          .thenAnswer((_) async => [p1, p2])
-          .thenAnswer((_) async => [p1]);
+      var deleteCallCount = 0;
+      when(() => svc.fetchAll()).thenAnswer((_) async {
+        deleteCallCount++;
+        return deleteCallCount == 1 ? [p1, p2] : [p1];
+      });
       when(() => svc.delete('p2')).thenAnswer((_) async {});
 
       final container = ProviderContainer(overrides: [
@@ -147,9 +153,7 @@ void main() {
       final events = <IveEvent>[];
       final sub = IveEventBus.instance.stream.listen(events.add);
 
-      await container
-          .read(projectsNotifierProvider.notifier)
-          .delete('p2');
+      await container.read(projectsNotifierProvider.notifier).delete('p2');
 
       await container.read(projectsNotifierProvider.future);
       await sub.cancel();

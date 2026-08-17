@@ -74,8 +74,8 @@ class _CampaignContent extends StatelessWidget {
         // Key messages
         if (campaign.keyMessages.isNotEmpty) ...[
           _SectionTitle('Mensagens-chave'),
-          ...campaign.keyMessages.map((m) => _BulletItem(
-              m, Icons.message_rounded, const Color(0xFF6C63FF))),
+          ...campaign.keyMessages.map((m) =>
+              _BulletItem(m, Icons.message_rounded, const Color(0xFF6C63FF))),
           const SizedBox(height: 16),
         ],
 
@@ -100,7 +100,8 @@ class _CampaignContent extends StatelessWidget {
           _SectionTitle('Sequência de Emails'),
           const SizedBox(height: 8),
           ...emails.map((e) {
-            final em = e is Map ? Map<String, dynamic>.from(e) : <String, dynamic>{};
+            final em =
+                e is Map ? Map<String, dynamic>.from(e) : <String, dynamic>{};
             return _EmailEntry(em);
           }),
           const SizedBox(height: 16),
@@ -212,7 +213,7 @@ class _Header extends StatelessWidget {
 class _Tag extends StatelessWidget {
   const _Tag(this.label, this.color);
   final String label;
-  final Color  color;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -270,9 +271,9 @@ class _Card extends StatelessWidget {
 
 class _BulletItem extends StatelessWidget {
   const _BulletItem(this.text, this.icon, this.color);
-  final String   text;
+  final String text;
   final IconData icon;
-  final Color    color;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -299,30 +300,41 @@ class _CalendarEntry extends StatelessWidget {
 
   Color _channelColor(String ch) {
     switch (ch.toLowerCase()) {
-      case 'instagram': return const Color(0xFFE91E63);
-      case 'facebook':  return const Color(0xFF1877F2);
-      case 'linkedin':  return const Color(0xFF0077B5);
-      case 'youtube':   return const Color(0xFFF44336);
-      case 'tiktok':    return const Color(0xFF00F2EA);
-      case 'email':     return const Color(0xFFFF9800);
-      case 'blog':      return const Color(0xFF4CAF50);
-      case 'hotmart':   return const Color(0xFF6C63FF);
-      case 'shopify':   return const Color(0xFF00BCD4);
-      case 'amazon':    return const Color(0xFFFF5722);
-      default:          return Colors.white38;
+      case 'instagram':
+        return const Color(0xFFE91E63);
+      case 'facebook':
+        return const Color(0xFF1877F2);
+      case 'linkedin':
+        return const Color(0xFF0077B5);
+      case 'youtube':
+        return const Color(0xFFF44336);
+      case 'tiktok':
+        return const Color(0xFF00F2EA);
+      case 'email':
+        return const Color(0xFFFF9800);
+      case 'blog':
+        return const Color(0xFF4CAF50);
+      case 'hotmart':
+        return const Color(0xFF6C63FF);
+      case 'shopify':
+        return const Color(0xFF00BCD4);
+      case 'amazon':
+        return const Color(0xFFFF5722);
+      default:
+        return Colors.white38;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final day         = entry['day']?.toString() ?? '';
-    final channel     = entry['channel'] as String? ?? '';
+    final day = entry['day']?.toString() ?? '';
+    final channel = entry['channel'] as String? ?? '';
     final contentType = entry['content_type'] as String? ?? '';
-    final topic       = entry['topic'] as String? ?? '';
-    final hook        = entry['hook'] as String? ?? '';
-    final cta         = entry['cta'] as String? ?? '';
-    final brief       = entry['content_brief'] as String? ?? '';
-    final color       = _channelColor(channel);
+    final topic = entry['topic'] as String? ?? '';
+    final hook = entry['hook'] as String? ?? '';
+    final cta = entry['cta'] as String? ?? '';
+    final brief = entry['content_brief'] as String? ?? '';
+    final color = _channelColor(channel);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -423,7 +435,7 @@ class _DetailRow extends StatelessWidget {
   const _DetailRow(this.label, this.value, this.color);
   final String label;
   final String value;
-  final Color  color;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -453,10 +465,10 @@ class _EmailEntry extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final day     = data['day']?.toString() ?? '';
+    final day = data['day']?.toString() ?? '';
     final subject = data['subject'] as String? ?? '';
     final preview = data['preview'] as String? ?? '';
-    final obj     = data['objective'] as String? ?? '';
+    final obj = data['objective'] as String? ?? '';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -464,8 +476,7 @@ class _EmailEntry extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A2E),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-            color: const Color(0xFFFF9800).withOpacity(0.25)),
+        border: Border.all(color: const Color(0xFFFF9800).withOpacity(0.25)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -496,8 +507,8 @@ class _EmailEntry extends StatelessWidget {
                 if (preview.isNotEmpty) ...[
                   const SizedBox(height: 2),
                   Text(preview,
-                      style: const TextStyle(
-                          color: Colors.white54, fontSize: 12)),
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 12)),
                 ],
                 if (obj.isNotEmpty) ...[
                   const SizedBox(height: 4),
@@ -513,4 +524,3 @@ class _EmailEntry extends StatelessWidget {
     );
   }
 }
-

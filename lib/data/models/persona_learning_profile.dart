@@ -50,10 +50,10 @@ class PersonaLearningProfile {
     required List<PersonaTraining> trainings,
     DateTime? now,
   }) {
-    final ref    = now ?? DateTime.now();
+    final ref = now ?? DateTime.now();
     final cutoff = ref.subtract(const Duration(days: 30));
 
-    final vocabulary  = <String>{};
+    final vocabulary = <String>{};
     final brandValues = <String>{};
 
     for (final t in trainings) {
@@ -63,16 +63,20 @@ class PersonaLearningProfile {
 
     final hasRecent = trainings.any((t) => t.createdAt.isAfter(cutoff));
     final lastAt = trainings.isNotEmpty
-        ? trainings.map((t) => t.createdAt).reduce((a, b) => a.isAfter(b) ? a : b)
+        ? trainings
+            .map((t) => t.createdAt)
+            .reduce((a, b) => a.isAfter(b) ? a : b)
         : null;
 
     // Learning score: weighted formula based on depth + recency
     final trainingPts = math.min(40, trainings.length * 10);
-    final vocabPts    = math.min(20, vocabulary.length);
-    final valuePts    = math.min(20, brandValues.length * 2);
-    final summaryPts  = trainings.any((t) => (t.trainingSummary?.isNotEmpty ?? false)) ? 10 : 0;
-    final recentPts   = hasRecent ? 10 : 0;
-    final score = (trainingPts + vocabPts + valuePts + summaryPts + recentPts).clamp(0, 100);
+    final vocabPts = math.min(20, vocabulary.length);
+    final valuePts = math.min(20, brandValues.length * 2);
+    final summaryPts =
+        trainings.any((t) => (t.trainingSummary?.isNotEmpty ?? false)) ? 10 : 0;
+    final recentPts = hasRecent ? 10 : 0;
+    final score = (trainingPts + vocabPts + valuePts + summaryPts + recentPts)
+        .clamp(0, 100);
 
     final topics = trainings
         .map((t) => t.toneProfileJson['topic'] as String? ?? '')
@@ -87,14 +91,14 @@ class PersonaLearningProfile {
         .toList();
 
     return PersonaLearningProfile(
-      persona:           persona,
-      trainingCount:     trainings.length,
-      vocabularySize:    vocabulary.length,
-      brandValueCount:   brandValues.length,
-      learningScore:     score,
-      knownTopics:       topics,
-      knownNiches:       niches,
-      lastTrainedAt:     lastAt,
+      persona: persona,
+      trainingCount: trainings.length,
+      vocabularySize: vocabulary.length,
+      brandValueCount: brandValues.length,
+      learningScore: score,
+      knownTopics: topics,
+      knownNiches: niches,
+      lastTrainedAt: lastAt,
       hasRecentTraining: hasRecent,
     );
   }

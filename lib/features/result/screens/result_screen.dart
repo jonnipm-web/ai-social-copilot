@@ -100,7 +100,8 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
       ),
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
+          constraints:
+              const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
             children: [

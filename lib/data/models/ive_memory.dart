@@ -23,36 +23,36 @@ class IveMemory {
   final List<String> dismissedAlerts;
 
   const IveMemory({
-    this.lastRoute          = '',
+    this.lastRoute = '',
     this.lastProjectId,
     this.lastProjectName,
-    this.recentQuestions    = const [],
-    this.interactionCount   = 0,
+    this.recentQuestions = const [],
+    this.interactionCount = 0,
     this.overallHealthScore = 0,
-    this.ecosystemSnapshot  = const {},
-    this.dismissedAlerts    = const [],
+    this.ecosystemSnapshot = const {},
+    this.dismissedAlerts = const [],
   });
 
   bool isAlertDismissed(String alertId) => dismissedAlerts.contains(alertId);
 
   IveMemory copyWith({
-    String?        lastRoute,
-    String?        lastProjectId,
-    String?        lastProjectName,
-    List<String>?  recentQuestions,
-    int?           interactionCount,
-    int?           overallHealthScore,
+    String? lastRoute,
+    String? lastProjectId,
+    String? lastProjectName,
+    List<String>? recentQuestions,
+    int? interactionCount,
+    int? overallHealthScore,
     Map<String, int>? ecosystemSnapshot,
-    List<String>?  dismissedAlerts,
+    List<String>? dismissedAlerts,
   }) =>
       IveMemory(
-        lastRoute:          lastRoute          ?? this.lastRoute,
-        lastProjectId:      lastProjectId      ?? this.lastProjectId,
-        lastProjectName:    lastProjectName    ?? this.lastProjectName,
-        recentQuestions:    recentQuestions    ?? this.recentQuestions,
-        interactionCount:   interactionCount   ?? this.interactionCount,
+        lastRoute: lastRoute ?? this.lastRoute,
+        lastProjectId: lastProjectId ?? this.lastProjectId,
+        lastProjectName: lastProjectName ?? this.lastProjectName,
+        recentQuestions: recentQuestions ?? this.recentQuestions,
+        interactionCount: interactionCount ?? this.interactionCount,
         overallHealthScore: overallHealthScore ?? this.overallHealthScore,
-        ecosystemSnapshot:  ecosystemSnapshot  ?? this.ecosystemSnapshot,
-        dismissedAlerts:    dismissedAlerts    ?? this.dismissedAlerts,
+        ecosystemSnapshot: ecosystemSnapshot ?? this.ecosystemSnapshot,
+        dismissedAlerts: dismissedAlerts ?? this.dismissedAlerts,
       );
 }

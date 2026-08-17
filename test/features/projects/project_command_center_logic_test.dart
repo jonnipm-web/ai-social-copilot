@@ -9,30 +9,30 @@ import 'package:ai_social_copilot/data/models/project.dart';
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 Project _p(String id, String name, {int priorityScore = 0}) => Project(
-      id:            id,
-      userId:        'uid',
-      name:          name,
+      id: id,
+      userId: 'uid',
+      name: name,
       priorityScore: priorityScore,
-      createdAt:     DateTime(2026),
-      updatedAt:     DateTime(2026),
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
     );
 
 EcosystemScore _score(Project p, int ecoScore) => EcosystemScore(
-      project:          p,
+      project: p,
       opportunityScore: ecoScore,
-      strategicFit:     50,
-      synergyScore:     50,
-      roiScore:         50,
-      momentumScore:    50,
-      ecosystemScore:   ecoScore,
-      recommendation:   ecoScore >= 70 ? 'ESCALAR' : 'MANTER',
-      strengths:        const [],
-      risks:            const [],
-      quickWins:        const [],
-      totalRoi:         0,
-      actionCount:      0,
+      strategicFit: 50,
+      synergyScore: 50,
+      roiScore: 50,
+      momentumScore: 50,
+      ecosystemScore: ecoScore,
+      recommendation: ecoScore >= 70 ? 'ESCALAR' : 'MANTER',
+      strengths: const [],
+      risks: const [],
+      quickWins: const [],
+      totalRoi: 0,
+      actionCount: 0,
       completedActions: 0,
-      labItemCount:     0,
+      labItemCount: 0,
     );
 
 /// Replica a lógica de ordenação da tela.
@@ -136,21 +136,21 @@ void main() {
     test('completionRate calculado corretamente', () {
       final p = _p('p1', 'Z');
       final score = EcosystemScore(
-        project:          p,
+        project: p,
         opportunityScore: 50,
-        strategicFit:     50,
-        synergyScore:     50,
-        roiScore:         50,
-        momentumScore:    50,
-        ecosystemScore:   50,
-        recommendation:   'MANTER',
-        strengths:        const [],
-        risks:            const [],
-        quickWins:        const [],
-        totalRoi:         0,
-        actionCount:      10,
+        strategicFit: 50,
+        synergyScore: 50,
+        roiScore: 50,
+        momentumScore: 50,
+        ecosystemScore: 50,
+        recommendation: 'MANTER',
+        strengths: const [],
+        risks: const [],
+        quickWins: const [],
+        totalRoi: 0,
+        actionCount: 10,
         completedActions: 7,
-        labItemCount:     0,
+        labItemCount: 0,
       );
       expect(score.completionRate, 70);
     });

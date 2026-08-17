@@ -17,15 +17,15 @@ final _bootstrapService = AutoBootstrapService();
 // ── Projects that need bootstrapping ──────────────────────────────────────
 final projectsNeedingBootstrapProvider =
     FutureProvider.autoDispose<List<Project>>((ref) async {
-  final projects      = await ref.watch(projectsProvider.future);
-  final actions       = await ref.watch(actionQueueProvider.future);
-  final labItems      = await ref.watch(opportunityLabProvider.future);
+  final projects = await ref.watch(projectsProvider.future);
+  final actions = await ref.watch(actionQueueProvider.future);
+  final labItems = await ref.watch(opportunityLabProvider.future);
   final knowledgeList = await ref.watch(knowledgeItemsProvider.future);
 
   return _bootstrapService.detectNeedingBootstrap(
-    projects:      projects,
-    actions:       actions,
-    labItems:      labItems,
+    projects: projects,
+    actions: actions,
+    labItems: labItems,
     knowledgeItems: knowledgeList,
   );
 });
@@ -58,12 +58,12 @@ class BootstrapState {
     String? error,
   }) =>
       BootstrapState(
-        isRunning:       isRunning ?? this.isRunning,
-        currentStep:     currentStep ?? this.currentStep,
-        currentProject:  currentProject ?? this.currentProject,
-        totalProjects:   totalProjects ?? this.totalProjects,
-        report:          report ?? this.report,
-        error:           error ?? this.error,
+        isRunning: isRunning ?? this.isRunning,
+        currentStep: currentStep ?? this.currentStep,
+        currentProject: currentProject ?? this.currentProject,
+        totalProjects: totalProjects ?? this.totalProjects,
+        report: report ?? this.report,
+        error: error ?? this.error,
       );
 
   bool get isDone => !isRunning && report != null;
@@ -83,18 +83,18 @@ class AutoBootstrapNotifier extends StateNotifier<BootstrapState> {
 
     try {
       // Gather needed data
-      final projects       = await _ref.read(projectsProvider.future);
-      final actions        = await _ref.read(actionQueueProvider.future);
-      final labItems       = await _ref.read(opportunityLabProvider.future);
+      final projects = await _ref.read(projectsProvider.future);
+      final actions = await _ref.read(actionQueueProvider.future);
+      final labItems = await _ref.read(opportunityLabProvider.future);
       final knowledgeItems = await _ref.read(knowledgeItemsProvider.future);
-      final personas       = await _ref.read(personasProvider.future);
-      final trainings      = await _ref.read(allPersonaTrainingsProvider.future);
-      final analyses       = await _ref.read(marketAnalysesProvider.future);
+      final personas = await _ref.read(personasProvider.future);
+      final trainings = await _ref.read(allPersonaTrainingsProvider.future);
+      final analyses = await _ref.read(marketAnalysesProvider.future);
 
       final toBootstrap = _bootstrapService.detectNeedingBootstrap(
-        projects:       projects,
-        actions:        actions,
-        labItems:       labItems,
+        projects: projects,
+        actions: actions,
+        labItems: labItems,
         knowledgeItems: knowledgeItems,
       );
 
@@ -104,11 +104,11 @@ class AutoBootstrapNotifier extends StateNotifier<BootstrapState> {
       final aiAnalyses = await _bootstrapService.fetchAnalysesWithTraining();
 
       state = state.copyWith(
-        isRunning:      true,
-        totalProjects:  toBootstrap.length,
+        isRunning: true,
+        totalProjects: toBootstrap.length,
         currentProject: 0,
-        report:         null,
-        error:          null,
+        report: null,
+        error: null,
       );
 
       final results = <BootstrapProjectResult>[];
@@ -122,16 +122,16 @@ class AutoBootstrapNotifier extends StateNotifier<BootstrapState> {
 
         state = state.copyWith(
           currentProject: i + 1,
-          currentStep:    'Iniciando',
+          currentStep: 'Iniciando',
         );
 
         final result = await _bootstrapService.bootstrapProject(
-          project:          project,
-          knowledgeItems:   knowledgeItems,
-          analyses:         aiAnalyses,
-          personas:         personas,
+          project: project,
+          knowledgeItems: knowledgeItems,
+          analyses: aiAnalyses,
+          personas: personas,
           existingTrainings: trainings,
-          linkedAnalysis:   linkedAnalysis.isEmpty ? null : linkedAnalysis.first,
+          linkedAnalysis: linkedAnalysis.isEmpty ? null : linkedAnalysis.first,
           onStep: (step) => state = state.copyWith(currentStep: step),
         );
 
@@ -140,9 +140,9 @@ class AutoBootstrapNotifier extends StateNotifier<BootstrapState> {
       }
 
       final report = BootstrapReport(
-        projectResults:      results,
+        projectResults: results,
         personasTrainedTotal: totalPersonasTrained,
-        completedAt:         DateTime.now(),
+        completedAt: DateTime.now(),
       );
 
       // Invalidate all affected providers so UI refreshes
@@ -155,9 +155,11 @@ class AutoBootstrapNotifier extends StateNotifier<BootstrapState> {
       _ref.invalidate(personaLearningProfilesProvider);
       _ref.invalidate(projectsNeedingBootstrapProvider);
 
-      state = state.copyWith(isRunning: false, currentStep: null, report: report);
+      state =
+          state.copyWith(isRunning: false, currentStep: null, report: report);
     } catch (e) {
-      state = state.copyWith(isRunning: false, currentStep: null, error: e.toString());
+      state = state.copyWith(
+          isRunning: false, currentStep: null, error: e.toString());
     }
   }
 

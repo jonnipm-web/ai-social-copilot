@@ -40,40 +40,42 @@ class WebsiteAnalysisResultScreen extends ConsumerWidget {
         elevation: 0,
         actions: [
           analysisAsync.whenOrNull(
-            data: (analysis) => Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextButton.icon(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Análise já salva no banco de dados!'),
-                        backgroundColor: Colors.green,
+                data: (analysis) => Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextButton.icon(
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content:
+                                Text('Análise já salva no banco de dados!'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.lock, size: 16, color: _accent),
+                      label: const Text(
+                        'Salvar no Cofre',
+                        style: TextStyle(color: _accent, fontSize: 13),
                       ),
-                    );
-                  },
-                  icon: const Icon(Icons.lock, size: 16, color: _accent),
-                  label: const Text(
-                    'Salvar no Cofre',
-                    style: TextStyle(color: _accent, fontSize: 13),
-                  ),
+                    ),
+                    TextButton.icon(
+                      onPressed: () {
+                        context.go(
+                          '/knowledge/new',
+                          extra: {'prefillUrl': analysis.url},
+                        );
+                      },
+                      icon: const Icon(Icons.auto_awesome,
+                          size: 16, color: _primary),
+                      label: const Text(
+                        'Criar Estratégia',
+                        style: TextStyle(color: _primary, fontSize: 13),
+                      ),
+                    ),
+                  ],
                 ),
-                TextButton.icon(
-                  onPressed: () {
-                    context.go(
-                      '/knowledge/new',
-                      extra: {'prefillUrl': analysis.url},
-                    );
-                  },
-                  icon: const Icon(Icons.auto_awesome, size: 16, color: _primary),
-                  label: const Text(
-                    'Criar Estratégia',
-                    style: TextStyle(color: _primary, fontSize: 13),
-                  ),
-                ),
-              ],
-            ),
-          ) ??
+              ) ??
               const SizedBox.shrink(),
         ],
       ),
@@ -194,7 +196,8 @@ class _AnalysisContent extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.copy, color: Colors.white.withOpacity(0.5), size: 18),
+                  icon: Icon(Icons.copy,
+                      color: Colors.white.withOpacity(0.5), size: 18),
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: analysis.url));
                   },
@@ -278,8 +281,7 @@ class _AnalysisContent extends StatelessWidget {
               ),
             ),
 
-          if (analysis.strengths.isNotEmpty)
-            const SizedBox(height: 8),
+          if (analysis.strengths.isNotEmpty) const SizedBox(height: 8),
 
           if (analysis.weaknesses.isNotEmpty)
             _ExpandableSection(
@@ -293,8 +295,7 @@ class _AnalysisContent extends StatelessWidget {
               ),
             ),
 
-          if (analysis.weaknesses.isNotEmpty)
-            const SizedBox(height: 8),
+          if (analysis.weaknesses.isNotEmpty) const SizedBox(height: 8),
 
           if (analysis.criticalIssues.isNotEmpty)
             _ExpandableSection(
@@ -308,8 +309,7 @@ class _AnalysisContent extends StatelessWidget {
               ),
             ),
 
-          if (analysis.criticalIssues.isNotEmpty)
-            const SizedBox(height: 8),
+          if (analysis.criticalIssues.isNotEmpty) const SizedBox(height: 8),
 
           if (analysis.seoAnalysis.isNotEmpty)
             _ExpandableSection(
@@ -320,8 +320,7 @@ class _AnalysisContent extends StatelessWidget {
               child: _MapContent(data: analysis.seoAnalysis),
             ),
 
-          if (analysis.seoAnalysis.isNotEmpty)
-            const SizedBox(height: 8),
+          if (analysis.seoAnalysis.isNotEmpty) const SizedBox(height: 8),
 
           if (analysis.adsenseAnalysis.isNotEmpty)
             _ExpandableSection(
@@ -332,8 +331,7 @@ class _AnalysisContent extends StatelessWidget {
               child: _AdsenseContent(analysis: analysis),
             ),
 
-          if (analysis.adsenseAnalysis.isNotEmpty)
-            const SizedBox(height: 8),
+          if (analysis.adsenseAnalysis.isNotEmpty) const SizedBox(height: 8),
 
           if (analysis.quickWins.isNotEmpty)
             _ExpandableSection(
@@ -348,8 +346,7 @@ class _AnalysisContent extends StatelessWidget {
               ),
             ),
 
-          if (analysis.quickWins.isNotEmpty)
-            const SizedBox(height: 8),
+          if (analysis.quickWins.isNotEmpty) const SizedBox(height: 8),
 
           if (analysis.plan7Days.isNotEmpty)
             _ExpandableSection(
@@ -360,8 +357,7 @@ class _AnalysisContent extends StatelessWidget {
               child: _NumberedList(items: analysis.plan7Days),
             ),
 
-          if (analysis.plan7Days.isNotEmpty)
-            const SizedBox(height: 8),
+          if (analysis.plan7Days.isNotEmpty) const SizedBox(height: 8),
 
           if (analysis.plan30Days.isNotEmpty)
             _ExpandableSection(
@@ -372,8 +368,7 @@ class _AnalysisContent extends StatelessWidget {
               child: _NumberedList(items: analysis.plan30Days),
             ),
 
-          if (analysis.plan30Days.isNotEmpty)
-            const SizedBox(height: 8),
+          if (analysis.plan30Days.isNotEmpty) const SizedBox(height: 8),
 
           if (analysis.articleIdeas.isNotEmpty)
             _ExpandableSection(
@@ -387,8 +382,7 @@ class _AnalysisContent extends StatelessWidget {
               ),
             ),
 
-          if (analysis.articleIdeas.isNotEmpty)
-            const SizedBox(height: 8),
+          if (analysis.articleIdeas.isNotEmpty) const SizedBox(height: 8),
 
           if (analysis.monetizationOpportunities.isNotEmpty)
             _ExpandableSection(
@@ -544,7 +538,9 @@ class _ExpandableSectionState extends State<_ExpandableSection> {
                     ),
                   ),
                   Icon(
-                    _expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    _expanded
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
                     color: Colors.white.withOpacity(0.5),
                   ),
                 ],
@@ -620,7 +616,8 @@ class _DiagnosticContent extends StatelessWidget {
             children: mainTopics
                 .map(
                   (topic) => Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: const Color(0xFF6C63FF).withOpacity(0.2),
                       borderRadius: BorderRadius.circular(20),
@@ -630,7 +627,8 @@ class _DiagnosticContent extends StatelessWidget {
                     ),
                     child: Text(
                       topic,
-                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 12),
                     ),
                   ),
                 )
@@ -753,7 +751,8 @@ class _MapContent extends StatelessWidget {
         final key = entry.key
             .replaceAll('_', ' ')
             .split(' ')
-            .map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : w)
+            .map((w) =>
+                w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : w)
             .join(' ');
         final value = entry.value;
 

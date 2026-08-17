@@ -67,15 +67,16 @@ void main() {
       // Aguarda a resolução
       final result = await container.read(projectsNotifierProvider.future);
 
-      expect(result, [p]);
-      expect(
-        container.read(projectsNotifierProvider),
-        AsyncData([p]),
-      );
+      expect(result, containsAll([p]));
+      expect(result.length, 1);
+      final state = container.read(projectsNotifierProvider);
+      expect(state.hasValue, isTrue);
+      expect(state.value, containsAll([p]));
       verify(() => svc.fetchAll()).called(1);
     });
 
-    test('projectsProvider é o mesmo provider que projectsNotifierProvider', () {
+    test('projectsProvider é o mesmo provider que projectsNotifierProvider',
+        () {
       // Garante que o alias aponta para a mesma instância
       expect(identical(projectsProvider, projectsNotifierProvider), isTrue);
     });
@@ -86,10 +87,13 @@ void main() {
       final container = _container(svc);
       addTearDown(container.dispose);
 
-      final state = await container
-          .read(projectsNotifierProvider.future)
-          .then(AsyncData.new)
-          .onError((e, st) => AsyncError<List<Project>>(e!, st));
+      AsyncValue<List<Project>> state;
+      try {
+        final result = await container.read(projectsNotifierProvider.future);
+        state = AsyncData(result);
+      } catch (e, st) {
+        state = AsyncError(e, st);
+      }
 
       expect(state, isA<AsyncError<List<Project>>>());
     });
@@ -102,9 +106,11 @@ void main() {
       final created = _project(id: 'p2', name: 'Novo Projeto');
       final afterCreate = [...initial, created];
 
-      when(() => svc.fetchAll())
-          .thenAnswer((_) async => initial)
-          .thenAnswer((_) async => afterCreate);
+      var createFetchCount = 0;
+      when(() => svc.fetchAll()).thenAnswer((_) async {
+        createFetchCount++;
+        return createFetchCount == 1 ? initial : afterCreate;
+      });
       when(() => svc.create(any())).thenAnswer((_) async => created);
 
       final container = _container(svc);
@@ -138,8 +144,7 @@ void main() {
       await container.read(projectsNotifierProvider.future);
 
       IveEvent? received;
-      final sub =
-          IveEventBus.instance.stream.listen((e) => received = e);
+      final sub = IveEventBus.instance.stream.listen((e) => received = e);
 
       await container
           .read(projectsNotifierProvider.notifier)
@@ -177,11 +182,12 @@ void main() {
       final original = _project(id: 'p1', status: 'idea');
       final updated = _project(id: 'p1', status: 'active');
 
-      when(() => svc.fetchAll())
-          .thenAnswer((_) async => [original])
-          .thenAnswer((_) async => [updated]);
-      when(() => svc.update('p1', any()))
-          .thenAnswer((_) async => updated);
+      var updateFetchCount = 0;
+      when(() => svc.fetchAll()).thenAnswer((_) async {
+        updateFetchCount++;
+        return updateFetchCount == 1 ? [original] : [updated];
+      });
+      when(() => svc.update('p1', any())).thenAnswer((_) async => updated);
 
       final container = _container(svc);
       addTearDown(container.dispose);
@@ -239,9 +245,8 @@ void main() {
       await container.read(projectsNotifierProvider.future);
 
       // Não aguarda — verifica estado otimista imediato
-      final future = container
-          .read(projectsNotifierProvider.notifier)
-          .delete('p1');
+      final future =
+          container.read(projectsNotifierProvider.notifier).delete('p1');
 
       // Imediatamente após chamar delete, o estado já não tem 'p1'
       final stateOptimistic =
@@ -285,9 +290,7 @@ void main() {
       IveEvent? received;
       final sub = IveEventBus.instance.stream.listen((e) => received = e);
 
-      await container
-          .read(projectsNotifierProvider.notifier)
-          .delete('p1');
+      await container.read(projectsNotifierProvider.notifier).delete('p1');
 
       await Future<void>.delayed(Duration.zero);
       await sub.cancel();

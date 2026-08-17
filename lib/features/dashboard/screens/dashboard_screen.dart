@@ -18,7 +18,7 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(currentProfileProvider);
-    final usageAsync   = ref.watch(monthlyUsageProvider);
+    final usageAsync = ref.watch(monthlyUsageProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -27,40 +27,43 @@ class DashboardScreen extends ConsumerWidget {
       drawer: const AppDrawer(),
       body: profileAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error:   (e, _) => Center(child: Text('Erro: $e')),
-        data:    (profile) {
+        error: (e, _) => Center(child: Text('Erro: $e')),
+        data: (profile) {
           final isAdmin = profile?.isAdmin ?? false;
-          final isPro   = profile?.isPro   ?? false;
-          final limit   = profile?.monthlyLimit ?? 5;
+          final isPro = profile?.isPro ?? false;
+          final limit = profile?.monthlyLimit ?? 5;
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
+                constraints:
+                    const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // Boas-vindas
                     Text(
                       'Olá! Bem-vindo de volta 👋',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      style:
+                          Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'Plano: ${profile?.roleLabel ?? "Free"}',
-                      style: const TextStyle(color: Colors.white54, fontSize: 14),
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 14),
                     ),
                     const SizedBox(height: 24),
 
                     // Card de uso mensal
                     usageAsync.when(
                       loading: () => const SizedBox.shrink(),
-                      error:   (_, __) => const SizedBox.shrink(),
-                      data:    (used) => _UsageCard(used: used, limit: limit),
+                      error: (_, __) => const SizedBox.shrink(),
+                      data: (used) => _UsageCard(used: used, limit: limit),
                     ),
                     const SizedBox(height: 16),
 
@@ -112,7 +115,8 @@ class DashboardScreen extends ConsumerWidget {
                           child: _ShortcutCard(
                             icon: Icons.history_rounded,
                             label: 'Histórico',
-                            onTap: () => context.push(AppConstants.routeHistory),
+                            onTap: () =>
+                                context.push(AppConstants.routeHistory),
                           ),
                         ),
                       ],
@@ -124,7 +128,8 @@ class DashboardScreen extends ConsumerWidget {
                           child: _ShortcutCard(
                             icon: Icons.auto_stories_rounded,
                             label: 'Cofre',
-                            onTap: () => context.go(AppConstants.routeKnowledge),
+                            onTap: () =>
+                                context.go(AppConstants.routeKnowledge),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -132,7 +137,8 @@ class DashboardScreen extends ConsumerWidget {
                           child: _ShortcutCard(
                             icon: Icons.campaign_rounded,
                             label: 'Campanhas',
-                            onTap: () => context.go(AppConstants.routeCampaigns),
+                            onTap: () =>
+                                context.go(AppConstants.routeCampaigns),
                           ),
                         ),
                       ],
@@ -144,7 +150,8 @@ class DashboardScreen extends ConsumerWidget {
                           child: _ShortcutCard(
                             icon: Icons.language_rounded,
                             label: 'Website\nAnalyzer',
-                            onTap: () => context.go(AppConstants.routeWebsiteAnalyzer),
+                            onTap: () =>
+                                context.go(AppConstants.routeWebsiteAnalyzer),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -152,7 +159,8 @@ class DashboardScreen extends ConsumerWidget {
                           child: _ShortcutCard(
                             icon: Icons.bar_chart_rounded,
                             label: 'Performance',
-                            onTap: () => context.go(AppConstants.routePerformance),
+                            onTap: () =>
+                                context.go(AppConstants.routePerformance),
                           ),
                         ),
                       ],
@@ -271,9 +279,9 @@ class _ActionButton extends StatelessWidget {
   });
 
   final IconData icon;
-  final String   label;
-  final String   subtitle;
-  final Color    color;
+  final String label;
+  final String subtitle;
+  final Color color;
   final VoidCallback onTap;
 
   @override
@@ -308,7 +316,8 @@ class _ActionButton extends StatelessWidget {
                     ),
                     Text(
                       subtitle,
-                      style: const TextStyle(color: Colors.white54, fontSize: 12),
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 12),
                     ),
                   ],
                 ),
@@ -331,9 +340,9 @@ class _ShortcutCard extends StatelessWidget {
   });
 
   final IconData icon;
-  final String   label;
+  final String label;
   final VoidCallback onTap;
-  final bool     locked;
+  final bool locked;
 
   @override
   Widget build(BuildContext context) {
@@ -389,9 +398,9 @@ class _AdminStats extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final usersAsync    = ref.watch(allProfilesProvider);
+    final usersAsync = ref.watch(allProfilesProvider);
     final personasAsync = ref.watch(personasProvider);
-    final contentAsync  = ref.watch(contentItemsProvider);
+    final contentAsync = ref.watch(contentItemsProvider);
     final knowledgeAsync = ref.watch(knowledgeItemsProvider);
     final campaignsAsync = ref.watch(campaignsProvider);
 
@@ -483,8 +492,8 @@ class _StatTile extends StatelessWidget {
     required this.value,
     required this.icon,
   });
-  final String   label;
-  final String   value;
+  final String label;
+  final String value;
   final IconData icon;
 
   @override

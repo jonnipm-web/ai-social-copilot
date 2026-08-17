@@ -25,9 +25,9 @@ class CopilotService {
     final row = await _client
         .from(AppConstants.tableCopilotSessions)
         .insert(CopilotSession(
-          id:        '',
-          userId:    uid,
-          title:     title,
+          id: '',
+          userId: uid,
+          title: title,
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
         ).toInsertMap())
@@ -39,8 +39,7 @@ class CopilotService {
   Future<void> closeSession(String sessionId) async {
     await _client
         .from(AppConstants.tableCopilotSessions)
-        .update({'status': 'closed'})
-        .eq('id', sessionId);
+        .update({'status': 'closed'}).eq('id', sessionId);
   }
 
   // ── Messages ─────────────────────────────────────────────────
@@ -65,20 +64,18 @@ class CopilotService {
     final row = await _client
         .from(AppConstants.tableCopilotMessages)
         .insert(CopilotMessage(
-          id:        '',
+          id: '',
           sessionId: sessionId,
-          userId:    uid,
-          role:      role,
-          content:   content,
+          userId: uid,
+          role: role,
+          content: content,
           createdAt: DateTime.now(),
         ).toInsertMap())
         .select()
         .single();
 
-    await _client
-        .from(AppConstants.tableCopilotSessions)
-        .update({'updated_at': DateTime.now().toIso8601String()})
-        .eq('id', sessionId);
+    await _client.from(AppConstants.tableCopilotSessions).update(
+        {'updated_at': DateTime.now().toIso8601String()}).eq('id', sessionId);
 
     return CopilotMessage.fromMap(row);
   }
@@ -94,10 +91,10 @@ class CopilotService {
 
     await _client.from(AppConstants.tableCopilotContext).upsert(
       {
-        'user_id':      uid,
+        'user_id': uid,
         'context_type': contextType,
         'context_data': contextData,
-        'updated_at':   DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
       },
       onConflict: 'user_id,context_type',
     );

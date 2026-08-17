@@ -20,17 +20,17 @@ class KnowledgeItem {
 
   static const sourceTypeLabels = {
     'manual': 'Texto Manual',
-    'url':    'URL / Site',
-    'file':   'Arquivo',
+    'url': 'URL / Site',
+    'file': 'Arquivo',
   };
 
   static const statuses = ['pending', 'processing', 'analyzed', 'error'];
 
   static const statusLabels = {
-    'pending':    'Pendente',
+    'pending': 'Pendente',
     'processing': 'Processando',
-    'analyzed':   'Analisado',
-    'error':      'Erro',
+    'analyzed': 'Analisado',
+    'error': 'Erro',
   };
 
   const KnowledgeItem({
@@ -53,48 +53,48 @@ class KnowledgeItem {
   });
 
   String get sourceTypeLabel => sourceTypeLabels[sourceType] ?? sourceType;
-  String get statusLabel     => statusLabels[status]         ?? status;
+  String get statusLabel => statusLabels[status] ?? status;
 
   factory KnowledgeItem.fromMap(Map<String, dynamic> map) {
     return KnowledgeItem(
-      id:             map['id'] as String,
-      userId:         map['user_id'] as String,
-      projectId:      map['project_id'] as String?,
-      title:          map['title'] as String,
-      sourceType:     map['source_type'] as String? ?? 'manual',
-      sourceUrl:      map['source_url'] as String?,
-      fileName:       map['file_name'] as String?,
-      content:        map['content'] as String? ?? '',
-      niche:          map['niche'] as String?,
+      id: map['id'] as String,
+      userId: map['user_id'] as String,
+      projectId: map['project_id'] as String?,
+      title: map['title'] as String,
+      sourceType: map['source_type'] as String? ?? 'manual',
+      sourceUrl: map['source_url'] as String?,
+      fileName: map['file_name'] as String?,
+      content: map['content'] as String? ?? '',
+      niche: map['niche'] as String?,
       targetAudience: map['target_audience'] as String?,
-      language:       map['language'] as String? ?? 'pt-BR',
-      personaId:      map['persona_id'] as String?,
-      status:         map['status'] as String? ?? 'pending',
+      language: map['language'] as String? ?? 'pt-BR',
+      personaId: map['persona_id'] as String?,
+      status: map['status'] as String? ?? 'pending',
       opportunityScore: map['opportunity_score'] as int? ?? 0,
-      createdAt:      map['created_at'] != null
+      createdAt: map['created_at'] != null
           ? DateTime.parse(map['created_at'] as String)
           : DateTime.now(),
-      updatedAt:      map['updated_at'] != null
+      updatedAt: map['updated_at'] != null
           ? DateTime.parse(map['updated_at'] as String)
           : DateTime.now(),
     );
   }
 
   Map<String, dynamic> toInsertMap() => {
-    'user_id':        userId,
-    if (projectId != null) 'project_id': projectId,
-    'title':          title,
-    'source_type':    sourceType,
-    'source_url':     sourceUrl,
-    'file_name':      fileName,
-    'content':        content,
-    'niche':          niche,
-    'target_audience': targetAudience,
-    'language':       language,
-    'persona_id':     personaId,
-    'status':         status,
-    'opportunity_score': opportunityScore,
-  };
+        'user_id': userId,
+        if (projectId != null) 'project_id': projectId,
+        'title': title,
+        'source_type': sourceType,
+        'source_url': sourceUrl,
+        'file_name': fileName,
+        'content': content,
+        'niche': niche,
+        'target_audience': targetAudience,
+        'language': language,
+        'persona_id': personaId,
+        'status': status,
+        'opportunity_score': opportunityScore,
+      };
 
   KnowledgeItem copyWith({
     String? projectId,
@@ -111,22 +111,22 @@ class KnowledgeItem {
     int? opportunityScore,
   }) {
     return KnowledgeItem(
-      id:             id,
-      userId:         userId,
-      projectId:      projectId      ?? this.projectId,
-      title:          title          ?? this.title,
-      sourceType:     sourceType     ?? this.sourceType,
-      sourceUrl:      sourceUrl      ?? this.sourceUrl,
-      fileName:       fileName       ?? this.fileName,
-      content:        content        ?? this.content,
-      niche:          niche          ?? this.niche,
+      id: id,
+      userId: userId,
+      projectId: projectId ?? this.projectId,
+      title: title ?? this.title,
+      sourceType: sourceType ?? this.sourceType,
+      sourceUrl: sourceUrl ?? this.sourceUrl,
+      fileName: fileName ?? this.fileName,
+      content: content ?? this.content,
+      niche: niche ?? this.niche,
       targetAudience: targetAudience ?? this.targetAudience,
-      language:       language       ?? this.language,
-      personaId:      personaId      ?? this.personaId,
-      status:         status         ?? this.status,
+      language: language ?? this.language,
+      personaId: personaId ?? this.personaId,
+      status: status ?? this.status,
       opportunityScore: opportunityScore ?? this.opportunityScore,
-      createdAt:      createdAt,
-      updatedAt:      DateTime.now(),
+      createdAt: createdAt,
+      updatedAt: DateTime.now(),
     );
   }
 }

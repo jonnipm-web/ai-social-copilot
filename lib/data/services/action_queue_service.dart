@@ -8,13 +8,12 @@ class ActionQueueService {
 
   String? get currentUserId => _client.auth.currentUser?.id;
 
-  Future<List<ActionQueueItem>> fetchAll({String? projectId, String? status}) async {
-    var filter = _client
-        .from(AppConstants.tableActionQueue)
-        .select();
+  Future<List<ActionQueueItem>> fetchAll(
+      {String? projectId, String? status}) async {
+    var filter = _client.from(AppConstants.tableActionQueue).select();
 
     if (projectId != null) filter = filter.eq('project_id', projectId);
-    if (status != null)    filter = filter.eq('status', status);
+    if (status != null) filter = filter.eq('status', status);
 
     final rows = await filter.order('priority', ascending: true);
     return rows.map((r) => ActionQueueItem.fromMap(r)).toList();
@@ -58,14 +57,13 @@ class ActionQueueService {
     await _client.from(AppConstants.tableActionQueue).delete().eq('id', id);
   }
 
-  Future<List<ActionQueueItem>> fetchPending() =>
-      fetchAll(status: 'pending');
+  Future<List<ActionQueueItem>> fetchPending() => fetchAll(status: 'pending');
 
   Future<Map<String, int>> summary() async {
     final list = await fetchAll();
     return {
-      'total':     list.length,
-      'pending':   list.where((i) => i.status == 'pending').length,
+      'total': list.length,
+      'pending': list.where((i) => i.status == 'pending').length,
       'executing': list.where((i) => i.status == 'executing').length,
       'completed': list.where((i) => i.status == 'completed').length,
     };

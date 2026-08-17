@@ -32,7 +32,9 @@ String extractErrorMessage(dynamic e) {
       str.contains('Failed host lookup')) {
     return 'Não foi possível conectar. Verifique sua internet.';
   }
-  if (str.contains('401') || str.contains('Unauthorized') || str.contains('jwt expired')) {
+  if (str.contains('401') ||
+      str.contains('Unauthorized') ||
+      str.contains('jwt expired')) {
     return 'Sua sessão expirou. Faça login novamente.';
   }
   if (str.contains('TimeoutException') || str.contains('timed out')) {

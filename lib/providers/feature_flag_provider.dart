@@ -19,10 +19,16 @@ final featureFlagProvider =
 });
 
 extension FlagMapX on Map<String, bool> {
-  bool get advisorEnabled        => this[FeatureFlag.advisorEnabled]        ?? false;
-  bool get businessMemoryEnabled => this[FeatureFlag.businessMemoryEnabled] ?? true;
-  bool get ecosystemViewEnabled  => this[FeatureFlag.ecosystemViewEnabled]  ?? true;
-  bool get opportunityLabEnabled => this[FeatureFlag.opportunityLabEnabled] ?? false;
-  bool get actionEngineEnabled   => this[FeatureFlag.actionEngineEnabled]   ?? false;
-  bool get copilotEnabled        => this[FeatureFlag.copilotEnabled]        ?? false;
+  bool get advisorEnabled => this[FeatureFlag.advisorEnabled] ?? false;
+  bool get businessMemoryEnabled =>
+      this[FeatureFlag.businessMemoryEnabled] ?? true;
+  bool get ecosystemViewEnabled =>
+      this[FeatureFlag.ecosystemViewEnabled] ?? true;
+  bool get opportunityLabEnabled =>
+      this[FeatureFlag.opportunityLabEnabled] ?? false;
+  bool get actionEngineEnabled =>
+      this[FeatureFlag.actionEngineEnabled] ?? false;
+  bool get copilotEnabled => this[FeatureFlag.copilotEnabled] ?? false;
+  // IVE Avatar V2 — starts false; must be explicitly enabled in Supabase
+  bool get iveAvatarV2Enabled => this[FeatureFlag.iveAvatarV2Enabled] ?? false;
 }

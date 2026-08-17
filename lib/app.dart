@@ -52,6 +52,7 @@ import 'features/action_engine/screens/action_engine_screen.dart';
 import 'features/action_engine/screens/action_detail_screen.dart';
 import 'features/dashboard/screens/executive_dashboard_screen.dart';
 import 'features/debug/screens/intelligence_debug_hub_screen.dart';
+import 'shared/ive_avatar/showcase/ive_avatar_showcase_page.dart';
 
 final _iveObserver = IveRouteObserver();
 
@@ -60,12 +61,12 @@ final _router = GoRouter(
   observers: [_iveObserver],
   redirect: (context, state) {
     final session = Supabase.instance.client.auth.currentSession;
-    final goingToAuth   = state.fullPath == AppConstants.routeLogin;
+    final goingToAuth = state.fullPath == AppConstants.routeLogin;
     final goingToSplash = state.fullPath == AppConstants.routeSplash;
 
     if (goingToSplash) return null;
     if (session == null && !goingToAuth) return AppConstants.routeLogin;
-    if (session != null && goingToAuth)  return AppConstants.routeDashboard;
+    if (session != null && goingToAuth) return AppConstants.routeDashboard;
     return null;
   },
   routes: [
@@ -103,8 +104,8 @@ final _router = GoRouter(
         }
         final map = extra as Map<String, dynamic>;
         return ResultScreen(
-          originalText:      map['originalText'] as String,
-          result:            map['result'] as Map<String, dynamic>,
+          originalText: map['originalText'] as String,
+          result: map['result'] as Map<String, dynamic>,
           processingSeconds: map['processingSeconds'] as double?,
         );
       },
@@ -369,6 +370,12 @@ final _router = GoRouter(
       path: AppConstants.routeIntelligenceDebug,
       builder: (_, __) => const IntelligenceDebugHubScreen(),
     ),
+
+    // ── IVE Avatar System V2 — showcase (debug / dev only) ───────────────
+    GoRoute(
+      path: AppConstants.routeIveAvatarShowcase,
+      builder: (_, __) => const IveAvatarShowcasePage(),
+    ),
   ],
 );
 
@@ -378,10 +385,10 @@ class App extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp.router(
-      title:                      AppConstants.appName,
+      title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
-      theme:                      AppTheme.dark,
-      routerConfig:               _router,
+      theme: AppTheme.dark,
+      routerConfig: _router,
       // Global safe area: evita que conteúdo fique atrás da barra de navegação
       // do Android (edge-to-edge mode). top: false pois o AppBar já cuida do topo.
       builder: (context, child) => SafeArea(

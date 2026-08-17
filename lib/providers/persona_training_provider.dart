@@ -8,9 +8,8 @@ import '../data/services/persona_training_service.dart';
 final personaTrainingServiceProvider =
     Provider<PersonaTrainingService>((_) => PersonaTrainingService());
 
-final personaTrainingProvider =
-    FutureProvider.autoDispose.family<List<PersonaTraining>, String>(
-        (ref, personaId) {
+final personaTrainingProvider = FutureProvider.autoDispose
+    .family<List<PersonaTraining>, String>((ref, personaId) {
   return ref.watch(personaTrainingServiceProvider).fetchForPersona(personaId);
 });
 
@@ -35,8 +34,8 @@ class PersonaTrainingNotifier
     try {
       final result = await _service.trainFromAnalysis(
         personaId: personaId,
-        item:      item,
-        analysis:  analysis,
+        item: item,
+        analysis: analysis,
       );
       state = AsyncValue.data(result);
       return result;

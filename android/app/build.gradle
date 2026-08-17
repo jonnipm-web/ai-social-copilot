@@ -1,0 +1,113 @@
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+android {
+    namespace "com.insightvalues.aisocialcopilot"
+    compileSdk = flutter.compileSdkVersion
+    ndkVersion = flutter.ndkVersion
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_11
+    }
+
+    defaultConfig {
+        applicationId "com.insightvalues.aisocialcopilot"
+        minSdk = flutter.minSdkVersion
+        targetSdk = flutter.targetSdkVersion
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+    }
+
+    // ── Flavors ────────────────────────────────────────────────────────────────
+    // production  — InsightValues principal
+    // iveAvatarLab — APK isolado de avaliação (applicationId separado)
+    //
+    // Build do laboratório (sem keystore, sem secrets de produção):
+    //   flutter build apk --debug \
+    //     --flavor iveAvatarLab \
+    //     --target lib/main_ive_avatar_lab.dart
+
+    flavorDimensions "variant"
+
+    productFlavors {
+        production {
+            dimension "variant"
+            applicationId "com.insightvalues.aisocialcopilot"
+            // app_name is in src/main/res/values/strings.xml
+        }
+
+        iveAvatarLab {
+            dimension "variant"
+            applicationId "com.insightvalues.iveavatarlab"
+            versionName "0.1.0"
+            versionCode 1
+            // app_name is in src/iveAvatarLab/res/values/strings.xml (overrides main)
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.debug
+        }
+    }
+}
+
+flutter {
+    source "../.."
+}
+
+// ── Google Services e Firebase ────────────────────────────────────────────────
+// Aplicado apenas para o flavor production.
+// O flavor iveAvatarLab não inicializa Firebase: sem Auth, Analytics ou Drive.
+// Nenhum google-services.json é necessário para o flavor iveAvatarLab.
+//
+// tasks.configureEach captura tasks registradas de forma lazy (gms plugin 4.x+),
+// garantindo que processGoogleServices seja desabilitado antes de ser executado.
+
+apply plugin: "com.google.gms.google-services"
+
+tasks.configureEach { task ->
+    if (task.name.startsWith("process") &&
+        task.name.contains("IveAvatarLab") &&
+        task.name.endsWith("GoogleServices")) {
+        task.enabled = false
+    }
+
+    // ── APK rename para o Flutter CLI ─────────────────────────────────────────
+    // AGP 8.11.1 nomeia o APK como app-iveAvatarLabDebug.apk (camelCase).
+    // O Flutter Gradle plugin copia para flutter-apk/ e adiciona -debug:
+    //   flutter-apk/app-iveAvatarLabDebug-debug.apk
+    // O Flutter CLI (gradle.dart) procura por:
+    //   flutter-apk/app-iveAvatarLab-debug.apk
+    //
+    // O doLast roda DEPOIS de packageIveAvatarLabDebug (onde o Flutter plugin copia)
+    // e ANTES do Gradle encerrar — quando o Flutter CLI verifica o arquivo.
+    // Assim garante que o nome esperado exista em flutter-apk/ sem mv/cp no workflow.
+    if (task.name == "assembleIveAvatarLabDebug") {
+        task.doLast {
+            def apkDir = new File("${project.buildDir}/outputs/flutter-apk")
+            def target = new File(apkDir, "app-iveAvatarLab-debug.apk")
+            if (apkDir.exists() && !target.exists()) {
+                def candidate = apkDir.listFiles()?.find { it.name.endsWith(".apk") }
+                if (candidate) {
+                    candidate.renameTo(target)
+                    println "[lab] APK: ${candidate.name} → app-iveAvatarLab-debug.apk"
+                }
+            }
+        }
+    }
+}
+
+dependencies {
+    // Firebase compilado apenas para o flavor production
+    productionImplementation platform("com.google.firebase:firebase-bom:33.7.0")
+    productionImplementation "com.google.firebase:firebase-analytics"
+}

@@ -9,7 +9,7 @@ class CampaignService {
   final _client = Supabase.instance.client;
 
   static const _tableCampaigns = 'campaigns';
-  static const _edgeFunction   = 'generate-campaign';
+  static const _edgeFunction = 'generate-campaign';
 
   Future<List<Campaign>> fetchAll() async {
     final rows = await _client
@@ -20,11 +20,8 @@ class CampaignService {
   }
 
   Future<Campaign?> fetchById(String id) async {
-    final row = await _client
-        .from(_tableCampaigns)
-        .select()
-        .eq('id', id)
-        .maybeSingle();
+    final row =
+        await _client.from(_tableCampaigns).select().eq('id', id).maybeSingle();
     return row == null ? null : Campaign.fromMap(row);
   }
 
@@ -55,16 +52,16 @@ class CampaignService {
     final response = await _client.functions.invoke(
       _edgeFunction,
       body: {
-        'title':             item.title,
-        'objective':         objective,
-        'duration_days':     durationDays,
-        'channels':          channels,
-        'niche':             item.niche ?? '',
-        'target_audience':   item.targetAudience ?? '',
-        'language':          item.language,
-        'summary':           analysis.summary ?? '',
+        'title': item.title,
+        'objective': objective,
+        'duration_days': durationDays,
+        'channels': channels,
+        'niche': item.niche ?? '',
+        'target_audience': item.targetAudience ?? '',
+        'language': item.language,
+        'summary': analysis.summary ?? '',
         'value_proposition': strategy?.valueProposition ?? '',
-        'keywords':          analysis.keywordsPrimary,
+        'keywords': analysis.keywordsPrimary,
       },
     );
 
@@ -80,13 +77,13 @@ class CampaignService {
     final row = await _client
         .from(_tableCampaigns)
         .insert({
-          'user_id':           uid,
+          'user_id': uid,
           'knowledge_item_id': item.id,
-          'title':             campaignName,
-          'objective':         objective,
-          'duration_days':     durationDays,
-          'channels':          channels,
-          'campaign_json':     data,
+          'title': campaignName,
+          'objective': objective,
+          'duration_days': durationDays,
+          'channels': channels,
+          'campaign_json': data,
         })
         .select()
         .single();

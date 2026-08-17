@@ -39,7 +39,10 @@ class _KnowledgeVaultScreenState extends ConsumerState<KnowledgeVaultScreen> {
 
     final selectedProjectName = _projectId == null
         ? null
-        : projects.where((p) => p.id == _projectId).map((p) => p.name).firstOrNull;
+        : projects
+            .where((p) => p.id == _projectId)
+            .map((p) => p.name)
+            .firstOrNull;
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F1A),
@@ -89,8 +92,7 @@ class _KnowledgeVaultScreenState extends ConsumerState<KnowledgeVaultScreen> {
             ),
           Expanded(
             child: itemsAsync.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(
                 child: Text('Erro: $e',
                     style: const TextStyle(color: Colors.white70)),
@@ -109,7 +111,7 @@ class _KnowledgeVaultScreenState extends ConsumerState<KnowledgeVaultScreen> {
                   : _ItemList(
                       items: items,
                       onInvalidate: _invalidateItems,
-                      projects:    projects,
+                      projects: projects,
                       projectsMap: {for (final p in projects) p.id: p.name},
                     ),
             ),
@@ -130,7 +132,7 @@ class _ProjectFilter extends StatelessWidget {
   });
 
   final List<dynamic> projects;
-  final String?       selectedId;
+  final String? selectedId;
   final void Function(String?) onSelect;
 
   @override
@@ -165,7 +167,7 @@ class _Chip extends StatelessWidget {
   });
 
   final String label;
-  final bool   selected;
+  final bool selected;
   final VoidCallback onTap;
 
   @override
@@ -203,8 +205,8 @@ class _EmptyState extends StatelessWidget {
   });
 
   final VoidCallback onAdd;
-  final bool         projectFiltered;
-  final String?      projectName;
+  final bool projectFiltered;
+  final String? projectName;
 
   @override
   Widget build(BuildContext context) {
@@ -263,10 +265,10 @@ class _ItemList extends StatelessWidget {
     required this.projects,
   });
 
-  final List<KnowledgeItem>  items;
-  final VoidCallback          onInvalidate;
-  final Map<String, String>   projectsMap;
-  final List<Project>         projects;
+  final List<KnowledgeItem> items;
+  final VoidCallback onInvalidate;
+  final Map<String, String> projectsMap;
+  final List<Project> projects;
 
   @override
   Widget build(BuildContext context) {
@@ -274,12 +276,11 @@ class _ItemList extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
       itemCount: items.length,
       itemBuilder: (ctx, i) => _KnowledgeCard(
-        item:        items[i],
+        item: items[i],
         onInvalidate: onInvalidate,
-        projects:    projects,
-        projectName: items[i].projectId == null
-            ? null
-            : projectsMap[items[i].projectId],
+        projects: projects,
+        projectName:
+            items[i].projectId == null ? null : projectsMap[items[i].projectId],
       ),
     );
   }
@@ -299,8 +300,8 @@ Future<void> _showProjectPicker(
     backgroundColor: Colors.transparent,
     isScrollControlled: true,
     builder: (_) => _ProjectPickerSheet(
-      item:         item,
-      projects:     projects,
+      item: item,
+      projects: projects,
       onInvalidate: onInvalidate,
     ),
   );
@@ -313,9 +314,9 @@ class _ProjectPickerSheet extends ConsumerWidget {
     required this.onInvalidate,
   });
 
-  final KnowledgeItem  item;
-  final List<Project>  projects;
-  final VoidCallback   onInvalidate;
+  final KnowledgeItem item;
+  final List<Project> projects;
+  final VoidCallback onInvalidate;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -331,7 +332,8 @@ class _ProjectPickerSheet extends ConsumerWidget {
         children: [
           Center(
             child: Container(
-              width: 40, height: 4,
+              width: 40,
+              height: 4,
               decoration: BoxDecoration(
                 color: Colors.white24,
                 borderRadius: BorderRadius.circular(2),
@@ -360,12 +362,13 @@ class _ProjectPickerSheet extends ConsumerWidget {
           const SizedBox(height: 16),
           // Opção "Sem projeto"
           _ProjectTile(
-            name:     'Sem projeto',
-            icon:     Icons.folder_off_rounded,
+            name: 'Sem projeto',
+            icon: Icons.folder_off_rounded,
             selected: item.projectId == null,
             onTap: () async {
               Navigator.pop(context);
-              await ref.read(knowledgeItemNotifierProvider.notifier)
+              await ref
+                  .read(knowledgeItemNotifierProvider.notifier)
                   .update(item.id, {'project_id': null});
               onInvalidate();
               if (context.mounted) {
@@ -380,27 +383,28 @@ class _ProjectPickerSheet extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           ...projects.map((p) => Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: _ProjectTile(
-              name:     p.name,
-              icon:     Icons.folder_rounded,
-              selected: item.projectId == p.id,
-              onTap: () async {
-                Navigator.pop(context);
-                await ref.read(knowledgeItemNotifierProvider.notifier)
-                    .update(item.id, {'project_id': p.id});
-                onInvalidate();
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Vinculado ao projeto "${p.name}"'),
-                      backgroundColor: const Color(0xFF4CAF50),
-                    ),
-                  );
-                }
-              },
-            ),
-          )),
+                padding: const EdgeInsets.only(bottom: 8),
+                child: _ProjectTile(
+                  name: p.name,
+                  icon: Icons.folder_rounded,
+                  selected: item.projectId == p.id,
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await ref
+                        .read(knowledgeItemNotifierProvider.notifier)
+                        .update(item.id, {'project_id': p.id});
+                    onInvalidate();
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Vinculado ao projeto "${p.name}"'),
+                          backgroundColor: const Color(0xFF4CAF50),
+                        ),
+                      );
+                    }
+                  },
+                ),
+              )),
         ],
       ),
     );
@@ -415,9 +419,9 @@ class _ProjectTile extends StatelessWidget {
     required this.onTap,
   });
 
-  final String    name;
-  final IconData  icon;
-  final bool      selected;
+  final String name;
+  final IconData icon;
+  final bool selected;
   final VoidCallback onTap;
 
   @override
@@ -432,9 +436,7 @@ class _ProjectTile extends StatelessWidget {
               : const Color(0xFF0F0F1A),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: selected
-                ? const Color(0xFF6C63FF)
-                : Colors.white12,
+            color: selected ? const Color(0xFF6C63FF) : Colors.white12,
           ),
         ),
         child: Row(
@@ -473,25 +475,32 @@ class _KnowledgeCard extends ConsumerWidget {
     this.projectName,
   });
 
-  final KnowledgeItem  item;
-  final VoidCallback   onInvalidate;
-  final List<Project>  projects;
-  final String?        projectName;
+  final KnowledgeItem item;
+  final VoidCallback onInvalidate;
+  final List<Project> projects;
+  final String? projectName;
 
   Color get _statusColor {
     switch (item.status) {
-      case 'analyzed':   return const Color(0xFF4CAF50);
-      case 'processing': return const Color(0xFFFF9800);
-      case 'error':      return const Color(0xFFF44336);
-      default:           return Colors.white38;
+      case 'analyzed':
+        return const Color(0xFF4CAF50);
+      case 'processing':
+        return const Color(0xFFFF9800);
+      case 'error':
+        return const Color(0xFFF44336);
+      default:
+        return Colors.white38;
     }
   }
 
   IconData get _sourceIcon {
     switch (item.sourceType) {
-      case 'url':  return Icons.link_rounded;
-      case 'file': return Icons.insert_drive_file_rounded;
-      default:     return Icons.edit_note_rounded;
+      case 'url':
+        return Icons.link_rounded;
+      case 'file':
+        return Icons.insert_drive_file_rounded;
+      default:
+        return Icons.edit_note_rounded;
     }
   }
 
@@ -548,7 +557,8 @@ class _KnowledgeCard extends ConsumerWidget {
               if (item.niche != null) ...[
                 const SizedBox(height: 4),
                 Text('Nicho: ${item.niche}',
-                    style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                    style:
+                        const TextStyle(color: Colors.white54, fontSize: 12)),
               ],
               const SizedBox(height: 12),
               Row(
@@ -615,13 +625,17 @@ class _KnowledgeCard extends ConsumerWidget {
                     icon: Icons.folder_special_rounded,
                     color: const Color(0xFF00BCD4),
                     onTap: () => _showProjectPicker(
-                      context, ref, item, projects, onInvalidate,
+                      context,
+                      ref,
+                      item,
+                      projects,
+                      onInvalidate,
                     ),
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.delete_rounded,
-                        color: Colors.white24),
+                    icon:
+                        const Icon(Icons.delete_rounded, color: Colors.white24),
                     iconSize: 20,
                     onPressed: () => _confirmDelete(context, ref),
                     tooltip: 'Excluir',
@@ -640,8 +654,8 @@ class _KnowledgeCard extends ConsumerWidget {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A2E),
-        title: const Text('Excluir item?',
-            style: TextStyle(color: Colors.white)),
+        title:
+            const Text('Excluir item?', style: TextStyle(color: Colors.white)),
         content: Text(
           'O item "${item.title}" e sua análise serão removidos.',
           style: const TextStyle(color: Colors.white70),
@@ -649,8 +663,8 @@ class _KnowledgeCard extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar',
-                style: TextStyle(color: Colors.white54)),
+            child:
+                const Text('Cancelar', style: TextStyle(color: Colors.white54)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
@@ -683,14 +697,18 @@ class _StatusChip extends StatelessWidget {
   const _StatusChip({required this.status, required this.color});
 
   final String status;
-  final Color  color;
+  final Color color;
 
   String get _label {
     switch (status) {
-      case 'analyzed':   return 'Analisado';
-      case 'processing': return 'Processando';
-      case 'error':      return 'Erro';
-      default:           return 'Pendente';
+      case 'analyzed':
+        return 'Analisado';
+      case 'processing':
+        return 'Processando';
+      case 'error':
+        return 'Erro';
+      default:
+        return 'Pendente';
     }
   }
 
@@ -705,8 +723,8 @@ class _StatusChip extends StatelessWidget {
       ),
       child: Text(
         _label,
-        style: TextStyle(
-            color: color, fontSize: 11, fontWeight: FontWeight.w600),
+        style:
+            TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -723,11 +741,11 @@ class _ActionButton extends StatelessWidget {
     this.enabled = true,
   });
 
-  final String       label;
-  final IconData     icon;
-  final Color        color;
+  final String label;
+  final IconData icon;
+  final Color color;
   final VoidCallback onTap;
-  final bool         enabled;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {

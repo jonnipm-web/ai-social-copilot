@@ -1,9 +1,9 @@
 class RevenuePlan {
-  final String  id;
-  final String  userId;
+  final String id;
+  final String userId;
   final String? projectId;
   final String? marketAnalysisId;
-  final String  projectName;
+  final String projectName;
   final double monthlyConservative;
   final double monthlyModerate;
   final double monthlyAggressive;
@@ -31,13 +31,21 @@ class RevenuePlan {
 
   List<Map<String, dynamic>> get revenueSources {
     final v = planJson['revenue_sources'];
-    if (v is List) return v.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+    if (v is List)
+      return v
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
     return [];
   }
 
   List<Map<String, dynamic>> get milestones {
     final v = planJson['milestones'];
-    if (v is List) return v.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+    if (v is List)
+      return v
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
     return [];
   }
 
@@ -55,18 +63,18 @@ class RevenuePlan {
     }
 
     return RevenuePlan(
-      id:                   map['id'] as String,
-      userId:               map['user_id'] as String,
-      projectId:            map['project_id'] as String?,
-      marketAnalysisId:     map['market_analysis_id'] as String?,
-      projectName:          map['project_name'] as String,
-      monthlyConservative:  _d(map['monthly_conservative']),
-      monthlyModerate:      _d(map['monthly_moderate']),
-      monthlyAggressive:    _d(map['monthly_aggressive']),
-      annualConservative:   _d(map['annual_conservative']),
-      annualModerate:       _d(map['annual_moderate']),
-      annualAggressive:     _d(map['annual_aggressive']),
-      planJson:             map['plan_json'] is Map
+      id: map['id'] as String,
+      userId: map['user_id'] as String,
+      projectId: map['project_id'] as String?,
+      marketAnalysisId: map['market_analysis_id'] as String?,
+      projectName: map['project_name'] as String,
+      monthlyConservative: _d(map['monthly_conservative']),
+      monthlyModerate: _d(map['monthly_moderate']),
+      monthlyAggressive: _d(map['monthly_aggressive']),
+      annualConservative: _d(map['annual_conservative']),
+      annualModerate: _d(map['annual_moderate']),
+      annualAggressive: _d(map['annual_aggressive']),
+      planJson: map['plan_json'] is Map
           ? Map<String, dynamic>.from(map['plan_json'] as Map)
           : {},
       createdAt: DateTime.parse(map['created_at'] as String),
@@ -74,16 +82,16 @@ class RevenuePlan {
   }
 
   Map<String, dynamic> toInsertMap() => {
-    'user_id':              userId,
-    if (projectId != null)  'project_id': projectId,
-    'market_analysis_id':   marketAnalysisId,
-    'project_name':         projectName,
-    'monthly_conservative': monthlyConservative,
-    'monthly_moderate':     monthlyModerate,
-    'monthly_aggressive':   monthlyAggressive,
-    'annual_conservative':  annualConservative,
-    'annual_moderate':      annualModerate,
-    'annual_aggressive':    annualAggressive,
-    'plan_json':            planJson,
-  };
+        'user_id': userId,
+        if (projectId != null) 'project_id': projectId,
+        'market_analysis_id': marketAnalysisId,
+        'project_name': projectName,
+        'monthly_conservative': monthlyConservative,
+        'monthly_moderate': monthlyModerate,
+        'monthly_aggressive': monthlyAggressive,
+        'annual_conservative': annualConservative,
+        'annual_moderate': annualModerate,
+        'annual_aggressive': annualAggressive,
+        'plan_json': planJson,
+      };
 }
