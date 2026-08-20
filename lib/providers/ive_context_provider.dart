@@ -123,23 +123,45 @@ final iveContextDataProvider = FutureProvider.autoDispose<IveContextData>((ref) 
 
   // Top 5 com content_excerpt quando grounded; sem excerpt: apenas metadados.
   // Mesmo conjunto passado ao buildGrounding — invariant mantido.
+  // source_id + delivered_chars + grounded permitem source disclosure explícita.
   final knowledgeSummary = topItems.map((k) {
     final excerptText = excerptTextByDoc[k.id];
+    final deliveredChars = grounding.excerpts
+        .where((e) => e.documentId == k.id)
+        .fold(0, (sum, e) => sum + e.charCount);
     return <String, dynamic>{
-      'title':  k.title,
-      'score':  k.opportunityScore,
-      'status': k.status,
+      'title':           k.title,
+      'score':           k.opportunityScore,
+      'status':          k.status,
+      'source_id':       k.id,
+      'grounded':        excerptText != null,
+      'delivered_chars': deliveredChars,
       if (k.niche != null) 'niche': k.niche,
       if (excerptText != null) 'content_excerpt': excerptText,
     };
   }).toList();
 
-  // Coverage: total_linked reflete TODOS os docs do projeto, não só os top-5
+  // Coverage: total_linked reflete TODOS os docs do projeto, não só os top-5.
+  // used_ids e not_used_count habilitam auditoria de quais docs foram excluídos.
+  final usedDocIds = grounding.excerpts.map((e) => e.documentId).toSet().toList();
+  final notUsedCount = totalLinkedCount - topItems.length;
   final documentCoverage = {
     ...grounding.coverage.toMap(),
     'total_linked': totalLinkedCount,
+    'used_ids':     usedDocIds,
+    'not_used_count': notUsedCount,
   };
-  final documentWarnings = grounding.warnings.map((w) => w.message).toList();
+
+  // Top-5 transparency: aviso explícito quando documentos são excluídos pelo limite.
+  final mutableWarnings = grounding.warnings.map((w) => w.message).toList();
+  if (totalLinkedCount > topItems.length) {
+    mutableWarnings.insert(
+      0,
+      '$totalLinkedCount fontes vinculadas · ${topItems.length} utilizadas nesta análise'
+      ' · $notUsedCount não utilizadas nesta execução.',
+    );
+  }
+  final documentWarnings = mutableWarnings;
 
   // ── Oportunidades pendentes — top 3 por finalScore ───────────────────────────
   final opportunities = await ref.watch(opportunityLabProvider.future).then(
