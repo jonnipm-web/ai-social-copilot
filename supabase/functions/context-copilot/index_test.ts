@@ -33,10 +33,15 @@ globalThis.fetch = async (input: string | URL | Request, options?: RequestInit):
 const { handler } = await import('./index.ts');
 
 // ── Helper ────────────────────────────────────────────────────────────────────
-async function post(body: Record<string, unknown>): Promise<Response> {
+// Por padrão inclui Authorization Bearer para simular sessão autenticada.
+// Passe extraHeaders: {} para testar ausência de auth; Bearer inválido para malformed.
+async function post(
+  body: Record<string, unknown>,
+  extraHeaders: Record<string, string> = { 'Authorization': 'Bearer test-session-jwt' },
+): Promise<Response> {
   return handler(new Request('http://localhost/', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...extraHeaders },
     body: JSON.stringify(body),
   }));
 }
@@ -147,12 +152,16 @@ Deno.test('CF-8: input com message undefined não causa crash', async () => {
   assertEquals([200, 500].includes(res.status), true);
 });
 
-// ── CF-9: Missing auth [baseline] ────────────────────────────────────────────
+// ── CF-9: JWT ausente → 401 ───────────────────────────────────────────────────
 
-Deno.test('CF-9 [baseline]: sem auth header a função responde 200 (auth é pré-existente ausência)', async () => {
-  const res = await post({ message: 'Teste sem auth', screen_name: 'home', context: {}, history: [] });
-  assertEquals(res.status, 200);
-  // Baseline: auth ausente é gap pré-existente a SHOW-01A. Correção: SHOW-01B.
+Deno.test('CF-9: sem Authorization header → 401 Unauthorized', async () => {
+  const res = await post(
+    { message: 'Teste sem auth', screen_name: 'home', context: {}, history: [] },
+    {}, // sem header Authorization
+  );
+  assertEquals(res.status, 401);
+  const data = await res.json();
+  assertEquals(data.error, 'Unauthorized');
 });
 
 // ── CF-10: Invalid project [baseline] ────────────────────────────────────────
@@ -225,4 +234,28 @@ Deno.test('CF-12: payload de injeção de prompt fica dentro dos marcadores de e
   // 4. CONTRATO DE GROUNDING antes da evidência real do documento
   const contratoPos = sysPrompt.indexOf('CONTRATO DE GROUNDING');
   assertEquals(contratoPos < startMarker, true, 'CONTRATO DE GROUNDING deve preceder a evidência');
+});
+
+// ── CF-13: JWT malformado → 401 ───────────────────────────────────────────────
+
+Deno.test('CF-13: JWT malformado (sem Bearer prefix) → 401 Unauthorized', async () => {
+  const res = await post(
+    { message: 'Teste', screen_name: 'home', context: {}, history: [] },
+    { 'Authorization': 'not-a-bearer-token' },
+  );
+  assertEquals(res.status, 401);
+  const data = await res.json();
+  assertEquals(data.error, 'Unauthorized');
+});
+
+// ── CF-14: JWT Bearer válido → handler executa ────────────────────────────────
+
+Deno.test('CF-14: Authorization Bearer válido → handler executa e retorna 200', async () => {
+  const res = await post({
+    message: 'Teste com auth válido', screen_name: 'home', context: {}, history: [],
+  });
+  assertEquals(res.status, 200);
+  const data = await res.json();
+  assertEquals(typeof data.answer, 'string');
+  assertEquals('grounding_delivered_chars' in data, true);
 });

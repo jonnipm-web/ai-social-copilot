@@ -16,6 +16,16 @@ const corsHeaders = {
 export async function handler(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
+  // Auth gate — plataforma rejeita antes do handler quando verify_jwt=true (config.toml).
+  // Verificação mínima de presença aqui como defence-in-depth para testes unitários.
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ') || authHeader.trim() === 'Bearer') {
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized' }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    );
+  }
+
   try {
     const { message, screen_name, context, history } = await req.json();
 
