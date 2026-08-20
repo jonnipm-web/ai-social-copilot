@@ -1,9 +1,25 @@
 # AI Social Copilot — Current Technical Baseline
 
-**Data:** 2026-08-02  
-**Branch canônica:** `release/phase-10-stabilization`  
+**Data:** 2026-08-20 (atualizado SHOW-01A)  
+**Branch canônica:** `main` (pós-integração SHOW-01A)  
 **Branch de desenvolvimento ativo:** `claude/ive-avatar-system-v2-yzjlvw`  
-**Audit:** Phase 10 Stabilization — 12 ETAPAs concluídas
+**Audit:** Phase 10 Stabilization — 12 ETAPAs concluídas | SHOW-01A — Integrado em main, pendente de deploy remoto
+
+---
+
+## SHOW-01A — Status de Integração
+
+| Item | Valor |
+|------|-------|
+| Status | **INTEGRADO NO GIT — PENDENTE DE DEPLOY REMOTO** |
+| SHA de integração | `1f97a250ca06cfda20a3d58beadfabc2bcf2fd9e` |
+| PR | #89 (squash-merge → main, 2026-08-20) |
+| Funções alteradas | `context-copilot`, `generate-project-opportunities` |
+| JWT | `verify_jwt = true` (`supabase/config.toml`) |
+| Testes Deno | 14/14 aprovados (CF-1 a CF-14) |
+| Workflow de deploy | `.github/workflows/deploy-show-01a.yml` (criado, pendente de disparo) |
+
+> **IMPORTANTE:** As Edge Functions `context-copilot` e `generate-project-opportunities` estão **integradas no Git** (commit `1f97a250`) mas **NÃO FORAM IMPLANTADAS** no ambiente Supabase remoto. O estado ativo em produção reflete a versão anterior ao PR #89. O deploy deve ser executado via `deploy-show-01a.yml` com `confirm=DEPLOY`.
 
 ---
 
@@ -78,9 +94,11 @@ Localizados em `lib/providers/`. Padrão: `AsyncNotifierProvider` / `FutureProvi
 |----------|---------|------------|
 | `build-apk.yml` | `workflow_dispatch` | APK release assinado (canônico) |
 | `build-android.yml` | `push main` + `workflow_dispatch` | LEGADO — APK simples |
-| `deploy-edge-functions.yml` | — | Deploy de Edge Functions |
+| `deploy-show-01a.yml` | `workflow_dispatch` | Deploy controlado SHOW-01A (sem `--no-verify-jwt`) |
+| `deploy-edge-functions.yml` | — | Deploy de Edge Functions (todas — NÃO usar para SHOW-01A) |
 | `deploy-supabase.yml` | — | Deploy de migrations |
 | `generate-keystore.yml` | `workflow_dispatch` | Geração única do keystore |
+| `edge-function-tests.yml` | `pull_request` → main | Testes Deno (CF-1 a CF-14) |
 
 > **Sem AAB:** Nenhum workflow gera Android App Bundle (`.aab`). Necessário para Google Play Store.
 

@@ -1,7 +1,25 @@
 # AI Social Copilot — Problemas Conhecidos
 
-**Data:** 2026-08-02  
-**Audit:** Phase 10 Stabilization
+**Data:** 2026-08-20 (atualizado SHOW-01A)  
+**Audit:** Phase 10 Stabilization | SHOW-01A Remote Validation
+
+---
+
+## SHOW-01A — Status de Deploy
+
+### KI-SHOW-01A-001: Edge Functions integradas no Git, pendentes de deploy remoto
+
+**Status:** INTEGRADO NO GIT — PENDENTE DE DEPLOY REMOTO  
+**SHA:** `1f97a250ca06cfda20a3d58beadfabc2bcf2fd9e` (squash-merge PR #89 → main, 2026-08-20)  
+**Funções:** `context-copilot`, `generate-project-opportunities`  
+**Impacto:** O ambiente Supabase remoto ainda executa a versão anterior ao PR #89. Grounding, auth gate (handler-level), CF-1 a CF-14 e verify_jwt=true ainda não estão ativos em produção.  
+**Resolução:** Executar `.github/workflows/deploy-show-01a.yml` via GitHub Actions com `confirm=DEPLOY`.  
+**Bloqueio atual:** Secrets `SUPABASE_ACCESS_TOKEN` e `SUPABASE_PROJECT_REF` precisam estar configurados no repositório.
+
+### KI-SHOW-01A-002: Workflows existentes usam --no-verify-jwt
+
+**Detalhe:** `deploy-context-copilot-v2.yml`, `deploy-edge-functions.yml` e `deploy-ive-backend-controlled.yml` utilizam `--no-verify-jwt`, o que sobrescreveria o `verify_jwt=true` do `config.toml` e exporia as funções sem autenticação JWT.  
+**Resolução:** Usar SOMENTE `deploy-show-01a.yml` para o escopo SHOW-01A. Os workflows legados NÃO devem ser usados para implantar `context-copilot` ou `generate-project-opportunities`.
 
 ---
 
