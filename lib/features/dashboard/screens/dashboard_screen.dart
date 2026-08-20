@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
-import '../../../providers/calendar_provider.dart';
 import '../../../providers/campaign_provider.dart';
 import '../../../providers/content_provider.dart';
 import '../../../providers/knowledge_provider.dart';

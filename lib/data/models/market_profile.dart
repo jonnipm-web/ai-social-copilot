@@ -105,10 +105,10 @@ class MarketProfile {
     } else if (pLab.isNotEmpty) {
       // Derive from opportunity lab items
       market         = _inferMarket(project.name);
-      niche          = project.description?.isNotEmpty == true
-          ? project.description!.split(' ').take(3).join(' ')
+      niche          = project.description.isNotEmpty
+          ? project.description.split(' ').take(3).join(' ')
           : project.name;
-      subNiche       = project.type ?? '';
+      subNiche       = project.type;
       targetAudience = '';
       businessModel  = _inferBizModel(project);
       final avgMarket   = pLab.map((l) => l.marketScore).fold(0, (a, b) => a + b) ~/ pLab.length;
@@ -126,7 +126,7 @@ class MarketProfile {
       // Minimum viable — inferred from project name/type only
       market         = _inferMarket(project.name);
       niche          = project.name;
-      subNiche       = project.type ?? '';
+      subNiche       = project.type;
       targetAudience = '';
       businessModel  = _inferBizModel(project);
       growthPotential = 40;
@@ -196,7 +196,7 @@ class MarketProfile {
   }
 
   static String _inferBizModel(Project project) {
-    final type = (project.type ?? '').toLowerCase();
+    final type = project.type.toLowerCase();
     if (type.contains('saas')) return 'SaaS';
     if (type.contains('ecom')) return 'E-commerce';
     if (type.contains('serv')) return 'Serviço';

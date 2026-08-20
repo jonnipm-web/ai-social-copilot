@@ -26,20 +26,22 @@ class FileImportService {
   static const _supportedExtensions = ['pdf', 'docx', 'txt'];
 
   Future<FileImportResult?> pickAndExtract() async {
-    final result = await FilePickerPlatform.instance.pickFiles(
+    // file_picker 12.x: FilePicker.pickFile() returns PlatformFile?
+    // PlatformFile.readAsBytes() replaces the removed .bytes getter
+    final file = await FilePicker.pickFile(
       type: FileType.custom,
       allowedExtensions: _supportedExtensions,
-      withData: true,
     );
 
-    if (result == null || result.files.isEmpty) return null;
+    if (file == null) return null;
 
-    final file = result.files.first;
-    final bytes = file.bytes;
-    if (bytes == null) throw Exception('Não foi possível ler o arquivo.');
-
-    final extension = (file.extension ?? 'txt').toLowerCase();
     final fileName  = file.name;
+    final extension = fileName.contains('.')
+        ? fileName.split('.').last.toLowerCase()
+        : 'txt';
+
+    final bytes = await file.readAsBytes();
+    if (bytes.isEmpty) throw Exception('Não foi possível ler o arquivo.');
 
     if (extension == 'txt') {
       final text = utf8.decode(bytes, allowMalformed: true);

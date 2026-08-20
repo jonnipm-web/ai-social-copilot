@@ -15,7 +15,7 @@ serve(async (req) => {
 
     const docLines = ((documents ?? []) as Array<{ title: string; content: string }>)
       .slice(0, 6)
-      .map((d) => `• ${d.title}: ${(d.content ?? '').substring(0, 400)}`)
+      .map((d) => `• ${d.title}: ${(d.content ?? '').substring(0, 800)}`)
       .join('\n') || 'Sem documentos específicos listados';
 
     const userPrompt = `Projeto: ${project_name}

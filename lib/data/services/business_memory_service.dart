@@ -7,20 +7,19 @@ class BusinessMemoryService {
   final _client = Supabase.instance.client;
 
   Future<List<BusinessMemory>> fetchAll({String? projectId, String? memoryType}) async {
-    var query = _client
+    var filterBuilder = _client
         .from(AppConstants.tableBusinessMemory)
-        .select()
-        .order('created_at', ascending: false);
+        .select();
 
     if (projectId != null) {
-      query = query.eq('project_id', projectId) as dynamic;
+      filterBuilder = filterBuilder.eq('project_id', projectId);
     }
     if (memoryType != null) {
-      query = query.eq('memory_type', memoryType) as dynamic;
+      filterBuilder = filterBuilder.eq('memory_type', memoryType);
     }
 
-    final rows = await query;
-    return (rows as List).map((r) => BusinessMemory.fromMap(r)).toList();
+    final rows = await filterBuilder.order('created_at', ascending: false);
+    return rows.map((r) => BusinessMemory.fromMap(r)).toList();
   }
 
   Future<BusinessMemory> create({

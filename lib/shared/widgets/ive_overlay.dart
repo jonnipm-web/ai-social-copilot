@@ -5,7 +5,6 @@ import '../../data/models/copilot_context_data.dart';
 import '../../data/models/ive_issue.dart';
 import '../../data/models/ive_state.dart';
 import '../../features/ive/visual/ive_avatar.dart';
-import '../../features/ive/visual/ive_avatar_state.dart';
 import '../../features/ive/visual/ive_visual_config.dart';
 import '../../providers/ive_context_provider.dart';
 import '../../providers/ive_memory_provider.dart';
@@ -189,8 +188,10 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
         project: ctx.topProjectsSnapshot.isNotEmpty
             ? {'projects': ctx.topProjectsSnapshot}
             : null,
-        documents:     ctx.knowledgeItemsSummary,
-        opportunities: ctx.pendingOpportunitiesSummary,
+        documents:        ctx.knowledgeItemsSummary,
+        documentCoverage: ctx.documentCoverage.isNotEmpty ? ctx.documentCoverage : null,
+        documentWarnings: ctx.documentWarnings,
+        opportunities:    ctx.pendingOpportunitiesSummary,
       );
 
   String _routeToName(String route) {
@@ -237,8 +238,7 @@ class _IveBubble extends StatelessWidget {
       case IveExpression.thinking: return '◈';
       case IveExpression.winking:  return '◉';
       case IveExpression.neutral:  return '⬡';
-      case IveExpression.happy:
-      default:                     return '◈';
+      case IveExpression.happy:    return '◈';
     }
   }
 
