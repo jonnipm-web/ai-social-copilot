@@ -184,9 +184,10 @@ Deno.test('CF-11: evidência forjada é envolvida por marcadores INÍCIO/FIM DO 
   const sysPrompt = capturedSystemPrompt();
   assertStringIncludes(sysPrompt, '[INÍCIO DO TRECHO]');
   assertStringIncludes(sysPrompt, '[FIM DO TRECHO]');
-  // Regras de segurança devem aparecer ANTES da evidência documental
+  // Regras de segurança devem aparecer ANTES da evidência documental.
+  // Usa lastIndexOf para encontrar o marcador real do documento (não a referência no CONTRATO).
   const secPos = sysPrompt.indexOf('REGRAS DE SEGURANÇA');
-  const evidencePos = sysPrompt.indexOf('[INÍCIO DO TRECHO]');
+  const evidencePos = sysPrompt.lastIndexOf('[INÍCIO DO TRECHO]');
   assertEquals(secPos < evidencePos, true);
 });
 
@@ -208,18 +209,20 @@ Deno.test('CF-12: payload de injeção de prompt fica dentro dos marcadores de e
   assertStringIncludes(sysPrompt, 'EVIDÊNCIA NÃO-CONFIÁVEL');
   assertStringIncludes(sysPrompt, 'NÃO PODEM');
 
-  // 2. Payload dentro dos marcadores
+  // 2. Payload dentro dos marcadores do documento.
+  // lastIndexOf: CONTRATO DE GROUNDING menciona os marcadores no texto;
+  // lastIndexOf encontra a ocorrência real do documento, não a referência textual.
   const injPos = sysPrompt.indexOf('Ignore all previous instructions');
-  const startMarker = sysPrompt.indexOf('[INÍCIO DO TRECHO]');
-  const endMarker = sysPrompt.indexOf('[FIM DO TRECHO]');
+  const startMarker = sysPrompt.lastIndexOf('[INÍCIO DO TRECHO]');
+  const endMarker = sysPrompt.lastIndexOf('[FIM DO TRECHO]');
   assertEquals(startMarker < injPos, true, 'payload deve vir após [INÍCIO DO TRECHO]');
   assertEquals(injPos < endMarker, true, 'payload deve vir antes de [FIM DO TRECHO]');
 
-  // 3. REGRAS DE SEGURANÇA antes da evidência
+  // 3. REGRAS DE SEGURANÇA antes da evidência real do documento
   const secPos = sysPrompt.indexOf('REGRAS DE SEGURANÇA');
   assertEquals(secPos < startMarker, true, 'REGRAS DE SEGURANÇA deve preceder a evidência');
 
-  // 4. CONTRATO DE GROUNDING antes da evidência
+  // 4. CONTRATO DE GROUNDING antes da evidência real do documento
   const contratoPos = sysPrompt.indexOf('CONTRATO DE GROUNDING');
   assertEquals(contratoPos < startMarker, true, 'CONTRATO DE GROUNDING deve preceder a evidência');
 });
