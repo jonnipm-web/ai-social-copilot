@@ -12,7 +12,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req) => {
+// Exportado para testes unitários. Em produção, serve() chama esta função.
+export async function handler(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
@@ -228,4 +229,8 @@ Responda sempre em Português do Brasil.`;
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   }
-});
+}
+
+if (Deno.env.get('DENO_TESTING') !== '1') {
+  serve(handler);
+}
