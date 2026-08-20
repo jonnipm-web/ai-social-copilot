@@ -151,7 +151,7 @@ jobs:
 
       - name: Vincular ao projeto
         env:
-          PROJECT_REF: ${{ needs.pre-flight.outputs.project_ref }}
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF || 'nzngvbajrnruknpzzjbf' }}
         run: |
           supabase link --project-ref "$PROJECT_REF"
           echo "✓ Projeto vinculado: $PROJECT_REF"
@@ -159,7 +159,7 @@ jobs:
       - name: Deploy context-copilot (SEM --no-verify-jwt)
         id: deploy_context
         env:
-          PROJECT_REF: ${{ needs.pre-flight.outputs.project_ref }}
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF || 'nzngvbajrnruknpzzjbf' }}
         run: |
           echo "→ Implantando context-copilot..."
           supabase functions deploy context-copilot \
@@ -169,7 +169,7 @@ jobs:
       - name: Deploy generate-project-opportunities (SEM --no-verify-jwt)
         id: deploy_opportunities
         env:
-          PROJECT_REF: ${{ needs.pre-flight.outputs.project_ref }}
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF || 'nzngvbajrnruknpzzjbf' }}
         run: |
           echo "→ Implantando generate-project-opportunities..."
           supabase functions deploy generate-project-opportunities \
@@ -178,7 +178,7 @@ jobs:
 
       - name: Listar funções ativas pós-deploy
         env:
-          PROJECT_REF: ${{ needs.pre-flight.outputs.project_ref }}
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF || 'nzngvbajrnruknpzzjbf' }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           echo "=== Funções ativas no projeto $PROJECT_REF ==="
@@ -187,7 +187,7 @@ jobs:
       - name: Sumário do deploy
         if: always()
         env:
-          PROJECT_REF: ${{ needs.pre-flight.outputs.project_ref }}
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF || 'nzngvbajrnruknpzzjbf' }}
           TARGET_SHA: ${{ needs.pre-flight.outputs.target_sha }}
         run: |
           TS="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
@@ -208,8 +208,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [pre-flight, deploy]
     env:
-      PROJECT_REF: ${{ needs.pre-flight.outputs.project_ref }}
-      SUPABASE_URL: "https://nzngvbajrnruknpzzjbf.supabase.co"
+      PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF || 'nzngvbajrnruknpzzjbf' }}
     steps:
       - name: Smoke 1 — Sem JWT → 401
         run: |
