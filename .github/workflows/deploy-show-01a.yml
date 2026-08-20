@@ -1,0 +1,263 @@
+name: Deploy SHOW-01A — context-copilot + generate-project-opportunities
+
+# Workflow controlado para implantação das Edge Functions da SHOW-01A.
+# Escopo: SOMENTE context-copilot e generate-project-opportunities.
+# SHA de referência: 1f97a250ca06cfda20a3d58beadfabc2bcf2fd9e (squash-merge PR #89 → main)
+# Regra absoluta: NÃO usa --no-verify-jwt. verify_jwt=true é gate de segurança P0.
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: 'SHA exato a implantar (padrão: commit SHOW-01A)'
+        required: false
+        default: '1f97a250ca06cfda20a3d58beadfabc2bcf2fd9e'
+      confirm:
+        description: 'Digite DEPLOY para confirmar implantação controlada'
+        required: true
+        default: ''
+
+permissions:
+  contents: read
+
+env:
+  SHOW01A_SHA: '1f97a250ca06cfda20a3d58beadfabc2bcf2fd9e'
+  DEFAULT_PROJECT_REF: 'nzngvbajrnruknpzzjbf'
+
+jobs:
+  pre-flight:
+    name: Pre-flight — Confirmação e resolução
+    runs-on: ubuntu-latest
+    outputs:
+      target_sha: ${{ steps.resolve.outputs.target_sha }}
+      project_ref: ${{ steps.resolve.outputs.project_ref }}
+    steps:
+      - name: Verificar confirmação
+        run: |
+          if [[ "${{ inputs.confirm }}" != "DEPLOY" ]]; then
+            echo "ERRO: confirmação inválida. Digite exatamente 'DEPLOY' no campo confirm."
+            exit 1
+          fi
+          echo "✓ Confirmação válida"
+
+      - name: Resolver SHA e project-ref
+        id: resolve
+        run: |
+          TARGET_SHA="${{ inputs.source_ref }}"
+          if [[ -z "$TARGET_SHA" ]]; then
+            TARGET_SHA="$SHOW01A_SHA"
+          fi
+          echo "target_sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
+
+          if [[ -n "${{ secrets.SUPABASE_PROJECT_REF }}" ]]; then
+            echo "project_ref=${{ secrets.SUPABASE_PROJECT_REF }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "project_ref=$DEFAULT_PROJECT_REF" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "SHA alvo: $TARGET_SHA"
+
+  security-gate:
+    name: Gate de Segurança — verify_jwt + Deno tests
+    runs-on: ubuntu-latest
+    needs: pre-flight
+    steps:
+      - name: Checkout SHA exato
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.pre-flight.outputs.target_sha }}
+
+      - name: Verificar SHA no HEAD
+        run: |
+          ACTUAL_SHA="$(git rev-parse HEAD)"
+          EXPECTED_SHA="${{ needs.pre-flight.outputs.target_sha }}"
+          if [[ "$ACTUAL_SHA" != "$EXPECTED_SHA" ]]; then
+            echo "ERRO: SHA divergente."
+            echo "  Esperado: $EXPECTED_SHA"
+            echo "  Atual:    $ACTUAL_SHA"
+            exit 1
+          fi
+          echo "✓ SHA confirmado: $ACTUAL_SHA"
+
+      - name: Gate P0 — verify_jwt = true em config.toml
+        run: |
+          CONFIG="supabase/config.toml"
+          if [[ ! -f "$CONFIG" ]]; then
+            echo "ERRO: $CONFIG não encontrado — deploy abortado."
+            exit 1
+          fi
+          if ! grep -q 'verify_jwt = true' "$CONFIG"; then
+            echo "ERRO: verify_jwt = true não encontrado em $CONFIG."
+            echo "Conteúdo atual:"
+            cat "$CONFIG"
+            echo "Deploy abortado para evitar exposição da função sem autenticação JWT."
+            exit 1
+          fi
+          echo "✓ verify_jwt = true confirmado em $CONFIG"
+          grep 'verify_jwt' "$CONFIG"
+
+      - name: Proibir --no-verify-jwt nos arquivos da função
+        run: |
+          if grep -rn "\-\-no-verify-jwt" supabase/functions/context-copilot/ 2>/dev/null; then
+            echo "ERRO: --no-verify-jwt encontrado dentro dos arquivos da função."
+            exit 1
+          fi
+          echo "✓ --no-verify-jwt ausente dos arquivos da função"
+
+      - name: Instalar Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Executar 14 testes Deno (CF-1 a CF-14) — obrigatório 14/14
+        env:
+          DENO_TESTING: "1"
+          GROQ_API_KEY: "test-key-ci"
+        run: |
+          deno test --allow-env --allow-net=deno.land \
+            supabase/functions/context-copilot/index_test.ts
+          echo "✓ 14/14 testes Deno aprovados"
+
+      - name: Verificar arquivos obrigatórios
+        run: |
+          test -f supabase/functions/context-copilot/index.ts || (echo "ERRO: context-copilot/index.ts ausente" && exit 1)
+          test -f supabase/config.toml || (echo "ERRO: supabase/config.toml ausente" && exit 1)
+          test -f supabase/functions/generate-project-opportunities/index.ts || (echo "ERRO: generate-project-opportunities/index.ts ausente" && exit 1)
+          echo "✓ Todos os arquivos obrigatórios presentes"
+
+  deploy:
+    name: Deploy — context-copilot + generate-project-opportunities
+    runs-on: ubuntu-latest
+    needs: [pre-flight, security-gate]
+    steps:
+      - name: Checkout SHA exato
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.pre-flight.outputs.target_sha }}
+
+      - name: Instalar Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Login no Supabase
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase login --token "$SUPABASE_ACCESS_TOKEN"
+          echo "✓ Login realizado"
+
+      - name: Vincular ao projeto
+        env:
+          PROJECT_REF: ${{ needs.pre-flight.outputs.project_ref }}
+        run: |
+          supabase link --project-ref "$PROJECT_REF"
+          echo "✓ Projeto vinculado: $PROJECT_REF"
+
+      - name: Deploy context-copilot (SEM --no-verify-jwt)
+        id: deploy_context
+        env:
+          PROJECT_REF: ${{ needs.pre-flight.outputs.project_ref }}
+        run: |
+          echo "→ Implantando context-copilot..."
+          supabase functions deploy context-copilot \
+            --project-ref "$PROJECT_REF"
+          echo "✓ context-copilot implantado"
+
+      - name: Deploy generate-project-opportunities (SEM --no-verify-jwt)
+        id: deploy_opportunities
+        env:
+          PROJECT_REF: ${{ needs.pre-flight.outputs.project_ref }}
+        run: |
+          echo "→ Implantando generate-project-opportunities..."
+          supabase functions deploy generate-project-opportunities \
+            --project-ref "$PROJECT_REF"
+          echo "✓ generate-project-opportunities implantado"
+
+      - name: Listar funções ativas pós-deploy
+        env:
+          PROJECT_REF: ${{ needs.pre-flight.outputs.project_ref }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          echo "=== Funções ativas no projeto $PROJECT_REF ==="
+          supabase functions list --project-ref "$PROJECT_REF" || true
+
+      - name: Sumário do deploy
+        if: always()
+        env:
+          PROJECT_REF: ${{ needs.pre-flight.outputs.project_ref }}
+          TARGET_SHA: ${{ needs.pre-flight.outputs.target_sha }}
+        run: |
+          TS="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          CONTEXT_STATUS="${{ steps.deploy_context.outcome == 'success' && 'SUCESSO' || 'FALHA' }}"
+          OPPS_STATUS="${{ steps.deploy_opportunities.outcome == 'success' && 'SUCESSO' || 'FALHA' }}"
+          {
+            echo "## SHOW-01A Deploy"
+            echo "SHA: $TARGET_SHA"
+            echo "Projeto: $PROJECT_REF"
+            echo "context-copilot: $CONTEXT_STATUS"
+            echo "generate-project-opportunities: $OPPS_STATUS"
+            echo "JWT: verify_jwt=true (sem --no-verify-jwt)"
+            echo "Timestamp: $TS"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  smoke-test:
+    name: Smoke tests — Auth gate
+    runs-on: ubuntu-latest
+    needs: [pre-flight, deploy]
+    env:
+      PROJECT_REF: ${{ needs.pre-flight.outputs.project_ref }}
+      SUPABASE_URL: "https://nzngvbajrnruknpzzjbf.supabase.co"
+    steps:
+      - name: Smoke 1 — Sem JWT → 401
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST \
+            "https://${PROJECT_REF}.supabase.co/functions/v1/context-copilot" \
+            -H "Content-Type: application/json" \
+            -d '{"message":"smoke","screen_name":"test","context":{}}')
+          echo "Smoke 1 (sem JWT): HTTP $STATUS"
+          if [[ "$STATUS" != "401" ]]; then
+            echo "FALHA: esperado 401, obtido $STATUS"
+            exit 1
+          fi
+          echo "✓ Smoke 1 passou: sem JWT → 401"
+
+      - name: Smoke 2 — JWT inválido → 401
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST \
+            "https://${PROJECT_REF}.supabase.co/functions/v1/context-copilot" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer invalid.jwt.token" \
+            -d '{"message":"smoke","screen_name":"test","context":{}}')
+          echo "Smoke 2 (JWT inválido): HTTP $STATUS"
+          if [[ "$STATUS" != "401" ]]; then
+            echo "FALHA: esperado 401, obtido $STATUS"
+            exit 1
+          fi
+          echo "✓ Smoke 2 passou: JWT inválido → 401"
+
+      - name: Smoke 3 — generate-project-opportunities sem JWT → 401
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST \
+            "https://${PROJECT_REF}.supabase.co/functions/v1/generate-project-opportunities" \
+            -H "Content-Type: application/json" \
+            -d '{"project_id":"test"}')
+          echo "Smoke 3 (generate-project-opportunities sem JWT): HTTP $STATUS"
+          if [[ "$STATUS" != "401" ]]; then
+            echo "FALHA: esperado 401, obtido $STATUS"
+            exit 1
+          fi
+          echo "✓ Smoke 3 passou: generate-project-opportunities sem JWT → 401"
+
+      - name: Sumário smoke tests
+        if: always()
+        run: |
+          echo "## Smoke Tests SHOW-01A" >> "$GITHUB_STEP_SUMMARY"
+          echo "Auth gate (sem JWT → 401): verificado" >> "$GITHUB_STEP_SUMMARY"
+          echo "Auth gate (JWT inválido → 401): verificado" >> "$GITHUB_STEP_SUMMARY"
+          echo "Auth gate generate-project-opportunities: verificado" >> "$GITHUB_STEP_SUMMARY"
