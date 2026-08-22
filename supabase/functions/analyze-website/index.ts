@@ -68,7 +68,40 @@ score_seo: otimização para mecanismos de busca.
 score_monetization: potencial de monetização geral.
 Retorne apenas o JSON. Nenhum texto antes ou depois.`;
 
+// SEC-00A P1: Block SSRF to private/metadata IP ranges and non-public hosts
+function isPublicUrl(rawUrl: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
+  const host = parsed.hostname.toLowerCase();
+  // Block IP literals in RFC-1918, loopback, link-local, and cloud metadata ranges
+  const privatePatterns = [
+    /^127\./,
+    /^10\./,
+    /^172\.(1[6-9]|2\d|3[01])\./,
+    /^192\.168\./,
+    /^169\.254\./,
+    /^::1$/,
+    /^fc00:/i,
+    /^fe80:/i,
+    /^0\./,
+  ];
+  for (const pat of privatePatterns) {
+    if (pat.test(host)) return false;
+  }
+  // Block bare "localhost" and internal hostnames without a TLD
+  if (host === "localhost" || (!host.includes(".") && host !== "")) return false;
+  return true;
+}
+
 async function fetchWebsiteContent(url: string): Promise<string> {
+  if (!isPublicUrl(url)) {
+    throw new Error("URL aponta para endereço privado ou reservado.");
+  }
   const res = await fetch(url, {
     headers: {
       "User-Agent": "Mozilla/5.0 (compatible; AIAnalyzer/1.0)",
