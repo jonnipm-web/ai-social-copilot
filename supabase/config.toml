@@ -1,2 +1,50 @@
+[functions.analyze-website]
+verify_jwt = true
+
+[functions.competitor-discovery]
+verify_jwt = true
+
+[functions.content-cluster]
+verify_jwt = true
+
 [functions.context-copilot]
+verify_jwt = true
+
+[functions.decision-simulator]
+verify_jwt = true
+
+[functions.extract-knowledge]
+verify_jwt = true
+
+[functions.gap-analysis]
+verify_jwt = true
+
+[functions.generate-campaign]
+verify_jwt = true
+
+[functions.generate-project-actions]
+verify_jwt = true
+
+[functions.generate-project-opportunities]
+verify_jwt = true
+
+[functions.generate-strategy]
+verify_jwt = true
+
+[functions.improve-post]
+verify_jwt = true
+
+[functions.market-analysis]
+verify_jwt = true
+
+[functions.niche-discovery]
+verify_jwt = true
+
+[functions.opportunity-discovery]
+verify_jwt = true
+
+[functions.process-file]
+verify_jwt = true
+
+[functions.revenue-planner]
 verify_jwt = true

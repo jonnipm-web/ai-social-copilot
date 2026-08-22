@@ -163,8 +163,7 @@ jobs:
         run: |
           set -euo pipefail
           supabase functions deploy context-copilot \
-            --project-ref "$PROJECT_REF" \
-            --no-verify-jwt
+            --project-ref "$PROJECT_REF"
 
       - name: Deploy ive-agent-runner
         id: deploy_agent
@@ -172,8 +171,7 @@ jobs:
         run: |
           set -euo pipefail
           supabase functions deploy ive-agent-runner \
-            --project-ref "$PROJECT_REF" \
-            --no-verify-jwt
+            --project-ref "$PROJECT_REF"
 
       - name: Final summary
         if: always()
@@ -198,5 +196,5 @@ jobs:
             echo "Deploy context-copilot: $DEPLOY_CONTEXT_STATUS"
             echo "Deploy ive-agent-runner: $DEPLOY_AGENT_STATUS"
             echo "Timestamp: $TS"
-            echo "JWT deploy mode: --no-verify-jwt"
+            echo "JWT deploy mode: verify_jwt=true (via config.toml)"
           } >> "$GITHUB_STEP_SUMMARY"
