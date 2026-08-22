@@ -118,7 +118,7 @@ function extractFromTxt(bytes: Uint8Array): string {
 }
 
 // ── Main handler ──────────────────────────────────────────────────────────────
-serve(async (req) => {
+if (import.meta.main) serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
