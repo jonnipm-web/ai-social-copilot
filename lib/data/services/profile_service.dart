@@ -17,32 +17,19 @@ class ProfileService {
         .maybeSingle();
 
     if (rows == null) return null;
-    final profile = Profile.fromMap(rows);
-
-    // Auto-promove admin pelo email configurado
-    if (profile.email == AppConstants.adminEmail && profile.role != 'admin') {
-      await _client
-          .from(AppConstants.tableProfiles)
-          .update({'role': 'admin', 'monthly_limit': 99999})
-          .eq('id', uid);
-      return profile.copyWith(role: 'admin', monthlyLimit: 99999);
-    }
-
-    return profile;
+    return Profile.fromMap(rows);
   }
 
   Future<void> upsertProfile({
     required String id,
     required String email,
   }) async {
-    final role = email == AppConstants.adminEmail ? 'admin' : 'free';
-    final limit = email == AppConstants.adminEmail ? 99999 : 5;
-
+    // SEC-01: role and monthly_limit are server-controlled fields.
+    // Do not write them from the client — the database trigger will reject it.
+    // New users receive role='free' / monthly_limit=5 via the handle_new_user() trigger.
     await _client.from(AppConstants.tableProfiles).upsert({
-      'id':            id,
-      'email':         email,
-      'role':          role,
-      'monthly_limit': limit,
+      'id':    id,
+      'email': email,
     }, onConflict: 'id');
   }
 

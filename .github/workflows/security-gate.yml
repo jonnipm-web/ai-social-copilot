@@ -1,0 +1,234 @@
+name: Security Gate
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/functions/**'
+      - 'supabase/config.toml'
+      - 'supabase/migrations/**'
+      - '.github/workflows/**'
+      - 'lib/data/services/**'
+      - 'lib/core/constants/**'
+      - '.env'
+      - 'pubspec.yaml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/functions/**'
+      - 'supabase/config.toml'
+      - 'supabase/migrations/**'
+      - '.github/workflows/**'
+
+permissions:
+  contents: read
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Gate 1: No --no-verify-jwt in any workflow
+  # ─────────────────────────────────────────────────────────────────────────────
+  check-no-verify-jwt:
+    name: "Gate: no --no-verify-jwt"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan workflows for --no-verify-jwt
+        run: |
+          set -euo pipefail
+          echo "Scanning .github/workflows/ for --no-verify-jwt..."
+          if grep -r -- '--no-verify-jwt' .github/workflows/ 2>/dev/null; then
+            echo "FAIL: --no-verify-jwt found in a workflow."
+            echo "All Edge Functions must use verify_jwt=true (via config.toml)."
+            echo "If a function must be public, add it to the allowlist in this check."
+            exit 1
+          fi
+          echo "PASS: no --no-verify-jwt found."
+
+      - name: Scan config.toml for verify_jwt = false
+        run: |
+          set -euo pipefail
+          echo "Scanning supabase/config.toml for verify_jwt = false..."
+          if grep -E 'verify_jwt\s*=\s*false' supabase/config.toml 2>/dev/null; then
+            echo "FAIL: verify_jwt = false found in config.toml."
+            echo "All Edge Functions must use verify_jwt = true."
+            exit 1
+          fi
+          echo "PASS: no verify_jwt = false found."
+
+      - name: Verify all functions have verify_jwt = true in config.toml
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Checking that every function has verify_jwt = true in config.toml..."
+          MISSING=()
+          for fn_dir in supabase/functions/*/; do
+            fn_name=$(basename "$fn_dir")
+            if ! grep -A5 "\[functions\.${fn_name}\]" supabase/config.toml | grep -q 'verify_jwt\s*=\s*true'; then
+              MISSING+=("$fn_name")
+            fi
+          done
+          if [[ ${#MISSING[@]} -gt 0 ]]; then
+            echo "FAIL: The following functions are missing verify_jwt = true in config.toml:"
+            printf '  - %s\n' "${MISSING[@]}"
+            exit 1
+          fi
+          echo "PASS: all functions have verify_jwt = true."
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Gate 2: SSRF test suite
+  # ─────────────────────────────────────────────────────────────────────────────
+  ssrf-tests:
+    name: "Gate: SSRF tests"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Run SSRF tests (analyze-website)
+        run: |
+          set -euo pipefail
+          deno test --allow-env \
+            supabase/functions/analyze-website/ssrf_test.ts
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Gate 3: process-file hardening tests
+  # ─────────────────────────────────────────────────────────────────────────────
+  process-file-tests:
+    name: "Gate: process-file tests"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Run process-file tests
+        run: |
+          set -euo pipefail
+          deno test --allow-env --allow-read \
+            supabase/functions/process-file/index_test.ts
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Gate 4: Existing edge function tests (context-copilot, ive-agent-runner)
+  # ─────────────────────────────────────────────────────────────────────────────
+  edge-function-tests:
+    name: "Gate: edge function unit tests"
+    runs-on: ubuntu-latest
+    env:
+      GROQ_API_KEY: "test-key-ci"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Run context-copilot tests
+        run: deno test --allow-env supabase/functions/context-copilot/index_test.ts
+
+      - name: Run ive-agent-runner tests (if present)
+        run: |
+          if [ -f supabase/functions/ive-agent-runner/index_test.ts ]; then
+            deno test --allow-env supabase/functions/ive-agent-runner/index_test.ts
+          else
+            echo "ive-agent-runner test not found — skipping"
+          fi
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Gate 5: Secret scan — check .env contains only known-public variables
+  # ─────────────────────────────────────────────────────────────────────────────
+  env-secret-scan:
+    name: "Gate: .env allowlist"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate .env contains only public config
+        run: |
+          set -euo pipefail
+          if [ ! -f .env ]; then
+            echo "No .env file found — skipping"
+            exit 0
+          fi
+
+          # Allowlist: only these variable prefixes are permitted in the Flutter asset .env
+          ALLOWED_PATTERN='^(SUPABASE_URL|SUPABASE_ANON_KEY|#|[[:space:]]*$)'
+
+          VIOLATIONS=()
+          while IFS= read -r line; do
+            if [[ -n "$line" && "$line" != \#* ]]; then
+              VAR_NAME="${line%%=*}"
+              if ! echo "$VAR_NAME" | grep -qE '^(SUPABASE_URL|SUPABASE_ANON_KEY)$'; then
+                VIOLATIONS+=("$VAR_NAME")
+              fi
+            fi
+          done < .env
+
+          if [[ ${#VIOLATIONS[@]} -gt 0 ]]; then
+            echo "FAIL: .env contains variables not in the allowed list:"
+            printf '  - %s\n' "${VIOLATIONS[@]}"
+            echo ""
+            echo "The .env file is bundled as a Flutter asset and must contain ONLY:"
+            echo "  SUPABASE_URL (public)"
+            echo "  SUPABASE_ANON_KEY (public / publishable)"
+            echo ""
+            echo "Any other variable must be handled via GitHub Secrets or server-side config."
+            exit 1
+          fi
+          echo "PASS: .env contains only allowed public variables."
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Gate 6: Flutter static analysis
+  # ─────────────────────────────────────────────────────────────────────────────
+  flutter-analyze:
+    name: "Gate: flutter analyze"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.x'
+          channel: 'stable'
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Flutter analyze
+        run: flutter analyze --no-fatal-infos
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Gate 7: Check for error message leaks in edge functions
+  # ─────────────────────────────────────────────────────────────────────────────
+  error-sanitization-check:
+    name: "Gate: no raw error leaks in 5xx responses"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for raw error exposure in catch blocks
+        run: |
+          set -euo pipefail
+          echo "Checking for raw error exposure (String(e), e.message) in 5xx responses..."
+
+          # Pattern: catch block that returns 5xx with raw error string to caller
+          HITS=$(grep -rn \
+            --include="*.ts" \
+            -E 'status: 5[0-9]{2}.*e\.message|e\.message.*status: 5[0-9]{2}|String\(e\).*status: 5[0-9]{2}' \
+            supabase/functions/ 2>/dev/null || true)
+
+          if [[ -n "$HITS" ]]; then
+            echo "WARNING: Possible raw error exposure in 5xx responses:"
+            echo "$HITS"
+            echo ""
+            echo "Review these locations. 5xx responses should return a generic message."
+            echo "See SEC-01 error sanitization requirements."
+            # Warning only — not blocking (some occurrences may be intentional)
+          else
+            echo "PASS: no obvious raw error leaks in 5xx responses."
+          fi

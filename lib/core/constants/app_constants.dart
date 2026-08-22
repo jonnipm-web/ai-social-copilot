@@ -135,6 +135,8 @@ class AppConstants {
   // Fase 10L — Decision Simulator (IVE v1.1)
   static const edgeFunctionDecisionSimulator = 'decision-simulator';
 
-  // Admin
-  static const adminEmail = 'jpaulo.start@gmail.com';
+
+  // PUBLIC CLIENT CONFIG — NOT SECRET
+  // Security depends on Supabase Auth (JWT) + Row Level Security, not on key secrecy.
+  // SUPABASE_URL and SUPABASE_ANON_KEY are publishable values safe to embed in the app.
 }
