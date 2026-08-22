@@ -38,6 +38,5 @@ jobs:
             fi
             echo "→ Deploying $name"
             supabase functions deploy "$name" \
-              --project-ref nzngvbajrnruknpzzjbf \
-              --no-verify-jwt
+              --project-ref nzngvbajrnruknpzzjbf
           done

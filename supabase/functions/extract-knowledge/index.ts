@@ -101,7 +101,38 @@ Retorne apenas o JSON. Nenhum texto antes ou depois.`;
 
 // ── Fetch content from a URL ──────────────────────────────────
 
+// SEC-00A P1: Block SSRF to private/metadata IP ranges and non-public hosts
+function isPublicUrl(rawUrl: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
+  const host = parsed.hostname.toLowerCase();
+  const privatePatterns = [
+    /^127\./,
+    /^10\./,
+    /^172\.(1[6-9]|2\d|3[01])\./,
+    /^192\.168\./,
+    /^169\.254\./,
+    /^::1$/,
+    /^fc00:/i,
+    /^fe80:/i,
+    /^0\./,
+  ];
+  for (const pat of privatePatterns) {
+    if (pat.test(host)) return false;
+  }
+  if (host === "localhost" || (!host.includes(".") && host !== "")) return false;
+  return true;
+}
+
 async function fetchUrlContent(url: string): Promise<string> {
+  if (!isPublicUrl(url)) {
+    throw new Error("URL aponta para endereço privado ou reservado.");
+  }
   // Google Docs → export as plain text
   const docsMatch = url.match(/docs\.google\.com\/document\/d\/([a-zA-Z0-9_-]+)/);
   if (docsMatch) {

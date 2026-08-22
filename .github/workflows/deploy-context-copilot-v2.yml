@@ -67,8 +67,7 @@ jobs:
         run: |
           echo "→ Deploying context-copilot (SOMENTE esta função)"
           supabase functions deploy context-copilot \
-            --project-ref nzngvbajrnruknpzzjbf \
-            --no-verify-jwt
+            --project-ref nzngvbajrnruknpzzjbf
           echo "✓ Deploy concluído"
 
       # ── PASSO 6: Confirmar versão ativa ────────────────────────────────────
