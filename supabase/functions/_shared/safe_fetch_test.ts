@@ -62,6 +62,66 @@ Deno.test("DENY: NAT64-mapped IPv6 embedding a blocked address (64:ff9b::169.254
   assertEquals(isBlockedIpv6("64:ff9b::169.254.169.254"), true);
 });
 
+// ── IVE-X4R regression: URL normalization can compress an IPv4-mapped
+// address to pure hex groups with no dots anywhere, which the original
+// (dotted-decimal-suffix-only) regex-based check silently missed. Confirmed
+// empirically: `new URL("http://[::ffff:127.0.0.1]/").hostname` in Deno is
+// "[::ffff:7f00:1]", not "[::ffff:127.0.0.1]".
+
+Deno.test("DENY: IPv4-mapped IPv6 in fully-compressed hex form (::ffff:7f00:1, no dots)", () => {
+  assertEquals(isBlockedIpv6("::ffff:7f00:1"), true);
+});
+
+Deno.test("DENY: cloud metadata via IPv4-mapped IPv6 in compressed hex form (::ffff:a9fe:a9fe = ::ffff:169.254.169.254)", () => {
+  assertEquals(isBlockedIpv6("::ffff:a9fe:a9fe"), true);
+});
+
+Deno.test("DENY: the exact bracketed form Deno's URL parser actually produces for [::ffff:169.254.169.254]", () => {
+  const hostname = new URL("http://[::ffff:169.254.169.254]/").hostname.replace(/^\[|\]$/g, "");
+  assertEquals(hostname, "::ffff:a9fe:a9fe"); // pin the empirical normalization itself
+  assertEquals(isBlockedIpv6(hostname), true);
+});
+
+Deno.test("DENY: NAT64-mapped IPv6 in fully-compressed hex form (64:ff9b::a9fe:a9fe)", () => {
+  assertEquals(isBlockedIpv6("64:ff9b::a9fe:a9fe"), true);
+});
+
+Deno.test("ALLOW: IPv4-mapped IPv6 wrapping a genuinely public address is not blocked", () => {
+  // ::ffff:8.8.8.8 -> ::ffff:0808:0808
+  assertEquals(isBlockedIpv6("::ffff:808:808"), false);
+});
+
+// ── IVE-X4R regression: alternative IPv4 textual representations. Deno's
+// URL() parser (WHATWG-compliant) canonicalizes all of these to dotted-
+// decimal *before* safe_fetch ever sees them -- confirmed empirically, not
+// assumed -- so the existing dotted-decimal-only ipv4ToInt is sufficient.
+// Pinned here so a future Deno/runtime change that stops normalizing one of
+// these forms is caught by a failing test instead of silently reopening it.
+
+Deno.test("DENY: decimal-integer IPv4 representation of 127.0.0.1 (2130706433) is normalized and blocked", () => {
+  const hostname = new URL("http://2130706433/").hostname;
+  assertEquals(hostname, "127.0.0.1");
+  assertEquals(isBlockedIpv4(hostname), true);
+});
+
+Deno.test("DENY: hex IPv4 representation of 127.0.0.1 (0x7f000001) is normalized and blocked", () => {
+  const hostname = new URL("http://0x7f000001/").hostname;
+  assertEquals(hostname, "127.0.0.1");
+  assertEquals(isBlockedIpv4(hostname), true);
+});
+
+Deno.test("DENY: octal IPv4 representation of 127.0.0.1 (017700000001) is normalized and blocked", () => {
+  const hostname = new URL("http://017700000001/").hostname;
+  assertEquals(hostname, "127.0.0.1");
+  assertEquals(isBlockedIpv4(hostname), true);
+});
+
+Deno.test("DENY: shorthand 2-part IPv4 representation of 127.0.0.1 (127.1) is normalized and blocked", () => {
+  const hostname = new URL("http://127.1/").hostname;
+  assertEquals(hostname, "127.0.0.1");
+  assertEquals(isBlockedIpv4(hostname), true);
+});
+
 Deno.test("isBlockedIp dispatches correctly by address family", () => {
   assertEquals(isBlockedIp("10.0.0.1"), true);
   assertEquals(isBlockedIp("8.8.8.8"), false);
@@ -167,6 +227,52 @@ Deno.test("DENY: a public URL that redirects to a private target is rejected at 
   });
   try {
     await assertRejects(() => safeFetch("http://public.example/"), UnsafeUrlError);
+  } finally {
+    restoreDns();
+    restoreFetch();
+  }
+});
+
+// ── IVE-X4R additions: redirect scheme-change and response-size cap.
+// Neither had an explicit test in X4 -- section 13's adversarial checklist
+// asked for both explicitly.
+
+Deno.test("DENY: a redirect that changes scheme to a non-http(s) target is rejected", async () => {
+  const restoreDns = stubDns({ "public.example": { A: ["93.184.216.34"] } });
+  const restoreFetch = stubFetch((url) => {
+    if (url === "http://public.example/") {
+      return new Response(null, { status: 302, headers: { location: "file:///etc/passwd" } });
+    }
+    return new Response("should never be reached");
+  });
+  try {
+    await assertRejects(() => safeFetch("http://public.example/"), UnsafeUrlError);
+  } finally {
+    restoreDns();
+    restoreFetch();
+  }
+});
+
+Deno.test("DENY: a response exceeding the configured size cap is rejected mid-stream", async () => {
+  const restoreDns = stubDns({ "public.example": { A: ["93.184.216.34"] } });
+  const restoreFetch = stubFetch(() => {
+    const bigChunk = new Uint8Array(1024).fill(65); // 1 KiB of 'A'
+    const stream = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        controller.enqueue(bigChunk); // enqueue repeatedly -- will exceed a tiny cap fast
+      },
+    });
+    return new Response(stream, { status: 200 });
+  });
+  try {
+    const res = await safeFetch("http://public.example/", { maxResponseBytes: 2048 });
+    await assertRejects(async () => {
+      const reader = res.body!.getReader();
+      while (true) {
+        const { done } = await reader.read();
+        if (done) break;
+      }
+    }, UnsafeUrlError);
   } finally {
     restoreDns();
     restoreFetch();

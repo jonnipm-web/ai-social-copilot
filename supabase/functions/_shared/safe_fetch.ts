@@ -92,19 +92,87 @@ export function isBlockedIpv4(ip: string): boolean {
 
 // ── IPv6 ──────────────────────────────────────────────────────────────────
 
+/**
+ * Expand an IPv6 address (with or without "::" compression, with or
+ * without a trailing embedded-IPv4 group) into exactly 8 hex groups.
+ * Returns null if the address doesn't parse.
+ *
+ * X4R finding: URL normalization can rewrite a textually-obvious embedded
+ * IPv4 address (e.g. "::ffff:127.0.0.1") into a fully-compressed hex form
+ * ("::ffff:7f00:1") with no dots left anywhere in the string. A regex
+ * looking for a literal "a.b.c.d" suffix -- what this function replaced --
+ * silently misses that form entirely. Expanding to numeric groups first
+ * and comparing groups, not substrings, is what actually matches Deno's
+ * own URL().hostname output regardless of which textual form the caller
+ * or a DNS response used.
+ */
+function expandIpv6Groups(rawIp: string): number[] | null {
+  let ip = rawIp.toLowerCase();
+  const zoneIdx = ip.indexOf("%");
+  if (zoneIdx !== -1) ip = ip.slice(0, zoneIdx); // strip zone id, e.g. fe80::1%eth0
+
+  const sections = ip.split("::");
+  if (sections.length > 2) return null; // more than one "::" is invalid
+
+  const expandTrailingIpv4 = (groups: string[]): string[] | null => {
+    if (groups.length === 0) return groups;
+    const last = groups[groups.length - 1];
+    if (!last.includes(".")) return groups;
+    const n = ipv4ToInt(last);
+    if (n === null) return null;
+    const hi = ((n >>> 16) & 0xffff).toString(16);
+    const lo = (n & 0xffff).toString(16);
+    return [...groups.slice(0, -1), hi, lo];
+  };
+
+  const parseSide = (s: string): string[] | null => (s.length === 0 ? [] : s.split(":"));
+
+  let head = parseSide(sections[0]);
+  let tail = sections.length === 2 ? parseSide(sections[1]) : [];
+  if (head === null || tail === null) return null;
+
+  head = expandTrailingIpv4(head);
+  tail = expandTrailingIpv4(tail);
+  if (head === null || tail === null) return null;
+
+  let groups: string[];
+  if (sections.length === 1) {
+    if (head.length !== 8) return null; // no "::" -- must be exactly 8 groups
+    groups = head;
+  } else {
+    const missing = 8 - (head.length + tail.length);
+    if (missing < 0) return null;
+    groups = [...head, ...new Array(missing).fill("0"), ...tail];
+  }
+
+  if (groups.length !== 8) return null;
+  const nums = groups.map((g) => (/^[0-9a-f]{1,4}$/.test(g) ? parseInt(g, 16) : NaN));
+  return nums.some(Number.isNaN) ? null : nums;
+}
+
 export function isBlockedIpv6(rawIp: string): boolean {
   const ip = rawIp.toLowerCase().replace(/^\[|\]$/g, "");
+  const groups = expandIpv6Groups(ip);
+  if (groups === null) return true; // unparseable -- fail closed
 
-  if (ip === "::1" || ip === "::") return true; // loopback / unspecified
-  if (ip.startsWith("fe8") || ip.startsWith("fe9") || ip.startsWith("fea") || ip.startsWith("feb")) return true; // fe80::/10 link-local
-  if (ip.startsWith("fc") || ip.startsWith("fd")) return true; // fc00::/7 unique-local
-  if (ip.startsWith("ff")) return true; // ff00::/8 multicast
-  if (ip.startsWith("2001:db8:")) return true; // documentation
+  const [g0, g1, g2, g3, g4, g5, g6, g7] = groups;
 
-  // IPv4-mapped (::ffff:a.b.c.d) or NAT64 (64:ff9b::a.b.c.d) -- extract and
-  // re-check the embedded IPv4 address rather than trusting the wrapper.
-  const mapped = ip.match(/(?:::ffff:|64:ff9b::)(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/);
-  if (mapped) return isBlockedIpv4(mapped[1]);
+  if (groups.every((g) => g === 0)) return true; // :: unspecified
+  if (g0 === 0 && g1 === 0 && g2 === 0 && g3 === 0 && g4 === 0 && g5 === 0 && g6 === 0 && g7 === 1) return true; // ::1 loopback
+  if ((g0 & 0xffc0) === 0xfe80) return true; // fe80::/10 link-local
+  if ((g0 & 0xfe00) === 0xfc00) return true; // fc00::/7 unique-local
+  if ((g0 & 0xff00) === 0xff00) return true; // ff00::/8 multicast
+  if (g0 === 0x2001 && g1 === 0xdb8) return true; // 2001:db8::/32 documentation
+
+  // IPv4-mapped (::ffff:0:0/96) or NAT64 (64:ff9b::/96) -- re-check the
+  // embedded IPv4 by numeric value, regardless of which textual form (dotted
+  // or fully-compressed hex) produced these groups.
+  const isIpv4Mapped = g0 === 0 && g1 === 0 && g2 === 0 && g3 === 0 && g4 === 0 && g5 === 0xffff;
+  const isNat64 = g0 === 0x0064 && g1 === 0xff9b && g2 === 0 && g3 === 0 && g4 === 0 && g5 === 0;
+  if (isIpv4Mapped || isNat64) {
+    const embeddedIpv4 = `${(g6 >> 8) & 0xff}.${g6 & 0xff}.${(g7 >> 8) & 0xff}.${g7 & 0xff}`;
+    return isBlockedIpv4(embeddedIpv4);
+  }
 
   return false;
 }
