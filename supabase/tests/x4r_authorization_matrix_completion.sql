@@ -16,8 +16,59 @@
 -- Requires x4b_authorization_tests.sql's fixtures to exist in the same
 -- session/transaction, OR run standalone -- fixtures are re-created here
 -- independently so this file also works on its own.
+--
+-- GATE 1C AUDIT FINDING (pre-push review, not a change to migration 022):
+-- migration 001_platform_schema.sql only ever creates 4 separate policies
+-- on public.profiles -- profiles_select_own (SELECT), profiles_update_own
+-- (UPDATE), profiles_admin_select (SELECT), profiles_admin_update (UPDATE)
+-- -- and NO migration in this repo's history creates or renames anything
+-- to "users_own_profile" / "admin_all_profiles" (FOR ALL). Those are the
+-- exact names X4B/X4R's live catalog inspection found on the PRODUCTION
+-- database. This means production's actual RLS policy set on `profiles`
+-- has drifted from what this repo's migrations reconstruct: someone
+-- created/renamed a FOR ALL policy directly (dashboard/SQL editor),
+-- without a matching committed migration. Concretely, migration 001 as
+-- committed has NO INSERT-permitting policy on profiles at all -- so
+-- `supabase start` replaying only the committed migrations would make
+-- every direct INSERT into profiles by `authenticated`/`anon` fail
+-- closed by RLS's default-deny, regardless of the new trigger -- which
+-- would make cases N/O below untestable (or misleadingly always-DENY)
+-- against a database that does not match production's real posture.
+-- Fixed HERE ONLY, inside this test's own transaction (rolled back at
+-- the end, never committed, migration 022 untouched): create the same
+-- FOR ALL / no-WITH-CHECK policy shape production is documented to
+-- actually have, additively alongside the existing 4 policies (multiple
+-- permissive policies for the same command OR together in Postgres RLS,
+-- so this can only make behavior MORE permissive than local's committed
+-- migrations, matching -- not exceeding -- what X4B/X4R found live in
+-- production). This is a test-fidelity shim, not a schema fix; the real
+-- drift (missing migration for these two production policies) is a
+-- separate finding for the owner, not something this session is
+-- authorized to correct in migration form at this gate.
 
 BEGIN;
+
+DO $$
+DECLARE pol RECORD;
+BEGIN
+  RAISE NOTICE '--- pre-existing policies on public.profiles (from committed migrations) ---';
+  FOR pol IN
+    SELECT policyname, cmd, qual, with_check FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'profiles'
+  LOOP
+    RAISE NOTICE 'policy=% cmd=% using=% with_check=%', pol.policyname, pol.cmd, pol.qual, pol.with_check;
+  END LOOP;
+END $$;
+
+DROP POLICY IF EXISTS "users_own_profile_test_fidelity_shim" ON public.profiles;
+CREATE POLICY "users_own_profile_test_fidelity_shim" ON public.profiles
+  FOR ALL USING (auth.uid() = id);
+-- Deliberately no WITH CHECK -- reproducing the exact implicit-fallback
+-- shape (USING reused as WITH CHECK) that X4R's finding is about.
+
+DROP POLICY IF EXISTS "admin_all_profiles_test_fidelity_shim" ON public.profiles;
+CREATE POLICY "admin_all_profiles_test_fidelity_shim" ON public.profiles
+  FOR ALL USING (public.is_admin_user());
 
 INSERT INTO auth.users (id, email) VALUES
   ('11111111-1111-1111-1111-111111111111', 'x4b-user-a@test.invalid'),
@@ -141,6 +192,18 @@ END $$;
 -- ---------------------------------------------------------------------------
 -- L — upsert (INSERT ... ON CONFLICT DO UPDATE) affecting a privileged
 -- field is denied the same as a plain UPDATE would be.
+--
+-- Note on mechanism (corrected during Gate 1C audit): per PostgreSQL's
+-- documented trigger-firing order for INSERT ... ON CONFLICT DO UPDATE,
+-- the BEFORE INSERT row trigger fires for the proposed row BEFORE the
+-- conflict is even detected -- it always fires once, regardless of
+-- whether the statement ultimately inserts or falls back to the UPDATE
+-- action. So this attempt is actually blocked by the trigger's INSERT
+-- branch (NEW.role='admin' vs the safe default), not its UPDATE branch;
+-- if a conflict were reached at all, the UPDATE branch would apply a
+-- second, independent check. Either branch raises the same ERRCODE
+-- 42501, so the test's PASS/FAIL outcome is correct either way -- this
+-- note only corrects which mechanism is actually exercised.
 -- ---------------------------------------------------------------------------
 DO $$
 BEGIN
@@ -150,7 +213,7 @@ BEGIN
       ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role;
     RAISE EXCEPTION 'FAIL (L): upsert set role=admin via ON CONFLICT DO UPDATE';
   EXCEPTION WHEN insufficient_privilege OR raise_exception THEN
-    RAISE NOTICE 'PASS (L): upsert affecting a privileged field blocked (fires the UPDATE branch)';
+    RAISE NOTICE 'PASS (L): upsert affecting a privileged field blocked';
   END;
 END $$;
 
