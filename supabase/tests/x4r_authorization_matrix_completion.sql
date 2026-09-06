@@ -272,4 +272,34 @@ BEGIN
   RAISE NOTICE 'PASS (O): INSERT of a new own-profile row with safe defaults succeeds';
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- P (Gate 1E addition, not part of the original A-O lettering) — the real
+-- signup cascade (INSERT INTO auth.users -> on_auth_user_created AFTER
+-- INSERT trigger -> handle_new_user() SECURITY DEFINER -> INSERT INTO
+-- profiles) still completes without error under migration 022's new
+-- BEFORE INSERT trigger, and the resulting row has the intended safe
+-- defaults (role='free', monthly_limit=5, is_active=true) -- not merely
+-- reasoned about in migration 022's own comment, but actually exercised
+-- end-to-end here for the first time.
+-- ---------------------------------------------------------------------------
+RESET ROLE; -- back to postgres -- a real signup is driven by GoTrue, not
+            -- by the 'authenticated' role this file has been simulating
+DO $$
+DECLARE new_role text; new_limit int; new_active boolean;
+BEGIN
+  INSERT INTO auth.users (id, email)
+    VALUES ('66666666-6666-6666-6666-666666666666', 'x4r-signup-cascade@test.invalid');
+
+  SELECT role, monthly_limit, is_active INTO new_role, new_limit, new_active
+    FROM public.profiles WHERE id = '66666666-6666-6666-6666-666666666666';
+
+  IF new_role IS NULL THEN
+    RAISE EXCEPTION 'FAIL (P): signup cascade did not create a profiles row at all';
+  END IF;
+  IF new_role IS DISTINCT FROM 'free' OR new_limit IS DISTINCT FROM 5 OR new_active IS DISTINCT FROM true THEN
+    RAISE EXCEPTION 'FAIL (P): trigger-created profile has unsafe values (role=%, monthly_limit=%, is_active=%)', new_role, new_limit, new_active;
+  END IF;
+  RAISE NOTICE 'PASS (P): real signup cascade (auth.users insert -> handle_new_user -> profiles insert) completes and yields safe defaults (role=%, monthly_limit=%, is_active=%)', new_role, new_limit, new_active;
+END $$;
+
 ROLLBACK; -- never commit test fixtures, even in a local/ephemeral instance

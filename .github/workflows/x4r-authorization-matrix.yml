@@ -50,6 +50,57 @@ jobs:
           { supabase --version; docker --version; docker compose version || true; psql --version; } \
             | tee environment_versions.log
 
+      - name: Ephemeral runner-only migration filename workaround (IVE-X4R Gate 1E)
+        run: |
+          set -euo pipefail
+          ORIGINAL="supabase/migrations/001_create_post_generations.sql"
+          TEMP="supabase/migrations/000_create_post_generations.sql"
+          # Computed outside any pipe on purpose: a `{ ... } | tee` block runs
+          # the left side in a subshell, so a variable assigned inside it
+          # would not survive for the comparison below.
+          ORIGINAL_SHA256=$(sha256sum "$ORIGINAL" | awk '{print $1}')
+          {
+            echo "PURPOSE: production's supabase_migrations bookkeeping is empty for"
+            echo "all 22 migrations (Gate 1D finding) -- separately, this repo has two"
+            echo "files both using version prefix 001 (001_create_post_generations.sql"
+            echo "and 001_platform_schema.sql), which collides in the CLI's"
+            echo "supabase_migrations.schema_migrations bookkeeping the moment a fresh"
+            echo "local instance tries to apply both. This step works around that"
+            echo "collision ONLY inside this disposable runner's working tree -- the"
+            echo "committed files on the branch are never touched, nothing here is"
+            echo "'git add'-ed, committed, or pushed."
+            echo
+            echo "ORIGINAL_FILENAME=$ORIGINAL"
+            echo "TEMP_FILENAME=$TEMP"
+            echo "ORIGINAL_SHA256=$ORIGINAL_SHA256"
+          } | tee migration_workaround.log
+
+          mv "$ORIGINAL" "$TEMP"
+
+          TEMP_SHA256=$(sha256sum "$TEMP" | awk '{print $1}')
+          echo "TEMP_CONTENT_SHA256=$TEMP_SHA256" | tee -a migration_workaround.log
+
+          if [ "$ORIGINAL_SHA256" != "$TEMP_SHA256" ]; then
+            echo "ABORT: content hash changed across rename -- this must never happen for a plain mv" \
+              | tee -a migration_workaround.log
+            exit 1
+          fi
+          echo "OK: content is byte-identical before and after rename." | tee -a migration_workaround.log
+
+          echo "-- final ordered migration filename list used by supabase start --" \
+            | tee -a migration_workaround.log
+          ls -1 supabase/migrations/ | sort | tee -a migration_workaround.log
+
+          echo "-- confirming nothing was staged/committed in git (working tree only) --" \
+            | tee -a migration_workaround.log
+          git status --short | tee -a migration_workaround.log
+          if [ -n "$(git status --short)" ]; then
+            echo "Expected: exactly the rename above shows as untracked/deleted in the" \
+              | tee -a migration_workaround.log
+            echo "working tree; nothing has been staged with 'git add'." \
+              | tee -a migration_workaround.log
+          fi
+
       - name: Start local Supabase stack (applies all committed migrations)
         run: supabase start
 
@@ -70,15 +121,38 @@ jobs:
         run: |
           DB_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
           {
-            echo "-- trigger on public.profiles --"
+            echo "-- full trigger definition on public.profiles (timing + events) --"
             psql "$DB_URL" -v ON_ERROR_STOP=1 -c \
               "SELECT tgname, pg_get_triggerdef(oid) FROM pg_trigger WHERE tgrelid = 'public.profiles'::regclass AND NOT tgisinternal;"
-            echo "-- hardened function attributes --"
+            echo "-- SECURITY INVOKER/DEFINER + search_path on every function migration 022 touches or adds --"
             psql "$DB_URL" -v ON_ERROR_STOP=1 -c \
-              "SELECT proname, prosecdef, proconfig FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname IN ('prevent_self_privilege_escalation','is_admin_user','handle_new_user','set_updated_at');"
+              "SELECT proname, CASE WHEN prosecdef THEN 'DEFINER' ELSE 'INVOKER' END AS security, proconfig FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname IN ('prevent_self_privilege_escalation','is_admin_user','handle_new_user','set_updated_at','update_project_events_updated_at','update_executive_contexts_updated_at') ORDER BY proname;"
+            echo "-- full body of the new trigger function (for direct visual confirmation of the TG_OP branches) --"
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -c \
+              "SELECT pg_get_functiondef(oid) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname='prevent_self_privilege_escalation';"
           } | tee migration_evidence.log
+
           grep -q "trg_prevent_self_privilege_escalation" migration_evidence.log \
             || { echo "REFUSING: expected trigger not found -- migration 022 not applied to this local instance"; exit 1; }
+          grep -q "BEFORE INSERT OR UPDATE" migration_evidence.log \
+            || { echo "REFUSING: trigger exists but is not BEFORE INSERT OR UPDATE -- wrong version of migration 022"; exit 1; }
+
+          # Dedicated boolean query, not a text-grep on the formatted table
+          # above (that log has multiple mentions of the function name, so a
+          # grep -A on it could accidentally match the wrong row).
+          IS_INVOKER=$(psql "$DB_URL" -tA -v ON_ERROR_STOP=1 -c \
+            "SELECT NOT prosecdef FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname='prevent_self_privilege_escalation';")
+          echo "prevent_self_privilege_escalation is SECURITY INVOKER: $IS_INVOKER" | tee -a migration_evidence.log
+          [ "$IS_INVOKER" = "t" ] \
+            || { echo "REFUSING: prevent_self_privilege_escalation is not SECURITY INVOKER -- wrong version of migration 022"; exit 1; }
+
+          SEARCH_PATH_COUNT=$(psql "$DB_URL" -tA -v ON_ERROR_STOP=1 -c \
+            "SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname IN ('is_admin_user','handle_new_user','set_updated_at','update_project_events_updated_at','update_executive_contexts_updated_at') AND proconfig @> ARRAY['search_path=public'];")
+          echo "functions with search_path=public hardened: $SEARCH_PATH_COUNT / 5" | tee -a migration_evidence.log
+          [ "$SEARCH_PATH_COUNT" = "5" ] \
+            || { echo "REFUSING: not all 5 expected functions have search_path hardened -- wrong version of migration 022"; exit 1; }
+
+          echo "OK: migration 022 (X4R-corrected version) confirmed applied to this local instance." | tee -a migration_evidence.log
 
       - name: Run x4b_authorization_tests.sql
         run: |
@@ -107,6 +181,7 @@ jobs:
           name: x4r-authorization-matrix-results
           path: |
             environment_versions.log
+            migration_workaround.log
             migration_evidence.log
             x4b_results.log
             x4r_completion_results.log
