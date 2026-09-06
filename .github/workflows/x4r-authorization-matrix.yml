@@ -1,0 +1,117 @@
+name: X4R Authorization Test Matrix (ephemeral, local Supabase)
+
+# IVE-X4R Gate 1C. Runs the full A-O dynamic authorization test matrix
+# against a Postgres instance that lives entirely inside this runner
+# (supabase start), never against any real Supabase project. No job in
+# this file declares or uses SUPABASE_ACCESS_TOKEN, SUPABASE_PROJECT_REF,
+# or any service_role/anon key. Triggered by push to this feature branch
+# only -- not workflow_dispatch, per owner decision (a new workflow file
+# cannot be workflow_dispatch-triggered until it exists on the default
+# branch, and merging to main to work around that is explicitly
+# prohibited for this mission). workflow_dispatch is kept as a secondary
+# trigger for a future manual re-run once this file exists on a branch
+# GitHub already recognizes it on -- push is what makes this run today.
+
+on:
+  push:
+    branches:
+      - claude/ive-x4-security-boundary-closure
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/tests/x4b_authorization_tests.sql'
+      - 'supabase/tests/x4r_authorization_matrix_completion.sql'
+      - '.github/workflows/x4r-authorization-matrix.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  authorization-matrix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        # No `ref:` -- tests exactly the commit (github.sha) that
+        # triggered this run, whatever it ends up being.
+
+      - name: Record commit under test
+        run: echo "Testing commit: ${{ github.sha }}" | tee test_summary.log
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.116.0 # pinned; latest stable non-beta as of 2026-09-06
+
+      - name: Install postgresql-client (psql)
+        run: sudo apt-get update && sudo apt-get install --yes postgresql-client
+
+      - name: Log environment versions
+        run: |
+          { supabase --version; docker --version; docker compose version || true; psql --version; } \
+            | tee environment_versions.log
+
+      - name: Start local Supabase stack (applies all committed migrations)
+        run: supabase start
+
+      - name: Safety check -- local-only, no production reference
+        run: |
+          STATUS=$(supabase status)
+          echo "$STATUS"
+          echo "$STATUS" | grep -q "127.0.0.1" || { echo "REFUSING: not a local instance"; exit 1; }
+          if echo "$STATUS" | grep -qi "nzngvbajrnruknpzzjbf"; then
+            echo "REFUSING: production project ref detected in local status"; exit 1
+          fi
+          if env | grep -iE "SUPABASE_ACCESS_TOKEN|SUPABASE_PROJECT_REF|SERVICE_ROLE_KEY"; then
+            echo "REFUSING: production-shaped secret name present in job environment"; exit 1
+          fi
+          echo "OK: local-only instance, no production reference or secret found."
+
+      - name: Confirm migration 022 objects applied (not assumed)
+        run: |
+          DB_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+          {
+            echo "-- trigger on public.profiles --"
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -c \
+              "SELECT tgname, pg_get_triggerdef(oid) FROM pg_trigger WHERE tgrelid = 'public.profiles'::regclass AND NOT tgisinternal;"
+            echo "-- hardened function attributes --"
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -c \
+              "SELECT proname, prosecdef, proconfig FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname IN ('prevent_self_privilege_escalation','is_admin_user','handle_new_user','set_updated_at');"
+          } | tee migration_evidence.log
+          grep -q "trg_prevent_self_privilege_escalation" migration_evidence.log \
+            || { echo "REFUSING: expected trigger not found -- migration 022 not applied to this local instance"; exit 1; }
+
+      - name: Run x4b_authorization_tests.sql
+        run: |
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 \
+            -f supabase/tests/x4b_authorization_tests.sql 2>&1 | tee x4b_results.log
+
+      - name: Run x4r_authorization_matrix_completion.sql
+        run: |
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 \
+            -f supabase/tests/x4r_authorization_matrix_completion.sql 2>&1 | tee x4r_completion_results.log
+
+      - name: Build test summary
+        if: always()
+        run: |
+          {
+            echo "commit_sha=${{ github.sha }}"
+            echo "--- x4b_authorization_tests.sql: PASS/FAIL/NOTICE lines ---"
+            grep -E "NOTICE|PASS|FAIL" x4b_results.log || echo "(no output captured -- see full log)"
+            echo "--- x4r_authorization_matrix_completion.sql: PASS/FAIL/NOTICE lines ---"
+            grep -E "NOTICE|PASS|FAIL" x4r_completion_results.log || echo "(no output captured -- see full log)"
+          } | tee test_summary.log
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: x4r-authorization-matrix-results
+          path: |
+            environment_versions.log
+            migration_evidence.log
+            x4b_results.log
+            x4r_completion_results.log
+            test_summary.log
+          retention-days: 14
+
+      - name: Stop local Supabase stack
+        if: always()
+        run: supabase stop --no-backup
