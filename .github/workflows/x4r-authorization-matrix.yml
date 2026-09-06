@@ -35,7 +35,8 @@ jobs:
         # triggered this run, whatever it ends up being.
 
       - name: Record commit under test
-        run: echo "Testing commit: ${{ github.sha }}" | tee test_summary.log
+        run: |
+          echo "Testing commit: ${{ github.sha }}" | tee test_summary.log
 
       - uses: supabase/setup-cli@v1
         with:
