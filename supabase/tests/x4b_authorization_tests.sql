@@ -201,15 +201,33 @@ END $$;
 -- ---------------------------------------------------------------------------
 -- TEST 6 — an already-admin user CAN change role/monthly_limit (own or others)
 -- ---------------------------------------------------------------------------
--- TEST-HARNESS DEFECT FIX (Gate 1F): the session is still acting as user B
--- at this point (the last act_as() call was for B, in TEST 4/5, and this is
--- all one transaction) -- so without resetting role first, this "out-of-
--- band admin grant" would itself run AS B, match neither users_own_profile
--- (B updating A's row) nor admin_all_profiles (B is not admin), silently
--- affect 0 rows, and produce a false FAIL below (A never actually becomes
--- admin). Never caught before because every prior dynamic run aborted
--- earlier (recursion, Gate 1E) before ever reaching this line.
+-- TEST-HARNESS DEFECT FIX (Gate 1F, part 1): the session is still acting as
+-- user B at this point (the last act_as() call was for B, in TEST 4/5, and
+-- this is all one transaction) -- so without resetting role first, this
+-- "out-of-band admin grant" would itself run AS B, match neither
+-- users_own_profile (B updating A's row) nor admin_all_profiles (B is not
+-- admin), silently affect 0 rows, and produce a false FAIL below (A never
+-- actually becomes admin). Never caught before because every prior dynamic
+-- run aborted earlier (recursion, Gate 1E) before ever reaching this line.
+--
+-- TEST-HARNESS DEFECT FIX (Gate 1F, part 2, found dynamically THIS run):
+-- RESET ROLE alone is not enough. It resets the actual Postgres role (so
+-- RLS is bypassed again), but it does NOT clear request.jwt.claims, which
+-- act_as() set with is_local=true and which persists across RESET ROLE
+-- within the same transaction. Migration 022's trigger fires for every
+-- UPDATE regardless of RLS bypass (triggers are not gated by BYPASSRLS),
+-- and it reads auth.uid()/auth.role() from that same still-stale GUC -- so
+-- even after RESET ROLE, the trigger still saw "user B" attempting this
+-- change and correctly blocked it (this is migration 022 working exactly
+-- as designed, not a flaw in it -- the trigger doesn't trust the literal
+-- Postgres role, only the auth context). A genuine out-of-band grant (a
+-- fresh dashboard/psql superuser session that never called act_as()) would
+-- have no JWT claims set at all, so auth.uid()/auth.role() would be NULL,
+-- and the trigger's condition would evaluate to NULL (treated as not-true
+-- by PL/pgSQL's IF), letting the UPDATE through -- reproduced here by
+-- explicitly clearing the stale claims before the grant.
 RESET ROLE;
+SELECT set_config('request.jwt.claims', '', true);
 UPDATE public.profiles SET role = 'admin' WHERE id = '11111111-1111-1111-1111-111111111111';
 -- (direct write as postgres/superuser role in this test transaction, simulating
 --  an out-of-band admin grant -- the exact mechanism the owner already uses today)
