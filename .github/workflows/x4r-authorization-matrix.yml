@@ -1,6 +1,6 @@
 name: X4R Authorization Test Matrix (ephemeral, local Supabase)
 
-# IVE-X4R Gate 1C. Runs the full A-O dynamic authorization test matrix
+# IVE-X4R / MB2. Runs the full A-P dynamic authorization test matrix
 # against a Postgres instance that lives entirely inside this runner
 # (supabase start), never against any real Supabase project. No job in
 # this file declares or uses SUPABASE_ACCESS_TOKEN, SUPABASE_PROJECT_REF,
@@ -11,6 +11,15 @@ name: X4R Authorization Test Matrix (ephemeral, local Supabase)
 # prohibited for this mission). workflow_dispatch is kept as a secondary
 # trigger for a future manual re-run once this file exists on a branch
 # GitHub already recognizes it on -- push is what makes this run today.
+#
+# MB2 update: as of the canonical baseline
+# (20260907120000_baseline_production_pre_x4r.sql), the Gate 1E
+# runner-only migration-filename workaround is no longer needed -- the
+# legacy duplicate-001 collision no longer exists in the active
+# supabase/migrations/ directory (those files are archived at
+# docs/legacy-migrations-archive/, never replayed). This workflow now
+# runs supabase start directly against the committed migrations
+# unmodified.
 
 on:
   push:
@@ -50,59 +59,32 @@ jobs:
           { supabase --version; docker --version; docker compose version || true; psql --version; } \
             | tee environment_versions.log
 
-      - name: Ephemeral runner-only migration filename workaround (IVE-X4R Gate 1E)
+      - name: Confirm clean migration list (no workaround needed)
         run: |
           set -euo pipefail
-          ORIGINAL="supabase/migrations/001_create_post_generations.sql"
-          TEMP="supabase/migrations/000_create_post_generations.sql"
-          # Computed outside any pipe on purpose: a `{ ... } | tee` block runs
-          # the left side in a subshell, so a variable assigned inside it
-          # would not survive for the comparison below.
-          ORIGINAL_SHA256=$(sha256sum "$ORIGINAL" | awk '{print $1}')
           {
-            echo "PURPOSE: production's supabase_migrations bookkeeping is empty for"
-            echo "all 22 migrations (Gate 1D finding) -- separately, this repo has two"
-            echo "files both using version prefix 001 (001_create_post_generations.sql"
-            echo "and 001_platform_schema.sql), which collides in the CLI's"
-            echo "supabase_migrations.schema_migrations bookkeeping the moment a fresh"
-            echo "local instance tries to apply both. This step works around that"
-            echo "collision ONLY inside this disposable runner's working tree -- the"
-            echo "committed files on the branch are never touched, nothing here is"
-            echo "'git add'-ed, committed, or pushed."
-            echo
-            echo "ORIGINAL_FILENAME=$ORIGINAL"
-            echo "TEMP_FILENAME=$TEMP"
-            echo "ORIGINAL_SHA256=$ORIGINAL_SHA256"
-          } | tee migration_workaround.log
+            echo "-- supabase/migrations/ as committed, no rename, no workaround --"
+            ls -1 supabase/migrations/ | sort
+            echo "-- confirming no legacy 001-021 files remain in the active migrations dir --"
+            if ls supabase/migrations/ | grep -qE '^0[0-2][0-9]_' ; then
+              echo "REFUSING: a legacy-numbered migration file is still present in supabase/migrations/"
+              exit 1
+            fi
+            echo "OK: only the canonical baseline and post-baseline migrations are present."
+          } | tee migration_list.log
 
-          mv "$ORIGINAL" "$TEMP"
-
-          TEMP_SHA256=$(sha256sum "$TEMP" | awk '{print $1}')
-          echo "TEMP_CONTENT_SHA256=$TEMP_SHA256" | tee -a migration_workaround.log
-
-          if [ "$ORIGINAL_SHA256" != "$TEMP_SHA256" ]; then
-            echo "ABORT: content hash changed across rename -- this must never happen for a plain mv" \
-              | tee -a migration_workaround.log
-            exit 1
-          fi
-          echo "OK: content is byte-identical before and after rename." | tee -a migration_workaround.log
-
-          echo "-- final ordered migration filename list used by supabase start --" \
-            | tee -a migration_workaround.log
-          ls -1 supabase/migrations/ | sort | tee -a migration_workaround.log
-
-          echo "-- confirming nothing was staged/committed in git (working tree only) --" \
-            | tee -a migration_workaround.log
-          git status --short | tee -a migration_workaround.log
-          if [ -n "$(git status --short)" ]; then
-            echo "Expected: exactly the rename above shows as untracked/deleted in the" \
-              | tee -a migration_workaround.log
-            echo "working tree; nothing has been staged with 'git add'." \
-              | tee -a migration_workaround.log
-          fi
-
-      - name: Start local Supabase stack (applies all committed migrations)
+      - name: Start local Supabase stack (applies baseline + post-baseline migrations)
         run: supabase start
+
+      - name: Verify seed.sql reference data landed (supabase start already ran it automatically)
+        run: |
+          COUNT=$(psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -tA -v ON_ERROR_STOP=1 \
+            -c "SELECT count(*) FROM public.feature_flags;")
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 \
+            -c "SELECT feature_name, enabled, plan_required FROM public.feature_flags ORDER BY feature_name;" \
+            | tee seed_verification.log
+          echo "feature_flags row count: $COUNT" | tee -a seed_verification.log
+          [ "$COUNT" = "6" ] || { echo "REFUSING: expected 6 feature_flags rows from seed.sql, got $COUNT"; exit 1; }
 
       - name: Safety check -- local-only, no production reference
         run: |
@@ -181,7 +163,8 @@ jobs:
           name: x4r-authorization-matrix-results
           path: |
             environment_versions.log
-            migration_workaround.log
+            migration_list.log
+            seed_verification.log
             migration_evidence.log
             x4b_results.log
             x4r_completion_results.log

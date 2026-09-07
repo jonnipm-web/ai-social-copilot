@@ -44,70 +44,16 @@ VALUES ('55555555-5555-5555-5555-555555555555',
 ON CONFLICT (id) DO NOTHING;
 
 -- ---------------------------------------------------------------------------
--- TEST-FIDELITY HARNESS -- LIVE PRODUCTION SHAPE RECONSTRUCTION (Gate 1F)
---
--- This repo's committed migration history (001_platform_schema.sql)
--- creates 4 separate profiles policies (profiles_select_own,
--- profiles_update_own, profiles_admin_select, profiles_admin_update) that
--- no longer match what is actually live in production. Gate 1D found
--- production instead runs exactly 2 policies (users_own_profile,
--- admin_all_profiles), and Gate 1E's dynamic run found the committed
--- admin_select/admin_update policies are additionally structurally
--- broken: their USING clause is a direct
--- `EXISTS (SELECT 1 FROM public.profiles ...)` subquery written inside a
--- policy defined ON profiles -- genuinely self-recursive, and Postgres
--- correctly raises "infinite recursion detected in policy" the moment
--- any UPDATE touches profiles, for any user, not just an attacker.
---
--- LEGACY MIGRATION DEFECT (recorded, not fixed here, not a migration-022
--- issue): profiles_admin_select / profiles_admin_update, as committed,
--- are structurally recursive and are not what is live in production --
--- production replaced them with admin_all_profiles, which routes the
--- admin check through a SECURITY DEFINER function instead of a raw
--- self-referencing subquery, which is exactly what avoids the recursion.
--- This belongs in a future migration-baseline reconstruction, not X4R.
---
--- Everything below exists ONLY inside this script's own transaction
--- (rolled back at the end, never committed) and reconstructs, exactly,
--- the objects Gate 1F captured live from production this session via
--- pg_policy/pg_proc/pg_get_functiondef -- not an approximation.
+-- IVE-X4R-MB2: the TEST-FIDELITY HARNESS that used to live here (Gate 1F)
+-- is removed. It existed only because the legacy migration history
+-- (archived at docs/legacy-migrations-archive/) did not reproduce
+-- production's real profiles authorization shape -- the canonical
+-- baseline (supabase/migrations/20260907120000_baseline_production_
+-- pre_x4r.sql) now creates users_own_profile / admin_all_profiles /
+-- get_current_user_role() natively, and never creates the recursive
+-- legacy profiles_admin_select / profiles_admin_update policies at all,
+-- so no reconstruction is needed here anymore.
 -- ---------------------------------------------------------------------------
-
--- 1. Remove only the two legacy policies that are structurally recursive.
---    profiles_select_own / profiles_update_own are left in place: they
---    are harmless, functionally subsumed by users_own_profile below, and
---    are not recursive -- removing them is not necessary.
-DROP POLICY IF EXISTS "profiles_admin_select" ON public.profiles;
-DROP POLICY IF EXISTS "profiles_admin_update" ON public.profiles;
-
--- 2. Recreate get_current_user_role() exactly as captured live from
---    production this session (pg_get_functiondef + prosecdef + proconfig
---    matched byte-for-byte, not paraphrased). This whole script connects
---    as `postgres`, the same superuser role that owns this function in
---    production; production's public.profiles has
---    relforcerowsecurity=false (confirmed live), so a postgres-owned
---    SECURITY DEFINER function querying profiles internally bypasses RLS
---    exactly as it does in production -- that is what avoids the
---    recursion here, faithfully, not by omission.
-CREATE OR REPLACE FUNCTION public.get_current_user_role()
- RETURNS text
- LANGUAGE sql
- STABLE SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-  SELECT role FROM public.profiles WHERE id = auth.uid();
-  $function$;
-
--- 3. Recreate the exact two live production policies (same names, same
---    USING expressions, FOR ALL/permissive, no WITH CHECK -- captured
---    live via pg_policy this session, not assumed).
-DROP POLICY IF EXISTS "users_own_profile" ON public.profiles;
-CREATE POLICY "users_own_profile" ON public.profiles
-  FOR ALL USING (auth.uid() = id);
-
-DROP POLICY IF EXISTS "admin_all_profiles" ON public.profiles;
-CREATE POLICY "admin_all_profiles" ON public.profiles
-  FOR ALL USING (get_current_user_role() = 'admin'::text);
 
 -- Helper to simulate an authenticated session as a given user.
 CREATE OR REPLACE FUNCTION pg_temp.act_as(uid uuid) RETURNS void AS $$
