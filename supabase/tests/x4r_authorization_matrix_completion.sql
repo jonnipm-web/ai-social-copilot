@@ -241,9 +241,20 @@ RESET ROLE; -- back to a role that can query pg_proc/pg_get_functiondef freely
 DO $$
 DECLARE writer_count int;
 BEGIN
+  -- TEST-HARNESS DEFECT FIX (Gate 1F, found dynamically THIS run, reproduced
+  -- and isolated read-only against production before fixing): joining
+  -- pg_proc to pg_namespace and calling pg_get_functiondef(p.oid) in the
+  -- WHERE clause makes PostgreSQL raise a genuine, reproducible
+  -- 'ERROR: 42809: "array_agg" is an aggregate function' -- confirmed live
+  -- (not an artifact of any tool wrapper) by running the exact query
+  -- against production read-only and bisecting it clause by clause: the
+  -- JOIN itself is what triggers it; the equivalent join-free
+  -- `p.pronamespace = 'public'::regnamespace` form returns the identical
+  -- correct result without error. Not a security-relevant finding, purely
+  -- a test-query-shape defect.
   SELECT count(*) INTO writer_count
-  FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-  WHERE n.nspname = 'public'
+  FROM pg_proc p
+  WHERE p.pronamespace = 'public'::regnamespace
     AND p.proname <> 'handle_new_user'
     AND (
       pg_get_functiondef(p.oid) ILIKE '%insert into%profiles%'
