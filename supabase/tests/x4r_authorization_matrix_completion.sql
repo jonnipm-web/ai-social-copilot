@@ -1,4 +1,5 @@
--- IVE-X4R authorization matrix completion (letters B, C, D, F, J, K, L, N, O).
+-- IVE-X4R authorization matrix completion (letters B, C, D, F, J, K, L, M,
+-- N, O, plus P added in Gate 1E -- not part of the original A-O lettering).
 --
 -- NOT EXECUTED ANYWHERE BY THIS SESSION. Prepared as part of the CI
 -- environment discovery proposal (Authorization Gate 1B) -- companion to
@@ -17,34 +18,30 @@
 -- session/transaction, OR run standalone -- fixtures are re-created here
 -- independently so this file also works on its own.
 --
--- GATE 1C AUDIT FINDING (pre-push review, not a change to migration 022):
+-- TEST-FIDELITY HARNESS -- LIVE PRODUCTION SHAPE RECONSTRUCTION (Gate 1F,
+-- supersedes the Gate 1C additive shim previously in this file):
+--
 -- migration 001_platform_schema.sql only ever creates 4 separate policies
 -- on public.profiles -- profiles_select_own (SELECT), profiles_update_own
 -- (UPDATE), profiles_admin_select (SELECT), profiles_admin_update (UPDATE)
 -- -- and NO migration in this repo's history creates or renames anything
--- to "users_own_profile" / "admin_all_profiles" (FOR ALL). Those are the
--- exact names X4B/X4R's live catalog inspection found on the PRODUCTION
--- database. This means production's actual RLS policy set on `profiles`
--- has drifted from what this repo's migrations reconstruct: someone
--- created/renamed a FOR ALL policy directly (dashboard/SQL editor),
--- without a matching committed migration. Concretely, migration 001 as
--- committed has NO INSERT-permitting policy on profiles at all -- so
--- `supabase start` replaying only the committed migrations would make
--- every direct INSERT into profiles by `authenticated`/`anon` fail
--- closed by RLS's default-deny, regardless of the new trigger -- which
--- would make cases N/O below untestable (or misleadingly always-DENY)
--- against a database that does not match production's real posture.
--- Fixed HERE ONLY, inside this test's own transaction (rolled back at
--- the end, never committed, migration 022 untouched): create the same
--- FOR ALL / no-WITH-CHECK policy shape production is documented to
--- actually have, additively alongside the existing 4 policies (multiple
--- permissive policies for the same command OR together in Postgres RLS,
--- so this can only make behavior MORE permissive than local's committed
--- migrations, matching -- not exceeding -- what X4B/X4R found live in
--- production). This is a test-fidelity shim, not a schema fix; the real
--- drift (missing migration for these two production policies) is a
--- separate finding for the owner, not something this session is
--- authorized to correct in migration form at this gate.
+-- to "users_own_profile" / "admin_all_profiles" (FOR ALL), the exact names
+-- Gate 1D's live catalog inspection found on the PRODUCTION database.
+-- Gate 1E's dynamic run additionally found that profiles_admin_select /
+-- profiles_admin_update are structurally recursive (their USING clause is
+-- a direct EXISTS subquery against profiles, written inside a policy ON
+-- profiles), and merely ADDING more policies alongside them (Gate 1C/1E's
+-- approach) did not help, since Postgres evaluates every applicable
+-- permissive policy regardless of what else exists. LEGACY MIGRATION
+-- DEFECT, not a migration-022 issue, not fixed in the migration here --
+-- belongs in a future migration-baseline reconstruction.
+--
+-- Fixed HERE ONLY, inside this test's own transaction (rolled back at the
+-- end, never committed, migration 022 untouched): the two recursive
+-- legacy policies are dropped, and get_current_user_role() plus the two
+-- live policies are recreated EXACTLY as Gate 1F captured them from
+-- production this session (pg_get_functiondef / pg_policy, not
+-- paraphrased) -- not a functional approximation.
 
 BEGIN;
 
@@ -60,15 +57,34 @@ BEGIN
   END LOOP;
 END $$;
 
-DROP POLICY IF EXISTS "users_own_profile_test_fidelity_shim" ON public.profiles;
-CREATE POLICY "users_own_profile_test_fidelity_shim" ON public.profiles
-  FOR ALL USING (auth.uid() = id);
--- Deliberately no WITH CHECK -- reproducing the exact implicit-fallback
--- shape (USING reused as WITH CHECK) that X4R's finding is about.
+-- 1. Remove only the two legacy policies that are structurally recursive.
+DROP POLICY IF EXISTS "profiles_admin_select" ON public.profiles;
+DROP POLICY IF EXISTS "profiles_admin_update" ON public.profiles;
 
-DROP POLICY IF EXISTS "admin_all_profiles_test_fidelity_shim" ON public.profiles;
-CREATE POLICY "admin_all_profiles_test_fidelity_shim" ON public.profiles
-  FOR ALL USING (public.is_admin_user());
+-- 2. Recreate get_current_user_role() exactly as captured live from
+--    production this session. Connecting role is `postgres`, matching
+--    production's function owner; production's profiles has
+--    relforcerowsecurity=false (confirmed live), so this SECURITY
+--    DEFINER function bypasses RLS on its internal query exactly as it
+--    does in production, which is what avoids the recursion here.
+CREATE OR REPLACE FUNCTION public.get_current_user_role()
+ RETURNS text
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  SELECT role FROM public.profiles WHERE id = auth.uid();
+  $function$;
+
+-- 3. Recreate the exact two live production policies (same names, same
+--    USING expressions, FOR ALL/permissive, no WITH CHECK).
+DROP POLICY IF EXISTS "users_own_profile" ON public.profiles;
+CREATE POLICY "users_own_profile" ON public.profiles
+  FOR ALL USING (auth.uid() = id);
+
+DROP POLICY IF EXISTS "admin_all_profiles" ON public.profiles;
+CREATE POLICY "admin_all_profiles" ON public.profiles
+  FOR ALL USING (get_current_user_role() = 'admin'::text);
 
 INSERT INTO auth.users (id, email) VALUES
   ('11111111-1111-1111-1111-111111111111', 'x4b-user-a@test.invalid'),
