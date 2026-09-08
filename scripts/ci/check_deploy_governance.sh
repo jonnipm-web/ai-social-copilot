@@ -25,21 +25,18 @@ fail() {
 }
 
 # ---------------------------------------------------------------------
-# Check 1: only one file may contain a real `supabase functions deploy`
-# invocation -- the canonical route. deploy-show-01a.yml is a retired,
-# trigger-disabled (`on: {}`) historical record of a past release gate;
-# it is explicitly allowed to keep the text as a non-runnable artifact.
+# Check 1: zero tolerance for the literal 'supabase functions deploy'
+# string anywhere in .github/workflows/. The canonical route
+# (deploy-edge-functions.yml) never spells this out as one substring --
+# it builds the argv from separate tokens via
+# scripts/ci/resolve_deploy_selection.sh -- so a match here always means
+# a second, hand-written deploy invocation exists somewhere it shouldn't.
+# (deploy-show-01a.yml, the one historical exception this check used to
+# carve out, was removed entirely in DG2 rather than left as inert text
+# -- see that commit for why.)
 # ---------------------------------------------------------------------
-ALLOWED_DEPLOY_FILES="deploy-edge-functions.yml deploy-show-01a.yml"
 while IFS= read -r f; do
-  base="$(basename "$f")"
-  allowed=0
-  for a in $ALLOWED_DEPLOY_FILES; do
-    [ "$base" = "$a" ] && allowed=1
-  done
-  if [ "$allowed" != "1" ]; then
-    fail "'$base' contains a live 'supabase functions deploy' invocation -- only deploy-edge-functions.yml (canonical) may deploy; deploy-show-01a.yml is the one documented, trigger-disabled historical exception"
-  fi
+  fail "'$(basename "$f")' contains a live 'supabase functions deploy' invocation -- only deploy-edge-functions.yml (canonical, via scripts/ci/resolve_deploy_selection.sh) may deploy"
 done < <(grep -rl "supabase functions deploy" "$WORKFLOWS" 2>/dev/null || true)
 
 # ---------------------------------------------------------------------

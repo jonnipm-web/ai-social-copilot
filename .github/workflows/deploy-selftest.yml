@@ -24,7 +24,6 @@ on:
       - '.github/deploy-allowlist.tsv'
       - '.github/workflows/deploy-selftest.yml'
       - '.github/workflows/deploy-edge-functions.yml'
-      - '.github/workflows/deploy-show-01a.yml'
       - '.github/workflows/test-context-copilot.yml'
   workflow_dispatch: {}
 
