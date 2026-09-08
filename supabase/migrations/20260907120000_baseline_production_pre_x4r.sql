@@ -45,6 +45,144 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ============================================================================
+-- FUNCTIONS (created BEFORE any table, since several tables below declare
+-- triggers inline that reference these -- a real ordering bug found and
+-- fixed dynamically via this branch's own CI run: the first attempt had
+-- this section after the tables and failed with
+-- "ERROR: function public.set_updated_at() does not exist" the moment
+-- the first inline trigger tried to bind to it. Exactly as captured live
+-- -- migration 022's search_path hardening on is_admin_user()/
+-- handle_new_user() is intentionally NOT applied here; it is the first
+-- migration after this baseline)
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION public.set_updated_at()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+begin
+  insert into public.profiles (id, email)
+    values (new.id, new.email)
+    on conflict (id) do nothing;
+  return new;
+end;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.is_admin_user()
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+AS $function$
+  SELECT EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role = 'admin'
+  );
+$function$;
+
+CREATE OR REPLACE FUNCTION public.get_current_user_role()
+ RETURNS text
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  SELECT role FROM public.profiles WHERE id = auth.uid();
+  $function$;
+
+CREATE OR REPLACE FUNCTION public.update_executive_contexts_updated_at()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.update_project_events_updated_at()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.validate_asset_id_ownership()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public, pg_catalog'
+AS $function$
+BEGIN
+  IF NEW.asset_id IS NOT NULL THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM public.assets
+      WHERE id = NEW.asset_id AND user_id = NEW.user_id
+    ) THEN
+      RAISE EXCEPTION 'asset_id does not belong to the acting user';
+    END IF;
+    IF NEW.project_id IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM public.assets
+      WHERE id = NEW.asset_id AND project_id = NEW.project_id
+    ) THEN
+      RAISE EXCEPTION 'asset_id does not belong to the specified project';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.validate_asset_parent_ownership()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public, pg_catalog'
+AS $function$
+BEGIN
+  IF NEW.parent_asset_id IS NOT NULL THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM public.assets
+      WHERE id = NEW.parent_asset_id
+        AND user_id = NEW.user_id
+        AND project_id = NEW.project_id
+    ) THEN
+      RAISE EXCEPTION 'parent_asset_id does not belong to the acting user/project';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.validate_asset_resource_ownership()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public, pg_catalog'
+AS $function$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM public.assets
+    WHERE id = NEW.asset_id AND user_id = NEW.user_id
+  ) THEN
+    RAISE EXCEPTION 'asset_id does not belong to the acting user';
+  END IF;
+  RETURN NEW;
+END;
+$function$;
+
+-- ============================================================================
 -- TABLES (dependency order; forward/circular references added via ALTER
 -- TABLE further below, exactly the way pg_dump itself handles them)
 -- ============================================================================
@@ -956,138 +1094,6 @@ ALTER TABLE public.projects
 ALTER TABLE public.calendar_items
   ADD CONSTRAINT calendar_items_campaign_id_fkey
   FOREIGN KEY (campaign_id) REFERENCES public.campaigns(id) ON DELETE SET NULL;
-
--- ============================================================================
--- FUNCTIONS (exactly as captured live -- migration 022's search_path
--- hardening on is_admin_user()/handle_new_user() is intentionally NOT
--- applied here; it is the first migration after this baseline)
--- ============================================================================
-
-CREATE OR REPLACE FUNCTION public.set_updated_at()
- RETURNS trigger
- LANGUAGE plpgsql
-AS $function$
-BEGIN
-  NEW.updated_at = now();
-  RETURN NEW;
-END;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.handle_new_user()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$
-begin
-  insert into public.profiles (id, email)
-    values (new.id, new.email)
-    on conflict (id) do nothing;
-  return new;
-end;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.is_admin_user()
- RETURNS boolean
- LANGUAGE sql
- STABLE SECURITY DEFINER
-AS $function$
-  SELECT EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = auth.uid() AND role = 'admin'
-  );
-$function$;
-
-CREATE OR REPLACE FUNCTION public.get_current_user_role()
- RETURNS text
- LANGUAGE sql
- STABLE SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-  SELECT role FROM public.profiles WHERE id = auth.uid();
-  $function$;
-
-CREATE OR REPLACE FUNCTION public.update_executive_contexts_updated_at()
- RETURNS trigger
- LANGUAGE plpgsql
-AS $function$
-BEGIN
-  NEW.updated_at = now();
-  RETURN NEW;
-END;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.update_project_events_updated_at()
- RETURNS trigger
- LANGUAGE plpgsql
-AS $function$
-BEGIN
-  NEW.updated_at = now();
-  RETURN NEW;
-END;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.validate_asset_id_ownership()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public, pg_catalog'
-AS $function$
-BEGIN
-  IF NEW.asset_id IS NOT NULL THEN
-    IF NOT EXISTS (
-      SELECT 1 FROM public.assets
-      WHERE id = NEW.asset_id AND user_id = NEW.user_id
-    ) THEN
-      RAISE EXCEPTION 'asset_id does not belong to the acting user';
-    END IF;
-    IF NEW.project_id IS NOT NULL AND NOT EXISTS (
-      SELECT 1 FROM public.assets
-      WHERE id = NEW.asset_id AND project_id = NEW.project_id
-    ) THEN
-      RAISE EXCEPTION 'asset_id does not belong to the specified project';
-    END IF;
-  END IF;
-  RETURN NEW;
-END;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.validate_asset_parent_ownership()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public, pg_catalog'
-AS $function$
-BEGIN
-  IF NEW.parent_asset_id IS NOT NULL THEN
-    IF NOT EXISTS (
-      SELECT 1 FROM public.assets
-      WHERE id = NEW.parent_asset_id
-        AND user_id = NEW.user_id
-        AND project_id = NEW.project_id
-    ) THEN
-      RAISE EXCEPTION 'parent_asset_id does not belong to the acting user/project';
-    END IF;
-  END IF;
-  RETURN NEW;
-END;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.validate_asset_resource_ownership()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public, pg_catalog'
-AS $function$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM public.assets
-    WHERE id = NEW.asset_id AND user_id = NEW.user_id
-  ) THEN
-    RAISE EXCEPTION 'asset_id does not belong to the acting user';
-  END IF;
-  RETURN NEW;
-END;
-$function$;
 
 -- ============================================================================
 -- Remaining triggers not already declared alongside their table above
