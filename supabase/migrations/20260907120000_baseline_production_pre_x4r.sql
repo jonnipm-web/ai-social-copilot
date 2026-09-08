@@ -1113,8 +1113,15 @@ ALTER TABLE public.calendar_items
 CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
-CREATE TRIGGER set_profiles_updated_at BEFORE UPDATE ON public.profiles
-  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+-- NOTE (found during MB2R's dynamic fidelity re-verification): production
+-- has ZERO triggers on public.profiles today -- confirmed via a direct,
+-- targeted query (`SELECT ... FROM pg_trigger WHERE tgrelid =
+-- 'public.profiles'::regclass`, empty result). Migration 001_platform_
+-- schema.sql declares `set_profiles_updated_at`, but it is not live,
+-- exactly the same "declared but not live" pattern MB1.5 already found
+-- for personas/content_items/calendar_items -- profiles itself was never
+-- checked for this specifically until now. Not created here, matching
+-- live fact over declared intent, per this file's own stated principle.
 
 CREATE TRIGGER trg_assets_parent_ownership BEFORE INSERT OR UPDATE ON public.assets
   FOR EACH ROW EXECUTE FUNCTION public.validate_asset_parent_ownership();
