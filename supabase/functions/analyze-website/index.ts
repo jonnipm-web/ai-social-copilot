@@ -164,13 +164,13 @@ ${content}`;
         "Authorization": `Bearer ${GROQ_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
+        model: "openai/gpt-oss-120b",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userMessage },
         ],
         temperature: 0.4,
-        max_tokens: 4000,
+        max_completion_tokens: 4000,
       }),
     });
 
