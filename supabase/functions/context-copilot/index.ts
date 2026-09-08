@@ -181,9 +181,9 @@ Responda sempre em Português do Brasil.`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: 'openai/gpt-oss-120b',
         temperature: 0.4,
-        max_tokens: 800,
+        max_completion_tokens: 800,
         response_format: { type: 'text' },
         messages: [
           { role: 'system', content: systemPrompt },

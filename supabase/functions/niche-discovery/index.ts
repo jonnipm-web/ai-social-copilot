@@ -64,13 +64,13 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
+        model: "openai/gpt-oss-120b",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: `Input/nicho/projeto: ${input}\n\nMapeie os top 10 nichos/sub-nichos/micro-nichos e retorne o JSON.` },
         ],
         temperature: 0.4,
-        max_tokens: 4000,
+        max_completion_tokens: 4000,
       }),
     });
 

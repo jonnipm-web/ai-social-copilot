@@ -61,7 +61,7 @@ final_score = média ponderada dos demais scores.`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: 'openai/gpt-oss-120b',
         messages: [
           {
             role: 'system',
@@ -71,7 +71,7 @@ final_score = média ponderada dos demais scores.`;
           { role: 'user', content: userPrompt },
         ],
         temperature: 0.7,
-        max_tokens: 2048,
+        max_completion_tokens: 2048,
         response_format: { type: 'json_object' },
       }),
     });

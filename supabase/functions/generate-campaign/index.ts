@@ -101,13 +101,13 @@ serve(async (req) => {
         "Authorization": `Bearer ${GROQ_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
+        model: "openai/gpt-oss-120b",
         messages: [
           { role: "system", content: buildSystemPrompt(objective, Math.min(duration_days, 30), channels) },
           { role: "user", content: userMessage },
         ],
         temperature: 0.7,
-        max_tokens: 4000,
+        max_completion_tokens: 4000,
       }),
     });
 
