@@ -192,15 +192,6 @@ jobs:
 
           echo "OK: migration 022 (X4R-corrected version) confirmed applied to this local instance." | tee -a migration_evidence.log
 
-      - name: TEMPORARY -- IVE-X4R-T1 negative oracle self-test (removed after this proof run)
-        run: |
-          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 \
-            -f supabase/tests/x4r_t1_oracle_selftest.sql > selftest.log 2>&1 || true
-          cat selftest.log
-          grep -q "OLD_ORACLE_RESULT|PASS" selftest.log || { echo "SELFTEST SETUP FAILED: old-oracle false-PASS did not reproduce"; exit 1; }
-          grep -q "NEW_ORACLE_RESULT|FAIL" selftest.log || { echo "SELFTEST FAILED: new oracle did not detect the same violation"; exit 1; }
-          echo "SELFTEST CONFIRMED: old oracle falsely PASSed, new oracle correctly FAILed on an identical, artificially-forced violation."
-
       - name: Run x4b_authorization_tests.sql
         run: |
           psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 \
