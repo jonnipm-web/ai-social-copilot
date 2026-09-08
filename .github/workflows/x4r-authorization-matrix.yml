@@ -29,6 +29,7 @@ on:
       - 'supabase/migrations/**'
       - 'supabase/tests/x4b_authorization_tests.sql'
       - 'supabase/tests/x4r_authorization_matrix_completion.sql'
+      - 'supabase/tests/schema_fingerprint.sql'
       - '.github/workflows/x4r-authorization-matrix.yml'
   workflow_dispatch: {}
 
@@ -73,8 +74,63 @@ jobs:
             echo "OK: only the canonical baseline and post-baseline migrations are present."
           } | tee migration_list.log
 
-      - name: Start local Supabase stack (applies baseline + post-baseline migrations)
+      # ------------------------------------------------------------------
+      # IVE-X4R-MB2R: baseline-only fingerprint + explicit migration-ledger
+      # simulation. 022 is moved OUT of the active migrations directory
+      # (in the runner's working tree only -- never committed, never
+      # pushed -- same discipline as every prior gate's local-only
+      # working-tree change) so `supabase start` applies ONLY the
+      # baseline, exactly the "BASELINE-ONLY disposable database" MB2R
+      # section 02 asks for. 022's own content is never edited.
+      # ------------------------------------------------------------------
+      - name: Move 022 out of the active migrations dir (runner-local only)
+        run: |
+          mkdir -p /tmp/deferred-migrations
+          mv supabase/migrations/20260907120001_x4b_search_path_and_role_protection.sql /tmp/deferred-migrations/
+          echo "-- migrations dir now contains (baseline only): --"
+          ls -1 supabase/migrations/
+
+      - name: Start local Supabase stack (BASELINE ONLY)
         run: supabase start
+
+      - name: Capture BASELINE-ONLY schema fingerprint (before 022 exists anywhere in this instance)
+        run: |
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 \
+            -f supabase/tests/schema_fingerprint.sql > baseline_only_fingerprint.log 2>&1
+          echo "-- local schema_migrations after baseline-only start (expect exactly 1 row) --" \
+            | tee -a baseline_only_fingerprint.log
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 \
+            -c "SELECT version, name FROM supabase_migrations.schema_migrations ORDER BY version;" \
+            | tee -a baseline_only_fingerprint.log
+          ROWCOUNT=$(psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -tA -v ON_ERROR_STOP=1 \
+            -c "SELECT count(*) FROM supabase_migrations.schema_migrations;")
+          [ "$ROWCOUNT" = "1" ] || { echo "REFUSING: expected exactly 1 applied migration (baseline only), got $ROWCOUNT"; exit 1; }
+
+      - name: Restore 022 and prove it is the only PENDING migration
+        run: |
+          mv /tmp/deferred-migrations/20260907120001_x4b_search_path_and_role_protection.sql supabase/migrations/
+          echo "-- migrations dir now contains (baseline + 022): --"
+          ls -1 supabase/migrations/
+          echo "-- supabase migration list (local): baseline should show APPLIED, 022 should show PENDING --" \
+            | tee migration_ledger.log
+          supabase migration list --local 2>&1 | tee -a migration_ledger.log
+
+      - name: Apply 022 via the same incremental mechanism intended for production (local target only)
+        run: |
+          supabase migration up --local 2>&1 | tee -a migration_ledger.log
+          echo "-- local schema_migrations after applying 022 (expect exactly 2 rows, baseline + 022, no legacy 001-021, nothing unexpected) --" \
+            | tee -a migration_ledger.log
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 \
+            -c "SELECT version, name FROM supabase_migrations.schema_migrations ORDER BY version;" \
+            | tee -a migration_ledger.log
+          ROWCOUNT=$(psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -tA -v ON_ERROR_STOP=1 \
+            -c "SELECT count(*) FROM supabase_migrations.schema_migrations;")
+          [ "$ROWCOUNT" = "2" ] || { echo "REFUSING: expected exactly 2 applied migrations after ledger simulation, got $ROWCOUNT"; exit 1; }
+          UNEXPECTED=$(psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -tA -v ON_ERROR_STOP=1 \
+            -c "SELECT count(*) FROM supabase_migrations.schema_migrations WHERE version NOT IN ('20260907120000','20260907120001');")
+          [ "$UNEXPECTED" = "0" ] || { echo "REFUSING: unexpected migration version(s) present in ledger"; exit 1; }
+          echo "OK: migration ledger simulation confirmed -- baseline applied, 022 applied, nothing else." \
+            | tee -a migration_ledger.log
 
       - name: Verify seed.sql reference data landed (supabase start already ran it automatically)
         run: |
@@ -164,6 +220,8 @@ jobs:
           path: |
             environment_versions.log
             migration_list.log
+            baseline_only_fingerprint.log
+            migration_ledger.log
             seed_verification.log
             migration_evidence.log
             x4b_results.log
