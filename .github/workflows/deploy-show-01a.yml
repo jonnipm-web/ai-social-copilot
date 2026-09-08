@@ -1,21 +1,26 @@
-name: Deploy SHOW-01A — context-copilot + generate-project-opportunities
+name: Deploy SHOW-01A — context-copilot + generate-project-opportunities (RETIRED)
 
 # Workflow controlado para implantação das Edge Functions da SHOW-01A.
 # Escopo: SOMENTE context-copilot e generate-project-opportunities.
 # SHA de referência: 1f97a250ca06cfda20a3d58beadfabc2bcf2fd9e (squash-merge PR #89 → main)
 # Regra absoluta: NÃO usa --no-verify-jwt. verify_jwt=true é gate de segurança P0.
+#
+# IVE-X4R-DG2: RETIRADO. Este workflow implanta um SHA histórico fixo
+# (1f97a250...) que antecede a migração Commercial P0 do Groq
+# (IVE-COMMERCIAL-P0-GROQ-RECOVERY-FAST) -- disparar isto hoje
+# reverteria context-copilot de volta ao modelo llama-3.3-70b-versatile,
+# hoje desativado pelo provedor, desfazendo a recuperação de produção.
+# A política de JWT que este workflow reforçava (verify_jwt=true, sem
+# --no-verify-jwt) permanece a correta e agora é a fonte única de
+# verdade em .github/deploy-allowlist.tsv, aplicada pelo workflow
+# canônico. O gatilho `workflow_dispatch` foi removido para que este
+# arquivo não possa mais ser disparado -- preservado apenas como
+# registro histórico do release SHOW-01A e do seu gate de segurança.
+# Para implantar context-copilot ou generate-project-opportunities
+# hoje, use:
+#   gh workflow run deploy-edge-functions.yml -f function=<nome> -f confirm=DEPLOY
 
-on:
-  workflow_dispatch:
-    inputs:
-      source_ref:
-        description: 'SHA exato a implantar (padrão: commit SHOW-01A)'
-        required: false
-        default: '1f97a250ca06cfda20a3d58beadfabc2bcf2fd9e'
-      confirm:
-        description: 'Digite DEPLOY para confirmar implantação controlada'
-        required: true
-        default: ''
+on: {}
 
 permissions:
   contents: read

@@ -1,0 +1,48 @@
+name: context-copilot regression tests (validation-only)
+
+# IVE-X4R-DG2. This workflow used to independently deploy
+# context-copilot with --no-verify-jwt, contradicting the canonical
+# JWT policy (context-copilot must stay verify_jwt=true -- see
+# supabase/config.toml and .github/deploy-allowlist.tsv). It also
+# pinned checkout to a fixed, long-stale branch
+# (claude/access-social-copilot-wJ6B5), so its own validation was
+# silently testing old code, not whatever ref actually triggered it.
+#
+# Its independent deploy capability is REMOVED. Its genuinely reusable
+# part -- context-copilot's own Deno regression suite -- is kept as a
+# validation-only workflow, now run against whatever ref triggered it
+# instead of a permanently pinned historical branch.
+#
+# To actually deploy context-copilot, use the canonical workflow:
+#   gh workflow run deploy-edge-functions.yml -f function=context-copilot -f confirm=DEPLOY
+# which resolves JWT policy from .github/deploy-allowlist.tsv (no
+# --no-verify-jwt for context-copilot) via
+# scripts/ci/resolve_deploy_selection.sh -- the single source of truth,
+# not duplicated here.
+#
+# workflow_dispatch only -- .github/workflows/edge-function-tests.yml
+# already runs this identical Deno suite automatically on every PR
+# touching supabase/functions/**, so an automatic trigger here would
+# just be a duplicate CI run. This file stays as an explicit, on-demand
+# "run this before you deploy context-copilot" check.
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Run context-copilot Deno regression tests
+        run: |
+          deno test --allow-env supabase/functions/context-copilot/index_test.ts
