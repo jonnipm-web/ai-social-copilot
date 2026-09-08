@@ -1,20 +1,31 @@
 name: Deploy selection self-test (no production access)
 
-# IVE-X4R-DG1. Proves scripts/ci/resolve_deploy_selection.sh -- the same
-# script .github/workflows/deploy-edge-functions.yml uses to decide what
-# to deploy -- behaves correctly, on every push that touches the
+# IVE-X4R-DG1/DG2. Proves scripts/ci/resolve_deploy_selection.sh -- the
+# same script .github/workflows/deploy-edge-functions.yml uses to decide
+# what to deploy -- behaves correctly, on every push that touches the
 # deploy-governance files. Never calls `supabase`, never uses
 # SUPABASE_ACCESS_TOKEN/SUPABASE_PROJECT_REF, never touches production.
 # A failure here means the deploy workflow's selection logic itself is
 # broken -- catch that before it ever reaches a real deploy.
+#
+# DG2 adds: a repo-wide static governance gate
+# (scripts/ci/check_deploy_governance.sh) that fails if any workflow
+# reintroduces a second real deploy route, --no-verify-jwt on
+# context-copilot, ive-agent-runner deploy capability, or a bulk/
+# wildcard deploy loop -- and a CRLF/LF equivalence test for the
+# allowlist reader (see scripts/ci/resolve_deploy_selection.sh's own
+# comment on why this matters for a Windows checkout).
 
 on:
   push:
     paths:
       - 'scripts/ci/resolve_deploy_selection.sh'
+      - 'scripts/ci/check_deploy_governance.sh'
       - '.github/deploy-allowlist.tsv'
       - '.github/workflows/deploy-selftest.yml'
       - '.github/workflows/deploy-edge-functions.yml'
+      - '.github/workflows/deploy-show-01a.yml'
+      - '.github/workflows/test-context-copilot.yml'
   workflow_dispatch: {}
 
 permissions:
@@ -83,16 +94,17 @@ jobs:
           fi
           echo "PASS: unknown function denied"
 
-      - name: wildcard/bulk-shaped input is DENIED, non-zero exit
+      - name: wildcard/bulk/path-traversal-shaped input is DENIED, non-zero exit
         run: |
           set -euo pipefail
-          for bad in '*' 'all' 'supabase/functions/*' '' 'analyze-website; rm -rf /' '--no-verify-jwt'; do
+          for bad in '*' 'all' 'supabase/functions/*' '' 'analyze-website; rm -rf /' '--no-verify-jwt' \
+                     '../../etc/passwd' 'analyze-website/../ive-agent-runner' '..' './analyze-website'; do
             if bash scripts/ci/resolve_deploy_selection.sh "$bad" 2>/dev/null; then
               echo "FAIL: '$bad' was NOT denied" >&2
               exit 1
             fi
           done
-          echo "PASS: every wildcard/bulk/injection-shaped input denied"
+          echo "PASS: every wildcard/bulk/injection/path-traversal-shaped input denied"
 
       - name: process-file is DENIED (excluded pending dedicated large-asset handling)
         run: |
@@ -102,3 +114,37 @@ jobs:
             exit 1
           fi
           echo "PASS: process-file denied"
+
+      - name: CRLF and LF allowlist input resolve identically (DG2)
+        run: |
+          set -euo pipefail
+          for MODE in lf crlf; do
+            FIXTURE="$(mktemp -d)"
+            mkdir -p "$FIXTURE/.github" "$FIXTURE/scripts/ci"
+            cp .github/deploy-allowlist.tsv "$FIXTURE/.github/deploy-allowlist.tsv"
+            if [ "$MODE" = "crlf" ]; then
+              sed -i 's/$/\r/' "$FIXTURE/.github/deploy-allowlist.tsv"
+            fi
+            cp scripts/ci/resolve_deploy_selection.sh "$FIXTURE/scripts/ci/"
+            for fn in context-copilot analyze-website extract-knowledge; do
+              OUT="$(bash "$FIXTURE/scripts/ci/resolve_deploy_selection.sh" "$fn")"
+              eval "OUT_${MODE}_${fn//-/_}=\$OUT"
+            done
+            rm -rf "$FIXTURE"
+          done
+          for fn in context-copilot analyze-website extract-knowledge; do
+            key="${fn//-/_}"
+            lf_var="OUT_lf_${key}"
+            crlf_var="OUT_crlf_${key}"
+            if [ "${!lf_var}" != "${!crlf_var}" ]; then
+              echo "FAIL: $fn resolves differently under LF vs CRLF allowlist input" >&2
+              echo "--- LF ---"; echo "${!lf_var}"
+              echo "--- CRLF ---"; echo "${!crlf_var}"
+              exit 1
+            fi
+          done
+          echo "PASS: LF and CRLF allowlist input resolve identically for context-copilot, analyze-website, extract-knowledge"
+
+      - name: Repo-wide deploy governance gate (DG2)
+        run: |
+          bash scripts/ci/check_deploy_governance.sh
