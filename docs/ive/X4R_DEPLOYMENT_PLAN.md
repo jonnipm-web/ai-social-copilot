@@ -4,6 +4,37 @@
 against production. Every command below is prepared, reviewed, and
 ready — none has been run.
 
+## IVE-X4R-DG1 addendum — read this before using the X4C section below
+
+Two things changed since this document was first written; both are
+corrections, kept here rather than silently edited, per this
+engagement's practice.
+
+1. **MERGE != DEPLOY, and DEPLOY is now controlled.** IVE-X4R-CLOSE
+   found that merging the X4R branch to `main` would have
+   auto-triggered `.github/workflows/deploy-edge-functions.yml`
+   (it fired on any push to `main` touching `supabase/functions/**`,
+   which X4C's own change does) and bulk-redeployed *every* Edge
+   Function with `--no-verify-jwt` unconditionally — including
+   `ive-agent-runner` (frozen since X4A) and `context-copilot`
+   (production `verify_jwt=true`, would have been silently flipped to
+   `false`). IVE-X4R-DG1 closed this: that workflow is now
+   `workflow_dispatch`-only, requires an explicit `function` input
+   checked against the allowlist at `.github/deploy-allowlist.tsv`,
+   and never loops over `supabase/functions/*`. Use it (not a bare
+   `supabase functions deploy` invoked by hand) to run the X4C deploy
+   below.
+2. **The two commands originally below did not pass `--no-verify-jwt`.**
+   Production has `analyze-website` and `extract-knowledge` both at
+   `verify_jwt=false` today (confirmed read-only during DG1), and
+   neither has an entry in `supabase/config.toml` overriding that — so
+   deploying with no flag risked silently turning JWT verification ON
+   for both, a policy change X4C never reviewed or intended (X4C's own
+   scope note says explicitly: "This fix does not change either
+   function's `verify_jwt` setting"). The commands below are corrected
+   to preserve the current policy explicitly rather than leave it to
+   the CLI's default.
+
 ## P0 — migration 022
 
 **Target project:** `nzngvbajrnruknpzzjbf` (production).
@@ -145,9 +176,23 @@ command.
 
 ### Commands (requires explicit owner authorization — not run by this session)
 
+**Preferred (post-DG1): use the controlled workflow, one function per
+run, JWT policy read from `.github/deploy-allowlist.tsv` automatically
+— this is also what proves no other function is touched:**
+
 ```
-supabase functions deploy analyze-website --project-ref nzngvbajrnruknpzzjbf
-supabase functions deploy extract-knowledge --project-ref nzngvbajrnruknpzzjbf
+gh workflow run deploy-edge-functions.yml -f function=analyze-website -f confirm=DEPLOY
+gh workflow run deploy-edge-functions.yml -f function=extract-knowledge -f confirm=DEPLOY
+```
+
+**Equivalent raw CLI, if ever run by hand instead — note the explicit
+`--no-verify-jwt` on both, preserving current production policy
+(`verify_jwt=false` for both, confirmed read-only during DG1) rather
+than leaving it to the CLI's default:**
+
+```
+supabase functions deploy analyze-website --no-verify-jwt --project-ref nzngvbajrnruknpzzjbf
+supabase functions deploy extract-knowledge --no-verify-jwt --project-ref nzngvbajrnruknpzzjbf
 ```
 
 ### Rollback
