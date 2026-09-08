@@ -59,6 +59,13 @@ fi
 
 MATCH_LINE=""
 while IFS=$'\t' read -r name jwt_flag || [ -n "${name:-}" ]; do
+  # Normalize CRLF: a Windows checkout with core.autocrlf=true can turn
+  # this file's committed LF endings into CRLF locally, leaving a
+  # trailing \r glued onto the last field of each line. Strip it before
+  # any comparison so this script behaves identically on LF and CRLF
+  # input (CI's Linux checkout is unaffected either way).
+  name="${name%$'\r'}"
+  jwt_flag="${jwt_flag%$'\r'}"
   [ -z "$name" ] && continue
   case "$name" in \#*) continue ;; esac
   if [ "$name" = "$FUNCTION_NAME" ]; then
