@@ -45,15 +45,17 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ============================================================================
--- FUNCTIONS (created BEFORE any table, since several tables below declare
--- triggers inline that reference these -- a real ordering bug found and
--- fixed dynamically via this branch's own CI run: the first attempt had
--- this section after the tables and failed with
--- "ERROR: function public.set_updated_at() does not exist" the moment
--- the first inline trigger tried to bind to it. Exactly as captured live
--- -- migration 022's search_path hardening on is_admin_user()/
--- handle_new_user() is intentionally NOT applied here; it is the first
--- migration after this baseline)
+-- FUNCTIONS, PART 1 -- plpgsql only, safe before any table exists (PL/pgSQL
+-- function bodies are opaque strings at CREATE time, not validated against
+-- the catalog until first execution -- unlike LANGUAGE sql functions,
+-- see PART 2 below, found dynamically via this branch's own CI run: a
+-- second attempt put ALL functions here and failed with "ERROR: relation
+-- public.profiles does not exist" on is_admin_user(), a LANGUAGE sql
+-- function, because SQL-language function bodies ARE parsed/validated
+-- against the catalog immediately at creation time).
+-- Also fixes a first, separate ordering bug: several tables below declare
+-- triggers inline that bind to these functions at creation time, so they
+-- must all exist before any CREATE TABLE regardless of language.
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION public.set_updated_at()
@@ -65,39 +67,6 @@ BEGIN
   RETURN NEW;
 END;
 $function$;
-
-CREATE OR REPLACE FUNCTION public.handle_new_user()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$
-begin
-  insert into public.profiles (id, email)
-    values (new.id, new.email)
-    on conflict (id) do nothing;
-  return new;
-end;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.is_admin_user()
- RETURNS boolean
- LANGUAGE sql
- STABLE SECURITY DEFINER
-AS $function$
-  SELECT EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = auth.uid() AND role = 'admin'
-  );
-$function$;
-
-CREATE OR REPLACE FUNCTION public.get_current_user_role()
- RETURNS text
- LANGUAGE sql
- STABLE SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-  SELECT role FROM public.profiles WHERE id = auth.uid();
-  $function$;
 
 CREATE OR REPLACE FUNCTION public.update_executive_contexts_updated_at()
  RETURNS trigger
@@ -182,13 +151,10 @@ BEGIN
 END;
 $function$;
 
--- ============================================================================
--- TABLES (dependency order; forward/circular references added via ALTER
--- TABLE further below, exactly the way pg_dump itself handles them)
--- ============================================================================
-
 -- ----------------------------------------------------------------------------
--- profiles
+-- profiles -- created here (ahead of the main TABLES section) because
+-- is_admin_user() and get_current_user_role() below are LANGUAGE sql and
+-- must be able to resolve public.profiles at CREATE FUNCTION time.
 -- ----------------------------------------------------------------------------
 CREATE TABLE public.profiles (
   id            uuid NOT NULL,
@@ -203,6 +169,52 @@ CREATE TABLE public.profiles (
   CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE,
   CONSTRAINT profiles_role_check CHECK (role = ANY (ARRAY['free','pro','premium','beta_tester','admin']))
 );
+
+-- ============================================================================
+-- FUNCTIONS, PART 2 -- depend on public.profiles existing (two are
+-- LANGUAGE sql, validated against the catalog at creation time; the third,
+-- handle_new_user, is plpgsql and doesn't strictly require this ordering,
+-- but is grouped here for readability since it's profiles-related too).
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+begin
+  insert into public.profiles (id, email)
+    values (new.id, new.email)
+    on conflict (id) do nothing;
+  return new;
+end;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.is_admin_user()
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+AS $function$
+  SELECT EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role = 'admin'
+  );
+$function$;
+
+CREATE OR REPLACE FUNCTION public.get_current_user_role()
+ RETURNS text
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  SELECT role FROM public.profiles WHERE id = auth.uid();
+  $function$;
+
+-- ============================================================================
+-- TABLES (dependency order; forward/circular references added via ALTER
+-- TABLE further below, exactly the way pg_dump itself handles them.
+-- profiles was already created above, ahead of this section.)
+-- ============================================================================
 
 -- ----------------------------------------------------------------------------
 -- personas
