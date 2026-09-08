@@ -50,6 +50,29 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ---------------------------------------------------------------------------
+-- IVE-X4R-T1 ORACLE FIX (applies to B, C, D, K, L, N below): the original
+-- pattern asserted PASS/FAIL via
+-- `EXCEPTION WHEN insufficient_privilege OR raise_exception`. That is
+-- unsound: a plain `RAISE EXCEPTION 'FAIL ...'` with no ERRCODE defaults
+-- to SQLSTATE P0001, which IS the `raise_exception` condition name -- so
+-- if the dangerous operation had actually succeeded, the test's own FAIL
+-- signal would have been caught by the very same handler and misreported
+-- as PASS. Confirmed as a real, not merely theoretical, gap while
+-- re-verifying these exact letters directly against production during
+-- IVE-X4R-MB4 (the MCP query tool used there doesn't even surface RAISE
+-- NOTICE output, so the original pattern's result was unobservable
+-- there regardless).
+--
+-- Fixed for every letter below by splitting into two unconditionally
+-- sound steps: (1) attempt the dangerous operation inside a block that
+-- swallows ANY error via `WHEN OTHERS` -- this step asserts nothing;
+-- (2) query the ACTUAL resulting state afterward, unguarded, and raise
+-- unambiguously if it shows the dangerous change took effect. Nothing
+-- can swallow step 2's RAISE EXCEPTION, because nothing is watching for
+-- it.
+-- ---------------------------------------------------------------------------
+
+-- ---------------------------------------------------------------------------
 -- B — normal user cannot self-promote to a different privileged value
 -- (not just 'admin' -- any value other than their current one).
 -- ---------------------------------------------------------------------------
@@ -59,10 +82,16 @@ BEGIN
   BEGIN
     UPDATE public.profiles SET role = 'premium'
       WHERE id = '22222222-2222-2222-2222-222222222222';
-    RAISE EXCEPTION 'FAIL (B): user B self-promoted role to premium';
-  EXCEPTION WHEN insufficient_privilege OR raise_exception THEN
-    RAISE NOTICE 'PASS (B): self-promotion to a non-admin privileged role value blocked';
-  END;
+  EXCEPTION WHEN OTHERS THEN NULL; END;
+END $$;
+DO $$
+DECLARE actual_role text;
+BEGIN
+  SELECT role INTO actual_role FROM public.profiles WHERE id = '22222222-2222-2222-2222-222222222222';
+  IF actual_role = 'premium' THEN
+    RAISE EXCEPTION 'B|FAIL|role changed to premium';
+  END IF;
+  RAISE NOTICE 'B|PASS|self-promotion to a non-admin privileged role value blocked, role remains %', actual_role;
 END $$;
 
 -- ---------------------------------------------------------------------------
@@ -73,10 +102,16 @@ BEGIN
   BEGIN
     UPDATE public.profiles SET monthly_limit = 999999
       WHERE id = '22222222-2222-2222-2222-222222222222';
-    RAISE EXCEPTION 'FAIL (C): user B changed their own monthly_limit';
-  EXCEPTION WHEN insufficient_privilege OR raise_exception THEN
-    RAISE NOTICE 'PASS (C): self-service monthly_limit change blocked';
-  END;
+  EXCEPTION WHEN OTHERS THEN NULL; END;
+END $$;
+DO $$
+DECLARE actual_limit int;
+BEGIN
+  SELECT monthly_limit INTO actual_limit FROM public.profiles WHERE id = '22222222-2222-2222-2222-222222222222';
+  IF actual_limit = 999999 THEN
+    RAISE EXCEPTION 'C|FAIL|monthly_limit changed to 999999';
+  END IF;
+  RAISE NOTICE 'C|PASS|self-service monthly_limit change blocked, value remains %', actual_limit;
 END $$;
 
 -- ---------------------------------------------------------------------------
@@ -87,10 +122,16 @@ BEGIN
   BEGIN
     UPDATE public.profiles SET is_active = false
       WHERE id = '22222222-2222-2222-2222-222222222222';
-    RAISE EXCEPTION 'FAIL (D): user B changed their own is_active';
-  EXCEPTION WHEN insufficient_privilege OR raise_exception THEN
-    RAISE NOTICE 'PASS (D): self-service is_active change blocked';
-  END;
+  EXCEPTION WHEN OTHERS THEN NULL; END;
+END $$;
+DO $$
+DECLARE actual_active boolean;
+BEGIN
+  SELECT is_active INTO actual_active FROM public.profiles WHERE id = '22222222-2222-2222-2222-222222222222';
+  IF actual_active = false THEN
+    RAISE EXCEPTION 'D|FAIL|is_active changed to false';
+  END IF;
+  RAISE NOTICE 'D|PASS|self-service is_active change blocked, value remains %', actual_active;
 END $$;
 
 -- ---------------------------------------------------------------------------
@@ -98,14 +139,16 @@ END $$;
 -- (RLS-level, independent of the trigger -- proves the row-ownership
 -- boundary, not just the column-value boundary the trigger adds).
 -- ---------------------------------------------------------------------------
+-- SAFE as originally written (no exception-catching involved) --
+-- message format updated for consistency only.
 DO $$
 BEGIN
   UPDATE public.profiles SET full_name = 'hijacked by B'
     WHERE id = '11111111-1111-1111-1111-111111111111';
   IF FOUND THEN
-    RAISE EXCEPTION 'FAIL (F): user B updated user A''s profile row';
+    RAISE EXCEPTION 'F|FAIL|user B updated user A''s profile row';
   END IF;
-  RAISE NOTICE 'PASS (F): cross-user profile update affects zero rows (RLS-level block)';
+  RAISE NOTICE 'F|PASS|cross-user profile update affects zero rows (RLS-level block)';
 END $$;
 
 -- ---------------------------------------------------------------------------
@@ -113,14 +156,16 @@ END $$;
 -- ---------------------------------------------------------------------------
 SET ROLE service_role;
 SELECT set_config('request.jwt.claims', json_build_object('role', 'service_role')::text, true);
+-- SAFE as originally written (no exception-catching involved) --
+-- message format updated for consistency only.
 DO $$
 BEGIN
   UPDATE public.profiles SET role = 'admin'
     WHERE id = '11111111-1111-1111-1111-111111111111';
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'FAIL (J): service_role could not perform an administrative profiles update';
+    RAISE EXCEPTION 'J|FAIL|service_role could not perform an administrative profiles update';
   END IF;
-  RAISE NOTICE 'PASS (J): service_role retains trusted administrative access';
+  RAISE NOTICE 'J|PASS|service_role retains trusted administrative access';
 END $$;
 RESET ROLE;
 
@@ -130,7 +175,7 @@ RESET ROLE;
 -- ---------------------------------------------------------------------------
 SELECT pg_temp.act_as('22222222-2222-2222-2222-222222222222');
 DO $$
-DECLARE name_before text;
+DECLARE name_before text; role_after text; name_after text;
 BEGIN
   SELECT full_name INTO name_before FROM public.profiles
     WHERE id = '22222222-2222-2222-2222-222222222222';
@@ -138,16 +183,20 @@ BEGIN
     UPDATE public.profiles
       SET full_name = 'multi-col attempt', role = 'admin'
       WHERE id = '22222222-2222-2222-2222-222222222222';
-    RAISE EXCEPTION 'FAIL (K): multi-column update incl. a privileged field succeeded';
-  EXCEPTION WHEN insufficient_privilege OR raise_exception THEN
-    RAISE NOTICE 'PASS (K): multi-column update blocked entirely -- full_name not silently applied either';
-  END;
-  -- Confirm the whole statement was atomic: full_name must be unchanged too.
-  PERFORM 1 FROM public.profiles
-    WHERE id = '22222222-2222-2222-2222-222222222222' AND full_name IS NOT DISTINCT FROM name_before;
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'FAIL (K): full_name was partially applied despite the blocked statement';
+  EXCEPTION WHEN OTHERS THEN NULL; END;
+
+  -- Sole assertion: query actual resulting state. role must be
+  -- unchanged, AND (proving atomicity -- no partial column apply)
+  -- full_name must be unchanged too, in the same query.
+  SELECT role, full_name INTO role_after, name_after FROM public.profiles
+    WHERE id = '22222222-2222-2222-2222-222222222222';
+  IF role_after = 'admin' THEN
+    RAISE EXCEPTION 'K|FAIL|multi-column update incl. a privileged field succeeded (role=admin)';
   END IF;
+  IF name_after IS DISTINCT FROM name_before THEN
+    RAISE EXCEPTION 'K|FAIL|full_name was partially applied despite the blocked statement';
+  END IF;
+  RAISE NOTICE 'K|PASS|multi-column update blocked entirely -- full_name not silently applied either';
 END $$;
 
 -- ---------------------------------------------------------------------------
@@ -172,10 +221,16 @@ BEGIN
     INSERT INTO public.profiles (id, email, role)
       VALUES ('22222222-2222-2222-2222-222222222222', 'x4b-user-b@test.invalid', 'admin')
       ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role;
-    RAISE EXCEPTION 'FAIL (L): upsert set role=admin via ON CONFLICT DO UPDATE';
-  EXCEPTION WHEN insufficient_privilege OR raise_exception THEN
-    RAISE NOTICE 'PASS (L): upsert affecting a privileged field blocked';
-  END;
+  EXCEPTION WHEN OTHERS THEN NULL; END;
+END $$;
+DO $$
+DECLARE actual_role text;
+BEGIN
+  SELECT role INTO actual_role FROM public.profiles WHERE id = '22222222-2222-2222-2222-222222222222';
+  IF actual_role = 'admin' THEN
+    RAISE EXCEPTION 'L|FAIL|upsert set role=admin via ON CONFLICT DO UPDATE';
+  END IF;
+  RAISE NOTICE 'L|PASS|upsert affecting a privileged field blocked, role remains %', actual_role;
 END $$;
 
 -- ---------------------------------------------------------------------------
@@ -207,9 +262,9 @@ BEGIN
       OR pg_get_functiondef(p.oid) ILIKE '%delete from%profiles%'
     );
   IF writer_count > 0 THEN
-    RAISE EXCEPTION 'FAIL (M): % unexpected function(s) besides handle_new_user write to profiles', writer_count;
+    RAISE EXCEPTION 'M|FAIL|% unexpected function(s) besides handle_new_user write to profiles', writer_count;
   END IF;
-  RAISE NOTICE 'PASS (M): handle_new_user remains the only function writing to profiles';
+  RAISE NOTICE 'M|PASS|handle_new_user remains the only function writing to profiles';
 END $$;
 
 -- ---------------------------------------------------------------------------
@@ -224,24 +279,36 @@ BEGIN
   BEGIN
     INSERT INTO public.profiles (id, email, role)
       VALUES ('22222222-2222-2222-2222-222222222222', 'x4b-user-b@test.invalid', 'admin');
-    RAISE EXCEPTION 'FAIL (N): user B inserted their own new profile row with role=admin -- THE X4R BUG IS BACK';
-  EXCEPTION WHEN insufficient_privilege OR raise_exception THEN
-    RAISE NOTICE 'PASS (N): INSERT of a new own-profile row with role=admin blocked';
-  END;
+  EXCEPTION WHEN OTHERS THEN NULL; END;
+END $$;
+-- Sole assertion for letter N (THE critical case -- the exact
+-- INSERT-path bypass X4R found and 022 fixes): a row must not exist
+-- at all, or if one somehow exists, it must not be role='admin'.
+DO $$
+DECLARE row_role text; row_found boolean;
+BEGIN
+  SELECT role INTO row_role FROM public.profiles WHERE id = '22222222-2222-2222-2222-222222222222';
+  row_found := FOUND;
+  IF row_found AND row_role = 'admin' THEN
+    RAISE EXCEPTION 'N|FAIL|user B inserted their own new profile row with role=admin -- THE X4R BUG IS BACK';
+  END IF;
+  RAISE NOTICE 'N|PASS|INSERT of a new own-profile row with role=admin blocked (row_created=%, role=%)', row_found, row_role;
 END $$;
 
 -- ---------------------------------------------------------------------------
 -- O — normal user CAN INSERT a brand-new own profile row when it uses the
 -- safe column defaults (proves N's fix isn't a blanket INSERT lockout).
 -- ---------------------------------------------------------------------------
+-- SAFE as originally written (no exception-catching involved) --
+-- message format updated for consistency only.
 DO $$
 BEGIN
   INSERT INTO public.profiles (id, email)
     VALUES ('22222222-2222-2222-2222-222222222222', 'x4b-user-b@test.invalid');
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'FAIL (O): user B could not insert their own profile row with safe defaults';
+    RAISE EXCEPTION 'O|FAIL|user B could not insert their own profile row with safe defaults';
   END IF;
-  RAISE NOTICE 'PASS (O): INSERT of a new own-profile row with safe defaults succeeds';
+  RAISE NOTICE 'O|PASS|INSERT of a new own-profile row with safe defaults succeeds';
 END $$;
 
 -- ---------------------------------------------------------------------------
@@ -266,12 +333,12 @@ BEGIN
     FROM public.profiles WHERE id = '66666666-6666-6666-6666-666666666666';
 
   IF new_role IS NULL THEN
-    RAISE EXCEPTION 'FAIL (P): signup cascade did not create a profiles row at all';
+    RAISE EXCEPTION 'P|FAIL|signup cascade did not create a profiles row at all';
   END IF;
   IF new_role IS DISTINCT FROM 'free' OR new_limit IS DISTINCT FROM 5 OR new_active IS DISTINCT FROM true THEN
-    RAISE EXCEPTION 'FAIL (P): trigger-created profile has unsafe values (role=%, monthly_limit=%, is_active=%)', new_role, new_limit, new_active;
+    RAISE EXCEPTION 'P|FAIL|trigger-created profile has unsafe values (role=%, monthly_limit=%, is_active=%)', new_role, new_limit, new_active;
   END IF;
-  RAISE NOTICE 'PASS (P): real signup cascade (auth.users insert -> handle_new_user -> profiles insert) completes and yields safe defaults (role=%, monthly_limit=%, is_active=%)', new_role, new_limit, new_active;
+  RAISE NOTICE 'P|PASS|real signup cascade (auth.users insert -> handle_new_user -> profiles insert) completes and yields safe defaults (role=%, monthly_limit=%, is_active=%)', new_role, new_limit, new_active;
 END $$;
 
 ROLLBACK; -- never commit test fixtures, even in a local/ephemeral instance

@@ -65,31 +65,38 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ---------------------------------------------------------------------------
--- TEST 1 — normal user cannot read another user's action_queue row
+-- TEST 1 (unlettered -- read-isolation check, not part of the A-P matrix)
+-- normal user cannot read another user's action_queue row
 -- ---------------------------------------------------------------------------
 SELECT pg_temp.act_as('22222222-2222-2222-2222-222222222222');
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM public.action_queue WHERE id = '44444444-4444-4444-4444-444444444444') THEN
-    RAISE EXCEPTION 'FAIL: user B could read user A''s action_queue row';
+    RAISE EXCEPTION 'READ1|FAIL|user B could read user A''s action_queue row';
   END IF;
-  RAISE NOTICE 'PASS: user B cannot read user A''s action_queue row';
+  RAISE NOTICE 'READ1|PASS|user B cannot read user A''s action_queue row';
 END $$;
 
 -- ---------------------------------------------------------------------------
--- TEST 2 — normal user cannot read another user's business_memory row
+-- TEST 2 (unlettered) — normal user cannot read another user's
+-- business_memory row
 -- ---------------------------------------------------------------------------
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM public.business_memory WHERE id = '55555555-5555-5555-5555-555555555555') THEN
-    RAISE EXCEPTION 'FAIL: user B could read user A''s business_memory row';
+    RAISE EXCEPTION 'READ2|FAIL|user B could read user A''s business_memory row';
   END IF;
-  RAISE NOTICE 'PASS: user B cannot read user A''s business_memory row';
+  RAISE NOTICE 'READ2|PASS|user B cannot read user A''s business_memory row';
 END $$;
 
 -- ---------------------------------------------------------------------------
--- TEST 3 — normal user cannot write an action_queue row claiming another
--- user's identity (forged user_id in the INSERT payload)
+-- TEST 3 / LETTER G — normal user cannot write an action_queue row
+-- claiming another user's identity (forged user_id in the INSERT
+-- payload). SAFE as originally written: the WHEN clause here is
+-- `insufficient_privilege OR check_violation`, which does NOT include
+-- `raise_exception` -- so this file's own FAIL signal (default SQLSTATE
+-- P0001/raise_exception) was never at risk of being caught by it.
+-- Message format updated for consistency only; logic unchanged.
 -- ---------------------------------------------------------------------------
 DO $$
 BEGIN
@@ -97,14 +104,29 @@ BEGIN
     INSERT INTO public.action_queue (user_id, project_id, title, action_type, status, origin)
     VALUES ('11111111-1111-1111-1111-111111111111', -- forged: not the caller (user B)
             '33333333-3333-3333-3333-333333333333', 'forged', 'task', 'pending', 'test');
-    RAISE EXCEPTION 'FAIL: user B inserted a row with a forged user_id';
+    RAISE EXCEPTION 'G|FAIL|user B inserted a row with a forged user_id';
   EXCEPTION WHEN insufficient_privilege OR check_violation THEN
-    RAISE NOTICE 'PASS: forged user_id on INSERT rejected';
+    RAISE NOTICE 'G|PASS|forged user_id on INSERT rejected';
   END;
 END $$;
 
 -- ---------------------------------------------------------------------------
--- TEST 4 (THE CRITICAL ONE) — normal user cannot self-promote to admin
+-- TEST 4 / LETTER A (THE CRITICAL ONE) — normal user cannot self-promote
+-- to admin.
+--
+-- IVE-X4R-T1 ORACLE FIX: the attempt step below used to also carry the
+-- PASS/FAIL assertion via `EXCEPTION WHEN insufficient_privilege OR
+-- raise_exception`. That is unsound on its own: a plain
+-- `RAISE EXCEPTION 'FAIL ...'` with no ERRCODE defaults to SQLSTATE
+-- P0001, which IS the `raise_exception` condition name -- so if the
+-- dangerous UPDATE had actually succeeded, the test's own FAIL signal
+-- would have been caught by the very same handler and misreported as
+-- PASS. The real assertion has always actually been the state check
+-- right after (line ~127 below), which is unguarded and therefore
+-- sound -- but the primary block's own claim of "PASS" was never
+-- itself proof of anything. Fixed by making the attempt step swallow
+-- ANY error via `WHEN OTHERS` (never asserting anything from it) and
+-- keeping the state check as the sole, unambiguous source of truth.
 -- ---------------------------------------------------------------------------
 SELECT pg_temp.act_as('22222222-2222-2222-2222-222222222222');
 DO $$
@@ -112,40 +134,45 @@ BEGIN
   BEGIN
     UPDATE public.profiles SET role = 'admin'
       WHERE id = '22222222-2222-2222-2222-222222222222';
-    RAISE EXCEPTION 'FAIL: user B self-promoted to admin -- migration 022 not applied or ineffective';
-  EXCEPTION WHEN insufficient_privilege OR raise_exception THEN
-    RAISE NOTICE 'PASS: self-promotion to admin blocked';
+  EXCEPTION WHEN OTHERS THEN
+    NULL; -- expected: the database itself may reject this; the real
+          -- assertion is the state check below, not this catch.
   END;
 END $$;
 
--- Confirm the role genuinely did not change despite the attempted UPDATE.
+-- Sole assertion for letter A: query the ACTUAL resulting value. This
+-- is unguarded -- if it fires, nothing can swallow it.
 DO $$
 DECLARE actual_role text;
 BEGIN
   SELECT role INTO actual_role FROM public.profiles
     WHERE id = '22222222-2222-2222-2222-222222222222';
   IF actual_role = 'admin' THEN
-    RAISE EXCEPTION 'FAIL: role column shows admin despite blocked UPDATE';
+    RAISE EXCEPTION 'A|FAIL|role column shows admin despite attempted self-promotion';
   END IF;
-  RAISE NOTICE 'PASS: role remains % after blocked self-promotion attempt', actual_role;
+  RAISE NOTICE 'A|PASS|role remains % after blocked self-promotion attempt', actual_role;
 END $$;
 
 -- ---------------------------------------------------------------------------
--- TEST 5 — normal user CAN still update their own non-sensitive columns
--- (proves the fix is scoped, not a blanket UPDATE lockout)
+-- TEST 5 / LETTER E — normal user CAN still update their own
+-- non-sensitive columns (proves the fix is scoped, not a blanket
+-- UPDATE lockout). No exception-catching involved -- SAFE as originally
+-- written; message format updated for consistency only.
 -- ---------------------------------------------------------------------------
 DO $$
 BEGIN
   UPDATE public.profiles SET full_name = 'B renamed'
     WHERE id = '22222222-2222-2222-2222-222222222222';
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'FAIL: user B could not update their own full_name -- fix over-scoped';
+    RAISE EXCEPTION 'E|FAIL|user B could not update their own full_name -- fix over-scoped';
   END IF;
-  RAISE NOTICE 'PASS: user B can still update their own non-sensitive columns';
+  RAISE NOTICE 'E|PASS|user B can still update their own non-sensitive columns';
 END $$;
 
 -- ---------------------------------------------------------------------------
--- TEST 6 — an already-admin user CAN change role/monthly_limit (own or others)
+-- TEST 6 / LETTER I — an already-admin user CAN change role/monthly_limit
+-- (own or others). No exception-catching involved on the assertion itself
+-- -- SAFE as originally written.
 -- ---------------------------------------------------------------------------
 -- TEST-HARNESS DEFECT FIX (Gate 1F, part 1): the session is still acting as
 -- user B at this point (the last act_as() call was for B, in TEST 4/5, and
@@ -184,9 +211,9 @@ BEGIN
   UPDATE public.profiles SET monthly_limit = 100
     WHERE id = '22222222-2222-2222-2222-222222222222';
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'FAIL: admin user A could not update user B''s monthly_limit';
+    RAISE EXCEPTION 'I|FAIL|admin user A could not update user B''s monthly_limit';
   END IF;
-  RAISE NOTICE 'PASS: admin retains ability to manage entitlement columns for any user';
+  RAISE NOTICE 'I|PASS|admin retains ability to manage entitlement columns for any user';
 END $$;
 
 ROLLBACK; -- never commit test fixtures, even in a branch database
