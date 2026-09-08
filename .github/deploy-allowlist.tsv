@@ -1,0 +1,48 @@
+# IVE-X4R-DG1 — Edge Function deploy allowlist. Single source of truth,
+# read by both .github/workflows/deploy-edge-functions.yml (the real
+# deploy) and scripts/ci/resolve_deploy_selection.sh (the no-production
+# dry-run test that proves the same logic without ever calling
+# `supabase`). Do not duplicate this mapping anywhere else.
+#
+# Format: <function_name><TAB><jwt_flag>
+#   jwt_flag empty  -> deploy WITHOUT --no-verify-jwt (JWT verification
+#                      stays required; matches supabase/config.toml and
+#                      production's current verify_jwt=true).
+#   jwt_flag set    -> deploy WITH --no-verify-jwt (preserves the
+#                      function's current production verify_jwt=false;
+#                      this workflow never turns JWT verification ON or
+#                      OFF as a side effect of deploying -- it only ever
+#                      preserves whatever policy is recorded here).
+#
+# Values below reflect the LIVE production verify_jwt state captured
+# read-only during IVE-X4R-DG1 (see docs/ive/X4R_DEPLOYMENT_PLAN.md).
+# Changing a function's JWT policy is a separate, explicit decision --
+# edit this file deliberately and note why, never as a side effect of
+# an unrelated deploy.
+#
+# Deliberately NOT listed (undeployable through this workflow):
+#   ive-agent-runner  -- FROZEN. No source exists in this repository
+#                        (confirmed absent from supabase/functions/ on
+#                        both main and this branch); protected since
+#                        X4A; the workflow also hard-blocks this name
+#                        explicitly regardless of allowlist contents.
+#   process-file       -- ~33 MB, exceeds Supabase's function upload
+#                        limit; needs dedicated handling, not a plain
+#                        allowlisted deploy. Excluded on purpose.
+#
+context-copilot
+analyze-website	--no-verify-jwt
+extract-knowledge	--no-verify-jwt
+improve-post	--no-verify-jwt
+generate-strategy	--no-verify-jwt
+generate-campaign	--no-verify-jwt
+competitor-discovery	--no-verify-jwt
+content-cluster	--no-verify-jwt
+gap-analysis	--no-verify-jwt
+market-analysis	--no-verify-jwt
+niche-discovery	--no-verify-jwt
+opportunity-discovery	--no-verify-jwt
+revenue-planner	--no-verify-jwt
+generate-project-actions	--no-verify-jwt
+generate-project-opportunities	--no-verify-jwt
+decision-simulator	--no-verify-jwt
