@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { safeFetch, UnsafeUrlError } from "../_shared/safe_fetch.ts";
 
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") ?? "";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
@@ -102,13 +103,23 @@ Retorne apenas o JSON. Nenhum texto antes ou depois.`;
 // ── Fetch content from a URL ──────────────────────────────────
 
 async function fetchUrlContent(url: string): Promise<string> {
+  try {
+    return await fetchUrlContentUnsafeWrapped(url);
+  } catch (err) {
+    if (err instanceof UnsafeUrlError) {
+      throw new Error("URL não permitida. Use um endereço público (http/https).");
+    }
+    throw err;
+  }
+}
+
+async function fetchUrlContentUnsafeWrapped(url: string): Promise<string> {
   // Google Docs → export as plain text
   const docsMatch = url.match(/docs\.google\.com\/document\/d\/([a-zA-Z0-9_-]+)/);
   if (docsMatch) {
     const exportUrl = `https://docs.google.com/document/d/${docsMatch[1]}/export?format=txt`;
-    const res = await fetch(exportUrl, {
+    const res = await safeFetch(exportUrl, {
       headers: { "User-Agent": "Mozilla/5.0" },
-      redirect: "follow",
     });
     if (!res.ok) {
       throw new Error(
@@ -124,9 +135,8 @@ async function fetchUrlContent(url: string): Promise<string> {
     const fileId = driveMatch[1];
     // Try the export as plain text (works for Google Docs stored as Drive files)
     const exportUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
-    const res = await fetch(exportUrl, {
+    const res = await safeFetch(exportUrl, {
       headers: { "User-Agent": "Mozilla/5.0" },
-      redirect: "follow",
     });
     if (!res.ok) {
       throw new Error(
@@ -148,9 +158,8 @@ async function fetchUrlContent(url: string): Promise<string> {
   }
 
   // Generic public URL → fetch HTML and strip tags
-  const res = await fetch(url, {
+  const res = await safeFetch(url, {
     headers: { "User-Agent": "Mozilla/5.0" },
-    redirect: "follow",
   });
   if (!res.ok) {
     throw new Error(`URL inacessível (${res.status}). Verifique se o endereço é público.`);

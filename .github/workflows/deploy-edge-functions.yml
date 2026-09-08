@@ -1,43 +1,91 @@
-name: Deploy Edge Functions
+name: Deploy Edge Functions (controlled, single-function)
+
+# IVE-X4R-DG1. Replaces the prior automatic bulk-deploy behavior, which
+# triggered on every push to main touching supabase/functions/** and
+# looped over every directory with an unconditional --no-verify-jwt --
+# that would have redeployed ive-agent-runner (frozen since X4A) and
+# silently flipped context-copilot from verify_jwt=true to false on any
+# such push, including the merge of a security branch. See
+# docs/ive/X4R_DEPLOYMENT_PLAN.md and the IVE-X4R-DG1 report for the
+# full history.
+#
+# MERGE != DEPLOY. This workflow has NO push trigger at all -- merging
+# any branch to main, including one that changes supabase/functions/**,
+# deploys nothing by itself. Every deploy is a deliberate, manual
+# workflow_dispatch naming exactly one function.
+#
+# DEPLOY ONE FUNCTION != DEPLOY ALL FUNCTIONS. There is no loop over
+# supabase/functions/*, no wildcard, no "deploy everything" path. Each
+# run deploys exactly the single function named in the `function` input,
+# validated against the repo-controlled allowlist at
+# .github/deploy-allowlist.tsv (see that file for the JWT-policy
+# rationale). scripts/ci/resolve_deploy_selection.sh implements the
+# selection/validation logic and is the same script
+# .github/workflows/deploy-selftest.yml uses to prove this behavior on
+# every push, without ever calling `supabase` or touching production.
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'supabase/functions/**'
   workflow_dispatch:
     inputs:
-      ref:
-        description: 'Branch ou commit para deploy (padrão: main)'
-        required: false
-        default: 'main'
+      function:
+        description: 'Exact function name to deploy (must be on .github/deploy-allowlist.tsv)'
+        required: true
+        type: string
+      confirm:
+        description: 'Type DEPLOY to confirm'
+        required: true
+        type: string
+
+permissions:
+  contents: read
 
 jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      function: ${{ steps.resolve.outputs.function }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require explicit confirmation
+        run: |
+          if [ "${{ inputs.confirm }}" != "DEPLOY" ]; then
+            echo "Confirmation failed. Set confirm=DEPLOY to proceed." >&2
+            exit 1
+          fi
+
+      - name: Resolve and validate function selection (no production access)
+        id: resolve
+        run: |
+          set -euo pipefail
+          echo "Requested function: '${{ inputs.function }}'"
+          ARGS="$(bash scripts/ci/resolve_deploy_selection.sh '${{ inputs.function }}')"
+          echo "Resolved argv (one per line):"
+          echo "$ARGS"
+          echo "function=${{ inputs.function }}" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Deploy resolution"
+            echo "Requested: \`${{ inputs.function }}\`"
+            echo '```'
+            echo "supabase $ARGS"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
   deploy:
+    needs: resolve
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.ref || github.ref }}
 
       - uses: supabase/setup-cli@v1
         with:
           version: latest
 
-      - name: Deploy all Edge Functions
+      - name: Deploy exactly one function (re-resolved, never trusts the prior job's output alone)
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
-          # process-file is ~33 MB and exceeds Supabase's upload limit — skip it
-          SKIP="process-file"
-          for fn in supabase/functions/*/; do
-            name=$(basename "$fn")
-            if [[ "$name" == "$SKIP" ]]; then
-              echo "⚠ Skipping $name (exceeds size limit)"
-              continue
-            fi
-            echo "→ Deploying $name"
-            supabase functions deploy "$name" \
-              --project-ref nzngvbajrnruknpzzjbf \
-              --no-verify-jwt
-          done
+          set -euo pipefail
+          mapfile -t ARGS < <(bash scripts/ci/resolve_deploy_selection.sh '${{ needs.resolve.outputs.function }}')
+          echo "→ Running: supabase ${ARGS[*]}"
+          supabase "${ARGS[@]}"

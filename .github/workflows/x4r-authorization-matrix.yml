@@ -1,0 +1,234 @@
+name: X4R Authorization Test Matrix (ephemeral, local Supabase)
+
+# IVE-X4R / MB2. Runs the full A-P dynamic authorization test matrix
+# against a Postgres instance that lives entirely inside this runner
+# (supabase start), never against any real Supabase project. No job in
+# this file declares or uses SUPABASE_ACCESS_TOKEN, SUPABASE_PROJECT_REF,
+# or any service_role/anon key. Triggered by push to this feature branch
+# only -- not workflow_dispatch, per owner decision (a new workflow file
+# cannot be workflow_dispatch-triggered until it exists on the default
+# branch, and merging to main to work around that is explicitly
+# prohibited for this mission). workflow_dispatch is kept as a secondary
+# trigger for a future manual re-run once this file exists on a branch
+# GitHub already recognizes it on -- push is what makes this run today.
+#
+# MB2 update: as of the canonical baseline
+# (20260907120000_baseline_production_pre_x4r.sql), the Gate 1E
+# runner-only migration-filename workaround is no longer needed -- the
+# legacy duplicate-001 collision no longer exists in the active
+# supabase/migrations/ directory (those files are archived at
+# docs/legacy-migrations-archive/, never replayed). This workflow now
+# runs supabase start directly against the committed migrations
+# unmodified.
+
+on:
+  push:
+    branches:
+      - claude/ive-x4-security-boundary-closure
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/tests/x4b_authorization_tests.sql'
+      - 'supabase/tests/x4r_authorization_matrix_completion.sql'
+      - 'supabase/tests/schema_fingerprint.sql'
+      - '.github/workflows/x4r-authorization-matrix.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  authorization-matrix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        # No `ref:` -- tests exactly the commit (github.sha) that
+        # triggered this run, whatever it ends up being.
+
+      - name: Record commit under test
+        run: |
+          echo "Testing commit: ${{ github.sha }}" | tee test_summary.log
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.116.0 # pinned; latest stable non-beta as of 2026-09-06
+
+      - name: Install postgresql-client (psql)
+        run: sudo apt-get update && sudo apt-get install --yes postgresql-client
+
+      - name: Log environment versions
+        run: |
+          { supabase --version; docker --version; docker compose version || true; psql --version; } \
+            | tee environment_versions.log
+
+      - name: Confirm clean migration list (no workaround needed)
+        run: |
+          set -euo pipefail
+          {
+            echo "-- supabase/migrations/ as committed, no rename, no workaround --"
+            ls -1 supabase/migrations/ | sort
+            echo "-- confirming no legacy 001-021 files remain in the active migrations dir --"
+            if ls supabase/migrations/ | grep -qE '^0[0-2][0-9]_' ; then
+              echo "REFUSING: a legacy-numbered migration file is still present in supabase/migrations/"
+              exit 1
+            fi
+            echo "OK: only the canonical baseline and post-baseline migrations are present."
+          } | tee migration_list.log
+
+      # ------------------------------------------------------------------
+      # IVE-X4R-MB2R: baseline-only fingerprint + explicit migration-ledger
+      # simulation. 022 is moved OUT of the active migrations directory
+      # (in the runner's working tree only -- never committed, never
+      # pushed -- same discipline as every prior gate's local-only
+      # working-tree change) so `supabase start` applies ONLY the
+      # baseline, exactly the "BASELINE-ONLY disposable database" MB2R
+      # section 02 asks for. 022's own content is never edited.
+      # ------------------------------------------------------------------
+      - name: Move 022 out of the active migrations dir (runner-local only)
+        run: |
+          mkdir -p /tmp/deferred-migrations
+          mv supabase/migrations/20260907120001_x4b_search_path_and_role_protection.sql /tmp/deferred-migrations/
+          echo "-- migrations dir now contains (baseline only): --"
+          ls -1 supabase/migrations/
+
+      - name: Start local Supabase stack (BASELINE ONLY)
+        run: supabase start
+
+      - name: Capture BASELINE-ONLY schema fingerprint (before 022 exists anywhere in this instance)
+        run: |
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 \
+            -f supabase/tests/schema_fingerprint.sql > baseline_only_fingerprint.log 2>&1
+          echo "-- local schema_migrations after baseline-only start (expect exactly 1 row) --" \
+            | tee -a baseline_only_fingerprint.log
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 \
+            -c "SELECT version, name FROM supabase_migrations.schema_migrations ORDER BY version;" \
+            | tee -a baseline_only_fingerprint.log
+          ROWCOUNT=$(psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -tA -v ON_ERROR_STOP=1 \
+            -c "SELECT count(*) FROM supabase_migrations.schema_migrations;")
+          [ "$ROWCOUNT" = "1" ] || { echo "REFUSING: expected exactly 1 applied migration (baseline only), got $ROWCOUNT"; exit 1; }
+
+      - name: Restore 022 and prove it is the only PENDING migration
+        run: |
+          mv /tmp/deferred-migrations/20260907120001_x4b_search_path_and_role_protection.sql supabase/migrations/
+          echo "-- migrations dir now contains (baseline + 022): --"
+          ls -1 supabase/migrations/
+          echo "-- supabase migration list (local): baseline should show APPLIED, 022 should show PENDING --" \
+            | tee migration_ledger.log
+          supabase migration list --local 2>&1 | tee -a migration_ledger.log
+
+      - name: Apply 022 via the same incremental mechanism intended for production (local target only)
+        run: |
+          supabase migration up --local 2>&1 | tee -a migration_ledger.log
+          echo "-- local schema_migrations after applying 022 (expect exactly 2 rows, baseline + 022, no legacy 001-021, nothing unexpected) --" \
+            | tee -a migration_ledger.log
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 \
+            -c "SELECT version, name FROM supabase_migrations.schema_migrations ORDER BY version;" \
+            | tee -a migration_ledger.log
+          ROWCOUNT=$(psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -tA -v ON_ERROR_STOP=1 \
+            -c "SELECT count(*) FROM supabase_migrations.schema_migrations;")
+          [ "$ROWCOUNT" = "2" ] || { echo "REFUSING: expected exactly 2 applied migrations after ledger simulation, got $ROWCOUNT"; exit 1; }
+          UNEXPECTED=$(psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -tA -v ON_ERROR_STOP=1 \
+            -c "SELECT count(*) FROM supabase_migrations.schema_migrations WHERE version NOT IN ('20260907120000','20260907120001');")
+          [ "$UNEXPECTED" = "0" ] || { echo "REFUSING: unexpected migration version(s) present in ledger"; exit 1; }
+          echo "OK: migration ledger simulation confirmed -- baseline applied, 022 applied, nothing else." \
+            | tee -a migration_ledger.log
+
+      - name: Verify seed.sql reference data landed (supabase start already ran it automatically)
+        run: |
+          COUNT=$(psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -tA -v ON_ERROR_STOP=1 \
+            -c "SELECT count(*) FROM public.feature_flags;")
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 \
+            -c "SELECT feature_name, enabled, plan_required FROM public.feature_flags ORDER BY feature_name;" \
+            | tee seed_verification.log
+          echo "feature_flags row count: $COUNT" | tee -a seed_verification.log
+          [ "$COUNT" = "6" ] || { echo "REFUSING: expected 6 feature_flags rows from seed.sql, got $COUNT"; exit 1; }
+
+      - name: Safety check -- local-only, no production reference
+        run: |
+          STATUS=$(supabase status)
+          echo "$STATUS"
+          echo "$STATUS" | grep -q "127.0.0.1" || { echo "REFUSING: not a local instance"; exit 1; }
+          if echo "$STATUS" | grep -qi "nzngvbajrnruknpzzjbf"; then
+            echo "REFUSING: production project ref detected in local status"; exit 1
+          fi
+          if env | grep -iE "SUPABASE_ACCESS_TOKEN|SUPABASE_PROJECT_REF|SERVICE_ROLE_KEY"; then
+            echo "REFUSING: production-shaped secret name present in job environment"; exit 1
+          fi
+          echo "OK: local-only instance, no production reference or secret found."
+
+      - name: Confirm migration 022 objects applied (not assumed)
+        run: |
+          DB_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+          {
+            echo "-- full trigger definition on public.profiles (timing + events) --"
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -c \
+              "SELECT tgname, pg_get_triggerdef(oid) FROM pg_trigger WHERE tgrelid = 'public.profiles'::regclass AND NOT tgisinternal;"
+            echo "-- SECURITY INVOKER/DEFINER + search_path on every function migration 022 touches or adds --"
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -c \
+              "SELECT proname, CASE WHEN prosecdef THEN 'DEFINER' ELSE 'INVOKER' END AS security, proconfig FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname IN ('prevent_self_privilege_escalation','is_admin_user','handle_new_user','set_updated_at','update_project_events_updated_at','update_executive_contexts_updated_at') ORDER BY proname;"
+            echo "-- full body of the new trigger function (for direct visual confirmation of the TG_OP branches) --"
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -c \
+              "SELECT pg_get_functiondef(oid) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname='prevent_self_privilege_escalation';"
+          } | tee migration_evidence.log
+
+          grep -q "trg_prevent_self_privilege_escalation" migration_evidence.log \
+            || { echo "REFUSING: expected trigger not found -- migration 022 not applied to this local instance"; exit 1; }
+          grep -q "BEFORE INSERT OR UPDATE" migration_evidence.log \
+            || { echo "REFUSING: trigger exists but is not BEFORE INSERT OR UPDATE -- wrong version of migration 022"; exit 1; }
+
+          # Dedicated boolean query, not a text-grep on the formatted table
+          # above (that log has multiple mentions of the function name, so a
+          # grep -A on it could accidentally match the wrong row).
+          IS_INVOKER=$(psql "$DB_URL" -tA -v ON_ERROR_STOP=1 -c \
+            "SELECT NOT prosecdef FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname='prevent_self_privilege_escalation';")
+          echo "prevent_self_privilege_escalation is SECURITY INVOKER: $IS_INVOKER" | tee -a migration_evidence.log
+          [ "$IS_INVOKER" = "t" ] \
+            || { echo "REFUSING: prevent_self_privilege_escalation is not SECURITY INVOKER -- wrong version of migration 022"; exit 1; }
+
+          SEARCH_PATH_COUNT=$(psql "$DB_URL" -tA -v ON_ERROR_STOP=1 -c \
+            "SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname IN ('is_admin_user','handle_new_user','set_updated_at','update_project_events_updated_at','update_executive_contexts_updated_at') AND proconfig @> ARRAY['search_path=public'];")
+          echo "functions with search_path=public hardened: $SEARCH_PATH_COUNT / 5" | tee -a migration_evidence.log
+          [ "$SEARCH_PATH_COUNT" = "5" ] \
+            || { echo "REFUSING: not all 5 expected functions have search_path hardened -- wrong version of migration 022"; exit 1; }
+
+          echo "OK: migration 022 (X4R-corrected version) confirmed applied to this local instance." | tee -a migration_evidence.log
+
+      - name: Run x4b_authorization_tests.sql
+        run: |
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 \
+            -f supabase/tests/x4b_authorization_tests.sql 2>&1 | tee x4b_results.log
+
+      - name: Run x4r_authorization_matrix_completion.sql
+        run: |
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 \
+            -f supabase/tests/x4r_authorization_matrix_completion.sql 2>&1 | tee x4r_completion_results.log
+
+      - name: Build test summary
+        if: always()
+        run: |
+          {
+            echo "commit_sha=${{ github.sha }}"
+            echo "--- x4b_authorization_tests.sql: PASS/FAIL/NOTICE lines ---"
+            grep -E "NOTICE|PASS|FAIL" x4b_results.log || echo "(no output captured -- see full log)"
+            echo "--- x4r_authorization_matrix_completion.sql: PASS/FAIL/NOTICE lines ---"
+            grep -E "NOTICE|PASS|FAIL" x4r_completion_results.log || echo "(no output captured -- see full log)"
+          } | tee test_summary.log
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: x4r-authorization-matrix-results
+          path: |
+            environment_versions.log
+            migration_list.log
+            baseline_only_fingerprint.log
+            migration_ledger.log
+            seed_verification.log
+            migration_evidence.log
+            x4b_results.log
+            x4r_completion_results.log
+            test_summary.log
+          retention-days: 14
+
+      - name: Stop local Supabase stack
+        if: always()
+        run: supabase stop --no-backup

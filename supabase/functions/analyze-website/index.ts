@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { safeFetch, UnsafeUrlError } from "../_shared/safe_fetch.ts";
 
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") ?? "";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
@@ -69,13 +70,20 @@ score_monetization: potencial de monetização geral.
 Retorne apenas o JSON. Nenhum texto antes ou depois.`;
 
 async function fetchWebsiteContent(url: string): Promise<string> {
-  const res = await fetch(url, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (compatible; AIAnalyzer/1.0)",
-      "Accept": "text/html,application/xhtml+xml",
-    },
-    redirect: "follow",
-  });
+  let res: Response;
+  try {
+    res = await safeFetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; AIAnalyzer/1.0)",
+        "Accept": "text/html,application/xhtml+xml",
+      },
+    });
+  } catch (err) {
+    if (err instanceof UnsafeUrlError) {
+      throw new Error("URL não permitida. Use um endereço público (http/https).");
+    }
+    throw err;
+  }
 
   if (!res.ok) {
     throw new Error(`Site inacessível (HTTP ${res.status}). Verifique se a URL está correta e é pública.`);
