@@ -66,3 +66,41 @@ Deno.test('PF-6: campos obrigatórios ausentes -> 400', async () => {
   const res = await handler(req({ file_type: 'txt' }), validUserClient);
   assertEquals(res.status, 400);
 });
+
+// ── PF-7/PF-8: proteção contra zip bomb no DOCX (achado do Codex Gate) ──────
+// unzipSync() sem filtro descomprime TODAS as entradas do arquivo antes de
+// eu escolher a que preciso -- um DOCX malicioso (é só um ZIP) com
+// compressão extrema poderia estourar memória bem além do limite de ~6MB
+// *comprimidos* checado antes do decode. O filtro do fflate roda ANTES de
+// descomprimir e recebe o tamanho declarado (originalSize), então dá pra
+// rejeitar sem nunca inflar os bytes.
+
+Deno.test('PF-7: DOCX legítimo e pequeno continua funcionando (regressão do filtro)', async () => {
+  const { zipSync, strToU8 } = await import('npm:fflate');
+  const xml = `<w:document><w:body><w:p><w:r><w:t>${LONG_TXT}</w:t></w:r></w:p></w:body></w:document>`;
+  const zipped = zipSync({ 'word/document.xml': strToU8(xml) });
+  const b64 = btoa(String.fromCharCode(...zipped));
+  const res = await handler(req({ file_base64: b64, file_type: 'docx' }), validUserClient);
+  assertEquals(res.status, 200);
+  const data = await res.json();
+  assertEquals(typeof data.text, 'string');
+  assertEquals(data.text.length > 20, true);
+});
+
+Deno.test('PF-8: DOCX no formato de zip bomb (originalSize declarado gigante) é rejeitado, não descomprimido', async () => {
+  const { zipSync, strToU8 } = await import('npm:fflate');
+  // Dados repetidos comprimem quase de graça -- 25MB reais de zeros vira um
+  // zip de poucos KB, provando que o ataque é barato de montar.
+  const huge = new Uint8Array(25 * 1024 * 1024); // 25MB > MAX_DOCX_XML_SIZE (20MB)
+  const zipped = zipSync({ 'word/document.xml': huge }, { level: 9 });
+  // O zip comprimido em si também precisa caber no teto de ~6MB de base64
+  // já testado em PF-4 -- confirma que o ataque passaria por aquele teto.
+  const b64 = btoa(String.fromCharCode(...zipped));
+  const start = performance.now();
+  const res = await handler(req({ file_base64: b64, file_type: 'docx' }), validUserClient);
+  const elapsedMs = performance.now() - start;
+  // Deve falhar (arquivo "vazio"/não encontrado, não os 25MB de zeros) e
+  // fazer isso rápido -- nunca chegou a inflar os 25MB.
+  assertEquals(res.status, 500);
+  assertEquals(elapsedMs < 2000, true);
+});

@@ -59,10 +59,23 @@ function extractFromPdf(bytes: Uint8Array): string {
   return blocks.join(" ").trim();
 }
 
+// IVE-PROCESS-FILE-CLOSURE (Codex Gate finding, HIGH): unzipSync() with no
+// filter inflates every entry in the archive before returning -- a
+// malicious DOCX (just a ZIP) crafted with extreme compression could
+// exhaust memory well beyond the ~6MB *compressed* input ceiling checked
+// earlier. fflate's `filter` callback runs BEFORE decompression and
+// receives each entry's declared uncompressed size, so we can (a) skip
+// decompressing every entry except the one we actually read, and (b)
+// reject that one entry outright if its declared size is unreasonable
+// for a text document -- both before any inflate happens.
+const MAX_DOCX_XML_SIZE = 20 * 1024 * 1024; // 20MB uncompressed, generous for document.xml
+
 async function extractFromDocx(bytes: Uint8Array): Promise<string> {
   try {
     const { unzipSync } = await import("npm:fflate");
-    const unzipped = unzipSync(bytes);
+    const unzipped = unzipSync(bytes, {
+      filter: (file) => file.name === "word/document.xml" && file.originalSize <= MAX_DOCX_XML_SIZE,
+    });
     const docXmlBytes = unzipped["word/document.xml"];
     if (!docXmlBytes) throw new Error("word/document.xml não encontrado");
     const xml = new TextDecoder("utf-8").decode(docXmlBytes);
