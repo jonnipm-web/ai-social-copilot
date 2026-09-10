@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { AuthError, resolveAuthenticatedUser, unauthorizedResponse } from '../_shared/auth.ts';
+import { quotaBlockedResponse, refundQuota, reserveQuota } from '../_shared/quota.ts';
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const corsHeaders = {
@@ -18,6 +19,7 @@ serve(async (req) => {
     throw e;
   }
 
+  let quotaReserved = false;
   try {
     const { project_name, opportunities } = await req.json();
 
@@ -54,6 +56,10 @@ Regras:
 - roi_score: retorno sobre investimento esperado, 0-100
 - Tipos válidos para action_type: tarefa, conteúdo, campanha, produto, análise`;
 
+    const quota = await reserveQuota(req);
+    if (!quota.allowed) return quotaBlockedResponse(corsHeaders, quota);
+    quotaReserved = true;
+
     const resp = await fetch(GROQ_URL, {
       method: 'POST',
       headers: {
@@ -78,6 +84,7 @@ Regras:
 
     if (!resp.ok) {
       const err = await resp.text();
+      await refundQuota(req);
       return Response.json({ error: `Groq error: ${err}` }, { status: 502, headers: corsHeaders });
     }
 
@@ -88,6 +95,7 @@ Regras:
     try {
       parsed = JSON.parse(content);
     } catch {
+      await refundQuota(req);
       return Response.json(
         { error: 'JSON inválido retornado pelo modelo', raw: content },
         { status: 502, headers: corsHeaders },
@@ -98,6 +106,7 @@ Regras:
 
     return Response.json(parsed, { headers: corsHeaders });
   } catch (e) {
+    if (quotaReserved) await refundQuota(req);
     return Response.json({ error: String(e) }, { status: 500, headers: corsHeaders });
   }
 });

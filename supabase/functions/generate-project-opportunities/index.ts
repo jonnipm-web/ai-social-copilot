@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { AuthError, resolveAuthenticatedUser, unauthorizedResponse } from '../_shared/auth.ts';
+import { quotaBlockedResponse, refundQuota, reserveQuota } from '../_shared/quota.ts';
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const corsHeaders = {
@@ -18,6 +19,7 @@ serve(async (req) => {
     throw e;
   }
 
+  let quotaReserved = false;
   try {
     const { project_name, project_description, project_type, documents, market_context } =
       await req.json();
@@ -63,6 +65,10 @@ Tipos válidos para opportunity_type: expansão, novo produto, novo nicho, afili
 Scores devem ser inteiros entre 0 e 100.
 final_score = média ponderada dos demais scores.`;
 
+    const quota = await reserveQuota(req);
+    if (!quota.allowed) return quotaBlockedResponse(corsHeaders, quota);
+    quotaReserved = true;
+
     const resp = await fetch(GROQ_URL, {
       method: 'POST',
       headers: {
@@ -87,6 +93,7 @@ final_score = média ponderada dos demais scores.`;
 
     if (!resp.ok) {
       const err = await resp.text();
+      await refundQuota(req);
       return Response.json({ error: `Groq error: ${err}` }, { status: 502, headers: corsHeaders });
     }
 
@@ -97,6 +104,7 @@ final_score = média ponderada dos demais scores.`;
     try {
       parsed = JSON.parse(content);
     } catch {
+      await refundQuota(req);
       return Response.json(
         { error: 'JSON inválido retornado pelo modelo', raw: content },
         { status: 502, headers: corsHeaders },
@@ -109,6 +117,7 @@ final_score = média ponderada dos demais scores.`;
 
     return Response.json(parsed, { headers: corsHeaders });
   } catch (e) {
+    if (quotaReserved) await refundQuota(req);
     return Response.json({ error: String(e) }, { status: 500, headers: corsHeaders });
   }
 });

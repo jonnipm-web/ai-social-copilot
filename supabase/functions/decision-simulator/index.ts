@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { AuthError, resolveAuthenticatedUser, unauthorizedResponse } from '../_shared/auth.ts';
+import { quotaBlockedResponse, refundQuota, reserveQuota } from '../_shared/quota.ts';
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const corsHeaders = {
@@ -18,6 +19,7 @@ serve(async (req) => {
     throw e;
   }
 
+  let quotaReserved = false;
   try {
     const {
       scenario,        // string: descrição do cenário a simular
@@ -80,6 +82,10 @@ Onde:
 - timeline_weeks: tempo estimado para ver o impacto em semanas
 
 Responda sempre em Português do Brasil.`;
+
+    const quota = await reserveQuota(req);
+    if (!quota.allowed) return quotaBlockedResponse(corsHeaders, quota);
+    quotaReserved = true;
 
     const groqRes = await fetch(GROQ_URL, {
       method: 'POST',
@@ -152,6 +158,7 @@ Responda sempre em Português do Brasil.`;
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (err) {
+    if (quotaReserved) await refundQuota(req);
     return new Response(
       JSON.stringify({ error: String(err) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },

@@ -10,8 +10,19 @@
  */
 import { assertEquals } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
 import { AuthClient } from '../_shared/auth.ts';
+import { QuotaClient } from '../_shared/quota.ts';
 
 let groqCalled = false;
+let quotaRefundCalls = 0;
+let quotaRpcOverride: { data: unknown; error: unknown } | null = null;
+const fakeQuotaClient: QuotaClient = {
+  // deno-lint-ignore require-await
+  async rpc(fn: string) {
+    if (fn === 'refund_ai_quota') { quotaRefundCalls++; return { data: null, error: null }; }
+    if (quotaRpcOverride) return quotaRpcOverride;
+    return { data: { allowed: true, used: 1, limit: 100, role: 'free' }, error: null };
+  },
+};
 
 const FAKE_ANALYSIS = {
   title: 't', description: 'd', main_topics: [], detected_niche: 'n', detected_audience: 'a',
@@ -25,11 +36,13 @@ const FAKE_ANALYSIS = {
   persona_training: { tone: '', vocabulary: [], values: [], communication_style: '' },
 };
 
+let groqShouldFail = false;
 const originalFetch = globalThis.fetch;
 globalThis.fetch = async (input: string | URL | Request, options?: RequestInit): Promise<Response> => {
   const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
   if (url.includes('groq.com')) {
     groqCalled = true;
+    if (groqShouldFail) return new Response('erro simulado', { status: 502 });
     return new Response(JSON.stringify({
       choices: [{ message: { content: JSON.stringify(FAKE_ANALYSIS) } }],
     }), { status: 200 });
@@ -76,14 +89,14 @@ function req(body: unknown, headers: Record<string, string> = { Authorization: '
 
 Deno.test('AW-1: sem Authorization -> 401, Groq nunca chamado', async () => {
   groqCalled = false;
-  const res = await handler(req({ url: 'https://example.com' }, {}), validUserClient);
+  const res = await handler(req({ url: 'https://example.com' }, {}), validUserClient, fakeQuotaClient);
   assertEquals(res.status, 401);
   assertEquals(groqCalled, false);
 });
 
 Deno.test('AW-2: Bearer bem-formado mas sem sessão real (ex: chave anon) -> 401, Groq nunca chamado', async () => {
   groqCalled = false;
-  const res = await handler(req({ url: 'https://example.com' }, { Authorization: 'Bearer anon-public-key' }), validUserClient);
+  const res = await handler(req({ url: 'https://example.com' }, { Authorization: 'Bearer anon-public-key' }), validUserClient, fakeQuotaClient);
   assertEquals(res.status, 401);
   assertEquals(groqCalled, false);
 });
@@ -92,12 +105,40 @@ Deno.test('AW-3: usuário autenticado válido -> Groq é chamado, retorna 200', 
   groqCalled = false;
   const restoreDns = stubDns('93.184.216.34'); // public IP, same convention as safe_fetch_test.ts
   try {
-    const res = await handler(req({ url: 'https://public.example' }), validUserClient);
+    const res = await handler(req({ url: 'https://public.example' }), validUserClient, fakeQuotaClient);
     assertEquals(res.status, 200);
     assertEquals(groqCalled, true);
     const data = await res.json();
     assertEquals(data.title, 't');
   } finally {
+    restoreDns();
+  }
+});
+
+Deno.test('AW-4: cota esgotada -> 429, Groq nunca chamado', async () => {
+  groqCalled = false;
+  quotaRpcOverride = { data: { allowed: false, reason: 'quota_exceeded', used: 5, limit: 5, role: 'free' }, error: null };
+  const restoreDns = stubDns('93.184.216.34');
+  try {
+    const res = await handler(req({ url: 'https://public.example' }), validUserClient, fakeQuotaClient);
+    assertEquals(res.status, 429);
+    assertEquals(groqCalled, false);
+  } finally {
+    quotaRpcOverride = null;
+    restoreDns();
+  }
+});
+
+Deno.test('AW-5: Groq falha depois da cota reservada -> devolve a unidade', async () => {
+  groqShouldFail = true;
+  quotaRefundCalls = 0;
+  const restoreDns = stubDns('93.184.216.34');
+  try {
+    const res = await handler(req({ url: 'https://public.example' }), validUserClient, fakeQuotaClient);
+    assertEquals(res.status, 502);
+    assertEquals(quotaRefundCalls, 1);
+  } finally {
+    groqShouldFail = false;
     restoreDns();
   }
 });
