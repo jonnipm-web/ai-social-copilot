@@ -42,13 +42,17 @@
 #                        both main and this branch); protected since
 #                        X4A; the workflow also hard-blocks this name
 #                        explicitly regardless of allowlist contents.
-#   process-file       -- ~33 MB, exceeds Supabase's function upload
-#                        limit; needs dedicated handling, not a plain
-#                        allowlisted deploy. Still fully unauthenticated
-#                        as of AUTH-01 -- tracked separately, does not
-#                        use Groq so it is not this mission's blocker,
-#                        but remains a resource/DoS exposure. See
-#                        IVE-COMMERCIAL-AUTH-01 final report.
+#
+# process-file (IVE-PROCESS-FILE-CLOSURE): previously excluded here at
+# ~91MB of bundled dependencies (confirmed via `deno info`, far worse
+# than the ~33MB originally estimated) -- npm:pdf-parse transitively
+# pulled in pdfjs-dist + a native @napi-rs/canvas renderer, purely to
+# support PDF *rendering*, which this function's actual job (text
+# extraction) never needed. Dropped pdf-parse entirely in favor of the
+# regex-based extraction that was already the fallback path; bundle is
+# now ~1.8MB, same order as every other function here. Also gained the
+# same resolveAuthenticatedUser() gate as the rest of this list, plus an
+# explicit pre-parse file-type and size ceiling it never had before.
 #
 context-copilot
 analyze-website
@@ -66,3 +70,4 @@ revenue-planner
 generate-project-actions
 generate-project-opportunities
 decision-simulator
+process-file

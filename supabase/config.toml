@@ -2,8 +2,12 @@
 # functions moved to verify_jwt=true, matching context-copilot and
 # .github/deploy-allowlist.tsv (the authoritative source at deploy time --
 # see that file's header for why an empty jwt_flag there is not the whole
-# auth story). process-file is intentionally absent here and from the
-# allowlist; see IVE-COMMERCIAL-AUTH-01 final report.
+# auth story).
+#
+# IVE-PROCESS-FILE-CLOSURE: process-file added below -- it now has the
+# same auth gate as everything else here and deploys through the same
+# canonical route (its ~91MB bundle-size blocker is resolved, see
+# .github/deploy-allowlist.tsv's header for details).
 
 [functions.context-copilot]
 verify_jwt = true
@@ -51,4 +55,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.decision-simulator]
+verify_jwt = true
+
+[functions.process-file]
 verify_jwt = true

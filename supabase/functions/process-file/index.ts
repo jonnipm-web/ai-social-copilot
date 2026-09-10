@@ -1,9 +1,22 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { AuthClient, AuthError, resolveAuthenticatedUser, unauthorizedResponse } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+const SUPPORTED_TYPES = new Set([
+  "txt", "text/plain",
+  "pdf", "application/pdf",
+  "docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+]);
+
+// ~8MB of base64 (~6MB decoded) -- generous for a text-bearing document,
+// bounded well below anything that would make regex/unzip parsing itself
+// a meaningful resource cost. Checked on the raw base64 string, before
+// any decode/parse work happens.
+const MAX_BASE64_LENGTH = 8 * 1024 * 1024;
 
 function base64ToUint8Array(base64: string): Uint8Array {
   const binary = atob(base64);
@@ -14,39 +27,73 @@ function base64ToUint8Array(base64: string): Uint8Array {
   return bytes;
 }
 
-async function extractFromPdf(bytes: Uint8Array): Promise<string> {
-  try {
-    const { default: pdfParse } = await import("npm:pdf-parse/lib/pdf-parse.js");
-    const buffer = Buffer.from(bytes);
-    const data = await pdfParse(buffer);
-    return data.text ?? "";
-  } catch {
-    // Fallback: regex-based text extraction for simple PDFs
-    const latin = new TextDecoder("latin1").decode(bytes);
-    const blocks: string[] = [];
+// IVE-PROCESS-FILE-CLOSURE: previously tried `npm:pdf-parse` first, falling
+// back to this regex extraction on failure. `pdf-parse` transitively pulls
+// in pdfjs-dist + a native @napi-rs/canvas renderer -- 91MB of dependencies
+// (confirmed via `deno info`) purely to support PDF *rendering*, which
+// text extraction never needed. That bundle size is the actual, confirmed
+// reason this function couldn't go through the canonical deploy route.
+// This was always just the fallback path for simple, uncompressed-text
+// PDFs -- now the only path. Complex/compressed/scanned PDFs will extract
+// little or nothing, same as before when pdf-parse also failed on them;
+// the existing <20-char-minimum check below already asks the user to
+// paste text manually in that case.
+function extractFromPdf(bytes: Uint8Array): string {
+  const latin = new TextDecoder("latin1").decode(bytes);
+  const blocks: string[] = [];
 
-    const btEtMatches = latin.match(/BT[\s\S]*?ET/g) ?? [];
-    for (const block of btEtMatches) {
-      const strings = block.match(/\(([^)\\]*(?:\\.[^)\\]*)*)\)/g) ?? [];
-      for (const s of strings) {
-        const text = s.slice(1, -1)
-          .replace(/\\n/g, " ")
-          .replace(/\\r/g, "")
-          .replace(/\\t/g, " ")
-          .replace(/\\\\/g, "\\")
-          .replace(/\\([()])/g, "$1");
-        if (text.trim().length > 0) blocks.push(text.trim());
-      }
+  const btEtMatches = latin.match(/BT[\s\S]*?ET/g) ?? [];
+  for (const block of btEtMatches) {
+    const strings = block.match(/\(([^)\\]*(?:\\.[^)\\]*)*)\)/g) ?? [];
+    for (const s of strings) {
+      const text = s.slice(1, -1)
+        .replace(/\\n/g, " ")
+        .replace(/\\r/g, "")
+        .replace(/\\t/g, " ")
+        .replace(/\\\\/g, "\\")
+        .replace(/\\([()])/g, "$1");
+      if (text.trim().length > 0) blocks.push(text.trim());
     }
-
-    return blocks.join(" ").trim();
   }
+
+  return blocks.join(" ").trim();
 }
+
+// IVE-PROCESS-FILE-CLOSURE (Codex Gate finding, HIGH, round 1): unzipSync()
+// with no filter inflates every entry in the archive before returning -- a
+// malicious DOCX (just a ZIP) crafted with extreme compression could
+// exhaust memory well beyond the ~6MB *compressed* input ceiling checked
+// earlier. fflate's `filter` callback runs BEFORE decompression and
+// receives each entry's declared uncompressed size.
+//
+// Round 2 (Codex Gate, HIGH): a per-entry name+size filter alone is not
+// enough -- a ZIP's central directory can legally contain multiple entries
+// with the identical name "word/document.xml" (a real DOCX never does,
+// only a crafted one would), and each would independently pass the filter
+// and get decompressed, making the aggregate decompression budget
+// unbounded (N entries x up to the per-entry cap each). Fixed by tracking
+// whether an entry has already been accepted in this call and refusing
+// every entry once one has -- across a whole unzipSync() invocation, at
+// most one entry is EVER decompressed, regardless of how many the archive
+// declares. Cap also lowered from 20MB to 5MB per the same review (a real
+// document.xml is almost always well under 1-2MB; 5MB is still generous,
+// with less transient memory pressure from the subsequent string/regex
+// work on the decompressed content).
+const MAX_DOCX_XML_SIZE = 5 * 1024 * 1024; // 5MB uncompressed
 
 async function extractFromDocx(bytes: Uint8Array): Promise<string> {
   try {
     const { unzipSync } = await import("npm:fflate");
-    const unzipped = unzipSync(bytes);
+    let matched = false;
+    const unzipped = unzipSync(bytes, {
+      filter: (file) => {
+        if (matched) return false; // never decompress more than one entry, ever
+        if (file.name !== "word/document.xml") return false;
+        if (file.originalSize > MAX_DOCX_XML_SIZE) return false;
+        matched = true;
+        return true;
+      },
+    });
     const docXmlBytes = unzipped["word/document.xml"];
     if (!docXmlBytes) throw new Error("word/document.xml não encontrado");
     const xml = new TextDecoder("utf-8").decode(docXmlBytes);
@@ -76,9 +123,19 @@ function extractFromTxt(bytes: Uint8Array): string {
   }
 }
 
-serve(async (req) => {
+// Exportado para testes unitários. Em produção, serve() chama esta função.
+export async function handler(req: Request, authClient?: AuthClient): Promise<Response> {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
+  }
+
+  // IVE-PROCESS-FILE-CLOSURE — mesmo limite de identidade real usado nas
+  // outras 16 funções. Falha fechado antes de qualquer parsing.
+  try {
+    await resolveAuthenticatedUser(req, authClient);
+  } catch (e) {
+    if (e instanceof AuthError) return unauthorizedResponse(corsHeaders);
+    throw e;
   }
 
   try {
@@ -98,28 +155,40 @@ serve(async (req) => {
     }
 
     const { file_base64, file_type } = body;
+
+    // Type and size are checked BEFORE any decode/parse work.
+    const normalizedType = String(file_type).toLowerCase();
+    if (!SUPPORTED_TYPES.has(normalizedType)) {
+      return new Response(
+        JSON.stringify({ error: `Tipo de arquivo não suportado: ${file_type}. Use PDF, DOCX ou TXT.` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    if (typeof file_base64 !== "string" || file_base64.length > MAX_BASE64_LENGTH) {
+      return new Response(
+        JSON.stringify({ error: "Arquivo muito grande. O limite é de aproximadamente 6 MB." }),
+        { status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     const bytes = base64ToUint8Array(file_base64);
 
     let text = "";
 
-    switch (file_type.toLowerCase()) {
+    switch (normalizedType) {
       case "txt":
       case "text/plain":
         text = extractFromTxt(bytes);
         break;
       case "pdf":
       case "application/pdf":
-        text = await extractFromPdf(bytes);
+        text = extractFromPdf(bytes);
         break;
       case "docx":
       case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
         text = await extractFromDocx(bytes);
         break;
-      default:
-        return new Response(
-          JSON.stringify({ error: `Tipo de arquivo não suportado: ${file_type}. Use PDF, DOCX ou TXT.` }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
     }
 
     text = text.trim();
@@ -142,4 +211,8 @@ serve(async (req) => {
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
-});
+}
+
+if (Deno.env.get("DENO_TESTING") !== "1") {
+  serve((req) => handler(req));
+}
