@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { AuthClient, AuthError, resolveAuthenticatedUser, unauthorizedResponse } from "../_shared/auth.ts";
+import { QuotaClient, quotaBlockedResponse, refundQuota, reserveQuota } from "../_shared/quota.ts";
 
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") ?? "";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
@@ -57,7 +58,11 @@ Estrutura obrigatória:
 Retorne apenas o JSON. Nenhum texto antes ou depois.`;
 
 // Exportado para testes unitários. Em produção, serve() chama esta função.
-export async function handler(req: Request, authClient?: AuthClient): Promise<Response> {
+export async function handler(
+  req: Request,
+  authClient?: AuthClient,
+  quotaClient?: QuotaClient,
+): Promise<Response> {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -70,6 +75,7 @@ export async function handler(req: Request, authClient?: AuthClient): Promise<Re
     throw e;
   }
 
+  let quotaReserved = false;
   try {
     if (req.method !== "POST") {
       return new Response(
@@ -113,6 +119,10 @@ export async function handler(req: Request, authClient?: AuthClient): Promise<Re
 
     const userMessage = `Idioma: ${language}\n\n${context}`;
 
+    const quota = await reserveQuota(req, quotaClient);
+    if (!quota.allowed) return quotaBlockedResponse(corsHeaders, quota);
+    quotaReserved = true;
+
     const groqRes = await fetch(GROQ_URL, {
       method: "POST",
       headers: {
@@ -133,6 +143,7 @@ export async function handler(req: Request, authClient?: AuthClient): Promise<Re
     if (!groqRes.ok) {
       const err = await groqRes.text();
       console.error("Groq error:", err);
+      await refundQuota(req, quotaClient);
       return new Response(
         JSON.stringify({ error: "Falha ao gerar estratégia. Tente novamente." }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -144,6 +155,7 @@ export async function handler(req: Request, authClient?: AuthClient): Promise<Re
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
 
     if (!jsonMatch) {
+      await refundQuota(req, quotaClient);
       return new Response(
         JSON.stringify({ error: "Resposta inválida da IA. Tente novamente." }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -158,6 +170,7 @@ export async function handler(req: Request, authClient?: AuthClient): Promise<Re
     });
   } catch (e) {
     console.error("Erro inesperado:", e);
+    if (quotaReserved) await refundQuota(req, quotaClient);
     return new Response(
       JSON.stringify({ error: "Erro interno. Tente novamente." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },

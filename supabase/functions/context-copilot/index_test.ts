@@ -10,6 +10,23 @@
 
 import { assertEquals, assertStringIncludes, assertNotEquals } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
 import { AuthClient } from '../_shared/auth.ts';
+import { QuotaClient } from '../_shared/quota.ts';
+
+// Fake quota RPC — allowed by default; tests that need "exceeded" or
+// "refund was called" override rpcOverrides/refundCalls directly.
+let quotaRefundCalls = 0;
+let quotaRpcOverride: { data: unknown; error: unknown } | null = null;
+const fakeQuotaClient: QuotaClient = {
+  // deno-lint-ignore require-await
+  async rpc(fn: string) {
+    if (fn === 'refund_ai_quota') {
+      quotaRefundCalls++;
+      return { data: null, error: null };
+    }
+    if (quotaRpcOverride) return quotaRpcOverride;
+    return { data: { allowed: true, used: 1, limit: 100, role: 'free' }, error: null };
+  },
+};
 
 // Fake Supabase Auth — resolve 'test-session-jwt' como usuário real, rejeita
 // qualquer outro token. Injetado no handler para não depender de rede/projeto
@@ -29,11 +46,15 @@ const fakeAuthClient: AuthClient = {
 
 // ── Mock fetch (instalar ANTES do import do handler) ──────────────────────────
 let _capturedRequestBody: Record<string, unknown> = {};
+let groqCallCount = 0;
+let groqShouldFail = false;
 
 const originalFetch = globalThis.fetch;
 globalThis.fetch = async (input: string | URL | Request, options?: RequestInit): Promise<Response> => {
   const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
   if (url.includes('groq.com')) {
+    groqCallCount++;
+    if (groqShouldFail) return new Response('erro simulado', { status: 502 });
     _capturedRequestBody = JSON.parse(options?.body as string ?? '{}');
     return new Response(JSON.stringify({
       choices: [{
@@ -60,7 +81,7 @@ async function post(
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...extraHeaders },
     body: JSON.stringify(body),
-  }), fakeAuthClient);
+  }), fakeAuthClient, fakeQuotaClient);
 }
 
 function capturedSystemPrompt(): string {
@@ -293,4 +314,39 @@ Deno.test('CF-15: Bearer bem-formado mas sem sessão real (ex: chave anon) → 4
   assertEquals(res.status, 401);
   const data = await res.json();
   assertEquals(data.error, 'Unauthorized');
+});
+
+// ── CF-16/17/18: cota (IVE-COMMERCIAL-ENTITLEMENTS-01) ───────────────────────
+
+Deno.test('CF-16: cota esgotada -> 429, Groq nunca chamado', async () => {
+  groqCallCount = 0;
+  quotaRpcOverride = { data: { allowed: false, reason: 'quota_exceeded', used: 5, limit: 5, role: 'free' }, error: null };
+  try {
+    const res = await post({ message: 'teste', screen_name: 'home', context: {}, history: [] });
+    assertEquals(res.status, 429);
+    assertEquals(groqCallCount, 0);
+    const data = await res.json();
+    assertEquals(data.error, 'QUOTA_EXCEEDED');
+  } finally {
+    quotaRpcOverride = null;
+  }
+});
+
+Deno.test('CF-17: Groq falha depois da cota reservada -> devolve a unidade (refund chamado)', async () => {
+  groqShouldFail = true;
+  quotaRefundCalls = 0;
+  try {
+    const res = await post({ message: 'teste', screen_name: 'home', context: {}, history: [] });
+    assertEquals(res.status, 500);
+    assertEquals(quotaRefundCalls, 1);
+  } finally {
+    groqShouldFail = false;
+  }
+});
+
+Deno.test('CF-18: sucesso não chama refund', async () => {
+  quotaRefundCalls = 0;
+  const res = await post({ message: 'teste', screen_name: 'home', context: {}, history: [] });
+  assertEquals(res.status, 200);
+  assertEquals(quotaRefundCalls, 0);
 });

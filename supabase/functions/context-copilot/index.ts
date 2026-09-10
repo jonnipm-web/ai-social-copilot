@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { AuthClient, AuthError, resolveAuthenticatedUser, unauthorizedResponse } from '../_shared/auth.ts';
+import { QuotaClient, quotaBlockedResponse, refundQuota, reserveQuota } from '../_shared/quota.ts';
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
@@ -16,7 +17,11 @@ const corsHeaders = {
 // Exportado para testes unitários. Em produção, serve() chama esta função.
 // authClient é opcional e só existe para testes injetarem um Supabase Auth
 // falso; em produção resolveAuthenticatedUser() usa o client real.
-export async function handler(req: Request, authClient?: AuthClient): Promise<Response> {
+export async function handler(
+  req: Request,
+  authClient?: AuthClient,
+  quotaClient?: QuotaClient,
+): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   // Auth gate real — IVE-COMMERCIAL-AUTH-01. verify_jwt=true (config.toml)
@@ -32,6 +37,7 @@ export async function handler(req: Request, authClient?: AuthClient): Promise<Re
     throw e;
   }
 
+  let quotaReserved = false;
   try {
     const { message, screen_name, context, history } = await req.json();
 
@@ -179,6 +185,14 @@ Tipos permitidos: "create_action", "approve_opportunity", "create_project", "gen
 
 Responda sempre em Português do Brasil.`;
 
+    // IVE-COMMERCIAL-ENTITLEMENTS-01 — reserva cota só agora (após validar o
+    // corpo), nunca antes: um erro de input do próprio usuário não deve
+    // consumir cota. Se o Groq falhar depois disso, devolvemos a unidade no
+    // catch abaixo.
+    const quota = await reserveQuota(req, quotaClient);
+    if (!quota.allowed) return quotaBlockedResponse(corsHeaders, quota);
+    quotaReserved = true;
+
     // ── Groq call ────────────────────────────────────────────────────────────
     const groqRes = await fetch(GROQ_URL, {
       method: 'POST',
@@ -240,6 +254,7 @@ Responda sempre em Português do Brasil.`;
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (err) {
+    if (quotaReserved) await refundQuota(req, quotaClient);
     return new Response(
       JSON.stringify({ error: String(err) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },

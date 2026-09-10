@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { AuthError, resolveAuthenticatedUser, unauthorizedResponse } from "../_shared/auth.ts";
+import { quotaBlockedResponse, refundQuota, reserveQuota } from "../_shared/quota.ts";
 
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") ?? "";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
@@ -58,6 +59,7 @@ serve(async (req) => {
     throw e;
   }
 
+  let quotaReserved = false;
   try {
     const { input } = await req.json();
 
@@ -67,6 +69,10 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const quota = await reserveQuota(req);
+    if (!quota.allowed) return quotaBlockedResponse(corsHeaders, quota);
+    quotaReserved = true;
 
     const groqResponse = await fetch(GROQ_URL, {
       method: "POST",
@@ -85,6 +91,11 @@ serve(async (req) => {
       }),
     });
 
+    if (!groqResponse.ok) {
+      const errText = await groqResponse.text();
+      throw new Error(`Groq error ${groqResponse.status}: ${errText}`);
+    }
+
     const groqData = await groqResponse.json();
     const content = groqData.choices?.[0]?.message?.content ?? "";
 
@@ -97,6 +108,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
+    if (quotaReserved) await refundQuota(req);
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
