@@ -61,6 +61,12 @@ Deno.test('AUTH-E: expired JWT -> AuthError', async () => {
   await assertRejects(() => resolveAuthenticatedUser(req('Bearer expired.jwt.token'), client), AuthError);
 });
 
+Deno.test('AUTH-F2: truthy user object with empty id -> AuthError (Codex Gate C hardening)', async () => {
+  // deno-lint-ignore no-explicit-any
+  const client = fakeClient({ user: { id: '' } as any });
+  await assertRejects(() => resolveAuthenticatedUser(req('Bearer some.token'), client), AuthError);
+});
+
 Deno.test('AUTH-F: auth resolution returns no user, no error -> AuthError', async () => {
   const client = fakeClient({ user: null });
   await assertRejects(() => resolveAuthenticatedUser(req('Bearer some.token'), client), AuthError);

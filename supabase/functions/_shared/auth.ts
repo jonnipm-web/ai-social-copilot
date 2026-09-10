@@ -48,7 +48,7 @@ export async function resolveAuthenticatedUser(
 
   const authClient = client ?? defaultClient();
   const { data, error } = await authClient.auth.getUser(token);
-  if (error || !data?.user) throw new AuthError('Invalid, expired, or non-user token');
+  if (error || !data?.user?.id) throw new AuthError('Invalid, expired, or non-user token');
 
   return { id: data.user.id, email: data.user.email ?? undefined };
 }
