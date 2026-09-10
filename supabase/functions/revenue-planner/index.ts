@@ -104,6 +104,11 @@ serve(async (req) => {
       }),
     });
 
+    if (!groqResponse.ok) {
+      const errText = await groqResponse.text();
+      throw new Error(`Groq error ${groqResponse.status}: ${errText}`);
+    }
+
     const groqData = await groqResponse.json();
     const content = groqData.choices?.[0]?.message?.content ?? "";
 
