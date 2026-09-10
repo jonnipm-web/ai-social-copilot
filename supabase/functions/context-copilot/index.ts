@@ -1,4 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { AuthClient, AuthError, resolveAuthenticatedUser, unauthorizedResponse } from '../_shared/auth.ts';
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
@@ -13,17 +14,22 @@ const corsHeaders = {
 };
 
 // Exportado para testes unitários. Em produção, serve() chama esta função.
-export async function handler(req: Request): Promise<Response> {
+// authClient é opcional e só existe para testes injetarem um Supabase Auth
+// falso; em produção resolveAuthenticatedUser() usa o client real.
+export async function handler(req: Request, authClient?: AuthClient): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
-  // Auth gate — plataforma rejeita antes do handler quando verify_jwt=true (config.toml).
-  // Verificação mínima de presença aqui como defence-in-depth para testes unitários.
-  const authHeader = req.headers.get('Authorization');
-  if (!authHeader?.startsWith('Bearer ') || authHeader.trim() === 'Bearer') {
-    return new Response(
-      JSON.stringify({ error: 'Unauthorized' }),
-      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-    );
+  // Auth gate real — IVE-COMMERCIAL-AUTH-01. verify_jwt=true (config.toml)
+  // barra a plataforma antes do handler, mas a chave anon/publishable é ela
+  // mesma um JWT válido e passaria por esse gate; resolveAuthenticatedUser()
+  // exige uma sessão de usuário real via getUser() e falha fechado (401)
+  // para qualquer outro caso — chave anon, JWT inválido/expirado, erro do
+  // serviço de auth. Nenhuma chamada ao Groq ocorre antes disso.
+  try {
+    await resolveAuthenticatedUser(req, authClient);
+  } catch (e) {
+    if (e instanceof AuthError) return unauthorizedResponse(corsHeaders);
+    throw e;
   }
 
   try {
@@ -242,5 +248,7 @@ Responda sempre em Português do Brasil.`;
 }
 
 if (Deno.env.get('DENO_TESTING') !== '1') {
-  serve(handler);
+  // Wrapped so serve()'s Handler type (req, connInfo) doesn't unify its
+  // connInfo slot with handler's test-only optional authClient param.
+  serve((req) => handler(req));
 }

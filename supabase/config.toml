@@ -1,2 +1,54 @@
+# IVE-COMMERCIAL-AUTH-01: all 15 previously verify_jwt=false Groq-dependent
+# functions moved to verify_jwt=true, matching context-copilot and
+# .github/deploy-allowlist.tsv (the authoritative source at deploy time --
+# see that file's header for why an empty jwt_flag there is not the whole
+# auth story). process-file is intentionally absent here and from the
+# allowlist; see IVE-COMMERCIAL-AUTH-01 final report.
+
 [functions.context-copilot]
+verify_jwt = true
+
+[functions.analyze-website]
+verify_jwt = true
+
+[functions.extract-knowledge]
+verify_jwt = true
+
+[functions.improve-post]
+verify_jwt = true
+
+[functions.generate-strategy]
+verify_jwt = true
+
+[functions.generate-campaign]
+verify_jwt = true
+
+[functions.competitor-discovery]
+verify_jwt = true
+
+[functions.content-cluster]
+verify_jwt = true
+
+[functions.gap-analysis]
+verify_jwt = true
+
+[functions.market-analysis]
+verify_jwt = true
+
+[functions.niche-discovery]
+verify_jwt = true
+
+[functions.opportunity-discovery]
+verify_jwt = true
+
+[functions.revenue-planner]
+verify_jwt = true
+
+[functions.generate-project-actions]
+verify_jwt = true
+
+[functions.generate-project-opportunities]
+verify_jwt = true
+
+[functions.decision-simulator]
 verify_jwt = true

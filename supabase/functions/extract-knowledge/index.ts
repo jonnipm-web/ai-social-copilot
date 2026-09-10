@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { safeFetch, UnsafeUrlError } from "../_shared/safe_fetch.ts";
+import { AuthClient, AuthError, resolveAuthenticatedUser, unauthorizedResponse } from "../_shared/auth.ts";
 
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") ?? "";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
@@ -184,9 +185,19 @@ async function fetchUrlContentUnsafeWrapped(url: string): Promise<string> {
 
 // ── Main handler ──────────────────────────────────────────────
 
-serve(async (req) => {
+// Exportado para testes unitários. Em produção, serve() chama esta função.
+export async function handler(req: Request, authClient?: AuthClient): Promise<Response> {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
+  }
+
+  // IVE-COMMERCIAL-AUTH-01 — exige sessão de usuário real antes de qualquer
+  // trabalho (fetch de URL, chamada ao Groq). Falha fechado.
+  try {
+    await resolveAuthenticatedUser(req, authClient);
+  } catch (e) {
+    if (e instanceof AuthError) return unauthorizedResponse(corsHeaders);
+    throw e;
   }
 
   try {
@@ -308,4 +319,8 @@ serve(async (req) => {
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
-});
+}
+
+if (Deno.env.get("DENO_TESTING") !== "1") {
+  serve((req) => handler(req));
+}
