@@ -59,22 +59,40 @@ function extractFromPdf(bytes: Uint8Array): string {
   return blocks.join(" ").trim();
 }
 
-// IVE-PROCESS-FILE-CLOSURE (Codex Gate finding, HIGH): unzipSync() with no
-// filter inflates every entry in the archive before returning -- a
+// IVE-PROCESS-FILE-CLOSURE (Codex Gate finding, HIGH, round 1): unzipSync()
+// with no filter inflates every entry in the archive before returning -- a
 // malicious DOCX (just a ZIP) crafted with extreme compression could
 // exhaust memory well beyond the ~6MB *compressed* input ceiling checked
 // earlier. fflate's `filter` callback runs BEFORE decompression and
-// receives each entry's declared uncompressed size, so we can (a) skip
-// decompressing every entry except the one we actually read, and (b)
-// reject that one entry outright if its declared size is unreasonable
-// for a text document -- both before any inflate happens.
-const MAX_DOCX_XML_SIZE = 20 * 1024 * 1024; // 20MB uncompressed, generous for document.xml
+// receives each entry's declared uncompressed size.
+//
+// Round 2 (Codex Gate, HIGH): a per-entry name+size filter alone is not
+// enough -- a ZIP's central directory can legally contain multiple entries
+// with the identical name "word/document.xml" (a real DOCX never does,
+// only a crafted one would), and each would independently pass the filter
+// and get decompressed, making the aggregate decompression budget
+// unbounded (N entries x up to the per-entry cap each). Fixed by tracking
+// whether an entry has already been accepted in this call and refusing
+// every entry once one has -- across a whole unzipSync() invocation, at
+// most one entry is EVER decompressed, regardless of how many the archive
+// declares. Cap also lowered from 20MB to 5MB per the same review (a real
+// document.xml is almost always well under 1-2MB; 5MB is still generous,
+// with less transient memory pressure from the subsequent string/regex
+// work on the decompressed content).
+const MAX_DOCX_XML_SIZE = 5 * 1024 * 1024; // 5MB uncompressed
 
 async function extractFromDocx(bytes: Uint8Array): Promise<string> {
   try {
     const { unzipSync } = await import("npm:fflate");
+    let matched = false;
     const unzipped = unzipSync(bytes, {
-      filter: (file) => file.name === "word/document.xml" && file.originalSize <= MAX_DOCX_XML_SIZE,
+      filter: (file) => {
+        if (matched) return false; // never decompress more than one entry, ever
+        if (file.name !== "word/document.xml") return false;
+        if (file.originalSize > MAX_DOCX_XML_SIZE) return false;
+        matched = true;
+        return true;
+      },
     });
     const docXmlBytes = unzipped["word/document.xml"];
     if (!docXmlBytes) throw new Error("word/document.xml não encontrado");
