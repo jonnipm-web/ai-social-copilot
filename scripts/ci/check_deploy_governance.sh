@@ -78,10 +78,35 @@ while IFS= read -r f; do
   fail "'$base' contains a directory-loop deploy pattern ('for ... in supabase/functions/*/') -- bulk deploy is prohibited"
 done < <(grep -rl "for .* in .*supabase/functions/\*" "$WORKFLOWS" 2>/dev/null || true)
 
+# ---------------------------------------------------------------------
+# Check 5 (IVE-COMMERCIAL-AUTH-01): no function on the deploy allowlist
+# may carry --no-verify-jwt. Before this mission, 15 Groq-dependent
+# functions deployed with verify_jwt=false and no internal auth -- any
+# anonymous caller could consume the shared, paid GROQ_API_KEY directly.
+# All 16 functions now require a real authenticated user (platform
+# verify_jwt=true, enforced code-side by
+# supabase/functions/_shared/auth.ts's resolveAuthenticatedUser(), which
+# fails closed even against the anon/publishable key). This check makes
+# that a structural invariant, not a one-time fix: any future edit that
+# reintroduces --no-verify-jwt anywhere in the allowlist fails CI.
+# ---------------------------------------------------------------------
+ALLOWLIST="$REPO_ROOT/.github/deploy-allowlist.tsv"
+if [ -f "$ALLOWLIST" ]; then
+  while IFS=$'\t' read -r name jwt_flag || [ -n "${name:-}" ]; do
+    name="${name%$'\r'}"
+    jwt_flag="${jwt_flag%$'\r'}"
+    [ -z "$name" ] && continue
+    case "$name" in \#*) continue ;; esac
+    if [ -n "${jwt_flag:-}" ]; then
+      fail "'$name' carries a jwt_flag ('$jwt_flag') in $ALLOWLIST -- IVE-COMMERCIAL-AUTH-01 requires verify_jwt=true (no --no-verify-jwt) for every allowlisted function"
+    fi
+  done < "$ALLOWLIST"
+fi
+
 if [ "$FAIL" = "1" ]; then
   echo "" >&2
   echo "One or more deploy-governance invariants were violated. See GOVERNANCE FAILURE lines above." >&2
   exit 1
 fi
 
-echo "OK: deploy governance invariants hold (single canonical deploy route, no unsafe context-copilot JWT deploy, no ive-agent-runner deploy path, no bulk/wildcard deploy loop)."
+echo "OK: deploy governance invariants hold (single canonical deploy route, no unsafe context-copilot JWT deploy, no ive-agent-runner deploy path, no bulk/wildcard deploy loop, no --no-verify-jwt anywhere in the allowlist)."

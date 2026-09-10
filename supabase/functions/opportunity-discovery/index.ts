@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { AuthError, resolveAuthenticatedUser, unauthorizedResponse } from "../_shared/auth.ts";
 
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") ?? "";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
@@ -49,6 +50,14 @@ Regras:
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
+  }
+
+  // IVE-COMMERCIAL-AUTH-01 — exige sessão de usuário real antes do Groq. Falha fechado.
+  try {
+    await resolveAuthenticatedUser(req);
+  } catch (e) {
+    if (e instanceof AuthError) return unauthorizedResponse(corsHeaders);
+    throw e;
   }
 
   try {

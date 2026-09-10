@@ -9,6 +9,23 @@
  */
 
 import { assertEquals, assertStringIncludes, assertNotEquals } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
+import { AuthClient } from '../_shared/auth.ts';
+
+// Fake Supabase Auth — resolve 'test-session-jwt' como usuário real, rejeita
+// qualquer outro token. Injetado no handler para não depender de rede/projeto
+// Supabase real nos testes; a lógica real de getUser() é coberta por
+// _shared/auth_test.ts.
+const fakeAuthClient: AuthClient = {
+  auth: {
+    // deno-lint-ignore require-await
+    async getUser(token: string) {
+      if (token === 'test-session-jwt') {
+        return { data: { user: { id: 'test-user-id', email: 'test@example.com' } }, error: null };
+      }
+      return { data: { user: null }, error: { message: 'invalid token' } };
+    },
+  },
+};
 
 // ── Mock fetch (instalar ANTES do import do handler) ──────────────────────────
 let _capturedRequestBody: Record<string, unknown> = {};
@@ -43,7 +60,7 @@ async function post(
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...extraHeaders },
     body: JSON.stringify(body),
-  }));
+  }), fakeAuthClient);
 }
 
 function capturedSystemPrompt(): string {
@@ -258,4 +275,22 @@ Deno.test('CF-14: Authorization Bearer válido → handler executa e retorna 200
   const data = await res.json();
   assertEquals(typeof data.answer, 'string');
   assertEquals('grounding_delivered_chars' in data, true);
+});
+
+// ── CF-15: chave anon/publishable como Bearer → 401 ──────────────────────────
+// IVE-COMMERCIAL-AUTH-01 (achado do Codex): verify_jwt=true sozinho não
+// bloqueia a chave anon, que é ela mesma um JWT válido assinado pelo
+// projeto. Este teste prova que resolveAuthenticatedUser() rejeita
+// qualquer Bearer bem-formado que não corresponda a uma sessão real —
+// exatamente o caso que a checagem anterior (só presença de "Bearer ")
+// deixava passar.
+
+Deno.test('CF-15: Bearer bem-formado mas sem sessão real (ex: chave anon) → 401', async () => {
+  const res = await post(
+    { message: 'Teste', screen_name: 'home', context: {}, history: [] },
+    { 'Authorization': 'Bearer this-looks-like-a-jwt-but-is-not-a-session' },
+  );
+  assertEquals(res.status, 401);
+  const data = await res.json();
+  assertEquals(data.error, 'Unauthorized');
 });

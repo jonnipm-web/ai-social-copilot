@@ -44,26 +44,43 @@ jobs:
           fi
           echo "OK: no production-shaped secret present."
 
-      - name: analyze-website resolves to analyze-website ONLY, with --no-verify-jwt
+      - name: analyze-website resolves to analyze-website ONLY, WITHOUT --no-verify-jwt (IVE-COMMERCIAL-AUTH-01)
         run: |
           set -euo pipefail
           OUT="$(bash scripts/ci/resolve_deploy_selection.sh analyze-website)"
           echo "$OUT"
-          [ "$OUT" = "$(printf 'functions\ndeploy\nanalyze-website\n--no-verify-jwt\n--project-ref\nnzngvbajrnruknpzzjbf')" ] \
+          [ "$OUT" = "$(printf 'functions\ndeploy\nanalyze-website\n--project-ref\nnzngvbajrnruknpzzjbf')" ] \
             || { echo "FAIL: unexpected resolution for analyze-website" >&2; exit 1; }
           echo "$OUT" | grep -qx "extract-knowledge" && { echo "FAIL: leaked extract-knowledge" >&2; exit 1; } || true
           echo "$OUT" | grep -qx "context-copilot" && { echo "FAIL: leaked context-copilot" >&2; exit 1; } || true
           echo "$OUT" | grep -qx "ive-agent-runner" && { echo "FAIL: leaked ive-agent-runner" >&2; exit 1; } || true
-          echo "PASS: analyze-website resolves to exactly one function, JWT-preserving flag present"
+          echo "PASS: analyze-website resolves to exactly one function, verify_jwt=true (no --no-verify-jwt)"
 
-      - name: extract-knowledge resolves to extract-knowledge ONLY, with --no-verify-jwt
+      - name: extract-knowledge resolves to extract-knowledge ONLY, WITHOUT --no-verify-jwt (IVE-COMMERCIAL-AUTH-01)
         run: |
           set -euo pipefail
           OUT="$(bash scripts/ci/resolve_deploy_selection.sh extract-knowledge)"
           echo "$OUT"
-          [ "$OUT" = "$(printf 'functions\ndeploy\nextract-knowledge\n--no-verify-jwt\n--project-ref\nnzngvbajrnruknpzzjbf')" ] \
+          [ "$OUT" = "$(printf 'functions\ndeploy\nextract-knowledge\n--project-ref\nnzngvbajrnruknpzzjbf')" ] \
             || { echo "FAIL: unexpected resolution for extract-knowledge" >&2; exit 1; }
-          echo "PASS: extract-knowledge resolves to exactly one function, JWT-preserving flag present"
+          echo "PASS: extract-knowledge resolves to exactly one function, verify_jwt=true (no --no-verify-jwt)"
+
+      - name: IVE-COMMERCIAL-AUTH-01 -- no allowlisted function resolves with --no-verify-jwt
+        run: |
+          set -euo pipefail
+          FAIL=0
+          while IFS=$'\t' read -r name _ || [ -n "${name:-}" ]; do
+            name="${name%$'\r'}"
+            [ -z "$name" ] && continue
+            case "$name" in \#*) continue ;; esac
+            OUT="$(bash scripts/ci/resolve_deploy_selection.sh "$name")"
+            if echo "$OUT" | grep -qx -- "--no-verify-jwt"; then
+              echo "FAIL: $name resolves WITH --no-verify-jwt -- anonymous Groq/cost exposure would reopen" >&2
+              FAIL=1
+            fi
+          done < .github/deploy-allowlist.tsv
+          [ "$FAIL" = "0" ] || exit 1
+          echo "PASS: every allowlisted function requires verify_jwt=true"
 
       - name: context-copilot resolves WITHOUT --no-verify-jwt (JWT policy preserved)
         run: |
