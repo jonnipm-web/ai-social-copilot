@@ -137,6 +137,16 @@ class IveVisualStateConfig {
 
 abstract final class IveVisualStateMapper {
   static IveVisualState fromIveState(IveState state) {
+    // Live chat interaction takes priority over everything else — it's a
+    // short-lived overlay (see IveNotifier.beginThinking/completeInteraction)
+    // that must not be confused with a persistent business/context state.
+    switch (state.interaction) {
+      case IveInteractionState.thinking: return IveVisualState.thinking;
+      case IveInteractionState.speaking: return IveVisualState.speaking;
+      case null:
+        break;
+    }
+
     // Active issue takes priority
     if (state.activeIssue != null && state.bubbleVisible) {
       switch (state.activeIssue!.severity) {

@@ -105,6 +105,15 @@ class IveNotifier extends StateNotifier<IveState> {
   int    _msgIndex     = 0;
   String _currentRoute = '';
 
+  // ── Live chat interaction bridge ──────────────────────────────────────────
+  // Single source of truth for the "thinking/speaking" overlay: a monotonic
+  // token guards against a superseded request (e.g. a stale response, or a
+  // second message sent before the first replied) clobbering the visual
+  // state set by a more recent one. See IveVisualStateMapper.fromIveState().
+  Timer? _speakingTimer;
+  int    _interactionToken = 0;
+  static const _kSpeakingDuration = Duration(milliseconds: 1500);
+
   // ── Event Bus ─────────────────────────────────────────────────────────────
 
   void _onEvent(IveEvent event) {
@@ -274,6 +283,43 @@ class IveNotifier extends StateNotifier<IveState> {
     });
   }
 
+  // ── Live chat interaction bridge (IVE-AVATAR-STATE-MACHINE-02) ────────────
+  // Called by ContextCopilotNotifier.send() around the real request
+  // lifecycle. Does NOT snapshot/restore business state: `expression` and
+  // `activeIssue` keep live-updating in the background (via the listeners
+  // above) while `interaction` is set, so clearing it always recomputes
+  // against current state instead of a stale one.
+
+  /// Call when a copilot request starts. Returns a token that must be
+  /// passed to [completeInteraction] — a response for an older token is
+  /// ignored, so a superseded request can never overwrite a newer one's
+  /// visual state.
+  int beginThinking() {
+    final token = ++_interactionToken;
+    if (!mounted) return token;
+    _speakingTimer?.cancel();
+    state = state.copyWith(interaction: IveInteractionState.thinking);
+    return token;
+  }
+
+  /// Call when the request settles (success or failure). No-op if [token]
+  /// was superseded by a newer [beginThinking] call in the meantime.
+  void completeInteraction(int token, {required bool success}) {
+    if (token != _interactionToken || !mounted) return;
+
+    if (!success) {
+      state = state.copyWith(clearInteraction: true);
+      return;
+    }
+
+    state = state.copyWith(interaction: IveInteractionState.speaking);
+    _speakingTimer?.cancel();
+    _speakingTimer = Timer(_kSpeakingDuration, () {
+      if (!mounted || token != _interactionToken) return;
+      state = state.copyWith(clearInteraction: true);
+    });
+  }
+
   // ── Public API ────────────────────────────────────────────────────────────
 
   void dismissBubble() {
@@ -363,6 +409,7 @@ class IveNotifier extends StateNotifier<IveState> {
     _eventSub?.cancel();
     _dismissTimer?.cancel();
     _cycleTimer?.cancel();
+    _speakingTimer?.cancel();
     super.dispose();
   }
 }
