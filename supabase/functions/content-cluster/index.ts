@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { AuthError, resolveAuthenticatedUser, unauthorizedResponse } from "../_shared/auth.ts";
+import { normalizeLanguage, withLanguageDirective } from "../_shared/language.ts";
 import { quotaBlockedResponse, refundQuota, reserveQuota } from "../_shared/quota.ts";
 
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") ?? "";
@@ -66,7 +67,6 @@ Regras:
 - O editorial_roadmap deve cobrir 6 meses
 - type dos artigos: "pillar", "supporting", "landing_page", "comparison"
 - search_intent: "informacional", "navegacional", "transacional", "comercial"
-- Todas as respostas em português brasileiro
 - Foque em relevância semântica e autoridade tópica`;
 
 serve(async (req) => {
@@ -84,7 +84,8 @@ serve(async (req) => {
 
   let quotaReserved = false;
   try {
-    const { input, main_keyword } = await req.json();
+    const { input, main_keyword, language: rawLanguage } = await req.json();
+    const language = normalizeLanguage(rawLanguage);
 
     if (!input || !main_keyword) {
       return new Response(JSON.stringify({ error: "Input e main_keyword são obrigatórios" }), {
@@ -109,7 +110,7 @@ serve(async (req) => {
           { role: "system", content: SYSTEM_PROMPT },
           {
             role: "user",
-            content: `Projeto/nicho: ${input}\nKeyword principal: ${main_keyword}\n\nCrie a estrutura completa de Content Cluster para esse projeto e retorne o JSON.`,
+            content: withLanguageDirective(language, `Projeto/nicho: ${input}\nKeyword principal: ${main_keyword}\n\nCrie a estrutura completa de Content Cluster para esse projeto e retorne o JSON.`),
           },
         ],
         temperature: 0.4,

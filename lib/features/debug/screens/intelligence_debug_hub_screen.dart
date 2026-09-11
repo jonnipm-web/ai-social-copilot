@@ -14,6 +14,7 @@ import '../../../providers/market_intelligence_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
 import '../../../providers/project_intelligence_provider.dart';
 import '../../../providers/project_provider.dart';
+import '../../../providers/profile_provider.dart';
 import '../../../providers/roi_metric_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 
@@ -48,6 +49,24 @@ class IntelligenceDebugHubScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // IVE-COMMERCIAL-RELEASE-CONTROL-PLANE-01 — este hub expõe scores e
+    // dados internos de todos os projetos/personas, mas nunca teve nenhum
+    // gate de admin (nem visual nem de rota) apesar de estar listado no
+    // drawer para qualquer usuário autenticado. Direct URL access era, na
+    // prática, o único "controle" existente. Mesmo padrão já usado em
+    // admin_panel_screen.dart -- client-side aqui é só UX (a proteção real
+    // continua sendo RLS/backend nos dados que cada aba lê).
+    final currentProfile = ref.watch(currentProfileProvider).valueOrNull;
+    if (currentProfile != null && !currentProfile.isAdmin) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Acesso Negado')),
+        body: const Center(
+          child: Text('Você não tem permissão para acessar esta área.',
+              style: TextStyle(color: Colors.white54)),
+        ),
+      );
+    }
+
     return DefaultTabController(
       length: _tabs.length,
       child: Scaffold(

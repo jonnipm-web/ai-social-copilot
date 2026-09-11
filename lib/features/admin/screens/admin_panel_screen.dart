@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/modules/module_definition.dart';
+import '../../../core/modules/module_registry.dart';
 import '../../../data/models/profile.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 
@@ -26,7 +29,7 @@ class AdminPanelScreen extends ConsumerWidget {
     }
 
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         appBar: AppBar(
           leading: IconButton(
@@ -41,10 +44,13 @@ class AdminPanelScreen extends ConsumerWidget {
           ),
           title: const Text('Painel Admin'),
           bottom: const TabBar(
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
             tabs: [
               Tab(text: 'Usuários'),
               Tab(text: 'Personas'),
               Tab(text: 'Visão Geral'),
+              Tab(text: 'Módulos'),
             ],
           ),
         ),
@@ -54,6 +60,7 @@ class AdminPanelScreen extends ConsumerWidget {
             _UsersTab(),
             _PersonasAdminTab(),
             _OverviewTab(),
+            _ModulesAdminTab(),
           ],
         ),
       ),
@@ -295,6 +302,186 @@ class _RoleBar extends StatelessWidget {
         const SizedBox(width: 8),
         Text('$count', style: TextStyle(color: color, fontSize: 13)),
       ],
+    );
+  }
+}
+
+// ── Tab: Módulos (Admin Module Control Plane) ──────────────────────────
+// IVE-COMMERCIAL-RELEASE-CONTROL-PLANE-01 — inventário COMPLETO de
+// módulos (não filtrado por commercialEnabled/plano como a navegação
+// comercial normal). Admin vê tudo, sempre, com status visível, e pode
+// abrir o detalhe de qualquer módulo tecnicamente seguro
+// (adminClickable). Nunca expõe segredos/tokens/service_role -- só
+// metadados de produto já públicos no próprio código.
+class _ModulesAdminTab extends StatelessWidget {
+  const _ModulesAdminTab();
+
+  @override
+  Widget build(BuildContext context) {
+    final isEnglish = Localizations.localeOf(context).languageCode == 'en';
+
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: kModuleRegistry.length,
+      separatorBuilder: (_, __) => const Divider(color: Colors.white12, height: 1),
+      itemBuilder: (context, i) {
+        final module = kModuleRegistry[i];
+        return ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+          title: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  isEnglish ? module.nameEn : module.namePt,
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                ),
+              ),
+              _StatusBadge(status: module.status, isEnglish: isEnglish),
+            ],
+          ),
+          subtitle: Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Row(
+              children: [
+                Icon(
+                  module.commercialEnabled ? Icons.check_circle_outline_rounded : Icons.remove_circle_outline_rounded,
+                  size: 13,
+                  color: module.commercialEnabled ? Colors.tealAccent : Colors.white24,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  module.commercialEnabled
+                      ? (isEnglish ? 'Commercial' : 'Comercial')
+                      : (isEnglish ? 'Not commercial' : 'Não comercial'),
+                  style: const TextStyle(color: Colors.white38, fontSize: 11),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  isEnglish ? module.minimumPlan.labelEn : module.minimumPlan.labelPt,
+                  style: const TextStyle(color: Colors.white38, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+          trailing: module.adminClickable
+              ? const Icon(Icons.chevron_right_rounded, color: Colors.white38)
+              : const Icon(Icons.block_rounded, color: Colors.white12, size: 18),
+          onTap: module.adminClickable
+              ? () => showModalBottomSheet(
+                    context: context,
+                    backgroundColor: const Color(0xFF141425),
+                    isScrollControlled: true,
+                    builder: (_) => _ModuleDetailSheet(module: module, isEnglish: isEnglish),
+                  )
+              : null,
+        );
+      },
+    );
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge({required this.status, required this.isEnglish});
+  final ModuleStatus status;
+  final bool isEnglish;
+
+  Color get _color => switch (status) {
+        ModuleStatus.active => Colors.tealAccent,
+        ModuleStatus.beta => const Color(0xFF6C63FF),
+        ModuleStatus.inDevelopment => Colors.amber,
+        ModuleStatus.disabled => Colors.white38,
+        ModuleStatus.planned => Colors.white24,
+        ModuleStatus.internal => const Color(0xFFFFD700),
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: _color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: _color.withOpacity(0.4)),
+      ),
+      child: Text(
+        isEnglish ? status.labelEn : status.labelPt,
+        style: TextStyle(color: _color, fontSize: 10, fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+}
+
+class _ModuleDetailSheet extends StatelessWidget {
+  const _ModuleDetailSheet({required this.module, required this.isEnglish});
+  final ModuleDefinition module;
+  final bool isEnglish;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    isEnglish ? module.nameEn : module.namePt,
+                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
+                  ),
+                ),
+                _StatusBadge(status: module.status, isEnglish: isEnglish),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(module.moduleId, style: const TextStyle(color: Colors.white24, fontSize: 11, fontFamily: 'monospace')),
+            const Divider(color: Colors.white12, height: 28),
+            _DetailRow(label: t.adminModulesCommercial, value: module.commercialEnabled ? t.adminModulesYes : t.adminModulesNo),
+            _DetailRow(label: t.adminModulesPlan, value: isEnglish ? module.minimumPlan.labelEn : module.minimumPlan.labelPt),
+            _DetailRow(label: t.adminModulesRoute, value: module.route ?? t.adminModulesNoRoute),
+            _DetailRow(label: t.adminModulesAi, value: module.aiDependency ? t.adminModulesYes : t.adminModulesNo),
+            if (module.edgeFunctions.isNotEmpty)
+              _DetailRow(label: 'Edge Functions', value: module.edgeFunctions.join(', ')),
+            if (module.databaseDependencies.isNotEmpty)
+              _DetailRow(label: isEnglish ? 'Tables' : 'Tabelas', value: module.databaseDependencies.join(', ')),
+            const SizedBox(height: 12),
+            Text(t.adminModulesReadiness, style: const TextStyle(color: Colors.white38, fontSize: 12, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 4),
+            Text(isEnglish ? module.readinessEn : module.readinessPt, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+            if (module.notes.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(t.adminModulesNotes, style: const TextStyle(color: Colors.white38, fontSize: 12, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
+              Text(module.notes, style: const TextStyle(color: Colors.amber, fontSize: 13)),
+            ],
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  const _DetailRow({required this.label, required this.value});
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(width: 110, child: Text(label, style: const TextStyle(color: Colors.white38, fontSize: 12))),
+          Expanded(child: Text(value, style: const TextStyle(color: Colors.white70, fontSize: 12))),
+        ],
+      ),
     );
   }
 }

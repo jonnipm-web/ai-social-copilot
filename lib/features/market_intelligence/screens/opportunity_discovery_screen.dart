@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/language_utils.dart';
 import '../../../data/models/opportunity.dart';
 import '../../../providers/market_analysis_provider.dart';
 
@@ -24,7 +25,7 @@ class _OpportunityDiscoveryScreenState
     setState(() { _running = true; _error = null; });
     try {
       final analysis = await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
-      await ref.read(marketAnalysisServiceProvider).discoverOpportunities(widget.analysisId, analysis.input);
+      await ref.read(marketAnalysisServiceProvider).discoverOpportunities(widget.analysisId, analysis.input, language: backendLanguageCode(context));
       ref.invalidate(opportunitiesByAnalysisProvider(widget.analysisId));
     } catch (e) {
       setState(() => _error = e.toString().replaceFirst('Exception: ', ''));

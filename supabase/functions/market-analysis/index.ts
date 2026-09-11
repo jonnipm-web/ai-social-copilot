@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { AuthError, resolveAuthenticatedUser, unauthorizedResponse } from "../_shared/auth.ts";
+import { normalizeLanguage, withLanguageDirective } from "../_shared/language.ts";
 import { quotaBlockedResponse, refundQuota, reserveQuota } from "../_shared/quota.ts";
 
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") ?? "";
@@ -96,7 +97,6 @@ Regras OBRIGATÓRIAS:
 - score_seo, score_monetization, score_competition (maior = menos concorrência), score_growth: 0-100
 - priority_actions: exatamente 5 itens ordenados por prioridade (1 = mais urgente)
 - impact e effort: apenas "Alto", "Médio" ou "Baixo"
-- Todas as respostas em português brasileiro
 - Seja específico, acionável e realista`;
 
 serve(async (req) => {
@@ -114,7 +114,8 @@ serve(async (req) => {
 
   let quotaReserved = false;
   try {
-    const { input, input_type } = await req.json();
+    const { input, input_type, language: rawLanguage } = await req.json();
+    const language = normalizeLanguage(rawLanguage);
 
     if (!input) {
       return new Response(JSON.stringify({ error: "Input obrigatório" }), {
@@ -123,7 +124,7 @@ serve(async (req) => {
       });
     }
 
-    const userMessage = `Tipo de entrada: ${input_type || "url"}\nInput: ${input}\n\nAnalise este mercado e retorne o JSON conforme especificado.`;
+    const userMessage = withLanguageDirective(language, `Tipo de entrada: ${input_type || "url"}\nInput: ${input}\n\nAnalise este mercado e retorne o JSON conforme especificado.`);
 
     const quota = await reserveQuota(req);
     if (!quota.allowed) return quotaBlockedResponse(corsHeaders, quota);

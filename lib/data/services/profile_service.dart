@@ -19,13 +19,28 @@ class ProfileService {
     if (rows == null) return null;
     final profile = Profile.fromMap(rows);
 
-    // Auto-promove admin pelo email configurado
+    // Auto-promove admin pelo email configurado. IVE-COMMERCIAL-RELEASE-
+    // CONTROL-PLANE-01: desde a migração X4B, o gatilho
+    // trg_prevent_self_privilege_escalation bloqueia qualquer sessão não-
+    // admin tentando mudar sua própria role -- exatamente o que este
+    // bloco faz. Hoje é inofensivo (a conta configurada já é admin em
+    // produção, então o guard `role != 'admin'` nunca deixa isto rodar de
+    // novo), mas se algum dia essa conta perder o papel de admin, ou o
+    // e-mail configurado mudar para um usuário ainda 'free', isto lançaria
+    // uma exceção Postgres 42501 não tratada e quebraria o carregamento do
+    // perfil inteiro. O try/catch trata esse cenário como "a promoção
+    // automática não é mais possível" (o que é o comportamento correto e
+    // esperado pós-X4B) em vez de propagar o erro.
     if (profile.email == AppConstants.adminEmail && profile.role != 'admin') {
-      await _client
-          .from(AppConstants.tableProfiles)
-          .update({'role': 'admin', 'monthly_limit': 99999})
-          .eq('id', uid);
-      return profile.copyWith(role: 'admin', monthlyLimit: 99999);
+      try {
+        await _client
+            .from(AppConstants.tableProfiles)
+            .update({'role': 'admin', 'monthly_limit': 99999})
+            .eq('id', uid);
+        return profile.copyWith(role: 'admin', monthlyLimit: 99999);
+      } catch (_) {
+        return profile;
+      }
     }
 
     return profile;

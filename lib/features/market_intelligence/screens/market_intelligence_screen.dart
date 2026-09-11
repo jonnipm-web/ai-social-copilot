@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/language_utils.dart';
 import '../../../data/models/market_analysis.dart';
 import '../../../providers/market_analysis_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
@@ -30,7 +31,7 @@ class _MarketIntelligenceScreenState
     final input = _inputCtrl.text.trim();
     if (input.isEmpty) return;
     final notifier = ref.read(marketAnalysisNotifierProvider.notifier);
-    final result = await notifier.analyze(input, inputType: _inputType);
+    final result = await notifier.analyze(input, inputType: _inputType, language: backendLanguageCode(context));
     if (result != null && mounted) {
       context.go(
         AppConstants.routeMarketIntelligenceHub.replaceFirst(':id', result.id),

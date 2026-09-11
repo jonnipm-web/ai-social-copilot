@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/language_utils.dart';
 import '../../../data/models/niche_ranking.dart';
 import '../../../providers/market_analysis_provider.dart';
 
@@ -22,7 +23,7 @@ class _NicheDiscoveryScreenState extends ConsumerState<NicheDiscoveryScreen> {
     setState(() { _running = true; _error = null; });
     try {
       final analysis = await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
-      await ref.read(marketAnalysisServiceProvider).discoverNiches(widget.analysisId, analysis.input);
+      await ref.read(marketAnalysisServiceProvider).discoverNiches(widget.analysisId, analysis.input, language: backendLanguageCode(context));
       ref.invalidate(nichesByAnalysisProvider(widget.analysisId));
     } catch (e) {
       setState(() => _error = e.toString().replaceFirst('Exception: ', ''));

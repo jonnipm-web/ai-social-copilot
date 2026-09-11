@@ -3,10 +3,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_constants.dart';
+import '../../core/modules/module_definition.dart';
+import '../../core/modules/module_registry.dart';
 import '../../data/models/profile.dart';
+import '../../l10n/app_localizations.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
 
+/// IVE-COMMERCIAL-RELEASE-CONTROL-PLANE-01 — navegação comercial dirigida
+/// pelo Module Registry (lib/core/modules/module_registry.dart), não mais
+/// uma lista fixa. Usuários normais só veem módulos com
+/// `commercialEnabled: true` permitidos pelo próprio plano -- o catálogo
+/// completo (incluindo Beta/Em desenvolvimento/Interno) só existe no
+/// Painel Admin, nunca aqui. Isto NÃO substitui autorização de servidor:
+/// acesso direto por URL continua protegido por RLS/gates de cada tela.
 class AppDrawer extends ConsumerWidget {
   const AppDrawer({super.key});
 
@@ -32,9 +42,19 @@ class _DrawerContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = AppLocalizations.of(context)!;
+    final isEnglish = Localizations.localeOf(context).languageCode == 'en';
     final isAdmin = profile?.isAdmin ?? false;
     final isPro   = profile?.isPro   ?? false;
     final current = GoRouterState.of(context).fullPath ?? '';
+
+    // Navegação comercial: só módulos habilitados para o plano do usuário,
+    // com rota própria (módulos sem rota, ex: Context Copilot, são
+    // overlays/capacidades embutidas, não destinos de navegação).
+    final visibleModules = kModuleRegistry.where((m) {
+      if (m.route == null) return false;
+      return m.visibleFor(isAdmin: false, isPro: isPro) && m.commercialEnabled;
+    }).toList();
 
     return SafeArea(
       child: Column(
@@ -98,157 +118,48 @@ class _DrawerContent extends ConsumerWidget {
             ),
           ),
 
-          // Itens de navegação
+          // Itens de navegação — gerados a partir do Module Registry
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 8),
               children: [
-                _NavItem(
-                  icon: Icons.hub_rounded,
-                  label: 'OS Command Center',
-                  route: AppConstants.routeHome,
-                  current: current,
-                ),
-                _NavItem(
-                  icon: Icons.dashboard_rounded,
-                  label: 'Business Dashboard',
-                  route: AppConstants.routeDashboard,
-                  current: current,
-                ),
-                _NavItem(
-                  icon: Icons.auto_fix_high_rounded,
-                  label: 'Melhorar Post',
-                  route: AppConstants.routeGenerate,
-                  current: current,
-                ),
-                _NavItem(
-                  icon: Icons.person_pin_rounded,
-                  label: 'Personas / Marcas',
-                  route: AppConstants.routePersonas,
-                  current: current,
-                  locked: !isPro && !isAdmin,
-                ),
-                _NavItem(
-                  icon: Icons.library_books_rounded,
-                  label: 'Biblioteca',
-                  route: AppConstants.routeContent,
-                  current: current,
-                  locked: !isPro && !isAdmin,
-                ),
-                _NavItem(
-                  icon: Icons.calendar_month_rounded,
-                  label: 'Calendário',
-                  route: AppConstants.routeCalendar,
-                  current: current,
-                  locked: !isPro && !isAdmin,
-                ),
-                _NavItem(
-                  icon: Icons.auto_stories_rounded,
-                  label: 'Cofre de Conhecimento',
-                  route: AppConstants.routeKnowledge,
-                  current: current,
-                ),
-                _NavItem(
-                  icon: Icons.campaign_rounded,
-                  label: 'Campanhas',
-                  route: AppConstants.routeCampaigns,
-                  current: current,
-                ),
-                _NavItem(
-                  icon: Icons.language_rounded,
-                  label: 'Website Analyzer',
-                  route: AppConstants.routeWebsiteAnalyzer,
-                  current: current,
-                ),
-                _NavItem(
-                  icon: Icons.bar_chart_rounded,
-                  label: 'Performance',
-                  route: AppConstants.routePerformance,
-                  current: current,
-                ),
-                const Divider(color: Colors.white12, height: 24),
-                _NavItem(
-                  icon: Icons.analytics_rounded,
-                  label: 'Market Intelligence',
-                  route: AppConstants.routeMarketIntelligence,
-                  current: current,
-                ),
-                _NavItem(
-                  icon: Icons.rocket_launch_rounded,
-                  label: 'Projetos',
-                  route: AppConstants.routeProjects,
-                  current: current,
-                ),
-                _NavItem(
-                  icon: Icons.insights_rounded,
-                  label: 'ROI Tracker',
-                  route: AppConstants.routeRoiTracker,
-                  current: current,
-                ),
-                const Divider(color: Colors.white12, height: 24),
-                // ── Fase 10A — Business OS ─────────────────────
-                _NavItem(
-                  icon: Icons.speed_rounded,
-                  label: 'Executive Dashboard',
-                  route: AppConstants.routeExecutiveDashboard,
-                  current: current,
-                ),
-                _NavItem(
-                  icon: Icons.hub_rounded,
-                  label: 'Decision Center',
-                  route: AppConstants.routeEcosystem,
-                  current: current,
-                ),
-                _NavItem(
-                  icon: Icons.schedule_rounded,
-                  label: 'Alocação de Recursos',
-                  route: AppConstants.routeEcosystemResources,
-                  current: current,
-                ),
-                _NavItem(
-                  icon: Icons.summarize_rounded,
-                  label: 'Briefing Semanal',
-                  route: AppConstants.routeEcosystemBriefing,
-                  current: current,
-                ),
-                _NavItem(
-                  icon: Icons.science_rounded,
-                  label: 'Opportunity Lab',
-                  route: AppConstants.routeOpportunityLab,
-                  current: current,
-                ),
-                _NavItem(
-                  icon: Icons.bolt_rounded,
-                  label: 'Action Engine',
-                  route: AppConstants.routeActionEngine,
-                  current: current,
-                ),
-                const Divider(color: Colors.white12, height: 24),
-                _NavItem(
-                  icon: Icons.history_rounded,
-                  label: 'Histórico',
-                  route: AppConstants.routeHistory,
-                  current: current,
-                ),
+                for (final module in visibleModules)
+                  _NavItem(
+                    icon: _iconFor(module.moduleId),
+                    label: isEnglish ? module.nameEn : module.namePt,
+                    route: module.route!,
+                    current: current,
+                  ),
                 const Divider(color: Colors.white12, height: 24),
                 _NavItem(
                   icon: Icons.workspace_premium_rounded,
-                  label: 'Plano / Upgrade',
+                  label: t.navUpgrade,
                   route: AppConstants.routeUpgrade,
                   current: current,
                 ),
-                const Divider(color: Colors.white12, height: 24),
                 _NavItem(
-                  icon: Icons.bug_report_rounded,
-                  label: 'Intelligence Debug',
-                  route: AppConstants.routeIntelligenceDebug,
+                  icon: Icons.manage_accounts_rounded,
+                  label: t.navAccount,
+                  route: AppConstants.routeAccount,
+                  current: current,
+                ),
+                _NavItem(
+                  icon: Icons.help_outline_rounded,
+                  label: t.navHelpSupport,
+                  route: AppConstants.routeSupport,
+                  current: current,
+                ),
+                _NavItem(
+                  icon: Icons.info_outline_rounded,
+                  label: t.navAbout,
+                  route: AppConstants.routeAbout,
                   current: current,
                 ),
                 if (isAdmin) ...[
                   const Divider(color: Colors.white12, height: 24),
                   _NavItem(
                     icon: Icons.admin_panel_settings_rounded,
-                    label: 'Painel Admin',
+                    label: t.navAdminPanel,
                     route: AppConstants.routeAdmin,
                     current: current,
                     isAdmin: true,
@@ -262,9 +173,9 @@ class _DrawerContent extends ConsumerWidget {
           const Divider(color: Colors.white12, height: 1),
           ListTile(
             leading: const Icon(Icons.logout_rounded, color: Colors.white54, size: 20),
-            title: const Text(
-              'Sair',
-              style: TextStyle(color: Colors.white54, fontSize: 14),
+            title: Text(
+              t.authSignOut,
+              style: const TextStyle(color: Colors.white54, fontSize: 14),
             ),
             onTap: () async {
               Navigator.of(context).pop();
@@ -276,6 +187,20 @@ class _DrawerContent extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  IconData _iconFor(String moduleId) {
+    const icons = <String, IconData>{
+      'command-center': Icons.hub_rounded,
+      'business-dashboard': Icons.dashboard_rounded,
+      'projects': Icons.rocket_launch_rounded,
+      'knowledge-vault': Icons.auto_stories_rounded,
+      'website-analyzer': Icons.language_rounded,
+      'market-intelligence': Icons.analytics_rounded,
+      'opportunity-lab': Icons.science_rounded,
+      'action-engine': Icons.bolt_rounded,
+    };
+    return icons[moduleId] ?? Icons.circle_outlined;
   }
 }
 
