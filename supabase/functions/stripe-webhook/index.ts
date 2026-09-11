@@ -28,16 +28,23 @@ export interface DbClient {
     ): { select(): { maybeSingle(): Promise<{ data: Record<string, unknown> | null; error: unknown }> } };
   };
   /** Wraps the subscriptions+profiles write in one Postgres transaction
-   * (public.apply_stripe_subscription_state) -- see migration
-   * 20260911020000. Codex's adversarial gate found the previous two
-   * separate .update() calls could leave the two tables inconsistent if
-   * the second call failed after the first succeeded. */
-  rpc(fn: string, args: Record<string, unknown>): Promise<{ error: unknown }>;
+   * (public.apply_stripe_subscription_state) -- see migrations
+   * 20260911020000 and 20260911030000. Returns `data: true` if the write
+   * was applied, `data: false` if skipped because a chronologically newer
+   * event (by Stripe's own event.created) already won. Codex's
+   * adversarial gate found the previous two separate .update() calls
+   * could leave the two tables inconsistent if the second call failed
+   * after the first succeeded, and that even one atomic RPC call per
+   * event could still let an older event's snapshot overwrite a newer
+   * one's if their GETs and commits raced -- this return value is how the
+   * caller observes that the ordering guard did its job. */
+  rpc(fn: string, args: Record<string, unknown>): Promise<{ data: boolean | null; error: unknown }>;
 }
 
 interface StripeEvent {
   id: string;
   type: string;
+  created: number;
   data: { object: Record<string, unknown> };
 }
 
@@ -78,19 +85,26 @@ async function findUserIdByCustomerId(db: DbClient, customerId: string): Promise
 }
 
 /** Writes the CURRENT Stripe-reported subscription state as absolute
- * values (never deltas), which is what makes reprocessing the same or an
- * out-of-order event safe: whichever event is handled last always ends up
- * setting the same fields to whatever Stripe's API says is true right
- * now, not to something derived from the event payload's own age. Both
- * tables are written in one Postgres transaction via RPC -- see
- * migration 20260911020000 for why (Codex-found P1: two separate
- * .update() calls could leave subscriptions/profiles inconsistent if the
- * second failed after the first succeeded). */
-async function applySubscriptionState(db: DbClient, userId: string, sub: StripeSubscription): Promise<void> {
+ * values (never deltas). Both tables are written in one Postgres
+ * transaction via RPC, and the write is itself ordered by the webhook
+ * event's own `created` timestamp -- Stripe's stable per-event creation
+ * time, not delivery order -- so even if two different events for the
+ * same subscription race on their Stripe GET and their commits land out
+ * of order, the chronologically older one's snapshot can never overwrite
+ * the newer one's (see migrations 20260911020000 and 20260911030000).
+ * Returns false if this event was skipped as stale -- that is a normal,
+ * expected outcome, not an error. */
+async function applySubscriptionState(
+  db: DbClient,
+  userId: string,
+  eventCreatedIso: string,
+  sub: StripeSubscription,
+): Promise<boolean> {
   const priceId = sub.items?.data?.[0]?.price?.id ?? null;
   const entitlement = entitlementForStatus(sub.status);
-  const { error } = await db.rpc('apply_stripe_subscription_state', {
+  const { data, error } = await db.rpc('apply_stripe_subscription_state', {
     p_user_id: userId,
+    p_event_created: eventCreatedIso,
     p_stripe_subscription_id: sub.id,
     p_stripe_price_id: priceId,
     p_status: sub.status,
@@ -100,6 +114,7 @@ async function applySubscriptionState(db: DbClient, userId: string, sub: StripeS
     p_monthly_limit: entitlement.monthly_limit,
   });
   if (error) throw error;
+  return data === true;
 }
 
 export async function handler(req: Request, stripeClient?: StripeFetch, dbClient?: DbClient): Promise<Response> {
@@ -133,11 +148,12 @@ export async function handler(req: Request, stripeClient?: StripeFetch, dbClient
   } catch {
     return new Response('Invalid JSON', { status: 400 });
   }
-  if (!event?.id || !event?.type) {
+  if (!event?.id || !event?.type || !event?.created) {
     return new Response('Malformed event', { status: 400 });
   }
 
   const db = (dbClient ?? createServiceClient()) as unknown as DbClient;
+  const eventCreatedIso = new Date(event.created * 1000).toISOString();
 
   try {
     if (await isEventAlreadyProcessed(db, event.id)) {
@@ -156,7 +172,8 @@ export async function handler(req: Request, stripeClient?: StripeFetch, dbClient
           break;
         }
         const sub = await retrieveSubscription(session.subscription, stripeClient);
-        await applySubscriptionState(db, userId, sub);
+        const applied = await applySubscriptionState(db, userId, eventCreatedIso, sub);
+        if (!applied) console.log(`checkout.session.completed ${event.id} skipped: superseded by a newer event`);
         break;
       }
       case 'customer.subscription.updated':
@@ -183,7 +200,8 @@ export async function handler(req: Request, stripeClient?: StripeFetch, dbClient
         // is no safe fallback here: any failure must abort and let
         // Stripe's own retry re-attempt the fresh GET.
         const sub = await retrieveSubscription(obj.id, stripeClient);
-        await applySubscriptionState(db, userId, sub);
+        const applied = await applySubscriptionState(db, userId, eventCreatedIso, sub);
+        if (!applied) console.log(`${event.type} ${event.id} skipped: superseded by a newer event`);
         break;
       }
       default:
