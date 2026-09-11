@@ -53,11 +53,25 @@ class IntelligenceDebugHubScreen extends ConsumerWidget {
     // dados internos de todos os projetos/personas, mas nunca teve nenhum
     // gate de admin (nem visual nem de rota) apesar de estar listado no
     // drawer para qualquer usuário autenticado. Direct URL access era, na
-    // prática, o único "controle" existente. Mesmo padrão já usado em
-    // admin_panel_screen.dart -- client-side aqui é só UX (a proteção real
-    // continua sendo RLS/backend nos dados que cada aba lê).
-    final currentProfile = ref.watch(currentProfileProvider).valueOrNull;
-    if (currentProfile != null && !currentProfile.isAdmin) {
+    // prática, o único "controle" existente. Client-side aqui é só UX (a
+    // proteção real continua sendo RLS/backend nos dados que cada aba lê).
+    //
+    // Codex Gate (P1, 2ª rodada desta mesma missão): a primeira versão
+    // desta correção (`currentProfile != null && !currentProfile.isAdmin`)
+    // falhava ABERTA -- enquanto o FutureProvider ainda não resolveu (ou
+    // se falha), currentProfile é null, a condição inteira é false, e o
+    // hub inteiro renderiza (disparando a busca de dados sensíveis de
+    // cada aba) antes de qualquer confirmação real de que o usuário é
+    // admin. Aqui isso é ainda mais sério que no admin_panel_screen.dart
+    // original: as abas leem projetos/personas/oportunidades/scores de
+    // TODOS os registros visíveis ao usuário assim que montam. Correção:
+    // exigir positivamente `hasValue && isAdmin == true`.
+    final profileAsync = ref.watch(currentProfileProvider);
+    if (profileAsync.isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    final isAdmin = profileAsync.valueOrNull?.isAdmin ?? false;
+    if (!isAdmin) {
       return Scaffold(
         appBar: AppBar(title: const Text('Acesso Negado')),
         body: const Center(

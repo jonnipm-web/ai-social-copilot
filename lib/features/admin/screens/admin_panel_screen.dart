@@ -15,10 +15,21 @@ class AdminPanelScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentProfile = ref.watch(currentProfileProvider).valueOrNull;
+    final profileAsync = ref.watch(currentProfileProvider);
 
-    // Proteção: só admin acessa
-    if (currentProfile != null && !currentProfile.isAdmin) {
+    // IVE-COMMERCIAL-RELEASE-CONTROL-PLANE-01 (Codex Gate, P1) — a checagem
+    // anterior (`currentProfile != null && !currentProfile.isAdmin`) falhava
+    // ABERTA: enquanto o FutureProvider ainda não resolveu (ou se falha),
+    // `currentProfile` é null, a condição inteira é false, e o conteúdo
+    // protegido renderiza (e as abas disparam suas próprias buscas de dados)
+    // ANTES de qualquer confirmação de que o usuário é admin. Correção:
+    // exigir positivamente `hasValue && isAdmin == true` -- loading/erro/
+    // não-admin caem todos no mesmo estado "negado por padrão".
+    if (profileAsync.isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    final isAdmin = profileAsync.valueOrNull?.isAdmin ?? false;
+    if (!isAdmin) {
       return Scaffold(
         appBar: AppBar(title: const Text('Acesso Negado')),
         body: const Center(
@@ -319,13 +330,18 @@ class _ModulesAdminTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isEnglish = Localizations.localeOf(context).languageCode == 'en';
+    // Codex Gate (P3): antes filtrava por índice bruto sem checar
+    // adminVisible -- hoje todo módulo tem adminVisible=true (então isto
+    // era latente, não uma exposição ativa), mas o campo existe
+    // exatamente para este filtro e deve ser respeitado de verdade.
+    final visibleModules = kModuleRegistry.where((m) => m.adminVisible).toList();
 
     return ListView.separated(
       padding: const EdgeInsets.all(16),
-      itemCount: kModuleRegistry.length,
+      itemCount: visibleModules.length,
       separatorBuilder: (_, __) => const Divider(color: Colors.white12, height: 1),
       itemBuilder: (context, i) {
-        final module = kModuleRegistry[i];
+        final module = visibleModules[i];
         return ListTile(
           contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
           title: Row(
