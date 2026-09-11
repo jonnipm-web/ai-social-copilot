@@ -28,11 +28,11 @@ class UpgradeScreen extends ConsumerWidget {
                 padding: EdgeInsets.symmetric(vertical: 60),
                 child: Center(child: CircularProgressIndicator()),
               ),
-              error: (err, _) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 40),
+              error: (err, _) => const Padding(
+                padding: EdgeInsets.symmetric(vertical: 40),
                 child: Text(
-                  'Não foi possível carregar seu plano agora.\n$err',
-                  style: const TextStyle(color: Colors.white54),
+                  'Não foi possível carregar seu plano agora. Tente novamente em instantes.',
+                  style: TextStyle(color: Colors.white54),
                 ),
               ),
               data: (quota) => _UpgradeContent(quota: quota),
@@ -53,6 +53,12 @@ class _UpgradeContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Se o usuário já é Pro, mostra o limite REAL configurado no servidor
+    // (profiles.monthly_limit) em vez do número padrão de marketing --
+    // evita anunciar um limite diferente do que a cota realmente aplica
+    // (achado do Codex Gate).
+    final displayedProLimit = quota.isPro ? quota.limit : _proLimit;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -86,13 +92,13 @@ class _UpgradeContent extends ConsumerWidget {
           isHighlighted: !quota.isPro,
           isCurrentPlan: quota.isPro,
           badge: quota.isPro ? 'Seu plano' : 'Mais popular',
-          features: const [
-            _Feature('$_proLimit análises de IA por mês', true),
-            _Feature('Análise de site, mercado e concorrência', true),
-            _Feature('Estratégia e ações priorizadas', true),
-            _Feature('Prioridade no processamento', true),
-            _Feature('Suporte prioritário por e-mail', true),
-            _Feature('Acesso a novos recursos primeiro', true),
+          features: [
+            _Feature('$displayedProLimit análises de IA por mês', true),
+            const _Feature('Análise de site, mercado e concorrência', true),
+            const _Feature('Estratégia e ações priorizadas', true),
+            const _Feature('Prioridade no processamento', true),
+            const _Feature('Suporte prioritário por e-mail', true),
+            const _Feature('Acesso a novos recursos primeiro', true),
           ],
           buttonLabel: quota.isPro ? 'Plano atual' : '🚀  Assinar Pro — R\$ 29/mês',
           onPressed: quota.isPro ? null : () => _onUpgradeTap(context, ref),
