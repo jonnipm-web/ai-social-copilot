@@ -6,6 +6,8 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/constants/app_constants.dart';
+
 class DriveFile {
   const DriveFile({
     required this.id,
@@ -115,6 +117,7 @@ class DriveService {
       if (res.statusCode != 200) {
         throw Exception('Erro ao baixar arquivo: ${res.statusCode}');
       }
+      _assertWithinImportLimit(res.bodyBytes.length);
       return _stripNulls(res.body);
     }
 
@@ -140,7 +143,18 @@ class DriveService {
     if (res.statusCode != 200) {
       throw Exception('Erro ao baixar arquivo: ${res.statusCode}');
     }
+    _assertWithinImportLimit(res.bodyBytes.length);
     return _stripNulls(res.body);
+  }
+
+  // Nem o export de Google Docs nem o download de TXT passam pelo
+  // process-file (que já checa tamanho antes de qualquer parsing) -- sem
+  // este teto, um arquivo de texto gigante no Drive do usuário seria
+  // mantido inteiro em memória sem nenhum limite.
+  void _assertWithinImportLimit(int byteLength) {
+    if (byteLength > AppConstants.maxLocalImportBytes) {
+      throw Exception('Arquivo muito grande para importar. O limite é de aproximadamente 6 MB.');
+    }
   }
 
   Future<String> _extractTextViaEdgeFunction(

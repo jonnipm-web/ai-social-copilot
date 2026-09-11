@@ -4,6 +4,8 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/constants/app_constants.dart';
+
 class FileImportResult {
   final String text;
   final String fileName;
@@ -43,7 +45,13 @@ class FileImportService {
     final bytes = await file.readAsBytes();
     if (bytes.isEmpty) throw Exception('Não foi possível ler o arquivo.');
 
+    // TXT nunca passa pelo process-file (que já checa tamanho antes de
+    // decodificar) -- sem este teto, um .txt gigante seria decodificado e
+    // mantido inteiro em memória sem nenhum limite.
     if (extension == 'txt') {
+      if (bytes.length > AppConstants.maxLocalImportBytes) {
+        throw Exception('Arquivo de texto muito grande. O limite é de aproximadamente 6 MB.');
+      }
       final text = utf8.decode(bytes, allowMalformed: true);
       return FileImportResult(
         text:      text,
