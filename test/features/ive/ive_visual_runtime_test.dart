@@ -275,8 +275,12 @@ void main() {
     // widget when iveProvider's real interaction bridge drives it.
     testWidgets('reflects thinking/speaking interaction through to the rendered fallback',
         (tester) async {
+      // Disposed explicitly at the end of the test body (not via addTearDown):
+      // testWidgets runs inside a FakeAsync zone whose pending-timer check
+      // runs before addTearDown callbacks fire, so a still-pending
+      // _speakingTimer (from completeInteraction below) would otherwise trip
+      // flutter_test's "A Timer is still pending" assertion.
       final container = ProviderContainer();
-      addTearDown(container.dispose);
 
       await tester.pumpWidget(
         UncontrolledProviderScope(
@@ -305,6 +309,10 @@ void main() {
         tester.widget<IveVisualFallback>(find.byType(IveVisualFallback)).state,
         IveVisualState.speaking,
       );
+
+      // Cancels the pending speaking-clear timer before the test body
+      // returns — see comment above.
+      container.dispose();
     });
   });
 }
