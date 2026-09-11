@@ -54,6 +54,18 @@
 # same resolveAuthenticatedUser() gate as the rest of this list, plus an
 # explicit pre-parse file-type and size ceiling it never had before.
 #
+# create-checkout-session / stripe-webhook (IVE-COMMERCIAL-BILLING-01):
+# create-checkout-session follows the same pattern as every function
+# above -- verify_jwt=true at the platform level AND resolveAuthenticatedUser()
+# inside. stripe-webhook is the one deliberate, reviewed exception: Stripe
+# calls it directly and never sends a Supabase-issued JWT, so verify_jwt=true
+# would reject every legitimate delivery. Its real trust boundary is the
+# manual HMAC-SHA256 Stripe-Signature verification in
+# supabase/functions/_shared/stripe.ts (see stripe-webhook/index.ts),
+# checked before any JSON parsing and before any DB write -- this is not
+# the same failure AUTH-01 closed (no GROQ/paid-capacity path exists here,
+# and no Supabase auth concept applies to a third-party webhook caller).
+#
 context-copilot
 analyze-website
 extract-knowledge
@@ -71,3 +83,5 @@ generate-project-actions
 generate-project-opportunities
 decision-simulator
 process-file
+create-checkout-session
+stripe-webhook	--no-verify-jwt
