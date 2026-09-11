@@ -5,6 +5,7 @@ import '../core/constants/app_constants.dart';
 import '../data/models/copilot_context_data.dart';
 import '../data/models/copilot_turn.dart';
 import 'ive_memory_provider.dart';
+import 'ive_provider.dart';
 
 // ── State ────────────────────────────────────────────────────────────────────
 
@@ -58,6 +59,12 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
       loading: true,
     );
 
+    // Drives the Avatar's visual state through the real request lifecycle
+    // (thinking while awaiting, speaking while presenting the answer). The
+    // token guards against a stale response overwriting a newer request's
+    // visual state — see IveNotifier.beginThinking/completeInteraction.
+    final interactionToken = _ref.read(iveProvider.notifier).beginThinking();
+
     try {
       final history = state.turns
           .where((t) => t.role == 'user' || t.role == 'assistant')
@@ -105,11 +112,13 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
         turns:   [...state.turns, assistantTurn],
         loading: false,
       );
+      _ref.read(iveProvider.notifier).completeInteraction(interactionToken, success: true);
     } catch (e) {
       state = state.copyWith(
         loading: false,
         error:   e.toString(),
       );
+      _ref.read(iveProvider.notifier).completeInteraction(interactionToken, success: false);
     }
   }
 

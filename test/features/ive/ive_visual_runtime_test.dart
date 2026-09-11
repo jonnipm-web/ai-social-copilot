@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:ai_social_copilot/data/models/ive_issue.dart';
 import 'package:ai_social_copilot/data/models/ive_state.dart';
 import 'package:ai_social_copilot/features/ive/visual/ive_avatar.dart';
 import 'package:ai_social_copilot/features/ive/visual/ive_avatar_controller.dart';
@@ -9,6 +10,7 @@ import 'package:ai_social_copilot/features/ive/visual/ive_avatar_state.dart';
 import 'package:ai_social_copilot/features/ive/visual/ive_status_ring.dart';
 import 'package:ai_social_copilot/features/ive/visual/ive_visual_config.dart';
 import 'package:ai_social_copilot/features/ive/visual/ive_visual_fallback.dart';
+import 'package:ai_social_copilot/providers/ive_provider.dart';
 
 void main() {
   // ── IveVisualState ────────────────────────────────────────────────────────
@@ -66,6 +68,40 @@ void main() {
         IveVisualStateMapper.fromIveState(makeState(expression: IveExpression.winking)),
         IveVisualState.opportunity,
       );
+    });
+  });
+
+  // ── IveVisualStateMapper — interaction overlay (IVE-AVATAR-STATE-MACHINE-02) ─
+  group('IveVisualStateMapper — interaction overlay', () {
+    test('thinking interaction overrides expression', () {
+      final state = IveState(
+        expression:  IveExpression.winking,
+        interaction: IveInteractionState.thinking,
+      );
+      expect(IveVisualStateMapper.fromIveState(state), IveVisualState.thinking);
+    });
+
+    test('speaking interaction overrides an active issue', () {
+      final issue = IveIssue(
+        errorCode:        'x',
+        stage:            IveIssueStage.network,
+        severity:         IveIssueSeverity.error,
+        recoverable:      true,
+        userMessage:      'msg',
+        technicalMessage: 'tech',
+        occurredAt:       DateTime.now(),
+      );
+      final state = IveState(
+        activeIssue:   issue,
+        bubbleVisible: true,
+        interaction:   IveInteractionState.speaking,
+      );
+      expect(IveVisualStateMapper.fromIveState(state), IveVisualState.speaking);
+    });
+
+    test('null interaction falls back to the live business state (opportunity preserved)', () {
+      final state = IveState(expression: IveExpression.winking);
+      expect(IveVisualStateMapper.fromIveState(state), IveVisualState.opportunity);
     });
   });
 
@@ -232,6 +268,51 @@ void main() {
           isButton: true,
         ),
       );
+    });
+
+    // IVE-AVATAR-STATE-MACHINE-02 (Codex review F4): the mapper is tested in
+    // isolation above; this proves the wiring actually reaches the rendered
+    // widget when iveProvider's real interaction bridge drives it.
+    testWidgets('reflects thinking/speaking interaction through to the rendered fallback',
+        (tester) async {
+      // Disposed explicitly at the end of the test body (not via addTearDown):
+      // testWidgets runs inside a FakeAsync zone whose pending-timer check
+      // runs before addTearDown callbacks fire, so a still-pending
+      // _speakingTimer (from completeInteraction below) would otherwise trip
+      // flutter_test's "A Timer is still pending" assertion.
+      final container = ProviderContainer();
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: Scaffold(
+              body: IveAvatar(size: IveAvatarSize.compact, interactive: false),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final notifier = container.read(iveProvider.notifier);
+
+      final token = notifier.beginThinking();
+      await tester.pump();
+      expect(
+        tester.widget<IveVisualFallback>(find.byType(IveVisualFallback)).state,
+        IveVisualState.thinking,
+      );
+
+      notifier.completeInteraction(token, success: true);
+      await tester.pump();
+      expect(
+        tester.widget<IveVisualFallback>(find.byType(IveVisualFallback)).state,
+        IveVisualState.speaking,
+      );
+
+      // Cancels the pending speaking-clear timer before the test body
+      // returns — see comment above.
+      container.dispose();
     });
   });
 }
