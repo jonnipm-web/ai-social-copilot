@@ -98,25 +98,30 @@ function fakeDb(initial: DbState) {
               },
             }),
           }),
-          update: (row: Record<string, unknown>) => ({
-            eq: (_col: string, val: string) => {
-              state.subscriptions[val] = { ...(state.subscriptions[val] ?? {}), ...row };
-              return Promise.resolve({ error: null });
-            },
-          }),
-        };
-      }
-      if (table === 'profiles') {
-        return {
-          update: (row: Record<string, unknown>) => ({
-            eq: (_col: string, val: string) => {
-              state.profiles[val] = { ...(state.profiles[val] ?? {}), ...row };
-              return Promise.resolve({ error: null });
-            },
-          }),
         };
       }
       throw new Error(`unexpected table in test fake: ${table}`);
+    },
+    // Mirrors public.apply_stripe_subscription_state (migration
+    // 20260911020000) -- both writes applied together, matching the real
+    // RPC's atomicity.
+    rpc(fn: string, args: Record<string, unknown>): Promise<{ error: unknown }> {
+      if (fn !== 'apply_stripe_subscription_state') throw new Error(`unexpected rpc in test fake: ${fn}`);
+      const userId = args.p_user_id as string;
+      state.subscriptions[userId] = {
+        ...(state.subscriptions[userId] ?? {}),
+        stripe_subscription_id: args.p_stripe_subscription_id,
+        stripe_price_id: args.p_stripe_price_id,
+        status: args.p_status,
+        current_period_end: args.p_current_period_end,
+        cancel_at_period_end: args.p_cancel_at_period_end,
+      };
+      state.profiles[userId] = {
+        ...(state.profiles[userId] ?? {}),
+        role: args.p_role,
+        monthly_limit: args.p_monthly_limit,
+      };
+      return Promise.resolve({ error: null });
     },
   };
 }
@@ -257,4 +262,33 @@ Deno.test('WEBHOOK-12: tipo de evento desconhecido -> 200, nenhuma alteração',
 Deno.test('WEBHOOK-13: método GET -> 405', async () => {
   const res = await handler(new Request('http://localhost/', { method: 'GET' }), fakeStripe({}), fakeDb(newState('cus_1', 'user_1')) as never);
   assertEquals(res.status, 405);
+});
+
+Deno.test('WEBHOOK-14: falha ao buscar assinatura atual no Stripe (GET) para subscription.deleted -> 500, sem fallback para o payload do evento, sem alteração de estado', async () => {
+  // Regressão do finding P1 do Codex (task-mtw7wtog-py3laq): uma versão
+  // anterior caía no payload do próprio evento quando o GET falhava,
+  // podendo aplicar estado obsoleto. Agora qualquer falha de GET aborta.
+  const db = fakeDb(newState('cus_6', 'user_6'));
+  db.state.profiles['user_6'] = { role: 'pro', monthly_limit: 300 };
+  const stripe = fakeStripe({}); // sub_6 não existe -> retrieveSubscription lança
+  const body = { id: 'evt_getfail_1', type: 'customer.subscription.deleted', data: { object: { id: 'sub_6', customer: 'cus_6', status: 'canceled' } } };
+  const res = await handler(await signedReq(body), stripe, db as never);
+  assertEquals(res.status, 500);
+  assertEquals(db.state.profiles['user_6'].role, 'pro'); // não foi rebaixado por um payload não confirmado
+  assertEquals(db.state.processedEvents['evt_getfail_1'], undefined);
+});
+
+Deno.test('WEBHOOK-15: falha no RPC atômico (ex: erro de banco) -> 500, evento não marcado como processado', async () => {
+  const db = fakeDb(newState('cus_7', 'user_7')) as ReturnType<typeof fakeDb> & { rpc: unknown };
+  let rpcCalls = 0;
+  db.rpc = (_fn: string, _args: Record<string, unknown>) => {
+    rpcCalls++;
+    return Promise.resolve({ error: new Error('simulated db failure') });
+  };
+  const stripe = fakeStripe({ sub_7: makeSub({ id: 'sub_7', status: 'active' }) });
+  const body = { id: 'evt_rpcfail_1', type: 'checkout.session.completed', data: { object: { customer: 'cus_7', subscription: 'sub_7' } } };
+  const res = await handler(await signedReq(body), stripe, db as never);
+  assertEquals(res.status, 500);
+  assertEquals(rpcCalls, 1);
+  assertEquals(db.state.processedEvents['evt_rpcfail_1'], undefined);
 });

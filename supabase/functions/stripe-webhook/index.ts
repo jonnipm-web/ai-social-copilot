@@ -26,10 +26,13 @@ export interface DbClient {
       row: Record<string, unknown>,
       opts?: { onConflict?: string; ignoreDuplicates?: boolean },
     ): { select(): { maybeSingle(): Promise<{ data: Record<string, unknown> | null; error: unknown }> } };
-    update(row: Record<string, unknown>): {
-      eq(col: string, val: unknown): Promise<{ error: unknown }>;
-    };
   };
+  /** Wraps the subscriptions+profiles write in one Postgres transaction
+   * (public.apply_stripe_subscription_state) -- see migration
+   * 20260911020000. Codex's adversarial gate found the previous two
+   * separate .update() calls could leave the two tables inconsistent if
+   * the second call failed after the first succeeded. */
+  rpc(fn: string, args: Record<string, unknown>): Promise<{ error: unknown }>;
 }
 
 interface StripeEvent {
@@ -78,23 +81,25 @@ async function findUserIdByCustomerId(db: DbClient, customerId: string): Promise
  * values (never deltas), which is what makes reprocessing the same or an
  * out-of-order event safe: whichever event is handled last always ends up
  * setting the same fields to whatever Stripe's API says is true right
- * now, not to something derived from the event payload's own age. */
+ * now, not to something derived from the event payload's own age. Both
+ * tables are written in one Postgres transaction via RPC -- see
+ * migration 20260911020000 for why (Codex-found P1: two separate
+ * .update() calls could leave subscriptions/profiles inconsistent if the
+ * second failed after the first succeeded). */
 async function applySubscriptionState(db: DbClient, userId: string, sub: StripeSubscription): Promise<void> {
   const priceId = sub.items?.data?.[0]?.price?.id ?? null;
-  const { error: subError } = await db
-    .from('subscriptions')
-    .update({
-      stripe_subscription_id: sub.id,
-      stripe_price_id: priceId,
-      status: sub.status,
-      current_period_end: sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null,
-      cancel_at_period_end: !!sub.cancel_at_period_end,
-    })
-    .eq('user_id', userId);
-  if (subError) throw subError;
-
-  const { error: profileError } = await db.from('profiles').update(entitlementForStatus(sub.status)).eq('id', userId);
-  if (profileError) throw profileError;
+  const entitlement = entitlementForStatus(sub.status);
+  const { error } = await db.rpc('apply_stripe_subscription_state', {
+    p_user_id: userId,
+    p_stripe_subscription_id: sub.id,
+    p_stripe_price_id: priceId,
+    p_status: sub.status,
+    p_current_period_end: sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null,
+    p_cancel_at_period_end: !!sub.cancel_at_period_end,
+    p_role: entitlement.role,
+    p_monthly_limit: entitlement.monthly_limit,
+  });
+  if (error) throw error;
 }
 
 export async function handler(req: Request, stripeClient?: StripeFetch, dbClient?: DbClient): Promise<Response> {
@@ -167,16 +172,17 @@ export async function handler(req: Request, stripeClient?: StripeFetch, dbClient
         // event payload -- delivery order is not guaranteed, so a stale
         // "active" event arriving after a newer "canceled" one must never
         // resurrect entitlement. Canceled subscriptions remain retrievable
-        // in Stripe's API (they are not hard-deleted), so this GET
-        // succeeds for both event types; the event's own payload is only
-        // a fallback if retrieval itself errors.
-        let sub: StripeSubscription;
-        try {
-          sub = await retrieveSubscription(obj.id, stripeClient);
-        } catch (fetchErr) {
-          console.error('retrieveSubscription failed, falling back to event payload:', fetchErr);
-          sub = obj;
-        }
+        // in Stripe's API (they are not hard-deleted), so this GET always
+        // succeeds for both event types in normal operation.
+        //
+        // Codex's adversarial gate found an earlier version of this code
+        // fell back to the event's OWN payload when this GET failed --
+        // but a GET failure (network blip, transient 5xx) is unrelated to
+        // whether the payload is stale, so that fallback could apply
+        // exactly the stale state this re-fetch exists to prevent. There
+        // is no safe fallback here: any failure must abort and let
+        // Stripe's own retry re-attempt the fresh GET.
+        const sub = await retrieveSubscription(obj.id, stripeClient);
         await applySubscriptionState(db, userId, sub);
         break;
       }
