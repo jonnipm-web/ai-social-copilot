@@ -87,6 +87,40 @@ Deno.test('PF-7: DOCX legítimo e pequeno continua funcionando (regressão do fi
   assertEquals(data.text.length > 20, true);
 });
 
+// ── PF-9: caminho PDF (IVE-COMMERCIAL-AUTH-IMPORT-GATE) ─────────────────────
+// extractFromPdf() nunca tinha um teste que de fato passasse bytes de PDF
+// pelo handler -- só PF-3 (tipo não suportado, nem chega a tentar extrair).
+// O código está inalterado desde a missão anterior, mas "inalterado" não é
+// o mesmo que "coberto por teste"; isto fecha essa lacuna.
+function buildMinimalPdfWithText(text: string): Uint8Array {
+  // PDF minimalista o bastante para extractFromPdf() (que só procura blocos
+  // BT...ET com operadores Tj de texto simples via regex, sem parsear a
+  // estrutura real de objetos/xref) extrair o texto -- não é um PDF
+  // estruturalmente válido de verdade, mas exercita o mesmo formato de
+  // stream de conteúdo que um PDF real gerado por qualquer editor produz.
+  const escaped = text.replace(/([()\\])/g, '\\$1');
+  const content = `1 0 obj\n<< >>\nstream\nBT /F1 12 Tf 72 712 Td (${escaped}) Tj ET\nendstream\nendobj\n%%EOF`;
+  return new TextEncoder().encode(content);
+}
+
+Deno.test('PF-9: PDF simples com texto extraível via operadores BT/Tj/ET -> 200, texto extraído', async () => {
+  const pdfText = 'Texto de teste extraido de um PDF minimo valido para o parser.';
+  const bytes = buildMinimalPdfWithText(pdfText);
+  const b64 = btoa(String.fromCharCode(...bytes));
+  const res = await handler(req({ file_base64: b64, file_type: 'pdf' }), validUserClient);
+  assertEquals(res.status, 200);
+  const data = await res.json();
+  assertEquals(typeof data.text, 'string');
+  assertEquals(data.text.includes('Texto de teste extraido'), true);
+});
+
+Deno.test('PF-10: PDF sem nenhum bloco BT/ET reconhecível (ex: só imagem escaneada) -> 422, mensagem pede colar texto manualmente', async () => {
+  const bytes = new TextEncoder().encode('%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF');
+  const b64 = btoa(String.fromCharCode(...bytes));
+  const res = await handler(req({ file_base64: b64, file_type: 'pdf' }), validUserClient);
+  assertEquals(res.status, 422);
+});
+
 Deno.test('PF-8: DOCX no formato de zip bomb (originalSize declarado gigante) é rejeitado, não descomprimido', async () => {
   const { zipSync, strToU8 } = await import('npm:fflate');
   // Dados repetidos comprimem quase de graça -- 25MB reais de zeros vira um
