@@ -59,3 +59,15 @@ verify_jwt = true
 
 [functions.process-file]
 verify_jwt = true
+
+[functions.create-checkout-session]
+verify_jwt = true
+
+# IVE-COMMERCIAL-BILLING-01: Stripe calls this function directly and never
+# sends a Supabase-issued JWT -- verify_jwt=true would reject every
+# legitimate webhook delivery. The real trust boundary is the manual
+# HMAC-SHA256 Stripe-Signature verification inside the function itself
+# (supabase/functions/_shared/stripe.ts), checked before any JSON parsing
+# or DB write. See .github/deploy-allowlist.tsv for the matching entry.
+[functions.stripe-webhook]
+verify_jwt = false
