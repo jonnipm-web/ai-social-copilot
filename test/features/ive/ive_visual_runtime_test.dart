@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:ai_social_copilot/data/models/ive_issue.dart';
 import 'package:ai_social_copilot/data/models/ive_state.dart';
 import 'package:ai_social_copilot/features/ive/visual/ive_avatar.dart';
 import 'package:ai_social_copilot/features/ive/visual/ive_avatar_controller.dart';
@@ -66,6 +67,40 @@ void main() {
         IveVisualStateMapper.fromIveState(makeState(expression: IveExpression.winking)),
         IveVisualState.opportunity,
       );
+    });
+  });
+
+  // ── IveVisualStateMapper — interaction overlay (IVE-AVATAR-STATE-MACHINE-02) ─
+  group('IveVisualStateMapper — interaction overlay', () {
+    test('thinking interaction overrides expression', () {
+      final state = IveState(
+        expression:  IveExpression.winking,
+        interaction: IveInteractionState.thinking,
+      );
+      expect(IveVisualStateMapper.fromIveState(state), IveVisualState.thinking);
+    });
+
+    test('speaking interaction overrides an active issue', () {
+      final issue = IveIssue(
+        errorCode:        'x',
+        stage:            IveIssueStage.network,
+        severity:         IveIssueSeverity.error,
+        recoverable:      true,
+        userMessage:      'msg',
+        technicalMessage: 'tech',
+        occurredAt:       DateTime.now(),
+      );
+      final state = IveState(
+        activeIssue:   issue,
+        bubbleVisible: true,
+        interaction:   IveInteractionState.speaking,
+      );
+      expect(IveVisualStateMapper.fromIveState(state), IveVisualState.speaking);
+    });
+
+    test('null interaction falls back to the live business state (opportunity preserved)', () {
+      final state = IveState(expression: IveExpression.winking);
+      expect(IveVisualStateMapper.fromIveState(state), IveVisualState.opportunity);
     });
   });
 
