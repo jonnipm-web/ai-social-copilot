@@ -112,20 +112,28 @@ function fakeDb(initial: DbState) {
       throw new Error(`unexpected table in test fake: ${table}`);
     },
     // Mirrors public.apply_stripe_subscription_state (migrations
-    // 20260911020000 + 20260911030000): one atomic write, gated by the
-    // event's own `created` timestamp so a chronologically older event
-    // can never overwrite a newer one's state, regardless of which HTTP
-    // request happens to finish (commit) last.
+    // 20260911020000 + 20260911030000) as closely as a JS fake reasonably
+    // can: a real Postgres `UPDATE ... WHERE user_id = X AND (...)`,
+    // never an insert. Codex's third review (task-mtw7wtog-py3laq) found
+    // an earlier version of this fake auto-created a subscriptions row on
+    // first write, which production code never does -- by the time any
+    // webhook event exists, create-checkout-session has already inserted
+    // the row (see newState() below), so a missing row here means the
+    // customer mapping is broken, not "first event for a new user", and
+    // must behave like a real UPDATE matching zero rows: applied=false,
+    // profiles untouched.
     rpc(fn: string, args: Record<string, unknown>): Promise<{ data: boolean | null; error: unknown }> {
       if (fn !== 'apply_stripe_subscription_state') throw new Error(`unexpected rpc in test fake: ${fn}`);
       const userId = args.p_user_id as string;
+      const existing = state.subscriptions[userId];
+      if (!existing) return Promise.resolve({ data: false, error: null }); // UPDATE matched zero rows
       const eventCreated = args.p_event_created as string;
-      const lastEventCreated = state.subscriptions[userId]?.last_event_created as string | undefined;
-      if (lastEventCreated && eventCreated < lastEventCreated) {
+      const lastEventCreated = existing.last_event_created as string | null | undefined;
+      if (lastEventCreated != null && eventCreated < lastEventCreated) {
         return Promise.resolve({ data: false, error: null }); // stale -- skipped
       }
       state.subscriptions[userId] = {
-        ...(state.subscriptions[userId] ?? {}),
+        ...existing,
         stripe_subscription_id: args.p_stripe_subscription_id,
         stripe_price_id: args.p_stripe_price_id,
         status: args.p_status,
@@ -143,9 +151,13 @@ function fakeDb(initial: DbState) {
   };
 }
 
+// Mirrors the row create-checkout-session already inserts (status='none',
+// last_event_created=null) BEFORE any webhook event can possibly exist
+// for this customer -- every test starts from that same real precondition
+// rather than an empty subscriptions table.
 function newState(customerId: string, userId: string): DbState {
   return {
-    subscriptions: {},
+    subscriptions: { [userId]: { stripe_customer_id: customerId, status: 'none', last_event_created: null } },
     customerToUser: { [customerId]: userId },
     profiles: { [userId]: { role: 'free', monthly_limit: 5 } },
     processedEvents: {},
@@ -352,4 +364,20 @@ Deno.test('WEBHOOK-16: evento cronologicamente mais antigo (event.created menor)
   assertEquals(resOlder.status, 200); // aceito e reconhecido -- mas...
   assertEquals(db.state.profiles['user_8'].role, 'free'); // ...NÃO ressuscitou o Pro
   assertEquals(db.state.subscriptions['user_8'].status, 'canceled');
+});
+
+Deno.test('WEBHOOK-17: linha de subscriptions ausente para o user_id resolvido (UPDATE não encontra a linha) -> RPC retorna false, profiles intocado, 200', async () => {
+  // Cenário defensivo apontado no 3º review do Codex: na prática essa
+  // condição é inatingível (findUserIdByCustomerId já lê essa mesma
+  // linha da tabela subscriptions antes de chamar o RPC), mas o fake
+  // precisa espelhar fielmente o "UPDATE ... WHERE user_id = X" real --
+  // que, sem linha correspondente, apenas não afeta nenhuma linha.
+  const db = fakeDb(newState('cus_9', 'user_9'));
+  delete db.state.subscriptions['user_9']; // simula a linha ausente
+  const stripe = fakeStripe({ sub_9: makeSub({ id: 'sub_9', status: 'active' }) });
+  const body = evt({ id: 'evt_missingrow_1', type: 'checkout.session.completed', data: { object: { customer: 'cus_9', subscription: 'sub_9' } } });
+  const res = await handler(await signedReq(body), stripe, db as never);
+  assertEquals(res.status, 200);
+  assertEquals(db.state.profiles['user_9'].role, 'free'); // não promovido
+  assertEquals(db.state.subscriptions['user_9'], undefined); // RPC não criou a linha (não é upsert)
 });
