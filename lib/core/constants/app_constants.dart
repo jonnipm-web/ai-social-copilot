@@ -4,6 +4,13 @@ class AppConstants {
   static const appName = 'InsightValues';
   static const minTextLength = 10;
   static const maxTextLength = 5000;
+
+  // IVE-COMMERCIAL-AUTH-IMPORT-GATE — teto de tamanho para conteúdo baixado
+  // diretamente como texto (TXT local e TXT/Google Docs exportado do Drive),
+  // que não passa pelo process-file e por isso não tinha nenhum limite
+  // checado antes desta missão. Mesma ordem de grandeza do teto efetivo já
+  // usado no process-file (MAX_BASE64_LENGTH=8MB base64 ≈ 6MB decodificado).
+  static const maxLocalImportBytes = 6 * 1024 * 1024;
   static const freeTierLimit = 9999;
   static const maxBodyWidth = 700.0;
 
