@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_constants.dart';
-import '../../core/modules/module_definition.dart';
 import '../../core/modules/module_registry.dart';
 import '../../data/models/profile.dart';
 import '../../l10n/app_localizations.dart';
@@ -210,7 +209,6 @@ class _NavItem extends StatelessWidget {
     required this.label,
     required this.route,
     required this.current,
-    this.locked  = false,
     this.isAdmin = false,
   });
 
@@ -218,7 +216,6 @@ class _NavItem extends StatelessWidget {
   final String   label;
   final String   route;
   final String   current;
-  final bool     locked;
   final bool     isAdmin;
 
   @override
@@ -226,43 +223,28 @@ class _NavItem extends StatelessWidget {
     final isSelected = current == route;
     final color = isAdmin
         ? const Color(0xFFFFD700)
-        : locked
-            ? Colors.white24
-            : isSelected
-                ? const Color(0xFF6C63FF)
-                : Colors.white70;
+        : isSelected
+            ? const Color(0xFF6C63FF)
+            : Colors.white70;
 
     return ListTile(
       leading: Icon(icon, color: color, size: 20),
-      title: Row(
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: color,
-              fontSize: 14,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-            ),
-          ),
-          if (locked) ...[
-            const SizedBox(width: 6),
-            const Icon(Icons.lock_rounded, color: Colors.white24, size: 12),
-          ],
-        ],
+      title: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 14,
+          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+        ),
       ),
       selected: isSelected,
       selectedTileColor: const Color(0xFF6C63FF).withOpacity(0.15),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-      onTap: locked
-          ? () {
-              Navigator.of(context).pop();
-              context.push(AppConstants.routeUpgrade);
-            }
-          : () {
-              Navigator.of(context).pop();
-              context.go(route);
-            },
+      onTap: () {
+        Navigator.of(context).pop();
+        context.go(route);
+      },
     );
   }
 }
