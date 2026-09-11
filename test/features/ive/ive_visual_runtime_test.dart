@@ -10,6 +10,7 @@ import 'package:ai_social_copilot/features/ive/visual/ive_avatar_state.dart';
 import 'package:ai_social_copilot/features/ive/visual/ive_status_ring.dart';
 import 'package:ai_social_copilot/features/ive/visual/ive_visual_config.dart';
 import 'package:ai_social_copilot/features/ive/visual/ive_visual_fallback.dart';
+import 'package:ai_social_copilot/providers/ive_provider.dart';
 
 void main() {
   // ── IveVisualState ────────────────────────────────────────────────────────
@@ -266,6 +267,43 @@ void main() {
           label:  'IVE, assistente executiva',
           isButton: true,
         ),
+      );
+    });
+
+    // IVE-AVATAR-STATE-MACHINE-02 (Codex review F4): the mapper is tested in
+    // isolation above; this proves the wiring actually reaches the rendered
+    // widget when iveProvider's real interaction bridge drives it.
+    testWidgets('reflects thinking/speaking interaction through to the rendered fallback',
+        (tester) async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: Scaffold(
+              body: IveAvatar(size: IveAvatarSize.compact, interactive: false),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final notifier = container.read(iveProvider.notifier);
+
+      final token = notifier.beginThinking();
+      await tester.pump();
+      expect(
+        tester.widget<IveVisualFallback>(find.byType(IveVisualFallback)).state,
+        IveVisualState.thinking,
+      );
+
+      notifier.completeInteraction(token, success: true);
+      await tester.pump();
+      expect(
+        tester.widget<IveVisualFallback>(find.byType(IveVisualFallback)).state,
+        IveVisualState.speaking,
       );
     });
   });
