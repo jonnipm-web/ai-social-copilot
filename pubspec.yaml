@@ -42,6 +42,12 @@ dependencies:
   # A versao 12.0.0-beta.1 e a primeira a usar win32 ^6 — unica opcao compativel.
   file_picker: ">=12.0.0-beta.1"
 
+  # IVE-COMMERCIAL-BILLING-01 — abre o Stripe Checkout Session URL.
+  # url_launcher_web (abaixo, em dependency_overrides) já era resolvido
+  # transitivamente via google_sign_in; isto só declara o pacote guarda-
+  # chuva explicitamente para poder importá-lo diretamente.
+  url_launcher: ^6.3.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

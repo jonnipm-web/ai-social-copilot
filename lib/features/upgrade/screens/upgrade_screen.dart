@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_constants.dart';
-import '../../../core/utils/snackbar_utils.dart' show showSuccessSnack;
+import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage, showErrorSnack;
 import '../../../data/models/quota_info.dart';
+import '../../../data/services/billing_service.dart';
 import '../../../providers/quota_provider.dart';
 
 class UpgradeScreen extends ConsumerWidget {
@@ -44,7 +46,7 @@ class UpgradeScreen extends ConsumerWidget {
   }
 }
 
-class _UpgradeContent extends ConsumerWidget {
+class _UpgradeContent extends ConsumerStatefulWidget {
   const _UpgradeContent({required this.quota});
   final QuotaInfo quota;
 
@@ -52,12 +54,22 @@ class _UpgradeContent extends ConsumerWidget {
   static const _proLimit = 300;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_UpgradeContent> createState() => _UpgradeContentState();
+}
+
+class _UpgradeContentState extends ConsumerState<_UpgradeContent> {
+  final _billingService = BillingService();
+  bool _isRedirecting = false;
+
+  QuotaInfo get quota => widget.quota;
+
+  @override
+  Widget build(BuildContext context) {
     // Se o usuário já é Pro, mostra o limite REAL configurado no servidor
     // (profiles.monthly_limit) em vez do número padrão de marketing --
     // evita anunciar um limite diferente do que a cota realmente aplica
     // (achado do Codex Gate).
-    final displayedProLimit = quota.isPro ? quota.limit : _proLimit;
+    final displayedProLimit = quota.isPro ? quota.limit : _UpgradeContent._proLimit;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -73,7 +85,7 @@ class _UpgradeContent extends ConsumerWidget {
           isCurrentPlan: !quota.isPro,
           badge: null,
           features: const [
-            _Feature('$_freeLimit análises de IA por mês', true),
+            _Feature('${_UpgradeContent._freeLimit} análises de IA por mês', true),
             _Feature('Análise de site, mercado e concorrência', true),
             _Feature('Estratégia e ações priorizadas', true),
             _Feature('Análises ilimitadas', false),
@@ -100,40 +112,30 @@ class _UpgradeContent extends ConsumerWidget {
             const _Feature('Suporte prioritário por e-mail', true),
             const _Feature('Acesso a novos recursos primeiro', true),
           ],
-          buttonLabel: quota.isPro ? 'Plano atual' : '🚀  Assinar Pro — R\$ 29/mês',
-          onPressed: quota.isPro ? null : () => _onUpgradeTap(context, ref),
+          buttonLabel: quota.isPro
+              ? 'Plano atual'
+              : (_isRedirecting ? 'Abrindo checkout...' : '🚀  Assinar Pro — R\$ 29/mês'),
+          onPressed: quota.isPro || _isRedirecting ? null : _onUpgradeTap,
         ),
         const SizedBox(height: 32),
-        const _FaqSection(freeLimit: _freeLimit, proLimit: _proLimit),
+        const _FaqSection(freeLimit: _UpgradeContent._freeLimit, proLimit: _UpgradeContent._proLimit),
       ],
     );
   }
 
-  void _onUpgradeTap(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Em breve!'),
-        content: const Text(
-          'O pagamento online estará disponível em breve.\n\n'
-          'Entre em contato pelo e-mail para assinar agora:\n'
-          'suporte@aisocialcopilot.com',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Fechar'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              showSuccessSnack(context, 'Entraremos em contato em breve!');
-            },
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
+  Future<void> _onUpgradeTap() async {
+    setState(() => _isRedirecting = true);
+    try {
+      final url = await _billingService.createCheckoutSession();
+      final launched = await launchUrl(Uri.parse(url), webOnlyWindowName: '_blank');
+      if (!launched && mounted) {
+        showErrorSnack(context, 'Não foi possível abrir a página de pagamento.');
+      }
+    } catch (e) {
+      if (mounted) showErrorSnack(context, extractErrorMessage(e));
+    } finally {
+      if (mounted) setState(() => _isRedirecting = false);
+    }
   }
 }
 
