@@ -3,16 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/snackbar_utils.dart' show showSuccessSnack;
-import '../../../providers/post_provider.dart';
+import '../../../data/models/quota_info.dart';
+import '../../../providers/quota_provider.dart';
 
 class UpgradeScreen extends ConsumerWidget {
   const UpgradeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final usageAsync = ref.watch(monthlyUsageProvider);
-    final used = usageAsync.valueOrNull ?? 0;
-    final limit = AppConstants.freeTierLimit;
+    final quotaAsync = ref.watch(currentQuotaProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -24,55 +23,89 @@ class UpgradeScreen extends ConsumerWidget {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: AppConstants.maxBodyWidth),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _UsageBanner(used: used, limit: limit),
-                const SizedBox(height: 28),
-                _PlanCard(
-                  title: 'Gratuito',
-                  subtitle: 'Plano atual',
-                  price: 'R\$ 0',
-                  period: '',
-                  isHighlighted: false,
-                  badge: null,
-                  features: [
-                    _Feature('$limit gerações por mês', true),
-                    _Feature('Todas as versões de post', true),
-                    _Feature('Histórico dos últimos 50 posts', true),
-                    _Feature('Gerações ilimitadas', false),
-                    _Feature('Prioridade no processamento', false),
-                    _Feature('Suporte prioritário', false),
-                  ],
-                  buttonLabel: 'Plano atual',
-                  onPressed: null,
+            child: quotaAsync.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: 60),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (err, _) => const Padding(
+                padding: EdgeInsets.symmetric(vertical: 40),
+                child: Text(
+                  'Não foi possível carregar seu plano agora. Tente novamente em instantes.',
+                  style: TextStyle(color: Colors.white54),
                 ),
-                const SizedBox(height: 16),
-                _PlanCard(
-                  title: 'Pro',
-                  subtitle: 'Para criadores sérios',
-                  price: 'R\$ 29',
-                  period: '/mês',
-                  isHighlighted: true,
-                  badge: 'Mais popular',
-                  features: const [
-                    _Feature('Gerações ilimitadas', true),
-                    _Feature('Todas as versões de post', true),
-                    _Feature('Histórico completo sem limite', true),
-                    _Feature('Prioridade no processamento', true),
-                    _Feature('Suporte prioritário por e-mail', true),
-                    _Feature('Acesso a novos recursos primeiro', true),
-                  ],
-                  buttonLabel: '🚀  Assinar Pro — R\$ 29/mês',
-                  onPressed: () => _onUpgradeTap(context, ref),
-                ),
-                const SizedBox(height: 32),
-                _FaqSection(),
-              ],
+              ),
+              data: (quota) => _UpgradeContent(quota: quota),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _UpgradeContent extends ConsumerWidget {
+  const _UpgradeContent({required this.quota});
+  final QuotaInfo quota;
+
+  static const _freeLimit = 5;
+  static const _proLimit = 300;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Se o usuário já é Pro, mostra o limite REAL configurado no servidor
+    // (profiles.monthly_limit) em vez do número padrão de marketing --
+    // evita anunciar um limite diferente do que a cota realmente aplica
+    // (achado do Codex Gate).
+    final displayedProLimit = quota.isPro ? quota.limit : _proLimit;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _UsageBanner(quota: quota),
+        const SizedBox(height: 28),
+        _PlanCard(
+          title: 'Gratuito',
+          subtitle: 'Plano atual',
+          price: 'R\$ 0',
+          period: '',
+          isHighlighted: false,
+          isCurrentPlan: !quota.isPro,
+          badge: null,
+          features: const [
+            _Feature('$_freeLimit análises de IA por mês', true),
+            _Feature('Análise de site, mercado e concorrência', true),
+            _Feature('Estratégia e ações priorizadas', true),
+            _Feature('Análises ilimitadas', false),
+            _Feature('Prioridade no processamento', false),
+            _Feature('Suporte prioritário', false),
+          ],
+          buttonLabel: quota.isPro ? 'Plano anterior' : 'Plano atual',
+          onPressed: null,
+        ),
+        const SizedBox(height: 16),
+        _PlanCard(
+          title: 'Pro',
+          subtitle: 'Para quem já está executando a estratégia',
+          price: 'R\$ 29',
+          period: '/mês',
+          isHighlighted: !quota.isPro,
+          isCurrentPlan: quota.isPro,
+          badge: quota.isPro ? 'Seu plano' : 'Mais popular',
+          features: [
+            _Feature('$displayedProLimit análises de IA por mês', true),
+            const _Feature('Análise de site, mercado e concorrência', true),
+            const _Feature('Estratégia e ações priorizadas', true),
+            const _Feature('Prioridade no processamento', true),
+            const _Feature('Suporte prioritário por e-mail', true),
+            const _Feature('Acesso a novos recursos primeiro', true),
+          ],
+          buttonLabel: quota.isPro ? 'Plano atual' : '🚀  Assinar Pro — R\$ 29/mês',
+          onPressed: quota.isPro ? null : () => _onUpgradeTap(context, ref),
+        ),
+        const SizedBox(height: 32),
+        const _FaqSection(freeLimit: _freeLimit, proLimit: _proLimit),
+      ],
     );
   }
 
@@ -105,14 +138,12 @@ class UpgradeScreen extends ConsumerWidget {
 }
 
 class _UsageBanner extends StatelessWidget {
-  const _UsageBanner({required this.used, required this.limit});
-  final int used;
-  final int limit;
+  const _UsageBanner({required this.quota});
+  final QuotaInfo quota;
 
   @override
   Widget build(BuildContext context) {
-    final pct = (used / limit).clamp(0.0, 1.0);
-    final remaining = limit - used;
+    final remaining = quota.remaining;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -129,7 +160,7 @@ class _UsageBanner extends StatelessWidget {
               const Icon(Icons.bolt_rounded, size: 18, color: Color(0xFF6C63FF)),
               const SizedBox(width: 6),
               Text(
-                'Uso este mês',
+                'Análises de IA este mês',
                 style: Theme.of(context)
                     .textTheme
                     .titleSmall
@@ -137,7 +168,7 @@ class _UsageBanner extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                '$used / $limit',
+                '${quota.used} / ${quota.limit}',
                 style: const TextStyle(
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
@@ -149,19 +180,19 @@ class _UsageBanner extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
             child: LinearProgressIndicator(
-              value: pct,
+              value: quota.fractionUsed,
               minHeight: 8,
               backgroundColor: Colors.white12,
               valueColor: AlwaysStoppedAnimation<Color>(
-                pct >= 1.0 ? Colors.red : const Color(0xFF6C63FF),
+                quota.isExhausted ? Colors.red : const Color(0xFF6C63FF),
               ),
             ),
           ),
           const SizedBox(height: 8),
           Text(
             remaining > 0
-                ? '$remaining geração${remaining == 1 ? '' : 'ões'} restante${remaining == 1 ? '' : 's'} no plano gratuito.'
-                : 'Você usou todas as gerações gratuitas deste mês.',
+                ? '$remaining análise${remaining == 1 ? '' : 's'} restante${remaining == 1 ? '' : 's'} no plano ${quota.isPro ? 'Pro' : 'gratuito'}.'
+                : 'Você usou todas as análises de IA deste mês.',
             style: TextStyle(
               fontSize: 12,
               color: remaining > 0 ? Colors.white54 : Colors.red.shade300,
@@ -186,6 +217,7 @@ class _PlanCard extends StatelessWidget {
     required this.price,
     required this.period,
     required this.isHighlighted,
+    required this.isCurrentPlan,
     required this.badge,
     required this.features,
     required this.buttonLabel,
@@ -197,6 +229,7 @@ class _PlanCard extends StatelessWidget {
   final String price;
   final String period;
   final bool isHighlighted;
+  final bool isCurrentPlan;
   final String? badge;
   final List<_Feature> features;
   final String buttonLabel;
@@ -231,9 +264,9 @@ class _PlanCard extends StatelessWidget {
           if (badge != null)
             Container(
               padding: const EdgeInsets.symmetric(vertical: 6),
-              decoration: const BoxDecoration(
-                color: _primary,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
+              decoration: BoxDecoration(
+                color: isCurrentPlan ? const Color(0xFF03DAC6) : _primary,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
               ),
               child: Text(
                 badge!,
@@ -354,25 +387,27 @@ class _FeatureRow extends StatelessWidget {
 }
 
 class _FaqSection extends StatelessWidget {
-  final _items = const [
-    _FaqItem(
-      q: 'Como funciona o limite gratuito?',
-      a: 'Você pode gerar até ${AppConstants.freeTierLimit} posts por mês no plano gratuito. O contador reinicia todo dia 1º.',
-    ),
-    _FaqItem(
-      q: 'Posso cancelar a qualquer momento?',
-      a: 'Sim. O plano Pro é mensal e você pode cancelar a qualquer momento sem taxa.',
-    ),
-    _FaqItem(
-      q: 'Meus dados ficam salvos se eu cancelar?',
-      a: 'Sim. Seu histórico fica salvo, mas o limite de gerações volta para ${AppConstants.freeTierLimit}/mês.',
-    ),
-  ];
-
-  const _FaqSection();
+  const _FaqSection({required this.freeLimit, required this.proLimit});
+  final int freeLimit;
+  final int proLimit;
 
   @override
   Widget build(BuildContext context) {
+    final items = [
+      _FaqItem(
+        q: 'Como funciona o limite gratuito?',
+        a: 'Você pode fazer até $freeLimit análises de IA por mês no plano gratuito (análise de site, estratégia, mercado, etc). O contador reinicia todo dia 1º.',
+      ),
+      _FaqItem(
+        q: 'Posso cancelar a qualquer momento?',
+        a: 'Sim. O plano Pro é mensal e você pode cancelar a qualquer momento sem taxa.',
+      ),
+      const _FaqItem(
+        q: 'Meus dados ficam salvos se eu cancelar?',
+        a: 'Sim. Seu histórico e projetos ficam salvos, mas o limite de análises volta para o do plano gratuito.',
+      ),
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -384,7 +419,7 @@ class _FaqSection extends StatelessWidget {
               ?.copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 12),
-        ..._items.map((item) => _FaqTile(item: item)),
+        ...items.map((item) => _FaqTile(item: item)),
       ],
     );
   }
