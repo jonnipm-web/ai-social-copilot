@@ -31,6 +31,43 @@ jobs:
       - name: Adicionar suporte à plataforma Web
         run: flutter create --platforms web --project-name ai_social_copilot .
 
+      - name: Injetar restauração de rota SPA em web/index.html (IVE-COMMERCIAL-TARGETED-REMEDIATION-04)
+        # web/index.html é gerado do zero pelo `flutter create` acima a cada
+        # execução -- não existe no repositório para editar diretamente.
+        # web/404.html (esse sim versionado) já faz metade do trabalho
+        # (https://github.com/rafgraph/spa-github-pages); esta metade
+        # restaura a URL real via history.replaceState ANTES do router do
+        # Flutter inicializar, então precisa ser o primeiro <script> depois
+        # de <head>, não importa a versão exata do template que o
+        # `flutter create` acima gerou.
+        run: |
+          python3 - <<'PYEOF'
+          import re
+          path = "web/index.html"
+          with open(path, "r", encoding="utf-8") as f:
+              html = f.read()
+          snippet = """  <script>
+            // Single Page Apps for GitHub Pages -- restaura a rota real
+            // codificada por web/404.html antes do GoRouter inicializar.
+            (function(l) {
+              if (l.search[1] === '/') {
+                var decoded = l.search.slice(1).split('&').map(function(s) {
+                  return s.replace(/~and~/g, '&');
+                }).join('?');
+                window.history.replaceState(null, null,
+                    l.pathname.slice(0, -1) + decoded + l.hash
+                );
+              }
+            }(window.location));
+          </script>
+          """
+          if "history.replaceState" not in html:
+              html = re.sub(r"(<head>\s*)", r"\1\n" + snippet, html, count=1)
+              with open(path, "w", encoding="utf-8") as f:
+                  f.write(html)
+          PYEOF
+          grep -q "history.replaceState" web/index.html && echo "OK: script injetado" || (echo "FALHA: script não encontrado em web/index.html" && exit 1)
+
       - name: Instalar dependências
         run: flutter pub get
 

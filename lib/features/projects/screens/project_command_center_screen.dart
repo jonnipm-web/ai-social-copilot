@@ -4,11 +4,13 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../data/models/copilot_context_data.dart';
 import '../../../data/models/ecosystem_score.dart';
 import '../../../data/models/opportunity_lab_item.dart';
 import '../../../data/models/project.dart';
 import '../../../data/models/project_intelligence_profile.dart';
 import '../../../providers/ecosystem_intelligence_provider.dart';
+import '../../../providers/ive_context_provider.dart';
 import '../../../providers/knowledge_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
 import '../../../providers/project_intelligence_provider.dart';
@@ -777,7 +779,7 @@ class _ProjectCard extends StatelessWidget {
 
 // ── Project Detail Bottom Sheet ───────────────────────────────────────────────
 
-class _ProjectDetailSheet extends StatelessWidget {
+class _ProjectDetailSheet extends ConsumerWidget {
   const _ProjectDetailSheet({
     required this.project,
     required this.onStatusChange,
@@ -812,7 +814,7 @@ class _ProjectDetailSheet extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final s = ecosystemScore;
 
     return DraggableScrollableSheet(
@@ -1001,7 +1003,7 @@ class _ProjectDetailSheet extends StatelessWidget {
               const Divider(color: Color(0xFF333355)),
               const SizedBox(height: 12),
               _sectionTitle('Perfil de Inteligência'),
-              _intelligenceSection(context, intelligenceProfile!),
+              _intelligenceSection(context, ref, intelligenceProfile!),
               const SizedBox(height: 8),
             ],
 
@@ -1085,7 +1087,7 @@ class _ProjectDetailSheet extends StatelessWidget {
     );
   }
 
-  Widget _intelligenceSection(BuildContext context, ProjectIntelligenceProfile p) {
+  Widget _intelligenceSection(BuildContext context, WidgetRef ref, ProjectIntelligenceProfile p) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1202,9 +1204,16 @@ class _ProjectDetailSheet extends StatelessWidget {
             label: const Text('Perguntar à IVE sobre este perfil', style: TextStyle(fontSize: 13)),
             onPressed: () {
               Navigator.of(context).pop();
+              // IVE-COMMERCIAL-TARGETED-REMEDIATION-04: mesmo padrão dos
+              // demais pontos de entrada -- sem isto, caía no
+              // CopilotContextData() vazio padrão de showCopilotChat().
+              final ctx = ref.read(iveContextDataProvider).valueOrNull;
+              final contextData =
+                  ctx != null ? CopilotContextData.fromIveContext(ctx) : CopilotContextData();
               showCopilotChat(
                 context,
                 screenName:     'Projetos',
+                contextData:    contextData,
                 initialMessage: 'Analise o perfil de inteligência do projeto "${p.project.name}": '
                     'nicho ${p.niche}, público ${p.targetAudience}, maturidade ${p.maturityLabel}. '
                     '${p.missingKnowledge.isNotEmpty ? "Lacunas: ${p.missingKnowledge.join(", ")}." : ""} '

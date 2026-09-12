@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'context_copilot_widget.dart' show showCopilotChat;
+import '../../data/models/copilot_context_data.dart';
+import '../../providers/ive_context_provider.dart';
 
 /// Botão "Explicar com IVE" — qualquer componente pode adicionar.
 ///
 /// Ao tocar, abre o chat da IVE já com a pergunta pre-enviada.
-class IveExplainButton extends StatelessWidget {
+class IveExplainButton extends ConsumerWidget {
   final String question;
   final String screenName;
   final String? label;
@@ -20,10 +23,10 @@ class IveExplainButton extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (compact) {
       return GestureDetector(
-        onTap: () => _open(context),
+        onTap: () => _open(context, ref),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -55,15 +58,26 @@ class IveExplainButton extends StatelessWidget {
       ),
       icon: const Text('💬', style: TextStyle(fontSize: 13)),
       label: Text(label ?? 'Explicar com IVE', style: const TextStyle(fontSize: 12)),
-      onPressed: () => _open(context),
+      onPressed: () => _open(context, ref),
     );
   }
 
-  void _open(BuildContext context) {
+  // IVE-COMMERCIAL-TARGETED-REMEDIATION-04 (achado do Codex Gate, 2ª
+  // rodada) — este era um dos vários pontos de entrada do chat que a
+  // consolidação inicial desta missão não tinha encontrado: chamava
+  // showCopilotChat() sem NENHUM contextData, caindo no
+  // CopilotContextData() vazio padrão do próprio showCopilotChat.
+  // Mesma fonte (iveContextDataProvider) e mesma conversão
+  // (CopilotContextData.fromIveContext) usadas em todos os outros pontos
+  // de entrada agora.
+  void _open(BuildContext context, WidgetRef ref) {
+    final ctx = ref.read(iveContextDataProvider).valueOrNull;
+    final contextData = ctx != null ? CopilotContextData.fromIveContext(ctx) : CopilotContextData();
     showCopilotChat(
       context,
       screenName:     screenName,
       initialMessage: question,
+      contextData:    contextData,
     );
   }
 }

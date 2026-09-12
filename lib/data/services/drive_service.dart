@@ -54,10 +54,43 @@ class DriveService {
     scopes: ['https://www.googleapis.com/auth/drive.readonly'],
   );
 
-  Future<bool> get isSignedIn => _googleSignIn.isSignedIn();
+  // IVE-COMMERCIAL-TARGETED-REMEDIATION-04 — causa raiz real do
+  // "Null check operator used on a null value" reportado no picker do
+  // Drive: bug documentado e conhecido do próprio pacote google_sign_in /
+  // google_sign_in_web, onde signInSilently() (sem sessão em cache,
+  // sobretudo em Web) pode lançar essa exceção internamente em vez de
+  // simplesmente retornar null -- o pacote assume, em parte do seu
+  // código interno, que "usuário conhecido" implica objeto não-nulo, mas
+  // a plataforma Web pode devolver um estado degenerado que rompe essa
+  // suposição. Isto não é um bug do nosso código; é uma falha de uma
+  // dependência externa. A correção robusta e segura aqui não é reescrever
+  // o pacote -- é nunca deixar essa chamada específica propagar uma
+  // exceção não tratada para fora do nosso próprio código, tratando
+  // "silentSignIn lançou" exatamente como "silentSignIn retornou null"
+  // (nenhuma sessão em cache -- cai para o fluxo interativo de login).
+  Future<GoogleSignInAccount?> _signInSilentlySafe() async {
+    try {
+      return await _googleSignIn.signInSilently();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // Mesma proteção: isSignedIn() pode consultar o mesmo estado
+  // problemático internamente. Falha segura para "não conectado" em vez
+  // de deixar o erro subir e derrubar a tela (era chamado sem nenhum
+  // try/catch em initState() do picker -- exatamente onde o crash
+  // relatado acontecia, sem chance de mostrar qualquer mensagem amigável).
+  Future<bool> get isSignedIn async {
+    try {
+      return await _googleSignIn.isSignedIn();
+    } catch (_) {
+      return false;
+    }
+  }
 
   Future<GoogleSignInAccount?> signIn() async {
-    var account = await _googleSignIn.signInSilently();
+    var account = await _signInSilentlySafe();
     account ??= await _googleSignIn.signIn();
     return account;
   }
@@ -65,8 +98,7 @@ class DriveService {
   Future<void> signOut() => _googleSignIn.signOut();
 
   Future<String?> _token() async {
-    final account =
-        _googleSignIn.currentUser ?? await _googleSignIn.signInSilently();
+    final account = _googleSignIn.currentUser ?? await _signInSilentlySafe();
     if (account == null) return null;
     final auth = await account.authentication;
     return auth.accessToken;
@@ -93,14 +125,31 @@ class DriveService {
       throw Exception('Drive API erro ${res.statusCode}');
     }
 
+    // IVE-COMMERCIAL-TARGETED-REMEDIATION-04 (achado do Codex Gate) --
+    // `as String` direto num campo ausente/nulo lança
+    // "type 'Null' is not a subtype of type 'String'", derrubando a
+    // listagem inteira por causa de UM item malformado. A API do Drive
+    // já garante id/name/mimeType quando o campo é devolvido (pedimos
+    // exatamente esses no `fields=`), mas nunca confiar cegamente numa
+    // resposta externa -- itens sem os campos esperados são
+    // silenciosamente ignorados (`whereType`) em vez de derrubar a tela.
     final data = json.decode(res.body) as Map<String, dynamic>;
-    return (data['files'] as List? ?? [])
-        .map((f) => DriveFile(
-              id:           f['id'] as String,
-              name:         f['name'] as String,
-              mimeType:     f['mimeType'] as String,
-              modifiedTime: f['modifiedTime'] as String?,
-            ))
+    final rawFiles = data['files'] as List? ?? [];
+    return rawFiles
+        .whereType<Map<String, dynamic>>()
+        .map((f) {
+          final id = f['id'];
+          final name = f['name'];
+          final mimeType = f['mimeType'];
+          if (id is! String || name is! String || mimeType is! String) return null;
+          return DriveFile(
+            id: id,
+            name: name,
+            mimeType: mimeType,
+            modifiedTime: f['modifiedTime'] as String?,
+          );
+        })
+        .whereType<DriveFile>()
         .toList();
   }
 
@@ -169,7 +218,7 @@ class DriveService {
       },
     );
 
-    if (response.data == null) {
+    if (response.data == null || response.data is! Map<String, dynamic>) {
       throw Exception('Resposta vazia do serviço de extração de texto.');
     }
 

@@ -27,12 +27,36 @@ class FileImportService {
 
   static const _supportedExtensions = ['pdf', 'docx', 'txt'];
 
+  // IVE-COMMERCIAL-TARGETED-REMEDIATION-04 — nenhum destes tinha timeout
+  // antes, o que permitia a UI ficar presa em "Extraindo texto…"
+  // indefinidamente (observado em auditoria anterior: zero chamadas ao
+  // process-file nos logs do período, ou seja, o travamento aconteceu
+  // ANTES de qualquer rede -- no próprio picker/leitura de bytes).
+  //
+  // _pickTimeout é deliberadamente generoso (um humano real pode demorar
+  // para navegar e escolher um arquivo) -- o objetivo não é apressar o
+  // usuário, é garantir que um diálogo que nunca resolve (cancelamento
+  // mal tratado pelo file_picker no Web, ou uma automação de navegador
+  // que não consegue completar a interação com o diálogo nativo) acabe
+  // desistindo com um erro claro e reversível em vez de travar para
+  // sempre. _readTimeout e _extractTimeout são curtos porque são
+  // operações de máquina (ler bytes já em memória do navegador / uma
+  // chamada de rede) que devem ser rápidas quando funcionam.
+  static const _pickTimeout = Duration(minutes: 5);
+  static const _readTimeout = Duration(seconds: 30);
+  static const _extractTimeout = Duration(seconds: 60);
+
   Future<FileImportResult?> pickAndExtract() async {
     // file_picker 12.x: FilePicker.pickFile() returns PlatformFile?
     // PlatformFile.readAsBytes() replaces the removed .bytes getter
     final file = await FilePicker.pickFile(
       type: FileType.custom,
       allowedExtensions: _supportedExtensions,
+    ).timeout(
+      _pickTimeout,
+      onTimeout: () => throw Exception(
+        'Tempo esgotado ao selecionar o arquivo. Tente novamente.',
+      ),
     );
 
     if (file == null) return null;
@@ -42,7 +66,12 @@ class FileImportService {
         ? fileName.split('.').last.toLowerCase()
         : 'txt';
 
-    final bytes = await file.readAsBytes();
+    final bytes = await file.readAsBytes().timeout(
+      _readTimeout,
+      onTimeout: () => throw Exception(
+        'Tempo esgotado ao ler o arquivo. Tente novamente.',
+      ),
+    );
     if (bytes.isEmpty) throw Exception('Não foi possível ler o arquivo.');
 
     // TXT nunca passa pelo process-file (que já checa tamanho antes de
@@ -77,9 +106,14 @@ class FileImportService {
         'file_base64': base64Content,
         'file_type':   extension,
       },
+    ).timeout(
+      _extractTimeout,
+      onTimeout: () => throw Exception(
+        'O servidor demorou demais para extrair o texto. Tente novamente.',
+      ),
     );
 
-    if (response.data == null) {
+    if (response.data == null || response.data is! Map<String, dynamic>) {
       throw Exception('Resposta vazia do serviço de extração.');
     }
 

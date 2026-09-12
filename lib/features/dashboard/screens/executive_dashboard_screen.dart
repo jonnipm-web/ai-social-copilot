@@ -13,6 +13,8 @@ import '../../../providers/market_analysis_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../providers/roi_metric_provider.dart';
+import '../../../data/models/copilot_context_data.dart';
+import '../../../providers/ive_context_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/context_copilot_widget.dart' show showCopilotChat;
 
@@ -93,7 +95,14 @@ class ExecutiveDashboardScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white54),
             tooltip: 'Perguntar à IVE',
-            onPressed: () => showCopilotChat(context, screenName: 'Business OS'),
+            // IVE-COMMERCIAL-TARGETED-REMEDIATION-04 (achado do Codex Gate,
+            // 2ª rodada) -- outro ponto de entrada do chat sem contextData
+            // nenhum, encontrado pela mesma auditoria.
+            onPressed: () {
+              final ctx = ref.read(iveContextDataProvider).valueOrNull;
+              final contextData = ctx != null ? CopilotContextData.fromIveContext(ctx) : CopilotContextData();
+              showCopilotChat(context, screenName: 'Business OS', contextData: contextData);
+            },
           ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: Colors.white54),

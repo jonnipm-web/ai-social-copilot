@@ -60,6 +60,31 @@ class IveContextData {
   });
 }
 
+// ── Seleção de conhecimento para grounding — extraída como função pura ────────
+//
+// IVE-COMMERCIAL-TARGETED-REMEDIATION-04 (achado P1 do Codex Gate): a versão
+// anterior (inline no provider) usava `projectItems.isNotEmpty ? projectItems
+// : knowledgeRaw`, que caía em knowledgeRaw (TODO o conhecimento do usuário,
+// de todos os projetos) sempre que o projeto ativo existia mas tinha zero
+// itens vinculados -- vazando conhecimento de OUTROS projetos do mesmo
+// usuário para o grounding deste projeto, violando o critério de isolamento
+// por projeto desta própria missão. O fallback para "todo o conhecimento do
+// usuário" só é correto quando NÃO HÁ projeto ativo algum (projectId ==
+// null); quando há um projeto ativo, o resultado deve respeitar seu
+// isolamento mesmo que fique vazio.
+//
+// Extraída como função pura (sem tocar Supabase/providers) especificamente
+// para permitir teste automatizado direto do isolamento, sem precisar mockar
+// a cadeia de providers que o restante deste arquivo deliberadamente não
+// mocka (ver nota de escopo em test/data/models/copilot_context_data_test.dart).
+List<KnowledgeItem> selectKnowledgeForGrounding(
+  List<KnowledgeItem> knowledgeRaw,
+  String? activeProjectId,
+) {
+  if (activeProjectId == null) return knowledgeRaw;
+  return knowledgeRaw.where((k) => k.projectId == activeProjectId).toList();
+}
+
 // ── Provider — FutureProvider derivado dos providers de ecossistema ───────────
 
 final iveContextDataProvider = FutureProvider.autoDispose<IveContextData>((ref) async {
@@ -80,12 +105,8 @@ final iveContextDataProvider = FutureProvider.autoDispose<IveContextData>((ref) 
     onError: (_, __) => <KnowledgeItem>[],
   );
 
-  // Filtra por projeto ativo; fallback para todos os itens se nenhum vinculado
   final projectId = top?.project.id;
-  final projectItems = projectId != null
-      ? knowledgeRaw.where((k) => k.projectId == projectId).toList()
-      : <KnowledgeItem>[];
-  final knowledgeForGrounding = projectItems.isNotEmpty ? projectItems : knowledgeRaw;
+  final knowledgeForGrounding = selectKnowledgeForGrounding(knowledgeRaw, projectId);
 
   final knowledgeSorted = [...knowledgeForGrounding]
     ..sort((a, b) => b.opportunityScore.compareTo(a.opportunityScore));

@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../data/models/copilot_context_data.dart';
 import '../../../data/models/decision_validation.dart';
 import '../../../data/models/ecosystem_score.dart';
 import '../../../data/models/priority_recommendation.dart';
 import '../../../providers/auto_bootstrap_provider.dart';
 import '../../../providers/decision_validation_provider.dart';
 import '../../../providers/ecosystem_intelligence_provider.dart';
+import '../../../providers/ive_context_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
 import '../../../providers/action_queue_provider.dart';
 import '../../../data/models/ive_state.dart';
@@ -356,11 +358,21 @@ class _Top5Tab extends ConsumerWidget {
                         IveAction(
                           emoji: '💬',
                           label: 'Perguntar à IVE sobre esta oportunidade',
-                          onTap: () => showCopilotChat(
-                            context,
-                            screenName:     'Decisões',
-                            initialMessage: 'Analise a oportunidade "${l.title}" (score ${l.finalScore}) e diga como aproveitá-la.',
-                          ),
+                          // IVE-COMMERCIAL-TARGETED-REMEDIATION-04: mesmo
+                          // padrão dos demais pontos de entrada -- sem isto,
+                          // caía no CopilotContextData() vazio padrão.
+                          onTap: () {
+                            final ctx = ref.read(iveContextDataProvider).valueOrNull;
+                            final contextData = ctx != null
+                                ? CopilotContextData.fromIveContext(ctx)
+                                : CopilotContextData();
+                            showCopilotChat(
+                              context,
+                              screenName:     'Decisões',
+                              contextData:    contextData,
+                              initialMessage: 'Analise a oportunidade "${l.title}" (score ${l.finalScore}) e diga como aproveitá-la.',
+                            );
+                          },
                         ),
                       ],
                       screenName: 'Decisões',
@@ -511,11 +523,11 @@ class _Top5Section extends StatelessWidget {
   }
 }
 
-class _ProjectCard extends StatelessWidget {
+class _ProjectCard extends ConsumerWidget {
   final EcosystemScore score;
   const _ProjectCard({required this.score});
 
-  void _showDetail(BuildContext context) {
+  void _showDetail(BuildContext context, WidgetRef ref) {
     IveDetailSheet.show(
       context,
       title:            score.project.name,
@@ -542,11 +554,20 @@ class _ProjectCard extends StatelessWidget {
           emoji:       '💬',
           label:       'Perguntar à IVE como melhorar este score',
           description: 'Abrir chat com contexto deste projeto',
-          onTap: () => showCopilotChat(
-            context,
-            screenName:     'Decisões',
-            initialMessage: 'Como posso melhorar o Ecosystem Score do projeto "${score.project.name}" que está em ${score.ecosystemScore}/100? Explique cada componente e quais ações têm maior impacto.',
-          ),
+          // IVE-COMMERCIAL-TARGETED-REMEDIATION-04: mesmo padrão dos demais
+          // pontos de entrada -- sem isto, caía no CopilotContextData()
+          // vazio padrão.
+          onTap: () {
+            final ctx = ref.read(iveContextDataProvider).valueOrNull;
+            final contextData =
+                ctx != null ? CopilotContextData.fromIveContext(ctx) : CopilotContextData();
+            showCopilotChat(
+              context,
+              screenName:     'Decisões',
+              contextData:    contextData,
+              initialMessage: 'Como posso melhorar o Ecosystem Score do projeto "${score.project.name}" que está em ${score.ecosystemScore}/100? Explique cada componente e quais ações têm maior impacto.',
+            );
+          },
         ),
       ],
       screenName: 'Decisões',
@@ -554,10 +575,10 @@ class _ProjectCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final color = _scoreColor(score.ecosystemScore);
     return GestureDetector(
-      onTap: () => _showDetail(context),
+      onTap: () => _showDetail(context, ref),
       child: Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
@@ -1049,7 +1070,7 @@ class _GateMetricRow extends StatelessWidget {
   }
 }
 
-class _RecCard extends StatelessWidget {
+class _RecCard extends ConsumerWidget {
   final PriorityRecommendation rec;
   const _RecCard({required this.rec});
 
@@ -1077,7 +1098,7 @@ class _RecCard extends StatelessWidget {
     }
   }
 
-  void _showDetail(BuildContext context) {
+  void _showDetail(BuildContext context, WidgetRef ref) {
     IveDetailSheet.show(
       context,
       title:            rec.title,
@@ -1092,11 +1113,20 @@ class _RecCard extends StatelessWidget {
         IveAction(
           emoji: '💬',
           label: 'Perguntar à IVE sobre esta recomendação',
-          onTap: () => showCopilotChat(
-            context,
-            screenName:     'Decisões',
-            initialMessage: 'Explique a recomendação "${rec.title}" e me dê um plano de ação concreto.',
-          ),
+          // IVE-COMMERCIAL-TARGETED-REMEDIATION-04: mesmo padrão dos demais
+          // pontos de entrada -- sem isto, caía no CopilotContextData()
+          // vazio padrão.
+          onTap: () {
+            final ctx = ref.read(iveContextDataProvider).valueOrNull;
+            final contextData =
+                ctx != null ? CopilotContextData.fromIveContext(ctx) : CopilotContextData();
+            showCopilotChat(
+              context,
+              screenName:     'Decisões',
+              contextData:    contextData,
+              initialMessage: 'Explique a recomendação "${rec.title}" e me dê um plano de ação concreto.',
+            );
+          },
         ),
       ],
       screenName: 'Decisões',
@@ -1104,9 +1134,9 @@ class _RecCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return GestureDetector(
-      onTap: () => _showDetail(context),
+      onTap: () => _showDetail(context, ref),
       child: Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
