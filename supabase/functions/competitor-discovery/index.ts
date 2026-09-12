@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { AuthError, resolveAuthenticatedUser, unauthorizedResponse } from "../_shared/auth.ts";
+import { normalizeLanguage, withLanguageDirective } from "../_shared/language.ts";
 import { quotaBlockedResponse, refundQuota, reserveQuota } from "../_shared/quota.ts";
 
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") ?? "";
@@ -38,7 +39,6 @@ Regras:
 - similarity_score, authority_score, relevance_score: 0-100
 - Retorne entre 5 e 10 concorrentes
 - Misture concorrentes diretos, indiretos e aspiracionais
-- Todas as respostas em português brasileiro
 - URLs devem ser URLs reais e plausíveis`;
 
 serve(async (req) => {
@@ -56,7 +56,8 @@ serve(async (req) => {
 
   let quotaReserved = false;
   try {
-    const { input } = await req.json();
+    const { input, language: rawLanguage } = await req.json();
+    const language = normalizeLanguage(rawLanguage);
 
     if (!input) {
       return new Response(JSON.stringify({ error: "Input obrigatório" }), {
@@ -79,7 +80,7 @@ serve(async (req) => {
         model: "openai/gpt-oss-120b",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: `Input/nicho/projeto: ${input}\n\nIdentifique os concorrentes e retorne o JSON.` },
+          { role: "user", content: withLanguageDirective(language, `Input/nicho/projeto: ${input}\n\nIdentifique os concorrentes e retorne o JSON.`) },
         ],
         temperature: 0.4,
         max_completion_tokens: 3000,

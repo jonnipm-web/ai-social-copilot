@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { AuthError, resolveAuthenticatedUser, unauthorizedResponse } from "../_shared/auth.ts";
+import { normalizeLanguage, withLanguageDirective } from "../_shared/language.ts";
 import { quotaBlockedResponse, refundQuota, reserveQuota } from "../_shared/quota.ts";
 
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") ?? "";
@@ -41,8 +42,7 @@ Regras:
 - Todos os scores: 0-100
 - overall_score: média ponderada dos demais scores
 - Retorne exatamente 10 nichos/sub-nichos/micro-nichos rankeados por overall_score decrescente
-- Misture os 3 níveis: pelo menos 3 de cada tipo
-- Todas as respostas em português brasileiro`;
+- Misture os 3 níveis: pelo menos 3 de cada tipo`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -59,7 +59,8 @@ serve(async (req) => {
 
   let quotaReserved = false;
   try {
-    const { input } = await req.json();
+    const { input, language: rawLanguage } = await req.json();
+    const language = normalizeLanguage(rawLanguage);
 
     if (!input) {
       return new Response(JSON.stringify({ error: "Input obrigatório" }), {
@@ -82,7 +83,7 @@ serve(async (req) => {
         model: "openai/gpt-oss-120b",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: `Input/nicho/projeto: ${input}\n\nMapeie os top 10 nichos/sub-nichos/micro-nichos e retorne o JSON.` },
+          { role: "user", content: withLanguageDirective(language, `Input/nicho/projeto: ${input}\n\nMapeie os top 10 nichos/sub-nichos/micro-nichos e retorne o JSON.`) },
         ],
         temperature: 0.4,
         max_completion_tokens: 4000,

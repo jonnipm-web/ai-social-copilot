@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { AuthError, resolveAuthenticatedUser, unauthorizedResponse } from "../_shared/auth.ts";
+import { normalizeLanguage, withLanguageDirective } from "../_shared/language.ts";
 import { quotaBlockedResponse, refundQuota, reserveQuota } from "../_shared/quota.ts";
 
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") ?? "";
@@ -53,8 +54,7 @@ Regras:
 - Cenário agressivo: com investimento significativo em tráfego e produto
 - percentage em revenue_sources deve somar 100
 - Defina 5-7 marcos progressivos
-- Todas as respostas em português brasileiro
-- Valores em Reais (BRL)`;
+- Valores em Reais (BRL) independentemente do idioma da resposta`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -71,7 +71,8 @@ serve(async (req) => {
 
   let quotaReserved = false;
   try {
-    const { input, project_name } = await req.json();
+    const { input, project_name, language: rawLanguage } = await req.json();
+    const language = normalizeLanguage(rawLanguage);
 
     if (!input) {
       return new Response(JSON.stringify({ error: "Input obrigatório" }), {
@@ -96,7 +97,7 @@ serve(async (req) => {
           { role: "system", content: SYSTEM_PROMPT },
           {
             role: "user",
-            content: `Projeto: ${project_name || "Projeto Digital"}\nInput/nicho/mercado: ${input}\n\nCrie o plano de receita e retorne o JSON.`,
+            content: withLanguageDirective(language, `Projeto: ${project_name || "Projeto Digital"}\nInput/nicho/mercado: ${input}\n\nCrie o plano de receita e retorne o JSON.`),
           },
         ],
         temperature: 0.3,

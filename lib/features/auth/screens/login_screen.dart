@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/snackbar_utils.dart' show showErrorSnack, extractErrorMessage;
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/loading_button.dart';
@@ -82,6 +83,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     final authState = ref.watch(authNotifierProvider);
     final isLoading = authState.isLoading;
 
@@ -111,7 +113,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    _isSignUp ? 'Crie sua conta' : 'Bem-vindo de volta',
+                    _isSignUp ? t.authCreateAccount : t.authWelcomeBack,
                     textAlign: TextAlign.center,
                     style: Theme.of(context)
                         .textTheme
@@ -128,7 +130,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.g_mobiledata_rounded, size: 26),
-                    label: const Text('Continuar com Google'),
+                    label: Text(t.authContinueWithGoogle),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       side: const BorderSide(color: Colors.white24),
@@ -141,7 +143,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         child: Text(
-                          'ou',
+                          t.commonOr,
                           style: Theme.of(context)
                               .textTheme
                               .bodySmall
@@ -154,20 +156,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: 20),
                   AppTextField(
                     controller: _emailCtrl,
-                    label: 'E-mail',
+                    label: t.authEmail,
                     keyboardType: TextInputType.emailAddress,
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) {
-                        return 'Informe seu e-mail';
+                        return t.authEmailRequired;
                       }
-                      if (!v.contains('@')) return 'E-mail inválido';
+                      if (!v.contains('@')) return t.authEmailInvalid;
                       return null;
                     },
                   ),
                   const SizedBox(height: 16),
                   AppTextField(
                     controller: _passwordCtrl,
-                    label: 'Senha',
+                    label: t.authPassword,
                     obscureText: _obscurePassword,
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -180,16 +182,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           setState(() => _obscurePassword = !_obscurePassword),
                     ),
                     validator: (v) {
-                      if (v == null || v.isEmpty) return 'Informe sua senha';
+                      if (v == null || v.isEmpty) return t.authPasswordRequired;
                       if (_isSignUp && v.length < 6) {
-                        return 'Mínimo de 6 caracteres';
+                        return t.authPasswordMinLength;
                       }
                       return null;
                     },
                   ),
                   const SizedBox(height: 32),
                   LoadingButton(
-                    label: _isSignUp ? 'Criar conta' : 'Entrar',
+                    label: _isSignUp ? t.authSignUp : t.authSignIn,
                     isLoading: isLoading,
                     onPressed: _submit,
                   ),
@@ -199,9 +201,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ? null
                         : () => setState(() => _isSignUp = !_isSignUp),
                     child: Text(
-                      _isSignUp
-                          ? 'Já tem conta? Faça login'
-                          : 'Não tem conta? Cadastre-se',
+                      _isSignUp ? t.authHasAccount : t.authNoAccount,
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.primary,
                       ),

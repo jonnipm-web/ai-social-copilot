@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/language_utils.dart';
 import '../../../providers/market_analysis_provider.dart';
 
 class RevenuePlannerScreen extends ConsumerStatefulWidget {
@@ -35,7 +36,7 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
     setState(() { _running = true; _error = null; });
     try {
       final analysis = await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
-      await ref.read(marketAnalysisServiceProvider).buildRevenuePlan(widget.analysisId, analysis.input, name);
+      await ref.read(marketAnalysisServiceProvider).buildRevenuePlan(widget.analysisId, analysis.input, name, language: backendLanguageCode(context));
       ref.invalidate(revenuePlanByAnalysisProvider(widget.analysisId));
     } catch (e) {
       setState(() => _error = e.toString().replaceFirst('Exception: ', ''));

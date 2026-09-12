@@ -14,6 +14,7 @@ import '../../../providers/market_intelligence_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
 import '../../../providers/project_intelligence_provider.dart';
 import '../../../providers/project_provider.dart';
+import '../../../providers/profile_provider.dart';
 import '../../../providers/roi_metric_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 
@@ -48,6 +49,41 @@ class IntelligenceDebugHubScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // IVE-COMMERCIAL-RELEASE-CONTROL-PLANE-01 — este hub expõe scores e
+    // dados internos de todos os projetos/personas, mas nunca teve nenhum
+    // gate de admin (nem visual nem de rota) apesar de estar listado no
+    // drawer para qualquer usuário autenticado. Direct URL access era, na
+    // prática, o único "controle" existente. Client-side aqui é só UX (a
+    // proteção real continua sendo RLS/backend nos dados que cada aba lê).
+    //
+    // Codex Gate (P1, 2ª rodada desta mesma missão): a primeira versão
+    // desta correção (`currentProfile != null && !currentProfile.isAdmin`)
+    // falhava ABERTA -- enquanto o FutureProvider ainda não resolveu (ou
+    // se falha), currentProfile é null, a condição inteira é false, e o
+    // hub inteiro renderiza (disparando a busca de dados sensíveis de
+    // cada aba) antes de qualquer confirmação real de que o usuário é
+    // admin. Aqui isso é ainda mais sério que no admin_panel_screen.dart
+    // original: as abas leem projetos/personas/oportunidades/scores de
+    // TODOS os registros visíveis ao usuário assim que montam. Correção:
+    // exigir positivamente `hasValue && isAdmin == true`.
+    final profileAsync = ref.watch(currentProfileProvider);
+    if (profileAsync.isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    // Codex Gate (P2, re-verificação): mesma correção defensiva de
+    // admin_panel_screen.dart -- exige hasValue && !hasError, fechando o
+    // caso teórico de um AsyncError reter um valor admin anterior.
+    final isAdmin = profileAsync.hasValue && !profileAsync.hasError && (profileAsync.value?.isAdmin ?? false);
+    if (!isAdmin) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Acesso Negado')),
+        body: const Center(
+          child: Text('Você não tem permissão para acessar esta área.',
+              style: TextStyle(color: Colors.white54)),
+        ),
+      );
+    }
+
     return DefaultTabController(
       length: _tabs.length,
       child: Scaffold(

@@ -10,6 +10,12 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # IVE-COMMERCIAL-RELEASE-CONTROL-PLANE-01 — i18n PT/EN oficial do Flutter
+  # (flutter_localizations + gen-l10n). Nenhum sistema de i18n existia antes
+  # desta missão (auditado: sem pacote intl/easy_localization/l10n em uso).
+  flutter_localizations:
+    sdk: flutter
+
   # Supabase — fixado em <2.15.0 para evitar dependência no passkeys_web (crasha no GitHub Pages)
   supabase_flutter: ">=2.5.6 <2.15.0"
 
@@ -48,6 +54,11 @@ dependencies:
   # chuva explicitamente para poder importá-lo diretamente.
   url_launcher: ^6.3.1
 
+  # IVE-COMMERCIAL-RELEASE-CONTROL-PLANE-01 — versão/build para a tela
+  # "Sobre" (About). Já era resolvido transitivamente via
+  # dependency_overrides abaixo; declarado direto para poder importar.
+  package_info_plus: ^10.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -63,6 +74,7 @@ dependency_overrides:
 
 flutter:
   uses-material-design: true
+  generate: true
   assets:
     - .env
     - assets/ive/reference/

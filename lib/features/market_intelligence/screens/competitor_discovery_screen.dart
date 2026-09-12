@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/language_utils.dart';
 import '../../../data/models/competitor.dart';
 import '../../../providers/market_analysis_provider.dart';
 
@@ -26,7 +27,7 @@ class _CompetitorDiscoveryScreenState
       final analysis = await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
       await ref
           .read(marketAnalysisServiceProvider)
-          .discoverCompetitors(widget.analysisId, analysis.input);
+          .discoverCompetitors(widget.analysisId, analysis.input, language: backendLanguageCode(context));
       ref.invalidate(competitorsByAnalysisProvider(widget.analysisId));
     } catch (e) {
       setState(() => _error = e.toString().replaceFirst('Exception: ', ''));

@@ -6,6 +6,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage, showErrorSnack;
 import '../../../data/models/quota_info.dart';
 import '../../../data/services/billing_service.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/quota_provider.dart';
 
 class UpgradeScreen extends ConsumerWidget {
@@ -13,11 +14,12 @@ class UpgradeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = AppLocalizations.of(context)!;
     final quotaAsync = ref.watch(currentQuotaProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Planos'),
+        title: Text(t.upgradePlansTitle),
         leading: const BackButton(),
       ),
       body: SingleChildScrollView(
@@ -30,11 +32,11 @@ class UpgradeScreen extends ConsumerWidget {
                 padding: EdgeInsets.symmetric(vertical: 60),
                 child: Center(child: CircularProgressIndicator()),
               ),
-              error: (err, _) => const Padding(
-                padding: EdgeInsets.symmetric(vertical: 40),
+              error: (err, _) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 40),
                 child: Text(
-                  'Não foi possível carregar seu plano agora. Tente novamente em instantes.',
-                  style: TextStyle(color: Colors.white54),
+                  t.upgradeLoadError,
+                  style: const TextStyle(color: Colors.white54),
                 ),
               ),
               data: (quota) => _UpgradeContent(quota: quota),
@@ -65,6 +67,7 @@ class _UpgradeContentState extends ConsumerState<_UpgradeContent> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     // Se o usuário já é Pro, mostra o limite REAL configurado no servidor
     // (profiles.monthly_limit) em vez do número padrão de marketing --
     // evita anunciar um limite diferente do que a cota realmente aplica
@@ -77,59 +80,66 @@ class _UpgradeContentState extends ConsumerState<_UpgradeContent> {
         _UsageBanner(quota: quota),
         const SizedBox(height: 28),
         _PlanCard(
-          title: 'Gratuito',
-          subtitle: 'Plano atual',
-          price: 'R\$ 0',
+          title: t.planFree,
+          subtitle: t.upgradeFreeSubtitle,
+          price: t.planFreePrice,
           period: '',
           isHighlighted: false,
           isCurrentPlan: !quota.isPro,
           badge: null,
-          features: const [
-            _Feature('${_UpgradeContent._freeLimit} análises de IA por mês', true),
-            _Feature('Análise de site, mercado e concorrência', true),
-            _Feature('Estratégia e ações priorizadas', true),
-            _Feature('Análises ilimitadas', false),
-            _Feature('Prioridade no processamento', false),
-            _Feature('Suporte prioritário', false),
+          features: [
+            _Feature(t.planFreeAnalyses(_UpgradeContent._freeLimit), true),
+            _Feature(t.upgradeFeatureWebsiteAnalysis, true),
+            _Feature(t.upgradeFeatureStrategyActions, true),
+            _Feature(t.upgradeFeatureUnlimited, false),
+            _Feature(t.upgradeFeaturePriority, false),
+            _Feature(t.upgradeFeatureSupport, false),
           ],
-          buttonLabel: quota.isPro ? 'Plano anterior' : 'Plano atual',
+          buttonLabel: quota.isPro ? t.upgradePreviousPlan : t.planCurrentPlan,
           onPressed: null,
         ),
         const SizedBox(height: 16),
         _PlanCard(
-          title: 'Pro',
-          subtitle: 'Para quem já está executando a estratégia',
-          price: 'R\$ 29',
-          period: '/mês',
+          title: t.planPro,
+          subtitle: t.upgradeProSubtitle,
+          price: t.planProPriceAmount,
+          period: t.planProPricePeriod,
           isHighlighted: !quota.isPro,
           isCurrentPlan: quota.isPro,
-          badge: quota.isPro ? 'Seu plano' : 'Mais popular',
+          badge: quota.isPro ? t.upgradeCurrentPlanBadge : t.upgradeMostPopular,
           features: [
-            _Feature('$displayedProLimit análises de IA por mês', true),
-            const _Feature('Análise de site, mercado e concorrência', true),
-            const _Feature('Estratégia e ações priorizadas', true),
-            const _Feature('Prioridade no processamento', true),
-            const _Feature('Suporte prioritário por e-mail', true),
-            const _Feature('Acesso a novos recursos primeiro', true),
+            _Feature(t.planProAnalyses(displayedProLimit), true),
+            _Feature(t.upgradeFeatureWebsiteAnalysis, true),
+            _Feature(t.upgradeFeatureStrategyActions, true),
+            _Feature(t.upgradeFeaturePriority, true),
+            _Feature(t.upgradeFeatureSupportEmail, true),
+            _Feature(t.upgradeFeatureEarlyAccess, true),
           ],
           buttonLabel: quota.isPro
-              ? 'Plano atual'
-              : (_isRedirecting ? 'Abrindo checkout...' : '🚀  Assinar Pro — R\$ 29/mês'),
+              ? t.planCurrentPlan
+              : (_isRedirecting ? t.checkoutOpening : t.upgradeSubscribeCta),
           onPressed: quota.isPro || _isRedirecting ? null : _onUpgradeTap,
         ),
+        const SizedBox(height: 12),
+        Text(
+          t.planFounderNote,
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: Colors.white38, fontSize: 11),
+        ),
         const SizedBox(height: 32),
-        const _FaqSection(freeLimit: _UpgradeContent._freeLimit, proLimit: _UpgradeContent._proLimit),
+        _FaqSection(freeLimit: _UpgradeContent._freeLimit, proLimit: _UpgradeContent._proLimit),
       ],
     );
   }
 
   Future<void> _onUpgradeTap() async {
+    final t = AppLocalizations.of(context)!;
     setState(() => _isRedirecting = true);
     try {
       final url = await _billingService.createCheckoutSession();
       final launched = await launchUrl(Uri.parse(url), webOnlyWindowName: '_blank');
       if (!launched && mounted) {
-        showErrorSnack(context, 'Não foi possível abrir a página de pagamento.');
+        showErrorSnack(context, t.checkoutOpeningError);
       }
     } catch (e) {
       if (mounted) showErrorSnack(context, extractErrorMessage(e));
@@ -145,6 +155,7 @@ class _UsageBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     final remaining = quota.remaining;
 
     return Container(
@@ -162,7 +173,7 @@ class _UsageBanner extends StatelessWidget {
               const Icon(Icons.bolt_rounded, size: 18, color: Color(0xFF6C63FF)),
               const SizedBox(width: 6),
               Text(
-                'Análises de IA este mês',
+                t.upgradeUsageThisMonth,
                 style: Theme.of(context)
                     .textTheme
                     .titleSmall
@@ -193,8 +204,8 @@ class _UsageBanner extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             remaining > 0
-                ? '$remaining análise${remaining == 1 ? '' : 's'} restante${remaining == 1 ? '' : 's'} no plano ${quota.isPro ? 'Pro' : 'gratuito'}.'
-                : 'Você usou todas as análises de IA deste mês.',
+                ? t.upgradeAnalysesRemaining(remaining, quota.isPro ? t.planPro : t.planFree)
+                : t.upgradeUsedAllAnalyses,
             style: TextStyle(
               fontSize: 12,
               color: remaining > 0 ? Colors.white54 : Colors.red.shade300,

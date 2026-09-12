@@ -84,6 +84,11 @@ class AppConstants {
   // Fase 10F — Intelligence Debug & Observability
   static const routeIntelligenceDebug    = '/intelligence-debug';
 
+  // IVE-COMMERCIAL-RELEASE-CONTROL-PLANE-01
+  static const routeAccount              = '/account';
+  static const routeAbout                = '/about';
+  static const routeSupport              = '/support';
+
   // Tabelas Supabase
   static const tablePostGenerations   = 'post_generations';
   static const tableProfiles          = 'profiles';
@@ -144,4 +149,20 @@ class AppConstants {
 
   // Admin
   static const adminEmail = 'jpaulo.start@gmail.com';
+
+  // IVE-COMMERCIAL-RELEASE-CONTROL-PLANE-01 — informações comerciais/legais.
+  // supportEmail: única evidência de contato encontrada no histórico do
+  // próprio repositório (commit cf806fa, tela de Upgrade original, usado
+  // como canal real de suporte antes do checkout Stripe existir) -- não
+  // inventado por esta missão.
+  static const supportEmail = 'suporte@aisocialcopilot.com';
+  // Site oficial hoje é o próprio deploy do GitHub Pages -- nenhum domínio
+  // próprio foi encontrado configurado em nenhum lugar do repositório.
+  static const officialWebsiteUrl = 'https://jonnipm-web.github.io/ai-social-copilot/';
+  // Nenhuma página de Política de Privacidade ou Termos de Uso foi
+  // encontrada em nenhum lugar do repositório ou configuração conhecida.
+  // Deliberadamente null -- ver mission section 12 (não fabricar texto
+  // legal). Reportado como OWNER CONTENT REQUIRED no relatório final.
+  static const String? privacyPolicyUrl = null;
+  static const String? termsOfUseUrl = null;
 }

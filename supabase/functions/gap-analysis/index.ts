@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { AuthError, resolveAuthenticatedUser, unauthorizedResponse } from "../_shared/auth.ts";
+import { normalizeLanguage, withLanguageDirective } from "../_shared/language.ts";
 import { quotaBlockedResponse, refundQuota, reserveQuota } from "../_shared/quota.ts";
 
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") ?? "";
@@ -43,8 +44,7 @@ O JSON deve ter exatamente esta estrutura:
 
 Regras:
 - Seja específico e acionável em cada gap
-- Priorize oportunidades com maior potencial de retorno
-- Todas as respostas em português brasileiro`;
+- Priorize oportunidades com maior potencial de retorno`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -61,7 +61,8 @@ serve(async (req) => {
 
   let quotaReserved = false;
   try {
-    const { input } = await req.json();
+    const { input, language: rawLanguage } = await req.json();
+    const language = normalizeLanguage(rawLanguage);
 
     if (!input) {
       return new Response(JSON.stringify({ error: "Input obrigatório" }), {
@@ -84,7 +85,7 @@ serve(async (req) => {
         model: "openai/gpt-oss-120b",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: `Input/nicho/projeto: ${input}\n\nIdentifique todos os gaps e retorne o JSON.` },
+          { role: "user", content: withLanguageDirective(language, `Input/nicho/projeto: ${input}\n\nIdentifique todos os gaps e retorne o JSON.`) },
         ],
         temperature: 0.3,
         max_completion_tokens: 3000,

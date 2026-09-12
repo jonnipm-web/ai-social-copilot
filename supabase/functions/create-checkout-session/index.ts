@@ -70,8 +70,9 @@ export async function handler(
       if (upsertError) throw upsertError;
     }
 
-    const successUrl = Deno.env.get('APP_CHECKOUT_SUCCESS_URL') ?? 'https://insightvalues.example/upgrade/success';
-    const cancelUrl = Deno.env.get('APP_CHECKOUT_CANCEL_URL') ?? 'https://insightvalues.example/upgrade/cancel';
+    const appBaseUrl = 'https://jonnipm-web.github.io/ai-social-copilot/';
+    const successUrl = Deno.env.get('APP_CHECKOUT_SUCCESS_URL') ?? `${appBaseUrl}#/upgrade/success`;
+    const cancelUrl = Deno.env.get('APP_CHECKOUT_CANCEL_URL') ?? `${appBaseUrl}#/upgrade/cancel`;
 
     const session = await createCheckoutSession(
       { customerId, priceId, successUrl, cancelUrl, supabaseUserId: user.id },

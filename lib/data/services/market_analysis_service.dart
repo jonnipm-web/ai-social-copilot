@@ -37,13 +37,14 @@ class MarketAnalysisService {
     String input, {
     String inputType = 'url',
     String? projectId,
+    String language = 'pt-BR',
   }) async {
     final uid = _client.auth.currentUser?.id;
     if (uid == null) throw Exception('Usuário não autenticado.');
 
     final response = await _client.functions.invoke(
       AppConstants.edgeFunctionMarket,
-      body: {'input': input, 'input_type': inputType},
+      body: {'input': input, 'input_type': inputType, 'language': language},
     );
 
     if (response.data == null) throw Exception('Resposta vazia da análise de mercado.');
@@ -84,13 +85,13 @@ class MarketAnalysisService {
     return (rows as List).map((r) => Competitor.fromMap(r)).toList();
   }
 
-  Future<List<Competitor>> discoverCompetitors(String marketAnalysisId, String input) async {
+  Future<List<Competitor>> discoverCompetitors(String marketAnalysisId, String input, {String language = 'pt-BR'}) async {
     final uid = _client.auth.currentUser?.id;
     if (uid == null) throw Exception('Usuário não autenticado.');
 
     final response = await _client.functions.invoke(
       AppConstants.edgeFunctionCompetitor,
-      body: {'market_analysis_id': marketAnalysisId, 'input': input},
+      body: {'market_analysis_id': marketAnalysisId, 'input': input, 'language': language},
     );
 
     if (response.data == null) throw Exception('Resposta vazia da descoberta de concorrentes.');
@@ -131,13 +132,13 @@ class MarketAnalysisService {
     return row == null ? null : GapAnalysis.fromMap(row);
   }
 
-  Future<GapAnalysis> runGapAnalysis(String marketAnalysisId, String input) async {
+  Future<GapAnalysis> runGapAnalysis(String marketAnalysisId, String input, {String language = 'pt-BR'}) async {
     final uid = _client.auth.currentUser?.id;
     if (uid == null) throw Exception('Usuário não autenticado.');
 
     final response = await _client.functions.invoke(
       AppConstants.edgeFunctionGap,
-      body: {'market_analysis_id': marketAnalysisId, 'input': input},
+      body: {'market_analysis_id': marketAnalysisId, 'input': input, 'language': language},
     );
 
     if (response.data == null) throw Exception('Resposta vazia da análise de gaps.');
@@ -172,13 +173,13 @@ class MarketAnalysisService {
     return (rows as List).map((r) => Opportunity.fromMap(r)).toList();
   }
 
-  Future<List<Opportunity>> discoverOpportunities(String marketAnalysisId, String input) async {
+  Future<List<Opportunity>> discoverOpportunities(String marketAnalysisId, String input, {String language = 'pt-BR'}) async {
     final uid = _client.auth.currentUser?.id;
     if (uid == null) throw Exception('Usuário não autenticado.');
 
     final response = await _client.functions.invoke(
       AppConstants.edgeFunctionOpportunity,
-      body: {'market_analysis_id': marketAnalysisId, 'input': input},
+      body: {'market_analysis_id': marketAnalysisId, 'input': input, 'language': language},
     );
 
     if (response.data == null) throw Exception('Resposta vazia da descoberta de oportunidades.');
@@ -222,13 +223,13 @@ class MarketAnalysisService {
     return (rows as List).map((r) => NicheRanking.fromMap(r)).toList();
   }
 
-  Future<List<NicheRanking>> discoverNiches(String marketAnalysisId, String input) async {
+  Future<List<NicheRanking>> discoverNiches(String marketAnalysisId, String input, {String language = 'pt-BR'}) async {
     final uid = _client.auth.currentUser?.id;
     if (uid == null) throw Exception('Usuário não autenticado.');
 
     final response = await _client.functions.invoke(
       AppConstants.edgeFunctionNiche,
-      body: {'market_analysis_id': marketAnalysisId, 'input': input},
+      body: {'market_analysis_id': marketAnalysisId, 'input': input, 'language': language},
     );
 
     if (response.data == null) throw Exception('Resposta vazia da descoberta de nichos.');
@@ -273,13 +274,13 @@ class MarketAnalysisService {
     return row == null ? null : ContentCluster.fromMap(row);
   }
 
-  Future<ContentCluster> buildContentCluster(String marketAnalysisId, String input, String mainKeyword) async {
+  Future<ContentCluster> buildContentCluster(String marketAnalysisId, String input, String mainKeyword, {String language = 'pt-BR'}) async {
     final uid = _client.auth.currentUser?.id;
     if (uid == null) throw Exception('Usuário não autenticado.');
 
     final response = await _client.functions.invoke(
       AppConstants.edgeFunctionCluster,
-      body: {'market_analysis_id': marketAnalysisId, 'input': input, 'main_keyword': mainKeyword},
+      body: {'market_analysis_id': marketAnalysisId, 'input': input, 'main_keyword': mainKeyword, 'language': language},
     );
 
     if (response.data == null) throw Exception('Resposta vazia do Content Cluster.');
@@ -327,13 +328,14 @@ class MarketAnalysisService {
     String input,
     String projectName, {
     String? projectId,
+    String language = 'pt-BR',
   }) async {
     final uid = _client.auth.currentUser?.id;
     if (uid == null) throw Exception('Usuário não autenticado.');
 
     final response = await _client.functions.invoke(
       AppConstants.edgeFunctionRevenue,
-      body: {'market_analysis_id': marketAnalysisId, 'input': input, 'project_name': projectName},
+      body: {'market_analysis_id': marketAnalysisId, 'input': input, 'project_name': projectName, 'language': language},
     );
 
     if (response.data == null) throw Exception('Resposta vazia do Revenue Planner.');

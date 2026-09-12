@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
+import 'l10n/app_localizations.dart';
+import 'providers/language_provider.dart';
 import 'shared/widgets/ive_overlay.dart';
 import 'features/admin/screens/admin_panel_screen.dart';
+import 'features/about/screens/about_screen.dart';
+import 'features/support/screens/support_screen.dart';
+import 'features/account/screens/account_screen.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/calendar/screens/calendar_screen.dart';
 import 'features/content/screens/content_form_screen.dart';
@@ -169,6 +175,20 @@ final _router = GoRouter(
     GoRoute(
       path: AppConstants.routeAdmin,
       builder: (_, __) => const AdminPanelScreen(),
+    ),
+
+    // ── Conta / Sobre / Suporte (IVE-COMMERCIAL-RELEASE-CONTROL-PLANE-01) ──
+    GoRoute(
+      path: AppConstants.routeAccount,
+      builder: (_, __) => const AccountScreen(),
+    ),
+    GoRoute(
+      path: AppConstants.routeAbout,
+      builder: (_, __) => const AboutScreen(),
+    ),
+    GoRoute(
+      path: AppConstants.routeSupport,
+      builder: (_, __) => const SupportScreen(),
     ),
 
     // ── Knowledge Vault ────────────────────────────────────────
@@ -377,11 +397,20 @@ class App extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(languageProvider);
     return MaterialApp.router(
       title:                      AppConstants.appName,
       debugShowCheckedModeBanner: false,
       theme:                      AppTheme.dark,
       routerConfig:               _router,
+      locale:                     locale,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
       // Global safe area: evita que conteúdo fique atrás da barra de navegação
       // do Android (edge-to-edge mode). top: false pois o AppBar já cuida do topo.
       builder: (context, child) => SafeArea(
