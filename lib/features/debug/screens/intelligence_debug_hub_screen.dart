@@ -70,7 +70,10 @@ class IntelligenceDebugHubScreen extends ConsumerWidget {
     if (profileAsync.isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    final isAdmin = profileAsync.valueOrNull?.isAdmin ?? false;
+    // Codex Gate (P2, re-verificação): mesma correção defensiva de
+    // admin_panel_screen.dart -- exige hasValue && !hasError, fechando o
+    // caso teórico de um AsyncError reter um valor admin anterior.
+    final isAdmin = profileAsync.hasValue && !profileAsync.hasError && (profileAsync.value?.isAdmin ?? false);
     if (!isAdmin) {
       return Scaffold(
         appBar: AppBar(title: const Text('Acesso Negado')),

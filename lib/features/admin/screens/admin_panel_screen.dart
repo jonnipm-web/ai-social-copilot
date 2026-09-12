@@ -28,7 +28,12 @@ class AdminPanelScreen extends ConsumerWidget {
     if (profileAsync.isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    final isAdmin = profileAsync.valueOrNull?.isAdmin ?? false;
+    // Codex Gate (P2, re-verificação): exige explicitamente hasValue &&
+    // !hasError -- fecha o caso teórico de um AsyncError reter um valor
+    // admin anterior (copyWithPrevious do Riverpod) e vazar pelo
+    // valueOrNull. Nenhum caminho deste repositório hoje faz refresh deste
+    // provider a ponto de produzir esse estado, mas o check custa nada.
+    final isAdmin = profileAsync.hasValue && !profileAsync.hasError && (profileAsync.value?.isAdmin ?? false);
     if (!isAdmin) {
       return Scaffold(
         appBar: AppBar(title: const Text('Acesso Negado')),
