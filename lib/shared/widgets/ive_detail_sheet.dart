@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'context_copilot_widget.dart' show showCopilotChat;
 import '../../data/models/copilot_context_data.dart';
+import '../../providers/ive_context_provider.dart';
 
 /// Generic drill-down sheet IVE opens when user taps any data item.
-class IveDetailSheet extends StatelessWidget {
+class IveDetailSheet extends ConsumerWidget {
   final String title;
   final String emoji;
   final String humanExplanation;
@@ -51,7 +53,7 @@ class IveDetailSheet extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return DraggableScrollableSheet(
       initialChildSize: 0.60,
       minChildSize:     0.40,
@@ -86,7 +88,7 @@ class IveDetailSheet extends StatelessWidget {
                     _actionsSection(context),
                   ],
                   const SizedBox(height: 16),
-                  _askIveButton(context),
+                  _askIveButton(context, ref),
                 ],
               ),
             ),
@@ -246,7 +248,14 @@ class IveDetailSheet extends StatelessWidget {
             : null,
       );
 
-  Widget _askIveButton(BuildContext context) => SizedBox(
+  // IVE-COMMERCIAL-TARGETED-REMEDIATION-04 — antes passava
+  // CopilotContextData() vazio direto, sem tentar ler o contexto real do
+  // projeto/conhecimento/oportunidades -- a IVE respondia sem nenhuma
+  // memória quando aberta por este botão especificamente, mesmo com o
+  // mesmo grounding rico disponível (e já usado) pelo avatar global.
+  // Mesma fonte (iveContextDataProvider) e mesma conversão
+  // (CopilotContextData.fromIveContext) usadas em ive_overlay.dart.
+  Widget _askIveButton(BuildContext context, WidgetRef ref) => SizedBox(
         width: double.infinity,
         child: OutlinedButton.icon(
           style: OutlinedButton.styleFrom(
@@ -259,10 +268,12 @@ class IveDetailSheet extends StatelessWidget {
           label: const Text('Perguntar à IVE'),
           onPressed: () {
             Navigator.of(context).pop();
+            final ctx = ref.read(iveContextDataProvider).valueOrNull;
+            final contextData = ctx != null ? CopilotContextData.fromIveContext(ctx) : CopilotContextData();
             showCopilotChat(
               context,
               screenName:  screenName.isNotEmpty ? screenName : title,
-              contextData: CopilotContextData(),
+              contextData: contextData,
             );
           },
         ),

@@ -40,9 +40,24 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
   }
 
   Future<void> _checkSession() async {
-    if (await _drive.isSignedIn) {
-      setState(() => _signedIn = true);
-      _loadFiles();
+    // IVE-COMMERCIAL-TARGETED-REMEDIATION-04 — este era o ponto exato do
+    // crash relatado: rodava em initState() sem nenhum try/catch, então
+    // qualquer exceção (inclusive o bug conhecido do pacote
+    // google_sign_in_web em signInSilently()/isSignedIn(), já tratado na
+    // origem em DriveService) derrubava a tela inteira sem chance de
+    // mostrar mensagem nenhuma. DriveService.isSignedIn já falha seguro
+    // para `false` internamente; este try/catch é defesa em profundidade
+    // -- nunca deixar uma falha aqui impedir a tela de simplesmente cair
+    // para a visão de login.
+    try {
+      if (await _drive.isSignedIn) {
+        if (!mounted) return;
+        setState(() => _signedIn = true);
+        _loadFiles();
+      }
+    } catch (_) {
+      // Falha ao verificar sessão existente -- trata como "não conectado"
+      // e deixa o usuário simplesmente clicar em "Entrar com Google" de novo.
     }
   }
 

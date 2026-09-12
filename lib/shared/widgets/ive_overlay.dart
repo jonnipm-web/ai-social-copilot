@@ -162,37 +162,17 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
 
   void _openChat(BuildContext context, String screenName) {
     ref.read(iveMemoryProvider.notifier).incrementInteraction();
-    final ctx         = ref.read(iveContextDataProvider).valueOrNull;
-    final contextData = ctx != null ? _buildCopilotContext(ctx) : CopilotContextData();
+    final ctx = ref.read(iveContextDataProvider).valueOrNull;
+    // IVE-COMMERCIAL-TARGETED-REMEDIATION-04 — conversão movida para
+    // CopilotContextData.fromIveContext() (fonte única, também usada por
+    // ive_detail_sheet.dart) em vez de uma cópia privada só deste widget.
+    final contextData = ctx != null ? CopilotContextData.fromIveContext(ctx) : CopilotContextData();
     showCopilotChat(
       context,
       screenName:  _routeToName(screenName),
       contextData: contextData,
     );
   }
-
-  CopilotContextData _buildCopilotContext(IveContextData ctx) =>
-      CopilotContextData(
-        scores: {
-          'ecosystem_health':           ctx.healthScore,
-          'total_projects':             ctx.projectCount,
-          'pending_actions':            ctx.pendingActionsCount,
-          'pending_opportunities':      ctx.pendingOpportunitiesCount,
-          if (ctx.topProjectName         != null) 'top_project_name':            ctx.topProjectName,
-          if (ctx.topProjectDescription  != null) 'top_project_description':     ctx.topProjectDescription,
-          if (ctx.topProjectType         != null) 'top_project_type':            ctx.topProjectType,
-          if (ctx.topProjectScore        != null) 'top_project_score':           ctx.topProjectScore,
-          if (ctx.mainBottleneckName     != null) 'main_bottleneck':             ctx.mainBottleneckName,
-          if (ctx.mainBottleneckScore    != null) 'bottleneck_execution_score':  ctx.mainBottleneckScore,
-        },
-        project: ctx.topProjectsSnapshot.isNotEmpty
-            ? {'projects': ctx.topProjectsSnapshot}
-            : null,
-        documents:        ctx.knowledgeItemsSummary,
-        documentCoverage: ctx.documentCoverage.isNotEmpty ? ctx.documentCoverage : null,
-        documentWarnings: ctx.documentWarnings,
-        opportunities:    ctx.pendingOpportunitiesSummary,
-      );
 
   String _routeToName(String route) {
     const map = <String, String>{
