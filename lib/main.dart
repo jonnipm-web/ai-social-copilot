@@ -7,7 +7,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
+import 'core/diagnostics/diagnostic_container.dart';
+import 'core/diagnostics/diagnostic_models.dart';
 import 'data/services/drive_stage.dart' show redactForLog;
+
+// IVE-COMMERCIAL-OBSERVABILITY-07A — a manually-created ProviderContainer
+// (rather than plain `ProviderScope(child: App())`) is the standard
+// Riverpod pattern for reaching a provider from OUTSIDE the widget tree —
+// exactly what's needed here: FlutterError.onError and runZonedGuarded's
+// error handler run with no BuildContext at all, so they cannot use
+// ProviderScope.containerOf(context) the way app.dart's redirect does.
+// UncontrolledProviderScope wires this same container into the normal
+// widget tree, so every provider (including diagnosticLoggerProvider) is
+// still the exact same singleton instance app widgets see. Defined once in
+// diagnostic_container.dart (as `globalProviderContainer`) rather than
+// here, so plain (non-Riverpod) service classes like DriveService can also
+// reach the logger without a BuildContext or a `ref`.
 
 // IVE-COMMERCIAL-TARGETED-REMEDIATION-06 — last-resort diagnostic net.
 // The confirmed root cause of the physical Drive "Null check operator used
@@ -22,8 +37,28 @@ import 'data/services/drive_stage.dart' show redactForLog;
 // line to work from. Never logs tokens, file content, or Drive metadata —
 // only the error's own (already-redacted, per DriveStageException) message
 // and type.
+//
+// IVE-COMMERCIAL-OBSERVABILITY-07A — this is also the single choke point
+// for RUNTIME category events (mission section 04: "CRITICAL for the
+// current Cannot read properties of null... defects"), since EVERY
+// uncaught Flutter framework error and every uncaught async error in the
+// whole app funnels through here already. Same fail-safe rules as the rest
+// of the logger: never throws, no-ops when there's no active diagnostic
+// session.
 void _logUncaughtError(Object error, StackTrace stack) {
   debugPrint('[uncaught] ${error.runtimeType}: ${redactForLog(error)}');
+  try {
+    diagnosticLogger.logEvent(
+      category: DiagnosticCategory.runtime,
+      eventName: 'uncaught_error',
+      severity: DiagnosticSeverity.critical,
+      status: 'failure',
+      error: error,
+      stackTrace: stack,
+    );
+  } catch (_) {
+    // Diagnostics must never compound an already-uncaught error.
+  }
 }
 
 void main() {
@@ -42,6 +77,6 @@ void main() {
       anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
     );
 
-    runApp(const ProviderScope(child: App()));
+    runApp(UncontrolledProviderScope(container: globalProviderContainer, child: const App()));
   }, _logUncaughtError);
 }

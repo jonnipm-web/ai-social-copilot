@@ -2,8 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/constants/app_constants.dart';
+import '../core/diagnostics/diagnostic_logger_service.dart';
+import '../core/diagnostics/diagnostic_models.dart';
 import '../data/models/copilot_context_data.dart';
 import '../data/models/copilot_turn.dart';
+import 'diagnostic_session_provider.dart';
 import 'ive_memory_provider.dart';
 import 'ive_provider.dart';
 import 'quota_provider.dart';
@@ -66,6 +69,22 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
     // visual state — see IveNotifier.beginThinking/completeInteraction.
     final interactionToken = _ref.read(iveProvider.notifier).beginThinking();
 
+    // IVE-COMMERCIAL-OBSERVABILITY-07A — IVE + AI categories share this one
+    // call site (context-copilot IS the IVE assistant's backend request).
+    // correlationId links the "started" event to whichever of
+    // success/failure follows, across the await below. Never logs the
+    // question/answer text itself — only shape (lengths/counts) and
+    // outcome, per mission section 04/05.
+    final correlationId = newDiagnosticCorrelationId();
+    final stopwatch = Stopwatch()..start();
+    _ref.read(diagnosticSessionProvider.notifier).logEvent(
+      category: DiagnosticCategory.ive,
+      eventName: 'copilot_request_started',
+      operation: screenName,
+      correlationId: correlationId,
+      status: 'started',
+    );
+
     try {
       final history = state.turns
           .where((t) => t.role == 'user' || t.role == 'assistant')
@@ -114,6 +133,18 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
         loading: false,
       );
       _ref.read(iveProvider.notifier).completeInteraction(interactionToken, success: true);
+      _ref.read(diagnosticSessionProvider.notifier).logEvent(
+        category: DiagnosticCategory.ai,
+        eventName: 'copilot_request_completed',
+        operation: screenName,
+        correlationId: correlationId,
+        status: 'success',
+        durationMs: stopwatch.elapsedMilliseconds,
+        metadata: {
+          'response_length': (data['answer'] as String? ?? '').length,
+          'grounding_count': sources.length,
+        },
+      );
 
       // IVE-COMMERCIAL-TARGETED-REMEDIATION-06 — o overlay da IVE fica
       // visível em toda tela (inclusive Conta/Upgrade) sem nunca desmontar
@@ -129,6 +160,15 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
         error:   e.toString(),
       );
       _ref.read(iveProvider.notifier).completeInteraction(interactionToken, success: false);
+      _ref.read(diagnosticSessionProvider.notifier).logEvent(
+        category: DiagnosticCategory.ai,
+        eventName: 'copilot_request_completed',
+        operation: screenName,
+        correlationId: correlationId,
+        status: 'failure',
+        durationMs: stopwatch.elapsedMilliseconds,
+        error: e,
+      );
     }
   }
 

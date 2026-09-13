@@ -9,6 +9,7 @@ import '../../../data/models/profile.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import 'diagnostic_logs_tab.dart';
 
 class AdminPanelScreen extends ConsumerWidget {
   const AdminPanelScreen({super.key});
@@ -45,7 +46,7 @@ class AdminPanelScreen extends ConsumerWidget {
     }
 
     return DefaultTabController(
-      length: 4,
+      length: 5,
       child: Scaffold(
         appBar: AppBar(
           leading: IconButton(
@@ -67,6 +68,7 @@ class AdminPanelScreen extends ConsumerWidget {
               Tab(text: 'Personas'),
               Tab(text: 'Visão Geral'),
               Tab(text: 'Módulos'),
+              Tab(text: 'Diagnóstico'),
             ],
           ),
         ),
@@ -77,6 +79,7 @@ class AdminPanelScreen extends ConsumerWidget {
             _PersonasAdminTab(),
             _OverviewTab(),
             _ModulesAdminTab(),
+            DiagnosticLogsTab(),
           ],
         ),
       ),

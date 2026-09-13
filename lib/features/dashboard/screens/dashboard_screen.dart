@@ -9,8 +9,8 @@ import '../../../providers/campaign_provider.dart';
 import '../../../providers/content_provider.dart';
 import '../../../providers/knowledge_provider.dart';
 import '../../../providers/persona_provider.dart';
-import '../../../providers/post_provider.dart';
 import '../../../providers/profile_provider.dart';
+import '../../../providers/quota_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 
 class DashboardScreen extends ConsumerWidget {
@@ -19,7 +19,15 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(currentProfileProvider);
-    final usageAsync   = ref.watch(monthlyUsageProvider);
+    // IVE-COMMERCIAL-OBSERVABILITY-07A — this used to read monthlyUsageProvider
+    // (a count of the legacy post_generations table, entirely unrelated to
+    // the commercial quota system), which is why a physical test found this
+    // card disagreeing with Account/Upgrade (both already read
+    // currentQuotaProvider, the actual ai_usage-backed source). Discovered
+    // purely by reading the code while building this mission's quota
+    // instrumentation -- an undeniable, one-provider-swap fix, not a new
+    // remediation effort.
+    final usageAsync   = ref.watch(currentQuotaProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -31,7 +39,6 @@ class DashboardScreen extends ConsumerWidget {
         error:   (e, _) => Center(child: Text('Erro: $e')),
         data:    (profile) {
           final isAdmin = profile?.isAdmin ?? false;
-          final limit   = profile?.monthlyLimit ?? 5;
 
           // IVE-COMMERCIAL-TARGETED-REMEDIATION-06S — the shortcuts below
           // used to compute `locked` from `!isPro && !isAdmin`, but
@@ -81,7 +88,7 @@ class DashboardScreen extends ConsumerWidget {
                     usageAsync.when(
                       loading: () => const SizedBox.shrink(),
                       error:   (_, __) => const SizedBox.shrink(),
-                      data:    (used) => _UsageCard(used: used, limit: limit),
+                      data:    (quota) => _UsageCard(used: quota.used, limit: quota.limit),
                     ),
                     const SizedBox(height: 16),
 

@@ -1,6 +1,33 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/diagnostics/diagnostic_container.dart';
+import '../../../core/diagnostics/diagnostic_models.dart';
 import '../../../data/services/drive_service.dart';
+
+// IVE-COMMERCIAL-OBSERVABILITY-07A — DRIVE category (mission section 04):
+// "session resolution, OAuth stage category, picker stage, list/download/
+// extract stage, safe MIME/type, safe size, success/failure. Do NOT log
+// OAuth tokens." Reuses this screen's EXISTING try/catch boundaries rather
+// than threading logging into DriveService/drive_stage.dart's control flow
+// (drive_stage.dart is deliberately kept pure/dependency-free for testing —
+// see its own file comment) — every Drive failure already surfaces to one
+// of these four catch blocks, so this is the natural, minimal choke point.
+void _logDrive(
+  String eventName, {
+  required String status,
+  Map<String, Object?> metadata = const {},
+  Object? error,
+}) {
+  diagnosticLogger.logEvent(
+    category: DiagnosticCategory.drive,
+    eventName: eventName,
+    severity: status == 'failure' ? DiagnosticSeverity.warn : DiagnosticSeverity.info,
+    status: status,
+    metadata: metadata,
+    error: error,
+    sourceComponent: 'DrivePickerScreen',
+  );
+}
 
 const _kBg      = Color(0xFF0F0F1A);
 const _kCard    = Color(0xFF1A1A2E);
@@ -56,14 +83,17 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
     // hasUsableSession(), esse estado degenerado agora cai para o botão
     // de login em vez de para uma lista que sabemos que vai falhar.
     try {
-      if (await _drive.hasUsableSession()) {
+      final usable = await _drive.hasUsableSession();
+      _logDrive('drive_session_check', status: usable ? 'success' : 'not_connected');
+      if (usable) {
         if (!mounted) return;
         setState(() => _signedIn = true);
         _loadFiles();
       }
-    } catch (_) {
+    } catch (e) {
       // Falha ao verificar sessão existente -- trata como "não conectado"
       // e deixa o usuário simplesmente clicar em "Entrar com Google" de novo.
+      _logDrive('drive_session_check', status: 'failure', error: e);
     }
   }
 
@@ -72,9 +102,11 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
     try {
       final account = await _drive.signIn();
       if (account == null) {
+        _logDrive('drive_sign_in', status: 'cancelled');
         setState(() { _signing = false; _error = 'Login cancelado.'; });
         return;
       }
+      _logDrive('drive_sign_in', status: 'success');
       setState(() {
         _signedIn = true;
         _signing  = false;
@@ -82,6 +114,7 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
       });
       await _loadFiles();
     } catch (e) {
+      _logDrive('drive_sign_in', status: 'failure', error: e);
       final msg = e.toString();
       String errorMsg;
       if (msg.contains('error 10') || msg.contains('sign_in_failed')) {
@@ -107,8 +140,10 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       final files = await _drive.listFiles(search: search);
+      _logDrive('drive_list_files', status: 'success', metadata: {'count': files.length});
       setState(() { _files = files; _loading = false; });
     } catch (e) {
+      _logDrive('drive_list_files', status: 'failure', error: e);
       setState(() { _loading = false; _error = 'Erro ao carregar: $e'; });
     }
   }
@@ -117,11 +152,22 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
     setState(() => _downloading = true);
     try {
       final content = await _drive.downloadContent(file);
+      _logDrive(
+        'drive_download',
+        status: 'success',
+        metadata: {'mime_type': file.mimeType},
+      );
       if (mounted) {
         Navigator.of(context)
             .pop({'name': file.name, 'content': content});
       }
     } catch (e) {
+      _logDrive(
+        'drive_download',
+        status: 'failure',
+        metadata: {'mime_type': file.mimeType},
+        error: e,
+      );
       if (mounted) {
         setState(() => _downloading = false);
         ScaffoldMessenger.of(context).showSnackBar(
