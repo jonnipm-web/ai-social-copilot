@@ -266,5 +266,15 @@ END;
 $function$;
 
 -- Only real, logged-in admins may call this -- not anon, not public.
-REVOKE ALL ON FUNCTION public.cleanup_old_diagnostic_sessions(integer) FROM PUBLIC;
+-- IVE-COMMERCIAL-OBSERVABILITY-07A production deploy gate (Codex read-only
+-- production policy check, section 04) -- REVOKE ALL FROM PUBLIC alone does
+-- not countermand Supabase's own default EXECUTE grant to the anon role, so
+-- anon could still technically invoke this RPC (verified live: it reached
+-- and failed the function's own is_admin_user() check rather than being
+-- rejected at the Postgres ACL level -- no privilege escalation resulted,
+-- but this deviated from this repo's own established convention of an
+-- explicit anon revoke on every admin-only RPC, e.g.
+-- 20260910190000_commercial_ai_quota.sql). Revoking from anon explicitly
+-- here matches that convention and closes the RPC at the ACL layer too.
+REVOKE ALL ON FUNCTION public.cleanup_old_diagnostic_sessions(integer) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.cleanup_old_diagnostic_sessions(integer) TO authenticated;
