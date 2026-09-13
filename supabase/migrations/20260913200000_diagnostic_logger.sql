@@ -44,7 +44,15 @@ CREATE TABLE public.diagnostic_sessions (
   -- (mission section 14: "bounded payload size").
   CONSTRAINT diagnostic_sessions_label_len CHECK (label IS NULL OR char_length(label) <= 200),
   CONSTRAINT diagnostic_sessions_ended_after_started
-    CHECK (ended_at IS NULL OR ended_at >= started_at)
+    CHECK (ended_at IS NULL OR ended_at >= started_at),
+  -- IVE-COMMERCIAL-OBSERVABILITY-07A (Codex adversarial review, P2, 2nd
+  -- pass) — role_snapshot/app_version/build_sha are rendered raw by
+  -- diagnostic_report_formatter.dart's export; bounded here to match the
+  -- sanitizeText maxLength now applied to each in
+  -- DiagnosticLoggerService.startSession().
+  CONSTRAINT diagnostic_sessions_role_snapshot_len CHECK (role_snapshot IS NULL OR char_length(role_snapshot) <= 50),
+  CONSTRAINT diagnostic_sessions_app_version_len CHECK (app_version IS NULL OR char_length(app_version) <= 50),
+  CONSTRAINT diagnostic_sessions_build_sha_len CHECK (build_sha IS NULL OR char_length(build_sha) <= 100)
 );
 
 CREATE INDEX diagnostic_sessions_user_started_idx

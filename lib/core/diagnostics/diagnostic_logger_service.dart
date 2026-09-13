@@ -57,10 +57,20 @@ class DiagnosticLoggerService {
             'user_id': userId,
             'label': label != null ? sanitizeText(label, maxLength: 200) : null,
             'status': 'active',
-            'app_version': appVersion,
-            'build_sha': buildSha,
+            // IVE-COMMERCIAL-OBSERVABILITY-07A (Codex adversarial review,
+            // P2, 2nd pass) — role_snapshot is app-controlled today
+            // (Profile.roleLabel is one of a fixed handful of literal
+            // strings), but the diagnostic_report_formatter.dart export
+            // renders it raw, and nothing here structurally stopped a
+            // future caller from passing arbitrary text (e.g. an embedded
+            // newline forging a fake extra report entry, the same class
+            // this mission already closed for every diagnostic_events
+            // field). Every session-level free-text field now goes
+            // through sanitizeText too, for the same reason.
+            'app_version': appVersion != null ? sanitizeText(appVersion, maxLength: 50) : null,
+            'build_sha': buildSha != null ? sanitizeText(buildSha, maxLength: 100) : null,
             'platform': kIsWeb ? 'web' : 'native',
-            'role_snapshot': roleSnapshot,
+            'role_snapshot': roleSnapshot != null ? sanitizeText(roleSnapshot, maxLength: 50) : null,
           })
           .select('id')
           .single();
