@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/constants/app_constants.dart';
 import 'core/modules/route_policy.dart';
 import 'core/theme/app_theme.dart';
+import 'data/models/profile.dart';
 import 'providers/profile_provider.dart';
 import 'l10n/app_localizations.dart';
 import 'providers/language_provider.dart';
@@ -89,8 +90,24 @@ Future<String?> _resolveEntitlementRedirect(BuildContext context, String path) a
   bool isAdmin = false;
   bool isPro = false;
   bool profileResolved = false;
+  // IVE-COMMERCIAL-TARGETED-REMEDIATION-06R (Codex adversarial review, P1) —
+  // a bare `container.read(currentProfileProvider.future)` is not a durable
+  // subscription: currentProfileProvider is `FutureProvider.autoDispose`,
+  // and nothing here stops Riverpod from disposing it out from under this
+  // await if no other widget happens to be watching it at that exact
+  // moment (the common case in practice is that app_drawer.dart already
+  // holds a real `ref.watch` on it, but this redirect must not depend on
+  // some other screen happening to be mounted). `container.listen(...)`
+  // opens a REAL keep-alive subscription for exactly the lifetime of this
+  // await, guaranteeing the provider cannot be swept mid-fetch, however
+  // many navigations happen to race through this function concurrently.
+  ProviderSubscription<AsyncValue<Profile?>>? keepAlive;
   try {
     final container = ProviderScope.containerOf(context, listen: false);
+    keepAlive = container.listen<AsyncValue<Profile?>>(
+      currentProfileProvider,
+      (_, __) {},
+    );
     final profile = await container
         .read(currentProfileProvider.future)
         .timeout(const Duration(seconds: 8));
@@ -100,6 +117,8 @@ Future<String?> _resolveEntitlementRedirect(BuildContext context, String path) a
   } catch (_) {
     // Profile fetch failed or timed out -- fail closed (never grant PRO/
     // admin access) rather than hang navigation forever or guess "yes".
+  } finally {
+    keepAlive?.close();
   }
 
   final decision = evaluateRouteAccess(
