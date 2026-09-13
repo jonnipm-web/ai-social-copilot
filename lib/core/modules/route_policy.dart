@@ -19,8 +19,6 @@ import '../constants/app_constants.dart';
 /// This file is pure policy — no GoRouter, no Riverpod, no Supabase import
 /// — so it can be unit-tested with plain booleans/strings. See
 /// lib/app.dart for how it's wired into the actual redirect.
-library route_policy;
-
 enum RouteDecision {
   /// Navigation proceeds to the requested route.
   allow,
