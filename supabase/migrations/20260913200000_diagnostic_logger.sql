@@ -52,7 +52,21 @@ CREATE TABLE public.diagnostic_sessions (
   -- DiagnosticLoggerService.startSession().
   CONSTRAINT diagnostic_sessions_role_snapshot_len CHECK (role_snapshot IS NULL OR char_length(role_snapshot) <= 50),
   CONSTRAINT diagnostic_sessions_app_version_len CHECK (app_version IS NULL OR char_length(app_version) <= 50),
-  CONSTRAINT diagnostic_sessions_build_sha_len CHECK (build_sha IS NULL OR char_length(build_sha) <= 100)
+  CONSTRAINT diagnostic_sessions_build_sha_len CHECK (build_sha IS NULL OR char_length(build_sha) <= 100),
+  -- IVE-COMMERCIAL-OBSERVABILITY-07A (Codex adversarial review, 3rd pass)
+  -- — sanitizeText()'s newline-stripping is enforced by the CLIENT before
+  -- an insert/update is ever sent; it is not itself a database guarantee.
+  -- diagnostic_sessions_admin_manage_own is FOR ALL, so an admin's own
+  -- authenticated session ALREADY has UPDATE privilege on their own rows
+  -- via RLS regardless of which client or tool issues the request — a
+  -- direct authenticated call (not through this app's Dart code) could
+  -- still write a newline into any of these columns, which the exporter
+  -- renders raw. These CHECK constraints make that impossible at the
+  -- database layer itself, independent of which client is writing.
+  CONSTRAINT diagnostic_sessions_label_no_newline CHECK (label IS NULL OR label !~ '[\r\n]'),
+  CONSTRAINT diagnostic_sessions_role_snapshot_no_newline CHECK (role_snapshot IS NULL OR role_snapshot !~ '[\r\n]'),
+  CONSTRAINT diagnostic_sessions_app_version_no_newline CHECK (app_version IS NULL OR app_version !~ '[\r\n]'),
+  CONSTRAINT diagnostic_sessions_build_sha_no_newline CHECK (build_sha IS NULL OR build_sha !~ '[\r\n]')
 );
 
 CREATE INDEX diagnostic_sessions_user_started_idx
@@ -111,7 +125,24 @@ CREATE TABLE public.diagnostic_events (
   CONSTRAINT diagnostic_events_status_len CHECK (status IS NULL OR char_length(status) <= 50),
   CONSTRAINT diagnostic_events_correlation_id_len CHECK (correlation_id IS NULL OR char_length(correlation_id) <= 100),
   CONSTRAINT diagnostic_events_error_type_len CHECK (error_type IS NULL OR char_length(error_type) <= 100),
-  CONSTRAINT diagnostic_events_source_component_len CHECK (source_component IS NULL OR char_length(source_component) <= 100)
+  CONSTRAINT diagnostic_events_source_component_len CHECK (source_component IS NULL OR char_length(source_component) <= 100),
+  -- IVE-COMMERCIAL-OBSERVABILITY-07A (Codex adversarial review, 3rd pass)
+  -- — same reasoning as diagnostic_sessions above: events have no UPDATE
+  -- policy at all (append-only by design), but the INSERT itself could
+  -- still come from a direct authenticated call bypassing this app's Dart
+  -- sanitizeText(), not just from DrivePickerScreen/context_copilot_
+  -- provider/etc. Every free-text column the exporter renders is bounded
+  -- against embedded newlines at the database layer, not only client-side.
+  CONSTRAINT diagnostic_events_event_name_no_newline CHECK (event_name !~ '[\r\n]'),
+  CONSTRAINT diagnostic_events_module_no_newline CHECK (module IS NULL OR module !~ '[\r\n]'),
+  CONSTRAINT diagnostic_events_operation_no_newline CHECK (operation IS NULL OR operation !~ '[\r\n]'),
+  CONSTRAINT diagnostic_events_route_no_newline CHECK (route IS NULL OR route !~ '[\r\n]'),
+  CONSTRAINT diagnostic_events_status_no_newline CHECK (status IS NULL OR status !~ '[\r\n]'),
+  CONSTRAINT diagnostic_events_correlation_id_no_newline CHECK (correlation_id IS NULL OR correlation_id !~ '[\r\n]'),
+  CONSTRAINT diagnostic_events_error_type_no_newline CHECK (error_type IS NULL OR error_type !~ '[\r\n]'),
+  CONSTRAINT diagnostic_events_source_component_no_newline CHECK (source_component IS NULL OR source_component !~ '[\r\n]'),
+  CONSTRAINT diagnostic_events_error_message_no_newline CHECK (error_message IS NULL OR error_message !~ '[\r\n]'),
+  CONSTRAINT diagnostic_events_error_stack_no_newline CHECK (error_stack IS NULL OR error_stack !~ '[\r\n]')
 );
 
 CREATE INDEX diagnostic_events_session_occurred_idx
