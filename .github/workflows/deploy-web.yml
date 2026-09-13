@@ -54,15 +54,22 @@ jobs:
         # .../account#/login, nunca chegando na tela de Conta). A correção é
         # escrever o caminho recuperado no HASH, não na pathname.
         #
-        # IVE-COMMERCIAL-TARGETED-REMEDIATION-06 (Codex adversarial review) --
-        # web/404.html forwards window.location.hash verbatim, unencoded,
-        # appended after everything else -- so a request that (unusually)
-        # already carried its own fragment arrives here with a non-empty
-        # l.hash. The first version of this fix ignored it, silently
-        # dropping that fragment. Now appended after the decoded path so
-        # nothing is lost, even though no real link in this app produces a
-        # clean path with its own separate fragment (hash IS the route
-        # here) -- this only guards against an unusual/malformed input.
+        # IVE-COMMERCIAL-TARGETED-REMEDIATION-06 (Codex adversarial review,
+        # 2nd pass) -- web/404.html forwards window.location.hash verbatim,
+        # unencoded, appended after everything else -- so a request that
+        # (unusually) already carried its own fragment arrives here with a
+        # non-empty l.hash. The first cut of this fix appended it raw after
+        # the restored hash (`'#' + decoded + l.hash`), which produces a
+        # second literal "#" in the URL -- syntactically present, but
+        # GoRouter's hash strategy only recognizes the FIRST "#" as the
+        # boundary, so everything from the second "#" onward (including
+        # its own "#") becomes part of the route string GoRouter tries to
+        # match, which would fail to resolve rather than cleanly ignoring
+        # it. Folded into a query parameter on the restored route instead:
+        # exactly one "#", route matching for `decoded` is unaffected, nothing
+        # is silently dropped. Still guards only an unusual/malformed input
+        # -- no real link in this app produces a clean path with its own
+        # separate fragment (hash IS the route here).
         run: |
           python3 - <<'PYEOF'
           import re
@@ -81,11 +88,18 @@ jobs:
                   return s.replace(/~and~/g, '&');
                 }).join('?');
                 // l.hash aqui só é não-vazio se a URL original (rara e
-                // improvável, mas possível) já tinha seu próprio fragmento
-                // -- preservado em vez de descartado, mesmo sem um jeito
-                // canônico de combinar isso com hash routing.
+                // improvável, mas possível) já tinha seu próprio fragmento.
+                // Dobrado como parâmetro de query em vez de concatenado
+                // como um segundo "#" -- GoRouter só reconhece o PRIMEIRO
+                // "#" como fronteira da rota; um segundo "#" quebraria o
+                // casamento da rota em vez de ser ignorado.
+                var extraHash = l.hash ? l.hash.slice(1) : '';
+                var origHashParam = extraHash
+                    ? (decoded.indexOf('?') === -1 ? '?' : '&') +
+                      'orig_hash=' + encodeURIComponent(extraHash)
+                    : '';
                 window.history.replaceState(null, null,
-                    l.pathname + '#' + decoded + l.hash
+                    l.pathname + '#' + decoded + origHashParam
                 );
               }
             }(window.location));

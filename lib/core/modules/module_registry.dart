@@ -89,12 +89,26 @@ const List<ModuleDefinition> kModuleRegistry = [
     adminClickable: true,
     commercialEnabled: true,
     minimumPlan: ModulePlan.free,
-    route: AppConstants.routeKnowledgeStrategy,
+    // IVE-COMMERCIAL-TARGETED-REMEDIATION-06 — este era o único módulo do
+    // catálogo com `route` parametrizado (":id" literal, nunca substituído)
+    // e commercialEnabled:true ao mesmo tempo: lib/shared/widgets/
+    // app_drawer.dart só filtra por `route == null`, sem tratar rotas com
+    // parâmetro, então isto aparecia como item clicável de nível superior
+    // no drawer ("Geração de Estratégia") navegando para o literal
+    // '/knowledge/:id/strategy' -- GoRouter casa isso contra
+    // '/knowledge/:id/strategy' com id=":id" (uma string qualquer serve),
+    // então a tela abria com um item inexistente em vez de navegação
+    // quebrada visível. A própria nota de prontidão abaixo já dizia que
+    // isto é um sub-fluxo por item, não uma entrada própria de catálogo --
+    // route:null (mesmo padrão de context-copilot/file-import/
+    // google-drive-import/usage-quota logo abaixo) corrige a inconsistência
+    // entre a intenção documentada e o que o drawer realmente fazia.
+    route: null,
     edgeFunctions: ['generate-strategy'],
     databaseDependencies: ['knowledge_strategies'],
     aiDependency: true,
-    readinessPt: 'Totalmente funcional -- sub-fluxo do Cofre de Conhecimento (por item, não um catálogo próprio).',
-    readinessEn: 'Fully functional -- a sub-flow of Knowledge Vault (per-item, not a standalone catalog entry).',
+    readinessPt: 'Totalmente funcional -- sub-fluxo do Cofre de Conhecimento (por item, não um catálogo próprio). Não é mais um item de navegação de nível superior (ver nota acima) -- alcançado a partir da tela do item, não do drawer.',
+    readinessEn: 'Fully functional -- a sub-flow of Knowledge Vault (per-item, not a standalone catalog entry). No longer a top-level nav item (see note above) -- reached from the item screen, not the drawer.',
     releaseClassification: ModuleReleaseClass.commercialV1,
   ),
   ModuleDefinition(

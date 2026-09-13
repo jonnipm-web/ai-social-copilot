@@ -117,19 +117,33 @@ function main() {
     failures.push(`"~and~"-encoded ampersands not fully decoded, got: ${multiAmpersand}`);
   }
 
-  // Codex adversarial review (Remediation 06): a request that already
-  // carried its own fragment must not have it silently dropped, even
-  // though no real link in this app produces this shape (hash IS the
-  // route for every real deep link here).
+  // Codex adversarial review (Remediation 06, 2nd pass): a request that
+  // already carried its own fragment must not have it silently dropped —
+  // but it also must not become a SECOND "#" in the restored URL, because
+  // GoRouter's hash strategy only recognizes the first "#" as the route
+  // boundary; anything from a second "#" onward would be swallowed into
+  // the route string and fail to match instead of being cleanly ignored.
+  // Folded into a query param on the restored route instead.
   const withExistingHash = runAgainst(snippet, {
     pathname: '/ai-social-copilot/',
     search: '?/account',
     hash: '#preexisting',
   });
-  if (withExistingHash === null || !withExistingHash.includes('#preexisting')) {
-    failures.push(
-      `Pre-existing hash fragment was dropped instead of preserved, got: ${withExistingHash}`,
-    );
+  if (withExistingHash === null) {
+    failures.push('Expected a history.replaceState call when a pre-existing hash is present.');
+  } else {
+    const hashCount = (withExistingHash.match(/#/g) || []).length;
+    if (hashCount !== 1) {
+      failures.push(
+        `Restored URL must contain exactly one "#" (GoRouter only honors the first), ` +
+          `found ${hashCount}: ${withExistingHash}`,
+      );
+    }
+    if (!withExistingHash.includes('#/account?orig_hash=preexisting')) {
+      failures.push(
+        `Pre-existing hash fragment was not preserved as a query param on the route, got: ${withExistingHash}`,
+      );
+    }
   }
 
   if (failures.length > 0) {
