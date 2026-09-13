@@ -153,7 +153,16 @@ const List<ModuleDefinition> kModuleRegistry = [
     adminClickable: true,
     commercialEnabled: true,
     minimumPlan: ModulePlan.free,
-    route: AppConstants.routeMarketIntelligenceCompetitors,
+    // IVE-COMMERCIAL-TARGETED-REMEDIATION-06 — mesma inconsistência
+    // corrigida em 'strategy-generation' acima: este é um sub-módulo por
+    // análise (":id" literal, nunca substituído), não uma entrada própria
+    // de catálogo -- a nota de prontidão abaixo já dizia isso. route:null
+    // (mesmo padrão de context-copilot/file-import/google-drive-import/
+    // usage-quota) evita que app_drawer.dart (que só filtra por
+    // `route == null`, sem tratar rotas parametrizadas) renderize isto
+    // como item de navegação de nível superior quebrado. Alcançável a
+    // partir do hub do Market Intelligence, não do drawer.
+    route: null,
     edgeFunctions: ['competitor-discovery'],
     aiDependency: true,
     readinessPt: 'Funcional -- sub-módulo do Market Intelligence.',
@@ -169,7 +178,10 @@ const List<ModuleDefinition> kModuleRegistry = [
     adminClickable: true,
     commercialEnabled: true,
     minimumPlan: ModulePlan.free,
-    route: AppConstants.routeMarketIntelligenceGaps,
+    // IVE-COMMERCIAL-TARGETED-REMEDIATION-06 — mesma correção de
+    // 'competitor-discovery' acima (ver comentário lá): sub-módulo por
+    // análise, route:null evita item de drawer quebrado.
+    route: null,
     edgeFunctions: ['gap-analysis'],
     aiDependency: true,
     readinessPt: 'Funcional -- sub-módulo do Market Intelligence.',
@@ -185,7 +197,10 @@ const List<ModuleDefinition> kModuleRegistry = [
     adminClickable: true,
     commercialEnabled: true,
     minimumPlan: ModulePlan.free,
-    route: AppConstants.routeMarketIntelligenceNiches,
+    // IVE-COMMERCIAL-TARGETED-REMEDIATION-06 — mesma correção de
+    // 'competitor-discovery' acima (ver comentário lá): sub-módulo por
+    // análise, route:null evita item de drawer quebrado.
+    route: null,
     edgeFunctions: ['niche-discovery'],
     aiDependency: true,
     readinessPt: 'Funcional -- sub-módulo do Market Intelligence.',
@@ -201,7 +216,10 @@ const List<ModuleDefinition> kModuleRegistry = [
     adminClickable: true,
     commercialEnabled: true,
     minimumPlan: ModulePlan.free,
-    route: AppConstants.routeMarketIntelligenceOpportunities,
+    // IVE-COMMERCIAL-TARGETED-REMEDIATION-06 — mesma correção de
+    // 'competitor-discovery' acima (ver comentário lá): sub-módulo por
+    // análise, route:null evita item de drawer quebrado.
+    route: null,
     edgeFunctions: ['opportunity-discovery'],
     aiDependency: true,
     readinessPt: 'Funcional -- sub-módulo do Market Intelligence.',
@@ -217,7 +235,10 @@ const List<ModuleDefinition> kModuleRegistry = [
     adminClickable: true,
     commercialEnabled: true,
     minimumPlan: ModulePlan.free,
-    route: AppConstants.routeMarketIntelligenceCluster,
+    // IVE-COMMERCIAL-TARGETED-REMEDIATION-06 — mesma correção de
+    // 'competitor-discovery' acima (ver comentário lá): sub-módulo por
+    // análise, route:null evita item de drawer quebrado.
+    route: null,
     edgeFunctions: ['content-cluster'],
     aiDependency: true,
     readinessPt: 'Funcional -- sub-módulo do Market Intelligence.',
@@ -233,7 +254,10 @@ const List<ModuleDefinition> kModuleRegistry = [
     adminClickable: true,
     commercialEnabled: true,
     minimumPlan: ModulePlan.free,
-    route: AppConstants.routeMarketIntelligenceRevenue,
+    // IVE-COMMERCIAL-TARGETED-REMEDIATION-06 — mesma correção de
+    // 'competitor-discovery' acima (ver comentário lá): sub-módulo por
+    // análise, route:null evita item de drawer quebrado.
+    route: null,
     edgeFunctions: ['revenue-planner'],
     aiDependency: true,
     readinessPt: 'Funcional -- sub-módulo do Market Intelligence.',
