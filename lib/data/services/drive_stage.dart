@@ -28,6 +28,23 @@
 ///      of an indefinitely stuck spinner.
 library drive_stage;
 
+/// IVE-COMMERCIAL-TARGETED-REMEDIATION-06 — Codex adversarial review flagged
+/// that logging a caught error's raw `toString()` asserts, but does not
+/// enforce, that no token/secret ever reaches a log line: an exception
+/// thrown by a third-party plugin could in principle embed request/response
+/// internals we don't control. This is a defensive, best-effort filter, not
+/// a cryptographic guarantee — it truncates and strips any long contiguous
+/// token-shaped run (the general shape of OAuth access tokens, JWTs and
+/// API keys: 20+ chars of base64url/JWT alphabet) before a message is ever
+/// handed to debugPrint.
+final _tokenShaped = RegExp(r'[A-Za-z0-9_\-\.]{20,}');
+
+String redactForLog(Object error) {
+  final raw = error.toString();
+  final truncated = raw.length > 300 ? '${raw.substring(0, 300)}…' : raw;
+  return truncated.replaceAll(_tokenShaped, '[redacted]');
+}
+
 /// Raised by [runDriveStage]. `stage` identifies exactly where in the Drive
 /// flow the failure happened (session check, sign-in, token, list,
 /// download, extraction) without ever carrying the OAuth token, file
@@ -40,6 +57,36 @@ class DriveStageException implements Exception {
 
   @override
   String toString() => '[drive:$stage] $message';
+}
+
+/// IVE-COMMERCIAL-TARGETED-REMEDIATION-06 — Codex adversarial review (this
+/// mission) found the P1 this closes: the original `signIn()` treated any
+/// non-null silently-resolved account as good enough, so a Drive session
+/// stuck in the documented "authenticated but not authorized" GIS state
+/// (see drive_service.dart) was returned as-is on every "Entrar com
+/// Google" click — the button did nothing, and the user could never reach
+/// the interactive consent screen that would actually grant drive.readonly.
+///
+/// Generic (no google_sign_in import here, kept pure/testable without any
+/// plugin mocking) two-step resolution: reuse the silent account only if a
+/// real token for it checks out; otherwise always fall through to
+/// interactive sign-in, which re-prompts for scope consent.
+Future<T?> resolveUsableAccount<T>({
+  required Future<T?> Function() silentSignIn,
+  required Future<Object?> Function(T account) tokenFor,
+  required Future<T?> Function() interactiveSignIn,
+}) async {
+  final silent = await silentSignIn();
+  if (silent != null) {
+    Object? token;
+    try {
+      token = await tokenFor(silent);
+    } catch (_) {
+      token = null;
+    }
+    if (token != null) return silent;
+  }
+  return interactiveSignIn();
 }
 
 /// Runs [action], tagging any failure with [stage] and enforcing [timeout]

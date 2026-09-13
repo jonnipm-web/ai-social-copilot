@@ -96,6 +96,42 @@ function main() {
     failures.push(`Expected no history.replaceState call for a plain root load, got: ${untouched}`);
   }
 
+  // Nested route (e.g. a shared /market-intelligence/gaps/abc123 link).
+  const nested = runAgainst(snippet, {
+    pathname: '/ai-social-copilot/',
+    search: '?/market-intelligence/gaps/abc123',
+  });
+  if (nested === null || !nested.includes('#/market-intelligence/gaps/abc123')) {
+    failures.push(`Nested path not restored correctly into the hash, got: ${nested}`);
+  }
+
+  // web/404.html encodes every "&" in the recovered path as "~and~" (so the
+  // real query string's own "&" separators survive being folded into a
+  // single search param) — the restore script must decode all of them, not
+  // just the first.
+  const multiAmpersand = runAgainst(snippet, {
+    pathname: '/ai-social-copilot/',
+    search: '?/knowledge/new&source~and~url~and~extra',
+  });
+  if (multiAmpersand === null || !multiAmpersand.includes('#/knowledge/new?source&url&extra')) {
+    failures.push(`"~and~"-encoded ampersands not fully decoded, got: ${multiAmpersand}`);
+  }
+
+  // Codex adversarial review (Remediation 06): a request that already
+  // carried its own fragment must not have it silently dropped, even
+  // though no real link in this app produces this shape (hash IS the
+  // route for every real deep link here).
+  const withExistingHash = runAgainst(snippet, {
+    pathname: '/ai-social-copilot/',
+    search: '?/account',
+    hash: '#preexisting',
+  });
+  if (withExistingHash === null || !withExistingHash.includes('#preexisting')) {
+    failures.push(
+      `Pre-existing hash fragment was dropped instead of preserved, got: ${withExistingHash}`,
+    );
+  }
+
   if (failures.length > 0) {
     console.error('FAIL: SPA hash-restore regression check failed:');
     for (const f of failures) console.error(`  - ${f}`);

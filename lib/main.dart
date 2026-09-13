@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
+import 'data/services/drive_stage.dart' show redactForLog;
 
 // IVE-COMMERCIAL-TARGETED-REMEDIATION-06 — last-resort diagnostic net.
 // The confirmed root cause of the physical Drive "Null check operator used
@@ -22,7 +23,7 @@ import 'app.dart';
 // only the error's own (already-redacted, per DriveStageException) message
 // and type.
 void _logUncaughtError(Object error, StackTrace stack) {
-  debugPrint('[uncaught] ${error.runtimeType}: $error');
+  debugPrint('[uncaught] ${error.runtimeType}: ${redactForLog(error)}');
 }
 
 void main() {

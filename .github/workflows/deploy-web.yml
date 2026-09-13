@@ -53,6 +53,16 @@ jobs:
         # silenciosamente (reproduzido: um link "limpo" para /account virava
         # .../account#/login, nunca chegando na tela de Conta). A correção é
         # escrever o caminho recuperado no HASH, não na pathname.
+        #
+        # IVE-COMMERCIAL-TARGETED-REMEDIATION-06 (Codex adversarial review) --
+        # web/404.html forwards window.location.hash verbatim, unencoded,
+        # appended after everything else -- so a request that (unusually)
+        # already carried its own fragment arrives here with a non-empty
+        # l.hash. The first version of this fix ignored it, silently
+        # dropping that fragment. Now appended after the decoded path so
+        # nothing is lost, even though no real link in this app produces a
+        # clean path with its own separate fragment (hash IS the route
+        # here) -- this only guards against an unusual/malformed input.
         run: |
           python3 - <<'PYEOF'
           import re
@@ -70,8 +80,12 @@ jobs:
                 var decoded = l.search.slice(1).split('&').map(function(s) {
                   return s.replace(/~and~/g, '&');
                 }).join('?');
+                // l.hash aqui só é não-vazio se a URL original (rara e
+                // improvável, mas possível) já tinha seu próprio fragmento
+                // -- preservado em vez de descartado, mesmo sem um jeito
+                // canônico de combinar isso com hash routing.
                 window.history.replaceState(null, null,
-                    l.pathname + '#' + decoded
+                    l.pathname + '#' + decoded + l.hash
                 );
               }
             }(window.location));

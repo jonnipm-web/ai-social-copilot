@@ -78,7 +78,7 @@ class DriveService {
       // (nenhuma sessão em cache), mas agora deixa um rastro diagnosticável
       // (nunca o token) de que o bug conhecido do pacote realmente disparou
       // aqui, em vez de falhar silenciosamente sem nenhuma pista.
-      debugPrint('[drive:silent-signin] falha tratada como "sem sessão": $e');
+      debugPrint('[drive:silent-signin] falha tratada como "sem sessão": ${redactForLog(e)}');
       return null;
     }
   }
@@ -92,7 +92,7 @@ class DriveService {
     try {
       return await _googleSignIn.isSignedIn();
     } catch (e) {
-      debugPrint('[drive:is-signed-in] falha tratada como "não conectado": $e');
+      debugPrint('[drive:is-signed-in] falha tratada como "não conectado": ${redactForLog(e)}');
       return false;
     }
   }
@@ -115,30 +115,43 @@ class DriveService {
   // drive.readonly -- exatamente o estado "autenticado mas não autorizado"
   // do changelog -- e é nessa reconciliação interna, dentro do próprio
   // pacote, que a Null check operator exception documentada dispara.
-  // signIn() abaixo já cobria o caso de conta nova (fallback correto para
-  // o fluxo interativo, que sempre pede consentimento de escopo de novo).
-  // O gap era confiar em isSignedIn()==true sozinho como prova de que
-  // drive.readonly está de fato concedido -- ver hasUsableSession() logo
-  // abaixo, que é o que realmente fecha esse buraco.
-  Future<GoogleSignInAccount?> signIn() async {
-    var account = await _signInSilentlySafe();
-    account ??= await runDriveStage(
-      'signin',
-      () => _googleSignIn.signIn(),
-      timeout: const Duration(seconds: 60),
+  //
+  // IVE-COMMERCIAL-TARGETED-REMEDIATION-06 (Codex adversarial re-check) --
+  // a primeira versão desta função ainda tinha o gap real que o crash
+  // físico expõe: `account ??= await _googleSignIn.signIn()` só cai para o
+  // fluxo interativo quando a conta silenciosa é `null`. No estado
+  // "autenticado mas não autorizado", a conta silenciosa NÃO é null -- só
+  // não tem um token de Drive utilizável -- então o clique em "Entrar com
+  // Google" não fazia nada: devolvia a mesma conta quebrada, sem nunca
+  // mostrar a tela de consentimento que de fato concede drive.readonly de
+  // novo. resolveUsableAccount() (drive_stage.dart) fecha isso: só reusa a
+  // conta silenciosa se um token real para ELA (não currentUser, a mesma
+  // conta) funcionar; caso contrário sempre cai para o fluxo interativo.
+  Future<GoogleSignInAccount?> signIn() {
+    return resolveUsableAccount<GoogleSignInAccount>(
+      silentSignIn: _signInSilentlySafe,
+      tokenFor: _tokenForAccount,
+      interactiveSignIn: () => runDriveStage(
+        'signin',
+        () => _googleSignIn.signIn(),
+        timeout: const Duration(seconds: 60),
+      ),
     );
-    return account;
   }
 
   Future<void> signOut() => _googleSignIn.signOut();
 
-  Future<String?> _token() async {
-    final account = _googleSignIn.currentUser ?? await _signInSilentlySafe();
-    if (account == null) return null;
+  Future<String?> _tokenForAccount(GoogleSignInAccount account) {
     return runDriveStage('token', () async {
       final auth = await account.authentication;
       return auth.accessToken;
     });
+  }
+
+  Future<String?> _token() async {
+    final account = _googleSignIn.currentUser ?? await _signInSilentlySafe();
+    if (account == null) return null;
+    return _tokenForAccount(account);
   }
 
   // IVE-COMMERCIAL-TARGETED-REMEDIATION-06 — o check de sessão real, não
@@ -159,7 +172,7 @@ class DriveService {
       final token = await _token();
       return token != null;
     } catch (e) {
-      debugPrint('[drive:usable-session] falha tratada como "sessão não utilizável": $e');
+      debugPrint('[drive:usable-session] falha tratada como "sessão não utilizável": ${redactForLog(e)}');
       return false;
     }
   }
