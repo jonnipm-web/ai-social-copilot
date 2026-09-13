@@ -5,13 +5,27 @@
   <script>
   // Single Page Apps for GitHub Pages -- restaura a rota real
   // codificada por web/404.html antes do GoRouter inicializar.
+  // Escreve no HASH (não na pathname): este app usa a estratégia
+  // de URL hash padrão do Flutter/GoRouter (sem
+  // usePathUrlStrategy()), que só lê window.location.hash.
   (function(l) {
     if (l.search[1] === '/') {
       var decoded = l.search.slice(1).split('&').map(function(s) {
         return s.replace(/~and~/g, '&');
       }).join('?');
+      // l.hash aqui só é não-vazio se a URL original (rara e
+      // improvável, mas possível) já tinha seu próprio fragmento.
+      // Dobrado como parâmetro de query em vez de concatenado
+      // como um segundo "#" -- GoRouter só reconhece o PRIMEIRO
+      // "#" como fronteira da rota; um segundo "#" quebraria o
+      // casamento da rota em vez de ser ignorado.
+      var extraHash = l.hash ? l.hash.slice(1) : '';
+      var origHashParam = extraHash
+          ? (decoded.indexOf('?') === -1 ? '?' : '&') +
+            'orig_hash=' + encodeURIComponent(extraHash)
+          : '';
       window.history.replaceState(null, null,
-          l.pathname.slice(0, -1) + decoded + l.hash
+          l.pathname + '#' + decoded + origHashParam
       );
     }
   }(window.location));
