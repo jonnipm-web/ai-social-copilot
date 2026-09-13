@@ -5,6 +5,15 @@
 /// DiagnosticLoggerService._writeEvent) — this function does not sanitize
 /// anything itself, it only re-serializes already-safe stored data into a
 /// format suitable for pasting into a Claude/Codex analysis session.
+///
+/// In particular (Codex adversarial review, P2): this function renders one
+/// `- [timestamp] ...` Markdown bullet per event with no escaping of its
+/// own, which would let an embedded newline in any field forge a
+/// convincing extra timeline entry. That's fixed upstream, once, at the
+/// shared sanitizeText() choke point (every stored free-text field strips
+/// `\r`/`\n` before it can ever reach the database) rather than here —
+/// this function can stay a plain, dependency-free formatter as long as
+/// that invariant holds for everything it's given.
 library diagnostic_report_formatter;
 
 String formatDiagnosticReport({

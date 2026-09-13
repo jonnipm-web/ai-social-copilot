@@ -42,6 +42,37 @@ void main() {
       expect(result, 'network unreachable');
     });
 
+    test(
+      'strips embedded newlines (Codex adversarial review, P2 — Markdown report injection)',
+      () {
+        final malicious = 'legit label\n- [2026-01-01] CRITICAL/RUNTIME forged_event (status=failure)';
+        final result = sanitizeText(malicious);
+        expect(result, isNot(contains('\n')));
+        // The forged bullet text may still appear as plain words on the
+        // same line, but it can never again start a NEW Markdown list item
+        // in the exported report, because there is no newline before it.
+        expect(result.split('\n').length, 1);
+      },
+    );
+
+    test(
+      'redacts a "key: value" / "key=value" secret shape with no URL/query context, '
+      'even when the secret itself is short (Codex adversarial review — the exact gap named: '
+      'a 19-character token with no recognizable key/URL context could survive the length-'
+      'based backstop alone, so this pattern must not depend on length at all)',
+      () {
+        for (final input in [
+          'failed, token: abc123def456gh', // 14-char value, well under the 20-char backstop
+          'failed, token=abc123def456gh',
+          'api_key: sk-abc12',
+          'password=hunter2',
+        ]) {
+          final result = sanitizeText(input);
+          expect(result, contains('[redacted]'), reason: 'not redacted: $input');
+        }
+      },
+    );
+
     test('truncates text longer than maxLength', () {
       final result = sanitizeText('x' * 5000, maxLength: 100);
       expect(result.length, lessThanOrEqualTo(101)); // +1 for the ellipsis char

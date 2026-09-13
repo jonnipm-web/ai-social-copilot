@@ -79,10 +79,27 @@ final List<RegExp> _secretPatterns = [
     caseSensitive: false,
   ),
   RegExp(r'Authorization:\s*\S+', caseSensitive: false),
+  // IVE-COMMERCIAL-OBSERVABILITY-07A (Codex adversarial review) — the
+  // query-param pattern above only fires inside a URL's own `?`/`&`
+  // syntax. A secret can just as easily show up in free text as
+  // "token: abc123" or "api_key=abc123" with no surrounding URL at all
+  // (a very real shape for a caught exception's own message) — this
+  // catches that "key: value" / "key=value" form anywhere in the string,
+  // not just inside a query string.
+  RegExp(
+    r'(password|token|secret|api[_-]?key|authorization)\s*[:=]\s*\S+',
+    caseSensitive: false,
+  ),
   // Generic long contiguous token-shaped run (OAuth access tokens, JWTs
   // caught elsewhere, generic API keys): 20+ chars of the base64url/JWT
   // alphabet. Deliberately last so the more specific patterns above get a
-  // chance to redact with a clearer label first.
+  // chance to redact with a clearer label first. Documented limitation
+  // (Codex adversarial review): a shorter, e.g. 19-character, secret with
+  // no recognizable key/URL context around it can still survive — this is
+  // an inherent limit of length-based heuristic detection with an
+  // acceptable false-positive rate, not something a slightly different
+  // threshold would meaningfully fix, hence still "best-effort, not a
+  // cryptographic guarantee" (see this function's own doc comment).
   RegExp(r'[A-Za-z0-9_\-\.]{20,}'),
 ];
 
@@ -90,8 +107,20 @@ final List<RegExp> _secretPatterns = [
 /// drive_stage.dart's redactForLog, which this generalizes) — truncates and
 /// strips every recognized secret-shaped pattern before a string is ever
 /// considered for storage.
+///
+/// IVE-COMMERCIAL-OBSERVABILITY-07A (Codex adversarial review, P2) —
+/// newlines are collapsed to a single space BEFORE anything else. Every
+/// stored free-text field ultimately flows through this one function (see
+/// DiagnosticLoggerService._writeEvent), and
+/// diagnostic_report_formatter.dart's Markdown export renders each event as
+/// one `- [timestamp] ...` bullet line — an embedded "\n- [fake]
+/// CRITICAL/RUNTIME forged_event" inside any field (a session label, an
+/// error message, anything) would otherwise forge a convincing extra
+/// timeline entry in the exported report. Stripping newlines here, at the
+/// one shared choke point, closes that for every field and every future
+/// call site at once, rather than only at the formatter boundary.
 String sanitizeText(String input, {int maxLength = 2000}) {
-  var text = input;
+  var text = input.replaceAll(RegExp(r'[\r\n]+'), ' ');
   for (final pattern in _secretPatterns) {
     text = text.replaceAll(pattern, '[redacted]');
   }

@@ -88,7 +88,22 @@ CREATE TABLE public.diagnostic_events (
   CONSTRAINT diagnostic_events_event_name_len CHECK (char_length(event_name) <= 200),
   CONSTRAINT diagnostic_events_error_message_len CHECK (error_message IS NULL OR char_length(error_message) <= 2000),
   CONSTRAINT diagnostic_events_error_stack_len CHECK (error_stack IS NULL OR char_length(error_stack) <= 4000),
-  CONSTRAINT diagnostic_events_metadata_size CHECK (octet_length(metadata::text) <= 8192)
+  CONSTRAINT diagnostic_events_metadata_size CHECK (octet_length(metadata::text) <= 8192),
+  -- IVE-COMMERCIAL-OBSERVABILITY-07A (Codex adversarial review, P3) — the
+  -- first version of this migration only bounded event_name/error_message/
+  -- error_stack/metadata. module/operation/route/status/correlation_id/
+  -- error_type/source_component had no database-level backstop at all
+  -- (the client-side sanitizer bounds them today, but nothing forced a
+  -- future write path to go through it). Every free-text column is now
+  -- bounded here too, matching the sanitizer's own per-field maxLength
+  -- (lib/core/diagnostics/diagnostic_logger_service.dart's _writeEvent).
+  CONSTRAINT diagnostic_events_module_len CHECK (module IS NULL OR char_length(module) <= 100),
+  CONSTRAINT diagnostic_events_operation_len CHECK (operation IS NULL OR char_length(operation) <= 100),
+  CONSTRAINT diagnostic_events_route_len CHECK (route IS NULL OR char_length(route) <= 200),
+  CONSTRAINT diagnostic_events_status_len CHECK (status IS NULL OR char_length(status) <= 50),
+  CONSTRAINT diagnostic_events_correlation_id_len CHECK (correlation_id IS NULL OR char_length(correlation_id) <= 100),
+  CONSTRAINT diagnostic_events_error_type_len CHECK (error_type IS NULL OR char_length(error_type) <= 100),
+  CONSTRAINT diagnostic_events_source_component_len CHECK (source_component IS NULL OR char_length(source_component) <= 100)
 );
 
 CREATE INDEX diagnostic_events_session_occurred_idx
@@ -168,6 +183,14 @@ CREATE POLICY "diagnostic_events_admin_read_all" ON public.diagnostic_events
 -- not enabled by this migration. See the mission report's RETENTION section
 -- for the recommended schedule and window.
 -- ----------------------------------------------------------------------------
+-- IVE-COMMERCIAL-OBSERVABILITY-07A (Codex adversarial review, P1) — the
+-- first version of this function trusted `retention_days` completely: a
+-- negative value makes `now() - make_interval(days => retention_days)`
+-- FUTURE-dated, so `started_at < <a future timestamp>` matches every row,
+-- deleting the entire append-only evidence log in one call from any admin
+-- — well beyond "read diagnostic logs", the only capability this feature
+-- is meant to grant. `retention_days` is now clamped to a safe range
+-- (1 day .. 10 years) before it can influence the DELETE at all.
 CREATE OR REPLACE FUNCTION public.cleanup_old_diagnostic_sessions(retention_days integer DEFAULT 30)
 RETURNS integer
 LANGUAGE plpgsql
@@ -179,6 +202,10 @@ DECLARE
 BEGIN
   IF NOT public.is_admin_user() THEN
     RAISE EXCEPTION 'insufficient_privilege';
+  END IF;
+
+  IF retention_days < 1 OR retention_days > 3650 THEN
+    RAISE EXCEPTION 'invalid_retention_days: must be between 1 and 3650';
   END IF;
 
   DELETE FROM public.diagnostic_sessions
