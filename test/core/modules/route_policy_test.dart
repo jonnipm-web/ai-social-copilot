@@ -378,4 +378,41 @@ void main() {
       expect(danglingRefs, isEmpty, reason: 'Dangling module references: $danglingRefs');
     });
   });
+
+  group('isModuleActionable — mission section 07 commercial CTA consistency (06S)', () {
+    test('a commercialEnabled:false module is not actionable for a non-admin', () {
+      expect(isModuleActionable('improve-post', isAdmin: false), isFalse);
+    });
+
+    test('the same commercialEnabled:false module IS actionable for an admin (preserve admin behavior)', () {
+      expect(isModuleActionable('improve-post', isAdmin: true), isTrue);
+    });
+
+    test('a commercialEnabled:true, released module remains actionable for a non-admin (no regression)', () {
+      for (final moduleId in ['command-center', 'knowledge-vault', 'market-intelligence', 'opportunity-lab']) {
+        expect(
+          isModuleActionable(moduleId, isAdmin: false),
+          isTrue,
+          reason: '$moduleId is commercialEnabled:true and must remain actionable',
+        );
+      }
+    });
+
+    test('PRO-gated-but-unreleased modules (personas/content-library/calendar) are not actionable for a non-admin', () {
+      // Mirrors the route guard's own CRITICAL RULE: commercialEnabled
+      // gates the CTA regardless of minimumPlan -- these are "not released
+      // to anyone", not "PRO-exclusive".
+      for (final moduleId in ['personas', 'content-library', 'calendar', 'campaigns', 'performance']) {
+        expect(
+          isModuleActionable(moduleId, isAdmin: false),
+          isFalse,
+          reason: '$moduleId is commercialEnabled:false and must not look actionable',
+        );
+      }
+    });
+
+    test('an unclassified moduleId fails open (true) rather than silently hiding a real button', () {
+      expect(isModuleActionable('this-module-does-not-exist', isAdmin: false), isTrue);
+    });
+  });
 }

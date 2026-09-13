@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'core/app_lifecycle/profile_resume_policy.dart';
 import 'core/constants/app_constants.dart';
 import 'core/modules/route_policy.dart';
 import 'core/theme/app_theme.dart';
@@ -471,11 +474,70 @@ final _router = GoRouter(
   ],
 );
 
-class App extends ConsumerWidget {
+class App extends ConsumerStatefulWidget {
   const App({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<App> createState() => _AppState();
+}
+
+// IVE-COMMERCIAL-TARGETED-REMEDIATION-06S — paid-state refresh. See
+// core/app_lifecycle/profile_resume_policy.dart for the pure decision this
+// wraps. WidgetsBindingObserver.didChangeAppLifecycleState fires
+// AppLifecycleState.resumed on Flutter web when the browser tab regains
+// visibility/focus (the engine maps the Page Visibility API to it) — the
+// existing, standard cross-platform Flutter mechanism the mission asked to
+// prefer over any dart:html-specific code, and it needed nothing new:
+// converting App to a State is the only structural change.
+class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
+  Timer? _boundedRecheck;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _boundedRecheck?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final isAuthenticated = Supabase.instance.client.auth.currentSession != null;
+    if (!shouldRefreshProfileOnResume(state: state, isAuthenticated: isAuthenticated)) {
+      return;
+    }
+    ref.invalidate(currentProfileProvider);
+
+    // Mission section 11's named timing race: Stripe Checkout runs in a
+    // separate tab, so a user can complete payment and switch back to this
+    // tab BEFORE the webhook has finished updating profiles.role — the
+    // immediate invalidate above would then still (correctly, given the
+    // server state at that exact moment) refetch FREE. Rather than poll
+    // continuously (explicitly forbidden), this schedules exactly ONE
+    // bounded follow-up refetch a few seconds later, covering the common
+    // case where the webhook finishes shortly after the user returns.
+    // Cancelled and rescheduled fresh on every new resume so rapid focus
+    // changes never stack up multiple pending timers. If the webhook takes
+    // longer than this window, the residual gap is real and NOT silently
+    // claimed closed here (see the mission report) — any subsequent
+    // navigation that needs a resolved profile still fails safe (never
+    // fabricates PRO), and the next natural remount of Account/Upgrade
+    // (or another resume) resolves it.
+    _boundedRecheck?.cancel();
+    _boundedRecheck = Timer(const Duration(seconds: 5), () {
+      if (!mounted) return;
+      if (Supabase.instance.client.auth.currentSession == null) return;
+      ref.invalidate(currentProfileProvider);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final locale = ref.watch(languageProvider);
     return MaterialApp.router(
       title:                      AppConstants.appName,

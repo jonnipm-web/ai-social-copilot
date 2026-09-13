@@ -3,15 +3,45 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/modules/route_policy.dart';
+import '../../../core/utils/snackbar_utils.dart';
 import '../../../data/models/knowledge_graph.dart';
 import '../../../data/models/persona_learning_profile.dart';
 import '../../../data/models/project_intelligence_profile.dart';
 import '../../../providers/action_queue_provider.dart';
 import '../../../providers/ecosystem_intelligence_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
+import '../../../providers/profile_provider.dart';
 import '../../../providers/project_intelligence_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
+
+// IVE-COMMERCIAL-TARGETED-REMEDIATION-06S — same fix as
+// dashboard_screen.dart's shortcuts: several cards here (the AppBar's
+// "Melhorar Post" icon, and two Executive Command Center quick actions)
+// linked to commercialEnabled:false modules with zero indication or
+// enforcement -- a tap produced real navigation the 06R route guard would
+// immediately bounce back from. Resolves module actionability from the
+// current profile once per build, threaded down to the few cards that
+// need it, rather than each card re-reading the provider independently.
+VoidCallback _commercialCtaTap(
+  BuildContext context, {
+  required String moduleId,
+  required bool isAdmin,
+  required String route,
+  bool push = true,
+}) {
+  if (isModuleActionable(moduleId, isAdmin: isAdmin)) {
+    return () {
+      if (push) {
+        context.push(route);
+      } else {
+        context.go(route);
+      }
+    };
+  }
+  return () => showInfoSnack(context, 'Este recurso ainda não está disponível.');
+}
 
 const _kBg      = Color(0xFF0A0A14);
 const _kCard    = Color(0xFF12121E);
@@ -31,6 +61,8 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isAdmin = ref.watch(currentProfileProvider).valueOrNull?.isAdmin ?? false;
+
     return Scaffold(
       backgroundColor: _kBg,
       drawer: const AppDrawer(),
@@ -51,9 +83,19 @@ class HomeScreen extends ConsumerWidget {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.auto_fix_high_rounded, color: _kPrimary),
+            icon: Icon(
+              Icons.auto_fix_high_rounded,
+              color: isModuleActionable('improve-post', isAdmin: isAdmin)
+                  ? _kPrimary
+                  : _kPrimary.withOpacity(0.3),
+            ),
             tooltip: 'Melhorar Post',
-            onPressed: () => context.push(AppConstants.routeGenerate),
+            onPressed: _commercialCtaTap(
+              context,
+              moduleId: 'improve-post',
+              isAdmin: isAdmin,
+              route: AppConstants.routeGenerate,
+            ),
           ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: Colors.white38),
@@ -95,6 +137,7 @@ class _ExecutiveCommandCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isAdmin = ref.watch(currentProfileProvider).valueOrNull?.isAdmin ?? false;
     final projectsAsync  = ref.watch(projectsProvider);
     final healthAsync    = ref.watch(ecosystemHealthProvider);
     final actionsAsync   = ref.watch(actionQueueProvider);
@@ -174,12 +217,22 @@ class _ExecutiveCommandCard extends ConsumerWidget {
             _QuickAction(
                 label: 'Decision Center',
                 icon: Icons.speed_rounded,
-                onTap: () => context.push(AppConstants.routeEcosystem)),
+                onTap: _commercialCtaTap(
+                  context,
+                  moduleId: 'decision-center',
+                  isAdmin: isAdmin,
+                  route: AppConstants.routeEcosystem,
+                )),
             const SizedBox(width: 8),
             _QuickAction(
                 label: 'Briefing',
                 icon: Icons.summarize_rounded,
-                onTap: () => context.push(AppConstants.routeEcosystemBriefing)),
+                onTap: _commercialCtaTap(
+                  context,
+                  moduleId: 'weekly-briefing',
+                  isAdmin: isAdmin,
+                  route: AppConstants.routeEcosystemBriefing,
+                )),
             const SizedBox(width: 8),
             _QuickAction(
                 label: 'Oportunidades',
@@ -331,13 +384,19 @@ class _PersonasCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isAdmin = ref.watch(currentProfileProvider).valueOrNull?.isAdmin ?? false;
     final profilesAsync = ref.watch(personaLearningProfilesProvider);
 
     return _OsCard(
       title: 'Personas',
       icon: Icons.psychology_rounded,
       iconColor: _kPrimary,
-      onSeeAll: () => context.push(AppConstants.routePersonas),
+      onSeeAll: _commercialCtaTap(
+        context,
+        moduleId: 'personas',
+        isAdmin: isAdmin,
+        route: AppConstants.routePersonas,
+      ),
       child: profilesAsync.when(
         loading: () => const _CardLoader(),
         error:   (e, _) => _CardError('$e'),
@@ -346,7 +405,12 @@ class _PersonasCard extends ConsumerWidget {
             return _EmptyHint(
               'Nenhuma persona criada.',
               action: 'Criar persona',
-              onTap: () => context.push(AppConstants.routePersonaNew),
+              onTap: _commercialCtaTap(
+                context,
+                moduleId: 'personas',
+                isAdmin: isAdmin,
+                route: AppConstants.routePersonaNew,
+              ),
             );
           }
           return Column(

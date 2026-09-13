@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/modules/route_policy.dart';
+import '../../../core/utils/snackbar_utils.dart';
 import '../../../providers/campaign_provider.dart';
 import '../../../providers/content_provider.dart';
 import '../../../providers/knowledge_provider.dart';
@@ -29,8 +31,28 @@ class DashboardScreen extends ConsumerWidget {
         error:   (e, _) => Center(child: Text('Erro: $e')),
         data:    (profile) {
           final isAdmin = profile?.isAdmin ?? false;
-          final isPro   = profile?.isPro   ?? false;
           final limit   = profile?.monthlyLimit ?? 5;
+
+          // IVE-COMMERCIAL-TARGETED-REMEDIATION-06S — the shortcuts below
+          // used to compute `locked` from `!isPro && !isAdmin`, but
+          // Personas/Biblioteca/Calendário (like Campanhas and Performance,
+          // which had no lock treatment at all) are commercialEnabled:false
+          // in the registry -- not released to anyone yet, not "PRO-
+          // exclusive". onTap called through unconditionally regardless of
+          // `locked` either way: a purely cosmetic badge with zero actual
+          // enforcement, which is the exact gap Remediation 06R closed at
+          // the route level and this mission closes at the CTA level, so a
+          // tap no longer produces a real navigation the route guard will
+          // immediately bounce back from.
+          VoidCallback shortcutTap(String moduleId, String route) {
+            if (isModuleActionable(moduleId, isAdmin: isAdmin)) {
+              return () => context.go(route);
+            }
+            return () => showInfoSnack(
+                  context,
+                  'Este recurso ainda não está disponível.',
+                );
+          }
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20),
@@ -80,8 +102,8 @@ class DashboardScreen extends ConsumerWidget {
                           child: _ShortcutCard(
                             icon: Icons.person_pin_rounded,
                             label: 'Personas',
-                            locked: !isPro && !isAdmin,
-                            onTap: () => context.go(AppConstants.routePersonas),
+                            locked: !isModuleActionable('personas', isAdmin: isAdmin),
+                            onTap: shortcutTap('personas', AppConstants.routePersonas),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -89,8 +111,8 @@ class DashboardScreen extends ConsumerWidget {
                           child: _ShortcutCard(
                             icon: Icons.library_books_rounded,
                             label: 'Biblioteca',
-                            locked: !isPro && !isAdmin,
-                            onTap: () => context.go(AppConstants.routeContent),
+                            locked: !isModuleActionable('content-library', isAdmin: isAdmin),
+                            onTap: shortcutTap('content-library', AppConstants.routeContent),
                           ),
                         ),
                       ],
@@ -102,8 +124,8 @@ class DashboardScreen extends ConsumerWidget {
                           child: _ShortcutCard(
                             icon: Icons.calendar_month_rounded,
                             label: 'Calendário',
-                            locked: !isPro && !isAdmin,
-                            onTap: () => context.go(AppConstants.routeCalendar),
+                            locked: !isModuleActionable('calendar', isAdmin: isAdmin),
+                            onTap: shortcutTap('calendar', AppConstants.routeCalendar),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -131,7 +153,8 @@ class DashboardScreen extends ConsumerWidget {
                           child: _ShortcutCard(
                             icon: Icons.campaign_rounded,
                             label: 'Campanhas',
-                            onTap: () => context.go(AppConstants.routeCampaigns),
+                            locked: !isModuleActionable('campaigns', isAdmin: isAdmin),
+                            onTap: shortcutTap('campaigns', AppConstants.routeCampaigns),
                           ),
                         ),
                       ],
@@ -151,7 +174,8 @@ class DashboardScreen extends ConsumerWidget {
                           child: _ShortcutCard(
                             icon: Icons.bar_chart_rounded,
                             label: 'Performance',
-                            onTap: () => context.go(AppConstants.routePerformance),
+                            locked: !isModuleActionable('performance', isAdmin: isAdmin),
+                            onTap: shortcutTap('performance', AppConstants.routePerformance),
                           ),
                         ),
                       ],

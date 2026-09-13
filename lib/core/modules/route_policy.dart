@@ -222,6 +222,43 @@ RouteDecision decideForModule({
   }
 }
 
+/// IVE-COMMERCIAL-TARGETED-REMEDIATION-06S — commercial CTA consistency.
+///
+/// The route guard (decideForModule/evaluateRouteAccess above) decides what
+/// happens when a navigation is ATTEMPTED. It says nothing about whether a
+/// button that leads to a commercialEnabled:false module should look
+/// clickable in the first place — dashboard_screen.dart's Personas/
+/// Biblioteca/Calendário shortcuts already had a `locked` badge wired to
+/// `!isPro && !isAdmin` (the wrong question — those three, like Campanhas,
+/// Performance and Improve Post, are commercialEnabled:false, i.e. not
+/// released to ANYONE yet, not "PRO-exclusive"), and Home's "Melhorar Post"
+/// AppBar icon and several Executive Command Center quick actions had no
+/// treatment at all. A user tapping any of these got real navigation that
+/// the route guard would then immediately bounce — which reads as "this is
+/// broken", not "this isn't available yet".
+///
+/// [isModuleActionable] answers exactly the "should this look like an
+/// available operational feature" question, deliberately narrower than
+/// [decideForModule]: it only cares about `commercialEnabled` (mission
+/// section 07 — "must not look like an available operational feature" is
+/// specifically about released-vs-not, not about plan tiers). A released
+/// PRO-only module SHOULD still look actionable with an upgrade prompt on
+/// tap — that's a legitimate, different "pay to unlock" UX, not a bug — so
+/// this function does not consult minimumPlan at all. Same admin bypass as
+/// the route guard, for the same reason: an admin actually can reach it.
+///
+/// An unclassified moduleId (a typo, or a module removed from the
+/// registry) fails open (returns true) rather than silently hiding a real
+/// button over what would then be a code bug elsewhere — exactly mirroring
+/// decideForModule's own fail-open for unclassified routes.
+bool isModuleActionable(String moduleId, {required bool isAdmin}) {
+  if (isAdmin) return true;
+  for (final m in kModuleRegistry) {
+    if (m.moduleId == moduleId) return m.commercialEnabled;
+  }
+  return true;
+}
+
 /// Real-data wrapper around [decideForModule]: resolves [path] against the
 /// actual kRouteModuleOwnership map and kModuleRegistry. This is what
 /// lib/app.dart's redirect actually calls.
