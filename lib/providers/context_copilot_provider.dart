@@ -6,6 +6,7 @@ import '../data/models/copilot_context_data.dart';
 import '../data/models/copilot_turn.dart';
 import 'ive_memory_provider.dart';
 import 'ive_provider.dart';
+import 'quota_provider.dart';
 
 // ── State ────────────────────────────────────────────────────────────────────
 
@@ -113,6 +114,15 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
         loading: false,
       );
       _ref.read(iveProvider.notifier).completeInteraction(interactionToken, success: true);
+
+      // IVE-COMMERCIAL-TARGETED-REMEDIATION-06 — o overlay da IVE fica
+      // visível em toda tela (inclusive Conta/Upgrade) sem nunca desmontar
+      // currentQuotaProvider, então uma cota reservada aqui pelo backend
+      // nunca aparecia sozinha na tela de Conta já aberta. Invalida o
+      // provider para refletir o consumo real assim que o backend confirma
+      // a resposta — o servidor continua sendo a única fonte de verdade,
+      // isto só força a UI a reconsultá-lo.
+      _ref.invalidate(currentQuotaProvider);
     } catch (e) {
       state = state.copyWith(
         loading: false,

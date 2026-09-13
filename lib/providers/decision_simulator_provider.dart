@@ -7,6 +7,7 @@ import '../core/constants/app_constants.dart';
 import '../data/models/simulation_result.dart';
 import 'ive_context_provider.dart';
 import 'ecosystem_intelligence_provider.dart';
+import 'quota_provider.dart';
 
 // ── Estado da simulação ────────────────────────────────────────────────────────
 
@@ -97,6 +98,12 @@ class DecisionSimulatorNotifier
         isLoading: false,
         result:    SimulationResult.fromJson(data),
       );
+
+      // IVE-COMMERCIAL-TARGETED-REMEDIATION-06 — mesma correção de
+      // atualização de cota aplicada ao Context Copilot: garante que uma
+      // tela de Conta/Upgrade já aberta reflita a cota reservada por esta
+      // chamada em vez de continuar mostrando o valor lido antes dela.
+      _ref.invalidate(currentQuotaProvider);
     } catch (e) {
       state = state.copyWith(
         isLoading: false,

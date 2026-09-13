@@ -1,12 +1,14 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/constants/app_constants.dart';
+import 'drive_stage.dart';
 
 class DriveFile {
   const DriveFile({
@@ -71,7 +73,12 @@ class DriveService {
   Future<GoogleSignInAccount?> _signInSilentlySafe() async {
     try {
       return await _googleSignIn.signInSilently();
-    } catch (_) {
+    } catch (e) {
+      // IVE-COMMERCIAL-TARGETED-REMEDIATION-06 — mantém o retorno seguro
+      // (nenhuma sessão em cache), mas agora deixa um rastro diagnosticável
+      // (nunca o token) de que o bug conhecido do pacote realmente disparou
+      // aqui, em vez de falhar silenciosamente sem nenhuma pista.
+      debugPrint('[drive:silent-signin] falha tratada como "sem sessão": $e');
       return null;
     }
   }
@@ -84,14 +91,42 @@ class DriveService {
   Future<bool> get isSignedIn async {
     try {
       return await _googleSignIn.isSignedIn();
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[drive:is-signed-in] falha tratada como "não conectado": $e');
       return false;
     }
   }
 
+  // IVE-COMMERCIAL-TARGETED-REMEDIATION-06 — causa raiz real do crash
+  // físico que sobreviveu à Remediation 04 (confirmado contra o changelog
+  // oficial do pacote, não suposição): `google_sign_in: ^6.2.1` fixa
+  // `google_sign_in_web: ^0.12.0`, e o próprio changelog dessa versão
+  // documenta uma mudança que quebra compatibilidade: "signInSilently now
+  // returns an authenticated (but not authorized) user". A partir da
+  // migração para Google Identity Services (GIS), "estar autenticado"
+  // (identidade) e "estar autorizado" (ter concedido um escopo extra como
+  // drive.readonly) deixaram de ser a mesma coisa -- mas a API disponível
+  // em `google_sign_in` 6.x (verificado na documentação da versão: única
+  // via é `GoogleSignInAccount.authentication`; `authorizeScopes`/
+  // `authorizationForScopes` só existem numa major posterior, fora do
+  // range fixado aqui) não tem como pedir essa reautorização de escopo
+  // separadamente. `isSignedIn()`/`signInSilently()` continuam retornando
+  // "true"/uma conta mesmo quando essa conta não tem autorização real para
+  // drive.readonly -- exatamente o estado "autenticado mas não autorizado"
+  // do changelog -- e é nessa reconciliação interna, dentro do próprio
+  // pacote, que a Null check operator exception documentada dispara.
+  // signIn() abaixo já cobria o caso de conta nova (fallback correto para
+  // o fluxo interativo, que sempre pede consentimento de escopo de novo).
+  // O gap era confiar em isSignedIn()==true sozinho como prova de que
+  // drive.readonly está de fato concedido -- ver hasUsableSession() logo
+  // abaixo, que é o que realmente fecha esse buraco.
   Future<GoogleSignInAccount?> signIn() async {
     var account = await _signInSilentlySafe();
-    account ??= await _googleSignIn.signIn();
+    account ??= await runDriveStage(
+      'signin',
+      () => _googleSignIn.signIn(),
+      timeout: const Duration(seconds: 60),
+    );
     return account;
   }
 
@@ -100,13 +135,38 @@ class DriveService {
   Future<String?> _token() async {
     final account = _googleSignIn.currentUser ?? await _signInSilentlySafe();
     if (account == null) return null;
-    final auth = await account.authentication;
-    return auth.accessToken;
+    return runDriveStage('token', () async {
+      final auth = await account.authentication;
+      return auth.accessToken;
+    });
+  }
+
+  // IVE-COMMERCIAL-TARGETED-REMEDIATION-06 — o check de sessão real, não
+  // só de identidade. `isSignedIn` acima responde "esta pessoa está
+  // autenticada com o Google?", que sob GIS pode ser `true` mesmo sem
+  // autorização de drive.readonly (ver nota em signIn()). Quem decide se a
+  // tela do picker deve pular direto para a lista de arquivos precisa da
+  // pergunta certa: "um token de Drive utilizável existe agora?" -- só
+  // isso garante que o próximo passo (listFiles) não vai falhar no mesmo
+  // estado degenerado. Falha (de qualquer tipo, incluindo a exceção
+  // documentada do pacote) é tratada como "sessão não utilizável" -- a
+  // tela cai para o botão de login, nunca para uma lista de arquivos que
+  // sabemos que vai quebrar.
+  Future<bool> hasUsableSession() async {
+    try {
+      final signedIn = await isSignedIn;
+      if (!signedIn) return false;
+      final token = await _token();
+      return token != null;
+    } catch (e) {
+      debugPrint('[drive:usable-session] falha tratada como "sessão não utilizável": $e');
+      return false;
+    }
   }
 
   Future<List<DriveFile>> listFiles({String search = ''}) async {
     final token = await _token();
-    if (token == null) throw Exception('Não autenticado com Google');
+    if (token == null) throw const DriveStageException('token', 'Não autenticado com Google');
 
     var q = '($_supportedMimes) AND trashed=false';
     if (search.isNotEmpty) q += " AND name contains '${search.replaceAll("'", "\\'")}'";
@@ -120,9 +180,12 @@ class DriveService {
       },
     );
 
-    final res = await http.get(uri, headers: {'Authorization': 'Bearer $token'});
+    final res = await runDriveStage(
+      'list',
+      () => http.get(uri, headers: {'Authorization': 'Bearer $token'}),
+    );
     if (res.statusCode != 200) {
-      throw Exception('Drive API erro ${res.statusCode}');
+      throw DriveStageException('list', 'Drive API erro ${res.statusCode}');
     }
 
     // IVE-COMMERCIAL-TARGETED-REMEDIATION-04 (achado do Codex Gate) --
@@ -155,16 +218,19 @@ class DriveService {
 
   Future<String> downloadContent(DriveFile file) async {
     final token = await _token();
-    if (token == null) throw Exception('Não autenticado com Google');
+    if (token == null) throw const DriveStageException('token', 'Não autenticado com Google');
 
     // Google Docs → export directly as plain text
     if (file.isGoogleDoc) {
       final uri = Uri.parse(
           'https://www.googleapis.com/drive/v3/files/${file.id}/export'
           '?mimeType=text/plain');
-      final res = await http.get(uri, headers: {'Authorization': 'Bearer $token'});
+      final res = await runDriveStage(
+        'download',
+        () => http.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      );
       if (res.statusCode != 200) {
-        throw Exception('Erro ao baixar arquivo: ${res.statusCode}');
+        throw DriveStageException('download', 'Erro ao baixar arquivo: ${res.statusCode}');
       }
       _assertWithinImportLimit(res.bodyBytes.length);
       return _stripNulls(res.body);
@@ -175,22 +241,31 @@ class DriveService {
     if (file.isDocx || file.isPdf) {
       final uri = Uri.parse(
           'https://www.googleapis.com/drive/v3/files/${file.id}?alt=media');
-      final res = await http.get(uri, headers: {'Authorization': 'Bearer $token'});
+      final res = await runDriveStage(
+        'download',
+        () => http.get(uri, headers: {'Authorization': 'Bearer $token'}),
+      );
       if (res.statusCode != 200) {
-        throw Exception('Erro ao baixar arquivo: ${res.statusCode}');
+        throw DriveStageException('download', 'Erro ao baixar arquivo: ${res.statusCode}');
       }
-      return _extractTextViaEdgeFunction(
-        res.bodyBytes,
-        file.isDocx ? 'docx' : 'pdf',
+      return runDriveStage(
+        'extract',
+        () => _extractTextViaEdgeFunction(
+          res.bodyBytes,
+          file.isDocx ? 'docx' : 'pdf',
+        ),
       );
     }
 
     // TXT and other text formats → download as text, strip any null bytes
     final uri = Uri.parse(
         'https://www.googleapis.com/drive/v3/files/${file.id}?alt=media');
-    final res = await http.get(uri, headers: {'Authorization': 'Bearer $token'});
+    final res = await runDriveStage(
+      'download',
+      () => http.get(uri, headers: {'Authorization': 'Bearer $token'}),
+    );
     if (res.statusCode != 200) {
-      throw Exception('Erro ao baixar arquivo: ${res.statusCode}');
+      throw DriveStageException('download', 'Erro ao baixar arquivo: ${res.statusCode}');
     }
     _assertWithinImportLimit(res.bodyBytes.length);
     return _stripNulls(res.body);
