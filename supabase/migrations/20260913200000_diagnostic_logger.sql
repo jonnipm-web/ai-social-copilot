@@ -66,7 +66,18 @@ CREATE TABLE public.diagnostic_sessions (
   CONSTRAINT diagnostic_sessions_label_no_newline CHECK (label IS NULL OR label !~ '[\r\n]'),
   CONSTRAINT diagnostic_sessions_role_snapshot_no_newline CHECK (role_snapshot IS NULL OR role_snapshot !~ '[\r\n]'),
   CONSTRAINT diagnostic_sessions_app_version_no_newline CHECK (app_version IS NULL OR app_version !~ '[\r\n]'),
-  CONSTRAINT diagnostic_sessions_build_sha_no_newline CHECK (build_sha IS NULL OR build_sha !~ '[\r\n]')
+  CONSTRAINT diagnostic_sessions_build_sha_no_newline CHECK (build_sha IS NULL OR build_sha !~ '[\r\n]'),
+  -- IVE-COMMERCIAL-OBSERVABILITY-07A (Codex adversarial review, 4th pass)
+  -- — platform/environment/language aren't populated with free text or
+  -- rendered by the exporter today (platform is one of two fixed literals;
+  -- environment/language are currently unused by startSession()), so this
+  -- isn't a recurrence of the report-injection issue the constraints above
+  -- close. Bounded here anyway for a consistent invariant across every
+  -- text column in this table, rather than leaving three columns as an
+  -- unexplained exception if a future caller ever does populate them.
+  CONSTRAINT diagnostic_sessions_platform_no_newline CHECK (platform IS NULL OR platform !~ '[\r\n]'),
+  CONSTRAINT diagnostic_sessions_environment_no_newline CHECK (environment IS NULL OR environment !~ '[\r\n]'),
+  CONSTRAINT diagnostic_sessions_language_no_newline CHECK (language IS NULL OR language !~ '[\r\n]')
 );
 
 CREATE INDEX diagnostic_sessions_user_started_idx
