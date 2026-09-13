@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/diagnostics/diagnostic_container.dart';
+import '../../../core/diagnostics/diagnostic_models.dart';
 import '../../../data/models/knowledge_item.dart';
 import '../../../data/services/file_import_service.dart';
 import '../../../providers/knowledge_provider.dart';
@@ -620,12 +622,29 @@ class _FileImportSection extends StatelessWidget {
     );
   }
 
+  // IVE-COMMERCIAL-OBSERVABILITY-07A — KNOWLEDGE/IMPORT category (mission
+  // section 04): "file selection event, safe file type, safe file size,
+  // extraction stage, success/failure, duration. Do NOT log file
+  // contents." Only the extension and character count are logged — never
+  // result.text/fileName themselves.
+  String? _safeFileType(String fileName) {
+    final match = RegExp(r'\.([A-Za-z0-9]+)$').firstMatch(fileName);
+    return match?.group(1)?.toLowerCase();
+  }
+
   Future<void> _pickFile(BuildContext context) async {
     onImporting();
+    final stopwatch = Stopwatch()..start();
     try {
       final service = FileImportService();
       final result  = await service.pickAndExtract();
       if (result == null) {
+        diagnosticLogger.logEvent(
+          category: DiagnosticCategory.knowledge,
+          eventName: 'local_import',
+          status: 'cancelled',
+          durationMs: stopwatch.elapsedMilliseconds,
+        );
         onError();
         return;
       }
@@ -634,8 +653,27 @@ class _FileImportSection extends StatelessWidget {
         final name = result.fileName.replaceAll(RegExp(r'\.[^.]+$'), '');
         titleCtrl.text = name;
       }
+      diagnosticLogger.logEvent(
+        category: DiagnosticCategory.knowledge,
+        eventName: 'local_import',
+        status: 'success',
+        durationMs: stopwatch.elapsedMilliseconds,
+        metadata: {
+          'file_type': _safeFileType(result.fileName),
+          'file_size_bytes': result.text.length,
+          'stage': 'extraction',
+        },
+      );
       onImport(result.fileName);
     } catch (e) {
+      diagnosticLogger.logEvent(
+        category: DiagnosticCategory.knowledge,
+        eventName: 'local_import',
+        severity: DiagnosticSeverity.warn,
+        status: 'failure',
+        durationMs: stopwatch.elapsedMilliseconds,
+        error: e,
+      );
       onError();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -1,0 +1,21 @@
+-- IVE-COMMERCIAL-OBSERVABILITY-07A production deploy gate (Codex read-only
+-- production policy check, section 04).
+--
+-- The original 20260913200000_diagnostic_logger.sql migration revoked
+-- EXECUTE on cleanup_old_diagnostic_sessions from PUBLIC and granted it only
+-- to authenticated. That is not equivalent to blocking anon: Supabase
+-- grants EXECUTE on new public-schema functions to anon by default
+-- independently of the PUBLIC pseudo-role, so REVOKE ALL FROM PUBLIC alone
+-- does not remove it. Verified live in production: an anon-role call to
+-- cleanup_old_diagnostic_sessions(30) reached the function body and was
+-- rejected by its own internal is_admin_user() check ('insufficient_
+-- privilege'), rather than being rejected by Postgres at the ACL level with
+-- a permission-denied error. No privilege escalation resulted (the
+-- function still fails closed), but it deviated from this repo's own
+-- established convention of an explicit anon revoke on every admin-only
+-- RPC (see 20260910190000_commercial_ai_quota.sql:
+-- "REVOKE ALL ... FROM PUBLIC, anon;").
+--
+-- This migration only tightens an ACL; it changes no table, policy, or
+-- function body, and cannot affect any existing authenticated/admin caller.
+REVOKE ALL ON FUNCTION public.cleanup_old_diagnostic_sessions(integer) FROM anon;

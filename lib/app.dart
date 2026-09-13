@@ -8,9 +8,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/app_lifecycle/profile_resume_policy.dart';
 import 'core/constants/app_constants.dart';
+import 'core/diagnostics/diagnostic_models.dart';
 import 'core/modules/route_policy.dart';
 import 'core/theme/app_theme.dart';
 import 'data/models/profile.dart';
+import 'providers/diagnostic_session_provider.dart';
 import 'providers/profile_provider.dart';
 import 'l10n/app_localizations.dart';
 import 'providers/language_provider.dart';
@@ -140,21 +142,55 @@ Future<String?> _resolveEntitlementRedirect(BuildContext context, String path) a
   }
 }
 
+// IVE-COMMERCIAL-OBSERVABILITY-07A — best-effort NAVIGATION event, covering
+// mission section 04's "route requested / route allowed / route denied /
+// redirect target". Never throws, never blocks navigation: if there's no
+// active diagnostic session (the overwhelming common case for every real
+// user) diagnosticLoggerProvider.logEvent is already a same-frame no-op
+// (see DiagnosticLoggerService.logEvent), and if the ProviderScope/
+// container itself can't be reached for any reason this is swallowed too.
+void _logNavigation(BuildContext context, String path, String? redirectTarget) {
+  try {
+    final container = ProviderScope.containerOf(context, listen: false);
+    container.read(diagnosticLoggerProvider).logEvent(
+      category: DiagnosticCategory.navigation,
+      eventName: redirectTarget == null ? 'route_allowed' : 'route_redirected',
+      route: path,
+      status: redirectTarget == null ? 'allowed' : 'redirected',
+      metadata: {
+        'from_route': path,
+        if (redirectTarget != null) 'redirect_target': redirectTarget,
+      },
+    );
+  } catch (_) {
+    // Diagnostics must never affect real navigation.
+  }
+}
+
+Future<String?> _computeRedirect(BuildContext context, GoRouterState state) async {
+  final session = Supabase.instance.client.auth.currentSession;
+  final path = state.fullPath ?? state.matchedLocation;
+  final goingToAuth   = path == AppConstants.routeLogin;
+  final goingToSplash = path == AppConstants.routeSplash;
+
+  if (goingToSplash) return null;
+  if (session == null && !goingToAuth) return AppConstants.routeLogin;
+  if (session != null && goingToAuth)  return AppConstants.routeDashboard;
+  if (session == null) return null; // goingToAuth, unauthenticated -- let /login render.
+
+  return _resolveEntitlementRedirect(context, path);
+}
+
 final _router = GoRouter(
   initialLocation: AppConstants.routeSplash,
   observers: [_iveObserver],
   redirect: (context, state) async {
-    final session = Supabase.instance.client.auth.currentSession;
     final path = state.fullPath ?? state.matchedLocation;
-    final goingToAuth   = path == AppConstants.routeLogin;
-    final goingToSplash = path == AppConstants.routeSplash;
-
-    if (goingToSplash) return null;
-    if (session == null && !goingToAuth) return AppConstants.routeLogin;
-    if (session != null && goingToAuth)  return AppConstants.routeDashboard;
-    if (session == null) return null; // goingToAuth, unauthenticated -- let /login render.
-
-    return _resolveEntitlementRedirect(context, path);
+    final redirectTarget = await _computeRedirect(context, state);
+    if (path != AppConstants.routeSplash) {
+      _logNavigation(context, path, redirectTarget);
+    }
+    return redirectTarget;
   },
   routes: [
     GoRoute(
