@@ -31,7 +31,7 @@ jobs:
       - name: Adicionar suporte à plataforma Web
         run: flutter create --platforms web --project-name ai_social_copilot .
 
-      - name: Injetar restauração de rota SPA em web/index.html (IVE-COMMERCIAL-TARGETED-REMEDIATION-04)
+      - name: Injetar restauração de rota SPA em web/index.html (IVE-COMMERCIAL-TARGETED-REMEDIATION-06)
         # web/index.html é gerado do zero pelo `flutter create` acima a cada
         # execução -- não existe no repositório para editar diretamente.
         # web/404.html (esse sim versionado) já faz metade do trabalho
@@ -40,6 +40,36 @@ jobs:
         # Flutter inicializar, então precisa ser o primeiro <script> depois
         # de <head>, não importa a versão exata do template que o
         # `flutter create` acima gerou.
+        #
+        # IVE-COMMERCIAL-TARGETED-REMEDIATION-06 -- a versão anterior
+        # (Remediation 04) restaurava o caminho decodificado em
+        # `window.location.pathname`, que é o comportamento certo para um
+        # GoRouter configurado com usePathUrlStrategy(). Este app usa a
+        # estratégia hash PADRÃO (nenhum usePathUrlStrategy() em
+        # lib/main.dart -- por decisão explícita de produto, GoRouter só lê
+        # `window.location.hash` para decidir a rota inicial. Escrever o
+        # caminho recuperado na pathname faz o Flutter nunca vê-lo: o hash
+        # continua vazio, o GoRouter assume "/" e o link direto se perde
+        # silenciosamente (reproduzido: um link "limpo" para /account virava
+        # .../account#/login, nunca chegando na tela de Conta). A correção é
+        # escrever o caminho recuperado no HASH, não na pathname.
+        #
+        # IVE-COMMERCIAL-TARGETED-REMEDIATION-06 (Codex adversarial review,
+        # 2nd pass) -- web/404.html forwards window.location.hash verbatim,
+        # unencoded, appended after everything else -- so a request that
+        # (unusually) already carried its own fragment arrives here with a
+        # non-empty l.hash. The first cut of this fix appended it raw after
+        # the restored hash (`'#' + decoded + l.hash`), which produces a
+        # second literal "#" in the URL -- syntactically present, but
+        # GoRouter's hash strategy only recognizes the FIRST "#" as the
+        # boundary, so everything from the second "#" onward (including
+        # its own "#") becomes part of the route string GoRouter tries to
+        # match, which would fail to resolve rather than cleanly ignoring
+        # it. Folded into a query parameter on the restored route instead:
+        # exactly one "#", route matching for `decoded` is unaffected, nothing
+        # is silently dropped. Still guards only an unusual/malformed input
+        # -- no real link in this app produces a clean path with its own
+        # separate fragment (hash IS the route here).
         run: |
           python3 - <<'PYEOF'
           import re
@@ -49,13 +79,27 @@ jobs:
           snippet = """  <script>
             // Single Page Apps for GitHub Pages -- restaura a rota real
             // codificada por web/404.html antes do GoRouter inicializar.
+            // Escreve no HASH (não na pathname): este app usa a estratégia
+            // de URL hash padrão do Flutter/GoRouter (sem
+            // usePathUrlStrategy()), que só lê window.location.hash.
             (function(l) {
               if (l.search[1] === '/') {
                 var decoded = l.search.slice(1).split('&').map(function(s) {
                   return s.replace(/~and~/g, '&');
                 }).join('?');
+                // l.hash aqui só é não-vazio se a URL original (rara e
+                // improvável, mas possível) já tinha seu próprio fragmento.
+                // Dobrado como parâmetro de query em vez de concatenado
+                // como um segundo "#" -- GoRouter só reconhece o PRIMEIRO
+                // "#" como fronteira da rota; um segundo "#" quebraria o
+                // casamento da rota em vez de ser ignorado.
+                var extraHash = l.hash ? l.hash.slice(1) : '';
+                var origHashParam = extraHash
+                    ? (decoded.indexOf('?') === -1 ? '?' : '&') +
+                      'orig_hash=' + encodeURIComponent(extraHash)
+                    : '';
                 window.history.replaceState(null, null,
-                    l.pathname.slice(0, -1) + decoded + l.hash
+                    l.pathname + '#' + decoded + origHashParam
                 );
               }
             }(window.location));
@@ -67,6 +111,13 @@ jobs:
                   f.write(html)
           PYEOF
           grep -q "history.replaceState" web/index.html && echo "OK: script injetado" || (echo "FALHA: script não encontrado em web/index.html" && exit 1)
+
+      - name: Verificar restauração de rota SPA (regressão IVE-COMMERCIAL-TARGETED-REMEDIATION-06)
+        # Executa o script injetado acima num DOM falso e confirma que ele
+        # restaura a rota no HASH, não na pathname -- exatamente a
+        # regressão que sobreviveu sem detecção da Remediation 04 até o
+        # Physical E2E Gate 05 pegá-la em produção.
+        run: node scripts/ci/verify_spa_hash_restore.mjs web/index.html
 
       - name: Instalar dependências
         run: flutter pub get

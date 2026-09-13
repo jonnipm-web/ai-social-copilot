@@ -141,16 +141,30 @@ class _UserTile extends StatelessWidget {
         icon: const Icon(Icons.more_vert, color: Colors.white38, size: 20),
         color: const Color(0xFF1A1A2E),
         onSelected: (value) async {
+          // IVE-COMMERCIAL-TARGETED-REMEDIATION-06R (Codex adversarial
+          // review) -- this only ever invalidated allProfilesProvider (the
+          // admin's own list view), never currentProfileProvider. Harmless
+          // before the route entitlement guard existed; now, an admin
+          // changing a role here -- including their OWN, e.g. testing a
+          // self-demotion or losing admin via another admin's action on a
+          // shared account -- left the route guard trusting a stale cached
+          // role until the affected session happened to navigate somewhere
+          // that repopulated it independently. Always invalidating both
+          // together closes that gap; the extra refetch when the changed
+          // user isn't the current one is negligible (this is an
+          // infrequent, deliberate admin action, not a hot path).
           if (value == 'toggle') {
             await ref
                 .read(profileAdminNotifierProvider.notifier)
                 .setActive(user.id, !user.isActive);
             ref.invalidate(allProfilesProvider);
+            ref.invalidate(currentProfileProvider);
           } else {
             await ref
                 .read(profileAdminNotifierProvider.notifier)
                 .updateRole(user.id, value);
             ref.invalidate(allProfilesProvider);
+            ref.invalidate(currentProfileProvider);
           }
         },
         itemBuilder: (_) => [

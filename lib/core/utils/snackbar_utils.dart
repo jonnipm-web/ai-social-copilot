@@ -74,6 +74,21 @@ void showErrorSnack(BuildContext context, String message) {
   );
 }
 
+// IVE-COMMERCIAL-TARGETED-REMEDIATION-06S — feedback for a CTA whose
+// module isn't commercially released yet (see
+// core/modules/route_policy.dart's isModuleActionable). Neutral tone,
+// deliberately not styled as an error: nothing went wrong, the feature
+// just isn't available yet.
+void showInfoSnack(BuildContext context, String message) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(message),
+      backgroundColor: Colors.white24,
+      behavior: SnackBarBehavior.floating,
+    ),
+  );
+}
+
 void showSuccessSnack(BuildContext context, String message) {
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(

@@ -42,15 +42,21 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
   Future<void> _checkSession() async {
     // IVE-COMMERCIAL-TARGETED-REMEDIATION-04 — este era o ponto exato do
     // crash relatado: rodava em initState() sem nenhum try/catch, então
-    // qualquer exceção (inclusive o bug conhecido do pacote
-    // google_sign_in_web em signInSilently()/isSignedIn(), já tratado na
-    // origem em DriveService) derrubava a tela inteira sem chance de
-    // mostrar mensagem nenhuma. DriveService.isSignedIn já falha seguro
-    // para `false` internamente; este try/catch é defesa em profundidade
-    // -- nunca deixar uma falha aqui impedir a tela de simplesmente cair
-    // para a visão de login.
+    // qualquer exceção derrubava a tela inteira sem chance de mostrar
+    // mensagem nenhuma. Este try/catch é defesa em profundidade -- nunca
+    // deixar uma falha aqui impedir a tela de simplesmente cair para a
+    // visão de login.
+    //
+    // IVE-COMMERCIAL-TARGETED-REMEDIATION-06 — trocado de `isSignedIn`
+    // (só identidade) para `hasUsableSession()` (identidade + token de
+    // Drive de fato utilizável). Sob GIS, `isSignedIn` pode ser `true`
+    // sem autorização de drive.readonly ("autenticado mas não
+    // autorizado" -- ver DriveService.signIn()); pular direto para a
+    // lista de arquivos nesse estado é o que produzia o crash físico. Com
+    // hasUsableSession(), esse estado degenerado agora cai para o botão
+    // de login em vez de para uma lista que sabemos que vai falhar.
     try {
-      if (await _drive.isSignedIn) {
+      if (await _drive.hasUsableSession()) {
         if (!mounted) return;
         setState(() => _signedIn = true);
         _loadFiles();
