@@ -360,7 +360,10 @@ void main() {
         ];
 
         final unresolved = allAppRoutes
-            .where((r) => !kRouteModuleOwnership.containsKey(r) && !kAlwaysAllowedRoutes.contains(r))
+            .where((r) =>
+                !kRouteModuleOwnership.containsKey(r) &&
+                !kAlwaysAllowedRoutes.contains(r) &&
+                !kDeliberatelyUnclassifiedRoutes.contains(r))
             .toList();
         expect(unresolved, isEmpty, reason: 'Unclassified app.dart routes (would silently fail-open): $unresolved');
       },

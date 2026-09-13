@@ -119,13 +119,22 @@ const Set<String> kAlwaysAllowedRoutes = {
   AppConstants.routeSupport,
 };
 
-/// routeHistory/routeHistoryDetail are deliberately absent from both maps
-/// above: dashboard_screen.dart links to "Histórico" with no `locked` flag
-/// (unlike Personas/Biblioteca/Calendário right next to it), and it is not
-/// modeled as its own module in kModuleRegistry — treated as unclassified,
-/// which resolves to `allow` below per mission section 09's explicit
-/// "unknown/unclassified route → fail safely ... without breaking
-/// legitimate application navigation".
+/// Routes deliberately left unclassified (neither owned by a module nor in
+/// kAlwaysAllowedRoutes): dashboard_screen.dart links to "Histórico" with
+/// no `locked` flag (unlike Personas/Biblioteca/Calendário right next to
+/// it), and it is not modeled as its own module in kModuleRegistry.
+/// Resolves to `allow` per mission section 09's explicit "unknown/
+/// unclassified route → fail safely ... without breaking legitimate
+/// application navigation". Listed explicitly (rather than just falling
+/// through silently) so the completeness invariant in
+/// route_policy_test.dart can still catch a genuinely-forgotten future
+/// route instead of every unmapped route being indistinguishable from one
+/// that was deliberately left alone.
+const Set<String> kDeliberatelyUnclassifiedRoutes = {
+  AppConstants.routeHistory,
+  AppConstants.routeHistoryDetail,
+};
+
 ModuleDefinition? _moduleForRoute(String path) {
   final moduleId = kRouteModuleOwnership[path];
   if (moduleId == null) return null;
