@@ -140,10 +140,19 @@ void main() {
       expect(ctrl.isRiveReady, isFalse);
     });
 
-    test('initializeRive returns false when .riv asset is absent', () async {
+    // IVE-AVATAR-RIVE-RUNTIME-03B6C — a verified canary .riv now ships at
+    // IveAssetPaths.riveAsset (temporary, isolated-branch pointer; see
+    // ive_visual_config.dart), so this proves the success path instead of
+    // the previously-only-possible absent-asset path. The absent/corrupt
+    // failure path itself is unchanged code (ive_rive_runtime.dart /
+    // ive_avatar_controller.dart were not modified by 03B6C) and remains
+    // structurally covered by the Failure Contract in
+    // docs/ive/IVE_RIVE_RUNTIME_CONTRACT_V1.md §14.
+    test('initializeRive loads the verified canary asset and becomes ready', () async {
       final result = await ctrl.initializeRive();
-      expect(result, isFalse);
-      expect(ctrl.isRiveReady, isFalse);
+      expect(result, isTrue);
+      expect(ctrl.isRiveReady, isTrue);
+      expect(ctrl.riveRuntime?.artboard, isNotNull);
     });
 
     test('controller is safe after dispose', () {
@@ -273,7 +282,15 @@ void main() {
     // IVE-AVATAR-STATE-MACHINE-02 (Codex review F4): the mapper is tested in
     // isolation above; this proves the wiring actually reaches the rendered
     // widget when iveProvider's real interaction bridge drives it.
-    testWidgets('reflects thinking/speaking interaction through to the rendered fallback',
+    //
+    // IVE-AVATAR-RIVE-RUNTIME-03B6C: asserts via IveStatusRingPainter.state
+    // instead of IveVisualFallback directly, because a verified canary .riv
+    // now ships (see ive_visual_config.dart) and IveAvatar may render either
+    // the Rive path or the fallback path depending on asset-load timing in
+    // this test environment — both paths wrap their content in the same
+    // IveStatusRingPainter with the same `state`, so this stays a correct,
+    // path-agnostic proof of the wiring regardless of which one is active.
+    testWidgets('reflects thinking/speaking interaction through to the rendered avatar',
         (tester) async {
       // Disposed explicitly at the end of the test body (not via addTearDown):
       // testWidgets runs inside a FakeAsync zone whose pending-timer check
@@ -294,21 +311,22 @@ void main() {
       );
       await tester.pump();
 
+      IveVisualState ringState() => tester
+          .widgetList<CustomPaint>(find.byType(CustomPaint))
+          .map((w) => w.painter)
+          .whereType<IveStatusRingPainter>()
+          .single
+          .state;
+
       final notifier = container.read(iveProvider.notifier);
 
       final token = notifier.beginThinking();
       await tester.pump();
-      expect(
-        tester.widget<IveVisualFallback>(find.byType(IveVisualFallback)).state,
-        IveVisualState.thinking,
-      );
+      expect(ringState(), IveVisualState.thinking);
 
       notifier.completeInteraction(token, success: true);
       await tester.pump();
-      expect(
-        tester.widget<IveVisualFallback>(find.byType(IveVisualFallback)).state,
-        IveVisualState.speaking,
-      );
+      expect(ringState(), IveVisualState.speaking);
 
       // Cancels the pending speaking-clear timer before the test body
       // returns — see comment above.
