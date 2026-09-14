@@ -116,4 +116,40 @@ void main() {
       expect(result.focus, isNull);
     });
   });
+
+  group('selectEcosystemWideFields (Codex Gate 1, round 1, P1 — regressão)', () {
+    test(
+      'com projectId explícito, topProjectsSnapshot e bottleneck NÃO vazam '
+      'dados de outros projetos — ficam vazios/nulos',
+      () {
+        final scores = [
+          _score('project-a', 'Projeto A', 20),
+          _score('project-b', 'Projeto B', 90), // maior score do sistema
+          _score('project-c', 'Projeto C', 5),
+        ];
+
+        final result = selectEcosystemWideFields(scores, 'project-a');
+
+        expect(result.topProjectsSnapshot, isEmpty);
+        expect(result.bottleneck, isNull);
+        // Regressão central: nem "Projeto B" (maior score) nem "Projeto C"
+        // (pior execução) devem aparecer em NENHUM campo quando a
+        // interação é sobre o Projeto A.
+      },
+    );
+
+    test('com projectId null, preserva o resumo ecosystem-wide original (top 3 + gargalo)', () {
+      final scores = [
+        _score('project-a', 'Projeto A', 20),
+        _score('project-b', 'Projeto B', 90),
+        _score('project-c', 'Projeto C', 55),
+      ];
+
+      final result = selectEcosystemWideFields(scores, null);
+
+      expect(result.topProjectsSnapshot, hasLength(3));
+      expect(result.topProjectsSnapshot.first['name'], 'Projeto B');
+      expect(result.bottleneck, isNotNull);
+    });
+  });
 }

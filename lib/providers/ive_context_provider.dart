@@ -141,6 +141,49 @@ ProjectFocusResult selectProjectFocus(
   return const ProjectFocusResult(focus: null, unavailable: true);
 }
 
+// ── Campos comparativos cross-project — extraídos como função pura ───────────
+//
+// IVE-COMMERCIAL-FOUNDATION-11 (Codex Gate 1, round 1, P1, ACCEPTED) —
+// `topProjectsSnapshot` (top 3 projetos por score) e `bottleneck` (projeto
+// com pior execução) são, por natureza, comparações ENTRE projetos — não
+// dados de um único projeto. São um resumo ecosystem-wide legítimo quando
+// projectId é null (overlay global, sem projeto em foco), mas vazariam
+// nome/descrição/score de um projeto DIFERENTE do pedido para dentro de
+// uma interação escopada a um projeto específico se incluídos
+// incondicionalmente. Extraída pura para permitir testar essa garantia
+// diretamente (test/providers/ive_project_context_test.dart), sem mockar
+// a cadeia de providers de ecossistema.
+class EcosystemWideFields {
+  const EcosystemWideFields({required this.topProjectsSnapshot, required this.bottleneck});
+  final List<Map<String, dynamic>> topProjectsSnapshot;
+  final EcosystemScore? bottleneck;
+}
+
+EcosystemWideFields selectEcosystemWideFields(
+  List<EcosystemScore> scores,
+  String? projectId,
+) {
+  // Escopado a um único projeto: nenhum campo comparativo cross-project
+  // é incluído — vazio/nulo, não "deixado como estava".
+  if (projectId != null) {
+    return const EcosystemWideFields(topProjectsSnapshot: [], bottleneck: null);
+  }
+  final sorted = [...scores]
+    ..sort((a, b) => b.ecosystemScore.compareTo(a.ecosystemScore));
+  final topThree = sorted.take(3).map((s) => {
+        'name':        s.project.name,
+        'description': s.project.description,
+        'type':        s.project.type,
+        'status':      s.project.status,
+        'score':       s.ecosystemScore,
+        'opportunity': s.project.opportunityScore,
+      }).toList();
+  final bottleneck = scores.isNotEmpty
+      ? scores.reduce((a, b) => a.executionScore < b.executionScore ? a : b)
+      : null;
+  return EcosystemWideFields(topProjectsSnapshot: topThree, bottleneck: bottleneck);
+}
+
 // ── Provider — FutureProvider derivado dos providers de ecossistema ───────────
 //
 // IVE-COMMERCIAL-FOUNDATION-11 (Project Context Contract, Phase A) — antes
@@ -178,9 +221,6 @@ final iveContextDataProvider =
   final scores     = await ref.watch(ecosystemScoresProvider.future);
   final pending    = await ref.watch(pendingActionsProvider.future);
   final labSummary = await ref.watch(opportunityLabSummaryProvider.future);
-
-  final sorted = [...scores]
-    ..sort((a, b) => b.ecosystemScore.compareTo(a.ecosystemScore));
 
   final focusResult = selectProjectFocus(scores, projectId);
   final top = focusResult.focus;
@@ -322,11 +362,9 @@ final iveContextDataProvider =
     if (a.risks.isNotEmpty)  'risks': a.risks.take(2).toList(),
   }).toList();
 
-  // ── Projeto com pior execução (principal gargalo) ────────────────────────────
-  final bottleneck = scores.isNotEmpty
-      ? scores.reduce(
-          (a, b) => a.executionScore < b.executionScore ? a : b)
-      : null;
+  // ── Campos comparativos cross-project (ver selectEcosystemWideFields) ────────
+  final ecosystemWideFields = selectEcosystemWideFields(scores, projectId);
+  final bottleneck = ecosystemWideFields.bottleneck;
 
   final pendingLab = labSummary['pending'] ?? 0;
 
@@ -355,14 +393,7 @@ final iveContextDataProvider =
                'Isso está impactando seu score de execução.';
   }
 
-  final topThree = sorted.take(3).map((s) => {
-    'name':        s.project.name,
-    'description': s.project.description,
-    'type':        s.project.type,
-    'status':      s.project.status,
-    'score':       s.ecosystemScore,
-    'opportunity': s.project.opportunityScore,
-  }).toList();
+  final topThree = ecosystemWideFields.topProjectsSnapshot;
 
   return IveContextData(
     healthScore:                 health,
