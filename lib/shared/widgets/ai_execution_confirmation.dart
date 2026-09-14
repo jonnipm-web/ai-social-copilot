@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/diagnostics/diagnostic_container.dart';
 import '../../core/diagnostics/diagnostic_models.dart';
 import '../../data/models/ive_interaction_request.dart';
+import '../../providers/diagnostic_session_provider.dart' show diagnosticLoggerProvider;
 import '../../providers/quota_provider.dart';
 
 // IVE-COMMERCIAL-FOUNDATION-11 — the ONE reusable AI-execution
@@ -109,7 +109,7 @@ class AiExecutionController extends ChangeNotifier {
       quota: quota,
     );
 
-    diagnosticLogger.logEvent(
+    ref.read(diagnosticLoggerProvider).logEvent(
       category: DiagnosticCategory.ai,
       eventName: confirmed
           ? 'ai_execution_confirmation_accepted'
@@ -133,7 +133,7 @@ class AiExecutionController extends ChangeNotifier {
     // class doc: the actual Edge Function call is a single await with no
     // intermediate signal this client can observe.
     _setState(AiExecutionState.reservingQuota);
-    diagnosticLogger.logEvent(
+    ref.read(diagnosticLoggerProvider).logEvent(
       category: DiagnosticCategory.ai,
       eventName: 'ai_analysis_requested',
       correlationId: request.correlationId,
@@ -149,7 +149,7 @@ class AiExecutionController extends ChangeNotifier {
     try {
       final result = await action();
       _setState(AiExecutionState.success);
-      diagnosticLogger.logEvent(
+      ref.read(diagnosticLoggerProvider).logEvent(
         category: DiagnosticCategory.ai,
         eventName: 'ai_analysis_succeeded',
         correlationId: request.correlationId,
@@ -166,7 +166,7 @@ class AiExecutionController extends ChangeNotifier {
       // IVE_INTERACTION_AND_QUOTA_CONTRACT.md §3.1). Inventing that event
       // client-side would violate Section 10's explicit rule against
       // "claiming backend outcomes the client cannot know."
-      diagnosticLogger.logEvent(
+      ref.read(diagnosticLoggerProvider).logEvent(
         category: DiagnosticCategory.ai,
         eventName: 'ai_analysis_failed',
         severity: DiagnosticSeverity.warn,

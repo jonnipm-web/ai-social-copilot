@@ -1,11 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 
+import 'package:ai_social_copilot/core/diagnostics/diagnostic_logger_service.dart';
 import 'package:ai_social_copilot/data/models/ive_interaction_request.dart';
 import 'package:ai_social_copilot/data/models/quota_info.dart';
+import 'package:ai_social_copilot/providers/diagnostic_session_provider.dart';
 import 'package:ai_social_copilot/providers/quota_provider.dart';
 import 'package:ai_social_copilot/shared/widgets/ai_execution_confirmation.dart';
+
+// IVE-COMMERCIAL-FOUNDATION-11 — diagnosticLoggerProvider's real
+// definition eagerly reads `Supabase.instance.client`, which throws in
+// any test process that never called Supabase.initialize(). Overriding
+// it with a mock (rather than routing AiExecutionController through the
+// ambient `diagnosticLogger` top-level getter, which reads from a
+// separate module-level ProviderContainer this test's ProviderScope
+// cannot reach at all) is exactly why AiExecutionController takes `ref`
+// and uses `ref.read(diagnosticLoggerProvider)` instead of that getter.
+class MockDiagnosticLoggerService extends Mock implements DiagnosticLoggerService {}
 
 // IVE-COMMERCIAL-FOUNDATION-11 — covers the reusable AI-execution
 // confirmation mechanism (mission Sections 07-08). This is the ONLY
@@ -27,6 +40,7 @@ void main() {
         currentQuotaProvider.overrideWith(
           (ref) async => const QuotaInfo(role: 'free', limit: 5, used: 2),
         ),
+        diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
       ],
       child: MaterialApp(
         home: Scaffold(
