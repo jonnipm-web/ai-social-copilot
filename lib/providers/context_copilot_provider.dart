@@ -42,7 +42,18 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
   ContextCopilotNotifier(this._ref) : super(const CopilotState());
 
   final Ref _ref;
-  final _client = Supabase.instance.client;
+  // IVE-COMMERCIAL-FOUNDATION-11 — lazy getter, not an eager field
+  // initializer: the old `final _client = Supabase.instance.client;` ran
+  // at CONSTRUCTION time, so merely instantiating a ContextCopilotNotifier
+  // (e.g. via `ProviderContainer.read(contextCopilotProvider(key).notifier)`
+  // in a test that never calls `send()`) crashed with "You must
+  // initialize the supabase instance before calling Supabase.instance" —
+  // Supabase.initialize() is never called in a plain widget/unit test
+  // process. Deferring the access to first real use (inside `send()`,
+  // exactly like the app's own normal flow, where Supabase is always
+  // initialized long before any chat message is sent) fixes this without
+  // any production behavior change.
+  SupabaseClient get _client => Supabase.instance.client;
 
   Future<void> send({
     required String message,
