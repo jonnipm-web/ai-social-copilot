@@ -26,6 +26,36 @@ class DiagnosticLoggerService {
   String? _activeSessionId;
   String? get activeSessionId => _activeSessionId;
 
+  static final RegExp _uuidShape = RegExp(
+    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+  );
+
+  /// Name of the mission 07B partial unique index
+  /// (diagnostic_one_active_session.sql) enforcing at most one ACTIVE
+  /// session per user — used to disambiguate exactly THAT unique-
+  /// violation from any other 23505 (e.g. a theoretical primary-key
+  /// collision on `id`, which is DB-generated and never client-supplied
+  /// today, but Codex read-only audit flagged the bare error CODE alone
+  /// as too broad a signal to act on).
+  static const _oneActiveSessionConstraint = 'diagnostic_sessions_one_active_per_user';
+
+  /// IVE-COMMERCIAL-OBSERVABILITY-07B — lets a recovered/adopted session
+  /// (see [findMyActiveSession]) become the local active session without
+  /// going through [startSession]'s own INSERT. Never accepts a caller-
+  /// supplied user id: the row itself was already fetched scoped to
+  /// auth.uid() via RLS, so there's nothing to re-check here. A real
+  /// exploit path was never possible even before this check (any misuse
+  /// still hits diagnostic_events_insert_own_active_session's own RLS at
+  /// write time, which requires the SESSION's owner to match auth.uid()),
+  /// but Codex read-only audit flagged this as an easy-to-misuse public
+  /// API with no shape validation of its own — this rejects anything that
+  /// isn't a real session id (a UUID) outright as a cheap, free defense-
+  /// in-depth floor, independent of the RLS backstop.
+  void adoptActiveSession(String sessionId) {
+    if (!_uuidShape.hasMatch(sessionId)) return;
+    _activeSessionId = sessionId;
+  }
+
   // Bounded, in-memory only (mission section 15: "Maintain only a bounded
   // in-memory buffer if simple and justified... Do not build a complex
   // offline telemetry subsystem") — a small window of the most recent
@@ -55,7 +85,7 @@ class DiagnosticLoggerService {
           .from('diagnostic_sessions')
           .insert({
             'user_id': userId,
-            'label': label != null ? sanitizeText(label, maxLength: 200) : null,
+            'label': label != null ? sanitizeSessionLabel(label, maxLength: 200) : null,
             'status': 'active',
             // IVE-COMMERCIAL-OBSERVABILITY-07A (Codex adversarial review,
             // P2, 2nd pass) — role_snapshot is app-controlled today
@@ -76,8 +106,60 @@ class DiagnosticLoggerService {
           .single();
       _activeSessionId = row['id'] as String?;
       return _activeSessionId;
+    } on PostgrestException catch (e) {
+      // IVE-COMMERCIAL-OBSERVABILITY-07B (mission section 05) — a unique-
+      // violation here means the one-active-session-per-user DB invariant
+      // rejected this insert because one already exists (most plausibly
+      // this same client racing itself: a double-tap, or another tab
+      // already active). Recover and adopt the existing row rather than
+      // surfacing a raw failure — mission section 05: "no crash; detect/
+      // recover gracefully; show the existing ACTIVE session".
+      //
+      // Checks the specific CONSTRAINT NAME, not just the bare 23505 code
+      // (Codex adversarial review) — this insert never supplies its own
+      // `id` (the column is DB-generated), so a primary-key collision on
+      // `id` isn't reachable today, but matching the constraint by name
+      // removes the ambiguity entirely rather than relying on that being
+      // permanently true.
+      if (e.code == '23505' && (e.message.contains(_oneActiveSessionConstraint))) {
+        final existing = await findMyActiveSession();
+        if (existing != null) {
+          _activeSessionId = existing['id'] as String?;
+          return _activeSessionId;
+        }
+      }
+      debugPrint('[diagnostics] falha ao iniciar sessão: ${sanitizeErrorMessage(e)}');
+      return null;
     } catch (e) {
       debugPrint('[diagnostics] falha ao iniciar sessão: ${sanitizeErrorMessage(e)}');
+      return null;
+    }
+  }
+
+  /// IVE-COMMERCIAL-OBSERVABILITY-07B (mission section 04) — deterministic
+  /// recovery of the CURRENT authenticated user's own ACTIVE session, if
+  /// any survives a page reload/new tab. Server-authoritative by
+  /// construction: scoped to `auth.uid()` (never a client-supplied user
+  /// id) and further narrowed by diagnostic_sessions_admin_manage_own's
+  /// own RLS, so a non-admin/forged caller simply gets null, same as every
+  /// other method here. `order by started_at desc limit 1` is defensive
+  /// only (mission section 05 makes at most one ACTIVE row possible going
+  /// forward); it does not itself enforce the invariant.
+  Future<Map<String, dynamic>?> findMyActiveSession() async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) return null;
+    try {
+      final rows = await _client
+          .from('diagnostic_sessions')
+          .select()
+          .eq('user_id', userId)
+          .eq('status', 'active')
+          .order('started_at', ascending: false)
+          .limit(1);
+      final list = List<Map<String, dynamic>>.from(rows as List);
+      return list.isEmpty ? null : list.first;
+    } catch (e) {
+      debugPrint('[diagnostics] falha ao recuperar sessão ativa: ${sanitizeErrorMessage(e)}');
       return null;
     }
   }
@@ -198,7 +280,7 @@ class DiagnosticLoggerService {
         'event_name': sanitizeText(eventName, maxLength: 200),
         'status': status != null ? sanitizeText(status, maxLength: 50) : null,
         'duration_ms': durationMs,
-        'correlation_id': correlationId != null ? sanitizeText(correlationId, maxLength: 100) : null,
+        'correlation_id': correlationId != null ? sanitizeCorrelationId(correlationId, maxLength: 100) : null,
         'metadata': buildSafeMetadata(metadata, allowedKeys: kDiagnosticMetadataKeys),
         'error_type': error != null ? sanitizeText(error.runtimeType.toString(), maxLength: 100) : null,
         'error_message': error != null ? sanitizeErrorMessage(error) : null,

@@ -209,6 +209,24 @@ void main() {
       }
     });
 
+    test(
+      'IVE-COMMERCIAL-OBSERVABILITY-07B — real /admin route denies non-admin '
+      '(PRO and FREE) direct navigation, allows an admin',
+      () {
+        for (final isPro in [true, false]) {
+          expect(
+            evaluateRouteAccess(path: AppConstants.routeAdmin, isAdmin: false, isPro: isPro, profileResolved: true),
+            RouteDecision.redirectDenied,
+            reason: 'non-admin (isPro=$isPro) must be denied direct /admin navigation',
+          );
+        }
+        expect(
+          evaluateRouteAccess(path: AppConstants.routeAdmin, isAdmin: true, isPro: false, profileResolved: true),
+          RouteDecision.allow,
+        );
+      },
+    );
+
     test('admin-only real route (intelligence-debug) denies a non-admin PRO user', () {
       expect(
         evaluateRouteAccess(
