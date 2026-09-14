@@ -123,13 +123,29 @@ class MarketAnalysisService {
   }
 
   // Gap Analysis
+  //
+  // IVE-COMMERCIAL-STABILITY-08 — this relationship is a CURRENT-STATE one
+  // (confirmed by product semantics: gap_analysis_screen.dart's "Analisar"
+  // action stays enabled even after a result already exists, i.e. running
+  // it again is meant to REPLACE the current result, not add history), so
+  // there should only ever be one row per market_analysis_id. In practice
+  // a race (double-tap, or a retry after a slow response) could still
+  // create a second row before the DB-level uniqueness fix
+  // (20260916000000_market_intelligence_current_state.sql) is applied —
+  // COMMERCIAL-E2E-001 physically reproduced exactly that
+  // (PostgrestException 406 "Results contain 2 rows"). Ordering by
+  // created_at desc + limit(1) makes this read deterministic and safe
+  // regardless of whether that migration has been applied yet: it always
+  // returns the most recent (== canonical) row instead of erroring.
   Future<GapAnalysis?> fetchGapAnalysis(String marketAnalysisId) async {
-    final row = await _client
+    final rows = await _client
         .from(AppConstants.tableGapAnalyses)
         .select()
         .eq('market_analysis_id', marketAnalysisId)
-        .maybeSingle();
-    return row == null ? null : GapAnalysis.fromMap(row);
+        .order('created_at', ascending: false)
+        .limit(1);
+    final list = rows as List;
+    return list.isEmpty ? null : GapAnalysis.fromMap(list.first as Map<String, dynamic>);
   }
 
   Future<GapAnalysis> runGapAnalysis(String marketAnalysisId, String input, {String language = 'pt-BR'}) async {
@@ -145,9 +161,19 @@ class MarketAnalysisService {
     final data = response.data as Map<String, dynamic>;
     if (data.containsKey('error')) throw Exception(data['error']);
 
+    // IVE-COMMERCIAL-STABILITY-08 — upsert on the current-state key instead
+    // of a plain insert, so re-running this analysis REPLACES the existing
+    // row instead of creating a second one (mission section: PROVEN bug,
+    // COMMERCIAL-E2E-001). REQUIRES the
+    // gap_analyses_one_per_market_analysis unique index
+    // (20260916000000_market_intelligence_current_state.sql) to already
+    // exist in the target database — onConflict has nothing to match
+    // against otherwise. That migration must be applied before this code
+    // ships, never after (same deploy-ordering rule already established
+    // for 07A/07B's own migrations).
     final row = await _client
         .from(AppConstants.tableGapAnalyses)
-        .insert({
+        .upsert({
           'user_id':            uid,
           'market_analysis_id': marketAnalysisId,
           'content_gaps':       data['content_gaps'] ?? [],
@@ -156,7 +182,7 @@ class MarketAnalysisService {
           'monetization_gaps':  data['monetization_gaps'] ?? [],
           'product_gaps':       data['product_gaps'] ?? [],
           'analysis_json':      data,
-        })
+        }, onConflict: 'market_analysis_id')
         .select()
         .single();
 
@@ -264,14 +290,16 @@ class MarketAnalysisService {
     return inserted;
   }
 
-  // Content Cluster
+  // Content Cluster — same current-state reasoning as fetchGapAnalysis above.
   Future<ContentCluster?> fetchContentCluster(String marketAnalysisId) async {
-    final row = await _client
+    final rows = await _client
         .from(AppConstants.tableContentClusters)
         .select()
         .eq('market_analysis_id', marketAnalysisId)
-        .maybeSingle();
-    return row == null ? null : ContentCluster.fromMap(row);
+        .order('created_at', ascending: false)
+        .limit(1);
+    final list = rows as List;
+    return list.isEmpty ? null : ContentCluster.fromMap(list.first as Map<String, dynamic>);
   }
 
   Future<ContentCluster> buildContentCluster(String marketAnalysisId, String input, String mainKeyword, {String language = 'pt-BR'}) async {
@@ -287,9 +315,12 @@ class MarketAnalysisService {
     final data = response.data as Map<String, dynamic>;
     if (data.containsKey('error')) throw Exception(data['error']);
 
+    // IVE-COMMERCIAL-STABILITY-08 — same upsert-on-current-state-key
+    // reasoning as runGapAnalysis above. REQUIRES
+    // content_clusters_one_per_market_analysis to already exist.
     final row = await _client
         .from(AppConstants.tableContentClusters)
-        .insert({
+        .upsert({
           'user_id':            uid,
           'market_analysis_id': marketAnalysisId,
           'main_keyword':       mainKeyword,
@@ -298,7 +329,7 @@ class MarketAnalysisService {
           'articles':           data['articles'] ?? [],
           'editorial_roadmap':  data['editorial_roadmap'] ?? [],
           'seo_structure':      data['seo_structure'] ?? {},
-        })
+        }, onConflict: 'market_analysis_id')
         .select()
         .single();
 
@@ -313,14 +344,16 @@ class MarketAnalysisService {
     return (rows as List).map((r) => RevenuePlan.fromMap(r)).toList();
   }
 
-  // Revenue Plan
+  // Revenue Plan — same current-state reasoning as fetchGapAnalysis above.
   Future<RevenuePlan?> fetchRevenuePlan(String marketAnalysisId) async {
-    final row = await _client
+    final rows = await _client
         .from(AppConstants.tableRevenuePlans)
         .select()
         .eq('market_analysis_id', marketAnalysisId)
-        .maybeSingle();
-    return row == null ? null : RevenuePlan.fromMap(row);
+        .order('created_at', ascending: false)
+        .limit(1);
+    final list = rows as List;
+    return list.isEmpty ? null : RevenuePlan.fromMap(list.first as Map<String, dynamic>);
   }
 
   Future<RevenuePlan> buildRevenuePlan(
@@ -348,9 +381,16 @@ class MarketAnalysisService {
       return 0.0;
     }
 
+    // IVE-COMMERCIAL-STABILITY-08 — same upsert-on-current-state-key
+    // reasoning as runGapAnalysis above. Only applies to the
+    // market-analysis-linked flow (market_analysis_id NOT NULL) — the
+    // separate project-only revenue plan flow (market_analysis_id IS
+    // NULL, see idx_revenue_plans_project_name) is untouched, its own
+    // uniqueness is keyed on (user_id, project_name) instead. REQUIRES
+    // revenue_plans_one_per_market_analysis to already exist.
     final row = await _client
         .from(AppConstants.tableRevenuePlans)
-        .insert({
+        .upsert({
           'user_id':              uid,
           if (projectId != null) 'project_id': projectId,
           'market_analysis_id':   marketAnalysisId,
@@ -362,7 +402,7 @@ class MarketAnalysisService {
           'annual_moderate':      _d(data['annual_moderate']),
           'annual_aggressive':    _d(data['annual_aggressive']),
           'plan_json':            data,
-        })
+        }, onConflict: 'market_analysis_id')
         .select()
         .single();
 

@@ -305,7 +305,24 @@ class DiagnosticLoggerService {
 /// both a "started" and a later "success"/"failure" event across an await
 /// gap or a different widget).
 String newDiagnosticCorrelationId() {
+  // IVE-COMMERCIAL-STABILITY-08 — STRONGEST KNOWN CANDIDATE (Codex
+  // adversarial review: SUPPORTED by exact signature match, not
+  // confirmed by a live dart2js reproduction -- this repo has no local
+  // Flutter SDK to build/run one) for the RangeError cluster in
+  // COMMERCIAL-E2E-001 ("max must be in range 0 < max ≤ 2^32, was 0").
+  // `1 << 32` is a documented dart2js web-compilation trap
+  // (dart-lang/sdk#37569): its own repro is `Random.nextInt(1 << 32)`,
+  // producing this EXACT error message, closed by the reporter switching
+  // to the exact same `1 << 31` fix applied here. Independently confirmed
+  // `1 << 32` evaluates to `1` (not 2^32) under real JavaScript semantics
+  // (`node -e "console.log(1<<32)"`) -- JS's `<<` takes the shift amount
+  // mod 32, so a shift by exactly 32 does not produce 2^32 the way it
+  // does on the Dart VM. Regardless of whether this was the exact cause,
+  // `1 << 31` is strictly safer (a shift of 31 cannot wrap) while still
+  // giving 2^31 (~2.1 billion) possible values, stacked with a
+  // microsecond timestamp prefix -- no meaningful loss of uniqueness for
+  // a same-session correlation id.
   final rand = Random();
   return '${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}'
-      '-${rand.nextInt(1 << 32).toRadixString(36)}';
+      '-${rand.nextInt(1 << 31).toRadixString(36)}';
 }
