@@ -14,6 +14,7 @@ import '../../../providers/opportunity_lab_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../providers/roi_metric_provider.dart';
 import '../../../data/models/copilot_context_data.dart';
+import '../../../data/models/ive_interaction_request.dart';
 import '../../../providers/ive_context_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/context_copilot_widget.dart' show showCopilotChat;
@@ -99,9 +100,18 @@ class ExecutiveDashboardScreen extends ConsumerWidget {
             // 2ª rodada) -- outro ponto de entrada do chat sem contextData
             // nenhum, encontrado pela mesma auditoria.
             onPressed: () {
-              final ctx = ref.read(iveContextDataProvider).valueOrNull;
-              final contextData = ctx != null ? CopilotContextData.fromIveContext(ctx) : CopilotContextData();
-              showCopilotChat(context, screenName: 'Business OS', contextData: contextData);
+              // Dashboard executivo global, sem projeto específico em foco.
+              final ctx = ref.read(iveContextDataProvider(null)).valueOrNull;
+              final contextData = ctx != null ? CopilotContextData.fromIveContext(ctx) : const CopilotContextData();
+              showCopilotChat(
+                context,
+                screenName: 'Business OS',
+                contextData: contextData,
+                request: IveInteractionRequest(
+                  sourceModule:  'executive_dashboard',
+                  operationType: IveOperationType.ask,
+                ),
+              );
             },
           ),
           IconButton(

@@ -42,7 +42,18 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
   ContextCopilotNotifier(this._ref) : super(const CopilotState());
 
   final Ref _ref;
-  final _client = Supabase.instance.client;
+  // IVE-COMMERCIAL-FOUNDATION-11 — lazy getter, not an eager field
+  // initializer: the old `final _client = Supabase.instance.client;` ran
+  // at CONSTRUCTION time, so merely instantiating a ContextCopilotNotifier
+  // (e.g. via `ProviderContainer.read(contextCopilotProvider(key).notifier)`
+  // in a test that never calls `send()`) crashed with "You must
+  // initialize the supabase instance before calling Supabase.instance" —
+  // Supabase.initialize() is never called in a plain widget/unit test
+  // process. Deferring the access to first real use (inside `send()`,
+  // exactly like the app's own normal flow, where Supabase is always
+  // initialized long before any chat message is sent) fixes this without
+  // any production behavior change.
+  SupabaseClient get _client => Supabase.instance.client;
 
   Future<void> send({
     required String message,
@@ -177,8 +188,24 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 // Sem autoDispose: histórico do chat persiste enquanto o app estiver aberto.
-// Family key = screenName → um estado por tela, nunca compartilhado.
+//
+// IVE-COMMERCIAL-FOUNDATION-11 (Codex Gate 2, P1, ACCEPTED) — a chave era
+// SOMENTE `screenName` (String). O Project Context Contract escopa
+// corretamente o GROUNDING (`CopilotContextData.projectId`) por projeto,
+// mas com a chave antiga o HISTÓRICO DE CONVERSA (`state.turns`, enviado
+// como `history` em toda chamada — ver ContextCopilotNotifier.send) era
+// compartilhado entre projetos diferentes na MESMA tela: perguntar sobre
+// o Projeto A em "Decisões" e depois sobre o Projeto B na mesma tela
+// reenviava as perguntas/respostas do Projeto A junto com o contexto
+// (correto) do Projeto B — exatamente o vazamento que a missão Seção 04
+// proíbe ("Project A → IVE then Project B → IVE must never reuse Project
+// A's question/context"). Chave agora é um record `(screenName,
+// projectId)`: trocar de projeto na mesma tela é uma chave DIFERENTE,
+// logo uma conversa nova, sem precisar de nenhuma lógica de reset manual
+// (mesmo raciocínio já aplicado a iveContextDataProvider).
+typedef CopilotConversationKey = (String screenName, String? projectId);
+
 final contextCopilotProvider = StateNotifierProvider.family<
-    ContextCopilotNotifier, CopilotState, String>(
-  (ref, screenName) => ContextCopilotNotifier(ref),
+    ContextCopilotNotifier, CopilotState, CopilotConversationKey>(
+  (ref, key) => ContextCopilotNotifier(ref),
 );

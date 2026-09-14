@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/models/ecosystem_score.dart';
 import '../data/models/knowledge_item.dart';
 import '../data/models/opportunity_lab_item.dart';
 import '../data/services/document_context_builder.dart';
@@ -36,6 +37,18 @@ class IveContextData {
   final List<Map<String, dynamic>> pendingOpportunitiesSummary;
   // Top 3 ações pendentes com campos de auditoria
   final List<Map<String, dynamic>> pendingActionsSummary;
+  // IVE-COMMERCIAL-FOUNDATION-11 — o project_id efetivamente usado para
+  // escopar este contexto (o mesmo passado à family, quando não-nulo, ou
+  // null quando o contexto é o resumo global do ecossistema). Não afeta
+  // nenhum comportamento existente — apenas torna explícito, para quem
+  // consome IveContextData, se este resultado está de fato project-scoped
+  // ou é o resumo ambiente system-wide.
+  final String? scopedProjectId;
+  // true quando um projectId explícito foi pedido mas o projeto não foi
+  // encontrado em ecosystemScoresProvider (deletado, inacessível, ainda
+  // não sincronizado) — falha segura: nunca cai de volta para o projeto
+  // de maior score do sistema todo.
+  final bool projectUnavailable;
 
   const IveContextData({
     this.healthScore                = 0,
@@ -57,6 +70,8 @@ class IveContextData {
     this.documentWarnings           = const [],
     this.pendingOpportunitiesSummary = const [],
     this.pendingActionsSummary       = const [],
+    this.scopedProjectId,
+    this.projectUnavailable          = false,
   });
 }
 
@@ -85,19 +100,144 @@ List<KnowledgeItem> selectKnowledgeForGrounding(
   return knowledgeRaw.where((k) => k.projectId == activeProjectId).toList();
 }
 
-// ── Provider — FutureProvider derivado dos providers de ecossistema ───────────
+// ── Seleção do projeto em foco — extraída como função pura ────────────────────
+//
+// IVE-COMMERCIAL-FOUNDATION-11 (Project Context Contract, Phase A) —
+// mesmo padrão de selectKnowledgeForGrounding acima: extraída pura,
+// sem tocar Supabase/providers, especificamente para permitir testar a
+// garantia central deste contrato (projeto pedido != projeto de maior
+// score do sistema; projeto inexistente falha seguro) sem mockar a
+// cadeia inteira de providers de ecossistema.
+class ProjectFocusResult {
+  const ProjectFocusResult({required this.focus, required this.unavailable});
+  final EcosystemScore? focus;
+  // true apenas quando um projectId explícito foi pedido e não foi
+  // encontrado em `scores` — NUNCA quando projectId é null (esse é o
+  // caso ecosystem-wide legítimo, não uma falha).
+  final bool unavailable;
+}
 
-final iveContextDataProvider = FutureProvider.autoDispose<IveContextData>((ref) async {
+ProjectFocusResult selectProjectFocus(
+  List<EcosystemScore> scores,
+  String? projectId,
+) {
+  if (projectId == null) {
+    final sorted = [...scores]
+      ..sort((a, b) => b.ecosystemScore.compareTo(a.ecosystemScore));
+    return ProjectFocusResult(
+      focus: sorted.isNotEmpty ? sorted.first : null,
+      unavailable: false,
+    );
+  }
+  for (final s in scores) {
+    if (s.project.id == projectId) {
+      return ProjectFocusResult(focus: s, unavailable: false);
+    }
+  }
+  // Falha segura: projeto pedido não encontrado (deletado/inacessível) —
+  // NUNCA cai de volta para o projeto de maior score do sistema todo,
+  // que seria exatamente o vazamento cross-project que este contrato
+  // existe para eliminar.
+  return const ProjectFocusResult(focus: null, unavailable: true);
+}
+
+// ── Campos comparativos cross-project — extraídos como função pura ───────────
+//
+// IVE-COMMERCIAL-FOUNDATION-11 (Codex Gate 1, round 1, P1, ACCEPTED) —
+// `topProjectsSnapshot` (top 3 projetos por score) e `bottleneck` (projeto
+// com pior execução) são, por natureza, comparações ENTRE projetos — não
+// dados de um único projeto. São um resumo ecosystem-wide legítimo quando
+// projectId é null (overlay global, sem projeto em foco), mas vazariam
+// nome/descrição/score de um projeto DIFERENTE do pedido para dentro de
+// uma interação escopada a um projeto específico se incluídos
+// incondicionalmente. Extraída pura para permitir testar essa garantia
+// diretamente (test/providers/ive_project_context_test.dart), sem mockar
+// a cadeia de providers de ecossistema.
+class EcosystemWideFields {
+  const EcosystemWideFields({required this.topProjectsSnapshot, required this.bottleneck});
+  final List<Map<String, dynamic>> topProjectsSnapshot;
+  final EcosystemScore? bottleneck;
+}
+
+EcosystemWideFields selectEcosystemWideFields(
+  List<EcosystemScore> scores,
+  String? projectId,
+) {
+  // Escopado a um único projeto: nenhum campo comparativo cross-project
+  // é incluído — vazio/nulo, não "deixado como estava".
+  if (projectId != null) {
+    return const EcosystemWideFields(topProjectsSnapshot: [], bottleneck: null);
+  }
+  final sorted = [...scores]
+    ..sort((a, b) => b.ecosystemScore.compareTo(a.ecosystemScore));
+  final topThree = sorted.take(3).map((s) => {
+        'name':        s.project.name,
+        'description': s.project.description,
+        'type':        s.project.type,
+        'status':      s.project.status,
+        'score':       s.ecosystemScore,
+        'opportunity': s.project.opportunityScore,
+      }).toList();
+  final bottleneck = scores.isNotEmpty
+      ? scores.reduce((a, b) => a.executionScore < b.executionScore ? a : b)
+      : null;
+  return EcosystemWideFields(topProjectsSnapshot: topThree, bottleneck: bottleneck);
+}
+
+// IVE-COMMERCIAL-FOUNDATION-11 (Codex Gate 2, P1, ACCEPTED) —
+// `opportunityLabSummaryProvider`'s 'pending' count is GLOBAL (every
+// project). Using it unconditionally leaked the user's aggregate pending-
+// opportunity count from ALL projects into a single-project-scoped
+// interaction. Extracted pure (same pattern as the functions above) so
+// this specific regression is directly testable.
+int selectPendingOpportunitiesCount({
+  required String? projectId,
+  required int scopedPendingCount,
+  required int globalPendingCount,
+}) =>
+    projectId != null ? scopedPendingCount : globalPendingCount;
+
+// ── Provider — FutureProvider derivado dos providers de ecossistema ───────────
+//
+// IVE-COMMERCIAL-FOUNDATION-11 (Project Context Contract, Phase A) — antes
+// desta missão este era um `FutureProvider.autoDispose` SEM parâmetro: TODA
+// interação com a IVE (de qualquer tela, sobre qualquer projeto) recebia o
+// mesmo grounding computado a partir de "qual projeto tem o maior score no
+// sistema todo", nunca do projeto que o usuário estava efetivamente olhando.
+// Isso é a causa raiz confirmada, em docs/commercial/
+// PROJECT_CONTEXT_CONTRACT.md, das reclamações do dono sobre "perguntas
+// antigas da IVE" e respostas fora de contexto.
+//
+// Agora é `.family<IveContextData, String?>`, chaveado POR PROJECT_ID
+// APENAS (não pelo objeto de interação inteiro — ver a correção do Codex
+// round 1 registrada no mesmo documento: chavear pelo request inteiro,
+// incluindo correlationId por-chamada, fragmentaria o cache em vez de
+// corrigi-lo).
+//
+//   projectId != null → grounding escopado EXATAMENTE a esse projeto
+//     (knowledge, oportunidades e ações pendentes filtrados por projectId;
+//     se o projeto não for encontrado em ecosystemScoresProvider —
+//     deletado, inacessível — falha seguro com `projectUnavailable: true`,
+//     NUNCA cai de volta para o projeto de maior score do sistema).
+//   projectId == null → comportamento de resumo ecosystem-wide preservado
+//     EXATAMENTE como antes (destaca o projeto de maior score como sinal
+//     de saúde do ecossistema). Este é um caso de uso legítimo e distinto
+//     — o overlay global de chat, aberto de uma tela sem projeto em foco,
+//     mostrando "que projeto está indo melhor/pior" como contexto de
+//     ecossistema — não é o mesmo bug que motivou esta mudança (que era
+//     usar esse mesmo valor como se fosse "o projeto que o usuário está
+//     vendo" quando na verdade é um projeto diferente).
+final iveContextDataProvider =
+    FutureProvider.autoDispose.family<IveContextData, String?>((ref, projectId) async {
   // Lê dados existentes — não cria nova lógica, apenas agrega
   final health     = await ref.watch(ecosystemHealthProvider.future);
   final scores     = await ref.watch(ecosystemScoresProvider.future);
   final pending    = await ref.watch(pendingActionsProvider.future);
   final labSummary = await ref.watch(opportunityLabSummaryProvider.future);
 
-  // ── Projeto de maior score (computado antes dos knowledge items para filtrar) ─
-  final sorted = [...scores]
-    ..sort((a, b) => b.ecosystemScore.compareTo(a.ecosystemScore));
-  final top = sorted.isNotEmpty ? sorted.first : null;
+  final focusResult = selectProjectFocus(scores, projectId);
+  final top = focusResult.focus;
+  final projectUnavailable = focusResult.unavailable;
 
   // ── Knowledge items — filtrados pelo projeto ativo quando disponível ──────────
   final knowledgeRaw = await ref.watch(knowledgeItemsProvider.future).then(
@@ -105,8 +245,13 @@ final iveContextDataProvider = FutureProvider.autoDispose<IveContextData>((ref) 
     onError: (_, __) => <KnowledgeItem>[],
   );
 
-  final projectId = top?.project.id;
-  final knowledgeForGrounding = selectKnowledgeForGrounding(knowledgeRaw, projectId);
+  // Quando um projectId explícito foi pedido, o escopo é SEMPRE esse
+  // projectId (mesmo que `top` seja null por projectUnavailable — nesse
+  // caso selectKnowledgeForGrounding filtra por um ID que não bate com
+  // nenhum item, retornando lista vazia, o que é o resultado seguro
+  // correto, não um erro).
+  final effectiveProjectId = projectId ?? top?.project.id;
+  final knowledgeForGrounding = selectKnowledgeForGrounding(knowledgeRaw, effectiveProjectId);
 
   final knowledgeSorted = [...knowledgeForGrounding]
     ..sort((a, b) => b.opportunityScore.compareTo(a.opportunityScore));
@@ -185,11 +330,19 @@ final iveContextDataProvider = FutureProvider.autoDispose<IveContextData>((ref) 
   final documentWarnings = mutableWarnings;
 
   // ── Oportunidades pendentes — top 3 por finalScore ───────────────────────────
+  // IVE-COMMERCIAL-FOUNDATION-11: quando projectId explícito foi pedido,
+  // filtra por esse projeto — antes desta missão, uma interação sobre o
+  // Projeto A podia receber oportunidades pendentes de QUALQUER projeto do
+  // usuário no grounding. Quando projectId é null (resumo ecosystem-wide),
+  // mantém o comportamento original (top 3 do sistema todo).
   final opportunities = await ref.watch(opportunityLabProvider.future).then(
     (v) => v,
     onError: (_, __) => <OpportunityLabItem>[],
   );
-  final pendingOpportunities = [...opportunities.where((o) => o.status == 'pending')]
+  final opportunitiesInScope = projectId != null
+      ? opportunities.where((o) => o.projectId == projectId)
+      : opportunities;
+  final pendingOpportunities = [...opportunitiesInScope.where((o) => o.status == 'pending')]
     ..sort((a, b) => b.finalScore.compareTo(a.finalScore));
   final opportunitiesSummary = pendingOpportunities.take(3).map((o) => {
     'title':        o.title,
@@ -205,7 +358,11 @@ final iveContextDataProvider = FutureProvider.autoDispose<IveContextData>((ref) 
   }).toList();
 
   // ── Ações pendentes — top 3 por prioridade com campos de auditoria ───────────
-  final pendingActionsSorted = [...pending]
+  // Mesma lógica de escopo por projeto que as oportunidades acima.
+  final pendingInScope = projectId != null
+      ? pending.where((a) => a.projectId == projectId)
+      : pending;
+  final pendingActionsSorted = [...pendingInScope]
     ..sort((a, b) => b.priority.compareTo(a.priority));
   final actionsSummary = pendingActionsSorted.take(3).map((a) => {
     'title':    a.title,
@@ -218,13 +375,15 @@ final iveContextDataProvider = FutureProvider.autoDispose<IveContextData>((ref) 
     if (a.risks.isNotEmpty)  'risks': a.risks.take(2).toList(),
   }).toList();
 
-  // ── Projeto com pior execução (principal gargalo) ────────────────────────────
-  final bottleneck = scores.isNotEmpty
-      ? scores.reduce(
-          (a, b) => a.executionScore < b.executionScore ? a : b)
-      : null;
+  // ── Campos comparativos cross-project (ver selectEcosystemWideFields) ────────
+  final ecosystemWideFields = selectEcosystemWideFields(scores, projectId);
+  final bottleneck = ecosystemWideFields.bottleneck;
 
-  final pendingLab = labSummary['pending'] ?? 0;
+  final pendingLab = selectPendingOpportunitiesCount(
+    projectId: projectId,
+    scopedPendingCount: pendingOpportunities.length,
+    globalPendingCount: labSummary['pending'] ?? 0,
+  );
 
   // ── Detecção de alertas ───────────────────────────────────────────────────────
   bool   hasAlert  = false;
@@ -251,19 +410,12 @@ final iveContextDataProvider = FutureProvider.autoDispose<IveContextData>((ref) 
                'Isso está impactando seu score de execução.';
   }
 
-  final topThree = sorted.take(3).map((s) => {
-    'name':        s.project.name,
-    'description': s.project.description,
-    'type':        s.project.type,
-    'status':      s.project.status,
-    'score':       s.ecosystemScore,
-    'opportunity': s.project.opportunityScore,
-  }).toList();
+  final topThree = ecosystemWideFields.topProjectsSnapshot;
 
   return IveContextData(
     healthScore:                 health,
     projectCount:                scores.length,
-    pendingActionsCount:         pending.length,
+    pendingActionsCount:         pendingInScope.length,
     pendingOpportunitiesCount:   pendingLab,
     topProjectName:              top?.project.name,
     topProjectDescription:       top?.project.description,
@@ -280,5 +432,7 @@ final iveContextDataProvider = FutureProvider.autoDispose<IveContextData>((ref) 
     documentWarnings:            documentWarnings,
     pendingOpportunitiesSummary: opportunitiesSummary,
     pendingActionsSummary:       actionsSummary,
+    scopedProjectId:             projectId,
+    projectUnavailable:          projectUnavailable,
   );
 });

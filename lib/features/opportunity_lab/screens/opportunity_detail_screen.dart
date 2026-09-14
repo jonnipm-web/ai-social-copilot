@@ -5,10 +5,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../data/models/copilot_context_data.dart';
+import '../../../data/models/ive_interaction_request.dart';
 import '../../../data/models/opportunity_lab_item.dart';
 import '../../../providers/action_queue_provider.dart';
+import '../../../providers/ive_context_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
 import '../../../providers/project_provider.dart';
+import '../../../shared/widgets/context_copilot_widget.dart' show showCopilotChat;
 import '../../action_engine/screens/action_detail_screen.dart';
 
 // ── Colors ────────────────────────────────────────────────────────────────────
@@ -923,9 +927,30 @@ class _ActionButtons extends StatelessWidget {
             icon: const Icon(Icons.auto_awesome_rounded),
             label: const Text('Perguntar à IVE sobre esta oportunidade'),
             onPressed: () {
-              // IVE overlay is always available via the floating button;
-              // navigate to lab screen so IVE has opportunity context loaded
-              context.go(AppConstants.routeOpportunityLab);
+              // IVE-COMMERCIAL-FOUNDATION-11 — antes, este botão navegava
+              // de volta para a lista de Opportunity Lab na esperança de
+              // que o overlay global "de alguma forma" tivesse o contexto
+              // certo (confirmado quebrado em docs/commercial/
+              // IVE_INTERACTION_AND_QUOTA_CONTRACT.md §1.1). Agora abre o
+              // diálogo contextual diretamente, escopado por esta
+              // oportunidade e seu projeto.
+              final ctx = ref.read(iveContextDataProvider(item.projectId)).valueOrNull;
+              final contextData =
+                  ctx != null ? CopilotContextData.fromIveContext(ctx) : const CopilotContextData();
+              showCopilotChat(
+                context,
+                screenName: 'Oportunidades',
+                contextData: contextData,
+                initialMessage:
+                    'Analise a oportunidade "${item.title}" (score ${item.finalScore}) e diga como aproveitá-la.',
+                request: IveInteractionRequest(
+                  projectId:        item.projectId,
+                  sourceModule:     'opportunity_lab',
+                  sourceEntityType: 'opportunity',
+                  sourceEntityId:   item.id,
+                  operationType:    IveOperationType.ask,
+                ),
+              );
             },
           ),
         ),

@@ -57,8 +57,11 @@ class DecisionSimulatorNotifier
     );
 
     try {
-      // Agrega dados do ecossistema para contexto
-      final ctx = _ref.read(iveContextDataProvider).valueOrNull;
+      // Agrega dados do ecossistema para contexto — o simulador compara
+      // TODOS os projetos por natureza (ver projectsPayload abaixo), logo
+      // o resumo ecosystem-wide (projectId: null) é o escopo correto aqui,
+      // não um vazamento.
+      final ctx = _ref.read(iveContextDataProvider(null)).valueOrNull;
       final scores = await _ref.read(ecosystemScoresProvider.future);
 
       final ecosystemPayload = {

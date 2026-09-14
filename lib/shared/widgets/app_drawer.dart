@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_constants.dart';
+import '../../core/modules/module_definition.dart';
 import '../../core/modules/module_registry.dart';
 import '../../data/models/profile.dart';
 import '../../l10n/app_localizations.dart';
@@ -16,6 +17,29 @@ import '../../providers/profile_provider.dart';
 /// completo (incluindo Beta/Em desenvolvimento/Interno) só existe no
 /// Painel Admin, nunca aqui. Isto NÃO substitui autorização de servidor:
 /// acesso direto por URL continua protegido por RLS/gates de cada tela.
+// IVE-COMMERCIAL-FOUNDATION-11 — extraída como função pura (mesmo padrão
+// já usado em ive_context_provider.dart's selectKnowledgeForGrounding/
+// selectProjectFocus) especificamente para permitir testar a correção do
+// duplicado "Planos/Plano" (docs/commercial/MODULE_LIFECYCLE_MATRIX.md
+// §3) sem precisar montar uma árvore de widgets completa com GoRouter e
+// AppLocalizations só para isso.
+//
+// routeUpgrade é explicitamente excluído: o item fixo "Plano / Upgrade"
+// (ver _DrawerContent.build, após o Divider) já cobre essa rota. Antes
+// desta correção, o item gerado pelo registro (`plans-upgrade`, "Planos
+// / Upgrade") e o item fixo apareciam AMBOS na gaveta, navegando para a
+// mesma rota com rótulos singular/plural inconsistentes.
+List<ModuleDefinition> visibleDrawerModules({
+  required bool isAdmin,
+  required bool isPro,
+}) {
+  return kModuleRegistry.where((m) {
+    if (m.route == null) return false;
+    if (m.route == AppConstants.routeUpgrade) return false;
+    return m.visibleFor(isAdmin: isAdmin, isPro: isPro) && m.commercialEnabled;
+  }).toList();
+}
+
 class AppDrawer extends ConsumerWidget {
   const AppDrawer({super.key});
 
@@ -48,12 +72,9 @@ class _DrawerContent extends ConsumerWidget {
     final current = GoRouterState.of(context).fullPath ?? '';
 
     // Navegação comercial: só módulos habilitados para o plano do usuário,
-    // com rota própria (módulos sem rota, ex: Context Copilot, são
-    // overlays/capacidades embutidas, não destinos de navegação).
-    final visibleModules = kModuleRegistry.where((m) {
-      if (m.route == null) return false;
-      return m.visibleFor(isAdmin: false, isPro: isPro) && m.commercialEnabled;
-    }).toList();
+    // com rota própria. Ver visibleDrawerModules() acima para a razão de
+    // routeUpgrade ser excluído deste loop.
+    final visibleModules = visibleDrawerModules(isAdmin: false, isPro: isPro);
 
     return SafeArea(
       child: Column(
@@ -188,19 +209,29 @@ class _DrawerContent extends ConsumerWidget {
     );
   }
 
-  IconData _iconFor(String moduleId) {
-    const icons = <String, IconData>{
-      'command-center': Icons.hub_rounded,
-      'business-dashboard': Icons.dashboard_rounded,
-      'projects': Icons.rocket_launch_rounded,
-      'knowledge-vault': Icons.auto_stories_rounded,
-      'website-analyzer': Icons.language_rounded,
-      'market-intelligence': Icons.analytics_rounded,
-      'opportunity-lab': Icons.science_rounded,
-      'action-engine': Icons.bolt_rounded,
-    };
-    return icons[moduleId] ?? Icons.circle_outlined;
-  }
+  IconData _iconFor(String moduleId) => drawerIconFor(moduleId);
+}
+
+// IVE-COMMERCIAL-FOUNDATION-11 — extraída como função pura top-level
+// (Codex adversarial review, Architecture-10 mission, round 1, P2,
+// ACCEPTED: "route_policy.dart's kRouteModuleOwnership... and app_drawer.
+// dart's _iconFor map... a new registry entry silently gets a generic
+// fallback icon if this map isn't updated alongside it"). Extracting it
+// enables the coverage test in test/shared/widgets/app_drawer_test.dart
+// without needing a full widget tree — the map itself is UNCHANGED, this
+// only makes its silent-fallback behavior testable.
+IconData drawerIconFor(String moduleId) {
+  const icons = <String, IconData>{
+    'command-center': Icons.hub_rounded,
+    'business-dashboard': Icons.dashboard_rounded,
+    'projects': Icons.rocket_launch_rounded,
+    'knowledge-vault': Icons.auto_stories_rounded,
+    'website-analyzer': Icons.language_rounded,
+    'market-intelligence': Icons.analytics_rounded,
+    'opportunity-lab': Icons.science_rounded,
+    'action-engine': Icons.bolt_rounded,
+  };
+  return icons[moduleId] ?? Icons.circle_outlined;
 }
 
 class _NavItem extends StatelessWidget {

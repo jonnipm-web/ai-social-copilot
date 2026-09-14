@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../data/models/copilot_context_data.dart';
+import '../../../data/models/ive_interaction_request.dart';
 import '../../../data/models/ecosystem_score.dart';
 import '../../../data/models/opportunity_lab_item.dart';
 import '../../../data/models/project.dart';
@@ -1204,12 +1205,16 @@ class _ProjectDetailSheet extends ConsumerWidget {
             label: const Text('Perguntar à IVE sobre este perfil', style: TextStyle(fontSize: 13)),
             onPressed: () {
               Navigator.of(context).pop();
-              // IVE-COMMERCIAL-TARGETED-REMEDIATION-04: mesmo padrão dos
-              // demais pontos de entrada -- sem isto, caía no
-              // CopilotContextData() vazio padrão de showCopilotChat().
-              final ctx = ref.read(iveContextDataProvider).valueOrNull;
+              // IVE-COMMERCIAL-FOUNDATION-11: este é o Project Command
+              // Center de UM projeto específico (p.project.id) — antes,
+              // "Perguntar à IVE sobre este perfil" ainda assim recebia
+              // o grounding do projeto de maior score do sistema todo,
+              // não necessariamente ESTE projeto. Esta é a referência de
+              // implementação do Project Context Contract (docs/
+              // commercial/PROJECT_CONTEXT_CONTRACT.md §6).
+              final ctx = ref.read(iveContextDataProvider(p.project.id)).valueOrNull;
               final contextData =
-                  ctx != null ? CopilotContextData.fromIveContext(ctx) : CopilotContextData();
+                  ctx != null ? CopilotContextData.fromIveContext(ctx) : const CopilotContextData();
               showCopilotChat(
                 context,
                 screenName:     'Projetos',
@@ -1218,6 +1223,13 @@ class _ProjectDetailSheet extends ConsumerWidget {
                     'nicho ${p.niche}, público ${p.targetAudience}, maturidade ${p.maturityLabel}. '
                     '${p.missingKnowledge.isNotEmpty ? "Lacunas: ${p.missingKnowledge.join(", ")}." : ""} '
                     'O que devo priorizar agora?',
+                request: IveInteractionRequest(
+                  projectId:        p.project.id,
+                  sourceModule:     'project_command_center',
+                  sourceEntityType: 'project',
+                  sourceEntityId:   p.project.id,
+                  operationType:    IveOperationType.ask,
+                ),
               );
             },
           ),

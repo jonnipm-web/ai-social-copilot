@@ -3,16 +3,31 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'context_copilot_widget.dart' show showCopilotChat;
 import '../../data/models/copilot_context_data.dart';
+import '../../data/models/ive_interaction_request.dart';
 import '../../providers/ive_context_provider.dart';
 
 /// Botão "Explicar com IVE" — qualquer componente pode adicionar.
 ///
 /// Ao tocar, abre o chat da IVE já com a pergunta pre-enviada.
+///
+/// IVE-COMMERCIAL-FOUNDATION-11 — [projectId]/[sourceModule]/
+/// [sourceEntityType]/[sourceEntityId] são OPCIONAIS e todos `null` por
+/// padrão: um chamador que não sabe a qual projeto o texto se refere
+/// (ex.: a narrativa de saúde do ecossistema, que é system-wide por
+/// natureza) continua funcionando exatamente como antes — apenas
+/// chamadores que SABEM o projeto em foco (ex.: um card por-projeto)
+/// agora podem passá-lo, fechando o vazamento de contexto descrito em
+/// docs/commercial/PROJECT_CONTEXT_CONTRACT.md sem exigir mudança em
+/// nenhum outro call site.
 class IveExplainButton extends ConsumerWidget {
   final String question;
   final String screenName;
   final String? label;
   final bool compact;
+  final String? projectId;
+  final String? sourceModule;
+  final String? sourceEntityType;
+  final String? sourceEntityId;
 
   const IveExplainButton({
     super.key,
@@ -20,6 +35,10 @@ class IveExplainButton extends ConsumerWidget {
     required this.screenName,
     this.label,
     this.compact = false,
+    this.projectId,
+    this.sourceModule,
+    this.sourceEntityType,
+    this.sourceEntityId,
   });
 
   @override
@@ -71,13 +90,20 @@ class IveExplainButton extends ConsumerWidget {
   // (CopilotContextData.fromIveContext) usadas em todos os outros pontos
   // de entrada agora.
   void _open(BuildContext context, WidgetRef ref) {
-    final ctx = ref.read(iveContextDataProvider).valueOrNull;
-    final contextData = ctx != null ? CopilotContextData.fromIveContext(ctx) : CopilotContextData();
+    final ctx = ref.read(iveContextDataProvider(projectId)).valueOrNull;
+    final contextData = ctx != null ? CopilotContextData.fromIveContext(ctx) : const CopilotContextData();
     showCopilotChat(
       context,
       screenName:     screenName,
       initialMessage: question,
       contextData:    contextData,
+      request: IveInteractionRequest(
+        projectId:        projectId,
+        sourceModule:     sourceModule ?? screenName,
+        sourceEntityType: sourceEntityType,
+        sourceEntityId:   sourceEntityId,
+        operationType:    IveOperationType.explain,
+      ),
     );
   }
 }

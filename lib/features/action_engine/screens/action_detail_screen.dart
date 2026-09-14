@@ -6,8 +6,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../data/models/action_queue_item.dart';
+import '../../../data/models/copilot_context_data.dart';
+import '../../../data/models/ive_interaction_request.dart';
 import '../../../providers/action_queue_provider.dart';
+import '../../../providers/ive_context_provider.dart';
 import '../../../providers/project_provider.dart';
+import '../../../shared/widgets/context_copilot_widget.dart' show showCopilotChat;
 
 // ── Colors ────────────────────────────────────────────────────────────────────
 const _kBg      = Color(0xFF0F0F1A);
@@ -873,7 +877,28 @@ class _StatusButtons extends StatelessWidget {
           ),
           icon: const Icon(Icons.auto_awesome_rounded),
           label: const Text('Perguntar à IVE sobre esta ação'),
-          onPressed: () => context.go(AppConstants.routeActionEngine),
+          onPressed: () {
+            // IVE-COMMERCIAL-FOUNDATION-11 — antes navegava de volta para
+            // a lista do Action Engine em vez de abrir um diálogo
+            // contextual (confirmado quebrado em docs/commercial/
+            // IVE_INTERACTION_AND_QUOTA_CONTRACT.md §1.1).
+            final ctx = ref.read(iveContextDataProvider(item.projectId)).valueOrNull;
+            final contextData =
+                ctx != null ? CopilotContextData.fromIveContext(ctx) : const CopilotContextData();
+            showCopilotChat(
+              context,
+              screenName: 'Ações',
+              contextData: contextData,
+              initialMessage: 'Analise a ação "${item.title}" e me dê orientação sobre como conduzi-la.',
+              request: IveInteractionRequest(
+                projectId:        item.projectId,
+                sourceModule:     'action_engine',
+                sourceEntityType: 'action',
+                sourceEntityId:   item.id,
+                operationType:    IveOperationType.ask,
+              ),
+            );
+          },
         ),
       ],
     );

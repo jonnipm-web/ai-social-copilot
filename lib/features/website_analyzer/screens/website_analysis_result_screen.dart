@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../data/models/website_analysis.dart';
 import '../../../providers/website_analyzer_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import '../../../shared/widgets/canonical_back_button.dart';
 
 class WebsiteAnalysisResultScreen extends ConsumerWidget {
   final String analysisId;
@@ -37,6 +39,15 @@ class WebsiteAnalysisResultScreen extends ConsumerWidget {
         ),
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
+        // IVE-COMMERCIAL-FOUNDATION-11 — root cause of the confirmed "no
+        // Back button" defect (docs/commercial/
+        // COMMERCIAL_NAVIGATION_STANDARD.md §2): this screen has a
+        // `drawer`, so Flutter's default AppBar (with no `leading`
+        // override) shows the hamburger icon instead of a back arrow,
+        // AND every entry point reaches this screen via `context.go()`
+        // (which replaces the navigation stack), so there was nothing to
+        // pop even if a back arrow had appeared.
+        leading: const CanonicalBackButton(fallbackRoute: AppConstants.routeWebsiteAnalyzer),
         actions: [
           analysisAsync.whenOrNull(
             data: (analysis) => Row(

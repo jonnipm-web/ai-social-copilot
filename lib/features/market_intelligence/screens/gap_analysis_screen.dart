@@ -4,8 +4,22 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/language_utils.dart';
+import '../../../data/models/ive_interaction_request.dart';
+import '../../../data/models/gap_analysis.dart';
 import '../../../providers/market_analysis_provider.dart';
+import '../../../shared/widgets/ai_execution_confirmation.dart';
 
+// IVE-COMMERCIAL-FOUNDATION-11 — this screen is the representative
+// quota-consuming call site migrated in Phase A (mission Section 11).
+// Before this mission, "Analisar" fired immediately on tap with no
+// confirmation, guarded only by the `bool _running` this replaces. The
+// other 7 screens in the same situation (opportunity_discovery_screen.
+// dart, revenue_planner_screen.dart, niche_discovery_screen.dart,
+// content_cluster_screen.dart, competitor_discovery_screen.dart,
+// persona_form_screen.dart, action_engine_screen.dart) are intentionally
+// NOT migrated here — see docs/commercial/IMPLEMENTATION_ROADMAP.md
+// Phase C/D — this migration is mechanical once the pattern below is
+// copied, not architecturally different.
 class GapAnalysisScreen extends ConsumerStatefulWidget {
   const GapAnalysisScreen({super.key, required this.analysisId});
   final String analysisId;
@@ -15,19 +29,46 @@ class GapAnalysisScreen extends ConsumerStatefulWidget {
 }
 
 class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
-  bool _running = false;
+  final _exec = AiExecutionController();
   String? _error;
 
+  @override
+  void dispose() {
+    _exec.dispose();
+    super.dispose();
+  }
+
+  bool get _running => _exec.isBusy;
+
   Future<void> _run() async {
-    setState(() { _running = true; _error = null; });
+    setState(() => _error = null);
     try {
       final analysis = await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
-      await ref.read(marketAnalysisServiceProvider).runGapAnalysis(widget.analysisId, analysis.input, language: backendLanguageCode(context));
+      await _exec.run<void>(
+        context: context,
+        ref: ref,
+        analysisLabel: 'Gap Analysis',
+        request: IveInteractionRequest(
+          projectId:        analysis.projectId,
+          sourceModule:     'market_intelligence',
+          sourceEntityType: 'gap_analysis',
+          sourceEntityId:   widget.analysisId,
+          operationType:    IveOperationType.analyze,
+        ),
+        action: () => ref
+            .read(marketAnalysisServiceProvider)
+            .runGapAnalysis(widget.analysisId, analysis.input, language: backendLanguageCode(context)),
+      );
+      // `run` returns null both when the user cancelled AND when a
+      // `Future<void>` action succeeds (void has no distinct non-null
+      // value) — check the controller's own terminal state instead of
+      // the return value to know whether to invalidate.
+      if (_exec.state != AiExecutionState.success) return;
       ref.invalidate(gapAnalysisByAnalysisProvider(widget.analysisId));
     } catch (e) {
       setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {
-      if (mounted) setState(() => _running = false);
+      if (mounted) setState(() {});
     }
   }
 
@@ -35,6 +76,16 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
   Widget build(BuildContext context) {
     final asyncGap = ref.watch(gapAnalysisByAnalysisProvider(widget.analysisId));
 
+    // AnimatedBuilder over `_exec` so both "Analisar" buttons below react
+    // live to AiExecutionState transitions (awaiting confirmation →
+    // reserving/thinking → success/error), not just a binary running flag.
+    return AnimatedBuilder(
+      animation: _exec,
+      builder: (context, _) => _buildScaffold(context, asyncGap),
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context, AsyncValue<GapAnalysis?> asyncGap) {
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F1A),
       appBar: AppBar(
@@ -51,10 +102,7 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
           TextButton.icon(
             onPressed: _running ? null : _run,
             icon: _running
-                ? const SizedBox(
-                    width: 16, height: 16,
-                    child: CircularProgressIndicator(color: Color(0xFFFFD93D), strokeWidth: 2),
-                  )
+                ? const AiThinkingIndicator(color: Color(0xFFFFD93D))
                 : const Icon(Icons.find_in_page_rounded, color: Color(0xFFFFD93D)),
             label: Text(
               _running ? 'Analisando...' : 'Analisar',

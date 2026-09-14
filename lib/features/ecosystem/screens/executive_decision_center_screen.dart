@@ -6,6 +6,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../data/models/copilot_context_data.dart';
 import '../../../data/models/decision_validation.dart';
 import '../../../data/models/ecosystem_score.dart';
+import '../../../data/models/ive_interaction_request.dart';
 import '../../../data/models/priority_recommendation.dart';
 import '../../../providers/auto_bootstrap_provider.dart';
 import '../../../providers/decision_validation_provider.dart';
@@ -362,20 +363,34 @@ class _Top5Tab extends ConsumerWidget {
                           // padrão dos demais pontos de entrada -- sem isto,
                           // caía no CopilotContextData() vazio padrão.
                           onTap: () {
-                            final ctx = ref.read(iveContextDataProvider).valueOrNull;
+                            // IVE-COMMERCIAL-FOUNDATION-11: escopado pelo
+                            // projectId da própria oportunidade, quando
+                            // presente — antes, sempre pegava o projeto de
+                            // maior score do sistema todo.
+                            final ctx = ref.read(iveContextDataProvider(l.projectId)).valueOrNull;
                             final contextData = ctx != null
                                 ? CopilotContextData.fromIveContext(ctx)
-                                : CopilotContextData();
+                                : const CopilotContextData();
                             showCopilotChat(
                               context,
                               screenName:     'Decisões',
                               contextData:    contextData,
                               initialMessage: 'Analise a oportunidade "${l.title}" (score ${l.finalScore}) e diga como aproveitá-la.',
+                              request: IveInteractionRequest(
+                                projectId:        l.projectId,
+                                sourceModule:     'ecosystem_decision_center',
+                                sourceEntityType: 'opportunity',
+                                sourceEntityId:   l.id,
+                                operationType:    IveOperationType.ask,
+                              ),
                             );
                           },
                         ),
                       ],
                       screenName: 'Decisões',
+                      projectId:        l.projectId,
+                      sourceEntityType: 'opportunity',
+                      sourceEntityId:   l.id,
                     ),
                   )).toList(),
                 );
@@ -558,19 +573,32 @@ class _ProjectCard extends ConsumerWidget {
           // pontos de entrada -- sem isto, caía no CopilotContextData()
           // vazio padrão.
           onTap: () {
-            final ctx = ref.read(iveContextDataProvider).valueOrNull;
+            // IVE-COMMERCIAL-FOUNDATION-11: escopado por score.project.id
+            // (o projeto que este card/mensagem literalmente cita), não
+            // mais o projeto de maior score do sistema todo.
+            final ctx = ref.read(iveContextDataProvider(score.project.id)).valueOrNull;
             final contextData =
-                ctx != null ? CopilotContextData.fromIveContext(ctx) : CopilotContextData();
+                ctx != null ? CopilotContextData.fromIveContext(ctx) : const CopilotContextData();
             showCopilotChat(
               context,
               screenName:     'Decisões',
               contextData:    contextData,
               initialMessage: 'Como posso melhorar o Ecosystem Score do projeto "${score.project.name}" que está em ${score.ecosystemScore}/100? Explique cada componente e quais ações têm maior impacto.',
+              request: IveInteractionRequest(
+                projectId:        score.project.id,
+                sourceModule:     'ecosystem_decision_center',
+                sourceEntityType: 'project',
+                sourceEntityId:   score.project.id,
+                operationType:    IveOperationType.ask,
+              ),
             );
           },
         ),
       ],
       screenName: 'Decisões',
+      projectId:        score.project.id,
+      sourceEntityType: 'project',
+      sourceEntityId:   score.project.id,
     );
   }
 
@@ -631,9 +659,16 @@ class _ProjectCard extends ConsumerWidget {
           ),
           const SizedBox(height: 6),
           IveExplainButton(
-            question:   'Por que o projeto ${score.project.name} tem score ${score.ecosystemScore}? Explique cada componente e como melhorar.',
-            screenName: 'Decisões',
-            compact:    true,
+            question:         'Por que o projeto ${score.project.name} tem score ${score.ecosystemScore}? Explique cada componente e como melhorar.',
+            screenName:       'Decisões',
+            compact:          true,
+            // IVE-COMMERCIAL-FOUNDATION-11 — antes, este botão perguntava
+            // sobre ESTE projeto mas o grounding vinha do projeto de maior
+            // score do sistema todo (podendo ser um projeto diferente).
+            projectId:        score.project.id,
+            sourceModule:     'ecosystem_decision_center',
+            sourceEntityType: 'project',
+            sourceEntityId:   score.project.id,
           ),
         ],
       ),
@@ -1117,14 +1152,29 @@ class _RecCard extends ConsumerWidget {
           // pontos de entrada -- sem isto, caía no CopilotContextData()
           // vazio padrão.
           onTap: () {
-            final ctx = ref.read(iveContextDataProvider).valueOrNull;
+            // IVE-COMMERCIAL-FOUNDATION-11: PriorityRecommendation não tem
+            // um campo project_id próprio (apenas entityId/entityName
+            // genéricos, cujo significado depende de `rec.type` — pode ser
+            // um projeto, uma oportunidade ou uma ação). Sem uma forma
+            // segura de derivar qual, mantém projectId: null (mesmo
+            // comportamento ecosystem-wide de antes) em vez de arriscar
+            // escopar para um projeto errado. Adicionar um project_id
+            // real ao modelo de recomendação é trabalho de Fase D (ver
+            // docs/commercial/COMMERCIAL_PRODUCT_ARCHITECTURE.md §11).
+            final ctx = ref.read(iveContextDataProvider(null)).valueOrNull;
             final contextData =
-                ctx != null ? CopilotContextData.fromIveContext(ctx) : CopilotContextData();
+                ctx != null ? CopilotContextData.fromIveContext(ctx) : const CopilotContextData();
             showCopilotChat(
               context,
               screenName:     'Decisões',
               contextData:    contextData,
               initialMessage: 'Explique a recomendação "${rec.title}" e me dê um plano de ação concreto.',
+              request: IveInteractionRequest(
+                sourceModule:     'ecosystem_decision_center',
+                sourceEntityType: 'recommendation',
+                sourceEntityId:   rec.entityId,
+                operationType:    IveOperationType.ask,
+              ),
             );
           },
         ),

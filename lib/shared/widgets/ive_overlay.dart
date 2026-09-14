@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/copilot_context_data.dart';
+import '../../data/models/ive_interaction_request.dart';
 import '../../data/models/ive_issue.dart';
 import '../../data/models/ive_state.dart';
 import '../../features/ive/visual/ive_avatar.dart';
@@ -119,7 +120,9 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
                     expression:  state.expression,
                     activeIssue: state.activeIssue,
                     onDismiss: () {
-                      final ctx = ref.read(iveContextDataProvider).valueOrNull;
+                      // Overlay global, sem projeto específico em foco — ver
+                      // comentário do provider em ive_context_provider.dart.
+                      final ctx = ref.read(iveContextDataProvider(null)).valueOrNull;
                       if (ctx != null && ctx.alertId.isNotEmpty) {
                         ref.read(iveMemoryProvider.notifier).dismissAlert(ctx.alertId);
                       }
@@ -162,15 +165,24 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
 
   void _openChat(BuildContext context, String screenName) {
     ref.read(iveMemoryProvider.notifier).incrementInteraction();
-    final ctx = ref.read(iveContextDataProvider).valueOrNull;
+    // Overlay global — sempre projectId: null. Se o usuário estiver
+    // dentro do Project Command Center de um projeto específico, esse
+    // botão de tela usa seu próprio showCopilotChat com o projectId real
+    // (ver project_command_center_screen.dart); este é o avatar
+    // FLUTUANTE, presente em toda tela, sem noção de "projeto atual".
+    final ctx = ref.read(iveContextDataProvider(null)).valueOrNull;
     // IVE-COMMERCIAL-TARGETED-REMEDIATION-04 — conversão movida para
     // CopilotContextData.fromIveContext() (fonte única, também usada por
     // ive_detail_sheet.dart) em vez de uma cópia privada só deste widget.
-    final contextData = ctx != null ? CopilotContextData.fromIveContext(ctx) : CopilotContextData();
+    final contextData = ctx != null ? CopilotContextData.fromIveContext(ctx) : const CopilotContextData();
     showCopilotChat(
       context,
       screenName:  _routeToName(screenName),
       contextData: contextData,
+      request: IveInteractionRequest(
+        sourceModule:  'global_overlay',
+        operationType: IveOperationType.ask,
+      ),
     );
   }
 
