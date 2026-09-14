@@ -90,11 +90,13 @@ void main() {
       expect(parseMoneyInputToCents('10,10'), 1010);
     });
 
-    test('não sofre o erro clássico de ponto-flutuante para 10.10', () {
-      // 10.10 como double binário não é exatamente representável;
-      // o parser nunca deve produzir 1009 por causa disso.
+    test('não sofre o erro clássico de ponto-flutuante para valores como 10.10', () {
+      // O parser nunca passa pelo intermediário double — compara dígito a
+      // dígito via regex, então produz exatamente 1010, nunca 1009 ou 1011
+      // por causa de arredondamento binário.
       expect(parseMoneyInputToCents('10.10'), 1010);
-      expect(10.10 * 100, isNot(1010)); // prova que o double intermediário mentiria
+      expect(parseMoneyInputToCents('0.10'), 10);
+      expect(parseMoneyInputToCents('19.99'), 1999);
     });
 
     test('preenche uma casa decimal faltante', () {

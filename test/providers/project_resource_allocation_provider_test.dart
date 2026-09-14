@@ -56,12 +56,23 @@ ProjectResourceAllocation _allocation({
       updatedAt: DateTime(2026, 1, 1),
     );
 
-ProviderContainer _container(FakeProjectResourceAllocationService svc) =>
-    ProviderContainer(
-      overrides: [
-        projectResourceAllocationServiceProvider.overrideWithValue(svc),
-      ],
-    );
+// `projectResourceAllocationProvider` is `.autoDispose` — a bare
+// `container.read()` never keeps it alive (only `watch`/`listen` do), so
+// without an explicit subscription the provider is disposed and silently
+// recreated (back to AsyncLoading) between two `read()` calls in the same
+// test. `container.listen` here plays the same role a widget's `ref.watch`
+// plays in production: it keeps the element alive for the container's
+// lifetime, exactly like the sheet's `ref.watch(...)` does when this
+// section is actually on screen.
+ProviderContainer _container(FakeProjectResourceAllocationService svc) {
+  final container = ProviderContainer(
+    overrides: [
+      projectResourceAllocationServiceProvider.overrideWithValue(svc),
+    ],
+  );
+  container.listen(projectResourceAllocationProvider(_projectId), (_, __) {});
+  return container;
+}
 
 void main() {
   // ── Load inicial ────────────────────────────────────────────────────────
