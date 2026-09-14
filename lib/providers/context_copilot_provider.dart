@@ -177,8 +177,24 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 // Sem autoDispose: histórico do chat persiste enquanto o app estiver aberto.
-// Family key = screenName → um estado por tela, nunca compartilhado.
+//
+// IVE-COMMERCIAL-FOUNDATION-11 (Codex Gate 2, P1, ACCEPTED) — a chave era
+// SOMENTE `screenName` (String). O Project Context Contract escopa
+// corretamente o GROUNDING (`CopilotContextData.projectId`) por projeto,
+// mas com a chave antiga o HISTÓRICO DE CONVERSA (`state.turns`, enviado
+// como `history` em toda chamada — ver ContextCopilotNotifier.send) era
+// compartilhado entre projetos diferentes na MESMA tela: perguntar sobre
+// o Projeto A em "Decisões" e depois sobre o Projeto B na mesma tela
+// reenviava as perguntas/respostas do Projeto A junto com o contexto
+// (correto) do Projeto B — exatamente o vazamento que a missão Seção 04
+// proíbe ("Project A → IVE then Project B → IVE must never reuse Project
+// A's question/context"). Chave agora é um record `(screenName,
+// projectId)`: trocar de projeto na mesma tela é uma chave DIFERENTE,
+// logo uma conversa nova, sem precisar de nenhuma lógica de reset manual
+// (mesmo raciocínio já aplicado a iveContextDataProvider).
+typedef CopilotConversationKey = (String screenName, String? projectId);
+
 final contextCopilotProvider = StateNotifierProvider.family<
-    ContextCopilotNotifier, CopilotState, String>(
-  (ref, screenName) => ContextCopilotNotifier(ref),
+    ContextCopilotNotifier, CopilotState, CopilotConversationKey>(
+  (ref, key) => ContextCopilotNotifier(ref),
 );

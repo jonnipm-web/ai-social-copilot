@@ -152,4 +152,24 @@ void main() {
       expect(result.bottleneck, isNotNull);
     });
   });
+
+  group('selectPendingOpportunitiesCount (Codex Gate 2, round 2 — regressão)', () {
+    test('com projectId explícito, usa a contagem escopada, não a global', () {
+      final result = selectPendingOpportunitiesCount(
+        projectId: 'project-a',
+        scopedPendingCount: 2,
+        globalPendingCount: 50, // agregado de TODOS os projetos do usuário
+      );
+      expect(result, 2);
+    });
+
+    test('com projectId null, preserva a contagem global original', () {
+      final result = selectPendingOpportunitiesCount(
+        projectId: null,
+        scopedPendingCount: 2,
+        globalPendingCount: 50,
+      );
+      expect(result, 50);
+    });
+  });
 }

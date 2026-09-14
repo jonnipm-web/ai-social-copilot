@@ -184,6 +184,19 @@ EcosystemWideFields selectEcosystemWideFields(
   return EcosystemWideFields(topProjectsSnapshot: topThree, bottleneck: bottleneck);
 }
 
+// IVE-COMMERCIAL-FOUNDATION-11 (Codex Gate 2, P1, ACCEPTED) —
+// `opportunityLabSummaryProvider`'s 'pending' count is GLOBAL (every
+// project). Using it unconditionally leaked the user's aggregate pending-
+// opportunity count from ALL projects into a single-project-scoped
+// interaction. Extracted pure (same pattern as the functions above) so
+// this specific regression is directly testable.
+int selectPendingOpportunitiesCount({
+  required String? projectId,
+  required int scopedPendingCount,
+  required int globalPendingCount,
+}) =>
+    projectId != null ? scopedPendingCount : globalPendingCount;
+
 // ── Provider — FutureProvider derivado dos providers de ecossistema ───────────
 //
 // IVE-COMMERCIAL-FOUNDATION-11 (Project Context Contract, Phase A) — antes
@@ -366,7 +379,11 @@ final iveContextDataProvider =
   final ecosystemWideFields = selectEcosystemWideFields(scores, projectId);
   final bottleneck = ecosystemWideFields.bottleneck;
 
-  final pendingLab = labSummary['pending'] ?? 0;
+  final pendingLab = selectPendingOpportunitiesCount(
+    projectId: projectId,
+    scopedPendingCount: pendingOpportunities.length,
+    globalPendingCount: labSummary['pending'] ?? 0,
+  );
 
   // ── Detecção de alertas ───────────────────────────────────────────────────────
   bool   hasAlert  = false;
