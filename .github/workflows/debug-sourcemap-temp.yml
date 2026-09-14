@@ -1,0 +1,37 @@
+name: TEMP — Build web with source maps (diagnostic only, no deploy)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-with-sourcemaps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: false
+
+      - name: Criar arquivo .env com as credenciais
+        run: |
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" > .env
+          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
+          echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env
+
+      - run: flutter create --platforms web --project-name ai_social_copilot .
+      - run: flutter pub get
+      - run: flutter build web --release --base-href /ai-social-copilot/ --source-maps
+
+      - name: Upload source map + main.dart.js
+        uses: actions/upload-artifact@v4
+        with:
+          name: sourcemap-bundle
+          path: |
+            build/web/main.dart.js
+            build/web/main.dart.js.map
+          retention-days: 1
