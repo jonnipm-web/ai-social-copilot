@@ -65,6 +65,11 @@ class ProjectContext {
 }
 ```
 
+`ProjectContext` remains the right shape for constructing an
+`IveInteractionRequest` (§3.2 below) and for audit events — the
+correction in §3.2 only changes what part of it is used as *provider
+cache identity* (just `projectId`), not the object's fields themselves.
+
 Rules:
 - `projectId` is **required** wherever the user is unambiguously inside a
   project-scoped screen (Project Command Center, any Market Intelligence
@@ -82,15 +87,38 @@ Rules:
   reconstructed downstream from "whatever the global top-score project
   currently is."
 
-### 3.2 `iveContextDataProvider` becomes project-scoped
+### 3.2 `iveContextDataProvider` becomes project-scoped — keyed by `projectId` alone
 
-Change `iveContextDataProvider` from a bare `FutureProvider.autoDispose`
-to `FutureProvider.family<IveContextData, ProjectContext?>`. A `null`
-context is the explicit, deliberate "no project in scope" case (global
-overlay chat opened from a project-agnostic screen) — it must not
-silently fall back to "top-scored project," which is today's bug.
-`selectKnowledgeForGrounding` keeps its existing signature; it is already
-correct.
+**Revised after Codex adversarial review, round 1 (P1, ACCEPTED):** the
+first draft of this contract proposed keying the `.family` provider by
+the entire `ProjectContext` object (including `sourceModule`,
+`sourceEntityId`, `analysisId`, and especially `correlationId`). Codex
+correctly identified that this makes every field part of the provider's
+*cache identity* — two interactions about the exact same project, from
+two different screens, or even two calls with two different
+(one-per-interaction) `correlationId`s, would each mint a **separate**
+provider instance and refetch the same aggregate grounding data. This
+doesn't just waste a fetch; it defeats the whole point of scoping
+correctly, by fragmenting the cache far more than the "ambient global
+singleton" bug it replaces.
+
+**Corrected design**: the provider family key is `projectId` (nullable)
+**only**:
+
+```dart
+FutureProvider.family<IveContextData, String?>
+```
+
+`sourceModule`, `sourceEntityType`, `sourceEntityId`, `analysisId`, and
+`correlationId` are **not** part of provider identity — they travel as
+plain parameters on the `IveInteractionRequest` (see
+`IVE_INTERACTION_AND_QUOTA_CONTRACT.md` §2) and on the audit event, not
+as cache keys. A `null` `projectId` is the explicit, deliberate "no
+project in scope" case (global overlay chat opened from a
+project-agnostic screen) — it must not silently fall back to
+"top-scored project," which is today's bug. `selectKnowledgeForGrounding`
+keeps its existing signature; it is already correct and needs no change
+under either the original or corrected design.
 
 ### 3.3 Switch semantics
 

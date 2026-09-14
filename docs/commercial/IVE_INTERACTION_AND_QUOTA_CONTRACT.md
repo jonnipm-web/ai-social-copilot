@@ -157,6 +157,26 @@ Rules:
   other than `IDLE`, `SUCCESS`, or `ERROR`/`RETRYABLE_ERROR` — this is
   the direct fix for "double click → double reservation" risk,
   independent of (but complementary to) any server-side idempotency.
+
+**Revised after Codex adversarial review, round 1 (P1, ACCEPTED):** the
+state machine above reduces double-tap risk but, as originally
+described, did not explicitly guarantee the transition **out of**
+`AWAITING_CONFIRMATION` is atomic with respect to the confirmation
+callback itself — a genuinely fast double-tap on CONFIRMAR could still
+fire the callback twice before the enum value visibly changes on the
+next frame. The state machine alone is a UX improvement, not a complete
+financial-consumption guarantee. Required, explicit additions:
+- Set a **synchronous** in-flight guard (a plain boolean checked and set
+  in the same synchronous handler, before any `await`) the instant
+  CONFIRMAR is tapped — before the state enum transition, not relying on
+  it alone.
+- Ensure only one confirmation dialog/request instance can exist per
+  interaction (dismiss/disable the dialog's own button on first tap).
+- Where feasible, have the server-side reservation accept the
+  interaction's `correlationId` and treat a duplicate reservation
+  request for the same `correlationId` as one already-in-flight
+  request, not two charges — this is the server-side backstop, the
+  client guards above are the first line of defense, not the only one.
 - Visual treatment: a subtle, consistent "thinking" indicator (e.g.
   animated three-dot pulse) replaces each screen's ad hoc spinner text,
   for consistency — this is a shared small widget, not a per-screen

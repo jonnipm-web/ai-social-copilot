@@ -118,12 +118,13 @@ Resource Allocation persistence decision introduces a new write path.
 analysis actions), Phase B (Project Command Center hosts the embedded
 Knowledge Analysis component).
 
-**Data migrations**: `ContentItem.type` single-value → multi-value tags
-(additive: existing value becomes first tag, no data loss) — this
-belongs to Content Library, listed here since it's the one schema
-change in this phase's neighborhood; see Phase C.1 note. No migration
-for Market Intelligence (all needed columns/methods already exist)
-or Website Analyzer (route-contract fix only).
+**Data migrations**: a new, additive `tags` column on `ContentItem`
+alongside the existing `type` column (see Phase C.1 — this is genuinely
+additive because it does not touch `type` or any of its consumers, unlike
+the originally-drafted "reshape `type` in place" idea that Codex round 1
+correctly rejected). No migration for Market Intelligence (all needed
+columns/methods already exist) or Website Analyzer (route-contract fix
+only).
 
 **Security risk**: low. `MarketAnalysisService.delete()` already exists;
 confirm it enforces `auth.uid()` ownership the same way reads do before
@@ -150,7 +151,12 @@ enforcement needs re-verification.
 
 ### Phase C.1 — Content Library / Knowledge integration
 (Can run in parallel with the rest of Phase C — no shared files.)
-- Multi-valued tags migration (additive).
+- Add a new `tags` column (`text[]` or equivalent) **alongside** the
+  existing `type` column — not a reshape of `type` in place, per the
+  Codex-corrected design in `COMMERCIAL_PRODUCT_ARCHITECTURE.md` §7.
+  `type` keeps working unmodified for every existing consumer during
+  this phase; only new multi-valued classification UI reads/writes
+  `tags`.
 - Wire `ContentItem.knowledgeItemId` into display ("Abrir Fonte
   Original") and creation (link to a Knowledge Vault source instead of
   a disconnected duplicate flow).
@@ -160,13 +166,22 @@ enforcement needs re-verification.
 **Scope**:
 - Decision Center: fix the `_BootstrapBanner` misroute (Debug Center →
   actual project), add project name to `_SimpleCard`/`_RecCard`.
-- Opportunity Lab: idempotency guard on `addFromOpportunity`, `approve()`
-  transitions to `'executing'` once an Action exists, project name on
-  list cards, fix the raw-UUID source display, evidence/inference/
-  recommendation labeling on AI justifications.
-- Action Engine: add `'paused'` status + `pause()`/`resume()`
-  transitions, make summary counters interactive filters, project name
-  on cards, contextual "Ask IVE" (direct dialog, not navigate-away).
+- Opportunity Lab: **server-side unique constraint** on
+  (`user_id`, `opportunity_lab_id`) for the actions table +
+  `addFromOpportunity` becomes an upsert/conflict-safe write (not a
+  plain conditional insert — see `COMMERCIAL_PRODUCT_ARCHITECTURE.md`
+  §3.2, corrected after Codex review), `approve()` transitions to
+  `'executing'` once an Action exists, project name on list cards, fix
+  the raw-UUID source display, evidence/inference/recommendation
+  labeling on AI justifications.
+- Action Engine: add `'paused'` status **plus a full compatibility
+  audit** of every exact-status consumer (`action_engine_screen.dart`,
+  `action_detail_screen.dart`, `action_queue_service.dart`, dashboard
+  aggregations, and any others found during the audit — see
+  `COMMERCIAL_PRODUCT_ARCHITECTURE.md` §3.3, corrected after Codex
+  review) + `pause()`/`resume()` transitions, interactive summary
+  counters (with a dedicated Paused bucket), project name on cards,
+  contextual "Ask IVE" (direct dialog, not navigate-away).
 
 **Dependencies**: Phase A (context contract, IVE dialog wiring,
 processing states for the approve/create-action/pause/complete
@@ -174,8 +189,14 @@ sequence — this is exactly the "no second click during processing"
 requirement from Section 08, and it needs the state machine from Phase
 A to be in place first).
 
-**Data migrations**: add `'paused'` to `ActionQueueItem.statusValues`
-(additive enum value, no destructive change — existing rows unaffected).
+**Data migrations**: (1) a partial unique index/constraint on the
+actions table scoped to `(user_id, opportunity_lab_id) WHERE
+opportunity_lab_id IS NOT NULL` — this is a real, Codex-required
+migration, not optional hardening; (2) add `'paused'` to
+`ActionQueueItem.statusValues` (the column itself is additive — text,
+no destructive change to existing rows — but ships together with the
+application-layer compatibility audit above, not as a bare enum
+addition).
 
 **Security risk**: low.
 
@@ -183,19 +204,29 @@ A to be in place first).
 AI consumption) except the "Ask IVE" wiring, which reuses Phase A's
 contract unchanged.
 
-**Expected tests**: regression test proving `addFromOpportunity` is
-idempotent (calling it twice for the same opportunity produces exactly
-one `ActionQueueItem`); state-machine test for pause/resume; a test
+**Expected tests**: a concurrency-shaped regression test proving the
+unique constraint (not just a client check) actually prevents two
+near-simultaneous `addFromOpportunity` calls from creating two rows
+(mirroring how Stability-08 tested its migration by running it twice in
+one transaction); a full compatibility test suite for the new
+`'paused'` status across every consumer found in the audit; a test
 confirming the `_BootstrapBanner` routes to the correct project.
 
 **Physical test gate**: approve an opportunity, attempt to create an
 action from it twice in a row (including via both list and detail
-screen entry points) — confirm exactly one action is created.
+screen entry points, and if feasible two near-simultaneous requests) —
+confirm exactly one action is created. Separately, pause an action and
+confirm it is correctly counted/filtered/rendered everywhere the other
+four statuses already are.
 
-**Codex gate**: standard (Class B); this phase directly targets a
-confirmed data-integrity bug (duplicate action creation), so a focused
-adversarial pass on the idempotency fix specifically is warranted (the
-same rigor applied to the Market Intelligence 406 fix in Stability-08).
+**Codex gate**: mandatory adversarial (Class D — this phase includes a
+new database constraint and directly targets a confirmed
+data-integrity bug), with the same rigor applied to the Market
+Intelligence 406 fix in Stability-08. Given round 1 of this
+architecture mission's own Codex review already flagged the
+client-only version of this fix as insufficient, the Phase D
+implementation mission should treat that finding as a starting
+constraint, not something to re-litigate.
 
 ## Phase E — Commercial Shell
 
@@ -299,16 +330,26 @@ demoted for speed):
   processing states) — without this, every "Ask IVE" interaction risks
   showing the wrong project's data, which is a trust/correctness issue,
   not a polish issue.
-- Phase D's idempotency fix (duplicate Action creation) — confirmed
-  data-integrity bug, same class as the Stability-08 Market Intelligence
-  406.
+- Phase D's Opportunity→Action fix, **including the server-side unique
+  constraint** (not the client-check-only version originally drafted —
+  Codex round 1 was explicit that the client check alone is not a
+  safety guarantee) — confirmed data-integrity bug, same class as the
+  Stability-08 Market Intelligence 406.
 - The `22P02` route-typing fix (Phase C) — confirmed crash on a common
   path (Website Analyzer → Create Campaign).
-- Back-button standard on the 12 form/detail screens + Website Analyzer
-  result screen (Phase A) — broken navigation is explicitly called out
-  as non-demotable in the mission brief.
+- Back-button fix specifically for `website_analysis_result_screen.dart`
+  (Phase A) — this one has a root-caused, reproducible "no way back"
+  defect (uses `context.go()` everywhere, nothing to pop), not just a
+  consistency gap.
 - Planos/Plano drawer duplicate fix (Phase A) — small, but a visibly
   broken/confusing commercial surface.
+- If the `'paused'` status migration ships in Phase D, its full
+  compatibility audit ships with it in the same MUST bucket — per Codex
+  round 1 (P2, ACCEPTED): "migration safety work should also be MUST
+  before deployment if those migrations are implemented." A partial
+  `'paused'` rollout (enum value added, consumers not audited) is worse
+  than not shipping it at all, since it would silently hide actions from
+  every status count.
 
 **SHOULD for Commercial V1** (meaningfully improves coherence/trust but
 the product is not unsafe without it at launch):
@@ -320,6 +361,11 @@ the product is not unsafe without it at launch):
 - Opportunity Lab/Action Engine remaining UX fixes beyond the
   idempotency bug itself (project names on cards, interactive counters,
   pause/resume) (Phase D).
+- General back-button consistency across the remaining 11 form/detail
+  screens beyond `website_analysis_result_screen.dart` (Phase A) — split
+  out per Codex round 1 (P2, ACCEPTED): these are a real usability gap,
+  but not the one screen with a confirmed, reproducible dead end, so
+  they are SHOULD rather than MUST.
 - Support flow confirmation UX (Phase E).
 
 **POST-V1** (real, worth doing, not launch-blocking):

@@ -94,14 +94,37 @@ and `:236-265`, `opportunity_detail_screen.dart:95-128` and `:844-909`),
 each capable of creating a duplicate `ActionQueueItem` for the same
 opportunity with no guard.
 
-**Fix target (Phase D)**: `addFromOpportunity` gains an idempotency
-check (does an `ActionQueueItem` already exist for this
-`opportunityLabId`? if so, return/navigate to it instead of inserting),
-and `approve()` transitions status to `'executing'` once an Action is
-actually created, so the "create action" affordance disappears once one
-exists. This closes the double-click/duplicate-transition risk at its
-actual source, not just by disabling buttons during a request (though
-the Section 07 processing-state work helps here too).
+**Fix target (Phase D) — revised after Codex adversarial review, round 1
+(P1, ACCEPTED):** the first draft of this fix proposed only a
+client-side "check if an ActionQueueItem already exists, then insert if
+not" guard. Codex correctly pointed out this is vulnerable to the exact
+same class of race the Stability-08 Market Intelligence 406 bug already
+taught this codebase to distrust: two near-simultaneous requests (two
+tabs, a genuine double-tap faster than the round trip, or the 07A/08
+diagnostic sessions' own observed "burst" behavior) can both complete
+their "does it exist?" check before either insert lands, and both
+insert. **The client check is UX only — it is not the integrity
+control.**
+
+Corrected fix, mirroring the Stability-08 migration pattern exactly:
+1. A server-side partial unique index/constraint, conceptually
+   `UNIQUE(user_id, opportunity_lab_id) WHERE opportunity_lab_id IS NOT
+   NULL` on the actions table — this is the actual guarantee, the same
+   way `gap_analyses_one_per_market_analysis` etc. were the actual fix
+   for the 406, not the application-level `.maybeSingle()` read.
+2. `addFromOpportunity` becomes an `upsert(..., onConflict: 'user_id,
+   opportunity_lab_id')` (or an insert that gracefully handles the
+   resulting unique-violation by fetching and returning the existing
+   row) instead of a plain conditional insert.
+3. `approve()` still transitions status to `'executing'` once an Action
+   is actually created, so the "create action" affordance disappears
+   once one exists — this remains correct UX on top of the now-real
+   integrity guarantee.
+
+This is the one item in this document that implies a database migration
+in Phase D (see `IMPLEMENTATION_ROADMAP.md` Phase D) — flagged
+explicitly here since the original draft understated it as a pure
+application-layer fix.
 
 ### 3.3 Confirmed defect: "Pausar" does not pause
 
@@ -121,11 +144,32 @@ OPPORTUNITY LAB:  DISCOVERED → ANALYZED → QUALIFIED → APPROVED → ACTION_
 ACTION ENGINE:    PENDING → ACTIVE → PAUSED → COMPLETED (or CANCELLED)
 ```
 
-(Mapping the current 5-value opportunity enum and 5-value — soon
-6-value — action enum onto these two named sequences is a labeling/
-UI-state-machine exercise on top of the existing DB columns; it does
-not require a schema rename, since the current string values already
-partition into the two sequences functionally.)
+**Revised after Codex adversarial review, round 1 (P1, ACCEPTED):** the
+original draft characterized adding `'paused'` to
+`ActionQueueItem.statusValues` as simply additive (existing rows
+unaffected, new string value, no schema rename). That's true only for
+the database column itself (`status text`) — it is **not true for the
+application layer**, which has multiple exact-status consumers that
+would silently mishandle a `'paused'` row the first time one exists,
+including `action_engine_screen.dart:143-145`,
+`action_detail_screen.dart:154-166,802-844`,
+`action_queue_service.dart:68-70`, and the dashboard's status
+aggregations. A paused item could disappear from every
+pending/active/completed count and bucket, and its detail screen may
+offer no valid action controls at all, purely because those call sites
+compare against a fixed, now-incomplete set of expected values.
+
+Corrected scope for this piece of Phase D: adding `'paused'` requires an
+explicit compatibility audit (every exact-status `==`/`switch`/filter
+site enumerated and updated, not just the two screens sampled above —
+Codex noted "additional exact-status consumers... need a broader
+repository-wide audit"), updated counters/filters (§3.4 above already
+plans interactive counters — `'paused'` needs its own bucket, not to
+silently fall into "pending" or "active"), and a dedicated test proving
+a paused item still counts, filters, and renders correctly everywhere
+the other four statuses already do. This is real work, not a one-line
+enum addition — sized accordingly in `IMPLEMENTATION_ROADMAP.md` Phase
+D.
 
 ### 3.4 Confirmed defect: static counters, no filtering
 
@@ -247,10 +291,29 @@ No Back button — root-caused to every entry point using `context.go()`
 `ContentItem.type` is confirmed **single-valued**, drawn from a fixed
 mutually-exclusive PT-labeled list (livro, ebook, artigo, post, ideia,
 texto, campanha, produto, marca, projeto) — exactly the restrictive
-taxonomy the owner flagged. Target: multi-valued classification (a
-`List<String>` of tags rather than one `type` string), migrated
-additively (existing single `type` value becomes the first tag; no data
-loss).
+taxonomy the owner flagged.
+
+**Revised after Codex adversarial review, round 1 (P1, ACCEPTED):** the
+original draft proposed reshaping `type` itself from `String` to
+`List<String>` as an "additive" change. Codex confirmed this is not
+safe as described: the underlying database column is `text`, not
+`text[]`, and multiple call sites perform exact equality/map-lookup
+against `type` as a single string —
+`content_library_screen.dart:91-111,273-274`,
+`content_form_screen.dart:24,46,65,124-130`, and
+`content_item.dart:6,40-67` itself (model parsing, insert maps,
+filtering, and label lookup all assume one string).
+
+Corrected target: add a **new**, separate `tags` column (`text[]` or an
+equivalent join table, product's choice) **alongside** the existing
+`type` column, rather than reshaping `type` in place. `type` keeps its
+current single-value role during a compatibility period (existing
+screens keep working unmodified); new multi-valued classification UI
+reads/writes `tags`. Only once every `type`-consuming call site listed
+above is migrated to read `tags` (with `type` folded in as the first
+tag, per the original intent) would `type` itself be deprecated — that
+final step is optional and explicitly out of scope for Phase C.1 as
+now sized.
 
 `ContentItem.knowledgeItemId` **already exists as a field** but is
 **completely unused** in both `content_library_screen.dart` and
@@ -348,7 +411,49 @@ granularity (single analysis row); this principle should be followed by
 the equivalent delete methods added elsewhere (Website Analyzer,
 Content Library) rather than re-derived per module.
 
-## 12. Non-goals for this mission
+## 12. Codex adversarial review — round 1 disposition
+
+VERDICT: PASS WITH FINDINGS. Fact-check: 4 of 5 sampled claims CONFIRMED
+by independent file reads; 1 (module registry field completeness)
+PARTIALLY CONFIRMED — the registry has 37 entries, not the 34 originally
+stated (corrected throughout `MODULE_LIFECYCLE_MATRIX.md`), and
+`internal` is expressed via `status`/`releaseClassification` rather than
+a dedicated boolean field (a real but cosmetic gap, not a functional
+one).
+
+Findings and disposition:
+- P1 ProjectContext family key too broad → **ACCEPTED**, contract
+  corrected to key by `projectId` alone (§ in `PROJECT_CONTEXT_
+  CONTRACT.md` §3.2).
+- P1 Client-side Opportunity→Action idempotency insufficient →
+  **ACCEPTED**, corrected to require a server-side unique constraint
+  (§3.2 above).
+- P1 Quota state machine needs an atomic submission boundary →
+  **ACCEPTED**, added explicit synchronous in-flight guard requirement
+  (`IVE_INTERACTION_AND_QUOTA_CONTRACT.md` §4).
+- P1 `'paused'` status not simply additive → **ACCEPTED**, corrected to
+  require a full consumer compatibility audit (§3.3 above).
+- P1 `ContentItem` tags not simply additive → **ACCEPTED**, corrected to
+  a new `tags` column alongside `type`, not a reshape (§7 above).
+- P2 Registry drift via `app_drawer.dart`'s icon map and
+  `route_policy.dart`'s ownership map → **ACCEPTED**, recorded in
+  `MODULE_LIFECYCLE_MATRIX.md` §6 with a small follow-up test
+  recommendation.
+- P2 Stale "34 entries" count → **ACCEPTED**, corrected to 37 throughout.
+- P2 i18n standard didn't distinguish AI-generated content →
+  **ACCEPTED**, added explicit scope boundary
+  (`COMMERCIAL_UI_STANDARD.md` §4).
+- P2 MUST/SHOULD classification needed adjustment → **ACCEPTED**,
+  migration-safety work folded into MUST where the migration itself is
+  MUST; back-button work split into the one confirmed dead-end screen
+  (MUST) vs general consistency (SHOULD) — see `IMPLEMENTATION_
+  ROADMAP.md`.
+
+No finding was rejected. All findings were within this mission's
+documentation-only scope to address (contract corrections), not
+requiring any code change to reconcile.
+
+## 13. Non-goals for this mission
 
 No Stripe/billing change. No quota architecture change (the confirm/
 audit layer sits in front of the existing, correct server-authoritative

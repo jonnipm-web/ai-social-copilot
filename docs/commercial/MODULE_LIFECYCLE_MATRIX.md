@@ -23,7 +23,7 @@ internal, each with PT/EN labels), `adminVisible`, `adminClickable`,
 internalTooling / externalPlanned), `notes`, and a `visibleFor({isAdmin,
 isPro})` method implementing the actual visibility rule.
 
-`lib/core/modules/module_registry.dart` (`kModuleRegistry`, 34 entries)
+`lib/core/modules/module_registry.dart` (`kModuleRegistry`, 37 entries)
 is a hand-curated inventory whose own header states it was built "by
 repository audit, not assumption." It already distinguishes Commercial
 V1 vs Post-V1 vs Beta vs Internal vs External-planned, with reasoning
@@ -102,7 +102,7 @@ implementation, not fixed in this architecture-only mission.
 
 ## 4. Module inventory table
 
-The authoritative table is `kModuleRegistry` itself (34 entries,
+The authoritative table is `kModuleRegistry` itself (37 entries,
 already fully structured and commented) — this document does not
 duplicate it verbatim (that would create exactly the second
 manually-maintained list Section 24 explicitly forbids). Instead:
@@ -122,3 +122,30 @@ automatically, per the existing (not proposed) design.
    `app_drawer.dart`.
 2. No new fields are needed on `ModuleDefinition` — it already has
    everything Section 24 asks for.
+
+## 6. Codex review — registry drift finding (accepted)
+
+Codex adversarial review (read-only, round 1) confirmed §3-4's factual
+claims but flagged a real gap in the "single source of truth" framing
+(ACCEPTED, recorded here rather than re-verified independently): the
+module-metadata registry (`module_registry.dart`) is genuinely single-
+source, but two **other** manually-maintained module-adjacent mappings
+exist and are not covered by that guarantee:
+
+- `route_policy.dart`'s `kRouteModuleOwnership` — a hand-listed
+  route→moduleId map, separate from the registry itself (though already
+  covered by `route_policy_test.dart`'s CI check, per §2).
+- `app_drawer.dart`'s `_iconFor` map (around line 191-203) — a hand-
+  maintained moduleId→icon lookup with **no test coverage** found; a
+  new registry entry silently gets a generic fallback icon if this map
+  isn't updated alongside it.
+
+This does not overturn §1's "Section 24 is a verify-and-keep item"
+conclusion (the fields and Admin-tab generation Section 24 asked for
+are real), but it means "no duplicated manual module list" is true for
+*metadata*, not yet true for *all* module-adjacent mappings. Recommended
+follow-up (Phase A, small): add a test asserting every `adminVisible`
+registry entry has an icon mapping in `_iconFor`, mirroring the existing
+route-ownership test's pattern — do not attempt to eliminate the icon
+map itself (icons are presentation, not policy, and don't need to live
+in the registry).

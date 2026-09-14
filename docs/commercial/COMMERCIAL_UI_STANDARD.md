@@ -97,6 +97,29 @@ this specifically for Market Intelligence per owner instruction
 ("already generally good, refine, don't redesign" — this is the
 refinement).
 
+**Scope boundary (Codex adversarial review, round 1, P2 — ACCEPTED):**
+this migration applies only to **fixed product copy** — titles, labels,
+buttons, badges, empty states, error strings, processing-state text. It
+explicitly does **not** apply to AI-generated analysis content (gap
+descriptions, competitor summaries, recommended-action text, etc.),
+which cannot be pre-translated via `.arb` and must not be silently
+treated as if it were localized UI. The standard for AI-generated text
+is:
+- Preserve the source language the model actually returned.
+- If the interaction's requested language is known and differs from the
+  content's language, label the content's language explicitly (e.g. a
+  small badge) rather than presenting it as if it matched the UI
+  language.
+- User-authored content (e.g. a manual project description) is
+  preserved verbatim, never auto-translated.
+- Translation of AI/user content, if ever offered, is an explicit,
+  separate user action — never an implicit side effect of an i18n
+  migration meant for fixed UI strings.
+This mirrors the mission brief's own caveat ("no mixed-language screens
+unless the AI-generated source itself is in another language and
+clearly marked") — the Market Intelligence migration must not blur this
+line while fixing the AppBar-title-level mixing above.
+
 ## 5. Data/source truth standard
 
 **Confirmed violation**: `opportunity_detail_screen.dart:477-482`
