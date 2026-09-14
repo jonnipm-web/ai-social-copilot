@@ -152,6 +152,23 @@ void main() {
         expect(sanitizeSessionLabel('Authorization: Bearer abc123def456ghi789'), contains('[redacted]'));
       });
 
+      test(
+        'a well-known secret PREFIX with no key/URL context around it is still '
+        'redacted (Codex adversarial review, 07B P1 — a raw secret pasted as a '
+        'label has no "key:" label for the other specific patterns to catch, '
+        'and the generic length backstop is deliberately skipped for this field)',
+        () {
+          for (final secret in [
+            'sk_live_abcdefghijklmnop',
+            'ghp_abcdefghijklmnopqrstuvwx',
+            'AKIAABCDEFGHIJKLMNOP',
+            'xoxb-abcdefghijklmnop',
+          ]) {
+            expect(sanitizeSessionLabel(secret), contains('[redacted]'), reason: '$secret was not redacted');
+          }
+        },
+      );
+
       test('an oversized label is truncated to maxLength', () {
         final result = sanitizeSessionLabel('E' * 500, maxLength: 200);
         expect(result.length, lessThanOrEqualTo(200));
@@ -186,6 +203,10 @@ void main() {
       test('an invalid/malformed correlation id falls back to full generic sanitization', () {
         final result = sanitizeCorrelationId('not-a-real-id-just-some-long-alphanumeric-text-here');
         expect(result, '[redacted]');
+      });
+
+      test('a well-known secret prefix passed as a correlation id is redacted, not adopted as a real id', () {
+        expect(sanitizeCorrelationId('sk_live_abcdefghijklmnop'), contains('[redacted]'));
       });
 
       test('a correlation id with a malicious (newline-injecting) suffix is not trusted verbatim', () {

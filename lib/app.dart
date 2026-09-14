@@ -195,6 +195,11 @@ Future<String?> _computeRedirect(BuildContext context, GoRouterState state) asyn
 // directly to the user instead of recovering gracefully.
 Widget _errorScreen(BuildContext context, GoRouterState state) {
   WidgetsBinding.instance.addPostFrameCallback((_) {
+    // Codex adversarial review — the callback runs on the NEXT frame, by
+    // which point this screen may already be gone (a subsequent redirect
+    // resolved first, or the whole route stack was replaced); calling
+    // context.go on a disposed context throws. Guard with context.mounted.
+    if (!context.mounted) return;
     final target = Supabase.instance.client.auth.currentSession == null
         ? AppConstants.routeLogin
         : AppConstants.routeDashboard;

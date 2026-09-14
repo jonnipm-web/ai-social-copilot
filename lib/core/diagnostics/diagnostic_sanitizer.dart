@@ -90,6 +90,22 @@ final List<RegExp> _secretPatterns = [
     r'(password|token|secret|api[_-]?key|authorization)\s*[:=]\s*\S+',
     caseSensitive: false,
   ),
+  // IVE-COMMERCIAL-OBSERVABILITY-07B (Codex adversarial review) — the
+  // patterns above only recognize a secret by its surrounding KEY (a
+  // "token:"/"api_key=" label). A well-known secret FORMAT with no such
+  // label at all — a raw Stripe/GitHub/AWS/Slack/Google key pasted as-is
+  // — has no key/URL context to catch it, and is exactly the shape
+  // sanitizeSessionLabel/sanitizeCorrelationId's own bounded identifier
+  // allowlist (letters/digits/underscore/hyphen) can no longer catch via
+  // the generic length backstop, since that backstop is deliberately
+  // skipped for those two fields. Matching these well-known prefixes
+  // specifically closes that gap without reintroducing the original
+  // false-positive problem (no real diagnostic label starts with
+  // "sk_live_", "ghp_", "AKIA", etc.).
+  RegExp(
+    r'\b(?:sk_live_|sk_test_|rk_live_|pk_live_|ghp_|gho_|ghu_|ghs_|ghr_|github_pat_|xox[baprs]-|AIza)[A-Za-z0-9_-]{10,}',
+  ),
+  RegExp(r'\bAKIA[0-9A-Z]{16}\b'),
   // Generic long contiguous token-shaped run (OAuth access tokens, JWTs
   // caught elsewhere, generic API keys): 20+ chars of the base64url/JWT
   // alphabet. Deliberately last so the more specific patterns above get a

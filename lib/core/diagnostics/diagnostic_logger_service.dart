@@ -26,12 +26,33 @@ class DiagnosticLoggerService {
   String? _activeSessionId;
   String? get activeSessionId => _activeSessionId;
 
+  static final RegExp _uuidShape = RegExp(
+    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+  );
+
+  /// Name of the mission 07B partial unique index
+  /// (diagnostic_one_active_session.sql) enforcing at most one ACTIVE
+  /// session per user — used to disambiguate exactly THAT unique-
+  /// violation from any other 23505 (e.g. a theoretical primary-key
+  /// collision on `id`, which is DB-generated and never client-supplied
+  /// today, but Codex read-only audit flagged the bare error CODE alone
+  /// as too broad a signal to act on).
+  static const _oneActiveSessionConstraint = 'diagnostic_sessions_one_active_per_user';
+
   /// IVE-COMMERCIAL-OBSERVABILITY-07B — lets a recovered/adopted session
   /// (see [findMyActiveSession]) become the local active session without
   /// going through [startSession]'s own INSERT. Never accepts a caller-
   /// supplied user id: the row itself was already fetched scoped to
-  /// auth.uid() via RLS, so there's nothing to re-check here.
+  /// auth.uid() via RLS, so there's nothing to re-check here. A real
+  /// exploit path was never possible even before this check (any misuse
+  /// still hits diagnostic_events_insert_own_active_session's own RLS at
+  /// write time, which requires the SESSION's owner to match auth.uid()),
+  /// but Codex read-only audit flagged this as an easy-to-misuse public
+  /// API with no shape validation of its own — this rejects anything that
+  /// isn't a real session id (a UUID) outright as a cheap, free defense-
+  /// in-depth floor, independent of the RLS backstop.
   void adoptActiveSession(String sessionId) {
+    if (!_uuidShape.hasMatch(sessionId)) return;
     _activeSessionId = sessionId;
   }
 
@@ -93,7 +114,14 @@ class DiagnosticLoggerService {
       // already active). Recover and adopt the existing row rather than
       // surfacing a raw failure — mission section 05: "no crash; detect/
       // recover gracefully; show the existing ACTIVE session".
-      if (e.code == '23505') {
+      //
+      // Checks the specific CONSTRAINT NAME, not just the bare 23505 code
+      // (Codex adversarial review) — this insert never supplies its own
+      // `id` (the column is DB-generated), so a primary-key collision on
+      // `id` isn't reachable today, but matching the constraint by name
+      // removes the ambiguity entirely rather than relying on that being
+      // permanently true.
+      if (e.code == '23505' && (e.message.contains(_oneActiveSessionConstraint))) {
         final existing = await findMyActiveSession();
         if (existing != null) {
           _activeSessionId = existing['id'] as String?;

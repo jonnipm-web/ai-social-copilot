@@ -25,6 +25,6 @@
 -- exist in production at all (the one row from OBSERVABILITY-SMOKE-001 is
 -- already 'stopped'), so this index can be created with no reconciliation
 -- step and no pre-existing violation risk.
-CREATE UNIQUE INDEX diagnostic_sessions_one_active_per_user
+CREATE UNIQUE INDEX IF NOT EXISTS diagnostic_sessions_one_active_per_user
   ON public.diagnostic_sessions (user_id)
   WHERE status = 'active';
