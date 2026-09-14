@@ -85,45 +85,13 @@ class AiExecutionController extends ChangeNotifier {
     // is exactly that — no await happens between the check and the
     // state transition below.
     if (isBusy) return null;
-    _setState(AiExecutionState.awaitingConfirmation);
 
-    QuotaInfoSnapshot? quota;
-    try {
-      final info = await ref.read(currentQuotaProvider.future);
-      quota = QuotaInfoSnapshot(remaining: info.remaining, limit: info.limit);
-    } catch (_) {
-      // Quota read failure: proceed to confirmation with an unknown
-      // remaining count rather than blocking the user — the server
-      // reservation call below remains the real authority and will fail
-      // safely on its own if quota is actually exhausted.
-      quota = null;
-    }
-    if (!context.mounted) {
-      _setState(AiExecutionState.idle);
-      return null;
-    }
-
-    final confirmed = await _showConfirmationDialog(
+    final confirmed = await _awaitUserConfirmation(
       context: context,
+      ref: ref,
       analysisLabel: analysisLabel,
-      quota: quota,
+      request: request,
     );
-
-    ref.read(diagnosticLoggerProvider).logEvent(
-      category: DiagnosticCategory.ai,
-      eventName: confirmed
-          ? 'ai_execution_confirmation_accepted'
-          : 'ai_execution_confirmation_rejected',
-      correlationId: request.correlationId,
-      module: request.sourceModule,
-      metadata: {
-        if (request.projectId != null) 'project_id': request.projectId,
-        if (request.sourceEntityType != null) 'source_entity_type': request.sourceEntityType,
-        if (request.sourceEntityId != null) 'source_entity_id': request.sourceEntityId,
-        'operation_type': request.operationType.name,
-      },
-    );
-
     if (!confirmed) {
       _setState(AiExecutionState.idle);
       return null;
@@ -177,6 +145,90 @@ class AiExecutionController extends ChangeNotifier {
       );
       rethrow;
     }
+  }
+
+  /// IVE-COMMERCIAL-EXPERIENCE-12 (Phase B, Section 15) — extracted from
+  /// [run] so [confirm] below can share it. Sets [AiExecutionState.
+  /// awaitingConfirmation], fetches the best-effort quota snapshot, shows
+  /// the standard confirm dialog, and logs the accepted/rejected event —
+  /// exactly what [run] always did inline. Does NOT reset state back to
+  /// idle on rejection/exit — callers own that (both [run] and [confirm]
+  /// do it themselves right after calling this).
+  Future<bool> _awaitUserConfirmation({
+    required BuildContext context,
+    required WidgetRef ref,
+    required String analysisLabel,
+    required IveInteractionRequest request,
+  }) async {
+    _setState(AiExecutionState.awaitingConfirmation);
+
+    QuotaInfoSnapshot? quota;
+    try {
+      final info = await ref.read(currentQuotaProvider.future);
+      quota = QuotaInfoSnapshot(remaining: info.remaining, limit: info.limit);
+    } catch (_) {
+      // Quota read failure: proceed to confirmation with an unknown
+      // remaining count rather than blocking the user — the server
+      // reservation call remains the real authority and will fail
+      // safely on its own if quota is actually exhausted.
+      quota = null;
+    }
+    if (!context.mounted) return false;
+
+    final confirmed = await _showConfirmationDialog(
+      context: context,
+      analysisLabel: analysisLabel,
+      quota: quota,
+    );
+
+    ref.read(diagnosticLoggerProvider).logEvent(
+      category: DiagnosticCategory.ai,
+      eventName: confirmed
+          ? 'ai_execution_confirmation_accepted'
+          : 'ai_execution_confirmation_rejected',
+      correlationId: request.correlationId,
+      module: request.sourceModule,
+      metadata: {
+        if (request.projectId != null) 'project_id': request.projectId,
+        if (request.sourceEntityType != null) 'source_entity_type': request.sourceEntityType,
+        if (request.sourceEntityId != null) 'source_entity_id': request.sourceEntityId,
+        'operation_type': request.operationType.name,
+      },
+    );
+
+    return confirmed;
+  }
+
+  /// IVE-COMMERCIAL-EXPERIENCE-12 (Phase B, Section 15) — a lighter sibling
+  /// of [run] for callers whose actual quota-consuming action is NOT a
+  /// single directly-awaitable `Future<T>` (e.g. opening a chat sheet —
+  /// context_copilot_widget.dart's `showCopilotChat` — that auto-sends its
+  /// first message asynchronously afterward, well after this call
+  /// returns). [run]'s reservingQuota → thinking → success/error lifecycle
+  /// is coupled to synchronously awaiting that action and cannot honestly
+  /// describe a deferred send, so this only performs the confirm step:
+  /// same dialog, same quota snapshot, same accepted/rejected event as
+  /// [run]. Returns true only if the user confirmed. Deliberately does
+  /// NOT log any `ai_analysis_*` event or reserve quota itself — the
+  /// caller's own downstream flow (the context-copilot Edge Function)
+  /// remains the sole source of truth for whether/when quota is actually
+  /// consumed, exactly as it already is for every other IVE chat entry
+  /// point in the app.
+  Future<bool> confirm({
+    required BuildContext context,
+    required WidgetRef ref,
+    required String analysisLabel,
+    required IveInteractionRequest request,
+  }) async {
+    if (isBusy) return false;
+    final confirmed = await _awaitUserConfirmation(
+      context: context,
+      ref: ref,
+      analysisLabel: analysisLabel,
+      request: request,
+    );
+    _setState(AiExecutionState.idle);
+    return confirmed;
   }
 
   Future<bool> _showConfirmationDialog({

@@ -18,6 +18,7 @@ import '../../../providers/opportunity_lab_provider.dart';
 import '../../../providers/project_intelligence_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../providers/project_resource_allocation_provider.dart';
+import '../../../shared/widgets/ai_execution_confirmation.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/context_copilot_widget.dart' show showCopilotChat;
 
@@ -1332,12 +1333,24 @@ class _ResourceAllocationSectionState
   bool _controllersInitialized = false;
   String? _budgetParseError;
 
+  // Codex Gate 1 (mission 12, Phase B) P1 — this section's own comment
+  // used to (incorrectly) claim "Analisar recursos com a IVE" doesn't
+  // consume quota. It does: showCopilotChat's auto-sent initialMessage
+  // goes through supabase/functions/context-copilot, which calls
+  // reserveQuota() before every message like every other IVE chat entry
+  // point in the app. AiExecutionController.confirm() (the Phase-A
+  // confirmation dialog, mission Section 15: "If invoking a NEW detailed
+  // IVE analysis consumes quota... do not bypass quota") now gates this
+  // button before the chat sheet opens.
+  final _exec = AiExecutionController();
+
   static const List<int> _hourPresets = [10, 20, 40, 80];
 
   @override
   void dispose() {
     _hoursController.dispose();
     _budgetController.dispose();
+    _exec.dispose();
     super.dispose();
   }
 
@@ -1555,47 +1568,66 @@ class _ResourceAllocationSectionState
             ],
             const SizedBox(height: 10),
 
-            // IVE Resource Analysis — explica o estado SALVO atual;
-            // reaproveita o chat existente e não consome quota
-            // (Section 15).
+            // IVE Resource Analysis — explica o estado SALVO atual.
+            // Reaproveita o chat existente (showCopilotChat), que NÃO é
+            // gratuito: seu envio automático consome 1 unidade de quota
+            // via context-copilot, como qualquer outro "Perguntar à IVE"
+            // do app — por isso passa pela confirmação padrão da Fase A
+            // (Section 15) antes de abrir o chat.
             SizedBox(
               width: double.infinity,
-              child: OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF00BCD4),
-                  side: const BorderSide(color: Color(0xFF00BCD4)),
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              child: AnimatedBuilder(
+                animation: _exec,
+                builder: (_, __) => OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF00BCD4),
+                    side: const BorderSide(color: Color(0xFF00BCD4)),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  icon: const Text('🧠', style: TextStyle(fontSize: 14)),
+                  label: const Text('Analisar recursos com a IVE', style: TextStyle(fontSize: 13)),
+                  onPressed: _exec.isBusy
+                      ? null
+                      : () async {
+                          final request = IveInteractionRequest(
+                            projectId: widget.projectId,
+                            sourceModule: 'project_command_center',
+                            sourceEntityType: 'project',
+                            sourceEntityId: widget.projectId,
+                            operationType: IveOperationType.ask,
+                          );
+                          final confirmed = await _exec.confirm(
+                            context: context,
+                            ref: ref,
+                            analysisLabel: 'Analisar recursos com a IVE',
+                            request: request,
+                          );
+                          if (!confirmed || !context.mounted) return;
+
+                          final saved = editState.saved;
+                          final ctx =
+                              ref.read(iveContextDataProvider(widget.projectId)).valueOrNull;
+                          final contextData = ctx != null
+                              ? CopilotContextData.fromIveContext(ctx)
+                              : const CopilotContextData();
+                          final dirtyNote = editState.isDirty
+                              ? ' Nota: há edições de alocação ainda não salvas que não estão refletidas nesta análise.'
+                              : '';
+                          Navigator.of(context).pop();
+                          showCopilotChat(
+                            context,
+                            screenName: 'Projetos',
+                            contextData: contextData,
+                            initialMessage:
+                                'Com base na alocação de recursos SALVA do projeto "${widget.projectName}" '
+                                '(${saved.hoursAllocated}h, ${_fmtCents(saved.budgetAllocatedCents)} ${saved.currency}), '
+                                'essa alocação está adequada para as prioridades atuais do projeto? '
+                                'O que ajustar?$dirtyNote',
+                            request: request,
+                          );
+                        },
                 ),
-                icon: const Text('🧠', style: TextStyle(fontSize: 14)),
-                label: const Text('Analisar recursos com a IVE', style: TextStyle(fontSize: 13)),
-                onPressed: () {
-                  final saved = editState.saved;
-                  final ctx = ref.read(iveContextDataProvider(widget.projectId)).valueOrNull;
-                  final contextData =
-                      ctx != null ? CopilotContextData.fromIveContext(ctx) : const CopilotContextData();
-                  final dirtyNote = editState.isDirty
-                      ? ' Nota: há edições de alocação ainda não salvas que não estão refletidas nesta análise.'
-                      : '';
-                  Navigator.of(context).pop();
-                  showCopilotChat(
-                    context,
-                    screenName: 'Projetos',
-                    contextData: contextData,
-                    initialMessage:
-                        'Com base na alocação de recursos SALVA do projeto "${widget.projectName}" '
-                        '(${saved.hoursAllocated}h, ${_fmtCents(saved.budgetAllocatedCents)} ${saved.currency}), '
-                        'essa alocação está adequada para as prioridades atuais do projeto? '
-                        'O que ajustar?$dirtyNote',
-                    request: IveInteractionRequest(
-                      projectId: widget.projectId,
-                      sourceModule: 'project_command_center',
-                      sourceEntityType: 'project',
-                      sourceEntityId: widget.projectId,
-                      operationType: IveOperationType.ask,
-                    ),
-                  );
-                },
               ),
             ),
           ],
