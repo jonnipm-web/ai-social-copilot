@@ -199,6 +199,66 @@ void main() {
       expect(state.saved.hoursAllocated, 5);
     });
 
+    test(
+      'Codex Gate 1 P1 — edição feita DURANTE um save() em andamento não é '
+      'perdida quando o save resolve (revision token)',
+      () async {
+        final svc = FakeProjectResourceAllocationService(_allocation(hours: 10, cents: 0))
+          ..saveDelay = const Duration(milliseconds: 30);
+        final container = _container(svc);
+        addTearDown(container.dispose);
+        await Future<void>.delayed(Duration.zero);
+
+        final notifier = container.read(projectResourceAllocationProvider(_projectId).notifier);
+        notifier.updateHoursPreview(20);
+        final saveFuture = notifier.save(); // captura preview=20 antes do await
+
+        // Edição mais nova chega enquanto o save de hours=20 ainda está em voo.
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+        notifier.updateHoursPreview(999);
+
+        await saveFuture;
+
+        final state = container.read(projectResourceAllocationProvider(_projectId)).valueOrNull!;
+        // A edição mais nova (999) NÃO pode ter sido sobrescrita pelo
+        // resultado stale do save (20) — este é exatamente o bug do Gate 1.
+        expect(state.preview.hoursAllocated, 999);
+        expect(state.status, AllocationEditStatus.editing);
+        // O baseline "saved" reflete o que o servidor de fato persistiu
+        // (20), para que isDirty compare corretamente contra a realidade.
+        expect(state.saved.hoursAllocated, 20);
+        expect(state.isDirty, isTrue);
+        expect(svc.saveCallCount, 1);
+      },
+    );
+
+    test(
+      'Codex Gate 1 P1 — cancel() durante um save() em andamento não é '
+      'revertido quando o save resolve',
+      () async {
+        final svc = FakeProjectResourceAllocationService(_allocation(hours: 10, cents: 0))
+          ..saveDelay = const Duration(milliseconds: 30);
+        final container = _container(svc);
+        addTearDown(container.dispose);
+        await Future<void>.delayed(Duration.zero);
+
+        final notifier = container.read(projectResourceAllocationProvider(_projectId).notifier);
+        notifier.updateHoursPreview(20);
+        final saveFuture = notifier.save();
+
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+        notifier.cancel();
+
+        await saveFuture;
+
+        final state = container.read(projectResourceAllocationProvider(_projectId)).valueOrNull!;
+        // cancel() já havia restaurado preview para o saved original (10) —
+        // o save (que persistiu 20) não pode reverter isso de volta a 20.
+        expect(state.preview.hoursAllocated, 10);
+        expect(state.status, AllocationEditStatus.saved);
+      },
+    );
+
     test('uma segunda chamada de save() concorrente é um no-op (guard síncrono)', () async {
       final svc = FakeProjectResourceAllocationService(_allocation(hours: 0, cents: 0))
         ..saveDelay = const Duration(milliseconds: 30);

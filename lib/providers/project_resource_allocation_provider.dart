@@ -59,6 +59,19 @@ class ProjectResourceAllocationNotifier
   final ProjectResourceAllocationServiceInterface _service;
   final String _projectId;
 
+  // Codex Gate 1 (mission 12, Phase B) P1 — "lost update": save() used to
+  // capture `current.preview` before its await, then unconditionally
+  // overwrite state with that (possibly now-stale) captured value once the
+  // await resolved, discarding any edit the user made WHILE the save was
+  // in flight. Fixed with the same monotonically-incrementing
+  // revision-token pattern already established in ive_provider.dart's
+  // beginThinking()/completeInteraction(token, ...) — every user-driven
+  // state change (edit or cancel) bumps `_revision`; save() only commits
+  // its full "back to saved" result if no such change happened during the
+  // await, otherwise it preserves the newer local state and merely
+  // records the server-confirmed baseline.
+  int _revision = 0;
+
   Future<void> _load() async {
     state = const AsyncValue.loading();
     try {
@@ -76,6 +89,7 @@ class ProjectResourceAllocationNotifier
   void updateHoursPreview(int hours) {
     final current = state.valueOrNull;
     if (current == null) return;
+    _revision++;
     state = AsyncValue.data(current.copyWith(
       preview: current.preview.copyWith(hoursAllocated: hours),
       status: AllocationEditStatus.editing,
@@ -85,6 +99,7 @@ class ProjectResourceAllocationNotifier
   void updateBudgetPreviewCents(int cents) {
     final current = state.valueOrNull;
     if (current == null) return;
+    _revision++;
     state = AsyncValue.data(current.copyWith(
       preview: current.preview.copyWith(budgetAllocatedCents: cents),
       status: AllocationEditStatus.editing,
@@ -96,6 +111,7 @@ class ProjectResourceAllocationNotifier
   void cancel() {
     final current = state.valueOrNull;
     if (current == null) return;
+    _revision++;
     state = AsyncValue.data(current.copyWith(
       preview: current.saved,
       status: AllocationEditStatus.saved,
@@ -110,15 +126,33 @@ class ProjectResourceAllocationNotifier
   Future<void> save() async {
     final current = state.valueOrNull;
     if (current == null || current.status == AllocationEditStatus.saving) return;
+    final revisionAtStart = _revision;
     state = AsyncValue.data(current.copyWith(status: AllocationEditStatus.saving));
     try {
       final saved = await _service.save(current.preview);
+      if (_revision != revisionAtStart) {
+        // The user edited or cancelled while this save was in flight —
+        // that newer local state must win. Still record the
+        // server-confirmed baseline (the save DID succeed) so isDirty
+        // compares the newer preview against what the server actually
+        // has, without discarding the newer edit.
+        final latest = state.valueOrNull;
+        if (latest != null) {
+          state = AsyncValue.data(latest.copyWith(saved: saved));
+        }
+        return;
+      }
       state = AsyncValue.data(ProjectResourceAllocationEditState(
         saved: saved,
         preview: saved,
         status: AllocationEditStatus.saved,
       ));
     } catch (e) {
+      if (_revision != revisionAtStart) {
+        // Superseded by a newer edit/cancel already — don't stomp it with
+        // a stale error from this abandoned attempt.
+        return;
+      }
       state = AsyncValue.data(current.copyWith(
         status: AllocationEditStatus.error,
         error: e.toString(),
