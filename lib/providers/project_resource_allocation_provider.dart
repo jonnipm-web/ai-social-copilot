@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/project_resource_allocation.dart';
 import '../data/services/project_resource_allocation_service.dart';
 
+// ── Service provider — injetável em testes via override (mesmo padrão de
+// projectServiceProvider em project_provider.dart) ────────────────────────────
 final projectResourceAllocationServiceProvider =
-    Provider<ProjectResourceAllocationService>((_) => ProjectResourceAllocationService());
+    Provider<ProjectResourceAllocationServiceInterface>(
+        (_) => ProjectResourceAllocationService());
 
 /// IVE-COMMERCIAL-EXPERIENCE-12 (Phase B, mission Section 12) — explicit
 /// PREVIEW-vs-SAVED lifecycle: `saved` is the last value confirmed
@@ -53,7 +56,7 @@ class ProjectResourceAllocationNotifier
     _load();
   }
 
-  final ProjectResourceAllocationService _service;
+  final ProjectResourceAllocationServiceInterface _service;
   final String _projectId;
 
   Future<void> _load() async {
