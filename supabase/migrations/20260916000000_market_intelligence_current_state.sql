@@ -138,6 +138,13 @@ ALTER TABLE public.gap_analyses_archive      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.content_clusters_archive  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.revenue_plans_archive     ENABLE ROW LEVEL SECURITY;
 
+-- IVE-COMMERCIAL-STABILITY-08 (Codex adversarial review, round 3) —
+-- DROP IF EXISTS first so this migration is safely re-runnable
+-- (CREATE POLICY has no IF NOT EXISTS form in Postgres).
+DROP POLICY IF EXISTS "Users read own gap_analyses_archive" ON public.gap_analyses_archive;
+DROP POLICY IF EXISTS "Users read own content_clusters_archive" ON public.content_clusters_archive;
+DROP POLICY IF EXISTS "Users read own revenue_plans_archive" ON public.revenue_plans_archive;
+
 CREATE POLICY "Users read own gap_analyses_archive"
   ON public.gap_analyses_archive FOR SELECT
   USING (auth.uid() = user_id);
