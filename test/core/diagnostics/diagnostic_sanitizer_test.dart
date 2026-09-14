@@ -269,10 +269,18 @@ void main() {
     });
 
     test('every currently-used event name in the app survives unchanged', () {
-      // A representative sample of real event names from across the
-      // logger's call sites, deliberately including the longest ones.
-      const realEventNames = [
+      // Every literal eventName in the codebase as of this fix — must stay
+      // in lockstep with kKnownDiagnosticEventNames in
+      // diagnostic_sanitizer.dart, found by grepping every `eventName:`
+      // call site and every `_log*` wrapper's own call sites.
+      for (final name in kKnownDiagnosticEventNames) {
+        expect(sanitizeEventName(name), name, reason: '"$name" must survive unchanged');
+        expect(sanitizeEventName(name), isNot('[redacted]'));
+      }
+      // Spot-check the set itself hasn't silently shrunk.
+      expect(kKnownDiagnosticEventNames, containsAll(<String>[
         'route_allowed',
+        'route_redirected',
         'uncaught_error',
         'quota_fetch',
         'copilot_request_started',
@@ -282,11 +290,15 @@ void main() {
         'ai_analysis_requested',
         'ai_analysis_succeeded',
         'ai_analysis_failed',
-      ];
-      for (final name in realEventNames) {
-        expect(sanitizeEventName(name), name, reason: '"$name" must survive unchanged');
-        expect(sanitizeEventName(name), isNot('[redacted]'));
-      }
+        'local_import',
+        'sign_in',
+        'sign_up',
+        'sign_out',
+        'drive_session_check',
+        'drive_sign_in',
+        'drive_list_files',
+        'drive_download',
+      ]));
     });
 
     test('malicious/unexpected event-name strings fail safely to [redacted]', () {
@@ -300,6 +312,24 @@ void main() {
       expect(sanitizeEventName('a' * 101), '[redacted]'); // over maxLength
       expect(sanitizeEventName('123_starts_with_digit'), '[redacted]');
     });
+
+    test(
+      'Codex Gate-1 regression: an unknown but grammar-shaped value is '
+      'rejected even though it would have passed the old regex grammar',
+      () {
+        // This is exactly the P1 gap Codex's Gate 1 review flagged in the
+        // first attempt (a `^[a-z][a-z0-9_]*$` grammar check): a raw secret
+        // that happens to be lowercase-alphanumeric-underscore, or simply
+        // any event name never added to the allowlist, must NOT pass just
+        // because it "looks like" a valid event name.
+        expect(
+          sanitizeEventName('a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5'),
+          '[redacted]',
+        );
+        expect(sanitizeEventName('not_a_real_event_name'), '[redacted]');
+        expect(sanitizeEventName('quota_fetch_v2'), '[redacted]');
+      },
+    );
 
     test('does not widen sanitizeText/buildSafeMetadata for other fields', () {
       // The generic backstop must still redact a genuinely long
