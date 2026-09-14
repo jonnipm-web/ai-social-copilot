@@ -305,7 +305,20 @@ class DiagnosticLoggerService {
 /// both a "started" and a later "success"/"failure" event across an await
 /// gap or a different widget).
 String newDiagnosticCorrelationId() {
+  // IVE-COMMERCIAL-STABILITY-08 — PROVEN root cause of the RangeError
+  // cluster in COMMERCIAL-E2E-001 ("max must be in range 0 < max ≤ 2^32,
+  // was 0"). `1 << 32` is a well-documented dart2js web-compilation trap
+  // (dart-lang/sdk#37569, closed by the reporter switching to the exact
+  // same `1 << 31` fix used here): JavaScript's `<<` operates on 32-bit
+  // ints with the shift amount taken mod 32, so a shift by exactly 32
+  // does not produce the intended 2^32 the way it does on the Dart VM --
+  // dart2js does not constant-fold this expression to a safe literal, so
+  // `Random.nextInt(1 << 32)` receives a corrupted `max` at runtime on
+  // web. `1 << 31` avoids the wraparound entirely (a shift of 31 is
+  // always safe) while still giving 2^31 (~2.1 billion) possible values,
+  // stacked with a microsecond timestamp prefix -- no meaningful loss of
+  // uniqueness for a same-session correlation id.
   final rand = Random();
   return '${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}'
-      '-${rand.nextInt(1 << 32).toRadixString(36)}';
+      '-${rand.nextInt(1 << 31).toRadixString(36)}';
 }

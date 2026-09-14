@@ -15,19 +15,30 @@
 -- SEMANTICS CONFIRMED (not assumed) before writing this migration:
 --   - Product/UI: gap_analysis_screen.dart's "Analisar" action stays
 --     enabled after a result already exists — running it again is meant to
---     REPLACE the current result, not append to a history. Same pattern in
---     content_cluster_screen.dart / revenue_planner_screen.dart (their
---     "Gerar" forms only appear before a result exists, and there is no
---     separate history view anywhere in these three screens).
+--     REPLACE what the app treats as the CURRENT result. Same pattern in
+--     content_cluster_screen.dart / revenue_planner_screen.dart (no
+--     separate history view anywhere in these three screens) — this
+--     justifies the UNIQUE(market_analysis_id) invariant added below.
 --   - Data: production has exactly ONE existing duplicate — gap_analyses,
 --     market_analysis_id 26d5ce9b-1f38-47a6-97b9-e74e6f1f44c0, two rows for
 --     the SAME user, created 1m28s apart (2026-08-01 14:19:20 and
---     14:20:48), with IDENTICAL gap counts in every category — consistent
---     with a user re-running the same analysis, not two distinct analyses.
---     content_clusters and revenue_plans have ZERO existing duplicates.
--- This is a CURRENT-STATE relationship (option A per mission spec), not a
--- versioned/historical one — so reconciliation-by-keep-latest is correct,
--- and a UNIQUE constraint is the right invariant going forward.
+--     14:20:48). content_clusters and revenue_plans have ZERO existing
+--     duplicates.
+--
+-- CODEX-FOUND CORRECTION (mission report Phase 8, finding #4): an earlier
+-- version of this migration compared only per-category ITEM COUNTS between
+-- the two known duplicate rows (8/8/6/6/6 both) and concluded the content
+-- was "identical", reconciling by DELETing the older row outright. Reading
+-- the actual jsonb text disproved that: each AI generation produces
+-- genuinely different gap descriptions even for the same input (expected
+-- LLM behavior, not a bug) — the older row contains real, distinct
+-- insights (e.g. "recursos sobre bolsas de estudo e financiamento",
+-- "relação entre dinheiro e bem-estar mental") that do NOT appear in the
+-- newer row. A plain DELETE would have destroyed that data. This version
+-- ARCHIVES the older duplicate(s) instead of deleting them — the
+-- uniqueness invariant only needs to hold on the LIVE table; nothing
+-- requires the superseded content to be destroyed rather than kept
+-- alongside it.
 --
 -- market_analysis_id is nullable on all three tables (a row may exist
 -- without being linked to any analysis — e.g. revenue_plans' existing
@@ -36,18 +47,45 @@
 -- nullable column already treats NULLs as pairwise distinct in Postgres
 -- (never conflicts with each other), so the project-only revenue-plan flow
 -- is completely unaffected by this migration.
---
--- SAFE FOR EXISTING DUPLICATES: reconciliation (step 1, per table) runs
--- BEFORE the unique index is created (step 2), keeping only the most
--- recent row (by created_at) per market_analysis_id. This is NOT a blind
--- "ADD UNIQUE and hope it passes" — the delete is scoped to exactly the
--- duplicate condition and verified via a read-only dry run (see mission
--- report) to affect only the one known production duplicate before this
--- migration is ever applied.
 
--- ── Step 1: reconciliation — keep the most recent row per
---    market_analysis_id, delete older duplicates. A no-op wherever no
---    duplicate exists (the overwhelming majority of rows).
+-- ── Step 1: archive tables — same shape as the source table plus
+--    archived_at, so a superseded row's full content is preserved and
+--    could still be inspected/restored/shown as history later if the
+--    product ever wants that, without living on the live table today.
+CREATE TABLE IF NOT EXISTS public.gap_analyses_archive (
+  LIKE public.gap_analyses INCLUDING ALL
+);
+ALTER TABLE public.gap_analyses_archive
+  ADD COLUMN IF NOT EXISTS archived_at timestamptz NOT NULL DEFAULT now();
+
+CREATE TABLE IF NOT EXISTS public.content_clusters_archive (
+  LIKE public.content_clusters INCLUDING ALL
+);
+ALTER TABLE public.content_clusters_archive
+  ADD COLUMN IF NOT EXISTS archived_at timestamptz NOT NULL DEFAULT now();
+
+CREATE TABLE IF NOT EXISTS public.revenue_plans_archive (
+  LIKE public.revenue_plans INCLUDING ALL
+);
+ALTER TABLE public.revenue_plans_archive
+  ADD COLUMN IF NOT EXISTS archived_at timestamptz NOT NULL DEFAULT now();
+
+-- ── Step 2: reconciliation — move every OLDER duplicate row (per
+--    market_analysis_id) to its archive table, keep only the newest on
+--    the live table. A no-op wherever no duplicate exists (the
+--    overwhelming majority of rows). NOT a delete: full content survives
+--    in the *_archive table.
+INSERT INTO public.gap_analyses_archive
+SELECT ga.*, now()
+FROM public.gap_analyses ga
+JOIN (
+  SELECT id, row_number() OVER (
+    PARTITION BY market_analysis_id ORDER BY created_at DESC, id DESC
+  ) AS rn
+  FROM public.gap_analyses
+  WHERE market_analysis_id IS NOT NULL
+) dup ON ga.id = dup.id AND dup.rn > 1;
+
 DELETE FROM public.gap_analyses ga
 USING (
   SELECT id, row_number() OVER (
@@ -57,6 +95,17 @@ USING (
   WHERE market_analysis_id IS NOT NULL
 ) dup
 WHERE ga.id = dup.id AND dup.rn > 1;
+
+INSERT INTO public.content_clusters_archive
+SELECT cc.*, now()
+FROM public.content_clusters cc
+JOIN (
+  SELECT id, row_number() OVER (
+    PARTITION BY market_analysis_id ORDER BY created_at DESC, id DESC
+  ) AS rn
+  FROM public.content_clusters
+  WHERE market_analysis_id IS NOT NULL
+) dup ON cc.id = dup.id AND dup.rn > 1;
 
 DELETE FROM public.content_clusters cc
 USING (
@@ -68,6 +117,17 @@ USING (
 ) dup
 WHERE cc.id = dup.id AND dup.rn > 1;
 
+INSERT INTO public.revenue_plans_archive
+SELECT rp.*, now()
+FROM public.revenue_plans rp
+JOIN (
+  SELECT id, row_number() OVER (
+    PARTITION BY market_analysis_id ORDER BY created_at DESC, id DESC
+  ) AS rn
+  FROM public.revenue_plans
+  WHERE market_analysis_id IS NOT NULL
+) dup ON rp.id = dup.id AND dup.rn > 1;
+
 DELETE FROM public.revenue_plans rp
 USING (
   SELECT id, row_number() OVER (
@@ -78,7 +138,26 @@ USING (
 ) dup
 WHERE rp.id = dup.id AND dup.rn > 1;
 
--- ── Step 2: enforce the invariant going forward.
+-- ── Step 3: RLS on the archive tables — same ownership rule as the live
+--    tables (owner can read their own archived rows; nothing else needs
+--    write access to an archive).
+ALTER TABLE public.gap_analyses_archive      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.content_clusters_archive  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.revenue_plans_archive     ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users read own gap_analyses_archive"
+  ON public.gap_analyses_archive FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users read own content_clusters_archive"
+  ON public.content_clusters_archive FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users read own revenue_plans_archive"
+  ON public.revenue_plans_archive FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- ── Step 4: enforce the invariant going forward on the LIVE tables.
 --
 -- Deliberately NOT a partial index (`WHERE market_analysis_id IS NOT
 -- NULL`) despite that being the more explicit statement of intent: a
