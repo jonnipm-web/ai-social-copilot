@@ -26,6 +26,14 @@ class ProjectResourceAllocation {
 
   static const int maxHours = 100000;
 
+  // Codex Gate 1 (mission 12, Phase B) P2 — parseMoneyInputToCents had no
+  // application-level maximum, so a pasted string with an unbounded
+  // number of digits could reach int.parse with no upper bound (well
+  // under PostgreSQL bigint's real ~9.2e18 max, but a sane one for any
+  // realistic project budget, and one this app can actually round-trip
+  // through a 64-bit int without surprises on Dart web/JS).
+  static const int maxBudgetAllocatedCents = 999999999999; // R$ 9.999.999.999,99
+
   /// The zero-state for a project that has never saved an allocation —
   /// distinct from "failed to load" (that stays a thrown error / null,
   /// never silently coerced to this).
@@ -79,6 +87,9 @@ String? validateHoursAllocated(int hours) {
 
 String? validateBudgetAllocatedCents(int cents) {
   if (cents < 0) return 'Orçamento não pode ser negativo.';
+  if (cents > ProjectResourceAllocation.maxBudgetAllocatedCents) {
+    return 'Valor de orçamento excede o limite permitido.';
+  }
   return null;
 }
 
@@ -87,16 +98,28 @@ String? validateBudgetAllocatedCents(int cents) {
 /// for the final stored value, so a value like 10.10 cannot silently
 /// become 1009 cents due to binary floating-point representation.
 /// Returns null for anything that doesn't parse as a plain non-negative
-/// decimal with at most 2 fraction digits.
+/// decimal with at most 2 fraction digits, or that exceeds
+/// [ProjectResourceAllocation.maxBudgetAllocatedCents].
+///
+/// Codex Gate 1 (mission 12, Phase B) P2 — this used to have no
+/// application-level maximum: the whole-number group was an unbounded
+/// `\d+`, so a pasted string with hundreds of digits would still reach
+/// `int.parse`/`whole * 100 + cents` with no upper bound. The whole-number
+/// group is now capped at 12 digits (already generous relative to
+/// [ProjectResourceAllocation.maxBudgetAllocatedCents]'s own digit count)
+/// so int.parse is never asked to parse an arbitrarily long string, and
+/// the final value is checked against the same maximum before returning.
 int? parseMoneyInputToCents(String input) {
   final normalized = input.trim().replaceAll(',', '.');
   if (normalized.isEmpty) return 0;
-  final match = RegExp(r'^(\d+)(?:\.(\d{1,2}))?$').firstMatch(normalized);
+  final match = RegExp(r'^(\d{1,12})(?:\.(\d{1,2}))?$').firstMatch(normalized);
   if (match == null) return null;
   final whole = int.parse(match.group(1)!);
   final fraction = match.group(2);
   final cents = fraction == null
       ? 0
       : int.parse(fraction.padRight(2, '0'));
-  return whole * 100 + cents;
+  final total = whole * 100 + cents;
+  if (total > ProjectResourceAllocation.maxBudgetAllocatedCents) return null;
+  return total;
 }

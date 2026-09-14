@@ -78,6 +78,17 @@ void main() {
     test('rejeita negativo', () {
       expect(validateBudgetAllocatedCents(-1), isNotNull);
     });
+
+    test('rejeita acima do limite máximo (Codex Gate 1 P2)', () {
+      expect(
+        validateBudgetAllocatedCents(ProjectResourceAllocation.maxBudgetAllocatedCents),
+        isNull,
+      );
+      expect(
+        validateBudgetAllocatedCents(ProjectResourceAllocation.maxBudgetAllocatedCents + 1),
+        isNotNull,
+      );
+    });
   });
 
   // ── parseMoneyInputToCents — Section 10: nunca via double intermediário ────
@@ -119,5 +130,25 @@ void main() {
       expect(parseMoneyInputToCents('R\$ 10'), isNull);
       expect(parseMoneyInputToCents('1e10'), isNull);
     });
+
+    test(
+      'Codex Gate 1 P2 — aplica um limite máximo em vez de deixar '
+      'int.parse/aritmética estourar em entrada arbitrariamente grande',
+      () {
+        // No limite exato: aceito.
+        expect(
+          parseMoneyInputToCents('9999999999.99'),
+          ProjectResourceAllocation.maxBudgetAllocatedCents,
+        );
+        // Um dígito acima do limite de dígitos da parte inteira: rejeitado
+        // pela própria regex (nunca chega a int.parse).
+        expect(parseMoneyInputToCents('1${'0' * 12}'), isNull); // 13 dígitos
+        // Uma string de centenas de dígitos — o caso que antes não tinha
+        // limite nenhum antes de int.parse — também é rejeitada com
+        // segurança, sem lançar exceção.
+        expect(() => parseMoneyInputToCents('9' * 300), returnsNormally);
+        expect(parseMoneyInputToCents('9' * 300), isNull);
+      },
+    );
   });
 }
