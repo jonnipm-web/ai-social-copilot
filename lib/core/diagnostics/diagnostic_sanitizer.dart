@@ -238,6 +238,43 @@ String sanitizeCorrelationId(String input, {int maxLength = 100}) {
   return sanitizeText(input, maxLength: maxLength);
 }
 
+/// IVE-COMMERCIAL-EXPERIENCE-12 (Phase B, Section 03 — confirmed P2 from
+/// IVE-COMMERCIAL-FOUNDATION-11D's physical validation) — a diagnostic
+/// event name is, like a session label or correlation id, NOT arbitrary
+/// free text: it is a short, structured identifier CHOSEN BY THE CALLING
+/// CODE from a small, known set (ai_analysis_requested,
+/// copilot_request_started, quota_fetch, route_allowed, ...). Every real
+/// event name in this codebase is lowercase snake_case. [sanitizeText]'s
+/// generic backstop (`[A-Za-z0-9_\-\.]{20,}`) cannot tell a 20+ character
+/// event name like `ai_execution_confirmation_accepted` (35 chars) or
+/// `copilot_request_started` (24 chars) apart from an actual leaked token
+/// of the same shape, and was redacting BOTH to the literal string
+/// "[redacted]" — confirmed live in production (11D physical validation:
+/// `event_name = '[redacted]'`, `length(event_name) = 10`, for every
+/// AI/IVE-category event; `quota_fetch`, at 11 characters, was the only
+/// one short enough to survive). This is over-redaction that defeats
+/// observability/auditability, not a data leak — the fix narrows the
+/// grammar rather than widening what is trusted, exactly like
+/// [sanitizeSessionLabel]/[sanitizeCorrelationId] below.
+final RegExp _eventNameShape = RegExp(r'^[a-z][a-z0-9_]*$');
+
+/// Sanitizes a diagnostic event name. A value matching the strict
+/// lowercase-snake_case grammar above survives unchanged; anything else —
+/// an unexpected character (including any hyphen/dot/space/uppercase),
+/// an empty string, or a value over [maxLength] — is rejected outright to
+/// "[redacted]" rather than stored partially-sanitized, the same
+/// fail-closed rule [sanitizeSessionLabel] uses. Deliberately does NOT
+/// widen [sanitizeText]/[buildSafeMetadata]'s own rules for prompt-like
+/// text, metadata values, session labels, correlation ids, or any other
+/// field — this grammar is narrower than all of them, scoped only to
+/// this one field.
+String sanitizeEventName(String input, {int maxLength = 100}) {
+  final text = _stripControlChars(input.replaceAll(RegExp(r'[\r\n]+'), ' ')).trim();
+  if (text.isEmpty || text.length > maxLength) return '[redacted]';
+  if (!_eventNameShape.hasMatch(text)) return '[redacted]';
+  return text;
+}
+
 /// Stack traces are noisier and longer than a message, so given more room,
 /// but still bounded and scrubbed the same way — a stack frame can
 /// occasionally embed a request URL with a query string.

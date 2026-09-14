@@ -245,4 +245,73 @@ void main() {
       expect(result, isNot(contains('abcdefghijklmnop123')));
     });
   });
+
+  // IVE-COMMERCIAL-EXPERIENCE-12 (Phase B, Section 03) — regression suite
+  // for the confirmed P2 from 11D's physical validation: sanitizeText's
+  // generic 20+-char backstop was redacting legitimate event names to the
+  // literal string "[redacted]", destroying observability. These tests
+  // pin the exact real event names (both Phase-A-new and pre-existing)
+  // that were confirmed broken live in production.
+  group('sanitizeEventName — IVE-COMMERCIAL-EXPERIENCE-12 mission section 03', () {
+    test('ai_execution_confirmation_accepted (35 chars, new in Phase A) survives exactly', () {
+      expect(
+        sanitizeEventName('ai_execution_confirmation_accepted'),
+        'ai_execution_confirmation_accepted',
+      );
+    });
+
+    test('copilot_request_started (24 chars, pre-existing since 07A) survives exactly', () {
+      expect(sanitizeEventName('copilot_request_started'), 'copilot_request_started');
+    });
+
+    test('quota_fetch (11 chars, already worked) still survives exactly', () {
+      expect(sanitizeEventName('quota_fetch'), 'quota_fetch');
+    });
+
+    test('every currently-used event name in the app survives unchanged', () {
+      // A representative sample of real event names from across the
+      // logger's call sites, deliberately including the longest ones.
+      const realEventNames = [
+        'route_allowed',
+        'uncaught_error',
+        'quota_fetch',
+        'copilot_request_started',
+        'copilot_request_completed',
+        'ai_execution_confirmation_accepted',
+        'ai_execution_confirmation_rejected',
+        'ai_analysis_requested',
+        'ai_analysis_succeeded',
+        'ai_analysis_failed',
+      ];
+      for (final name in realEventNames) {
+        expect(sanitizeEventName(name), name, reason: '"$name" must survive unchanged');
+        expect(sanitizeEventName(name), isNot('[redacted]'));
+      }
+    });
+
+    test('malicious/unexpected event-name strings fail safely to [redacted]', () {
+      expect(sanitizeEventName(''), '[redacted]');
+      expect(sanitizeEventName('Bearer abc123def456ghi789jkl'), '[redacted]');
+      expect(sanitizeEventName('event-with-hyphens'), '[redacted]');
+      expect(sanitizeEventName('EventWithUpperCase'), '[redacted]');
+      expect(sanitizeEventName('event name with spaces'), '[redacted]');
+      expect(sanitizeEventName('event.with.dots'), '[redacted]');
+      expect(sanitizeEventName('event\nwith\nnewlines'), '[redacted]');
+      expect(sanitizeEventName('a' * 101), '[redacted]'); // over maxLength
+      expect(sanitizeEventName('123_starts_with_digit'), '[redacted]');
+    });
+
+    test('does not widen sanitizeText/buildSafeMetadata for other fields', () {
+      // The generic backstop must still redact a genuinely long
+      // secret-shaped string in ordinary free text / metadata — this
+      // fix is scoped to event_name alone, not a general loosening.
+      final longToken = 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5';
+      expect(sanitizeText(longToken), '[redacted]');
+      final meta = buildSafeMetadata({'note': longToken}, allowedKeys: {'note'});
+      expect(meta['note'], '[redacted]');
+      // Session labels/correlation ids keep their own existing, separate
+      // bounded rules — unaffected by this change.
+      expect(sanitizeSessionLabel('COMMERCIAL-E2E-001'), 'COMMERCIAL-E2E-001');
+    });
+  });
 }

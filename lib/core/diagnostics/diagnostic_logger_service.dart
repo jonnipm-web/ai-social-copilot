@@ -268,6 +268,16 @@ class DiagnosticLoggerService {
     // that for a future call site. Every free-text field now goes through
     // sanitizeText (bounded, newline-stripped, secret-redacted) rather than
     // only event_name.
+    //
+    // IVE-COMMERCIAL-EXPERIENCE-12 (Phase B, Section 03) — `event_name` is
+    // the one exception: it now goes through the dedicated
+    // sanitizeEventName (strict lowercase-snake_case grammar), not the
+    // generic sanitizeText, because sanitizeText's generic 20+-char
+    // backstop was redacting legitimate event names like
+    // `ai_execution_confirmation_accepted` to the literal string
+    // "[redacted]" — confirmed live in production during
+    // IVE-COMMERCIAL-FOUNDATION-11D's physical validation. See
+    // sanitizeEventName's own doc comment in diagnostic_sanitizer.dart.
     try {
       await _client.from('diagnostic_events').insert({
         'session_id': sessionId,
@@ -277,7 +287,7 @@ class DiagnosticLoggerService {
         'module': module != null ? sanitizeText(module, maxLength: 100) : null,
         'operation': operation != null ? sanitizeText(operation, maxLength: 100) : null,
         'route': route != null ? sanitizeText(route, maxLength: 200) : null,
-        'event_name': sanitizeText(eventName, maxLength: 200),
+        'event_name': sanitizeEventName(eventName, maxLength: 200),
         'status': status != null ? sanitizeText(status, maxLength: 50) : null,
         'duration_ms': durationMs,
         'correlation_id': correlationId != null ? sanitizeCorrelationId(correlationId, maxLength: 100) : null,
