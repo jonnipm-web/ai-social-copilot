@@ -10,6 +10,7 @@ import 'app.dart';
 import 'core/diagnostics/diagnostic_container.dart';
 import 'core/diagnostics/diagnostic_models.dart';
 import 'data/services/drive_stage.dart' show redactForLog;
+import 'shared/widgets/ive_overlay.dart' show iveRouteNotifier;
 
 // IVE-COMMERCIAL-OBSERVABILITY-07A — a manually-created ProviderContainer
 // (rather than plain `ProviderScope(child: App())`) is the standard
@@ -48,11 +49,21 @@ import 'data/services/drive_stage.dart' show redactForLog;
 void _logUncaughtError(Object error, StackTrace stack) {
   debugPrint('[uncaught] ${error.runtimeType}: ${redactForLog(error)}');
   try {
+    // IVE-COMMERCIAL-STABILITY-08 (Phase 3/4 — "prepare additional evidence
+    // for the next physical session") — COMMERCIAL-E2E-001 captured 25
+    // uncaught_error events with route always null, forcing this mission's
+    // analysis to infer the screen from the nearest NAVIGATION event by
+    // timestamp instead of reading it directly. iveRouteNotifier already
+    // tracks the current route globally (see ive_overlay.dart's
+    // IveRouteObserver, wired into every GoRouter navigation) — reading it
+    // here costs nothing and turns that inference into a direct fact for
+    // whichever crash occurs next.
     diagnosticLogger.logEvent(
       category: DiagnosticCategory.runtime,
       eventName: 'uncaught_error',
       severity: DiagnosticSeverity.critical,
       status: 'failure',
+      route: iveRouteNotifier.value.isEmpty ? null : iveRouteNotifier.value,
       error: error,
       stackTrace: stack,
     );
