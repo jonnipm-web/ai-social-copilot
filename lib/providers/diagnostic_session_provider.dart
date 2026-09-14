@@ -61,17 +61,27 @@ class DiagnosticSessionNotifier extends StateNotifier<DiagnosticSessionState> {
     state = _stateFromRow(row);
   }
 
+  /// IVE-COMMERCIAL-OBSERVABILITY-07B (Codex production-check review) —
+  /// [sessionId] already originates from a server-validated source
+  /// ([DiagnosticLoggerService.startSession]'s own INSERT result, or its
+  /// internal RLS-scoped recovery on a unique-violation) — never client
+  /// input. Even so, this re-confirms it against a fresh, independent
+  /// [findMyActiveSession] read (retried once for an immediate-read-after-
+  /// write race) rather than ever trusting [sessionId] on its own: if the
+  /// server-side row can't be re-confirmed to actually be ACTIVE for the
+  /// current user after that retry, this fails CLOSED to "no active
+  /// session" rather than optimistically displaying one that isn't
+  /// independently confirmed.
   Future<void> _adoptFromServer(String sessionId) async {
-    final row = await _logger.findMyActiveSession();
-    if (row != null && row['id'] == sessionId) {
-      state = _stateFromRow(row);
-      return;
+    for (var attempt = 0; attempt < 2; attempt++) {
+      final row = await _logger.findMyActiveSession();
+      if (row != null && row['id'] == sessionId) {
+        state = _stateFromRow(row);
+        return;
+      }
+      if (attempt == 0) await Future.delayed(const Duration(milliseconds: 250));
     }
-    // Defensive fallback only: the row this exact id belongs to could not
-    // be re-fetched (e.g. a transient read failure right after a
-    // successful write) -- still reflect that a session is active rather
-    // than silently staying "inactive" and inviting a second START.
-    state = DiagnosticSessionState(sessionId: sessionId, startedAt: DateTime.now());
+    state = const DiagnosticSessionState();
   }
 
   DiagnosticSessionState _stateFromRow(Map<String, dynamic> row) {
