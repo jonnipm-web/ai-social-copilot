@@ -1,4 +1,5 @@
 import '../../providers/ive_context_provider.dart' show IveContextData;
+import 'ive_interaction_request.dart';
 
 class CopilotContextData {
   final Map<String, dynamic>? project;
@@ -14,6 +15,21 @@ class CopilotContextData {
   // Avisos de grounding enviados ao LLM para instrução de honestidade epistêmica
   final List<String> documentWarnings;
 
+  // IVE-COMMERCIAL-FOUNDATION-11 (Project Context Contract, Phase A) —
+  // identity fields. Before this mission this class had NONE of these —
+  // every "Ask IVE" call site shared the same ecosystem-wide grounding
+  // with no way to know which project/item/interaction it was actually
+  // about (docs/commercial/PROJECT_CONTEXT_CONTRACT.md §2). These mirror
+  // IveInteractionRequest 1:1 (see [withIdentity]) and exist on THIS
+  // class — not just the request — so the identity travels with the
+  // context all the way into the chat provider/audit trail, not just up
+  // to the point `showCopilotChat` is called.
+  final String? projectId;
+  final String? sourceModule;
+  final String? sourceEntityType;
+  final String? sourceEntityId;
+  final String? correlationId;
+
   const CopilotContextData({
     this.project,
     this.scores,
@@ -25,7 +41,34 @@ class CopilotContextData {
     this.market,
     this.documentCoverage,
     this.documentWarnings   = const [],
+    this.projectId,
+    this.sourceModule,
+    this.sourceEntityType,
+    this.sourceEntityId,
+    this.correlationId,
   });
+
+  /// Returns a copy carrying [request]'s identity fields — the single
+  /// choke point `showCopilotChat` uses (see context_copilot_widget.dart)
+  /// so every chat invocation carries identity regardless of how its
+  /// `contextData` was built upstream.
+  CopilotContextData withIdentity(IveInteractionRequest request) => CopilotContextData(
+        project:           project,
+        scores:            scores,
+        opportunities:     opportunities,
+        actions:           actions,
+        documents:         documents,
+        personas:          personas,
+        revenue:           revenue,
+        market:            market,
+        documentCoverage:  documentCoverage,
+        documentWarnings:  documentWarnings,
+        projectId:         request.projectId,
+        sourceModule:      request.sourceModule,
+        sourceEntityType:  request.sourceEntityType,
+        sourceEntityId:    request.sourceEntityId,
+        correlationId:     request.correlationId,
+      );
 
   // IVE-COMMERCIAL-TARGETED-REMEDIATION-04 — fonte única desta conversão.
   // Antes desta correção, o overlay global (ive_overlay.dart) tinha sua
@@ -52,6 +95,11 @@ class CopilotContextData {
         if (ctx.topProjectScore       != null) 'top_project_score':          ctx.topProjectScore,
         if (ctx.mainBottleneckName    != null) 'main_bottleneck':            ctx.mainBottleneckName,
         if (ctx.mainBottleneckScore   != null) 'bottleneck_execution_score': ctx.mainBottleneckScore,
+        // IVE-COMMERCIAL-FOUNDATION-11 — falha segura e explícita: quando
+        // um projectId foi pedido e não foi encontrado, diz isso ao LLM
+        // em vez de silenciosamente devolver um contexto vazio que possa
+        // ser confundido com "projeto sem dados ainda".
+        if (ctx.projectUnavailable) 'project_unavailable': true,
       },
       project: ctx.topProjectsSnapshot.isNotEmpty
           ? {'projects': ctx.topProjectsSnapshot}

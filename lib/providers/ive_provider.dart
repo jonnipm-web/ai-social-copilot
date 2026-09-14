@@ -76,8 +76,11 @@ class IveNotifier extends StateNotifier<IveState> {
     _eventSub = IveEventBus.instance.stream.listen(_onEvent);
 
     // Escuta contexto do ecossistema — substitui ref.listen no overlay
+    // IVE-COMMERCIAL-FOUNDATION-11: `null` = resumo ecosystem-wide global,
+    // o caso correto para este listener (overlay montado uma única vez
+    // para o app inteiro, sem projeto específico em foco).
     _ref.listen<AsyncValue<IveContextData>>(
-      iveContextDataProvider,
+      iveContextDataProvider(null),
       (_, next) => next.whenData(_onContextData),
     );
 
@@ -89,7 +92,7 @@ class IveNotifier extends StateNotifier<IveState> {
           for (final s in scores) s.project.id: s.ecosystemScore,
         };
         final health =
-            _ref.read(iveContextDataProvider).valueOrNull?.healthScore ?? 0;
+            _ref.read(iveContextDataProvider(null)).valueOrNull?.healthScore ?? 0;
         _ref
             .read(iveMemoryProvider.notifier)
             .updateEcosystemSnapshot(health: health, scores: snapshot);

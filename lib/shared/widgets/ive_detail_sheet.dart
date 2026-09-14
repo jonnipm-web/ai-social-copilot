@@ -3,9 +3,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'context_copilot_widget.dart' show showCopilotChat;
 import '../../data/models/copilot_context_data.dart';
+import '../../data/models/ive_interaction_request.dart';
 import '../../providers/ive_context_provider.dart';
 
 /// Generic drill-down sheet IVE opens when user taps any data item.
+///
+/// IVE-COMMERCIAL-FOUNDATION-11 — [projectId]/[sourceEntityType]/
+/// [sourceEntityId] are OPTIONAL, `null` by default: existing call sites
+/// (opportunity/action/risk/recommendation cards in the Decision Center)
+/// keep their current ecosystem-wide grounding unchanged in this Phase A
+/// mission — wiring their actual project scope belongs to the
+/// Opportunity Lab/Action Engine/Decision Center work in Phase D (see
+/// docs/commercial/IMPLEMENTATION_ROADMAP.md), not this foundation. This
+/// widget is ready to carry that identity the moment a caller has it.
 class IveDetailSheet extends ConsumerWidget {
   final String title;
   final String emoji;
@@ -14,6 +24,9 @@ class IveDetailSheet extends ConsumerWidget {
   final List<IveAction> suggestedActions;
   final Map<String, dynamic>? expandedData;
   final String screenName;
+  final String? projectId;
+  final String? sourceEntityType;
+  final String? sourceEntityId;
 
   const IveDetailSheet({
     super.key,
@@ -24,6 +37,9 @@ class IveDetailSheet extends ConsumerWidget {
     this.suggestedActions = const [],
     this.expandedData,
     this.screenName = '',
+    this.projectId,
+    this.sourceEntityType,
+    this.sourceEntityId,
   });
 
   static void show(
@@ -35,6 +51,9 @@ class IveDetailSheet extends ConsumerWidget {
     List<IveAction> suggestedActions = const [],
     Map<String, dynamic>? expandedData,
     String screenName = '',
+    String? projectId,
+    String? sourceEntityType,
+    String? sourceEntityId,
   }) {
     showModalBottomSheet(
       context:             context,
@@ -48,6 +67,9 @@ class IveDetailSheet extends ConsumerWidget {
         suggestedActions: suggestedActions,
         expandedData:     expandedData,
         screenName:       screenName,
+        projectId:        projectId,
+        sourceEntityType: sourceEntityType,
+        sourceEntityId:   sourceEntityId,
       ),
     );
   }
@@ -268,12 +290,19 @@ class IveDetailSheet extends ConsumerWidget {
           label: const Text('Perguntar à IVE'),
           onPressed: () {
             Navigator.of(context).pop();
-            final ctx = ref.read(iveContextDataProvider).valueOrNull;
-            final contextData = ctx != null ? CopilotContextData.fromIveContext(ctx) : CopilotContextData();
+            final ctx = ref.read(iveContextDataProvider(projectId)).valueOrNull;
+            final contextData = ctx != null ? CopilotContextData.fromIveContext(ctx) : const CopilotContextData();
             showCopilotChat(
               context,
               screenName:  screenName.isNotEmpty ? screenName : title,
               contextData: contextData,
+              request: IveInteractionRequest(
+                projectId:        projectId,
+                sourceModule:     screenName.isNotEmpty ? screenName : title,
+                sourceEntityType: sourceEntityType,
+                sourceEntityId:   sourceEntityId,
+                operationType:    IveOperationType.ask,
+              ),
             );
           },
         ),

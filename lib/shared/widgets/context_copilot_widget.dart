@@ -3,16 +3,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/copilot_context_data.dart';
 import '../../data/models/copilot_turn.dart';
+import '../../data/models/ive_interaction_request.dart';
 import '../../providers/context_copilot_provider.dart';
 
 // ── Public helper ─────────────────────────────────────────────────────────────
 
+// IVE-COMMERCIAL-FOUNDATION-11 — `request` is now required: this is the
+// single choke point every "Ask/Analyze/Compare/Explain com a IVE" call
+// site in the app goes through (see
+// docs/commercial/IVE_INTERACTION_AND_QUOTA_CONTRACT.md §2), so identity
+// is attached here unconditionally via [CopilotContextData.withIdentity]
+// rather than relying on each of the ~8 call sites to remember to do it
+// themselves.
 void showCopilotChat(
   BuildContext context, {
   required String screenName,
+  required IveInteractionRequest request,
   CopilotContextData? contextData,
   String? initialMessage,
 }) {
+  final resolvedContext = (contextData ?? const CopilotContextData()).withIdentity(request);
   showModalBottomSheet(
     context:             context,
     isScrollControlled:  true,
@@ -21,7 +31,7 @@ void showCopilotChat(
       parent: ProviderScope.containerOf(context),
       child:  _CopilotSheet(
         screenName:     screenName,
-        context:        contextData ?? CopilotContextData(),
+        context:        resolvedContext,
         initialMessage: initialMessage,
       ),
     ),
