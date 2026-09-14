@@ -9,11 +9,22 @@ import 'package:ai_social_copilot/providers/project_resource_allocation_provider
 // corrigida uma vez neste projeto ("make ContextCopilotNotifier's Supabase
 // client access lazy"). Implementa a interface diretamente, sem herdar da
 // classe concreta. ─────────────────────────────────────────────────────────
+// Codex Gate 1 (mission 12, Phase B) P2 — this fake used to hold a single
+// `_current` field and IGNORE the `projectId` argument passed to
+// fetch()/save() entirely, so no test using it could ever prove the
+// provider/service pair actually routes by project — a two-project mixup
+// would have passed silently. Now keyed by projectId, like the real
+// Supabase-backed service is keyed by its `project_id` column.
 class FakeProjectResourceAllocationService
     implements ProjectResourceAllocationServiceInterface {
-  FakeProjectResourceAllocationService(this._current);
+  FakeProjectResourceAllocationService(ProjectResourceAllocation initial)
+      : _byProject = {initial.projectId: initial};
 
-  ProjectResourceAllocation _current;
+  FakeProjectResourceAllocationService.multi(
+    Map<String, ProjectResourceAllocation> initial,
+  ) : _byProject = Map.of(initial);
+
+  final Map<String, ProjectResourceAllocation> _byProject;
   int fetchCallCount = 0;
   int saveCallCount = 0;
   bool failNextSave = false;
@@ -22,7 +33,7 @@ class FakeProjectResourceAllocationService
   @override
   Future<ProjectResourceAllocation> fetch(String projectId) async {
     fetchCallCount++;
-    return _current;
+    return _byProject[projectId] ?? ProjectResourceAllocation.empty(projectId);
   }
 
   @override
@@ -30,14 +41,15 @@ class FakeProjectResourceAllocationService
     saveCallCount++;
     if (saveDelay > Duration.zero) await Future<void>.delayed(saveDelay);
     if (failNextSave) throw Exception('simulated save failure');
-    _current = ProjectResourceAllocation(
+    final saved = ProjectResourceAllocation(
       projectId: allocation.projectId,
       hoursAllocated: allocation.hoursAllocated,
       budgetAllocatedCents: allocation.budgetAllocatedCents,
       currency: allocation.currency,
       updatedAt: DateTime(2026, 9, 14),
     );
-    return _current;
+    _byProject[allocation.projectId] = saved;
+    return saved;
   }
 }
 
@@ -64,13 +76,16 @@ ProjectResourceAllocation _allocation({
 // plays in production: it keeps the element alive for the container's
 // lifetime, exactly like the sheet's `ref.watch(...)` does when this
 // section is actually on screen.
-ProviderContainer _container(FakeProjectResourceAllocationService svc) {
+ProviderContainer _container(
+  FakeProjectResourceAllocationService svc, {
+  String projectId = _projectId,
+}) {
   final container = ProviderContainer(
     overrides: [
       projectResourceAllocationServiceProvider.overrideWithValue(svc),
     ],
   );
-  container.listen(projectResourceAllocationProvider(_projectId), (_, __) {});
+  container.listen(projectResourceAllocationProvider(projectId), (_, __) {});
   return container;
 }
 
@@ -279,6 +294,63 @@ void main() {
       expect(state.status, AllocationEditStatus.saved);
       expect(state.saved.hoursAllocated, 70);
     });
+  });
+
+  // ── Roteamento por projeto — Codex Gate 1 P2 ────────────────────────────
+  group('roteamento por projectId', () {
+    test(
+      'dois projetos diferentes carregam e salvam de forma isolada, '
+      'sem vazar dados entre providers (mesmo container/serviço)',
+      () async {
+        final svc = FakeProjectResourceAllocationService.multi({
+          'p1': ProjectResourceAllocation(
+            projectId: 'p1',
+            hoursAllocated: 10,
+            budgetAllocatedCents: 100000,
+            currency: 'BRL',
+            updatedAt: DateTime(2026, 1, 1),
+          ),
+          'p2': ProjectResourceAllocation(
+            projectId: 'p2',
+            hoursAllocated: 999,
+            budgetAllocatedCents: 5000000,
+            currency: 'USD',
+            updatedAt: DateTime(2026, 1, 1),
+          ),
+        });
+
+        final container = ProviderContainer(
+          overrides: [
+            projectResourceAllocationServiceProvider.overrideWithValue(svc),
+          ],
+        );
+        addTearDown(container.dispose);
+        container.listen(projectResourceAllocationProvider('p1'), (_, __) {});
+        container.listen(projectResourceAllocationProvider('p2'), (_, __) {});
+        await Future<void>.delayed(Duration.zero);
+
+        final state1 = container.read(projectResourceAllocationProvider('p1')).valueOrNull!;
+        final state2 = container.read(projectResourceAllocationProvider('p2')).valueOrNull!;
+
+        // Cada provider carregou o valor do SEU PRÓPRIO projeto — a falha
+        // que o fake antigo (com um único `_current` ignorando projectId)
+        // não conseguia detectar.
+        expect(state1.saved.hoursAllocated, 10);
+        expect(state1.saved.currency, 'BRL');
+        expect(state2.saved.hoursAllocated, 999);
+        expect(state2.saved.currency, 'USD');
+
+        // Editar/salvar em p1 não pode afetar p2.
+        final notifier1 = container.read(projectResourceAllocationProvider('p1').notifier);
+        notifier1.updateHoursPreview(77);
+        await notifier1.save();
+
+        final after1 = container.read(projectResourceAllocationProvider('p1')).valueOrNull!;
+        final after2 = container.read(projectResourceAllocationProvider('p2')).valueOrNull!;
+        expect(after1.saved.hoursAllocated, 77);
+        expect(after2.saved.hoursAllocated, 999); // p2 intacto
+      },
+    );
   });
 
   // ── isDirty ──────────────────────────────────────────────────────────────
