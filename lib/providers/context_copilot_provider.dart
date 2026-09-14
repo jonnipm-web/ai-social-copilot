@@ -55,10 +55,17 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
   // any production behavior change.
   SupabaseClient get _client => Supabase.instance.client;
 
+  /// IVE-COMMERCIAL-QUOTA-HARDENING-13 — [idempotencyKey] is optional so
+  /// any other/future caller keeps compiling, but the real call site
+  /// through context_copilot_widget.dart's `_CopilotSheet` (the single
+  /// choke point this mission gates) now supplies one, generated once per
+  /// confirmed chat session and reused for that session's messages — see
+  /// `_CopilotSheetState._ensureConfirmed`.
   Future<void> send({
     required String message,
     required String screenName,
     required CopilotContextData context,
+    String? idempotencyKey,
   }) async {
     final userTurn = CopilotTurn(
       role:      'user',

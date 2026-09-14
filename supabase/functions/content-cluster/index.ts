@@ -83,8 +83,10 @@ serve(async (req) => {
   }
 
   let quotaReserved = false;
+  let idempotencyKey: string | undefined;
   try {
-    const { input, main_keyword, language: rawLanguage } = await req.json();
+    const { input, main_keyword, language: rawLanguage, idempotency_key } = await req.json();
+    idempotencyKey = idempotency_key;
     const language = normalizeLanguage(rawLanguage);
 
     if (!input || !main_keyword) {
@@ -94,7 +96,7 @@ serve(async (req) => {
       });
     }
 
-    const quota = await reserveQuota(req);
+    const quota = await reserveQuota(req, undefined, idempotencyKey);
     if (!quota.allowed) return quotaBlockedResponse(corsHeaders, quota);
     quotaReserved = true;
 
@@ -135,7 +137,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    if (quotaReserved) await refundQuota(req);
+    if (quotaReserved) await refundQuota(req, undefined, idempotencyKey);
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

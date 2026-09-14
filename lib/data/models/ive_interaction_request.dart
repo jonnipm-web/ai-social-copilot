@@ -1,4 +1,5 @@
 import '../../core/diagnostics/diagnostic_logger_service.dart' show newDiagnosticCorrelationId;
+import '../../core/utils/uuid_v4.dart';
 
 // IVE-COMMERCIAL-FOUNDATION-11 — canonical contract for every "Perguntar/
 // Analisar/Comparar/Explicar com a IVE" invocation in the app (mission
@@ -50,6 +51,19 @@ class IveInteractionRequest {
   /// than introducing a second ID-generation scheme.
   final String correlationId;
 
+  /// IVE-COMMERCIAL-QUOTA-HARDENING-13 (mission Sections 05, 14) — ONE
+  /// idempotency key per intentional operation, generated once when this
+  /// request is first created and reused for every retry of that SAME
+  /// operation (mission Section 05: "The same key must survive request
+  /// retry... A genuinely new user analysis must receive a new key").
+  /// Unlike [correlationId] (a diagnostics-only tracing id, never a real
+  /// UUID), this is a genuine RFC 4122 v4 UUID because the server stores
+  /// it in a Postgres `uuid` column (migration 20260918000000) and
+  /// enforces uniqueness on it. NOT authorization — ownership is still
+  /// auth.uid()-derived server-side; this only prevents one confirmed
+  /// operation from reserving quota more than once.
+  final String idempotencyKey;
+
   IveInteractionRequest({
     this.projectId,
     required this.sourceModule,
@@ -57,5 +71,7 @@ class IveInteractionRequest {
     this.sourceEntityId,
     required this.operationType,
     String? correlationId,
-  }) : correlationId = correlationId ?? newDiagnosticCorrelationId();
+    String? idempotencyKey,
+  })  : correlationId = correlationId ?? newDiagnosticCorrelationId(),
+        idempotencyKey = idempotencyKey ?? newUuidV4();
 }

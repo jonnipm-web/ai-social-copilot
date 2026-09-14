@@ -11,6 +11,8 @@ import '../../../data/models/opportunity_lab_item.dart';
 import '../../../data/models/project.dart';
 import '../../../data/models/project_intelligence_profile.dart';
 import '../../../data/models/project_resource_allocation.dart';
+import '../../../core/utils/uuid_v4.dart';
+import '../../../providers/auto_bootstrap_provider.dart';
 import '../../../providers/ecosystem_intelligence_provider.dart';
 import '../../../providers/ive_context_provider.dart';
 import '../../../providers/knowledge_provider.dart';
@@ -40,11 +42,29 @@ class _ProjectCommandCenterScreenState
   String _type    = 'website';
   bool   _saving  = false;
 
+  // IVE-COMMERCIAL-QUOTA-HARDENING-13 — gates the auto-bootstrap flow
+  // (previously an unconditional, silent ive_provider.dart side effect
+  // firing up to 3 quota-consuming Edge Function calls per project — see
+  // AutoBootstrapService.bootstrapProject) behind one explicit
+  // confirmation, right after a successful project creation.
+  final _bootstrapExec = AiExecutionController();
+
+  // IVE-COMMERCIAL-QUOTA-HARDENING-13 — gates _analyzeWithKnowledge's own
+  // direct generate-project-opportunities call ("Analisar com
+  // Conhecimento"), a separate silent quota-consuming path from both the
+  // resource-analysis button (already fixed in mission 12) and the
+  // auto-bootstrap flow above. A dedicated controller, not reused from
+  // _bootstrapExec, so the two independent actions' busy-guards never
+  // interfere with each other.
+  final _knowledgeAnalysisExec = AiExecutionController();
+
   @override
   void dispose() {
     _nameCtrl.dispose();
     _descCtrl.dispose();
     _urlCtrl.dispose();
+    _bootstrapExec.dispose();
+    _knowledgeAnalysisExec.dispose();
     super.dispose();
   }
 
@@ -65,7 +85,7 @@ class _ProjectCommandCenterScreenState
     if (name.isEmpty) return;
     setState(() => _saving = true);
     try {
-      await ref.read(projectsNotifierProvider.notifier).create({
+      final project = await ref.read(projectsNotifierProvider.notifier).create({
         'name':        name,
         'description': _descCtrl.text.trim(),
         'url':         _urlCtrl.text.trim().isNotEmpty ? _urlCtrl.text.trim() : null,
@@ -76,6 +96,7 @@ class _ProjectCommandCenterScreenState
       _descCtrl.clear();
       _urlCtrl.clear();
       setState(() { _showForm = false; _type = 'website'; });
+      if (mounted) _maybeOfferAutoBootstrap(project);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -85,6 +106,43 @@ class _ProjectCommandCenterScreenState
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  /// IVE-COMMERCIAL-QUOTA-HARDENING-13 — the ONLY remaining trigger for
+  /// AutoBootstrapService's auto-enrichment flow (previously an
+  /// unconditional ive_provider.dart side effect on every project
+  /// creation — mission Section 12). `runAll()` bootstraps EVERY project
+  /// currently needing it (not just the one just created — it re-detects
+  /// from scratch), so the quota estimate shown here is `3 * that count`,
+  /// not a hardcoded 3, to never UNDERSTATE the real cost (mission
+  /// Section 12's own confirm() doc: "must never understate"). Runs
+  /// AFTER `_save()`'s own try/finally completes (not awaited from
+  /// there) so the Save button's spinner doesn't linger through this
+  /// separate, possibly-multi-call confirmation + bootstrap.
+  Future<void> _maybeOfferAutoBootstrap(Project justCreated) async {
+    final List<Project> toBootstrap;
+    try {
+      toBootstrap = await ref.read(projectsNeedingBootstrapProvider.future);
+    } catch (_) {
+      return; // best-effort — a detection failure must not block anything
+    }
+    if (toBootstrap.isEmpty || !mounted) return;
+
+    final confirmed = await _bootstrapExec.confirm(
+      context: context,
+      ref: ref,
+      analysisLabel: 'Gerar oportunidades, ações e plano de receita automaticamente',
+      request: IveInteractionRequest(
+        projectId:        justCreated.id,
+        sourceModule:     'project_command_center',
+        sourceEntityType: 'project',
+        sourceEntityId:   justCreated.id,
+        operationType:    IveOperationType.analyze,
+      ),
+      estimatedUnits: toBootstrap.length * 3,
+    );
+    if (!confirmed || !mounted) return;
+    ref.read(autoBootstrapNotifierProvider.notifier).runAll();
   }
 
   Future<void> _confirmDelete(Project project) async {
@@ -153,6 +211,20 @@ class _ProjectCommandCenterScreenState
       return;
     }
 
+    final confirmed = await _knowledgeAnalysisExec.confirm(
+      context: context,
+      ref: ref,
+      analysisLabel: 'Analisar com Conhecimento',
+      request: IveInteractionRequest(
+        projectId:        project.id,
+        sourceModule:     'project_command_center',
+        sourceEntityType: 'project',
+        sourceEntityId:   project.id,
+        operationType:    IveOperationType.analyze,
+      ),
+    );
+    if (!confirmed || !mounted) return;
+
     // Mostra progresso
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -179,6 +251,7 @@ class _ProjectCommandCenterScreenState
           'project_description': project.description,
           'project_type':        project.type,
           'documents':           docs,
+          'idempotency_key':     newUuidV4(),
         },
       );
 
@@ -1338,11 +1411,13 @@ class _ResourceAllocationSectionState
   // consume quota. It does: showCopilotChat's auto-sent initialMessage
   // goes through supabase/functions/context-copilot, which calls
   // reserveQuota() before every message like every other IVE chat entry
-  // point in the app. AiExecutionController.confirm() (the Phase-A
-  // confirmation dialog, mission Section 15: "If invoking a NEW detailed
-  // IVE analysis consumes quota... do not bypass quota") now gates this
-  // button before the chat sheet opens.
-  final _exec = AiExecutionController();
+  // point in the app. Mission 12 gated this button locally with its own
+  // AiExecutionController; mission 13 (Codex Gate 1, Section 13: "no
+  // double confirmation") moved that gate into
+  // context_copilot_widget.dart's `_CopilotSheet` itself — the single
+  // choke point for EVERY auto-sending showCopilotChat call, not just
+  // this one — so a local controller here would now show a SECOND
+  // redundant confirmation dialog. Removed.
 
   static const List<int> _hourPresets = [10, 20, 40, 80];
 
@@ -1350,7 +1425,6 @@ class _ResourceAllocationSectionState
   void dispose() {
     _hoursController.dispose();
     _budgetController.dispose();
-    _exec.dispose();
     super.dispose();
   }
 
@@ -1572,62 +1646,55 @@ class _ResourceAllocationSectionState
             // Reaproveita o chat existente (showCopilotChat), que NÃO é
             // gratuito: seu envio automático consome 1 unidade de quota
             // via context-copilot, como qualquer outro "Perguntar à IVE"
-            // do app — por isso passa pela confirmação padrão da Fase A
-            // (Section 15) antes de abrir o chat.
+            // do app. IVE-COMMERCIAL-QUOTA-HARDENING-13 — a confirmação
+            // NÃO é mais feita aqui: context_copilot_widget.dart's
+            // `_CopilotSheet` agora é o único ponto de confirmação para
+            // TODO envio automático de mensagem (mission 13, Seção 13:
+            // "no double confirmation" — confirmar aqui E dentro do
+            // sheet mostraria dois diálogos em sequência para a mesma
+            // ação). O botão só monta o request e abre o chat; o sheet
+            // decide se precisa confirmar.
             SizedBox(
               width: double.infinity,
-              child: AnimatedBuilder(
-                animation: _exec,
-                builder: (_, __) => OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF00BCD4),
-                    side: const BorderSide(color: Color(0xFF00BCD4)),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  icon: const Text('🧠', style: TextStyle(fontSize: 14)),
-                  label: const Text('Analisar recursos com a IVE', style: TextStyle(fontSize: 13)),
-                  onPressed: _exec.isBusy
-                      ? null
-                      : () async {
-                          final request = IveInteractionRequest(
-                            projectId: widget.projectId,
-                            sourceModule: 'project_command_center',
-                            sourceEntityType: 'project',
-                            sourceEntityId: widget.projectId,
-                            operationType: IveOperationType.ask,
-                          );
-                          final confirmed = await _exec.confirm(
-                            context: context,
-                            ref: ref,
-                            analysisLabel: 'Analisar recursos com a IVE',
-                            request: request,
-                          );
-                          if (!confirmed || !context.mounted) return;
-
-                          final saved = editState.saved;
-                          final ctx =
-                              ref.read(iveContextDataProvider(widget.projectId)).valueOrNull;
-                          final contextData = ctx != null
-                              ? CopilotContextData.fromIveContext(ctx)
-                              : const CopilotContextData();
-                          final dirtyNote = editState.isDirty
-                              ? ' Nota: há edições de alocação ainda não salvas que não estão refletidas nesta análise.'
-                              : '';
-                          Navigator.of(context).pop();
-                          showCopilotChat(
-                            context,
-                            screenName: 'Projetos',
-                            contextData: contextData,
-                            initialMessage:
-                                'Com base na alocação de recursos SALVA do projeto "${widget.projectName}" '
-                                '(${saved.hoursAllocated}h, ${_fmtCents(saved.budgetAllocatedCents)} ${saved.currency}), '
-                                'essa alocação está adequada para as prioridades atuais do projeto? '
-                                'O que ajustar?$dirtyNote',
-                            request: request,
-                          );
-                        },
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF00BCD4),
+                  side: const BorderSide(color: Color(0xFF00BCD4)),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
+                icon: const Text('🧠', style: TextStyle(fontSize: 14)),
+                label: const Text('Analisar recursos com a IVE', style: TextStyle(fontSize: 13)),
+                onPressed: () {
+                  final request = IveInteractionRequest(
+                    projectId: widget.projectId,
+                    sourceModule: 'project_command_center',
+                    sourceEntityType: 'project',
+                    sourceEntityId: widget.projectId,
+                    operationType: IveOperationType.ask,
+                  );
+                  final saved = editState.saved;
+                  final ctx =
+                      ref.read(iveContextDataProvider(widget.projectId)).valueOrNull;
+                  final contextData = ctx != null
+                      ? CopilotContextData.fromIveContext(ctx)
+                      : const CopilotContextData();
+                  final dirtyNote = editState.isDirty
+                      ? ' Nota: há edições de alocação ainda não salvas que não estão refletidas nesta análise.'
+                      : '';
+                  Navigator.of(context).pop();
+                  showCopilotChat(
+                    context,
+                    screenName: 'Projetos',
+                    contextData: contextData,
+                    initialMessage:
+                        'Com base na alocação de recursos SALVA do projeto "${widget.projectName}" '
+                        '(${saved.hoursAllocated}h, ${_fmtCents(saved.budgetAllocatedCents)} ${saved.currency}), '
+                        'essa alocação está adequada para as prioridades atuais do projeto? '
+                        'O que ajustar?$dirtyNote',
+                    request: request,
+                  );
+                },
               ),
             ),
           ],

@@ -69,7 +69,7 @@ void main() {
       ref: capturedRef,
       analysisLabel: 'Teste',
       request: req(),
-      action: () async {
+      action: (idempotencyKey) async {
         calls++;
         return 1;
       },
@@ -96,7 +96,7 @@ void main() {
       ref: capturedRef,
       analysisLabel: 'Teste',
       request: req(),
-      action: () async {
+      action: (idempotencyKey) async {
         calls++;
         return 42;
       },
@@ -126,7 +126,7 @@ void main() {
         ref: capturedRef,
         analysisLabel: 'Teste',
         request: req(),
-        action: () async {
+        action: (idempotencyKey) async {
           calls++;
           return 1;
         },
@@ -142,7 +142,7 @@ void main() {
         ref: capturedRef,
         analysisLabel: 'Teste',
         request: req(),
-        action: () async {
+        action: (idempotencyKey) async {
           calls++;
           return 2;
         },
@@ -169,7 +169,7 @@ void main() {
       ref: capturedRef,
       analysisLabel: 'Teste',
       request: req(),
-      action: () async => throw Exception('falhou'),
+      action: (idempotencyKey) async => throw Exception('falhou'),
     );
     // IMPORTANTE: anexa o matcher assíncrono ANTES de qualquer outro
     // await — se `future` rejeitar enquanto nada está "escutando" ainda
@@ -186,6 +186,65 @@ void main() {
     expect(controller.state, AiExecutionState.error);
   });
 
+  // ── IVE-COMMERCIAL-QUOTA-HARDENING-13 — idempotency key contract ────────
+  testWidgets(
+    'run() passa para action() exatamente o idempotencyKey da request confirmada',
+    (tester) async {
+      final controller = AiExecutionController();
+      await tester.pumpWidget(harness());
+      final request = req();
+      String? receivedKey;
+
+      final future = controller.run<int>(
+        context: capturedContext,
+        ref: capturedRef,
+        analysisLabel: 'Teste',
+        request: request,
+        action: (idempotencyKey) async {
+          receivedKey = idempotencyKey;
+          return 1;
+        },
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONFIRMAR'));
+      await tester.pumpAndSettle();
+      await future;
+
+      expect(receivedKey, isNotNull);
+      expect(receivedKey, request.idempotencyKey);
+    },
+  );
+
+  testWidgets(
+    'duas execuções confirmadas sucessivas (duas requests novas) recebem '
+    'idempotencyKeys diferentes — cada uma é uma operação nova',
+    (tester) async {
+      final controller = AiExecutionController();
+      await tester.pumpWidget(harness());
+      final keys = <String>[];
+
+      for (var i = 0; i < 2; i++) {
+        final future = controller.run<int>(
+          context: capturedContext,
+          ref: capturedRef,
+          analysisLabel: 'Teste',
+          request: req(), // uma IveInteractionRequest NOVA a cada chamada
+          action: (idempotencyKey) async {
+            keys.add(idempotencyKey);
+            return 1;
+          },
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONFIRMAR'));
+        await tester.pumpAndSettle();
+        await future;
+      }
+
+      expect(keys.length, 2);
+      expect(keys[0], isNot(keys[1]));
+    },
+  );
+
   testWidgets('isBusy é false antes de run() e volta a false após success/cancel',
       (tester) async {
     final controller = AiExecutionController();
@@ -197,7 +256,7 @@ void main() {
       ref: capturedRef,
       analysisLabel: 'Teste',
       request: req(),
-      action: () async => 1,
+      action: (idempotencyKey) async => 1,
     );
     await tester.pump();
     expect(controller.isBusy, isTrue);
@@ -209,4 +268,51 @@ void main() {
 
     expect(controller.isBusy, isFalse);
   });
+
+  // ── confirm() — Codex Gate 1 / mission 13, Seção 12 (auto-bootstrap) ────
+  testWidgets(
+    'confirm() com estimatedUnits > 1 mostra o custo real ("até N"), não o texto de 1 unidade',
+    (tester) async {
+      final controller = AiExecutionController();
+      await tester.pumpWidget(harness());
+
+      final future = controller.confirm(
+        context: capturedContext,
+        ref: capturedRef,
+        analysisLabel: 'Bootstrap automático',
+        request: req(),
+        estimatedUnits: 3,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('até 3'), findsOneWidget);
+      expect(find.textContaining('vai consumir 1 das'), findsNothing);
+
+      await tester.tap(find.text('CANCELAR'));
+      await tester.pumpAndSettle();
+      expect(await future, isFalse);
+    },
+  );
+
+  testWidgets(
+    'confirm() com estimatedUnits padrão (1) mantém o texto original de 1 unidade',
+    (tester) async {
+      final controller = AiExecutionController();
+      await tester.pumpWidget(harness());
+
+      final future = controller.confirm(
+        context: capturedContext,
+        ref: capturedRef,
+        analysisLabel: 'Análise simples',
+        request: req(),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('vai consumir 1 das suas análises mensais'), findsOneWidget);
+
+      await tester.tap(find.text('CANCELAR'));
+      await tester.pumpAndSettle();
+      await future;
+    },
+  );
 }

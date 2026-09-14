@@ -20,9 +20,11 @@ serve(async (req) => {
   }
 
   let quotaReserved = false;
+  let idempotencyKey: string | undefined;
   try {
-    const { project_name, project_description, project_type, documents, market_context } =
+    const { project_name, project_description, project_type, documents, market_context, idempotency_key } =
       await req.json();
+    idempotencyKey = idempotency_key;
 
     const docLines = ((documents ?? []) as Array<{ title: string; content: string }>)
       .slice(0, 6)
@@ -65,7 +67,7 @@ Tipos válidos para opportunity_type: expansão, novo produto, novo nicho, afili
 Scores devem ser inteiros entre 0 e 100.
 final_score = média ponderada dos demais scores.`;
 
-    const quota = await reserveQuota(req);
+    const quota = await reserveQuota(req, undefined, idempotencyKey);
     if (!quota.allowed) return quotaBlockedResponse(corsHeaders, quota);
     quotaReserved = true;
 
@@ -93,7 +95,7 @@ final_score = média ponderada dos demais scores.`;
 
     if (!resp.ok) {
       const err = await resp.text();
-      await refundQuota(req);
+      await refundQuota(req, undefined, idempotencyKey);
       return Response.json({ error: `Groq error: ${err}` }, { status: 502, headers: corsHeaders });
     }
 
@@ -104,7 +106,7 @@ final_score = média ponderada dos demais scores.`;
     try {
       parsed = JSON.parse(content);
     } catch {
-      await refundQuota(req);
+      await refundQuota(req, undefined, idempotencyKey);
       return Response.json(
         { error: 'JSON inválido retornado pelo modelo', raw: content },
         { status: 502, headers: corsHeaders },
@@ -117,7 +119,7 @@ final_score = média ponderada dos demais scores.`;
 
     return Response.json(parsed, { headers: corsHeaders });
   } catch (e) {
-    if (quotaReserved) await refundQuota(req);
+    if (quotaReserved) await refundQuota(req, undefined, idempotencyKey);
     return Response.json({ error: String(e) }, { status: 500, headers: corsHeaders });
   }
 });

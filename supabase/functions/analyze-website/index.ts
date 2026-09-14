@@ -134,6 +134,7 @@ export async function handler(
   }
 
   let quotaReserved = false;
+  let idempotencyKey: string | undefined;
   try {
     if (req.method !== "POST") {
       return new Response(
@@ -143,6 +144,7 @@ export async function handler(
     }
 
     const body = await req.json().catch(() => null);
+    idempotencyKey = body?.idempotency_key;
     if (!body || typeof body.url !== "string") {
       return new Response(
         JSON.stringify({ error: "Campo 'url' obrigatório." }),
@@ -176,7 +178,7 @@ ${content}`;
 
     // IVE-COMMERCIAL-ENTITLEMENTS-01 — reserva cota só depois de validar
     // input e buscar o conteúdo do site (erros do usuário não custam cota).
-    const quota = await reserveQuota(req, quotaClient);
+    const quota = await reserveQuota(req, quotaClient, idempotencyKey);
     if (!quota.allowed) return quotaBlockedResponse(corsHeaders, quota);
     quotaReserved = true;
 
@@ -200,7 +202,7 @@ ${content}`;
     if (!groqRes.ok) {
       const err = await groqRes.text();
       console.error("Groq error:", err);
-      await refundQuota(req, quotaClient);
+      await refundQuota(req, quotaClient, idempotencyKey);
       return new Response(
         JSON.stringify({ error: "Falha ao processar com a IA. Tente novamente." }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -213,7 +215,7 @@ ${content}`;
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       console.error("JSON não encontrado:", rawText);
-      await refundQuota(req, quotaClient);
+      await refundQuota(req, quotaClient, idempotencyKey);
       return new Response(
         JSON.stringify({ error: "Resposta inválida da IA. Tente novamente." }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -228,7 +230,7 @@ ${content}`;
     });
   } catch (e) {
     console.error("Erro inesperado:", e);
-    if (quotaReserved) await refundQuota(req, quotaClient);
+    if (quotaReserved) await refundQuota(req, quotaClient, idempotencyKey);
     return new Response(
       JSON.stringify({ error: "Erro interno. Tente novamente." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },

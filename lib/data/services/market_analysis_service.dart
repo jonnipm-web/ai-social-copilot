@@ -148,13 +148,23 @@ class MarketAnalysisService {
     return list.isEmpty ? null : GapAnalysis.fromMap(list.first as Map<String, dynamic>);
   }
 
-  Future<GapAnalysis> runGapAnalysis(String marketAnalysisId, String input, {String language = 'pt-BR'}) async {
+  Future<GapAnalysis> runGapAnalysis(
+    String marketAnalysisId,
+    String input, {
+    String language = 'pt-BR',
+    String? idempotencyKey,
+  }) async {
     final uid = _client.auth.currentUser?.id;
     if (uid == null) throw Exception('Usuário não autenticado.');
 
     final response = await _client.functions.invoke(
       AppConstants.edgeFunctionGap,
-      body: {'market_analysis_id': marketAnalysisId, 'input': input, 'language': language},
+      body: {
+        'market_analysis_id': marketAnalysisId,
+        'input': input,
+        'language': language,
+        if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
+      },
     );
 
     if (response.data == null) throw Exception('Resposta vazia da análise de gaps.');

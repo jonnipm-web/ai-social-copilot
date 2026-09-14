@@ -7,7 +7,6 @@ import '../data/models/ecosystem_score.dart';
 import '../data/models/ive_event.dart';
 import '../data/models/ive_issue.dart';
 import '../data/models/ive_state.dart';
-import 'auto_bootstrap_provider.dart';
 import 'ecosystem_intelligence_provider.dart';
 import 'ive_context_provider.dart';
 import 'ive_memory_provider.dart';
@@ -144,12 +143,19 @@ class IveNotifier extends StateNotifier<IveState> {
       case IveEventType.projectCreated:
         final name = event.entityName;
         if (name != null) {
-          _showTransient(
-            'Projeto "$name" criado! Iniciando análise automática...',
-            IveExpression.excited,
-          );
+          _showTransient('Projeto "$name" criado!', IveExpression.excited);
         }
-        _ref.read(autoBootstrapNotifierProvider.notifier).runAll();
+        // IVE-COMMERCIAL-QUOTA-HARDENING-13 — this used to unconditionally
+        // call runAll() here, silently reserving up to 3 quota units
+        // (generate-project-opportunities, generate-project-actions,
+        // revenue-planner — see AutoBootstrapService.bootstrapProject)
+        // for every project needing bootstrap, with no confirmation and
+        // no way for the user to decline. This notifier has no
+        // BuildContext to show the standard confirm dialog, so the
+        // trigger moved to project_command_center_screen.dart's _save()
+        // — the one screen that actually creates a project and already
+        // has a BuildContext — right after a successful creation,
+        // wrapped in AiExecutionController.confirm(estimatedUnits: 3).
         break;
 
       case IveEventType.projectDeleted:
