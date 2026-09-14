@@ -75,68 +75,61 @@ ALTER TABLE public.revenue_plans_archive
 --    the live table. A no-op wherever no duplicate exists (the
 --    overwhelming majority of rows). NOT a delete: full content survives
 --    in the *_archive table.
+--
+-- IVE-COMMERCIAL-STABILITY-08 (Codex adversarial review, round 2) — an
+-- earlier version of this step ran the archive INSERT and the live
+-- DELETE as two SEPARATE statements, each independently recomputing
+-- row_number(). A row inserted by a concurrent request between those two
+-- statements could shift the ranking, so the DELETE could remove a row
+-- the INSERT never actually archived. A single `WITH ... DELETE ...
+-- RETURNING` CTE feeding the INSERT is one atomic statement — Postgres
+-- guarantees it sees one consistent snapshot and there is no window
+-- between "decide what to delete" and "delete it" for a concurrent write
+-- to land in.
+WITH deleted AS (
+  DELETE FROM public.gap_analyses ga
+  USING (
+    SELECT id, row_number() OVER (
+      PARTITION BY market_analysis_id ORDER BY created_at DESC, id DESC
+    ) AS rn
+    FROM public.gap_analyses
+    WHERE market_analysis_id IS NOT NULL
+  ) dup
+  WHERE ga.id = dup.id AND dup.rn > 1
+  RETURNING ga.*
+)
 INSERT INTO public.gap_analyses_archive
-SELECT ga.*, now()
-FROM public.gap_analyses ga
-JOIN (
-  SELECT id, row_number() OVER (
-    PARTITION BY market_analysis_id ORDER BY created_at DESC, id DESC
-  ) AS rn
-  FROM public.gap_analyses
-  WHERE market_analysis_id IS NOT NULL
-) dup ON ga.id = dup.id AND dup.rn > 1;
+SELECT deleted.*, now() FROM deleted;
 
-DELETE FROM public.gap_analyses ga
-USING (
-  SELECT id, row_number() OVER (
-    PARTITION BY market_analysis_id ORDER BY created_at DESC, id DESC
-  ) AS rn
-  FROM public.gap_analyses
-  WHERE market_analysis_id IS NOT NULL
-) dup
-WHERE ga.id = dup.id AND dup.rn > 1;
-
+WITH deleted AS (
+  DELETE FROM public.content_clusters cc
+  USING (
+    SELECT id, row_number() OVER (
+      PARTITION BY market_analysis_id ORDER BY created_at DESC, id DESC
+    ) AS rn
+    FROM public.content_clusters
+    WHERE market_analysis_id IS NOT NULL
+  ) dup
+  WHERE cc.id = dup.id AND dup.rn > 1
+  RETURNING cc.*
+)
 INSERT INTO public.content_clusters_archive
-SELECT cc.*, now()
-FROM public.content_clusters cc
-JOIN (
-  SELECT id, row_number() OVER (
-    PARTITION BY market_analysis_id ORDER BY created_at DESC, id DESC
-  ) AS rn
-  FROM public.content_clusters
-  WHERE market_analysis_id IS NOT NULL
-) dup ON cc.id = dup.id AND dup.rn > 1;
+SELECT deleted.*, now() FROM deleted;
 
-DELETE FROM public.content_clusters cc
-USING (
-  SELECT id, row_number() OVER (
-    PARTITION BY market_analysis_id ORDER BY created_at DESC, id DESC
-  ) AS rn
-  FROM public.content_clusters
-  WHERE market_analysis_id IS NOT NULL
-) dup
-WHERE cc.id = dup.id AND dup.rn > 1;
-
+WITH deleted AS (
+  DELETE FROM public.revenue_plans rp
+  USING (
+    SELECT id, row_number() OVER (
+      PARTITION BY market_analysis_id ORDER BY created_at DESC, id DESC
+    ) AS rn
+    FROM public.revenue_plans
+    WHERE market_analysis_id IS NOT NULL
+  ) dup
+  WHERE rp.id = dup.id AND dup.rn > 1
+  RETURNING rp.*
+)
 INSERT INTO public.revenue_plans_archive
-SELECT rp.*, now()
-FROM public.revenue_plans rp
-JOIN (
-  SELECT id, row_number() OVER (
-    PARTITION BY market_analysis_id ORDER BY created_at DESC, id DESC
-  ) AS rn
-  FROM public.revenue_plans
-  WHERE market_analysis_id IS NOT NULL
-) dup ON rp.id = dup.id AND dup.rn > 1;
-
-DELETE FROM public.revenue_plans rp
-USING (
-  SELECT id, row_number() OVER (
-    PARTITION BY market_analysis_id ORDER BY created_at DESC, id DESC
-  ) AS rn
-  FROM public.revenue_plans
-  WHERE market_analysis_id IS NOT NULL
-) dup
-WHERE rp.id = dup.id AND dup.rn > 1;
+SELECT deleted.*, now() FROM deleted;
 
 -- ── Step 3: RLS on the archive tables — same ownership rule as the live
 --    tables (owner can read their own archived rows; nothing else needs
