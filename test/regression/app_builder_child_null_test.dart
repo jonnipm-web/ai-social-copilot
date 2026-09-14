@@ -28,14 +28,22 @@
 // captures the EXACT same exception type/message as production
 // ("Null check operator used on a null value"), not a stand-in assertion.
 //
-// RESULT OF THIS TEST IS EVIDENCE, either way:
+// RESULT OF THIS TEST IS EVIDENCE, either way — but NOT conclusive either
+// way (Codex adversarial review, IVE-COMMERCIAL-STABILITY-09, round 1):
 //   - If `tester.takeException()` returns a null-check error: PROVEN
 //     reproduction of the exact production signature, isolating the
 //     responsible line (app.dart's builder / child!).
 //   - If it never throws despite the async-redirect + rapid-transition
-//     stress below: this specific hypothesis is ELIMINATED, and
-//     investigation must continue elsewhere (IveOverlay's own internals,
-//     provider watch chains, etc.) — report this explicitly either way.
+//     stress below: this is a NON-REPRODUCTION under THIS specific
+//     isolation, not a full elimination of the hypothesis. This minimal
+//     harness omits several things the real app.dart has that could
+//     still matter: the real `_router`'s actual redirect body (Supabase/
+//     profile/entitlement reads, not a plain delay), the real
+//     `observers: [_iveObserver]`, the real route table, and the real
+//     ProviderScope/Consumer topology around the builder. A future
+//     mission should build a more faithful integration test (real App +
+//     ProviderScope + _router with mocked async Supabase responses)
+//     before treating app.dart:628 as cleared.
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -105,7 +113,8 @@ void main() {
           'builder) as the root cause of the production crash.',
         );
       }
-      // No exception: hypothesis eliminated for this specific code shape.
+      // No exception: non-reproduction under this specific isolated code
+      // shape only — see file header re: what this harness does not cover.
     },
   );
 }
