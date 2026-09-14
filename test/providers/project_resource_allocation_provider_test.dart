@@ -248,8 +248,8 @@ void main() {
     );
 
     test(
-      'Codex Gate 1 P1 — cancel() durante um save() em andamento não é '
-      'revertido quando o save resolve',
+      'Codex Gate 1 P1 / Gate 2 P2 (F-01) — cancel() durante um save() em '
+      'andamento não é revertido, e o status permanece consistente com isDirty',
       () async {
         final svc = FakeProjectResourceAllocationService(_allocation(hours: 10, cents: 0))
           ..saveDelay = const Duration(milliseconds: 30);
@@ -268,9 +268,18 @@ void main() {
 
         final state = container.read(projectResourceAllocationProvider(_projectId)).valueOrNull!;
         // cancel() já havia restaurado preview para o saved original (10) —
-        // o save (que persistiu 20) não pode reverter isso de volta a 20.
+        // o save (que persistiu 20 no servidor) não pode reverter isso de
+        // volta a 20.
         expect(state.preview.hoursAllocated, 10);
-        expect(state.status, AllocationEditStatus.saved);
+        // O servidor agora tem 20 (o save realmente aconteceu), então o
+        // baseline "saved" precisa refletir isso — deixando preview (10) e
+        // saved (20) divergentes.
+        expect(state.saved.hoursAllocated, 20);
+        // Gate 2 P2 (F-01): status precisa concordar com isDirty. Um status
+        // "saved" com isDirty == true reabilitaria o botão Salvar em
+        // silêncio, sem indicar visualmente que há algo para salvar.
+        expect(state.isDirty, isTrue);
+        expect(state.status, AllocationEditStatus.editing);
       },
     );
 

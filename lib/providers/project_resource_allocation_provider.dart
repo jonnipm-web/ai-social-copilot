@@ -138,7 +138,18 @@ class ProjectResourceAllocationNotifier
         // has, without discarding the newer edit.
         final latest = state.valueOrNull;
         if (latest != null) {
-          state = AsyncValue.data(latest.copyWith(saved: saved));
+          final merged = latest.copyWith(saved: saved);
+          // Codex Gate 2 (mission 12, Phase B) P2 — a cancel() during this
+          // save leaves `latest.status == saved` (cancel's own doing), but
+          // merging in the server's now-newer `saved` baseline can make
+          // `merged.isDirty` true again (the cancelled preview no longer
+          // matches what the server actually has). Recompute status from
+          // isDirty here so the two never disagree — a `saved` status with
+          // isDirty == true would tell the user everything's fine while
+          // Save is silently re-enabled underneath them.
+          state = AsyncValue.data(merged.copyWith(
+            status: merged.isDirty ? AllocationEditStatus.editing : AllocationEditStatus.saved,
+          ));
         }
         return;
       }
