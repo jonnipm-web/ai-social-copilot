@@ -171,12 +171,18 @@ void main() {
       request: req(),
       action: () async => throw Exception('falhou'),
     );
+    // IMPORTANTE: anexa o matcher assíncrono ANTES de qualquer outro
+    // await — se `future` rejeitar enquanto nada está "escutando" ainda
+    // (ex.: durante os awaits de pump/tap abaixo), o Dart trata como
+    // exceção não tratada na zone do teste, mesmo que um `expectLater`
+    // mais tardio fosse eventualmente vê-la.
+    final expectation = expectLater(future, throwsA(isA<Exception>()));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('CONFIRMAR'));
     await tester.pumpAndSettle();
 
-    await expectLater(future, throwsA(isA<Exception>()));
+    await expectation;
     expect(controller.state, AiExecutionState.error);
   });
 
