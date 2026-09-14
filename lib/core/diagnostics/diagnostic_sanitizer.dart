@@ -238,6 +238,82 @@ String sanitizeCorrelationId(String input, {int maxLength = 100}) {
   return sanitizeText(input, maxLength: maxLength);
 }
 
+/// IVE-COMMERCIAL-EXPERIENCE-12 (Phase B, Section 03 — confirmed P2 from
+/// IVE-COMMERCIAL-FOUNDATION-11D's physical validation) — a diagnostic
+/// event name is, like a session label or correlation id, NOT arbitrary
+/// free text: it is a short, structured identifier CHOSEN BY THE CALLING
+/// CODE from a small, known set. [sanitizeText]'s generic backstop
+/// (`[A-Za-z0-9_\-\.]{20,}`) cannot tell a 20+ character event name like
+/// `ai_execution_confirmation_accepted` (35 chars) or
+/// `copilot_request_started` (24 chars) apart from an actual leaked token
+/// of the same shape, and was redacting BOTH to the literal string
+/// "[redacted]" — confirmed live in production (11D physical validation:
+/// `event_name = '[redacted]'`, `length(event_name) = 10`, for every
+/// AI/IVE-category event; `quota_fetch`, at 11 characters, was the only
+/// one short enough to survive). This is over-redaction that defeats
+/// observability/auditability, not a data leak.
+///
+/// Gate-1 Codex adversarial review of this mission's first attempt (a
+/// lowercase-snake_case GRAMMAR check, `^[a-z][a-z0-9_]*$`) correctly
+/// flagged it as weaker than a true allowlist: a grammar accepts ANY
+/// string of that shape, including a plausible raw secret that happened
+/// to be lowercase-alphanumeric-underscore, if a non-constant value were
+/// ever passed to `eventName` (not exploitable today — every real call
+/// site below passes a hardcoded literal — but a latent gap the mission's
+/// own original text already called for closing: "eventName must use a
+/// strict allowlist"). This is that allowlist: every literal `eventName:`
+/// value in the codebase as of this fix, found by grepping every
+/// `eventName:` call site and every small `_log*` wrapper's own call
+/// sites (auth_provider.dart's `_logAuth`, drive_picker_screen.dart's
+/// `_logDrive`, app.dart's `_logNavigation`, main.dart's
+/// `_logUncaughtError`) so no literal reachable only through a wrapper
+/// function was missed.
+const Set<String> kKnownDiagnosticEventNames = {
+  // app.dart — navigation.
+  'route_allowed',
+  'route_redirected',
+  // main.dart — uncaught error safety net.
+  'uncaught_error',
+  // ai_execution_confirmation.dart — quota confirmation dialog.
+  'ai_analysis_requested',
+  'ai_analysis_succeeded',
+  'ai_analysis_failed',
+  'ai_execution_confirmation_accepted',
+  'ai_execution_confirmation_rejected',
+  // context_copilot_provider.dart — IVE chat.
+  'copilot_request_started',
+  'copilot_request_completed',
+  // quota_provider.dart.
+  'quota_fetch',
+  // knowledge_item_form_screen.dart — local file import.
+  'local_import',
+  // auth_provider.dart, via _logAuth.
+  'sign_in',
+  'sign_up',
+  'sign_out',
+  // drive_picker_screen.dart, via _logDrive.
+  'drive_session_check',
+  'drive_sign_in',
+  'drive_list_files',
+  'drive_download',
+};
+
+/// Sanitizes a diagnostic event name against [kKnownDiagnosticEventNames],
+/// an exact-match allowlist rather than a permissive grammar — a value not
+/// in the set, regardless of its shape, is rejected outright to
+/// "[redacted]" rather than stored partially-sanitized, the same
+/// fail-closed rule [sanitizeSessionLabel] uses. Deliberately does NOT
+/// widen [sanitizeText]/[buildSafeMetadata]'s own rules for prompt-like
+/// text, metadata values, session labels, correlation ids, or any other
+/// field — this allowlist is narrower than all of them, scoped only to
+/// this one field. Adding a new real event name requires adding it here.
+String sanitizeEventName(String input, {int maxLength = 100}) {
+  final text = _stripControlChars(input.replaceAll(RegExp(r'[\r\n]+'), ' ')).trim();
+  if (text.isEmpty || text.length > maxLength) return '[redacted]';
+  if (!kKnownDiagnosticEventNames.contains(text)) return '[redacted]';
+  return text;
+}
+
 /// Stack traces are noisier and longer than a message, so given more room,
 /// but still bounded and scrubbed the same way — a stack frame can
 /// occasionally embed a request URL with a query string.

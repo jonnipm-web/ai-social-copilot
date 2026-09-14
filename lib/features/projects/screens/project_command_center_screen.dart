@@ -10,12 +10,15 @@ import '../../../data/models/ecosystem_score.dart';
 import '../../../data/models/opportunity_lab_item.dart';
 import '../../../data/models/project.dart';
 import '../../../data/models/project_intelligence_profile.dart';
+import '../../../data/models/project_resource_allocation.dart';
 import '../../../providers/ecosystem_intelligence_provider.dart';
 import '../../../providers/ive_context_provider.dart';
 import '../../../providers/knowledge_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
 import '../../../providers/project_intelligence_provider.dart';
 import '../../../providers/project_provider.dart';
+import '../../../providers/project_resource_allocation_provider.dart';
+import '../../../shared/widgets/ai_execution_confirmation.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/context_copilot_widget.dart' show showCopilotChat;
 
@@ -1008,6 +1011,19 @@ class _ProjectDetailSheet extends ConsumerWidget {
               const SizedBox(height: 8),
             ],
 
+            // Resource Allocation section (IVE-COMMERCIAL-EXPERIENCE-12,
+            // Phase B, Section 04/09) — persistent per-project state, not
+            // the unrelated portfolio-wide simulation on
+            // resource_allocation_screen.dart.
+            const Divider(color: Color(0xFF333355)),
+            const SizedBox(height: 12),
+            _sectionTitle('Alocação de Recursos'),
+            _ResourceAllocationSection(
+              projectId: project.id,
+              projectName: project.name,
+            ),
+            const SizedBox(height: 8),
+
             const Divider(color: Color(0xFF333355)),
             const SizedBox(height: 12),
 
@@ -1284,6 +1300,341 @@ class _ProjectDetailSheet extends ConsumerWidget {
                 ),
               ))
           .toList();
+}
+
+// ── Resource Allocation section (persistent, SAVED vs EDIT/PREVIEW) ─────────
+//
+// IVE-COMMERCIAL-EXPERIENCE-12, Phase B, mission Sections 09-15:
+//   - Edits only ever touch `preview` (never implicit-save on keystroke).
+//   - The SAVED banner always shows the last value actually persisted,
+//     visually distinct from the edit fields below it.
+//   - "Analisar recursos com a IVE" reuses the existing chat pipeline
+//     (showCopilotChat) and explains the CURRENT SAVED allocation only —
+//     it does not consume quota and does not describe unsaved preview
+//     edits as if they were committed (Section 15).
+class _ResourceAllocationSection extends ConsumerStatefulWidget {
+  const _ResourceAllocationSection({
+    required this.projectId,
+    required this.projectName,
+  });
+
+  final String projectId;
+  final String projectName;
+
+  @override
+  ConsumerState<_ResourceAllocationSection> createState() =>
+      _ResourceAllocationSectionState();
+}
+
+class _ResourceAllocationSectionState
+    extends ConsumerState<_ResourceAllocationSection> {
+  final _hoursController = TextEditingController();
+  final _budgetController = TextEditingController();
+  bool _controllersInitialized = false;
+  String? _budgetParseError;
+
+  // Codex Gate 1 (mission 12, Phase B) P1 — this section's own comment
+  // used to (incorrectly) claim "Analisar recursos com a IVE" doesn't
+  // consume quota. It does: showCopilotChat's auto-sent initialMessage
+  // goes through supabase/functions/context-copilot, which calls
+  // reserveQuota() before every message like every other IVE chat entry
+  // point in the app. AiExecutionController.confirm() (the Phase-A
+  // confirmation dialog, mission Section 15: "If invoking a NEW detailed
+  // IVE analysis consumes quota... do not bypass quota") now gates this
+  // button before the chat sheet opens.
+  final _exec = AiExecutionController();
+
+  static const List<int> _hourPresets = [10, 20, 40, 80];
+
+  @override
+  void dispose() {
+    _hoursController.dispose();
+    _budgetController.dispose();
+    _exec.dispose();
+    super.dispose();
+  }
+
+  void _syncControllers(ProjectResourceAllocation preview) {
+    _hoursController.text = preview.hoursAllocated.toString();
+    _budgetController.text = preview.budgetAllocatedDisplay.toStringAsFixed(2);
+    _budgetParseError = null;
+  }
+
+  void _onBudgetChanged(String text, ProjectResourceAllocationNotifier notifier) {
+    final cents = parseMoneyInputToCents(text);
+    if (cents == null) {
+      setState(() => _budgetParseError = 'Valor inválido. Use apenas números, ex: 1500.00');
+      return;
+    }
+    if (_budgetParseError != null) setState(() => _budgetParseError = null);
+    notifier.updateBudgetPreviewCents(cents);
+  }
+
+  String _fmtCents(int cents) =>
+      'R\$ ${(cents / 100).toStringAsFixed(2).replaceAll('.', ',')}';
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = projectResourceAllocationProvider(widget.projectId);
+    final asyncState = ref.watch(provider);
+    final notifier = ref.read(provider.notifier);
+
+    ref.listen(provider, (previous, next) {
+      final nextValue = next.valueOrNull;
+      if (nextValue == null) return;
+      if (nextValue.status == AllocationEditStatus.saved) {
+        _syncControllers(nextValue.preview);
+      }
+    });
+
+    return asyncState.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      ),
+      error: (e, _) => const Text(
+        'Não foi possível carregar a alocação de recursos deste projeto.',
+        style: TextStyle(color: Colors.white38, fontSize: 12),
+      ),
+      data: (editState) {
+        if (!_controllersInitialized) {
+          _syncControllers(editState.preview);
+          _controllersInitialized = true;
+        }
+
+        final hoursError = validateHoursAllocated(editState.preview.hoursAllocated);
+        final budgetError = _budgetParseError ??
+            validateBudgetAllocatedCents(editState.preview.budgetAllocatedCents);
+        final canSave = editState.isDirty &&
+            hoursError == null &&
+            budgetError == null &&
+            editState.status != AllocationEditStatus.saving;
+        final isSaving = editState.status == AllocationEditStatus.saving;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Estado SALVO — sempre reflete o último valor persistido,
+            // nunca o preview em edição (Section 11).
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF00BCD4).withOpacity(0.08),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFF00BCD4).withOpacity(0.25)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle, size: 14, color: Color(0xFF00BCD4)),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Salvo: ${editState.saved.hoursAllocated}h · '
+                      '${_fmtCents(editState.saved.budgetAllocatedCents)} '
+                      '(${editState.saved.currency})',
+                      style: const TextStyle(color: Color(0xFF00BCD4), fontSize: 12),
+                    ),
+                  ),
+                  if (editState.isDirty)
+                    const Text('EDITANDO',
+                        style: TextStyle(
+                            color: Color(0xFFFFD93D),
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            // Campos de edição — só afetam o preview local.
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _hoursController,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    decoration: InputDecoration(
+                      labelText: 'Horas',
+                      labelStyle: const TextStyle(color: Colors.white38, fontSize: 12),
+                      errorText: hoursError,
+                      isDense: true,
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Colors.white24),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFF6C63FF)),
+                      ),
+                    ),
+                    onChanged: (text) {
+                      final parsed = int.tryParse(text.trim());
+                      if (parsed != null) notifier.updateHoursPreview(parsed);
+                    },
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextField(
+                    controller: _budgetController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    decoration: InputDecoration(
+                      labelText: 'Orçamento (${editState.preview.currency})',
+                      labelStyle: const TextStyle(color: Colors.white38, fontSize: 12),
+                      errorText: budgetError,
+                      isDense: true,
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Colors.white24),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFF6C63FF)),
+                      ),
+                    ),
+                    onChanged: (text) => _onBudgetChanged(text, notifier),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            // Presets opcionais de horas (Section 11: "manual input +
+            // optional presets").
+            Wrap(
+              spacing: 6,
+              children: _hourPresets.map((h) => ActionChip(
+                    label: Text('${h}h', style: const TextStyle(fontSize: 11)),
+                    backgroundColor: const Color(0xFF6C63FF).withOpacity(0.12),
+                    labelStyle: const TextStyle(color: Color(0xFF6C63FF)),
+                    side: BorderSide.none,
+                    onPressed: () {
+                      notifier.updateHoursPreview(h);
+                      _hoursController.text = h.toString();
+                    },
+                  )).toList(),
+            ),
+            const SizedBox(height: 10),
+
+            // Ciclo explícito: SAVED → EDITING/PREVIEW → SAVE → SAVING →
+            // SAVED/ERROR (Section 12). Cancelar restaura o valor salvo
+            // exatamente; nunca há salvamento implícito.
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: editState.isDirty && !isSaving
+                        ? () {
+                            notifier.cancel();
+                          }
+                        : null,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white54,
+                      side: const BorderSide(color: Colors.white24),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    child: const Text('Cancelar', style: TextStyle(fontSize: 13)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: canSave ? () => notifier.save() : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6C63FF),
+                      disabledBackgroundColor: const Color(0xFF6C63FF).withOpacity(0.25),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    child: isSaving
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Text('Salvar', style: TextStyle(fontSize: 13, color: Colors.white)),
+                  ),
+                ),
+              ],
+            ),
+            if (editState.status == AllocationEditStatus.error && editState.error != null) ...[
+              const SizedBox(height: 6),
+              Text('Erro ao salvar: ${editState.error}',
+                  style: const TextStyle(color: Color(0xFFFF6B6B), fontSize: 11)),
+            ],
+            const SizedBox(height: 10),
+
+            // IVE Resource Analysis — explica o estado SALVO atual.
+            // Reaproveita o chat existente (showCopilotChat), que NÃO é
+            // gratuito: seu envio automático consome 1 unidade de quota
+            // via context-copilot, como qualquer outro "Perguntar à IVE"
+            // do app — por isso passa pela confirmação padrão da Fase A
+            // (Section 15) antes de abrir o chat.
+            SizedBox(
+              width: double.infinity,
+              child: AnimatedBuilder(
+                animation: _exec,
+                builder: (_, __) => OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF00BCD4),
+                    side: const BorderSide(color: Color(0xFF00BCD4)),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  icon: const Text('🧠', style: TextStyle(fontSize: 14)),
+                  label: const Text('Analisar recursos com a IVE', style: TextStyle(fontSize: 13)),
+                  onPressed: _exec.isBusy
+                      ? null
+                      : () async {
+                          final request = IveInteractionRequest(
+                            projectId: widget.projectId,
+                            sourceModule: 'project_command_center',
+                            sourceEntityType: 'project',
+                            sourceEntityId: widget.projectId,
+                            operationType: IveOperationType.ask,
+                          );
+                          final confirmed = await _exec.confirm(
+                            context: context,
+                            ref: ref,
+                            analysisLabel: 'Analisar recursos com a IVE',
+                            request: request,
+                          );
+                          if (!confirmed || !context.mounted) return;
+
+                          final saved = editState.saved;
+                          final ctx =
+                              ref.read(iveContextDataProvider(widget.projectId)).valueOrNull;
+                          final contextData = ctx != null
+                              ? CopilotContextData.fromIveContext(ctx)
+                              : const CopilotContextData();
+                          final dirtyNote = editState.isDirty
+                              ? ' Nota: há edições de alocação ainda não salvas que não estão refletidas nesta análise.'
+                              : '';
+                          Navigator.of(context).pop();
+                          showCopilotChat(
+                            context,
+                            screenName: 'Projetos',
+                            contextData: contextData,
+                            initialMessage:
+                                'Com base na alocação de recursos SALVA do projeto "${widget.projectName}" '
+                                '(${saved.hoursAllocated}h, ${_fmtCents(saved.budgetAllocatedCents)} ${saved.currency}), '
+                                'essa alocação está adequada para as prioridades atuais do projeto? '
+                                'O que ajustar?$dirtyNote',
+                            request: request,
+                          );
+                        },
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 }
 
 // ── Score row com barra de progresso ─────────────────────────────────────────

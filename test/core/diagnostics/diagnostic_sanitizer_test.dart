@@ -245,4 +245,103 @@ void main() {
       expect(result, isNot(contains('abcdefghijklmnop123')));
     });
   });
+
+  // IVE-COMMERCIAL-EXPERIENCE-12 (Phase B, Section 03) — regression suite
+  // for the confirmed P2 from 11D's physical validation: sanitizeText's
+  // generic 20+-char backstop was redacting legitimate event names to the
+  // literal string "[redacted]", destroying observability. These tests
+  // pin the exact real event names (both Phase-A-new and pre-existing)
+  // that were confirmed broken live in production.
+  group('sanitizeEventName — IVE-COMMERCIAL-EXPERIENCE-12 mission section 03', () {
+    test('ai_execution_confirmation_accepted (35 chars, new in Phase A) survives exactly', () {
+      expect(
+        sanitizeEventName('ai_execution_confirmation_accepted'),
+        'ai_execution_confirmation_accepted',
+      );
+    });
+
+    test('copilot_request_started (24 chars, pre-existing since 07A) survives exactly', () {
+      expect(sanitizeEventName('copilot_request_started'), 'copilot_request_started');
+    });
+
+    test('quota_fetch (11 chars, already worked) still survives exactly', () {
+      expect(sanitizeEventName('quota_fetch'), 'quota_fetch');
+    });
+
+    test('every currently-used event name in the app survives unchanged', () {
+      // Every literal eventName in the codebase as of this fix — must stay
+      // in lockstep with kKnownDiagnosticEventNames in
+      // diagnostic_sanitizer.dart, found by grepping every `eventName:`
+      // call site and every `_log*` wrapper's own call sites.
+      for (final name in kKnownDiagnosticEventNames) {
+        expect(sanitizeEventName(name), name, reason: '"$name" must survive unchanged');
+        expect(sanitizeEventName(name), isNot('[redacted]'));
+      }
+      // Spot-check the set itself hasn't silently shrunk.
+      expect(kKnownDiagnosticEventNames, containsAll(<String>[
+        'route_allowed',
+        'route_redirected',
+        'uncaught_error',
+        'quota_fetch',
+        'copilot_request_started',
+        'copilot_request_completed',
+        'ai_execution_confirmation_accepted',
+        'ai_execution_confirmation_rejected',
+        'ai_analysis_requested',
+        'ai_analysis_succeeded',
+        'ai_analysis_failed',
+        'local_import',
+        'sign_in',
+        'sign_up',
+        'sign_out',
+        'drive_session_check',
+        'drive_sign_in',
+        'drive_list_files',
+        'drive_download',
+      ]));
+    });
+
+    test('malicious/unexpected event-name strings fail safely to [redacted]', () {
+      expect(sanitizeEventName(''), '[redacted]');
+      expect(sanitizeEventName('Bearer abc123def456ghi789jkl'), '[redacted]');
+      expect(sanitizeEventName('event-with-hyphens'), '[redacted]');
+      expect(sanitizeEventName('EventWithUpperCase'), '[redacted]');
+      expect(sanitizeEventName('event name with spaces'), '[redacted]');
+      expect(sanitizeEventName('event.with.dots'), '[redacted]');
+      expect(sanitizeEventName('event\nwith\nnewlines'), '[redacted]');
+      expect(sanitizeEventName('a' * 101), '[redacted]'); // over maxLength
+      expect(sanitizeEventName('123_starts_with_digit'), '[redacted]');
+    });
+
+    test(
+      'Codex Gate-1 regression: an unknown but grammar-shaped value is '
+      'rejected even though it would have passed the old regex grammar',
+      () {
+        // This is exactly the P1 gap Codex's Gate 1 review flagged in the
+        // first attempt (a `^[a-z][a-z0-9_]*$` grammar check): a raw secret
+        // that happens to be lowercase-alphanumeric-underscore, or simply
+        // any event name never added to the allowlist, must NOT pass just
+        // because it "looks like" a valid event name.
+        expect(
+          sanitizeEventName('a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5'),
+          '[redacted]',
+        );
+        expect(sanitizeEventName('not_a_real_event_name'), '[redacted]');
+        expect(sanitizeEventName('quota_fetch_v2'), '[redacted]');
+      },
+    );
+
+    test('does not widen sanitizeText/buildSafeMetadata for other fields', () {
+      // The generic backstop must still redact a genuinely long
+      // secret-shaped string in ordinary free text / metadata — this
+      // fix is scoped to event_name alone, not a general loosening.
+      final longToken = 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5';
+      expect(sanitizeText(longToken), '[redacted]');
+      final meta = buildSafeMetadata({'note': longToken}, allowedKeys: {'note'});
+      expect(meta['note'], '[redacted]');
+      // Session labels/correlation ids keep their own existing, separate
+      // bounded rules — unaffected by this change.
+      expect(sanitizeSessionLabel('COMMERCIAL-E2E-001'), 'COMMERCIAL-E2E-001');
+    });
+  });
 }
