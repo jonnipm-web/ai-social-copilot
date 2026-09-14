@@ -53,6 +53,20 @@ class _DiagnosticControlsCardState extends ConsumerState<_DiagnosticControlsCard
   bool _busy = false;
 
   @override
+  void initState() {
+    super.initState();
+    // IVE-COMMERCIAL-OBSERVABILITY-07B (mission section 04) — every time
+    // this card mounts (first load, or a fresh mount after a page
+    // reload/new tab), ask the server whether the current admin already
+    // has an ACTIVE session and adopt it if so, instead of always starting
+    // from "Diagnóstico inativo" and risking an orphaned/duplicate session.
+    // Scheduled after the first frame so `ref` is safe to use here.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(diagnosticSessionProvider.notifier).recover();
+    });
+  }
+
+  @override
   void dispose() {
     _labelCtrl.dispose();
     super.dispose();

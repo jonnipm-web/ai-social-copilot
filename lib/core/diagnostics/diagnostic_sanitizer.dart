@@ -136,6 +136,92 @@ String sanitizeErrorMessage(Object error, {int maxLength = 500}) {
   return sanitizeText(error.toString(), maxLength: maxLength);
 }
 
+/// IVE-COMMERCIAL-OBSERVABILITY-07B — a diagnostic session label and a
+/// correlation id are NOT arbitrary free text pulled from an exception or
+/// external source (that's [sanitizeText]'s job, unchanged below): they are
+/// short, structured identifiers either hand-chosen by the caller (a label
+/// like "COMMERCIAL-E2E-001") or generated in a known bounded shape (see
+/// [newDiagnosticCorrelationId] below). [sanitizeText]'s last-resort generic
+/// backstop pattern — `[A-Za-z0-9_\-\.]{20,}` — cannot tell those apart from
+/// an actual leaked token of the same shape and redacts both identically
+/// (07B production smoke: "OBSERVABILITY-SMOKE-001", 23 chars, came back as
+/// "[redacted]" end to end, and the app's OWN placeholder example
+/// "COMMERCIAL-E2E-001" is only 1 character short of the same fate).
+/// Destroying every non-trivial label/correlation id defeats the feature
+/// (a label you can't read back, a correlation id that can never correlate
+/// anything), so these two fields get their own bounded validation instead
+/// of the generic length backstop — while still running every OTHER,
+/// SPECIFIC secret pattern above (Bearer/JWT/Authorization header/query-
+/// param/key-value shapes) as a defense-in-depth floor, plus the same CR/LF
+/// and control-character stripping and a strict length cap. An input that
+/// still doesn't look like a plain identifier after that — because it
+/// contains a genuinely unexpected character, not merely because it is long
+/// — is rejected outright rather than stored partially-sanitized.
+final List<RegExp> _specificSecretPatterns =
+    _secretPatterns.sublist(0, _secretPatterns.length - 1);
+
+String _stripControlChars(String input) {
+  return input.replaceAll(RegExp(r'[\x00-\x1F\x7F]'), '');
+}
+
+/// Letters, digits, spaces and a small set of punctuation already used by
+/// real labels in this codebase/mission text (COMMERCIAL-E2E-001-v2,
+/// E2E-001) — deliberately NOT the same permissive class the old generic
+/// backstop watched (that class is exactly what made a real label
+/// indistinguishable from a token).
+final RegExp _safeIdentifierShape = RegExp(r'^[A-Za-z0-9 _.-]*$');
+
+/// Sanitizes a user-supplied diagnostic session label (mission section 03:
+/// "SESSION LABEL"). Legitimate short identifiers survive unchanged;
+/// CR/LF, control characters, recognized secret shapes, and anything
+/// oversized or outside the safe identifier character set are rejected.
+String sanitizeSessionLabel(String input, {int maxLength = 200}) {
+  var text = _stripControlChars(input.replaceAll(RegExp(r'[\r\n]+'), ' '));
+  for (final pattern in _specificSecretPatterns) {
+    text = text.replaceAll(pattern, '[redacted]');
+  }
+  if (text.length > maxLength) {
+    text = text.substring(0, maxLength);
+  }
+  text = text.trim();
+  if (text.isEmpty) return text;
+  if (text.contains('[redacted]')) return text;
+  if (!_safeIdentifierShape.hasMatch(text)) {
+    // Something other than a specifically-recognized secret pattern still
+    // doesn't look like a plain identifier (e.g. an unexpected symbol) --
+    // fail closed rather than guess at partial sanitization.
+    return '[redacted]';
+  }
+  return text;
+}
+
+/// Matches a canonical UUID (any version/variant).
+final RegExp _uuidPattern = RegExp(
+  r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+);
+
+/// Matches this app's own generated shape (see [newDiagnosticCorrelationId]
+/// in diagnostic_logger_service.dart): two lowercase base36 (0-9a-z) runs
+/// separated by a single hyphen.
+final RegExp _appCorrelationIdPattern = RegExp(r'^[0-9a-z]+-[0-9a-z]+$');
+
+/// Sanitizes a correlation id (mission section 03: "CORRELATION ID").
+/// A value matching a UUID or this app's own generated correlation-id
+/// shape survives unchanged (after CR/LF/control-char stripping) — it is
+/// exactly the kind of long alphanumeric+hyphen string the generic
+/// backstop would otherwise always destroy, defeating the entire point of
+/// correlating events. Anything else falls back to full [sanitizeText]
+/// (generic backstop included), since an unrecognized shape here gets no
+/// special trust.
+String sanitizeCorrelationId(String input, {int maxLength = 100}) {
+  final text = _stripControlChars(input.replaceAll(RegExp(r'[\r\n]+'), ' ')).trim();
+  final bounded = text.length > maxLength ? text.substring(0, maxLength) : text;
+  if (_uuidPattern.hasMatch(bounded) || _appCorrelationIdPattern.hasMatch(bounded)) {
+    return bounded;
+  }
+  return sanitizeText(input, maxLength: maxLength);
+}
+
 /// Stack traces are noisier and longer than a message, so given more room,
 /// but still bounded and scrubbed the same way — a stack frame can
 /// occasionally embed a request URL with a query string.

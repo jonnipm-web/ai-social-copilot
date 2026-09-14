@@ -5,6 +5,7 @@ import '../core/diagnostics/diagnostic_models.dart';
 import '../data/services/auth_service.dart';
 import 'diagnostic_session_provider.dart';
 import 'profile_provider.dart';
+import 'quota_provider.dart';
 
 final authServiceProvider = Provider<AuthService>((_) => AuthService());
 
@@ -31,7 +32,22 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
   // second. Every method below that can change WHO auth.currentUser is
   // invalidates it, forcing the next read to hit the database for the
   // now-current session rather than any cached value from before.
-  void _invalidateProfile() => _ref.invalidate(currentProfileProvider);
+  //
+  // IVE-COMMERCIAL-OBSERVABILITY-07B (mission section 14 profile-cache
+  // investigation) — currentQuotaProvider is exactly the same kind of
+  // user-scoped FutureProvider.autoDispose as currentProfileProvider, sits
+  // right next to it in the drawer/Account/Upgrade screens, but was never
+  // included here. No path from it to a real authorization decision was
+  // found (route entitlement reads currentProfileProvider, never quota;
+  // every actual quota reservation is server-side per Remediation 06's own
+  // audit), so this is a display-only staleness gap, not a security one —
+  // still closed here for the same reason currentProfileProvider already
+  // is: a second user signing in within the same tab, no reload, must
+  // never see the first user's cached quota.
+  void _invalidateProfile() {
+    _ref.invalidate(currentProfileProvider);
+    _ref.invalidate(currentQuotaProvider);
+  }
 
   // IVE-COMMERCIAL-OBSERVABILITY-07A — AUTH category (mission section 04:
   // "signed-in state, sign-in success/failure category, sign-out, profile

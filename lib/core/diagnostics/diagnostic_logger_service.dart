@@ -26,6 +26,15 @@ class DiagnosticLoggerService {
   String? _activeSessionId;
   String? get activeSessionId => _activeSessionId;
 
+  /// IVE-COMMERCIAL-OBSERVABILITY-07B — lets a recovered/adopted session
+  /// (see [findMyActiveSession]) become the local active session without
+  /// going through [startSession]'s own INSERT. Never accepts a caller-
+  /// supplied user id: the row itself was already fetched scoped to
+  /// auth.uid() via RLS, so there's nothing to re-check here.
+  void adoptActiveSession(String sessionId) {
+    _activeSessionId = sessionId;
+  }
+
   // Bounded, in-memory only (mission section 15: "Maintain only a bounded
   // in-memory buffer if simple and justified... Do not build a complex
   // offline telemetry subsystem") — a small window of the most recent
@@ -55,7 +64,7 @@ class DiagnosticLoggerService {
           .from('diagnostic_sessions')
           .insert({
             'user_id': userId,
-            'label': label != null ? sanitizeText(label, maxLength: 200) : null,
+            'label': label != null ? sanitizeSessionLabel(label, maxLength: 200) : null,
             'status': 'active',
             // IVE-COMMERCIAL-OBSERVABILITY-07A (Codex adversarial review,
             // P2, 2nd pass) — role_snapshot is app-controlled today
@@ -76,8 +85,53 @@ class DiagnosticLoggerService {
           .single();
       _activeSessionId = row['id'] as String?;
       return _activeSessionId;
+    } on PostgrestException catch (e) {
+      // IVE-COMMERCIAL-OBSERVABILITY-07B (mission section 05) — a unique-
+      // violation here means the one-active-session-per-user DB invariant
+      // rejected this insert because one already exists (most plausibly
+      // this same client racing itself: a double-tap, or another tab
+      // already active). Recover and adopt the existing row rather than
+      // surfacing a raw failure — mission section 05: "no crash; detect/
+      // recover gracefully; show the existing ACTIVE session".
+      if (e.code == '23505') {
+        final existing = await findMyActiveSession();
+        if (existing != null) {
+          _activeSessionId = existing['id'] as String?;
+          return _activeSessionId;
+        }
+      }
+      debugPrint('[diagnostics] falha ao iniciar sessão: ${sanitizeErrorMessage(e)}');
+      return null;
     } catch (e) {
       debugPrint('[diagnostics] falha ao iniciar sessão: ${sanitizeErrorMessage(e)}');
+      return null;
+    }
+  }
+
+  /// IVE-COMMERCIAL-OBSERVABILITY-07B (mission section 04) — deterministic
+  /// recovery of the CURRENT authenticated user's own ACTIVE session, if
+  /// any survives a page reload/new tab. Server-authoritative by
+  /// construction: scoped to `auth.uid()` (never a client-supplied user
+  /// id) and further narrowed by diagnostic_sessions_admin_manage_own's
+  /// own RLS, so a non-admin/forged caller simply gets null, same as every
+  /// other method here. `order by started_at desc limit 1` is defensive
+  /// only (mission section 05 makes at most one ACTIVE row possible going
+  /// forward); it does not itself enforce the invariant.
+  Future<Map<String, dynamic>?> findMyActiveSession() async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) return null;
+    try {
+      final rows = await _client
+          .from('diagnostic_sessions')
+          .select()
+          .eq('user_id', userId)
+          .eq('status', 'active')
+          .order('started_at', ascending: false)
+          .limit(1);
+      final list = List<Map<String, dynamic>>.from(rows as List);
+      return list.isEmpty ? null : list.first;
+    } catch (e) {
+      debugPrint('[diagnostics] falha ao recuperar sessão ativa: ${sanitizeErrorMessage(e)}');
       return null;
     }
   }
@@ -198,7 +252,7 @@ class DiagnosticLoggerService {
         'event_name': sanitizeText(eventName, maxLength: 200),
         'status': status != null ? sanitizeText(status, maxLength: 50) : null,
         'duration_ms': durationMs,
-        'correlation_id': correlationId != null ? sanitizeText(correlationId, maxLength: 100) : null,
+        'correlation_id': correlationId != null ? sanitizeCorrelationId(correlationId, maxLength: 100) : null,
         'metadata': buildSafeMetadata(metadata, allowedKeys: kDiagnosticMetadataKeys),
         'error_type': error != null ? sanitizeText(error.runtimeType.toString(), maxLength: 100) : null,
         'error_message': error != null ? sanitizeErrorMessage(error) : null,

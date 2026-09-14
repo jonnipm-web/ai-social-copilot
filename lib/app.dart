@@ -181,9 +181,32 @@ Future<String?> _computeRedirect(BuildContext context, GoRouterState state) asyn
   return _resolveEntitlementRedirect(context, path);
 }
 
+// IVE-COMMERCIAL-OBSERVABILITY-07B — defense-in-depth only. Investigation
+// (mission section 08) found the '/admin' GoRoute correctly registered and
+// reachable both via in-app navigation and a genuinely cold, fresh direct
+// URL load on the current production build; the owner's "GoException: no
+// routes for location: /admin" could not be reproduced under either path,
+// pointing to a stale browser-side cache/tab (a session left open across a
+// deploy, or a stale cached service worker) rather than a routing defect.
+// No routing table change was made for that reason alone. This
+// errorBuilder is still added because GoRouter previously had NONE at all:
+// any genuinely unmatched location — a typo, a stale bookmark, a future
+// removed route — would otherwise surface GoRouter's raw exception text
+// directly to the user instead of recovering gracefully.
+Widget _errorScreen(BuildContext context, GoRouterState state) {
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    final target = Supabase.instance.client.auth.currentSession == null
+        ? AppConstants.routeLogin
+        : AppConstants.routeDashboard;
+    context.go(target);
+  });
+  return const Scaffold(body: Center(child: CircularProgressIndicator()));
+}
+
 final _router = GoRouter(
   initialLocation: AppConstants.routeSplash,
   observers: [_iveObserver],
+  errorBuilder: _errorScreen,
   redirect: (context, state) async {
     final path = state.fullPath ?? state.matchedLocation;
     final redirectTarget = await _computeRedirect(context, state);

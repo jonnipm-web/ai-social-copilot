@@ -37,8 +37,49 @@ class DiagnosticSessionNotifier extends StateNotifier<DiagnosticSessionState> {
     final effectiveRole = roleSnapshot ?? _ref.read(currentProfileProvider).valueOrNull?.roleLabel;
     final id = await _logger.startSession(label: label, roleSnapshot: effectiveRole);
     if (id == null) return false;
-    state = DiagnosticSessionState(sessionId: id, label: label, startedAt: DateTime.now());
+    // IVE-COMMERCIAL-OBSERVABILITY-07B — `id` may belong to a session this
+    // call just created, OR one it recovered after a unique-violation
+    // (mission section 05: another ACTIVE session already existed, most
+    // plausibly this same client racing itself). Re-fetch the authoritative
+    // row rather than trusting the label/timestamp this specific call
+    // happened to be invoked with, so a recovered session shows its REAL
+    // label, not whatever text happened to be in the input field this time.
+    await _adoptFromServer(id);
     return true;
+  }
+
+  /// IVE-COMMERCIAL-OBSERVABILITY-07B (mission section 04) — deterministic
+  /// recovery of an existing ACTIVE session after a reload/new tab/new
+  /// provider container. A no-op if this notifier already tracks an active
+  /// session (never overwrites live in-memory state with a server round
+  /// trip it doesn't need) or if the server has none for the current user.
+  Future<void> recover() async {
+    if (state.isActive) return;
+    final row = await _logger.findMyActiveSession();
+    if (row == null) return;
+    _logger.adoptActiveSession(row['id'] as String);
+    state = _stateFromRow(row);
+  }
+
+  Future<void> _adoptFromServer(String sessionId) async {
+    final row = await _logger.findMyActiveSession();
+    if (row != null && row['id'] == sessionId) {
+      state = _stateFromRow(row);
+      return;
+    }
+    // Defensive fallback only: the row this exact id belongs to could not
+    // be re-fetched (e.g. a transient read failure right after a
+    // successful write) -- still reflect that a session is active rather
+    // than silently staying "inactive" and inviting a second START.
+    state = DiagnosticSessionState(sessionId: sessionId, startedAt: DateTime.now());
+  }
+
+  DiagnosticSessionState _stateFromRow(Map<String, dynamic> row) {
+    return DiagnosticSessionState(
+      sessionId: row['id'] as String,
+      label: row['label'] as String?,
+      startedAt: DateTime.tryParse(row['started_at'] as String? ?? ''),
+    );
   }
 
   Future<void> stop() async {

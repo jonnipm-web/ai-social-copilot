@@ -118,6 +118,97 @@ void main() {
     });
   });
 
+  group(
+    'sanitizeSessionLabel — IVE-COMMERCIAL-OBSERVABILITY-07B mission section 17 '
+    'regression matrix',
+    () {
+      test('legitimate diagnostic labels survive completely unchanged', () {
+        for (final label in [
+          'COMMERCIAL-E2E-001',
+          'OBSERVABILITY-SMOKE-001',
+          'COMMERCIAL-E2E-001-v2',
+          'E2E-001',
+        ]) {
+          expect(sanitizeSessionLabel(label), label, reason: '$label must survive unchanged');
+        }
+      });
+
+      test('a label with CR or LF is stripped of the newline, not fully redacted', () {
+        final withCr = sanitizeSessionLabel('E2E-001\rinjected');
+        final withLf = sanitizeSessionLabel('E2E-001\ninjected');
+        expect(withCr, isNot(contains('\r')));
+        expect(withLf, isNot(contains('\n')));
+        expect(withCr, contains('E2E-001'));
+        expect(withLf, contains('E2E-001'));
+      });
+
+      test('control characters are stripped', () {
+        final result = sanitizeSessionLabel('E2E-001\x00\x07-clean');
+        expect(result, 'E2E-001-clean');
+      });
+
+      test('a genuine secret shape inside a label is still redacted', () {
+        expect(sanitizeSessionLabel('token: abc123def456gh'), contains('[redacted]'));
+        expect(sanitizeSessionLabel('Authorization: Bearer abc123def456ghi789'), contains('[redacted]'));
+      });
+
+      test('an oversized label is truncated to maxLength', () {
+        final result = sanitizeSessionLabel('E' * 500, maxLength: 200);
+        expect(result.length, lessThanOrEqualTo(200));
+      });
+
+      test('a label containing an unexpected/unsafe character is rejected outright', () {
+        expect(sanitizeSessionLabel('E2E-001<script>'), '[redacted]');
+        expect(sanitizeSessionLabel('E2E-001;DROP TABLE'), '[redacted]');
+      });
+    },
+  );
+
+  group(
+    'sanitizeCorrelationId — IVE-COMMERCIAL-OBSERVABILITY-07B mission section 17 '
+    'regression matrix',
+    () {
+      test('a valid UUID correlation id survives unchanged', () {
+        const uuid = '9d5a1bf5-de91-4bf8-8132-eed24a5ab2d8';
+        expect(sanitizeCorrelationId(uuid), uuid);
+      });
+
+      test("this app's own generated correlation id shape survives unchanged", () {
+        // Mirrors newDiagnosticCorrelationId()'s own shape (two base36 runs
+        // separated by one hyphen) without importing diagnostic_logger_
+        // service.dart, which pulls in supabase_flutter -- this file is
+        // deliberately pure Dart.
+        const id = 'mfx2k9q1r7-3a7f9c02z1';
+        expect(sanitizeCorrelationId(id), id);
+        expect(id.length, greaterThan(20), reason: 'must exceed the old generic backstop threshold to be a real test');
+      });
+
+      test('an invalid/malformed correlation id falls back to full generic sanitization', () {
+        final result = sanitizeCorrelationId('not-a-real-id-just-some-long-alphanumeric-text-here');
+        expect(result, '[redacted]');
+      });
+
+      test('a correlation id with a malicious (newline-injecting) suffix is not trusted verbatim', () {
+        const input = 'mfx2k9q1r7-3a7f9c02z1\nFAKE LOG LINE';
+        final result = sanitizeCorrelationId(input);
+        // The newline that would forge a new report line is gone either way...
+        expect(result, isNot(contains('\n')));
+        // ...and specifically because this no longer matches the trusted
+        // identifier shape once it has a suffix, so it falls through to
+        // full generic sanitization rather than being accepted verbatim
+        // like a real id (sanitizeCorrelationId's whole point: ONLY an
+        // exact-shape match skips the generic backstop).
+        expect(result, isNot(equals(input)));
+      });
+
+      test('CR/LF in an otherwise-valid-looking id still gets rejected/rewritten safely', () {
+        final result = sanitizeCorrelationId('abc123-def456\r\ninjected');
+        expect(result, isNot(contains('\r')));
+        expect(result, isNot(contains('\n')));
+      });
+    },
+  );
+
   group('sanitizeErrorMessage / sanitizeStackTrace', () {
     test('sanitizeErrorMessage redacts secrets inside an exception toString()', () {
       final msg = sanitizeErrorMessage(Exception('failed with Authorization: Bearer abc123def456ghi789'));
