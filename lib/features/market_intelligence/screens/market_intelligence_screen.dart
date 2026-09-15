@@ -47,27 +47,38 @@ class _MarketIntelligenceScreenState
   /// — never inferred, only ever the explicit id Project Command Center
   /// passed when it opened this screen for one specific project.
   String? _projectId;
-  bool _extraRead = false;
+
+  /// Codex Gate P2 mitigation: tracks the specific `extra` instance already
+  /// processed (identity, not just "have we ever processed any extra"), so
+  /// that if go_router ever reuses this State for a route re-entry carrying
+  /// a DIFFERENT extra (e.g. a second push before the first was disposed),
+  /// the new extra is picked up instead of silently keeping a stale
+  /// `_projectId` from the previous entry.
+  Object? _lastProcessedExtra;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_extraRead) return;
-    _extraRead = true;
     final extra = GoRouterState.of(context).extra;
-    if (extra is Map) {
-      final projectId = extra['projectId'];
-      if (projectId is String && projectId.isNotEmpty) {
-        setState(() {
-          _projectId = projectId;
-          _inputType = 'project';
-          final prefill = extra['initialInput'];
-          if (prefill is String && prefill.isNotEmpty) {
-            _inputCtrl.text = prefill;
-          }
-        });
+    if (identical(extra, _lastProcessedExtra)) return;
+    _lastProcessedExtra = extra;
+    final projectId =
+        extra is Map && extra['projectId'] is String && (extra['projectId'] as String).isNotEmpty
+            ? extra['projectId'] as String
+            : null;
+    setState(() {
+      // Always reset, never leave a previous entry's binding in place —
+      // a reused State with no projectId in its new extra must NOT keep
+      // pointing at the old project.
+      _projectId = projectId;
+      if (projectId != null) {
+        _inputType = 'project';
+        final prefill = (extra as Map)['initialInput'];
+        if (prefill is String && prefill.isNotEmpty) {
+          _inputCtrl.text = prefill;
+        }
       }
-    }
+    });
   }
 
   // IVE-COMMERCIAL-QUOTA-HARDENING-13 — this screen fired market-analysis
@@ -85,9 +96,33 @@ class _MarketIntelligenceScreenState
     super.dispose();
   }
 
+  // IVE-COMMERCIAL-EXPERIENCE-14 — Codex Gate P0: `_projectId` originates
+  // from a GoRouter `extra`, which is client-supplied and MUST NOT be
+  // trusted as authority to bind a new market_analyses/opportunity_lab row
+  // to an arbitrary project (mission threat model: "Client projectId is
+  // context, never authority"). market_analysis_service.dart's INSERT path
+  // (pre-existing, unmodified this mission) accepts project_id without
+  // server-side ownership validation — Supabase RLS on market_analyses only
+  // checks the row's own user_id, not that project_id belongs to that same
+  // user (baseline migration, projects table only). A real server-side fix
+  // needs a new RLS policy / RPC — a migration, which this implementation-
+  // only mission cannot make (see final report, architectural escalation).
+  // This client-side check is defense-in-depth for the NEW path this
+  // mission adds: only accept `_projectId` if it appears in the current
+  // user's own (RLS-scoped) project list; otherwise treat the analysis as
+  // project-less rather than silently trusting the caller-supplied id.
+  String? get _verifiedProjectId {
+    final id = _projectId;
+    if (id == null) return null;
+    final owned = ref.read(projectsNotifierProvider).valueOrNull;
+    if (owned == null) return null; // not loaded — fail closed, not open
+    return owned.any((p) => p.id == id) ? id : null;
+  }
+
   Future<void> _analyze() async {
     final input = _inputCtrl.text.trim();
     if (input.isEmpty) return;
+    final verifiedProjectId = _verifiedProjectId;
     final notifier = ref.read(marketAnalysisNotifierProvider.notifier);
     final result = await _exec.run<MarketAnalysis?>(
       context: context,
@@ -101,12 +136,12 @@ class _MarketIntelligenceScreenState
       action: (idempotencyKey) => notifier.analyze(
         input,
         inputType: _inputType,
-        projectId: _projectId,
+        projectId: verifiedProjectId,
         language: backendLanguageCode(context),
         idempotencyKey: idempotencyKey,
       ),
     );
-    if (result != null && mounted) {
+    if (result != null && mounted && verifiedProjectId != null) {
       // Link this project to its newest analysis — mirrors what already
       // happens when a project is first CREATED via this same 'project'
       // input mode (see market_analysis_provider.dart's own project-
@@ -114,12 +149,14 @@ class _MarketIntelligenceScreenState
       // Command Center would keep pointing at a stale/absent analysis
       // after a project-scoped re-analysis. Reuses the existing, already-
       // safe updateFields() — no new update semantics introduced.
-      if (_projectId != null) {
-        await ref.read(projectsNotifierProvider.notifier).updateFields(
-          _projectId!,
-          {'market_analysis_id': result.id},
-        );
-      }
+      // Reuses the SAME verifiedProjectId gate as the analyze() call above
+      // — this update is itself RLS-protected by the projects table's own
+      // "auth.uid() = user_id" policy, but only ever reached with an id
+      // the user already legitimately owns.
+      await ref.read(projectsNotifierProvider.notifier).updateFields(
+        verifiedProjectId,
+        {'market_analysis_id': result.id},
+      );
       if (!mounted) return;
       context.go(
         AppConstants.routeMarketIntelligenceHub.replaceFirst(':id', result.id),
@@ -149,7 +186,6 @@ class _MarketIntelligenceScreenState
 
   @override
   Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
     // AnimatedBuilder over `_exec` so the button also reacts to the
     // confirmation-dialog phase (AiExecutionState.awaitingConfirmation),
     // not just the notifier's own AsyncLoading (which only starts once
@@ -162,6 +198,7 @@ class _MarketIntelligenceScreenState
   }
 
   Widget _buildScaffold(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     final state = ref.watch(marketAnalysisNotifierProvider);
     final analyses = ref.watch(marketAnalysesProvider);
     final busy = state is AsyncLoading || _exec.isBusy;
@@ -220,7 +257,13 @@ class _MarketIntelligenceScreenState
                   ],
                 ),
               ),
-              if (_projectId != null) ...[
+              // Same ownership check as _verifiedProjectId (Codex Gate P0
+              // mitigation) — keeps the banner honest: never claims a link
+              // will be made if the write path would actually reject it.
+              if (_projectId != null &&
+                  (ref.watch(projectsNotifierProvider).valueOrNull
+                          ?.any((p) => p.id == _projectId) ??
+                      false)) ...[
                 const SizedBox(height: 12),
                 Container(
                   width: double.infinity,
