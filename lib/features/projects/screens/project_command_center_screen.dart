@@ -11,6 +11,8 @@ import '../../../data/models/opportunity_lab_item.dart';
 import '../../../data/models/project.dart';
 import '../../../data/models/project_intelligence_profile.dart';
 import '../../../data/models/project_resource_allocation.dart';
+import '../../../data/models/weekly_briefing.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/auto_bootstrap_provider.dart';
 import '../../../providers/ecosystem_intelligence_provider.dart';
 import '../../../providers/ive_context_provider.dart';
@@ -354,7 +356,41 @@ class _ProjectCommandCenterScreenState
             extra: {'projectId': project.id},
           );
         },
+        onAnalyzeIdea: () {
+          Navigator.of(context).pop();
+          context.push(
+            AppConstants.routeMarketIntelligence,
+            extra: {
+              'projectId': project.id,
+              'initialInput': project.description.isNotEmpty
+                  ? project.description
+                  : project.name,
+            },
+          );
+        },
+        onOpenConfig: () {
+          Navigator.of(context).pop();
+          _openConfig(project);
+        },
       ),
+    );
+  }
+
+  // IVE-COMMERCIAL-EXPERIENCE-14, Phase B Section 08/09 — Project
+  // Configuration. Exposes ONLY fields the real, current Project model
+  // persists (lib/data/models/project.dart: name, description, type,
+  // url, status — verified from source before writing this; opportunity/
+  // revenue/complexity/priority scores are AI-computed, not user
+  // configuration, and are correctly left out). Reuses
+  // ProjectsNotifier.updateFields(), the existing safe update path
+  // (Section 09: "If existing service already has safe update semantics:
+  // reuse it") — no new persistence logic.
+  void _openConfig(Project project) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ProjectConfigSheet(project: project),
     );
   }
 
@@ -875,6 +911,8 @@ class _ProjectDetailSheet extends ConsumerWidget {
     this.onAnalyze,
     this.onAnalyzeKnowledge,
     this.onViewKnowledge,
+    required this.onAnalyzeIdea,
+    required this.onOpenConfig,
   });
 
   final Project project;
@@ -885,6 +923,14 @@ class _ProjectDetailSheet extends ConsumerWidget {
   final VoidCallback? onAnalyze;
   final VoidCallback? onAnalyzeKnowledge;
   final VoidCallback? onViewKnowledge;
+  /// IVE-COMMERCIAL-EXPERIENCE-14, Phase B Section 07 — opens Market
+  /// Intelligence pre-bound to this project (the "Idea Analysis" entry
+  /// point). Always available, unlike [onAnalyze] (which only shows an
+  /// EXISTING linked analysis) — this always lets the user run a NEW one.
+  final VoidCallback onAnalyzeIdea;
+  /// IVE-COMMERCIAL-EXPERIENCE-14, Phase B Section 08 — opens the Project
+  /// Configuration sheet for this project.
+  final VoidCallback onOpenConfig;
 
   Color _ecoScoreColor(int score) {
     if (score >= 70) return const Color(0xFF6BCB77);
@@ -902,6 +948,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final s = ecosystemScore;
+    final t = AppLocalizations.of(context)!;
 
     return DraggableScrollableSheet(
       initialChildSize: 0.65,
@@ -967,6 +1014,21 @@ class _ProjectDetailSheet extends ConsumerWidget {
                       color: Color(0xFF6C63FF), fontSize: 12)),
             ],
             const SizedBox(height: 16),
+
+            // Briefing Executivo (IVE-COMMERCIAL-EXPERIENCE-14, Phase B,
+            // Section 05/06) — reuses projectBriefingProvider, which reuses
+            // the SAME deterministic generateBriefing() computation
+            // weeklyBriefingProvider already calls, just filtered to this
+            // project only (see ecosystem_intelligence_provider.dart). Not
+            // an AI call, not quota-consuming — no confirmation needed.
+            // Deliberately does NOT repeat Recomendação IA / Scores /
+            // Pontos Fortes / Riscos / Quick Wins / Próximas Ações /
+            // Alocação de Recursos below, which already answer most of
+            // Section 06's questions for this same project — this section
+            // adds only what those don't: a synthesized summary, recent
+            // (7-day) change signals, and how much knowledge is on file.
+            _briefingSection(context, ref),
+            const SizedBox(height: 8),
 
             // Recomendação
             if (s != null) ...[
@@ -1110,14 +1172,30 @@ class _ProjectDetailSheet extends ConsumerWidget {
             const SizedBox(height: 12),
 
             // Action buttons
-            if (onAnalyze != null)
-              _SheetButton(
-                icon: Icons.analytics_rounded,
-                label: 'Ver Análise de Mercado',
-                color: const Color(0xFF00BCD4),
-                onTap: onAnalyze!,
-              ),
-            if (onAnalyze != null) const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: _SheetButton(
+                    icon: Icons.lightbulb_outline_rounded,
+                    label: t.projectAnalyzeIdea,
+                    color: const Color(0xFF00BCD4),
+                    onTap: onAnalyzeIdea,
+                  ),
+                ),
+                if (onAnalyze != null) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _SheetButton(
+                      icon: Icons.analytics_rounded,
+                      label: 'Ver Análise de Mercado',
+                      color: const Color(0xFF00BCD4),
+                      onTap: onAnalyze!,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 8),
             Row(
               children: [
                 if (onViewKnowledge != null)
@@ -1174,11 +1252,26 @@ class _ProjectDetailSheet extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 8),
-            _SheetButton(
-              icon: Icons.delete_outline_rounded,
-              label: 'Excluir Projeto',
-              color: const Color(0xFFFF6B6B),
-              onTap: onDelete,
+            Row(
+              children: [
+                Expanded(
+                  child: _SheetButton(
+                    icon: Icons.settings_outlined,
+                    label: t.projectOpenConfig,
+                    color: const Color(0xFFAAAAAA),
+                    onTap: onOpenConfig,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _SheetButton(
+                    icon: Icons.delete_outline_rounded,
+                    label: 'Excluir Projeto',
+                    color: const Color(0xFFFF6B6B),
+                    onTap: onDelete,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -1354,6 +1447,83 @@ class _ProjectDetailSheet extends ConsumerWidget {
           ],
         ),
       );
+
+  Widget _briefingSection(BuildContext context, WidgetRef ref) {
+    final t = AppLocalizations.of(context)!;
+    final briefingAsync   = ref.watch(projectBriefingProvider(project.id));
+    final knowledgeAsync  = ref.watch(knowledgeItemsByProjectProvider(project.id));
+    final knowledgeCount  = knowledgeAsync.valueOrNull?.length;
+
+    return briefingAsync.when(
+      // Loading/error must never block the rest of the sheet — the
+      // briefing is a convenience summary, not the source of truth for
+      // anything below it.
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: SizedBox(
+          height: 16,
+          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        ),
+      ),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (briefing) {
+        // whatChanged/whatGrew/whatDeclined are already project-filtered
+        // by projectBriefingProvider — no further scoping needed here.
+        final recent = [...briefing.whatChanged, ...briefing.whatGrew, ...briefing.whatDeclined]
+            .take(3)
+            .toList();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _sectionTitle(t.projectBriefingSectionTitle),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A1A2E),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFF333355)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (briefing.executiveSummary.isNotEmpty)
+                    Text(briefing.executiveSummary,
+                        style: const TextStyle(color: Colors.white70, fontSize: 12, height: 1.4)),
+                  if (knowledgeCount != null) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.menu_book_rounded, size: 13, color: Colors.white38),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            t.projectBriefingKnowledgeCount(knowledgeCount),
+                            style: const TextStyle(color: Colors.white54, fontSize: 11),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  if (recent.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(t.projectBriefingRecentChanges,
+                        style: const TextStyle(color: Colors.white38, fontSize: 10, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 4),
+                    ...recent.map((item) => Padding(
+                          padding: const EdgeInsets.only(bottom: 2),
+                          child: Text('• ${item.title}',
+                              style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                        )),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   Widget _sectionTitle(String title) => Padding(
         padding: const EdgeInsets.only(bottom: 8),
@@ -1713,6 +1883,301 @@ class _ResourceAllocationSectionState
   }
 }
 
+// ── Project Configuration sheet ──────────────────────────────────────────────
+// IVE-COMMERCIAL-EXPERIENCE-14, Phase B Section 08/09. Explicit
+// EDIT → SAVE/CANCEL semantics (fields start read-only; tapping "Editar"
+// unlocks them; "Cancelar" discards local edits and re-locks; "Salvar"
+// persists via ProjectsNotifier.updateFields() and re-locks on success).
+// Only real, currently-persisted Project fields are exposed — see the
+// verification comment on _openConfig() above.
+class _ProjectConfigSheet extends ConsumerStatefulWidget {
+  const _ProjectConfigSheet({required this.project});
+  final Project project;
+
+  @override
+  ConsumerState<_ProjectConfigSheet> createState() =>
+      _ProjectConfigSheetState();
+}
+
+class _ProjectConfigSheetState extends ConsumerState<_ProjectConfigSheet> {
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _descCtrl;
+  late final TextEditingController _urlCtrl;
+  late String _type;
+  late String _status;
+
+  bool _editing = false;
+  bool _saving = false;
+  String? _error;
+
+  static const _types = ['website', 'app', 'product', 'service', 'content'];
+  static const _statuses = ['idea', 'active', 'paused', 'completed'];
+
+  @override
+  void initState() {
+    super.initState();
+    _resetFromProject();
+  }
+
+  void _resetFromProject() {
+    _nameCtrl = TextEditingController(text: widget.project.name);
+    _descCtrl = TextEditingController(text: widget.project.description);
+    _urlCtrl  = TextEditingController(text: widget.project.url);
+    _type     = widget.project.type;
+    _status   = widget.project.status;
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _descCtrl.dispose();
+    _urlCtrl.dispose();
+    super.dispose();
+  }
+
+  void _startEdit() => setState(() => _editing = true);
+
+  void _cancelEdit() {
+    setState(() {
+      _nameCtrl.text = widget.project.name;
+      _descCtrl.text = widget.project.description;
+      _urlCtrl.text  = widget.project.url;
+      _type   = widget.project.type;
+      _status = widget.project.status;
+      _editing = false;
+      _error = null;
+    });
+  }
+
+  Future<void> _save() async {
+    if (_saving) return;
+    final name = _nameCtrl.text.trim();
+    if (name.isEmpty) {
+      setState(() => _error = AppLocalizations.of(context)!.projectConfigNameRequired);
+      return;
+    }
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      await ref.read(projectsNotifierProvider.notifier).updateFields(
+        widget.project.id,
+        {
+          'name':        name,
+          'description': _descCtrl.text.trim(),
+          'type':        _type,
+          'url':         _urlCtrl.text.trim(),
+          'status':      _status,
+        },
+      );
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _editing = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _error = AppLocalizations.of(context)!.projectConfigSaveError(e.toString());
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+    return DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      minChildSize: 0.4,
+      maxChildSize: 0.9,
+      expand: false,
+      builder: (context, ctrl) => Container(
+        decoration: const BoxDecoration(
+          color: Color(0xFF1A1A2E),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: ListView(
+          controller: ctrl,
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(t.projectConfigTitle,
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold)),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white60),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _configField(
+              label: t.projectConfigNameLabel,
+              controller: _nameCtrl,
+              enabled: _editing,
+            ),
+            const SizedBox(height: 12),
+            _configField(
+              label: t.projectConfigDescriptionLabel,
+              controller: _descCtrl,
+              enabled: _editing,
+              maxLines: 3,
+            ),
+            const SizedBox(height: 12),
+            _configField(
+              label: t.projectConfigUrlLabel,
+              controller: _urlCtrl,
+              enabled: _editing,
+            ),
+            const SizedBox(height: 16),
+            Text(t.projectConfigTypeLabel,
+                style: const TextStyle(color: Colors.white60, fontSize: 12)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _types.map((type) {
+                return ChoiceChip(
+                  label: Text(type),
+                  selected: _type == type,
+                  onSelected:
+                      _editing ? (_) => setState(() => _type = type) : null,
+                  backgroundColor: const Color(0xFF2A2A45),
+                  selectedColor: const Color(0xFF6C5CE7),
+                  labelStyle: TextStyle(
+                    color: _type == type ? Colors.white : Colors.white60,
+                    fontSize: 12,
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
+            Text(t.projectConfigStatusLabel,
+                style: const TextStyle(color: Colors.white60, fontSize: 12)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _statuses.map((status) {
+                return ChoiceChip(
+                  label: Text(status),
+                  selected: _status == status,
+                  onSelected: _editing
+                      ? (_) => setState(() => _status = status)
+                      : null,
+                  backgroundColor: const Color(0xFF2A2A45),
+                  selectedColor: const Color(0xFF6C5CE7),
+                  labelStyle: TextStyle(
+                    color: _status == status ? Colors.white : Colors.white60,
+                    fontSize: 12,
+                  ),
+                );
+              }).toList(),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 16),
+              Text(_error!,
+                  style:
+                      const TextStyle(color: Color(0xFFFF6B6B), fontSize: 13)),
+            ],
+            const SizedBox(height: 24),
+            if (!_editing)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _startEdit,
+                  icon: const Icon(Icons.edit_outlined, size: 18),
+                  label: Text(t.projectConfigEdit),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF6C5CE7),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                ),
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _saving ? null : _cancelEdit,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white60,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: Text(t.commonCancel),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _saving ? null : _save,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF6C5CE7),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: _saving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white),
+                            )
+                          : Text(t.commonSave),
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _configField({
+    required String label,
+    required TextEditingController controller,
+    required bool enabled,
+    int maxLines = 1,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: const TextStyle(color: Colors.white60, fontSize: 12)),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          enabled: enabled,
+          maxLines: maxLines,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor:
+                enabled ? const Color(0xFF2A2A45) : const Color(0xFF222235),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 // ── Score row com barra de progresso ─────────────────────────────────────────
 
 class _ScoreRow extends StatelessWidget {
@@ -1818,7 +2283,10 @@ class _SheetButton extends StatelessWidget {
     return OutlinedButton.icon(
       onPressed: onTap,
       icon: Icon(icon, size: 16, color: color),
-      label: Text(label, style: TextStyle(color: color, fontSize: 13)),
+      label: Text(label,
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
+          style: TextStyle(color: color, fontSize: 13)),
       style: OutlinedButton.styleFrom(
         padding:
             const EdgeInsets.symmetric(vertical: 10, horizontal: 12),

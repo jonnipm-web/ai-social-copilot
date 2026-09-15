@@ -6,10 +6,29 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/language_utils.dart';
 import '../../../data/models/ive_interaction_request.dart';
 import '../../../data/models/market_analysis.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/market_analysis_provider.dart';
+import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import '../../../shared/widgets/canonical_back_button.dart';
 
+// IVE-COMMERCIAL-EXPERIENCE-14 (Phase B, Section 07) — "Idea Analysis"
+// entry point. No dedicated IdeaAnalysis engine exists anywhere in this
+// codebase (confirmed by source search before writing this) — the closest,
+// and only, existing capability is this screen's own 'project' input mode
+// ("Descreva seu projeto ou ideia"), backed by a market-analysis service
+// that already accepts an optional projectId (market_analysis_service.
+// dart's analyze()) but that this screen never threaded through. Rather
+// than build a second engine, this screen now accepts an optional
+// [projectId] (and [initialInput], the project's own description) via
+// route `extra` from Project Command Center, defaults the input mode to
+// 'project', pre-fills the text field, and forwards projectId into the
+// existing service call — the analysis this produces is then correctly
+// attributable to that project (market_analyses.project_id), and (see
+// _analyze below) the project's own market_analysis_id is updated to
+// point at it, exactly like a project created directly from this flow
+// already does.
 class MarketIntelligenceScreen extends ConsumerStatefulWidget {
   const MarketIntelligenceScreen({super.key});
 
@@ -22,6 +41,34 @@ class _MarketIntelligenceScreenState
     extends ConsumerState<MarketIntelligenceScreen> {
   final _inputCtrl = TextEditingController();
   String _inputType = 'url';
+
+  /// Set from GoRouter `extra` (same convention as
+  /// knowledge_item_form_screen.dart's own projectId-via-extra handling)
+  /// — never inferred, only ever the explicit id Project Command Center
+  /// passed when it opened this screen for one specific project.
+  String? _projectId;
+  bool _extraRead = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_extraRead) return;
+    _extraRead = true;
+    final extra = GoRouterState.of(context).extra;
+    if (extra is Map) {
+      final projectId = extra['projectId'];
+      if (projectId is String && projectId.isNotEmpty) {
+        setState(() {
+          _projectId = projectId;
+          _inputType = 'project';
+          final prefill = extra['initialInput'];
+          if (prefill is String && prefill.isNotEmpty) {
+            _inputCtrl.text = prefill;
+          }
+        });
+      }
+    }
+  }
 
   // IVE-COMMERCIAL-QUOTA-HARDENING-13 — this screen fired market-analysis
   // (a quota-consuming Edge Function) directly from the notifier with no
@@ -54,11 +101,26 @@ class _MarketIntelligenceScreenState
       action: (idempotencyKey) => notifier.analyze(
         input,
         inputType: _inputType,
+        projectId: _projectId,
         language: backendLanguageCode(context),
         idempotencyKey: idempotencyKey,
       ),
     );
     if (result != null && mounted) {
+      // Link this project to its newest analysis — mirrors what already
+      // happens when a project is first CREATED via this same 'project'
+      // input mode (see market_analysis_provider.dart's own project-
+      // creation path); without this, "Ver Análise de Mercado" on Project
+      // Command Center would keep pointing at a stale/absent analysis
+      // after a project-scoped re-analysis. Reuses the existing, already-
+      // safe updateFields() — no new update semantics introduced.
+      if (_projectId != null) {
+        await ref.read(projectsNotifierProvider.notifier).updateFields(
+          _projectId!,
+          {'market_analysis_id': result.id},
+        );
+      }
+      if (!mounted) return;
       context.go(
         AppConstants.routeMarketIntelligenceHub.replaceFirst(':id', result.id),
       );
@@ -87,6 +149,7 @@ class _MarketIntelligenceScreenState
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     // AnimatedBuilder over `_exec` so the button also reacts to the
     // confirmation-dialog phase (AiExecutionState.awaitingConfirmation),
     // not just the notifier's own AsyncLoading (which only starts once
@@ -106,16 +169,11 @@ class _MarketIntelligenceScreenState
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F1A),
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go(AppConstants.routeHome);
-            }
-          },
-        ),
+        // IVE-COMMERCIAL-EXPERIENCE-14 (Phase B, Section 13) — replaces
+        // this screen's own hand-rolled canPop()/go() with the shared
+        // CanonicalBackButton (Architecture-10), same fallback target
+        // (routeHome) this inline version already used.
+        leading: const CanonicalBackButton(fallbackRoute: AppConstants.routeHome),
         backgroundColor: const Color(0xFF0F0F1A),
         title: const Text('Market Intelligence', style: TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
@@ -162,6 +220,30 @@ class _MarketIntelligenceScreenState
                   ],
                 ),
               ),
+              if (_projectId != null) ...[
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6C63FF).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFF6C63FF).withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.push_pin_rounded, size: 13, color: Color(0xFF6C63FF)),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          t.ideaAnalysisProjectBannerText,
+                          style: const TextStyle(color: Color(0xFF6C63FF), fontSize: 11),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 24),
 
               // Input type selector

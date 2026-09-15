@@ -64,6 +64,33 @@ final weeklyBriefingProvider =
   );
 });
 
+// ── Project-scoped briefing (IVE-COMMERCIAL-EXPERIENCE-14, Phase B) ────────
+// REUSES the exact same deterministic (non-AI, zero quota cost)
+// generateBriefing() computation weeklyBriefingProvider already calls —
+// only the four input lists are filtered down to this ONE project first, so
+// every BriefingItem this produces is legitimately attributable to
+// projectId (mission Section 05: "must contain only data legitimately
+// attributable to the selected project. Never present global information
+// as project-specific."). ecosystemScoresProvider's own scores already
+// carry the full Project object (EcosystemScore.project), so filtering by
+// project.id is exact, not a heuristic.
+final projectBriefingProvider =
+    FutureProvider.autoDispose.family<WeeklyBriefing, String>((ref, projectId) async {
+  final scores   = await ref.watch(ecosystemScoresProvider.future);
+  final analyses = await ref.watch(marketAnalysesProvider.future);
+  final actions  = await ref.watch(actionQueueProvider.future);
+  final labItems = await ref.watch(opportunityLabProvider.future);
+  final roiList  = await ref.watch(roiMetricsProvider.future);
+
+  return _eiService.generateBriefing(
+    scores:     scores.where((s) => s.project.id == projectId).toList(),
+    analyses:   analyses.where((a) => a.projectId == projectId).toList(),
+    actions:    actions.where((a) => a.projectId == projectId).toList(),
+    labItems:   labItems.where((l) => l.projectId == projectId).toList(),
+    roiMetrics: roiList.where((r) => r.projectId == projectId).toList(),
+  );
+});
+
 // ── Resource allocation providers (parameterized by budget) ──────────────
 final resourceAllocationHoursProvider =
     Provider.autoDispose.family<AsyncValue<ResourceAllocation>, double>((ref, hours) {

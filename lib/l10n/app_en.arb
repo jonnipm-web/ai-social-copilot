@@ -140,5 +140,31 @@
   "adminModulesNotes": "Notes",
   "adminModulesNoRoute": "No dedicated route",
   "adminModulesYes": "Yes",
-  "adminModulesNo": "No"
+  "adminModulesNo": "No",
+
+  "projectBriefingSectionTitle": "Executive Briefing",
+  "projectBriefingNoKnowledge": "No knowledge items yet",
+  "projectBriefingKnowledgeCount": "{count, plural, =0{No knowledge items} =1{1 knowledge item available} other{{count} knowledge items available}}",
+  "@projectBriefingKnowledgeCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "projectBriefingRecentChanges": "What changed recently",
+
+  "projectAnalyzeIdea": "Analyze Idea",
+  "projectOpenConfig": "Settings",
+
+  "projectConfigTitle": "Project Settings",
+  "projectConfigNameLabel": "Name",
+  "projectConfigDescriptionLabel": "Description",
+  "projectConfigUrlLabel": "URL",
+  "projectConfigTypeLabel": "Type",
+  "projectConfigStatusLabel": "Status",
+  "projectConfigEdit": "Edit",
+  "projectConfigNameRequired": "Project name cannot be empty.",
+  "projectConfigSaveError": "Failed to save: {error}",
+  "@projectConfigSaveError": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+
+  "ideaAnalysisProjectBannerText": "This analysis will be linked to the selected project"
 }
