@@ -46,11 +46,9 @@ jobs:
           flutter create --platforms web --project-name ai_social_copilot .
           flutter build web --release --base-href /ai-social-copilot/ --source-maps
 
-      - name: TEMP DIAGNOSTIC — upload source map bundle
+      - name: TEMP DIAGNOSTIC — upload full web build (incl. source maps)
         uses: actions/upload-artifact@v4
         with:
-          name: sourcemap-bundle-09r
-          path: |
-            build/web/main.dart.js
-            build/web/main.dart.js.map
+          name: webbuild-bundle-09r
+          path: build/web
           retention-days: 1
