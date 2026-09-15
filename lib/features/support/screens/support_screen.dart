@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/ive_intro_sheet.dart';
 
 /// IVE-COMMERCIAL-RELEASE-CONTROL-PLANE-01 — "Ajuda e Suporte". Usa apenas
 /// o canal de contato já evidenciado no próprio repositório
@@ -30,6 +31,15 @@ class SupportScreen extends StatelessWidget {
             style: const TextStyle(color: Colors.white70),
           ),
           const SizedBox(height: 20),
+          // IVE-EXPERIENCE-V1-06 (Section 16) — permanent "Meet IVE" replay
+          // entry point. Always available regardless of first-use state
+          // (does not read/write ive_intro_provider's shouldShow) — replay
+          // is a deliberate re-watch, not a first-use trigger.
+          ListTile(
+            leading: const Icon(Icons.auto_awesome_rounded, color: Colors.white70),
+            title: Text(t.ivIntroReplayLabel),
+            onTap: () => showIveIntroSheet(context, trigger: 'replay'),
+          ),
           ListTile(
             leading: const Icon(Icons.mail_outline_rounded, color: Colors.white70),
             title: Text(t.supportContact),

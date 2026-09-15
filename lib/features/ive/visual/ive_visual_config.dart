@@ -1,8 +1,29 @@
 // ── Rive asset paths ──────────────────────────────────────────────────────────
 
 abstract final class IveAssetPaths {
-  static const riveAsset      = 'assets/ive/rive/ive_executive_v1.riv';
+  // IVE-AVATAR-RIVE-RUNTIME-03B6C — temporary canary pointer, isolated branch
+  // only. Points at the verified 03B6R cloud baseline (fileId 2578290,
+  // revision 46876824, SHA-256 eabbfd3658479efe3c90cdef571f04c3fe2129d
+  // 218146ef466176bc62ac2cd1f) exported as ive_executive_03b6_canary.riv.
+  // Do NOT rename to ive_executive_v1.riv until a production gate approves
+  // it; do NOT merge this pointer change to main as-is.
+  static const riveAsset      = 'assets/ive/rive/ive_executive_03b6_canary.riv';
   static const referenceImage = 'assets/ive/reference/ive_character_reference.png';
+}
+
+// ── Rive feature gate ─────────────────────────────────────────────────────────
+// IVE-AVATAR-COMMERCIAL-FALLBACK-04 — the Rive track is FROZEN
+// (docs/ive/IVE_RIVE_FREEZE_RECORD.md). The commercial Avatar is
+// IveVisualFallback, selected deterministically by this gate BEFORE any Rive
+// runtime is constructed — never by waiting for a Rive failure, because
+// 03B6O proved a Rive failure can be silent (initialize() succeeds, zero
+// pixels drawn). This is a literal constant on purpose (Codex FALLBACK-04
+// P1): no build flag, environment variable or CI invocation can flip it —
+// re-entry requires a reviewed code change under an explicit Agente
+// Martins/Paulo decision (see IVE_RIVE_FREEZE_RECORD.md §05).
+
+abstract final class IveRiveFeatureGate {
+  static const bool enabled = false;
 }
 
 // ── Rive State Machine contract ───────────────────────────────────────────────

@@ -166,5 +166,15 @@
     "placeholders": { "error": { "type": "String" } }
   },
 
-  "ideaAnalysisProjectBannerText": "Esta análise será vinculada ao projeto selecionado"
+  "ideaAnalysisProjectBannerText": "Esta análise será vinculada ao projeto selecionado",
+
+  "ivIntroTitle": "Conheça a IVE",
+  "ivIntroWhoBody": "Eu sou a IVE, sua copiloto estratégica dentro do InsightValues.",
+  "ivIntroWhatBody": "Posso explicar seus resultados, apontar riscos e oportunidades, e sugerir o que fazer a seguir — sempre com base nos dados reais do seu projeto.",
+  "ivIntroWhereBody": "Você me encontra de dois jeitos: o ícone flutuante aparece em qualquer tela, e alguns módulos têm um botão direto para me perguntar sobre o que você está vendo ali.",
+  "ivIntroControlBody": "Eu só respondo quando você pede — você decide quando e sobre o que perguntar.",
+  "ivIntroContinueButton": "Entendi",
+  "ivIntroSkipButton": "Pular",
+  "ivIntroSemanticLabel": "Introdução à IVE, sua copiloto estratégica",
+  "ivIntroReplayLabel": "Conhecer a IVE"
 }
