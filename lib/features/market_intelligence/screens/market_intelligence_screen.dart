@@ -69,14 +69,17 @@ class _MarketIntelligenceScreenState
     setState(() {
       // Always reset, never leave a previous entry's binding in place —
       // a reused State with no projectId in its new extra must NOT keep
-      // pointing at the old project.
+      // pointing at the old project (Codex Gate P2 follow-up: also reset
+      // _inputType/_inputCtrl so a reused State doesn't keep showing
+      // stale "project mode" UI/text from the previous entry).
       _projectId = projectId;
       if (projectId != null) {
         _inputType = 'project';
         final prefill = (extra as Map)['initialInput'];
-        if (prefill is String && prefill.isNotEmpty) {
-          _inputCtrl.text = prefill;
-        }
+        _inputCtrl.text = prefill is String ? prefill : '';
+      } else {
+        _inputType = 'url';
+        _inputCtrl.clear();
       }
     });
   }
