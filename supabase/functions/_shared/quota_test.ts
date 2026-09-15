@@ -240,8 +240,16 @@ Deno.test(
 Deno.test(
   'QUOTA-S: refundQuota DOES refund when idempotentReplay is false (the actual owner of a fresh reservation)',
   async () => {
+    // Round-4 fix (Codex Gate 2 round-2 finding) — this fixture used to
+    // return `data: null`, which post-round-4 reads as `data !== true`,
+    // i.e. the "already applied" branch. That happened to still leave
+    // `calls.length === 1` true (this test's actual assertion), but the
+    // fixture no longer honestly represented "a fresh, successful
+    // refund" as its own name claims. `data: true` is what
+    // refund_ai_quota actually returns for that case (see QUOTA-W, which
+    // asserts the resulting log event on this same shape).
     const { client, calls } = recordingClient({
-      refund_ai_quota: { data: null, error: null },
+      refund_ai_quota: { data: true, error: null },
     });
     await refundQuota(req(), client, { reservationId: 'my-own-reservation-id', idempotentReplay: false });
     assertEquals(calls.length, 1);

@@ -121,6 +121,14 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
           'history':          history,
           if (recentQuestions.isNotEmpty)
             'recent_questions': recentQuestions,
+          // IVE-COMMERCIAL-QUOTA-HARDENING-13 (Codex Gate 2 round-2
+          // finding) — [idempotencyKey] was accepted as a parameter and
+          // documented as wired, but never actually reached this body:
+          // the single confirmed choke point in context_copilot_widget.
+          // dart was silently falling back to the legacy unconditional
+          // reserve path on every message despite showing a confirmation
+          // dialog.
+          if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
         },
       );
 

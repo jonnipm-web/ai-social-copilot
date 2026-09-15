@@ -211,7 +211,16 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
       final confirmed = await _ensureConfirmed();
       if (!mounted || !confirmed) return; // leave the typed text in the box
       _ctrl.clear();
-      ref.read(contextCopilotProvider(_conversationKey).notifier).send(
+      // Codex Gate 2 round-2 finding — this call used to be fire-and-
+      // forget: `_sending` reset in `finally` right after DISPATCHING the
+      // request, not after it actually completed, so it stopped guarding
+      // anything for the whole (multi-second, LLM-latency) duration the
+      // network call was actually in flight. Awaiting it means `_sending`
+      // (and _exec.isBusy, transitively) now cover the full request, the
+      // same "busy for the real duration of the operation" guarantee
+      // every other AiExecutionController-gated flow in the app already
+      // has.
+      await ref.read(contextCopilotProvider(_conversationKey).notifier).send(
             message:        msg,
             screenName:     widget.screenName,
             context:        widget.context,

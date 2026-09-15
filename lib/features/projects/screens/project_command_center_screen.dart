@@ -11,7 +11,6 @@ import '../../../data/models/opportunity_lab_item.dart';
 import '../../../data/models/project.dart';
 import '../../../data/models/project_intelligence_profile.dart';
 import '../../../data/models/project_resource_allocation.dart';
-import '../../../core/utils/uuid_v4.dart';
 import '../../../providers/auto_bootstrap_provider.dart';
 import '../../../providers/ecosystem_intelligence_provider.dart';
 import '../../../providers/ive_context_provider.dart';
@@ -211,17 +210,27 @@ class _ProjectCommandCenterScreenState
       return;
     }
 
+    // Codex Gate 2 round-2 finding — this request's own idempotencyKey
+    // (generated once, right here) MUST be the one actually sent below.
+    // The previous version constructed the IveInteractionRequest inline
+    // inside the confirm() call, so its key had no reference left to
+    // reuse afterward — the network call then minted a completely
+    // separate, disposable newUuidV4() of its own. That key was never
+    // reused by anything, so this confirmed operation had no real
+    // retry-safe idempotency: a retry (network failure, re-tap after
+    // error) would mint yet another new key and be charged again.
+    final request = IveInteractionRequest(
+      projectId:        project.id,
+      sourceModule:     'project_command_center',
+      sourceEntityType: 'project',
+      sourceEntityId:   project.id,
+      operationType:    IveOperationType.analyze,
+    );
     final confirmed = await _knowledgeAnalysisExec.confirm(
       context: context,
       ref: ref,
       analysisLabel: 'Analisar com Conhecimento',
-      request: IveInteractionRequest(
-        projectId:        project.id,
-        sourceModule:     'project_command_center',
-        sourceEntityType: 'project',
-        sourceEntityId:   project.id,
-        operationType:    IveOperationType.analyze,
-      ),
+      request: request,
     );
     if (!confirmed || !mounted) return;
 
@@ -251,7 +260,7 @@ class _ProjectCommandCenterScreenState
           'project_description': project.description,
           'project_type':        project.type,
           'documents':           docs,
-          'idempotency_key':     newUuidV4(),
+          'idempotency_key':     request.idempotencyKey,
         },
       );
 

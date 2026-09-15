@@ -467,7 +467,7 @@ class _ProjectTile extends StatelessWidget {
 
 // ── Knowledge card ────────────────────────────────────────────────────────────
 
-class _KnowledgeCard extends ConsumerWidget {
+class _KnowledgeCard extends ConsumerStatefulWidget {
   const _KnowledgeCard({
     required this.item,
     required this.onInvalidate,
@@ -479,6 +479,34 @@ class _KnowledgeCard extends ConsumerWidget {
   final VoidCallback   onInvalidate;
   final List<Project>  projects;
   final String?        projectName;
+
+  @override
+  ConsumerState<_KnowledgeCard> createState() => _KnowledgeCardState();
+}
+
+// IVE-COMMERCIAL-QUOTA-HARDENING-13 (Codex Gate 2 round-2 finding) — the
+// "Analisar com IA" button below used a short-lived AiExecutionController
+// created fresh per tap. Only one quota-consuming button exists per card
+// (unlike knowledge_analysis_screen.dart's two-buttons case), but a fresh
+// controller per tap still cannot guard against a rapid double-tap on
+// THIS SAME button — each tap got its own instance with no memory of the
+// other. Promoted to ConsumerStatefulWidget so the controller persists
+// across taps for this card's lifetime (ListView.builder reuses the
+// Element/State at a given index across rebuilds, same guarantee any
+// other stateful list-item widget relies on).
+class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
+  final _exec = AiExecutionController();
+
+  @override
+  void dispose() {
+    _exec.dispose();
+    super.dispose();
+  }
+
+  KnowledgeItem get item => widget.item;
+  VoidCallback get onInvalidate => widget.onInvalidate;
+  List<Project> get projects => widget.projects;
+  String? get projectName => widget.projectName;
 
   Color get _statusColor {
     switch (item.status) {
@@ -498,7 +526,7 @@ class _KnowledgeCard extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Card(
       color: const Color(0xFF1A1A2E),
       margin: const EdgeInsets.only(bottom: 12),
@@ -577,12 +605,7 @@ class _KnowledgeCard extends ConsumerWidget {
                         return;
                       }
                       try {
-                        // IVE-COMMERCIAL-QUOTA-HARDENING-13 (Codex Gate 2
-                        // finding) — see knowledge_analysis_screen.dart's
-                        // _confirmAndAnalyze for why a short-lived
-                        // controller (not a State field) is used here too.
-                        final exec = AiExecutionController();
-                        await exec.run<void>(
+                        await _exec.run<void>(
                           context: context,
                           ref: ref,
                           analysisLabel: 'Analisar com IA',
@@ -596,7 +619,8 @@ class _KnowledgeCard extends ConsumerWidget {
                           action: (idempotencyKey) => ref
                               .read(knowledgeAnalysisNotifierProvider.notifier)
                               .analyze(item, idempotencyKey: idempotencyKey),
-                        ).whenComplete(exec.dispose);
+                        );
+                        if (_exec.state != AiExecutionState.success) return;
                         onInvalidate();
                         if (context.mounted) {
                           context.push(
