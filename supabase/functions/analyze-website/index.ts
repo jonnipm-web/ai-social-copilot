@@ -135,7 +135,7 @@ export async function handler(
 
   let quotaReserved = false;
   let idempotencyKey: string | undefined;
-  let reservationId: string | undefined;
+  let quotaResult: Awaited<ReturnType<typeof reserveQuota>> | undefined;
   try {
     if (req.method !== "POST") {
       return new Response(
@@ -182,7 +182,7 @@ ${content}`;
     const quota = await reserveQuota(req, quotaClient, idempotencyKey, 'analyze-website');
     if (!quota.allowed) return quotaBlockedResponse(corsHeaders, quota);
     quotaReserved = true;
-    reservationId = quota.reservationId;
+    quotaResult = quota;
 
     const groqRes = await fetch(GROQ_URL, {
       method: "POST",
@@ -204,7 +204,7 @@ ${content}`;
     if (!groqRes.ok) {
       const err = await groqRes.text();
       console.error("Groq error:", err);
-      await refundQuota(req, quotaClient, reservationId);
+      await refundQuota(req, quotaClient, quotaResult);
       return new Response(
         JSON.stringify({ error: "Falha ao processar com a IA. Tente novamente." }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -217,7 +217,7 @@ ${content}`;
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       console.error("JSON não encontrado:", rawText);
-      await refundQuota(req, quotaClient, reservationId);
+      await refundQuota(req, quotaClient, quotaResult);
       return new Response(
         JSON.stringify({ error: "Resposta inválida da IA. Tente novamente." }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -232,7 +232,7 @@ ${content}`;
     });
   } catch (e) {
     console.error("Erro inesperado:", e);
-    if (quotaReserved) await refundQuota(req, quotaClient, reservationId);
+    if (quotaReserved) await refundQuota(req, quotaClient, quotaResult);
     return new Response(
       JSON.stringify({ error: "Erro interno. Tente novamente." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },

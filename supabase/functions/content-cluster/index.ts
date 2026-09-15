@@ -84,7 +84,7 @@ serve(async (req) => {
 
   let quotaReserved = false;
   let idempotencyKey: string | undefined;
-  let reservationId: string | undefined;
+  let quotaResult: Awaited<ReturnType<typeof reserveQuota>> | undefined;
   try {
     const { input, main_keyword, language: rawLanguage, idempotency_key } = await req.json();
     idempotencyKey = idempotency_key;
@@ -100,7 +100,7 @@ serve(async (req) => {
     const quota = await reserveQuota(req, undefined, idempotencyKey, 'content-cluster');
     if (!quota.allowed) return quotaBlockedResponse(corsHeaders, quota);
     quotaReserved = true;
-    reservationId = quota.reservationId;
+    quotaResult = quota;
 
     const groqResponse = await fetch(GROQ_URL, {
       method: "POST",
@@ -139,7 +139,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    if (quotaReserved) await refundQuota(req, undefined, reservationId);
+    if (quotaReserved) await refundQuota(req, undefined, quotaResult);
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

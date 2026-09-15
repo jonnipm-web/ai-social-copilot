@@ -306,20 +306,29 @@ SECURITY DEFINER
 SET search_path = 'public'
 AS $function$
 DECLARE
-  v_user_id uuid := auth.uid();
-  v_period  date := date_trunc('month', now())::date;
-  v_updated int;
+  v_user_id           uuid := auth.uid();
+  v_updated           int;
+  v_reservation_period date;
 BEGIN
   IF v_user_id IS NULL THEN
     RETURN;
   END IF;
 
   IF p_reservation_id IS NOT NULL THEN
+    -- Codex round-3 review, P1-3 — this used to decrement
+    -- date_trunc('month', now())::date regardless of which period the
+    -- reservation actually belonged to. A refund delayed across a month
+    -- boundary (reserved Aug 31, refunded Sep 1) would then decrement
+    -- THIS month's usage instead of the month the charge actually
+    -- happened in, permanently leaving one period over-counted and the
+    -- other under-counted. RETURNING the row's own period_start and
+    -- decrementing THAT period fixes it.
     UPDATE public.ai_quota_reservations
     SET status = 'refunded', refunded_at = now()
     WHERE id = p_reservation_id
       AND user_id = v_user_id
-      AND status = 'reserved';
+      AND status = 'reserved'
+    RETURNING period_start INTO v_reservation_period;
     GET DIAGNOSTICS v_updated = ROW_COUNT;
 
     IF v_updated = 0 THEN
@@ -329,11 +338,20 @@ BEGIN
       -- not decrement usage again.
       RETURN;
     END IF;
+
+    UPDATE public.ai_usage
+    SET request_count = GREATEST(request_count - 1, 0), updated_at = now()
+    WHERE user_id = v_user_id AND period_start = v_reservation_period;
+    RETURN;
   END IF;
 
+  -- Legacy path (no reservation id at all) — reproduces the exact pre-13
+  -- behavior: unconditional decrement of the CURRENT period. Safe only
+  -- because a legacy caller's reserve-then-refund always happens
+  -- synchronously within one request, never spanning a period boundary.
   UPDATE public.ai_usage
   SET request_count = GREATEST(request_count - 1, 0), updated_at = now()
-  WHERE user_id = v_user_id AND period_start = v_period;
+  WHERE user_id = v_user_id AND period_start = date_trunc('month', now())::date;
 END;
 $function$;
 

@@ -193,29 +193,61 @@ Deno.test('QUOTA-K: quotaBlockedResponse maps invalid_idempotency_key to 400, no
   assertEquals(body.error, 'INVALID_IDEMPOTENCY_KEY');
 });
 
-// ── Codex Gate 2 P1 fix — refund targets an immutable reservation id ──────
-// (Gate 2 found that refunding by re-deriving "the current row for this
+// ── Codex round-2 fix — refund targets an immutable reservation id ────────
+// (Found that refunding by re-deriving "the current row for this
 // key+operation+period" let a DELAYED DUPLICATE refund match a NEWER
 // reservation created by a legitimate retry, silently un-charging a real,
 // successful AI call. refundQuota's contract changed accordingly: it now
-// takes the reserve call's own reservationId, never the key/operation.)
+// takes the reserve call's own QuotaResult, never the key/operation.)
 
-Deno.test('QUOTA-L: refundQuota forwards a reservationId as p_reservation_id', async () => {
+Deno.test('QUOTA-L: refundQuota forwards quota.reservationId as p_reservation_id', async () => {
   const { client, calls } = recordingClient({
     refund_ai_quota: { data: null, error: null },
   });
-  await refundQuota(req(), client, 'reservation-abc-123');
+  await refundQuota(req(), client, { reservationId: 'reservation-abc-123' });
   assertEquals(calls[0].fn, 'refund_ai_quota');
   assertEquals(calls[0].params, { p_reservation_id: 'reservation-abc-123' });
 });
 
-Deno.test('QUOTA-M: refundQuota with no reservationId calls the RPC with no params (legacy unconditional decrement)', async () => {
+Deno.test('QUOTA-M: refundQuota with no quota argument calls the RPC with no params (legacy unconditional decrement)', async () => {
   const { client, calls } = recordingClient({
     refund_ai_quota: { data: null, error: null },
   });
   await refundQuota(req(), client);
   assertEquals(calls[0].params, undefined);
 });
+
+// ── Codex round-3 fix — a REPLAY must never refund the shared reservation ──
+// (A replayed request (idempotentReplay: true) is handed the SAME
+// reservationId as the request that actually created it. If the replay's
+// own downstream call failed, refunding that shared reservation would undo
+// the ORIGINAL request's charge even if the original had already
+// succeeded. This is enforced centrally in refundQuota, not repeated at
+// each of the 16 Edge Function call sites, so it can never be forgotten.)
+
+Deno.test(
+  'QUOTA-R: refundQuota REFUSES to call the RPC at all when quota.idempotentReplay is true, ' +
+  'even though a reservationId is present',
+  async () => {
+    const { client, calls } = recordingClient({
+      refund_ai_quota: { data: null, error: null },
+    });
+    await refundQuota(req(), client, { reservationId: 'shared-reservation-id', idempotentReplay: true });
+    assertEquals(calls.length, 0, 'a replay must never be able to refund the reservation it does not own');
+  },
+);
+
+Deno.test(
+  'QUOTA-S: refundQuota DOES refund when idempotentReplay is false (the actual owner of a fresh reservation)',
+  async () => {
+    const { client, calls } = recordingClient({
+      refund_ai_quota: { data: null, error: null },
+    });
+    await refundQuota(req(), client, { reservationId: 'my-own-reservation-id', idempotentReplay: false });
+    assertEquals(calls.length, 1);
+    assertEquals(calls[0].params, { p_reservation_id: 'my-own-reservation-id' });
+  },
+);
 
 // ── Codex Gate 1 P1 fix — operationType required whenever a key is given ──
 // (Gate 1 found that a bare (user_id, idempotency_key) scope let the SAME

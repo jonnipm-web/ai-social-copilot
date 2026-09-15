@@ -21,7 +21,7 @@ serve(async (req) => {
 
   let quotaReserved = false;
   let idempotencyKey: string | undefined;
-  let reservationId: string | undefined;
+  let quotaResult: Awaited<ReturnType<typeof reserveQuota>> | undefined;
   try {
     const { project_name, project_description, project_type, documents, market_context, idempotency_key } =
       await req.json();
@@ -71,7 +71,7 @@ final_score = média ponderada dos demais scores.`;
     const quota = await reserveQuota(req, undefined, idempotencyKey, 'generate-project-opportunities');
     if (!quota.allowed) return quotaBlockedResponse(corsHeaders, quota);
     quotaReserved = true;
-    reservationId = quota.reservationId;
+    quotaResult = quota;
 
     const resp = await fetch(GROQ_URL, {
       method: 'POST',
@@ -97,7 +97,7 @@ final_score = média ponderada dos demais scores.`;
 
     if (!resp.ok) {
       const err = await resp.text();
-      await refundQuota(req, undefined, reservationId);
+      await refundQuota(req, undefined, quotaResult);
       return Response.json({ error: `Groq error: ${err}` }, { status: 502, headers: corsHeaders });
     }
 
@@ -108,7 +108,7 @@ final_score = média ponderada dos demais scores.`;
     try {
       parsed = JSON.parse(content);
     } catch {
-      await refundQuota(req, undefined, reservationId);
+      await refundQuota(req, undefined, quotaResult);
       return Response.json(
         { error: 'JSON inválido retornado pelo modelo', raw: content },
         { status: 502, headers: corsHeaders },
@@ -121,7 +121,7 @@ final_score = média ponderada dos demais scores.`;
 
     return Response.json(parsed, { headers: corsHeaders });
   } catch (e) {
-    if (quotaReserved) await refundQuota(req, undefined, reservationId);
+    if (quotaReserved) await refundQuota(req, undefined, quotaResult);
     return Response.json({ error: String(e) }, { status: 500, headers: corsHeaders });
   }
 });

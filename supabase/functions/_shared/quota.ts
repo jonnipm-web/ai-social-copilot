@@ -37,15 +37,24 @@
  * updated) reproduces the exact pre-13 unconditional-reserve behavior —
  * see the migration's own comment for the removal point.
  *
- * refundQuota takes a reservationId (the reserve call's own
- * QuotaResult.reservationId), NOT the idempotency key/operation pair —
- * Codex Gate 2 finding on this mission's second draft: refunding by
- * re-deriving "the current active row for this (key, operation, period)
- * tuple" let a DELAYED DUPLICATE refund call match a NEWER reservation
- * created by a legitimate retry after the original was already refunded,
- * silently un-charging a real, successful AI call. A reservation's own
- * immutable id can never be reused by a later attempt, so a delayed
- * duplicate naming an old id is a safe no-op instead.
+ * refundQuota takes the reserve call's own QuotaResult (not just an id,
+ * not the idempotency key/operation pair) — two rounds of Codex review
+ * found real bugs here:
+ *   - Round 2: refunding by re-deriving "the current active row for this
+ *     (key, operation, period) tuple" let a DELAYED DUPLICATE refund call
+ *     match a NEWER reservation created by a legitimate retry after the
+ *     original was already refunded, silently un-charging a real,
+ *     successful AI call. Fixed by refunding a reservation's own
+ *     immutable id instead — a delayed duplicate naming an old id is a
+ *     safe no-op, since ids are never reused by a later attempt.
+ *   - Round 3: a REPLAYED request (idempotentReplay: true) was handed the
+ *     SAME reservationId as the request that actually created it. If the
+ *     replay's OWN downstream call then failed, it would refund that
+ *     shared reservation regardless of whether the ORIGINAL request's own
+ *     call had already succeeded — undoing a real charge for a real,
+ *     delivered response. refundQuota now refuses outright whenever
+ *     `quota.idempotentReplay` is true: only the request that actually
+ *     created a reservation may ever refund it.
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.116.0';
 
@@ -163,26 +172,36 @@ export async function reserveQuota(
 
 /** Best-effort compensating decrement. Never throws -- a refund failure
  * must not turn into a 500 on top of an already-failed AI request.
- * @param reservationId The SAME reserveQuota call's own
- * `result.reservationId` — NOT the idempotency key or operation type.
- * Refunding by the reservation's own immutable id (rather than
- * re-deriving "the current row for this key+operation+period") is what
- * keeps a delayed duplicate refund from ever matching a DIFFERENT, later
- * reservation created by a legitimate retry (Codex Gate 2 finding — see
- * this file's own top-of-file doc comment). Omit it to reproduce the
- * legacy unconditional decrement (pre-13 behavior / a caller that never
- * used an idempotency key to begin with).
+ * @param quota The SAME reserveQuota call's own result — NOT just its
+ * reservationId. Two things are read from it:
+ *   - reservationId: refunding by the reservation's own immutable id
+ *     (rather than re-deriving "the current row for this
+ *     key+operation+period") is what keeps a delayed duplicate refund
+ *     from ever matching a DIFFERENT, later reservation created by a
+ *     legitimate retry (Codex round-2 finding).
+ *   - idempotentReplay: a replayed request does NOT own the reservation
+ *     it was handed — it's someone else's (or an earlier attempt's) still
+ *     -active reservation. If THIS replay's own downstream call fails,
+ *     refunding that shared reservation would undo the ORIGINAL request's
+ *     charge even if the original succeeded (Codex round-3 finding:
+ *     "replayed requests can refund the original request's active
+ *     reservation"). This check is centralized HERE, in the one shared
+ *     helper, rather than repeated at each of the 16 call sites, so it
+ *     can't be forgotten by a future one.
+ * Omit `quota` entirely to reproduce the legacy unconditional decrement
+ * (pre-13 behavior / a caller that never used an idempotency key).
  */
 export async function refundQuota(
   req: Request,
   client?: QuotaClient,
-  reservationId?: string,
+  quota?: Pick<QuotaResult, 'reservationId' | 'idempotentReplay'>,
 ): Promise<void> {
   try {
+    if (quota?.idempotentReplay) return;
     const rpcClient = client ?? buildUserScopedClient(req);
     await rpcClient.rpc(
       'refund_ai_quota',
-      reservationId !== undefined ? { p_reservation_id: reservationId } : undefined,
+      quota?.reservationId !== undefined ? { p_reservation_id: quota.reservationId } : undefined,
     );
   } catch {
     // best-effort only

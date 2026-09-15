@@ -207,7 +207,7 @@ export async function handler(
 
   let quotaReserved = false;
   let idempotencyKey: string | undefined;
-  let reservationId: string | undefined;
+  let quotaResult: Awaited<ReturnType<typeof reserveQuota>> | undefined;
   try {
     if (req.method !== "POST") {
       return new Response(
@@ -264,7 +264,7 @@ export async function handler(
     const quota = await reserveQuota(req, quotaClient, idempotencyKey, 'extract-knowledge');
     if (!quota.allowed) return quotaBlockedResponse(corsHeaders, quota);
     quotaReserved = true;
-    reservationId = quota.reservationId;
+    quotaResult = quota;
 
     // ── Groq call with retry + fallback model ────────────────
     const groqBody = JSON.stringify({
@@ -304,7 +304,7 @@ export async function handler(
 
     if (!groqRes || !groqRes.ok) {
       console.error("Groq final error after retries:", lastGroqErr);
-      await refundQuota(req, quotaClient, reservationId);
+      await refundQuota(req, quotaClient, quotaResult);
       return new Response(
         JSON.stringify({ error: "Serviço de IA temporariamente indisponível. Tente novamente em instantes." }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -317,7 +317,7 @@ export async function handler(
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       console.error("JSON não encontrado:", rawText);
-      await refundQuota(req, quotaClient, reservationId);
+      await refundQuota(req, quotaClient, quotaResult);
       return new Response(
         JSON.stringify({ error: "Resposta inválida da IA. Tente novamente." }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -332,7 +332,7 @@ export async function handler(
     });
   } catch (e) {
     console.error("Erro inesperado:", e);
-    if (quotaReserved) await refundQuota(req, quotaClient, reservationId);
+    if (quotaReserved) await refundQuota(req, quotaClient, quotaResult);
     return new Response(
       JSON.stringify({ error: "Erro interno. Tente novamente." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },

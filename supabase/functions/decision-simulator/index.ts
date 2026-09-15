@@ -21,7 +21,7 @@ serve(async (req) => {
 
   let quotaReserved = false;
   let idempotencyKey: string | undefined;
-  let reservationId: string | undefined;
+  let quotaResult: Awaited<ReturnType<typeof reserveQuota>> | undefined;
   try {
     const {
       scenario,        // string: descrição do cenário a simular
@@ -90,7 +90,7 @@ Responda sempre em Português do Brasil.`;
     const quota = await reserveQuota(req, undefined, idempotencyKey, 'decision-simulator');
     if (!quota.allowed) return quotaBlockedResponse(corsHeaders, quota);
     quotaReserved = true;
-    reservationId = quota.reservationId;
+    quotaResult = quota;
 
     const groqRes = await fetch(GROQ_URL, {
       method: 'POST',
@@ -163,7 +163,7 @@ Responda sempre em Português do Brasil.`;
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (err) {
-    if (quotaReserved) await refundQuota(req, undefined, reservationId);
+    if (quotaReserved) await refundQuota(req, undefined, quotaResult);
     return new Response(
       JSON.stringify({ error: String(err) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },

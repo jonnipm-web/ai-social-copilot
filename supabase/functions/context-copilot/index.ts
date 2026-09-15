@@ -43,7 +43,7 @@ export async function handler(
   // pass the SAME key the reservation used, tying the refund to that
   // specific reservation (mission Section 08).
   let idempotencyKey: string | undefined;
-  let reservationId: string | undefined;
+  let quotaResult: Awaited<ReturnType<typeof reserveQuota>> | undefined;
   try {
     const { message, screen_name, context, history, idempotency_key } = await req.json();
     idempotencyKey = idempotency_key;
@@ -199,7 +199,7 @@ Responda sempre em Português do Brasil.`;
     const quota = await reserveQuota(req, quotaClient, idempotencyKey, 'context-copilot');
     if (!quota.allowed) return quotaBlockedResponse(corsHeaders, quota);
     quotaReserved = true;
-    reservationId = quota.reservationId;
+    quotaResult = quota;
 
     // ── Groq call ────────────────────────────────────────────────────────────
     const groqRes = await fetch(GROQ_URL, {
@@ -262,7 +262,7 @@ Responda sempre em Português do Brasil.`;
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (err) {
-    if (quotaReserved) await refundQuota(req, quotaClient, reservationId);
+    if (quotaReserved) await refundQuota(req, quotaClient, quotaResult);
     return new Response(
       JSON.stringify({ error: String(err) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
