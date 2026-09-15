@@ -123,7 +123,44 @@ jobs:
         run: flutter pub get
 
       - name: Build da versão Web
-        run: flutter build web --release --base-href /ai-social-copilot/
+        # IVE-COMMERCIAL-STABILITY-09O — --source-maps produces main.dart.js.map
+        # alongside main.dart.js; --dart-define=BUILD_SHA bakes the exact commit
+        # being built into the app itself (lib/core/diagnostics/build_info.dart)
+        # so a future diagnostic event can never claim a build it wasn't
+        # actually compiled from. Neither flag changes runtime behavior.
+        run: flutter build web --release --base-href /ai-social-copilot/ --source-maps --dart-define=BUILD_SHA=${{ github.sha }}
+
+      - name: STABILITY-09O — instalar ferramentas de symbolication
+        run: cd tool/stability09o && npm install
+
+      - name: STABILITY-09O — validar que o source map corresponde exatamente a este build
+        # Mission section 09: "If the mapping check fails: deployment should
+        # not claim forensic readiness." Implemented as a hard gate — a
+        # non-zero exit here fails the whole job, before anything is
+        # published, rather than silently shipping an unverified map.
+        run: node tool/stability09o/verify_build_sourcemap.mjs build/web/main.dart.js.map
+
+      - name: STABILITY-09O — separar source map em artefato PRIVADO (nunca publicado no GitHub Pages)
+        # Mission section 08: the map must never be copied into the public
+        # GitHub Pages output or be publicly addressable from the site.
+        # Moved OUT of build/web (not copied) before the publish step below
+        # ever runs, so publish_dir structurally cannot contain it. The
+        # `//# sourceMappingURL=main.dart.js.map` comment dart2js left inside
+        # main.dart.js now points at a path that 404s on the public site —
+        # harmless (a normal devtools 404, no information disclosed) and the
+        # deliberate cost of keeping the map private.
+        run: |
+          mkdir -p sourcemap-artifact
+          find build/web -name '*.js.map' -exec mv {} sourcemap-artifact/ \;
+          echo "Arquivos movidos para o artefato privado (NÃO publicado no GitHub Pages):"
+          ls -la sourcemap-artifact/
+
+      - name: STABILITY-09O — publicar source map como artefato privado do Actions (retenção 90 dias)
+        uses: actions/upload-artifact@v4
+        with:
+          name: sourcemap-${{ github.sha }}
+          path: sourcemap-artifact/
+          retention-days: 90
 
       - name: Publicar no GitHub Pages
         uses: peaceiris/actions-gh-pages@v3

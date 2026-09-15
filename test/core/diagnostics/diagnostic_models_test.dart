@@ -21,6 +21,19 @@ void main() {
     });
   });
 
+  test('kDiagnosticMetadataKeys includes the STABILITY-09O forensic context keys', () {
+    expect(kDiagnosticMetadataKeys, containsAll({
+      'previous_route',
+      'lifecycle_state',
+      'overlay_mounted',
+      'overlay_interaction_active',
+      'issue_present',
+      'project_context_present',
+      'builder_child_was_null',
+      'profile_resolved',
+    }));
+  });
+
   test('kDiagnosticMetadataKeys contains no forbidden-shaped key name', () {
     const forbiddenFragments = ['password', 'token', 'secret', 'authorization', 'cookie', 'api_key', 'apikey'];
     for (final key in kDiagnosticMetadataKeys) {

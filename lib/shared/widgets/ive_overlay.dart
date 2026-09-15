@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/diagnostics/ive_forensic_snapshot.dart';
 import '../../data/models/copilot_context_data.dart';
 import '../../data/models/ive_interaction_request.dart';
 import '../../data/models/ive_issue.dart';
@@ -53,11 +54,15 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
   void initState() {
     super.initState();
     iveRouteNotifier.addListener(_onRouteChange);
+    // IVE-COMMERCIAL-STABILITY-09O — reuses this already-existing lifecycle
+    // callback; no new listener.
+    IveForensicSnapshot.overlayMounted = true;
   }
 
   @override
   void dispose() {
     iveRouteNotifier.removeListener(_onRouteChange);
+    IveForensicSnapshot.overlayMounted = false;
     super.dispose();
   }
 
@@ -115,9 +120,15 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
     // app's own profile-invalidation call happens to run afterward.
     final hasSession = ref.watch(authStateProvider).valueOrNull?.session != null;
     final profile = ref.watch(currentProfileProvider).valueOrNull;
+    // IVE-COMMERCIAL-STABILITY-09O — reuses this already-existing provider
+    // watch; no new subscription.
+    IveForensicSnapshot.profileResolved = profile != null;
     if (!hasSession || profile == null) return const SizedBox.shrink();
 
     final state  = ref.watch(iveProvider);
+    // IVE-COMMERCIAL-STABILITY-09O — reuses the `state` already read above
+    // for the widget's own rendering; no new watch.
+    IveForensicSnapshot.issuePresent = state.activeIssue != null;
     final screen = MediaQuery.of(context).size;
     final safeBottom = MediaQuery.of(context).padding.bottom;
     _position ??= _defaultPosition(screen);
@@ -131,7 +142,10 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
       right: _position!.dx,
       top:   _position!.dy,
       child: GestureDetector(
-        onPanStart:  (_) => setState(() => _dragging = true),
+        onPanStart:  (_) => setState(() {
+          _dragging = true;
+          IveForensicSnapshot.overlayDragging = true;
+        }),
         onPanUpdate: (d) => setState(() {
           // dx tracks distance-from-right: dragging right (positive delta.dx)
           // moves the widget closer to the right edge, so dx DECREASES.
@@ -140,7 +154,10 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
             Offset(screen.width - 72, maxY),
           );
         }),
-        onPanEnd: (_) => setState(() => _dragging = false),
+        onPanEnd: (_) => setState(() {
+          _dragging = false;
+          IveForensicSnapshot.overlayDragging = false;
+        }),
         child: Column(
           mainAxisSize:       MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.end,

@@ -1,0 +1,10 @@
+{
+  "name": "stability09o-sourcemap-tools",
+  "private": true,
+  "version": "1.0.0",
+  "description": "IVE-COMMERCIAL-STABILITY-09O — build-matched source-map self-check and offline symbolication for Flutter Web production crashes. See README.md.",
+  "type": "module",
+  "dependencies": {
+    "source-map": "0.7.4"
+  }
+}

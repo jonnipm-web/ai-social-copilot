@@ -62,6 +62,12 @@ const Set<String> kDiagnosticMetadataKeys = {
   'knowledge_item_count', 'context_project_id',
   // runtime
   'widget', 'component', 'zone_name',
+  // runtime — IVE-COMMERCIAL-STABILITY-09O uncaught-error forensic context
+  // (see ive_forensic_snapshot.dart). Booleans/enums/route strings only —
+  // never content, per mission section 05's explicit "do NOT log" list.
+  'previous_route', 'lifecycle_state', 'overlay_mounted',
+  'overlay_interaction_active', 'issue_present', 'project_context_present',
+  'builder_child_was_null',
   // generic
   'attempt', 'count',
 };

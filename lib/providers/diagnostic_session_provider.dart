@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../core/diagnostics/build_info.dart';
 import '../core/diagnostics/diagnostic_logger_service.dart';
 import '../core/diagnostics/diagnostic_models.dart';
 import 'profile_provider.dart';
@@ -35,7 +36,15 @@ class DiagnosticSessionNotifier extends StateNotifier<DiagnosticSessionState> {
 
   Future<bool> start({String? label, String? roleSnapshot}) async {
     final effectiveRole = roleSnapshot ?? _ref.read(currentProfileProvider).valueOrNull?.roleLabel;
-    final id = await _logger.startSession(label: label, roleSnapshot: effectiveRole);
+    // IVE-COMMERCIAL-STABILITY-09O — kBuildSha is baked in at compile time
+    // from the exact deployed commit (see build_info.dart); every session
+    // started against a production build now carries the one join key a
+    // future crash needs to find its matching private source map.
+    final id = await _logger.startSession(
+      label: label,
+      roleSnapshot: effectiveRole,
+      buildSha: kBuildSha,
+    );
     if (id == null) return false;
     // IVE-COMMERCIAL-OBSERVABILITY-07B — `id` may belong to a session this
     // call just created, OR one it recovered after a unique-violation

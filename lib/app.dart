@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/app_lifecycle/profile_resume_policy.dart';
 import 'core/constants/app_constants.dart';
 import 'core/diagnostics/diagnostic_models.dart';
+import 'core/diagnostics/ive_forensic_snapshot.dart';
 import 'core/modules/route_policy.dart';
 import 'core/theme/app_theme.dart';
 import 'data/models/profile.dart';
@@ -215,6 +216,13 @@ final _router = GoRouter(
   errorBuilder: _errorScreen,
   redirect: (context, state) async {
     final path = state.fullPath ?? state.matchedLocation;
+    // IVE-COMMERCIAL-STABILITY-09O — this callback already runs on every
+    // navigation ATTEMPT (see _resolveEntitlementRedirect's own comment),
+    // so recording the canonical route here costs nothing new and is far
+    // more reliable than IveRouteObserver's `route.settings.name` (empty
+    // for every GoRoute below, since none set `name:`). See
+    // ive_forensic_snapshot.dart / main.dart's _logUncaughtError.
+    IveForensicSnapshot.recordRoute(path);
     final redirectTarget = await _computeRedirect(context, state);
     if (path != AppConstants.routeSplash) {
       _logNavigation(context, path, redirectTarget);
@@ -572,6 +580,10 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    // IVE-COMMERCIAL-STABILITY-09O — this callback already fires on every
+    // real lifecycle transition; recording the current state is a single
+    // cheap write, no new observer.
+    IveForensicSnapshot.lifecycleState = state;
     final isAuthenticated = Supabase.instance.client.auth.currentSession != null;
     if (!shouldRefreshProfileOnResume(state: state, isAuthenticated: isAuthenticated)) {
       return;
@@ -619,20 +631,30 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
       supportedLocales: AppLocalizations.supportedLocales,
       // Global safe area: evita que conteúdo fique atrás da barra de navegação
       // do Android (edge-to-edge mode). top: false pois o AppBar já cuida do topo.
-      builder: (context, child) => SafeArea(
-        top: false,
-        left: false,
-        right: false,
-        child: Consumer(
-          builder: (ctx, ref, _) => Stack(
-            children: [
-              child!,
-              const IveOverlay(),
-              const IveIntroGate(),
-            ],
+      builder: (context, child) {
+        // IVE-COMMERCIAL-STABILITY-09O (mission section 13) — bounded,
+        // one-way observability for the `child!` assertion below: records
+        // whether the framework EVER handed this builder a null child this
+        // session, without patching the assertion itself (no evidence yet
+        // ties it to the crash) and without emitting an event per rebuild.
+        if (child == null) {
+          IveForensicSnapshot.builderChildWasNull = true;
+        }
+        return SafeArea(
+          top: false,
+          left: false,
+          right: false,
+          child: Consumer(
+            builder: (ctx, ref, _) => Stack(
+              children: [
+                child!,
+                const IveOverlay(),
+                const IveIntroGate(),
+              ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
