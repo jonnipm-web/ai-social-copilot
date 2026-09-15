@@ -14,15 +14,18 @@
  * call then fails, call refundQuota(req) so the failed attempt doesn't
  * permanently cost the user a unit of their monthly allowance.
  *
- * IVE-COMMERCIAL-QUOTA-HARDENING-13 — reserveQuota/refundQuota now accept
- * an optional (idempotencyKey, operationType) pair, forwarded to
- * try_reserve_ai_quota(uuid, text)/refund_ai_quota(uuid, text) (migration
- * 20260918000000). This closes the gap where a network retry, a second
- * browser tab, or a client refresh after the server already reserved but
- * before the response arrived could double-charge one intentional
- * operation. The idempotencyKey is read from the request body
- * (idempotency_key) by the calling Edge Function, since every caller
- * already sends a JSON body and this avoids a second convention.
+ * IVE-COMMERCIAL-QUOTA-HARDENING-13 — reserveQuota now accepts an optional
+ * (idempotencyKey, operationType) pair, forwarded to
+ * try_reserve_ai_quota(uuid, text) (migration 20260918000000).
+ * refundQuota's own contract is different — see its own doc comment
+ * below (it takes the reserve call's QuotaResult, not this pair, and
+ * forwards to refund_ai_quota(uuid) — one parameter, not two). This
+ * closes the gap where a network retry, a second browser tab, or a
+ * client refresh after the server already reserved but before the
+ * response arrived could double-charge one intentional operation. The
+ * idempotencyKey is read from the request body (idempotency_key) by the
+ * calling Edge Function, since every caller already sends a JSON body
+ * and this avoids a second convention.
  *
  * operationType is DELIBERATELY NOT read from the client's request body —
  * each Edge Function passes its OWN hardcoded name (e.g. 'gap-analysis')
