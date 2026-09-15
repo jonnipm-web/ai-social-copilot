@@ -2,6 +2,8 @@
 
 **Mission:** IVE-AVATAR-RIVE-RUNTIME-03A
 **Status:** Specification only — no `.riv` file exists yet, none is added by this document.
+
+> **FREEZE NOTICE — IVE-AVATAR-COMMERCIAL-FALLBACK-04 (2026-09-15).** The Rive track is **FROZEN**. The "no `.riv` file exists yet" status line above is historical (03A): a verified canary now ships at `assets/ive/rive/ive_executive_03b6_canary.riv` but is **inert** — the diagnostic chain 03B6D→03B6O is CLOSED and the commercial IVE Avatar is `IveVisualFallback`, selected deterministically by `IveRiveFeatureGate.enabled = false` (`lib/features/ive/visual/ive_visual_config.dart`). This contract remains the authoritative input/priority specification for any future re-entry, but nothing below is on the commercial critical path. See `docs/ive/IVE_RIVE_FREEZE_RECORD.md` for the freeze reason, preserved knowledge and re-entry conditions.
 **Supersedes (reconciles, does not replace):** `IVE_RIVE_ASSET_SPECIFICATION.md`, `IVE_RIVE_INTEGRATION_REPORT.md`, `IVE_VISUAL_RUNTIME_AUDIT.md` (all dated 2026-07-16/2026-08-15). Those documents remain accurate for character identity, layers, bones and animation timeline — this document is the one to trust for the **exact, current, code-verified** runtime contract (inputs, priority, dead vs. live surface), because it was produced by reading `main` at commit `3abde7a` line by line, not by re-describing intent.
 
 ---

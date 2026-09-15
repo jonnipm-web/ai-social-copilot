@@ -112,6 +112,17 @@ class CopilotContextData {
     );
   }
 
+  // IVE-EXPERIENCE-V1-06 (Section 07) — identity fields were carried on
+  // this class (see [withIdentity] above, since FOUNDATION-11) but were
+  // never serialized here, so `context-copilot`/index.ts never actually
+  // received the projectId/sourceModule/sourceEntityType/sourceEntityId/
+  // correlationId a call site attached via `showCopilotChat`'s
+  // `IveInteractionRequest` — the envelope stopped at the Dart boundary.
+  // Included as `identity` (not flattened into the top level) so the
+  // backend can distinguish "who/what is asking" from the grounding
+  // content sections below without a naming collision (e.g. a future
+  // `project` grounding key vs. `project_id` identity key staying
+  // unambiguous once both are on the wire).
   Map<String, dynamic> toMap() => {
     if (project      != null) 'project':       project,
     if (scores       != null) 'scores':        scores,
@@ -123,6 +134,15 @@ class CopilotContextData {
     if (market       != null) 'market':        market,
     if (documentCoverage != null)         'document_coverage':  documentCoverage,
     if (documentWarnings.isNotEmpty)      'document_warnings':  documentWarnings,
+    if (projectId != null || sourceModule != null || sourceEntityType != null ||
+        sourceEntityId != null || correlationId != null)
+      'identity': {
+        if (projectId        != null) 'project_id':         projectId,
+        if (sourceModule      != null) 'source_module':      sourceModule,
+        if (sourceEntityType  != null) 'source_entity_type': sourceEntityType,
+        if (sourceEntityId    != null) 'source_entity_id':   sourceEntityId,
+        if (correlationId     != null) 'correlation_id':     correlationId,
+      },
   };
 
   bool get isEmpty =>

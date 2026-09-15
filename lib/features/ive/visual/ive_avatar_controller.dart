@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../domain/ive_visual_event.dart';
 import 'ive_avatar_state.dart';
 import 'ive_rive_runtime.dart';
+import 'ive_visual_config.dart';
 
 // ── Avatar Controller ─────────────────────────────────────────────────────────
 // Bridge between the IVE Context Engine (business logic / IveProvider) and the
@@ -23,6 +24,14 @@ class IveAvatarController extends ChangeNotifier {
   // ── Initialization ────────────────────────────────────────────────────────
 
   Future<bool> initializeRive({String? artboardName}) async {
+    // IVE-AVATAR-COMMERCIAL-FALLBACK-04 — configuration gate, evaluated
+    // before any Rive object exists: no asset load, no native runtime, no
+    // failure to wait for. See IveRiveFeatureGate.
+    if (!IveRiveFeatureGate.enabled) {
+      _riveRuntime = null;
+      _riveReady   = false;
+      return false;
+    }
     try {
       _riveRuntime = artboardName != null
           ? IveRiveRuntime(artboardName: artboardName)

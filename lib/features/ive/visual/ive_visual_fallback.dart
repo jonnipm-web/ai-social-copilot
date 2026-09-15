@@ -5,11 +5,12 @@ import 'ive_avatar_state.dart';
 import 'ive_status_ring.dart';
 import 'ive_visual_config.dart';
 
-// ── Temporary Fallback ────────────────────────────────────────────────────────
-// Displayed when the Rive asset is not yet available.
-// Uses the approved reference image with a status ring overlay.
-// THIS IS NOT THE FINAL IMPLEMENTATION — it will be replaced by IveRiveRuntime
-// once assets/ive/rive/ive_executive_v1.riv is available.
+// ── Commercial Fallback ───────────────────────────────────────────────────────
+// IVE-AVATAR-COMMERCIAL-FALLBACK-04 — this is the COMMERCIAL Avatar while the
+// Rive track is frozen (docs/ive/IVE_RIVE_FREEZE_RECORD.md): approved
+// reference image + status ring, driven by the same IveVisualState as the
+// Rive path. It is selected deterministically by IveRiveFeatureGate
+// (ive_visual_config.dart), not by waiting for a Rive failure.
 
 class IveVisualFallback extends StatefulWidget {
   final IveVisualState state;

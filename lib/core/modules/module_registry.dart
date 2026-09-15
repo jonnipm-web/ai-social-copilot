@@ -613,10 +613,10 @@ const List<ModuleDefinition> kModuleRegistry = [
     commercialEnabled: true,
     minimumPlan: ModulePlan.free,
     route: null,
-    readinessPt: 'Overlay visual global (Rive), em desenvolvimento ativo por workstream paralelo a esta missão -- não auditado em profundidade aqui.',
-    readinessEn: 'Global visual overlay (Rive), under active development by a workstream parallel to this mission -- not deeply audited here.',
+    readinessPt: 'Overlay visual global. Rive foi CONGELADO por decisão de produto (IVE-AVATAR-COMMERCIAL-FALLBACK-04): IveVisualFallback é o caminho comercial determinístico; reabertura do Rive requer autorização explícita (ver docs/ive/IVE_RIVE_FREEZE_RECORD.md).',
+    readinessEn: 'Global visual overlay. Rive is FROZEN by product decision (IVE-AVATAR-COMMERCIAL-FALLBACK-04): IveVisualFallback is the deterministic commercial path; reopening Rive requires explicit authorization (see docs/ive/IVE_RIVE_FREEZE_RECORD.md).',
     releaseClassification: ModuleReleaseClass.betaProgram,
-    notes: 'Desenvolvimento paralelo (branches claude/ive-avatar-*) -- fora do escopo de auditoria profunda desta missão.',
+    notes: 'IVE-EXPERIENCE-V1-06 — corrigido texto desatualizado que ainda descrevia o Rive como em desenvolvimento ativo; a decisão de congelamento já estava tomada (FALLBACK-04) mas não integrada a esta branch até este ponto.',
   ),
   ModuleDefinition(
     moduleId: 'ive-quant',
