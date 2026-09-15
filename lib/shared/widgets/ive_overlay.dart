@@ -7,9 +7,11 @@ import '../../data/models/ive_issue.dart';
 import '../../data/models/ive_state.dart';
 import '../../features/ive/visual/ive_avatar.dart';
 import '../../features/ive/visual/ive_visual_config.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/ive_context_provider.dart';
 import '../../providers/ive_memory_provider.dart';
 import '../../providers/ive_provider.dart';
+import '../../providers/profile_provider.dart';
 import 'context_copilot_widget.dart' show showCopilotChat;
 
 // ── Route bridge ──────────────────────────────────────────────────────────────
@@ -77,6 +79,30 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
 
   @override
   Widget build(BuildContext context) {
+    // IVE-EXPERIENCE-V1-06QA (live-QA defect) — this overlay is mounted
+    // globally in app.dart's Stack with NO route awareness at all, so
+    // before this fix it rendered on every screen including /login and
+    // /splash. IveIntroGate (mounted in the same Stack) already gated
+    // itself on `currentProfileProvider` resolving to a non-null profile
+    // — the exact same "authenticated and app-state stable" signal used
+    // elsewhere in app.dart — but that comment explicitly (and wrongly)
+    // assumed IveOverlay needed no equivalent gate ("Never shown on
+    // Splash/Login" referred only to the intro sheet, not this widget).
+    //
+    // Codex adversarial review (this fix, P1, ACCEPTED) — gating on
+    // `currentProfileProvider` alone fails closed for the unauthenticated/
+    // loading/error states, but not for an IN-FLIGHT sign-out: AuthNotifier.
+    // signOut() awaits the Supabase call BEFORE invalidating the profile
+    // provider (auth_provider.dart), so a previously-resolved non-null
+    // profile can briefly remain cached while sign-out is still in
+    // progress. Also requiring `authStateProvider`'s session to be
+    // non-null closes this: that stream reflects Supabase's own
+    // client-side auth state change directly, independent of when this
+    // app's own profile-invalidation call happens to run afterward.
+    final hasSession = ref.watch(authStateProvider).valueOrNull?.session != null;
+    final profile = ref.watch(currentProfileProvider).valueOrNull;
+    if (!hasSession || profile == null) return const SizedBox.shrink();
+
     final state  = ref.watch(iveProvider);
     final screen = MediaQuery.of(context).size;
     final safeBottom = MediaQuery.of(context).padding.bottom;

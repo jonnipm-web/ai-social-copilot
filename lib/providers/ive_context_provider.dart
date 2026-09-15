@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/models/action_queue_item.dart';
 import '../data/models/ecosystem_score.dart';
 import '../data/models/knowledge_item.dart';
 import '../data/models/opportunity_lab_item.dart';
@@ -197,6 +198,63 @@ int selectPendingOpportunitiesCount({
 }) =>
     projectId != null ? scopedPendingCount : globalPendingCount;
 
+// ── Detecção de alertas — extraída como função pura ───────────────────────────
+//
+// IVE-EXPERIENCE-V1-06QA (live-QA defect, mesmo padrão de extração das
+// funções acima) — regressão central: `ecosystemHealthProvider` devolve o
+// sentinela literal 0 quando `scores` está vazio ("nenhum dado carregado
+// ainda", inclusive na janela pré-autenticação em que uma consulta
+// protegida por RLS retorna uma lista vazia em vez de lançar um erro — ver
+// mission report). Antes desta correção, esse mesmo 0 virava a alegação
+// textual "Saúde do ecossistema em 0/100. Ação imediata recomendada." —
+// uma afirmação de diagnóstico real sobre um usuário que a IVE não tem
+// nenhum dado autorizado para fazer. UNKNOWN != ZERO: o ramo de saúde
+// baixa só pode disparar quando `scores` realmente existe — exatamente
+// como `criticals` (derivado do mesmo `scores`) já fazia implicitamente.
+// Um score genuinamente zerado (projetos reais, todos com ecosystemScore
+// 0) continua dessa forma corretamente reportado como alerta real.
+class EcosystemAlert {
+  const EcosystemAlert({this.hasAlert = false, this.alertId = '', this.alertMessage = ''});
+  final bool   hasAlert;
+  final String alertId;
+  final String alertMessage;
+}
+
+EcosystemAlert selectEcosystemAlert({
+  required List<EcosystemScore> scores,
+  required int health,
+  required List<ActionQueueItem> pending,
+}) {
+  final criticals = scores.where((s) => s.ecosystemScore < 30).toList();
+
+  if (scores.isNotEmpty && health < 40) {
+    return EcosystemAlert(
+      hasAlert: true,
+      alertId:  'health_low_$health',
+      alertMessage: 'Saúde do ecossistema em $health/100. '
+                    'Ação imediata recomendada.',
+    );
+  }
+  if (criticals.isNotEmpty) {
+    final c = criticals.first;
+    return EcosystemAlert(
+      hasAlert: true,
+      alertId:  'score_critical_${c.project.id}',
+      alertMessage: '${c.project.name} com score crítico (${c.ecosystemScore}/100). '
+                    'Posso identificar o que está limitando.',
+    );
+  }
+  if (pending.length > 5) {
+    return EcosystemAlert(
+      hasAlert: true,
+      alertId:  'actions_overdue_${pending.length}',
+      alertMessage: '${pending.length} ações pendentes acumuladas. '
+                    'Isso está impactando seu score de execução.',
+    );
+  }
+  return const EcosystemAlert();
+}
+
 // ── Provider — FutureProvider derivado dos providers de ecossistema ───────────
 //
 // IVE-COMMERCIAL-FOUNDATION-11 (Project Context Contract, Phase A) — antes
@@ -385,30 +443,8 @@ final iveContextDataProvider =
     globalPendingCount: labSummary['pending'] ?? 0,
   );
 
-  // ── Detecção de alertas ───────────────────────────────────────────────────────
-  bool   hasAlert  = false;
-  String alertMsg  = '';
-  String alertId   = '';
-
-  final criticals = scores.where((s) => s.ecosystemScore < 30).toList();
-
-  if (health < 40) {
-    hasAlert = true;
-    alertId  = 'health_low_$health';
-    alertMsg = 'Saúde do ecossistema em $health/100. '
-               'Ação imediata recomendada.';
-  } else if (criticals.isNotEmpty) {
-    final c  = criticals.first;
-    hasAlert = true;
-    alertId  = 'score_critical_${c.project.id}';
-    alertMsg = '${c.project.name} com score crítico (${c.ecosystemScore}/100). '
-               'Posso identificar o que está limitando.';
-  } else if (pending.length > 5) {
-    hasAlert = true;
-    alertId  = 'actions_overdue_${pending.length}';
-    alertMsg = '${pending.length} ações pendentes acumuladas. '
-               'Isso está impactando seu score de execução.';
-  }
+  // ── Detecção de alertas (ver selectEcosystemAlert) ────────────────────────────
+  final alert = selectEcosystemAlert(scores: scores, health: health, pending: pending);
 
   final topThree = ecosystemWideFields.topProjectsSnapshot;
 
@@ -423,9 +459,9 @@ final iveContextDataProvider =
     topProjectScore:             top?.ecosystemScore,
     mainBottleneckName:          bottleneck?.project.name,
     mainBottleneckScore:         bottleneck?.executionScore,
-    hasAlert:                    hasAlert,
-    alertMessage:                alertMsg,
-    alertId:                     alertId,
+    hasAlert:                    alert.hasAlert,
+    alertMessage:                alert.alertMessage,
+    alertId:                     alert.alertId,
     topProjectsSnapshot:         topThree,
     knowledgeItemsSummary:       knowledgeSummary,
     documentCoverage:            documentCoverage,
