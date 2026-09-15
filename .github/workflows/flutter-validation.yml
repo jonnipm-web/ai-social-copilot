@@ -63,9 +63,12 @@ jobs:
           flutter create --platforms web --project-name ai_social_copilot .
           flutter build web --release --base-href /ai-social-copilot/ --source-maps
 
-      - name: TEMP DIAGNOSTIC — upload full web build (incl. source maps)
+      - name: TEMP DIAGNOSTIC — zip build/web (actions/upload-artifact silently drops dotfiles like .env)
+        run: cd build/web && zip -r ../../webbuild-09r.zip .
+
+      - name: TEMP DIAGNOSTIC — upload zipped web build (incl. source maps + .env asset)
         uses: actions/upload-artifact@v4
         with:
           name: webbuild-bundle-09r
-          path: build/web
+          path: webbuild-09r.zip
           retention-days: 1
