@@ -76,6 +76,8 @@ export async function handler(
   }
 
   let quotaReserved = false;
+  let idempotencyKey: string | undefined;
+  let quotaResult: Awaited<ReturnType<typeof reserveQuota>> | undefined;
   try {
     if (req.method !== "POST") {
       return new Response(
@@ -85,6 +87,7 @@ export async function handler(
     }
 
     const body = await req.json().catch(() => null);
+    idempotencyKey = body?.idempotency_key;
     if (!body) {
       return new Response(
         JSON.stringify({ error: "Body inválido." }),
@@ -119,9 +122,10 @@ export async function handler(
 
     const userMessage = `Idioma: ${language}\n\n${context}`;
 
-    const quota = await reserveQuota(req, quotaClient);
+    const quota = await reserveQuota(req, quotaClient, idempotencyKey, 'generate-strategy');
     if (!quota.allowed) return quotaBlockedResponse(corsHeaders, quota);
     quotaReserved = true;
+    quotaResult = quota;
 
     const groqRes = await fetch(GROQ_URL, {
       method: "POST",
@@ -143,7 +147,7 @@ export async function handler(
     if (!groqRes.ok) {
       const err = await groqRes.text();
       console.error("Groq error:", err);
-      await refundQuota(req, quotaClient);
+      await refundQuota(req, quotaClient, quotaResult);
       return new Response(
         JSON.stringify({ error: "Falha ao gerar estratégia. Tente novamente." }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -155,7 +159,7 @@ export async function handler(
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
 
     if (!jsonMatch) {
-      await refundQuota(req, quotaClient);
+      await refundQuota(req, quotaClient, quotaResult);
       return new Response(
         JSON.stringify({ error: "Resposta inválida da IA. Tente novamente." }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -170,7 +174,7 @@ export async function handler(
     });
   } catch (e) {
     console.error("Erro inesperado:", e);
-    if (quotaReserved) await refundQuota(req, quotaClient);
+    if (quotaReserved) await refundQuota(req, quotaClient, quotaResult);
     return new Response(
       JSON.stringify({ error: "Erro interno. Tente novamente." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },

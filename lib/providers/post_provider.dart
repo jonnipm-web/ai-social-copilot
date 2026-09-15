@@ -29,12 +29,12 @@ class PostNotifier extends StateNotifier<AsyncValue<PostGeneration?>> {
 
   final PostService _service;
 
-  Future<PostGeneration?> improvePost(String text) async {
+  Future<PostGeneration?> improvePost(String text, {String? idempotencyKey}) async {
     state = const AsyncValue.loading();
 
     final result = await AsyncValue.guard<PostGeneration?>(() async {
       final userId = Supabase.instance.client.auth.currentUser!.id;
-      final apiResponse = await _service.improvePost(text);
+      final apiResponse = await _service.improvePost(text, idempotencyKey: idempotencyKey);
       return PostGeneration.fromApiResponse(
         userId: userId,
         originalText: text,

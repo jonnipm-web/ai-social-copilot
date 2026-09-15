@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/utils/uuid_v4.dart';
 import '../../data/models/copilot_context_data.dart';
 import '../../data/models/copilot_turn.dart';
 import '../../data/models/ive_interaction_request.dart';
 import '../../providers/context_copilot_provider.dart';
+import 'ai_execution_confirmation.dart';
 
 // ── Public helper ─────────────────────────────────────────────────────────────
 
@@ -96,6 +98,41 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
   final _ctrl   = TextEditingController();
   final _scroll = ScrollController();
 
+  // IVE-COMMERCIAL-QUOTA-HARDENING-13 — this sheet is the single choke
+  // point EVERY "Ask/Analyze/Compare/Explain com a IVE" call site goes
+  // through (showCopilotChat's own doc comment), including an
+  // auto-sending `initialMessage` that used to fire with ZERO
+  // confirmation the instant this sheet mounted, AND a free-form chat
+  // where every manually-typed message ALSO reserves quota server-side
+  // (context-copilot/index.ts calls reserveQuota before every message) —
+  // confirmed in production during Foundation-11D's physical validation
+  // and registered as a known architectural gap in Mission 12's own
+  // final report. Gating HERE, once, closes every one of those call
+  // sites (~9 at last count) in one file instead of duplicating a
+  // confirm() call at each of them and risking missing one.
+  //
+  // Confirmed ONCE per sheet lifetime (not per message) — mission
+  // Section 13: "each intentional analysis must require exactly one
+  // execution confirmation," and re-asking on every single chat turn
+  // would be a UX disaster for what is, after the first message, an
+  // already-acknowledged ongoing conversation. This is deliberately
+  // DIFFERENT from the idempotency key below: confirmation is per
+  // SESSION, the key is per MESSAGE.
+  final _exec = AiExecutionController();
+  bool _confirmedThisSession = false;
+
+  // Codex-anticipated finding (mission Section 21: "rapid double click:
+  // one operation") — once a session is already confirmed, _send() no
+  // longer goes through _exec's own busy guard (only the FIRST message's
+  // confirm() call does). Inserting the `await _ensureConfirmed()` check
+  // before `_ctrl.clear()` created a narrow window where two rapid taps
+  // could both read the same unclear text and both call send() with two
+  // different idempotency keys — a real double-charge for what the user
+  // perceived as one tap. This synchronous flag, set before the first
+  // await in _send(), closes that the same way AiExecutionController's
+  // own isBusy guard closes it for the first message.
+  bool _sending = false;
+
   // IVE-COMMERCIAL-FOUNDATION-11 (Codex Gate 2, P1) — inclui projectId na
   // chave da conversa, não só o screenName, para que trocar de projeto na
   // mesma tela nunca reutilize o histórico de outro projeto (ver
@@ -103,16 +140,54 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
   CopilotConversationKey get _conversationKey =>
       (widget.screenName, widget.context.projectId);
 
+  /// Shows the standard confirm dialog the FIRST time this sheet is about
+  /// to send a message (auto-sent or manually typed) and remembers that
+  /// for the rest of this sheet's lifetime. Returns false if the user
+  /// cancelled (or this is a duplicate concurrent call while the dialog
+  /// is already showing) — callers must not send in that case.
+  Future<bool> _ensureConfirmed() async {
+    if (_confirmedThisSession) return true;
+    if (_exec.isBusy) return false;
+    final request = IveInteractionRequest(
+      projectId:        widget.context.projectId,
+      sourceModule:     widget.context.sourceModule ?? widget.screenName,
+      sourceEntityType: widget.context.sourceEntityType,
+      sourceEntityId:   widget.context.sourceEntityId,
+      operationType:    IveOperationType.ask,
+      correlationId:    widget.context.correlationId,
+    );
+    final confirmed = await _exec.confirm(
+      context:       context,
+      ref:           ref,
+      analysisLabel: 'Perguntar à IVE',
+      request:       request,
+    );
+    if (confirmed) _confirmedThisSession = true;
+    return confirmed;
+  }
+
   @override
   void initState() {
     super.initState();
     if (widget.initialMessage != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (!mounted) return;
+        final confirmed = await _ensureConfirmed();
+        if (!mounted) return;
+        if (!confirmed) {
+          // The caller opened this sheet SPECIFICALLY to run one
+          // auto-sent analysis — if the user declines the quota
+          // confirmation, there is nothing left for this sheet to show;
+          // closing it (rather than leaving an empty chat open) matches
+          // what the caller's button press was actually for.
+          Navigator.of(context).pop();
+          return;
+        }
         ref.read(contextCopilotProvider(_conversationKey).notifier).send(
-              message:    widget.initialMessage!,
-              screenName: widget.screenName,
-              context:    widget.context,
+              message:        widget.initialMessage!,
+              screenName:     widget.screenName,
+              context:        widget.context,
+              idempotencyKey: newUuidV4(),
             );
         Future.delayed(const Duration(milliseconds: 400), _scrollToBottom);
       });
@@ -123,19 +198,38 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
   void dispose() {
     _ctrl.dispose();
     _scroll.dispose();
+    _exec.dispose();
     super.dispose();
   }
 
-  void _send() {
+  void _send() async {
+    if (_sending) return; // synchronous guard, set before any await below
     final msg = _ctrl.text.trim();
     if (msg.isEmpty) return;
-    _ctrl.clear();
-    ref.read(contextCopilotProvider(_conversationKey).notifier).send(
-          message:    msg,
-          screenName: widget.screenName,
-          context:    widget.context,
-        );
-    Future.delayed(const Duration(milliseconds: 300), _scrollToBottom);
+    _sending = true;
+    try {
+      final confirmed = await _ensureConfirmed();
+      if (!mounted || !confirmed) return; // leave the typed text in the box
+      _ctrl.clear();
+      // Codex Gate 2 round-2 finding — this call used to be fire-and-
+      // forget: `_sending` reset in `finally` right after DISPATCHING the
+      // request, not after it actually completed, so it stopped guarding
+      // anything for the whole (multi-second, LLM-latency) duration the
+      // network call was actually in flight. Awaiting it means `_sending`
+      // (and _exec.isBusy, transitively) now cover the full request, the
+      // same "busy for the real duration of the operation" guarantee
+      // every other AiExecutionController-gated flow in the app already
+      // has.
+      await ref.read(contextCopilotProvider(_conversationKey).notifier).send(
+            message:        msg,
+            screenName:     widget.screenName,
+            context:        widget.context,
+            idempotencyKey: newUuidV4(),
+          );
+      Future.delayed(const Duration(milliseconds: 300), _scrollToBottom);
+    } finally {
+      _sending = false;
+    }
   }
 
   void _scrollToBottom() {

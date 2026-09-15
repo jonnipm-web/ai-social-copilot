@@ -36,6 +36,7 @@ class CampaignNotifier extends StateNotifier<AsyncValue<Campaign?>> {
     required String objective,
     required int durationDays,
     required List<String> channels,
+    String? idempotencyKey,
   }) async {
     state = const AsyncValue.loading();
     try {
@@ -46,6 +47,7 @@ class CampaignNotifier extends StateNotifier<AsyncValue<Campaign?>> {
         objective:     objective,
         durationDays:  durationDays,
         channels:      channels,
+        idempotencyKey: idempotencyKey,
       );
       state = AsyncValue.data(result);
       return result;

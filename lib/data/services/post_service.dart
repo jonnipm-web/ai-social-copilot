@@ -6,10 +6,13 @@ import '../models/post_generation.dart';
 class PostService {
   final _client = Supabase.instance.client;
 
-  Future<Map<String, dynamic>> improvePost(String text) async {
+  Future<Map<String, dynamic>> improvePost(String text, {String? idempotencyKey}) async {
     final response = await _client.functions.invoke(
       AppConstants.edgeFunctionImprove,
-      body: {'text': text},
+      body: {
+        'text': text,
+        if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
+      },
     );
 
     if (response.status != 200) {

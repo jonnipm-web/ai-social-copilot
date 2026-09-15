@@ -71,12 +71,21 @@ class AiExecutionController extends ChangeNotifier {
   /// exceptions — they propagate to the caller's own try/catch, exactly
   /// like the `bool _running` pattern this replaces, so existing
   /// per-screen error-display code keeps working unchanged.
+  ///
+  /// IVE-COMMERCIAL-QUOTA-HARDENING-13 (mission Sections 05/11/14) —
+  /// [action] now receives the confirmed [request]'s own idempotencyKey.
+  /// The caller MUST attach it to whatever the Edge Function call sends
+  /// (an `idempotency_key` body field) so a network retry, a second tab,
+  /// or a refresh-after-reserve-before-response cannot double-charge this
+  /// ONE confirmed operation — the server enforces this (migration
+  /// 20260918000000), the client only needs to forward the same key on
+  /// every attempt of the same confirmed action.
   Future<T?> run<T>({
     required BuildContext context,
     required WidgetRef ref,
     required String analysisLabel,
     required IveInteractionRequest request,
-    required Future<T> Function() action,
+    required Future<T> Function(String idempotencyKey) action,
   }) async {
     // Codex adversarial review (Architecture-10 mission, round 1, P1,
     // ACCEPTED): the guard must be synchronous and set BEFORE any
@@ -115,7 +124,7 @@ class AiExecutionController extends ChangeNotifier {
     _setState(AiExecutionState.thinking);
 
     try {
-      final result = await action();
+      final result = await action(request.idempotencyKey);
       _setState(AiExecutionState.success);
       ref.read(diagnosticLoggerProvider).logEvent(
         category: DiagnosticCategory.ai,
@@ -159,6 +168,7 @@ class AiExecutionController extends ChangeNotifier {
     required WidgetRef ref,
     required String analysisLabel,
     required IveInteractionRequest request,
+    int estimatedUnits = 1,
   }) async {
     _setState(AiExecutionState.awaitingConfirmation);
 
@@ -179,6 +189,7 @@ class AiExecutionController extends ChangeNotifier {
       context: context,
       analysisLabel: analysisLabel,
       quota: quota,
+      estimatedUnits: estimatedUnits,
     );
 
     ref.read(diagnosticLoggerProvider).logEvent(
@@ -214,11 +225,20 @@ class AiExecutionController extends ChangeNotifier {
   /// remains the sole source of truth for whether/when quota is actually
   /// consumed, exactly as it already is for every other IVE chat entry
   /// point in the app.
+  /// [estimatedUnits] — IVE-COMMERCIAL-QUOTA-HARDENING-13 (mission Section
+  /// 12: auto-bootstrap can reserve up to 3 quota units — opportunities,
+  /// actions, revenue — for ONE user action). Defaults to 1, unchanged
+  /// for every existing caller. Stating a HIGHER number is always safe
+  /// (worst case the user declines something that would have cost less);
+  /// this must never UNDERSTATE the real cost, so callers that fire
+  /// multiple Edge Function calls behind one confirmation must pass the
+  /// true maximum here rather than leaving the default.
   Future<bool> confirm({
     required BuildContext context,
     required WidgetRef ref,
     required String analysisLabel,
     required IveInteractionRequest request,
+    int estimatedUnits = 1,
   }) async {
     if (isBusy) return false;
     final confirmed = await _awaitUserConfirmation(
@@ -226,6 +246,7 @@ class AiExecutionController extends ChangeNotifier {
       ref: ref,
       analysisLabel: analysisLabel,
       request: request,
+      estimatedUnits: estimatedUnits,
     );
     _setState(AiExecutionState.idle);
     return confirmed;
@@ -235,7 +256,11 @@ class AiExecutionController extends ChangeNotifier {
     required BuildContext context,
     required String analysisLabel,
     required QuotaInfoSnapshot? quota,
+    int estimatedUnits = 1,
   }) async {
+    final costLine = estimatedUnits <= 1
+        ? '"$analysisLabel" vai consumir 1 das suas análises mensais.'
+        : '"$analysisLabel" pode consumir até $estimatedUnits das suas análises mensais.';
     final result = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -246,7 +271,7 @@ class AiExecutionController extends ChangeNotifier {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '"$analysisLabel" vai consumir 1 das suas análises mensais.',
+              costLine,
               style: const TextStyle(color: Colors.white70),
             ),
             if (quota != null) ...[

@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/language_utils.dart';
+import '../../../data/models/ive_interaction_request.dart';
 import '../../../providers/market_analysis_provider.dart';
+import '../../../shared/widgets/ai_execution_confirmation.dart';
 
 class RevenuePlannerScreen extends ConsumerStatefulWidget {
   const RevenuePlannerScreen({super.key, required this.analysisId});
@@ -14,16 +16,21 @@ class RevenuePlannerScreen extends ConsumerStatefulWidget {
   ConsumerState<RevenuePlannerScreen> createState() => _RevenuePlannerScreenState();
 }
 
+// IVE-COMMERCIAL-QUOTA-HARDENING-13 (Codex Gate 2 finding) — see
+// competitor_discovery_screen.dart's identical note.
 class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
-  bool _running = false;
+  final _exec = AiExecutionController();
   String? _error;
   final _projectCtrl = TextEditingController();
 
   @override
   void dispose() {
     _projectCtrl.dispose();
+    _exec.dispose();
     super.dispose();
   }
+
+  bool get _running => _exec.isBusy;
 
   Future<void> _build() async {
     final name = _projectCtrl.text.trim();
@@ -33,15 +40,36 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
       );
       return;
     }
-    setState(() { _running = true; _error = null; });
+    setState(() => _error = null);
     try {
       final analysis = await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
-      await ref.read(marketAnalysisServiceProvider).buildRevenuePlan(widget.analysisId, analysis.input, name, language: backendLanguageCode(context));
+      await _exec.run<void>(
+        context: context,
+        ref: ref,
+        analysisLabel: 'Revenue Planner',
+        request: IveInteractionRequest(
+          projectId:        analysis.projectId,
+          sourceModule:     'market_intelligence',
+          sourceEntityType: 'revenue_plan',
+          sourceEntityId:   widget.analysisId,
+          operationType:    IveOperationType.analyze,
+        ),
+        action: (idempotencyKey) => ref
+            .read(marketAnalysisServiceProvider)
+            .buildRevenuePlan(
+              widget.analysisId,
+              analysis.input,
+              name,
+              language: backendLanguageCode(context),
+              idempotencyKey: idempotencyKey,
+            ),
+      );
+      if (_exec.state != AiExecutionState.success) return;
       ref.invalidate(revenuePlanByAnalysisProvider(widget.analysisId));
     } catch (e) {
       setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {
-      if (mounted) setState(() => _running = false);
+      if (mounted) setState(() {});
     }
   }
 
@@ -53,6 +81,13 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _exec,
+      builder: (context, _) => _buildScaffold(context),
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context) {
     final asyncPlan = ref.watch(revenuePlanByAnalysisProvider(widget.analysisId));
 
     return Scaffold(

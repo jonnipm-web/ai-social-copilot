@@ -55,9 +55,14 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
           sourceEntityId:   widget.analysisId,
           operationType:    IveOperationType.analyze,
         ),
-        action: () => ref
+        action: (idempotencyKey) => ref
             .read(marketAnalysisServiceProvider)
-            .runGapAnalysis(widget.analysisId, analysis.input, language: backendLanguageCode(context)),
+            .runGapAnalysis(
+              widget.analysisId,
+              analysis.input,
+              language: backendLanguageCode(context),
+              idempotencyKey: idempotencyKey,
+            ),
       );
       // `run` returns null both when the user cancelled AND when a
       // `Future<void>` action succeeds (void has no distinct non-null

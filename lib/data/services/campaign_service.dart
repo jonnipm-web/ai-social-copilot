@@ -48,6 +48,7 @@ class CampaignService {
     required String objective,
     required int durationDays,
     required List<String> channels,
+    String? idempotencyKey,
   }) async {
     final uid = _client.auth.currentUser?.id;
     if (uid == null) throw Exception('Usuário não autenticado.');
@@ -65,6 +66,7 @@ class CampaignService {
         'summary':           analysis.summary ?? '',
         'value_proposition': strategy?.valueProposition ?? '',
         'keywords':          analysis.keywordsPrimary,
+        if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
       },
     );
 

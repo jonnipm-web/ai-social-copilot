@@ -35,8 +35,9 @@ class StrategyService {
 
   Future<KnowledgeStrategy> generate(
     KnowledgeItem item,
-    KnowledgeAnalysis analysis,
-  ) async {
+    KnowledgeAnalysis analysis, {
+    String? idempotencyKey,
+  }) async {
     final uid = _client.auth.currentUser?.id;
     if (uid == null) throw Exception('Usuário não autenticado.');
 
@@ -55,6 +56,7 @@ class StrategyService {
         'pain_points':       analysis.audiencePainPoints,
         'desires':           analysis.audienceDesires,
         'topics':            analysis.topics,
+        if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
       },
     );
 

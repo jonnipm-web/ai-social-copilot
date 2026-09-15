@@ -29,3 +29,10 @@ jobs:
             --allow-env \
             --allow-net=deno.land \
             supabase/functions/context-copilot/index_test.ts
+
+      - name: Run quota helper tests (IVE-COMMERCIAL-QUOTA-HARDENING-13)
+        run: |
+          deno test \
+            --allow-env \
+            --allow-net=deno.land,esm.sh \
+            supabase/functions/_shared/quota_test.ts

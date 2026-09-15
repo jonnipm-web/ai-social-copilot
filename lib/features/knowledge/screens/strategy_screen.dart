@@ -2,19 +2,72 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../data/models/ive_interaction_request.dart';
 import '../../../data/models/knowledge_analysis.dart';
 import '../../../data/models/knowledge_item.dart';
 import '../../../data/models/knowledge_strategy.dart';
 import '../../../providers/knowledge_provider.dart';
 import '../../../providers/strategy_provider.dart';
+import '../../../shared/widgets/ai_execution_confirmation.dart';
 
-class StrategyScreen extends ConsumerWidget {
+// IVE-COMMERCIAL-QUOTA-HARDENING-13 (Codex Gate 2 round-2 finding) — both
+// call sites below (the initial "Gerar Estratégia" button and "Regenerar
+// Estratégia") fired generate-strategy directly with no confirmation and
+// no idempotency key. A round-1 fix used a short-lived AiExecutionController
+// per tap, which is only safe when at most one button using it can ever
+// be visible at once — true here (strategyAsync.when renders EITHER
+// _GeneratePrompt OR _StrategyContent's regenerate button, never both),
+// but a fresh controller per tap still can't guard against a rapid
+// DOUBLE-tap on the SAME button, since each tap gets its own instance
+// with no memory of the other. Fixed the same way as
+// knowledge_analysis_screen.dart: StrategyScreen (promoted to
+// ConsumerStatefulWidget) owns ONE persistent controller, passed down to
+// whichever of the two mutually-exclusive widgets is actually rendered.
+Future<KnowledgeStrategy?> _confirmAndGenerateStrategy(
+  BuildContext context,
+  WidgetRef ref,
+  KnowledgeItem item,
+  KnowledgeAnalysis analysis,
+  AiExecutionController exec,
+) {
+  return exec.run<KnowledgeStrategy?>(
+    context: context,
+    ref: ref,
+    analysisLabel: 'Gerar Estratégia',
+    request: IveInteractionRequest(
+      projectId:        item.projectId,
+      sourceModule:     'knowledge_vault',
+      sourceEntityType: 'knowledge_strategy',
+      sourceEntityId:   item.id,
+      operationType:    IveOperationType.analyze,
+    ),
+    action: (idempotencyKey) => ref
+        .read(strategyNotifierProvider.notifier)
+        .generate(item, analysis, idempotencyKey: idempotencyKey),
+  );
+}
+
+class StrategyScreen extends ConsumerStatefulWidget {
   const StrategyScreen({super.key, required this.itemId});
 
   final String itemId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<StrategyScreen> createState() => _StrategyScreenState();
+}
+
+class _StrategyScreenState extends ConsumerState<StrategyScreen> {
+  final _exec = AiExecutionController();
+
+  @override
+  void dispose() {
+    _exec.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final itemId        = widget.itemId;
     final itemAsync     = ref.watch(knowledgeItemByIdProvider(itemId));
     final analysisAsync = ref.watch(knowledgeAnalysisProvider(itemId));
     final strategyAsync = ref.watch(knowledgeStrategyProvider(itemId));
@@ -51,10 +104,10 @@ class StrategyScreen extends ConsumerWidget {
               }
               return strategyAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error:   (e, _) => _GeneratePrompt(item: item, analysis: analysis, error: e.toString()),
+                error:   (e, _) => _GeneratePrompt(item: item, analysis: analysis, exec: _exec, error: e.toString()),
                 data:    (strategy) => strategy == null
-                    ? _GeneratePrompt(item: item, analysis: analysis)
-                    : _StrategyContent(item: item, strategy: strategy, analysis: analysis),
+                    ? _GeneratePrompt(item: item, analysis: analysis, exec: _exec)
+                    : _StrategyContent(item: item, strategy: strategy, analysis: analysis, exec: _exec),
               );
             },
           );
@@ -106,15 +159,16 @@ class _NoAnalysis extends StatelessWidget {
 }
 
 class _GeneratePrompt extends ConsumerWidget {
-  const _GeneratePrompt({required this.item, required this.analysis, this.error});
+  const _GeneratePrompt({required this.item, required this.analysis, required this.exec, this.error});
   final KnowledgeItem     item;
   final KnowledgeAnalysis analysis;
+  final AiExecutionController exec;
   final String?           error;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notifierState = ref.watch(strategyNotifierProvider);
-    final isLoading = notifierState is AsyncLoading;
+    final isLoading = notifierState is AsyncLoading || exec.isBusy;
 
     return Center(
       child: Padding(
@@ -169,9 +223,7 @@ class _GeneratePrompt extends ConsumerWidget {
                 icon: const Icon(Icons.rocket_launch_rounded),
                 label: const Text('Gerar Estratégia', style: TextStyle(fontSize: 15)),
                 onPressed: () async {
-                  final strategy = await ref
-                      .read(strategyNotifierProvider.notifier)
-                      .generate(item, analysis);
+                  final strategy = await _confirmAndGenerateStrategy(context, ref, item, analysis, exec);
                   if (strategy != null) {
                     ref.invalidate(knowledgeStrategyProvider(item.id));
                   }
@@ -189,11 +241,13 @@ class _StrategyContent extends ConsumerWidget {
     required this.item,
     required this.strategy,
     required this.analysis,
+    required this.exec,
   });
 
   final KnowledgeItem     item;
   final KnowledgeStrategy strategy;
   final KnowledgeAnalysis analysis;
+  final AiExecutionController exec;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -289,10 +343,7 @@ class _StrategyContent extends ConsumerWidget {
           icon: const Icon(Icons.refresh_rounded, size: 16),
           label: const Text('Regenerar Estratégia', style: TextStyle(fontSize: 13)),
           onPressed: () async {
-            ref.invalidate(knowledgeStrategyProvider(item.id));
-            await ref
-                .read(strategyNotifierProvider.notifier)
-                .generate(item, analysis);
+            await _confirmAndGenerateStrategy(context, ref, item, analysis, exec);
             ref.invalidate(knowledgeStrategyProvider(item.id));
           },
         ),

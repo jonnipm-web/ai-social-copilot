@@ -28,13 +28,16 @@ class WebsiteAnalyzerService {
     await _client.from(_table).delete().eq('id', id);
   }
 
-  Future<WebsiteAnalysis> analyzeUrl(String url) async {
+  Future<WebsiteAnalysis> analyzeUrl(String url, {String? idempotencyKey}) async {
     final uid = _client.auth.currentUser?.id;
     if (uid == null) throw Exception('Usuário não autenticado.');
 
     final response = await _client.functions.invoke(
       _edgeFunction,
-      body: {'url': url},
+      body: {
+        'url': url,
+        if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
+      },
     );
 
     if (response.data == null) {

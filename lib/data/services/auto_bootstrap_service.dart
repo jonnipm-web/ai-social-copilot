@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/constants/app_constants.dart';
+import '../../core/utils/uuid_v4.dart';
 import '../models/action_queue_item.dart';
 import '../models/bootstrap_result.dart';
 import '../models/knowledge_analysis.dart';
@@ -66,6 +67,13 @@ class AutoBootstrapService {
         'content': k.content.substring(0, math.min(400, k.content.length)),
       }).toList();
 
+      // IVE-COMMERCIAL-QUOTA-HARDENING-13 — one fresh idempotency key per
+      // Edge Function call below, NOT one shared across all three: each
+      // is a genuinely separate quota-consuming operation
+      // (opportunities/actions/revenue), not retries of one another. A
+      // shared key would make the second and third calls look like
+      // idempotent replays of the first server-side and silently skip
+      // their own reservation — the opposite of correct.
       final oppResp = await _client.functions.invoke(
         AppConstants.edgeFunctionGenerateOpportunities,
         body: {
@@ -74,6 +82,7 @@ class AutoBootstrapService {
           'project_type':        project.type,
           'documents':           docSummaries,
           'market_context':      linkedAnalysis?.niche ?? '',
+          'idempotency_key':     newUuidV4(),
         },
       );
 
@@ -152,8 +161,9 @@ class AutoBootstrapService {
           final actResp = await _client.functions.invoke(
             AppConstants.edgeFunctionGenerateActions,
             body: {
-              'project_name':  project.name,
-              'opportunities': oppList,
+              'project_name':    project.name,
+              'opportunities':   oppList,
+              'idempotency_key': newUuidV4(),
             },
           );
 
@@ -196,8 +206,9 @@ class AutoBootstrapService {
         final revResp = await _client.functions.invoke(
           AppConstants.edgeFunctionRevenue,
           body: {
-            'input':        revenueInput,
-            'project_name': project.name,
+            'input':           revenueInput,
+            'project_name':    project.name,
+            'idempotency_key': newUuidV4(),
           },
         );
 

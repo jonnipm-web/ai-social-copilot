@@ -5,10 +5,12 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/snackbar_utils.dart'
     show showErrorSnack, showSuccessSnack, extractErrorMessage;
+import '../../../data/models/ive_interaction_request.dart';
 import '../../../data/models/post_generation.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/post_provider.dart';
 import '../../../providers/profile_provider.dart';
+import '../../../shared/widgets/ai_execution_confirmation.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/loading_button.dart';
 
@@ -20,9 +22,16 @@ class ContentGenerationScreen extends ConsumerStatefulWidget {
       _ContentGenerationScreenState();
 }
 
+// IVE-COMMERCIAL-QUOTA-HARDENING-13 (Codex Gate 2 finding) — this screen
+// fired improve-post directly with no confirmation and no idempotency
+// key. Reachable only by admins today (module improve-post has
+// commercialEnabled:false — route_policy.dart denies it to regular
+// users), but it still spends a real quota unit when used, so it gets
+// the same treatment as every other silent path.
 class _ContentGenerationScreenState
     extends ConsumerState<ContentGenerationScreen> {
   final _textCtrl = TextEditingController();
+  final _exec = AiExecutionController();
   int _charCount = 0;
   DateTime? _startTime;
 
@@ -37,6 +46,7 @@ class _ContentGenerationScreenState
   @override
   void dispose() {
     _textCtrl.dispose();
+    _exec.dispose();
     super.dispose();
   }
 
@@ -62,8 +72,19 @@ class _ContentGenerationScreenState
     }
 
     _startTime = DateTime.now();
-    final result =
-        await ref.read(postNotifierProvider.notifier).improvePost(text);
+    final result = await _exec.run<PostGeneration?>(
+      context: context,
+      ref: ref,
+      analysisLabel: 'Melhorar Conteúdo',
+      request: IveInteractionRequest(
+        sourceModule:     'content_generation',
+        sourceEntityType: 'post_generation',
+        operationType:    IveOperationType.analyze,
+      ),
+      action: (idempotencyKey) => ref
+          .read(postNotifierProvider.notifier)
+          .improvePost(text, idempotencyKey: idempotencyKey),
+    );
 
     if (!mounted) return;
 
@@ -187,8 +208,15 @@ class _ContentGenerationScreenState
 
   @override
   Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _exec,
+      builder: (context, _) => _buildScaffold(context),
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context) {
     final postState  = ref.watch(postNotifierProvider);
-    final isLoading  = postState.isLoading;
+    final isLoading  = postState.isLoading || _exec.isBusy;
     final usageAsync = ref.watch(monthlyUsageProvider);
     final profile    = ref.watch(currentProfileProvider).valueOrNull;
     final limit      = profile?.monthlyLimit ?? AppConstants.freeTierLimit;

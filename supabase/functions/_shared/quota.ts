@@ -5,7 +5,7 @@
  * (see migration 20260907120001 — a client can never self-promote either
  * column) plus a new public.ai_usage counter (migration
  * 20260910190000_commercial_ai_quota.sql). All enforcement happens inside
- * two SECURITY DEFINER Postgres functions that derive identity from
+ * SECURITY DEFINER Postgres functions that derive identity from
  * auth.uid() only — never from a client-supplied user id, plan, or count.
  *
  * Contract: call reserveQuota(req) AFTER resolveAuthenticatedUser(req)
@@ -13,8 +13,84 @@
  * return quotaBlockedResponse() immediately — no Groq call. If the Groq
  * call then fails, call refundQuota(req) so the failed attempt doesn't
  * permanently cost the user a unit of their monthly allowance.
+ *
+ * IVE-COMMERCIAL-QUOTA-HARDENING-13 — reserveQuota now accepts an optional
+ * (idempotencyKey, operationType) pair, forwarded to
+ * try_reserve_ai_quota(uuid, text) (migration 20260918000000).
+ * refundQuota's own contract is different — see its own doc comment
+ * below (it takes the reserve call's QuotaResult, not this pair, and
+ * forwards to refund_ai_quota(uuid) — one parameter, not two). This
+ * closes the gap where a network retry, a second browser tab, or a
+ * client refresh after the server already reserved but before the
+ * response arrived could double-charge one intentional operation. The
+ * idempotencyKey is read from the request body (idempotency_key) by the
+ * calling Edge Function, since every caller already sends a JSON body
+ * and this avoids a second convention.
+ *
+ * operationType is DELIBERATELY NOT read from the client's request body —
+ * each Edge Function passes its OWN hardcoded name (e.g. 'gap-analysis')
+ * as a literal. It exists to scope the reservation ledger so one key
+ * cannot be replayed against a DIFFERENT Edge Function and be mistaken
+ * for that operation's own already-successful reservation (Codex Gate 1
+ * finding on this mission's first draft: a client-suppliable
+ * operation_type would have reopened the same bypass by letting the
+ * caller simply lie about which operation a replayed key belongs to).
+ *
+ * Backward compatible: omitting both (or an existing caller not yet
+ * updated) reproduces the exact pre-13 unconditional-reserve behavior —
+ * see the migration's own comment for the removal point.
+ *
+ * refundQuota takes the reserve call's own QuotaResult (not just an id,
+ * not the idempotency key/operation pair) — two rounds of Codex review
+ * found real bugs here:
+ *   - Round 2: refunding by re-deriving "the current active row for this
+ *     (key, operation, period) tuple" let a DELAYED DUPLICATE refund call
+ *     match a NEWER reservation created by a legitimate retry after the
+ *     original was already refunded, silently un-charging a real,
+ *     successful AI call. Fixed by refunding a reservation's own
+ *     immutable id instead — a delayed duplicate naming an old id is a
+ *     safe no-op, since ids are never reused by a later attempt.
+ *   - Round 3: a REPLAYED request (idempotentReplay: true) was handed the
+ *     SAME reservationId as the request that actually created it. If the
+ *     replay's OWN downstream call then failed, it would refund that
+ *     shared reservation regardless of whether the ORIGINAL request's own
+ *     call had already succeeded — undoing a real charge for a real,
+ *     delivered response. refundQuota now refuses outright whenever
+ *     `quota.idempotentReplay` is true: only the request that actually
+ *     created a reservation may ever refund it.
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.116.0';
+
+/** RFC 4122 UUID shape check — deliberately NOT trusting the DB's own
+ * `uuid` cast to fail safely: a malformed key sent as a raw string would
+ * otherwise reach Postgres as a type-cast error (a generic 500), rather
+ * than the specific, safe "invalid_idempotency_key" rejection mission
+ * Section 09's failure matrix calls for. */
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function isValidIdempotencyKey(key: unknown): key is string {
+  return typeof key === 'string' && UUID_PATTERN.test(key);
+}
+
+/**
+ * Mission Section 15 — server-side audit trail for the quota reservation
+ * lifecycle. Deliberately NOT wired into the Flutter client's own
+ * kKnownDiagnosticEventNames allowlist (diagnostic_sanitizer.dart):
+ * reservation-created/reused and refund-succeeded/already-applied are
+ * facts only the SERVER knows (see reserveQuota/refundQuota's own doc
+ * comments — the client never sees the raw RPC response for a
+ * successful, non-blocked call). Structured stdout is what these
+ * SECURITY DEFINER RPCs' own caller (this Edge Function) can honestly
+ * emit without inventing a second logging service — Supabase already
+ * captures and retains every Edge Function's stdout as that function's
+ * own audit log, so this adds zero new infrastructure. Never receives
+ * (and must never be passed) prompt content, tokens, or PII — only ids,
+ * enums and booleans, matching mission Section 15's redaction rule.
+ */
+function logQuotaEvent(event: string, fields: Record<string, unknown>): void {
+  console.log(JSON.stringify({ event, ts: new Date().toISOString(), ...fields }));
+}
 
 export interface QuotaResult {
   allowed: boolean;
@@ -22,13 +98,24 @@ export interface QuotaResult {
   used?: number;
   limit?: number;
   role?: string;
+  idempotentReplay?: boolean;
+  /** Present whenever an idempotency key was used for this reservation
+   * (fresh or replayed). Pass this — not the idempotency key/operation
+   * pair — to refundQuota if the downstream action then fails. */
+  reservationId?: string;
 }
 
 /** Minimal shape reserveQuota/refundQuota need — lets tests inject a fake
- * client instead of hitting a real Supabase project. */
+ * client instead of hitting a real Supabase project. Matches
+ * supabase-js's real `.rpc(fn, params)` signature so no adapter is
+ * needed for the real client. */
 export interface QuotaClient {
-  // deno-lint-ignore no-explicit-any
-  rpc(fn: string): PromiseLike<{ data: any; error: unknown }>;
+  rpc(
+    fn: string,
+    // deno-lint-ignore no-explicit-any
+    params?: Record<string, unknown>,
+    // deno-lint-ignore no-explicit-any
+  ): PromiseLike<{ data: any; error: unknown }>;
 }
 
 function extractToken(req: Request): string | null {
@@ -53,19 +140,126 @@ function buildUserScopedClient(req: Request): QuotaClient {
   });
 }
 
-export async function reserveQuota(req: Request, client?: QuotaClient): Promise<QuotaResult> {
+/**
+ * @param idempotencyKey Optional — the caller's own request body should
+ * already have been parsed once by the Edge Function itself (a Request
+ * body can only be read once); this function never re-reads req.json()
+ * for it. Omit it (or pass undefined) to reproduce the exact pre-13
+ * unconditional-reserve behavior. A value that doesn't look like a UUID
+ * fails closed with 'invalid_idempotency_key' rather than reaching
+ * Postgres as a type-cast error.
+ * @param operationType Required whenever idempotencyKey is supplied — a
+ * literal constant the CALLING Edge Function hardcodes for itself (never
+ * read from the client's request). Missing/empty while a key is present
+ * fails closed with 'invalid_request' rather than reaching Postgres with
+ * a NULL that would silently defeat the reservation ledger's uniqueness
+ * guarantee (see migration 20260918000000's own comment on this).
+ */
+export async function reserveQuota(
+  req: Request,
+  client?: QuotaClient,
+  idempotencyKey?: string,
+  operationType?: string,
+): Promise<QuotaResult> {
+  if (idempotencyKey !== undefined) {
+    if (!isValidIdempotencyKey(idempotencyKey)) {
+      return { allowed: false, reason: 'invalid_idempotency_key' };
+    }
+    if (!operationType || operationType.trim() === '') {
+      return { allowed: false, reason: 'invalid_request' };
+    }
+  }
+  if (idempotencyKey !== undefined) {
+    logQuotaEvent('quota_reservation_requested', { idempotencyKey, operationType });
+  }
   const rpcClient = client ?? buildUserScopedClient(req);
-  const { data, error } = await rpcClient.rpc('try_reserve_ai_quota');
+  const { data, error } = await rpcClient.rpc(
+    'try_reserve_ai_quota',
+    idempotencyKey !== undefined
+      ? { p_idempotency_key: idempotencyKey, p_operation_type: operationType }
+      : undefined,
+  );
   if (error || !data) return { allowed: false, reason: 'quota_service_error' };
-  return data as QuotaResult;
+  // The RPC returns snake_case JSON (reservation_id, idempotent_replay) —
+  // map explicitly rather than blindly casting, or reservationId would
+  // silently be undefined at runtime despite compiling fine.
+  const raw = data as Record<string, unknown>;
+  if (idempotencyKey !== undefined) {
+    if (raw.reason === 'quota_exceeded') {
+      logQuotaEvent('quota_exceeded', { idempotencyKey, operationType });
+    } else if (raw.allowed === true) {
+      logQuotaEvent(
+        raw.idempotent_replay === true ? 'quota_reservation_reused' : 'quota_reservation_created',
+        { idempotencyKey, operationType, reservationId: raw.reservation_id },
+      );
+    }
+  }
+  return {
+    allowed: raw.allowed as boolean,
+    reason: raw.reason as string | undefined,
+    used: raw.used as number | undefined,
+    limit: raw.limit as number | undefined,
+    role: raw.role as string | undefined,
+    idempotentReplay: raw.idempotent_replay as boolean | undefined,
+    reservationId: raw.reservation_id as string | undefined,
+  };
 }
 
 /** Best-effort compensating decrement. Never throws -- a refund failure
- * must not turn into a 500 on top of an already-failed AI request. */
-export async function refundQuota(req: Request, client?: QuotaClient): Promise<void> {
+ * must not turn into a 500 on top of an already-failed AI request.
+ * Round 4 (mission Section 15) — the underlying RPC now returns a
+ * boolean (true = this call actually flipped the row; false = no-op,
+ * already refunded). Logged as 'quota_refund_succeeded' /
+ * 'quota_refund_already_applied' respectively — this is the only place
+ * that distinction can be observed, since both are silent successes to
+ * every existing caller (the return type here is still void; callers'
+ * control flow is unchanged).
+ * @param quota The SAME reserveQuota call's own result — NOT just its
+ * reservationId. Two things are read from it:
+ *   - reservationId: refunding by the reservation's own immutable id
+ *     (rather than re-deriving "the current row for this
+ *     key+operation+period") is what keeps a delayed duplicate refund
+ *     from ever matching a DIFFERENT, later reservation created by a
+ *     legitimate retry (Codex round-2 finding).
+ *   - idempotentReplay: a replayed request does NOT own the reservation
+ *     it was handed — it's someone else's (or an earlier attempt's) still
+ *     -active reservation. If THIS replay's own downstream call fails,
+ *     refunding that shared reservation would undo the ORIGINAL request's
+ *     charge even if the original succeeded (Codex round-3 finding:
+ *     "replayed requests can refund the original request's active
+ *     reservation"). This check is centralized HERE, in the one shared
+ *     helper, rather than repeated at each of the 16 call sites, so it
+ *     can't be forgotten by a future one.
+ * Omit `quota` entirely to reproduce the legacy unconditional decrement
+ * (pre-13 behavior / a caller that never used an idempotency key).
+ */
+export async function refundQuota(
+  req: Request,
+  client?: QuotaClient,
+  quota?: Pick<QuotaResult, 'reservationId' | 'idempotentReplay'>,
+): Promise<void> {
   try {
+    if (quota?.idempotentReplay) return;
+    if (quota?.reservationId !== undefined) {
+      logQuotaEvent('quota_refund_requested', { reservationId: quota.reservationId });
+    }
     const rpcClient = client ?? buildUserScopedClient(req);
-    await rpcClient.rpc('refund_ai_quota');
+    const { data, error } = await rpcClient.rpc(
+      'refund_ai_quota',
+      quota?.reservationId !== undefined ? { p_reservation_id: quota.reservationId } : undefined,
+    );
+    // `data` is the boolean refund_ai_quota now returns (migration
+    // 20260918000000, Round 4): true = this call actually flipped the row
+    // (a real refund), false = no-op (already refunded, or not found).
+    // Only meaningful for the reservation-scoped path — the legacy
+    // zero-arg path always returns true and has no distinct "already
+    // applied" state worth logging.
+    if (!error && quota?.reservationId !== undefined) {
+      logQuotaEvent(
+        data === true ? 'quota_refund_succeeded' : 'quota_refund_already_applied',
+        { reservationId: quota.reservationId },
+      );
+    }
   } catch {
     // best-effort only
   }
@@ -85,6 +279,17 @@ export function quotaBlockedResponse(
         role: result.role,
       }),
       { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    );
+  }
+  if (result.reason === 'invalid_idempotency_key' || result.reason === 'invalid_request') {
+    return new Response(
+      JSON.stringify({
+        error: result.reason === 'invalid_idempotency_key'
+          ? 'INVALID_IDEMPOTENCY_KEY'
+          : 'INVALID_REQUEST',
+        message: 'Identificador de operação inválido.',
+      }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   }
   return new Response(

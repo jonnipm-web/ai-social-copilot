@@ -92,6 +92,7 @@ class MarketAnalysisNotifier extends StateNotifier<AsyncValue<MarketAnalysis?>> 
     String inputType = 'url',
     String? projectId,
     String language = 'pt-BR',
+    String? idempotencyKey,
   }) async {
     state = const AsyncValue.loading();
     try {
@@ -100,6 +101,7 @@ class MarketAnalysisNotifier extends StateNotifier<AsyncValue<MarketAnalysis?>> 
         inputType: inputType,
         projectId: projectId,
         language: language,
+        idempotencyKey: idempotencyKey,
       );
       state = AsyncValue.data(result);
 

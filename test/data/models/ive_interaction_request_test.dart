@@ -51,6 +51,34 @@ void main() {
       );
       expect(req.projectId, isNull);
     });
+
+    // ── idempotencyKey — Codex Gate 1 / mission 13, Seções 05/14 ──────────
+    final uuidV4Pattern = RegExp(
+      r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+    );
+
+    test('gera um idempotencyKey automaticamente, com forma de UUID v4 real', () {
+      final req = IveInteractionRequest(
+        sourceModule: 'global_overlay',
+        operationType: IveOperationType.ask,
+      );
+      expect(req.idempotencyKey, matches(uuidV4Pattern));
+    });
+
+    test('duas requests sucessivas geram idempotencyKeys diferentes', () {
+      final a = IveInteractionRequest(sourceModule: 'x', operationType: IveOperationType.ask);
+      final b = IveInteractionRequest(sourceModule: 'x', operationType: IveOperationType.ask);
+      expect(a.idempotencyKey, isNot(b.idempotencyKey));
+    });
+
+    test('preserva um idempotencyKey explicitamente passado, sem gerar outro', () {
+      final req = IveInteractionRequest(
+        sourceModule: 'x',
+        operationType: IveOperationType.ask,
+        idempotencyKey: 'fixed-idempotency-key',
+      );
+      expect(req.idempotencyKey, 'fixed-idempotency-key');
+    });
   });
 
   group('CopilotContextData.withIdentity', () {

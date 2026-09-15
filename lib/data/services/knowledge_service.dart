@@ -94,6 +94,7 @@ class KnowledgeService {
     String? niche,
     String? targetAudience,
     String language = 'pt-BR',
+    String? idempotencyKey,
   }) async {
     final response = await _client.functions.invoke(
       _edgeFunction,
@@ -103,6 +104,7 @@ class KnowledgeService {
         'niche':           niche,
         'target_audience': targetAudience,
         'language':        language,
+        if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
       },
     );
 
@@ -120,7 +122,7 @@ class KnowledgeService {
 
   // ── Full analyze flow ─────────────────────────────────────────
 
-  Future<KnowledgeAnalysis> analyzeItem(KnowledgeItem item) async {
+  Future<KnowledgeAnalysis> analyzeItem(KnowledgeItem item, {String? idempotencyKey}) async {
     final uid = _client.auth.currentUser?.id;
     if (uid == null) throw Exception('Usuário não autenticado.');
 
@@ -137,6 +139,7 @@ class KnowledgeService {
         niche:          item.niche,
         targetAudience: item.targetAudience,
         language:       item.language,
+        idempotencyKey: idempotencyKey,
       );
 
       final analysis = KnowledgeAnalysis(

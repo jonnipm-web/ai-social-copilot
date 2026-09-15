@@ -5,19 +5,75 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/snackbar_utils.dart';
+import '../../../data/models/ive_interaction_request.dart';
 import '../../../data/models/knowledge_analysis.dart';
 import '../../../data/models/knowledge_item.dart';
 import '../../../providers/knowledge_provider.dart';
 import '../../../providers/persona_provider.dart';
 import '../../../providers/persona_training_provider.dart';
+import '../../../shared/widgets/ai_execution_confirmation.dart';
 
-class KnowledgeAnalysisScreen extends ConsumerWidget {
+// IVE-COMMERCIAL-QUOTA-HARDENING-13 (Codex Gate 2 round-2 finding) — both
+// call sites below (the AppBar "Re-analisar" icon and _NoAnalysis's
+// "Analisar com IA" button) fired extract-knowledge directly with no
+// confirmation and no idempotency key. A round-1 fix used a short-lived
+// AiExecutionController created fresh per tap, reasoning that its own
+// isBusy guard didn't need widget lifecycle to work — true for a SINGLE
+// button, but false here: both buttons can be visible and tappable at
+// once (the AppBar icon renders whenever an item is loaded; _NoAnalysis
+// renders whenever there's no analysis yet — both true simultaneously on
+// first load), and two SEPARATE short-lived controllers cannot guard
+// against each other. Fixed by promoting KnowledgeAnalysisScreen to a
+// ConsumerStatefulWidget holding ONE persistent controller, shared by
+// both buttons via _NoAnalysis's constructor — now whichever fires first
+// makes the other's `isBusy` check fail synchronously, exactly like
+// every other screen's single-controller-per-operation pattern.
+Future<KnowledgeAnalysis?> _confirmAndAnalyze(
+  BuildContext context,
+  WidgetRef ref,
+  KnowledgeItem item,
+  AiExecutionController exec,
+) {
+  return exec.run<KnowledgeAnalysis?>(
+    context: context,
+    ref: ref,
+    analysisLabel: 'Analisar com IA',
+    request: IveInteractionRequest(
+      projectId:        item.projectId,
+      sourceModule:     'knowledge_vault',
+      sourceEntityType: 'knowledge_item',
+      sourceEntityId:   item.id,
+      operationType:    IveOperationType.analyze,
+    ),
+    action: (idempotencyKey) => ref
+        .read(knowledgeAnalysisNotifierProvider.notifier)
+        .analyze(item, idempotencyKey: idempotencyKey),
+  );
+}
+
+class KnowledgeAnalysisScreen extends ConsumerStatefulWidget {
   const KnowledgeAnalysisScreen({super.key, required this.itemId});
 
   final String itemId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<KnowledgeAnalysisScreen> createState() =>
+      _KnowledgeAnalysisScreenState();
+}
+
+class _KnowledgeAnalysisScreenState
+    extends ConsumerState<KnowledgeAnalysisScreen> {
+  final _exec = AiExecutionController();
+
+  @override
+  void dispose() {
+    _exec.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final itemId        = widget.itemId;
     final itemAsync     = ref.watch(knowledgeItemByIdProvider(itemId));
     final analysisAsync = ref.watch(knowledgeAnalysisProvider(itemId));
 
@@ -49,9 +105,7 @@ class KnowledgeAnalysisScreen extends ConsumerWidget {
                         icon: const Icon(Icons.auto_awesome_rounded),
                         tooltip: 'Re-analisar',
                         onPressed: () async {
-                          await ref
-                              .read(knowledgeAnalysisNotifierProvider.notifier)
-                              .analyze(item);
+                          await _confirmAndAnalyze(context, ref, item, _exec);
                           ref.invalidate(knowledgeAnalysisProvider(itemId));
                           ref.invalidate(knowledgeItemsProvider);
                         },
@@ -76,9 +130,9 @@ class KnowledgeAnalysisScreen extends ConsumerWidget {
           }
           return analysisAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => _NoAnalysis(item: item, error: e.toString()),
+            error: (e, _) => _NoAnalysis(item: item, exec: _exec, error: e.toString()),
             data: (analysis) => analysis == null
-                ? _NoAnalysis(item: item)
+                ? _NoAnalysis(item: item, exec: _exec)
                 : _AnalysisContent(item: item, analysis: analysis),
           );
         },
@@ -90,14 +144,15 @@ class KnowledgeAnalysisScreen extends ConsumerWidget {
 // ── No analysis yet ──────────────────────────────────────────
 
 class _NoAnalysis extends ConsumerWidget {
-  const _NoAnalysis({required this.item, this.error});
+  const _NoAnalysis({required this.item, required this.exec, this.error});
 
   final KnowledgeItem item;
+  final AiExecutionController exec;
   final String?       error;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(knowledgeAnalysisNotifierProvider) is AsyncLoading;
+    final isLoading = ref.watch(knowledgeAnalysisNotifierProvider) is AsyncLoading || exec.isBusy;
 
     return Center(
       child: Padding(
@@ -134,9 +189,7 @@ class _NoAnalysis extends ConsumerWidget {
                 icon: const Icon(Icons.auto_awesome_rounded),
                 label: const Text('Analisar com IA'),
                 onPressed: () async {
-                  await ref
-                      .read(knowledgeAnalysisNotifierProvider.notifier)
-                      .analyze(item);
+                  await _confirmAndAnalyze(context, ref, item, exec);
                   ref.invalidate(knowledgeAnalysisProvider(item.id));
                   ref.invalidate(knowledgeItemsProvider);
                 },

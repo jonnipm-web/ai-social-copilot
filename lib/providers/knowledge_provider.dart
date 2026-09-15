@@ -91,10 +91,10 @@ class KnowledgeAnalysisNotifier
 
   final KnowledgeService _service;
 
-  Future<KnowledgeAnalysis?> analyze(KnowledgeItem item) async {
+  Future<KnowledgeAnalysis?> analyze(KnowledgeItem item, {String? idempotencyKey}) async {
     state = const AsyncValue.loading();
     try {
-      final result = await _service.analyzeItem(item);
+      final result = await _service.analyzeItem(item, idempotencyKey: idempotencyKey);
       state = AsyncValue.data(result);
       return result;
     } catch (e, st) {

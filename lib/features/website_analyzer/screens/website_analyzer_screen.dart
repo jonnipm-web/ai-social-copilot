@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../data/models/ive_interaction_request.dart';
 import '../../../providers/website_analyzer_provider.dart';
+import '../../../shared/widgets/ai_execution_confirmation.dart';
 import '../../../shared/widgets/app_drawer.dart';
 
 class WebsiteAnalyzerScreen extends ConsumerStatefulWidget {
@@ -13,9 +15,13 @@ class WebsiteAnalyzerScreen extends ConsumerStatefulWidget {
       _WebsiteAnalyzerScreenState();
 }
 
+// IVE-COMMERCIAL-QUOTA-HARDENING-13 (Codex Gate 2 finding) — this screen
+// fired analyze-website directly with no confirmation and no idempotency
+// key. Same pattern as gap_analysis_screen.dart.
 class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
   final TextEditingController _urlController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final _exec = AiExecutionController();
 
   static const Color _background = Color(0xFF0F0F1A);
   static const Color _cardColor = Color(0xFF1A1A2E);
@@ -25,6 +31,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
   @override
   void dispose() {
     _urlController.dispose();
+    _exec.dispose();
     super.dispose();
   }
 
@@ -39,9 +46,19 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
 
     final url = _urlController.text.trim();
     try {
-      final analysis = await ref
-          .read(websiteAnalyzerNotifierProvider.notifier)
-          .analyze(url);
+      final analysis = await _exec.run(
+        context: context,
+        ref: ref,
+        analysisLabel: 'Analisar Site',
+        request: IveInteractionRequest(
+          sourceModule:     'website_analyzer',
+          sourceEntityType: 'website_analysis',
+          operationType:    IveOperationType.analyze,
+        ),
+        action: (idempotencyKey) => ref
+            .read(websiteAnalyzerNotifierProvider.notifier)
+            .analyze(url, idempotencyKey: idempotencyKey),
+      );
       if (mounted && analysis != null) {
         context.go('/website-analyzer/${analysis.id}');
       }
@@ -59,8 +76,16 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _exec,
+      builder: (context, _) => _buildScaffold(context),
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context) {
     final analyzerState = ref.watch(websiteAnalyzerNotifierProvider);
     final analysesAsync = ref.watch(websiteAnalysesProvider);
+    final busy = analyzerState.isLoading || _exec.isBusy;
 
     return Scaffold(
       backgroundColor: _background,
@@ -178,8 +203,8 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                   SizedBox(
                     height: 50,
                     child: ElevatedButton.icon(
-                      onPressed: analyzerState.isLoading ? null : _analyze,
-                      icon: analyzerState.isLoading
+                      onPressed: busy ? null : _analyze,
+                      icon: busy
                           ? const SizedBox(
                               width: 20,
                               height: 20,
@@ -190,7 +215,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                             )
                           : const Icon(Icons.search),
                       label: Text(
-                        analyzerState.isLoading ? 'Analisando...' : 'Analisar Site',
+                        busy ? 'Analisando...' : 'Analisar Site',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,

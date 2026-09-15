@@ -55,8 +55,13 @@ serve(async (req) => {
   }
 
   let quotaReserved = false;
+  // IVE-COMMERCIAL-QUOTA-HARDENING-13 — hoisted above the try block so the
+  // catch-block refund below can pass the SAME key the reservation used.
+  let idempotencyKey: string | undefined;
+  let quotaResult: Awaited<ReturnType<typeof reserveQuota>> | undefined;
   try {
-    const { input, language: rawLanguage } = await req.json();
+    const { input, language: rawLanguage, idempotency_key } = await req.json();
+    idempotencyKey = idempotency_key;
     const language = normalizeLanguage(rawLanguage);
 
     if (!input) {
@@ -66,9 +71,10 @@ serve(async (req) => {
       });
     }
 
-    const quota = await reserveQuota(req);
+    const quota = await reserveQuota(req, undefined, idempotencyKey, 'competitor-discovery');
     if (!quota.allowed) return quotaBlockedResponse(corsHeaders, quota);
     quotaReserved = true;
+    quotaResult = quota;
 
     const groqResponse = await fetch(GROQ_URL, {
       method: "POST",
@@ -104,7 +110,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    if (quotaReserved) await refundQuota(req);
+    if (quotaReserved) await refundQuota(req, undefined, quotaResult);
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

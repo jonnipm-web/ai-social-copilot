@@ -38,8 +38,15 @@ export async function handler(
   }
 
   let quotaReserved = false;
+  // IVE-COMMERCIAL-QUOTA-HARDENING-13 — hoisted above the try block (not
+  // just destructured inside it) so the catch-block refund call below can
+  // pass the SAME key the reservation used, tying the refund to that
+  // specific reservation (mission Section 08).
+  let idempotencyKey: string | undefined;
+  let quotaResult: Awaited<ReturnType<typeof reserveQuota>> | undefined;
   try {
-    const { message, screen_name, context, history } = await req.json();
+    const { message, screen_name, context, history, idempotency_key } = await req.json();
+    idempotencyKey = idempotency_key;
 
     const ctx = context ?? {};
 
@@ -189,9 +196,10 @@ Responda sempre em Português do Brasil.`;
     // corpo), nunca antes: um erro de input do próprio usuário não deve
     // consumir cota. Se o Groq falhar depois disso, devolvemos a unidade no
     // catch abaixo.
-    const quota = await reserveQuota(req, quotaClient);
+    const quota = await reserveQuota(req, quotaClient, idempotencyKey, 'context-copilot');
     if (!quota.allowed) return quotaBlockedResponse(corsHeaders, quota);
     quotaReserved = true;
+    quotaResult = quota;
 
     // ── Groq call ────────────────────────────────────────────────────────────
     const groqRes = await fetch(GROQ_URL, {
@@ -254,7 +262,7 @@ Responda sempre em Português do Brasil.`;
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (err) {
-    if (quotaReserved) await refundQuota(req, quotaClient);
+    if (quotaReserved) await refundQuota(req, quotaClient, quotaResult);
     return new Response(
       JSON.stringify({ error: String(err) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
