@@ -60,7 +60,13 @@ void _logUncaughtError(Object error, StackTrace stack) {
   // without needing a real Supabase connection in this local harness.
   if (Uri.base.queryParameters['stability09rSelfTest'] == '1' ||
       Uri.base.queryParameters['stability09rDumpStack'] == '1') {
-    debugPrint('[STABILITY-09R FULL STACK] $stack');
+    // One console line per stack frame — a single multi-line debugPrint
+    // call is only partially captured by some console readers.
+    final lines = stack.toString().split('\n');
+    for (var i = 0; i < lines.length; i++) {
+      if (lines[i].trim().isEmpty) continue;
+      debugPrint('[STABILITY-09R FRAME $i] ${lines[i]}');
+    }
   }
   try {
     // IVE-COMMERCIAL-STABILITY-08 (Phase 3/4 — "prepare additional evidence
