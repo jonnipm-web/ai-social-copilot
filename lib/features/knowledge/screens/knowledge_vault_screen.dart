@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../data/models/ive_interaction_request.dart';
 import '../../../data/models/knowledge_item.dart';
 import '../../../data/models/project.dart';
 import '../../../providers/knowledge_provider.dart';
 import '../../../providers/project_provider.dart';
+import '../../../shared/widgets/ai_execution_confirmation.dart';
 import '../../../shared/widgets/app_drawer.dart';
 
 class KnowledgeVaultScreen extends ConsumerStatefulWidget {
@@ -575,9 +577,26 @@ class _KnowledgeCard extends ConsumerWidget {
                         return;
                       }
                       try {
-                        final notifier = ref
-                            .read(knowledgeAnalysisNotifierProvider.notifier);
-                        await notifier.analyze(item);
+                        // IVE-COMMERCIAL-QUOTA-HARDENING-13 (Codex Gate 2
+                        // finding) — see knowledge_analysis_screen.dart's
+                        // _confirmAndAnalyze for why a short-lived
+                        // controller (not a State field) is used here too.
+                        final exec = AiExecutionController();
+                        await exec.run<void>(
+                          context: context,
+                          ref: ref,
+                          analysisLabel: 'Analisar com IA',
+                          request: IveInteractionRequest(
+                            projectId:        item.projectId,
+                            sourceModule:     'knowledge_vault',
+                            sourceEntityType: 'knowledge_item',
+                            sourceEntityId:   item.id,
+                            operationType:    IveOperationType.analyze,
+                          ),
+                          action: (idempotencyKey) => ref
+                              .read(knowledgeAnalysisNotifierProvider.notifier)
+                              .analyze(item, idempotencyKey: idempotencyKey),
+                        ).whenComplete(exec.dispose);
                         onInvalidate();
                         if (context.mounted) {
                           context.push(

@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/language_utils.dart';
+import '../../../data/models/ive_interaction_request.dart';
 import '../../../data/models/market_analysis.dart';
 import '../../../providers/market_analysis_provider.dart';
+import '../../../shared/widgets/ai_execution_confirmation.dart';
 import '../../../shared/widgets/app_drawer.dart';
 
 class MarketIntelligenceScreen extends ConsumerStatefulWidget {
@@ -21,9 +23,18 @@ class _MarketIntelligenceScreenState
   final _inputCtrl = TextEditingController();
   String _inputType = 'url';
 
+  // IVE-COMMERCIAL-QUOTA-HARDENING-13 — this screen fired market-analysis
+  // (a quota-consuming Edge Function) directly from the notifier with no
+  // confirmation and no idempotency key. Codex Gate 2 finding: only
+  // gap_analysis_screen.dart's representative call site was migrated by
+  // Foundation-11; every other market-intelligence sub-flow (this one
+  // included) was still silent. Same pattern as gap_analysis_screen.dart.
+  final _exec = AiExecutionController();
+
   @override
   void dispose() {
     _inputCtrl.dispose();
+    _exec.dispose();
     super.dispose();
   }
 
@@ -31,7 +42,22 @@ class _MarketIntelligenceScreenState
     final input = _inputCtrl.text.trim();
     if (input.isEmpty) return;
     final notifier = ref.read(marketAnalysisNotifierProvider.notifier);
-    final result = await notifier.analyze(input, inputType: _inputType, language: backendLanguageCode(context));
+    final result = await _exec.run<MarketAnalysis?>(
+      context: context,
+      ref: ref,
+      analysisLabel: 'Analisar Mercado',
+      request: IveInteractionRequest(
+        sourceModule:     'market_intelligence',
+        sourceEntityType: 'market_analysis',
+        operationType:    IveOperationType.analyze,
+      ),
+      action: (idempotencyKey) => notifier.analyze(
+        input,
+        inputType: _inputType,
+        language: backendLanguageCode(context),
+        idempotencyKey: idempotencyKey,
+      ),
+    );
     if (result != null && mounted) {
       context.go(
         AppConstants.routeMarketIntelligenceHub.replaceFirst(':id', result.id),
@@ -61,8 +87,21 @@ class _MarketIntelligenceScreenState
 
   @override
   Widget build(BuildContext context) {
+    // AnimatedBuilder over `_exec` so the button also reacts to the
+    // confirmation-dialog phase (AiExecutionState.awaitingConfirmation),
+    // not just the notifier's own AsyncLoading (which only starts once
+    // the user has already confirmed) — same reasoning as
+    // gap_analysis_screen.dart.
+    return AnimatedBuilder(
+      animation: _exec,
+      builder: (context, _) => _buildScaffold(context),
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context) {
     final state = ref.watch(marketAnalysisNotifierProvider);
     final analyses = ref.watch(marketAnalysesProvider);
+    final busy = state is AsyncLoading || _exec.isBusy;
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F1A),
@@ -174,8 +213,8 @@ class _MarketIntelligenceScreenState
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton.icon(
-                  onPressed: state is AsyncLoading ? null : _analyze,
-                  icon: state is AsyncLoading
+                  onPressed: busy ? null : _analyze,
+                  icon: busy
                       ? const SizedBox(
                           width: 18,
                           height: 18,
@@ -183,7 +222,7 @@ class _MarketIntelligenceScreenState
                         )
                       : const Icon(Icons.rocket_launch_rounded),
                   label: Text(
-                    state is AsyncLoading ? 'Analisando...' : 'Analisar Mercado',
+                    busy ? 'Analisando...' : 'Analisar Mercado',
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                   ),
                   style: ElevatedButton.styleFrom(

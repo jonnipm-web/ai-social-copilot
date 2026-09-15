@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/language_utils.dart';
 import '../../../data/models/competitor.dart';
+import '../../../data/models/ive_interaction_request.dart';
 import '../../../providers/market_analysis_provider.dart';
+import '../../../shared/widgets/ai_execution_confirmation.dart';
 
 class CompetitorDiscoveryScreen extends ConsumerStatefulWidget {
   const CompetitorDiscoveryScreen({super.key, required this.analysisId});
@@ -16,28 +18,65 @@ class CompetitorDiscoveryScreen extends ConsumerStatefulWidget {
       _CompetitorDiscoveryScreenState();
 }
 
+// IVE-COMMERCIAL-QUOTA-HARDENING-13 (Codex Gate 2 finding) — this screen
+// fired competitor-discovery directly with no confirmation and no
+// idempotency key; only gap_analysis_screen.dart's representative call
+// site was migrated by Foundation-11. Same pattern as that screen.
 class _CompetitorDiscoveryScreenState
     extends ConsumerState<CompetitorDiscoveryScreen> {
-  bool _running = false;
+  final _exec = AiExecutionController();
   String? _error;
 
+  @override
+  void dispose() {
+    _exec.dispose();
+    super.dispose();
+  }
+
+  bool get _running => _exec.isBusy;
+
   Future<void> _discover() async {
-    setState(() { _running = true; _error = null; });
+    setState(() => _error = null);
     try {
       final analysis = await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
-      await ref
-          .read(marketAnalysisServiceProvider)
-          .discoverCompetitors(widget.analysisId, analysis.input, language: backendLanguageCode(context));
+      await _exec.run<List<Competitor>>(
+        context: context,
+        ref: ref,
+        analysisLabel: 'Descobrir Concorrentes',
+        request: IveInteractionRequest(
+          projectId:        analysis.projectId,
+          sourceModule:     'market_intelligence',
+          sourceEntityType: 'competitor_discovery',
+          sourceEntityId:   widget.analysisId,
+          operationType:    IveOperationType.analyze,
+        ),
+        action: (idempotencyKey) => ref
+            .read(marketAnalysisServiceProvider)
+            .discoverCompetitors(
+              widget.analysisId,
+              analysis.input,
+              language: backendLanguageCode(context),
+              idempotencyKey: idempotencyKey,
+            ),
+      );
+      if (_exec.state != AiExecutionState.success) return;
       ref.invalidate(competitorsByAnalysisProvider(widget.analysisId));
     } catch (e) {
       setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {
-      if (mounted) setState(() => _running = false);
+      if (mounted) setState(() {});
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _exec,
+      builder: (context, _) => _buildScaffold(context),
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context) {
     final asyncList = ref.watch(competitorsByAnalysisProvider(widget.analysisId));
 
     return Scaffold(

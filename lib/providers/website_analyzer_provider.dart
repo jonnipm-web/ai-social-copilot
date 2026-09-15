@@ -16,10 +16,10 @@ class WebsiteAnalyzerNotifier
 
   final WebsiteAnalyzerService _service;
 
-  Future<WebsiteAnalysis?> analyze(String url) async {
+  Future<WebsiteAnalysis?> analyze(String url, {String? idempotencyKey}) async {
     state = const AsyncValue.loading();
     try {
-      final result = await _service.analyzeUrl(url);
+      final result = await _service.analyzeUrl(url, idempotencyKey: idempotencyKey);
       state = AsyncValue.data(result);
       return result;
     } catch (e, st) {

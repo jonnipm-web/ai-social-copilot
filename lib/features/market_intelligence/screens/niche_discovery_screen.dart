@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/language_utils.dart';
+import '../../../data/models/ive_interaction_request.dart';
 import '../../../data/models/niche_ranking.dart';
 import '../../../providers/market_analysis_provider.dart';
+import '../../../shared/widgets/ai_execution_confirmation.dart';
 
 class NicheDiscoveryScreen extends ConsumerStatefulWidget {
   const NicheDiscoveryScreen({super.key, required this.analysisId});
@@ -15,25 +17,62 @@ class NicheDiscoveryScreen extends ConsumerStatefulWidget {
   ConsumerState<NicheDiscoveryScreen> createState() => _NicheDiscoveryScreenState();
 }
 
+// IVE-COMMERCIAL-QUOTA-HARDENING-13 (Codex Gate 2 finding) — see
+// competitor_discovery_screen.dart's identical note.
 class _NicheDiscoveryScreenState extends ConsumerState<NicheDiscoveryScreen> {
-  bool _running = false;
+  final _exec = AiExecutionController();
   String? _error;
 
+  @override
+  void dispose() {
+    _exec.dispose();
+    super.dispose();
+  }
+
+  bool get _running => _exec.isBusy;
+
   Future<void> _discover() async {
-    setState(() { _running = true; _error = null; });
+    setState(() => _error = null);
     try {
       final analysis = await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
-      await ref.read(marketAnalysisServiceProvider).discoverNiches(widget.analysisId, analysis.input, language: backendLanguageCode(context));
+      await _exec.run<List<NicheRanking>>(
+        context: context,
+        ref: ref,
+        analysisLabel: 'Descobrir Nichos',
+        request: IveInteractionRequest(
+          projectId:        analysis.projectId,
+          sourceModule:     'market_intelligence',
+          sourceEntityType: 'niche_discovery',
+          sourceEntityId:   widget.analysisId,
+          operationType:    IveOperationType.analyze,
+        ),
+        action: (idempotencyKey) => ref
+            .read(marketAnalysisServiceProvider)
+            .discoverNiches(
+              widget.analysisId,
+              analysis.input,
+              language: backendLanguageCode(context),
+              idempotencyKey: idempotencyKey,
+            ),
+      );
+      if (_exec.state != AiExecutionState.success) return;
       ref.invalidate(nichesByAnalysisProvider(widget.analysisId));
     } catch (e) {
       setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {
-      if (mounted) setState(() => _running = false);
+      if (mounted) setState(() {});
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _exec,
+      builder: (context, _) => _buildScaffold(context),
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context) {
     final asyncList = ref.watch(nichesByAnalysisProvider(widget.analysisId));
 
     return Scaffold(

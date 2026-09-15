@@ -22,11 +22,12 @@ class StrategyNotifier
 
   Future<KnowledgeStrategy?> generate(
     KnowledgeItem item,
-    KnowledgeAnalysis analysis,
-  ) async {
+    KnowledgeAnalysis analysis, {
+    String? idempotencyKey,
+  }) async {
     state = const AsyncValue.loading();
     try {
-      final result = await _service.generate(item, analysis);
+      final result = await _service.generate(item, analysis, idempotencyKey: idempotencyKey);
       state = AsyncValue.data(result);
       return result;
     } catch (e, st) {

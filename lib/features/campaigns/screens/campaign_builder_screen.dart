@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../data/models/ive_interaction_request.dart';
 import '../../../data/models/knowledge_analysis.dart';
 import '../../../data/models/knowledge_item.dart';
 import '../../../providers/campaign_provider.dart';
 import '../../../providers/knowledge_provider.dart';
 import '../../../providers/strategy_provider.dart';
+import '../../../shared/widgets/ai_execution_confirmation.dart';
 
 class CampaignBuilderScreen extends ConsumerStatefulWidget {
   const CampaignBuilderScreen({super.key, required this.itemId});
@@ -19,12 +21,24 @@ class CampaignBuilderScreen extends ConsumerStatefulWidget {
       _CampaignBuilderScreenState();
 }
 
+// IVE-COMMERCIAL-QUOTA-HARDENING-13 (Codex Gate 2 finding) — this screen
+// fired generate-campaign directly with no confirmation and no
+// idempotency key. Reachable only by admins today (module campaigns has
+// commercialEnabled:false), but see content_generation_screen.dart's
+// identical note — it still spends a real quota unit when used.
 class _CampaignBuilderScreenState
     extends ConsumerState<CampaignBuilderScreen> {
   String _objective   = 'Venda';
   int    _duration    = 30;
   final  _channels    = <String>{};
   bool   _generating  = false;
+  final _exec = AiExecutionController();
+
+  @override
+  void dispose() {
+    _exec.dispose();
+    super.dispose();
+  }
 
   static const _objectives = [
     'Venda', 'Autoridade', 'Leads', 'Engajamento',
@@ -350,16 +364,29 @@ class _CampaignBuilderScreenState
       final strategyAsync = ref.read(knowledgeStrategyProvider(item.id));
       final strategy      = strategyAsync.valueOrNull;
 
-      final campaign = await ref
-          .read(campaignNotifierProvider.notifier)
-          .generate(
-            item:         item,
-            analysis:     analysis,
-            strategy:     strategy,
-            objective:    _objective,
-            durationDays: _duration,
-            channels:     _channels.toList(),
-          );
+      final campaign = await _exec.run(
+        context: context,
+        ref: ref,
+        analysisLabel: 'Gerar Campanha',
+        request: IveInteractionRequest(
+          projectId:        item.projectId,
+          sourceModule:     'campaigns',
+          sourceEntityType: 'campaign',
+          sourceEntityId:   item.id,
+          operationType:    IveOperationType.analyze,
+        ),
+        action: (idempotencyKey) => ref
+            .read(campaignNotifierProvider.notifier)
+            .generate(
+              item:         item,
+              analysis:     analysis,
+              strategy:     strategy,
+              objective:    _objective,
+              durationDays: _duration,
+              channels:     _channels.toList(),
+              idempotencyKey: idempotencyKey,
+            ),
+      );
 
       if (!mounted) return;
 

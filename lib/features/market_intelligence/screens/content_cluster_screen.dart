@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/language_utils.dart';
+import '../../../data/models/ive_interaction_request.dart';
 import '../../../providers/market_analysis_provider.dart';
+import '../../../shared/widgets/ai_execution_confirmation.dart';
 
 class ContentClusterScreen extends ConsumerStatefulWidget {
   const ContentClusterScreen({super.key, required this.analysisId});
@@ -14,16 +16,21 @@ class ContentClusterScreen extends ConsumerStatefulWidget {
   ConsumerState<ContentClusterScreen> createState() => _ContentClusterScreenState();
 }
 
+// IVE-COMMERCIAL-QUOTA-HARDENING-13 (Codex Gate 2 finding) — see
+// competitor_discovery_screen.dart's identical note.
 class _ContentClusterScreenState extends ConsumerState<ContentClusterScreen> {
-  bool _running = false;
+  final _exec = AiExecutionController();
   String? _error;
   final _keywordCtrl = TextEditingController();
 
   @override
   void dispose() {
     _keywordCtrl.dispose();
+    _exec.dispose();
     super.dispose();
   }
+
+  bool get _running => _exec.isBusy;
 
   Future<void> _build() async {
     final kw = _keywordCtrl.text.trim();
@@ -33,20 +40,48 @@ class _ContentClusterScreenState extends ConsumerState<ContentClusterScreen> {
       );
       return;
     }
-    setState(() { _running = true; _error = null; });
+    setState(() => _error = null);
     try {
       final analysis = await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
-      await ref.read(marketAnalysisServiceProvider).buildContentCluster(widget.analysisId, analysis.input, kw, language: backendLanguageCode(context));
+      await _exec.run<void>(
+        context: context,
+        ref: ref,
+        analysisLabel: 'Content Cluster',
+        request: IveInteractionRequest(
+          projectId:        analysis.projectId,
+          sourceModule:     'market_intelligence',
+          sourceEntityType: 'content_cluster',
+          sourceEntityId:   widget.analysisId,
+          operationType:    IveOperationType.analyze,
+        ),
+        action: (idempotencyKey) => ref
+            .read(marketAnalysisServiceProvider)
+            .buildContentCluster(
+              widget.analysisId,
+              analysis.input,
+              kw,
+              language: backendLanguageCode(context),
+              idempotencyKey: idempotencyKey,
+            ),
+      );
+      if (_exec.state != AiExecutionState.success) return;
       ref.invalidate(contentClusterByAnalysisProvider(widget.analysisId));
     } catch (e) {
       setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {
-      if (mounted) setState(() => _running = false);
+      if (mounted) setState(() {});
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _exec,
+      builder: (context, _) => _buildScaffold(context),
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context) {
     final asyncCluster = ref.watch(contentClusterByAnalysisProvider(widget.analysisId));
 
     return Scaffold(

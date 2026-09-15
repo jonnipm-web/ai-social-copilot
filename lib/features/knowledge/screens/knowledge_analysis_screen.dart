@@ -5,11 +5,46 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/snackbar_utils.dart';
+import '../../../data/models/ive_interaction_request.dart';
 import '../../../data/models/knowledge_analysis.dart';
 import '../../../data/models/knowledge_item.dart';
 import '../../../providers/knowledge_provider.dart';
 import '../../../providers/persona_provider.dart';
 import '../../../providers/persona_training_provider.dart';
+import '../../../shared/widgets/ai_execution_confirmation.dart';
+
+// IVE-COMMERCIAL-QUOTA-HARDENING-13 (Codex Gate 2 finding) — both call
+// sites below (the AppBar "Re-analisar" icon and _NoAnalysis's "Analisar
+// com IA" button) fired extract-knowledge directly with no confirmation
+// and no idempotency key. This screen is a stateless ConsumerWidget (no
+// State object to hold a persistent AiExecutionController field like
+// gap_analysis_screen.dart's pattern), so a short-lived controller is
+// created per tap instead — safe because AiExecutionController's
+// isBusy/confirm/run guard is purely a plain Dart object's own state, not
+// tied to widget lifecycle; it only needs to survive the one async
+// button-press call it's created for.
+Future<KnowledgeAnalysis?> _confirmAndAnalyze(
+  BuildContext context,
+  WidgetRef ref,
+  KnowledgeItem item,
+) {
+  final exec = AiExecutionController();
+  return exec.run<KnowledgeAnalysis?>(
+    context: context,
+    ref: ref,
+    analysisLabel: 'Analisar com IA',
+    request: IveInteractionRequest(
+      projectId:        item.projectId,
+      sourceModule:     'knowledge_vault',
+      sourceEntityType: 'knowledge_item',
+      sourceEntityId:   item.id,
+      operationType:    IveOperationType.analyze,
+    ),
+    action: (idempotencyKey) => ref
+        .read(knowledgeAnalysisNotifierProvider.notifier)
+        .analyze(item, idempotencyKey: idempotencyKey),
+  ).whenComplete(exec.dispose);
+}
 
 class KnowledgeAnalysisScreen extends ConsumerWidget {
   const KnowledgeAnalysisScreen({super.key, required this.itemId});
@@ -49,9 +84,7 @@ class KnowledgeAnalysisScreen extends ConsumerWidget {
                         icon: const Icon(Icons.auto_awesome_rounded),
                         tooltip: 'Re-analisar',
                         onPressed: () async {
-                          await ref
-                              .read(knowledgeAnalysisNotifierProvider.notifier)
-                              .analyze(item);
+                          await _confirmAndAnalyze(context, ref, item);
                           ref.invalidate(knowledgeAnalysisProvider(itemId));
                           ref.invalidate(knowledgeItemsProvider);
                         },
@@ -134,9 +167,7 @@ class _NoAnalysis extends ConsumerWidget {
                 icon: const Icon(Icons.auto_awesome_rounded),
                 label: const Text('Analisar com IA'),
                 onPressed: () async {
-                  await ref
-                      .read(knowledgeAnalysisNotifierProvider.notifier)
-                      .analyze(item);
+                  await _confirmAndAnalyze(context, ref, item);
                   ref.invalidate(knowledgeAnalysisProvider(item.id));
                   ref.invalidate(knowledgeItemsProvider);
                 },

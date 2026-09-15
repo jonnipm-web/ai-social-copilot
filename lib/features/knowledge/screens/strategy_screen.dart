@@ -2,11 +2,43 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../data/models/ive_interaction_request.dart';
 import '../../../data/models/knowledge_analysis.dart';
 import '../../../data/models/knowledge_item.dart';
 import '../../../data/models/knowledge_strategy.dart';
 import '../../../providers/knowledge_provider.dart';
 import '../../../providers/strategy_provider.dart';
+import '../../../shared/widgets/ai_execution_confirmation.dart';
+
+// IVE-COMMERCIAL-QUOTA-HARDENING-13 (Codex Gate 2 finding) — both call
+// sites below (the initial "Gerar Estratégia" button and "Regenerar
+// Estratégia") fired generate-strategy directly with no confirmation and
+// no idempotency key. Short-lived controller per tap — see
+// knowledge_analysis_screen.dart's _confirmAndAnalyze for why (both
+// widgets here are stateless ConsumerWidgets).
+Future<KnowledgeStrategy?> _confirmAndGenerateStrategy(
+  BuildContext context,
+  WidgetRef ref,
+  KnowledgeItem item,
+  KnowledgeAnalysis analysis,
+) {
+  final exec = AiExecutionController();
+  return exec.run<KnowledgeStrategy?>(
+    context: context,
+    ref: ref,
+    analysisLabel: 'Gerar Estratégia',
+    request: IveInteractionRequest(
+      projectId:        item.projectId,
+      sourceModule:     'knowledge_vault',
+      sourceEntityType: 'knowledge_strategy',
+      sourceEntityId:   item.id,
+      operationType:    IveOperationType.analyze,
+    ),
+    action: (idempotencyKey) => ref
+        .read(strategyNotifierProvider.notifier)
+        .generate(item, analysis, idempotencyKey: idempotencyKey),
+  ).whenComplete(exec.dispose);
+}
 
 class StrategyScreen extends ConsumerWidget {
   const StrategyScreen({super.key, required this.itemId});
@@ -169,9 +201,7 @@ class _GeneratePrompt extends ConsumerWidget {
                 icon: const Icon(Icons.rocket_launch_rounded),
                 label: const Text('Gerar Estratégia', style: TextStyle(fontSize: 15)),
                 onPressed: () async {
-                  final strategy = await ref
-                      .read(strategyNotifierProvider.notifier)
-                      .generate(item, analysis);
+                  final strategy = await _confirmAndGenerateStrategy(context, ref, item, analysis);
                   if (strategy != null) {
                     ref.invalidate(knowledgeStrategyProvider(item.id));
                   }
@@ -289,10 +319,7 @@ class _StrategyContent extends ConsumerWidget {
           icon: const Icon(Icons.refresh_rounded, size: 16),
           label: const Text('Regenerar Estratégia', style: TextStyle(fontSize: 13)),
           onPressed: () async {
-            ref.invalidate(knowledgeStrategyProvider(item.id));
-            await ref
-                .read(strategyNotifierProvider.notifier)
-                .generate(item, analysis);
+            await _confirmAndGenerateStrategy(context, ref, item, analysis);
             ref.invalidate(knowledgeStrategyProvider(item.id));
           },
         ),
