@@ -73,6 +73,25 @@ export function isValidIdempotencyKey(key: unknown): key is string {
   return typeof key === 'string' && UUID_PATTERN.test(key);
 }
 
+/**
+ * Mission Section 15 — server-side audit trail for the quota reservation
+ * lifecycle. Deliberately NOT wired into the Flutter client's own
+ * kKnownDiagnosticEventNames allowlist (diagnostic_sanitizer.dart):
+ * reservation-created/reused and refund-succeeded/already-applied are
+ * facts only the SERVER knows (see reserveQuota/refundQuota's own doc
+ * comments — the client never sees the raw RPC response for a
+ * successful, non-blocked call). Structured stdout is what these
+ * SECURITY DEFINER RPCs' own caller (this Edge Function) can honestly
+ * emit without inventing a second logging service — Supabase already
+ * captures and retains every Edge Function's stdout as that function's
+ * own audit log, so this adds zero new infrastructure. Never receives
+ * (and must never be passed) prompt content, tokens, or PII — only ids,
+ * enums and booleans, matching mission Section 15's redaction rule.
+ */
+function logQuotaEvent(event: string, fields: Record<string, unknown>): void {
+  console.log(JSON.stringify({ event, ts: new Date().toISOString(), ...fields }));
+}
+
 export interface QuotaResult {
   allowed: boolean;
   reason?: string;
@@ -150,6 +169,9 @@ export async function reserveQuota(
       return { allowed: false, reason: 'invalid_request' };
     }
   }
+  if (idempotencyKey !== undefined) {
+    logQuotaEvent('quota_reservation_requested', { idempotencyKey, operationType });
+  }
   const rpcClient = client ?? buildUserScopedClient(req);
   const { data, error } = await rpcClient.rpc(
     'try_reserve_ai_quota',
@@ -162,6 +184,16 @@ export async function reserveQuota(
   // map explicitly rather than blindly casting, or reservationId would
   // silently be undefined at runtime despite compiling fine.
   const raw = data as Record<string, unknown>;
+  if (idempotencyKey !== undefined) {
+    if (raw.reason === 'quota_exceeded') {
+      logQuotaEvent('quota_exceeded', { idempotencyKey, operationType });
+    } else if (raw.allowed === true) {
+      logQuotaEvent(
+        raw.idempotent_replay === true ? 'quota_reservation_reused' : 'quota_reservation_created',
+        { idempotencyKey, operationType, reservationId: raw.reservation_id },
+      );
+    }
+  }
   return {
     allowed: raw.allowed as boolean,
     reason: raw.reason as string | undefined,
@@ -175,6 +207,13 @@ export async function reserveQuota(
 
 /** Best-effort compensating decrement. Never throws -- a refund failure
  * must not turn into a 500 on top of an already-failed AI request.
+ * Round 4 (mission Section 15) — the underlying RPC now returns a
+ * boolean (true = this call actually flipped the row; false = no-op,
+ * already refunded). Logged as 'quota_refund_succeeded' /
+ * 'quota_refund_already_applied' respectively — this is the only place
+ * that distinction can be observed, since both are silent successes to
+ * every existing caller (the return type here is still void; callers'
+ * control flow is unchanged).
  * @param quota The SAME reserveQuota call's own result — NOT just its
  * reservationId. Two things are read from it:
  *   - reservationId: refunding by the reservation's own immutable id
@@ -201,11 +240,26 @@ export async function refundQuota(
 ): Promise<void> {
   try {
     if (quota?.idempotentReplay) return;
+    if (quota?.reservationId !== undefined) {
+      logQuotaEvent('quota_refund_requested', { reservationId: quota.reservationId });
+    }
     const rpcClient = client ?? buildUserScopedClient(req);
-    await rpcClient.rpc(
+    const { data, error } = await rpcClient.rpc(
       'refund_ai_quota',
       quota?.reservationId !== undefined ? { p_reservation_id: quota.reservationId } : undefined,
     );
+    // `data` is the boolean refund_ai_quota now returns (migration
+    // 20260918000000, Round 4): true = this call actually flipped the row
+    // (a real refund), false = no-op (already refunded, or not found).
+    // Only meaningful for the reservation-scoped path — the legacy
+    // zero-arg path always returns true and has no distinct "already
+    // applied" state worth logging.
+    if (!error && quota?.reservationId !== undefined) {
+      logQuotaEvent(
+        data === true ? 'quota_refund_succeeded' : 'quota_refund_already_applied',
+        { reservationId: quota.reservationId },
+      );
+    }
   } catch {
     // best-effort only
   }

@@ -294,13 +294,25 @@ $function$;
 -- ownership: additionally scoped to user_id = auth.uid(), so a
 -- reservation_id belonging to a different user's row (however it might
 -- have leaked) can never be refunded by this caller.
+--
+-- Round 4 (observability, mission Section 15) — RETURNS boolean instead of
+-- void: true iff THIS call actually flipped a 'reserved' row to
+-- 'refunded' (a real, new refund), false iff it was a no-op (nothing
+-- found for this id/user, or the row was already 'refunded' by an
+-- earlier call). This is the ONLY server-side signal that can honestly
+-- distinguish "quota refund succeeded" from "quota refund already
+-- applied" per mission Section 15's canonical event list — the caller
+-- has no other way to know which happened, since both are silent
+-- successes from the RPC's point of view. Purely additive: every branch
+-- that used to `RETURN;` now returns an explicit boolean instead; no
+-- decrement/guard logic changes.
 DROP FUNCTION IF EXISTS public.refund_ai_quota();
 DROP FUNCTION IF EXISTS public.refund_ai_quota(uuid);
 DROP FUNCTION IF EXISTS public.refund_ai_quota(uuid, text);
 CREATE OR REPLACE FUNCTION public.refund_ai_quota(
   p_reservation_id uuid DEFAULT NULL
 )
-RETURNS void
+RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = 'public'
@@ -311,7 +323,7 @@ DECLARE
   v_reservation_period date;
 BEGIN
   IF v_user_id IS NULL THEN
-    RETURN;
+    RETURN false;
   END IF;
 
   IF p_reservation_id IS NOT NULL THEN
@@ -335,23 +347,26 @@ BEGIN
       -- No such reservation belonging to this user (never existed, or
       -- belongs to someone else), or it was already refunded once (a
       -- retried/duplicate refund of the SAME attempt) — either way, do
-      -- not decrement usage again.
-      RETURN;
+      -- not decrement usage again. false = "already applied" / no-op.
+      RETURN false;
     END IF;
 
     UPDATE public.ai_usage
     SET request_count = GREATEST(request_count - 1, 0), updated_at = now()
     WHERE user_id = v_user_id AND period_start = v_reservation_period;
-    RETURN;
+    RETURN true;
   END IF;
 
   -- Legacy path (no reservation id at all) — reproduces the exact pre-13
   -- behavior: unconditional decrement of the CURRENT period. Safe only
   -- because a legacy caller's reserve-then-refund always happens
   -- synchronously within one request, never spanning a period boundary.
+  -- Always reports true: this path has no row-level guard to distinguish
+  -- a genuine decrement from a no-op, same limitation it had pre-13.
   UPDATE public.ai_usage
   SET request_count = GREATEST(request_count - 1, 0), updated_at = now()
   WHERE user_id = v_user_id AND period_start = date_trunc('month', now())::date;
+  RETURN true;
 END;
 $function$;
 

@@ -202,7 +202,7 @@ Deno.test('QUOTA-K: quotaBlockedResponse maps invalid_idempotency_key to 400, no
 
 Deno.test('QUOTA-L: refundQuota forwards quota.reservationId as p_reservation_id', async () => {
   const { client, calls } = recordingClient({
-    refund_ai_quota: { data: null, error: null },
+    refund_ai_quota: { data: true, error: null },
   });
   await refundQuota(req(), client, { reservationId: 'reservation-abc-123' });
   assertEquals(calls[0].fn, 'refund_ai_quota');
@@ -286,5 +286,113 @@ Deno.test('QUOTA-P: quotaBlockedResponse maps invalid_request to 400, not 429/50
   assertEquals(res.status, 400);
   const body = await res.json();
   assertEquals(body.error, 'INVALID_REQUEST');
+});
+
+// ── Round 4 (mission Section 15) — auditable lifecycle events ─────────────
+// refund_ai_quota now RETURNS boolean (migration 20260918000000): true =
+// this call actually flipped a row, false = no-op/already-refunded. These
+// tests capture stdout to prove reserveQuota/refundQuota emit the right
+// canonical event name for each outcome — the ONLY server-side signal
+// that can distinguish "succeeded" from "already applied".
+
+function captureLogs(): { lines: string[]; restore: () => void } {
+  const lines: string[] = [];
+  const original = console.log;
+  console.log = (msg?: unknown) => { lines.push(String(msg)); };
+  return { lines, restore: () => { console.log = original; } };
+}
+
+Deno.test('QUOTA-T: reserveQuota logs quota_reservation_created for a fresh (non-replay) reservation', async () => {
+  const client = fakeClient({
+    try_reserve_ai_quota: {
+      data: { allowed: true, used: 1, limit: 5, role: 'free', reservation_id: 'r-1', idempotent_replay: false },
+      error: null,
+    },
+  });
+  const { lines, restore } = captureLogs();
+  try {
+    await reserveQuota(req(), client, VALID_KEY, OP);
+  } finally {
+    restore();
+  }
+  const events = lines.map((l) => JSON.parse(l).event);
+  assertEquals(events.includes('quota_reservation_requested'), true);
+  assertEquals(events.includes('quota_reservation_created'), true);
+  assertEquals(events.includes('quota_reservation_reused'), false);
+});
+
+Deno.test('QUOTA-U: reserveQuota logs quota_reservation_reused for an idempotent replay', async () => {
+  const client = fakeClient({
+    try_reserve_ai_quota: {
+      data: { allowed: true, used: 1, limit: 5, role: 'free', reservation_id: 'r-1', idempotent_replay: true },
+      error: null,
+    },
+  });
+  const { lines, restore } = captureLogs();
+  try {
+    await reserveQuota(req(), client, VALID_KEY, OP);
+  } finally {
+    restore();
+  }
+  const events = lines.map((l) => JSON.parse(l).event);
+  assertEquals(events.includes('quota_reservation_reused'), true);
+  assertEquals(events.includes('quota_reservation_created'), false);
+});
+
+Deno.test('QUOTA-V: reserveQuota logs quota_exceeded, not a reservation event, when blocked', async () => {
+  const client = fakeClient({
+    try_reserve_ai_quota: {
+      data: { allowed: false, reason: 'quota_exceeded', used: 5, limit: 5, role: 'free' },
+      error: null,
+    },
+  });
+  const { lines, restore } = captureLogs();
+  try {
+    await reserveQuota(req(), client, VALID_KEY, OP);
+  } finally {
+    restore();
+  }
+  const events = lines.map((l) => JSON.parse(l).event);
+  assertEquals(events.includes('quota_exceeded'), true);
+  assertEquals(events.includes('quota_reservation_created'), false);
+  assertEquals(events.includes('quota_reservation_reused'), false);
+});
+
+Deno.test('QUOTA-W: refundQuota logs quota_refund_succeeded when the RPC reports a real refund (true)', async () => {
+  const client = fakeClient({ refund_ai_quota: { data: true, error: null } });
+  const { lines, restore } = captureLogs();
+  try {
+    await refundQuota(req(), client, { reservationId: 'r-1', idempotentReplay: false });
+  } finally {
+    restore();
+  }
+  const events = lines.map((l) => JSON.parse(l).event);
+  assertEquals(events.includes('quota_refund_requested'), true);
+  assertEquals(events.includes('quota_refund_succeeded'), true);
+  assertEquals(events.includes('quota_refund_already_applied'), false);
+});
+
+Deno.test('QUOTA-X: refundQuota logs quota_refund_already_applied when the RPC reports a no-op (false)', async () => {
+  const client = fakeClient({ refund_ai_quota: { data: false, error: null } });
+  const { lines, restore } = captureLogs();
+  try {
+    await refundQuota(req(), client, { reservationId: 'r-1', idempotentReplay: false });
+  } finally {
+    restore();
+  }
+  const events = lines.map((l) => JSON.parse(l).event);
+  assertEquals(events.includes('quota_refund_already_applied'), true);
+  assertEquals(events.includes('quota_refund_succeeded'), false);
+});
+
+Deno.test('QUOTA-Y: refundQuota logs nothing when the caller is a replay (RPC never called, per QUOTA-R)', async () => {
+  const client = fakeClient({ refund_ai_quota: { data: true, error: null } });
+  const { lines, restore } = captureLogs();
+  try {
+    await refundQuota(req(), client, { reservationId: 'shared-id', idempotentReplay: true });
+  } finally {
+    restore();
+  }
+  assertEquals(lines.length, 0, 'a replay must not emit a refund audit event for a reservation it does not own');
 });
 
