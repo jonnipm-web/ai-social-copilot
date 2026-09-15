@@ -86,7 +86,19 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
     // success/failure follows, across the await below. Never logs the
     // question/answer text itself — only shape (lengths/counts) and
     // outcome, per mission section 04/05.
-    final correlationId = newDiagnosticCorrelationId();
+    //
+    // IVE-EXPERIENCE-V1-06 (Section 08) — prefer the ID the interaction was
+    // actually opened with (`IveInteractionRequest.correlationId`, carried
+    // on `context` since `showCopilotChat`'s `withIdentity` call) instead of
+    // minting a fresh one here. One user-initiated interaction now keeps ONE
+    // correlation identity end-to-end: UI → IveInteractionRequest →
+    // CopilotContextData → this diagnostic event → the Edge Function request
+    // body (`context.toMap()`'s `identity.correlation_id`) → the Edge
+    // Function's own log line. Falls back to a new ID only for a
+    // `CopilotContextData` built without identity (there is no such call
+    // site today — `showCopilotChat` is the sole choke point — but `send()`
+    // is public API and must not crash if one is ever missing).
+    final correlationId = context.correlationId ?? newDiagnosticCorrelationId();
     final stopwatch = Stopwatch()..start();
     _ref.read(diagnosticSessionProvider.notifier).logEvent(
       category: DiagnosticCategory.ive,
