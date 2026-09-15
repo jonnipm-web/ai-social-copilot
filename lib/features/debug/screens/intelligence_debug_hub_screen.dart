@@ -949,6 +949,7 @@ class _TestsTab extends ConsumerWidget {
           bootstrapState:      bootstrapState,
           notifier:            bootstrapNotifier,
           needsBootstrapAsync: needsBootstrapAsync,
+          ref:                 ref,
         ),
         const SizedBox(height: 16),
         const Divider(color: Color(0xFF1A1A2E), height: 1),
@@ -971,11 +972,13 @@ class _BootstrapEngineCard extends StatelessWidget {
   final BootstrapState bootstrapState;
   final AutoBootstrapNotifier notifier;
   final AsyncValue<List<Project>> needsBootstrapAsync;
+  final WidgetRef ref;
 
   const _BootstrapEngineCard({
     required this.bootstrapState,
     required this.notifier,
     required this.needsBootstrapAsync,
+    required this.ref,
   });
 
   @override
