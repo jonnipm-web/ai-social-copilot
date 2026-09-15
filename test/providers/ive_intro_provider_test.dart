@@ -165,4 +165,47 @@ void main() {
       expect(state.shouldShow, isFalse);
     });
   });
+
+  group('Corrida entre _restore() e ação explícita (bug real encontrado)', () {
+    // O notifier é criado sob demanda (primeiro `ref.read(...notifier)`) —
+    // no sheet "Meet IVE" isso acontece no exato instante em que o botão é
+    // tocado, não antes. Se skip()/complete() forem chamados IMEDIATAMENTE
+    // após a criação, sem aguardar o _restore() do construtor terminar,
+    // _restore() (que sobrescreve `state` inteiro, não faz merge) podia
+    // vencer a corrida e reverter a ação explícita do usuário de volta para
+    // os valores (então vazios) do SharedPreferences. skip()/complete()
+    // agora marcam loading:false, e _restore() nunca sobrescreve depois
+    // que loading já é false.
+    test('skip() chamado antes do restore terminar não é revertido por ele', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      // Sem aguardar nada — dispara a criação do notifier e chama skip()
+      // no mesmo microtask, exatamente como o sheet faz ao tocar "Pular"
+      // antes do _restore() do construtor sequer começar a resolver.
+      await container.read(iveIntroProvider.notifier).skip();
+
+      // Dá tempo de sobra para um _restore() antigo (se não fosse
+      // guardado) também terminar e potencialmente sobrescrever o estado.
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      final state = container.read(iveIntroProvider);
+      expect(state.skipped, isTrue);
+      expect(state.completed, isFalse);
+      expect(state.loading, isFalse);
+    });
+
+    test('complete() chamado antes do restore terminar não é revertido por ele', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      await container.read(iveIntroProvider.notifier).complete();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      final state = container.read(iveIntroProvider);
+      expect(state.completed, isTrue);
+      expect(state.skipped, isFalse);
+      expect(state.loading, isFalse);
+    });
+  });
 }

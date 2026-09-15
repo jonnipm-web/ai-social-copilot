@@ -63,6 +63,17 @@ class IveIntroNotifier extends StateNotifier<IveIntroState> {
   Future<void> _restore() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      // IVE-EXPERIENCE-V1-06 — genuine race found while debugging this
+      // mission's own widget test: the notifier is created lazily (first
+      // `ref.read(iveIntroProvider.notifier)`), which in the "Meet IVE"
+      // sheet happens the instant a button is tapped, not earlier. If the
+      // user taps CONTINUE/SKIP before this restore's own await resolves,
+      // `complete()`/`skip()` already flips `loading` to false (below) —
+      // an explicit user action always wins over a still-in-flight
+      // restore, which is now stale by definition. Without this guard,
+      // whichever of the two finished last would silently overwrite the
+      // other's result with pre-write SharedPreferences values.
+      if (!state.loading) return;
       state = IveIntroState(
         loading:     false,
         completed:   prefs.getBool(_kIntroCompletedKey) ?? false,
@@ -73,12 +84,12 @@ class IveIntroNotifier extends StateNotifier<IveIntroState> {
       // SharedPreferences pode falhar em ambiente de teste — mantém o
       // estado padrão (não visto), mas encerra o loading para não bloquear
       // indefinidamente uma decisão de exibição.
-      state = state.copyWith(loading: false);
+      if (state.loading) state = state.copyWith(loading: false);
     }
   }
 
   Future<void> complete() async {
-    state = state.copyWith(completed: true, skipped: false, seenVersion: kIveIntroCurrentVersion);
+    state = state.copyWith(loading: false, completed: true, skipped: false, seenVersion: kIveIntroCurrentVersion);
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_kIntroCompletedKey, true);
@@ -90,7 +101,7 @@ class IveIntroNotifier extends StateNotifier<IveIntroState> {
   }
 
   Future<void> skip() async {
-    state = state.copyWith(completed: false, skipped: true, seenVersion: kIveIntroCurrentVersion);
+    state = state.copyWith(loading: false, completed: false, skipped: true, seenVersion: kIveIntroCurrentVersion);
     try {
       final prefs = await SharedPreferences.getInstance();
       // IVE-EXPERIENCE-V1-06 (Codex Class B review, P2) — symmetric with
