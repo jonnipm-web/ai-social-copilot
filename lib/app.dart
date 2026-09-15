@@ -16,6 +16,7 @@ import 'providers/diagnostic_session_provider.dart';
 import 'providers/profile_provider.dart';
 import 'l10n/app_localizations.dart';
 import 'providers/language_provider.dart';
+import 'shared/widgets/ive_intro_gate.dart';
 import 'shared/widgets/ive_overlay.dart';
 import 'features/admin/screens/admin_panel_screen.dart';
 import 'features/about/screens/about_screen.dart';
@@ -627,6 +628,7 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
             children: [
               child!,
               const IveOverlay(),
+              const IveIntroGate(),
             ],
           ),
         ),

@@ -140,5 +140,15 @@
   "adminModulesNotes": "Notes",
   "adminModulesNoRoute": "No dedicated route",
   "adminModulesYes": "Yes",
-  "adminModulesNo": "No"
+  "adminModulesNo": "No",
+
+  "ivIntroTitle": "Meet IVE",
+  "ivIntroWhoBody": "I'm IVE, your strategic copilot inside InsightValues.",
+  "ivIntroWhatBody": "I can explain your results, point out risks and opportunities, and suggest what to do next — always based on your project's real data.",
+  "ivIntroWhereBody": "You can find me two ways: the floating icon appears on every screen, and some modules have a direct button to ask me about what you're looking at there.",
+  "ivIntroControlBody": "I only answer when you ask — you decide when and what to ask.",
+  "ivIntroContinueButton": "Got it",
+  "ivIntroSkipButton": "Skip",
+  "ivIntroSemanticLabel": "Introduction to IVE, your strategic copilot",
+  "ivIntroReplayLabel": "Meet IVE"
 }
