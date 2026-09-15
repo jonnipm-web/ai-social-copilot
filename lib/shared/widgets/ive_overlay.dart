@@ -69,12 +69,26 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
 
   bool get _isDesktop => MediaQuery.of(context).size.width >= 1024;
 
+  // IVE-EXPERIENCE-V1-06QA (live-QA gate-2 defect, Codex-confirmed P1) —
+  // `_position.dx` is the column's distance from the RIGHT edge of the
+  // screen, not a left-x coordinate. The column (bubble + avatar, sized to
+  // fit its widest child, up to the bubble's `maxWidth: 220`) used to be
+  // anchored via `Positioned(left: screen.width - 88, ...)`. That assumed
+  // the column was only ~88px wide (avatar + margin), but the bubble is up
+  // to 220px wide, so the right-aligned avatar rendered `220 - 88 = 132px`
+  // past the visible edge on every desktop-width screen -- unreachable,
+  // regardless of viewport width, whenever the bubble was wide enough to
+  // hit maxWidth (e.g. any real alert message). Anchoring with `right:`
+  // instead (see build() below) makes the column grow leftward from a
+  // fixed right margin, so its right-aligned avatar is always exactly
+  // `dx` away from the screen's right edge no matter how wide the bubble
+  // gets -- structurally immune to this class of overflow.
   Offset _defaultPosition(Size screen) {
     if (_isDesktop) {
       // Desktop: safe corner — bottom-right with extra margin to avoid overlapping content
-      return Offset(screen.width - 88, screen.height - 220);
+      return Offset(88, screen.height - 220);
     }
-    return Offset(screen.width - 80, screen.height - 200);
+    return Offset(80, screen.height - 200);
   }
 
   @override
@@ -114,12 +128,14 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
         : screen.height - 100;
 
     return Positioned(
-      left: _position!.dx,
-      top:  _position!.dy,
+      right: _position!.dx,
+      top:   _position!.dy,
       child: GestureDetector(
         onPanStart:  (_) => setState(() => _dragging = true),
         onPanUpdate: (d) => setState(() {
-          _position = (_position! + d.delta).clamp(
+          // dx tracks distance-from-right: dragging right (positive delta.dx)
+          // moves the widget closer to the right edge, so dx DECREASES.
+          _position = Offset(_position!.dx - d.delta.dx, _position!.dy + d.delta.dy).clamp(
             Offset.zero,
             Offset(screen.width - 72, maxY),
           );
