@@ -54,13 +54,78 @@
  * exactly mirroring how PostgREST authenticates a real request.
  */
 import { Pool } from "https://deno.land/x/postgres@v0.19.3/mod.ts";
-import { assertEquals, assertRejects } from "https://deno.land/std@0.168.0/testing/asserts.ts";
+import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
 
 const ADMIN_URL = Deno.env.get("DATABASE_URL");
 const APP_URL = Deno.env.get("APP_USER_DATABASE_URL");
 
 function uuid(): string {
   return crypto.randomUUID();
+}
+
+// Codex Gate (mission 14S) P2 finding: an RLS test that silently connects
+// as a superuser or as the tables' own owner would "pass" every rejection
+// test for the WRONG reason — RLS is bypassed for those roles by default,
+// so nothing would ever be rejected regardless of policy correctness. This
+// asserts the app-role connection is genuinely subject to RLS BEFORE any
+// other test runs, so a misconfigured APP_USER_DATABASE_URL fails loudly
+// instead of producing false-positive passes.
+async function assertAppRoleIsRlsSubject(pool: Pool): Promise<void> {
+  const conn = await pool.connect();
+  try {
+    const r = await conn.queryObject<{ usesuper: boolean; ownsany: boolean }>(
+      `SELECT
+         (SELECT usesuper FROM pg_user WHERE usename = current_user) AS usesuper,
+         EXISTS (
+           SELECT 1 FROM pg_class c
+           JOIN pg_roles r ON r.oid = c.relowner
+           WHERE r.rolname = current_user
+             AND c.relname IN ('projects','market_analyses','opportunity_lab')
+         ) AS ownsany`,
+    );
+    const row = r.rows[0];
+    if (row.usesuper) {
+      throw new Error(
+        `APP_USER_DATABASE_URL connects as a SUPERUSER (${await currentUser(conn)}) — RLS is bypassed entirely, every test below would false-positive-pass. Use a plain LOGIN role, not postgres.`,
+      );
+    }
+    if (row.ownsany) {
+      throw new Error(
+        `APP_USER_DATABASE_URL connects as the OWNER of one of the target tables — table owners bypass RLS by default (unless FORCE ROW LEVEL SECURITY is set), every test below would false-positive-pass. Use a role that only has GRANTed access, not ownership.`,
+      );
+    }
+  } finally {
+    conn.release();
+  }
+}
+
+async function currentUser(conn: Awaited<ReturnType<Pool["connect"]>>): Promise<string> {
+  const r = await conn.queryObject<{ u: string }>(`SELECT current_user AS u`);
+  return r.rows[0].u;
+}
+
+// Codex Gate P2 finding: assertRejects() alone doesn't confirm WHY a
+// statement failed — a typo, a missing column, or a connection drop would
+// also make it "reject" and the test would false-positive-pass. This
+// requires the specific Postgres SQLSTATE for an RLS policy violation
+// (42501 / insufficient_privilege — the exact code Postgres raises for
+// "new row violates row-level security policy").
+async function assertRlsRejects(fn: () => Promise<unknown>): Promise<void> {
+  let threw = false;
+  try {
+    await fn();
+  } catch (e) {
+    threw = true;
+    const code = (e as { fields?: { code?: string } }).fields?.code;
+    if (code !== "42501") {
+      throw new Error(
+        `expected an RLS policy violation (SQLSTATE 42501), got ${code ?? "no SQLSTATE"} instead: ${(e as Error).message}`,
+      );
+    }
+  }
+  if (!threw) {
+    throw new Error("expected the statement to be rejected by RLS, but it succeeded");
+  }
 }
 
 if (!ADMIN_URL || !APP_URL) {
@@ -70,6 +135,10 @@ if (!ADMIN_URL || !APP_URL) {
 } else {
   const adminPool = new Pool(ADMIN_URL, 5, true);
   const appPool = new Pool(APP_URL, 30, true);
+
+  Deno.test("PRECONDITION: app role is genuinely subject to RLS (not superuser, not table owner)", async () => {
+    await assertAppRoleIsRlsSubject(appPool);
+  });
 
   async function asAdmin<T>(fn: (query: (sql: string, params?: unknown[]) => Promise<any>) => Promise<T>): Promise<T> {
     const conn = await adminPool.connect();
@@ -130,7 +199,7 @@ if (!ADMIN_URL || !APP_URL) {
   Deno.test("FORGE-01: INSERT market_analyses referencing ANOTHER user's project — rejected", async () => {
     const { userId } = await makeUserWithProject();
     const other = await makeUserWithProject(); // other.projectId belongs to a different user
-    await assertRejects(() =>
+    await assertRlsRejects(() =>
       asUser(userId, (query) =>
         query(`INSERT INTO public.market_analyses (user_id, input, project_id) VALUES ($1,$2,$3)`, [
           userId,
@@ -155,7 +224,7 @@ if (!ADMIN_URL || !APP_URL) {
         projectId,
       ])
     );
-    await assertRejects(() =>
+    await assertRlsRejects(() =>
       asUser(userId, (query) =>
         query(`UPDATE public.market_analyses SET project_id=$1 WHERE user_id=$2 AND input='update-target'`, [
           other.projectId,
@@ -192,6 +261,27 @@ if (!ADMIN_URL || !APP_URL) {
       query(`SELECT project_id FROM public.market_analyses WHERE user_id=$1 AND input='fill-in'`, [userId])
     );
     assertEquals(rows.rows[0].project_id, projectId);
+  });
+
+  // Codex Gate P3 finding: the policy expression statically allows
+  // project_id IS NULL unconditionally, but that was never exercised in
+  // the reverse direction (owned project -> NULL) — clear it explicitly.
+  Deno.test("NULL-03: UPDATE market_analyses project_id from own project to NULL — allowed", async () => {
+    const { userId, projectId } = await makeUserWithProject();
+    await asUser(userId, (query) =>
+      query(`INSERT INTO public.market_analyses (user_id, input, project_id) VALUES ($1,$2,$3)`, [
+        userId,
+        "clear-out",
+        projectId,
+      ])
+    );
+    await asUser(userId, (query) =>
+      query(`UPDATE public.market_analyses SET project_id=NULL WHERE user_id=$1 AND input='clear-out'`, [userId])
+    );
+    const rows = await asAdmin((query) =>
+      query(`SELECT project_id FROM public.market_analyses WHERE user_id=$1 AND input='clear-out'`, [userId])
+    );
+    assertEquals(rows.rows[0].project_id, null);
   });
 
   Deno.test("CROSS-USER-01: USER_B cannot mutate USER_A's row at all", async () => {
@@ -242,7 +332,7 @@ if (!ADMIN_URL || !APP_URL) {
   Deno.test("OPP-FORGE-01: INSERT opportunity_lab referencing ANOTHER user's project — rejected", async () => {
     const { userId } = await makeUserWithProject();
     const other = await makeUserWithProject();
-    await assertRejects(() =>
+    await assertRlsRejects(() =>
       asUser(userId, (query) =>
         query(`INSERT INTO public.opportunity_lab (user_id, project_id, title) VALUES ($1,$2,$3)`, [
           userId,
@@ -267,7 +357,7 @@ if (!ADMIN_URL || !APP_URL) {
         "lab-update-target",
       ])
     );
-    await assertRejects(() =>
+    await assertRlsRejects(() =>
       asUser(userId, (query) =>
         query(`UPDATE public.opportunity_lab SET project_id=$1 WHERE user_id=$2 AND title='lab-update-target'`, [
           other.projectId,
@@ -275,6 +365,24 @@ if (!ADMIN_URL || !APP_URL) {
         ])
       )
     );
+  });
+
+  Deno.test("OPP-NULL-01: UPDATE opportunity_lab project_id from own project to NULL — allowed", async () => {
+    const { userId, projectId } = await makeUserWithProject();
+    await asUser(userId, (query) =>
+      query(`INSERT INTO public.opportunity_lab (user_id, project_id, title) VALUES ($1,$2,$3)`, [
+        userId,
+        projectId,
+        "lab-clear-out",
+      ])
+    );
+    await asUser(userId, (query) =>
+      query(`UPDATE public.opportunity_lab SET project_id=NULL WHERE user_id=$1 AND title='lab-clear-out'`, [userId])
+    );
+    const rows = await asAdmin((query) =>
+      query(`SELECT project_id FROM public.opportunity_lab WHERE user_id=$1 AND title='lab-clear-out'`, [userId])
+    );
+    assertEquals(rows.rows[0].project_id, null);
   });
 
   Deno.test("PROJECTS-01: projects table's own RLS is unaffected by this migration", async () => {
