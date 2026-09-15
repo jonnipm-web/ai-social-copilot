@@ -4,12 +4,16 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../data/models/competitor.dart';
+import '../../../data/models/copilot_context_data.dart';
 import '../../../data/models/gap_analysis.dart';
+import '../../../data/models/ive_interaction_request.dart';
 import '../../../data/models/market_analysis.dart';
 import '../../../data/models/opportunity.dart';
 import '../../../data/models/revenue_plan.dart';
+import '../../../providers/ive_context_provider.dart';
 import '../../../providers/market_analysis_provider.dart';
 import '../../../providers/roi_metric_provider.dart';
+import '../../../shared/widgets/context_copilot_widget.dart';
 
 // ── Colors ───────────────────────────────────────────────────────────────────
 const _kBg      = Color(0xFF0F0F1A);
@@ -143,6 +147,40 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
           style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
         ),
         actions: [
+          // IVE-EXPERIENCE-V1-06 (Section 20) — first (and only, per mission
+          // instruction to not blindly wire all six submodules) contextual
+          // IVE entry point for Market Intelligence: the hub, which already
+          // aggregates score/competitors/gap/opportunities/revenue for one
+          // analysis — a cleaner bounded entry point than repeating this on
+          // every submodule screen. Uses the analysis's own projectId when
+          // it has one (MarketAnalysis.projectId already exists on the
+          // model) rather than assuming project-agnostic.
+          if (analysisAsync.valueOrNull != null)
+            IconButton(
+              icon: const Icon(Icons.auto_awesome_rounded, color: Colors.white54),
+              tooltip: 'Comparar com IVE',
+              onPressed: () {
+                final analysis = analysisAsync.value!;
+                final ctx = ref.read(iveContextDataProvider(analysis.projectId)).valueOrNull;
+                final contextData =
+                    ctx != null ? CopilotContextData.fromIveContext(ctx) : const CopilotContextData();
+                showCopilotChat(
+                  context,
+                  screenName: 'Market Intelligence',
+                  contextData: contextData,
+                  initialMessage:
+                      'Compare os resultados desta análise de mercado (${analysis.niche ?? analysis.input}) '
+                      'e identifique a maior oportunidade.',
+                  request: IveInteractionRequest(
+                    projectId:        analysis.projectId,
+                    sourceModule:     'market_intelligence',
+                    sourceEntityType: 'market_analysis',
+                    sourceEntityId:   analysis.id,
+                    operationType:    IveOperationType.compare,
+                  ),
+                );
+              },
+            ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: Colors.white54),
             tooltip: 'Recarregar dados',

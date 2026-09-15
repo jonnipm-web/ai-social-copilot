@@ -3,13 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../data/models/copilot_context_data.dart';
 import '../../../data/models/ive_interaction_request.dart';
 import '../../../data/models/knowledge_item.dart';
 import '../../../data/models/project.dart';
+import '../../../providers/ive_context_provider.dart';
 import '../../../providers/knowledge_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import '../../../shared/widgets/context_copilot_widget.dart';
 
 class KnowledgeVaultScreen extends ConsumerStatefulWidget {
   const KnowledgeVaultScreen({super.key});
@@ -662,6 +665,38 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
                     ),
                   ),
                   const Spacer(),
+                  // IVE-EXPERIENCE-V1-06 (Section 22) — only once there is
+                  // content to explain (item.status == 'analyzed'); reuses
+                  // the existing project-scoped grounding
+                  // (iveContextDataProvider(item.projectId)) rather than
+                  // sending the whole vault — this item's own summary
+                  // reaches IVE through that provider's existing
+                  // knowledgeItemsSummary aggregation, unchanged.
+                  if (item.status == 'analyzed')
+                    IconButton(
+                      icon: const Icon(Icons.auto_awesome_rounded,
+                          color: Color(0xFF6C63FF)),
+                      iconSize: 20,
+                      tooltip: 'Explicar com IVE',
+                      onPressed: () {
+                        final ctx = ref.read(iveContextDataProvider(item.projectId)).valueOrNull;
+                        final contextData =
+                            ctx != null ? CopilotContextData.fromIveContext(ctx) : const CopilotContextData();
+                        showCopilotChat(
+                          context,
+                          screenName: 'Conhecimento',
+                          contextData: contextData,
+                          initialMessage: 'Resuma e explique o documento "${item.title}".',
+                          request: IveInteractionRequest(
+                            projectId:        item.projectId,
+                            sourceModule:     'knowledge_vault',
+                            sourceEntityType: 'knowledge_item',
+                            sourceEntityId:   item.id,
+                            operationType:    IveOperationType.explain,
+                          ),
+                        );
+                      },
+                    ),
                   IconButton(
                     icon: const Icon(Icons.delete_rounded,
                         color: Colors.white24),

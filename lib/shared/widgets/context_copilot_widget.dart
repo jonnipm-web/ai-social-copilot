@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/diagnostics/diagnostic_models.dart';
 import '../../core/utils/uuid_v4.dart';
 import '../../data/models/copilot_context_data.dart';
 import '../../data/models/copilot_turn.dart';
 import '../../data/models/ive_interaction_request.dart';
 import '../../providers/context_copilot_provider.dart';
+import '../../providers/diagnostic_session_provider.dart';
 import 'ai_execution_confirmation.dart';
 
 // ── Public helper ─────────────────────────────────────────────────────────────
@@ -25,6 +27,19 @@ void showCopilotChat(
   String? initialMessage,
 }) {
   final resolvedContext = (contextData ?? const CopilotContextData()).withIdentity(request);
+
+  // IVE-EXPERIENCE-V1-06 (Section 21/27) — minimal analytics, reusing the
+  // existing DiagnosticCategory.ive vocabulary. Logged here (the single
+  // choke point) rather than per call site, so it can never be forgotten by
+  // a future module wiring. 'global_overlay' is IveOverlay's own
+  // sourceModule value (see ive_overlay.dart) — every other value is a
+  // contextual module entry point.
+  ProviderScope.containerOf(context).read(diagnosticSessionProvider.notifier).logEvent(
+        category:  DiagnosticCategory.ive,
+        eventName: request.sourceModule == 'global_overlay' ? 'ive_opened_global' : 'ive_opened_contextual',
+        operation: request.sourceModule,
+      );
+
   showModalBottomSheet(
     context:             context,
     isScrollControlled:  true,
