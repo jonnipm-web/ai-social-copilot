@@ -140,5 +140,31 @@
   "adminModulesNotes": "Notas",
   "adminModulesNoRoute": "Sem rota própria",
   "adminModulesYes": "Sim",
-  "adminModulesNo": "Não"
+  "adminModulesNo": "Não",
+
+  "projectBriefingSectionTitle": "Briefing Executivo",
+  "projectBriefingNoKnowledge": "Nenhum conhecimento cadastrado ainda",
+  "projectBriefingKnowledgeCount": "{count, plural, =0{Nenhum item de conhecimento} =1{1 item de conhecimento disponível} other{{count} itens de conhecimento disponíveis}}",
+  "@projectBriefingKnowledgeCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "projectBriefingRecentChanges": "O que mudou recentemente",
+
+  "projectAnalyzeIdea": "Analisar Ideia",
+  "projectOpenConfig": "Configurações",
+
+  "projectConfigTitle": "Configurações do Projeto",
+  "projectConfigNameLabel": "Nome",
+  "projectConfigDescriptionLabel": "Descrição",
+  "projectConfigUrlLabel": "URL",
+  "projectConfigTypeLabel": "Tipo",
+  "projectConfigStatusLabel": "Status",
+  "projectConfigEdit": "Editar",
+  "projectConfigNameRequired": "O nome do projeto não pode ficar vazio.",
+  "projectConfigSaveError": "Falha ao salvar: {error}",
+  "@projectConfigSaveError": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+
+  "ideaAnalysisProjectBannerText": "Esta análise será vinculada ao projeto selecionado"
 }
