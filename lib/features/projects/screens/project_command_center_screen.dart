@@ -11,7 +11,6 @@ import '../../../data/models/opportunity_lab_item.dart';
 import '../../../data/models/project.dart';
 import '../../../data/models/project_intelligence_profile.dart';
 import '../../../data/models/project_resource_allocation.dart';
-import '../../../data/models/weekly_briefing.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/auto_bootstrap_provider.dart';
 import '../../../providers/ecosystem_intelligence_provider.dart';
@@ -1941,7 +1940,7 @@ class _ProjectConfigSheetState extends ConsumerState<_ProjectConfigSheet> {
     setState(() {
       _nameCtrl.text = widget.project.name;
       _descCtrl.text = widget.project.description;
-      _urlCtrl.text  = widget.project.url;
+      _urlCtrl.text  = widget.project.url ?? '';
       _type   = widget.project.type;
       _status = widget.project.status;
       _editing = false;
