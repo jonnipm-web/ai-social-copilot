@@ -381,6 +381,30 @@ Deno.test('CF-41: itens de array bem-formados continuam aceitos após o endureci
   assertEquals(res.status, 200);
 });
 
+// ── CF-42/CF-43: limite total de tamanho do context (Codex Class D, P1) ─────
+// A validação por campo (contagem de arrays, tipos) não limitava strings
+// aninhadas (project.name, document.content_excerpt além do budget de
+// grounding, campos de personas, etc.) — um payload bem-formado mas
+// enorme passava e só custava caro depois, ANTES da reserva de cota.
+
+Deno.test('CF-42: context serializado acima do limite total é rejeitado com 400', async () => {
+  const res = await post({
+    message: 'oi', screen_name: 'home',
+    context: { project: { name: 'A'.repeat(60000), description: '', type: '', status: '' } },
+    history: [],
+  });
+  assertEquals(res.status, 400);
+});
+
+Deno.test('CF-43: context dentro do limite total continua aceito', async () => {
+  const res = await post({
+    message: 'oi', screen_name: 'home',
+    context: { project: { name: 'Projeto normal', description: 'Descrição razoável', type: 'ebook', status: 'active' } },
+    history: [],
+  });
+  assertEquals(res.status, 200);
+});
+
 // ── CF-34: framing de contexto não-confiável agora cobre todas as seções ────
 // (IVE-EXPERIENCE-V1-06 Section 11 — antes só DOCUMENTOS tinha esta regra)
 

@@ -23,6 +23,19 @@ const MAX_SCREEN_NAME_CHARS = 200;
 const MAX_HISTORY_ITEMS = 20;
 const MAX_HISTORY_CONTENT_CHARS = 4000;
 const MAX_CONTEXT_ARRAY_ITEMS = 200; // generous upper bound — real payloads slice to 5 client-side
+// IVE-EXPERIENCE-V1-06 (Codex Class D adversarial review, P1) — the field-
+// by-field checks above bound counts and shapes but not nested string
+// lengths (project.name, document title/content_excerpt, persona fields,
+// etc.), which are interpolated into the prompt sent to Groq BEFORE quota
+// reservation. An authenticated caller could otherwise submit a
+// well-shaped but enormous `context` for one quota unit. A single
+// total-serialized-size cap closes the whole class of field (present and
+// future) in one place, rather than enumerating every nested string —
+// Codex's own top recommendation. Generous: legitimate payloads
+// (grounding already capped at GROUNDING_DELIVERY_BUDGET_CHARS=8000 total,
+// plus ~5 items x a few hundred chars each per array field) sit far below
+// this.
+const MAX_CONTEXT_SERIALIZED_CHARS = 50000;
 const ALLOWED_HISTORY_ROLES = new Set(['user', 'assistant']);
 const CONTEXT_ARRAY_FIELDS = ['opportunities', 'actions', 'documents', 'personas'] as const;
 
@@ -77,6 +90,18 @@ function validateRequestBody(body: any): string | null {
   if (body.context !== undefined) {
     if (typeof body.context !== 'object' || body.context === null || Array.isArray(body.context)) {
       return 'context must be an object';
+    }
+    // Total-size gate first — cheaper and catches the whole class of
+    // "well-shaped but enormous nested string" payloads (any field,
+    // present or future) before the more granular checks below even run.
+    let serializedLength: number;
+    try {
+      serializedLength = JSON.stringify(body.context).length;
+    } catch {
+      return 'context must be JSON-serializable';
+    }
+    if (serializedLength > MAX_CONTEXT_SERIALIZED_CHARS) {
+      return `context must not exceed ${MAX_CONTEXT_SERIALIZED_CHARS} serialized characters`;
     }
     const ctxBody = body.context as Record<string, unknown>;
     for (const field of CONTEXT_ARRAY_FIELDS) {
