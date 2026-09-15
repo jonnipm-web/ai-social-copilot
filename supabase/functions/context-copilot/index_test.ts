@@ -16,12 +16,23 @@ import { QuotaClient } from '../_shared/quota.ts';
 // "refund was called" override rpcOverrides/refundCalls directly.
 let quotaRefundCalls = 0;
 let quotaRpcOverride: { data: unknown; error: unknown } | null = null;
+// IVE-EXPERIENCE-V1-06-R (reconciliation, mission Section 08) — captures
+// the params the LAST try_reserve_ai_quota call actually received, so a
+// test can prove index.ts correctly threads `idempotency_key` from the
+// HTTP body through to reserveQuota()'s RPC call. quota_test.ts already
+// proves reserveQuota()'s OWN internal forwarding/replay logic in
+// isolation; this is the one integration point specific to this merge
+// that neither original suite covered.
+let lastReserveRpcParams: Record<string, unknown> | undefined;
 const fakeQuotaClient: QuotaClient = {
   // deno-lint-ignore require-await
-  async rpc(fn: string) {
+  async rpc(fn: string, params?: Record<string, unknown>) {
     if (fn === 'refund_ai_quota') {
       quotaRefundCalls++;
       return { data: null, error: null };
+    }
+    if (fn === 'try_reserve_ai_quota') {
+      lastReserveRpcParams = params;
     }
     if (quotaRpcOverride) return quotaRpcOverride;
     return { data: { allowed: true, used: 1, limit: 100, role: 'free' }, error: null };
@@ -582,4 +593,56 @@ Deno.test('CF-18: sucesso não chama refund', async () => {
   const res = await post({ message: 'teste', screen_name: 'home', context: {}, history: [] });
   assertEquals(res.status, 200);
   assertEquals(quotaRefundCalls, 0);
+});
+
+// ── CF-44 a CF-47: idempotency_key threading (reconciliation with ─────────
+// IVE-COMMERCIAL-QUOTA-HARDENING-13/13V) — quota_test.ts already proves
+// reserveQuota()'s own forwarding/replay logic against a directly-called
+// fake; these prove index.ts's OWN integration point: extracting
+// idempotency_key from the validated HTTP body and passing it (plus the
+// hardcoded operationType 'context-copilot') to reserveQuota().
+
+Deno.test('CF-44: idempotency_key do corpo HTTP chega ao RPC como p_idempotency_key + operationType fixo', async () => {
+  lastReserveRpcParams = undefined;
+  const key = '11111111-2222-4333-8444-555555555555';
+  const res = await post({
+    message: 'teste', screen_name: 'home', context: {}, history: [],
+    idempotency_key: key,
+  });
+  assertEquals(res.status, 200);
+  const params = lastReserveRpcParams as Record<string, unknown> | undefined;
+  assertEquals(params?.p_idempotency_key, key);
+  assertEquals(params?.p_operation_type, 'context-copilot');
+});
+
+Deno.test('CF-45: requisição sem idempotency_key não passa parâmetros ao RPC (comportamento legado inalterado)', async () => {
+  lastReserveRpcParams = undefined;
+  const res = await post({ message: 'teste', screen_name: 'home', context: {}, history: [] });
+  assertEquals(res.status, 200);
+  assertEquals(lastReserveRpcParams, undefined);
+});
+
+Deno.test('CF-46: idempotency_key malformado (não-UUID) é rejeitado pelo próprio reserveQuota (400/INVALID_IDEMPOTENCY_KEY), não pela validação desta missão', async () => {
+  const res = await post({
+    message: 'teste', screen_name: 'home', context: {}, history: [],
+    idempotency_key: 'not-a-real-uuid',
+  });
+  assertEquals(res.status, 400);
+  const data = await res.json();
+  // A validação desta missão (validateRequestBody) não conhece
+  // idempotency_key — quem rejeita é reserveQuota()/isValidIdempotencyKey(),
+  // com seu próprio motivo dedicado (quota.ts's quotaBlockedResponse),
+  // exatamente como projetado.
+  assertEquals(data.error, 'INVALID_IDEMPOTENCY_KEY');
+});
+
+Deno.test('CF-47: input malformado continua sendo rejeitado ANTES do RPC de cota mesmo com idempotency_key válido presente', async () => {
+  lastReserveRpcParams = undefined;
+  const key = '11111111-2222-4333-8444-555555555555';
+  const res = await post({
+    screen_name: 'home', context: {}, history: [],
+    idempotency_key: key, // message ausente — deve falhar na validação primeiro
+  });
+  assertEquals(res.status, 400);
+  assertEquals(lastReserveRpcParams, undefined);
 });
