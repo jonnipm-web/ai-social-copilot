@@ -111,6 +111,19 @@ if (!DATABASE_URL) {
     }
   }
 
+  async function activeReservationCount(userId: string, key: string, op: string): Promise<number> {
+    const conn = await pool.connect();
+    try {
+      const r = await conn.queryObject(
+        `SELECT count(*)::int AS c FROM public.ai_quota_reservations WHERE user_id=$1 AND idempotency_key=$2 AND operation_type=$3 AND status='reserved'`,
+        [userId, key, op],
+      );
+      return (r.rows[0] as any).c;
+    } finally {
+      conn.release();
+    }
+  }
+
   async function makeUser(role = "free", limit = 5): Promise<string> {
     const id = uuid();
     const conn = await pool.connect();
@@ -142,12 +155,34 @@ if (!DATABASE_URL) {
     assertEquals(await usage(user), 1);
   });
 
-  Deno.test("REALDB-03: 30-way concurrent same-key race produces exactly one reservation (mandatory gate)", async () => {
+  // Codex adversarial review (mission 13V) — the original version of this
+  // test only asserted aggregate usage==1 and allowed==30, which a defect
+  // producing multiple active ledger rows while still only incrementing
+  // usage once could have passed. Strengthened to assert, per round:
+  // exactly ONE active ledger row for the key, exactly ONE non-replay
+  // response among the 30, and every response (replay or not) naming the
+  // SAME reservation_id — not just "usage looks right" but "the ledger
+  // itself has no duplicate active row." Also repeated across 3 fresh
+  // keys/rounds (mission Section 08: "repeat multiple rounds with fresh
+  // keys") — the original committed version ran only a single round.
+  Deno.test("REALDB-03: 30-way concurrent same-key race produces exactly one reservation (mandatory gate, 3 rounds)", async () => {
     const user = await makeUser();
-    const key = uuid();
-    const results = await Promise.all(Array.from({ length: 30 }, () => reserve(user, key, "op")));
-    assertEquals(results.filter((r) => r.allowed).length, 30, "every concurrent replay must still report allowed=true");
-    assertEquals(await usage(user), 1, "usage must be exactly 1 regardless of concurrency");
+    for (let round = 0; round < 3; round++) {
+      const key = uuid();
+      const results = await Promise.all(Array.from({ length: 30 }, () => reserve(user, key, "op")));
+      const allowedCount = results.filter((r) => r.allowed).length;
+      const nonReplayCount = results.filter((r) => r.allowed && !r.idempotent_replay).length;
+      const reservationIds = new Set(results.filter((r) => r.allowed).map((r) => r.reservation_id));
+      assertEquals(allowedCount, 30, `round ${round}: every concurrent request must still report allowed=true`);
+      assertEquals(nonReplayCount, 1, `round ${round}: exactly one of the 30 requests may be the actual winner (non-replay)`);
+      assertEquals(reservationIds.size, 1, `round ${round}: all 30 responses must name the SAME reservation_id, no duplicates`);
+      assertEquals(
+        await activeReservationCount(user, key, "op"),
+        1,
+        `round ${round}: exactly one ACTIVE ledger row must exist for this key, regardless of how many concurrent requests raced for it`,
+      );
+    }
+    assertEquals(await usage(user), 3, "3 rounds x 1 real unit each = usage must be exactly 3, never more");
   });
 
   Deno.test("REALDB-04: different keys are independent operations", async () => {
@@ -200,5 +235,48 @@ if (!DATABASE_URL) {
     await refund(user, r1.reservation_id);
     const retry = await reserve(user, uuid(), "op");
     assertEquals(retry.allowed, true, "a legitimate retry after quota frees up must not be permanently blocked");
+  });
+
+  // Codex adversarial review (mission 13V) — this scenario existed only in
+  // an untracked scratch script, not the committed suite. It regression-
+  // tests an earlier (pre-13V) Codex finding: a delayed refund must
+  // decrement the PERIOD THE RESERVATION ACTUALLY BELONGS TO, never
+  // whatever period date_trunc('month', now()) resolves to at refund
+  // time.
+  Deno.test("REALDB-09: a delayed refund decrements the reservation's OWN period, not the current one", async () => {
+    const user = await makeUser();
+    const key = uuid();
+    const r = await reserve(user, key, "op");
+    const conn = await pool.connect();
+    try {
+      await conn.queryArray(
+        `UPDATE public.ai_quota_reservations SET period_start = (date_trunc('month', now()) - interval '1 month')::date WHERE id=$1`,
+        [r.reservation_id],
+      );
+      await conn.queryArray(`DELETE FROM public.ai_usage WHERE user_id=$1`, [user]);
+      await conn.queryArray(
+        `INSERT INTO public.ai_usage (user_id, period_start, request_count) VALUES ($1, date_trunc('month', now())::date, 0), ($1, (date_trunc('month', now()) - interval '1 month')::date, 1)`,
+        [user],
+      );
+    } finally {
+      conn.release();
+    }
+    const currentBefore = await usage(user);
+    await refund(user, r.reservation_id);
+    const currentAfter = await usage(user);
+    const pastUsage = await (async () => {
+      const c = await pool.connect();
+      try {
+        const row = await c.queryObject(
+          `SELECT request_count FROM public.ai_usage WHERE user_id=$1 AND period_start=(date_trunc('month', now()) - interval '1 month')::date`,
+          [user],
+        );
+        return (row.rows[0] as any).request_count;
+      } finally {
+        c.release();
+      }
+    })();
+    assertEquals(currentBefore, currentAfter, "the CURRENT period's usage must be untouched by a delayed refund of a PAST-period reservation");
+    assertEquals(pastUsage, 0, "the PAST period (the reservation's own period_start) must be what actually got decremented");
   });
 }
