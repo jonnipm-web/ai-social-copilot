@@ -138,22 +138,31 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
             const SizedBox(height: 6),
 
             // ── New IveAvatar (replaces old IveAvatarWidget) ─────────────────
-            GestureDetector(
-              onTap: () {
-                if (_dragging) return;
-                if (state.bubbleVisible) {
-                  ref.read(iveProvider.notifier).dismissBubble();
-                } else {
-                  _openChat(context, state.screenName);
-                }
-              },
-              child: AnimatedScale(
-                scale:    _dragging ? 0.92 : 1.0,
-                duration: const Duration(milliseconds: 150),
-                child: IveAvatar(
-                  size:           IveAvatarSize.compact,
-                  showStatusRing: true,
-                  interactive:    false, // overlay owns the tap
+            // IVE-AVATAR-COMMERCIAL-FALLBACK-04 (Codex P2): the avatar is
+            // mounted with interactive:false (overlay owns the tap), which
+            // skips IveAvatar's own Semantics wrapper — so the overlay
+            // provides the screen-reader label/button role here instead.
+            Semantics(
+              label:            'IVE, assistente executiva',
+              button:           true,
+              excludeSemantics: true,
+              child: GestureDetector(
+                onTap: () {
+                  if (_dragging) return;
+                  if (state.bubbleVisible) {
+                    ref.read(iveProvider.notifier).dismissBubble();
+                  } else {
+                    _openChat(context, state.screenName);
+                  }
+                },
+                child: AnimatedScale(
+                  scale:    _dragging ? 0.92 : 1.0,
+                  duration: const Duration(milliseconds: 150),
+                  child: IveAvatar(
+                    size:           IveAvatarSize.compact,
+                    showStatusRing: true,
+                    interactive:    false, // overlay owns the tap
+                  ),
                 ),
               ),
             ),
