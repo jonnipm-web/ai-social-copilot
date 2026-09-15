@@ -195,7 +195,7 @@ Responda sempre em Português do Brasil.`;
     // corpo), nunca antes: um erro de input do próprio usuário não deve
     // consumir cota. Se o Groq falhar depois disso, devolvemos a unidade no
     // catch abaixo.
-    const quota = await reserveQuota(req, quotaClient, idempotencyKey);
+    const quota = await reserveQuota(req, quotaClient, idempotencyKey, 'context-copilot');
     if (!quota.allowed) return quotaBlockedResponse(corsHeaders, quota);
     quotaReserved = true;
 
@@ -260,7 +260,7 @@ Responda sempre em Português do Brasil.`;
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (err) {
-    if (quotaReserved) await refundQuota(req, quotaClient, idempotencyKey);
+    if (quotaReserved) await refundQuota(req, quotaClient, idempotencyKey, 'context-copilot');
     return new Response(
       JSON.stringify({ error: String(err) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },

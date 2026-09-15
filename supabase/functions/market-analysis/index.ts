@@ -128,7 +128,7 @@ serve(async (req) => {
 
     const userMessage = withLanguageDirective(language, `Tipo de entrada: ${input_type || "url"}\nInput: ${input}\n\nAnalise este mercado e retorne o JSON conforme especificado.`);
 
-    const quota = await reserveQuota(req, undefined, idempotencyKey);
+    const quota = await reserveQuota(req, undefined, idempotencyKey, 'market-analysis');
     if (!quota.allowed) return quotaBlockedResponse(corsHeaders, quota);
     quotaReserved = true;
 
@@ -166,7 +166,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    if (quotaReserved) await refundQuota(req, undefined, idempotencyKey);
+    if (quotaReserved) await refundQuota(req, undefined, idempotencyKey, 'market-analysis');
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

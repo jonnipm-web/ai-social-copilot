@@ -16,6 +16,8 @@ import '../../../providers/project_intelligence_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/roi_metric_provider.dart';
+import '../../../data/models/ive_interaction_request.dart';
+import '../../../shared/widgets/ai_execution_confirmation.dart';
 import '../../../shared/widgets/app_drawer.dart';
 
 // ─── Palette ───────────────────────────────────────────────────────────────
@@ -1132,12 +1134,38 @@ class _BootstrapEngineCard extends StatelessWidget {
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: isRunning ? null : () {
+                onPressed: isRunning ? null : () async {
                   if (isDone) {
                     notifier.reset();
-                  } else {
-                    notifier.runAll();
+                    return;
                   }
+                  // Codex Gate 1 (mission 13) P1 — this route
+                  // (/intelligence-debug) has no admin/role route guard,
+                  // so any authenticated user who navigates here directly
+                  // could otherwise trigger the SAME up-to-3-quota-unit
+                  // auto-bootstrap flow project_command_center_screen.dart
+                  // gates with a confirmation, with zero confirmation of
+                  // its own — disproving this mission's "only remaining
+                  // trigger" claim. Gated the same way here. A short-lived
+                  // controller (not a State field — _TestsTab is a plain
+                  // ConsumerWidget) is fine for a single one-shot confirm
+                  // call on this low-traffic internal/debug screen; the
+                  // button's own isRunning-based disable already prevents
+                  // a double-submit race.
+                  final toBootstrap = needsBootstrapAsync.valueOrNull ?? const <Project>[];
+                  if (toBootstrap.isEmpty) return;
+                  final confirmed = await AiExecutionController().confirm(
+                    context: context,
+                    ref: ref,
+                    analysisLabel: 'Executar Knowledge → Action Engine',
+                    request: IveInteractionRequest(
+                      sourceModule: 'intelligence_debug_hub',
+                      operationType: IveOperationType.analyze,
+                    ),
+                    estimatedUnits: toBootstrap.length * 3,
+                  );
+                  if (!confirmed) return;
+                  notifier.runAll();
                 },
                 icon: Icon(isDone
                     ? Icons.refresh_rounded

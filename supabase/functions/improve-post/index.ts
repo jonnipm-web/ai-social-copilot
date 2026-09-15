@@ -79,7 +79,7 @@ serve(async (req) => {
       }
     }
 
-    const quota = await reserveQuota(req, undefined, idempotencyKey);
+    const quota = await reserveQuota(req, undefined, idempotencyKey, 'improve-post');
     if (!quota.allowed) return quotaBlockedResponse(corsHeaders, quota);
     quotaReserved = true;
 
@@ -103,7 +103,7 @@ serve(async (req) => {
     if (!groqRes.ok) {
       const err = await groqRes.text();
       console.error("Groq error:", err);
-      await refundQuota(req, undefined, idempotencyKey);
+      await refundQuota(req, undefined, idempotencyKey, 'improve-post');
       return new Response(
         JSON.stringify({ error: "Falha ao processar com a IA. Tente novamente." }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -116,7 +116,7 @@ serve(async (req) => {
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       console.error("JSON não encontrado:", rawText);
-      await refundQuota(req, undefined, idempotencyKey);
+      await refundQuota(req, undefined, idempotencyKey, 'improve-post');
       return new Response(
         JSON.stringify({ error: "Resposta inválida da IA. Tente novamente." }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -127,7 +127,7 @@ serve(async (req) => {
 
     for (const field of ["improved_text", "professional_version", "casual_version", "persuasive_version", "comment_reply", "scores"]) {
       if (!(field in result)) {
-        await refundQuota(req, undefined, idempotencyKey);
+        await refundQuota(req, undefined, idempotencyKey, 'improve-post');
         return new Response(
           JSON.stringify({ error: `Campo '${field}' ausente na resposta da IA.` }),
           { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -141,7 +141,7 @@ serve(async (req) => {
     });
   } catch (e) {
     console.error("Erro inesperado:", e);
-    if (quotaReserved) await refundQuota(req, undefined, idempotencyKey);
+    if (quotaReserved) await refundQuota(req, undefined, idempotencyKey, 'improve-post');
     return new Response(
       JSON.stringify({ error: "Erro interno. Tente novamente." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },

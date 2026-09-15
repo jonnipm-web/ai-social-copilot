@@ -129,15 +129,17 @@ Deno.test('QUOTA-G: isValidIdempotencyKey accepts a real UUID, rejects everythin
   assertEquals(isValidIdempotencyKey('a1b2c3d4e5f64789a0123456789abcde'), false);
 });
 
-Deno.test('QUOTA-H: reserveQuota forwards a valid idempotency key as p_idempotency_key', async () => {
+const OP = 'gap-analysis';
+
+Deno.test('QUOTA-H: reserveQuota forwards a valid key + operationType as p_idempotency_key/p_operation_type', async () => {
   const { client, calls } = recordingClient({
     try_reserve_ai_quota: { data: { allowed: true, used: 1, limit: 5, role: 'free' }, error: null },
   });
-  const result = await reserveQuota(req(), client, VALID_KEY);
+  const result = await reserveQuota(req(), client, VALID_KEY, OP);
   assertEquals(result.allowed, true);
   assertEquals(calls.length, 1);
   assertEquals(calls[0].fn, 'try_reserve_ai_quota');
-  assertEquals(calls[0].params, { p_idempotency_key: VALID_KEY });
+  assertEquals(calls[0].params, { p_idempotency_key: VALID_KEY, p_operation_type: OP });
 });
 
 Deno.test('QUOTA-I: reserveQuota with no key calls the RPC with no params (legacy behavior unchanged)', async () => {
@@ -154,7 +156,7 @@ Deno.test(
     const { client, calls } = recordingClient({
       try_reserve_ai_quota: { data: { allowed: true, used: 1, limit: 5, role: 'free' }, error: null },
     });
-    const result = await reserveQuota(req(), client, 'not-a-real-uuid');
+    const result = await reserveQuota(req(), client, 'not-a-real-uuid', OP);
     assertEquals(result.allowed, false);
     assertEquals(result.reason, 'invalid_idempotency_key');
     assertEquals(calls.length, 0, 'a malformed key must never reach Postgres as a type-cast attempt');
@@ -168,23 +170,73 @@ Deno.test('QUOTA-K: quotaBlockedResponse maps invalid_idempotency_key to 400, no
   assertEquals(body.error, 'INVALID_IDEMPOTENCY_KEY');
 });
 
-Deno.test('QUOTA-L: refundQuota forwards a valid idempotency key as p_idempotency_key', async () => {
+Deno.test('QUOTA-L: refundQuota forwards a valid key + operationType as p_idempotency_key/p_operation_type', async () => {
   const { client, calls } = recordingClient({
     refund_ai_quota: { data: null, error: null },
   });
-  await refundQuota(req(), client, VALID_KEY);
+  await refundQuota(req(), client, VALID_KEY, OP);
   assertEquals(calls[0].fn, 'refund_ai_quota');
-  assertEquals(calls[0].params, { p_idempotency_key: VALID_KEY });
+  assertEquals(calls[0].params, { p_idempotency_key: VALID_KEY, p_operation_type: OP });
 });
 
 Deno.test('QUOTA-M: refundQuota with a malformed key calls the RPC with no params (fails open on refund, never throws)', async () => {
   const { client, calls } = recordingClient({
     refund_ai_quota: { data: null, error: null },
   });
-  await refundQuota(req(), client, 'garbage');
+  await refundQuota(req(), client, 'garbage', OP);
   // A refund is already a failure-path cleanup step (mission: "a refund
   // failure must not turn into a 500 on top of an already-failed AI
   // request") — a malformed key degrades to the legacy unconditional
   // decrement rather than throwing, unlike reserveQuota's hard fail-closed.
   assertEquals(calls[0].params, undefined);
 });
+
+// ── Codex Gate 1 P1 fix — operationType required whenever a key is given ──
+// (Gate 1 found that a bare (user_id, idempotency_key) scope let the SAME
+// key be replayed against a DIFFERENT operation and be mistaken for an
+// already-successful reservation, bypassing quota entirely. Requiring —
+// and never trusting the client for — operationType is the fix.)
+
+Deno.test(
+  'QUOTA-N: reserveQuota with a key but NO operationType fails closed as invalid_request, RPC never called',
+  async () => {
+    const { client, calls } = recordingClient({
+      try_reserve_ai_quota: { data: { allowed: true, used: 1, limit: 5, role: 'free' }, error: null },
+    });
+    const result = await reserveQuota(req(), client, VALID_KEY);
+    assertEquals(result.allowed, false);
+    assertEquals(result.reason, 'invalid_request');
+    assertEquals(calls.length, 0);
+  },
+);
+
+Deno.test(
+  'QUOTA-O: reserveQuota with a key and an EMPTY-STRING operationType also fails closed',
+  async () => {
+    const { client, calls } = recordingClient({
+      try_reserve_ai_quota: { data: { allowed: true, used: 1, limit: 5, role: 'free' }, error: null },
+    });
+    const result = await reserveQuota(req(), client, VALID_KEY, '   ');
+    assertEquals(result.allowed, false);
+    assertEquals(result.reason, 'invalid_request');
+    assertEquals(calls.length, 0);
+  },
+);
+
+Deno.test('QUOTA-P: quotaBlockedResponse maps invalid_request to 400, not 429/500', async () => {
+  const res = quotaBlockedResponse(CORS, { allowed: false, reason: 'invalid_request' });
+  assertEquals(res.status, 400);
+  const body = await res.json();
+  assertEquals(body.error, 'INVALID_REQUEST');
+});
+
+Deno.test(
+  'QUOTA-Q: refundQuota with a key but no operationType degrades to the legacy no-key call (never throws)',
+  async () => {
+    const { client, calls } = recordingClient({
+      refund_ai_quota: { data: null, error: null },
+    });
+    await refundQuota(req(), client, VALID_KEY);
+    assertEquals(calls[0].params, undefined);
+  },
+);

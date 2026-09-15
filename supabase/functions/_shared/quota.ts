@@ -15,14 +15,25 @@
  * permanently cost the user a unit of their monthly allowance.
  *
  * IVE-COMMERCIAL-QUOTA-HARDENING-13 — reserveQuota/refundQuota now accept
- * an optional idempotencyKey, forwarded to try_reserve_ai_quota(uuid)/
- * refund_ai_quota(uuid) (migration 20260918000000). This closes the gap
- * where a network retry, a second browser tab, or a client refresh after
- * the server already reserved but before the response arrived could
- * double-charge one intentional operation. The key is read from the
- * request body (idempotency_key) rather than a header, since every
- * caller already sends a JSON body and this avoids a second convention.
- * Backward compatible: omitting the key (or an existing caller not yet
+ * an optional (idempotencyKey, operationType) pair, forwarded to
+ * try_reserve_ai_quota(uuid, text)/refund_ai_quota(uuid, text) (migration
+ * 20260918000000). This closes the gap where a network retry, a second
+ * browser tab, or a client refresh after the server already reserved but
+ * before the response arrived could double-charge one intentional
+ * operation. The idempotencyKey is read from the request body
+ * (idempotency_key) by the calling Edge Function, since every caller
+ * already sends a JSON body and this avoids a second convention.
+ *
+ * operationType is DELIBERATELY NOT read from the client's request body —
+ * each Edge Function passes its OWN hardcoded name (e.g. 'gap-analysis')
+ * as a literal. It exists to scope the reservation ledger so one key
+ * cannot be replayed against a DIFFERENT Edge Function and be mistaken
+ * for that operation's own already-successful reservation (Codex Gate 1
+ * finding on this mission's first draft: a client-suppliable
+ * operation_type would have reopened the same bypass by letting the
+ * caller simply lie about which operation a replayed key belongs to).
+ *
+ * Backward compatible: omitting both (or an existing caller not yet
  * updated) reproduces the exact pre-13 unconditional-reserve behavior —
  * see the migration's own comment for the removal point.
  */
@@ -92,19 +103,33 @@ function buildUserScopedClient(req: Request): QuotaClient {
  * unconditional-reserve behavior. A value that doesn't look like a UUID
  * fails closed with 'invalid_idempotency_key' rather than reaching
  * Postgres as a type-cast error.
+ * @param operationType Required whenever idempotencyKey is supplied — a
+ * literal constant the CALLING Edge Function hardcodes for itself (never
+ * read from the client's request). Missing/empty while a key is present
+ * fails closed with 'invalid_request' rather than reaching Postgres with
+ * a NULL that would silently defeat the reservation ledger's uniqueness
+ * guarantee (see migration 20260918000000's own comment on this).
  */
 export async function reserveQuota(
   req: Request,
   client?: QuotaClient,
   idempotencyKey?: string,
+  operationType?: string,
 ): Promise<QuotaResult> {
-  if (idempotencyKey !== undefined && !isValidIdempotencyKey(idempotencyKey)) {
-    return { allowed: false, reason: 'invalid_idempotency_key' };
+  if (idempotencyKey !== undefined) {
+    if (!isValidIdempotencyKey(idempotencyKey)) {
+      return { allowed: false, reason: 'invalid_idempotency_key' };
+    }
+    if (!operationType || operationType.trim() === '') {
+      return { allowed: false, reason: 'invalid_request' };
+    }
   }
   const rpcClient = client ?? buildUserScopedClient(req);
   const { data, error } = await rpcClient.rpc(
     'try_reserve_ai_quota',
-    idempotencyKey !== undefined ? { p_idempotency_key: idempotencyKey } : undefined,
+    idempotencyKey !== undefined
+      ? { p_idempotency_key: idempotencyKey, p_operation_type: operationType }
+      : undefined,
   );
   if (error || !data) return { allowed: false, reason: 'quota_service_error' };
   return data as QuotaResult;
@@ -118,18 +143,28 @@ export async function reserveQuota(
  * (mission Section 08: "at most one effective refund per reserved
  * operation"). A malformed key is silently ignored (best-effort), not
  * thrown, since a refund is already a failure-path cleanup step.
+ * @param operationType Same literal constant passed to the matching
+ * reserveQuota call — mismatched or missing degrades to the legacy
+ * no-key call (best-effort; the SQL function itself also fails safe on
+ * this), never throws.
  */
 export async function refundQuota(
   req: Request,
   client?: QuotaClient,
   idempotencyKey?: string,
+  operationType?: string,
 ): Promise<void> {
   try {
     const rpcClient = client ?? buildUserScopedClient(req);
-    const key = idempotencyKey !== undefined && isValidIdempotencyKey(idempotencyKey)
+    const key = idempotencyKey !== undefined &&
+        isValidIdempotencyKey(idempotencyKey) &&
+        operationType && operationType.trim() !== ''
       ? idempotencyKey
       : undefined;
-    await rpcClient.rpc('refund_ai_quota', key !== undefined ? { p_idempotency_key: key } : undefined);
+    await rpcClient.rpc(
+      'refund_ai_quota',
+      key !== undefined ? { p_idempotency_key: key, p_operation_type: operationType } : undefined,
+    );
   } catch {
     // best-effort only
   }
@@ -151,10 +186,12 @@ export function quotaBlockedResponse(
       { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   }
-  if (result.reason === 'invalid_idempotency_key') {
+  if (result.reason === 'invalid_idempotency_key' || result.reason === 'invalid_request') {
     return new Response(
       JSON.stringify({
-        error: 'INVALID_IDEMPOTENCY_KEY',
+        error: result.reason === 'invalid_idempotency_key'
+          ? 'INVALID_IDEMPOTENCY_KEY'
+          : 'INVALID_REQUEST',
         message: 'Identificador de operação inválido.',
       }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },

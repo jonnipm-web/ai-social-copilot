@@ -58,7 +58,7 @@ Regras:
 - roi_score: retorno sobre investimento esperado, 0-100
 - Tipos válidos para action_type: tarefa, conteúdo, campanha, produto, análise`;
 
-    const quota = await reserveQuota(req, undefined, idempotencyKey);
+    const quota = await reserveQuota(req, undefined, idempotencyKey, 'generate-project-actions');
     if (!quota.allowed) return quotaBlockedResponse(corsHeaders, quota);
     quotaReserved = true;
 
@@ -86,7 +86,7 @@ Regras:
 
     if (!resp.ok) {
       const err = await resp.text();
-      await refundQuota(req, undefined, idempotencyKey);
+      await refundQuota(req, undefined, idempotencyKey, 'generate-project-actions');
       return Response.json({ error: `Groq error: ${err}` }, { status: 502, headers: corsHeaders });
     }
 
@@ -97,7 +97,7 @@ Regras:
     try {
       parsed = JSON.parse(content);
     } catch {
-      await refundQuota(req, undefined, idempotencyKey);
+      await refundQuota(req, undefined, idempotencyKey, 'generate-project-actions');
       return Response.json(
         { error: 'JSON inválido retornado pelo modelo', raw: content },
         { status: 502, headers: corsHeaders },
@@ -108,7 +108,7 @@ Regras:
 
     return Response.json(parsed, { headers: corsHeaders });
   } catch (e) {
-    if (quotaReserved) await refundQuota(req, undefined, idempotencyKey);
+    if (quotaReserved) await refundQuota(req, undefined, idempotencyKey, 'generate-project-actions');
     return Response.json({ error: String(e) }, { status: 500, headers: corsHeaders });
   }
 });

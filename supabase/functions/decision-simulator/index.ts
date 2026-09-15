@@ -86,7 +86,7 @@ Onde:
 
 Responda sempre em Português do Brasil.`;
 
-    const quota = await reserveQuota(req, undefined, idempotencyKey);
+    const quota = await reserveQuota(req, undefined, idempotencyKey, 'decision-simulator');
     if (!quota.allowed) return quotaBlockedResponse(corsHeaders, quota);
     quotaReserved = true;
 
@@ -161,7 +161,7 @@ Responda sempre em Português do Brasil.`;
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (err) {
-    if (quotaReserved) await refundQuota(req, undefined, idempotencyKey);
+    if (quotaReserved) await refundQuota(req, undefined, idempotencyKey, 'decision-simulator');
     return new Response(
       JSON.stringify({ error: String(err) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
