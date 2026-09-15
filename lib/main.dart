@@ -72,6 +72,29 @@ void _logUncaughtError(Object error, StackTrace stack) {
   }
 }
 
+// IVE-COMMERCIAL-STABILITY-09R — Section 05 source-map self-validation.
+// TEMPORARY, forensic-only. Deliberately triggers the EXACT same runtime
+// exception shape being investigated ("Null check operator used on a null
+// value") from this one, precisely known source line, so the forensic
+// build's source map can be proven to resolve a KNOWN location before it
+// is trusted to diagnose the real production crash. Never fires unless
+// the URL carries the literal marker `?stability09rSelfTest=1` — inert in
+// every normal load, including production (which does not have this
+// marker and, more importantly, does not run this build at all — this
+// code exists only on the stability-09r-null-crash-forensics branch, in
+// a private CI artifact, never deployed). To be reverted before this
+// mission's investigation concludes.
+void _stability09rSelfTestMarker() {
+  final Uri uri = Uri.base;
+  if (uri.queryParameters['stability09rSelfTest'] != '1') return;
+  // queryParameters['...'] is Map<String,String>, so this genuinely reads
+  // as String? to the analyzer (no unnecessary-assertion warning) while
+  // being deterministically null (no such key is ever set) — the exact
+  // "Null check operator used on a null value" throw, from this one known
+  // line, used only to self-validate the forensic source map below.
+  uri.queryParameters['stability09rSelfTestNeverSet']!.length;
+}
+
 void main() {
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
@@ -80,6 +103,8 @@ void main() {
       FlutterError.presentError(details);
       _logUncaughtError(details.exception, details.stack ?? StackTrace.empty);
     };
+
+    _stability09rSelfTestMarker();
 
     await dotenv.load(fileName: '.env');
 
