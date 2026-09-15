@@ -39,8 +39,20 @@ function badRequestResponse(message: string): Response {
 // content, which stays untrusted regardless (see the system prompt framing
 // below, Section 11) rather than something this function can authoritatively
 // verify without a database round trip (out of scope here, Section 12).
+const MAX_IDENTITY_STRING_CHARS = 200;
+const IDENTITY_STRING_FIELDS = ['project_id', 'source_module', 'source_entity_type', 'source_entity_id', 'correlation_id'] as const;
+
 // deno-lint-ignore no-explicit-any
 function validateRequestBody(body: any): string | null {
+  // IVE-EXPERIENCE-V1-06 (Codex Class B review, P2) — the original version
+  // of this function assumed `body` was already a plain object (true for
+  // every real client call, but `await req.json()` can also successfully
+  // parse a bare `null`/string/number/array as valid JSON). Guarding this
+  // first turns "TypeError reading body.message" into the same
+  // deterministic 400 every other malformed-input case already gets.
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    return 'request body must be a JSON object';
+  }
   if (typeof body.message !== 'string' || body.message.length === 0 || body.message.length > MAX_MESSAGE_CHARS) {
     return `message must be a non-empty string of at most ${MAX_MESSAGE_CHARS} characters`;
   }
@@ -52,7 +64,7 @@ function validateRequestBody(body: any): string | null {
     if (!Array.isArray(body.history)) return 'history must be an array';
     if (body.history.length > MAX_HISTORY_ITEMS) return `history must not exceed ${MAX_HISTORY_ITEMS} items`;
     for (const entry of body.history) {
-      if (typeof entry !== 'object' || entry === null) return 'each history entry must be an object';
+      if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) return 'each history entry must be an object';
       const h = entry as Record<string, unknown>;
       if (!ALLOWED_HISTORY_ROLES.has(h.role as string)) {
         return `history role must be one of: ${[...ALLOWED_HISTORY_ROLES].join(', ')}`;
@@ -72,11 +84,31 @@ function validateRequestBody(body: any): string | null {
       if (value !== undefined) {
         if (!Array.isArray(value)) return `context.${field} must be an array`;
         if (value.length > MAX_CONTEXT_ARRAY_ITEMS) return `context.${field} must not exceed ${MAX_CONTEXT_ARRAY_ITEMS} items`;
+        // IVE-EXPERIENCE-V1-06 (Codex Class B review, P2) — the original
+        // check stopped at "is this field an array?". Every entry is later
+        // dereferenced directly (e.g. `d.content_excerpt`, `o.title`) while
+        // building the prompt context block — an entry of `null` or a
+        // bare string passed that shallow check and crashed there instead
+        // of failing here with a deterministic 400.
+        for (const item of value) {
+          if (typeof item !== 'object' || item === null || Array.isArray(item)) {
+            return `each item in context.${field} must be an object`;
+          }
+        }
       }
     }
-    if (ctxBody.identity !== undefined &&
-        (typeof ctxBody.identity !== 'object' || ctxBody.identity === null || Array.isArray(ctxBody.identity))) {
-      return 'context.identity must be an object';
+    if (ctxBody.identity !== undefined) {
+      if (typeof ctxBody.identity !== 'object' || ctxBody.identity === null || Array.isArray(ctxBody.identity)) {
+        return 'context.identity must be an object';
+      }
+      const identity = ctxBody.identity as Record<string, unknown>;
+      for (const field of IDENTITY_STRING_FIELDS) {
+        const value = identity[field];
+        if (value !== undefined &&
+            (typeof value !== 'string' || value.length > MAX_IDENTITY_STRING_CHARS)) {
+          return `context.identity.${field} must be a string of at most ${MAX_IDENTITY_STRING_CHARS} characters`;
+        }
+      }
     }
   }
   return null;

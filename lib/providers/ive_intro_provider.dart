@@ -93,6 +93,14 @@ class IveIntroNotifier extends StateNotifier<IveIntroState> {
     state = state.copyWith(completed: false, skipped: true, seenVersion: kIveIntroCurrentVersion);
     try {
       final prefs = await SharedPreferences.getInstance();
+      // IVE-EXPERIENCE-V1-06 (Codex Class B review, P2) — symmetric with
+      // complete()'s own clearing of _kIntroSkippedKey below: without this,
+      // a user who completed an OLDER version and then skips a NEWER one
+      // restores with completed=true AND skipped=true simultaneously (the
+      // stale completed flag from the earlier version never got cleared),
+      // an internally-contradictory persisted state even though shouldShow
+      // itself stayed correct throughout (it only reads seenVersion).
+      await prefs.setBool(_kIntroCompletedKey, false);
       await prefs.setBool(_kIntroSkippedKey, true);
       await prefs.setInt(_kIntroVersionKey, kIveIntroCurrentVersion);
     } catch (_) {

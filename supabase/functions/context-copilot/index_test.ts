@@ -311,6 +311,76 @@ Deno.test('CF-33: context.identity malformado (não-objeto) é rejeitado com 400
   assertEquals(res.status, 400);
 });
 
+// ── CF-35 a CF-38: validação profunda de itens de array (Codex Class B, P2) ──
+// Antes destes testes, a validação parava em "é um array?" — um item null
+// ou uma string solta passavam e só quebravam depois, ao montar o bloco de
+// contexto (ex: d.content_excerpt em um `d` null), gerando 500 em vez de um
+// 400 determinístico.
+
+Deno.test('CF-35: context.documents com item null é rejeitado com 400 (não gera 500)', async () => {
+  const res = await post({
+    message: 'oi', screen_name: 'home',
+    context: { documents: [null] }, history: [],
+  });
+  assertEquals(res.status, 400);
+});
+
+Deno.test('CF-36: context.opportunities com item string solta é rejeitado com 400', async () => {
+  const res = await post({
+    message: 'oi', screen_name: 'home',
+    context: { opportunities: ['not-an-object'] }, history: [],
+  });
+  assertEquals(res.status, 400);
+});
+
+Deno.test('CF-37: context.actions com item array aninhado é rejeitado com 400', async () => {
+  const res = await post({
+    message: 'oi', screen_name: 'home',
+    context: { actions: [['nested', 'array']] }, history: [],
+  });
+  assertEquals(res.status, 400);
+});
+
+Deno.test('CF-38: context.identity.project_id acima do limite é rejeitado com 400', async () => {
+  const res = await post({
+    message: 'oi', screen_name: 'home',
+    context: { identity: { project_id: 'A'.repeat(201) } }, history: [],
+  });
+  assertEquals(res.status, 400);
+});
+
+Deno.test('CF-39: body raiz não-objeto (array) é rejeitado com 400', async () => {
+  const res = await handler(new Request('http://localhost/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer test-session-jwt' },
+    body: JSON.stringify([1, 2, 3]),
+  }), fakeAuthClient, fakeQuotaClient);
+  assertEquals(res.status, 400);
+});
+
+Deno.test('CF-40: body raiz null é rejeitado com 400 (não causa TypeError)', async () => {
+  const res = await handler(new Request('http://localhost/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer test-session-jwt' },
+    body: JSON.stringify(null),
+  }), fakeAuthClient, fakeQuotaClient);
+  assertEquals(res.status, 400);
+});
+
+Deno.test('CF-41: itens de array bem-formados continuam aceitos após o endurecimento', async () => {
+  const res = await post({
+    message: 'oi', screen_name: 'home',
+    context: {
+      documents: [{ title: 'Doc', status: 'processed', content_excerpt: 'texto' }],
+      opportunities: [{ title: 'Opp', finalScore: 80, status: 'pending', opportunityType: 'x' }],
+      actions: [{ title: 'Ação', status: 'pending', priority: 1, impactScore: 1, effortScore: 1 }],
+      personas: [{ name: 'P1', niche: 'x', learningScore: 10 }],
+    },
+    history: [],
+  });
+  assertEquals(res.status, 200);
+});
+
 // ── CF-34: framing de contexto não-confiável agora cobre todas as seções ────
 // (IVE-EXPERIENCE-V1-06 Section 11 — antes só DOCUMENTOS tinha esta regra)
 

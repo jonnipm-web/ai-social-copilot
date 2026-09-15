@@ -139,5 +139,30 @@ void main() {
 
       expect(state.shouldShow, isFalse);
     });
+
+    // IVE-EXPERIENCE-V1-06 (Codex Class B review, P2) — regressão exata do
+    // achado: completar uma versão ANTIGA e depois pular uma versão NOVA
+    // não pode deixar completed=true e skipped=true persistidos ao mesmo
+    // tempo (estado internamente contraditório), mesmo que shouldShow em si
+    // já estivesse correto (só olha seenVersion).
+    test('skip() após complete() de uma versão anterior nunca deixa completed=true persistido', () async {
+      SharedPreferences.setMockInitialValues({
+        'ive_intro_completed': true,
+        'ive_intro_skipped': false,
+        'ive_intro_version': kIveIntroCurrentVersion - 1,
+      });
+      final first = ProviderContainer();
+      await restored(first);
+      await first.read(iveIntroProvider.notifier).skip();
+      first.dispose();
+
+      final second = ProviderContainer();
+      addTearDown(second.dispose);
+      final state = await restored(second);
+
+      expect(state.skipped, isTrue);
+      expect(state.completed, isFalse);
+      expect(state.shouldShow, isFalse);
+    });
   });
 }
