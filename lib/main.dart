@@ -48,6 +48,20 @@ import 'shared/widgets/ive_overlay.dart' show iveRouteNotifier;
 // session.
 void _logUncaughtError(Object error, StackTrace stack) {
   debugPrint('[uncaught] ${error.runtimeType}: ${redactForLog(error)}');
+  // IVE-COMMERCIAL-STABILITY-09R — TEMPORARY forensic-only stack dump.
+  // Gated behind the same inert self-test marker as
+  // _stability09rSelfTestMarker above; never active on any deployed
+  // build. Prints the FULL compiled JS stack to the console so it can be
+  // captured and symbolicated against this exact forensic build's source
+  // map — production's diagnostic_logger already stores this same
+  // sanitized stack server-side, this is only a local, temporary
+  // convenience for the source-map self-validation step (Section 05) and
+  // for capturing genuine stress-matrix reproductions (Section 10/11)
+  // without needing a real Supabase connection in this local harness.
+  if (Uri.base.queryParameters['stability09rSelfTest'] == '1' ||
+      Uri.base.queryParameters['stability09rDumpStack'] == '1') {
+    debugPrint('[STABILITY-09R FULL STACK] $stack');
+  }
   try {
     // IVE-COMMERCIAL-STABILITY-08 (Phase 3/4 — "prepare additional evidence
     // for the next physical session") — COMMERCIAL-E2E-001 captured 25
