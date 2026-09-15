@@ -3,10 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../data/models/copilot_context_data.dart';
+import '../../../data/models/ive_interaction_request.dart';
 import '../../../data/models/website_analysis.dart';
+import '../../../providers/ive_context_provider.dart';
 import '../../../providers/website_analyzer_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/canonical_back_button.dart';
+import '../../../shared/widgets/context_copilot_widget.dart';
 
 class WebsiteAnalysisResultScreen extends ConsumerWidget {
   final String analysisId;
@@ -79,6 +83,43 @@ class WebsiteAnalysisResultScreen extends ConsumerWidget {
                   label: const Text(
                     'Criar Estratégia',
                     style: TextStyle(color: _primary, fontSize: 13),
+                  ),
+                ),
+                // IVE-EXPERIENCE-V1-06 (Section 21) — first contextual IVE
+                // entry point in this module. WebsiteAnalysis has no
+                // projectId (it isn't project-scoped, see
+                // data/models/website_analysis.dart), so this reuses the
+                // existing "genuinely project-agnostic surface" case
+                // (docs/commercial/PROJECT_CONTEXT_CONTRACT.md §3.1) —
+                // iveContextDataProvider(null), the same pattern the global
+                // overlay itself uses. Explains only what this analysis
+                // already produced (scores/strengths/weaknesses) — no
+                // Phase-9 SEO/AdSense capability is implied.
+                TextButton.icon(
+                  onPressed: () {
+                    final ctx = ref.read(iveContextDataProvider(null)).valueOrNull;
+                    final contextData =
+                        ctx != null ? CopilotContextData.fromIveContext(ctx) : const CopilotContextData();
+                    showCopilotChat(
+                      context,
+                      screenName: 'Website Analyzer',
+                      contextData: contextData,
+                      initialMessage:
+                          'Explique os resultados da análise do site ${analysis.url} '
+                          '(score geral ${analysis.scoreWebsite}, SEO ${analysis.scoreSeo}, '
+                          'AdSense ${analysis.scoreAdsense}, monetização ${analysis.scoreMonetization}).',
+                      request: IveInteractionRequest(
+                        sourceModule:     'website_analyzer',
+                        sourceEntityType: 'website_analysis',
+                        sourceEntityId:   analysis.id,
+                        operationType:    IveOperationType.explain,
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.auto_awesome_rounded, size: 16, color: _accent),
+                  label: const Text(
+                    'Explicar com IVE',
+                    style: TextStyle(color: _accent, fontSize: 13),
                   ),
                 ),
               ],
