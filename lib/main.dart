@@ -48,26 +48,6 @@ import 'shared/widgets/ive_overlay.dart' show iveRouteNotifier;
 // session.
 void _logUncaughtError(Object error, StackTrace stack) {
   debugPrint('[uncaught] ${error.runtimeType}: ${redactForLog(error)}');
-  // IVE-COMMERCIAL-STABILITY-09R — TEMPORARY forensic-only stack dump.
-  // Gated behind the same inert self-test marker as
-  // _stability09rSelfTestMarker above; never active on any deployed
-  // build. Prints the FULL compiled JS stack to the console so it can be
-  // captured and symbolicated against this exact forensic build's source
-  // map — production's diagnostic_logger already stores this same
-  // sanitized stack server-side, this is only a local, temporary
-  // convenience for the source-map self-validation step (Section 05) and
-  // for capturing genuine stress-matrix reproductions (Section 10/11)
-  // without needing a real Supabase connection in this local harness.
-  if (Uri.base.queryParameters['stability09rSelfTest'] == '1' ||
-      Uri.base.queryParameters['stability09rDumpStack'] == '1') {
-    // One console line per stack frame — a single multi-line debugPrint
-    // call is only partially captured by some console readers.
-    final lines = stack.toString().split('\n');
-    for (var i = 0; i < lines.length; i++) {
-      if (lines[i].trim().isEmpty) continue;
-      debugPrint('[STABILITY-09R FRAME $i] ${lines[i]}');
-    }
-  }
   try {
     // IVE-COMMERCIAL-STABILITY-08 (Phase 3/4 — "prepare additional evidence
     // for the next physical session") — COMMERCIAL-E2E-001 captured 25
@@ -92,29 +72,6 @@ void _logUncaughtError(Object error, StackTrace stack) {
   }
 }
 
-// IVE-COMMERCIAL-STABILITY-09R — Section 05 source-map self-validation.
-// TEMPORARY, forensic-only. Deliberately triggers the EXACT same runtime
-// exception shape being investigated ("Null check operator used on a null
-// value") from this one, precisely known source line, so the forensic
-// build's source map can be proven to resolve a KNOWN location before it
-// is trusted to diagnose the real production crash. Never fires unless
-// the URL carries the literal marker `?stability09rSelfTest=1` — inert in
-// every normal load, including production (which does not have this
-// marker and, more importantly, does not run this build at all — this
-// code exists only on the stability-09r-null-crash-forensics branch, in
-// a private CI artifact, never deployed). To be reverted before this
-// mission's investigation concludes.
-void _stability09rSelfTestMarker() {
-  final Uri uri = Uri.base;
-  if (uri.queryParameters['stability09rSelfTest'] != '1') return;
-  // queryParameters['...'] is Map<String,String>, so this genuinely reads
-  // as String? to the analyzer (no unnecessary-assertion warning) while
-  // being deterministically null (no such key is ever set) — the exact
-  // "Null check operator used on a null value" throw, from this one known
-  // line, used only to self-validate the forensic source map below.
-  uri.queryParameters['stability09rSelfTestNeverSet']!.length;
-}
-
 void main() {
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
@@ -123,8 +80,6 @@ void main() {
       FlutterError.presentError(details);
       _logUncaughtError(details.exception, details.stack ?? StackTrace.empty);
     };
-
-    _stability09rSelfTestMarker();
 
     await dotenv.load(fileName: '.env');
 
