@@ -54,6 +54,29 @@ Deno.test('QUOTA-A: allowed=true passes through used/limit/role', async () => {
   assertEquals(result.limit, 5);
 });
 
+Deno.test(
+  'QUOTA-A2: reserveQuota maps the RPC\'s snake_case reservation_id/idempotent_replay ' +
+  'to camelCase reservationId/idempotentReplay (a blind cast would leave these undefined)',
+  async () => {
+    const client = fakeClient({
+      try_reserve_ai_quota: {
+        data: {
+          allowed: true,
+          used: 1,
+          limit: 5,
+          role: 'free',
+          reservation_id: 'r-123',
+          idempotent_replay: true,
+        },
+        error: null,
+      },
+    });
+    const result = await reserveQuota(req(), client);
+    assertEquals(result.reservationId, 'r-123');
+    assertEquals(result.idempotentReplay, true);
+  },
+);
+
 Deno.test('QUOTA-B: quota_exceeded -> quotaBlockedResponse returns 429 with used/limit', async () => {
   const client = fakeClient({
     try_reserve_ai_quota: {
@@ -170,24 +193,27 @@ Deno.test('QUOTA-K: quotaBlockedResponse maps invalid_idempotency_key to 400, no
   assertEquals(body.error, 'INVALID_IDEMPOTENCY_KEY');
 });
 
-Deno.test('QUOTA-L: refundQuota forwards a valid key + operationType as p_idempotency_key/p_operation_type', async () => {
+// ── Codex Gate 2 P1 fix — refund targets an immutable reservation id ──────
+// (Gate 2 found that refunding by re-deriving "the current row for this
+// key+operation+period" let a DELAYED DUPLICATE refund match a NEWER
+// reservation created by a legitimate retry, silently un-charging a real,
+// successful AI call. refundQuota's contract changed accordingly: it now
+// takes the reserve call's own reservationId, never the key/operation.)
+
+Deno.test('QUOTA-L: refundQuota forwards a reservationId as p_reservation_id', async () => {
   const { client, calls } = recordingClient({
     refund_ai_quota: { data: null, error: null },
   });
-  await refundQuota(req(), client, VALID_KEY, OP);
+  await refundQuota(req(), client, 'reservation-abc-123');
   assertEquals(calls[0].fn, 'refund_ai_quota');
-  assertEquals(calls[0].params, { p_idempotency_key: VALID_KEY, p_operation_type: OP });
+  assertEquals(calls[0].params, { p_reservation_id: 'reservation-abc-123' });
 });
 
-Deno.test('QUOTA-M: refundQuota with a malformed key calls the RPC with no params (fails open on refund, never throws)', async () => {
+Deno.test('QUOTA-M: refundQuota with no reservationId calls the RPC with no params (legacy unconditional decrement)', async () => {
   const { client, calls } = recordingClient({
     refund_ai_quota: { data: null, error: null },
   });
-  await refundQuota(req(), client, 'garbage', OP);
-  // A refund is already a failure-path cleanup step (mission: "a refund
-  // failure must not turn into a 500 on top of an already-failed AI
-  // request") — a malformed key degrades to the legacy unconditional
-  // decrement rather than throwing, unlike reserveQuota's hard fail-closed.
+  await refundQuota(req(), client);
   assertEquals(calls[0].params, undefined);
 });
 
@@ -230,13 +256,3 @@ Deno.test('QUOTA-P: quotaBlockedResponse maps invalid_request to 400, not 429/50
   assertEquals(body.error, 'INVALID_REQUEST');
 });
 
-Deno.test(
-  'QUOTA-Q: refundQuota with a key but no operationType degrades to the legacy no-key call (never throws)',
-  async () => {
-    const { client, calls } = recordingClient({
-      refund_ai_quota: { data: null, error: null },
-    });
-    await refundQuota(req(), client, VALID_KEY);
-    assertEquals(calls[0].params, undefined);
-  },
-);

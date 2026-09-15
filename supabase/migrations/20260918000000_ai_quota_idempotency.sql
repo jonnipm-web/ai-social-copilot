@@ -2,7 +2,7 @@
 -- AI quota reservation.
 --
 -- NOT APPLIED IN THIS MISSION — per mission Section 30 ("Do not apply
--- production migration in this mission"). Prepared for Codex Gate 1
+-- production migration in this mission"). Prepared for Codex Gate 1/Gate 2
 -- adversarial review and for a future controlled-deploy mission.
 --
 -- PROBLEM (mission Section 04): try_reserve_ai_quota() (20260910190000)
@@ -15,63 +15,78 @@
 -- after the server already reserved but before the response arrived, or
 -- any other replay of the same logical request.
 --
--- REVISION HISTORY WITHIN THIS (never-applied) MIGRATION: Codex Gate 1's
--- adversarial review of the FIRST version of this file (scoped only to
--- (user_id, idempotency_key)) found a real quota-bypass it introduced:
--- a client could replay the SAME key against a DIFFERENT Edge Function,
--- or in a LATER month, and the server would treat it as an
--- already-successful "idempotent replay" — allowed=true — WITHOUT ever
--- incrementing usage for that genuinely new operation. Worse, retrying a
--- key whose reservation had been REFUNDED (i.e. the original attempt
--- failed) also matched as a "replay," letting a client get an unlimited
--- number of free, uncharged AI calls by reusing one key after any
--- failure. Both are fixed below by scoping the reservation identity to
--- (user_id, idempotency_key, operation_type, period_start) — never just
--- the key alone — and by treating a 'refunded' row as "this key's
--- attempt failed, allow a genuine new attempt" rather than "already
--- handled."
+-- REVISION HISTORY WITHIN THIS (never-applied) MIGRATION:
+--   Round 1 (Codex Gate 1, FAIL): scoped uniqueness to (user_id,
+--   idempotency_key) alone. Found bypass: replaying a key against a
+--   DIFFERENT operation or in a LATER month was mistaken for an
+--   already-successful reservation, granting free (uncharged) access.
+--   Fixed by scoping to (user_id, idempotency_key, operation_type,
+--   period_start), with operation_type a literal each Edge Function
+--   hardcodes for itself — never client-supplied.
 --
--- DESIGN (mission Sections 04-07):
---   - ONE ROW PER (user_id, idempotency_key, operation_type,
---     period_start) — a client generates ONE key per intentional
---     operation (mission Section 05) and reuses it for every retry of
---     that SAME operation; a genuinely new analysis gets a new key.
---     operation_type identifies WHICH Edge Function/action the key was
---     issued for (e.g. 'gap-analysis', 'context-copilot') — required
---     whenever a key is supplied, precisely so one key cannot be replayed
---     against a different operation and be mistaken for that operation's
---     own already-successful reservation. period_start is part of the
---     scope too, so a key captured and replayed in a later calendar
---     month cannot be mistaken for "already reserved this month" — it
---     simply doesn't match any row for the new period and proceeds to a
---     real, correctly-charged reservation instead.
---   - The UNIQUE constraint on (user_id, idempotency_key, operation_type,
---     period_start) is the concurrency guard itself — not a
---     SELECT-before-INSERT (mission Section 06 explicitly forbids that
---     pattern). Two concurrent requests racing to claim the same tuple
---     can only have one INSERT succeed; Postgres serializes on the
---     unique index. operation_type is NOT NULL (no default) specifically
---     because Postgres treats NULLs as mutually DISTINCT in a unique
---     index — an nullable operation_type would silently defeat this
---     exact uniqueness guarantee for any caller that omitted it.
+--   Round 2 (Codex Gate 2, FAIL): the round-1 fix, on retrying a
+--   REFUNDED reservation, DELETEd the old row and INSERTed a new one
+--   under the same tuple so the retry could get a genuine new charge.
+--   Found bypass: refund_ai_quota looked up "the row for this tuple with
+--   status='reserved'" rather than one specific row — so a DELAYED
+--   DUPLICATE refund call (e.g. a retried refund request) arriving AFTER
+--   a legitimate retry had already replaced the row could match and
+--   refund the NEW (successful, real) reservation instead of the OLD
+--   (already-refunded) one it actually belonged to, silently undoing a
+--   real charge for a real, successful AI call.
+--
+--   Round 3 (this version): refund_ai_quota now targets a reservation by
+--   its own immutable primary key (p_reservation_id), never by
+--   re-deriving "the current row for this tuple." try_reserve_ai_quota
+--   returns that id in its result specifically so the caller can pass it
+--   back later. A delayed duplicate refund naming an OLD reservation id
+--   can only ever match that exact row — if it's already 'refunded'
+--   (ROW_COUNT=0) or gone, it is correctly a no-op, and it can never
+--   accidentally match a DIFFERENT (newer) row, because ids are globally
+--   unique (gen_random_uuid()) and never reused. This also lets every
+--   attempt keep its own permanent ledger row (audit trail preserved) —
+--   a PARTIAL unique index (WHERE status = 'reserved') is the
+--   concurrency guard now, not a table-wide UNIQUE constraint, so a
+--   retry after a refund is a plain INSERT of a NEW row rather than a
+--   DELETE-then-INSERT of the old one.
+--
+-- DESIGN:
+--   - Race safety: a partial unique index on (user_id, idempotency_key,
+--     operation_type, period_start) WHERE status = 'reserved' means at
+--     most one ACTIVE reservation can ever exist for one operation's key
+--     in one period — the INSERT ... ON CONFLICT (...) WHERE status =
+--     'reserved' DO NOTHING is the guard, exactly like the original
+--     table-wide-constraint design, just scoped to the active rows only.
+--     A 'refunded' row from an earlier failed attempt under the same key
+--     does NOT count toward that index, so a retry's INSERT succeeds
+--     immediately as a brand new ledger row — no deletion, full history.
+--   - Refund safety: refund_ai_quota(p_reservation_id) is idempotent by
+--     the reservation's own primary key + a conditional
+--     status='reserved' -> 'refunded' transition (ROW_COUNT gate) — the
+--     same "conditional UPDATE is the guard" pattern as before, just
+--     keyed by an immutable id instead of a mutable, reusable tuple.
+--   - operation_type is NOT NULL (no default) specifically because
+--     Postgres treats NULLs as mutually DISTINCT in a unique index — a
+--     nullable column would silently defeat the partial index's
+--     uniqueness guarantee for any caller that omitted it. Supplying a
+--     key without one is rejected outright (see 'invalid_request') by
+--     try_reserve_ai_quota.
 --   - Ownership derived from auth.uid() only (SECURITY DEFINER function
 --     identity), never from a client-supplied user id — same rule the
---     existing quota functions already follow.
---   - BACKWARD COMPATIBLE: the idempotency key parameter on both
---     functions defaults to NULL. A legacy call (no key, no operation
---     type) behaves EXACTLY as before this migration — unconditional
---     reserve/refund. This is a deliberate, temporary compatibility path
---     (mission Section 10) — the actual removal point is a future
---     mission once every one of the 16 quota-consuming Edge Functions has
---     been confirmed to always send a key from an updated client; until
---     then an old cached client build (or a request from before this
---     mission shipped) still functions, just without idempotency
---     protection for that one call. Supplying a key WITHOUT an
---     operation_type is rejected outright (see 'invalid_request' below)
---     rather than silently degrading protection.
+--     existing quota functions already follow. refund_ai_quota's lookup
+--     is additionally scoped to `user_id = auth.uid()`, so even a leaked
+--     reservation_id from a different user's row can never be refunded
+--     by someone else.
+--   - BACKWARD COMPATIBLE: every new parameter defaults to NULL. A
+--     legacy call (no key, no operation type, no reservation id) behaves
+--     EXACTLY as before this migration — unconditional reserve/refund.
+--     This is a deliberate, temporary compatibility path (mission
+--     Section 10) — the actual removal point is a future mission once
+--     every one of the 16 quota-consuming Edge Functions has been
+--     confirmed to always send a key from an updated client.
 --
 -- ROLLBACK:
---   DROP FUNCTION IF EXISTS public.refund_ai_quota(uuid, text);
+--   DROP FUNCTION IF EXISTS public.refund_ai_quota(uuid);
 --   DROP FUNCTION IF EXISTS public.try_reserve_ai_quota(uuid, text);
 --   -- Recreate the pre-13 zero-arg versions from 20260910190000 if
 --   -- reverting fully.
@@ -86,10 +101,17 @@ CREATE TABLE IF NOT EXISTS public.ai_quota_reservations (
   status          text NOT NULL DEFAULT 'reserved'
                     CHECK (status IN ('reserved', 'refunded')),
   created_at      timestamptz NOT NULL DEFAULT now(),
-  refunded_at     timestamptz,
-  CONSTRAINT ai_quota_reservations_unique_key
-    UNIQUE (user_id, idempotency_key, operation_type, period_start)
+  refunded_at     timestamptz
 );
+
+-- The concurrency guard: at most one ACTIVE ('reserved') row per
+-- (user, key, operation, period). Deliberately a PARTIAL index, not a
+-- table-wide UNIQUE constraint — see "Round 3" comment above for why a
+-- refunded row must NOT block a later genuine retry from getting its own
+-- new ledger row.
+CREATE UNIQUE INDEX IF NOT EXISTS ai_quota_reservations_active_unique
+  ON public.ai_quota_reservations (user_id, idempotency_key, operation_type, period_start)
+  WHERE status = 'reserved';
 
 CREATE INDEX IF NOT EXISTS idx_ai_quota_reservations_user_period
   ON public.ai_quota_reservations (user_id, period_start);
@@ -121,22 +143,21 @@ CREATE POLICY "users_read_own_quota_reservations" ON public.ai_quota_reservation
 -- function and an all-defaults function — a documented PostgREST
 -- ambiguity ("Could not choose the best candidate function"). Dropping
 -- the old signature first guarantees exactly one function named
--- try_reserve_ai_quota exists at any time, so there is no dispatch
--- ambiguity for either an old caller (empty body -> both params default
--- to NULL, identical behavior to before this migration) or a new caller
--- (body includes both).
+-- try_reserve_ai_quota exists at any time.
 DROP FUNCTION IF EXISTS public.try_reserve_ai_quota();
 DROP FUNCTION IF EXISTS public.try_reserve_ai_quota(uuid);
 --
--- Race-safety proof: the reservation INSERT ... ON CONFLICT DO NOTHING
--- happens BEFORE the usage increment, and its result (whether a row was
--- actually inserted) gates whether the increment runs at all. Two
--- concurrent transactions with the same (user_id, idempotency_key,
--- operation_type, period_start) can both attempt the INSERT; Postgres's
--- unique index guarantees only one commits the insert, the other observes
--- the conflict and gets NULL back from RETURNING — so only the winner
--- ever reaches the usage increment. This is the standard Postgres
--- upsert-based idempotency pattern, not a SELECT-then-INSERT race.
+-- Race-safety proof: the reservation INSERT ... ON CONFLICT (...) WHERE
+-- status = 'reserved' DO NOTHING happens BEFORE the usage increment, and
+-- its result (whether a row was actually inserted) gates whether the
+-- increment runs at all. Two concurrent transactions with the same
+-- (user_id, idempotency_key, operation_type, period_start) racing while
+-- an active reservation exists (or is being created) can both attempt the
+-- INSERT; the partial unique index guarantees only one commits, the
+-- other observes the conflict and gets NULL back from RETURNING — so only
+-- the winner ever reaches the usage increment. This is the standard
+-- Postgres upsert-based idempotency pattern, not a SELECT-then-INSERT
+-- race.
 CREATE OR REPLACE FUNCTION public.try_reserve_ai_quota(
   p_idempotency_key uuid DEFAULT NULL,
   p_operation_type  text DEFAULT NULL
@@ -147,13 +168,12 @@ SECURITY DEFINER
 SET search_path = 'public'
 AS $function$
 DECLARE
-  v_user_id         uuid := auth.uid();
-  v_role            text;
-  v_limit           int;
-  v_period          date := date_trunc('month', now())::date;
-  v_count           int;
-  v_reservation_id  uuid;
-  v_existing_status text;
+  v_user_id        uuid := auth.uid();
+  v_role           text;
+  v_limit          int;
+  v_period         date := date_trunc('month', now())::date;
+  v_count          int;
+  v_reservation_id uuid;
 BEGIN
   IF v_user_id IS NULL THEN
     RETURN jsonb_build_object('allowed', false, 'reason', 'unauthenticated');
@@ -177,47 +197,39 @@ BEGIN
   END IF;
 
   IF p_idempotency_key IS NOT NULL THEN
-    -- Codex Gate 1 P1 fix — a previously REFUNDED reservation under this
-    -- exact (key, operation, period) means that attempt failed and cost
-    -- nothing real. Treating it as "already reserved" would let a client
-    -- retry indefinitely after every failure and get a free, uncharged
-    -- allowed=true every time (the Edge Function would then make a real,
-    -- unrewarded Groq call). Clear it out so the retry below gets a
-    -- GENUINE new reservation instead.
-    SELECT status INTO v_existing_status
-    FROM public.ai_quota_reservations
-    WHERE user_id = v_user_id
-      AND idempotency_key = p_idempotency_key
-      AND operation_type = p_operation_type
-      AND period_start = v_period
-    FOR UPDATE;
-
-    IF v_existing_status = 'refunded' THEN
-      DELETE FROM public.ai_quota_reservations
-      WHERE user_id = v_user_id
-        AND idempotency_key = p_idempotency_key
-        AND operation_type = p_operation_type
-        AND period_start = v_period;
-    END IF;
-
+    -- A prior REFUNDED row for this same tuple (an earlier failed
+    -- attempt under this key) does not block this INSERT — the partial
+    -- index only constrains 'reserved' rows — so a retry always gets its
+    -- own fresh ledger row and its own fresh id. If an ACTIVE reservation
+    -- already exists for this tuple (a genuine retry of a
+    -- currently-successful reservation, or a concurrent duplicate), the
+    -- INSERT conflicts and this becomes an idempotent replay instead.
     INSERT INTO public.ai_quota_reservations
       (user_id, idempotency_key, operation_type, period_start, status)
     VALUES (v_user_id, p_idempotency_key, p_operation_type, v_period, 'reserved')
-    ON CONFLICT (user_id, idempotency_key, operation_type, period_start) DO NOTHING
+    ON CONFLICT (user_id, idempotency_key, operation_type, period_start)
+      WHERE status = 'reserved'
+      DO NOTHING
     RETURNING id INTO v_reservation_id;
 
     IF v_reservation_id IS NULL THEN
-      -- This exact (key, operation, period) tuple is already reserved —
-      -- a genuine retry of a currently-successful reservation, or this
-      -- request lost the race to a concurrent duplicate. Do NOT reserve
-      -- again. Replaying the SAME key against a DIFFERENT operation_type
-      -- or in a DIFFERENT period_start never reaches this branch at all —
-      -- it simply doesn't match this WHERE clause, so it falls through
-      -- to a real, correctly-charged reservation below instead.
+      -- Already actively reserved — do NOT reserve again. Fetch that
+      -- existing reservation's id too, so a caller who only has the key
+      -- (e.g. inspecting an old response) can still learn which ledger
+      -- row is authoritative right now.
+      SELECT id INTO v_reservation_id
+      FROM public.ai_quota_reservations
+      WHERE user_id = v_user_id
+        AND idempotency_key = p_idempotency_key
+        AND operation_type = p_operation_type
+        AND period_start = v_period
+        AND status = 'reserved';
+
       SELECT request_count INTO v_count
       FROM public.ai_usage WHERE user_id = v_user_id AND period_start = v_period;
       RETURN jsonb_build_object(
         'allowed', true, 'idempotent_replay', true,
+        'reservation_id', v_reservation_id,
         'used', COALESCE(v_count, 0), 'limit', v_limit, 'role', v_role
       );
     END IF;
@@ -234,10 +246,14 @@ BEGIN
 
   IF v_count IS NULL THEN
     -- Quota exceeded. If we just claimed a reservation row above for this
-    -- attempt, release it — a denied attempt must not permanently occupy
-    -- the key (mission Section 07: "Quota exceeded: return
-    -- QUOTA_EXCEEDED", not a silently-poisoned key a legitimate retry
-    -- after upgrading plan could never reuse).
+    -- attempt, delete it — a denied attempt must not permanently occupy
+    -- the active slot for this key (mission Section 07: "Quota exceeded:
+    -- return QUOTA_EXCEEDED", not a silently-poisoned key a legitimate
+    -- retry after upgrading plan could never reuse). This DELETE is safe
+    -- against the refund-race this migration exists to close: nothing
+    -- has told the client a reservation_id for a denied attempt (it was
+    -- never returned — this response path doesn't include one), so
+    -- nothing could have captured this id to refund later.
     IF v_reservation_id IS NOT NULL THEN
       DELETE FROM public.ai_quota_reservations WHERE id = v_reservation_id;
     END IF;
@@ -251,30 +267,38 @@ BEGIN
 
   RETURN jsonb_build_object(
     'allowed', true, 'idempotent_replay', false,
+    'reservation_id', v_reservation_id,
     'used', v_count, 'limit', v_limit, 'role', v_role
   );
 END;
 $function$;
 
--- ── refund_ai_quota(p_idempotency_key, p_operation_type) ────────────────────
--- Idempotent refund: tied to the reservation row's own state transition
--- (reserved -> refunded), not a blind decrement, and scoped by the SAME
--- (key, operation, period) tuple as the reservation it's refunding — a
--- refund call carrying the wrong operation_type for this key must not be
--- able to refund a different operation's reservation. The conditional
--- UPDATE (... AND status = 'reserved') is itself the concurrency guard —
--- a retried or concurrently-duplicated refund call for the same tuple can
--- only ever flip that row once; ROW_COUNT tells us whether THIS call was
--- the one that did it.
+-- ── refund_ai_quota(p_reservation_id) ───────────────────────────────────────
+-- Codex Gate 2 P1 fix — refund now targets ONE SPECIFIC reservation by its
+-- own immutable primary key, never by re-deriving "the current active row
+-- for this (key, operation, period) tuple." That re-derivation was the
+-- bug: after a refunded reservation was retried (getting a NEW row with a
+-- NEW id), a DELAYED DUPLICATE refund call for the OLD attempt would
+-- still match "the row for this tuple with status='reserved'" — which by
+-- then was the NEW, successful, genuinely-charged reservation — and
+-- incorrectly refund it, silently un-charging a real, successful AI call.
 --
--- Same drop-and-recreate reasoning as try_reserve_ai_quota above — avoids
--- a PostgREST overload-dispatch ambiguity between a genuine zero-arg
--- function and an all-defaults function.
+-- Scoping by p_reservation_id closes this completely: a delayed duplicate
+-- refund names a SPECIFIC id. If that id's row is already 'refunded'
+-- (ROW_COUNT=0) it is correctly a no-op; it can never match a DIFFERENT,
+-- newer row, because ids are globally unique and a retry always gets its
+-- own new one. The conditional UPDATE (... AND status = 'reserved') is
+-- still the concurrency guard for two concurrent/duplicate refunds of the
+-- SAME id — only one can ever flip it.
+--
+-- ownership: additionally scoped to user_id = auth.uid(), so a
+-- reservation_id belonging to a different user's row (however it might
+-- have leaked) can never be refunded by this caller.
 DROP FUNCTION IF EXISTS public.refund_ai_quota();
 DROP FUNCTION IF EXISTS public.refund_ai_quota(uuid);
+DROP FUNCTION IF EXISTS public.refund_ai_quota(uuid, text);
 CREATE OR REPLACE FUNCTION public.refund_ai_quota(
-  p_idempotency_key uuid DEFAULT NULL,
-  p_operation_type  text DEFAULT NULL
+  p_reservation_id uuid DEFAULT NULL
 )
 RETURNS void
 LANGUAGE plpgsql
@@ -290,31 +314,19 @@ BEGIN
     RETURN;
   END IF;
 
-  -- A refund is already a best-effort failure-path cleanup step (see
-  -- quota.ts's own doc comment) — a malformed/incomplete pair degrades to
-  -- the legacy unconditional decrement rather than being rejected, unlike
-  -- try_reserve_ai_quota's hard fail-closed on the same condition.
-  IF p_idempotency_key IS NOT NULL AND
-     (p_operation_type IS NULL OR btrim(p_operation_type) = '') THEN
-    p_idempotency_key := NULL;
-  END IF;
-
-  IF p_idempotency_key IS NOT NULL THEN
+  IF p_reservation_id IS NOT NULL THEN
     UPDATE public.ai_quota_reservations
     SET status = 'refunded', refunded_at = now()
-    WHERE user_id = v_user_id
-      AND idempotency_key = p_idempotency_key
-      AND operation_type = p_operation_type
-      AND period_start = v_period
+    WHERE id = p_reservation_id
+      AND user_id = v_user_id
       AND status = 'reserved';
     GET DIAGNOSTICS v_updated = ROW_COUNT;
 
     IF v_updated = 0 THEN
-      -- No reservation exists for this exact tuple (nothing to refund —
-      -- e.g. a refund call for a key that was never reserved, or
-      -- fail-closed against refund-before-reserve), or it was already
-      -- refunded once (a retried refund) — either way, do not decrement
-      -- usage again.
+      -- No such reservation belonging to this user (never existed, or
+      -- belongs to someone else), or it was already refunded once (a
+      -- retried/duplicate refund of the SAME attempt) — either way, do
+      -- not decrement usage again.
       RETURN;
     END IF;
   END IF;
@@ -328,19 +340,19 @@ $function$;
 -- Same authorization posture as the functions being extended — real
 -- logged-in users only, never anon/public.
 REVOKE ALL ON FUNCTION public.try_reserve_ai_quota(uuid, text) FROM PUBLIC, anon;
-REVOKE ALL ON FUNCTION public.refund_ai_quota(uuid, text) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.refund_ai_quota(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.try_reserve_ai_quota(uuid, text) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.refund_ai_quota(uuid, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.refund_ai_quota(uuid) TO authenticated;
 
 -- BACKWARD COMPATIBILITY (mission Section 10): exactly one function of
--- each name now exists (the old zero-arg and one-arg signatures were
--- dropped above), with both parameters defaulting to NULL. An Edge
--- Function deployed before this migration and calling
--- .rpc('try_reserve_ai_quota') with an empty body keeps working
--- identically — same unconditional-reserve behavior as before, just
--- routed through the new function body. The REMOVAL POINT for this
--- compatibility default is a future mission, once every one of the 16
--- quota-consuming Edge Functions is confirmed to always send a real
--- idempotency key + operation type: at that point both parameters should
--- become NOT NULL / required, so a client that skips them can no longer
--- silently bypass idempotency forever.
+-- each name now exists (old signatures were dropped above), with every
+-- new parameter defaulting to NULL. An Edge Function deployed before this
+-- migration and calling .rpc('try_reserve_ai_quota')/.rpc('refund_ai_quota')
+-- with an empty body keeps working identically — same unconditional
+-- reserve/refund behavior as before, just routed through the new function
+-- bodies. The REMOVAL POINT for this compatibility default is a future
+-- mission, once every one of the 16 quota-consuming Edge Functions is
+-- confirmed to always send a real idempotency key + operation type (for
+-- reserve) and reservation id (for refund): at that point these
+-- parameters should become required, so a client that skips them can no
+-- longer silently bypass idempotency forever.

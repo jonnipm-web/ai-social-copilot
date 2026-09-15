@@ -36,6 +36,16 @@
  * Backward compatible: omitting both (or an existing caller not yet
  * updated) reproduces the exact pre-13 unconditional-reserve behavior —
  * see the migration's own comment for the removal point.
+ *
+ * refundQuota takes a reservationId (the reserve call's own
+ * QuotaResult.reservationId), NOT the idempotency key/operation pair —
+ * Codex Gate 2 finding on this mission's second draft: refunding by
+ * re-deriving "the current active row for this (key, operation, period)
+ * tuple" let a DELAYED DUPLICATE refund call match a NEWER reservation
+ * created by a legitimate retry after the original was already refunded,
+ * silently un-charging a real, successful AI call. A reservation's own
+ * immutable id can never be reused by a later attempt, so a delayed
+ * duplicate naming an old id is a safe no-op instead.
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.116.0';
 
@@ -58,6 +68,10 @@ export interface QuotaResult {
   limit?: number;
   role?: string;
   idempotentReplay?: boolean;
+  /** Present whenever an idempotency key was used for this reservation
+   * (fresh or replayed). Pass this — not the idempotency key/operation
+   * pair — to refundQuota if the downstream action then fails. */
+  reservationId?: string;
 }
 
 /** Minimal shape reserveQuota/refundQuota need — lets tests inject a fake
@@ -132,38 +146,43 @@ export async function reserveQuota(
       : undefined,
   );
   if (error || !data) return { allowed: false, reason: 'quota_service_error' };
-  return data as QuotaResult;
+  // The RPC returns snake_case JSON (reservation_id, idempotent_replay) —
+  // map explicitly rather than blindly casting, or reservationId would
+  // silently be undefined at runtime despite compiling fine.
+  const raw = data as Record<string, unknown>;
+  return {
+    allowed: raw.allowed as boolean,
+    reason: raw.reason as string | undefined,
+    used: raw.used as number | undefined,
+    limit: raw.limit as number | undefined,
+    role: raw.role as string | undefined,
+    idempotentReplay: raw.idempotent_replay as boolean | undefined,
+    reservationId: raw.reservation_id as string | undefined,
+  };
 }
 
 /** Best-effort compensating decrement. Never throws -- a refund failure
  * must not turn into a 500 on top of an already-failed AI request.
- * @param idempotencyKey Same contract as reserveQuota's — pass the SAME
- * key used for the reservation being refunded, so refund_ai_quota can
- * tie the refund to that specific reservation and stay idempotent itself
- * (mission Section 08: "at most one effective refund per reserved
- * operation"). A malformed key is silently ignored (best-effort), not
- * thrown, since a refund is already a failure-path cleanup step.
- * @param operationType Same literal constant passed to the matching
- * reserveQuota call — mismatched or missing degrades to the legacy
- * no-key call (best-effort; the SQL function itself also fails safe on
- * this), never throws.
+ * @param reservationId The SAME reserveQuota call's own
+ * `result.reservationId` — NOT the idempotency key or operation type.
+ * Refunding by the reservation's own immutable id (rather than
+ * re-deriving "the current row for this key+operation+period") is what
+ * keeps a delayed duplicate refund from ever matching a DIFFERENT, later
+ * reservation created by a legitimate retry (Codex Gate 2 finding — see
+ * this file's own top-of-file doc comment). Omit it to reproduce the
+ * legacy unconditional decrement (pre-13 behavior / a caller that never
+ * used an idempotency key to begin with).
  */
 export async function refundQuota(
   req: Request,
   client?: QuotaClient,
-  idempotencyKey?: string,
-  operationType?: string,
+  reservationId?: string,
 ): Promise<void> {
   try {
     const rpcClient = client ?? buildUserScopedClient(req);
-    const key = idempotencyKey !== undefined &&
-        isValidIdempotencyKey(idempotencyKey) &&
-        operationType && operationType.trim() !== ''
-      ? idempotencyKey
-      : undefined;
     await rpcClient.rpc(
       'refund_ai_quota',
-      key !== undefined ? { p_idempotency_key: key, p_operation_type: operationType } : undefined,
+      reservationId !== undefined ? { p_reservation_id: reservationId } : undefined,
     );
   } catch {
     // best-effort only
