@@ -238,7 +238,9 @@ void main() {
     'just never applied to this field)',
     () {
       test('a full 40-char git SHA survives unchanged', () {
-        const sha = 'c1098e656224d5b3b816e416f309556a618ba24';
+        // This mission's own first deployed commit SHA — the exact value
+        // that came back "[redacted]" live before this fix.
+        const sha = 'c1098e656224d5b3b816e416f309556a618ba241';
         expect(sha.length, 40);
         expect(sanitizeBuildSha(sha), sha);
       });
@@ -252,7 +254,10 @@ void main() {
       });
 
       test('something that is NOT a plausible git SHA still falls back to full sanitization', () {
-        final result = sanitizeBuildSha('not a real sha at all, way too long and has spaces');
+        // Same alphanumeric+dash shape a real SHA would have, just too
+        // long and containing letters outside [0-9a-f] -- exercises the
+        // fallback path itself, not sanitizeText's specific patterns.
+        final result = sanitizeBuildSha('not-a-real-git-sha-but-still-one-long-contiguous-token-zzzzzz');
         expect(result, contains('[redacted]'));
       });
 
