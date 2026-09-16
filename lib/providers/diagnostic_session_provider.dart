@@ -105,6 +105,17 @@ class DiagnosticSessionNotifier extends StateNotifier<DiagnosticSessionState> {
     state = const DiagnosticSessionState();
   }
 
+  /// IVE-COMMERCIAL-STABILITY-09O-R (mission section 10) — local-only
+  /// detach, no server call (unlike [stop], which marks the session row
+  /// 'stopped' server-side). Called on sign-out: the outgoing user's
+  /// session should remain 'active' server-side (so they can [recover] it
+  /// again on their next login), but THIS tab's in-memory state must not
+  /// keep pointing at it once they're no longer the authenticated user.
+  void reset() {
+    _logger.forgetActiveSession();
+    state = const DiagnosticSessionState();
+  }
+
   void logEvent({
     required DiagnosticCategory category,
     required String eventName,
