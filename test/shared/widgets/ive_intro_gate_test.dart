@@ -74,7 +74,8 @@ void main() {
     'the intro sheet opens, no regression from the pre-fix behavior',
     (tester) async {
       await tester.pumpWidget(withNavigatorHarness(baseOverrides()));
-      await tester.pump(); // build schedules the postFrameCallback
+      await tester.pump(); // lets currentProfileProvider's Future resolve
+      await tester.pump(); // this rebuild sees profile != null, schedules the postFrameCallback
       await tester.pump(); // postFrameCallback fires, Navigator is available
       await tester.pump(const Duration(milliseconds: 400));
 
@@ -130,6 +131,7 @@ void main() {
       }
 
       await tester.pumpWidget(buildTree());
+      await tester.pump(); // lets currentProfileProvider's Future resolve, schedules the callback
       // A couple of frames with genuinely no Navigator -- exactly the
       // transient window the production race exhibited.
       await tester.pump();
