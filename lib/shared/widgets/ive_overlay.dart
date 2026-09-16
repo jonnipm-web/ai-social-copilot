@@ -40,7 +40,20 @@ class IveRouteObserver extends NavigatorObserver {
 // ── Overlay ───────────────────────────────────────────────────────────────────
 
 class IveOverlay extends ConsumerStatefulWidget {
-  const IveOverlay({super.key});
+  const IveOverlay({super.key, required this.navigatorKey});
+
+  // STABILITY-10 — app.dart's MaterialApp.router `builder` mounts this
+  // widget as a Stack SIBLING of `child` (the real GoRouter-managed
+  // Router/Navigator), never a DESCENDANT of it -- the exact same
+  // structural position IveIntroGate occupied (mission STABILITY-09-FIX).
+  // A symbolicated production crash (same signature: "Null check operator
+  // used on a null value" -> showModalBottomSheet -> Navigator.of)
+  // confirmed _openChat's ancestor-based Navigator lookup fails from here
+  // just as it did for IveIntroGate. This is the SAME GlobalKey app.dart
+  // passes as GoRouter's own `navigatorKey` (and to IveIntroGate) -- the
+  // existing root navigator GoRouter already manages, not a second,
+  // competing Navigator architecture.
+  final GlobalKey<NavigatorState> navigatorKey;
 
   @override
   ConsumerState<IveOverlay> createState() => _IveOverlayState();
@@ -202,7 +215,7 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
                       ref.read(iveProvider.notifier).dismissBubble();
                     },
                     onChat: state.activeIssue == null
-                        ? () => _openChat(context, state.screenName)
+                        ? () => _openChat(state.screenName)
                         : null,
                   ),
                 ),
@@ -225,7 +238,7 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
                   if (state.bubbleVisible) {
                     ref.read(iveProvider.notifier).dismissBubble();
                   } else {
-                    _openChat(context, state.screenName);
+                    _openChat(state.screenName);
                   }
                 },
                 child: AnimatedScale(
@@ -245,7 +258,24 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
     );
   }
 
-  void _openChat(BuildContext context, String screenName) {
+  void _openChat(String screenName) {
+    // STABILITY-10 — `context` (this State's own BuildContext) sits ABOVE
+    // the real Router/Navigator, same as IveIntroGate did; showCopilotChat
+    // internally calls showModalBottomSheet, whose Navigator.of lookup
+    // would fail from there exactly like the original STABILITY-09 crash.
+    // widget.navigatorKey.currentState.overlay.context is a genuine
+    // Navigator DESCENDANT (the Overlay the Navigator builds internally),
+    // from which ancestor lookup correctly finds this same Navigator --
+    // the Navigator's own context would NOT qualify (Navigator.of's
+    // ancestor search starts at the given context's PARENT, so calling it
+    // from the Navigator's own context searches ABOVE the Navigator, not
+    // the Navigator itself). Unlike IveIntroGate's app-boot race, this
+    // fires from a synchronous user tap -- the Navigator/Overlay are
+    // already mounted by the time a user can interact with anything, so no
+    // bounded retry is needed here; the null case is purely defensive.
+    final overlayContext = widget.navigatorKey.currentState?.overlay?.context;
+    if (overlayContext == null) return;
+
     ref.read(iveMemoryProvider.notifier).incrementInteraction();
     // Overlay global — sempre projectId: null. Se o usuário estiver
     // dentro do Project Command Center de um projeto específico, esse
@@ -258,7 +288,7 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
     // ive_detail_sheet.dart) em vez de uma cópia privada só deste widget.
     final contextData = ctx != null ? CopilotContextData.fromIveContext(ctx) : const CopilotContextData();
     showCopilotChat(
-      context,
+      overlayContext,
       screenName:  _routeToName(screenName),
       contextData: contextData,
       request: IveInteractionRequest(

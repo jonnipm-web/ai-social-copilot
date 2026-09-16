@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -51,6 +52,10 @@ AuthState _authState({Session? session}) =>
     AuthState(session != null ? AuthChangeEvent.signedIn : AuthChangeEvent.signedOut, session);
 
 void main() {
+  // STABILITY-10 -- IveOverlay now requires a navigatorKey (see its own
+  // constructor doc). A-D below only exercise auth-gating/rendering, not
+  // chat-opening, so a plain unattached key is enough to satisfy the
+  // constructor without changing what these tests actually verify.
   Widget harness({required Override profileOverride, required Override authOverride}) {
     return ProviderScope(
       overrides: [
@@ -58,12 +63,12 @@ void main() {
         profileOverride,
         authOverride,
       ],
-      child: const MaterialApp(
+      child: MaterialApp(
         home: Scaffold(
           body: Stack(
             children: [
-              SizedBox.expand(child: ColoredBox(color: Colors.black)),
-              IveOverlay(),
+              const SizedBox.expand(child: ColoredBox(color: Colors.black)),
+              IveOverlay(navigatorKey: GlobalKey<NavigatorState>()),
             ],
           ),
         ),
@@ -186,12 +191,12 @@ void main() {
           authStateProvider.overrideWith((ref) => Stream.value(_authState(session: MockSession()))),
           iveProvider.overrideWith((ref) => _FixedIveNotifier(ref, wideIssueState)),
         ],
-        child: const MaterialApp(
+        child: MaterialApp(
           home: Scaffold(
             body: Stack(
               children: [
-                SizedBox.expand(child: ColoredBox(color: Colors.black)),
-                IveOverlay(),
+                const SizedBox.expand(child: ColoredBox(color: Colors.black)),
+                IveOverlay(navigatorKey: GlobalKey<NavigatorState>()),
               ],
             ),
           ),
@@ -236,6 +241,19 @@ void main() {
   // whether `_IveOverlayState`'s `onTap` (bubbleVisible ? dismissBubble :
   // _openChat) actually fires and opens the real Context Copilot sheet,
   // not just that the GestureDetector exists in the tree.
+  //
+  // STABILITY-10 -- this test ORIGINALLY used MaterialApp(home:
+  // Scaffold(body: Stack(children: [..., IveOverlay()]))), which places
+  // IveOverlay BELOW an implicit Navigator MaterialApp builds internally --
+  // a structurally different, easier topology than production's real
+  // MaterialApp.router (see app.dart), where IveOverlay is a Stack SIBLING
+  // of the Router's own child, never a descendant of it. That mismatch is
+  // exactly why this test kept passing while a real, symbolicated
+  // production crash (same signature as STABILITY-09: "Null check operator
+  // used on a null value" -> showModalBottomSheet -> Navigator.of) was
+  // live in _openChat. Rebuilt around a real GoRouter + MaterialApp.router
+  // whose `builder` mirrors app.dart's exact Stack(children: [child!,
+  // IveOverlay(navigatorKey: ...), ...]) structure.
   testWidgets(
     'F. toque no avatar da IVE (sem bolha ativa) abre o Context Copilot',
     (tester) async {
@@ -248,20 +266,28 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
+      final navigatorKey = GlobalKey<NavigatorState>();
+      final router = GoRouter(
+        navigatorKey: navigatorKey,
+        initialLocation: '/',
+        routes: [
+          GoRoute(path: '/', builder: (_, __) => const Scaffold(body: SizedBox.shrink())),
+        ],
+      );
+
       await tester.pumpWidget(ProviderScope(
         overrides: [
           diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
           currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
           authStateProvider.overrideWith((ref) => Stream.value(_authState(session: MockSession()))),
         ],
-        child: const MaterialApp(
-          home: Scaffold(
-            body: Stack(
-              children: [
-                SizedBox.expand(child: ColoredBox(color: Colors.black)),
-                IveOverlay(),
-              ],
-            ),
+        child: MaterialApp.router(
+          routerConfig: router,
+          builder: (context, child) => Stack(
+            children: [
+              child!,
+              IveOverlay(navigatorKey: navigatorKey),
+            ],
           ),
         ),
       ));
@@ -273,6 +299,7 @@ void main() {
       );
       expect(avatarFinder, findsOneWidget);
       expect(find.text('Pergunte à IVE'), findsNothing);
+      expect(tester.takeException(), isNull);
 
       await tester.tap(avatarFinder, warnIfMissed: false);
       // Not pumpAndSettle: the opened sheet's empty state has a
@@ -281,9 +308,56 @@ void main() {
       // transition to finish and the sheet's content to build.
       for (var i = 0; i < 10; i++) {
         await tester.pump(const Duration(milliseconds: 100));
+        expect(tester.takeException(), isNull, reason: 'threw on pump #$i opening the chat sheet');
       }
 
       expect(find.text('Pergunte à IVE'), findsOneWidget);
+    },
+  );
+
+  // G — STABILITY-10 regression: the pathological case where the
+  // navigatorKey has genuinely never attached to any Navigator (mirrors
+  // IveIntroGate's own equivalent test). _openChat must no-op safely
+  // rather than crash -- there is nothing to bound-retry here (unlike
+  // IveIntroGate's app-boot race, this fires from a synchronous user tap,
+  // so a permanently-unattached key is the pathological case, not the
+  // reproduced one).
+  testWidgets(
+    'G. toque no avatar quando o navigatorKey nunca se anexou a nenhum Navigator: nenhuma exceção, sheet não abre',
+    (tester) async {
+      final navigatorKey = GlobalKey<NavigatorState>();
+
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
+          currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
+          authStateProvider.overrideWith((ref) => Stream.value(_authState(session: MockSession()))),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: Stack(
+              children: [
+                const SizedBox.expand(child: ColoredBox(color: Colors.black)),
+                IveOverlay(navigatorKey: navigatorKey),
+              ],
+            ),
+          ),
+        ),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      final avatarFinder = find.byWidgetPredicate(
+        (w) => w is Semantics && w.properties.label == 'IVE, assistente executiva',
+      );
+      expect(avatarFinder, findsOneWidget);
+
+      await tester.tap(avatarFinder, warnIfMissed: false);
+      for (var i = 0; i < 5; i++) {
+        await tester.pump();
+        expect(tester.takeException(), isNull, reason: 'threw on pump #$i with navigatorKey never attached');
+      }
+      expect(find.text('Pergunte à IVE'), findsNothing);
     },
   );
 }
