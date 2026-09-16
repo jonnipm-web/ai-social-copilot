@@ -603,7 +603,6 @@ void main() {
       addTearDown(authController.close);
 
       simulateRouteSettledPastSplash();
-      authController.add(_authState(session: MockSession()));
 
       await tester.pumpWidget(realRouterHarness(
         navigatorKey: navigatorKey,
@@ -614,9 +613,23 @@ void main() {
         ],
       ));
 
-      // A single pump lets the profile/intro providers resolve and
-      // _maybeSchedule run at least once, but stops short of the
-      // postFrameCallback chain that would actually open the sheet.
+      // CODEX/STABILITY-09-FIX ROUND 6 -- a broadcast StreamController never
+      // replays events to a subscriber that joins after they were added, so
+      // the signed-in event MUST be emitted only after pumpWidget has
+      // actually subscribed authStateProvider to the stream (a pump first
+      // is not enough by itself -- the ProviderScope/Riverpod subscription
+      // is established synchronously during the pumpWidget build, so
+      // emitting right after it, before any further pump, is what actually
+      // reaches this specific subscriber). Establishes the genuine
+      // "authenticated, ready to schedule" precondition this test claims to
+      // start from -- without this, the gate would never leave AsyncLoading
+      // and the test would pass VACUOUSLY regardless of whether the
+      // sign-out guard works at all.
+      authController.add(_authState(session: MockSession()));
+      // Lets the profile/intro providers AND the now-delivered signed-in
+      // auth state resolve, and _maybeSchedule run with every precondition
+      // genuinely satisfied -- but stops short of the postFrameCallback
+      // chain that would actually open the sheet.
       await tester.pump();
 
       // The session is invalidated EXTERNALLY now -- no context.go call, no
@@ -659,14 +672,28 @@ void main() {
       }
 
       simulateRouteSettledPastSplash();
-      authController.add(_authState(session: MockSession()));
 
       await tester.pumpWidget(buildTree());
-      await tester.pump(); // profile/intro resolve, scheduling begins (Navigator not yet attached)
+      // CODEX/STABILITY-09-FIX ROUND 6 -- same broadcast-stream subscription
+      // timing fix as the test above: emitted only after pumpWidget has
+      // actually subscribed authStateProvider, so this genuinely
+      // establishes "signed in" as the starting precondition rather than
+      // silently staying in AsyncLoading (which would make this test
+      // indistinguishable from "never scheduled because never
+      // authenticated" -- unable to prove the _tryPresent-specific guard at
+      // all, only ever exercising _maybeSchedule's).
+      authController.add(_authState(session: MockSession()));
+      // Several pumps with a genuinely authenticated session and the
+      // Navigator deliberately unattached (noNavigatorHarness): _maybeSchedule
+      // succeeds and _presented becomes true here, well before sign-out is
+      // ever emitted below -- the bounded retry loop is now actively
+      // in-flight when sign-out arrives.
+      await tester.pump();
+      await tester.pump();
       await tester.pump();
 
       // Sign-out arrives while still mid-retry (Navigator/Overlay still
-      // unattached in this tree).
+      // unattached in this tree) -- AFTER scheduling already began.
       authController.add(_authState());
       await tester.pump();
 
