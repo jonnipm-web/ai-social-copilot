@@ -591,16 +591,29 @@ void main() {
   );
 
   testWidgets(
-    'CODEX/STABILITY-09-FIX ROUND 5 — an auth session invalidated EXTERNALLY (no in-app '
-    "navigation, so GoRouter's redirect callback never re-runs and settledRoute stays "
-    'stale/ready) must still block presentation: authStateProvider emitting signed-out is '
-    'checked directly, independent of route state',
+    'CODEX/STABILITY-09-FIX ROUND 5/6 — no live session (authStateProvider signed-out) even '
+    'though profile/route both look ready: presentation is blocked from the very first build, '
+    'independent of route state',
     (tester) async {
+      // CODEX/STABILITY-09-FIX ROUND 6 -- a REAL Navigator (realRouterHarness)
+      // is available from the very first frame, so with a StreamController
+      // there is no reliably observable window between "scheduled" and
+      // "presented" to inject a LATER sign-out into (the whole schedule ->
+      // tryPresent -> showModalBottomSheet chain can complete within a
+      // single pump, exactly like the "Navigator available" test's own
+      // fast path) -- an earlier version of this test tried exactly that
+      // and, once its own signed-in-delivery bug was fixed, proved the
+      // intro already opens before the sign-out line ever runs. This test
+      // instead proves the simpler, still load-bearing property: a session
+      // that is signed-out (or never resolves) from the start blocks
+      // presentation outright, no matter how "ready" every other signal
+      // is. The harder "authenticated, scheduled, THEN signed out mid
+      // retry" property is proven by the next test, which deliberately
+      // uses noNavigatorHarness to keep presentation pending long enough
+      // to have a controllable window.
       final navigatorKey = GlobalKey<NavigatorState>();
       final l10n = await AppLocalizations.delegate.load(const Locale('pt'));
       final titleFinder = find.text(l10n.ivIntroTitle);
-      final authController = StreamController<AuthState>.broadcast();
-      addTearDown(authController.close);
 
       simulateRouteSettledPastSplash();
 
@@ -609,39 +622,13 @@ void main() {
         overrides: [
           diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
           currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
-          authStateProvider.overrideWith((ref) => authController.stream),
+          authStateProvider.overrideWith((ref) => Stream.value(_authState())),
         ],
       ));
 
-      // CODEX/STABILITY-09-FIX ROUND 6 -- a broadcast StreamController never
-      // replays events to a subscriber that joins after they were added, so
-      // the signed-in event MUST be emitted only after pumpWidget has
-      // actually subscribed authStateProvider to the stream (a pump first
-      // is not enough by itself -- the ProviderScope/Riverpod subscription
-      // is established synchronously during the pumpWidget build, so
-      // emitting right after it, before any further pump, is what actually
-      // reaches this specific subscriber). Establishes the genuine
-      // "authenticated, ready to schedule" precondition this test claims to
-      // start from -- without this, the gate would never leave AsyncLoading
-      // and the test would pass VACUOUSLY regardless of whether the
-      // sign-out guard works at all.
-      authController.add(_authState(session: MockSession()));
-      // Lets the profile/intro providers AND the now-delivered signed-in
-      // auth state resolve, and _maybeSchedule run with every precondition
-      // genuinely satisfied -- but stops short of the postFrameCallback
-      // chain that would actually open the sheet.
-      await tester.pump();
-
-      // The session is invalidated EXTERNALLY now -- no context.go call, no
-      // redirect re-evaluation; settledRoute/currentProfileProvider are
-      // exactly as stale as Codex round 5 described. authStateProvider is
-      // the only signal that actually changes.
-      authController.add(_authState());
-      await tester.pump();
-
       for (var i = 0; i < 15; i++) {
         await tester.pump();
-        expect(tester.takeException(), isNull, reason: 'threw on pump #$i after external sign-out');
+        expect(tester.takeException(), isNull, reason: 'threw on pump #$i with no live session');
       }
       expect(titleFinder, findsNothing);
     },
