@@ -12,23 +12,36 @@
 // which places the probed widget BELOW an implicit Navigator and does not
 // reproduce the real production topology (this was the exact test-fidelity
 // gap Codex identified in an earlier round of this same fix).
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:ai_social_copilot/core/constants/app_constants.dart';
 import 'package:ai_social_copilot/core/diagnostics/diagnostic_logger_service.dart';
 import 'package:ai_social_copilot/core/diagnostics/ive_forensic_snapshot.dart';
 import 'package:ai_social_copilot/data/models/profile.dart';
 import 'package:ai_social_copilot/l10n/app_localizations.dart';
+import 'package:ai_social_copilot/providers/auth_provider.dart';
 import 'package:ai_social_copilot/providers/diagnostic_session_provider.dart';
 import 'package:ai_social_copilot/providers/profile_provider.dart';
 import 'package:ai_social_copilot/shared/widgets/ive_intro_gate.dart';
 
 class MockDiagnosticLoggerService extends Mock implements DiagnosticLoggerService {}
+
+// STABILITY-09-FIX (Codex Gate round 5) -- IveIntroGate now also gates on
+// authStateProvider (see its own comment), same pattern already established
+// in test/shared/widgets/ive_overlay_auth_gate_test.dart for the same class
+// of "auth-adjacent global overlay widget" concern.
+class MockSession extends Mock implements Session {}
+
+AuthState _authState({Session? session}) =>
+    AuthState(session != null ? AuthChangeEvent.signedIn : AuthChangeEvent.signedOut, session);
 
 Profile _fakeProfile() => Profile(
       id: 'user-1',
@@ -77,6 +90,7 @@ void main() {
   List<Override> baseOverrides() => [
         diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
         currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
+        authStateProvider.overrideWith((ref) => Stream.value(_authState(session: MockSession()))),
       ];
 
   // The exact real production topology: a real GoRouter-managed Navigator,
@@ -254,6 +268,7 @@ void main() {
         overrides: [
           diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
           currentProfileProvider.overrideWith((ref) async => null),
+          authStateProvider.overrideWith((ref) => Stream.value(_authState(session: MockSession()))),
         ],
       ));
       for (var i = 0; i < 5; i++) {
@@ -572,6 +587,99 @@ void main() {
       expect(titleFinder, findsOneWidget);
       expect(tester.takeException(), isNull);
       expect(IveForensicSnapshot.settledRoute, AppConstants.routeHome);
+    },
+  );
+
+  testWidgets(
+    'CODEX/STABILITY-09-FIX ROUND 5 — an auth session invalidated EXTERNALLY (no in-app '
+    "navigation, so GoRouter's redirect callback never re-runs and settledRoute stays "
+    'stale/ready) must still block presentation: authStateProvider emitting signed-out is '
+    'checked directly, independent of route state',
+    (tester) async {
+      final navigatorKey = GlobalKey<NavigatorState>();
+      final l10n = await AppLocalizations.delegate.load(const Locale('pt'));
+      final titleFinder = find.text(l10n.ivIntroTitle);
+      final authController = StreamController<AuthState>.broadcast();
+      addTearDown(authController.close);
+
+      simulateRouteSettledPastSplash();
+      authController.add(_authState(session: MockSession()));
+
+      await tester.pumpWidget(realRouterHarness(
+        navigatorKey: navigatorKey,
+        overrides: [
+          diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
+          currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
+          authStateProvider.overrideWith((ref) => authController.stream),
+        ],
+      ));
+
+      // A single pump lets the profile/intro providers resolve and
+      // _maybeSchedule run at least once, but stops short of the
+      // postFrameCallback chain that would actually open the sheet.
+      await tester.pump();
+
+      // The session is invalidated EXTERNALLY now -- no context.go call, no
+      // redirect re-evaluation; settledRoute/currentProfileProvider are
+      // exactly as stale as Codex round 5 described. authStateProvider is
+      // the only signal that actually changes.
+      authController.add(_authState());
+      await tester.pump();
+
+      for (var i = 0; i < 15; i++) {
+        await tester.pump();
+        expect(tester.takeException(), isNull, reason: 'threw on pump #$i after external sign-out');
+      }
+      expect(titleFinder, findsNothing);
+    },
+  );
+
+  testWidgets(
+    'CODEX/STABILITY-09-FIX ROUND 5 — external sign-out arriving DURING the bounded '
+    'Navigator-retry window (after scheduling, before presenting) still blocks presentation '
+    '(the _tryPresent final guard, not just the _maybeSchedule one)',
+    (tester) async {
+      final navigatorKey = GlobalKey<NavigatorState>();
+      final l10n = await AppLocalizations.delegate.load(const Locale('pt'));
+      final titleFinder = find.text(l10n.ivIntroTitle);
+      final authController = StreamController<AuthState>.broadcast();
+      addTearDown(authController.close);
+      final introKey = GlobalKey();
+      var navigatorReady = false;
+
+      Widget buildTree() {
+        final overrides = [
+          diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
+          currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
+          authStateProvider.overrideWith((ref) => authController.stream),
+        ];
+        return navigatorReady
+            ? realRouterHarness(navigatorKey: navigatorKey, overrides: overrides, introKey: introKey)
+            : noNavigatorHarness(navigatorKey: navigatorKey, overrides: overrides, introKey: introKey);
+      }
+
+      simulateRouteSettledPastSplash();
+      authController.add(_authState(session: MockSession()));
+
+      await tester.pumpWidget(buildTree());
+      await tester.pump(); // profile/intro resolve, scheduling begins (Navigator not yet attached)
+      await tester.pump();
+
+      // Sign-out arrives while still mid-retry (Navigator/Overlay still
+      // unattached in this tree).
+      authController.add(_authState());
+      await tester.pump();
+
+      // The real Navigator becomes available -- if the only guard were the
+      // one in _maybeSchedule (already evaluated before sign-out), this
+      // would incorrectly open the sheet now.
+      navigatorReady = true;
+      await tester.pumpWidget(buildTree());
+      for (var i = 0; i < 15; i++) {
+        await tester.pump();
+        expect(tester.takeException(), isNull, reason: 'threw on pump #$i after external sign-out mid-retry');
+      }
+      expect(titleFinder, findsNothing);
     },
   );
 }

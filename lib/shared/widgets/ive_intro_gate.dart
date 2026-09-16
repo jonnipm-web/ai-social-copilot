@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/diagnostics/ive_forensic_snapshot.dart';
 import '../../data/models/profile.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/ive_intro_provider.dart';
 import '../../providers/profile_provider.dart';
 import 'ive_intro_sheet.dart';
@@ -108,6 +109,33 @@ class _IveIntroGateState extends ConsumerState<IveIntroGate> {
     return route.isNotEmpty && route != AppConstants.routeSplash && route != AppConstants.routeLogin;
   }
 
+  // STABILITY-09-FIX (Codex Gate round 5, P1) — `settledRoute` (and
+  // `currentProfileProvider`'s cached resolved value) are only refreshed
+  // when GoRouter's `redirect` callback actually runs, i.e. on an in-app
+  // navigation attempt. An auth session invalidated EXTERNALLY (token
+  // expiry, sign-out in another tab, server-side revocation) with the user
+  // simply sitting on an already-settled authenticated screen -- no
+  // `context.go` call, no redirect re-evaluation -- would leave both
+  // signals stale. `authStateProvider` (already existing, wrapping
+  // Supabase's own `onAuthStateChange` stream, which fires for external/
+  // token-refresh/session-expiry events too, not just in-app sign-in/out)
+  // gives a live, REACTIVE signal instead: watching it in build() means
+  // this widget rebuilds on any such change on its own, independent of
+  // whether GoRouter ever re-evaluates a redirect. This stays entirely
+  // inside the intro flow (mission section 08: "no change to navigation
+  // behavior outside the intro flow") and reuses an existing, already
+  // test-mockable provider rather than reading the raw Supabase singleton
+  // directly (which throws in this project's widget-test harnesses unless
+  // initialized — every other file that needs auth state goes through this
+  // same provider for exactly that reason). Wiring GoRouter's OWN
+  // redirect/refresh architecture to auth-state changes app-wide (Codex's
+  // own suggested alternative) would be a materially different, broader
+  // change than this mission's IveIntroGate-scoped fix, and is a
+  // pre-existing characteristic of currentProfileProvider shared by the
+  // whole app, not something this mission introduced or is scoped to fix
+  // (mission section 16).
+  bool _hasLiveSession() => ref.read(authStateProvider).valueOrNull?.session != null;
+
   @override
   void initState() {
     super.initState();
@@ -138,7 +166,9 @@ class _IveIntroGateState extends ConsumerState<IveIntroGate> {
   }
 
   void _maybeSchedule(Profile? profile, IveIntroState introState) {
-    if (_presented || profile == null || !introState.shouldShow || !_routeReady()) return;
+    if (_presented || profile == null || !introState.shouldShow || !_routeReady() || !_hasLiveSession()) {
+      return;
+    }
     _presented = true;
     _navigatorRetryAttempt = 0;
     WidgetsBinding.instance.addPostFrameCallback((_) => _tryPresent());
@@ -148,6 +178,10 @@ class _IveIntroGateState extends ConsumerState<IveIntroGate> {
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(currentProfileProvider);
     final introState   = ref.watch(iveIntroProvider);
+    // Watched (not just read) so an external auth-state change (session
+    // expiry, sign-out in another tab) rebuilds this widget on its own --
+    // see _hasLiveSession's own comment.
+    ref.watch(authStateProvider);
 
     _maybeSchedule(profileAsync.valueOrNull, introState);
 
@@ -159,6 +193,14 @@ class _IveIntroGateState extends ConsumerState<IveIntroGate> {
 
   void _tryPresent() {
     if (!mounted) return;
+    // Final guard: the retry window above can span several frames, during
+    // which an externally-invalidated session (see _hasLiveSession's own
+    // comment) could newly become stale. Cheap and always fresh -- re-check
+    // right before actually presenting, not just at scheduling time.
+    if (!_hasLiveSession()) {
+      _presented = false;
+      return;
+    }
     final overlayContext = widget.navigatorKey.currentState?.overlay?.context;
     if (overlayContext == null) {
       if (_navigatorRetryAttempt < _maxNavigatorRetryAttempts) {
