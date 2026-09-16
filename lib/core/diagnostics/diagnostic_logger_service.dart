@@ -314,25 +314,29 @@ class DiagnosticLoggerService {
     // "[redacted]" — confirmed live in production during
     // IVE-COMMERCIAL-FOUNDATION-11D's physical validation. See
     // sanitizeEventName's own doc comment in diagnostic_sanitizer.dart.
+    //
+    // IVE-COMMERCIAL-STABILITY-09O-SHA — the actual row shape (including
+    // event-level build_sha) is built by the top-level
+    // [buildDiagnosticEventPayload], a pure function tested directly in
+    // test/core/diagnostics/diagnostic_logger_service_test.dart.
     try {
-      await _client.from('diagnostic_events').insert({
-        'session_id': sessionId,
-        'user_id': userId,
-        'severity': severity.value,
-        'category': category.value,
-        'module': module != null ? sanitizeText(module, maxLength: 100) : null,
-        'operation': operation != null ? sanitizeText(operation, maxLength: 100) : null,
-        'route': route != null ? sanitizeText(route, maxLength: 200) : null,
-        'event_name': sanitizeEventName(eventName, maxLength: 200),
-        'status': status != null ? sanitizeText(status, maxLength: 50) : null,
-        'duration_ms': durationMs,
-        'correlation_id': correlationId != null ? sanitizeCorrelationId(correlationId, maxLength: 100) : null,
-        'metadata': buildSafeMetadata(metadata, allowedKeys: kDiagnosticMetadataKeys),
-        'error_type': error != null ? sanitizeText(error.runtimeType.toString(), maxLength: 100) : null,
-        'error_message': error != null ? sanitizeErrorMessage(error) : null,
-        'error_stack': stackTrace != null ? sanitizeStackTrace(stackTrace) : null,
-        'source_component': sourceComponent != null ? sanitizeText(sourceComponent, maxLength: 100) : null,
-      });
+      await _client.from('diagnostic_events').insert(buildDiagnosticEventPayload(
+        sessionId: sessionId,
+        userId: userId,
+        category: category,
+        eventName: eventName,
+        severity: severity,
+        module: module,
+        operation: operation,
+        route: route,
+        status: status,
+        durationMs: durationMs,
+        correlationId: correlationId,
+        metadata: metadata,
+        error: error,
+        stackTrace: stackTrace,
+        sourceComponent: sourceComponent,
+      ));
     } catch (e) {
       // Never rethrow, never log-the-logger's-own-failure through this same
       // path (that would be the recursive loop mission section 14 forbids)
@@ -344,6 +348,59 @@ class DiagnosticLoggerService {
       debugPrint('[diagnostics] falha ao gravar evento "$eventName": ${sanitizeErrorMessage(e)}');
     }
   }
+}
+
+/// IVE-COMMERCIAL-STABILITY-09O-SHA — pure construction of the row
+/// [DiagnosticLoggerService._writeEvent] inserts into `diagnostic_events`.
+/// Extracted to a top-level, dependency-free function (no Supabase client,
+/// no instance state) purely for testability: this codebase's established
+/// convention is to never build heavy SupabaseClient mocking
+/// infrastructure just to test what a write WOULD contain (see e.g.
+/// profile_resume_policy.dart's own precedent for extracting pure
+/// decisions out of code that otherwise needs a live backend) — this
+/// function is exactly that extraction for the event-payload shape.
+///
+/// `build_sha` always comes from the runtime's own [kBuildSha] (never a
+/// parameter here, never derived from anything caller-supplied) — see
+/// [DiagnosticLoggerService._writeEvent]'s own comment for why this must
+/// be authoritative per EVENT, not inherited from
+/// `diagnostic_sessions.build_sha`.
+Map<String, Object?> buildDiagnosticEventPayload({
+  required String sessionId,
+  required String userId,
+  required DiagnosticCategory category,
+  required String eventName,
+  required DiagnosticSeverity severity,
+  String? module,
+  String? operation,
+  String? route,
+  String? status,
+  int? durationMs,
+  String? correlationId,
+  Map<String, Object?> metadata = const {},
+  Object? error,
+  StackTrace? stackTrace,
+  String? sourceComponent,
+}) {
+  return {
+    'session_id': sessionId,
+    'user_id': userId,
+    'severity': severity.value,
+    'category': category.value,
+    'build_sha': sanitizeBuildSha(kBuildSha, maxLength: 100),
+    'module': module != null ? sanitizeText(module, maxLength: 100) : null,
+    'operation': operation != null ? sanitizeText(operation, maxLength: 100) : null,
+    'route': route != null ? sanitizeText(route, maxLength: 200) : null,
+    'event_name': sanitizeEventName(eventName, maxLength: 200),
+    'status': status != null ? sanitizeText(status, maxLength: 50) : null,
+    'duration_ms': durationMs,
+    'correlation_id': correlationId != null ? sanitizeCorrelationId(correlationId, maxLength: 100) : null,
+    'metadata': buildSafeMetadata(metadata, allowedKeys: kDiagnosticMetadataKeys),
+    'error_type': error != null ? sanitizeText(error.runtimeType.toString(), maxLength: 100) : null,
+    'error_message': error != null ? sanitizeErrorMessage(error) : null,
+    'error_stack': stackTrace != null ? sanitizeStackTrace(stackTrace) : null,
+    'source_component': sourceComponent != null ? sanitizeText(sourceComponent, maxLength: 100) : null,
+  };
 }
 
 /// Public helper so instrumentation call sites can generate a correlation id

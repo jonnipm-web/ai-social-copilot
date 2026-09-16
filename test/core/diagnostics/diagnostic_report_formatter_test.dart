@@ -57,4 +57,38 @@ void main() {
     expect(report, contains('(active)'));
     expect(report, contains('Timeline (0 events)'));
   });
+
+  test(
+    'IVE-COMMERCIAL-STABILITY-09O-SHA — distinguishes session build_sha (session-start) '
+    'from each event\'s own, possibly different, build_sha',
+    () {
+      final report = formatDiagnosticReport(
+        session: {
+          'id': 'abc-123',
+          'started_at': '2026-09-14T10:00:00Z',
+          'ended_at': null,
+          'build_sha': 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        },
+        events: [
+          {
+            'occurred_at': '2026-09-16T17:05:42Z',
+            'severity': 'CRITICAL',
+            'category': 'RUNTIME',
+            'event_name': 'uncaught_error',
+            'route': '/dashboard',
+            'status': 'failure',
+            'duration_ms': null,
+            // Deliberately DIFFERENT from the session's build_sha above —
+            // exactly the STABILITY-09O-R real-world scenario this
+            // mission exists to make unambiguous.
+            'build_sha': 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+          },
+        ],
+      );
+
+      expect(report, contains('Session build_sha'));
+      expect(report, contains('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'));
+      expect(report, contains('event_build_sha=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'));
+    },
+  );
 }

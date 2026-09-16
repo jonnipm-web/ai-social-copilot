@@ -28,6 +28,14 @@ String formatDiagnosticReport({
     ..writeln('Started: ${session['started_at']}')
     ..writeln('Ended: ${session['ended_at'] ?? '(active)'}')
     ..writeln('Role snapshot: ${session['role_snapshot'] ?? '—'}')
+    // IVE-COMMERCIAL-STABILITY-09O-SHA (mission section 08) — explicitly
+    // labeled "session-start" to prevent exactly the confusion this
+    // mission exists to close: this reflects the build running when the
+    // session was CREATED, which can be stale by the time any individual
+    // event below actually fired (a session may survive many deploys).
+    // Each event line has its OWN, authoritative build_sha for that
+    // reason — always prefer the event's own value for symbolication.
+    ..writeln('Session build_sha (session-start, may be stale for later events): ${session['build_sha'] ?? '—'}')
     ..writeln()
     ..writeln('## Timeline (${events.length} events)')
     ..writeln();
@@ -35,7 +43,8 @@ String formatDiagnosticReport({
     buffer.writeln(
       '- [${e['occurred_at']}] ${e['severity']}/${e['category']} '
       '${e['event_name']} (route=${e['route'] ?? '—'}, status=${e['status'] ?? '—'}'
-      '${e['duration_ms'] != null ? ', ${e['duration_ms']}ms' : ''})',
+      '${e['duration_ms'] != null ? ', ${e['duration_ms']}ms' : ''}'
+      ', event_build_sha=${e['build_sha'] ?? '—'})',
     );
     if (e['error_message'] != null) {
       buffer.writeln('  error: ${e['error_type'] ?? ''} ${e['error_message']}');
