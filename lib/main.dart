@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
 import 'core/diagnostics/diagnostic_container.dart';
 import 'core/diagnostics/diagnostic_models.dart';
+import 'core/diagnostics/ive_forensic_snapshot.dart';
 import 'data/services/drive_stage.dart' show redactForLog;
 import 'shared/widgets/ive_overlay.dart' show iveRouteNotifier;
 
@@ -49,21 +50,27 @@ import 'shared/widgets/ive_overlay.dart' show iveRouteNotifier;
 void _logUncaughtError(Object error, StackTrace stack) {
   debugPrint('[uncaught] ${error.runtimeType}: ${redactForLog(error)}');
   try {
-    // IVE-COMMERCIAL-STABILITY-08 (Phase 3/4 — "prepare additional evidence
-    // for the next physical session") — COMMERCIAL-E2E-001 captured 25
-    // uncaught_error events with route always null, forcing this mission's
-    // analysis to infer the screen from the nearest NAVIGATION event by
-    // timestamp instead of reading it directly. iveRouteNotifier already
-    // tracks the current route globally (see ive_overlay.dart's
-    // IveRouteObserver, wired into every GoRouter navigation) — reading it
-    // here costs nothing and turns that inference into a direct fact for
-    // whichever crash occurs next.
+    // IVE-COMMERCIAL-STABILITY-08 (Phase 3/4) — COMMERCIAL-E2E-001 captured
+    // 25 uncaught_error events with route always null. STABILITY-09O root-
+    // caused why: iveRouteNotifier only updates via a NavigatorObserver's
+    // didPush/didPop/didReplace, keyed off `route.settings.name` — but no
+    // GoRoute in app.dart sets `name:`, so that name is empty for ordinary
+    // GoRouter navigation and the notifier rarely actually changes.
+    // IveForensicSnapshot.currentRoute is populated instead from the
+    // GoRouter `redirect` callback (app.dart), which already runs on every
+    // navigation ATTEMPT and already computes an accurate path — that is
+    // now the primary source, with iveRouteNotifier kept only as a
+    // zero-cost fallback for any navigation that somehow bypasses it.
+    final capturedRoute = IveForensicSnapshot.currentRoute.isNotEmpty
+        ? IveForensicSnapshot.currentRoute
+        : (iveRouteNotifier.value.isEmpty ? null : iveRouteNotifier.value);
     diagnosticLogger.logEvent(
       category: DiagnosticCategory.runtime,
       eventName: 'uncaught_error',
       severity: DiagnosticSeverity.critical,
       status: 'failure',
-      route: iveRouteNotifier.value.isEmpty ? null : iveRouteNotifier.value,
+      route: capturedRoute,
+      metadata: IveForensicSnapshot.toMetadata(),
       error: error,
       stackTrace: stack,
     );
