@@ -28,13 +28,23 @@ class IveForensicSnapshot {
   static String previousRoute = '';
   static String currentRoute = '';
 
-  /// STABILITY-09-FIX (Codex Gate round 2, P1) — a purpose-built, listenable
-  /// mirror of [currentRoute] so a widget (IveIntroGate) can react to the
-  /// actual route-CHANGE event the GoRouter `redirect` callback already
-  /// produces via [recordRoute], instead of polling. Kept separate from the
-  /// plain [currentRoute] string so every existing reader of that field
-  /// (toMetadata, [projectContextPresent], existing tests) is unaffected.
-  static final ValueNotifier<String> currentRouteNotifier = ValueNotifier<String>('');
+  /// STABILITY-09-FIX (Codex Gate round 3, P1) — DELIBERATELY separate from
+  /// [currentRoute]/[recordRoute]. Those fire on every navigation ATTEMPT
+  /// (the GoRouter `redirect` callback records the path it is EVALUATING,
+  /// before the redirect decision is known), so a request for `/login` by
+  /// an already-authenticated user briefly makes [currentRoute] equal
+  /// `/login` even though GoRouter immediately redirects it to `/dashboard`
+  /// — round 2's `currentRoute != routeSplash` check could not tell that
+  /// apart from a genuine, settled `/login` visit. [settledRouteNotifier]
+  /// is written ONLY via [recordSettledRoute], which app.dart's `redirect`
+  /// callback calls AFTER its own redirect decision resolves to null (no
+  /// further redirect needed — GoRouter has accepted this exact path) and
+  /// the path is neither Splash nor Login, i.e. a genuinely arrived-at,
+  /// authenticated destination. [currentRoute]'s existing forensic
+  /// semantics (attempted path, used by [toMetadata]/[projectContextPresent]
+  /// and existing tests) are completely unchanged.
+  static final ValueNotifier<String> settledRouteNotifier = ValueNotifier<String>('');
+  static String get settledRoute => settledRouteNotifier.value;
   static AppLifecycleState? lifecycleState;
   static bool overlayMounted = false;
   static bool overlayDragging = false;
@@ -60,7 +70,15 @@ class IveForensicSnapshot {
     if (path == currentRoute) return;
     previousRoute = currentRoute;
     currentRoute = path;
-    currentRouteNotifier.value = path;
+  }
+
+  /// STABILITY-09-FIX (Codex Gate round 3) — see [settledRouteNotifier].
+  /// Callers are responsible for only calling this with a genuinely settled,
+  /// non-Splash, non-Login path (app.dart's `redirect` callback does this
+  /// after its own redirect decision is null).
+  static void recordSettledRoute(String path) {
+    if (path == settledRouteNotifier.value) return;
+    settledRouteNotifier.value = path;
   }
 
   /// Derived, not stored: true only for a specific project-scoped route

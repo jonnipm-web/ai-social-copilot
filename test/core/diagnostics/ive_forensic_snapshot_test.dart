@@ -13,7 +13,7 @@ import 'package:ai_social_copilot/core/diagnostics/ive_forensic_snapshot.dart';
 void _resetSnapshot() {
   IveForensicSnapshot.previousRoute = '';
   IveForensicSnapshot.currentRoute = '';
-  IveForensicSnapshot.currentRouteNotifier.value = '';
+  IveForensicSnapshot.settledRouteNotifier.value = '';
   IveForensicSnapshot.lifecycleState = null;
   IveForensicSnapshot.overlayMounted = false;
   IveForensicSnapshot.overlayDragging = false;
@@ -47,24 +47,41 @@ void main() {
       expect(IveForensicSnapshot.previousRoute, AppConstants.routeDashboard);
     });
 
-    test('STABILITY-09-FIX — currentRouteNotifier mirrors currentRoute and '
-        'only notifies listeners on a genuine change', () {
+    test('STABILITY-09-FIX (Codex Gate round 3) — recordRoute alone never touches '
+        'settledRouteNotifier: attempted-path recording and settled-route recording '
+        'are independent signals', () {
+      IveForensicSnapshot.recordRoute(AppConstants.routeLogin);
+      expect(IveForensicSnapshot.currentRoute, AppConstants.routeLogin);
+      expect(IveForensicSnapshot.settledRoute, '');
+    });
+  });
+
+  group('recordSettledRoute — settled-destination signal (Codex Gate round 3)', () {
+    test('sets settledRoute and notifies listeners on a genuine change', () {
       var notifyCount = 0;
       void listener() => notifyCount++;
-      IveForensicSnapshot.currentRouteNotifier.addListener(listener);
-      addTearDown(() => IveForensicSnapshot.currentRouteNotifier.removeListener(listener));
+      IveForensicSnapshot.settledRouteNotifier.addListener(listener);
+      addTearDown(() => IveForensicSnapshot.settledRouteNotifier.removeListener(listener));
 
-      IveForensicSnapshot.recordRoute(AppConstants.routeDashboard);
-      expect(IveForensicSnapshot.currentRouteNotifier.value, AppConstants.routeDashboard);
+      IveForensicSnapshot.recordSettledRoute(AppConstants.routeDashboard);
+      expect(IveForensicSnapshot.settledRoute, AppConstants.routeDashboard);
       expect(notifyCount, 1);
 
-      // Same route again -- recordRoute no-ops before touching the notifier.
-      IveForensicSnapshot.recordRoute(AppConstants.routeDashboard);
+      // Same route again -- no-ops before touching the notifier.
+      IveForensicSnapshot.recordSettledRoute(AppConstants.routeDashboard);
       expect(notifyCount, 1);
 
-      IveForensicSnapshot.recordRoute(AppConstants.routeHome);
-      expect(IveForensicSnapshot.currentRouteNotifier.value, AppConstants.routeHome);
+      IveForensicSnapshot.recordSettledRoute(AppConstants.routeHome);
+      expect(IveForensicSnapshot.settledRoute, AppConstants.routeHome);
       expect(notifyCount, 2);
+    });
+
+    test('does not affect currentRoute/previousRoute (the separate, pre-existing '
+        'attempted-path forensic signal)', () {
+      IveForensicSnapshot.recordRoute(AppConstants.routeLogin);
+      IveForensicSnapshot.recordSettledRoute(AppConstants.routeDashboard);
+      expect(IveForensicSnapshot.currentRoute, AppConstants.routeLogin);
+      expect(IveForensicSnapshot.settledRoute, AppConstants.routeDashboard);
     });
   });
 

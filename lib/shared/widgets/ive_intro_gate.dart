@@ -84,42 +84,46 @@ class _IveIntroGateState extends ConsumerState<IveIntroGate> {
   static const _maxNavigatorRetryAttempts = 10;
   int _navigatorRetryAttempt = 0;
 
-  // STABILITY-09-FIX (Codex Gate round 2, P1) — profile resolution
-  // (currentProfileProvider, a network fetch) and GoRouter's own
-  // Splash->Dashboard/Login redirect (SplashScreen's fixed 800ms timer) are
-  // driven by two INDEPENDENT clocks. On a fast connection/warm session the
-  // profile can resolve WHILE the app is still showing Splash -- and since
-  // IveIntroGate is mounted globally in app.dart's builder (not per-route),
-  // its build() runs regardless of the current route. Without a route
-  // check, this let the intro sheet schedule and open on top of the Splash
-  // screen instead of Dashboard/login-adjacent authenticated content.
+  // STABILITY-09-FIX (Codex Gate rounds 2-3) — profile resolution
+  // (currentProfileProvider, a network fetch) and GoRouter's own redirect
+  // resolution (SplashScreen's fixed 800ms timer, plus an async entitlement
+  // check) are driven by INDEPENDENT clocks. On a fast connection/warm
+  // session the profile can resolve WHILE the app is still showing Splash
+  // or mid-redirect -- and since IveIntroGate is mounted globally in
+  // app.dart's builder (not per-route), its build() runs regardless of the
+  // current route.
   //
-  // IveForensicSnapshot.currentRoute (already updated synchronously on
-  // every GoRouter `redirect` evaluation, see app.dart) is reused as the
-  // "has routing left Splash" signal -- no new Navigator/route-guard
-  // architecture, just reading state that already exists for exactly this
-  // kind of purpose (mission section 08).
+  // Round 2 gated on IveForensicSnapshot.currentRoute, but that field
+  // records every navigation ATTEMPT (the path a redirect evaluation is
+  // currently considering), not the settled outcome -- Codex round 3 proved
+  // this let the intro open over `/login` while an already-authenticated
+  // user's request for it was still being redirected to `/dashboard`.
+  // IveForensicSnapshot.settledRoute is a separate, purpose-built signal
+  // app.dart's redirect callback only sets AFTER its own redirect decision
+  // resolves to null (no further redirect -- this exact path is accepted)
+  // and the path is neither Splash nor Login, i.e. a genuinely arrived-at
+  // authenticated destination.
   bool _routeReady() {
-    final route = IveForensicSnapshot.currentRoute;
-    return route.isNotEmpty && route != AppConstants.routeSplash;
+    final route = IveForensicSnapshot.settledRoute;
+    return route.isNotEmpty && route != AppConstants.routeSplash && route != AppConstants.routeLogin;
   }
 
   @override
   void initState() {
     super.initState();
     // Profile/intro state alone (watched in build()) cannot detect a LATER
-    // route transition away from Splash, since a route change by itself
-    // does not rebuild this widget (it is not a descendant of the Router).
-    // Listening to the same redirect-driven signal lets a presentation that
-    // was blocked purely on route-readiness retry the instant the app
-    // actually leaves Splash, instead of being silently lost forever
-    // (mission section 07: "no permanent loss of intro").
-    IveForensicSnapshot.currentRouteNotifier.addListener(_onRouteChanged);
+    // route transition to a settled destination, since a route change by
+    // itself does not rebuild this widget (it is not a descendant of the
+    // Router). Listening to the settled-route signal lets a presentation
+    // that was blocked purely on route-readiness retry the instant the app
+    // actually arrives, instead of being silently lost forever (mission
+    // section 07: "no permanent loss of intro").
+    IveForensicSnapshot.settledRouteNotifier.addListener(_onRouteChanged);
   }
 
   @override
   void dispose() {
-    IveForensicSnapshot.currentRouteNotifier.removeListener(_onRouteChanged);
+    IveForensicSnapshot.settledRouteNotifier.removeListener(_onRouteChanged);
     super.dispose();
   }
 

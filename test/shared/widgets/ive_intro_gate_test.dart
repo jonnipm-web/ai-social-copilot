@@ -44,21 +44,22 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
-    // STABILITY-09-FIX (Codex Gate round 2) — IveForensicSnapshot.currentRoute
-    // is a static/global, so it must be reset between tests in this file to
+    // STABILITY-09-FIX — IveForensicSnapshot's route fields are
+    // static/global, so they must be reset between tests in this file to
     // avoid one test's simulated route leaking into the next.
     IveForensicSnapshot.previousRoute = '';
     IveForensicSnapshot.currentRoute = '';
-    IveForensicSnapshot.currentRouteNotifier.value = '';
+    IveForensicSnapshot.settledRouteNotifier.value = '';
   });
 
   // Simulates the GoRouter `redirect` callback having already settled on a
   // real, post-Splash, authenticated destination -- the same call app.dart's
-  // own redirect makes via IveForensicSnapshot.recordRoute(path). Tests that
-  // are not specifically about route-readiness call this once up front so
-  // they exercise exactly one variable (Navigator availability) at a time.
+  // own redirect makes via IveForensicSnapshot.recordSettledRoute(path) once
+  // ITS OWN redirect decision resolves to null. Tests that are not
+  // specifically about route-readiness call this once up front so they
+  // exercise exactly one variable (Navigator availability) at a time.
   void simulateRouteSettledPastSplash() {
-    IveForensicSnapshot.recordRoute(AppConstants.routeDashboard);
+    IveForensicSnapshot.recordSettledRoute(AppConstants.routeDashboard);
   }
 
   // Robust against exact frame-count assumptions (currentProfileProvider's
@@ -289,11 +290,9 @@ void main() {
       final l10n = await AppLocalizations.delegate.load(const Locale('pt'));
       final titleFinder = find.text(l10n.ivIntroTitle);
 
-      // Mirrors app.dart's redirect callback recording the initial location
-      // on app boot, exactly as GoRouter's own redirect does for
-      // initialLocation before Splash's 800ms timer ever fires.
-      IveForensicSnapshot.recordRoute(AppConstants.routeSplash);
-
+      // No recordSettledRoute call yet -- settledRoute stays '', exactly
+      // matching production before app.dart's redirect callback has ever
+      // resolved to a non-Splash, non-Login destination.
       await tester.pumpWidget(realRouterHarness(
         navigatorKey: navigatorKey,
         overrides: baseOverrides(),
@@ -307,11 +306,12 @@ void main() {
       }
       expect(titleFinder, findsNothing);
 
-      // SplashScreen's own redirect now fires (the real 800ms timer, here
-      // simulated directly via the same IveForensicSnapshot.recordRoute
-      // call app.dart's redirect callback makes) -- the intro was NOT lost;
-      // it opens now, driven by IveForensicSnapshot.currentRouteNotifier.
-      IveForensicSnapshot.recordRoute(AppConstants.routeDashboard);
+      // SplashScreen's own redirect now fires and settles (the real 800ms
+      // timer, here simulated directly via the same
+      // IveForensicSnapshot.recordSettledRoute call app.dart's redirect
+      // callback makes once its own decision resolves to null) -- the intro
+      // was NOT lost; it opens now, driven by settledRouteNotifier.
+      IveForensicSnapshot.recordSettledRoute(AppConstants.routeDashboard);
       await pumpUntilFound(tester, titleFinder);
 
       expect(titleFinder, findsOneWidget);
@@ -324,7 +324,6 @@ void main() {
     'no exception, ever, and the intro never opens',
     (tester) async {
       final navigatorKey = GlobalKey<NavigatorState>();
-      IveForensicSnapshot.recordRoute(AppConstants.routeSplash);
 
       await tester.pumpWidget(realRouterHarness(
         navigatorKey: navigatorKey,
@@ -337,6 +336,113 @@ void main() {
 
       final l10n = await AppLocalizations.delegate.load(const Locale('pt'));
       expect(find.text(l10n.ivIntroTitle), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'CODEX/STABILITY-09-FIX ROUND 3 — an authenticated request for /login is only ever '
+    'RECORDED (IveForensicSnapshot.recordRoute, the pre-existing forensic "attempted path" '
+    'signal) on its way to being redirected to /dashboard -- the intro must NOT open over '
+    'Login even though the attempted path is non-Splash',
+    (tester) async {
+      final navigatorKey = GlobalKey<NavigatorState>();
+      final l10n = await AppLocalizations.delegate.load(const Locale('pt'));
+      final titleFinder = find.text(l10n.ivIntroTitle);
+
+      // Exactly the round-2 gate's blind spot: an ATTEMPTED, not settled,
+      // non-Splash path. app.dart's redirect callback always calls
+      // recordRoute() first, regardless of what it later decides -- this is
+      // that same call, in isolation, for a path about to be redirected
+      // away from (mirrors _computeRedirect's
+      // `if (session != null && goingToAuth) return routeDashboard;`
+      // branch: an authenticated user hitting /login never actually
+      // settles there).
+      IveForensicSnapshot.recordRoute(AppConstants.routeLogin);
+
+      await tester.pumpWidget(realRouterHarness(
+        navigatorKey: navigatorKey,
+        overrides: baseOverrides(),
+      ));
+      for (var i = 0; i < 15; i++) {
+        await tester.pump();
+        expect(tester.takeException(), isNull, reason: 'threw on pump #$i with an attempted (not settled) /login');
+      }
+      // The attempted path alone must never be mistaken for arrival.
+      expect(titleFinder, findsNothing);
+
+      // Only the SETTLED destination (what app.dart's redirect callback
+      // calls recordSettledRoute with, after its own decision is null)
+      // unblocks presentation.
+      IveForensicSnapshot.recordSettledRoute(AppConstants.routeDashboard);
+      await pumpUntilFound(tester, titleFinder);
+
+      expect(titleFinder, findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'CODEX/STABILITY-09-FIX ROUND 3 — end-to-end through a redirect callback shaped exactly '
+    "like app.dart's own (recordRoute on every attempt, recordSettledRoute only when the "
+    'redirect decision is null and the path is neither Splash nor Login): an authenticated '
+    "request for /login that GoRouter redirects to /dashboard never shows the intro over "
+    'Login, and shows it once settled at /dashboard',
+    (tester) async {
+      final navigatorKey = GlobalKey<NavigatorState>();
+      final l10n = await AppLocalizations.delegate.load(const Locale('pt'));
+      final titleFinder = find.text(l10n.ivIntroTitle);
+
+      final router = GoRouter(
+        navigatorKey: navigatorKey,
+        initialLocation: AppConstants.routeLogin,
+        redirect: (context, state) async {
+          final path = state.fullPath ?? state.matchedLocation;
+          IveForensicSnapshot.recordRoute(path);
+          // Mirrors _computeRedirect's own authenticated/login branch: an
+          // authenticated session hitting /login is always redirected to
+          // /dashboard; everything else settles where it is.
+          final redirectTarget = path == AppConstants.routeLogin ? AppConstants.routeDashboard : null;
+          if (redirectTarget == null &&
+              path != AppConstants.routeSplash &&
+              path != AppConstants.routeLogin) {
+            IveForensicSnapshot.recordSettledRoute(path);
+          }
+          return redirectTarget;
+        },
+        routes: [
+          GoRoute(path: AppConstants.routeLogin, builder: (_, __) => const Scaffold(body: SizedBox.shrink())),
+          GoRoute(path: AppConstants.routeDashboard, builder: (_, __) => const Scaffold(body: SizedBox.shrink())),
+        ],
+      );
+
+      await tester.pumpWidget(ProviderScope(
+        overrides: baseOverrides(),
+        child: MaterialApp.router(
+          locale: const Locale('pt'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          routerConfig: router,
+          builder: (context, child) => Stack(children: [child!, IveIntroGate(navigatorKey: navigatorKey)]),
+        ),
+      ));
+
+      // The redirect chain (/login -> /dashboard) and the profile/intro
+      // providers resolve across these pumps; nothing must throw while any
+      // of that is in flight, regardless of how many attempted-path
+      // recordRoute() calls happen along the way.
+      for (var i = 0; i < 10; i++) {
+        await tester.pump();
+        expect(tester.takeException(), isNull, reason: 'threw on pump #$i during the /login -> /dashboard redirect');
+      }
+
+      // By now the redirect has settled at /dashboard (recordSettledRoute
+      // was only ever called for /dashboard, never /login) and the intro
+      // has opened -- proving the real, GoRouter-driven redirect callback
+      // never let it open over the intermediate /login attempt.
+      await pumpUntilFound(tester, titleFinder);
+      expect(titleFinder, findsOneWidget);
+      expect(tester.takeException(), isNull);
+      expect(IveForensicSnapshot.settledRoute, AppConstants.routeDashboard);
     },
   );
 }

@@ -244,6 +244,19 @@ final _router = GoRouter(
     if (path != AppConstants.routeSplash) {
       _logNavigation(context, path, redirectTarget);
     }
+    // STABILITY-09-FIX (Codex Gate round 3, P1) — `redirectTarget == null`
+    // is GoRouter's own "no further redirect needed" signal: this exact
+    // path has been accepted and will actually render. Excluding Splash and
+    // Login explicitly (defense in depth -- an authenticated user's `/login`
+    // request never actually resolves to null here, see _computeRedirect,
+    // but this does not depend on that invariant holding forever) makes
+    // this a reliable "genuinely arrived at an authenticated destination"
+    // signal for IveIntroGate, unlike the path recorded above (which fires
+    // on every navigation ATTEMPT, including ones about to be redirected
+    // away from).
+    if (redirectTarget == null && path != AppConstants.routeSplash && path != AppConstants.routeLogin) {
+      IveForensicSnapshot.recordSettledRoute(path);
+    }
     return redirectTarget;
   },
   routes: [
