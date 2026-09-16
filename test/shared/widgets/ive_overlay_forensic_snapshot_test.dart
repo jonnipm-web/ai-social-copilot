@@ -90,9 +90,16 @@ void main() {
     expect(IveForensicSnapshot.overlayDragging, isFalse);
 
     final gesture = await tester.startGesture(tester.getCenter(avatarFinder));
+    addTearDown(() => gesture.removePointer());
     await tester.pump();
-    await gesture.moveBy(const Offset(-10, -10));
-    await tester.pump();
+    // Two moves well past the framework's touch-slop threshold, with a
+    // pump between them, so the pan recognizer reliably wins the gesture
+    // arena over the inner avatar's tap recognizer (a single small move
+    // is not guaranteed to clear the slop in a test binding).
+    await gesture.moveBy(const Offset(-20, -20));
+    await tester.pump(const Duration(milliseconds: 20));
+    await gesture.moveBy(const Offset(-20, -20));
+    await tester.pump(const Duration(milliseconds: 20));
     expect(IveForensicSnapshot.overlayDragging, isTrue);
 
     await gesture.up();
