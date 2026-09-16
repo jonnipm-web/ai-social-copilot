@@ -403,8 +403,10 @@ void main() {
           // /dashboard; everything else settles where it is.
           final redirectTarget = path == AppConstants.routeLogin ? AppConstants.routeDashboard : null;
           if (redirectTarget == null &&
+              (state.fullPath ?? '').isNotEmpty &&
               path != AppConstants.routeSplash &&
-              path != AppConstants.routeLogin) {
+              path != AppConstants.routeLogin &&
+              path != AppConstants.routeResult) {
             IveForensicSnapshot.recordSettledRoute(path);
           }
           return redirectTarget;
@@ -443,6 +445,129 @@ void main() {
       expect(titleFinder, findsOneWidget);
       expect(tester.takeException(), isNull);
       expect(IveForensicSnapshot.settledRoute, AppConstants.routeDashboard);
+    },
+  );
+
+  testWidgets(
+    'CODEX/STABILITY-09-FIX ROUND 4 — a genuinely UNMATCHED location (no registered GoRoute, '
+    "headed for errorBuilder) resolves redirectTarget == null too, but state.fullPath is "
+    'empty for it -- the intro must NOT open over the error screen',
+    (tester) async {
+      final navigatorKey = GlobalKey<NavigatorState>();
+      final l10n = await AppLocalizations.delegate.load(const Locale('pt'));
+      final titleFinder = find.text(l10n.ivIntroTitle);
+
+      final router = GoRouter(
+        navigatorKey: navigatorKey,
+        initialLocation: '/this-path-matches-no-registered-route',
+        errorBuilder: (_, __) => const Scaffold(body: Text('error')),
+        redirect: (context, state) async {
+          final path = state.fullPath ?? state.matchedLocation;
+          IveForensicSnapshot.recordRoute(path);
+          const redirectTarget = null; // nothing special-cases an unmatched path either.
+          if (redirectTarget == null &&
+              (state.fullPath ?? '').isNotEmpty &&
+              path != AppConstants.routeSplash &&
+              path != AppConstants.routeLogin &&
+              path != AppConstants.routeResult) {
+            IveForensicSnapshot.recordSettledRoute(path);
+          }
+          return redirectTarget;
+        },
+        routes: [
+          GoRoute(path: AppConstants.routeDashboard, builder: (_, __) => const Scaffold(body: SizedBox.shrink())),
+        ],
+      );
+
+      await tester.pumpWidget(ProviderScope(
+        overrides: baseOverrides(),
+        child: MaterialApp.router(
+          locale: const Locale('pt'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          routerConfig: router,
+          builder: (context, child) => Stack(children: [child!, IveIntroGate(navigatorKey: navigatorKey)]),
+        ),
+      ));
+
+      for (var i = 0; i < 15; i++) {
+        await tester.pump();
+        expect(tester.takeException(), isNull, reason: 'threw on pump #$i on an unmatched location');
+      }
+      expect(titleFinder, findsNothing);
+      expect(IveForensicSnapshot.settledRoute, '');
+    },
+  );
+
+  testWidgets(
+    'CODEX/STABILITY-09-FIX ROUND 4 — /result reached without its required `extra` renders a '
+    'transient loading screen and self-redirects to /home from its OWN builder (invisible to '
+    'the redirect callback, which sees redirectTarget == null): the intro must NOT open over '
+    'that loading screen, and opens once genuinely settled at /home',
+    (tester) async {
+      final navigatorKey = GlobalKey<NavigatorState>();
+      final l10n = await AppLocalizations.delegate.load(const Locale('pt'));
+      final titleFinder = find.text(l10n.ivIntroTitle);
+
+      final router = GoRouter(
+        navigatorKey: navigatorKey,
+        initialLocation: AppConstants.routeResult,
+        redirect: (context, state) async {
+          final path = state.fullPath ?? state.matchedLocation;
+          IveForensicSnapshot.recordRoute(path);
+          const redirectTarget = null; // /result is accepted at the redirect level either way.
+          if (redirectTarget == null &&
+              (state.fullPath ?? '').isNotEmpty &&
+              path != AppConstants.routeSplash &&
+              path != AppConstants.routeLogin &&
+              path != AppConstants.routeResult) {
+            IveForensicSnapshot.recordSettledRoute(path);
+          }
+          return redirectTarget;
+        },
+        routes: [
+          GoRoute(
+            path: AppConstants.routeResult,
+            // Mirrors app.dart's own /result builder: no `extra` -> a
+            // transient loading Scaffold that self-redirects to /home from
+            // a post-frame callback, entirely inside this builder.
+            builder: (context, state) {
+              if (state.extra == null) {
+                WidgetsBinding.instance.addPostFrameCallback((_) => context.go(AppConstants.routeHome));
+                return const Scaffold(body: Center(child: CircularProgressIndicator()));
+              }
+              return const Scaffold(body: Text('result'));
+            },
+          ),
+          GoRoute(path: AppConstants.routeHome, builder: (_, __) => const Scaffold(body: SizedBox.shrink())),
+        ],
+      );
+
+      await tester.pumpWidget(ProviderScope(
+        overrides: baseOverrides(),
+        child: MaterialApp.router(
+          locale: const Locale('pt'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          routerConfig: router,
+          builder: (context, child) => Stack(children: [child!, IveIntroGate(navigatorKey: navigatorKey)]),
+        ),
+      ));
+
+      // A few pumps while /result's own loading Scaffold is showing and
+      // about to self-redirect -- the intro must never appear over it.
+      for (var i = 0; i < 5; i++) {
+        await tester.pump();
+        expect(tester.takeException(), isNull, reason: 'threw on pump #$i while /result was self-redirecting');
+      }
+      expect(titleFinder, findsNothing);
+      expect(IveForensicSnapshot.settledRoute, isNot(AppConstants.routeResult));
+
+      // /home is reached, genuinely settles, and the intro opens there.
+      await pumpUntilFound(tester, titleFinder);
+      expect(titleFinder, findsOneWidget);
+      expect(tester.takeException(), isNull);
+      expect(IveForensicSnapshot.settledRoute, AppConstants.routeHome);
     },
   );
 }

@@ -172,6 +172,16 @@ void _logNavigation(BuildContext context, String path, String? redirectTarget) {
 
 Future<String?> _computeRedirect(BuildContext context, GoRouterState state) async {
   final session = Supabase.instance.client.auth.currentSession;
+  if (session == null) {
+    // STABILITY-09-FIX (Codex Gate round 4, P1) — clear the settled-route
+    // signal the instant there is no session, so a stale previously
+    // authenticated destination (e.g. `/dashboard`, still recorded from
+    // before logout) can never coexist with a logged-out user.
+    // IveIntroGate's own `profile != null` check already covers this in
+    // practice, but this closes the gap unconditionally rather than
+    // depending on that provider's own invalidation timing.
+    IveForensicSnapshot.clearSettledRoute();
+  }
   final path = state.fullPath ?? state.matchedLocation;
   final goingToAuth   = path == AppConstants.routeLogin;
   final goingToSplash = path == AppConstants.routeSplash;
@@ -244,17 +254,31 @@ final _router = GoRouter(
     if (path != AppConstants.routeSplash) {
       _logNavigation(context, path, redirectTarget);
     }
-    // STABILITY-09-FIX (Codex Gate round 3, P1) — `redirectTarget == null`
-    // is GoRouter's own "no further redirect needed" signal: this exact
-    // path has been accepted and will actually render. Excluding Splash and
-    // Login explicitly (defense in depth -- an authenticated user's `/login`
-    // request never actually resolves to null here, see _computeRedirect,
-    // but this does not depend on that invariant holding forever) makes
-    // this a reliable "genuinely arrived at an authenticated destination"
-    // signal for IveIntroGate, unlike the path recorded above (which fires
-    // on every navigation ATTEMPT, including ones about to be redirected
-    // away from).
-    if (redirectTarget == null && path != AppConstants.routeSplash && path != AppConstants.routeLogin) {
+    // STABILITY-09-FIX (Codex Gate rounds 3-4) — `redirectTarget == null`
+    // is GoRouter's own "no further redirect needed" signal, but round 4
+    // proved that alone is not sufficient for two reasons:
+    //   1. A location that never matched any GoRoute at all (a typo, a
+    //      stale bookmark) also resolves with redirectTarget == null once
+    //      it falls through to _resolveEntitlementRedirect, yet it is
+    //      headed for errorBuilder, not a real screen. `state.fullPath` is
+    //      only non-empty for a path that matched a registered GoRoute
+    //      pattern (verified empirically: unmatched locations leave it ''),
+    //      so requiring it non-empty excludes this case precisely.
+    //   2. `/result` (routeResult) accepted without its required `extra`
+    //      renders a loading spinner and self-redirects to `/home` from
+    //      its OWN builder (see its GoRoute below) -- invisible to this
+    //      callback, since redirectTarget is still null. Excluded by name;
+    //      the common case (reached with extra, a real stable result page)
+    //      simply schedules the intro on whatever LATER settled route the
+    //      user navigates to instead, which costs nothing.
+    // Splash/Login remain excluded as before (defense in depth for Login --
+    // see _computeRedirect for why an authenticated request for it never
+    // actually reaches this point with a null redirectTarget).
+    if (redirectTarget == null &&
+        (state.fullPath ?? '').isNotEmpty &&
+        path != AppConstants.routeSplash &&
+        path != AppConstants.routeLogin &&
+        path != AppConstants.routeResult) {
       IveForensicSnapshot.recordSettledRoute(path);
     }
     return redirectTarget;

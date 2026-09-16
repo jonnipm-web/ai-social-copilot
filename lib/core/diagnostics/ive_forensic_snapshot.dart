@@ -74,11 +74,21 @@ class IveForensicSnapshot {
 
   /// STABILITY-09-FIX (Codex Gate round 3) — see [settledRouteNotifier].
   /// Callers are responsible for only calling this with a genuinely settled,
-  /// non-Splash, non-Login path (app.dart's `redirect` callback does this
-  /// after its own redirect decision is null).
+  /// non-Splash, non-Login, matched-route path (app.dart's `redirect`
+  /// callback does this after its own redirect decision is null).
   static void recordSettledRoute(String path) {
     if (path == settledRouteNotifier.value) return;
     settledRouteNotifier.value = path;
+  }
+
+  /// STABILITY-09-FIX (Codex Gate round 4, P1) — [settledRoute] is never
+  /// implicitly invalidated by the passage of time or a route change alone
+  /// (a logged-out user could otherwise still read a stale previously
+  /// authenticated destination). Called from app.dart's `redirect` callback
+  /// the instant there is no session.
+  static void clearSettledRoute() {
+    if (settledRouteNotifier.value.isEmpty) return;
+    settledRouteNotifier.value = '';
   }
 
   /// Derived, not stored: true only for a specific project-scoped route

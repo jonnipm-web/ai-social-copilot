@@ -85,6 +85,36 @@ void main() {
     });
   });
 
+  group('clearSettledRoute — logout invalidation (Codex Gate round 4, P1)', () {
+    test('clears a previously settled route back to empty', () {
+      IveForensicSnapshot.recordSettledRoute(AppConstants.routeDashboard);
+      IveForensicSnapshot.clearSettledRoute();
+      expect(IveForensicSnapshot.settledRoute, '');
+    });
+
+    test('notifies listeners when clearing a genuinely settled route', () {
+      var notifyCount = 0;
+      void listener() => notifyCount++;
+      IveForensicSnapshot.settledRouteNotifier.addListener(listener);
+      addTearDown(() => IveForensicSnapshot.settledRouteNotifier.removeListener(listener));
+
+      IveForensicSnapshot.recordSettledRoute(AppConstants.routeDashboard);
+      expect(notifyCount, 1);
+      IveForensicSnapshot.clearSettledRoute();
+      expect(notifyCount, 2);
+    });
+
+    test('clearing an already-empty settledRoute is a no-op (no redundant notification)', () {
+      var notifyCount = 0;
+      void listener() => notifyCount++;
+      IveForensicSnapshot.settledRouteNotifier.addListener(listener);
+      addTearDown(() => IveForensicSnapshot.settledRouteNotifier.removeListener(listener));
+
+      IveForensicSnapshot.clearSettledRoute();
+      expect(notifyCount, 0);
+    });
+  });
+
   group('projectContextPresent — derived from the already-captured route only', () {
     test('false for the bare projects list route', () {
       IveForensicSnapshot.recordRoute(AppConstants.routeProjects);
