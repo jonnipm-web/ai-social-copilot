@@ -12,7 +12,7 @@ bool? navigatorFoundImmediately;
 bool? navigatorFoundAfterSettle;
 
 class _ProbeWidget extends StatefulWidget {
-  const _ProbeWidget();
+  const _ProbeWidget({super.key});
   @override
   State<_ProbeWidget> createState() => _ProbeWidgetState();
 }
