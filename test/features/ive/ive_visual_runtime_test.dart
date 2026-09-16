@@ -270,11 +270,18 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
+      // IveVisualFallback passes cacheWidth/cacheHeight to Image.asset,
+      // which makes Flutter wrap the underlying AssetImage in a
+      // ResizeImage -- so w.image is a ResizeImage here, not a bare
+      // AssetImage; unwrap it via its public `imageProvider` field.
+      bool matchesAvatarPortrait(ImageProvider provider) {
+        if (provider is AssetImage) return provider.assetName == IveAssetPaths.avatarPortrait;
+        if (provider is ResizeImage) return matchesAvatarPortrait(provider.imageProvider);
+        return false;
+      }
+
       final imageFinder = find.byWidgetPredicate(
-        (w) =>
-            w is Image &&
-            w.image is AssetImage &&
-            (w.image as AssetImage).assetName == IveAssetPaths.avatarPortrait,
+        (w) => w is Image && matchesAvatarPortrait(w.image),
       );
       expect(imageFinder, findsOneWidget);
       expect(find.byIcon(Icons.person_rounded), findsNothing,
