@@ -230,6 +230,40 @@ void main() {
     },
   );
 
+  group(
+    'sanitizeBuildSha — IVE-COMMERCIAL-STABILITY-09O regression '
+    '(confirmed live in production: a real 40-char SHA came back as the '
+    'literal "[redacted]" on the very first controlled deploy, the exact '
+    'over-redaction class sanitizeEventName above already exists to fix, '
+    'just never applied to this field)',
+    () {
+      test('a full 40-char git SHA survives unchanged', () {
+        const sha = 'c1098e656224d5b3b816e416f309556a618ba24';
+        expect(sha.length, 40);
+        expect(sanitizeBuildSha(sha), sha);
+      });
+
+      test('a short (7-char) abbreviated git SHA survives unchanged', () {
+        expect(sanitizeBuildSha('c1098e6'), 'c1098e6');
+      });
+
+      test('the build_info.dart fallback literal "unknown" survives unchanged', () {
+        expect(sanitizeBuildSha('unknown'), 'unknown');
+      });
+
+      test('something that is NOT a plausible git SHA still falls back to full sanitization', () {
+        final result = sanitizeBuildSha('not a real sha at all, way too long and has spaces');
+        expect(result, contains('[redacted]'));
+      });
+
+      test('CR/LF in an otherwise SHA-shaped value is rejected safely', () {
+        final result = sanitizeBuildSha('c1098e6\r\ninjected');
+        expect(result, isNot(contains('\r')));
+        expect(result, isNot(contains('\n')));
+      });
+    },
+  );
+
   group('sanitizeErrorMessage / sanitizeStackTrace', () {
     test('sanitizeErrorMessage redacts secrets inside an exception toString()', () {
       final msg = sanitizeErrorMessage(Exception('failed with Authorization: Bearer abc123def456ghi789'));

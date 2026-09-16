@@ -98,7 +98,12 @@ class DiagnosticLoggerService {
             // field). Every session-level free-text field now goes
             // through sanitizeText too, for the same reason.
             'app_version': appVersion != null ? sanitizeText(appVersion, maxLength: 50) : null,
-            'build_sha': buildSha != null ? sanitizeText(buildSha, maxLength: 100) : null,
+            // IVE-COMMERCIAL-STABILITY-09O (discovered live in production)
+            // — a plain sanitizeText() was destroying every real 40-char
+            // git SHA via the generic 20+-char backstop pattern, turning
+            // build_sha into the literal string "[redacted]" on every
+            // session. See sanitizeBuildSha's own doc comment.
+            'build_sha': buildSha != null ? sanitizeBuildSha(buildSha, maxLength: 100) : null,
             'platform': kIsWeb ? 'web' : 'native',
             'role_snapshot': roleSnapshot != null ? sanitizeText(roleSnapshot, maxLength: 50) : null,
           })

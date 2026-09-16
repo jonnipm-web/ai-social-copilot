@@ -238,6 +238,32 @@ String sanitizeCorrelationId(String input, {int maxLength = 100}) {
   return sanitizeText(input, maxLength: maxLength);
 }
 
+/// Matches a git commit SHA, short (7 chars, the shortest git ever
+/// abbreviates to) or full (40 chars).
+final RegExp _gitShaPattern = RegExp(r'^[0-9a-fA-F]{7,40}$');
+
+/// IVE-COMMERCIAL-STABILITY-09O (discovered live in production, first
+/// controlled deploy: the active diagnostic session's build_sha came back
+/// as the literal string "[redacted]") — the EXACT same over-redaction bug
+/// [sanitizeEventName] above was already created to fix for event names,
+/// just never applied to this field: a full git SHA is 40 lowercase-hex
+/// characters, which trivially matches [sanitizeText]'s generic 20+-char
+/// backstop pattern and was being destroyed by it on every single
+/// startSession() call, silently defeating this whole mission's "next
+/// production event -> exact Git commit" purpose. A value matching the git
+/// SHA shape, or the literal build_info.dart fallback "unknown", survives
+/// unchanged; anything else (this field is never user-entered, but fails
+/// safe the same way the other typed sanitizers here do) falls back to
+/// full [sanitizeText].
+String sanitizeBuildSha(String input, {int maxLength = 100}) {
+  final text = _stripControlChars(input.replaceAll(RegExp(r'[\r\n]+'), ' ')).trim();
+  final bounded = text.length > maxLength ? text.substring(0, maxLength) : text;
+  if (_gitShaPattern.hasMatch(bounded) || bounded == 'unknown') {
+    return bounded;
+  }
+  return sanitizeText(input, maxLength: maxLength);
+}
+
 /// IVE-COMMERCIAL-EXPERIENCE-12 (Phase B, Section 03 — confirmed P2 from
 /// IVE-COMMERCIAL-FOUNDATION-11D's physical validation) — a diagnostic
 /// event name is, like a session label or correlation id, NOT arbitrary
