@@ -53,6 +53,16 @@ class _IveVisualFallbackState extends State<IveVisualFallback>
   Widget build(BuildContext context) {
     final config  = IveVisualStateConfig.forState(widget.state);
     final padding = widget.size * 0.055;
+    // IVE-VISUAL-CANONICAL-INTEGRATION-07 — the master (1254x1254) is
+    // decoded once per unique (asset, cacheWidth) pair by Flutter's image
+    // cache; without cacheWidth/cacheHeight it would decode at full
+    // resolution (~1.57M px) even for a 56dp compact avatar. Only two
+    // sizes are in active use today (compact=56, large=96 -- see
+    // IveAvatarSize), both far below the master's native resolution, so
+    // this is measured, not speculative. Rounds up to the nearest device
+    // pixel so the portrait stays crisp at any DPR.
+    final devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
+    final cachePixels = (widget.size * devicePixelRatio).round();
 
     return AnimatedBuilder(
       animation: _pulse,
@@ -71,11 +81,19 @@ class _IveVisualFallbackState extends State<IveVisualFallback>
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    // Reference image — official character identity
+                    // Canonical portrait — approved character identity
+                    // (docs/ive/IVE_AVATAR_03B2_ASSET_PROVENANCE.md). The
+                    // master is already square (1254x1254), matching this
+                    // circular avatar's square bounding box exactly, so
+                    // BoxFit.cover needs no crop-anchoring alignment (unlike
+                    // the superseded referenceImage, a 1536x1024 non-square
+                    // spec sheet that required topCenter to avoid showing
+                    // an arbitrary crop).
                     Image.asset(
-                      IveAssetPaths.referenceImage,
+                      IveAssetPaths.avatarPortrait,
                       fit: BoxFit.cover,
-                      alignment: Alignment.topCenter,
+                      cacheWidth:  cachePixels,
+                      cacheHeight: cachePixels,
                       errorBuilder: (_, __, ___) => _Placeholder(state: widget.state),
                     ),
 
