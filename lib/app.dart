@@ -754,7 +754,7 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
             builder: (ctx, ref, _) => Stack(
               children: [
                 child!,
-                const IveOverlay(),
+                IveOverlay(navigatorKey: rootNavigatorKey),
                 IveIntroGate(navigatorKey: rootNavigatorKey),
               ],
             ),

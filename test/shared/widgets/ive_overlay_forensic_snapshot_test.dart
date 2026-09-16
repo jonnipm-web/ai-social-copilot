@@ -47,12 +47,12 @@ void main() {
           currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
           authStateProvider.overrideWith((ref) => Stream.value(_authState(session: MockSession()))),
         ],
-        child: const MaterialApp(
+        child: MaterialApp(
           home: Scaffold(
             body: Stack(
               children: [
-                SizedBox.expand(child: ColoredBox(color: Colors.black)),
-                IveOverlay(),
+                const SizedBox.expand(child: ColoredBox(color: Colors.black)),
+                IveOverlay(navigatorKey: GlobalKey<NavigatorState>()),
               ],
             ),
           ),
