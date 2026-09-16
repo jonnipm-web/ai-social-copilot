@@ -1,17 +1,21 @@
-// STABILITY-09-FIX — regression coverage for the exact race a symbolicated
+// STABILITY-09-FIX — regression coverage for the exact defect a symbolicated
 // production stack proved (mission STABILITY-09O-SHA): IveIntroGate is
 // mounted as a Stack SIBLING of GoRouter's own Router/Navigator (see
-// app.dart's MaterialApp.router builder), not a descendant of it, so on the
-// very first route transition (splash -> dashboard/login, driven by the
-// SAME currentProfileProvider resolution that triggers this widget's
-// one-time intro-scheduling) the Navigator can be transiently unmounted for
-// one or a few frames. These tests reproduce that exact topology (a widget
-// tree with NO Navigator ancestor, later replaced by one) rather than a
-// generic/unrelated Navigator failure.
-
+// app.dart's MaterialApp.router builder), never a DESCENDANT of it, so
+// ancestor-based Navigator.of/Navigator.maybeOf can NEVER resolve the real
+// Navigator from this position (confirmed empirically with a topology probe:
+// immediate=false, settled=false, even long after full route settlement).
+//
+// These harnesses use a REAL MaterialApp.router + real GoRouter with a
+// `builder` that exactly mirrors app.dart's own Stack(children: [child!,
+// ...]) structure -- not a simplified MaterialApp(home: Scaffold(...)) tree,
+// which places the probed widget BELOW an implicit Navigator and does not
+// reproduce the real production topology (this was the exact test-fidelity
+// gap Codex identified in an earlier round of this same fix).
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -57,43 +61,72 @@ void main() {
         currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
       ];
 
-  // No MaterialApp, no Navigator, no Router -- the exact real topology
-  // IveIntroGate occupies for one or more frames during the production
-  // race: reachable ancestors are only Directionality/MediaQuery, nothing
-  // that can satisfy Navigator.maybeOf(context).
-  Widget noNavigatorHarness(List<Override> overrides) => ProviderScope(
+  // The exact real production topology: a real GoRouter-managed Navigator,
+  // with IveIntroGate mounted as a Stack SIBLING of `child` inside
+  // MaterialApp.router's own `builder` — never a descendant of the
+  // Navigator, exactly like app.dart's real Stack(children: [child!,
+  // IveOverlay(), IveIntroGate()]).
+  Widget realRouterHarness({
+    required GlobalKey<NavigatorState> navigatorKey,
+    required List<Override> overrides,
+    Key? introKey,
+  }) {
+    final router = GoRouter(
+      navigatorKey: navigatorKey,
+      initialLocation: '/',
+      routes: [
+        GoRoute(path: '/', builder: (_, __) => const Scaffold(body: SizedBox.shrink())),
+      ],
+    );
+    return ProviderScope(
+      overrides: overrides,
+      child: MaterialApp.router(
+        locale: const Locale('pt'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        routerConfig: router,
+        builder: (context, child) => Stack(
+          children: [
+            child!,
+            IveIntroGate(key: introKey, navigatorKey: navigatorKey),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // No MaterialApp.router, no GoRouter, no Navigator anywhere in the tree —
+  // `navigatorKey` is never attached to any Navigator, exactly reproducing
+  // the pathological "root Navigator never became available" case section
+  // 07 requires recovery from.
+  Widget noNavigatorHarness({
+    required GlobalKey<NavigatorState> navigatorKey,
+    required List<Override> overrides,
+    Key? introKey,
+  }) =>
+      ProviderScope(
         overrides: overrides,
-        child: const MediaQuery(
-          data: MediaQueryData(),
+        child: MediaQuery(
+          data: const MediaQueryData(),
           child: Directionality(
             textDirection: TextDirection.ltr,
-            child: Stack(children: [IveIntroGate()]),
+            child: Stack(children: [IveIntroGate(key: introKey, navigatorKey: navigatorKey)]),
           ),
         ),
       );
 
-  Widget withNavigatorHarness(List<Override> overrides) => ProviderScope(
-        overrides: overrides,
-        // locale must be explicit (matches ive_intro_sheet_test.dart's own
-        // harness) -- without it MaterialApp falls back to the test
-        // environment's system locale, not 'pt', and every find.text(...)
-        // below (which loads PT-BR strings explicitly) finds nothing.
-        child: MaterialApp(
-          locale: const Locale('pt'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: const Scaffold(body: Stack(children: [IveIntroGate()])),
-        ),
-      );
-
   testWidgets(
-    'Navigator available from the first frame (normal/steady-state case) — '
+    'Navigator available (real GoRouter/MaterialApp.router topology) — '
     'the intro sheet opens, no regression from the pre-fix behavior',
     (tester) async {
       final l10n = await AppLocalizations.delegate.load(const Locale('pt'));
       final titleFinder = find.text(l10n.ivIntroTitle);
+      final navigatorKey = GlobalKey<NavigatorState>();
 
-      await tester.pumpWidget(withNavigatorHarness(baseOverrides()));
+      await tester.pumpWidget(realRouterHarness(
+        navigatorKey: navigatorKey,
+        overrides: baseOverrides(),
+      ));
       await pumpUntilFound(tester, titleFinder);
 
       expect(titleFinder, findsOneWidget);
@@ -102,64 +135,49 @@ void main() {
   );
 
   testWidgets(
-    'CODEX/STABILITY-09-FIX — Navigator genuinely absent for several frames: '
-    'no exception, ever (this is the exact symbolicated production crash)',
+    'CODEX/STABILITY-09-FIX — navigatorKey never attaches to any Navigator: '
+    'no exception, ever (the pathological case, not the reproduced one)',
     (tester) async {
-      await tester.pumpWidget(noNavigatorHarness(baseOverrides()));
+      final navigatorKey = GlobalKey<NavigatorState>();
+      await tester.pumpWidget(noNavigatorHarness(
+        navigatorKey: navigatorKey,
+        overrides: baseOverrides(),
+      ));
       // Pump well past the bounded retry window (10 attempts) -- must
-      // never throw, at any point, even though a Navigator never appears.
+      // never throw, at any point, even though the key never attaches.
       for (var i = 0; i < 15; i++) {
         await tester.pump();
-        expect(tester.takeException(), isNull, reason: 'threw on pump #$i with no Navigator ever available');
+        expect(tester.takeException(), isNull, reason: 'threw on pump #$i with navigatorKey never attached');
       }
     },
   );
 
   testWidgets(
-    'CODEX/STABILITY-09-FIX — Navigator absent initially, becomes available a few '
-    'frames later: the intro still opens (no permanent loss), no exception in between',
+    'CODEX/STABILITY-09-FIX — root Navigator not attached to the key initially, '
+    'becomes available a few frames later: the intro still opens (no permanent loss), '
+    'no exception in between',
     (tester) async {
       final introKey = GlobalKey();
+      final navigatorKey = GlobalKey<NavigatorState>();
       var navigatorReady = false;
 
-      Widget buildTree() {
-        final overrides = baseOverrides();
-        if (!navigatorReady) {
-          return ProviderScope(
-            overrides: overrides,
-            child: MediaQuery(
-              data: const MediaQueryData(),
-              child: Directionality(
-                textDirection: TextDirection.ltr,
-                child: Stack(children: [IveIntroGate(key: introKey)]),
-              ),
-            ),
-          );
-        }
-        return ProviderScope(
-          overrides: overrides,
-          child: MaterialApp(
-            locale: const Locale('pt'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(body: Stack(children: [IveIntroGate(key: introKey)])),
-          ),
-        );
-      }
+      Widget buildTree() => navigatorReady
+          ? realRouterHarness(navigatorKey: navigatorKey, overrides: baseOverrides(), introKey: introKey)
+          : noNavigatorHarness(navigatorKey: navigatorKey, overrides: baseOverrides(), introKey: introKey);
 
       final l10n = await AppLocalizations.delegate.load(const Locale('pt'));
       final titleFinder = find.text(l10n.ivIntroTitle);
 
       await tester.pumpWidget(buildTree());
       await tester.pump(); // lets currentProfileProvider's Future resolve, schedules the callback
-      // A couple of frames with genuinely no Navigator -- exactly the
+      // A couple of frames with the key genuinely unattached -- exactly the
       // transient window the production race exhibited.
       await tester.pump();
       await tester.pump();
       expect(tester.takeException(), isNull);
 
-      // Navigator becomes available (route transition completes) well
-      // within the bounded retry window.
+      // The real Navigator becomes available (route transition completes)
+      // well within the bounded retry window.
       navigatorReady = true;
       await tester.pumpWidget(buildTree());
       await pumpUntilFound(tester, titleFinder);
@@ -170,52 +188,31 @@ void main() {
   );
 
   testWidgets(
-    'CODEX/STABILITY-09-FIX — retry window fully exhausted (Navigator never appeared in time), '
-    'THEN the profile re-resolves (a later rebuild) with a Navigator now available -- '
+    'CODEX/STABILITY-09-FIX — retry window fully exhausted (Navigator key never attached in time), '
+    'THEN the profile re-resolves (a later rebuild) with the Navigator now available -- '
     'the intro is still shown, proving it was re-armed rather than permanently lost',
     (tester) async {
       final introKey = GlobalKey();
+      final navigatorKey = GlobalKey<NavigatorState>();
       var navigatorReady = false;
 
-      Widget buildTree() {
-        final overrides = baseOverrides();
-        if (!navigatorReady) {
-          return ProviderScope(
-            overrides: overrides,
-            child: MediaQuery(
-              data: const MediaQueryData(),
-              child: Directionality(
-                textDirection: TextDirection.ltr,
-                child: Stack(children: [IveIntroGate(key: introKey)]),
-              ),
-            ),
-          );
-        }
-        return ProviderScope(
-          overrides: overrides,
-          child: MaterialApp(
-            locale: const Locale('pt'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(body: Stack(children: [IveIntroGate(key: introKey)])),
-          ),
-        );
-      }
+      Widget buildTree() => navigatorReady
+          ? realRouterHarness(navigatorKey: navigatorKey, overrides: baseOverrides(), introKey: introKey)
+          : noNavigatorHarness(navigatorKey: navigatorKey, overrides: baseOverrides(), introKey: introKey);
 
       final l10n = await AppLocalizations.delegate.load(const Locale('pt'));
       final titleFinder = find.text(l10n.ivIntroTitle);
 
       await tester.pumpWidget(buildTree());
-      // Exhaust the full bounded retry window with NO Navigator ever
-      // appearing -- the pathological case, not the one reproduced in
-      // production, but the one section 07 explicitly requires recovery
-      // from.
+      // Exhaust the full bounded retry window with the key never attaching
+      // -- the pathological case, not the one reproduced in production, but
+      // the one section 07 explicitly requires recovery from.
       for (var i = 0; i < 12; i++) {
         await tester.pump();
       }
       expect(tester.takeException(), isNull);
 
-      // Only NOW does a Navigator become available, well after the
+      // Only NOW does the real Navigator become available, well after the
       // bounded window closed.
       navigatorReady = true;
       await tester.pumpWidget(buildTree());
@@ -229,18 +226,13 @@ void main() {
   testWidgets(
     'no profile resolved yet -> nothing scheduled, no exception, no premature dismissal',
     (tester) async {
-      await tester.pumpWidget(ProviderScope(
+      final navigatorKey = GlobalKey<NavigatorState>();
+      await tester.pumpWidget(noNavigatorHarness(
+        navigatorKey: navigatorKey,
         overrides: [
           diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
           currentProfileProvider.overrideWith((ref) async => null),
         ],
-        child: const MediaQuery(
-          data: MediaQueryData(),
-          child: Directionality(
-            textDirection: TextDirection.ltr,
-            child: Stack(children: [IveIntroGate()]),
-          ),
-        ),
       ));
       for (var i = 0; i < 5; i++) {
         await tester.pump();
@@ -252,7 +244,11 @@ void main() {
   testWidgets(
     'widget disposed before the post-frame callback fires -> no exception (mounted guard preserved)',
     (tester) async {
-      await tester.pumpWidget(noNavigatorHarness(baseOverrides()));
+      final navigatorKey = GlobalKey<NavigatorState>();
+      await tester.pumpWidget(noNavigatorHarness(
+        navigatorKey: navigatorKey,
+        overrides: baseOverrides(),
+      ));
       await tester.pump(); // schedules the callback for next frame
       // Replace the whole tree before that callback runs -- IveIntroGate
       // (and its State) is disposed mid-flight.

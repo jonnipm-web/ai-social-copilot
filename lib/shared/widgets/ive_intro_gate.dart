@@ -13,7 +13,22 @@ import 'ive_intro_sheet.dart';
 // signal `_AppState.didChangeAppLifecycleState` already uses elsewhere in
 // this file. Never shown on Splash/Login (no profile exists yet there).
 class IveIntroGate extends ConsumerStatefulWidget {
-  const IveIntroGate({super.key});
+  const IveIntroGate({super.key, required this.navigatorKey});
+
+  // STABILITY-09-FIX — app.dart's MaterialApp.router `builder` mounts this
+  // widget as a Stack SIBLING of `child` (the real GoRouter-managed
+  // Router/Navigator), never a DESCENDANT of it. From that structural
+  // position, ancestor-based `Navigator.of`/`Navigator.maybeOf` can NEVER
+  // resolve the real Navigator — proven both by the symbolicated
+  // STABILITY-09O-SHA production crash and by an empirical topology probe
+  // reproducing this exact structure (immediate=false, settled=false, even
+  // long after full route settlement). This GlobalKey is the SAME key
+  // app.dart passes as GoRouter's own `navigatorKey`, so it reaches the
+  // real root NavigatorState directly, independent of BuildContext
+  // position — confirmed by the same probe (keyBased=true). It is the
+  // existing root navigator GoRouter already manages, not a second,
+  // competing Navigator architecture (mission section 08).
+  final GlobalKey<NavigatorState> navigatorKey;
 
   @override
   ConsumerState<IveIntroGate> createState() => _IveIntroGateState();
@@ -22,42 +37,47 @@ class IveIntroGate extends ConsumerStatefulWidget {
 class _IveIntroGateState extends ConsumerState<IveIntroGate> {
   bool _presented = false;
 
-  // STABILITY-09-FIX — symbolicated production evidence (mission
-  // STABILITY-09O-SHA) proved the exact failure path:
-  //   _IveIntroGateState.build.<anonymous function> (this callback)
+  // STABILITY-09-FIX — root cause (source/runtime evidence, not
+  // speculation): app.dart's MaterialApp.router `builder` places
+  // IveIntroGate as a Stack SIBLING of `child` (the actual GoRouter-managed
+  // Router/Navigator), never a DESCENDANT of it. This is a PERMANENT
+  // structural property of this widget's mount point, not a transient
+  // timing race — ancestor-based Navigator lookup from here never
+  // resolves, at any point in the widget's lifetime (topology probe:
+  // immediate=false, settled=false). The symbolicated STABILITY-09O-SHA
+  // production crash's exact path —
+  //   _IveIntroGateState.build.<anonymous function>
   //   -> showIveIntroSheet -> showModalBottomSheet -> Navigator.of
-  //   -> failure ("Null check operator used on a null value").
+  //   -> failure ("Null check operator used on a null value")
+  // — is this same defect surfacing as a crash instead of a silent no-op,
+  // because the pre-fix code called `Navigator.of` unconditionally.
   //
-  // Root cause (source/runtime evidence, not speculation): app.dart's
-  // MaterialApp.router `builder` places IveIntroGate as a Stack SIBLING of
-  // `child` (the actual GoRouter-managed Router/Navigator), never a
-  // DESCENDANT of it — `Navigator.of(context)` from here has always
-  // depended on an ambient Navigator reachable through that same builder
-  // scope, exactly like IveOverlay's own showModalBottomSheet call
-  // (context_copilot_widget.dart's showCopilotChat, same Stack position),
-  // which works reliably because it only ever fires from a deliberate user
-  // tap, long after the app's initial route has settled. IveIntroGate is
-  // different: it fires from the FIRST resolution of currentProfileProvider,
-  // which is the EXACT SAME signal that drives GoRouter's own initial
-  // redirect (splash -> dashboard/login, in _computeRedirect) — the one
-  // moment the Router/Navigator subtree is itself being freshly built,
-  // making it transiently unavailable for one or a few frames. Every
-  // natural production occurrence captured across STABILITY-09O-R and
-  // STABILITY-09O-SHA happened on a fresh page load/reload with an
-  // already-authenticated session — never during steady-state in-app
-  // navigation — consistent with this explanation.
+  // Fix: reach the real root Navigator via `widget.navigatorKey` (the same
+  // GlobalKey app.dart supplies to GoRouter's own `navigatorKey`) instead
+  // of ancestor-based lookup. Critically, `showModalBottomSheet` still
+  // needs a BuildContext that has the Navigator as an ANCESTOR -- the
+  // Navigator's own `currentContext` does NOT qualify (Navigator.of's
+  // ancestor search starts at the given context's PARENT, so calling it
+  // from the Navigator's own context searches ABOVE the Navigator, not the
+  // Navigator itself, and would fail exactly like the original bug for a
+  // root Navigator with nothing above it). `navigatorKey.currentState!
+  // .overlay!.context` is used instead -- the Overlay is a genuine
+  // DESCENDANT the Navigator builds internally, from which ancestor lookup
+  // correctly finds this same Navigator. Verified empirically (not just
+  // reasoned about) via a controlled reproduction test using the exact
+  // app.dart topology before this was relied on for production.
   //
-  // Fix: verify the Navigator is actually reachable BEFORE calling
-  // showModalBottomSheet, with a small, hard-bounded, frame-driven retry
-  // (never a Timer, never unbounded — mission section 06: "No polling
-  // loop. No timer storm.") for the rare case for the Navigator not being
-  // mounted yet on the very first frame. If it's still not reachable after
-  // the bounded window (a pathological case, not the one reproduced),
-  // `_presented` is reset so a LATER rebuild gets a fresh attempt instead
-  // of permanently losing the intro for this session (mission section 07:
-  // "do NOT mark the intro as shown before it has actually been safely
-  // presented" / "no permanent loss of intro due to one transient
-  // unavailable frame").
+  // The key's Navigator/Overlay is only attached once GoRouter has
+  // actually built its Navigator for the current frame, which can still
+  // lag by one or a few frames right after app boot -- so a small,
+  // hard-bounded, frame-driven retry (never a Timer, never unbounded --
+  // mission section 06: "No polling loop. No timer storm.") covers that
+  // narrow window. If it is still unattached after the bounded window
+  // (pathological, not the reproduced case), `_presented` is reset so a
+  // LATER rebuild gets a fresh attempt instead of permanently losing the
+  // intro for this session (mission section 07: "do NOT mark the intro as
+  // shown before it has actually been safely presented" / "no permanent
+  // loss of intro due to one transient unavailable frame").
   static const _maxNavigatorRetryAttempts = 10;
   int _navigatorRetryAttempt = 0;
 
@@ -81,21 +101,26 @@ class _IveIntroGateState extends ConsumerState<IveIntroGate> {
 
   void _tryPresent() {
     if (!mounted) return;
-    if (Navigator.maybeOf(context) == null) {
+    final overlayContext = widget.navigatorKey.currentState?.overlay?.context;
+    if (overlayContext == null) {
       if (_navigatorRetryAttempt < _maxNavigatorRetryAttempts) {
         _navigatorRetryAttempt++;
         WidgetsBinding.instance.addPostFrameCallback((_) => _tryPresent());
         return;
       }
-      // Bounded window exhausted without a Navigator ever becoming
-      // reachable — re-arm rather than leaving the intro permanently
-      // skipped for the rest of this session. iveIntroProvider's own
-      // SharedPreferences state is untouched either way (it's only ever
+      // Bounded window exhausted without the root Navigator's Overlay ever
+      // becoming attached -- re-arm rather than leaving the intro
+      // permanently skipped for the rest of this session. iveIntroProvider's
+      // own SharedPreferences state is untouched either way (it's only ever
       // written by the user's own CONTINUE/SKIP action inside the sheet,
       // see ive_intro_sheet.dart), so no persisted state needs correcting.
       _presented = false;
       return;
     }
-    showIveIntroSheet(context, trigger: 'first_use');
+    // Uses the Overlay's context (a genuine DESCENDANT of the real
+    // Router/Navigator subtree), not this widget's own context --
+    // ProviderScope is still reachable upward from it since it wraps the
+    // whole app above MaterialApp.router.
+    showIveIntroSheet(overlayContext, trigger: 'first_use');
   }
 }

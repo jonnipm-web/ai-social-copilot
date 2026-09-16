@@ -211,7 +211,23 @@ Widget _errorScreen(BuildContext context, GoRouterState state) {
   return const Scaffold(body: Center(child: CircularProgressIndicator()));
 }
 
+// STABILITY-09-FIX — symbolicated production evidence (missions
+// STABILITY-09O-SHA/STABILITY-09-FIX) proved IveIntroGate is mounted as a
+// Stack SIBLING of `child` (the real GoRouter-managed Router/Navigator) in
+// the builder below, never a DESCENDANT of it — ancestor-based
+// `Navigator.of(context)`/`Navigator.maybeOf(context)` from that position
+// can NEVER resolve the real Navigator (confirmed empirically with a
+// topology probe reproducing this exact structure: immediate=false,
+// settled=false, even long after route settlement). A GlobalKey passed as
+// GoRouter's OWN `navigatorKey` reaches the same NavigatorState directly,
+// independent of BuildContext position (probe confirmed: keyBased=true).
+// This is the SAME root navigator GoRouter itself manages — not a second,
+// competing Navigator architecture — so it is shared here rather than
+// duplicated.
+final rootNavigatorKey = GlobalKey<NavigatorState>();
+
 final _router = GoRouter(
+  navigatorKey: rootNavigatorKey,
   initialLocation: AppConstants.routeSplash,
   observers: [_iveObserver],
   errorBuilder: _errorScreen,
@@ -702,7 +718,7 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
               children: [
                 child!,
                 const IveOverlay(),
-                const IveIntroGate(),
+                IveIntroGate(navigatorKey: rootNavigatorKey),
               ],
             ),
           ),
