@@ -27,6 +27,13 @@ class DiagnosticLoggerService {
   String? _activeSessionId;
   String? get activeSessionId => _activeSessionId;
 
+  /// IVE-COMMERCIAL-STABILITY-09O-R (Codex Gate, P1 ACCEPTED) — lets
+  /// [DiagnosticSessionNotifier.recover] re-check, AFTER an async gap,
+  /// whether the authenticated user is still who it was when the call
+  /// started. A live read of the Supabase client's own current user, never
+  /// cached, so it reflects a sign-out/sign-in that happened mid-await.
+  String? get currentUserId => _client.auth.currentUser?.id;
+
   static final RegExp _uuidShape = RegExp(
     r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
   );

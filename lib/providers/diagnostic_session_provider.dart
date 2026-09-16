@@ -33,6 +33,16 @@ class DiagnosticSessionNotifier extends StateNotifier<DiagnosticSessionState> {
   final DiagnosticLoggerService _logger;
   final Ref _ref;
 
+  // IVE-COMMERCIAL-STABILITY-09O-R (Codex Gate, 2 P1s ACCEPTED) — lives
+  // HERE, not in the caller (lib/app.dart's _AppState originally kept its
+  // own copy), so [reset] can clear it atomically with the session state
+  // it guards. The two defects that caused: (1) a stale in-flight
+  // recover() from a just-signed-out user could overwrite the new user's
+  // notifier state after an await gap, and (2) the SAME user signing out
+  // and back in inherited a guard that never got cleared, permanently
+  // suppressing their own re-recovery for the rest of the runtime.
+  String? _recoveryAttemptedForUserId;
+
   Future<bool> start({String? label, String? roleSnapshot}) async {
     final effectiveRole = roleSnapshot ?? _ref.read(currentProfileProvider).valueOrNull?.roleLabel;
     // IVE-COMMERCIAL-STABILITY-09O (Codex Gate 2nd pass, P2 ACCEPTED) —
@@ -60,13 +70,37 @@ class DiagnosticSessionNotifier extends StateNotifier<DiagnosticSessionState> {
   /// recovery of an existing ACTIVE session after a reload/new tab/new
   /// provider container. A no-op if this notifier already tracks an active
   /// session (never overwrites live in-memory state with a server round
-  /// trip it doesn't need) or if the server has none for the current user.
+  /// trip it doesn't need), if there's no authenticated user, or if
+  /// recovery was already attempted for the CURRENT user this runtime
+  /// (cleared by [reset], so a later sign-out/sign-in — same user or a
+  /// different one — always gets a fresh attempt).
+  ///
+  /// IVE-COMMERCIAL-STABILITY-09O-R (Codex Gate, P1 ACCEPTED) — the user
+  /// id is captured BEFORE the `await` below and re-checked AFTER it, so a
+  /// sign-out (-> [reset]) or a sign-in as someone else that happens
+  /// mid-flight can never have this call's STALE result overwrite the
+  /// notifier with the wrong (no-longer-current) user's session. try/catch
+  /// wraps the query itself so a malformed row or a network failure
+  /// surfaces as a caught, logged no-op rather than an unhandled async
+  /// error during app bootstrap (Codex Gate, P2 ACCEPTED).
   Future<void> recover() async {
     if (state.isActive) return;
-    final row = await _logger.findMyActiveSession();
-    if (row == null) return;
-    _logger.adoptActiveSession(row['id'] as String);
-    state = _stateFromRow(row);
+    final userId = _logger.currentUserId;
+    if (userId == null) return;
+    if (_recoveryAttemptedForUserId == userId) return;
+    _recoveryAttemptedForUserId = userId;
+    try {
+      final row = await _logger.findMyActiveSession();
+      if (userId != _logger.currentUserId) return; // stale — discard.
+      if (row == null) return;
+      _logger.adoptActiveSession(row['id'] as String);
+      state = _stateFromRow(row);
+    } catch (_) {
+      // Diagnostics must never throw back into app bootstrap. A failed
+      // attempt stays "attempted" for this user this runtime (no retry
+      // storm against a persistently failing server) until the next
+      // sign-out/sign-in cycle clears the guard via reset().
+    }
   }
 
   /// IVE-COMMERCIAL-OBSERVABILITY-07B (Codex production-check review) —
@@ -113,6 +147,11 @@ class DiagnosticSessionNotifier extends StateNotifier<DiagnosticSessionState> {
   /// keep pointing at it once they're no longer the authenticated user.
   void reset() {
     _logger.forgetActiveSession();
+    // IVE-COMMERCIAL-STABILITY-09O-R (Codex Gate, P1 ACCEPTED) — clearing
+    // this alongside the session state is what lets the SAME user signing
+    // out and back in get a fresh recover() attempt, not just a different
+    // user (see recover()'s own comment).
+    _recoveryAttemptedForUserId = null;
     state = const DiagnosticSessionState();
   }
 

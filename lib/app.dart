@@ -566,17 +566,6 @@ class App extends ConsumerStatefulWidget {
 class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
   Timer? _boundedRecheck;
 
-  // IVE-COMMERCIAL-STABILITY-09O-R (mission section 05) — keyed by user id
-  // rather than a plain bool, so a sign-out/sign-in as a DIFFERENT user in
-  // the same tab (no full reload) gets a fresh recovery attempt instead of
-  // being silently skipped by a guard that already fired for someone else.
-  // Comparing against a live id (not a one-shot flag) also means this is
-  // safe to leave set across an ordinary profile refetch (app resume,
-  // etc.) for the SAME user — recover() itself is additionally idempotent
-  // (a no-op once state.isActive), so this is defense-in-depth against
-  // redundant network round trips, not the only thing preventing repeats.
-  String? _diagnosticRecoveryAttemptedForUserId;
-
   @override
   void initState() {
     super.initState();
@@ -653,25 +642,25 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
   //     findMyActiveSession()'s own `.eq('status', 'active')` filter.
   //   - recover() never INSERTs, so this can never create a session, let
   //     alone a duplicate one.
+  //   - "already attempted for this user this runtime" is guarded INSIDE
+  //     DiagnosticSessionNotifier.recover() itself (Codex Gate, P1
+  //     ACCEPTED — a duplicate local guard here, kept separately from the
+  //     one that [reset] clears on sign-out, previously let a stale
+  //     in-flight recovery from a just-signed-out user overwrite the next
+  //     user's state, and separately let the SAME user's re-login stay
+  //     permanently suppressed). This method is intentionally a thin,
+  //     unconditional trigger — recover() decides for itself, every time.
   void _maybeRecoverDiagnosticSession(AsyncValue<Profile?> next) {
     final profile = next.valueOrNull;
-    final userId = Supabase.instance.client.auth.currentUser?.id;
-    final shouldRecover = shouldAttemptDiagnosticRecovery(
-      isAdmin: profile?.isAdmin ?? false,
-      userId: userId,
-      alreadyAttemptedForUserId: _diagnosticRecoveryAttemptedForUserId,
-    );
-    if (!shouldRecover) return;
-    _diagnosticRecoveryAttemptedForUserId = userId;
+    if (!shouldAttemptDiagnosticRecovery(isAdmin: profile?.isAdmin ?? false)) return;
     ref.read(diagnosticSessionProvider.notifier).recover().then((_) {
-      _maybeFireStability09orControlledCaptureTest();
+      _maybeFireStability09orControlledCaptureTest(profile);
     });
   }
 
   // TEMPORARY, forensic-only — IVE-COMMERCIAL-STABILITY-09O-R Section 08/18
-  // controlled capture proof. Gated behind a query param no ordinary user
-  // would ever have in their URL, and reverted before this mission's final
-  // merge (same convention as STABILITY-09R's self-test marker). Fires a
+  // controlled capture proof. Reverted before this mission's final merge
+  // (same convention as STABILITY-09R's self-test marker). Fires a
   // genuinely uncaught error through the SAME runZonedGuarded zone a real
   // crash would use — not a direct function call bypassing that path — to
   // prove, live, that: (a) recovery just happened without ever visiting
@@ -679,7 +668,15 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
   // diagnostic_events with build_sha/route/stack/metadata intact. Never a
   // null-check throw on real app state; a plain, bounded, clearly-labeled
   // Exception.
-  void _maybeFireStability09orControlledCaptureTest() {
+  //
+  // Codex Gate (P1 ACCEPTED) — the first cut of this gated ONLY on a
+  // public URL query parameter, which ANY visitor (not just an admin)
+  // could trigger just by knowing or receiving the URL, deployable to
+  // production for however briefly this stayed merged. Now ALSO requires
+  // `profile.isAdmin` (the same already-resolved profile this method is
+  // called with) — a normal user can no longer trigger it under any URL.
+  void _maybeFireStability09orControlledCaptureTest(Profile? profile) {
+    if (profile?.isAdmin != true) return;
     if (Uri.base.queryParameters['stability09orTest'] != '1') return;
     Future(() => throw Exception('STABILITY-09O-R controlled capture test — safe, expected, not a real crash'));
   }
