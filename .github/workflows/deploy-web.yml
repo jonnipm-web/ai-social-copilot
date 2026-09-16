@@ -138,28 +138,67 @@ jobs:
         # not claim forensic readiness." Implemented as a hard gate — a
         # non-zero exit here fails the whole job, before anything is
         # published, rather than silently shipping an unverified map.
-        run: node tool/stability09o/verify_build_sourcemap.mjs build/web/main.dart.js.map
+        #
+        # Codex Gate (P1 ACCEPTED, 2nd pass) — the first version of this
+        # check only proved the map was internally self-consistent, which a
+        # STALE map (e.g. a cache-reuse bug) would also pass. Now passes the
+        # REAL checked-out lib/main.dart from THIS SAME checkout/job so the
+        # script can require exact content equality, not just internal
+        # consistency — see verify_build_sourcemap.mjs's own header comment.
+        run: node tool/stability09o/verify_build_sourcemap.mjs build/web/main.dart.js.map lib/main.dart
 
-      - name: STABILITY-09O — separar source map em artefato PRIVADO (nunca publicado no GitHub Pages)
+      - name: STABILITY-09O — separar source map do output público do GitHub Pages
         # Mission section 08: the map must never be copied into the public
-        # GitHub Pages output or be publicly addressable from the site.
-        # Moved OUT of build/web (not copied) before the publish step below
-        # ever runs, so publish_dir structurally cannot contain it. The
-        # `//# sourceMappingURL=main.dart.js.map` comment dart2js left inside
-        # main.dart.js now points at a path that 404s on the public site —
-        # harmless (a normal devtools 404, no information disclosed) and the
-        # deliberate cost of keeping the map private.
+        # GitHub Pages output. Moved OUT of build/web (not copied) before the
+        # publish step below ever runs, so publish_dir structurally cannot
+        # contain it. The `//# sourceMappingURL=main.dart.js.map` comment
+        # dart2js left inside main.dart.js now points at a path that 404s on
+        # the public site — harmless (a normal devtools 404, no information
+        # disclosed).
         run: |
           mkdir -p sourcemap-artifact
           find build/web -name '*.js.map' -exec mv {} sourcemap-artifact/ \;
-          echo "Arquivos movidos para o artefato privado (NÃO publicado no GitHub Pages):"
+          echo "Arquivos movidos para fora do output público do GitHub Pages:"
           ls -la sourcemap-artifact/
 
-      - name: STABILITY-09O — publicar source map como artefato privado do Actions (retenção 90 dias)
+      - name: STABILITY-09O — cifrar o source map antes de qualquer upload
+        # Codex Gate (P1 ACCEPTED) — this repository is PUBLIC
+        # (visibility: PUBLIC, confirmed via `gh repo view`). A plain
+        # actions/upload-artifact upload is downloadable by ANY GitHub
+        # account, not just repo collaborators (GitHub's own docs: workflow
+        # artifacts follow repository READ access, and public repos grant
+        # read to everyone) — that would directly violate mission section
+        # 08's "artifact NOT publicly addressable" requirement, no matter
+        # how the artifact is named or where it's stored on GitHub's side.
+        # Encrypting the map with a symmetric key known only to this repo's
+        # secrets (never itself uploaded, never logged) means the uploaded
+        # BLOB can be downloaded by anyone but is useless without that key —
+        # achieving the mission's actual confidentiality intent without a
+        # new architectural dependency (no new cloud storage, no new
+        # cross-repo credential). Fails the job outright (not silently
+        # skips) if the key isn't configured — see this mission's own
+        # report for the exact `gh secret set` step Paulo still needs to run
+        # once before this step can succeed.
+        run: |
+          if [ -z "${{ secrets.SOURCEMAP_ENCRYPTION_KEY }}" ]; then
+            echo "SOURCEMAP_ENCRYPTION_KEY não está configurado como secret do repositório." >&2
+            echo "Sem essa chave, o artefato do source map ficaria legível por qualquer conta do GitHub (repositório público) — encerrando antes de publicar." >&2
+            exit 1
+          fi
+          tar -C sourcemap-artifact -czf sourcemap.tar.gz .
+          openssl enc -aes-256-cbc -pbkdf2 -salt \
+            -in sourcemap.tar.gz \
+            -out sourcemap.tar.gz.enc \
+            -k "${{ secrets.SOURCEMAP_ENCRYPTION_KEY }}"
+          rm -f sourcemap.tar.gz
+          rm -rf sourcemap-artifact
+          echo "Source map cifrado — texto plano removido do workspace do runner."
+
+      - name: STABILITY-09O — publicar source map cifrado como artefato do Actions (retenção 90 dias)
         uses: actions/upload-artifact@v4
         with:
           name: sourcemap-${{ github.sha }}
-          path: sourcemap-artifact/
+          path: sourcemap.tar.gz.enc
           retention-days: 90
 
       - name: Publicar no GitHub Pages

@@ -62,7 +62,12 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
   @override
   void dispose() {
     iveRouteNotifier.removeListener(_onRouteChange);
-    IveForensicSnapshot.overlayMounted = false;
+    // IVE-COMMERCIAL-STABILITY-09O (Codex Gate, P2 ACCEPTED) — a dispose
+    // mid-drag (e.g. a fast sign-out while dragging) would otherwise leave
+    // overlayDragging stuck true forever, misleadingly implying an
+    // in-progress drag at the moment of some LATER, unrelated crash.
+    IveForensicSnapshot.overlayMounted  = false;
+    IveForensicSnapshot.overlayDragging = false;
     super.dispose();
   }
 
@@ -123,7 +128,16 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
     // IVE-COMMERCIAL-STABILITY-09O — reuses this already-existing provider
     // watch; no new subscription.
     IveForensicSnapshot.profileResolved = profile != null;
-    if (!hasSession || profile == null) return const SizedBox.shrink();
+    if (!hasSession || profile == null) {
+      // IVE-COMMERCIAL-STABILITY-09O (Codex Gate, P2 ACCEPTED) — this early
+      // return skips the `issuePresent`/`overlayDragging` writes below, so
+      // without this, a stale `true` from BEFORE sign-out/session-loss
+      // would misleadingly survive into a later crash's forensic snapshot
+      // even though the overlay (and its issue bubble) is no longer shown.
+      IveForensicSnapshot.issuePresent    = false;
+      IveForensicSnapshot.overlayDragging = false;
+      return const SizedBox.shrink();
+    }
 
     final state  = ref.watch(iveProvider);
     // IVE-COMMERCIAL-STABILITY-09O — reuses the `state` already read above
