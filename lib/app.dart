@@ -653,37 +653,7 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
   void _maybeRecoverDiagnosticSession(AsyncValue<Profile?> next) {
     final profile = next.valueOrNull;
     if (!shouldAttemptDiagnosticRecovery(isAdmin: profile?.isAdmin ?? false)) return;
-    ref.read(diagnosticSessionProvider.notifier).recover().then((_) {
-      _maybeFireStability09orControlledCaptureTest();
-    });
-  }
-
-  // TEMPORARY, forensic-only — IVE-COMMERCIAL-STABILITY-09O-R Section 08/18
-  // controlled capture proof. Reverted before this mission's final merge
-  // (same convention as STABILITY-09R's self-test marker). Fires a
-  // genuinely uncaught error through the SAME runZonedGuarded zone a real
-  // crash would use — not a direct function call bypassing that path — to
-  // prove, live, that: (a) recovery just happened without ever visiting
-  // Admin/diagnostic_logs_tab, and (b) the resulting event actually reaches
-  // diagnostic_events with build_sha/route/stack/metadata intact. Never a
-  // null-check throw on real app state; a plain, bounded, clearly-labeled
-  // Exception.
-  //
-  // Codex Gate round 1 (P1 ACCEPTED) — the first cut gated ONLY on a
-  // public URL query parameter, which ANY visitor (not just an admin)
-  // could trigger just by knowing or receiving the URL. Fixed by also
-  // requiring admin status.
-  //
-  // Codex Gate round 2 (P2 ACCEPTED) — that fix checked the `profile`
-  // CAPTURED when recovery began, not the current state: an admin starts
-  // recovery, signs out, and a non-admin signs in before the `.then`
-  // callback runs would still fire using the stale admin profile. Re-reads
-  // `currentProfileProvider` fresh, at the moment of firing, instead of
-  // trusting anything captured earlier in this async chain.
-  void _maybeFireStability09orControlledCaptureTest() {
-    if (ref.read(currentProfileProvider).valueOrNull?.isAdmin != true) return;
-    if (Uri.base.queryParameters['stability09orTest'] != '1') return;
-    Future(() => throw Exception('STABILITY-09O-R controlled capture test — safe, expected, not a real crash'));
+    ref.read(diagnosticSessionProvider.notifier).recover();
   }
 
   @override
