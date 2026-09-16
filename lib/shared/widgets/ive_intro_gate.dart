@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/constants/app_constants.dart';
+import '../../core/diagnostics/ive_forensic_snapshot.dart';
+import '../../data/models/profile.dart';
 import '../../providers/ive_intro_provider.dart';
 import '../../providers/profile_provider.dart';
 import 'ive_intro_sheet.dart';
@@ -81,17 +84,63 @@ class _IveIntroGateState extends ConsumerState<IveIntroGate> {
   static const _maxNavigatorRetryAttempts = 10;
   int _navigatorRetryAttempt = 0;
 
+  // STABILITY-09-FIX (Codex Gate round 2, P1) — profile resolution
+  // (currentProfileProvider, a network fetch) and GoRouter's own
+  // Splash->Dashboard/Login redirect (SplashScreen's fixed 800ms timer) are
+  // driven by two INDEPENDENT clocks. On a fast connection/warm session the
+  // profile can resolve WHILE the app is still showing Splash -- and since
+  // IveIntroGate is mounted globally in app.dart's builder (not per-route),
+  // its build() runs regardless of the current route. Without a route
+  // check, this let the intro sheet schedule and open on top of the Splash
+  // screen instead of Dashboard/login-adjacent authenticated content.
+  //
+  // IveForensicSnapshot.currentRoute (already updated synchronously on
+  // every GoRouter `redirect` evaluation, see app.dart) is reused as the
+  // "has routing left Splash" signal -- no new Navigator/route-guard
+  // architecture, just reading state that already exists for exactly this
+  // kind of purpose (mission section 08).
+  bool _routeReady() {
+    final route = IveForensicSnapshot.currentRoute;
+    return route.isNotEmpty && route != AppConstants.routeSplash;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Profile/intro state alone (watched in build()) cannot detect a LATER
+    // route transition away from Splash, since a route change by itself
+    // does not rebuild this widget (it is not a descendant of the Router).
+    // Listening to the same redirect-driven signal lets a presentation that
+    // was blocked purely on route-readiness retry the instant the app
+    // actually leaves Splash, instead of being silently lost forever
+    // (mission section 07: "no permanent loss of intro").
+    IveForensicSnapshot.currentRouteNotifier.addListener(_onRouteChanged);
+  }
+
+  @override
+  void dispose() {
+    IveForensicSnapshot.currentRouteNotifier.removeListener(_onRouteChanged);
+    super.dispose();
+  }
+
+  void _onRouteChanged() {
+    if (!mounted) return;
+    _maybeSchedule(ref.read(currentProfileProvider).valueOrNull, ref.read(iveIntroProvider));
+  }
+
+  void _maybeSchedule(Profile? profile, IveIntroState introState) {
+    if (_presented || profile == null || !introState.shouldShow || !_routeReady()) return;
+    _presented = true;
+    _navigatorRetryAttempt = 0;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _tryPresent());
+  }
+
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(currentProfileProvider);
     final introState   = ref.watch(iveIntroProvider);
 
-    final profile = profileAsync.valueOrNull;
-    if (!_presented && profile != null && introState.shouldShow) {
-      _presented = true;
-      _navigatorRetryAttempt = 0;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _tryPresent());
-    }
+    _maybeSchedule(profileAsync.valueOrNull, introState);
 
     // Renders nothing — this widget only observes state and, at most once,
     // schedules the intro sheet. It must never affect layout (mounted in

@@ -19,7 +19,9 @@ import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:ai_social_copilot/core/constants/app_constants.dart';
 import 'package:ai_social_copilot/core/diagnostics/diagnostic_logger_service.dart';
+import 'package:ai_social_copilot/core/diagnostics/ive_forensic_snapshot.dart';
 import 'package:ai_social_copilot/data/models/profile.dart';
 import 'package:ai_social_copilot/l10n/app_localizations.dart';
 import 'package:ai_social_copilot/providers/diagnostic_session_provider.dart';
@@ -42,7 +44,22 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
+    // STABILITY-09-FIX (Codex Gate round 2) — IveForensicSnapshot.currentRoute
+    // is a static/global, so it must be reset between tests in this file to
+    // avoid one test's simulated route leaking into the next.
+    IveForensicSnapshot.previousRoute = '';
+    IveForensicSnapshot.currentRoute = '';
+    IveForensicSnapshot.currentRouteNotifier.value = '';
   });
+
+  // Simulates the GoRouter `redirect` callback having already settled on a
+  // real, post-Splash, authenticated destination -- the same call app.dart's
+  // own redirect makes via IveForensicSnapshot.recordRoute(path). Tests that
+  // are not specifically about route-readiness call this once up front so
+  // they exercise exactly one variable (Navigator availability) at a time.
+  void simulateRouteSettledPastSplash() {
+    IveForensicSnapshot.recordRoute(AppConstants.routeDashboard);
+  }
 
   // Robust against exact frame-count assumptions (currentProfileProvider's
   // Future resolution, the postFrameCallback chain, and the bottom sheet's
@@ -122,6 +139,7 @@ void main() {
       final l10n = await AppLocalizations.delegate.load(const Locale('pt'));
       final titleFinder = find.text(l10n.ivIntroTitle);
       final navigatorKey = GlobalKey<NavigatorState>();
+      simulateRouteSettledPastSplash();
 
       await tester.pumpWidget(realRouterHarness(
         navigatorKey: navigatorKey,
@@ -139,6 +157,7 @@ void main() {
     'no exception, ever (the pathological case, not the reproduced one)',
     (tester) async {
       final navigatorKey = GlobalKey<NavigatorState>();
+      simulateRouteSettledPastSplash();
       await tester.pumpWidget(noNavigatorHarness(
         navigatorKey: navigatorKey,
         overrides: baseOverrides(),
@@ -167,6 +186,7 @@ void main() {
 
       final l10n = await AppLocalizations.delegate.load(const Locale('pt'));
       final titleFinder = find.text(l10n.ivIntroTitle);
+      simulateRouteSettledPastSplash();
 
       await tester.pumpWidget(buildTree());
       await tester.pump(); // lets currentProfileProvider's Future resolve, schedules the callback
@@ -202,6 +222,7 @@ void main() {
 
       final l10n = await AppLocalizations.delegate.load(const Locale('pt'));
       final titleFinder = find.text(l10n.ivIntroTitle);
+      simulateRouteSettledPastSplash();
 
       await tester.pumpWidget(buildTree());
       // Exhaust the full bounded retry window with the key never attaching
@@ -255,6 +276,67 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
       expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'CODEX/STABILITY-09-FIX ROUND 2 — profile resolves WHILE the route is still Splash '
+    '(the two independent clocks Codex identified: a fast profile fetch vs. '
+    "SplashScreen's fixed redirect timer): the intro must NOT open over Splash, "
+    'and no exception is thrown while it is pending',
+    (tester) async {
+      final navigatorKey = GlobalKey<NavigatorState>();
+      final l10n = await AppLocalizations.delegate.load(const Locale('pt'));
+      final titleFinder = find.text(l10n.ivIntroTitle);
+
+      // Mirrors app.dart's redirect callback recording the initial location
+      // on app boot, exactly as GoRouter's own redirect does for
+      // initialLocation before Splash's 800ms timer ever fires.
+      IveForensicSnapshot.recordRoute(AppConstants.routeSplash);
+
+      await tester.pumpWidget(realRouterHarness(
+        navigatorKey: navigatorKey,
+        overrides: baseOverrides(),
+      ));
+      // Profile resolves and the Navigator/Overlay are both genuinely
+      // available -- but the route is still Splash. Pump well past every
+      // bounded retry window; the intro must never appear.
+      for (var i = 0; i < 15; i++) {
+        await tester.pump();
+        expect(tester.takeException(), isNull, reason: 'threw on pump #$i while route was still Splash');
+      }
+      expect(titleFinder, findsNothing);
+
+      // SplashScreen's own redirect now fires (the real 800ms timer, here
+      // simulated directly via the same IveForensicSnapshot.recordRoute
+      // call app.dart's redirect callback makes) -- the intro was NOT lost;
+      // it opens now, driven by IveForensicSnapshot.currentRouteNotifier.
+      IveForensicSnapshot.recordRoute(AppConstants.routeDashboard);
+      await pumpUntilFound(tester, titleFinder);
+
+      expect(titleFinder, findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'CODEX/STABILITY-09-FIX ROUND 2 — route never leaves Splash (pathological): '
+    'no exception, ever, and the intro never opens',
+    (tester) async {
+      final navigatorKey = GlobalKey<NavigatorState>();
+      IveForensicSnapshot.recordRoute(AppConstants.routeSplash);
+
+      await tester.pumpWidget(realRouterHarness(
+        navigatorKey: navigatorKey,
+        overrides: baseOverrides(),
+      ));
+      for (var i = 0; i < 20; i++) {
+        await tester.pump();
+        expect(tester.takeException(), isNull, reason: 'threw on pump #$i with route stuck on Splash');
+      }
+
+      final l10n = await AppLocalizations.delegate.load(const Locale('pt'));
+      expect(find.text(l10n.ivIntroTitle), findsNothing);
     },
   );
 }

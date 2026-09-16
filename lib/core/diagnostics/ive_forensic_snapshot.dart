@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show ValueNotifier;
 import 'package:flutter/widgets.dart' show AppLifecycleState;
 
 import '../constants/app_constants.dart';
@@ -26,6 +27,14 @@ class IveForensicSnapshot {
 
   static String previousRoute = '';
   static String currentRoute = '';
+
+  /// STABILITY-09-FIX (Codex Gate round 2, P1) — a purpose-built, listenable
+  /// mirror of [currentRoute] so a widget (IveIntroGate) can react to the
+  /// actual route-CHANGE event the GoRouter `redirect` callback already
+  /// produces via [recordRoute], instead of polling. Kept separate from the
+  /// plain [currentRoute] string so every existing reader of that field
+  /// (toMetadata, [projectContextPresent], existing tests) is unaffected.
+  static final ValueNotifier<String> currentRouteNotifier = ValueNotifier<String>('');
   static AppLifecycleState? lifecycleState;
   static bool overlayMounted = false;
   static bool overlayDragging = false;
@@ -51,6 +60,7 @@ class IveForensicSnapshot {
     if (path == currentRoute) return;
     previousRoute = currentRoute;
     currentRoute = path;
+    currentRouteNotifier.value = path;
   }
 
   /// Derived, not stored: true only for a specific project-scoped route
