@@ -172,6 +172,16 @@ void _logNavigation(BuildContext context, String path, String? redirectTarget) {
 
 Future<String?> _computeRedirect(BuildContext context, GoRouterState state) async {
   final session = Supabase.instance.client.auth.currentSession;
+  if (session == null) {
+    // STABILITY-09-FIX (Codex Gate round 4, P1) — clear the settled-route
+    // signal the instant there is no session, so a stale previously
+    // authenticated destination (e.g. `/dashboard`, still recorded from
+    // before logout) can never coexist with a logged-out user.
+    // IveIntroGate's own `profile != null` check already covers this in
+    // practice, but this closes the gap unconditionally rather than
+    // depending on that provider's own invalidation timing.
+    IveForensicSnapshot.clearSettledRoute();
+  }
   final path = state.fullPath ?? state.matchedLocation;
   final goingToAuth   = path == AppConstants.routeLogin;
   final goingToSplash = path == AppConstants.routeSplash;
@@ -211,7 +221,23 @@ Widget _errorScreen(BuildContext context, GoRouterState state) {
   return const Scaffold(body: Center(child: CircularProgressIndicator()));
 }
 
+// STABILITY-09-FIX — symbolicated production evidence (missions
+// STABILITY-09O-SHA/STABILITY-09-FIX) proved IveIntroGate is mounted as a
+// Stack SIBLING of `child` (the real GoRouter-managed Router/Navigator) in
+// the builder below, never a DESCENDANT of it — ancestor-based
+// `Navigator.of(context)`/`Navigator.maybeOf(context)` from that position
+// can NEVER resolve the real Navigator (confirmed empirically with a
+// topology probe reproducing this exact structure: immediate=false,
+// settled=false, even long after route settlement). A GlobalKey passed as
+// GoRouter's OWN `navigatorKey` reaches the same NavigatorState directly,
+// independent of BuildContext position (probe confirmed: keyBased=true).
+// This is the SAME root navigator GoRouter itself manages — not a second,
+// competing Navigator architecture — so it is shared here rather than
+// duplicated.
+final rootNavigatorKey = GlobalKey<NavigatorState>();
+
 final _router = GoRouter(
+  navigatorKey: rootNavigatorKey,
   initialLocation: AppConstants.routeSplash,
   observers: [_iveObserver],
   errorBuilder: _errorScreen,
@@ -227,6 +253,33 @@ final _router = GoRouter(
     final redirectTarget = await _computeRedirect(context, state);
     if (path != AppConstants.routeSplash) {
       _logNavigation(context, path, redirectTarget);
+    }
+    // STABILITY-09-FIX (Codex Gate rounds 3-4) — `redirectTarget == null`
+    // is GoRouter's own "no further redirect needed" signal, but round 4
+    // proved that alone is not sufficient for two reasons:
+    //   1. A location that never matched any GoRoute at all (a typo, a
+    //      stale bookmark) also resolves with redirectTarget == null once
+    //      it falls through to _resolveEntitlementRedirect, yet it is
+    //      headed for errorBuilder, not a real screen. `state.fullPath` is
+    //      only non-empty for a path that matched a registered GoRoute
+    //      pattern (verified empirically: unmatched locations leave it ''),
+    //      so requiring it non-empty excludes this case precisely.
+    //   2. `/result` (routeResult) accepted without its required `extra`
+    //      renders a loading spinner and self-redirects to `/home` from
+    //      its OWN builder (see its GoRoute below) -- invisible to this
+    //      callback, since redirectTarget is still null. Excluded by name;
+    //      the common case (reached with extra, a real stable result page)
+    //      simply schedules the intro on whatever LATER settled route the
+    //      user navigates to instead, which costs nothing.
+    // Splash/Login remain excluded as before (defense in depth for Login --
+    // see _computeRedirect for why an authenticated request for it never
+    // actually reaches this point with a null redirectTarget).
+    if (redirectTarget == null &&
+        (state.fullPath ?? '').isNotEmpty &&
+        path != AppConstants.routeSplash &&
+        path != AppConstants.routeLogin &&
+        path != AppConstants.routeResult) {
+      IveForensicSnapshot.recordSettledRoute(path);
     }
     return redirectTarget;
   },
@@ -702,7 +755,7 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
               children: [
                 child!,
                 const IveOverlay(),
-                const IveIntroGate(),
+                IveIntroGate(navigatorKey: rootNavigatorKey),
               ],
             ),
           ),
