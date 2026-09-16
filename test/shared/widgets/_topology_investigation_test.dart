@@ -10,6 +10,8 @@ import 'package:go_router/go_router.dart';
 
 bool? navigatorFoundImmediately;
 bool? navigatorFoundAfterSettle;
+final rootNavigatorKey = GlobalKey<NavigatorState>();
+bool? keyBasedNavigatorFound;
 
 class _ProbeWidget extends StatefulWidget {
   const _ProbeWidget({super.key});
@@ -40,6 +42,7 @@ final _probeKey = GlobalKey<_ProbeWidgetState>();
 void main() {
   testWidgets('TOPOLOGY PROBE: exact app.dart MaterialApp.router builder structure', (tester) async {
     final router = GoRouter(
+      navigatorKey: rootNavigatorKey,
       initialLocation: '/',
       routes: [
         GoRoute(path: '/', builder: (_, __) => const Scaffold(body: Text('home'))),
@@ -70,8 +73,14 @@ void main() {
     // "steady-state, long after boot" case IveOverlay's chat represents.
     _probeKey.currentState?.probeNow();
 
+    // Codex's recommended alternative: does a NavigatorState reached via an
+    // explicitly-owned GlobalKey<NavigatorState> (assigned to GoRouter's own
+    // `navigatorKey` parameter) work from this same structural position,
+    // where ancestor-based Navigator.maybeOf(context) does not?
+    keyBasedNavigatorFound = rootNavigatorKey.currentState != null;
+
     // ignore: avoid_print
-    print('TOPOLOGY_PROBE_RESULT immediate=$navigatorFoundImmediately settled=$navigatorFoundAfterSettle');
+    print('TOPOLOGY_PROBE_RESULT immediate=$navigatorFoundImmediately settled=$navigatorFoundAfterSettle keyBased=$keyBasedNavigatorFound');
 
     expect(true, isTrue); // always "passes" -- this test is for its printed output only.
   });
