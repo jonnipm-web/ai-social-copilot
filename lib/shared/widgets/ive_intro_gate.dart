@@ -22,6 +22,45 @@ class IveIntroGate extends ConsumerStatefulWidget {
 class _IveIntroGateState extends ConsumerState<IveIntroGate> {
   bool _presented = false;
 
+  // STABILITY-09-FIX — symbolicated production evidence (mission
+  // STABILITY-09O-SHA) proved the exact failure path:
+  //   _IveIntroGateState.build.<anonymous function> (this callback)
+  //   -> showIveIntroSheet -> showModalBottomSheet -> Navigator.of
+  //   -> failure ("Null check operator used on a null value").
+  //
+  // Root cause (source/runtime evidence, not speculation): app.dart's
+  // MaterialApp.router `builder` places IveIntroGate as a Stack SIBLING of
+  // `child` (the actual GoRouter-managed Router/Navigator), never a
+  // DESCENDANT of it — `Navigator.of(context)` from here has always
+  // depended on an ambient Navigator reachable through that same builder
+  // scope, exactly like IveOverlay's own showModalBottomSheet call
+  // (context_copilot_widget.dart's showCopilotChat, same Stack position),
+  // which works reliably because it only ever fires from a deliberate user
+  // tap, long after the app's initial route has settled. IveIntroGate is
+  // different: it fires from the FIRST resolution of currentProfileProvider,
+  // which is the EXACT SAME signal that drives GoRouter's own initial
+  // redirect (splash -> dashboard/login, in _computeRedirect) — the one
+  // moment the Router/Navigator subtree is itself being freshly built,
+  // making it transiently unavailable for one or a few frames. Every
+  // natural production occurrence captured across STABILITY-09O-R and
+  // STABILITY-09O-SHA happened on a fresh page load/reload with an
+  // already-authenticated session — never during steady-state in-app
+  // navigation — consistent with this explanation.
+  //
+  // Fix: verify the Navigator is actually reachable BEFORE calling
+  // showModalBottomSheet, with a small, hard-bounded, frame-driven retry
+  // (never a Timer, never unbounded — mission section 06: "No polling
+  // loop. No timer storm.") for the rare case for the Navigator not being
+  // mounted yet on the very first frame. If it's still not reachable after
+  // the bounded window (a pathological case, not the one reproduced),
+  // `_presented` is reset so a LATER rebuild gets a fresh attempt instead
+  // of permanently losing the intro for this session (mission section 07:
+  // "do NOT mark the intro as shown before it has actually been safely
+  // presented" / "no permanent loss of intro due to one transient
+  // unavailable frame").
+  static const _maxNavigatorRetryAttempts = 10;
+  int _navigatorRetryAttempt = 0;
+
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(currentProfileProvider);
@@ -30,15 +69,33 @@ class _IveIntroGateState extends ConsumerState<IveIntroGate> {
     final profile = profileAsync.valueOrNull;
     if (!_presented && profile != null && introState.shouldShow) {
       _presented = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        showIveIntroSheet(context, trigger: 'first_use');
-      });
+      _navigatorRetryAttempt = 0;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _tryPresent());
     }
 
     // Renders nothing — this widget only observes state and, at most once,
     // schedules the intro sheet. It must never affect layout (mounted in
     // the same Stack as IveOverlay, above the routed page).
     return const SizedBox.shrink();
+  }
+
+  void _tryPresent() {
+    if (!mounted) return;
+    if (Navigator.maybeOf(context) == null) {
+      if (_navigatorRetryAttempt < _maxNavigatorRetryAttempts) {
+        _navigatorRetryAttempt++;
+        WidgetsBinding.instance.addPostFrameCallback((_) => _tryPresent());
+        return;
+      }
+      // Bounded window exhausted without a Navigator ever becoming
+      // reachable — re-arm rather than leaving the intro permanently
+      // skipped for the rest of this session. iveIntroProvider's own
+      // SharedPreferences state is untouched either way (it's only ever
+      // written by the user's own CONTINUE/SKIP action inside the sheet,
+      // see ive_intro_sheet.dart), so no persisted state needs correcting.
+      _presented = false;
+      return;
+    }
+    showIveIntroSheet(context, trigger: 'first_use');
   }
 }
