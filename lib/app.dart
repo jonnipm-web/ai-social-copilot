@@ -654,7 +654,7 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
     final profile = next.valueOrNull;
     if (!shouldAttemptDiagnosticRecovery(isAdmin: profile?.isAdmin ?? false)) return;
     ref.read(diagnosticSessionProvider.notifier).recover().then((_) {
-      _maybeFireStability09orControlledCaptureTest(profile);
+      _maybeFireStability09orControlledCaptureTest();
     });
   }
 
@@ -669,14 +669,19 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
   // null-check throw on real app state; a plain, bounded, clearly-labeled
   // Exception.
   //
-  // Codex Gate (P1 ACCEPTED) — the first cut of this gated ONLY on a
+  // Codex Gate round 1 (P1 ACCEPTED) — the first cut gated ONLY on a
   // public URL query parameter, which ANY visitor (not just an admin)
-  // could trigger just by knowing or receiving the URL, deployable to
-  // production for however briefly this stayed merged. Now ALSO requires
-  // `profile.isAdmin` (the same already-resolved profile this method is
-  // called with) — a normal user can no longer trigger it under any URL.
-  void _maybeFireStability09orControlledCaptureTest(Profile? profile) {
-    if (profile?.isAdmin != true) return;
+  // could trigger just by knowing or receiving the URL. Fixed by also
+  // requiring admin status.
+  //
+  // Codex Gate round 2 (P2 ACCEPTED) — that fix checked the `profile`
+  // CAPTURED when recovery began, not the current state: an admin starts
+  // recovery, signs out, and a non-admin signs in before the `.then`
+  // callback runs would still fire using the stale admin profile. Re-reads
+  // `currentProfileProvider` fresh, at the moment of firing, instead of
+  // trusting anything captured earlier in this async chain.
+  void _maybeFireStability09orControlledCaptureTest() {
+    if (ref.read(currentProfileProvider).valueOrNull?.isAdmin != true) return;
     if (Uri.base.queryParameters['stability09orTest'] != '1') return;
     Future(() => throw Exception('STABILITY-09O-R controlled capture test — safe, expected, not a real crash'));
   }
