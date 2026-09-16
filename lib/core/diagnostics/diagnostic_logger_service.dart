@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'build_info.dart';
 import 'diagnostic_models.dart';
 import 'diagnostic_sanitizer.dart';
 
@@ -76,7 +77,6 @@ class DiagnosticLoggerService {
     String? label,
     String? roleSnapshot,
     String? appVersion,
-    String? buildSha,
   }) async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) return null;
@@ -98,12 +98,20 @@ class DiagnosticLoggerService {
             // field). Every session-level free-text field now goes
             // through sanitizeText too, for the same reason.
             'app_version': appVersion != null ? sanitizeText(appVersion, maxLength: 50) : null,
-            // IVE-COMMERCIAL-STABILITY-09O (discovered live in production)
-            // — a plain sanitizeText() was destroying every real 40-char
-            // git SHA via the generic 20+-char backstop pattern, turning
-            // build_sha into the literal string "[redacted]" on every
-            // session. See sanitizeBuildSha's own doc comment.
-            'build_sha': buildSha != null ? sanitizeBuildSha(buildSha, maxLength: 100) : null,
+            // IVE-COMMERCIAL-STABILITY-09O (discovered live in production;
+            // Codex Gate 2nd pass, P2 ACCEPTED) — build_sha is intentionally
+            // NOT a parameter of this method: it is always kBuildSha itself
+            // (the compile-time constant from build_info.dart), never a
+            // caller-supplied value. This closes two issues at once: (1) a
+            // plain sanitizeText() was destroying every real 40-char git SHA
+            // via the generic 20+-char backstop pattern (build_sha came back
+            // "[redacted]" on every session); (2) even after adding a typed
+            // sanitizeBuildSha() to fix that, accepting it as a free
+            // parameter would trust ANY 7-40 hex-shaped caller input,
+            // including a future hex-shaped secret from a different call
+            // site — removing the parameter removes that surface entirely
+            // rather than relying on callers to behave.
+            'build_sha': sanitizeBuildSha(kBuildSha, maxLength: 100),
             'platform': kIsWeb ? 'web' : 'native',
             'role_snapshot': roleSnapshot != null ? sanitizeText(roleSnapshot, maxLength: 50) : null,
           })

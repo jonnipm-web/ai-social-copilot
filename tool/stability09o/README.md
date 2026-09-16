@@ -16,14 +16,20 @@ npm install
 Run automatically by `.github/workflows/deploy-web.yml` right after
 `flutter build web --release --source-maps`, before the private source-map
 artifact is uploaded and before GitHub Pages publish. Proves the freshly
-built `main.dart.js.map` actually corresponds to the commit just built, via
-a source→generated→source round trip (see the script's own header comment
-for why this is used instead of a fixed compiled offset). A failure fails
-the whole deploy job — a source map that cannot be proven build-matched
-must not be trusted for a future crash.
+built `main.dart.js.map` corresponds to the commit just built by reading
+the REAL checked-out `lib/main.dart` from the same job and round-tripping
+SEVERAL known lines, spread across the entire file (not just one), through
+`generatedPositionFor` / `originalPositionFor` (see the script's own header
+comment, including the two earlier approaches that didn't hold up under
+Codex review, for exactly why). This is a strong multi-point freshness
+check, not a byte-for-byte whole-file guarantee — Flutter/dart2js on this
+version doesn't embed `sourcesContent`, so an exact content comparison
+isn't available; see the script's header for the accepted residual
+limitation. A failure fails the whole deploy job — a source map that
+cannot be proven build-matched must not be trusted for a future crash.
 
 ```
-node verify_build_sourcemap.mjs build/web/main.dart.js.map
+node verify_build_sourcemap.mjs build/web/main.dart.js.map lib/main.dart
 ```
 
 ## `symbolicate.mjs` — manual symbolication of a real production crash

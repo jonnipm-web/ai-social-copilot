@@ -139,12 +139,16 @@ jobs:
         # non-zero exit here fails the whole job, before anything is
         # published, rather than silently shipping an unverified map.
         #
-        # Codex Gate (P1 ACCEPTED, 2nd pass) — the first version of this
-        # check only proved the map was internally self-consistent, which a
-        # STALE map (e.g. a cache-reuse bug) would also pass. Now passes the
-        # REAL checked-out lib/main.dart from THIS SAME checkout/job so the
-        # script can require exact content equality, not just internal
-        # consistency — see verify_build_sourcemap.mjs's own header comment.
+        # Codex Gate (P1 ACCEPTED across two review rounds) — the first
+        # version of this check only proved the map was internally self-
+        # consistent (would pass a stale map too); a follow-up requiring
+        # embedded sourcesContent failed on real CI (this Flutter/dart2js
+        # version doesn't produce it). The current version passes the REAL
+        # checked-out lib/main.dart from THIS SAME checkout/job and requires
+        # SEVERAL known lines spread across the whole file to round-trip
+        # exactly (not just one) — see verify_build_sourcemap.mjs's own
+        # header comment for the full history and the accepted residual
+        # limitation (not a byte-for-byte whole-file guarantee).
         run: node tool/stability09o/verify_build_sourcemap.mjs build/web/main.dart.js.map lib/main.dart
 
       - name: STABILITY-09O — separar source map do output público do GitHub Pages
