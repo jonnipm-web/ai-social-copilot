@@ -511,12 +511,18 @@ class _EventTile extends StatelessWidget {
           const SizedBox(height: 4),
           Text(event['event_name'] as String? ?? '',
               style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
-          if (event['route'] != null || event['status'] != null)
+          if (event['route'] != null || event['status'] != null || event['build_sha'] != null)
             Text(
               [
                 if (event['route'] != null) 'rota: ${event['route']}',
                 if (event['status'] != null) 'status: ${event['status']}',
                 if (event['duration_ms'] != null) '${event['duration_ms']}ms',
+                // IVE-COMMERCIAL-STABILITY-09O-SHA (mission section 08) —
+                // the EVENT's own build_sha, not the session's: this is
+                // the authoritative value for locating the matching
+                // encrypted source-map artifact (sourcemap-<build_sha>)
+                // when symbolicating a specific crash.
+                if (event['build_sha'] != null) 'build: ${event['build_sha']}',
               ].join(' · '),
               style: const TextStyle(color: Colors.white54, fontSize: 11),
             ),

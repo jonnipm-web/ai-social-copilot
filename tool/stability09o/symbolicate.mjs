@@ -38,8 +38,15 @@ try {
     console.error(
       '\nWARNING: both LUB and GLB resolved to null. Per STABILITY-09R evidence, this is the ' +
       'expected signature of a BUILD_MISMATCH (map does not correspond to the build that produced ' +
-      'this compiled stack) rather than a tool defect — confirm the map\'s build_sha matches the ' +
-      'diagnostic_sessions.build_sha for this event before concluding anything else.',
+      'this compiled stack) rather than a tool defect — confirm the map came from ' +
+      // IVE-COMMERCIAL-STABILITY-09O-SHA (Codex Gate, P2 ACCEPTED) — the
+      // event's OWN build_sha column, never diagnostic_sessions.build_sha
+      // (which only reflects session-start time and was proven stale for
+      // a later event during STABILITY-09O-R's own live incident — see
+      // README.md's symbolication workflow for the full contract).
+      'sourcemap-<THIS EVENT\'S OWN diagnostic_events.build_sha> — NOT diagnostic_sessions.build_sha, ' +
+      'which only reflects when the session started and can be stale for a later event — before ' +
+      'concluding anything else.',
     );
   }
 } finally {

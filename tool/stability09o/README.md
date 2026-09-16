@@ -37,9 +37,17 @@ node verify_build_sourcemap.mjs build/web/main.dart.js.map lib/main.dart
 When a genuine STABILITY-09 recurrence is captured in `diagnostic_events`
 (category `RUNTIME`, event `uncaught_error`):
 
-1. Read the event's `session_id` → look up that session's `build_sha` in
-   `diagnostic_sessions`.
-2. Download the artifact named `sourcemap-<build_sha>` from that commit's
+1. Read the event's OWN `build_sha` column directly (added by mission
+   STABILITY-09O-SHA). **Never** `diagnostic_sessions.build_sha` for this
+   purpose — the session's value only reflects when the session was
+   CREATED and can be stale by the time any individual event fires within
+   a long-lived session (confirmed live: STABILITY-09O-R captured a real
+   crash under a session whose `build_sha` was from several deploys
+   earlier than the build that actually produced the event). The event's
+   own `build_sha` is the authoritative value; select the source-map
+   artifact from it alone.
+2. Download the artifact named `sourcemap-<event's own build_sha>` from
+   that commit's
    `Deploy Web → GitHub Pages` Actions run (Actions tab → the run →
    Artifacts). This repository is **public**, so the encrypted blob itself
    is downloadable by anyone — it decrypts only with
