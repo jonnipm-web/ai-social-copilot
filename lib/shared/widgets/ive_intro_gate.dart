@@ -124,20 +124,17 @@ class _IveIntroGateState extends ConsumerState<IveIntroGate> {
   }
 
   void _onRouteChanged() {
-    // ignore: avoid_print
-    print('DEBUG_ROUTE_CHANGED mounted=$mounted route=${IveForensicSnapshot.currentRoute}');
     if (!mounted) return;
-    final profile = ref.read(currentProfileProvider).valueOrNull;
-    final introState = ref.read(iveIntroProvider);
-    // ignore: avoid_print
-    print('DEBUG_ROUTE_CHANGED profile=${profile != null} shouldShow=${introState.shouldShow} presented=$_presented routeReady=${_routeReady()}');
-    _maybeSchedule(profile, introState);
+    // Forces build() to re-run so scheduling goes through the exact same
+    // path/timing as every other trigger (profile/intro state changes) --
+    // calling addPostFrameCallback directly from here, OUTSIDE an active
+    // frame (this listener can fire from idle time between frames), is not
+    // reliably flushed by a later pump/frame; routing through build() is.
+    setState(() {});
   }
 
   void _maybeSchedule(Profile? profile, IveIntroState introState) {
     if (_presented || profile == null || !introState.shouldShow || !_routeReady()) return;
-    // ignore: avoid_print
-    print('DEBUG_SCHEDULING');
     _presented = true;
     _navigatorRetryAttempt = 0;
     WidgetsBinding.instance.addPostFrameCallback((_) => _tryPresent());
@@ -159,8 +156,6 @@ class _IveIntroGateState extends ConsumerState<IveIntroGate> {
   void _tryPresent() {
     if (!mounted) return;
     final overlayContext = widget.navigatorKey.currentState?.overlay?.context;
-    // ignore: avoid_print
-    print('DEBUG_TRY_PRESENT overlayContext=${overlayContext != null} attempt=$_navigatorRetryAttempt');
     if (overlayContext == null) {
       if (_navigatorRetryAttempt < _maxNavigatorRetryAttempts) {
         _navigatorRetryAttempt++;
