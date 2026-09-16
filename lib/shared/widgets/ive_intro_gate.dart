@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -68,11 +67,9 @@ class _IveIntroGateState extends ConsumerState<IveIntroGate> {
     final introState   = ref.watch(iveIntroProvider);
 
     final profile = profileAsync.valueOrNull;
-    debugPrint('[09FIX-DEBUG] build: presented=$_presented profile=${profile != null} loading=${introState.loading} shouldShow=${introState.shouldShow}');
     if (!_presented && profile != null && introState.shouldShow) {
       _presented = true;
       _navigatorRetryAttempt = 0;
-      debugPrint('[09FIX-DEBUG] scheduling _tryPresent');
       WidgetsBinding.instance.addPostFrameCallback((_) => _tryPresent());
     }
 
@@ -83,11 +80,8 @@ class _IveIntroGateState extends ConsumerState<IveIntroGate> {
   }
 
   void _tryPresent() {
-    debugPrint('[09FIX-DEBUG] _tryPresent called, mounted=$mounted attempt=$_navigatorRetryAttempt');
     if (!mounted) return;
-    final nav = Navigator.maybeOf(context);
-    debugPrint('[09FIX-DEBUG] Navigator.maybeOf = ${nav != null}');
-    if (nav == null) {
+    if (Navigator.maybeOf(context) == null) {
       if (_navigatorRetryAttempt < _maxNavigatorRetryAttempts) {
         _navigatorRetryAttempt++;
         WidgetsBinding.instance.addPostFrameCallback((_) => _tryPresent());
@@ -99,15 +93,9 @@ class _IveIntroGateState extends ConsumerState<IveIntroGate> {
       // SharedPreferences state is untouched either way (it's only ever
       // written by the user's own CONTINUE/SKIP action inside the sheet,
       // see ive_intro_sheet.dart), so no persisted state needs correcting.
-      debugPrint('[09FIX-DEBUG] retry window exhausted, re-arming');
       _presented = false;
       return;
     }
-    debugPrint('[09FIX-DEBUG] calling showIveIntroSheet');
-    showIveIntroSheet(context, trigger: 'first_use').then((_) {
-      debugPrint('[09FIX-DEBUG] showIveIntroSheet future completed normally');
-    }, onError: (Object e, StackTrace st) {
-      debugPrint('[09FIX-DEBUG] showIveIntroSheet future ERRORED: $e\n$st');
-    });
+    showIveIntroSheet(context, trigger: 'first_use');
   }
 }

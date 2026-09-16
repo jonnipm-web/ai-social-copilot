@@ -74,7 +74,12 @@ void main() {
 
   Widget withNavigatorHarness(List<Override> overrides) => ProviderScope(
         overrides: overrides,
+        // locale must be explicit (matches ive_intro_sheet_test.dart's own
+        // harness) -- without it MaterialApp falls back to the test
+        // environment's system locale, not 'pt', and every find.text(...)
+        // below (which loads PT-BR strings explicitly) finds nothing.
         child: MaterialApp(
+          locale: const Locale('pt'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: const Scaffold(body: Stack(children: [IveIntroGate()])),
@@ -134,6 +139,7 @@ void main() {
         return ProviderScope(
           overrides: overrides,
           child: MaterialApp(
+            locale: const Locale('pt'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(body: Stack(children: [IveIntroGate(key: introKey)])),
@@ -188,6 +194,7 @@ void main() {
         return ProviderScope(
           overrides: overrides,
           child: MaterialApp(
+            locale: const Locale('pt'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(body: Stack(children: [IveIntroGate(key: introKey)])),
