@@ -27,6 +27,13 @@ class DiagnosticLoggerService {
   String? _activeSessionId;
   String? get activeSessionId => _activeSessionId;
 
+  /// IVE-COMMERCIAL-STABILITY-09O-R (Codex Gate, P1 ACCEPTED) — lets
+  /// [DiagnosticSessionNotifier.recover] re-check, AFTER an async gap,
+  /// whether the authenticated user is still who it was when the call
+  /// started. A live read of the Supabase client's own current user, never
+  /// cached, so it reflects a sign-out/sign-in that happened mid-await.
+  String? get currentUserId => _client.auth.currentUser?.id;
+
   static final RegExp _uuidShape = RegExp(
     r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
   );
@@ -55,6 +62,22 @@ class DiagnosticLoggerService {
   void adoptActiveSession(String sessionId) {
     if (!_uuidShape.hasMatch(sessionId)) return;
     _activeSessionId = sessionId;
+  }
+
+  /// IVE-COMMERCIAL-STABILITY-09O-R (mission section 10 — "logout clears
+  /// runtime session state") — a pure in-memory detach, no network call
+  /// (unlike [stopSession], which marks the row 'stopped' server-side and
+  /// is only appropriate when the OWNER explicitly ends the walkthrough).
+  /// Called on sign-out so this tab's logger cannot keep attaching events
+  /// to a session that belonged to whichever user was just signed out —
+  /// [logEvent] would already fail closed via
+  /// diagnostic_events_insert_own_active_session's RLS (session.user_id
+  /// would no longer match the new auth.uid()), but clearing this
+  /// eagerly avoids depending on that as the only backstop, and leaves a
+  /// clean slate for the next [recover]/[startSession] call (by the same
+  /// user logging back in, or a different one).
+  void forgetActiveSession() {
+    _activeSessionId = null;
   }
 
   // Bounded, in-memory only (mission section 15: "Maintain only a bounded

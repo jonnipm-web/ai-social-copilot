@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'core/app_lifecycle/diagnostic_recovery_policy.dart';
 import 'core/app_lifecycle/profile_resume_policy.dart';
 import 'core/constants/app_constants.dart';
 import 'core/diagnostics/diagnostic_models.dart';
@@ -613,9 +614,91 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
     });
   }
 
+  // IVE-COMMERCIAL-STABILITY-09O-R (mission sections 04/05/06/07) — closes
+  // the exact gap 09O's own post-deploy smoke test found: recover() was
+  // only ever called from the Admin diagnostics tab's initState, so a
+  // crash anywhere else in the app went uncaptured even with a genuinely
+  // ACTIVE diagnostic_sessions row, unless that tab/runtime had separately
+  // visited that one screen. This is the canonical, once-per-user
+  // authenticated-bootstrap point instead: fires the first time
+  // currentProfileProvider resolves to a non-null, ADMIN profile for a
+  // user id this runtime hasn't already tried, with no Admin-screen
+  // navigation required.
+  //
+  // Fail-closed by construction, not by extra gating logic:
+  //   - `next.valueOrNull` is null while loading/erroring/unauthenticated
+  //     -> no action (mission section 06: "fail closed until role is
+  //     resolved", never treated as "safe to skip because not admin").
+  //   - `!profile.isAdmin` -> no action, ever (mission section 06: a
+  //     normal FREE/PRO user must not gain diagnostic functionality).
+  //   - recover() itself only ever READS (see its own doc comment) and is
+  //     scoped server-side by diagnostic_sessions_admin_manage_own's RLS
+  //     (`is_admin_user() AND user_id = auth.uid()`) -- this client-side
+  //     admin check is a courtesy that avoids a pointless round trip for
+  //     the overwhelming majority of users, never the actual security
+  //     boundary (same "do not reuse client-side guard as security
+  //     boundary" principle already established for route entitlement).
+  //   - a closed/'stopped' session is already excluded by
+  //     findMyActiveSession()'s own `.eq('status', 'active')` filter.
+  //   - recover() never INSERTs, so this can never create a session, let
+  //     alone a duplicate one.
+  //   - "already attempted for this user this runtime" is guarded INSIDE
+  //     DiagnosticSessionNotifier.recover() itself (Codex Gate, P1
+  //     ACCEPTED — a duplicate local guard here, kept separately from the
+  //     one that [reset] clears on sign-out, previously let a stale
+  //     in-flight recovery from a just-signed-out user overwrite the next
+  //     user's state, and separately let the SAME user's re-login stay
+  //     permanently suppressed). This method is intentionally a thin,
+  //     unconditional trigger — recover() decides for itself, every time.
+  void _maybeRecoverDiagnosticSession(AsyncValue<Profile?> next) {
+    final profile = next.valueOrNull;
+    if (!shouldAttemptDiagnosticRecovery(isAdmin: profile?.isAdmin ?? false)) return;
+    ref.read(diagnosticSessionProvider.notifier).recover().then((_) {
+      _maybeFireStability09orControlledCaptureTest();
+    });
+  }
+
+  // TEMPORARY, forensic-only — IVE-COMMERCIAL-STABILITY-09O-R Section 08/18
+  // controlled capture proof. Reverted before this mission's final merge
+  // (same convention as STABILITY-09R's self-test marker). Fires a
+  // genuinely uncaught error through the SAME runZonedGuarded zone a real
+  // crash would use — not a direct function call bypassing that path — to
+  // prove, live, that: (a) recovery just happened without ever visiting
+  // Admin/diagnostic_logs_tab, and (b) the resulting event actually reaches
+  // diagnostic_events with build_sha/route/stack/metadata intact. Never a
+  // null-check throw on real app state; a plain, bounded, clearly-labeled
+  // Exception.
+  //
+  // Codex Gate round 1 (P1 ACCEPTED) — the first cut gated ONLY on a
+  // public URL query parameter, which ANY visitor (not just an admin)
+  // could trigger just by knowing or receiving the URL. Fixed by also
+  // requiring admin status.
+  //
+  // Codex Gate round 2 (P2 ACCEPTED) — that fix checked the `profile`
+  // CAPTURED when recovery began, not the current state: an admin starts
+  // recovery, signs out, and a non-admin signs in before the `.then`
+  // callback runs would still fire using the stale admin profile. Re-reads
+  // `currentProfileProvider` fresh, at the moment of firing, instead of
+  // trusting anything captured earlier in this async chain.
+  void _maybeFireStability09orControlledCaptureTest() {
+    if (ref.read(currentProfileProvider).valueOrNull?.isAdmin != true) return;
+    if (Uri.base.queryParameters['stability09orTest'] != '1') return;
+    Future(() => throw Exception('STABILITY-09O-R controlled capture test — safe, expected, not a real crash'));
+  }
+
   @override
   Widget build(BuildContext context) {
     final locale = ref.watch(languageProvider);
+    ref.listen<AsyncValue<Profile?>>(currentProfileProvider, (previous, next) {
+      _maybeRecoverDiagnosticSession(next);
+    });
+    // ref.listen only fires on a FUTURE change, not for whatever value the
+    // provider already holds at the moment this subscription is created —
+    // this covers the (normally unlikely, since _AppState is the app's
+    // root widget) case where currentProfileProvider had already resolved
+    // before this first build(). _maybeRecoverDiagnosticSession's own
+    // guard makes this safe to call redundantly.
+    _maybeRecoverDiagnosticSession(ref.read(currentProfileProvider));
     return MaterialApp.router(
       title:                      AppConstants.appName,
       debugShowCheckedModeBanner: false,

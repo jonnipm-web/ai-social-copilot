@@ -99,8 +99,25 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
   Future<void> signOut() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(_service.signOut);
+    // Logged BEFORE the reset below, deliberately: the sign_out event
+    // itself still belongs to the OUTGOING user's session.
     _logAuth('sign_out', success: !state.hasError);
     _invalidateProfile();
+    // IVE-COMMERCIAL-STABILITY-09O-R (mission section 10) — clears this
+    // tab's in-memory diagnostic session state so no subsequent event
+    // (before a future recover()/start() runs for whoever signs in next)
+    // can attach itself to the outgoing user's session. See
+    // DiagnosticSessionNotifier.reset()'s own comment.
+    //
+    // Codex Gate (P2 ACCEPTED) — only when sign-out actually SUCCEEDED: a
+    // failed _service.signOut() leaves the same user still authenticated,
+    // so detaching their still-legitimately-active session here would
+    // needlessly suppress capture for the rest of this runtime (recover()
+    // marks a user "attempted" even on failure, and there is no reason to
+    // force that here when nothing about the auth state actually changed).
+    if (!state.hasError) {
+      _ref.read(diagnosticSessionProvider.notifier).reset();
+    }
   }
 }
 
