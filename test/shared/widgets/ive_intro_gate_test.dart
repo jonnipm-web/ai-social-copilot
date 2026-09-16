@@ -40,6 +40,18 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
+  // Robust against exact frame-count assumptions (currentProfileProvider's
+  // Future resolution, the postFrameCallback chain, and the bottom sheet's
+  // own entrance animation each take an unknown number of pumps to settle)
+  // — polls in small steps up to a generous bound instead of asserting a
+  // hardcoded pump count.
+  Future<void> pumpUntilFound(WidgetTester tester, Finder finder, {int maxSteps = 30}) async {
+    for (var i = 0; i < maxSteps; i++) {
+      if (finder.evaluate().isNotEmpty) return;
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+  }
+
   List<Override> baseOverrides() => [
         diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
         currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
@@ -73,14 +85,13 @@ void main() {
     'Navigator available from the first frame (normal/steady-state case) — '
     'the intro sheet opens, no regression from the pre-fix behavior',
     (tester) async {
-      await tester.pumpWidget(withNavigatorHarness(baseOverrides()));
-      await tester.pump(); // lets currentProfileProvider's Future resolve
-      await tester.pump(); // this rebuild sees profile != null, schedules the postFrameCallback
-      await tester.pump(); // postFrameCallback fires, Navigator is available
-      await tester.pump(const Duration(milliseconds: 400));
-
       final l10n = await AppLocalizations.delegate.load(const Locale('pt'));
-      expect(find.text(l10n.ivIntroTitle), findsOneWidget);
+      final titleFinder = find.text(l10n.ivIntroTitle);
+
+      await tester.pumpWidget(withNavigatorHarness(baseOverrides()));
+      await pumpUntilFound(tester, titleFinder);
+
+      expect(titleFinder, findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
@@ -130,6 +141,9 @@ void main() {
         );
       }
 
+      final l10n = await AppLocalizations.delegate.load(const Locale('pt'));
+      final titleFinder = find.text(l10n.ivIntroTitle);
+
       await tester.pumpWidget(buildTree());
       await tester.pump(); // lets currentProfileProvider's Future resolve, schedules the callback
       // A couple of frames with genuinely no Navigator -- exactly the
@@ -142,11 +156,9 @@ void main() {
       // within the bounded retry window.
       navigatorReady = true;
       await tester.pumpWidget(buildTree());
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
+      await pumpUntilFound(tester, titleFinder);
 
-      final l10n = await AppLocalizations.delegate.load(const Locale('pt'));
-      expect(find.text(l10n.ivIntroTitle), findsOneWidget);
+      expect(titleFinder, findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
@@ -183,6 +195,9 @@ void main() {
         );
       }
 
+      final l10n = await AppLocalizations.delegate.load(const Locale('pt'));
+      final titleFinder = find.text(l10n.ivIntroTitle);
+
       await tester.pumpWidget(buildTree());
       // Exhaust the full bounded retry window with NO Navigator ever
       // appearing -- the pathological case, not the one reproduced in
@@ -197,11 +212,9 @@ void main() {
       // bounded window closed.
       navigatorReady = true;
       await tester.pumpWidget(buildTree());
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
+      await pumpUntilFound(tester, titleFinder);
 
-      final l10n = await AppLocalizations.delegate.load(const Locale('pt'));
-      expect(find.text(l10n.ivIntroTitle), findsOneWidget);
+      expect(titleFinder, findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
