@@ -360,6 +360,69 @@ void main() {
       expect(find.text('Pergunte à IVE'), findsNothing);
     },
   );
+
+  // H — Codex Gate round 1 (P2 ACCEPTED): test F only exercised the avatar
+  // tap; the visible speech bubble has its OWN separate "Conversar com a
+  // IVE" tap target (_IveBubble's onChat), which also calls _openChat but
+  // through a different GestureDetector in the widget tree. Both converge
+  // on the same fixed code, so this was never a correctness gap, but
+  // proves the fix from the other real entry point too.
+  testWidgets(
+    'H. toque em "Conversar com a IVE" na bolha visível (sem issue ativo) abre o Context Copilot',
+    (tester) async {
+      tester.view.physicalSize = const Size(1536, 1024);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final navigatorKey = GlobalKey<NavigatorState>();
+      final router = GoRouter(
+        navigatorKey: navigatorKey,
+        initialLocation: '/',
+        routes: [
+          GoRoute(path: '/', builder: (_, __) => const Scaffold(body: SizedBox.shrink())),
+        ],
+      );
+
+      final bubbleState = IveState(
+        bubbleVisible: true,
+        message: 'Notei uma oportunidade no seu projeto.',
+        activeIssue: null,
+      );
+
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
+          currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
+          authStateProvider.overrideWith((ref) => Stream.value(_authState(session: MockSession()))),
+          iveProvider.overrideWith((ref) => _FixedIveNotifier(ref, bubbleState)),
+        ],
+        child: MaterialApp.router(
+          routerConfig: router,
+          builder: (context, child) => Stack(
+            children: [
+              child!,
+              IveOverlay(navigatorKey: navigatorKey),
+            ],
+          ),
+        ),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      final chatLinkFinder = find.text('Conversar com a IVE');
+      expect(chatLinkFinder, findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(chatLinkFinder, warnIfMissed: false);
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(tester.takeException(), isNull, reason: 'threw on pump #$i opening the chat sheet from the bubble');
+      }
+
+      expect(find.text('Pergunte à IVE'), findsOneWidget);
+    },
+  );
 }
 
 class _FixedIveNotifier extends IveNotifier {
