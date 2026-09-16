@@ -68,9 +68,15 @@ void main() {
   // hardcoded pump count.
   Future<void> pumpUntilFound(WidgetTester tester, Finder finder, {int maxSteps = 30}) async {
     for (var i = 0; i < maxSteps; i++) {
-      if (finder.evaluate().isNotEmpty) return;
+      if (finder.evaluate().isNotEmpty) {
+        // ignore: avoid_print
+        print('DEBUG_PUMP_UNTIL_FOUND found at step $i');
+        return;
+      }
       await tester.pump(const Duration(milliseconds: 50));
     }
+    // ignore: avoid_print
+    print('DEBUG_PUMP_UNTIL_FOUND exhausted $maxSteps steps, not found');
   }
 
   List<Override> baseOverrides() => [
