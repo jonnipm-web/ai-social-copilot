@@ -124,12 +124,20 @@ class _IveIntroGateState extends ConsumerState<IveIntroGate> {
   }
 
   void _onRouteChanged() {
+    // ignore: avoid_print
+    print('DEBUG_ROUTE_CHANGED mounted=$mounted route=${IveForensicSnapshot.currentRoute}');
     if (!mounted) return;
-    _maybeSchedule(ref.read(currentProfileProvider).valueOrNull, ref.read(iveIntroProvider));
+    final profile = ref.read(currentProfileProvider).valueOrNull;
+    final introState = ref.read(iveIntroProvider);
+    // ignore: avoid_print
+    print('DEBUG_ROUTE_CHANGED profile=${profile != null} shouldShow=${introState.shouldShow} presented=$_presented routeReady=${_routeReady()}');
+    _maybeSchedule(profile, introState);
   }
 
   void _maybeSchedule(Profile? profile, IveIntroState introState) {
     if (_presented || profile == null || !introState.shouldShow || !_routeReady()) return;
+    // ignore: avoid_print
+    print('DEBUG_SCHEDULING');
     _presented = true;
     _navigatorRetryAttempt = 0;
     WidgetsBinding.instance.addPostFrameCallback((_) => _tryPresent());
@@ -151,6 +159,8 @@ class _IveIntroGateState extends ConsumerState<IveIntroGate> {
   void _tryPresent() {
     if (!mounted) return;
     final overlayContext = widget.navigatorKey.currentState?.overlay?.context;
+    // ignore: avoid_print
+    print('DEBUG_TRY_PRESENT overlayContext=${overlayContext != null} attempt=$_navigatorRetryAttempt');
     if (overlayContext == null) {
       if (_navigatorRetryAttempt < _maxNavigatorRetryAttempts) {
         _navigatorRetryAttempt++;
