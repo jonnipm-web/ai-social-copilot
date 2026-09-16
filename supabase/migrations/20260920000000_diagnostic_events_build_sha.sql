@@ -25,13 +25,29 @@
 -- broad grants.
 -- ============================================================================
 
+-- IVE-COMMERCIAL-STABILITY-09O-SHA (Codex Gate, P2 ACCEPTED) — ADD COLUMN
+-- with no DEFAULT is already effectively instant (no table rewrite,
+-- Postgres 11+), but a plain `ADD CONSTRAINT ... CHECK (...)` scans and
+-- validates every EXISTING row before committing, taking a lock strong
+-- enough to block concurrent writes for the duration of that scan. Added
+-- NOT VALID first (near-instant: only new/updated rows are checked from
+-- this point on) and validated in a separate statement, which takes the
+-- much weaker SHARE UPDATE EXCLUSIVE lock — concurrent INSERTs (i.e. the
+-- app's own normal diagnostic writes) are not blocked while existing rows
+-- are scanned.
 ALTER TABLE public.diagnostic_events
   ADD COLUMN build_sha text;
 
 ALTER TABLE public.diagnostic_events
   ADD CONSTRAINT diagnostic_events_build_sha_len
-    CHECK (build_sha IS NULL OR char_length(build_sha) <= 100);
+    CHECK (build_sha IS NULL OR char_length(build_sha) <= 100) NOT VALID;
 
 ALTER TABLE public.diagnostic_events
   ADD CONSTRAINT diagnostic_events_build_sha_no_newline
-    CHECK (build_sha IS NULL OR build_sha !~ '[\r\n]');
+    CHECK (build_sha IS NULL OR build_sha !~ '[\r\n]') NOT VALID;
+
+ALTER TABLE public.diagnostic_events
+  VALIDATE CONSTRAINT diagnostic_events_build_sha_len;
+
+ALTER TABLE public.diagnostic_events
+  VALIDATE CONSTRAINT diagnostic_events_build_sha_no_newline;

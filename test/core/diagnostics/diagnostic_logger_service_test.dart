@@ -39,17 +39,37 @@ void main() {
       expect(row['build_sha'], 'unknown');
     });
 
-    test('caller cannot substitute a build SHA — there is no parameter for one', () {
-      // Structural, not behavioral: buildDiagnosticEventPayload's own
-      // signature has no buildSha/build_sha argument at all (unlike the
-      // pre-STABILITY-09O startSession(), which the 09O mission had to
-      // actively CLOSE that surface on). This test documents the
-      // invariant by construction — it would fail to COMPILE, not just
-      // fail an assertion, if a future edit ever reintroduced one and a
-      // caller here tried to use it.
-      final row = payload();
-      expect(row.containsKey('build_sha'), isTrue);
-    });
+    test(
+      'caller cannot substitute a build SHA — varying every OTHER parameter still '
+      'produces the exact same build_sha (Codex Gate, P3 ACCEPTED: the first version of '
+      'this test only checked the key existed, which would still pass even if a spoofable '
+      'buildSha parameter were reintroduced)',
+      () {
+        final first = buildDiagnosticEventPayload(
+          sessionId: 'session-1',
+          userId: 'user-1',
+          category: DiagnosticCategory.runtime,
+          eventName: 'uncaught_error',
+          severity: DiagnosticSeverity.critical,
+          route: '/dashboard',
+        );
+        final second = buildDiagnosticEventPayload(
+          sessionId: 'a-totally-different-session',
+          userId: 'a-totally-different-user',
+          category: DiagnosticCategory.navigation,
+          eventName: 'route_allowed',
+          severity: DiagnosticSeverity.info,
+          route: '/opportunity-lab',
+          status: 'allowed',
+          metadata: const {'from_route': '/other'},
+        );
+        // Every other field legitimately differs between these two calls;
+        // build_sha must not, because nothing about ANY of them can
+        // influence it — it always comes from the one runtime constant.
+        expect(first['build_sha'], second['build_sha']);
+        expect(first['build_sha'], 'unknown');
+      },
+    );
 
     test('session build_sha and event build_sha are independent columns (no session dependency here)', () {
       // buildDiagnosticEventPayload never reads or references
