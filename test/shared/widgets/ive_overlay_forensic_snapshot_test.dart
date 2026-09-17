@@ -12,6 +12,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:ai_social_copilot/core/diagnostics/diagnostic_logger_service.dart';
 import 'package:ai_social_copilot/core/diagnostics/ive_forensic_snapshot.dart';
 import 'package:ai_social_copilot/data/models/profile.dart';
+import 'package:ai_social_copilot/l10n/app_localizations.dart';
 import 'package:ai_social_copilot/providers/auth_provider.dart';
 import 'package:ai_social_copilot/providers/diagnostic_session_provider.dart';
 import 'package:ai_social_copilot/providers/profile_provider.dart';
@@ -48,6 +49,9 @@ void main() {
           authStateProvider.overrideWith((ref) => Stream.value(_authState(session: MockSession()))),
         ],
         child: MaterialApp(
+          locale: const Locale('pt'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: Stack(
               children: [

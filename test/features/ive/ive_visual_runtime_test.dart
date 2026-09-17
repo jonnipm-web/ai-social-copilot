@@ -7,6 +7,7 @@ import 'package:rive/rive.dart' show Rive;
 
 import 'package:ai_social_copilot/data/models/ive_issue.dart';
 import 'package:ai_social_copilot/data/models/ive_state.dart';
+import 'package:ai_social_copilot/l10n/app_localizations.dart';
 import 'package:ai_social_copilot/features/ive/visual/ive_avatar.dart';
 import 'package:ai_social_copilot/features/ive/visual/ive_avatar_controller.dart';
 import 'package:ai_social_copilot/features/ive/visual/ive_avatar_state.dart';
@@ -340,6 +341,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
+            locale: const Locale('pt'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: IveAvatar(
                 size:        IveAvatarSize.compact,
@@ -359,6 +363,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
+            locale: const Locale('pt'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: IveAvatar(
                 size:        IveAvatarSize.standard,

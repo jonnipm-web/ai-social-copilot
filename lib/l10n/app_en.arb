@@ -176,5 +176,70 @@
   "ivIntroContinueButton": "Got it",
   "ivIntroSkipButton": "Skip",
   "ivIntroSemanticLabel": "Introduction to IVE, your strategic copilot",
-  "ivIntroReplayLabel": "Meet IVE"
+  "ivIntroReplayLabel": "Meet IVE",
+
+  "iveSemanticsLabel": "IVE, executive copilot",
+  "iveBubbleChatCta": "Chat with IVE",
+
+  "iveChatAskCta": "Ask IVE",
+  "iveChatHint": "Ask IVE…",
+  "iveChatClearHistory": "Clear history",
+  "iveChatErrorPrefix": "Error: {error}",
+  "@iveChatErrorPrefix": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+
+  "iveScreenActions": "Actions",
+  "iveScreenWebsiteAnalyzer": "Website Analyzer",
+  "iveScreenProjects": "Projects",
+  "iveScreenDecisions": "Decisions",
+  "iveScreenKnowledge": "Knowledge",
+  "iveScreenMarketIntelligence": "Market Intelligence",
+  "iveScreenBusinessOs": "Business OS",
+  "iveScreenOpportunities": "Opportunities",
+  "iveScreenBriefing": "Briefing",
+  "iveScreenResources": "Resources",
+  "iveScreenPersonas": "Personas",
+  "iveScreenDebugHub": "Debug Hub",
+  "iveScreenRoiTracker": "ROI Tracker",
+  "iveScreenScores": "Scores",
+
+  "iveSuggestionProjects1": "Which project should I focus on?",
+  "iveSuggestionProjects2": "Which projects carry the most risk?",
+  "iveSuggestionOpportunities1": "Which opportunity has the highest ROI?",
+  "iveSuggestionOpportunities2": "What should I approve now?",
+  "iveSuggestionScores1": "Why is my score low?",
+  "iveSuggestionScores2": "How can I improve the Ecosystem Score?",
+  "iveSuggestionDecisions1": "What should I escalate?",
+  "iveSuggestionDecisions2": "Simulate the impact of approving the top opportunity",
+  "iveSuggestionBriefing1": "Summarize my week",
+  "iveSuggestionBriefing2": "Which critical actions are overdue?",
+  "iveSuggestionKnowledge1": "What did I learn this week?",
+  "iveSuggestionKnowledge2": "Which document impacts my project the most?",
+  "iveSuggestionPersonas1": "Which persona has advanced the most?",
+  "iveSuggestionPersonas2": "Which niche has the most potential?",
+  "iveSuggestionDefault1": "Explain this screen's data to me",
+  "iveSuggestionDefault2": "What should I do now?",
+
+  "iveActionSuggestionHint": "IVE's suggestion: {label}. Finish the details on the screen that just opened.",
+  "@iveActionSuggestionHint": {
+    "placeholders": { "label": { "type": "String" } }
+  },
+  "iveActionNoDestination": "This action type doesn't have a direct destination yet. Ask IVE for more details.",
+
+  "oppNewTitle": "New Opportunity",
+  "oppTypeLabel": "Type",
+  "oppTitleLabel": "Title",
+  "oppDescriptionLabel": "Description (optional)",
+  "oppCancel": "Cancel",
+  "oppAdd": "Add",
+  "oppKnowledgeSectionTitle": "Project knowledge",
+  "oppKnowledgeSectionHint": "Select items from this project's Knowledge Vault to give the opportunity real context.",
+  "oppKnowledgeSelectProjectFirst": "Select a project in the filter above to use project knowledge (optional).",
+  "oppKnowledgeEmpty": "This project has no Knowledge Vault items yet.",
+  "oppKnowledgeCountSelected": "{count, plural, =0{No items selected} =1{1 item selected} other{{count} items selected}}",
+  "@oppKnowledgeCountSelected": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "oppLinkedKnowledgeTitle": "Linked knowledge"
 }

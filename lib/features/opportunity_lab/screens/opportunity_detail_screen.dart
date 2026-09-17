@@ -8,8 +8,10 @@ import '../../../core/constants/app_constants.dart';
 import '../../../data/models/copilot_context_data.dart';
 import '../../../data/models/ive_interaction_request.dart';
 import '../../../data/models/opportunity_lab_item.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/action_queue_provider.dart';
 import '../../../providers/ive_context_provider.dart';
+import '../../../providers/knowledge_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/context_copilot_widget.dart' show showCopilotChat;
@@ -912,6 +914,15 @@ class _ActionButtons extends StatelessWidget {
           ),
         ],
 
+        // COMMERCIAL-EXPERIENCE-CLOSURE-16 (mission Section 21) — surfaces
+        // the Knowledge Vault items the user explicitly linked when
+        // creating this opportunity (Section 17), so the evidentiary trail
+        // stays visible here, not just at creation time.
+        if (item.knowledgeItemIds.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          _LinkedKnowledgeSection(knowledgeItemIds: item.knowledgeItemIds),
+        ],
+
         const SizedBox(height: 10),
 
         SizedBox(
@@ -955,6 +966,63 @@ class _ActionButtons extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// COMMERCIAL-EXPERIENCE-CLOSURE-16 (mission Section 17/21) — resolves each
+// linked knowledge_item id to its title for display. A ConsumerWidget of
+// its own (not inlined into the StatelessWidget above using its passed-in
+// `ref`) so provider watches here are correctly scoped and rebuild this
+// section on change, not just on whatever triggers the parent's rebuild.
+// A ref no longer resolvable (deleted item, or belonging to another user --
+// knowledge_items RLS fails it closed) is skipped rather than shown as an
+// error: it is a truthful "not currently available" case, not a bug.
+class _LinkedKnowledgeSection extends ConsumerWidget {
+  const _LinkedKnowledgeSection({required this.knowledgeItemIds});
+  final List<String> knowledgeItemIds;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: _kCard,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.oppLinkedKnowledgeTitle,
+            style: const TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: knowledgeItemIds.map((id) {
+              final async = ref.watch(knowledgeItemByIdProvider(id));
+              final title = async.valueOrNull?.title;
+              if (title == null || title.isEmpty) return const SizedBox.shrink();
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.06),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.white12),
+                ),
+                child: Text(
+                  title,
+                  style: const TextStyle(color: Colors.white70, fontSize: 11),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
     );
   }
 }

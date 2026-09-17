@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../core/constants/app_constants.dart';
 import '../../core/diagnostics/diagnostic_models.dart';
+import '../../core/ui/breakpoints.dart';
 import '../../core/utils/uuid_v4.dart';
 import '../../data/models/copilot_context_data.dart';
 import '../../data/models/copilot_turn.dart';
 import '../../data/models/ive_interaction_request.dart';
+import '../../features/ive/visual/ive_avatar.dart';
+import '../../l10n/app_localizations.dart';
 import '../../providers/context_copilot_provider.dart';
 import '../../providers/diagnostic_session_provider.dart';
 import 'ai_execution_confirmation.dart';
@@ -40,17 +45,44 @@ void showCopilotChat(
         operation: request.sourceModule,
       );
 
+  _presentCopilotSheet(
+    context,
+    desktop: Breakpoints.isDesktop(MediaQuery.of(context).size.width),
+    child: _CopilotSheet(
+      screenName:     screenName,
+      context:        resolvedContext,
+      initialMessage: initialMessage,
+    ),
+  );
+}
+
+// COMMERCIAL-EXPERIENCE-CLOSURE-16 (mission Section 09) — the owner
+// rejected the previous presentation for being "too small" on desktop: a
+// bottom sheet capped at 92% height still reads as a thin strip pinned to
+// the bottom of a large monitor, with no real reading/conversation area.
+// Desktop gets a materially larger, centered dialog instead; mobile/tablet
+// keep the existing DraggableScrollableSheet (already appropriate for a
+// small viewport, and not something the mission asked to change). Both
+// paths render the exact same `_CopilotSheet` content — this is a second
+// presentation SHELL, not a second assistant.
+void _presentCopilotSheet(BuildContext context, {required bool desktop, required Widget child}) {
+  if (desktop) {
+    showDialog(
+      context: context,
+      builder: (_) => ProviderScope(
+        parent: ProviderScope.containerOf(context),
+        child:  child,
+      ),
+    );
+    return;
+  }
   showModalBottomSheet(
-    context:             context,
+    context:            context,
     isScrollControlled:  true,
     backgroundColor:     Colors.transparent,
     builder: (_) => ProviderScope(
       parent: ProviderScope.containerOf(context),
-      child:  _CopilotSheet(
-        screenName:     screenName,
-        context:        resolvedContext,
-        initialMessage: initialMessage,
-      ),
+      child:  child,
     ),
   );
 }
@@ -67,32 +99,32 @@ class ContextCopilotButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext ctx, WidgetRef ref) {
+    final l10n = AppLocalizations.of(ctx)!;
     return FloatingActionButton(
       heroTag: 'copilot_$screenName',
       onPressed: () => _openCopilot(ctx, ref),
       backgroundColor: const Color(0xFF6C63FF),
-      tooltip: 'Pergunte à IVE',
-      child: const Text('💬', style: TextStyle(fontSize: 22)),
+      tooltip: l10n.iveChatAskCta,
+      // Functional trigger (opens the chat) -- exactly the case mission
+      // Section 01.2 carves out as a legitimate use of chat iconography,
+      // unlike the removed decorative bubble inside the sheet itself below.
+      child: const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 22),
     );
   }
 
   void _openCopilot(BuildContext ctx, WidgetRef ref) {
-    showModalBottomSheet(
-      context:       ctx,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => ProviderScope(
-        parent: ProviderScope.containerOf(ctx),
-        child: _CopilotSheet(
-          screenName: screenName,
-          context:    context,
-        ),
+    _presentCopilotSheet(
+      ctx,
+      desktop: Breakpoints.isDesktop(MediaQuery.of(ctx).size.width),
+      child: _CopilotSheet(
+        screenName: screenName,
+        context:    context,
       ),
     );
   }
 }
 
-// ── Internal bottom-sheet ─────────────────────────────────────────────────────
+// ── Internal sheet/dialog content ────────────────────────────────────────────
 
 class _CopilotSheet extends ConsumerStatefulWidget {
   final String screenName;
@@ -257,45 +289,127 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
     }
   }
 
+  // COMMERCIAL-EXPERIENCE-CLOSURE-16 (mission Section 11/12) — closes the
+  // known gap where CopilotActionSuggestion was populated by the backend
+  // but the chip rendering it had no onTap at all (purely decorative).
+  //
+  // The LLM (context-copilot/index.ts) is never given real database IDs
+  // for opportunities/projects/actions in its prompt context — only
+  // display fields (title/score/status). Its `action_suggestion.data` is
+  // therefore a PROPOSAL, not a verified reference to an existing row.
+  // Auto-executing a mutation (create/approve) straight from unverified
+  // model output, with no human review of what's actually about to
+  // happen, would reopen exactly the "no decorative fake action, but also
+  // no unreviewed AI-driven mutation" tension the mission's own STOP
+  // conditions warn about (material product-direction risk to
+  // EXECUTION SECURITY). The safe, real, and honest action every one of
+  // these types can perform today is: navigate to the existing screen
+  // that already owns that creation/approval flow (with its own already-
+  // audited confirmation boundary), and tell the user what IVE proposed
+  // so they can act on it there. `generate_roadmap` has no dedicated
+  // screen anywhere in this app (confirmed by repository search) — it
+  // stays truthfully disabled rather than pointed at a fake destination.
+  void _handleActionSuggestion(CopilotActionSuggestion action) {
+    final l10n = AppLocalizations.of(context)!;
+    String? route;
+    switch (action.type) {
+      case 'create_action':
+        route = AppConstants.routeActionEngine;
+        break;
+      case 'approve_opportunity':
+        route = AppConstants.routeOpportunityLab;
+        break;
+      case 'create_project':
+        route = AppConstants.routeProjects;
+        break;
+      default:
+        route = null; // includes 'generate_roadmap' -- no existing screen owns it
+    }
+
+    final messenger = ScaffoldMessenger.of(context);
+    if (route == null) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.iveActionNoDestination)));
+      return;
+    }
+    messenger.showSnackBar(SnackBar(content: Text(l10n.iveActionSuggestionHint(action.label))));
+    final router = GoRouter.of(context); // capture while context is still mounted
+    Navigator.of(context).pop();
+    router.go(route);
+  }
+
   @override
   Widget build(BuildContext ctx) {
+    final desktop = Breakpoints.isDesktop(MediaQuery.of(ctx).size.width);
+    return desktop ? _buildDesktopDialog(ctx) : _buildMobileSheet(ctx);
+  }
+
+  // ── Desktop: centered, materially larger dialog ─────────────────────────
+  Widget _buildDesktopDialog(BuildContext ctx) {
+    final screen = MediaQuery.of(ctx).size;
+    final width  = (screen.width * 0.42).clamp(480.0, 680.0);
+    final height = (screen.height * 0.78).clamp(560.0, 820.0);
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding:    const EdgeInsets.all(24),
+      child: Container(
+        width:  width,
+        height: height,
+        decoration: BoxDecoration(
+          color:        const Color(0xFF1E1B2E),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 32, offset: const Offset(0, 12)),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: _body(showDragHandle: false),
+      ),
+    );
+  }
+
+  // ── Mobile/tablet: existing draggable bottom sheet ──────────────────────
+  Widget _buildMobileSheet(BuildContext ctx) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.55,
+      minChildSize:     0.35,
+      maxChildSize:     0.92,
+      builder: (_, __) => Container(
+        decoration: const BoxDecoration(
+          color: Color(0xFF1E1B2E),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: _body(showDragHandle: true),
+      ),
+    );
+  }
+
+  Widget _body({required bool showDragHandle}) {
     final state = ref.watch(contextCopilotProvider(_conversationKey));
 
     if (state.turns.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
     }
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.55,
-      minChildSize:     0.35,
-      maxChildSize:     0.92,
-      builder: (_, scrollCtrl) => Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFF1E1B2E),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    return Column(
+      children: [
+        if (showDragHandle) _handle(),
+        _header(state),
+        const Divider(color: Colors.white12, height: 1),
+        Expanded(
+          child: state.turns.isEmpty
+              ? _empty()
+              : _messages(state.turns),
         ),
-        child: Column(
-          children: [
-            _handle(),
-            _header(state),
-            const Divider(color: Colors.white12, height: 1),
-            Expanded(
-              child: state.turns.isEmpty
-                  ? _empty()
-                  : _messages(state.turns),
+        if (state.error != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Text(
+              AppLocalizations.of(context)!.iveChatErrorPrefix(state.error ?? ''),
+              style: const TextStyle(color: Colors.redAccent, fontSize: 12),
             ),
-            if (state.error != null)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                child: Text(
-                  'Erro: ${state.error}',
-                  style: const TextStyle(color: Colors.redAccent, fontSize: 12),
-                ),
-              ),
-            _input(state.loading),
-          ],
-        ),
-      ),
+          ),
+        _input(state.loading),
+      ],
     );
   }
 
@@ -311,75 +425,99 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
         ),
       );
 
-  Widget _header(CopilotState state) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 8, 10),
-        child: Row(
-          children: [
-            const Text('💬', style: TextStyle(fontSize: 20)),
-            const SizedBox(width: 8),
-            const Expanded(
-              child: Text(
-                'IVE',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-              ),
+  // COMMERCIAL-EXPERIENCE-CLOSURE-16 (mission Section 01.2) — the previous
+  // header paired a 💬 emoji with the "IVE" text right next to it: two
+  // representations of the same idea (this is IVE's chat) in a two-word
+  // row. Removed rather than replaced -- the hero portrait below (_empty)
+  // and the status ring already carry IVE's identity; this row's only
+  // remaining job is the title + the two functional icon buttons.
+  Widget _header(CopilotState state) {
+    final l10n = AppLocalizations.of(context)!;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 8, 10),
+      child: Row(
+        children: [
+          const Expanded(
+            child: Text(
+              'IVE',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
             ),
-            if (state.turns.isNotEmpty)
-              IconButton(
-                icon:    const Icon(Icons.delete_sweep_rounded, size: 20),
-                color:   Colors.white38,
-                tooltip: 'Limpar histórico',
-                onPressed: () => ref
-                    .read(contextCopilotProvider(_conversationKey).notifier)
-                    .clearHistory(),
-              ),
+          ),
+          if (state.turns.isNotEmpty)
             IconButton(
-              icon:    const Icon(Icons.close_rounded),
+              icon:    const Icon(Icons.delete_sweep_rounded, size: 20),
               color:   Colors.white38,
-              onPressed: () => Navigator.of(context).pop(),
+              tooltip: l10n.iveChatClearHistory,
+              onPressed: () => ref
+                  .read(contextCopilotProvider(_conversationKey).notifier)
+                  .clearHistory(),
             ),
-          ],
-        ),
-      );
+          IconButton(
+            icon:    const Icon(Icons.close_rounded),
+            color:   Colors.white38,
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
+    );
+  }
 
-  Widget _empty() => Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('💬', style: TextStyle(fontSize: 48)),
-            const SizedBox(height: 12),
-            const Text(
-              'Pergunte à IVE',
-              style: TextStyle(color: Colors.white70, fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              widget.screenName,
-              style: const TextStyle(color: Colors.white38, fontSize: 12),
-            ),
-            const SizedBox(height: 20),
-            ..._suggestions().map((s) => _suggestionChip(s)),
-          ],
-        ),
-      );
+  // COMMERCIAL-EXPERIENCE-CLOSURE-16 (mission Section 01.3) — this was a
+  // 48px 💬 emoji: a second, LARGER generic speech bubble (redundant with
+  // the header's) standing in for IVE's actual visual identity. Replaced
+  // with the real, approved 03B2 portrait (IveAvatar, already the
+  // canonical widget used everywhere else IVE appears -- IveOverlay,
+  // IveIntroSheet -- so this is the SAME character, not a second one).
+  // Rive stays frozen (IveRiveFeatureGate=false, untouched): IveAvatar
+  // transparently falls back to IveVisualFallback exactly as it already
+  // does today.
+  Widget _empty() {
+    final l10n = AppLocalizations.of(context)!;
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const IveAvatar(
+            size:           IveAvatarSize.hero,
+            showStatusRing: true,
+            interactive:    false,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            l10n.iveChatAskCta,
+            style: const TextStyle(color: Colors.white70, fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            _localizedScreenName(context, widget.screenName),
+            style: const TextStyle(color: Colors.white38, fontSize: 12),
+          ),
+          const SizedBox(height: 20),
+          ..._suggestions(context).map((s) => _suggestionChip(s)),
+        ],
+      ),
+    );
+  }
 
-  List<String> _suggestions() {
+  List<String> _suggestions(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     switch (widget.screenName) {
       case 'Projetos':
-        return ['Qual projeto devo focar?', 'Quais projetos têm mais risco?'];
+        return [l10n.iveSuggestionProjects1, l10n.iveSuggestionProjects2];
       case 'Oportunidades':
-        return ['Qual oportunidade tem maior ROI?', 'O que devo aprovar agora?'];
+        return [l10n.iveSuggestionOpportunities1, l10n.iveSuggestionOpportunities2];
       case 'Scores':
-        return ['Por que meu score está baixo?', 'Como melhorar o Ecosystem Score?'];
+        return [l10n.iveSuggestionScores1, l10n.iveSuggestionScores2];
       case 'Decisões':
-        return ['O que devo escalar?', 'Simule o impacto de aprovar a top oportunidade'];
+        return [l10n.iveSuggestionDecisions1, l10n.iveSuggestionDecisions2];
       case 'Briefing':
-        return ['Resuma minha semana', 'Quais ações críticas estão atrasadas?'];
+        return [l10n.iveSuggestionBriefing1, l10n.iveSuggestionBriefing2];
       case 'Conhecimento':
-        return ['O que aprendi esta semana?', 'Qual documento mais impacta meu projeto?'];
+        return [l10n.iveSuggestionKnowledge1, l10n.iveSuggestionKnowledge2];
       case 'Personas':
-        return ['Qual persona mais avançou?', 'Qual nicho tem mais potencial?'];
+        return [l10n.iveSuggestionPersonas1, l10n.iveSuggestionPersonas2];
       default:
-        return ['Me explique os dados desta tela', 'O que devo fazer agora?'];
+        return [l10n.iveSuggestionDefault1, l10n.iveSuggestionDefault2];
     }
   }
 
@@ -403,7 +541,12 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
         controller: _scroll,
         padding:    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         itemCount:  turns.length,
-        itemBuilder: (_, i) => _TurnBubble(turn: turns[i]),
+        itemBuilder: (_, i) => _TurnBubble(
+          turn: turns[i],
+          onActionTap: turns[i].actionSuggestion != null
+              ? () => _handleActionSuggestion(turns[i].actionSuggestion!)
+              : null,
+        ),
       );
 
   Widget _input(bool loading) => SafeArea(
@@ -424,7 +567,7 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
                   maxLines:      null,
                   style:         const TextStyle(color: Colors.white, fontSize: 14),
                   decoration:    InputDecoration(
-                    hintText:       'Pergunte à IVE…',
+                    hintText:       AppLocalizations.of(context)!.iveChatHint,
                     hintStyle:      const TextStyle(color: Colors.white38),
                     filled:         true,
                     fillColor:      const Color(0xFF2A2740),
@@ -465,11 +608,59 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
       );
 }
 
+// COMMERCIAL-EXPERIENCE-CLOSURE-16 (mission Section 01.8) — `screenName`
+// is passed as a stable PT-canonical identifier from ~9 call sites across
+// the app (see e.g. ive_overlay.dart's `_routeToName`) and used internally
+// as a conversation-history key (`_conversationKey` above) and an analytics
+// label -- changing what callers pass would be a much larger, riskier
+// refactor than this mission's "smallest coherent delta" calls for. This
+// maps that SAME stable identifier to a localized DISPLAY string only,
+// exactly where it is shown to the user. An unmapped/custom screenName
+// falls back to the raw value (today's exact behavior), which is never a
+// regression -- only mapped names change display language.
+String _localizedScreenName(BuildContext context, String raw) {
+  final l10n = AppLocalizations.of(context)!;
+  const map = <String, String Function(AppLocalizations)>{
+    'Ações':                   _screenActions,
+    'Website Analyzer':        _screenWebsiteAnalyzer,
+    'Projetos':                _screenProjects,
+    'Decisões':                _screenDecisions,
+    'Conhecimento':            _screenKnowledge,
+    'Market Intelligence':     _screenMarketIntelligence,
+    'Business OS':             _screenBusinessOs,
+    'Oportunidades':           _screenOpportunities,
+    'Briefing':                _screenBriefing,
+    'Recursos':                _screenResources,
+    'Personas':                _screenPersonas,
+    'Debug Hub':               _screenDebugHub,
+    'ROI Tracker':             _screenRoiTracker,
+    'Scores':                  _screenScores,
+  };
+  final fn = map[raw];
+  return fn == null ? raw : fn(l10n);
+}
+
+String _screenActions(AppLocalizations l) => l.iveScreenActions;
+String _screenWebsiteAnalyzer(AppLocalizations l) => l.iveScreenWebsiteAnalyzer;
+String _screenProjects(AppLocalizations l) => l.iveScreenProjects;
+String _screenDecisions(AppLocalizations l) => l.iveScreenDecisions;
+String _screenKnowledge(AppLocalizations l) => l.iveScreenKnowledge;
+String _screenMarketIntelligence(AppLocalizations l) => l.iveScreenMarketIntelligence;
+String _screenBusinessOs(AppLocalizations l) => l.iveScreenBusinessOs;
+String _screenOpportunities(AppLocalizations l) => l.iveScreenOpportunities;
+String _screenBriefing(AppLocalizations l) => l.iveScreenBriefing;
+String _screenResources(AppLocalizations l) => l.iveScreenResources;
+String _screenPersonas(AppLocalizations l) => l.iveScreenPersonas;
+String _screenDebugHub(AppLocalizations l) => l.iveScreenDebugHub;
+String _screenRoiTracker(AppLocalizations l) => l.iveScreenRoiTracker;
+String _screenScores(AppLocalizations l) => l.iveScreenScores;
+
 // ── Message bubble ────────────────────────────────────────────────────────────
 
 class _TurnBubble extends StatelessWidget {
-  final CopilotTurn turn;
-  const _TurnBubble({required this.turn});
+  final CopilotTurn   turn;
+  final VoidCallback? onActionTap;
+  const _TurnBubble({required this.turn, this.onActionTap});
 
   @override
   Widget build(BuildContext ctx) {
@@ -499,7 +690,7 @@ class _TurnBubble extends StatelessWidget {
             if (!isUser && (turn.sources.isNotEmpty || turn.confidence > 0))
               _meta(turn),
             if (!isUser && turn.actionSuggestion != null)
-              _actionChip(turn.actionSuggestion!),
+              _actionChip(turn.actionSuggestion!, onActionTap),
           ],
         ),
       ),
@@ -527,26 +718,34 @@ class _TurnBubble extends StatelessWidget {
         child: Text(text, style: const TextStyle(color: Colors.white54, fontSize: 10)),
       );
 
-  Widget _actionChip(CopilotActionSuggestion action) => Container(
-        margin:  const EdgeInsets.only(top: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color:        const Color(0xFF6C63FF).withOpacity(0.25),
-          border:       Border.all(color: const Color(0xFF6C63FF), width: 1),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.bolt_rounded, size: 14, color: Color(0xFF6C63FF)),
-            const SizedBox(width: 4),
-            Flexible(
-              child: Text(
-                action.label,
-                style: const TextStyle(color: Color(0xFF6C63FF), fontSize: 12),
+  // COMMERCIAL-EXPERIENCE-CLOSURE-16 — now wired to `onActionTap`
+  // (`_CopilotSheetState._handleActionSuggestion`); previously a plain
+  // Container with no GestureDetector at all (mission Section 01.4:
+  // "Commercial V1 must not ship misleading decorative actions").
+  Widget _actionChip(CopilotActionSuggestion action, VoidCallback? onTap) => InkWell(
+        onTap:        onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          margin:  const EdgeInsets.only(top: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color:        const Color(0xFF6C63FF).withOpacity(0.25),
+            border:       Border.all(color: const Color(0xFF6C63FF), width: 1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.bolt_rounded, size: 14, color: Color(0xFF6C63FF)),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  action.label,
+                  style: const TextStyle(color: Color(0xFF6C63FF), fontSize: 12),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       );
 }

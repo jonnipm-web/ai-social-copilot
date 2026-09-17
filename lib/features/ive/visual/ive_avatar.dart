@@ -3,6 +3,7 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rive/rive.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/ive_provider.dart';
 import 'ive_avatar_controller.dart';
 import 'ive_avatar_state.dart';
@@ -123,7 +124,7 @@ class _IveAvatarState extends ConsumerState<IveAvatar>
     if (!widget.interactive) return avatar;
 
     return Semantics(
-      label:            'IVE, assistente executiva',
+      label:            AppLocalizations.of(context)!.iveSemanticsLabel,
       button:           true,
       excludeSemantics: true,
       child: GestureDetector(

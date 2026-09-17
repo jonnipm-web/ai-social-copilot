@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../data/models/knowledge_item.dart';
 import '../../../data/models/opportunity_lab_item.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/action_queue_provider.dart';
+import '../../../providers/knowledge_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
 import '../../../providers/feature_flag_provider.dart';
 import '../../../providers/project_provider.dart';
@@ -49,7 +52,7 @@ class _OpportunityLabScreenState extends ConsumerState<OpportunityLabScreen> {
     showDialog(
       context: context,
       builder: (ctx) => Consumer(
-        builder: (ctx, r, _) => _AddOpportunityDialog(ref: r),
+        builder: (ctx, r, _) => _AddOpportunityDialog(ref: r, projectId: _projectId),
       ),
     );
   }
@@ -57,6 +60,10 @@ class _OpportunityLabScreenState extends ConsumerState<OpportunityLabScreen> {
   @override
   Widget build(BuildContext context) {
     final flagAsync = ref.watch(featureFlagProvider(FeatureFlag.opportunityLabEnabled));
+    // 'Opportunity Lab' is intentionally identical in PT/EN -- matches the
+    // product's own naming decision already recorded in module_registry.dart
+    // (namePt == nameEn for this module), not an untranslated string.
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -78,7 +85,7 @@ class _OpportunityLabScreenState extends ConsumerState<OpportunityLabScreen> {
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add_rounded),
-        label: const Text('Nova Oportunidade'),
+        label: Text(l10n.oppNewTitle),
         onPressed: () => _showAddDialog(context),
       ),
       body: flagAsync.when(
@@ -169,8 +176,9 @@ class _LabBody extends ConsumerWidget {
                 child: _EmptyLab(
                   onAdd: () => showDialog(
                     context: context,
-                    builder: (ctx) =>
-                        Consumer(builder: (ctx, r, _) => _AddOpportunityDialog(ref: r)),
+                    builder: (ctx) => Consumer(
+                      builder: (ctx, r, _) => _AddOpportunityDialog(ref: r, projectId: projectId),
+                    ),
                   ),
                 ),
               ),
@@ -540,9 +548,19 @@ class _Chip extends StatelessWidget {
 }
 
 // ── Add Dialog ────────────────────────────────────────────────────────────────
+// COMMERCIAL-EXPERIENCE-CLOSURE-16 (mission Section 01.6/17) — the owner
+// explicitly rejected this dialog remaining an isolated Tipo/Título/
+// Descrição form when useful Knowledge already exists for the active
+// project. `projectId` is now required (still nullable -- "Todos" in the
+// filter above is a legitimate state, see Section 19) so this dialog can:
+// (a) actually stamp the created opportunity with the project the user was
+// filtered to (previously never set at all -- a pre-existing gap, not
+// something this mission introduced), and (b) offer a project-scoped
+// Knowledge picker.
 class _AddOpportunityDialog extends ConsumerStatefulWidget {
-  const _AddOpportunityDialog({required this.ref});
+  const _AddOpportunityDialog({required this.ref, required this.projectId});
   final WidgetRef ref;
+  final String?   projectId;
 
   @override
   ConsumerState<_AddOpportunityDialog> createState() =>
@@ -555,6 +573,7 @@ class _AddOpportunityDialogState
   final _descCtrl  = TextEditingController();
   String _type = OpportunityLabItem.types.first;
   bool _saving = false;
+  final Set<String> _selectedKnowledgeIds = {};
 
   @override
   void initState() {
@@ -571,63 +590,68 @@ class _AddOpportunityDialogState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return AlertDialog(
       backgroundColor: _kCard,
-      title: const Text('Nova Oportunidade',
-          style: TextStyle(color: Colors.white)),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            DropdownButtonFormField<String>(
-              value: _type,
-              dropdownColor: _kCard,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
-                labelText: 'Tipo',
-                labelStyle: TextStyle(color: Colors.white54),
-                enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white24)),
+      title: Text(l10n.oppNewTitle, style: const TextStyle(color: Colors.white)),
+      content: SizedBox(
+        width: 420,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              DropdownButtonFormField<String>(
+                value: _type,
+                dropdownColor: _kCard,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: l10n.oppTypeLabel,
+                  labelStyle: const TextStyle(color: Colors.white54),
+                  enabledBorder: const UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white24)),
+                ),
+                items: OpportunityLabItem.types
+                    .map((t) => DropdownMenuItem(
+                          value: t,
+                          child: Text(t),
+                        ))
+                    .toList(),
+                onChanged: (v) => setState(() => _type = v ?? _type),
               ),
-              items: OpportunityLabItem.types
-                  .map((t) => DropdownMenuItem(
-                        value: t,
-                        child: Text(t),
-                      ))
-                  .toList(),
-              onChanged: (v) => setState(() => _type = v ?? _type),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _titleCtrl,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
-                labelText: 'Título',
-                labelStyle: TextStyle(color: Colors.white54),
-                enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white24)),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _titleCtrl,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: l10n.oppTitleLabel,
+                  labelStyle: const TextStyle(color: Colors.white54),
+                  enabledBorder: const UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white24)),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _descCtrl,
-              style: const TextStyle(color: Colors.white),
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Descrição (opcional)',
-                labelStyle: TextStyle(color: Colors.white54),
-                enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white24)),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _descCtrl,
+                style: const TextStyle(color: Colors.white),
+                maxLines: 3,
+                decoration: InputDecoration(
+                  labelText: l10n.oppDescriptionLabel,
+                  labelStyle: const TextStyle(color: Colors.white54),
+                  enabledBorder: const UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white24)),
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              _knowledgeSection(l10n),
+            ],
+          ),
         ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancelar', style: TextStyle(color: Colors.white54)),
+          child: Text(l10n.oppCancel, style: const TextStyle(color: Colors.white54)),
         ),
         ElevatedButton(
           onPressed: _saving || _titleCtrl.text.trim().isEmpty
@@ -635,12 +659,14 @@ class _AddOpportunityDialogState
               : () async {
                   setState(() => _saving = true);
                   final item = OpportunityLabItem(
-                    id:              '',
-                    userId:          '',
-                    opportunityType: _type,
-                    title:           _titleCtrl.text.trim(),
-                    description:     _descCtrl.text.trim(),
-                    createdAt:       DateTime.now(),
+                    id:               '',
+                    userId:           '',
+                    projectId:        widget.projectId,
+                    opportunityType:  _type,
+                    title:            _titleCtrl.text.trim(),
+                    description:      _descCtrl.text.trim(),
+                    createdAt:        DateTime.now(),
+                    knowledgeItemIds: _selectedKnowledgeIds.toList(),
                   );
                   await ref
                       .read(opportunityLabNotifierProvider.notifier)
@@ -648,9 +674,121 @@ class _AddOpportunityDialogState
                   if (context.mounted) Navigator.pop(context);
                 },
           style: ElevatedButton.styleFrom(backgroundColor: _kPrimary),
-          child: const Text('Adicionar'),
+          child: Text(l10n.oppAdd),
         ),
       ],
+    );
+  }
+
+  // COMMERCIAL-EXPERIENCE-CLOSURE-16 (mission Section 19) — project
+  // isolation is non-negotiable: with no active project, this shows a
+  // truthful deterministic hint instead of silently listing knowledge from
+  // every project the user has (which `knowledgeItemsByProjectProvider`
+  // structurally cannot even do -- it always filters by a single
+  // `project_id`, and RLS additionally scopes every row to `auth.uid()`).
+  Widget _knowledgeSection(AppLocalizations l10n) {
+    if (widget.projectId == null) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.04),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Text(
+          l10n.oppKnowledgeSelectProjectFirst,
+          style: const TextStyle(color: Colors.white54, fontSize: 12),
+        ),
+      );
+    }
+
+    final knowledgeAsync = ref.watch(knowledgeItemsByProjectProvider(widget.projectId!));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.oppKnowledgeSectionTitle,
+          style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          l10n.oppKnowledgeSectionHint,
+          style: const TextStyle(color: Colors.white38, fontSize: 11),
+        ),
+        const SizedBox(height: 8),
+        knowledgeAsync.when(
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: _kPrimary)),
+          ),
+          error: (_, __) => const SizedBox.shrink(),
+          data: (items) {
+            if (items.isEmpty) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  l10n.oppKnowledgeEmpty,
+                  style: const TextStyle(color: Colors.white38, fontSize: 12),
+                ),
+              );
+            }
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 180),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: items.length,
+                    itemBuilder: (_, i) => _KnowledgeCheckTile(
+                      item:     items[i],
+                      selected: _selectedKnowledgeIds.contains(items[i].id),
+                      onChanged: (v) => setState(() {
+                        if (v) {
+                          _selectedKnowledgeIds.add(items[i].id);
+                        } else {
+                          _selectedKnowledgeIds.remove(items[i].id);
+                        }
+                      }),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  l10n.oppKnowledgeCountSelected(_selectedKnowledgeIds.length),
+                  style: const TextStyle(color: Colors.white38, fontSize: 11),
+                ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _KnowledgeCheckTile extends StatelessWidget {
+  const _KnowledgeCheckTile({required this.item, required this.selected, required this.onChanged});
+  final KnowledgeItem                item;
+  final bool                         selected;
+  final ValueChanged<bool>           onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return CheckboxListTile(
+      dense:           true,
+      value:           selected,
+      onChanged:       (v) => onChanged(v ?? false),
+      activeColor:     _kPrimary,
+      checkColor:      Colors.white,
+      controlAffinity: ListTileControlAffinity.leading,
+      contentPadding:  EdgeInsets.zero,
+      title: Text(
+        item.title.isEmpty ? (item.fileName ?? item.sourceUrl ?? item.id) : item.title,
+        style: const TextStyle(color: Colors.white, fontSize: 13),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
     );
   }
 }

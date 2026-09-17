@@ -8,6 +8,7 @@ import '../../data/models/ive_issue.dart';
 import '../../data/models/ive_state.dart';
 import '../../features/ive/visual/ive_avatar.dart';
 import '../../features/ive/visual/ive_visual_config.dart';
+import '../../l10n/app_localizations.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/ive_context_provider.dart';
 import '../../providers/ive_memory_provider.dart';
@@ -229,7 +230,7 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
             // skips IveAvatar's own Semantics wrapper — so the overlay
             // provides the screen-reader label/button role here instead.
             Semantics(
-              label:            'IVE, assistente executiva',
+              label:            AppLocalizations.of(context)!.iveSemanticsLabel,
               button:           true,
               excludeSemantics: true,
               child: GestureDetector(
@@ -429,9 +430,9 @@ class _IveBubble extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 5),
-                      const Text(
-                        'Conversar com a IVE',
-                        style: TextStyle(
+                      Text(
+                        AppLocalizations.of(context)!.iveBubbleChatCta,
+                        style: const TextStyle(
                           color:      Color(0xFF9B8FFF),
                           fontSize:   11,
                           fontWeight: FontWeight.w600,

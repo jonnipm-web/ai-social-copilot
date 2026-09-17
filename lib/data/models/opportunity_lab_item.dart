@@ -23,6 +23,12 @@ class OpportunityLabItem {
   final List<String>   risks;
   final List<String>   actionSteps;
 
+  // COMMERCIAL-EXPERIENCE-CLOSURE-16 (mission Section 17/18) — ids of
+  // knowledge_items the user explicitly linked to this opportunity, stored
+  // as references (never duplicated content). See migration
+  // 20260920000001_opportunity_knowledge_links.sql.
+  final List<String>   knowledgeItemIds;
+
   const OpportunityLabItem({
     required this.id,
     required this.userId,
@@ -45,6 +51,7 @@ class OpportunityLabItem {
     this.confidence = 0,
     this.risks = const [],
     this.actionSteps = const [],
+    this.knowledgeItemIds = const [],
   });
 
   static const List<String> types = [
@@ -104,6 +111,7 @@ class OpportunityLabItem {
         confidence:       map['confidence'] as int? ?? 0,
         risks:            _parseList(map['risks']),
         actionSteps:      _parseList(map['action_steps']),
+        knowledgeItemIds: _parseList(map['knowledge_item_ids']),
       );
 
   Map<String, dynamic> toInsertMap() => {
@@ -126,6 +134,7 @@ class OpportunityLabItem {
         'confidence':          confidence,
         'risks':               risks,
         'action_steps':        actionSteps,
+        'knowledge_item_ids':  knowledgeItemIds,
       };
 
   OpportunityLabItem copyWith({
@@ -159,5 +168,6 @@ class OpportunityLabItem {
         confidence:       confidence ?? this.confidence,
         risks:            risks ?? this.risks,
         actionSteps:      actionSteps ?? this.actionSteps,
+        knowledgeItemIds: knowledgeItemIds,
       );
 }

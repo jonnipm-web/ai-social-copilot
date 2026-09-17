@@ -84,7 +84,14 @@ enum IveAvatarSize {
   standard(72),
   large(96),
   chat(128),
-  detail(160);
+  detail(160),
+  // COMMERCIAL-EXPERIENCE-CLOSURE-16 — owner-rejected the previous IVE
+  // dialog for showing a tiny generic chat emoji instead of the canonical
+  // 03B2 portrait as its primary identity (mission Section 01.3). `hero` is
+  // the size used for that one placement (the chat dialog's empty-state
+  // central illustration) — materially larger than any existing use, without
+  // inventing a second visual system.
+  hero(220);
 
   final double dp;
   const IveAvatarSize(this.dp);

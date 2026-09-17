@@ -11,6 +11,7 @@ import 'package:ai_social_copilot/core/diagnostics/diagnostic_logger_service.dar
 import 'package:ai_social_copilot/data/models/ive_issue.dart';
 import 'package:ai_social_copilot/data/models/ive_state.dart';
 import 'package:ai_social_copilot/data/models/profile.dart';
+import 'package:ai_social_copilot/l10n/app_localizations.dart';
 import 'package:ai_social_copilot/providers/auth_provider.dart';
 import 'package:ai_social_copilot/providers/diagnostic_session_provider.dart';
 import 'package:ai_social_copilot/providers/ive_provider.dart';
@@ -64,6 +65,9 @@ void main() {
         authOverride,
       ],
       child: MaterialApp(
+        locale: const Locale('pt'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: Stack(
             children: [
@@ -192,6 +196,9 @@ void main() {
           iveProvider.overrideWith((ref) => _FixedIveNotifier(ref, wideIssueState)),
         ],
         child: MaterialApp(
+          locale: const Locale('pt'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: Stack(
               children: [
@@ -283,6 +290,9 @@ void main() {
         ],
         child: MaterialApp.router(
           routerConfig: router,
+          locale: const Locale('pt'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           builder: (context, child) => Stack(
             children: [
               child!,
@@ -298,7 +308,8 @@ void main() {
         (w) => w is Semantics && w.properties.label == 'IVE, assistente executiva',
       );
       expect(avatarFinder, findsOneWidget);
-      expect(find.text('Pergunte à IVE'), findsNothing);
+      final l10n = await AppLocalizations.delegate.load(const Locale('pt'));
+      expect(find.text(l10n.iveChatAskCta), findsNothing);
       expect(tester.takeException(), isNull);
 
       await tester.tap(avatarFinder, warnIfMissed: false);
@@ -311,7 +322,7 @@ void main() {
         expect(tester.takeException(), isNull, reason: 'threw on pump #$i opening the chat sheet');
       }
 
-      expect(find.text('Pergunte à IVE'), findsOneWidget);
+      expect(find.text(l10n.iveChatAskCta), findsOneWidget);
     },
   );
 
@@ -334,6 +345,9 @@ void main() {
           authStateProvider.overrideWith((ref) => Stream.value(_authState(session: MockSession()))),
         ],
         child: MaterialApp(
+          locale: const Locale('pt'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: Stack(
               children: [

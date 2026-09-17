@@ -176,5 +176,70 @@
   "ivIntroContinueButton": "Entendi",
   "ivIntroSkipButton": "Pular",
   "ivIntroSemanticLabel": "Introdução à IVE, sua copiloto estratégica",
-  "ivIntroReplayLabel": "Conhecer a IVE"
+  "ivIntroReplayLabel": "Conhecer a IVE",
+
+  "iveSemanticsLabel": "IVE, assistente executiva",
+  "iveBubbleChatCta": "Conversar com a IVE",
+
+  "iveChatAskCta": "Pergunte à IVE",
+  "iveChatHint": "Pergunte à IVE…",
+  "iveChatClearHistory": "Limpar histórico",
+  "iveChatErrorPrefix": "Erro: {error}",
+  "@iveChatErrorPrefix": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+
+  "iveScreenActions": "Ações",
+  "iveScreenWebsiteAnalyzer": "Website Analyzer",
+  "iveScreenProjects": "Projetos",
+  "iveScreenDecisions": "Decisões",
+  "iveScreenKnowledge": "Conhecimento",
+  "iveScreenMarketIntelligence": "Market Intelligence",
+  "iveScreenBusinessOs": "Business OS",
+  "iveScreenOpportunities": "Oportunidades",
+  "iveScreenBriefing": "Briefing",
+  "iveScreenResources": "Recursos",
+  "iveScreenPersonas": "Personas",
+  "iveScreenDebugHub": "Debug Hub",
+  "iveScreenRoiTracker": "ROI Tracker",
+  "iveScreenScores": "Scores",
+
+  "iveSuggestionProjects1": "Qual projeto devo focar?",
+  "iveSuggestionProjects2": "Quais projetos têm mais risco?",
+  "iveSuggestionOpportunities1": "Qual oportunidade tem maior ROI?",
+  "iveSuggestionOpportunities2": "O que devo aprovar agora?",
+  "iveSuggestionScores1": "Por que meu score está baixo?",
+  "iveSuggestionScores2": "Como melhorar o Ecosystem Score?",
+  "iveSuggestionDecisions1": "O que devo escalar?",
+  "iveSuggestionDecisions2": "Simule o impacto de aprovar a top oportunidade",
+  "iveSuggestionBriefing1": "Resuma minha semana",
+  "iveSuggestionBriefing2": "Quais ações críticas estão atrasadas?",
+  "iveSuggestionKnowledge1": "O que aprendi esta semana?",
+  "iveSuggestionKnowledge2": "Qual documento mais impacta meu projeto?",
+  "iveSuggestionPersonas1": "Qual persona mais avançou?",
+  "iveSuggestionPersonas2": "Qual nicho tem mais potencial?",
+  "iveSuggestionDefault1": "Me explique os dados desta tela",
+  "iveSuggestionDefault2": "O que devo fazer agora?",
+
+  "iveActionSuggestionHint": "Sugestão da IVE: {label}. Complete os detalhes na tela que abriu.",
+  "@iveActionSuggestionHint": {
+    "placeholders": { "label": { "type": "String" } }
+  },
+  "iveActionNoDestination": "Este tipo de ação ainda não tem um destino direto. Pergunte à IVE para mais detalhes.",
+
+  "oppNewTitle": "Nova Oportunidade",
+  "oppTypeLabel": "Tipo",
+  "oppTitleLabel": "Título",
+  "oppDescriptionLabel": "Descrição (opcional)",
+  "oppCancel": "Cancelar",
+  "oppAdd": "Adicionar",
+  "oppKnowledgeSectionTitle": "Conhecimento do projeto",
+  "oppKnowledgeSectionHint": "Selecione itens do Cofre de Conhecimento deste projeto para dar contexto real à oportunidade.",
+  "oppKnowledgeSelectProjectFirst": "Selecione um projeto no filtro acima para usar conhecimento do projeto (opcional).",
+  "oppKnowledgeEmpty": "Este projeto ainda não tem itens no Cofre de Conhecimento.",
+  "oppKnowledgeCountSelected": "{count, plural, =0{Nenhum item selecionado} =1{1 item selecionado} other{{count} itens selecionados}}",
+  "@oppKnowledgeCountSelected": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "oppLinkedKnowledgeTitle": "Conhecimento vinculado"
 }
