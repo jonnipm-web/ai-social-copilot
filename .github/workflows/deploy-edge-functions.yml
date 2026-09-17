@@ -23,6 +23,33 @@ name: Deploy Edge Functions (controlled, single-function)
 # selection/validation logic and is the same script
 # .github/workflows/deploy-selftest.yml uses to prove this behavior on
 # every push, without ever calling `supabase` or touching production.
+#
+# IV-SECURITY-REMEDIATION-03: this job also runs
+# scripts/ci/check_deploy_governance.sh before resolving/deploying
+# anything. Before this, the repo-wide static invariants it enforces
+# (no-verify-jwt exception list, allowlist/config.toml consistency, the
+# ive-agent-runner/context-copilot/wildcard checks) were only ever
+# exercised by deploy-selftest.yml, a separate, non-blocking workflow --
+# a Codex adversarial review correctly noted this meant a real
+# deploy could proceed even while that static gate was failing.
+# resolve_deploy_selection.sh's own checks (allowlist membership, the
+# ive-agent-runner hard block, name-format validation) were always
+# enforced at deploy time regardless; this closes the remaining gap.
+#
+# KNOWN OUT-OF-SCOPE FINDING (not fixed by this mission, tracked
+# separately): a Codex adversarial review also found that
+# `${{ inputs.function }}` / `${{ needs.resolve.outputs.function }}` are
+# interpolated directly into these run: blocks' shell text rather than
+# passed through an env var, which is a known GitHub Actions injection
+# class if the input contains shell metacharacters (e.g. a single
+# quote). Exploiting it requires an actor who can already trigger
+# workflow_dispatch on this repo (i.e., existing write access, who could
+# achieve the same SUPABASE_ACCESS_TOKEN exposure more directly by
+# editing this file in a commit) -- this bounds but does not eliminate
+# the risk. Predates this mission and both files this mission actually
+# changes; fixing it here would exceed IV-SECURITY-REMEDIATION-03's
+# scope (SR-04/SR-05 closure + the stripe-webhook governance defect).
+# Needs its own mission.
 
 on:
   workflow_dispatch:
@@ -53,6 +80,10 @@ jobs:
             echo "Confirmation failed. Set confirm=DEPLOY to proceed." >&2
             exit 1
           fi
+
+      - name: Repo-wide deploy governance gate (DG2) -- must pass before any resolution/deploy
+        run: |
+          bash scripts/ci/check_deploy_governance.sh
 
       - name: Resolve and validate function selection (no production access)
         id: resolve
