@@ -26,7 +26,13 @@ import {
   ValidationResult,
   AUTHORITATIVE_SOURCE_ALLOWLIST,
 } from "./types.ts";
-import { scanForProhibitedFields } from "./prohibited_fields.ts";
+import { ProhibitedFieldFinding, scanForProhibitedFields } from "./prohibited_fields.ts";
+
+function describeFinding(f: ProhibitedFieldFinding): string {
+  return f.reason === "non_ascii_identifier_key"
+    ? `field '${f.field}' at ${f.path} is not a plain ASCII identifier -- rejected outright (closes the Unicode homoglyph bypass class, e.g. Cyrillic lookalike characters, regardless of what the name appears to say)`
+    : `prohibited authority field '${f.field}' found at ${f.path} -- this must never be supplied by a request-originating component; only intent, never authority`;
+}
 
 const UUID_V4_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -87,11 +93,28 @@ export function validateActor(value: unknown, path = "actor"): ValidationResult 
       `${path}.auth_ref: required -- an actor id alone is never sufficient (Section 6)`,
     );
   } else {
+    // Minimum substantive content after the prefix (Codex adversarial
+    // review, Round 2, Finding F-02 partial): a bare prefix (`svc:`) or a
+    // trivially short suffix (`svc:x`) previously passed. This is a
+    // PARTIAL, PROPORTIONATE mitigation, not a closure of the underlying
+    // issue: this contract explicitly does NOT implement cryptographic
+    // verification (Section 7), so no check here can prove auth_ref
+    // resolves to anything real. Raising the minimum length only removes
+    // the most trivial/degenerate cases (empty or near-empty suffixes);
+    // it cannot detect a syntactically well-formed but meaningless value
+    // like `svc:not-a-real-service`. Full closure of the confused-deputy
+    // risk requires an independent auth resolver outside this contract's
+    // scope -- see README.md's escalated architectural note.
+    const MIN_AUTH_REF_SUFFIX_LENGTH = 8;
     if (type === "user" && !auth_ref.startsWith("usr:")) {
       errors.push(`${path}.auth_ref: type=user requires an 'usr:' prefixed auth_ref, not a bare/self-declared identity`);
+    } else if (type === "user" && auth_ref.slice("usr:".length).length < MIN_AUTH_REF_SUFFIX_LENGTH) {
+      errors.push(`${path}.auth_ref: 'usr:' prefix must be followed by a substantive identifier (min ${MIN_AUTH_REF_SUFFIX_LENGTH} chars) -- a bare or near-empty suffix is rejected as a degenerate value`);
     }
     if (type === "service" && !auth_ref.startsWith("svc:")) {
       errors.push(`${path}.auth_ref: type=service requires an 'svc:' prefixed auth_ref -- service identity must never reuse or resemble a user auth_ref`);
+    } else if (type === "service" && auth_ref.slice("svc:".length).length < MIN_AUTH_REF_SUFFIX_LENGTH) {
+      errors.push(`${path}.auth_ref: 'svc:' prefix must be followed by a substantive identifier (min ${MIN_AUTH_REF_SUFFIX_LENGTH} chars) -- a bare or near-empty suffix is rejected as a degenerate value`);
     }
     if (type === "system" && auth_ref !== "system:internal") {
       errors.push(`${path}.auth_ref: type=system requires the fixed literal 'system:internal'`);
@@ -115,6 +138,14 @@ export function validateExecutionRequest(
   opts: ValidateExecutionRequestOptions = {},
 ): ValidationResult {
   if (!isPlainObject(value)) return fail("request: must be an object");
+  // A default parameter value (`= {}`) only applies when the argument is
+  // `undefined`, never when the caller explicitly passes `null` -- Codex
+  // adversarial review (Finding F-08/N-01) demonstrated this throws a
+  // TypeError instead of returning a normal validation failure. Normalized
+  // defensively here (and in every other function below taking an options
+  // object) so a caller passing `null` behaves identically to omitting the
+  // argument entirely.
+  opts = opts ?? {};
   const now = opts.now ?? new Date();
   const errors: string[] = [];
 
@@ -233,25 +264,28 @@ export function validateExecutionRequest(
       errors.push("request.quant_execution_tier: required when domain='quant' (Section 14)");
     } else {
       // The tier must not be a freely-asserted, disconnected field --
-      // Codex adversarial review (Finding F-07) demonstrated that a
-      // caller could request action='quant.controlled_live.submit_order'
+      // Codex adversarial review (Finding F-07, round 1) demonstrated that
+      // a caller could request action='quant.controlled_live.submit_order'
       // (a real-money action, by its own namespace) while separately
       // declaring quant_execution_tier='research', suppressing the
-      // human_gate_ref requirement below. Fixed by requiring the action's
-      // OWN second namespace segment (when it names a known tier) to
-      // match the declared tier exactly. This makes the field redundant
-      // with the action name rather than a separate, independently
-      // lie-able classifier -- the action string is validated by
-      // ACTION_RE above and is the same string a future AEF would
-      // actually route on, so the two can no longer disagree.
+      // human_gate_ref requirement below. The round-1 fix only checked
+      // consistency WHEN the action's second segment happened to already
+      // be a recognized tier name -- round 2 (Finding F-07 partial)
+      // demonstrated this still let a NON-STANDARD segment name (e.g.
+      // action='quant.live.submit_order', where 'live' names no known
+      // tier) bypass the check entirely, since the condition never fired.
+      // Fixed by making the naming convention MANDATORY, not conditional:
+      // for domain='quant', the action's second segment MUST always be one
+      // of the five known tier names, full stop -- there is no longer a
+      // way to name a quant action outside this taxonomy.
       if (typeof action === "string") {
         const segments = action.split(".");
         const actionTierSegment = segments[1];
-        if (
-          actionTierSegment &&
-          KNOWN_QUANT_TIERS.includes(actionTierSegment as QuantExecutionTier) &&
-          actionTierSegment !== tier
-        ) {
+        if (!actionTierSegment || !KNOWN_QUANT_TIERS.includes(actionTierSegment as QuantExecutionTier)) {
+          errors.push(
+            `request.action: for domain='quant', the action's second namespace segment must be one of ${KNOWN_QUANT_TIERS.join("|")} (got '${actionTierSegment ?? ""}' in '${action}') -- a quant action may not be named outside this tier taxonomy`,
+          );
+        } else if (actionTierSegment !== tier) {
           errors.push(
             `request.quant_execution_tier ('${tier}') does not match the tier named in request.action ('${action}', tier segment '${actionTierSegment}') -- a request must never claim a lower-risk tier than the action it names`,
           );
@@ -313,9 +347,7 @@ export function validateExecutionRequest(
   // down structurally (Section 5).
   const findings = scanForProhibitedFields(value);
   for (const f of findings) {
-    errors.push(
-      `request: prohibited authority field '${f.field}' found at ${f.path} -- IVE (or any request-originating component) must never supply this; a request must NEVER carry authority, only intent`,
-    );
+    errors.push(`request: ${describeFinding(f)}`);
   }
 
   // Execution-replay defense (Section 9): a request_id seen before is
@@ -349,6 +381,7 @@ export function validateDelegationEnvelope(
   opts: ValidateDelegationOptions = {},
 ): ValidationResult {
   if (!isPlainObject(value)) return fail("delegation: must be an object");
+  opts = opts ?? {}; // see F-08/N-01 comment in validateExecutionRequest above
   const now = opts.now ?? new Date();
   const errors: string[] = [];
 
@@ -460,7 +493,7 @@ export function validateDelegationEnvelope(
   const { scope: _scope, ...delegationWithoutScope } = value as Record<string, unknown>;
   const findings = scanForProhibitedFields(delegationWithoutScope);
   for (const f of findings) {
-    errors.push(`delegation: prohibited authority field '${f.field}' found at ${f.path}`);
+    errors.push(`delegation: ${describeFinding(f)}`);
   }
 
   // Authentication-replay defense (Section 9), deferred to the end and
@@ -610,6 +643,7 @@ export function validateHumanGateRecord(
   opts: ValidateHumanGateOptions = {},
 ): ValidationResult {
   if (!isPlainObject(value)) return fail("gate: must be an object");
+  opts = opts ?? {}; // see F-08/N-01 comment in validateExecutionRequest above
   const now = opts.now ?? new Date();
   const errors: string[] = [];
 
@@ -735,7 +769,7 @@ export function validateHumanGateRecord(
 
   const findings = scanForProhibitedFields(value);
   for (const f of findings) {
-    errors.push(`gate: prohibited authority field '${f.field}' found at ${f.path}`);
+    errors.push(`gate: ${describeFinding(f)}`);
   }
 
   return errors.length === 0 ? OK : fail(...errors);
@@ -873,7 +907,7 @@ export function validateExecutionReceipt(value: unknown): ValidationResult {
 
   const findings = scanForProhibitedFields(value);
   for (const f of findings) {
-    errors.push(`receipt: prohibited authority field '${f.field}' found at ${f.path}`);
+    errors.push(`receipt: ${describeFinding(f)}`);
   }
 
   return errors.length === 0 ? OK : fail(...errors);

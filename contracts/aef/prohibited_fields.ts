@@ -104,6 +104,25 @@ function normalizeFieldName(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
+/**
+ * A field name (anywhere in an ExecutionRequest, including nested inside
+ * `parameters`/`metadata`/`constraints`) must be a plain ASCII identifier.
+ * Codex adversarial review (2nd round, still-open F-01) demonstrated that
+ * a Cyrillic homoglyph -- 'раid' using U+0430 CYRILLIC SMALL LETTER A
+ * in place of Latin 'a' -- is a visually indistinguishable but distinct
+ * key that PROHIBITED_SET's normalization (which only folds case and
+ * strips separators, not confusable Unicode) does not catch. Rather than
+ * attempt a full Unicode confusable-skeleton normalization (UTS #39,
+ * genuinely complex and disproportionate for this contract foundation),
+ * this closes the entire class at the root: NO non-ASCII-identifier key
+ * is permitted anywhere in these fields at all, regardless of what it
+ * says. A legitimate parameter name is always a plain ASCII identifier in
+ * this codebase's own conventions (see every real field in the schemas);
+ * anything else is rejected outright as malformed, not merely as a
+ * suspected authority field.
+ */
+const ASCII_IDENTIFIER_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
 const PROHIBITED_SET: ReadonlySet<string> = new Set(
   PROHIBITED_AUTHORITY_FIELDS.map(normalizeFieldName),
 );
@@ -112,24 +131,19 @@ export interface ProhibitedFieldFinding {
   /** Dot-path to the offending field, e.g. "parameters.role" or "metadata.is_admin". */
   path: string;
   field: string;
+  /** Why this was flagged: an exact/normalized match against the prohibited list, or a non-ASCII-identifier key shape (which closes the homoglyph bypass class entirely, per the ASCII_IDENTIFIER_RE comment above). */
+  reason: "prohibited_name" | "non_ascii_identifier_key";
 }
 
 /**
- * Recursively scans a value (object/array/primitive) for any key matching
- * PROHIBITED_AUTHORITY_FIELDS after normalization (case- and
- * separator-insensitive -- `Role`, `ROLE`, `is-admin`, and `IsAdmin` are
- * all caught, not just an exact/lowercase match). Returns every finding,
- * not just the first, so a single reject can report everything that
- * needs fixing.
- *
- * Known, documented limitation: true Unicode homoglyphs (e.g. Cyrillic
- * 'а' U+0430 substituted for Latin 'a') are NOT normalized to their Latin
- * equivalent and would NOT be caught by name alone. This is a deliberate
- * scope boundary, not an oversight -- closing it fully requires Unicode
- * confusable-skeleton normalization (e.g. per UTS #39), which this
- * contract foundation does not implement. It is recorded here, in
- * validators_test.ts's fuzz suite, and in the mission report as a known
- * gap for a future hardening pass, not silently left undocumented.
+ * Recursively scans a value (object/array/primitive) for:
+ *  (a) any key matching PROHIBITED_AUTHORITY_FIELDS after normalization
+ *      (case- and separator-insensitive -- `Role`, `ROLE`, `is-admin`,
+ *      and `IsAdmin` are all caught, not just an exact/lowercase match);
+ *  (b) any key that is not a plain ASCII identifier at all (closes the
+ *      Unicode homoglyph bypass class -- see ASCII_IDENTIFIER_RE above).
+ * Returns every finding, not just the first, so a single reject can
+ * report everything that needs fixing.
  */
 export function scanForProhibitedFields(
   value: unknown,
@@ -150,8 +164,10 @@ export function scanForProhibitedFields(
 
   for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
     const childPath = path === "$" ? key : `${path}.${key}`;
-    if (PROHIBITED_SET.has(normalizeFieldName(key))) {
-      findings.push({ path: childPath, field: key });
+    if (!ASCII_IDENTIFIER_RE.test(key)) {
+      findings.push({ path: childPath, field: key, reason: "non_ascii_identifier_key" });
+    } else if (PROHIBITED_SET.has(normalizeFieldName(key))) {
+      findings.push({ path: childPath, field: key, reason: "prohibited_name" });
     }
     findings.push(...scanForProhibitedFields(val, childPath));
   }

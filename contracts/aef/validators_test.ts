@@ -65,7 +65,7 @@ Deno.test("1. VALID -- minimal valid user request", () => {
 
 Deno.test("2. VALID -- valid service-shaped request", () => {
   const r = validateExecutionRequest(
-    baseRequest({ actor: { type: "service", id: "svc-scheduler", auth_ref: "svc:cron-01" } }),
+    baseRequest({ actor: { type: "service", id: "svc-scheduler", auth_ref: "svc:cron-job-01" } }),
     { now: NOW },
   );
   assertValid(r, "case 2");
@@ -469,11 +469,6 @@ Deno.test("fuzz: unexpected array where an object is expected (parameters)", () 
 });
 
 Deno.test("fuzz: unicode / homoglyph field name attempting to dodge the prohibited-field scanner", () => {
-  // Cyrillic 'а' (U+0430) instead of Latin 'a' in "role" would NOT be
-  // caught by an exact string match unless normalized -- this test
-  // documents current behavior (a true homoglyph is a distinct key and
-  // is NOT rejected by name) while confirming ASCII case-variation IS
-  // caught, and records the homoglyph gap as a known limitation.
   const caseVariant = validateExecutionRequest(baseRequest({ parameters: { RoLe: "admin" } }), { now: NOW });
   assertInvalid(caseVariant, "fuzz ASCII case-variant field name (RoLe) must still be caught");
 });
@@ -614,7 +609,7 @@ Deno.test("F-04 regression: an AUTHORIZED HumanGateRecord past its own expiry is
     request_id: uuid("req1"),
     action: "quant.controlled_live.submit_order",
     state: "AUTHORIZED",
-    approver: { type: "user", id: "approver-1", auth_ref: "usr:s2" },
+    approver: { type: "user", id: "approver-1", auth_ref: "usr:session-f4" },
     decided_at: "2026-09-18T10:00:00.000Z",
     audit_ref: "audit-log-entry-f4",
     expires_at: PAST, // already expired relative to NOW
@@ -705,6 +700,110 @@ Deno.test("F-07 regression: quant_execution_tier can no longer disagree with the
     ),
     "F-07: matching tier + human_gate_ref must be accepted",
   );
+});
+
+Deno.test("F-01 regression (round 2): non-ASCII-identifier field keys are rejected outright, closing the homoglyph bypass class", () => {
+  // Cyrillic 'а' (U+0430 CYRILLIC SMALL LETTER A) in place of Latin 'a' --
+  // visually indistinguishable, but a genuinely distinct key that
+  // normalizeFieldName's case/separator folding alone does not catch
+  // (Codex adversarial review, round 2, Finding F-01 partial). Rather than
+  // attempt full Unicode confusable-skeleton normalization, the fix
+  // rejects ANY key that is not a plain ASCII identifier, anywhere in
+  // parameters/constraints/metadata, regardless of what it appears to say.
+  const homoglyphKey = "pаid"; // "paid" with Cyrillic 'а'
+  assertInvalid(
+    validateExecutionRequest(baseRequest({ parameters: { [homoglyphKey]: true } }), { now: NOW }),
+    "F-01: Cyrillic-homoglyph key must be rejected as a non-ASCII identifier",
+  );
+
+  // Sanity: a legitimate plain-ASCII parameter name is unaffected.
+  assertValid(
+    validateExecutionRequest(baseRequest({ parameters: { topic: "quarterly report" } }), { now: NOW }),
+    "F-01: legitimate ASCII parameter name must still be accepted",
+  );
+});
+
+Deno.test("F-02 regression (round 2): a bare or near-empty auth_ref suffix is rejected as degenerate", () => {
+  // Codex adversarial review (round 2, Finding F-02 partial): an
+  // Actor-shaped issuer/actor with a syntactically-valid-but-meaningless
+  // auth_ref (e.g. 'svc:' or 'svc:x') previously passed. This is a
+  // partial, proportionate mitigation only -- it cannot prove auth_ref
+  // resolves to anything real (no crypto in scope, Section 7) -- but it
+  // does remove the most trivial degenerate values.
+  assertInvalid(
+    validateActor({ type: "service", id: "svc-x", auth_ref: "svc:x" }),
+    "F-02: near-empty auth_ref suffix ('svc:x') must be rejected",
+  );
+  assertInvalid(
+    validateActor({ type: "service", id: "svc-x", auth_ref: "svc:" }),
+    "F-02: bare auth_ref prefix with empty suffix must be rejected",
+  );
+  assertInvalid(
+    validateActor({ type: "user", id: "u1", auth_ref: "usr:a" }),
+    "F-02: near-empty user auth_ref suffix must be rejected",
+  );
+  assertValid(
+    validateActor({ type: "service", id: "svc-x", auth_ref: "svc:ive-core" }),
+    "F-02: a substantive auth_ref suffix (>= 8 chars) must still be accepted",
+  );
+});
+
+Deno.test("F-07 regression (round 2): a non-standard quant action segment bypasses no longer possible", () => {
+  // Codex adversarial review (round 2, Finding F-07 partial): the round-1
+  // fix only checked tier-vs-action consistency WHEN the action's second
+  // segment happened to already be a recognized tier name -- a
+  // non-standard segment like 'live' (not one of the five known tiers)
+  // bypassed the check entirely. Fixed by making the taxonomy mandatory
+  // for every domain='quant' action, not merely checked when convenient.
+  assertInvalid(
+    validateExecutionRequest(
+      baseRequest({
+        domain: "quant",
+        action: "quant.live.submit_order",
+        quant_execution_tier: "research",
+      }),
+      { now: NOW },
+    ),
+    "F-07: a quant action whose second segment is not a known tier name must be rejected outright",
+  );
+});
+
+Deno.test("F-08 regression (round 2): explicit null for the options parameter behaves like omitting it entirely", () => {
+  // Codex adversarial review (round 2, Finding F-08/N-01): a default
+  // parameter value only applies when the caller passes `undefined`, not
+  // when they explicitly pass `null` -- validateHumanGateRecord(record,
+  // null) previously threw a TypeError instead of returning a normal
+  // { ok: false } / { ok: true } result. Fixed by normalizing opts ??
+  // {} at the top of every function taking an options object.
+  const validGate = {
+    contract_version: "1.0",
+    gate_id: uuid("gatef8"),
+    request_id: uuid("req1"),
+    action: "core.generate_strategy",
+    state: "REQUESTED",
+    expires_at: FUTURE,
+  };
+  // deno-lint-ignore no-explicit-any
+  assertValid(validateHumanGateRecord(validGate, null as any), "F-08: null opts on validateHumanGateRecord must not throw");
+  // deno-lint-ignore no-explicit-any
+  assertValid(validateExecutionRequest(baseRequest(), null as any), "F-08: null opts on validateExecutionRequest must not throw");
+
+  const validDelegation: Record<string, unknown> = {
+    contract_version: "1.0",
+    delegation_id: uuid("delf8"),
+    issuer: { type: "service", id: "ive", auth_ref: "svc:ive-core" },
+    subject: { type: "user", id: "user-42", auth_ref: "usr:session-abc123" },
+    audience: "aef.core",
+    issued_at: "2026-09-18T11:55:00.000Z",
+    expires_at: FUTURE,
+    nonce: "nonce-f8-aaaaaaaaaaaa",
+    purpose: "test",
+    scope: ["core.generate_strategy"],
+    request_binding: uuid("req1"),
+    auth_assertion_ref: "ref-f8",
+  };
+  // deno-lint-ignore no-explicit-any
+  assertValid(validateDelegationEnvelope(validDelegation, null as any), "F-08: null opts on validateDelegationEnvelope must not throw");
 });
 
 // =======================================================================
