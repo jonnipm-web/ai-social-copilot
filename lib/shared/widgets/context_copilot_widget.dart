@@ -81,27 +81,37 @@ void showCopilotChat(
 // presentation SHELL, not a second assistant.
 void _presentCopilotSheet(BuildContext context, {required bool desktop, required Widget child}) {
   iveChatOpenNotifier.value = true;
-  final Future<void> closed;
-  if (desktop) {
-    closed = showDialog(
-      context: context,
-      builder: (_) => ProviderScope(
-        parent: ProviderScope.containerOf(context),
-        child:  child,
-      ),
-    );
-  } else {
-    closed = showModalBottomSheet(
-      context:            context,
-      isScrollControlled:  true,
-      backgroundColor:     Colors.transparent,
-      builder: (_) => ProviderScope(
-        parent: ProviderScope.containerOf(context),
-        child:  child,
-      ),
-    );
+  try {
+    final Future<void> closed;
+    if (desktop) {
+      closed = showDialog(
+        context: context,
+        builder: (_) => ProviderScope(
+          parent: ProviderScope.containerOf(context),
+          child:  child,
+        ),
+      );
+    } else {
+      closed = showModalBottomSheet(
+        context:            context,
+        isScrollControlled:  true,
+        backgroundColor:     Colors.transparent,
+        builder: (_) => ProviderScope(
+          parent: ProviderScope.containerOf(context),
+          child:  child,
+        ),
+      );
+    }
+    closed.whenComplete(() => iveChatOpenNotifier.value = false);
+  } catch (_) {
+    // Codex Gate (P2 ACCEPTED) — showDialog/showModalBottomSheet can throw
+    // synchronously (e.g. an unmounted/invalid context) before ever
+    // returning a Future to attach whenComplete to, which would otherwise
+    // leave iveChatOpenNotifier stuck true forever, permanently hiding
+    // IveOverlay for a chat that never actually opened.
+    iveChatOpenNotifier.value = false;
+    rethrow;
   }
-  closed.whenComplete(() => iveChatOpenNotifier.value = false);
 }
 
 class ContextCopilotButton extends ConsumerWidget {

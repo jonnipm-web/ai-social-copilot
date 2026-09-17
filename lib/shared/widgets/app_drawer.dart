@@ -255,6 +255,19 @@ IconData drawerIconFor(String moduleId) {
   return icons[moduleId] ?? Icons.circle_outlined;
 }
 
+// Codex Gate (COMMERCIAL-EXPERIENCE-CLOSURE-16, P2 ACCEPTED) — the five
+// routes _NavItem's push:true covers (see call sites above). Kept as its
+// own named set (not inferred from the `push` flags scattered across the
+// call sites) so the pushReplacement guard below stays correct even if a
+// future edit reorders those call sites.
+const Set<String> _kSettingsStyleRoutes = {
+  AppConstants.routeUpgrade,
+  AppConstants.routeAccount,
+  AppConstants.routeSupport,
+  AppConstants.routeAbout,
+  AppConstants.routeAdmin,
+};
+
 class _NavItem extends StatelessWidget {
   const _NavItem({
     required this.icon,
@@ -302,7 +315,20 @@ class _NavItem extends StatelessWidget {
       onTap: () {
         Navigator.of(context).pop();
         if (push) {
-          context.push(route);
+          // Codex Gate (P2 ACCEPTED) — plain push() on these drill-in
+          // destinations lets the back-stack grow without bound if the
+          // user bounces between them (Account -> drawer -> Support ->
+          // drawer -> About -> ...), each one stacking on the last
+          // instead of replacing it. Already being on one of these five
+          // settings-style screens and picking another replaces it
+          // in-place instead — caps the stack at one settings screen deep
+          // while still preserving the single real back-entry to
+          // whatever the user was doing before opening the drawer.
+          if (_kSettingsStyleRoutes.contains(current)) {
+            context.pushReplacement(route);
+          } else {
+            context.push(route);
+          }
         } else {
           context.go(route);
         }
