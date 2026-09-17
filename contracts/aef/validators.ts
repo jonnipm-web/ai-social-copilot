@@ -69,6 +69,20 @@ function isIsoDateTime(v: unknown): v is string {
   return !Number.isNaN(d.getTime()) && v.includes("T");
 }
 
+/**
+ * Resolves an options object's `now` field defensively (Codex adversarial
+ * review, round 3, Finding N-04): a caller passing a malformed value for
+ * `now` (a string, an Invalid Date, `NaN`, etc.) must not crash the
+ * validator with a downstream TypeError on `.getTime()` -- it is treated
+ * the same as if `now` had been omitted entirely, falling back to the
+ * real current time. This preserves the package-wide guarantee that any
+ * input, however malformed, yields a normal ValidationResult, never a
+ * thrown exception.
+ */
+function resolveNow(now: unknown): Date {
+  return now instanceof Date && !Number.isNaN(now.getTime()) ? now : new Date();
+}
+
 // ---------------------------------------------------------------------
 // Actor
 // ---------------------------------------------------------------------
@@ -146,7 +160,7 @@ export function validateExecutionRequest(
   // object) so a caller passing `null` behaves identically to omitting the
   // argument entirely.
   opts = opts ?? {};
-  const now = opts.now ?? new Date();
+  const now = resolveNow(opts.now);
   const errors: string[] = [];
 
   const ALLOWED_KEYS = new Set([
@@ -382,7 +396,7 @@ export function validateDelegationEnvelope(
 ): ValidationResult {
   if (!isPlainObject(value)) return fail("delegation: must be an object");
   opts = opts ?? {}; // see F-08/N-01 comment in validateExecutionRequest above
-  const now = opts.now ?? new Date();
+  const now = resolveNow(opts.now);
   const errors: string[] = [];
 
   const ALLOWED_KEYS = new Set([
@@ -644,7 +658,7 @@ export function validateHumanGateRecord(
 ): ValidationResult {
   if (!isPlainObject(value)) return fail("gate: must be an object");
   opts = opts ?? {}; // see F-08/N-01 comment in validateExecutionRequest above
-  const now = opts.now ?? new Date();
+  const now = resolveNow(opts.now);
   const errors: string[] = [];
 
   const ALLOWED_GATE_KEYS = new Set([

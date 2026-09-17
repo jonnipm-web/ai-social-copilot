@@ -806,6 +806,30 @@ Deno.test("F-08 regression (round 2): explicit null for the options parameter be
   assertValid(validateDelegationEnvelope(validDelegation, null as any), "F-08: null opts on validateDelegationEnvelope must not throw");
 });
 
+Deno.test("N-04 regression (round 3): a malformed opts.now does not throw, falls back to real time", () => {
+  // Codex adversarial review (round 3, Finding N-04): a type-confused
+  // caller passing e.g. opts.now = "not-a-Date" (a string) reached
+  // `now.getTime()` downstream and threw a TypeError instead of getting
+  // back a normal ValidationResult. Fixed via resolveNow() in
+  // validators.ts, which falls back to the real current time for any
+  // non-Date or Invalid Date value, exactly as if `now` had been omitted.
+  // deno-lint-ignore no-explicit-any
+  assertValid(validateExecutionRequest(baseRequest(), { now: "not-a-Date" as any }), "N-04: string now on validateExecutionRequest must not throw");
+  // deno-lint-ignore no-explicit-any
+  assertValid(validateExecutionRequest(baseRequest(), { now: new Date("not-a-real-date") as any }), "N-04: Invalid Date now on validateExecutionRequest must not throw");
+
+  const gate = {
+    contract_version: "1.0",
+    gate_id: uuid("gaten04"),
+    request_id: uuid("req1"),
+    action: "core.generate_strategy",
+    state: "REQUESTED",
+    expires_at: FUTURE,
+  };
+  // deno-lint-ignore no-explicit-any
+  assertValid(validateHumanGateRecord(gate, { now: "not-a-Date" as any }), "N-04: string now on validateHumanGateRecord must not throw");
+});
+
 // =======================================================================
 // SECTION 16 -- NEGATIVE-SPACE TEST: no execution capability exists here
 // =======================================================================

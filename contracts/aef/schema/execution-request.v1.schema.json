@@ -72,9 +72,14 @@
       "description": "Optional. What the action targets, if anything (e.g. a project, a campaign). Descriptive only."
     },
     "parameters": {
-      "type": "object",
-      "description": "Domain/action-specific data. Intentionally NOT additionalProperties=false at the schema level (extensible per action), but is recursively scanned for PROHIBITED_AUTHORITY_FIELDS at runtime by validators.ts -- schema permissiveness here is not a security boundary, the scanner is.",
-      "maxProperties": 50
+      "allOf": [
+        { "$ref": "#/definitions/AsciiKeyedValue" },
+        {
+          "type": "object",
+          "maxProperties": 50
+        }
+      ],
+      "description": "Domain/action-specific data. Intentionally NOT additionalProperties=false at the schema level (extensible per action) and the specific PROHIBITED_AUTHORITY_FIELDS name list is NOT expressible here either (runtime-only, see prohibited_fields.ts) -- but the ASCII-identifier-key restriction (Codex adversarial review, round 3, Finding N-03) IS expressible in pure JSON Schema via the recursive AsciiKeyedValue definition below, so a schema-only implementation can no longer accept the Unicode-homoglyph bypass class that only the TypeScript validator previously caught."
     },
     "constraints": {
       "type": "object",
@@ -116,9 +121,10 @@
     },
     "metadata": {
       "type": "object",
+      "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
       "additionalProperties": { "type": "string", "maxLength": 500 },
       "maxProperties": 20,
-      "description": "Optional, free-form STRING-only annotations. Explicitly documented and enforced (validators.ts) as NEVER consulted for authorization -- purely descriptive/telemetry. Still scanned for prohibited field names as defense-in-depth."
+      "description": "Optional, free-form STRING-only annotations. Explicitly documented and enforced (validators.ts) as NEVER consulted for authorization -- purely descriptive/telemetry. Still scanned for prohibited field names as defense-in-depth. Keys are restricted to plain ASCII identifiers at the schema level (Codex adversarial review, round 3, Finding N-03), matching prohibited_fields.ts's ASCII_IDENTIFIER_RE."
     }
   },
   "definitions": {
@@ -141,9 +147,40 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 300,
-          "description": "Reference to a verifiable authentication assertion that an INDEPENDENT component (not the request's own author) must resolve before treating `id` as real. For type=user this must be prefixed 'usr:'; for type=service, 'svc:'; for type=system, the fixed literal 'system:internal'. This schema does not implement the verification itself -- see README's trust principle section."
+          "description": "Reference to a verifiable authentication assertion that an INDEPENDENT component (not the request's own author) must resolve before treating `id` as real. For type=user this must be prefixed 'usr:' followed by a substantive identifier (>= 8 chars); for type=service, 'svc:' likewise; for type=system, the fixed literal 'system:internal'. The per-type pattern is enforced below via if/then, mirroring validators.ts's MIN_AUTH_REF_SUFFIX_LENGTH check (Codex adversarial review, round 3, Finding N-03 -- this schema previously only required minLength:1, silently accepting the degenerate values the validator already rejected). This schema does not implement the verification itself -- see README's trust principle section and its escalated-architectural-decision note on auth_ref (Finding F-02)."
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "user" } } },
+          "then": { "properties": { "auth_ref": { "pattern": "^usr:.{8,}$" } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "service" } } },
+          "then": { "properties": { "auth_ref": { "pattern": "^svc:.{8,}$" } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "system" } } },
+          "then": { "properties": { "auth_ref": { "const": "system:internal" } } }
+        }
+      ]
+    },
+    "AsciiKeyedValue": {
+      "description": "Recursively restricts every object key, at every nesting depth, to a plain ASCII identifier -- mirrors prohibited_fields.ts's ASCII_IDENTIFIER_RE (/^[A-Za-z_][A-Za-z0-9_]*$/) so a schema-only implementation cannot accept the Unicode-homoglyph field-name bypass that Codex adversarial review (round 2, Finding F-01 partial) found the TypeScript validator alone previously caught (round 3, Finding N-03). Used by ExecutionRequest.parameters, which is otherwise intentionally open/extensible (no fixed shape, no additionalProperties=false) -- this is the one constraint on that openness expressible in pure JSON Schema; the PROHIBITED_AUTHORITY_FIELDS name list itself remains runtime-only (see prohibited_fields.ts and README.md).",
+      "anyOf": [
+        {
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+          "additionalProperties": { "$ref": "#/definitions/AsciiKeyedValue" }
+        },
+        {
+          "type": "array",
+          "items": { "$ref": "#/definitions/AsciiKeyedValue" }
+        },
+        {
+          "type": ["string", "number", "boolean", "null"]
+        }
+      ]
     }
   }
 }
