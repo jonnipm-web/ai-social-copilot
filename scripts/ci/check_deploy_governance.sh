@@ -137,26 +137,39 @@ if [ -f "$ALLOWLIST" ]; then
       fi
     fi
   done < "$ALLOWLIST"
+else
+  fail "$ALLOWLIST does not exist -- cannot verify the no-verify-jwt invariant at all; treat a missing allowlist as a governance failure, not a pass"
 fi
 
 # Reverse direction: every declared exception must actually be present,
 # with the exact expected flag, in BOTH the allowlist and config.toml --
 # catches silent drift (e.g. the exception quietly dropped from one file
-# but not the other) that a one-directional check would miss.
+# but not the other) that a one-directional check would miss. Both files
+# are REQUIRED to exist for this to be checkable at all -- a missing file
+# fails closed (a prior version of this check silently skipped a missing
+# file instead, which a Codex adversarial review correctly flagged as a
+# fail-open gap, IV-SECURITY-REMEDIATION-03).
+if [ ! -f "$CONFIG_TOML" ]; then
+  fail "$CONFIG_TOML does not exist -- cannot verify allowlist/config.toml consistency for the no-verify-jwt exception(s)"
+fi
 for exception in "${NO_VERIFY_JWT_EXCEPTIONS[@]}"; do
   if [ -f "$ALLOWLIST" ] && ! grep -qP "^${exception}\t--no-verify-jwt\r?$" "$ALLOWLIST"; then
     fail "'$exception' is declared as a no-verify-jwt exception in $0 but is missing (or has the wrong flag) in $ALLOWLIST"
   fi
   if [ -f "$CONFIG_TOML" ]; then
+    # Strip full-line comments before matching -- a commented-out
+    # 'verify_jwt = false' must not count as the real setting (Codex
+    # adversarial review, IV-SECURITY-REMEDIATION-03).
     if ! grep -q "^\[functions\.${exception}\]$" "$CONFIG_TOML"; then
       fail "'$exception' is declared as a no-verify-jwt exception in $0 but has no [functions.${exception}] section in $CONFIG_TOML"
     elif ! awk -v sec="[functions.${exception}]" '
+      /^[[:space:]]*#/ { next }
       $0 == sec { found=1; next }
       found && /^\[/ { found=0 }
       found && /verify_jwt[[:space:]]*=[[:space:]]*false/ { ok=1 }
       END { exit ok ? 0 : 1 }
     ' "$CONFIG_TOML"; then
-      fail "'$exception' has a [functions.${exception}] section in $CONFIG_TOML but it does not set verify_jwt = false -- allowlist/config.toml drift"
+      fail "'$exception' has a [functions.${exception}] section in $CONFIG_TOML but it does not set verify_jwt = false (or only sets it in a commented-out line) -- allowlist/config.toml drift"
     fi
   fi
 done

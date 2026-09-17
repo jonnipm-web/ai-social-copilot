@@ -11,14 +11,14 @@
 
 | Item | Status |
 |---|---|
-| **SR-04** (source-of-truth drift) | **CONTAINED — pending PR merge** ([PR #97](https://github.com/jonnipm-web/ai-social-copilot/pull/97)). Runtime and this branch already match; `origin/main` will match once merged. |
-| **SR-05** (auth/JWT gap) | **CLOSED** — verified live in production, does not depend on merge status |
+| **SR-04** (source-of-truth drift) | **CLOSED** — [PR #97](https://github.com/jonnipm-web/ai-social-copilot/pull/97) merged into `origin/main` (`IV-SECURITY-REMEDIATION-03`, merge commit `f9c20f7`). `origin/main` now contains `supabase/functions/ive-agent-runner/index.ts`, matching production. |
+| **SR-05** (auth/JWT gap) | **CLOSED** — verified live in production, independent of merge status |
 | `ive-agent-runner` deployment version | 6 (was 5) |
 | `verify_jwt` | `true` (was `false`) |
 | Business logic present | **None** — function is an inert retirement stub |
 | Deployment governance hard-block | **Preserved, unchanged** |
 
-**Note on SR-04 status (Codex-reviewed, P1 finding, resolved by opening PR #97):** the production runtime fix and this repository's source addition are both real and already in effect on branch `ive-commercial-autonomous-15` (commit `356f550`). The *fully* closed state for SR-04 — where anyone reading `origin/main` sees a canonical source matching production — requires this PR to be reviewed and merged. Do not report SR-04 as unconditionally `CLOSED` until that merge lands.
+**Note on SR-04 status (updated by `IV-SECURITY-REMEDIATION-03`):** this doc previously reported SR-04 as `CONTAINED — pending PR merge`, correctly, at the time `IV-SECURITY-REMEDIATION-02` closed. `IV-SECURITY-REMEDIATION-03` reviewed PR #97 (confirmed diff was exactly the 3 files this mission describes, CI green, no stray changes), merged it, and independently re-verified `origin/main:supabase/functions/ive-agent-runner/index.ts` is byte-identical to what was committed here. SR-04 is now genuinely `CLOSED` by the same evidentiary standard the rest of this document already uses — repository truth and, per the runtime checks below, production truth agree.
 
 ---
 
