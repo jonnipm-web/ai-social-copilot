@@ -241,5 +241,14 @@
   "@oppKnowledgeCountSelected": {
     "placeholders": { "count": { "type": "int" } }
   },
-  "oppLinkedKnowledgeTitle": "Linked knowledge"
+  "oppLinkedKnowledgeTitle": "Linked knowledge",
+
+  "oppTypeExpansao": "Expansion",
+  "oppTypeNovoProduto": "New Product",
+  "oppTypeNovoNicho": "New Niche",
+  "oppTypeAfiliado": "Affiliate",
+  "oppTypeSaas": "SaaS",
+  "oppTypeEbook": "Ebook",
+  "oppTypeCurso": "Course",
+  "oppTypeAssinatura": "Subscription"
 }

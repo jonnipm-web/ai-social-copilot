@@ -13,6 +13,7 @@ import '../../../providers/feature_flag_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../action_engine/screens/action_detail_screen.dart';
+import '../opportunity_type_labels.dart';
 import 'opportunity_detail_screen.dart';
 
 // ── Colors ───────────────────────────────────────────────────────────────────
@@ -331,7 +332,7 @@ class _LabItemCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  item.opportunityType.toUpperCase(),
+                  opportunityTypeLabel(item.opportunityType, AppLocalizations.of(context)!).toUpperCase(),
                   style: const TextStyle(
                       color: _kPrimary, fontSize: 9, fontWeight: FontWeight.bold),
                 ),
@@ -614,7 +615,7 @@ class _AddOpportunityDialogState
                 items: OpportunityLabItem.types
                     .map((t) => DropdownMenuItem(
                           value: t,
-                          child: Text(t),
+                          child: Text(opportunityTypeLabel(t, l10n)),
                         ))
                     .toList(),
                 onChanged: (v) => setState(() => _type = v ?? _type),

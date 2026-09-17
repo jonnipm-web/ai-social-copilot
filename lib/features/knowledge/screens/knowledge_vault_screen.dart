@@ -584,7 +584,24 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
                     style: const TextStyle(color: Colors.white54, fontSize: 12)),
               ],
               const SizedBox(height: 12),
-              Row(
+              // COMMERCIAL-EXPERIENCE-CLOSURE-16R (mission Section 05) —
+              // owner-supplied physical evidence (Samsung SM-S938B):
+              // this Row had 3 text-labelled action buttons plus a
+              // Spacer plus up to 2 icon buttons, none wrapped/sized to
+              // the card's actual width -- guaranteed RenderFlex
+              // overflow on any real phone once the project chip label
+              // ("Trocar Projeto"/"Adicionar a Projeto") pushed total
+              // content width past ~320-412dp. Wrap (not a scrollable
+              // Row, not an overflow menu) keeps every action
+              // immediately visible and tappable -- nothing hidden --
+              // while flowing to a second line on narrow widths instead
+              // of clipping. Spacer removed (meaningless outside a
+              // Flex/Row's own main axis); icon actions now trailing
+              // Wrap children instead of push-to-the-right.
+              Wrap(
+                spacing:    8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   _ActionButton(
                     label: item.status == 'analyzed'
@@ -643,7 +660,6 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
                       }
                     },
                   ),
-                  const SizedBox(width: 8),
                   _ActionButton(
                     label: 'Editar',
                     icon: Icons.edit_rounded,
@@ -653,7 +669,6 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
                           .replaceFirst(':id', item.id),
                     ),
                   ),
-                  const SizedBox(width: 8),
                   _ActionButton(
                     label: item.projectId == null
                         ? 'Adicionar a Projeto'
@@ -664,7 +679,6 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
                       context, ref, item, projects, onInvalidate,
                     ),
                   ),
-                  const Spacer(),
                   // IVE-EXPERIENCE-V1-06 (Section 22) — only once there is
                   // content to explain (item.status == 'analyzed'); reuses
                   // the existing project-scoped grounding

@@ -60,7 +60,13 @@ void main() {
   // before the test ends, which would otherwise leave the notifier `true`
   // and incorrectly hide every subsequent test's IveOverlay. Reset before
   // each test so ordering never matters.
-  setUp(() => iveChatOpenNotifier.value = false);
+  setUp(() {
+    iveChatOpenNotifier.value = false;
+    // Test H below balances its own push/pop, so the internal counter
+    // self-resets to 0 -- this just also resets the public notifier in
+    // case a future test in this file leaves it unbalanced.
+    iveModalOpenNotifier.value = false;
+  });
 
   // STABILITY-10 -- IveOverlay now requires a navigatorKey (see its own
   // constructor doc). A-D below only exercise auth-gating/rendering, not
@@ -381,6 +387,91 @@ void main() {
         expect(tester.takeException(), isNull, reason: 'threw on pump #$i with navigatorKey never attached');
       }
       expect(find.text('Pergunte à IVE'), findsNothing);
+    },
+  );
+
+  // H — COMMERCIAL-EXPERIENCE-CLOSURE-16R (mission Section 07) — owner-
+  // supplied physical evidence (Performance -> Nova Métrica): IveOverlay
+  // covered the primary "Salvar" button of a plain showModalBottomSheet
+  // that has NOTHING to do with the copilot chat. Proves the generic
+  // fix -- IveRouteObserver counting PopupRoute push/pop -- hides
+  // IveOverlay for ANY modal, not just showCopilotChat's own sheet/dialog.
+  testWidgets(
+    'H. IveOverlay some enquanto QUALQUER modal genérico (não relacionado ao chat) está aberto',
+    (tester) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final navigatorKey = GlobalKey<NavigatorState>();
+      final router = GoRouter(
+        navigatorKey: navigatorKey,
+        initialLocation: '/',
+        observers: [IveRouteObserver()],
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, __) => Scaffold(
+              body: Center(
+                child: ElevatedButton(
+                  onPressed: () => showModalBottomSheet(
+                    context: context,
+                    builder: (_) => const SizedBox(height: 200, child: Center(child: Text('Salvar'))),
+                  ),
+                  child: const Text('open unrelated sheet'),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
+          currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
+          authStateProvider.overrideWith((ref) => Stream.value(_authState(session: MockSession()))),
+        ],
+        child: MaterialApp.router(
+          routerConfig: router,
+          locale: const Locale('pt'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => Stack(
+            children: [
+              child!,
+              IveOverlay(navigatorKey: navigatorKey),
+            ],
+          ),
+        ),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      final avatarFinder = find.byWidgetPredicate(
+        (w) => w is Semantics && w.properties.label == 'IVE, assistente executiva',
+      );
+      expect(avatarFinder, findsOneWidget, reason: 'IVE avatar visible before the unrelated sheet opens');
+
+      // Not pumpAndSettle: IveAvatar's ring-pulse animation never settles
+      // on its own (same caveat as test F above) -- bounded pumps instead.
+      await tester.tap(find.text('open unrelated sheet'));
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      expect(avatarFinder, findsNothing, reason: 'IVE avatar must hide while ANY modal covers the screen');
+      expect(find.text('Salvar'), findsOneWidget);
+
+      // Close it -- IveOverlay must reappear.
+      Navigator.of(tester.element(find.text('Salvar')), rootNavigator: true).pop();
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      expect(avatarFinder, findsOneWidget, reason: 'IVE avatar must reappear once the modal closes');
+      expect(tester.takeException(), isNull);
     },
   );
 }

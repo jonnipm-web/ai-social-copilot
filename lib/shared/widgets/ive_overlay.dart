@@ -19,22 +19,62 @@ import 'context_copilot_widget.dart' show showCopilotChat, iveChatOpenNotifier;
 // ── Route bridge ──────────────────────────────────────────────────────────────
 final iveRouteNotifier = ValueNotifier<String>('');
 
+// COMMERCIAL-EXPERIENCE-CLOSURE-16R (mission Section 07) — owner-supplied
+// physical evidence (Performance -> Nova Métrica): IveOverlay is a Stack
+// SIBLING of the router's own content (STABILITY-09/10 topology), painted
+// AFTER it, so it visually sits on top of ANY modal (showDialog,
+// showModalBottomSheet) too, since a modal's content still lives inside
+// that same `child` subtree, not in some separate layer above IveOverlay.
+// iveChatOpenNotifier (context_copilot_widget.dart) already fixed this for
+// the ONE known case (the copilot chat sheet/dialog), but that required
+// every call site to explicitly set it -- exactly the "per-screen hack"
+// mission Section 07 says to avoid for the GENERAL problem. This instead
+// generalizes via the NavigatorObserver already registered on the app's
+// single root Navigator (app.dart's `observers: [_iveObserver]`): every
+// dialog and modal bottom sheet in Flutter is a PopupRoute under the hood,
+// so counting PopupRoute push/pop here catches EVERY modal in the app,
+// present and future, with zero changes required at any call site --
+// "Nova Métrica" included, with no Performance-specific fix needed.
+final iveModalOpenNotifier = ValueNotifier<bool>(false);
+int _iveOpenModalCount = 0;
+
+void _iveModalCountChanged(int delta) {
+  _iveOpenModalCount = (_iveOpenModalCount + delta).clamp(0, 1 << 30);
+  iveModalOpenNotifier.value = _iveOpenModalCount > 0;
+}
+
 class IveRouteObserver extends NavigatorObserver {
   void _notify(Route route) {
     final name = route.settings.name ?? '';
     if (name.isNotEmpty) iveRouteNotifier.value = name;
   }
 
-  @override void didPush(Route route, Route? previousRoute) => _notify(route);
+  @override
+  void didPush(Route route, Route? previousRoute) {
+    _notify(route);
+    if (route is PopupRoute) _iveModalCountChanged(1);
+  }
 
   @override
   void didPop(Route route, Route? previousRoute) {
     if (previousRoute != null) _notify(previousRoute);
+    if (route is PopupRoute) _iveModalCountChanged(-1);
+  }
+
+  @override
+  void didRemove(Route route, Route? previousRoute) {
+    // Codex Gate precedent (COMMERCIAL-EXPERIENCE-CLOSURE-16 P2) — a modal
+    // can leave the tree via removal (e.g. programmatic dismissal) rather
+    // than a "normal" pop; only counting didPop would leak this counter
+    // upward forever in that path, permanently hiding IveOverlay.
+    if (route is PopupRoute) _iveModalCountChanged(-1);
   }
 
   @override
   void didReplace({Route? newRoute, Route? oldRoute}) {
     if (newRoute != null) _notify(newRoute);
+    if (oldRoute is PopupRoute) _iveModalCountChanged(-1);
+    if (newRoute is PopupRoute) _iveModalCountChanged(1);
   }
 }
 
@@ -74,6 +114,10 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
     // it) and reappear once it closes. Same listener pattern as
     // iveRouteNotifier just above, not a new mechanism.
     iveChatOpenNotifier.addListener(_onChatOpenChange);
+    // COMMERCIAL-EXPERIENCE-CLOSURE-16R — generic modal-collision guard
+    // (see iveModalOpenNotifier's own doc comment above); same listener
+    // pattern, not a new mechanism.
+    iveModalOpenNotifier.addListener(_onChatOpenChange);
     // IVE-COMMERCIAL-STABILITY-09O — reuses this already-existing lifecycle
     // callback; no new listener.
     IveForensicSnapshot.overlayMounted = true;
@@ -83,6 +127,7 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
   void dispose() {
     iveRouteNotifier.removeListener(_onRouteChange);
     iveChatOpenNotifier.removeListener(_onChatOpenChange);
+    iveModalOpenNotifier.removeListener(_onChatOpenChange);
     // IVE-COMMERCIAL-STABILITY-09O (Codex Gate, P2 ACCEPTED) — a dispose
     // mid-drag (e.g. a fast sign-out while dragging) would otherwise leave
     // overlayDragging stuck true forever, misleadingly implying an
@@ -170,7 +215,11 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
     // this is a purely visual, momentary state with no forensic
     // implication, and the underlying IVE state itself is unchanged while
     // the chat is open.
-    if (iveChatOpenNotifier.value) {
+    // COMMERCIAL-EXPERIENCE-CLOSURE-16R — generalizes the check above to
+    // ANY open modal (dialog/bottom sheet), not just the copilot chat one
+    // -- see iveModalOpenNotifier's doc comment for why this is a single
+    // app-wide NavigatorObserver check rather than a per-screen fix.
+    if (iveChatOpenNotifier.value || iveModalOpenNotifier.value) {
       return const SizedBox.shrink();
     }
 

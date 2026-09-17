@@ -74,20 +74,12 @@ class AccountScreen extends ConsumerWidget {
               child: LinearProgressIndicator(),
             ),
             error: (_, __) => const SizedBox.shrink(),
-            data: (quota) => ListTile(
-              leading: Icon(
-                quota.isPro ? Icons.workspace_premium_rounded : Icons.card_giftcard_rounded,
-                color: quota.isPro ? const Color(0xFFFFD700) : Colors.white70,
-              ),
-              title: Text(quota.isPro ? t.planPro : t.planFree),
-              subtitle: Text(
-                '${t.accountUsage}: ${quota.used} / ${quota.limit}',
-                style: const TextStyle(color: Colors.white38, fontSize: 12),
-              ),
-              trailing: TextButton(
-                onPressed: () => context.push(AppConstants.routeUpgrade),
-                child: Text(t.accountUpgradeManage),
-              ),
+            data: (quota) => _PlanSection(
+              isPro: quota.isPro,
+              planLabel: quota.isPro ? t.planPro : t.planFree,
+              usageLabel: '${t.accountUsage}: ${quota.used} / ${quota.limit}',
+              ctaLabel: t.accountUpgradeManage,
+              onTapCta: () => context.push(AppConstants.routeUpgrade),
             ),
           ),
           const Divider(color: Colors.white12, height: 32),
@@ -113,6 +105,77 @@ class AccountScreen extends ConsumerWidget {
               await ref.read(authNotifierProvider.notifier).signOut();
               if (context.mounted) context.go(AppConstants.routeLogin);
             },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// COMMERCIAL-EXPERIENCE-CLOSURE-16R (mission Section 06) — owner-supplied
+// physical evidence (Samsung SM-S938B): the previous single ListTile put
+// title ("Pro Founder") + subtitle (usage) in its Expanded middle column
+// while `trailing` held a TextButton whose label
+// (accountUpgradeManage — "Fazer upgrade / gerenciar assinatura" in PT)
+// is long. ListTile's trailing column is intrinsically sized, not
+// responsive, so on a real phone width it ate most of the row, collapsing
+// title/subtitle's available width down to a handful of pixels -- each
+// wrapped to nearly one character per line. No breakpoint patch fixes
+// this correctly, because the underlying problem (two independently-sized,
+// width-competing text blocks forced into one Row) exists at every width,
+// just less visibly on a wide desktop window. Stacking the CTA on its own
+// line below removes the competition entirely, unconditionally.
+class _PlanSection extends StatelessWidget {
+  const _PlanSection({
+    required this.isPro,
+    required this.planLabel,
+    required this.usageLabel,
+    required this.ctaLabel,
+    required this.onTapCta,
+  });
+
+  final bool         isPro;
+  final String       planLabel;
+  final String       usageLabel;
+  final String       ctaLabel;
+  final VoidCallback onTapCta;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                isPro ? Icons.workspace_premium_rounded : Icons.card_giftcard_rounded,
+                color: isPro ? const Color(0xFFFFD700) : Colors.white70,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(planLabel, style: const TextStyle(color: Colors.white, fontSize: 16)),
+                    const SizedBox(height: 2),
+                    Text(
+                      usageLabel,
+                      style: const TextStyle(color: Colors.white38, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: onTapCta,
+              child: Text(ctaLabel),
+            ),
           ),
         ],
       ),
