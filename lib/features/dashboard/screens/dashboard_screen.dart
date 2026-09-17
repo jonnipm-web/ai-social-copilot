@@ -255,16 +255,27 @@ class _UsageCard extends StatelessWidget {
                 size: 18,
               ),
               const SizedBox(width: 8),
-              Text(
-                isFull
-                    ? 'Limite atingido'
-                    : '$remaining de $limit gerações restantes',
-                style: TextStyle(
-                  color: isFull ? Colors.red : Colors.white,
-                  fontWeight: FontWeight.w600,
+              // COMMERCIAL-EXPERIENCE-CLOSURE-16R (mission Section 03/09)
+              // — sweep for the same class of defect as the 3 owner-
+              // reported ones: this Text's content is dynamic ("$remaining
+              // de $limit gerações restantes") with no Expanded/Flexible,
+              // sharing a Row with a trailing Spacer + "este mês" -- at a
+              // real narrow width this can overflow exactly like Knowledge
+              // Vault's cards did. Expanded + ellipsis keeps the fixed-size
+              // trailing label always visible and readable instead.
+              Expanded(
+                child: Text(
+                  isFull
+                      ? 'Limite atingido'
+                      : '$remaining de $limit gerações restantes',
+                  style: TextStyle(
+                    color: isFull ? Colors.red : Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
               Text(
                 'este mês',
                 style: const TextStyle(color: Colors.white38, fontSize: 12),
