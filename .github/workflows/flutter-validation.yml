@@ -49,3 +49,17 @@ jobs:
 
       - name: flutter build web (release, build gate only -- never published)
         run: flutter build web --release
+
+      - name: TEMP -- IVE-VISUAL-CANONICAL-INTEGRATION-07V render-proof capture
+        # Temporary step, this branch only -- captures real rendered pixels
+        # (RenderRepaintBoundary.toImage()) of the actual IveAvatar widget
+        # for A/B visual proof. Not merged to main; removed before this
+        # branch is finalized.
+        run: flutter test test/features/ive/_visual_render_proof_test.dart --reporter expanded
+
+      - name: TEMP -- upload render-proof PNGs
+        uses: actions/upload-artifact@v4
+        with:
+          name: ive-visual-render-proof
+          path: render_proof/
+          retention-days: 7
