@@ -11,12 +11,14 @@
 
 | Item | Status |
 |---|---|
-| **SR-04** (source-of-truth drift) | **CLOSED** |
-| **SR-05** (auth/JWT gap) | **CLOSED** |
+| **SR-04** (source-of-truth drift) | **CONTAINED — pending PR merge** ([PR #97](https://github.com/jonnipm-web/ai-social-copilot/pull/97)). Runtime and this branch already match; `origin/main` will match once merged. |
+| **SR-05** (auth/JWT gap) | **CLOSED** — verified live in production, does not depend on merge status |
 | `ive-agent-runner` deployment version | 6 (was 5) |
 | `verify_jwt` | `true` (was `false`) |
 | Business logic present | **None** — function is an inert retirement stub |
 | Deployment governance hard-block | **Preserved, unchanged** |
+
+**Note on SR-04 status (Codex-reviewed, P1 finding, resolved by opening PR #97):** the production runtime fix and this repository's source addition are both real and already in effect on branch `ive-commercial-autonomous-15` (commit `356f550`). The *fully* closed state for SR-04 — where anyone reading `origin/main` sees a canonical source matching production — requires this PR to be reviewed and merged. Do not report SR-04 as unconditionally `CLOSED` until that merge lands.
 
 ---
 
@@ -68,3 +70,7 @@
   1. A mission must explicitly authorize touching this function again.
   2. If the future change is "replace with AEF-routed adapter" (Runner Transition Decision step E), it must go through `IV-AEF-FOUNDATION-01` (or successor), not be improvised ad hoc.
   3. If the future change is "restore functionality," the requesting mission must independently re-derive the desired behavior and threat model — it must **not** treat the frozen `release/phase-10-stabilization` code as a ready-to-use specification (per `IV-EVIDENCE-TRUST-BOUNDARY-DESIGN-01`'s and this repository's `X4A`/`X4R` findings).
+
+## Rollback
+
+If this change needs to be reverted for any reason, **do not** redeploy the historical version 5 — that would silently reintroduce the exact `verify_jwt=false` exposure this mission closed. A safe rollback deploys another known-safe inert stub (this one, or an equivalent), the same way this one was deployed (direct, outside CI, under an explicit mission), and reverts the two repository files (`supabase/functions/ive-agent-runner/index.ts`, this doc) via a normal `git revert` of commit `356f550`. A full backup of the pre-change function state (version 5 metadata, including its `ezbr_sha256`) was archived during this mission for audit purposes; the historical source itself remains recoverable from `origin/release/phase-10-stabilization` if ever needed for forensic reference — not for redeployment.
