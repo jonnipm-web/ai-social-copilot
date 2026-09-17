@@ -8,7 +8,23 @@ abstract final class IveAssetPaths {
   // Do NOT rename to ive_executive_v1.riv until a production gate approves
   // it; do NOT merge this pointer change to main as-is.
   static const riveAsset      = 'assets/ive/rive/ive_executive_03b6_canary.riv';
+
+  // IVE-VISUAL-CANONICAL-INTEGRATION-07 — superseded by [avatarPortrait]
+  // below (IveVisualFallback no longer references this). Left defined
+  // rather than deleted: removing it is a separate, Codex-gated cleanup
+  // decision (not required for this integration), and it has zero
+  // remaining references as of this change.
   static const referenceImage = 'assets/ive/reference/ive_character_reference.png';
+
+  // IVE-VISUAL-CANONICAL-INTEGRATION-07 — the approved canonical IVE
+  // portrait (see docs/ive/IVE_AVATAR_03B2_ASSET_PROVENANCE.md), used by
+  // IveVisualFallback as the commercial Avatar's displayed identity. A real
+  // alpha-channel character cutout (1254x1254 RGBA, square), unlike
+  // [referenceImage] above -- a flattened, non-transparent 1536x1024
+  // design-spec sheet (the full "BASE DO PERSONAGEM" reference grid) never
+  // intended for direct circular-avatar display. Master file is immutable;
+  // never edit assets/ive/source/ive_avatar_master_03b2.png directly.
+  static const avatarPortrait = 'assets/ive/source/ive_avatar_master_03b2.png';
 }
 
 // ── Rive feature gate ─────────────────────────────────────────────────────────

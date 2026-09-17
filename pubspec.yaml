@@ -79,3 +79,4 @@ flutter:
     - .env
     - assets/ive/reference/
     - assets/ive/rive/
+    - assets/ive/source/

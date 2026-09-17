@@ -40,3 +40,12 @@ jobs:
 
       - name: flutter test
         run: flutter test --reporter expanded
+
+      - name: Adicionar suporte à plataforma Web
+        # web/ não é versionado neste repositório (gerado por `flutter
+        # create`, mesmo padrão de deploy-web.yml); sem este passo o build
+        # abaixo falha com "This project is not configured for the web."
+        run: flutter create --platforms web --project-name ai_social_copilot .
+
+      - name: flutter build web (release, build gate only -- never published)
+        run: flutter build web --release

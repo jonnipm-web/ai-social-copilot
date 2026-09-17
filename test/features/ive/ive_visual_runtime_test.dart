@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -238,6 +240,53 @@ void main() {
       );
       // Should render fallback placeholder (no crash)
       expect(find.byType(IveVisualFallback), findsOneWidget);
+    });
+
+    // IVE-VISUAL-CANONICAL-INTEGRATION-07 — the approved 03B2 master must
+    // exist at the exact canonical repo path (mission section 04's own
+    // integrity gate, re-proven here as a permanent regression test rather
+    // than a one-time manual check).
+    test('canonical portrait asset file exists on disk and is non-empty', () {
+      final file = File(IveAssetPaths.avatarPortrait);
+      expect(file.existsSync(), isTrue,
+          reason: 'canonical IVE avatar master must exist at ${file.path}');
+      expect(file.lengthSync(), greaterThan(0));
+    });
+
+    // IVE-VISUAL-CANONICAL-INTEGRATION-07 — proves IveVisualFallback is
+    // actually WIRED to the canonical asset (not just that the file exists
+    // on disk) and that it genuinely loads -- if the asset failed to
+    // resolve, `errorBuilder` would render `_Placeholder` (an
+    // Icons.person_rounded icon) instead of the real Image.
+    testWidgets('displays the canonical portrait asset, not the missing-asset placeholder',
+        (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: IveVisualFallback(state: IveVisualState.idle, size: 72),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // IveVisualFallback passes cacheWidth/cacheHeight to Image.asset,
+      // which makes Flutter wrap the underlying AssetImage in a
+      // ResizeImage -- so w.image is a ResizeImage here, not a bare
+      // AssetImage; unwrap it via its public `imageProvider` field.
+      bool matchesAvatarPortrait(ImageProvider provider) {
+        if (provider is AssetImage) return provider.assetName == IveAssetPaths.avatarPortrait;
+        if (provider is ResizeImage) return matchesAvatarPortrait(provider.imageProvider);
+        return false;
+      }
+
+      final imageFinder = find.byWidgetPredicate(
+        (w) => w is Image && matchesAvatarPortrait(w.image),
+      );
+      expect(imageFinder, findsOneWidget);
+      expect(find.byIcon(Icons.person_rounded), findsNothing,
+          reason: 'errorBuilder placeholder must never trigger for the real canonical asset');
+      expect(tester.takeException(), isNull);
     });
   });
 
