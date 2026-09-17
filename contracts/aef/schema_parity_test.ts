@@ -34,6 +34,14 @@ const delegationSchema = JSON.parse(
   await Deno.readTextFile(new URL("./schema/delegation-envelope.v1.schema.json", import.meta.url)),
 );
 
+// strict: false is deliberate (Codex adversarial review, round 4, Finding
+// N-05, non-blocking): ajv's opt-in strict-mode linter flags the
+// spec-compliant draft-07 array-valued `type` used in AsciiKeyedValue's
+// leaf branch (requiring `allowUnionTypes: true` to silence) -- an
+// ajv-specific strictness preference, not a Draft-07 validity problem.
+// strict:false here only relaxes ajv's own lint pass; it does not change
+// what the schema itself permits or rejects, which is exactly what every
+// test in this file exercises directly.
 const ajv = new Ajv({ allErrors: true, strict: false });
 addFormats(ajv);
 const validateRequest = ajv.compile(execRequestSchema);

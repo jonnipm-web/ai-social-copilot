@@ -153,20 +153,20 @@
       "allOf": [
         {
           "if": { "properties": { "type": { "const": "user" } } },
-          "then": { "properties": { "auth_ref": { "pattern": "^usr:.{8,}$" } } }
+          "then": { "properties": { "auth_ref": { "type": "string", "pattern": "^usr:.{8,}$" } } }
         },
         {
           "if": { "properties": { "type": { "const": "service" } } },
-          "then": { "properties": { "auth_ref": { "pattern": "^svc:.{8,}$" } } }
+          "then": { "properties": { "auth_ref": { "type": "string", "pattern": "^svc:.{8,}$" } } }
         },
         {
           "if": { "properties": { "type": { "const": "system" } } },
-          "then": { "properties": { "auth_ref": { "const": "system:internal" } } }
+          "then": { "properties": { "auth_ref": { "type": "string", "const": "system:internal" } } }
         }
       ]
     },
     "AsciiKeyedValue": {
-      "description": "Recursively restricts every object key, at every nesting depth, to a plain ASCII identifier -- mirrors prohibited_fields.ts's ASCII_IDENTIFIER_RE (/^[A-Za-z_][A-Za-z0-9_]*$/) so a schema-only implementation cannot accept the Unicode-homoglyph field-name bypass that Codex adversarial review (round 2, Finding F-01 partial) found the TypeScript validator alone previously caught (round 3, Finding N-03). Used by ExecutionRequest.parameters, which is otherwise intentionally open/extensible (no fixed shape, no additionalProperties=false) -- this is the one constraint on that openness expressible in pure JSON Schema; the PROHIBITED_AUTHORITY_FIELDS name list itself remains runtime-only (see prohibited_fields.ts and README.md).",
+      "description": "Recursively restricts every object key, at every nesting depth, to a plain ASCII identifier -- mirrors prohibited_fields.ts's ASCII_IDENTIFIER_RE (/^[A-Za-z_][A-Za-z0-9_]*$/) so a schema-only implementation cannot accept the Unicode-homoglyph field-name bypass that Codex adversarial review (round 2, Finding F-01 partial) found the TypeScript validator alone previously caught (round 3, Finding N-03). Used by ExecutionRequest.parameters, which is otherwise intentionally open/extensible (no fixed shape, no additionalProperties=false) -- this is the one constraint on that openness expressible in pure JSON Schema; the PROHIBITED_AUTHORITY_FIELDS name list itself remains runtime-only (see prohibited_fields.ts and README.md). NOTE (Codex adversarial review, round 4, Finding N-05, non-blocking): the leaf branch below uses a draft-07 array-valued `type` (a spec-compliant union, not an extension), which ajv's own opt-in `strict: true` linting mode flags and requires `allowUnionTypes: true` to accept -- this is an ajv-specific strictness preference, not a JSON Schema Draft-07 validity problem, and is deliberately left as-is rather than duplicated into four near-identical anyOf branches for no semantic gain.",
       "anyOf": [
         {
           "type": "object",
