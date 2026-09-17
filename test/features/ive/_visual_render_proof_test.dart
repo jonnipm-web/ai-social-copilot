@@ -163,9 +163,19 @@ void main() {
     // matched here for fidelity.
     await tester.pump();
     await tester.pump(const Duration(seconds: 2));
-    // A few more frames to ensure the decoded image bytes have actually
-    // painted (Image.asset's first frames can be empty while the asset
-    // bundle read completes).
+
+    // Image.asset's real decode (rootBundle.load + codec instantiation) is
+    // a genuine async I/O operation that does not resolve inside
+    // flutter_test's FakeAsync zone via plain pump() calls alone --
+    // without this, the earlier capture attempt showed only the status
+    // ring + color overlay with a BLANK/transparent interior (proving the
+    // widget was wired correctly but the actual pixels had never painted).
+    // tester.runAsync lets real Futures/timers elapse on the real event
+    // loop so the decode genuinely completes; the following pump() then
+    // picks up the now-resolved frame.
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 500)));
+    await tester.pump();
+    // A few more frames for the resolved frame to actually paint.
     for (var i = 0; i < 5; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
