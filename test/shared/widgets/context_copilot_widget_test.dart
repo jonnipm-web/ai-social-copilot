@@ -12,6 +12,7 @@ import 'package:ai_social_copilot/data/models/ive_interaction_request.dart';
 import 'package:ai_social_copilot/features/ive/visual/ive_avatar.dart';
 import 'package:ai_social_copilot/l10n/app_localizations.dart';
 import 'package:ai_social_copilot/providers/context_copilot_provider.dart';
+import 'package:ai_social_copilot/providers/diagnostic_session_provider.dart';
 import 'package:ai_social_copilot/shared/widgets/context_copilot_widget.dart';
 
 // COMMERCIAL-EXPERIENCE-CLOSURE-16 (mission Sections 09/10/12) — proves:
@@ -55,7 +56,7 @@ void main() {
                 onPressed: () => showCopilotChat(
                   context,
                   screenName: 'Projetos',
-                  request: const IveInteractionRequest(
+                  request: IveInteractionRequest(
                     sourceModule:  'test',
                     operationType: IveOperationType.ask,
                   ),
@@ -162,7 +163,7 @@ void main() {
                 onPressed: () => showCopilotChat(
                   context,
                   screenName: 'Projetos',
-                  request: const IveInteractionRequest(sourceModule: 'test', operationType: IveOperationType.ask),
+                  request: IveInteractionRequest(sourceModule: 'test', operationType: IveOperationType.ask),
                 ),
                 child: const Text('open'),
               ),
