@@ -471,30 +471,53 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
   // Rive stays frozen (IveRiveFeatureGate=false, untouched): IveAvatar
   // transparently falls back to IveVisualFallback exactly as it already
   // does today.
+  //
+  // Avatar size is responsive, not a single fixed hero size: the mobile
+  // sheet's initial height (DraggableScrollableSheet, 55% of a phone
+  // screen) genuinely cannot fit a 220dp portrait plus title/subtitle/two
+  // suggestion chips without overflowing (found by this mission's own
+  // widget test at 400x800 -- a real bug, not a hypothetical one). The
+  // desktop dialog has the room mission Section 09 asked for; mobile gets
+  // `detail` (160dp) -- still far larger than the old ~24px emoji, just
+  // not the same size as a materially bigger, dedicated desktop surface.
+  // Wrapped in SingleChildScrollView as defense-in-depth for any viewport
+  // this sizing still doesn't anticipate (e.g. a phone in landscape),
+  // never clipping content mission Section 24 requires stay visible.
   Widget _empty() {
     final l10n = AppLocalizations.of(context)!;
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const IveAvatar(
-            size:           IveAvatarSize.hero,
-            showStatusRing: true,
-            interactive:    false,
+    final desktop = Breakpoints.isDesktop(MediaQuery.of(context).size.width);
+    return LayoutBuilder(
+      builder: (_, constraints) => SingleChildScrollView(
+        // ConstrainedBox + minHeight is the standard way to keep content
+        // vertically centered when it fits, while still allowing it to
+        // scroll (instead of overflowing) when it doesn't.
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IveAvatar(
+                  size:           desktop ? IveAvatarSize.hero : IveAvatarSize.detail,
+                  showStatusRing: true,
+                  interactive:    false,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  l10n.iveChatAskCta,
+                  style: const TextStyle(color: Colors.white70, fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  _localizedScreenName(context, widget.screenName),
+                  style: const TextStyle(color: Colors.white38, fontSize: 12),
+                ),
+                const SizedBox(height: 20),
+                ..._suggestions(context).map((s) => _suggestionChip(s)),
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
-          Text(
-            l10n.iveChatAskCta,
-            style: const TextStyle(color: Colors.white70, fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            _localizedScreenName(context, widget.screenName),
-            style: const TextStyle(color: Colors.white38, fontSize: 12),
-          ),
-          const SizedBox(height: 20),
-          ..._suggestions(context).map((s) => _suggestionChip(s)),
-        ],
+        ),
       ),
     );
   }
