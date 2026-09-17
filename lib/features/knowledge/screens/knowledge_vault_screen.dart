@@ -565,15 +565,23 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
               ),
               if (projectName != null) ...[
                 const SizedBox(height: 5),
+                // Codex Gate (COMMERCIAL-EXPERIENCE-CLOSURE-16R, P1
+                // ACCEPTED) — this Row had the exact same defect class as
+                // the action row above (Text with no Expanded/Flexible),
+                // just with a different trigger: a long real project name
+                // instead of long action labels. Same fix shape.
                 Row(
                   children: [
                     const Icon(Icons.folder_rounded,
                         color: Color(0xFF6C63FF), size: 12),
                     const SizedBox(width: 4),
-                    Text(
-                      projectName!,
-                      style: const TextStyle(
-                          color: Color(0xFF6C63FF), fontSize: 11),
+                    Expanded(
+                      child: Text(
+                        projectName!,
+                        style: const TextStyle(
+                            color: Color(0xFF6C63FF), fontSize: 11),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),
