@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://insightvalues.internal/contracts/aef/policy-signal.v1.schema.json",
+  "title": "PolicySignal v1",
+  "description": "Distinguishes ADVISORY signals (reasoning, recommendations, estimated risk -- from IVE, Evidence & Trust, Quant, or anywhere else) from AUTHORITATIVE policy decisions, which only a small, explicit allow-list of sources may produce (Section 13). This is horizontal -- the same rule applies regardless of which domain produced the signal.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "kind", "source", "signal", "computed_at"],
+  "properties": {
+    "contract_version": { "type": "string", "const": "1.0" },
+    "kind": {
+      "type": "string",
+      "enum": ["ADVISORY", "AUTHORITATIVE"]
+    },
+    "source": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*$",
+      "maxLength": 150,
+      "description": "Dot-namespaced component identity, e.g. 'ive.reasoning', 'aef.policy_engine', 'evidence_trust.legal_gate'. validators.ts enforces: any source in the IVE namespace (or any namespace not on the explicit AUTHORITATIVE_SOURCE_ALLOWLIST) claiming kind=AUTHORITATIVE is REJECTED outright, regardless of signal content."
+    },
+    "signal": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "description": "The actual content, e.g. 'recommended_risk_level: low' or 'policy_decision: DENY'. Free text at the schema level -- authority is determined by kind+source, never by parsing this string."
+    },
+    "computed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "request_ref": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Optional reference to the ExecutionRequest this signal concerns."
+    }
+  }
+}

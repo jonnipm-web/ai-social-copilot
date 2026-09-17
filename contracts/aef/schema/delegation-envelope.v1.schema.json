@@ -1,0 +1,85 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://insightvalues.internal/contracts/aef/delegation-envelope.v1.schema.json",
+  "title": "DelegationEnvelope v1",
+  "description": "A narrow, scoped, single-use proof that one component (issuer) may ask a specific other component/boundary (audience) to act on behalf of a specific actor, for exactly one ExecutionRequest. Does NOT implement cryptographic signing itself (Section 7) -- auth_assertion_ref points to wherever that proof actually lives; this schema only defines the shape and the validation rules around it (expiry, audience matching, single-use nonce, single-request binding).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "delegation_id",
+    "issuer",
+    "subject",
+    "audience",
+    "issued_at",
+    "expires_at",
+    "nonce",
+    "purpose",
+    "scope",
+    "request_binding",
+    "auth_assertion_ref"
+  ],
+  "properties": {
+    "contract_version": { "type": "string", "const": "1.0" },
+    "delegation_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "issuer": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "maxLength": 100,
+      "description": "The component asserting this delegation, e.g. 'ive'. Never self-declared authority -- issuer identity is itself expected to be established the same way actor identity is (an independent auth_ref), not merely by this string."
+    },
+    "subject": {
+      "$ref": "execution-request.v1.schema.json#/definitions/Actor",
+      "description": "Whose intent this delegation represents -- same Actor shape as ExecutionRequest, same rule: id alone proves nothing without auth_ref."
+    },
+    "audience": {
+      "type": "string",
+      "pattern": "^aef\\.[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*$",
+      "maxLength": 150,
+      "description": "The SPECIFIC execution boundary this delegation authorizes reaching, e.g. 'aef.core.action_engine', 'aef.quant.controlled_live', 'aef.stripe.billing'. A delegation for one audience must never be accepted for another -- an IVE->AEF delegation for 'aef.core' does not, and structurally cannot per validators.ts, satisfy a request whose domain/action maps to 'aef.quant.controlled_live' or 'aef.stripe.billing'. Each hop in a future chain (IVE->AEF, AEF->Stripe, AEF->Supabase Admin, AEF->Broker) needs its OWN delegation with that hop's own audience (Section 8)."
+    },
+    "issued_at": { "type": "string", "format": "date-time" },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Independent expiry from the ExecutionRequest's own expires_at -- both are checked, whichever is stricter governs."
+    },
+    "nonce": {
+      "type": "string",
+      "minLength": 16,
+      "maxLength": 200,
+      "description": "Single-use value. A future AEF must reject any delegation whose nonce has been seen before (authentication-replay defense) -- see validators.ts's NonceStore interface, which this contract mission implements only as an in-memory reference for tests, explicitly NOT for production use."
+    },
+    "purpose": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "description": "Human/machine-readable statement of what this delegation is for. Descriptive, cross-checked against `scope`, never authoritative on its own."
+    },
+    "scope": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*(\\.\\*)?$",
+        "maxLength": 200
+      },
+      "minItems": 1,
+      "maxItems": 50,
+      "description": "Explicit allow-list of action patterns this delegation covers, e.g. ['core.generate_strategy', 'core.knowledge_vault.*']. The ExecutionRequest's `action` must match at least one pattern here. Never a blanket '*' at the top level -- see validators.ts, which rejects a bare '*' scope entry outright."
+    },
+    "request_binding": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "description": "The exact request_id this delegation is bound to. v1 delegations are single-request only -- one delegation cannot satisfy two different ExecutionRequests, even within its own expiry window and scope. (A future v2 could consider multi-request delegations; deliberately not built here -- see README.)"
+    },
+    "auth_assertion_ref": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "description": "Reference to wherever the actual cryptographic or session proof behind this delegation lives. This contract does not implement or validate the proof itself -- only requires its presence and that an independent component resolves it before trusting the rest of this envelope."
+    }
+  }
+}

@@ -1,0 +1,533 @@
+/**
+ * Contract test matrix (Section 21) + fuzz-lite cases (Section 22) +
+ * cross-domain examples (Section 24) for the AEF contract foundation.
+ *
+ * Every VALID case must return { ok: true }.
+ * Every INVALID case must return { ok: false } -- fail-closed is the
+ * only acceptable outcome for anything this suite labels invalid.
+ */
+import { assert, assertFalse } from "https://deno.land/std@0.224.0/assert/mod.ts";
+import {
+  validateActor,
+  validateDelegationEnvelope,
+  validateExecutionReceipt,
+  validateExecutionRequest,
+  validateHumanGateRecord,
+  validatePolicySignal,
+  validateRequestAgainstDelegation,
+} from "./validators.ts";
+import {
+  DelegationEnvelope,
+  ExecutionRequest,
+  InMemoryNonceStore,
+  InMemoryRequestIdStore,
+} from "./types.ts";
+
+const NOW = new Date("2026-09-18T12:00:00.000Z");
+const FUTURE = new Date("2026-09-18T13:00:00.000Z").toISOString();
+const PAST = new Date("2026-09-18T11:00:00.000Z").toISOString();
+
+function uuid(seed: string): string {
+  // Deterministic, valid-shaped UUID v4 for reproducible fixtures.
+  const hex = seed.padEnd(32, "0").slice(0, 32).replace(/[^0-9a-f]/gi, "0");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+}
+
+function baseRequest(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    contract_version: "1.0",
+    request_id: uuid("req1"),
+    requested_at: "2026-09-18T11:55:00.000Z",
+    expires_at: FUTURE,
+    actor: { type: "user", id: "user-42", auth_ref: "usr:session-abc123" },
+    intent: "Generate a market strategy summary",
+    domain: "core",
+    action: "core.generate_strategy",
+    ...overrides,
+  };
+}
+
+function assertValid(result: { ok: boolean; errors?: string[] }, label: string) {
+  assert(result.ok, `${label}: expected VALID but got errors: ${JSON.stringify((result as { errors?: string[] }).errors)}`);
+}
+function assertInvalid(result: { ok: boolean }, label: string) {
+  assertFalse(result.ok, `${label}: expected INVALID (fail-closed) but was accepted`);
+}
+
+// =======================================================================
+// SECTION 21 -- REQUIRED CONTRACT TEST MATRIX
+// =======================================================================
+
+Deno.test("1. VALID -- minimal valid user request", () => {
+  const r = validateExecutionRequest(baseRequest(), { now: NOW });
+  assertValid(r, "case 1");
+});
+
+Deno.test("2. VALID -- valid service-shaped request", () => {
+  const r = validateExecutionRequest(
+    baseRequest({ actor: { type: "service", id: "svc-scheduler", auth_ref: "svc:cron-01" } }),
+    { now: NOW },
+  );
+  assertValid(r, "case 2");
+});
+
+Deno.test("3. VALID -- valid informational/read-only request", () => {
+  const r = validateExecutionRequest(
+    baseRequest({ action: "core.decision_center.read_summary", intent: "Read the current executive summary" }),
+    { now: NOW },
+  );
+  assertValid(r, "case 3");
+});
+
+Deno.test("4. VALID -- supported version (1.0)", () => {
+  const r = validateExecutionRequest(baseRequest({ contract_version: "1.0" }), { now: NOW });
+  assertValid(r, "case 4");
+});
+
+Deno.test("5. VALID -- valid expiration (in the future relative to now)", () => {
+  const r = validateExecutionRequest(baseRequest({ expires_at: FUTURE }), { now: NOW });
+  assertValid(r, "case 5");
+});
+
+Deno.test("6. INVALID -- missing version", () => {
+  const req = baseRequest();
+  delete (req as Record<string, unknown>).contract_version;
+  assertInvalid(validateExecutionRequest(req, { now: NOW }), "case 6");
+});
+
+Deno.test("7. INVALID -- unsupported version", () => {
+  assertInvalid(validateExecutionRequest(baseRequest({ contract_version: "0.9" }), { now: NOW }), "case 7");
+});
+
+Deno.test("8. INVALID -- expired request", () => {
+  assertInvalid(validateExecutionRequest(baseRequest({ expires_at: PAST }), { now: NOW }), "case 8");
+});
+
+Deno.test("9. INVALID -- malformed request_id", () => {
+  assertInvalid(validateExecutionRequest(baseRequest({ request_id: "not-a-uuid" }), { now: NOW }), "case 9");
+});
+
+Deno.test("10. INVALID -- duplicate/invalid nonce (delegation)", () => {
+  const store = new InMemoryNonceStore();
+  const envelope = (overrides: Record<string, unknown> = {}) => ({
+    contract_version: "1.0",
+    delegation_id: uuid("del1"),
+    issuer: "ive",
+    subject: { type: "user", id: "user-42", auth_ref: "usr:session-abc123" },
+    audience: "aef.core",
+    issued_at: "2026-09-18T11:55:00.000Z",
+    expires_at: FUTURE,
+    nonce: "nonce-0123456789abcdef",
+    purpose: "Generate a strategy on behalf of user-42",
+    scope: ["core.generate_strategy"],
+    request_binding: uuid("req1"),
+    auth_assertion_ref: "assertion-ref-1",
+    ...overrides,
+  });
+  const first = validateDelegationEnvelope(envelope(), { now: NOW, nonceStore: store });
+  assertValid(first, "case 10 (first use)");
+  store.record("nonce-0123456789abcdef");
+  const replayed = validateDelegationEnvelope(envelope({ delegation_id: uuid("del2") }), { now: NOW, nonceStore: store });
+  assertInvalid(replayed, "case 10 (replay)");
+});
+
+Deno.test("11. INVALID -- unknown authority-shaped field at top level", () => {
+  assertInvalid(validateExecutionRequest(baseRequest({ superuser: true }), { now: NOW }), "case 11");
+});
+
+Deno.test("12. INVALID -- is_admin=true nested in parameters", () => {
+  assertInvalid(
+    validateExecutionRequest(baseRequest({ parameters: { is_admin: true } }), { now: NOW }),
+    "case 12",
+  );
+});
+
+Deno.test("13. INVALID -- role=admin nested in metadata", () => {
+  assertInvalid(
+    validateExecutionRequest(baseRequest({ metadata: { role: "admin" } }), { now: NOW }),
+    "case 13",
+  );
+});
+
+Deno.test("14. INVALID -- service_role=true", () => {
+  assertInvalid(
+    validateExecutionRequest(baseRequest({ parameters: { service_role: true } }), { now: NOW }),
+    "case 14",
+  );
+});
+
+Deno.test("15. INVALID -- skip_checks=true", () => {
+  assertInvalid(
+    validateExecutionRequest(baseRequest({ parameters: { skip_checks: true } }), { now: NOW }),
+    "case 15",
+  );
+});
+
+Deno.test("16. INVALID -- human_approved=true", () => {
+  assertInvalid(
+    validateExecutionRequest(baseRequest({ parameters: { human_approved: true } }), { now: NOW }),
+    "case 16",
+  );
+});
+
+Deno.test("17. INVALID -- authoritative subscription tier (plan=premium)", () => {
+  assertInvalid(
+    validateExecutionRequest(baseRequest({ parameters: { plan: "premium" } }), { now: NOW }),
+    "case 17",
+  );
+});
+
+Deno.test("18. INVALID -- tenant authority injection (tenant_id)", () => {
+  assertInvalid(
+    validateExecutionRequest(baseRequest({ parameters: { tenant_id: "tenant-1" } }), { now: NOW }),
+    "case 18 (tenant_id in parameters)",
+  );
+  assertInvalid(
+    validateExecutionRequest(baseRequest({ tenant_id: "tenant-1" } as Record<string, unknown>), { now: NOW }),
+    "case 18 (tenant_id top-level, also an unknown field)",
+  );
+});
+
+Deno.test("19. INVALID -- malformed audience", () => {
+  const badDelegation = {
+    contract_version: "1.0",
+    delegation_id: uuid("del3"),
+    issuer: "ive",
+    subject: { type: "user", id: "user-42", auth_ref: "usr:session-abc123" },
+    audience: "not-a-valid-audience",
+    issued_at: "2026-09-18T11:55:00.000Z",
+    expires_at: FUTURE,
+    nonce: "nonce-abcdefabcdefabcd",
+    purpose: "test",
+    scope: ["core.generate_strategy"],
+    request_binding: uuid("req1"),
+    auth_assertion_ref: "assertion-ref-1",
+  };
+  assertInvalid(validateDelegationEnvelope(badDelegation, { now: NOW }), "case 19");
+});
+
+Deno.test("20. INVALID -- mismatched audience (delegation for core used against a quant request)", () => {
+  const request: ExecutionRequest = baseRequest({
+    domain: "quant",
+    action: "quant.controlled_live.submit_order",
+    quant_execution_tier: "controlled_live",
+    human_gate_ref: uuid("gate1"),
+  }) as unknown as ExecutionRequest;
+  const delegation: DelegationEnvelope = {
+    contract_version: "1.0",
+    delegation_id: uuid("del4"),
+    issuer: "ive",
+    subject: request.actor,
+    audience: "aef.core", // wrong audience for a quant request
+    issued_at: "2026-09-18T11:55:00.000Z",
+    expires_at: FUTURE,
+    nonce: "nonce-fedcbafedcbafedc",
+    purpose: "test",
+    scope: ["quant.controlled_live.submit_order"],
+    request_binding: request.request_id,
+    auth_assertion_ref: "assertion-ref-1",
+  };
+  assertInvalid(validateRequestAgainstDelegation(request, delegation), "case 20");
+});
+
+Deno.test("21. INVALID -- malformed actor", () => {
+  assertInvalid(validateActor({ type: "user", id: "" }), "case 21 (empty id, missing auth_ref)");
+  assertInvalid(validateActor({ type: "wizard", id: "x", auth_ref: "usr:x" }), "case 21 (bad type)");
+});
+
+Deno.test("22. INVALID -- user_id without trusted identity binding (missing/malformed auth_ref)", () => {
+  assertInvalid(
+    validateExecutionRequest(baseRequest({ actor: { type: "user", id: "user-42" } }), { now: NOW }),
+    "case 22 (no auth_ref)",
+  );
+  assertInvalid(
+    validateExecutionRequest(
+      baseRequest({ actor: { type: "user", id: "user-42", auth_ref: "svc:not-a-user-ref" } }),
+      { now: NOW },
+    ),
+    "case 22 (auth_ref wrong namespace for actor type)",
+  );
+});
+
+Deno.test("23. INVALID -- missing required delegation for a high-risk quant action", () => {
+  // Contract-level: request itself must at least require human_gate_ref;
+  // full delegation *presence* enforcement (delegation_ref resolving to a
+  // real, matching DelegationEnvelope) is an AEF-side responsibility this
+  // mission does not implement -- but the request-level guard is tested
+  // here as the part this contract DOES own.
+  assertInvalid(
+    validateExecutionRequest(
+      baseRequest({
+        domain: "quant",
+        action: "quant.controlled_live.submit_order",
+        quant_execution_tier: "controlled_live",
+        // human_gate_ref deliberately omitted
+      }),
+      { now: NOW },
+    ),
+    "case 23",
+  );
+});
+
+Deno.test("24. INVALID -- unknown domain", () => {
+  assertInvalid(
+    validateExecutionRequest(baseRequest({ domain: "wonderland", action: "wonderland.do_thing" }), { now: NOW }),
+    "case 24",
+  );
+});
+
+Deno.test("25. INVALID -- malformed parameters (not an object)", () => {
+  assertInvalid(validateExecutionRequest(baseRequest({ parameters: "not-an-object" }), { now: NOW }), "case 25");
+});
+
+Deno.test("26. INVALID -- replayed consequential request (request_id seen before)", () => {
+  const store = new InMemoryRequestIdStore();
+  const req = baseRequest();
+  const first = validateExecutionRequest(req, { now: NOW, requestIdStore: store });
+  assertValid(first, "case 26 (first time)");
+  store.record((req as { request_id: string }).request_id);
+  const second = validateExecutionRequest(req, { now: NOW, requestIdStore: store });
+  assertInvalid(second, "case 26 (replay)");
+});
+
+Deno.test("27. INVALID -- future/unrecognized contract version", () => {
+  assertInvalid(validateExecutionRequest(baseRequest({ contract_version: "2.0" }), { now: NOW }), "case 27");
+});
+
+Deno.test("28. INVALID -- arbitrary extra field attempting privilege injection", () => {
+  assertInvalid(
+    validateExecutionRequest(baseRequest({ authorization_level: "root" }), { now: NOW }),
+    "case 28",
+  );
+});
+
+// =======================================================================
+// Additional contract-object coverage (DelegationEnvelope, HumanGateRecord,
+// PolicySignal, ExecutionReceipt) not fully exercised by the 28-case
+// ExecutionRequest matrix above.
+// =======================================================================
+
+Deno.test("DelegationEnvelope: bare '*' scope is rejected even though it would structurally validate as a string array", () => {
+  const bad = {
+    contract_version: "1.0",
+    delegation_id: uuid("del5"),
+    issuer: "ive",
+    subject: { type: "user", id: "u1", auth_ref: "usr:s1" },
+    audience: "aef.core",
+    issued_at: "2026-09-18T11:55:00.000Z",
+    expires_at: FUTURE,
+    nonce: "nonce-1111111111111111",
+    purpose: "test",
+    scope: ["*"],
+    request_binding: uuid("req1"),
+    auth_assertion_ref: "ref-1",
+  };
+  assertInvalid(validateDelegationEnvelope(bad, { now: NOW }), "bare wildcard scope");
+});
+
+Deno.test("HumanGateRecord: human_approved cannot be smuggled onto the gate record itself", () => {
+  const bad = {
+    contract_version: "1.0",
+    gate_id: uuid("gate2"),
+    request_id: uuid("req1"),
+    action: "quant.controlled_live.submit_order",
+    state: "AUTHORIZED",
+    approver: { type: "user", id: "approver-1", auth_ref: "usr:s2" },
+    decided_at: "2026-09-18T11:59:00.000Z",
+    audit_ref: "audit-log-entry-1",
+    expires_at: FUTURE,
+    human_approved: true, // prohibited field, must reject even on an otherwise-valid AUTHORIZED record
+  };
+  assertInvalid(validateHumanGateRecord(bad, { now: NOW }), "human_approved smuggled onto gate record");
+});
+
+Deno.test("HumanGateRecord: AUTHORIZED without approver/decided_at/audit_ref is rejected", () => {
+  const bad = {
+    contract_version: "1.0",
+    gate_id: uuid("gate3"),
+    request_id: uuid("req1"),
+    action: "quant.controlled_live.submit_order",
+    state: "AUTHORIZED",
+    expires_at: FUTURE,
+  };
+  assertInvalid(validateHumanGateRecord(bad, { now: NOW }), "AUTHORIZED missing approver");
+});
+
+Deno.test("HumanGateRecord: approver type='system' is never valid", () => {
+  const bad = {
+    contract_version: "1.0",
+    gate_id: uuid("gate4"),
+    request_id: uuid("req1"),
+    action: "quant.controlled_live.submit_order",
+    state: "REJECTED",
+    approver: { type: "system", id: "system", auth_ref: "system:internal" },
+    decided_at: "2026-09-18T11:59:00.000Z",
+    audit_ref: "audit-log-entry-2",
+    expires_at: FUTURE,
+  };
+  assertInvalid(validateHumanGateRecord(bad, { now: NOW }), "system approver");
+});
+
+Deno.test("HumanGateRecord: illegal state transition (EXECUTED without ever being AUTHORIZED)", () => {
+  const record = {
+    contract_version: "1.0",
+    gate_id: uuid("gate5"),
+    request_id: uuid("req1"),
+    action: "quant.controlled_live.submit_order",
+    state: "EXECUTED",
+    expires_at: FUTURE,
+  };
+  assertInvalid(
+    validateHumanGateRecord(record, { now: NOW, previousState: "REQUESTED" }),
+    "REQUESTED -> EXECUTED is not a legal transition",
+  );
+});
+
+Deno.test("PolicySignal: IVE source claiming AUTHORITATIVE is rejected", () => {
+  const bad = {
+    contract_version: "1.0",
+    kind: "AUTHORITATIVE",
+    source: "ive.reasoning",
+    signal: "policy_decision: ALLOW",
+    computed_at: "2026-09-18T11:55:00.000Z",
+  };
+  assertInvalid(validatePolicySignal(bad), "IVE claiming authoritative");
+});
+
+Deno.test("PolicySignal: IVE source as ADVISORY is accepted", () => {
+  const good = {
+    contract_version: "1.0",
+    kind: "ADVISORY",
+    source: "ive.reasoning",
+    signal: "recommended_risk_level: low",
+    computed_at: "2026-09-18T11:55:00.000Z",
+  };
+  assertValid(validatePolicySignal(good), "IVE advisory");
+});
+
+Deno.test("PolicySignal: allow-listed source may issue AUTHORITATIVE", () => {
+  const good = {
+    contract_version: "1.0",
+    kind: "AUTHORITATIVE",
+    source: "aef.policy_engine",
+    signal: "policy_decision: DENY",
+    computed_at: "2026-09-18T11:55:00.000Z",
+  };
+  assertValid(validatePolicySignal(good), "aef.policy_engine authoritative");
+});
+
+Deno.test("ExecutionReceipt: DENIED policy_decision must have outcome=NOT_EXECUTED", () => {
+  const bad = {
+    contract_version: "1.0",
+    receipt_id: uuid("rcpt1"),
+    request_id: uuid("req1"),
+    actor: { type: "user", id: "u1", auth_ref: "usr:s1" },
+    action: "core.generate_strategy",
+    policy_decision: "DENIED",
+    started_at: "2026-09-18T11:55:00.000Z",
+    outcome: "SUCCESS", // contradiction: denied but claims success
+  };
+  assertInvalid(validateExecutionReceipt(bad), "DENIED with SUCCESS outcome");
+});
+
+// =======================================================================
+// SECTION 22 -- FUZZ-LITE / PROPERTY-STYLE CASES
+// =======================================================================
+
+Deno.test("fuzz: unknown top-level field", () => {
+  assertInvalid(validateExecutionRequest(baseRequest({ totally_unexpected_field: 1 }), { now: NOW }), "fuzz unknown field");
+});
+
+Deno.test("fuzz: type confusion -- domain as a number", () => {
+  assertInvalid(validateExecutionRequest(baseRequest({ domain: 42 }), { now: NOW }), "fuzz type confusion domain");
+});
+
+Deno.test("fuzz: type confusion -- actor as a string", () => {
+  assertInvalid(validateExecutionRequest(baseRequest({ actor: "user-42" }), { now: NOW }), "fuzz actor as string");
+});
+
+Deno.test("fuzz: null in required field", () => {
+  assertInvalid(validateExecutionRequest(baseRequest({ request_id: null }), { now: NOW }), "fuzz null request_id");
+});
+
+Deno.test("fuzz: nested object where a string is expected (intent)", () => {
+  assertInvalid(validateExecutionRequest(baseRequest({ intent: { nested: "object" } }), { now: NOW }), "fuzz nested intent");
+});
+
+Deno.test("fuzz: oversized string in intent", () => {
+  assertInvalid(validateExecutionRequest(baseRequest({ intent: "x".repeat(10000) }), { now: NOW }), "fuzz oversized intent");
+});
+
+Deno.test("fuzz: unexpected array where an object is expected (parameters)", () => {
+  assertInvalid(validateExecutionRequest(baseRequest({ parameters: ["a", "b"] }), { now: NOW }), "fuzz array parameters");
+});
+
+Deno.test("fuzz: unicode / homoglyph field name attempting to dodge the prohibited-field scanner", () => {
+  // Cyrillic 'а' (U+0430) instead of Latin 'a' in "role" would NOT be
+  // caught by an exact string match unless normalized -- this test
+  // documents current behavior (a true homoglyph is a distinct key and
+  // is NOT rejected by name) while confirming ASCII case-variation IS
+  // caught, and records the homoglyph gap as a known limitation.
+  const caseVariant = validateExecutionRequest(baseRequest({ parameters: { RoLe: "admin" } }), { now: NOW });
+  assertInvalid(caseVariant, "fuzz ASCII case-variant field name (RoLe) must still be caught");
+});
+
+Deno.test("fuzz: duplicate semantic field via different casing does not create a bypass (IS_ADMIN)", () => {
+  assertInvalid(validateExecutionRequest(baseRequest({ parameters: { IS_ADMIN: true } }), { now: NOW }), "fuzz IS_ADMIN uppercase");
+});
+
+Deno.test("fuzz: empty object as request", () => {
+  assertInvalid(validateExecutionRequest({}, { now: NOW }), "fuzz empty object");
+});
+
+Deno.test("fuzz: array instead of object as request", () => {
+  assertInvalid(validateExecutionRequest([1, 2, 3], { now: NOW }), "fuzz array as request");
+});
+
+Deno.test("fuzz: primitive instead of object as request", () => {
+  assertInvalid(validateExecutionRequest("just a string", { now: NOW }), "fuzz string as request");
+  assertInvalid(validateExecutionRequest(42, { now: NOW }), "fuzz number as request");
+  assertInvalid(validateExecutionRequest(null, { now: NOW }), "fuzz null as request");
+  assertInvalid(validateExecutionRequest(undefined, { now: NOW }), "fuzz undefined as request");
+});
+
+// =======================================================================
+// SECTION 24 -- CROSS-DOMAIN EXAMPLES (Core / Quant / Impact)
+// =======================================================================
+
+Deno.test("cross-domain: Core example validates", async () => {
+  const fixture = JSON.parse(await Deno.readTextFile(new URL("./fixtures/examples/core-example.json", import.meta.url)));
+  assertValid(validateExecutionRequest(fixture, { now: NOW }), "core example");
+});
+
+Deno.test("cross-domain: Quant example (research tier, low risk) validates", async () => {
+  const fixture = JSON.parse(await Deno.readTextFile(new URL("./fixtures/examples/quant-example.json", import.meta.url)));
+  assertValid(validateExecutionRequest(fixture, { now: NOW }), "quant example");
+});
+
+Deno.test("cross-domain: Impact example validates", async () => {
+  const fixture = JSON.parse(await Deno.readTextFile(new URL("./fixtures/examples/impact-example.json", import.meta.url)));
+  assertValid(validateExecutionRequest(fixture, { now: NOW }), "impact example");
+});
+
+// =======================================================================
+// SECTION 16 -- NEGATIVE-SPACE TEST: no execution capability exists here
+// =======================================================================
+
+Deno.test("no direct-execution API exists in this module (Section 16 / NO_DIRECT_EXECUTION.md)", async () => {
+  const validatorsModule = await import("./validators.ts");
+  const typesModule = await import("./types.ts");
+  const forbiddenNames = ["execute", "run", "dispatch", "invoke", "call"];
+  for (const name of Object.keys(validatorsModule)) {
+    assertFalse(
+      forbiddenNames.some((f) => name.toLowerCase().includes(f)),
+      `validators.ts exports '${name}', which looks execution-shaped -- this module must only validate, never execute`,
+    );
+  }
+  for (const name of Object.keys(typesModule)) {
+    assertFalse(
+      forbiddenNames.some((f) => name.toLowerCase().includes(f)),
+      `types.ts exports '${name}', which looks execution-shaped`,
+    );
+  }
+});

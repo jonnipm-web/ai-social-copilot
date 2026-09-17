@@ -1,0 +1,24 @@
+{
+  "contract_version": "1.0",
+  "request_id": "c0000000-0000-4000-8000-000000000003",
+  "requested_at": "2026-09-18T11:55:00.000Z",
+  "expires_at": "2026-09-18T13:00:00.000Z",
+  "actor": {
+    "type": "user",
+    "id": "user-77",
+    "auth_ref": "usr:session-def456"
+  },
+  "intent": "Investigate the evidence trail for a donation campaign before it is shown to other users",
+  "domain": "impact",
+  "action": "impact.investigate.request_review",
+  "resource": {
+    "type": "fundraising_campaign",
+    "id": "campaign-1234"
+  },
+  "parameters": {
+    "requested_evidence_depth": "standard"
+  },
+  "context_ref": "evidence-trust-investigation-8891",
+  "idempotency_key": "impact-investigate-campaign-1234-2026-09-18",
+  "delegation_ref": "d0000000-0000-4000-8000-000000000003"
+}

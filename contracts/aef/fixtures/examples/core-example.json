@@ -1,0 +1,24 @@
+{
+  "contract_version": "1.0",
+  "request_id": "c0000000-0000-4000-8000-000000000001",
+  "requested_at": "2026-09-18T11:55:00.000Z",
+  "expires_at": "2026-09-18T13:00:00.000Z",
+  "actor": {
+    "type": "user",
+    "id": "user-42",
+    "auth_ref": "usr:session-abc123"
+  },
+  "intent": "Generate a market strategy summary for the current project",
+  "domain": "core",
+  "action": "core.generate_strategy",
+  "resource": {
+    "type": "project",
+    "id": "project-9001"
+  },
+  "parameters": {
+    "market_focus": "b2b_saas",
+    "language": "pt-BR"
+  },
+  "idempotency_key": "core-strategy-project-9001-2026-09-18",
+  "delegation_ref": "d0000000-0000-4000-8000-000000000001"
+}

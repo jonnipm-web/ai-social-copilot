@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://insightvalues.internal/contracts/aef/human-gate-record.v1.schema.json",
+  "title": "HumanGateRecord v1",
+  "description": "The ONLY legitimate record of human approval. An ExecutionRequest may carry a `human_gate_ref` pointing to one of these, but must never carry the approval decision itself (`human_approved`/`approved` are PROHIBITED_AUTHORITY_FIELDS -- see prohibited_fields.ts). A future AEF independently resolves the referenced record and checks state=AUTHORIZED plus binding match; IVE never asserts approval.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "gate_id",
+    "request_id",
+    "action",
+    "state",
+    "expires_at"
+  ],
+  "properties": {
+    "contract_version": { "type": "string", "const": "1.0" },
+    "gate_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "request_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "description": "Binding to the exact ExecutionRequest this gate covers."
+    },
+    "action": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$",
+      "description": "Binding to the exact action -- a gate authorized for one action must not be reusable for a different one, even on the same request_id."
+    },
+    "state": {
+      "type": "string",
+      "enum": ["REQUESTED", "REVIEW_REQUIRED", "AUTHORIZED", "REJECTED", "EXPIRED", "EXECUTED"],
+      "description": "Valid transitions (enforced in validators.ts, not expressible in pure schema): REQUESTED -> REVIEW_REQUIRED -> (AUTHORIZED | REJECTED | EXPIRED); AUTHORIZED -> EXECUTED. Any other transition is invalid."
+    },
+    "approver": {
+      "$ref": "execution-request.v1.schema.json#/definitions/Actor",
+      "description": "Required when state is AUTHORIZED or REJECTED (enforced conditionally in validators.ts -- JSON Schema's if/then handles the simple case, see schema below). Must be type='user' or type='service' with a resolvable auth_ref -- never type='system' (a human gate approved by 'the system' is a contradiction)."
+    },
+    "decided_at": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "Required (non-null) exactly when state is AUTHORIZED, REJECTED, or EXPIRED."
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "A gate left in REQUESTED/REVIEW_REQUIRED past this time must be treated as EXPIRED, never as a silent default of AUTHORIZED or DENIED -- the caller must poll/resolve, not assume."
+    },
+    "audit_ref": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "description": "Reference to durable, independent audit evidence of the human decision (e.g. an immutable log entry ID). Required when state is AUTHORIZED or REJECTED."
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "state": { "enum": ["AUTHORIZED", "REJECTED"] } } },
+      "then": { "required": ["approver", "decided_at", "audit_ref"] }
+    },
+    {
+      "if": { "properties": { "state": { "const": "EXPIRED" } } },
+      "then": { "required": ["decided_at"] }
+    }
+  ]
+}
