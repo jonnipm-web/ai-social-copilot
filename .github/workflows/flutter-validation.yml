@@ -49,3 +49,13 @@ jobs:
 
       - name: flutter build web (release, build gate only -- never published)
         run: flutter build web --release
+
+      - name: flutter build apk (debug, build gate only -- never published/signed for release)
+        # GOOGLE-AUTH-ANDROID-IDENTITY-GATE-17 -- android/ is now a real,
+        # committed platform folder (previously regenerated via `flutter
+        # create` on every local build, which is why the applicationId
+        # kept silently reverting to Flutter's com.example.* placeholder).
+        # Debug build only: no release keystore exists yet in CI, and none
+        # should ever be added here as a plaintext secret -- see
+        # android/app/build.gradle.kts's own signing-config doc comment.
+        run: flutter build apk --debug
