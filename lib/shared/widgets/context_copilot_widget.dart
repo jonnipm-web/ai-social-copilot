@@ -15,6 +15,20 @@ import '../../providers/context_copilot_provider.dart';
 import '../../providers/diagnostic_session_provider.dart';
 import 'ai_execution_confirmation.dart';
 
+// COMMERCIAL-EXPERIENCE-CLOSURE-16 — owner feedback (live physical/web QA,
+// both platforms): while the chat dialog/sheet is open, IveOverlay's own
+// floating avatar+bubble stayed visible underneath it -- two
+// representations of IVE on screen at once, redundant with the portrait
+// now shown inside the dialog itself (Section 01.3). Plain top-level
+// ValueNotifier, matching the existing `iveRouteNotifier` pattern in
+// ive_overlay.dart (that file already listens to a module-level notifier
+// this way; this is the same mechanism, not a second one) -- avoids
+// coupling this widget to IveOverlay's Riverpod providers just to toggle
+// one boolean. Set true immediately before presenting, false once the
+// route's own Future resolves (covers every dismissal path: close button,
+// system back, tap-outside, or programmatic pop).
+final iveChatOpenNotifier = ValueNotifier<bool>(false);
+
 // ── Public helper ─────────────────────────────────────────────────────────────
 
 // IVE-COMMERCIAL-FOUNDATION-11 — `request` is now required: this is the
@@ -66,25 +80,28 @@ void showCopilotChat(
 // paths render the exact same `_CopilotSheet` content — this is a second
 // presentation SHELL, not a second assistant.
 void _presentCopilotSheet(BuildContext context, {required bool desktop, required Widget child}) {
+  iveChatOpenNotifier.value = true;
+  final Future<void> closed;
   if (desktop) {
-    showDialog(
+    closed = showDialog(
       context: context,
       builder: (_) => ProviderScope(
         parent: ProviderScope.containerOf(context),
         child:  child,
       ),
     );
-    return;
+  } else {
+    closed = showModalBottomSheet(
+      context:            context,
+      isScrollControlled:  true,
+      backgroundColor:     Colors.transparent,
+      builder: (_) => ProviderScope(
+        parent: ProviderScope.containerOf(context),
+        child:  child,
+      ),
+    );
   }
-  showModalBottomSheet(
-    context:            context,
-    isScrollControlled:  true,
-    backgroundColor:     Colors.transparent,
-    builder: (_) => ProviderScope(
-      parent: ProviderScope.containerOf(context),
-      child:  child,
-    ),
-  );
+  closed.whenComplete(() => iveChatOpenNotifier.value = false);
 }
 
 class ContextCopilotButton extends ConsumerWidget {

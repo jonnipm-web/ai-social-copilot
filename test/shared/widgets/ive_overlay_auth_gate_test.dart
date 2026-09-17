@@ -16,6 +16,7 @@ import 'package:ai_social_copilot/providers/auth_provider.dart';
 import 'package:ai_social_copilot/providers/diagnostic_session_provider.dart';
 import 'package:ai_social_copilot/providers/ive_provider.dart';
 import 'package:ai_social_copilot/providers/profile_provider.dart';
+import 'package:ai_social_copilot/shared/widgets/context_copilot_widget.dart' show iveChatOpenNotifier;
 import 'package:ai_social_copilot/shared/widgets/ive_overlay.dart';
 
 // IVE-EXPERIENCE-V1-06QA (live-QA defect) — the owner's real authenticated
@@ -53,6 +54,14 @@ AuthState _authState({Session? session}) =>
     AuthState(session != null ? AuthChangeEvent.signedIn : AuthChangeEvent.signedOut, session);
 
 void main() {
+  // COMMERCIAL-EXPERIENCE-CLOSURE-16 — iveChatOpenNotifier is a top-level
+  // singleton (module-level state persists across testWidgets calls within
+  // this same file/isolate); test F opens a chat sheet and never closes it
+  // before the test ends, which would otherwise leave the notifier `true`
+  // and incorrectly hide every subsequent test's IveOverlay. Reset before
+  // each test so ordering never matters.
+  setUp(() => iveChatOpenNotifier.value = false);
+
   // STABILITY-10 -- IveOverlay now requires a navigatorKey (see its own
   // constructor doc). A-D below only exercise auth-gating/rendering, not
   // chat-opening, so a plain unattached key is enough to satisfy the

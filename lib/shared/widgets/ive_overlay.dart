@@ -14,7 +14,7 @@ import '../../providers/ive_context_provider.dart';
 import '../../providers/ive_memory_provider.dart';
 import '../../providers/ive_provider.dart';
 import '../../providers/profile_provider.dart';
-import 'context_copilot_widget.dart' show showCopilotChat;
+import 'context_copilot_widget.dart' show showCopilotChat, iveChatOpenNotifier;
 
 // ── Route bridge ──────────────────────────────────────────────────────────────
 final iveRouteNotifier = ValueNotifier<String>('');
@@ -68,6 +68,12 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
   void initState() {
     super.initState();
     iveRouteNotifier.addListener(_onRouteChange);
+    // COMMERCIAL-EXPERIENCE-CLOSURE-16 — owner feedback (live physical +
+    // web QA): the floating avatar/bubble must disappear while the chat
+    // dialog/sheet is open (redundant with the portrait now shown inside
+    // it) and reappear once it closes. Same listener pattern as
+    // iveRouteNotifier just above, not a new mechanism.
+    iveChatOpenNotifier.addListener(_onChatOpenChange);
     // IVE-COMMERCIAL-STABILITY-09O — reuses this already-existing lifecycle
     // callback; no new listener.
     IveForensicSnapshot.overlayMounted = true;
@@ -76,6 +82,7 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
   @override
   void dispose() {
     iveRouteNotifier.removeListener(_onRouteChange);
+    iveChatOpenNotifier.removeListener(_onChatOpenChange);
     // IVE-COMMERCIAL-STABILITY-09O (Codex Gate, P2 ACCEPTED) — a dispose
     // mid-drag (e.g. a fast sign-out while dragging) would otherwise leave
     // overlayDragging stuck true forever, misleadingly implying an
@@ -90,6 +97,8 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
     ref.read(iveProvider.notifier).setRoute(route);
     ref.read(iveMemoryProvider.notifier).setRoute(route);
   }
+
+  void _onChatOpenChange() => setState(() {});
 
   bool get _isDesktop => MediaQuery.of(context).size.width >= 1024;
 
@@ -150,6 +159,18 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
       // even though the overlay (and its issue bubble) is no longer shown.
       IveForensicSnapshot.issuePresent    = false;
       IveForensicSnapshot.overlayDragging = false;
+      return const SizedBox.shrink();
+    }
+
+    // COMMERCIAL-EXPERIENCE-CLOSURE-16 — hide the floating avatar+bubble
+    // entirely while the chat dialog/sheet is open (see
+    // context_copilot_widget.dart's iveChatOpenNotifier doc comment).
+    // Deliberately does NOT skip the issuePresent/overlayDragging writes
+    // below like the auth early-return above does -- unlike sign-out,
+    // this is a purely visual, momentary state with no forensic
+    // implication, and the underlying IVE state itself is unchanged while
+    // the chat is open.
+    if (iveChatOpenNotifier.value) {
       return const SizedBox.shrink();
     }
 

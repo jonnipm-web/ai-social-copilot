@@ -36,6 +36,12 @@ class _FakeCopilotNotifier extends ContextCopilotNotifier {
 }
 
 void main() {
+  // iveChatOpenNotifier is a top-level singleton (state persists across
+  // testWidgets calls within this file/isolate); several tests here open
+  // a sheet/dialog without popping it before the test ends. Reset before
+  // each test so ordering never matters (mirrors ive_overlay_auth_gate_test.dart).
+  setUp(() => iveChatOpenNotifier.value = false);
+
   // Size is controlled via tester.view.physicalSize in each test (same
   // pattern already established by ive_overlay_auth_gate_test.dart's tests
   // E/F/G) -- MaterialApp derives its own MediaQuery from the real test
