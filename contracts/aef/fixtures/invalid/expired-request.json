@@ -1,0 +1,10 @@
+{
+  "contract_version": "1.0",
+  "request_id": "b0000000-0000-4000-8000-000000000002",
+  "requested_at": "2026-01-01T00:00:00.000Z",
+  "expires_at": "2026-01-01T00:05:00.000Z",
+  "actor": { "type": "user", "id": "user-1", "auth_ref": "usr:session-1" },
+  "intent": "This request's expires_at is far in the past relative to any realistic validation time",
+  "domain": "core",
+  "action": "core.generate_strategy"
+}
