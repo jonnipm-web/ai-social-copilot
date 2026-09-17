@@ -96,6 +96,89 @@ class _OldProductionFallbackState extends State<_OldProductionFallback>
   }
 }
 
+// ── Release-mode reconstruction of the NEW (this branch) IveVisualFallback ──
+// The real IveVisualFallback's `if (kDebugMode) Positioned(... 'RIVE ASSET
+// PENDING' ...)` badge (pre-existing code, unrelated to and untouched by
+// this mission) is compiled OUT entirely in a real `flutter build web
+// --release` (already verified separately in this mission) -- but
+// `flutter test` always runs in debug mode, so a direct IveAvatar capture
+// unavoidably includes that badge, which at 56dp wraps to 3 lines and
+// visually obscures the eyes/nose/mouth (confirmed in the first capture
+// pass). This reconstruction is otherwise byte-identical to the real
+// IveVisualFallback, MINUS only that debug-only conditional, to honestly
+// assess what an actual release-build end user sees.
+class _NewFallbackReleaseSimulation extends StatefulWidget {
+  final IveVisualState state;
+  final double size;
+  const _NewFallbackReleaseSimulation({required this.state, required this.size});
+
+  @override
+  State<_NewFallbackReleaseSimulation> createState() => _NewFallbackReleaseSimulationState();
+}
+
+class _NewFallbackReleaseSimulationState extends State<_NewFallbackReleaseSimulation>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulseCtrl;
+  late final Animation<double> _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 2200))
+      ..repeat(reverse: true);
+    _pulse = Tween<double>(begin: 0.0, end: 1.0)
+        .animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _pulseCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final config = IveVisualStateConfig.forState(widget.state);
+    final padding = widget.size * 0.055;
+    final devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
+    final cachePixels = (widget.size * devicePixelRatio).round();
+    return AnimatedBuilder(
+      animation: _pulse,
+      builder: (_, __) => SizedBox(
+        width: widget.size,
+        height: widget.size,
+        child: CustomPaint(
+          painter: IveStatusRingPainter(state: widget.state, glowPulse: _pulse.value),
+          child: Padding(
+            padding: EdgeInsets.all(padding),
+            child: ClipOval(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.asset(
+                    IveAssetPaths.avatarPortrait,
+                    fit: BoxFit.cover,
+                    cacheWidth: cachePixels,
+                    cacheHeight: cachePixels,
+                    errorBuilder: (_, __, ___) => const ColoredBox(color: Color(0xFF0A0B1A)),
+                  ),
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 500),
+                    decoration: BoxDecoration(
+                      color: config.overlayColor
+                          .withOpacity(config.overlayOpacity * (0.6 + _pulse.value * 0.4)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 Future<void> _capture(WidgetTester tester, Key key, String outPath) async {
   final finder = find.byKey(key);
   final element = finder.evaluate().single;
@@ -150,6 +233,13 @@ void main() {
                       interactive: false,
                     ),
                   ),
+                  // Release-mode reconstruction (no debug-only badge) at
+                  // 56dp -- honest view of what an end user's release
+                  // build actually shows, unobstructed.
+                  RepaintBoundary(
+                    key: const Key('new_release_compact_56'),
+                    child: const _NewFallbackReleaseSimulation(state: IveVisualState.idle, size: 56),
+                  ),
                 ],
               ),
             ),
@@ -185,6 +275,7 @@ void main() {
       await _capture(tester, const Key('old_large_96'), 'render_proof/A_old_production_large_96dp.png');
       await _capture(tester, const Key('new_compact_56'), 'render_proof/B_new_branch_compact_56dp.png');
       await _capture(tester, const Key('new_large_96'), 'render_proof/B_new_branch_large_96dp.png');
+      await _capture(tester, const Key('new_release_compact_56'), 'render_proof/C_new_release_sim_compact_56dp.png');
     });
 
     expect(tester.takeException(), isNull);
