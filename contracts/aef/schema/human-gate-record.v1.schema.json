@@ -46,7 +46,7 @@
     "expires_at": {
       "type": "string",
       "format": "date-time",
-      "description": "A gate left in REQUESTED/REVIEW_REQUIRED past this time must be treated as EXPIRED, never as a silent default of AUTHORIZED or DENIED -- the caller must poll/resolve, not assume."
+      "description": "A gate left in REQUESTED/REVIEW_REQUIRED past this time must be treated as EXPIRED, never as a silent default of AUTHORIZED or DENIED -- the caller must poll/resolve, not assume. This also applies to a gate already in state=AUTHORIZED: an approval whose expires_at has passed must not be treated as currently valid by a resolver (Codex adversarial review, Finding F-04 -- the original validators.ts only checked this for REQUESTED/REVIEW_REQUIRED, silently accepting a stale AUTHORIZED record)."
     },
     "audit_ref": {
       "type": "string",

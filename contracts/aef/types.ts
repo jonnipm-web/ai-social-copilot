@@ -46,7 +46,15 @@ export interface ExecutionRequest {
 export interface DelegationEnvelope {
   contract_version: "1.0";
   delegation_id: string;
-  issuer: string;
+  /**
+   * The component asserting this delegation. Actor-shaped (not a bare
+   * string) so the issuer's OWN identity requires an auth_ref an
+   * independent component must resolve -- fixed after Codex adversarial
+   * review (Finding F-02) found that a bare issuer string let any caller
+   * simply declare itself e.g. "aef_policy_engine" with no binding to a
+   * verifiable identity, a textbook confused-deputy setup.
+   */
+  issuer: Actor;
   subject: Actor;
   audience: string;
   issued_at: string;
@@ -131,39 +139,52 @@ export const AUTHORITATIVE_SOURCE_ALLOWLIST: readonly string[] = [
   "evidence_trust.legal_gate",
 ] as const;
 
-/** Pluggable nonce store for DelegationEnvelope replay defense (Section 9). */
+/**
+ * Pluggable nonce store for DelegationEnvelope replay defense (Section 9).
+ *
+ * Exposes a SINGLE atomic operation, `tryConsume`, deliberately instead of
+ * a `hasSeen()` + `record()` pair. A Codex adversarial review (Finding
+ * F-05) correctly noted that a check-then-record API invites a
+ * time-of-check-to-time-of-use race under concurrency -- two callers can
+ * both observe `hasSeen() === false` before either calls `record()`. This
+ * is not just an in-memory-test-store concern: even a "durable" store
+ * built against this two-step shape would inherit the race unless its
+ * caller wraps both calls in a transaction, which nothing here would
+ * force it to do. A single `tryConsume` makes atomicity a property of the
+ * interface itself, not something every implementer must remember.
+ */
 export interface NonceStore {
-  hasSeen(nonce: string): boolean;
-  record(nonce: string): void;
+  /** Atomically checks-and-records in one step. Returns true if this is the FIRST time `value` has been seen (i.e. consumption succeeded); false if it was already consumed (replay). */
+  tryConsume(value: string): boolean;
 }
 
 /**
  * Reference in-memory implementation for TESTS ONLY. A real AEF must use a
- * durable store (e.g. a database unique constraint) -- an in-memory Set is
- * lost on process restart and is not safe across multiple instances.
+ * durable store with a real atomic/unique-constraint guarantee (e.g. a
+ * database unique index and an INSERT ... ON CONFLICT DO NOTHING pattern)
+ * -- an in-memory Set is lost on process restart, is not safe across
+ * multiple instances, and (JavaScript's single-threaded event loop aside)
+ * is not a substitute for cross-process atomicity in a real deployment.
  */
 export class InMemoryNonceStore implements NonceStore {
   private readonly seen = new Set<string>();
-  hasSeen(nonce: string): boolean {
-    return this.seen.has(nonce);
-  }
-  record(nonce: string): void {
-    this.seen.add(nonce);
+  tryConsume(value: string): boolean {
+    if (this.seen.has(value)) return false;
+    this.seen.add(value);
+    return true;
   }
 }
 
-/** Pluggable request-id store for execution-replay defense (Section 9). Same "tests only" caveat as NonceStore. */
+/** Pluggable request-id store for execution-replay defense (Section 9). Same atomic-by-design shape and "tests only" caveat as NonceStore. */
 export interface RequestIdStore {
-  hasSeen(requestId: string): boolean;
-  record(requestId: string): void;
+  tryConsume(value: string): boolean;
 }
 
 export class InMemoryRequestIdStore implements RequestIdStore {
   private readonly seen = new Set<string>();
-  hasSeen(requestId: string): boolean {
-    return this.seen.has(requestId);
-  }
-  record(requestId: string): void {
-    this.seen.add(requestId);
+  tryConsume(value: string): boolean {
+    if (this.seen.has(value)) return false;
+    this.seen.add(value);
+    return true;
   }
 }

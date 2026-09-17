@@ -88,7 +88,7 @@
     "quant_execution_tier": {
       "type": "string",
       "enum": ["research", "backtest", "paper", "controlled_live", "expanded_live"],
-      "description": "Required when domain='quant' and the action represents a trading/order action (enforced in validators.ts, not expressible in pure JSON Schema without knowing the action taxonomy). controlled_live/expanded_live additionally require a non-null human_gate_ref pointing to an AUTHORIZED HumanGateRecord (Section 14/16)."
+      "description": "Required when domain='quant' (enforced in validators.ts, not expressible in pure JSON Schema without knowing the action taxonomy). Must exactly match the tier named in the second dot-segment of `action` whenever that segment is itself one of these five tier names (e.g. action='quant.controlled_live.submit_order' requires quant_execution_tier='controlled_live') -- this field is intentionally redundant with the action's own namespace, not an independent, freely-settable classifier, because a caller could otherwise under-declare risk (Codex adversarial review, Finding F-07: a request naming a 'controlled_live' action could previously claim tier='research' and skip the human-gate requirement below). controlled_live/expanded_live additionally require a non-null human_gate_ref pointing to an AUTHORIZED HumanGateRecord (Section 14/16)."
     },
     "context_ref": {
       "type": "string",

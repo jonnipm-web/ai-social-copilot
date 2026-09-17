@@ -32,7 +32,6 @@ const UUID_V4_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ACTION_RE = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/;
 const AUDIENCE_RE = /^aef\.[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$/;
-const ISSUER_RE = /^[a-z][a-z0-9_]*$/;
 const SOURCE_RE = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$/;
 const SCOPE_ITEM_RE = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*(\.\*)?$/;
 const KNOWN_DOMAINS: readonly Domain[] = ["core", "quant", "impact", "internal"];
@@ -232,12 +231,39 @@ export function validateExecutionRequest(
   if (domain === "quant") {
     if (tier === undefined) {
       errors.push("request.quant_execution_tier: required when domain='quant' (Section 14)");
-    } else if (HIGH_RISK_QUANT_TIERS.includes(tier as QuantExecutionTier)) {
-      const humanGateRef = (value as Record<string, unknown>).human_gate_ref;
-      if (typeof humanGateRef !== "string" || humanGateRef.length < 1) {
-        errors.push(
-          `request.human_gate_ref: required when quant_execution_tier='${tier}' -- no real-money action may be requested without a human_gate_ref, regardless of any other field (Section 14/16)`,
-        );
+    } else {
+      // The tier must not be a freely-asserted, disconnected field --
+      // Codex adversarial review (Finding F-07) demonstrated that a
+      // caller could request action='quant.controlled_live.submit_order'
+      // (a real-money action, by its own namespace) while separately
+      // declaring quant_execution_tier='research', suppressing the
+      // human_gate_ref requirement below. Fixed by requiring the action's
+      // OWN second namespace segment (when it names a known tier) to
+      // match the declared tier exactly. This makes the field redundant
+      // with the action name rather than a separate, independently
+      // lie-able classifier -- the action string is validated by
+      // ACTION_RE above and is the same string a future AEF would
+      // actually route on, so the two can no longer disagree.
+      if (typeof action === "string") {
+        const segments = action.split(".");
+        const actionTierSegment = segments[1];
+        if (
+          actionTierSegment &&
+          KNOWN_QUANT_TIERS.includes(actionTierSegment as QuantExecutionTier) &&
+          actionTierSegment !== tier
+        ) {
+          errors.push(
+            `request.quant_execution_tier ('${tier}') does not match the tier named in request.action ('${action}', tier segment '${actionTierSegment}') -- a request must never claim a lower-risk tier than the action it names`,
+          );
+        }
+      }
+      if (HIGH_RISK_QUANT_TIERS.includes(tier as QuantExecutionTier)) {
+        const humanGateRef = (value as Record<string, unknown>).human_gate_ref;
+        if (typeof humanGateRef !== "string" || humanGateRef.length < 1) {
+          errors.push(
+            `request.human_gate_ref: required when quant_execution_tier='${tier}' -- no real-money action may be requested without a human_gate_ref, regardless of any other field (Section 14/16)`,
+          );
+        }
       }
     }
   } else if (tier !== undefined) {
@@ -293,9 +319,16 @@ export function validateExecutionRequest(
   }
 
   // Execution-replay defense (Section 9): a request_id seen before is
-  // rejected outright, independent of every other check.
-  if (opts.requestIdStore && typeof requestId === "string" && UUID_V4_RE.test(requestId)) {
-    if (opts.requestIdStore.hasSeen(requestId)) {
+  // rejected outright, independent of every other check. This is
+  // deliberately checked LAST and only reached when every other field is
+  // already valid -- tryConsume() has a side effect (it atomically marks
+  // request_id as consumed), so a request that would fail for an
+  // unrelated reason must not burn its request_id first (Codex
+  // adversarial review, Finding F-05: hasSeen()+record() as two separate
+  // calls is a check-then-act race under concurrency; tryConsume() closes
+  // that by making check-and-mark one atomic operation).
+  if (errors.length === 0 && opts.requestIdStore && typeof requestId === "string" && UUID_V4_RE.test(requestId)) {
+    if (!opts.requestIdStore.tryConsume(requestId)) {
       errors.push(`request.request_id: '${requestId}' has already been processed (execution-replay defense)`);
     }
   }
@@ -349,9 +382,16 @@ export function validateDelegationEnvelope(
     errors.push("delegation.delegation_id: required, must be a UUID v4");
   }
 
-  const issuer = (value as Record<string, unknown>).issuer;
-  if (typeof issuer !== "string" || !ISSUER_RE.test(issuer) || issuer.length > 100) {
-    errors.push("delegation.issuer: required, lowercase identifier");
+  // issuer is Actor-shaped (not a bare string) so the issuer's own claimed
+  // identity requires an auth_ref -- fixed after Codex adversarial review
+  // (Finding F-02): a bare issuer string let any caller simply declare
+  // itself e.g. "aef_policy_engine" with no binding to anything a future
+  // AEF could independently resolve, a textbook confused-deputy gap.
+  const issuerResult = validateActor((value as Record<string, unknown>).issuer, "delegation.issuer");
+  if (!issuerResult.ok) errors.push(...issuerResult.errors);
+  const issuer = (value as Record<string, unknown>).issuer as { type?: string } | undefined;
+  if (isPlainObject(issuer) && issuer.type === "user") {
+    errors.push("delegation.issuer: type='user' is not valid for an issuer -- only a service or system component may issue a delegation, never an end-user identity");
   }
 
   const subjectResult = validateActor((value as Record<string, unknown>).subject, "delegation.subject");
@@ -373,10 +413,11 @@ export function validateDelegationEnvelope(
   }
 
   const nonce = (value as Record<string, unknown>).nonce;
+  let nonceWellFormed = false;
   if (typeof nonce !== "string" || nonce.length < 16 || nonce.length > 200) {
     errors.push("delegation.nonce: required, at least 16 chars");
-  } else if (opts.nonceStore?.hasSeen(nonce)) {
-    errors.push(`delegation.nonce: has already been used (authentication-replay defense)`);
+  } else {
+    nonceWellFormed = true;
   }
 
   const purpose = (value as Record<string, unknown>).purpose;
@@ -422,6 +463,17 @@ export function validateDelegationEnvelope(
     errors.push(`delegation: prohibited authority field '${f.field}' found at ${f.path}`);
   }
 
+  // Authentication-replay defense (Section 9), deferred to the end and
+  // atomic for the same reason as ExecutionRequest's request_id check
+  // above (Finding F-05): only consume the nonce once everything else is
+  // already known-valid, and do so as a single atomic operation so two
+  // concurrent validations of the same nonce cannot both succeed.
+  if (errors.length === 0 && nonceWellFormed && opts.nonceStore) {
+    if (!opts.nonceStore.tryConsume(nonce as string)) {
+      errors.push("delegation.nonce: has already been used (authentication-replay defense)");
+    }
+  }
+
   return errors.length === 0 ? OK : fail(...errors);
 }
 
@@ -443,50 +495,93 @@ function scopeMatches(action: string, pattern: string): boolean {
  * rules between them.
  */
 export function validateRequestAgainstDelegation(
-  request: ExecutionRequest,
-  delegation: DelegationEnvelope,
+  request: unknown,
+  delegation: unknown,
 ): ValidationResult {
+  // Defensive guards first (Codex adversarial review, Finding F-08): this
+  // function documents that it "assumes well-formed input," but an
+  // uncaught exception on malformed input is itself a fail-open risk -- a
+  // careless caller could treat a thrown error as "the check didn't run"
+  // and proceed anyway. Every prior-validation assumption below is now
+  // re-checked structurally before being relied upon.
+  if (!isPlainObject(request) || !isPlainObject(delegation)) {
+    return fail("validateRequestAgainstDelegation: both request and delegation must be objects (call validateExecutionRequest/validateDelegationEnvelope first)");
+  }
+  const req = request as unknown as ExecutionRequest;
+  const del = delegation as unknown as DelegationEnvelope;
+  if (
+    typeof req.request_id !== "string" ||
+    typeof req.domain !== "string" ||
+    !isPlainObject(req.actor) ||
+    typeof req.actor.type !== "string" ||
+    typeof req.actor.id !== "string"
+  ) {
+    return fail("validateRequestAgainstDelegation: request is missing required fields (request_id/domain/actor) -- it must independently pass validateExecutionRequest first");
+  }
+  if (
+    typeof del.request_binding !== "string" ||
+    typeof del.audience !== "string" ||
+    !isPlainObject(del.subject) ||
+    typeof del.subject.type !== "string" ||
+    typeof del.subject.id !== "string" ||
+    !Array.isArray(del.scope)
+  ) {
+    return fail("validateRequestAgainstDelegation: delegation is missing required fields (request_binding/audience/subject/scope) -- it must independently pass validateDelegationEnvelope first");
+  }
+
   const errors: string[] = [];
 
-  if (delegation.request_binding !== request.request_id) {
+  if (del.request_binding !== req.request_id) {
     errors.push(
-      `delegation.request_binding ('${delegation.request_binding}') does not match request.request_id ('${request.request_id}') -- a delegation is single-request only and cannot be reused`,
+      `delegation.request_binding ('${del.request_binding}') does not match request.request_id ('${req.request_id}') -- a delegation is single-request only and cannot be reused`,
     );
   }
 
   if (
-    delegation.subject.type !== request.actor.type ||
-    delegation.subject.id !== request.actor.id
+    del.subject.type !== req.actor.type ||
+    del.subject.id !== req.actor.id
   ) {
     errors.push(
       "delegation.subject does not match request.actor -- a delegation issued for one actor cannot be used to authorize a different actor's request",
     );
   }
 
-  const expectedAudiencePrefix = `aef.${request.domain}`;
-  if (!delegation.audience.startsWith(expectedAudiencePrefix)) {
+  // Boundary-aware audience matching (Codex adversarial review, Finding
+  // F-03): a naive `.startsWith(prefix)` check let "aef.coreextra" pass
+  // for a request whose domain is "core", since "coreextra" begins with
+  // "core" as a plain substring. An audience must equal the domain
+  // prefix exactly, or be followed by a '.' boundary into a subcomponent
+  // -- "aef.core" and "aef.core.action_engine" both match domain=core;
+  // "aef.coreextra" never does.
+  const expectedAudiencePrefix = `aef.${req.domain}`;
+  const audienceMatchesDomain =
+    del.audience === expectedAudiencePrefix ||
+    del.audience.startsWith(`${expectedAudiencePrefix}.`);
+  if (!audienceMatchesDomain) {
     errors.push(
-      `delegation.audience ('${delegation.audience}') does not match request.domain ('${request.domain}') -- expected an audience under '${expectedAudiencePrefix}' (Section 8: audience mismatch)`,
+      `delegation.audience ('${del.audience}') does not match request.domain ('${req.domain}') -- expected exactly '${expectedAudiencePrefix}' or a '.'-delimited subcomponent of it (Section 8: audience mismatch)`,
     );
   }
 
   if (
-    request.quant_execution_tier &&
-    HIGH_RISK_QUANT_TIERS.includes(request.quant_execution_tier)
+    req.quant_execution_tier &&
+    HIGH_RISK_QUANT_TIERS.includes(req.quant_execution_tier)
   ) {
-    const expectedTierAudience = `aef.quant.${request.quant_execution_tier}`;
-    if (delegation.audience !== expectedTierAudience) {
+    const expectedTierAudience = `aef.quant.${req.quant_execution_tier}`;
+    if (del.audience !== expectedTierAudience) {
       errors.push(
-        `delegation.audience must be exactly '${expectedTierAudience}' for quant_execution_tier='${request.quant_execution_tier}' -- high-risk tiers require an audience scoped to that exact tier, not a broader 'aef.quant' delegation`,
+        `delegation.audience must be exactly '${expectedTierAudience}' for quant_execution_tier='${req.quant_execution_tier}' -- high-risk tiers require an audience scoped to that exact tier, not a broader 'aef.quant' delegation`,
       );
     }
   }
 
-  const matchesScope = delegation.scope.some((pattern) => scopeMatches(request.action, pattern));
-  if (!matchesScope) {
-    errors.push(
-      `request.action ('${request.action}') is not covered by delegation.scope (${JSON.stringify(delegation.scope)})`,
-    );
+  if (typeof req.action === "string") {
+    const matchesScope = del.scope.some((pattern) => typeof pattern === "string" && scopeMatches(req.action, pattern));
+    if (!matchesScope) {
+      errors.push(
+        `request.action ('${req.action}') is not covered by delegation.scope (${JSON.stringify(del.scope)})`,
+      );
+    }
   }
 
   return errors.length === 0 ? OK : fail(...errors);
@@ -517,6 +612,37 @@ export function validateHumanGateRecord(
   if (!isPlainObject(value)) return fail("gate: must be an object");
   const now = opts.now ?? new Date();
   const errors: string[] = [];
+
+  const ALLOWED_GATE_KEYS = new Set([
+    "contract_version",
+    "gate_id",
+    "request_id",
+    "action",
+    "state",
+    "approver",
+    "decided_at",
+    "expires_at",
+    "audit_ref",
+  ]);
+  for (const key of Object.keys(value)) {
+    if (!ALLOWED_GATE_KEYS.has(key)) errors.push(`gate: unknown field '${key}'`);
+  }
+
+  const validStatesForPrevCheck: HumanGateState[] = [
+    "REQUESTED",
+    "REVIEW_REQUIRED",
+    "AUTHORIZED",
+    "REJECTED",
+    "EXPIRED",
+    "EXECUTED",
+  ];
+  if (opts.previousState !== undefined && !validStatesForPrevCheck.includes(opts.previousState)) {
+    // Defensive guard (Codex adversarial review, Finding F-08): a caller
+    // passing a bogus previousState used to reach `.includes()` on
+    // `undefined` inside VALID_TRANSITIONS and throw. An invalid
+    // previousState is itself invalid input, not a crash.
+    return fail(`validateHumanGateRecord: opts.previousState '${String(opts.previousState)}' is not a recognized HumanGateState`);
+  }
 
   const version = (value as Record<string, unknown>).contract_version;
   if (version !== SUPPORTED_CONTRACT_VERSION) {
@@ -590,6 +716,21 @@ export function validateHumanGateRecord(
     errors.push(
       `gate: state is '${state}' but expires_at (${expiresAt}) has passed -- must be resolved to EXPIRED, never silently treated as approved or denied`,
     );
+  } else if (
+    state === "AUTHORIZED" &&
+    new Date(expiresAt).getTime() <= now.getTime()
+  ) {
+    // Codex adversarial review, Finding F-04: the original check only
+    // covered REQUESTED/REVIEW_REQUIRED, so a syntactically complete
+    // AUTHORIZED record whose expiry had already passed was accepted --
+    // a future AEF resolving human_gate_ref could treat stale approval
+    // as currently valid. An approval past its own expiry is not
+    // currently authorized; it must be re-derived (typically to EXPIRED)
+    // by whatever system owns this record's lifecycle, never trusted
+    // as-is by a caller that merely has an old copy of it.
+    errors.push(
+      `gate: state is 'AUTHORIZED' but expires_at (${expiresAt}) has already passed -- a stale approval must not be treated as currently valid`,
+    );
   }
 
   const findings = scanForProhibitedFields(value);
@@ -606,6 +747,24 @@ export function validateHumanGateRecord(
 export function validatePolicySignal(value: unknown): ValidationResult {
   if (!isPlainObject(value)) return fail("signal: must be an object");
   const errors: string[] = [];
+
+  // Codex adversarial review, Finding F-06: the JSON Schema declares
+  // additionalProperties=false, but this reference validator did not
+  // enforce the same, so a field like "is_authoritative": true could
+  // pass through this validator silently even though the canonical
+  // schema would reject it -- schema/validator parity matters because a
+  // real implementation is more likely to use one of these, not both.
+  const ALLOWED_SIGNAL_KEYS = new Set([
+    "contract_version",
+    "kind",
+    "source",
+    "signal",
+    "computed_at",
+    "request_ref",
+  ]);
+  for (const key of Object.keys(value)) {
+    if (!ALLOWED_SIGNAL_KEYS.has(key)) errors.push(`signal: unknown field '${key}'`);
+  }
 
   const version = (value as Record<string, unknown>).contract_version;
   if (version !== SUPPORTED_CONTRACT_VERSION) {
@@ -648,6 +807,29 @@ export function validatePolicySignal(value: unknown): ValidationResult {
 export function validateExecutionReceipt(value: unknown): ValidationResult {
   if (!isPlainObject(value)) return fail("receipt: must be an object");
   const errors: string[] = [];
+
+  // Codex adversarial review, Finding F-06: same schema/validator parity
+  // gap as PolicySignal above.
+  const ALLOWED_RECEIPT_KEYS = new Set([
+    "contract_version",
+    "receipt_id",
+    "request_id",
+    "actor",
+    "action",
+    "policy_decision",
+    "human_gate_ref",
+    "tool",
+    "started_at",
+    "completed_at",
+    "outcome",
+    "verification_ref",
+    "error",
+    "rollback_ref",
+    "deployment_identity",
+  ]);
+  for (const key of Object.keys(value)) {
+    if (!ALLOWED_RECEIPT_KEYS.has(key)) errors.push(`receipt: unknown field '${key}'`);
+  }
 
   const version = (value as Record<string, unknown>).contract_version;
   if (version !== SUPPORTED_CONTRACT_VERSION) {

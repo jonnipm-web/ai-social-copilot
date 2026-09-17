@@ -26,10 +26,8 @@
       "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
     },
     "issuer": {
-      "type": "string",
-      "pattern": "^[a-z][a-z0-9_]*$",
-      "maxLength": 100,
-      "description": "The component asserting this delegation, e.g. 'ive'. Never self-declared authority -- issuer identity is itself expected to be established the same way actor identity is (an independent auth_ref), not merely by this string."
+      "$ref": "execution-request.v1.schema.json#/definitions/Actor",
+      "description": "The component asserting this delegation, e.g. IVE. Actor-shaped (not a bare string) so the issuer's own identity requires a resolvable auth_ref -- fixed after Codex adversarial review (Finding F-02) found that a bare issuer string let any caller simply declare itself e.g. 'aef_policy_engine' with no binding to anything a future AEF could independently resolve, a textbook confused-deputy setup. type='user' is never valid for an issuer (enforced in validators.ts, not expressible in this $ref alone) -- only a service or system component may issue a delegation."
     },
     "subject": {
       "$ref": "execution-request.v1.schema.json#/definitions/Actor",
@@ -39,7 +37,7 @@
       "type": "string",
       "pattern": "^aef\\.[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*$",
       "maxLength": 150,
-      "description": "The SPECIFIC execution boundary this delegation authorizes reaching, e.g. 'aef.core.action_engine', 'aef.quant.controlled_live', 'aef.stripe.billing'. A delegation for one audience must never be accepted for another -- an IVE->AEF delegation for 'aef.core' does not, and structurally cannot per validators.ts, satisfy a request whose domain/action maps to 'aef.quant.controlled_live' or 'aef.stripe.billing'. Each hop in a future chain (IVE->AEF, AEF->Stripe, AEF->Supabase Admin, AEF->Broker) needs its OWN delegation with that hop's own audience (Section 8)."
+      "description": "The SPECIFIC execution boundary this delegation authorizes reaching, e.g. 'aef.core.action_engine', 'aef.quant.controlled_live', 'aef.stripe.billing'. A delegation for one audience must never be accepted for another -- an IVE->AEF delegation for 'aef.core' does not, and structurally cannot per validators.ts, satisfy a request whose domain/action maps to 'aef.quant.controlled_live' or 'aef.stripe.billing'. Each hop in a future chain (IVE->AEF, AEF->Stripe, AEF->Supabase Admin, AEF->Broker) needs its OWN delegation with that hop's own audience (Section 8). Matching against a request's domain is boundary-aware, not a plain prefix check: 'aef.core' matches domain=core, as does any '.'-delimited subcomponent like 'aef.core.action_engine' -- but 'aef.coreextra' does NOT match domain=core, even though it shares the same leading characters (Codex adversarial review, Finding F-03, fixed in validators.ts's validateRequestAgainstDelegation)."
     },
     "issued_at": { "type": "string", "format": "date-time" },
     "expires_at": {

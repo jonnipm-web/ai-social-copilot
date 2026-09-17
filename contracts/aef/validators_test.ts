@@ -112,7 +112,7 @@ Deno.test("10. INVALID -- duplicate/invalid nonce (delegation)", () => {
   const envelope = (overrides: Record<string, unknown> = {}) => ({
     contract_version: "1.0",
     delegation_id: uuid("del1"),
-    issuer: "ive",
+    issuer: { type: "service", id: "ive", auth_ref: "svc:ive-core" },
     subject: { type: "user", id: "user-42", auth_ref: "usr:session-abc123" },
     audience: "aef.core",
     issued_at: "2026-09-18T11:55:00.000Z",
@@ -124,9 +124,13 @@ Deno.test("10. INVALID -- duplicate/invalid nonce (delegation)", () => {
     auth_assertion_ref: "assertion-ref-1",
     ...overrides,
   });
+  // validateDelegationEnvelope now atomically consumes the nonce via
+  // tryConsume() internally (Finding F-05) -- the first call both checks
+  // AND records it, so no separate manual store.record() step exists or
+  // is needed; calling it a second time with the same nonce is the
+  // replay itself.
   const first = validateDelegationEnvelope(envelope(), { now: NOW, nonceStore: store });
   assertValid(first, "case 10 (first use)");
-  store.record("nonce-0123456789abcdef");
   const replayed = validateDelegationEnvelope(envelope({ delegation_id: uuid("del2") }), { now: NOW, nonceStore: store });
   assertInvalid(replayed, "case 10 (replay)");
 });
@@ -192,7 +196,7 @@ Deno.test("19. INVALID -- malformed audience", () => {
   const badDelegation = {
     contract_version: "1.0",
     delegation_id: uuid("del3"),
-    issuer: "ive",
+    issuer: { type: "service", id: "ive", auth_ref: "svc:ive-core" },
     subject: { type: "user", id: "user-42", auth_ref: "usr:session-abc123" },
     audience: "not-a-valid-audience",
     issued_at: "2026-09-18T11:55:00.000Z",
@@ -216,7 +220,7 @@ Deno.test("20. INVALID -- mismatched audience (delegation for core used against 
   const delegation: DelegationEnvelope = {
     contract_version: "1.0",
     delegation_id: uuid("del4"),
-    issuer: "ive",
+    issuer: { type: "service", id: "ive", auth_ref: "svc:ive-core" },
     subject: request.actor,
     audience: "aef.core", // wrong audience for a quant request
     issued_at: "2026-09-18T11:55:00.000Z",
@@ -283,9 +287,11 @@ Deno.test("25. INVALID -- malformed parameters (not an object)", () => {
 Deno.test("26. INVALID -- replayed consequential request (request_id seen before)", () => {
   const store = new InMemoryRequestIdStore();
   const req = baseRequest();
+  // validateExecutionRequest now atomically consumes request_id via
+  // tryConsume() internally (Finding F-05) -- the first successful
+  // validation already records it, no separate manual step needed.
   const first = validateExecutionRequest(req, { now: NOW, requestIdStore: store });
   assertValid(first, "case 26 (first time)");
-  store.record((req as { request_id: string }).request_id);
   const second = validateExecutionRequest(req, { now: NOW, requestIdStore: store });
   assertInvalid(second, "case 26 (replay)");
 });
@@ -311,7 +317,7 @@ Deno.test("DelegationEnvelope: bare '*' scope is rejected even though it would s
   const bad = {
     contract_version: "1.0",
     delegation_id: uuid("del5"),
-    issuer: "ive",
+    issuer: { type: "service", id: "ive", auth_ref: "svc:ive-core" },
     subject: { type: "user", id: "u1", auth_ref: "usr:s1" },
     audience: "aef.core",
     issued_at: "2026-09-18T11:55:00.000Z",
@@ -508,6 +514,197 @@ Deno.test("cross-domain: Quant example (research tier, low risk) validates", asy
 Deno.test("cross-domain: Impact example validates", async () => {
   const fixture = JSON.parse(await Deno.readTextFile(new URL("./fixtures/examples/impact-example.json", import.meta.url)));
   assertValid(validateExecutionRequest(fixture, { now: NOW }), "impact example");
+});
+
+// =======================================================================
+// CODEX ADVERSARIAL REVIEW REGRESSION TESTS (Findings F-01 through F-07)
+// Each test below proves the specific bypass Codex demonstrated is now
+// closed. See the mission report's "Claude Reconciliation" section for
+// the full writeup of each finding.
+// =======================================================================
+
+Deno.test("F-01 regression: alias field names not on the literal list are still caught after normalization", () => {
+  const aliases: Record<string, unknown>[] = [
+    { tenantId: "org-7" },
+    { workspace_id: "ws-1" },
+    { subscriptionLevel: "premium" },
+    { paid: true },
+    { execution_mode: "live" },
+    { "Tenant-Id": "org-7" },
+  ];
+  for (const parameters of aliases) {
+    assertInvalid(
+      validateExecutionRequest(baseRequest({ parameters }), { now: NOW }),
+      `F-01: alias ${JSON.stringify(parameters)} must be rejected`,
+    );
+  }
+});
+
+Deno.test("F-02 regression: delegation issuer must be Actor-shaped with a resolvable auth_ref, and must not be type=user", () => {
+  const base = {
+    contract_version: "1.0",
+    delegation_id: uuid("delf2"),
+    subject: { type: "user", id: "user-42", auth_ref: "usr:session-abc123" },
+    audience: "aef.core",
+    issued_at: "2026-09-18T11:55:00.000Z",
+    expires_at: FUTURE,
+    nonce: "nonce-f02-aaaaaaaaaaaa",
+    purpose: "test",
+    scope: ["core.generate_strategy"],
+    request_binding: uuid("req1"),
+    auth_assertion_ref: "assertion-ref-1",
+  };
+  // Bare string issuer (the pre-fix shape) must now be rejected outright.
+  assertInvalid(
+    validateDelegationEnvelope({ ...base, issuer: "ive" }, { now: NOW }),
+    "F-02: bare string issuer must be rejected",
+  );
+  // A self-declared issuer claiming to BE an authoritative component,
+  // without a resolvable auth_ref, is still rejected (auth_ref presence
+  // is required by validateActor regardless of the claimed id).
+  assertInvalid(
+    validateDelegationEnvelope({ ...base, issuer: { type: "service", id: "aef_policy_engine" } }, { now: NOW }),
+    "F-02: issuer missing auth_ref must be rejected",
+  );
+  // type=user is never a valid issuer.
+  assertInvalid(
+    validateDelegationEnvelope(
+      { ...base, issuer: { type: "user", id: "user-42", auth_ref: "usr:session-abc123" } },
+      { now: NOW },
+    ),
+    "F-02: type=user issuer must be rejected",
+  );
+  // A properly Actor-shaped service issuer with an auth_ref is accepted.
+  assertValid(
+    validateDelegationEnvelope(
+      { ...base, issuer: { type: "service", id: "ive", auth_ref: "svc:ive-core" } },
+      { now: NOW },
+    ),
+    "F-02: well-formed service issuer must be accepted",
+  );
+});
+
+Deno.test("F-03 regression: audience prefix confusion (aef.coreextra) no longer satisfies domain=core", () => {
+  const request: ExecutionRequest = baseRequest() as unknown as ExecutionRequest;
+  const delegation: DelegationEnvelope = {
+    contract_version: "1.0",
+    delegation_id: uuid("delf3"),
+    issuer: { type: "service", id: "ive", auth_ref: "svc:ive-core" },
+    subject: request.actor,
+    audience: "aef.coreextra", // must NOT satisfy domain='core' via naive prefix matching
+    issued_at: "2026-09-18T11:55:00.000Z",
+    expires_at: FUTURE,
+    nonce: "nonce-f03-aaaaaaaaaaaa",
+    purpose: "test",
+    scope: ["core.generate_strategy"],
+    request_binding: request.request_id,
+    auth_assertion_ref: "assertion-ref-1",
+  };
+  assertInvalid(validateRequestAgainstDelegation(request, delegation), "F-03: aef.coreextra must not match domain=core");
+
+  // Sanity: the legitimate boundary form (a genuine subcomponent) still works.
+  const goodDelegation = { ...delegation, audience: "aef.core.action_engine" };
+  assertValid(validateRequestAgainstDelegation(request, goodDelegation), "F-03: aef.core.action_engine must still match domain=core");
+});
+
+Deno.test("F-04 regression: an AUTHORIZED HumanGateRecord past its own expiry is rejected", () => {
+  const staleAuthorized = {
+    contract_version: "1.0",
+    gate_id: uuid("gatef4"),
+    request_id: uuid("req1"),
+    action: "quant.controlled_live.submit_order",
+    state: "AUTHORIZED",
+    approver: { type: "user", id: "approver-1", auth_ref: "usr:s2" },
+    decided_at: "2026-09-18T10:00:00.000Z",
+    audit_ref: "audit-log-entry-f4",
+    expires_at: PAST, // already expired relative to NOW
+  };
+  assertInvalid(validateHumanGateRecord(staleAuthorized, { now: NOW }), "F-04: stale AUTHORIZED gate must be rejected");
+
+  // Sanity: the same record with a future expiry is accepted.
+  const freshAuthorized = { ...staleAuthorized, expires_at: FUTURE };
+  assertValid(validateHumanGateRecord(freshAuthorized, { now: NOW }), "F-04: non-expired AUTHORIZED gate must be accepted");
+});
+
+Deno.test("F-05 regression: nonce/request_id consumption is atomic (tryConsume), not check-then-record", () => {
+  const nonceStore = new InMemoryNonceStore();
+  assert(nonceStore.tryConsume("shared-nonce-aaaaaaaaaa"), "F-05: first consume must succeed");
+  assertFalse(nonceStore.tryConsume("shared-nonce-aaaaaaaaaa"), "F-05: second consume of the same value must fail -- this is the atomic replay defense");
+
+  const reqIdStore = new InMemoryRequestIdStore();
+  assert(reqIdStore.tryConsume(uuid("f05req")), "F-05: first request_id consume must succeed");
+  assertFalse(reqIdStore.tryConsume(uuid("f05req")), "F-05: second request_id consume must fail");
+});
+
+Deno.test("F-06 regression: unknown fields are rejected on HumanGateRecord, PolicySignal, and ExecutionReceipt", () => {
+  assertInvalid(
+    validateHumanGateRecord({
+      contract_version: "1.0",
+      gate_id: uuid("gatef6"),
+      request_id: uuid("req1"),
+      action: "quant.controlled_live.submit_order",
+      state: "REQUESTED",
+      expires_at: FUTURE,
+      is_authoritative: true, // unknown field
+    }, { now: NOW }),
+    "F-06: HumanGateRecord unknown field must be rejected",
+  );
+  assertInvalid(
+    validatePolicySignal({
+      contract_version: "1.0",
+      kind: "ADVISORY",
+      source: "ive.reasoning",
+      signal: "test",
+      computed_at: "2026-09-18T11:55:00.000Z",
+      is_authoritative: true, // unknown field
+    }),
+    "F-06: PolicySignal unknown field must be rejected",
+  );
+  assertInvalid(
+    validateExecutionReceipt({
+      contract_version: "1.0",
+      receipt_id: uuid("rcptf6"),
+      request_id: uuid("req1"),
+      actor: { type: "user", id: "u1", auth_ref: "usr:s1" },
+      action: "core.generate_strategy",
+      policy_decision: "ALLOWED",
+      started_at: "2026-09-18T11:55:00.000Z",
+      outcome: "SUCCESS",
+      is_authoritative: true, // unknown field
+    }),
+    "F-06: ExecutionReceipt unknown field must be rejected",
+  );
+});
+
+Deno.test("F-07 regression: quant_execution_tier can no longer disagree with the tier named in the action itself", () => {
+  // The attack Codex demonstrated: claim tier='research' (no human gate
+  // required) while the action itself names 'controlled_live' (a
+  // real-money action).
+  assertInvalid(
+    validateExecutionRequest(
+      baseRequest({
+        domain: "quant",
+        action: "quant.controlled_live.submit_order",
+        quant_execution_tier: "research",
+      }),
+      { now: NOW },
+    ),
+    "F-07: mismatched tier vs. action namespace must be rejected",
+  );
+
+  // Sanity: matching tier + action + human_gate_ref is accepted.
+  assertValid(
+    validateExecutionRequest(
+      baseRequest({
+        domain: "quant",
+        action: "quant.controlled_live.submit_order",
+        quant_execution_tier: "controlled_live",
+        human_gate_ref: uuid("gatef7"),
+      }),
+      { now: NOW },
+    ),
+    "F-07: matching tier + human_gate_ref must be accepted",
+  );
 });
 
 // =======================================================================
