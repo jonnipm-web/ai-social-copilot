@@ -1,0 +1,37 @@
+name: TEMP — IVE Visual Render Proof (investigation only)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  render-proof:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter (stable)
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Create .env (placeholder para asset loader)
+        run: |
+          echo "SUPABASE_URL=https://placeholder.supabase.co" > .env
+          echo "SUPABASE_ANON_KEY=placeholder_anon_key" >> .env
+          echo "GOOGLE_CLIENT_ID=placeholder.apps.googleusercontent.com" >> .env
+
+      - name: flutter pub get
+        run: flutter pub get
+
+      - name: Run render-proof capture test
+        run: flutter test test/features/ive/_visual_render_proof_test.dart --reporter expanded
+
+      - name: Upload render proof PNGs
+        uses: actions/upload-artifact@v4
+        with:
+          name: ive-visual-render-proof
+          path: render_proof/
+          retention-days: 7
