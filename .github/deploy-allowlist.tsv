@@ -37,11 +37,19 @@
 # an unrelated deploy.
 #
 # Deliberately NOT listed (undeployable through this workflow):
-#   ive-agent-runner  -- FROZEN. No source exists in this repository
-#                        (confirmed absent from supabase/functions/ on
-#                        both main and this branch); protected since
-#                        X4A; the workflow also hard-blocks this name
-#                        explicitly regardless of allowlist contents.
+#   ive-agent-runner  -- FROZEN, permanently excluded from this workflow
+#                        regardless of allowlist contents (protected
+#                        since X4A). IV-SECURITY-REMEDIATION-02 replaced
+#                        the deployed function with an inert retirement
+#                        stub (verify_jwt=true + resolveAuthenticatedUser,
+#                        no business logic, always 410) and committed
+#                        that same stub to supabase/functions/ive-agent-runner/
+#                        on main, so a canonical source now DOES exist --
+#                        this no longer means "source absent," it means
+#                        "this name may never be deployed through CI,
+#                        even for its own retirement stub." See
+#                        docs/ive/SR04_SR05_CLOSURE.md for the full record
+#                        and the conditions for any future change.
 #
 # process-file (IVE-PROCESS-FILE-CLOSURE): previously excluded here at
 # ~91MB of bundled dependencies (confirmed via `deno info`, far worse
