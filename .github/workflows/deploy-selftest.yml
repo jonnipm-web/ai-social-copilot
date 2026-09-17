@@ -65,22 +65,39 @@ jobs:
             || { echo "FAIL: unexpected resolution for extract-knowledge" >&2; exit 1; }
           echo "PASS: extract-knowledge resolves to exactly one function, verify_jwt=true (no --no-verify-jwt)"
 
-      - name: IVE-COMMERCIAL-AUTH-01 -- no allowlisted function resolves with --no-verify-jwt
+      - name: IVE-COMMERCIAL-AUTH-01 -- no allowlisted function resolves with --no-verify-jwt (except the explicit stripe-webhook exception, IV-SECURITY-REMEDIATION-03)
         run: |
           set -euo pipefail
+          # This duplicates the invariant scripts/ci/check_deploy_governance.sh's
+          # Check 5 already enforces via a different mechanism (static allowlist
+          # parsing there vs. resolved-output inspection here). Kept as
+          # defense-in-depth, but the exception list below MUST stay identical
+          # to check_deploy_governance.sh's -- this exact drift (one copy
+          # updated, one forgotten) is what caused this step to fail on every
+          # push since IVE-COMMERCIAL-BILLING-01 added the stripe-webhook
+          # exception (see docs/ive/SR04_SR05_CLOSURE.md and
+          # docs/ive/OUT_OF_BAND_DEPLOYMENT_THREAT_MODEL.md).
+          NO_VERIFY_JWT_EXCEPTIONS=("stripe-webhook")
+          is_allowed_exception() {
+            local candidate="$1" allowed
+            for allowed in "${NO_VERIFY_JWT_EXCEPTIONS[@]}"; do
+              [ "$candidate" = "$allowed" ] && return 0
+            done
+            return 1
+          }
           FAIL=0
           while IFS=$'\t' read -r name _ || [ -n "${name:-}" ]; do
             name="${name%$'\r'}"
             [ -z "$name" ] && continue
             case "$name" in \#*) continue ;; esac
             OUT="$(bash scripts/ci/resolve_deploy_selection.sh "$name")"
-            if echo "$OUT" | grep -qx -- "--no-verify-jwt"; then
-              echo "FAIL: $name resolves WITH --no-verify-jwt -- anonymous Groq/cost exposure would reopen" >&2
+            if echo "$OUT" | grep -qx -- "--no-verify-jwt" && ! is_allowed_exception "$name"; then
+              echo "FAIL: $name resolves WITH --no-verify-jwt but is not on the explicit exception list (${NO_VERIFY_JWT_EXCEPTIONS[*]}) -- anonymous Groq/cost exposure would reopen" >&2
               FAIL=1
             fi
           done < .github/deploy-allowlist.tsv
           [ "$FAIL" = "0" ] || exit 1
-          echo "PASS: every allowlisted function requires verify_jwt=true"
+          echo "PASS: every allowlisted function requires verify_jwt=true, except the explicit, reviewed stripe-webhook exception"
 
       - name: context-copilot resolves WITHOUT --no-verify-jwt (JWT policy preserved)
         run: |
