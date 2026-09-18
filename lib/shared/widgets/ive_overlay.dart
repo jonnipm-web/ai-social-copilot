@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -41,6 +43,45 @@ int _iveOpenModalCount = 0;
 void _iveModalCountChanged(int delta) {
   _iveOpenModalCount = (_iveOpenModalCount + delta).clamp(0, 1 << 30);
   iveModalOpenNotifier.value = _iveOpenModalCount > 0;
+}
+
+// GATE-17-FINAL-CLOSURE (Section 03, Agente Martins Decision 1-3) — the
+// modal/chat notifiers above only stop IveOverlay from covering something
+// that itself OWNS the whole screen (a dialog/sheet/chat). They do nothing
+// for the far more common case physical testing actually found: ordinary
+// scrolled page content (a card, a FAB) passing UNDER the overlay's own
+// fixed viewport position. A per-screen fix was explicitly rejected
+// (Decision 2) unless no simpler centralized signal exists — one already
+// does, the same way PopupRoute did for modals: Flutter's ScrollNotification
+// bubbles up from ANY Scrollable (ListView, CustomScrollView, a
+// SingleChildScrollView, GridView -- every scrollable screen in this app)
+// to a SINGLE NotificationListener wrapped around the router's `child` in
+// app.dart, with zero opt-in required at any call site, present or future.
+// Used to temporarily compact/fade the overlay WHILE the user is actively
+// scrolling content through its position -- it does not (and structurally
+// cannot) guarantee zero overlap with a screen that is at rest without
+// ever having been scrolled, which is why this is paired with a smaller,
+// edge-anchored resting footprint (see _defaultPosition/build below), not
+// relied on alone.
+final iveScrollingNotifier = ValueNotifier<bool>(false);
+Timer? _iveScrollIdleTimer;
+
+bool ivePageScrollNotification(ScrollNotification notification) {
+  if (notification is ScrollStartNotification ||
+      notification is ScrollUpdateNotification) {
+    _iveScrollIdleTimer?.cancel();
+    if (!iveScrollingNotifier.value) iveScrollingNotifier.value = true;
+  } else if (notification is ScrollEndNotification) {
+    _iveScrollIdleTimer?.cancel();
+    // Debounced, not immediate -- an instant snap-back the moment velocity
+    // hits zero reads as flicker on a fast, short scroll (very common
+    // flicking through a list); 400ms is long enough to settle past that
+    // without meaningfully delaying the avatar's return once reading resumes.
+    _iveScrollIdleTimer = Timer(const Duration(milliseconds: 400), () {
+      iveScrollingNotifier.value = false;
+    });
+  }
+  return false; // never consume -- let it keep bubbling to real listeners.
 }
 
 class IveRouteObserver extends NavigatorObserver {
@@ -102,7 +143,7 @@ class IveOverlay extends ConsumerStatefulWidget {
 
 class _IveOverlayState extends ConsumerState<IveOverlay> {
   Offset? _position;
-  bool    _dragging = false;
+  bool _dragging = false;
 
   @override
   void initState() {
@@ -118,6 +159,10 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
     // (see iveModalOpenNotifier's own doc comment above); same listener
     // pattern, not a new mechanism.
     iveModalOpenNotifier.addListener(_onChatOpenChange);
+    // GATE-17-FINAL-CLOSURE (Section 03) — same listener pattern, driving
+    // the scroll-aware compaction in build() below; see
+    // ivePageScrollNotification's doc comment for the mechanism itself.
+    iveScrollingNotifier.addListener(_onChatOpenChange);
     // IVE-COMMERCIAL-STABILITY-09O — reuses this already-existing lifecycle
     // callback; no new listener.
     IveForensicSnapshot.overlayMounted = true;
@@ -128,11 +173,12 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
     iveRouteNotifier.removeListener(_onRouteChange);
     iveChatOpenNotifier.removeListener(_onChatOpenChange);
     iveModalOpenNotifier.removeListener(_onChatOpenChange);
+    iveScrollingNotifier.removeListener(_onChatOpenChange);
     // IVE-COMMERCIAL-STABILITY-09O (Codex Gate, P2 ACCEPTED) — a dispose
     // mid-drag (e.g. a fast sign-out while dragging) would otherwise leave
     // overlayDragging stuck true forever, misleadingly implying an
     // in-progress drag at the moment of some LATER, unrelated crash.
-    IveForensicSnapshot.overlayMounted  = false;
+    IveForensicSnapshot.overlayMounted = false;
     IveForensicSnapshot.overlayDragging = false;
     super.dispose();
   }
@@ -189,7 +235,13 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
       // Desktop: safe corner — bottom-right with extra margin to avoid overlapping content
       return Offset(88, screen.height - 220);
     }
-    return Offset(24, screen.height - 320);
+    // Tightened from 24 to 8 -- part of the same physical-evidence-driven
+    // pass as the height offset above: hugging the true edge more closely
+    // shrinks how far the avatar's own footprint reaches leftward into
+    // content, without shrinking the 56dp tap target itself (still fully
+    // on-screen, just closer to the margin most cards/FABs already leave
+    // before their own edge padding starts).
+    return Offset(8, screen.height - 320);
   }
 
   @override
@@ -214,7 +266,8 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
     // non-null closes this: that stream reflects Supabase's own
     // client-side auth state change directly, independent of when this
     // app's own profile-invalidation call happens to run afterward.
-    final hasSession = ref.watch(authStateProvider).valueOrNull?.session != null;
+    final hasSession =
+        ref.watch(authStateProvider).valueOrNull?.session != null;
     final profile = ref.watch(currentProfileProvider).valueOrNull;
     // IVE-COMMERCIAL-STABILITY-09O — reuses this already-existing provider
     // watch; no new subscription.
@@ -225,7 +278,7 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
       // without this, a stale `true` from BEFORE sign-out/session-loss
       // would misleadingly survive into a later crash's forensic snapshot
       // even though the overlay (and its issue bubble) is no longer shown.
-      IveForensicSnapshot.issuePresent    = false;
+      IveForensicSnapshot.issuePresent = false;
       IveForensicSnapshot.overlayDragging = false;
       return const SizedBox.shrink();
     }
@@ -242,35 +295,56 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
     // ANY open modal (dialog/bottom sheet), not just the copilot chat one
     // -- see iveModalOpenNotifier's doc comment for why this is a single
     // app-wide NavigatorObserver check rather than a per-screen fix.
-    if (iveChatOpenNotifier.value || iveModalOpenNotifier.value) {
+    // GATE-17-FINAL-CLOSURE (Section 03/04, "react correctly to keyboard")
+    // — a form's Save/submit button routinely sits directly above an open
+    // keyboard (Performance's "Nova Métrica" among others); the floating
+    // avatar has no safe place to sit in that band, so it hides rather than
+    // guess. MediaQuery.viewInsets.bottom is the standard, centralized
+    // Flutter signal for "the keyboard is currently showing" -- true on
+    // every screen with a focused text field, again with no per-screen
+    // wiring required.
+    final keyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
+    if (iveChatOpenNotifier.value ||
+        iveModalOpenNotifier.value ||
+        keyboardOpen) {
       return const SizedBox.shrink();
     }
 
-    final state  = ref.watch(iveProvider);
+    final state = ref.watch(iveProvider);
     // IVE-COMMERCIAL-STABILITY-09O — reuses the `state` already read above
     // for the widget's own rendering; no new watch.
     IveForensicSnapshot.issuePresent = state.activeIssue != null;
     final screen = MediaQuery.of(context).size;
     final safeBottom = MediaQuery.of(context).padding.bottom;
     _position ??= _defaultPosition(screen);
+    // GATE-17-FINAL-CLOSURE (Section 03) — true only while a page is
+    // actively being scrolled AND there's nothing important currently
+    // shown (no open alert bubble, not mid-drag); see
+    // ivePageScrollNotification's doc comment for the underlying signal.
+    // Deliberately does not apply while `state.bubbleVisible` -- a message
+    // the user hasn't dismissed yet must stay fully legible even if they
+    // happen to scroll the page behind it.
+    final isCompactingForScroll =
+        iveScrollingNotifier.value && !_dragging && !state.bubbleVisible;
 
     // On desktop clamp to avoid navigation bars / toolbars
-    final maxY = _isDesktop
-        ? screen.height - 140 - safeBottom
-        : screen.height - 100;
+    final maxY =
+        _isDesktop ? screen.height - 140 - safeBottom : screen.height - 100;
 
     return Positioned(
       right: _position!.dx,
-      top:   _position!.dy,
+      top: _position!.dy,
       child: GestureDetector(
-        onPanStart:  (_) => setState(() {
+        onPanStart: (_) => setState(() {
           _dragging = true;
           IveForensicSnapshot.overlayDragging = true;
         }),
         onPanUpdate: (d) => setState(() {
           // dx tracks distance-from-right: dragging right (positive delta.dx)
           // moves the widget closer to the right edge, so dx DECREASES.
-          _position = Offset(_position!.dx - d.delta.dx, _position!.dy + d.delta.dy).clamp(
+          _position =
+              Offset(_position!.dx - d.delta.dx, _position!.dy + d.delta.dy)
+                  .clamp(
             Offset.zero,
             Offset(screen.width - 72, maxY),
           );
@@ -279,74 +353,97 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
           _dragging = false;
           IveForensicSnapshot.overlayDragging = false;
         }),
-        child: Column(
-          mainAxisSize:       MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            // Speech bubble — IgnorePointer evita hitbox invisível quando opacity=0
-            IgnorePointer(
-              ignoring: !state.bubbleVisible || _dragging,
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 350),
-                opacity:  state.bubbleVisible && !_dragging ? 1.0 : 0.0,
-                child: AnimatedSlide(
-                  duration: const Duration(milliseconds: 350),
-                  offset:   state.bubbleVisible && !_dragging
-                      ? Offset.zero
-                      : const Offset(0, 0.15),
-                  curve:    Curves.easeOut,
-                  child: _IveBubble(
-                    message:     state.message,
-                    expression:  state.expression,
-                    activeIssue: state.activeIssue,
-                    onDismiss: () {
-                      // Overlay global, sem projeto específico em foco — ver
-                      // comentário do provider em ive_context_provider.dart.
-                      final ctx = ref.read(iveContextDataProvider(null)).valueOrNull;
-                      if (ctx != null && ctx.alertId.isNotEmpty) {
-                        ref.read(iveMemoryProvider.notifier).dismissAlert(ctx.alertId);
-                      }
-                      ref.read(iveProvider.notifier).dismissBubble();
-                    },
-                    onChat: state.activeIssue == null
-                        ? () => _openChat(state.screenName)
-                        : null,
+        // GATE-17-FINAL-CLOSURE (Section 03) — recedes (faded + shrunk,
+        // never fully invisible so spatial continuity isn't lost) while
+        // isCompactingForScroll is true, i.e. while content is actively
+        // scrolling underneath with no alert bubble open. Still tappable
+        // at reduced opacity -- during an active scroll gesture, touch
+        // input is on the list being dragged, not this small a target.
+        child: AnimatedOpacity(
+          // Key exists only so tests can assert on this specific
+          // AnimatedOpacity's current value unambiguously -- the bubble
+          // below has its own, separate AnimatedOpacity.
+          key: const ValueKey('iveScrollCompactionOpacity'),
+          duration: const Duration(milliseconds: 200),
+          opacity: isCompactingForScroll ? 0.35 : 1.0,
+          child: AnimatedScale(
+            duration: const Duration(milliseconds: 200),
+            scale: isCompactingForScroll ? 0.7 : 1.0,
+            alignment: Alignment.bottomRight,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                // Speech bubble — IgnorePointer evita hitbox invisível quando opacity=0
+                IgnorePointer(
+                  ignoring: !state.bubbleVisible || _dragging,
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 350),
+                    opacity: state.bubbleVisible && !_dragging ? 1.0 : 0.0,
+                    child: AnimatedSlide(
+                      duration: const Duration(milliseconds: 350),
+                      offset: state.bubbleVisible && !_dragging
+                          ? Offset.zero
+                          : const Offset(0, 0.15),
+                      curve: Curves.easeOut,
+                      child: _IveBubble(
+                        message: state.message,
+                        expression: state.expression,
+                        activeIssue: state.activeIssue,
+                        onDismiss: () {
+                          // Overlay global, sem projeto específico em foco — ver
+                          // comentário do provider em ive_context_provider.dart.
+                          final ctx = ref
+                              .read(iveContextDataProvider(null))
+                              .valueOrNull;
+                          if (ctx != null && ctx.alertId.isNotEmpty) {
+                            ref
+                                .read(iveMemoryProvider.notifier)
+                                .dismissAlert(ctx.alertId);
+                          }
+                          ref.read(iveProvider.notifier).dismissBubble();
+                        },
+                        onChat: state.activeIssue == null
+                            ? () => _openChat(state.screenName)
+                            : null,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 6),
+                const SizedBox(height: 6),
 
-            // ── New IveAvatar (replaces old IveAvatarWidget) ─────────────────
-            // IVE-AVATAR-COMMERCIAL-FALLBACK-04 (Codex P2): the avatar is
-            // mounted with interactive:false (overlay owns the tap), which
-            // skips IveAvatar's own Semantics wrapper — so the overlay
-            // provides the screen-reader label/button role here instead.
-            Semantics(
-              label:            AppLocalizations.of(context)!.iveSemanticsLabel,
-              button:           true,
-              excludeSemantics: true,
-              child: GestureDetector(
-                onTap: () {
-                  if (_dragging) return;
-                  if (state.bubbleVisible) {
-                    ref.read(iveProvider.notifier).dismissBubble();
-                  } else {
-                    _openChat(state.screenName);
-                  }
-                },
-                child: AnimatedScale(
-                  scale:    _dragging ? 0.92 : 1.0,
-                  duration: const Duration(milliseconds: 150),
-                  child: IveAvatar(
-                    size:           IveAvatarSize.compact,
-                    showStatusRing: true,
-                    interactive:    false, // overlay owns the tap
+                // ── New IveAvatar (replaces old IveAvatarWidget) ─────────────────
+                // IVE-AVATAR-COMMERCIAL-FALLBACK-04 (Codex P2): the avatar is
+                // mounted with interactive:false (overlay owns the tap), which
+                // skips IveAvatar's own Semantics wrapper — so the overlay
+                // provides the screen-reader label/button role here instead.
+                Semantics(
+                  label: AppLocalizations.of(context)!.iveSemanticsLabel,
+                  button: true,
+                  excludeSemantics: true,
+                  child: GestureDetector(
+                    onTap: () {
+                      if (_dragging) return;
+                      if (state.bubbleVisible) {
+                        ref.read(iveProvider.notifier).dismissBubble();
+                      } else {
+                        _openChat(state.screenName);
+                      }
+                    },
+                    child: AnimatedScale(
+                      scale: _dragging ? 0.92 : 1.0,
+                      duration: const Duration(milliseconds: 150),
+                      child: IveAvatar(
+                        size: IveAvatarSize.compact,
+                        showStatusRing: true,
+                        interactive: false, // overlay owns the tap
+                      ),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -380,13 +477,15 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
     // IVE-COMMERCIAL-TARGETED-REMEDIATION-04 — conversão movida para
     // CopilotContextData.fromIveContext() (fonte única, também usada por
     // ive_detail_sheet.dart) em vez de uma cópia privada só deste widget.
-    final contextData = ctx != null ? CopilotContextData.fromIveContext(ctx) : const CopilotContextData();
+    final contextData = ctx != null
+        ? CopilotContextData.fromIveContext(ctx)
+        : const CopilotContextData();
     showCopilotChat(
       overlayContext,
-      screenName:  _routeToName(screenName),
+      screenName: _routeToName(screenName),
       contextData: contextData,
       request: IveInteractionRequest(
-        sourceModule:  'global_overlay',
+        sourceModule: 'global_overlay',
         operationType: IveOperationType.ask,
       ),
     );
@@ -394,17 +493,17 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
 
   String _routeToName(String route) {
     const map = <String, String>{
-      '/projects':            'Projetos',
-      '/opportunity-lab':     'Oportunidades',
-      '/ecosystem':           'Decisões',
-      '/ecosystem/briefing':  'Briefing',
+      '/projects': 'Projetos',
+      '/opportunity-lab': 'Oportunidades',
+      '/ecosystem': 'Decisões',
+      '/ecosystem/briefing': 'Briefing',
       '/ecosystem/resources': 'Recursos',
-      '/personas':            'Personas',
-      '/knowledge':           'Conhecimento',
-      '/action-engine':       'Ações',
-      '/intelligence-debug':  'Debug Hub',
+      '/personas': 'Personas',
+      '/knowledge': 'Conhecimento',
+      '/action-engine': 'Ações',
+      '/intelligence-debug': 'Debug Hub',
       '/market-intelligence': 'Inteligência de Mercado',
-      '/roi-tracker':         'ROI Tracker',
+      '/roi-tracker': 'ROI Tracker',
     };
     return map[route] ?? route;
   }
@@ -413,10 +512,10 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
 // ── Speech bubble ─────────────────────────────────────────────────────────────
 
 class _IveBubble extends StatelessWidget {
-  final String        message;
+  final String message;
   final IveExpression expression;
-  final IveIssue?     activeIssue;
-  final VoidCallback  onDismiss;
+  final IveIssue? activeIssue;
+  final VoidCallback onDismiss;
   final VoidCallback? onChat;
 
   const _IveBubble({
@@ -432,11 +531,16 @@ class _IveBubble extends StatelessWidget {
   String get _moodIcon {
     if (_hasIssue) return '⚠';
     switch (expression) {
-      case IveExpression.excited:  return '✦';
-      case IveExpression.thinking: return '◈';
-      case IveExpression.winking:  return '◉';
-      case IveExpression.neutral:  return '⬡';
-      case IveExpression.happy:    return '◈';
+      case IveExpression.excited:
+        return '✦';
+      case IveExpression.thinking:
+        return '◈';
+      case IveExpression.winking:
+        return '◉';
+      case IveExpression.neutral:
+        return '⬡';
+      case IveExpression.happy:
+        return '◈';
     }
   }
 
@@ -457,26 +561,26 @@ class _IveBubble extends StatelessWidget {
           decoration: BoxDecoration(
             color: const Color(0xFF1A1535),
             borderRadius: const BorderRadius.only(
-              topLeft:     Radius.circular(14),
-              topRight:    Radius.circular(14),
-              bottomLeft:  Radius.circular(14),
+              topLeft: Radius.circular(14),
+              topRight: Radius.circular(14),
+              bottomLeft: Radius.circular(14),
               bottomRight: Radius.circular(4),
             ),
             boxShadow: [
               BoxShadow(
-                color:      Colors.black.withOpacity(0.4),
+                color: Colors.black.withOpacity(0.4),
                 blurRadius: 16,
-                offset:     const Offset(0, 4),
+                offset: const Offset(0, 4),
               ),
             ],
             border: Border.all(color: _accentColor.withOpacity(0.45)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize:       MainAxisSize.min,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Row(
-                mainAxisSize:       MainAxisSize.min,
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Flexible(
@@ -484,15 +588,15 @@ class _IveBubble extends StatelessWidget {
                       text: TextSpan(
                         children: [
                           TextSpan(
-                            text:  '$_moodIcon ',
+                            text: '$_moodIcon ',
                             style: TextStyle(color: _iconColor, fontSize: 11),
                           ),
                           TextSpan(
-                            text:  message,
+                            text: message,
                             style: const TextStyle(
-                              color:    Colors.white,
+                              color: Colors.white,
                               fontSize: 12,
-                              height:   1.45,
+                              height: 1.45,
                             ),
                           ),
                         ],
@@ -501,8 +605,9 @@ class _IveBubble extends StatelessWidget {
                   ),
                   const SizedBox(width: 4),
                   GestureDetector(
-                    onTap:  onDismiss,
-                    child:  const Icon(Icons.close_rounded, size: 14, color: Colors.white24),
+                    onTap: onDismiss,
+                    child: const Icon(Icons.close_rounded,
+                        size: 14, color: Colors.white24),
                   ),
                 ],
               ),
@@ -516,7 +621,8 @@ class _IveBubble extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        width: 4, height: 4,
+                        width: 4,
+                        height: 4,
                         decoration: const BoxDecoration(
                           color: Color(0xFF7B5CF6),
                           shape: BoxShape.circle,
@@ -526,8 +632,8 @@ class _IveBubble extends StatelessWidget {
                       Text(
                         AppLocalizations.of(context)!.iveBubbleChatCta,
                         style: const TextStyle(
-                          color:      Color(0xFF9B8FFF),
-                          fontSize:   11,
+                          color: Color(0xFF9B8FFF),
+                          fontSize: 11,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -553,9 +659,9 @@ class _IssueActions extends StatelessWidget {
     final actions = issue.recommendedActions;
     if (actions.isEmpty) return const SizedBox.shrink();
     return Wrap(
-      spacing:    6,
+      spacing: 6,
       runSpacing: 4,
-      children:   actions.map((a) => _IssueActionChip(action: a)).toList(),
+      children: actions.map((a) => _IssueActionChip(action: a)).toList(),
     );
   }
 }
@@ -577,15 +683,15 @@ class _IssueActionChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color:        _color.withOpacity(0.12),
+          color: _color.withOpacity(0.12),
           borderRadius: BorderRadius.circular(6),
-          border:       Border.all(color: _color.withOpacity(0.4)),
+          border: Border.all(color: _color.withOpacity(0.4)),
         ),
         child: Text(
           action.label,
           style: const TextStyle(
-            color:      _color,
-            fontSize:   10,
+            color: _color,
+            fontSize: 10,
             fontWeight: FontWeight.w600,
           ),
         ),

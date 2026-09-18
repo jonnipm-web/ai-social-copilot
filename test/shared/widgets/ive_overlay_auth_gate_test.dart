@@ -66,6 +66,10 @@ void main() {
     // self-resets to 0 -- this just also resets the public notifier in
     // case a future test in this file leaves it unbalanced.
     iveModalOpenNotifier.value = false;
+    // GATE-17-FINAL-CLOSURE (Section 03) -- same cross-test-pollution risk
+    // as the two notifiers above: a top-level singleton test I/J could
+    // leave `true` for a later test in this file if not reset here.
+    iveScrollingNotifier.value = false;
   });
 
   // STABILITY-10 -- IveOverlay now requires a navigatorKey (see its own
@@ -472,6 +476,118 @@ void main() {
 
       expect(avatarFinder, findsOneWidget, reason: 'IVE avatar must reappear once the modal closes');
       expect(tester.takeException(), isNull);
+    },
+  );
+
+  // I — GATE-17-FINAL-CLOSURE (Section 03/04, "react correctly to keyboard").
+  // A form's Save/submit button routinely sits directly above an open
+  // keyboard; the floating avatar has no safe place there, so it hides
+  // entirely rather than guess a position. MediaQuery.viewInsets.bottom is
+  // the framework's own signal for "a keyboard (or similar bottom inset) is
+  // currently showing" -- true on every screen with a focused text field,
+  // with no per-screen wiring required.
+  //
+  // Deliberately does NOT use the shared harness() above: harness() nests
+  // IveOverlay inside a Scaffold's `body`, but Scaffold's default
+  // resizeToAvoidBottomInset:true strips bottom viewInsets from its OWN
+  // body subtree (Scaffold.build -> `data.removeViewInsets(removeBottom:
+  // true)`, scaffold.dart) precisely so body content doesn't ALSO try to
+  // dodge a keyboard Scaffold is already resizing around -- a real Flutter
+  // behavior, not a test bug, but one that would silently zero the very
+  // signal this test means to exercise. app.dart's real topology mounts
+  // IveOverlay OUTSIDE every screen's own Scaffold (a Stack sibling of the
+  // router's content, see the STABILITY-10 doc comment on IveOverlay
+  // itself), so this harness mirrors that instead: no Scaffold ancestor.
+  testWidgets(
+    'I. teclado aberto (viewInsets.bottom > 0): overlay esconde completamente e reaparece ao fechar',
+    (tester) async {
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
+          currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
+          authStateProvider.overrideWith((ref) => Stream.value(_authState(session: MockSession()))),
+        ],
+        child: MaterialApp(
+          locale: const Locale('pt'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Stack(
+            children: [
+              const SizedBox.expand(child: ColoredBox(color: Colors.black)),
+              IveOverlay(navigatorKey: GlobalKey<NavigatorState>()),
+            ],
+          ),
+        ),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(find.bySemanticsLabel('IVE, assistente executiva'), findsOneWidget);
+
+      tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+      addTearDown(tester.view.resetViewInsets);
+      await tester.pump();
+
+      expect(
+        find.bySemanticsLabel('IVE, assistente executiva'),
+        findsNothing,
+        reason: 'must hide while a keyboard/bottom inset is showing, not guess a position above it',
+      );
+
+      tester.view.viewInsets = FakeViewPadding.zero;
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(
+        find.bySemanticsLabel('IVE, assistente executiva'),
+        findsOneWidget,
+        reason: 'must reappear once the keyboard closes',
+      );
+    },
+  );
+
+  // J — GATE-17-FINAL-CLOSURE (Section 03) -- ivePageScrollNotification's
+  // own reaction, not Flutter's ScrollNotification bubbling itself (a
+  // framework guarantee, not this app's logic to re-test). Drives
+  // iveScrollingNotifier directly, the same signal app.dart's
+  // NotificationListener<ScrollNotification> sets from any real Scrollable
+  // in the app -- see that notifier's doc comment in ive_overlay.dart.
+  testWidgets(
+    'J. rolagem ativa sem bolha aberta: avatar recua (opacidade/escala reduzidas) mas nunca desaparece; volta ao normal ao parar',
+    (tester) async {
+      await tester.pumpWidget(harness(
+        profileOverride: currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
+        authOverride: authStateProvider.overrideWith((ref) => Stream.value(_authState(session: MockSession()))),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      final opacityFinder = find.byKey(const ValueKey('iveScrollCompactionOpacity'));
+      expect(
+        tester.widget<AnimatedOpacity>(opacityFinder).opacity,
+        1.0,
+        reason: 'at rest, fully visible',
+      );
+
+      iveScrollingNotifier.value = true;
+      await tester.pump();
+
+      expect(find.bySemanticsLabel('IVE, assistente executiva'), findsOneWidget,
+          reason: 'recedes during scroll, but must never fully disappear (unlike the keyboard/modal cases)');
+      expect(
+        tester.widget<AnimatedOpacity>(opacityFinder).opacity,
+        lessThan(1.0),
+        reason: 'visually recedes while content is actively scrolling underneath it',
+      );
+
+      iveScrollingNotifier.value = false;
+      await tester.pump();
+
+      expect(
+        tester.widget<AnimatedOpacity>(opacityFinder).opacity,
+        1.0,
+        reason: 'returns to full visibility once scrolling stops',
+      );
     },
   );
 }

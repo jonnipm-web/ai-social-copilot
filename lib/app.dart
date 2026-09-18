@@ -88,7 +88,8 @@ final _iveObserver = IveRouteObserver();
 // URL) — no reactive re-evaluation of an already-open screen is needed for
 // that, so none was added ("do not introduce a new redirect-state
 // subsystem for this MVP").
-Future<String?> _resolveEntitlementRedirect(BuildContext context, String path) async {
+Future<String?> _resolveEntitlementRedirect(
+    BuildContext context, String path) async {
   // Cheap pre-check: the large majority of navigation targets (every free,
   // already-released V1 screen, plus login/splash/upgrade/account/about/
   // support) can never be denied, so most navigation never pays for a
@@ -170,7 +171,8 @@ void _logNavigation(BuildContext context, String path, String? redirectTarget) {
   }
 }
 
-Future<String?> _computeRedirect(BuildContext context, GoRouterState state) async {
+Future<String?> _computeRedirect(
+    BuildContext context, GoRouterState state) async {
   final session = Supabase.instance.client.auth.currentSession;
   if (session == null) {
     // STABILITY-09-FIX (Codex Gate round 4, P1) — clear the settled-route
@@ -183,13 +185,14 @@ Future<String?> _computeRedirect(BuildContext context, GoRouterState state) asyn
     IveForensicSnapshot.clearSettledRoute();
   }
   final path = state.fullPath ?? state.matchedLocation;
-  final goingToAuth   = path == AppConstants.routeLogin;
+  final goingToAuth = path == AppConstants.routeLogin;
   final goingToSplash = path == AppConstants.routeSplash;
 
   if (goingToSplash) return null;
   if (session == null && !goingToAuth) return AppConstants.routeLogin;
-  if (session != null && goingToAuth)  return AppConstants.routeDashboard;
-  if (session == null) return null; // goingToAuth, unauthenticated -- let /login render.
+  if (session != null && goingToAuth) return AppConstants.routeDashboard;
+  if (session == null)
+    return null; // goingToAuth, unauthenticated -- let /login render.
 
   return _resolveEntitlementRedirect(context, path);
 }
@@ -318,8 +321,8 @@ final _router = GoRouter(
         }
         final map = extra as Map<String, dynamic>;
         return ResultScreen(
-          originalText:      map['originalText'] as String,
-          result:            map['result'] as Map<String, dynamic>,
+          originalText: map['originalText'] as String,
+          result: map['result'] as Map<String, dynamic>,
           processingSeconds: map['processingSeconds'] as double?,
         );
       },
@@ -638,8 +641,10 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
     // real lifecycle transition; recording the current state is a single
     // cheap write, no new observer.
     IveForensicSnapshot.lifecycleState = state;
-    final isAuthenticated = Supabase.instance.client.auth.currentSession != null;
-    if (!shouldRefreshProfileOnResume(state: state, isAuthenticated: isAuthenticated)) {
+    final isAuthenticated =
+        Supabase.instance.client.auth.currentSession != null;
+    if (!shouldRefreshProfileOnResume(
+        state: state, isAuthenticated: isAuthenticated)) {
       return;
     }
     ref.invalidate(currentProfileProvider);
@@ -705,7 +710,8 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
   //     unconditional trigger — recover() decides for itself, every time.
   void _maybeRecoverDiagnosticSession(AsyncValue<Profile?> next) {
     final profile = next.valueOrNull;
-    if (!shouldAttemptDiagnosticRecovery(isAdmin: profile?.isAdmin ?? false)) return;
+    if (!shouldAttemptDiagnosticRecovery(isAdmin: profile?.isAdmin ?? false))
+      return;
     ref.read(diagnosticSessionProvider.notifier).recover();
   }
 
@@ -723,11 +729,11 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
     // guard makes this safe to call redundantly.
     _maybeRecoverDiagnosticSession(ref.read(currentProfileProvider));
     return MaterialApp.router(
-      title:                      AppConstants.appName,
+      title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
-      theme:                      AppTheme.dark,
-      routerConfig:               _router,
-      locale:                     locale,
+      theme: AppTheme.dark,
+      routerConfig: _router,
+      locale: locale,
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
@@ -753,7 +759,19 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
           child: Consumer(
             builder: (ctx, ref, _) => Stack(
               children: [
-                child!,
+                // GATE-17-FINAL-CLOSURE (Section 03) — a single, app-wide
+                // ScrollNotification listener wrapping the router's own
+                // content. Every Scrollable already in this app (and any
+                // added later) bubbles its scroll events up through here
+                // automatically, with no per-screen opt-in -- see
+                // ivePageScrollNotification's own doc comment in
+                // ive_overlay.dart for why this is IveOverlay's centralized
+                // signal for "content is moving under me right now" instead
+                // of a per-screen collision-avoidance hack.
+                NotificationListener<ScrollNotification>(
+                  onNotification: ivePageScrollNotification,
+                  child: child!,
+                ),
                 IveOverlay(navigatorKey: rootNavigatorKey),
                 IveIntroGate(navigatorKey: rootNavigatorKey),
               ],
