@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - 'supabase/functions/**'
+      - 'contracts/aef/**'
+      - 'aef/**'
   workflow_dispatch:
 
 jobs:
@@ -36,3 +38,38 @@ jobs:
             --allow-env \
             --allow-net=deno.land,esm.sh \
             supabase/functions/_shared/quota_test.ts
+
+  contract-and-aef-ci:
+    name: AEF contract + kernel CI (IV-AEF-FOUNDATION-01)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Type-check contracts/aef and aef/
+        run: |
+          deno check contracts/aef/*.ts contracts/aef/schema_parity_test.ts \
+            aef/*.ts aef/adapters/*.ts
+
+      - name: Lint contracts/aef and aef/
+        run: |
+          deno lint contracts/aef/*.ts contracts/aef/schema_parity_test.ts \
+            aef/*.ts aef/adapters/*.ts
+
+      - name: Run contract validator tests (65 cases)
+        run: |
+          deno test --allow-read contracts/aef/validators_test.ts
+
+      - name: Run schema-parity tests (10 cases, Codex Finding N-03)
+        run: |
+          deno test --allow-read --allow-net=registry.npmjs.org contracts/aef/schema_parity_test.ts
+
+      - name: Run AEF v0 kernel tests (security matrix + confused deputy + concurrency)
+        run: |
+          deno test --allow-read --allow-net=deno.land,esm.sh \
+            aef/kernel_test.ts aef/adapters/supabase_identity_resolver_test.ts
