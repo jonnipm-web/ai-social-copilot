@@ -161,12 +161,35 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
   // fixed right margin, so its right-aligned avatar is always exactly
   // `dx` away from the screen's right edge no matter how wide the bubble
   // gets -- structurally immune to this class of overflow.
+  // GATE-17-FINAL-CLOSURE (mission Section 03, owner-supplied physical
+  // evidence across 6 screens: Command Center, Cofre de Conhecimento,
+  // Business Dashboard, Biblioteca de Conteúdo, Opportunity Lab, Action
+  // Engine) — the previous mobile default (right:80, top:height-200) sat
+  // squarely inside the same fixed viewport band that: (a) wide/labeled
+  // FloatingActionButtons ("+ Novo Item", "+ Nova Oportunidade") occupy
+  // near the bottom-right, since a label-width FAB's left edge extends
+  // well past a plain circular FAB's, and (b) ordinary scrolled card
+  // content (e.g. Command Center's "Inteligência do Ecossistema" card,
+  // a Persona card's trailing score label) naturally passes through when
+  // scrolled into view, because this overlay is pinned to the VIEWPORT,
+  // not to any one screen's content. A plain circular FAB (Performance's
+  // "+") happened to clear the old offset, which is why mission 16R's
+  // fix (hiding the overlay for actual PopupRoute modals) looked
+  // sufficient from that one screen alone. This does not claim to make
+  // collision with arbitrary scrolled content structurally impossible
+  // (that would need each screen's Scaffold to reserve space for this
+  // overlay, a bigger architectural change flagged separately) — it only
+  // pushes the DEFAULT (undragged) position higher and closer to the true
+  // corner, clearing the common single-row FAB band confirmed by physical
+  // testing. A user who has dragged the bubble keeps their own position
+  // (see _position's drag-persists behavior below); this only changes
+  // where a FRESH session starts.
   Offset _defaultPosition(Size screen) {
     if (_isDesktop) {
       // Desktop: safe corner — bottom-right with extra margin to avoid overlapping content
       return Offset(88, screen.height - 220);
     }
-    return Offset(80, screen.height - 200);
+    return Offset(24, screen.height - 320);
   }
 
   @override
