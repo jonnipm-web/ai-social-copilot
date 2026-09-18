@@ -238,6 +238,36 @@ actor), 9b (human-gate resolver exceptions), 9c (adapter Request
 construction), and the injectable-clock fix. Round 2 assessed areas
 4/5/11 as acceptable-as-scoped, consistent with round 1's classification.
 
+## Codex round-3 adversarial re-review: remediation
+
+Round 3 confirmed all 3 round-2 findings genuinely CLOSED and found one
+new P1 (accepted and fixed):
+
+- **New finding (mutable registered ToolDefinition, P1)**: `register()`
+  stored the CALLER'S own object by reference -- a caller retaining that
+  reference could mutate its `execute` field (or any other field) AFTER
+  registration and even after `seal()`, retroactively changing what the
+  kernel would execute. Separately, `AefKernel` never auto-sealed the
+  registry, so a registry that was never explicitly sealed by wiring
+  code remained open to new registrations indefinitely. Fixed both:
+  `register()` now stores `Object.freeze({ ...tool })` -- an independent,
+  frozen shallow copy, so the caller's own object can be mutated freely
+  afterward with zero effect; and `claimExecutionRights()` now
+  unconditionally seals the registry too, so registration and
+  execution-capability issuance close together in one step, with no
+  separate `seal()` call required.
+
+Round 3 confirmed CLOSED: Finding 1 (mutable HumanGateRecord escape --
+`structuredClone()` genuinely severs the reference on both read and
+write, including nested fields like `approver`), Finding 2 (public
+`invoke()` -- no equivalent method remains, `#executeClaimedTool` is
+unreachable from outside `AefKernel`, and `claimExecutionRights()`
+cannot be called a second time through any means Codex attempted,
+including prototype/property inspection), Finding 3 (delegation issuer
+denial is genuinely resolver-independent -- `identityResolver` is not
+referenced anywhere in `checkDelegation()` anymore, and the earlier
+delegation-shape/nonce/binding/subject checks still run first).
+
 ## Files
 
 | File | Purpose |

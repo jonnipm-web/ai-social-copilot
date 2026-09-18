@@ -64,7 +64,15 @@ export class ToolRegistry {
     if (this.#tools.has(key)) {
       throw new Error(`ToolRegistry: duplicate registration for ${key} -- tool IDs must be unique per domain`);
     }
-    this.#tools.set(key, tool);
+    // Codex round-3 adversarial review, new finding: storing the CALLER'S
+    // own object by reference let them mutate `execute` (or any other
+    // field) AFTER registration/sealing, retroactively changing what the
+    // kernel runs even though `seal()` had already been called. Storing a
+    // frozen, independent shallow copy means the caller's own object can
+    // be mutated freely afterward with zero effect on what is actually
+    // registered -- Object.freeze() additionally guards the STORED copy
+    // itself against mutation via any other path.
+    this.#tools.set(key, Object.freeze({ ...tool }));
   }
 
   /**
@@ -100,6 +108,13 @@ export class ToolRegistry {
       throw new Error("ToolRegistry.claimExecutionRights: execution rights already claimed -- this can only happen once, by whichever code constructs the real AefKernel; no other caller may obtain execution capability afterward");
     }
     this.#executionRightsClaimed = true;
+    // Codex round-3 adversarial review, new finding: relying on wiring
+    // code to separately remember to call seal() left a window where a
+    // registry could still accept new registrations even after a real
+    // AefKernel had already claimed execution rights. Claiming execution
+    // rights now unconditionally seals the registry too -- registration
+    // and execution-capability issuance close together, in one step.
+    this.#sealed = true;
     const tools = this.#tools;
     return (request: ExecutionRequest) => {
       const tool = tools.get(registryKey(request.domain, request.action));

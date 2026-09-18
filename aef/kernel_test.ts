@@ -1121,3 +1121,61 @@ Deno.test("ROUND-2 finding 3 regression: delegation issuer is denied uncondition
   assertEquals(result.kernelOutcome, "AUTH_FAILED", "delegation issuer must be denied categorically, independent of what any injected resolver claims");
   assert(result.receipt.error?.includes("categorically unsupported"));
 });
+
+// =======================================================================
+// CODEX ROUND-3 ADVERSARIAL REVIEW -- REMEDIATION REGRESSION TESTS
+// =======================================================================
+
+Deno.test("ROUND-3 new-finding regression: mutating the caller's own tool object after register()/seal() has no effect on execution", async () => {
+  const { identityResolver, humanGateStore } = makeKernel();
+  const toolRegistry = new ToolRegistry();
+  const mutableTool = {
+    toolId: "internal.mock_read_echo",
+    domain: "internal" as const,
+    classification: "READ_ONLY" as const,
+    requiresHumanGate: false,
+    execute: (): Promise<{ outcome: "SUCCESS"; detail?: string }> => Promise.resolve({ outcome: "SUCCESS", detail: "original" }),
+  };
+  toolRegistry.register(mutableTool);
+  toolRegistry.seal();
+
+  // Mutate the caller's own retained object AFTER registration/sealing --
+  // this must not retroactively change what is actually registered.
+  mutableTool.execute = () => Promise.resolve({ outcome: "SUCCESS", detail: "mutated-post-seal" });
+
+  const kernel2 = new AefKernel({
+    identityResolver,
+    delegationResolver: new InMemoryDelegationStore(),
+    humanGateResolver: humanGateStore,
+    toolRegistry,
+    requestIdStore: new InMemoryRequestIdStore(),
+    nonceStore: new InMemoryNonceStore(),
+    idempotencyStore: new InMemoryIdempotencyStore(),
+    now: () => NOW,
+  });
+  const result = await kernel2.submit(baseRequest({ action: "internal.mock_read_echo" }), bearer(VALID_TOKEN));
+  assertEquals(result.kernelOutcome, "SUCCESS");
+  assert(
+    result.receipt.verification_ref?.includes("original") && !result.receipt.verification_ref?.includes("mutated"),
+    `expected the ORIGINAL execute closure to have run, got verification_ref: ${result.receipt.verification_ref}`,
+  );
+});
+
+Deno.test("ROUND-3 new-finding regression: claimExecutionRights() also seals the registry, even if seal() was never called separately", () => {
+  const registry = new ToolRegistry();
+  registerMockTools(registry);
+  registry.claimExecutionRights();
+  let threw = false;
+  try {
+    registry.register({
+      toolId: "internal.late_registration_after_claim",
+      domain: "internal",
+      classification: "READ_ONLY",
+      requiresHumanGate: false,
+      execute: () => Promise.resolve({ outcome: "SUCCESS" as const }),
+    });
+  } catch {
+    threw = true;
+  }
+  assert(threw, "register() must throw after claimExecutionRights(), even without an explicit seal() call");
+});
