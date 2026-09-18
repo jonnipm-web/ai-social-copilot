@@ -1179,3 +1179,21 @@ Deno.test("ROUND-3 new-finding regression: claimExecutionRights() also seals the
   }
   assert(threw, "register() must throw after claimExecutionRights(), even without an explicit seal() call");
 });
+
+Deno.test("ROUND-4 new-finding (P2) regression: mutating a completed KernelResult does not corrupt the stored/returned idempotency record", async () => {
+  const { kernel } = makeKernel();
+  const key = "biz-op-round4";
+  const req = baseRequest({ action: "internal.mock_reversible_update", idempotency_key: key });
+  const first = await kernel.submit(req, bearer(VALID_TOKEN));
+  assertEquals(first.kernelOutcome, "SUCCESS");
+
+  // Mutate the caller's own returned result object.
+  first.receipt.outcome = "FAILURE";
+  first.receipt.error = "forged-by-caller";
+
+  const retryReq = { ...req, request_id: uuid("round4-retry") };
+  const second = await kernel.submit(retryReq, bearer(VALID_TOKEN));
+  assertEquals(second.kernelOutcome, "DUPLICATE");
+  assertEquals(second.receipt.outcome, "SUCCESS", "the stored record must be unaffected by mutating a previously-returned reference");
+  assertEquals(second.receipt.error, null);
+});

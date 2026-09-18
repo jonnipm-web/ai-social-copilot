@@ -59,11 +59,19 @@ export class InMemoryIdempotencyStore {
       return "CLAIMED";
     }
     if (existing === "IN_FLIGHT") return "IN_FLIGHT";
-    return { COMPLETED: existing };
+    // Codex round-4 adversarial review (P2, systematic aliasing sweep):
+    // returning the stored object by reference let a caller mutate a
+    // completed result (e.g. `result.receipt.outcome = "..."`), and that
+    // mutation would corrupt what a LATER duplicate lookup returns, since
+    // it is the exact same object. KernelResult/ExecutionReceipt are
+    // plain JSON-shaped data (no functions), so structuredClone is a
+    // correct, cheap defensive copy here -- same pattern already applied
+    // to HumanGateRecord in human_gate_store.ts (round-2 Finding 1).
+    return { COMPLETED: structuredClone(existing) };
   }
 
   complete(key: string, result: KernelResult): void {
-    this.entries.set(key, result);
+    this.entries.set(key, structuredClone(result));
   }
 
   /** Releases a claim without recording a result -- used when the attempt failed for a reason that should NOT permanently block retries (e.g. a transient tool failure), so a legitimate retry with the same idempotency_key is not wedged forever behind a stale IN_FLIGHT marker. */

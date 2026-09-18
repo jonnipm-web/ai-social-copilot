@@ -268,6 +268,32 @@ denial is genuinely resolver-independent -- `identityResolver` is not
 referenced anywhere in `checkDelegation()` anymore, and the earlier
 delegation-shape/nonce/binding/subject checks still run first).
 
+## Codex round-4 adversarial re-review: PASS WITH FINDINGS (CONDITIONAL_PASS)
+
+Round 4 confirmed the round-3 fix genuinely closes the mutable-tool
+finding, and performed a systematic sweep across every remaining file in
+`aef/` for the same mutable-object-aliasing pattern (since it had now
+appeared twice: `HumanGateRecord` in round 2, `ToolDefinition` in round
+3). It found one more instance, correctly classified as non-blocking:
+
+- **New finding (mutable `KernelResult` alias in idempotency store, P2,
+  non-blocking)**: `InMemoryIdempotencyStore.claim()`/`complete()`
+  stored and returned the caller-supplied `KernelResult` by reference --
+  a caller mutating a previously-returned result (e.g.
+  `result.receipt.outcome = "..."`) would corrupt what a LATER duplicate
+  lookup returns for the same `idempotency_key`. Fixed with
+  `structuredClone()` on both write (`complete()`) and read
+  (`claim()`'s `COMPLETED` branch) -- the same pattern already applied to
+  `HumanGateRecord`. Codex explicitly assessed this as NOT blocking the
+  v0 closure gate (no P0/P1 remained), but it was fixed anyway rather
+  than left as a known gap, given the pattern's track record.
+
+No other instance of the pattern was found across `identity_resolver.ts`,
+`human_gate_evaluator.ts`, `receipt_builder.ts`, `kernel.ts`,
+`action_classification.ts`, `policy_evaluator.ts`, or
+`delegation_binding.ts`. Final round-4 verdict: **0 open P0/P1**, gate
+satisfied.
+
 ## Files
 
 | File | Purpose |
