@@ -12,18 +12,31 @@
  * there is no dynamic/arbitrary tool selection path (Section 17: "Não
  * permitir dynamic arbitrary command/tool selection").
  *
- * Codex round-1 adversarial review, area 10 ("direct execution fallback"):
- * the original `lookup()` returned the full `ToolDefinition`, including
- * its `execute` closure -- ANY caller holding a `ToolRegistry` reference
- * could grab a tool and call `.execute()` directly, completely bypassing
- * AefKernel's governed pipeline (identity/contract/policy/human-gate/
- * idempotency). Fixed by never handing out the executable capability at
- * all: `describe()` returns only descriptive metadata (`ToolDescriptor`,
- * no `execute` field), and `invoke()` is the ONLY way to actually run a
- * tool -- it does its own internal lookup and calls `execute` itself,
- * so the function value is never exposed to any caller, including
- * AefKernel itself (which only ever calls `invoke()`, never destructures
- * a stored ToolDefinition).
+ * Codex adversarial review, round 1 area 10 AND round 2 Finding 2
+ * ("direct execution fallback"): the original `lookup()` returned the
+ * full `ToolDefinition` including `execute` (round 1); the round-1 fix
+ * (`describe()`/`invoke()` split) still left `invoke()` itself PUBLIC
+ * and UNCONDITIONALLY callable by anyone holding a `ToolRegistry`
+ * reference -- Codex demonstrated `await registry.invoke(validRequest)`
+ * executes a tool with zero governance, at any time.
+ *
+ * Fixed with a SINGLE-ISSUANCE capability pattern: `claimExecutionRights()`
+ * returns a bound lookup-and-describe-nothing execution function EXACTLY
+ * ONCE across this registry's entire lifetime -- a second call throws.
+ * `AefKernel`'s constructor is the only intended caller, immediately
+ * after receiving the registry, and stores the returned function in its
+ * OWN `#private` field (see kernel.ts). This does not, and cannot,
+ * defend against code that already has arbitrary execution inside this
+ * process BEFORE a real AefKernel is ever constructed (no in-process
+ * capability system can defend against that in any language without
+ * real process isolation, which is disproportionate for a v0 with zero
+ * network exposure and zero persistence -- Sections 12/27) -- but it
+ * DOES close the realistic, demonstrated scenario: once a real
+ * `AefKernel` exists and has claimed execution rights, no other code,
+ * even code holding that EXACT SAME `ToolRegistry` reference, can ever
+ * obtain execution capability from it again. `describe()` remains
+ * available afterward for classification/policy purposes (metadata
+ * only, always safe to expose).
  */
 import type { ExecutionRequest } from "../contracts/aef/types.ts";
 import type { ActionClassification, ToolDefinition, ToolExecutionResult } from "./types.ts";
@@ -35,9 +48,13 @@ export interface ToolDescriptor {
   requiresHumanGate: boolean;
 }
 
+/** A bound execution function returned by `claimExecutionRights()` -- looks up AND executes in one step, so the raw `execute` closure is never separately observable. Returns undefined for an unregistered domain+action. */
+export type ExecuteFn = (request: ExecutionRequest) => Promise<ToolExecutionResult> | undefined;
+
 export class ToolRegistry {
   #tools = new Map<string, ToolDefinition>();
   #sealed = false;
+  #executionRightsClaimed = false;
 
   register(tool: ToolDefinition): void {
     if (this.#sealed) {
@@ -71,11 +88,24 @@ export class ToolRegistry {
     return { toolId: tool.toolId, domain: tool.domain, classification: tool.classification, requiresHumanGate: tool.requiresHumanGate };
   }
 
-  /** The ONLY way to actually execute a tool. Does its own internal lookup so `execute` is never handed out to a caller. Returns undefined if the tool is not registered -- callers must already have confirmed existence via `describe()` first; this defensively re-checks rather than assume. */
-  invoke(request: ExecutionRequest): Promise<ToolExecutionResult> | undefined {
-    const tool = this.#tools.get(registryKey(request.domain, request.action));
-    if (!tool) return undefined;
-    return tool.execute(request);
+  /**
+   * Returns a bound execution function EXACTLY ONCE across this
+   * registry's entire lifetime -- throws on any subsequent call. Intended
+   * to be called exactly once, by `AefKernel`'s constructor, immediately
+   * after it receives the registry. See the module doc comment above for
+   * the full threat-model reasoning (Codex round-2, Finding 2).
+   */
+  claimExecutionRights(): ExecuteFn {
+    if (this.#executionRightsClaimed) {
+      throw new Error("ToolRegistry.claimExecutionRights: execution rights already claimed -- this can only happen once, by whichever code constructs the real AefKernel; no other caller may obtain execution capability afterward");
+    }
+    this.#executionRightsClaimed = true;
+    const tools = this.#tools;
+    return (request: ExecutionRequest) => {
+      const tool = tools.get(registryKey(request.domain, request.action));
+      if (!tool) return undefined;
+      return tool.execute(request);
+    };
   }
 }
 

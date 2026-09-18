@@ -23,6 +23,25 @@ import type { HumanGateResolver, IdentityResolver, RawCredential } from "./types
 
 export type AuthorizeResult = { ok: true } | { ok: false; reason: string };
 
+/**
+ * Codex adversarial review (round 2, Finding 1): `#records` being a true
+ * private field stops `(store as any).records.set(...)`, but `resolve()`
+ * previously returned the SAME live object stored internally -- a caller
+ * could take that reference and mutate its `state`/`approver`/
+ * `decided_at`/`audit_ref` fields directly, bypassing `authorize()`'s
+ * identity verification entirely (the mutated object IS the stored
+ * object, no `.set()` call needed). Symmetrically, `create()` previously
+ * stored the caller's OWN object by reference, so a caller retaining
+ * their original reference could mutate it after the fact with the same
+ * effect. Fixed by defensively cloning on every write AND every read --
+ * `structuredClone` is sufficient here since HumanGateRecord is plain
+ * JSON-shaped data (strings, nested Actor objects, nulls), no functions
+ * or exotic types.
+ */
+function cloneRecord(record: HumanGateRecord): HumanGateRecord {
+  return structuredClone(record);
+}
+
 export class InMemoryHumanGateStore implements HumanGateResolver {
   // A true ECMAScript private field (runtime-enforced, unlike TypeScript's
   // compile-time-only `private`) -- Codex adversarial review (round 1,
@@ -56,11 +75,13 @@ export class InMemoryHumanGateStore implements HumanGateResolver {
     if (!check.ok) {
       throw new Error(`InMemoryHumanGateStore.create: refusing to store an invalid HumanGateRecord: ${check.errors?.join("; ")}`);
     }
-    this.#records.set(record.gate_id, record);
+    this.#records.set(record.gate_id, cloneRecord(record));
   }
 
+  /** Returns a defensive CLONE -- never the live stored object (Codex round-2, Finding 1). Mutating the returned value has no effect on this store's internal state. */
   resolve(gateId: string): HumanGateRecord | undefined {
-    return this.#records.get(gateId);
+    const record = this.#records.get(gateId);
+    return record ? cloneRecord(record) : undefined;
   }
 
   /**
@@ -103,7 +124,7 @@ export class InMemoryHumanGateStore implements HumanGateResolver {
     if (!check.ok) {
       return { ok: false, reason: `resulting AUTHORIZED record failed contract validation: ${check.errors?.join("; ")}` };
     }
-    this.#records.set(gateId, authorized);
+    this.#records.set(gateId, cloneRecord(authorized));
     return { ok: true };
   }
 
@@ -131,13 +152,13 @@ export class InMemoryHumanGateStore implements HumanGateResolver {
     if (identity.status !== "VERIFIED" || identity.verifiedType !== "user") {
       return { ok: false, reason: `rejecter identity could not be independently verified as a user (status=${identity.status})` };
     }
-    this.#records.set(gateId, {
+    this.#records.set(gateId, cloneRecord({
       ...existing,
       state: "REJECTED",
       approver,
       decided_at: decidedAt.toISOString(),
       audit_ref: auditRef,
-    });
+    }));
     return { ok: true };
   }
 }

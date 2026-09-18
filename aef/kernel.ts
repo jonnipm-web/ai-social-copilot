@@ -36,6 +36,7 @@ import {
   tagAsDuplicate,
 } from "./receipt_builder.ts";
 import { ToolRegistry } from "./tool_registry.ts";
+import type { ExecuteFn } from "./tool_registry.ts";
 import type { DelegationResolver, HumanGateResolver, IdentityResolver, KernelResult, RawCredential } from "./types.ts";
 
 const UUID_V4_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -78,9 +79,20 @@ export interface AefKernelDeps {
 
 export class AefKernel {
   private readonly idempotencyGuard: IdempotencyGuard;
+  // True private field (Codex round-2, Finding 2): holds the ONE-TIME
+  // execution capability claimed from the ToolRegistry at construction.
+  // No `as any` cast can reach a `#`-private field, so no external code
+  // -- even code holding this exact AefKernel instance -- can extract
+  // this function and call it outside submit()'s governed pipeline.
+  #executeClaimedTool: ExecuteFn;
 
   constructor(private readonly deps: AefKernelDeps) {
     this.idempotencyGuard = new IdempotencyGuard(deps.requestIdStore, deps.idempotencyStore);
+    // Claimed immediately, before this constructor returns -- whoever
+    // constructs the real AefKernel consumes the registry's one-time
+    // execution capability first, so no other code holding the same
+    // ToolRegistry reference can obtain it afterward.
+    this.#executeClaimedTool = deps.toolRegistry.claimExecutionRights();
   }
 
   private now(): Date {
@@ -168,7 +180,7 @@ export class AefKernel {
     // Step 2b: Delegation validation (Section 8), only if declared.
     // -----------------------------------------------------------------
     if (request.delegation_ref) {
-      const delegationOutcome = await this.checkDelegation(request, identity.verifiedId);
+      const delegationOutcome = this.checkDelegation(request, identity.verifiedId);
       if (delegationOutcome) return delegationOutcome;
     }
 
@@ -242,14 +254,13 @@ export class AefKernel {
     // -----------------------------------------------------------------
     let finalResult: KernelResult;
     try {
-      // invoke() does its own internal lookup and calls execute() itself
-      // -- the closure is never exposed to this code (see tool_registry.ts).
-      // Guaranteed defined here since `tool` (describe()) already
-      // confirmed registration, but re-checked defensively rather than
-      // assumed, in case the registry were ever mutated between steps
-      // (it cannot be today -- ToolRegistry has no remove() -- kept for
-      // robustness against future changes).
-      const invocation = this.deps.toolRegistry.invoke(request);
+      // Uses the execution capability claimed ONCE in the constructor
+      // (Codex round-2, Finding 2) -- never the registry directly. Even
+      // this class's own `#executeClaimedTool` field cannot be extracted
+      // by external code (true private field). Guaranteed defined here
+      // since `tool` (describe()) already confirmed registration, but
+      // re-checked defensively rather than assumed.
+      const invocation = this.#executeClaimedTool(request);
       if (!invocation) {
         finalResult = buildDenied(params(), `tool '${tool.toolId}' was described but is no longer invocable -- treating as unknown tool`);
         this.idempotencyGuard.releaseOnTechnicalFailure(request);
@@ -283,7 +294,7 @@ export class AefKernel {
    * (delegation_binding.ts) is still run and unit-tested in isolation so
    * that guarantee already exists for when issuer verification is added.
    */
-  private async checkDelegation(request: ExecutionRequest, verifiedRequesterId: string): Promise<KernelResult | null> {
+  private checkDelegation(request: ExecutionRequest, verifiedRequesterId: string): KernelResult | null {
     const delegation = this.deps.delegationResolver.resolve(request.delegation_ref!);
     if (!delegation) {
       return buildInvalid(
@@ -309,17 +320,23 @@ export class AefKernel {
       return buildDenied(baseParams, subjectCheck.reason);
     }
 
-    // The issuer must itself be an independently verified identity --
-    // never trust a delegation just because ITS shape validated.
-    const issuerIdentity = await this.deps.identityResolver.resolve(delegation.issuer, { kind: "none" });
-    if (issuerIdentity.status !== "VERIFIED") {
-      return buildAuthFailed(
-        baseParams,
-        `delegation issuer identity could not be verified (status=${issuerIdentity.status}) -- AEF v0 does not support delegated execution end-to-end (no service-identity verification exists yet, Section 6)`,
-      );
-    }
-
-    return null; // delegation fully validated -- continue the pipeline (unreachable in v0 today, kept for forward compatibility).
+    // Codex round-2 adversarial review, Finding 3: the previous version
+    // routed this through the generic IdentityResolver and trusted its
+    // `status`/`verifiedType` -- a misconfigured or rogue injected
+    // resolver implementation could dishonestly claim VERIFIED for a
+    // service/system issuer, defeating the v0 boundary. Since a
+    // contract-valid DelegationEnvelope's issuer can NEVER legitimately
+    // be type="user" (contracts/aef/validators.ts already enforces this,
+    // Finding F-02), and AEF v0 has no real verification mechanism for
+    // service/system identities at all (Section 6), this is now a
+    // categorical, resolver-INDEPENDENT denial: no injected
+    // IdentityResolver implementation, however it behaves, can make a
+    // delegated flow succeed in v0. This is deliberately NOT delegated
+    // to the generic identity-resolution call anymore.
+    return buildAuthFailed(
+      baseParams,
+      `delegation issuer type='${delegation.issuer.type}' is categorically unsupported in AEF v0 -- no service/system identity verification mechanism exists yet (Section 6), so no delegated execution can complete end-to-end, regardless of any identity resolver's claim`,
+    );
   }
 }
 

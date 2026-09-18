@@ -191,6 +191,53 @@ for the full Codex output and Claude's per-finding classification
   `now?: () => Date` pattern to the store; test #17 now uses two
   independently-clocked components instead of touching internals at all.
 
+## Codex round-2 adversarial re-review: remediation
+
+Round 2 re-verified every round-1 fix and found 3 of them incompletely
+closed (all 3 accepted and fixed):
+
+- **Finding 1 (mutable HumanGateRecord escape, P1)**: `#records` being a
+  true private field stopped `(store as any).records.set(...)`, but
+  `resolve()` still returned the SAME live object stored internally -- a
+  caller could mutate its `state`/`approver`/`decided_at`/`audit_ref`
+  fields directly (no `.set()` call needed, since the mutated object WAS
+  the stored object). Symmetrically, `create()` stored the caller's own
+  object by reference. Fixed by defensively `structuredClone()`-ing on
+  every write (`create()`/`authorize()`/`reject()`) AND every read
+  (`resolve()`) in `human_gate_store.ts`.
+- **Finding 2 (public `invoke()` still bypasses the kernel, P1)**: the
+  round-1 `describe()`/`invoke()` split hid the `execute` closure, but
+  `invoke()` itself remained public and unconditionally callable by
+  anyone holding a `ToolRegistry` reference. Fixed with a
+  single-issuance capability: `ToolRegistry.claimExecutionRights()`
+  returns a bound execution function EXACTLY ONCE across the registry's
+  lifetime (a second call throws); `AefKernel`'s constructor claims it
+  immediately and stores it in its own `#private` field. Once a real
+  `AefKernel` exists, no other code -- even code holding that exact same
+  `ToolRegistry` reference -- can extract execution capability from it
+  anymore. This does not (and, in a single JS process without real
+  process isolation, cannot) defend against code with arbitrary
+  execution BEFORE a real kernel is constructed; it closes the
+  realistic, demonstrated scenario of a caller reusing an
+  already-wired-in registry reference after the fact.
+- **Finding 3 (delegation issuer verified-type bypass, P1)**: the issuer
+  identity check trusted `identityResolver.resolve()`'s result without
+  checking `verifiedType`, so a rogue/misconfigured injected resolver
+  could claim a service issuer was "verified" and let a delegated flow
+  through. Fixed by removing the dependency on the resolver entirely for
+  this path: since a contract-valid `DelegationEnvelope.issuer` can never
+  legitimately be `type=user` (already enforced at the contract layer),
+  and AEF v0 has no real verification mechanism for `service`/`system`
+  at all, `kernel.ts`'s `checkDelegation()` now denies EVERY delegation
+  issuer categorically and unconditionally, without ever calling the
+  identity resolver for it -- no injected resolver implementation,
+  however dishonest, can make this path succeed in v0.
+
+Round 2 also confirmed CLOSED (no further action): 9a (malformed raw
+actor), 9b (human-gate resolver exceptions), 9c (adapter Request
+construction), and the injectable-clock fix. Round 2 assessed areas
+4/5/11 as acceptable-as-scoped, consistent with round 1's classification.
+
 ## Files
 
 | File | Purpose |

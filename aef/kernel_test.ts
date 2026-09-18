@@ -993,3 +993,131 @@ Deno.test("ROUND-1 area 13 regression: kernel independently rejects VERIFIED res
   const result = await kernel2.submit(req, NO_CREDENTIAL);
   assertEquals(result.kernelOutcome, "AUTH_FAILED", "a rogue/misconfigured resolver claiming VERIFIED for a non-user type must still be rejected by the kernel itself");
 });
+
+// =======================================================================
+// CODEX ROUND-2 ADVERSARIAL REVIEW -- REMEDIATION REGRESSION TESTS
+// =======================================================================
+
+Deno.test("ROUND-2 finding 1 regression: mutating a resolve()'d HumanGateRecord does not affect the store or a later kernel evaluation", async () => {
+  const { kernel, humanGateStore } = makeKernel();
+  const req = baseRequest({ action: "internal.mock_consequential_action" });
+  const gateId = uuid("gate-r2f1");
+  humanGateStore.create({
+    contract_version: "1.0",
+    gate_id: gateId,
+    request_id: req.request_id,
+    action: req.action,
+    state: "REVIEW_REQUIRED",
+    expires_at: FUTURE,
+  });
+
+  // Obtain a "live" reference the way legitimate code would, then try to
+  // forge approval by mutating it directly instead of calling authorize().
+  const leaked = humanGateStore.resolve(gateId)!;
+  // deno-lint-ignore no-explicit-any
+  (leaked as any).state = "AUTHORIZED";
+  // deno-lint-ignore no-explicit-any
+  (leaked as any).approver = { type: "user", id: "forged-approver", auth_ref: "usr:forged-approver-ref" };
+  // deno-lint-ignore no-explicit-any
+  (leaked as any).decided_at = NOW.toISOString();
+  // deno-lint-ignore no-explicit-any
+  (leaked as any).audit_ref = "forged-audit-entry";
+
+  // The store's internal state must be UNCHANGED by mutating the leaked copy.
+  const reResolved = humanGateStore.resolve(gateId)!;
+  assertEquals(reResolved.state, "REVIEW_REQUIRED", "mutating a resolve()'d object must not affect the store's internal record");
+
+  const reqWithGate = { ...req, human_gate_ref: gateId };
+  const result = await kernel.submit(reqWithGate, bearer(VALID_TOKEN));
+  assertEquals(result.kernelOutcome, "HUMAN_REVIEW_REQUIRED", "the forged mutation must not grant approval");
+});
+
+Deno.test("ROUND-2 finding 2 regression: ToolRegistry.claimExecutionRights() can only be claimed once", () => {
+  const registry = new ToolRegistry();
+  registerMockTools(registry);
+  registry.claimExecutionRights(); // first claim (simulates AefKernel's constructor)
+  let threw = false;
+  try {
+    registry.claimExecutionRights(); // second claim attempt -- same registry reference
+  } catch {
+    threw = true;
+  }
+  assert(threw, "a second claimExecutionRights() call must throw -- execution capability is single-issuance");
+});
+
+Deno.test("ROUND-2 finding 2 regression: after a real AefKernel is constructed, the SAME ToolRegistry reference cannot yield execution capability anymore", () => {
+  const { identityResolver, humanGateStore } = makeKernel();
+  const toolRegistry = new ToolRegistry();
+  registerMockTools(toolRegistry);
+  // Constructing AefKernel claims execution rights immediately.
+  new AefKernel({
+    identityResolver,
+    delegationResolver: new InMemoryDelegationStore(),
+    humanGateResolver: humanGateStore,
+    toolRegistry,
+    requestIdStore: new InMemoryRequestIdStore(),
+    nonceStore: new InMemoryNonceStore(),
+    idempotencyStore: new InMemoryIdempotencyStore(),
+    now: () => NOW,
+  });
+  // An attacker holding this EXACT SAME registry reference (e.g. because
+  // it was passed around after being wired into a real kernel) can no
+  // longer extract execution capability from it.
+  let threw = false;
+  try {
+    toolRegistry.claimExecutionRights();
+  } catch {
+    threw = true;
+  }
+  assert(threw, "claimExecutionRights() must throw once a real AefKernel has already claimed it");
+});
+
+Deno.test("ROUND-2 finding 3 regression: delegation issuer is denied unconditionally, even if an injected resolver dishonestly claims it verified", async () => {
+  const { delegationResolver } = makeKernel();
+  class AlwaysVerifiedResolver {
+    resolve() {
+      // Dishonestly claims ANY actor (including a service issuer) is verified.
+      return Promise.resolve({ status: "VERIFIED" as const, verifiedId: "any-id", verifiedType: "user" as const, source: "rogue" });
+    }
+  }
+  const rogueIdentityResolver = new AlwaysVerifiedResolver();
+  const toolRegistry = new ToolRegistry();
+  registerMockTools(toolRegistry);
+  const kernel2 = new AefKernel({
+    identityResolver: rogueIdentityResolver,
+    delegationResolver,
+    humanGateResolver: new InMemoryHumanGateStore(rogueIdentityResolver, () => NOW),
+    toolRegistry,
+    requestIdStore: new InMemoryRequestIdStore(),
+    nonceStore: new InMemoryNonceStore(),
+    idempotencyStore: new InMemoryIdempotencyStore(),
+    now: () => NOW,
+  });
+  const delegation: DelegationEnvelope = {
+    contract_version: "1.0",
+    delegation_id: uuid("del-r2f3"),
+    issuer: { type: "service", id: "ive-core", auth_ref: "svc:ive-core-service" },
+    subject: { type: "user", id: "any-id", auth_ref: "usr:session-any-id-1" },
+    audience: "aef.internal",
+    issued_at: "2026-09-18T11:55:00.000Z",
+    expires_at: FUTURE,
+    nonce: "nonce-r2f3-aaaaaaaaaaaa",
+    purpose: "test",
+    scope: ["internal.mock_read_echo"],
+    request_binding: uuid("req-r2f3"),
+    auth_assertion_ref: "assertion-r2f3",
+  };
+  delegationResolver.put(delegation);
+  // request.actor must match delegation.subject exactly -- that binding
+  // check (contracts/aef's validateRequestAgainstDelegation) compares
+  // against the CLAIMED request.actor field, independent of whatever the
+  // (here, rogue) identity resolver later claims to verify.
+  const req = baseRequest({
+    request_id: delegation.request_binding,
+    delegation_ref: delegation.delegation_id,
+    actor: { type: "user", id: "any-id", auth_ref: "usr:session-any-id-1" },
+  });
+  const result = await kernel2.submit(req, bearer(VALID_TOKEN));
+  assertEquals(result.kernelOutcome, "AUTH_FAILED", "delegation issuer must be denied categorically, independent of what any injected resolver claims");
+  assert(result.receipt.error?.includes("categorically unsupported"));
+});
