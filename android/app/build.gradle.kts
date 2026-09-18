@@ -20,6 +20,36 @@ val keystoreProperties = Properties()
 val hasReleaseSigning = keystorePropertiesFile.exists()
 if (hasReleaseSigning) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+    // Codex Gate (GOOGLE-AUTH-ANDROID-IDENTITY-GATE-17, P2 ACCEPTED) — the
+    // signingConfigs block below used to cast these 4 properties directly
+    // (`as String`), so a key.properties present but missing/misspelling
+    // one field failed with an opaque Kotlin ClassCastException instead of
+    // saying which field is missing. Validated explicitly, once, here.
+    val requiredKeys = listOf("keyAlias", "keyPassword", "storeFile", "storePassword")
+    val missingKeys = requiredKeys.filter { keystoreProperties.getProperty(it).isNullOrBlank() }
+    if (missingKeys.isNotEmpty()) {
+        throw GradleException(
+            "android/key.properties exists but is missing or has empty values for: " +
+                "${missingKeys.joinToString(", ")}. Expected all four of: " +
+                "${requiredKeys.joinToString(", ")}."
+        )
+    }
+} else {
+    // Codex Gate (P2 ACCEPTED) — falling back to debug signing for a
+    // release build is Flutter's own standard scaffolded default (keeps
+    // `flutter build apk --debug` / this repo's CI build gate working
+    // before a real keystore exists) and is intentionally NOT a hard
+    // failure here. But a `--release`/`appbundle --release` build with no
+    // real signing configured should never look silent about that -- this
+    // is a build-configuration-time warning (always printed once when
+    // Gradle evaluates this file for a release-capable build), not a test
+    // a normal `flutter test` run would ever see.
+    logger.warn(
+        "[insightvalues] android/key.properties not found -- RELEASE builds will be " +
+            "signed with the DEBUG keystore (not production-ready). This is expected " +
+            "before the Owner creates a real upload keystore; see this file's own doc " +
+            "comment for the keytool command."
+    )
 }
 
 android {
@@ -49,11 +79,17 @@ android {
 
     signingConfigs {
         if (hasReleaseSigning) {
+            // getProperty() (String?) instead of the Map-style `[...] as
+            // String` cast used before -- the validation above already
+            // guarantees these are non-blank, so `!!` here can never
+            // actually trip; it exists so the compiler (not a runtime
+            // ClassCastException) is what would catch a future edit that
+            // removes that guarantee.
             create("release") {
-                keyAlias = keystoreProperties["keyAlias"] as String
-                keyPassword = keystoreProperties["keyPassword"] as String
-                storeFile = file(keystoreProperties["storeFile"] as String)
-                storePassword = keystoreProperties["storePassword"] as String
+                keyAlias = keystoreProperties.getProperty("keyAlias")!!
+                keyPassword = keystoreProperties.getProperty("keyPassword")!!
+                storeFile = file(keystoreProperties.getProperty("storeFile")!!)
+                storePassword = keystoreProperties.getProperty("storePassword")!!
             }
         }
     }
