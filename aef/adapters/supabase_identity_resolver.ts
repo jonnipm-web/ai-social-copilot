@@ -22,15 +22,18 @@ export class SupabaseUserVerifier implements UserVerifier {
   constructor(private readonly client?: AuthClient) {}
 
   async verify(token: string): Promise<UserVerification> {
-    // resolveAuthenticatedUser() reads the Authorization header off a
-    // Request object -- construct a minimal synthetic one carrying only
-    // the token we were given, so we reuse its exact parsing/verification
-    // logic rather than duplicating it.
-    const syntheticRequest = new Request("https://internal.invalid/aef-identity-resolution", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
     try {
+      // resolveAuthenticatedUser() reads the Authorization header off a
+      // Request object -- construct a minimal synthetic one carrying only
+      // the token we were given, so we reuse its exact parsing/verification
+      // logic rather than duplicating it. Constructing the Request is
+      // INSIDE this try (Codex round-1 adversarial review, area 9): a
+      // pathological token value (e.g. containing characters the Headers
+      // constructor rejects) must still fail closed as UNAVAILABLE, not
+      // throw past this adapter's contract of never throwing.
+      const syntheticRequest = new Request("https://internal.invalid/aef-identity-resolution", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const user = await resolveAuthenticatedUser(syntheticRequest, this.client);
       return { ok: true, userId: user.id };
     } catch (err) {

@@ -84,7 +84,7 @@ function makeKernel(overrides: Partial<{ userVerifier: UserVerifier }> = {}) {
   const toolRegistry = new ToolRegistry();
   registerMockTools(toolRegistry);
   const delegationResolver = new InMemoryDelegationStore();
-  const humanGateStore = new InMemoryHumanGateStore(identityResolver);
+  const humanGateStore = new InMemoryHumanGateStore(identityResolver, () => NOW);
   const requestIdStore = new InMemoryRequestIdStore();
   const nonceStore = new InMemoryNonceStore();
   const idempotencyStore = new InMemoryIdempotencyStore();
@@ -330,7 +330,36 @@ Deno.test("SECURITY MATRIX #16 -- missing approval -> HUMAN_REVIEW_REQUIRED", as
 });
 
 Deno.test("SECURITY MATRIX #17 -- expired approval -> HUMAN_REVIEW_REQUIRED", async () => {
-  const { kernel, humanGateStore } = makeKernel();
+  // Codex round-1 adversarial review, area 3/14: the original version of
+  // this test reached into the store's internals via `(store as any)
+  // .records.set(...)` to simulate a stale AUTHORIZED record -- exactly
+  // the anti-pattern that finding demonstrated could ALSO be used to
+  // forge approval illegitimately. `#records` is now a true private
+  // field (cannot be reached via `as any` at all), so this test instead
+  // uses two independently-clocked components, exactly as a real clock
+  // would behave: the store's clock is EARLY (so creating/authorizing a
+  // gate that expires shortly afterward succeeds normally), and the
+  // kernel evaluates it LATER (after that expiry) -- proving the
+  // AUTHORIZED-but-now-expired rejection (Finding F-04) through entirely
+  // legitimate API calls, no internals access required.
+  const EARLY_STORE_NOW = new Date(PAST); // 11:00
+  const SHORT_LIVED_EXPIRY = "2026-09-18T11:30:00.000Z"; // future relative to 11:00, past relative to kernel's NOW (12:00)
+
+  const { identityResolver, delegationResolver, requestIdStore, nonceStore, idempotencyStore } = makeKernel();
+  const humanGateStore = new InMemoryHumanGateStore(identityResolver, () => EARLY_STORE_NOW);
+  const toolRegistry = new ToolRegistry();
+  registerMockTools(toolRegistry);
+  const kernel = new AefKernel({
+    identityResolver,
+    delegationResolver,
+    humanGateResolver: humanGateStore,
+    toolRegistry,
+    requestIdStore,
+    nonceStore,
+    idempotencyStore,
+    now: () => NOW, // kernel evaluates LATER than the store's clock
+  });
+
   const req = baseRequest({ action: "internal.mock_consequential_action" });
   const gateId = uuid("gate17");
   humanGateStore.create({
@@ -339,26 +368,16 @@ Deno.test("SECURITY MATRIX #17 -- expired approval -> HUMAN_REVIEW_REQUIRED", as
     request_id: req.request_id,
     action: req.action,
     state: "REVIEW_REQUIRED",
-    expires_at: FUTURE,
+    expires_at: SHORT_LIVED_EXPIRY,
   });
-  // Authorize while the gate's expires_at is still in the future...
   const authorize = await humanGateStore.authorize(
     gateId,
     { type: "user", id: "user-alice", auth_ref: "usr:session-alice-1" },
     bearer(VALID_TOKEN),
-    NOW,
+    EARLY_STORE_NOW,
     "audit-17",
   );
-  assert(authorize.ok);
-  // ...but the record itself was created with an expiry now in the past
-  // relative to a LATER evaluation time -- force it by re-creating the
-  // gate directly with an already-past expiry, since authorize() does not
-  // change expires_at.
-  const expired = humanGateStore.resolve(gateId)!;
-  // Directly simulate an AUTHORIZED-but-now-expired record for the
-  // evaluator (Finding F-04's exact scenario).
-  // deno-lint-ignore no-explicit-any
-  (humanGateStore as any).records.set(gateId, { ...expired, expires_at: PAST });
+  assert(authorize.ok, `authorize should succeed while not yet expired: ${JSON.stringify(authorize)}`);
 
   const reqWithGate = { ...req, human_gate_ref: gateId };
   const result = await kernel.submit(reqWithGate, bearer(VALID_TOKEN));
@@ -827,4 +846,150 @@ Deno.test("no direct-execution API exists in the AEF v0 kernel module", async ()
       );
     }
   }
+});
+
+// =======================================================================
+// CODEX ROUND-1 ADVERSARIAL REVIEW -- REMEDIATION REGRESSION TESTS
+// =======================================================================
+
+Deno.test("ROUND-1 area 3 regression: HumanGateRecord storage is truly private (#records), not reachable via `as any`", () => {
+  const { identityResolver } = makeKernel();
+  const store = new InMemoryHumanGateStore(identityResolver, () => NOW);
+  // deno-lint-ignore no-explicit-any
+  assertEquals((store as any).records, undefined, "there must be no `records` property reachable at all -- only the true private field `#records`, which `as any` cannot expose");
+});
+
+Deno.test("ROUND-1 area 4 regression: ToolRegistry.seal() prevents further registration after startup wiring", () => {
+  const registry = new ToolRegistry();
+  registerMockTools(registry);
+  registry.seal();
+  let threw = false;
+  try {
+    registry.register({
+      toolId: "internal.late_registration_attempt",
+      domain: "internal",
+      classification: "READ_ONLY",
+      requiresHumanGate: false,
+      execute: () => Promise.resolve({ outcome: "SUCCESS" as const }),
+    });
+  } catch {
+    threw = true;
+  }
+  assert(threw, "register() after seal() must throw -- registration is startup-only");
+});
+
+Deno.test("ROUND-1 area 5 regression: Impact REVERSIBLE (not just CONSEQUENTIAL) is also denied unconditionally", async () => {
+  const { identityResolver, humanGateStore } = makeKernel();
+  const toolRegistry = new ToolRegistry();
+  registerMockTools(toolRegistry);
+  toolRegistry.register({
+    toolId: "impact.discover.update_index",
+    domain: "impact",
+    classification: "REVERSIBLE", // deliberately NOT CONSEQUENTIAL -- proving the tightened boundary
+    requiresHumanGate: false,
+    execute: () => Promise.resolve({ outcome: "SUCCESS" as const }),
+  });
+  const kernel2 = new AefKernel({
+    identityResolver,
+    delegationResolver: new InMemoryDelegationStore(),
+    humanGateResolver: humanGateStore,
+    toolRegistry,
+    requestIdStore: new InMemoryRequestIdStore(),
+    nonceStore: new InMemoryNonceStore(),
+    idempotencyStore: new InMemoryIdempotencyStore(),
+    now: () => NOW,
+  });
+  const req = baseRequest({ domain: "impact", action: "impact.discover.update_index" });
+  const result = await kernel2.submit(req, bearer(VALID_TOKEN));
+  assertEquals(result.kernelOutcome, "DENIED");
+  assert(result.receipt.error?.includes("DENY_BY_V0"));
+});
+
+Deno.test("ROUND-1 area 9 regression: a resolver returning VERIFIED with a malformed/garbage claimed actor does not throw", async () => {
+  class LooseVerifiedResolver {
+    resolve() {
+      return Promise.resolve({ status: "VERIFIED" as const, verifiedId: "user-x", verifiedType: "user" as const, source: "test" });
+    }
+  }
+  const toolRegistry = new ToolRegistry();
+  registerMockTools(toolRegistry);
+  const kernel2 = new AefKernel({
+    identityResolver: new LooseVerifiedResolver(),
+    delegationResolver: new InMemoryDelegationStore(),
+    humanGateResolver: new InMemoryHumanGateStore(new LooseVerifiedResolver(), () => NOW),
+    toolRegistry,
+    requestIdStore: new InMemoryRequestIdStore(),
+    nonceStore: new InMemoryNonceStore(),
+    idempotencyStore: new InMemoryIdempotencyStore(),
+    now: () => NOW,
+  });
+  // actor is `null` -- a resolver that loosely says VERIFIED regardless
+  // must not cause the kernel to crash when it tries to read auth_ref off
+  // it. Contract validation separately (and correctly) rejects a null
+  // actor -- INVALID is the expected outcome; reaching a normal
+  // KernelResult at all (rather than a thrown exception) is what this
+  // test actually proves.
+  const result = await kernel2.submit({ ...baseRequest(), actor: null }, bearer(VALID_TOKEN));
+  assertEquals(result.kernelOutcome, "INVALID");
+  assertReceiptValid(result);
+});
+
+Deno.test("ROUND-1 area 9 regression: a human-gate resolver that throws is treated as HUMAN_REVIEW_REQUIRED, not an unhandled rejection", async () => {
+  const { identityResolver } = makeKernel();
+  const throwingGateResolver = {
+    resolve(): never {
+      throw new Error("gate backend down");
+    },
+  };
+  const toolRegistry = new ToolRegistry();
+  registerMockTools(toolRegistry);
+  const kernel2 = new AefKernel({
+    identityResolver,
+    delegationResolver: new InMemoryDelegationStore(),
+    humanGateResolver: throwingGateResolver,
+    toolRegistry,
+    requestIdStore: new InMemoryRequestIdStore(),
+    nonceStore: new InMemoryNonceStore(),
+    idempotencyStore: new InMemoryIdempotencyStore(),
+    now: () => NOW,
+  });
+  // Must actually carry a human_gate_ref, otherwise evaluateHumanGate()
+  // short-circuits at "missing approval" before ever calling resolve() --
+  // the throwing behavior is only reachable once resolve() is invoked.
+  const req = baseRequest({ action: "internal.mock_consequential_action", human_gate_ref: uuid("gate-throws") });
+  const result = await kernel2.submit(req, bearer(VALID_TOKEN));
+  assertEquals(result.kernelOutcome, "HUMAN_REVIEW_REQUIRED");
+  assert(result.receipt.error?.includes("threw unexpectedly"), `expected 'threw unexpectedly' in error, got: ${result.receipt.error}`);
+});
+
+Deno.test("ROUND-1 area 10 regression: ToolRegistry.describe() never exposes an executable function", () => {
+  const registry = new ToolRegistry();
+  registerMockTools(registry);
+  const descriptor = registry.describe(baseRequest({ action: "internal.mock_read_echo" }));
+  assert(descriptor !== undefined);
+  // deno-lint-ignore no-explicit-any
+  assertEquals((descriptor as any).execute, undefined, "describe() must return metadata only, never the execute closure");
+});
+
+Deno.test("ROUND-1 area 13 regression: kernel independently rejects VERIFIED results whose verifiedType is not 'user'", async () => {
+  class RogueServiceVerifiedResolver {
+    resolve() {
+      return Promise.resolve({ status: "VERIFIED" as const, verifiedId: "svc-1", verifiedType: "service" as unknown as "user", source: "rogue-test-resolver" });
+    }
+  }
+  const toolRegistry = new ToolRegistry();
+  registerMockTools(toolRegistry);
+  const kernel2 = new AefKernel({
+    identityResolver: new RogueServiceVerifiedResolver(),
+    delegationResolver: new InMemoryDelegationStore(),
+    humanGateResolver: new InMemoryHumanGateStore(new RogueServiceVerifiedResolver(), () => NOW),
+    toolRegistry,
+    requestIdStore: new InMemoryRequestIdStore(),
+    nonceStore: new InMemoryNonceStore(),
+    idempotencyStore: new InMemoryIdempotencyStore(),
+    now: () => NOW,
+  });
+  const req = baseRequest({ actor: { type: "service", id: "svc-1", auth_ref: "svc:whatever-service-id" } });
+  const result = await kernel2.submit(req, NO_CREDENTIAL);
+  assertEquals(result.kernelOutcome, "AUTH_FAILED", "a rogue/misconfigured resolver claiming VERIFIED for a non-user type must still be rejected by the kernel itself");
 });

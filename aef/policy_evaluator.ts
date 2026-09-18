@@ -12,9 +12,11 @@
  */
 import { checkDomainBoundary } from "./action_classification.ts";
 import type { ExecutionRequest } from "../contracts/aef/types.ts";
-import type { PolicyDecision, ToolDefinition } from "./types.ts";
+import type { PolicyDecision } from "./types.ts";
+import type { ToolDescriptor } from "./tool_registry.ts";
 
-export function evaluatePolicy(request: ExecutionRequest, tool: ToolDefinition): PolicyDecision {
+/** Takes a ToolDescriptor, never the full ToolDefinition -- the policy engine has no business holding an executable capability (Codex round-1 adversarial review, area 10). */
+export function evaluatePolicy(request: ExecutionRequest, tool: ToolDescriptor): PolicyDecision {
   const boundary = checkDomainBoundary(request, tool.classification);
   if (boundary) return boundary;
 

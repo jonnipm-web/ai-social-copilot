@@ -46,15 +46,25 @@ export function checkDomainBoundary(
     }
   }
 
-  if (request.domain === "impact" && classification === "CONSEQUENTIAL") {
+  if (request.domain === "impact" && classification !== "READ_ONLY") {
     // Section 25 / Finding F-09: Impact has no consequential-action risk
     // taxonomy yet (contracts/aef/README.md's known, acknowledged gap).
     // Until that taxonomy exists, AEF v0 cannot distinguish a safe
-    // Impact consequential action from an unsafe one -- so all of them
-    // are denied, not just the ones that happen to look risky.
+    // Impact consequential/reversible action from an unsafe one -- so
+    // EVERYTHING except READ_ONLY is denied, not just CONSEQUENTIAL.
+    // Codex adversarial review (round 1, area 5) correctly noted that
+    // gating on `classification === "CONSEQUENTIAL"` alone puts full
+    // trust in whatever classification the tool's registrar declared --
+    // a REVERSIBLE-but-actually-mutating Impact action (e.g. a
+    // misclassified tool) would previously bypass this boundary
+    // entirely. Narrowing the allowed set to exactly READ_ONLY reduces
+    // (does not eliminate -- see Section 17's registration-time trust
+    // model, documented at the top of this file) that blast radius,
+    // without inventing the Impact risk taxonomy this mission correctly
+    // defers (Section 25: "não implementar Quant/Impact").
     return {
       decision: "DENY",
-      reason: "DENY_BY_V0: Impact has no canonical consequential-action taxonomy yet (Finding F-09, deliberately deferred) -- any CONSEQUENTIAL Impact action is denied unconditionally in v0.",
+      reason: "DENY_BY_V0: Impact has no canonical consequential-action taxonomy yet (Finding F-09, deliberately deferred) -- only READ_ONLY Impact actions are permitted in v0; REVERSIBLE and CONSEQUENTIAL are both denied unconditionally.",
     };
   }
 

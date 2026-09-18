@@ -24,9 +24,26 @@ import type { HumanGateResolver, IdentityResolver, RawCredential } from "./types
 export type AuthorizeResult = { ok: true } | { ok: false; reason: string };
 
 export class InMemoryHumanGateStore implements HumanGateResolver {
-  private readonly records = new Map<string, HumanGateRecord>();
+  // A true ECMAScript private field (runtime-enforced, unlike TypeScript's
+  // compile-time-only `private`) -- Codex adversarial review (round 1,
+  // Finding "approval spoofing") correctly demonstrated that
+  // `(store as any).records.set(...)` could write a forged AUTHORIZED
+  // record directly, bypassing authorize()'s independent approver
+  // verification entirely. `#records` cannot be reached that way: there
+  // is no `as any` cast that grants access to a `#`-private field from
+  // outside this class, in any JS engine. This does not defend against
+  // an attacker with arbitrary code execution INSIDE this process (no
+  // in-process boundary can, in any language) -- it defends against
+  // exactly what was demonstrated: a casual/careless type-cast bypass by
+  // legitimate calling code, which is the actual class of mistake this
+  // hardening closes.
+  #records = new Map<string, HumanGateRecord>();
 
-  constructor(private readonly identityResolver: IdentityResolver) {}
+  constructor(
+    private readonly identityResolver: IdentityResolver,
+    /** Injectable clock (Section 20 test determinism). Defaults to real time. Distinct from the kernel's own injected clock so a gate's creation/authorization time and the kernel's evaluation time can be tested independently. */
+    private readonly now: () => Date = () => new Date(),
+  ) {}
 
   /** Seeds a gate in REQUESTED/REVIEW_REQUIRED state -- the only states a caller may create directly. Never accepts AUTHORIZED/REJECTED/EXECUTED here (those only exist via authorize()/reject()). */
   create(record: HumanGateRecord): void {
@@ -35,15 +52,15 @@ export class InMemoryHumanGateStore implements HumanGateResolver {
         `InMemoryHumanGateStore.create: only REQUESTED/REVIEW_REQUIRED records may be seeded directly (got '${record.state}') -- use authorize()/reject() for terminal states, so approver identity is always independently verified`,
       );
     }
-    const check = validateHumanGateRecord(record);
+    const check = validateHumanGateRecord(record, { now: this.now() });
     if (!check.ok) {
       throw new Error(`InMemoryHumanGateStore.create: refusing to store an invalid HumanGateRecord: ${check.errors?.join("; ")}`);
     }
-    this.records.set(record.gate_id, record);
+    this.#records.set(record.gate_id, record);
   }
 
   resolve(gateId: string): HumanGateRecord | undefined {
-    return this.records.get(gateId);
+    return this.#records.get(gateId);
   }
 
   /**
@@ -61,15 +78,18 @@ export class InMemoryHumanGateStore implements HumanGateResolver {
     decidedAt: Date,
     auditRef: string,
   ): Promise<AuthorizeResult> {
-    const existing = this.records.get(gateId);
+    const existing = this.#records.get(gateId);
     if (!existing) return { ok: false, reason: `no HumanGateRecord found for gate_id '${gateId}'` };
     if (existing.state !== "REQUESTED" && existing.state !== "REVIEW_REQUIRED") {
       return { ok: false, reason: `gate '${gateId}' is in terminal/non-pending state '${existing.state}', cannot authorize` };
     }
 
+    // Independently verify the approver -- and require verifiedType==="user"
+    // explicitly (Codex round-1 Finding, area 13: don't just check
+    // status==="VERIFIED" and trust whatever type came back).
     const identity = await this.identityResolver.resolve(approver, approverCredential);
-    if (identity.status !== "VERIFIED") {
-      return { ok: false, reason: `approver identity could not be independently verified (status=${identity.status}) -- fabricated or unverifiable approver, gate remains '${existing.state}'` };
+    if (identity.status !== "VERIFIED" || identity.verifiedType !== "user") {
+      return { ok: false, reason: `approver identity could not be independently verified as a user (status=${identity.status}) -- fabricated or unverifiable approver, gate remains '${existing.state}'` };
     }
 
     const authorized: HumanGateRecord = {
@@ -79,11 +99,11 @@ export class InMemoryHumanGateStore implements HumanGateResolver {
       decided_at: decidedAt.toISOString(),
       audit_ref: auditRef,
     };
-    const check = validateHumanGateRecord(authorized);
+    const check = validateHumanGateRecord(authorized, { now: this.now() });
     if (!check.ok) {
       return { ok: false, reason: `resulting AUTHORIZED record failed contract validation: ${check.errors?.join("; ")}` };
     }
-    this.records.set(gateId, authorized);
+    this.#records.set(gateId, authorized);
     return { ok: true };
   }
 
@@ -102,16 +122,16 @@ export class InMemoryHumanGateStore implements HumanGateResolver {
     decidedAt: Date,
     auditRef: string,
   ): Promise<AuthorizeResult> {
-    const existing = this.records.get(gateId);
+    const existing = this.#records.get(gateId);
     if (!existing) return { ok: false, reason: `no HumanGateRecord found for gate_id '${gateId}'` };
     if (existing.state !== "REQUESTED" && existing.state !== "REVIEW_REQUIRED") {
       return { ok: false, reason: `gate '${gateId}' is in terminal/non-pending state '${existing.state}', cannot reject` };
     }
     const identity = await this.identityResolver.resolve(approver, approverCredential);
-    if (identity.status !== "VERIFIED") {
-      return { ok: false, reason: `rejecter identity could not be independently verified (status=${identity.status})` };
+    if (identity.status !== "VERIFIED" || identity.verifiedType !== "user") {
+      return { ok: false, reason: `rejecter identity could not be independently verified as a user (status=${identity.status})` };
     }
-    this.records.set(gateId, {
+    this.#records.set(gateId, {
       ...existing,
       state: "REJECTED",
       approver,

@@ -124,10 +124,24 @@ export class AefKernel {
       // unhandled rejection that some caller might mistake for "proceed."
       return buildAuthFailed(paramsWith(fallbackActorForReceipt), `identity resolver threw unexpectedly: ${String(err)}`);
     }
-    if (identity.status !== "VERIFIED") {
-      return buildAuthFailed(paramsWith(fallbackActorForReceipt), `identity resolution status=${identity.status}: ${identity.reason}`);
+    // Codex round-1 adversarial review, area 13: do not trust `status`
+    // alone. AefIdentityResolver (the shipped implementation) never
+    // returns VERIFIED for a non-user actor, but AefKernel is
+    // dependency-injected on the IdentityResolver INTERFACE -- a
+    // different/future/misconfigured implementation could return
+    // VERIFIED with `verifiedType` other than "user" (e.g. a service
+    // identity a future mission adds support for, before this kernel is
+    // updated to handle it). Defense in depth: re-check explicitly rather
+    // than assume every possible resolver respects the v0 boundary.
+    if (identity.status !== "VERIFIED" || identity.verifiedType !== "user") {
+      return buildAuthFailed(paramsWith(fallbackActorForReceipt), `identity resolution status=${identity.status}: ${"reason" in identity ? identity.reason : "resolver returned VERIFIED for an unsupported actor type"}`);
     }
-    const verifiedActorForReceipt: Actor = { type: "user", id: identity.verifiedId, auth_ref: (rawActor as Actor).auth_ref };
+    // Codex round-1 adversarial review, area 9: do not blindly dereference
+    // the raw, attacker-controlled input just because SOME resolver said
+    // VERIFIED -- a non-AefIdentityResolver implementation could return
+    // VERIFIED without `rawActor` actually being a well-formed object.
+    const claimedAuthRef = isRecord(rawActor) && typeof rawActor.auth_ref === "string" ? rawActor.auth_ref : "usr:unresolved-actor";
+    const verifiedActorForReceipt: Actor = { type: "user", id: identity.verifiedId, auth_ref: claimedAuthRef };
 
     // -----------------------------------------------------------------
     // Step 2: Contract Validation (Section 3/6) -- full ExecutionRequest
@@ -162,7 +176,10 @@ export class AefKernel {
     // Step 3: Tool lookup (feeds classification into Policy Evaluation).
     // Unknown tool/action -> DENY, no dynamic selection (Section 17).
     // -----------------------------------------------------------------
-    const tool = this.deps.toolRegistry.lookup(request);
+    // `describe()` returns metadata ONLY -- never the executable
+    // capability (Codex round-1 adversarial review, area 10). Actual
+    // execution happens exclusively via `toolRegistry.invoke()` at Step 7.
+    const tool = this.deps.toolRegistry.describe(request);
     if (!tool) {
       return buildDenied(params(), `unknown tool/action '${request.domain}::${request.action}' -- no dynamic tool selection permitted (Section 17)`);
     }
@@ -191,7 +208,15 @@ export class AefKernel {
     // Step 5: Human Gate (Section 3/16), only when policy requires it.
     // -----------------------------------------------------------------
     if (policy.decision === "REQUIRE_HUMAN_REVIEW") {
-      const gate = evaluateHumanGate(request, this.deps.humanGateResolver, startedAt);
+      let gate;
+      try {
+        gate = evaluateHumanGate(request, this.deps.humanGateResolver, startedAt);
+      } catch (err) {
+        // Codex round-1 adversarial review, area 9: a broken/unavailable
+        // human-gate backend must fail closed, never throw past this
+        // pipeline stage into an unhandled rejection.
+        return buildHumanReviewRequired(params({ humanGateRef: request.human_gate_ref ?? null }), `human gate resolver threw unexpectedly: ${String(err)}`);
+      }
       if (gate.decision !== "ALLOW") {
         return buildHumanReviewRequired(params({ humanGateRef: request.human_gate_ref ?? null }), gate.reason);
       }
@@ -217,7 +242,21 @@ export class AefKernel {
     // -----------------------------------------------------------------
     let finalResult: KernelResult;
     try {
-      const toolResult = await tool.execute(request);
+      // invoke() does its own internal lookup and calls execute() itself
+      // -- the closure is never exposed to this code (see tool_registry.ts).
+      // Guaranteed defined here since `tool` (describe()) already
+      // confirmed registration, but re-checked defensively rather than
+      // assumed, in case the registry were ever mutated between steps
+      // (it cannot be today -- ToolRegistry has no remove() -- kept for
+      // robustness against future changes).
+      const invocation = this.deps.toolRegistry.invoke(request);
+      if (!invocation) {
+        finalResult = buildDenied(params(), `tool '${tool.toolId}' was described but is no longer invocable -- treating as unknown tool`);
+        this.idempotencyGuard.releaseOnTechnicalFailure(request);
+        this.idempotencyGuard.recordCompletion(request, finalResult);
+        return finalResult;
+      }
+      const toolResult = await invocation;
       const completedAt = this.now();
       finalResult = toolResult.outcome === "SUCCESS"
         ? buildSuccess(params({ tool: tool.toolId, humanGateRef: request.human_gate_ref ?? null, completedAt }), toolResult.detail)

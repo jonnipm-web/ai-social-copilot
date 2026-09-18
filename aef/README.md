@@ -127,6 +127,70 @@ evaluation and unconditionally denies:
   canonical consequential-action risk taxonomy yet (Finding F-09,
   deliberately deferred in the contract mission).
 
+## Codex round-1 adversarial review: remediation
+
+Codex's first adversarial pass (Class D, mandatory) returned FAIL with
+several findings, all reconciled below. See the mission's final report
+for the full Codex output and Claude's per-finding classification
+(ACCEPT/PARTIAL_ACCEPT/REJECT).
+
+- **Approval spoofing** (P1, ACCEPTED): `InMemoryHumanGateStore`'s
+  internal map was TypeScript-`private` only (compile-time, not
+  runtime) -- reachable via `(store as any).records.set(...)`, bypassing
+  `authorize()`'s independent approver verification entirely. Fixed with
+  a true ECMAScript `#records` private field, which no `as any` cast can
+  reach in any JS engine.
+- **Direct execution fallback** (P1, ACCEPTED): `ToolRegistry.lookup()`
+  returned the full `ToolDefinition`, including its `execute` closure --
+  any caller holding a registry reference could invoke a tool directly,
+  skipping the entire governed pipeline. Fixed by splitting the API into
+  `describe()` (metadata only, no `execute` field -- `ToolDescriptor`)
+  and `invoke()` (the only way to actually run a tool; does its own
+  internal lookup so the closure itself is never handed out).
+- **Tool spoofing / late registration** (P1, PARTIAL_ACCEPT): registering
+  a tool is a startup-wiring-time operation (same trust tier as
+  constructing `AefKernel` itself), not a per-request attack surface --
+  Section 17's "no dynamic arbitrary tool selection" is about REQUEST-time
+  selection, which was never possible. Still hardened with
+  `ToolRegistry.seal()`, called by production wiring right after
+  registering all tools, so a later `register()` call throws.
+- **Impact policy bypass via misclassification** (P1, PARTIAL_ACCEPT,
+  reclassified P2): a tool's classification is inherently a
+  registration-time trust decision (Section 17). Rather than invent an
+  Impact risk taxonomy (correctly out of scope, Finding F-09), the domain
+  boundary was tightened to deny everything except exactly `READ_ONLY`
+  for Impact (previously only `CONSEQUENTIAL` was denied) -- reduces, does
+  not eliminate, the blast radius of a misclassified tool.
+- **Unsupported-identity bypass via kernel trust** (accepted): the kernel
+  only checked `identity.status === "VERIFIED"`, not `verifiedType` --
+  a different/future `IdentityResolver` implementation returning VERIFIED
+  for a non-`user` actor would have been silently accepted. Fixed with an
+  explicit `verifiedType !== "user"` check in `kernel.ts`, independent of
+  what any injected resolver claims. Applied symmetrically to
+  `InMemoryHumanGateStore.authorize()`/`reject()` for the approver.
+- **Fail-closed exception handling gaps** (P2, ACCEPTED): (a) the kernel
+  dereferenced the raw claimed actor's `auth_ref` without checking it was
+  actually an object first; (b) `evaluateHumanGate()`/its resolver call
+  was not wrapped in try/catch; (c) the adapter constructed its synthetic
+  `Request` OUTSIDE its try block. All three fixed.
+- **Receipt falsification** (P2, PARTIAL_ACCEPT, documented not fully
+  closed): `receipt_builder.ts`'s functions are exported (required for
+  `kernel.ts`, a separate file, to import them) and could be called
+  directly by any code with module access to construct a false SUCCESS
+  receipt. A full fix needs a capability-based construction API or a
+  durable, server-provenance receipt store -- disproportionate for a v0
+  with zero persistence and zero network exposure. Documented explicitly
+  as a dependency for whichever future mission adds a durable
+  ExecutionReceipt store.
+- **A bug Claude found while fixing the above**: `InMemoryHumanGateStore`
+  had no injectable clock (always used real wall-clock time internally),
+  while `AefKernel` uses an injectable one -- a latent test-flakiness
+  risk, and the reason an earlier version of test #17 reached into
+  private state via `as any` in the first place (to fake an already-past
+  expiry without a controllable clock). Fixed by adding the same
+  `now?: () => Date` pattern to the store; test #17 now uses two
+  independently-clocked components instead of touching internals at all.
+
 ## Files
 
 | File | Purpose |
@@ -139,7 +203,7 @@ evaluation and unconditionally denies:
 | `human_gate_evaluator.ts` | Validates a resolved `HumanGateRecord` against binding rules before allowing a gated action. |
 | `human_gate_store.ts` | In-memory `HumanGateRecord` store -- the ONLY path to `AUTHORIZED` independently re-verifies the approver's identity. |
 | `delegation_binding.ts` | Subject-binding check for delegated requests (see "Delegation flows" above). |
-| `tool_registry.ts` | `ToolRegistry` + `registerMockTools()` -- safe mock tools only. |
+| `tool_registry.ts` | `ToolRegistry` (`describe()`/`invoke()`/`seal()`) + `registerMockTools()` -- safe mock tools only; `execute` is never exposed to any caller (see round-1 remediation above). |
 | `idempotency_guard.ts` | Atomic idempotency-key claim/complete + request_id replay defense, positioned right before tool execution. |
 | `receipt_builder.ts` | Builds `KernelResult`/`ExecutionReceipt` for every outcome; the kernel-outcome-to-contract-outcome mapping. |
 | `kernel.ts` | `AefKernel` -- orchestrates the full pipeline. |

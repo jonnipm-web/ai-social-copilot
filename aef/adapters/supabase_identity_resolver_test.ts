@@ -41,6 +41,17 @@ Deno.test("SupabaseUserVerifier: null user with no error -> INVALID", async () =
   if (!result.ok) assertEquals(result.reason, "INVALID");
 });
 
+Deno.test("ROUND-1 area 9 regression: a pathological token that breaks Header construction does not throw", async () => {
+  // Codex round-1 adversarial review, area 9: the synthetic Request was
+  // previously constructed OUTSIDE the try block -- a token containing
+  // characters the Headers API rejects (e.g. a raw newline) would throw
+  // past this adapter's "never throws" contract instead of failing
+  // closed. Now inside the try, this must resolve to a normal failure.
+  const verifier = new SupabaseUserVerifier(fakeClient({ user: null }));
+  const result = await verifier.verify("token-with-a-newline\r\ninjected-header: evil");
+  assertEquals(result.ok, false);
+});
+
 Deno.test("SupabaseUserVerifier: identity backend throws -> UNAVAILABLE, not INVALID", async () => {
   const throwingClient: AuthClient = {
     auth: {

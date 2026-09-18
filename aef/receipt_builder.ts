@@ -2,8 +2,31 @@
  * ReceiptBuilder (Section 21/22). Builds the KernelResult (kernel-internal
  * outcome + a schema-valid contracts/aef ExecutionReceipt) for every
  * processable attempt -- "toda tentativa processável deve gerar receipt
- * quando tecnicamente seguro." Never records a fictitious success.
+ * quando tecnicamente seguro." Never records a fictitious success THROUGH
+ * THE GOVERNED PIPELINE (AefKernel.submit()).
  *
+ * ACKNOWLEDGED LIMITATION (Codex round-1 adversarial review, area 11):
+ * these builder functions are exported (kernel.ts, in a separate file,
+ * needs `export` to import them; there is no package-private-but-
+ * cross-file visibility in ES modules), so any code with a module
+ * reference to receipt_builder.ts could call e.g. `buildSuccess()`
+ * directly and construct a schema-valid SUCCESS receipt WITHOUT any tool
+ * having executed. This is real, and is not fully closed here: closing
+ * it properly requires a capability-based construction API (e.g. a
+ * token only AefKernel's own execution step can mint) or, more robustly,
+ * a durable append-only receipt store with server-side provenance that
+ * doesn't trust a client-constructed object at all -- both are
+ * disproportionate complexity for a v0 that has ZERO persistence and
+ * ZERO network exposure (Sections 12/27): there is no durable audit
+ * trail yet for a forged receipt to corrupt, and no external caller can
+ * reach this module without already having arbitrary code execution
+ * inside this process (at which point far stronger primitives are
+ * available to them regardless). Tracked as an explicit dependency for
+ * whichever future mission adds a durable ExecutionReceipt store --
+ * that mission MUST NOT trust a client/caller-constructed receipt object
+ * the way this in-memory v0 harness currently does.
+ *
+
  * ## Kernel outcome vs. contract outcome
  *
  * Section 21 asks for 7 kernel-level outcomes: SUCCESS, FAILURE, DENIED,
