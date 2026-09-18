@@ -179,7 +179,14 @@ jobs:
           fi
 
           # Verificação de segurança: confirmar que não é o package de produção
-          if [ "$PKG_NAME" = "com.insightvalues.aisocialcopilot" ] || \
+          # GOOGLE-AUTH-ANDROID-IDENTITY-GATE-17/18 -- adicionado
+          # com.insightvalues.app (o applicationId real e definitivo,
+          # aprovado pelo Owner) a esta lista. com.insightvalues.aisocialcopilot
+          # era um palpite anterior nunca de fato adotado; com.example.
+          # ai_social_copilot era o placeholder padrão do Flutter. Mantidos
+          # os três na lista -- custo zero, blindagem extra.
+          if [ "$PKG_NAME" = "com.insightvalues.app" ] || \
+             [ "$PKG_NAME" = "com.insightvalues.aisocialcopilot" ] || \
              [ "$PKG_NAME" = "com.example.ai_social_copilot" ]; then
             echo "ERRO DE SEGURANÇA: APK tem package de produção: $PKG_NAME"
             echo "Esperado: com.insightvalues.iveavatarlab"
