@@ -239,11 +239,44 @@ Widget _errorScreen(BuildContext context, GoRouterState state) {
 // duplicated.
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 
+// GATE-17-FINAL-CLOSURE (Section 09, Google Web OAuth callback race) —
+// go_router removed its own GoRouterRefreshStream years ago (see the
+// package's CHANGELOG under "Removes GoRouterRefreshStream"), so this is
+// the standard ~10-line replacement: adapts any Stream into the
+// Listenable refreshListenable expects, notifying GoRouter on every
+// stream event so it re-runs `redirect` for the CURRENT location (GoRouter
+// already evaluates redirect once on its own for the initial route, with
+// or without a refreshListenable -- this only needs to cover events AFTER
+// that). Exists specifically so a Supabase session that lands AFTER
+// GoRouter's redirect callback already ran once (the PKCE web OAuth
+// callback: Supabase.initialize()'s async detectSessionInUri code
+// exchange racing SplashScreen's fixed 800ms timer in
+// splash_screen.dart, confirmed both by source tracing and physical
+// testing -- accept Google consent, land back on /login with no error,
+// no dashboard) is noticed instead of leaving the user stranded on
+// /login with a valid session nothing ever re-checks.
+class GoRouterRefreshStream extends ChangeNotifier {
+  GoRouterRefreshStream(Stream<dynamic> stream) {
+    _subscription = stream.listen((_) => notifyListeners());
+  }
+
+  late final StreamSubscription<dynamic> _subscription;
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+}
+
 final _router = GoRouter(
   navigatorKey: rootNavigatorKey,
   initialLocation: AppConstants.routeSplash,
   observers: [_iveObserver],
   errorBuilder: _errorScreen,
+  refreshListenable: GoRouterRefreshStream(
+    Supabase.instance.client.auth.onAuthStateChange,
+  ),
   redirect: (context, state) async {
     final path = state.fullPath ?? state.matchedLocation;
     // IVE-COMMERCIAL-STABILITY-09O — this callback already runs on every
