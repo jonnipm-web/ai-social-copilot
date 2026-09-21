@@ -11,7 +11,8 @@ import '../../../data/models/ive_interaction_request.dart';
 import '../../../providers/action_queue_provider.dart';
 import '../../../providers/ive_context_provider.dart';
 import '../../../providers/project_provider.dart';
-import '../../../shared/widgets/context_copilot_widget.dart' show showCopilotChat;
+import '../../../shared/widgets/context_copilot_widget.dart'
+    show showCopilotChat, IveInlineAskPresence;
 
 // ── Colors ────────────────────────────────────────────────────────────────────
 const _kBg      = Color(0xFF0F0F1A);
@@ -867,38 +868,40 @@ class _StatusButtons extends StatelessWidget {
 
         const SizedBox(height: 10),
 
-        OutlinedButton.icon(
-          style: OutlinedButton.styleFrom(
-            foregroundColor: _kPrimary,
-            side: const BorderSide(color: _kPrimary),
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            minimumSize: const Size(double.infinity, 0),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        IveInlineAskPresence(
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: _kPrimary,
+              side: const BorderSide(color: _kPrimary),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              minimumSize: const Size(double.infinity, 0),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            icon: const Icon(Icons.auto_awesome_rounded),
+            label: const Text('Perguntar à IVE sobre esta ação'),
+            onPressed: () {
+              // IVE-COMMERCIAL-FOUNDATION-11 — antes navegava de volta para
+              // a lista do Action Engine em vez de abrir um diálogo
+              // contextual (confirmado quebrado em docs/commercial/
+              // IVE_INTERACTION_AND_QUOTA_CONTRACT.md §1.1).
+              final ctx = ref.read(iveContextDataProvider(item.projectId)).valueOrNull;
+              final contextData =
+                  ctx != null ? CopilotContextData.fromIveContext(ctx) : const CopilotContextData();
+              showCopilotChat(
+                context,
+                screenName: 'Ações',
+                contextData: contextData,
+                initialMessage: 'Analise a ação "${item.title}" e me dê orientação sobre como conduzi-la.',
+                request: IveInteractionRequest(
+                  projectId:        item.projectId,
+                  sourceModule:     'action_engine',
+                  sourceEntityType: 'action',
+                  sourceEntityId:   item.id,
+                  operationType:    IveOperationType.ask,
+                ),
+              );
+            },
           ),
-          icon: const Icon(Icons.auto_awesome_rounded),
-          label: const Text('Perguntar à IVE sobre esta ação'),
-          onPressed: () {
-            // IVE-COMMERCIAL-FOUNDATION-11 — antes navegava de volta para
-            // a lista do Action Engine em vez de abrir um diálogo
-            // contextual (confirmado quebrado em docs/commercial/
-            // IVE_INTERACTION_AND_QUOTA_CONTRACT.md §1.1).
-            final ctx = ref.read(iveContextDataProvider(item.projectId)).valueOrNull;
-            final contextData =
-                ctx != null ? CopilotContextData.fromIveContext(ctx) : const CopilotContextData();
-            showCopilotChat(
-              context,
-              screenName: 'Ações',
-              contextData: contextData,
-              initialMessage: 'Analise a ação "${item.title}" e me dê orientação sobre como conduzi-la.',
-              request: IveInteractionRequest(
-                projectId:        item.projectId,
-                sourceModule:     'action_engine',
-                sourceEntityType: 'action',
-                sourceEntityId:   item.id,
-                operationType:    IveOperationType.ask,
-              ),
-            );
-          },
         ),
       ],
     );

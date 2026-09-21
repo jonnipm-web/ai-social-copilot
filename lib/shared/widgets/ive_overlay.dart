@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -16,7 +17,8 @@ import '../../providers/ive_context_provider.dart';
 import '../../providers/ive_memory_provider.dart';
 import '../../providers/ive_provider.dart';
 import '../../providers/profile_provider.dart';
-import 'context_copilot_widget.dart' show showCopilotChat, iveChatOpenNotifier;
+import 'context_copilot_widget.dart'
+    show showCopilotChat, iveChatOpenNotifier, iveInlineAskVisibleNotifier;
 
 // ── Route bridge ──────────────────────────────────────────────────────────────
 final iveRouteNotifier = ValueNotifier<String>('');
@@ -163,6 +165,10 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
     // the scroll-aware compaction in build() below; see
     // ivePageScrollNotification's doc comment for the mechanism itself.
     iveScrollingNotifier.addListener(_onChatOpenChange);
+    // GATE-17-FINAL-CLOSURE (physical Android feedback, 2026-09-21) — same
+    // listener pattern, driving the Android-only redundant-CTA guard in
+    // build() below; see iveInlineAskVisibleNotifier's own doc comment.
+    iveInlineAskVisibleNotifier.addListener(_onChatOpenChange);
     // IVE-COMMERCIAL-STABILITY-09O — reuses this already-existing lifecycle
     // callback; no new listener.
     IveForensicSnapshot.overlayMounted = true;
@@ -174,6 +180,7 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
     iveChatOpenNotifier.removeListener(_onChatOpenChange);
     iveModalOpenNotifier.removeListener(_onChatOpenChange);
     iveScrollingNotifier.removeListener(_onChatOpenChange);
+    iveInlineAskVisibleNotifier.removeListener(_onChatOpenChange);
     // IVE-COMMERCIAL-STABILITY-09O (Codex Gate, P2 ACCEPTED) — a dispose
     // mid-drag (e.g. a fast sign-out while dragging) would otherwise leave
     // overlayDragging stuck true forever, misleadingly implying an
@@ -304,9 +311,17 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
     // every screen with a focused text field, again with no per-screen
     // wiring required.
     final keyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
+    // GATE-17-FINAL-CLOSURE (physical Android feedback, 2026-09-21) —
+    // Android only, per owner instruction ("somente no Android a versão web
+    // deve ficar intocada"): the floating avatar is redundant with a
+    // screen's own dedicated "Perguntar à IVE" CTA (see
+    // iveInlineAskVisibleNotifier's doc comment for which ones and why web
+    // is excluded -- kIsWeb false on Android covers exactly this).
+    final inlineAskRedundant = !kIsWeb && iveInlineAskVisibleNotifier.value;
     if (iveChatOpenNotifier.value ||
         iveModalOpenNotifier.value ||
-        keyboardOpen) {
+        keyboardOpen ||
+        inlineAskRedundant) {
       return const SizedBox.shrink();
     }
 

@@ -16,7 +16,8 @@ import 'package:ai_social_copilot/providers/auth_provider.dart';
 import 'package:ai_social_copilot/providers/diagnostic_session_provider.dart';
 import 'package:ai_social_copilot/providers/ive_provider.dart';
 import 'package:ai_social_copilot/providers/profile_provider.dart';
-import 'package:ai_social_copilot/shared/widgets/context_copilot_widget.dart' show iveChatOpenNotifier;
+import 'package:ai_social_copilot/shared/widgets/context_copilot_widget.dart'
+    show iveChatOpenNotifier, IveInlineAskPresence;
 import 'package:ai_social_copilot/shared/widgets/ive_overlay.dart';
 
 // IVE-EXPERIENCE-V1-06QA (live-QA defect) — the owner's real authenticated
@@ -588,6 +589,73 @@ void main() {
         1.0,
         reason: 'returns to full visibility once scrolling stops',
       );
+    },
+  );
+
+  // K — GATE-17-FINAL-CLOSURE (physical Android feedback, 2026-09-21): a
+  // screen's own dedicated "Perguntar à IVE" CTA is redundant with the
+  // floating avatar sitting on top of it. `flutter test` runs with
+  // kIsWeb == false, so this exercises exactly the Android-only branch the
+  // owner asked for; the web behavior is unchanged by construction (the
+  // `!kIsWeb &&` guard in ive_overlay.dart), not something a non-web test
+  // binary can flip to verify directly.
+  testWidgets(
+    'K. IveOverlay some enquanto um IveInlineAskPresence (CTA própria de '
+    '"Perguntar à IVE" da tela) está visível — redundante com o avatar',
+    (tester) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final navigatorKey = GlobalKey<NavigatorState>();
+      final router = GoRouter(
+        navigatorKey: navigatorKey,
+        initialLocation: '/',
+        observers: [IveRouteObserver()],
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, __) => const Scaffold(
+              body: Center(
+                child: IveInlineAskPresence(
+                  child: Text('Perguntar à IVE sobre esta ação'),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
+          currentProfileProvider.overrideWith((ref) async => _fakeProfile()),
+          authStateProvider.overrideWith((ref) => Stream.value(_authState(session: MockSession()))),
+        ],
+        child: MaterialApp.router(
+          routerConfig: router,
+          locale: const Locale('pt'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => Stack(
+            children: [
+              child!,
+              IveOverlay(navigatorKey: navigatorKey),
+            ],
+          ),
+        ),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      final avatarFinder = find.byWidgetPredicate(
+        (w) => w is Semantics && w.properties.label == 'IVE, assistente executiva',
+      );
+      expect(avatarFinder, findsNothing,
+          reason: 'must already be hidden: the CTA mounts in the same frame as the route');
+      expect(find.text('Perguntar à IVE sobre esta ação'), findsOneWidget);
+      expect(tester.takeException(), isNull);
     },
   );
 }

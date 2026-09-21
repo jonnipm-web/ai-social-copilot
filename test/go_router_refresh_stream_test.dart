@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:ai_social_copilot/app.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
@@ -66,6 +67,51 @@ void main() {
       await Future<void>.delayed(Duration.zero);
 
       expect(notifyCount, 0);
+    });
+
+    // Physical regression (real device, 2026-09-21): on every cold start,
+    // GoTrue's onAuthStateChange fired its first event during Flutter's
+    // very first frame, and the old unconditional `notifyListeners()` here
+    // propagated that into a GoRouter refresh landing squarely inside
+    // Flutter's build phase -- which Riverpod's own build-time guard
+    // rejects elsewhere in the app (IveNotifier's constructor-time
+    // ref.listen). This does not reproduce that downstream Riverpod crash
+    // (that requires the full provider graph); it proves the narrower,
+    // directly-testable property that actually prevents it: notifyListeners
+    // is never invoked while a widget build is in progress -- an event
+    // fired from initState (itself deep inside Flutter's persistentCallbacks
+    // phase, the same phase the physical crash happened in) is not
+    // delivered until the phase has returned to idle.
+    testWidgets(
+        'a stream event fired during a widget build is not delivered until '
+        'the scheduler phase is back to idle', (tester) async {
+      final controller = StreamController<int>.broadcast();
+      addTearDown(controller.close);
+
+      late GoRouterRefreshStream refresh;
+      SchedulerPhase? phaseWhenNotified;
+
+      await tester.pumpWidget(
+        _InitStateStreamFirer(
+          onInit: () {
+            refresh = GoRouterRefreshStream(controller.stream)
+              ..addListener(() {
+                phaseWhenNotified = SchedulerBinding.instance.schedulerPhase;
+              });
+            // Fired from inside initState -- Flutter is still deep in the
+            // persistentCallbacks phase building this very widget tree,
+            // exactly the window the physical crash happened in.
+            controller.add(1);
+          },
+        ),
+      );
+      addTearDown(() => refresh.dispose());
+
+      await tester.pumpAndSettle();
+
+      expect(phaseWhenNotified, isNotNull,
+          reason: 'the deferred notification must still eventually fire');
+      expect(phaseWhenNotified, SchedulerPhase.idle);
     });
   });
 
@@ -162,4 +208,25 @@ void main() {
       expect(find.text('DASHBOARD'), findsNothing);
     });
   });
+}
+
+class _InitStateStreamFirer extends StatefulWidget {
+  const _InitStateStreamFirer({required this.onInit});
+
+  final VoidCallback onInit;
+
+  @override
+  State<_InitStateStreamFirer> createState() => _InitStateStreamFirerState();
+}
+
+class _InitStateStreamFirerState extends State<_InitStateStreamFirer> {
+  @override
+  void initState() {
+    super.initState();
+    widget.onInit();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      const Directionality(textDirection: TextDirection.ltr, child: SizedBox.shrink());
 }

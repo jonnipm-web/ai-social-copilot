@@ -29,6 +29,61 @@ import 'ai_execution_confirmation.dart';
 // system back, tap-outside, or programmatic pop).
 final iveChatOpenNotifier = ValueNotifier<bool>(false);
 
+// GATE-17-FINAL-CLOSURE (physical Android feedback, 2026-09-21) — owner
+// found the floating IveOverlay avatar sitting redundantly on top of a
+// screen's OWN dedicated "Perguntar à IVE [sobre X]" CTA button (Action
+// Engine's action detail, among others): two ways to reach the same IVE
+// entry point visible on screen at once. Android only, per owner
+// instruction -- the web layout/interaction model is untouched. Same
+// counter pattern as iveModalOpenNotifier (ive_overlay.dart) rather than a
+// plain bool: IveInlineAskPresence below can wrap more than one such button
+// (unlikely but not impossible on a single screen), and a counter is the
+// only way two overlapping presences don't clobber each other's dispose.
+// Deliberately scoped to the small set of full-page/always-visible "ask
+// IVE" CTAs found by inspection (NOT the ubiquitous small IveExplainButton
+// or IveDetailSheet's own button, already inside a showModalBottomSheet and
+// so already covered by iveModalOpenNotifier) -- wrapping ubiquitous small
+// affordances would hide the avatar on most of the app, not just the
+// genuinely redundant cases the owner flagged.
+final iveInlineAskVisibleNotifier = ValueNotifier<bool>(false);
+int _iveInlineAskCount = 0;
+
+void _iveInlineAskCountChanged(int delta) {
+  _iveInlineAskCount = (_iveInlineAskCount + delta).clamp(0, 1 << 30);
+  iveInlineAskVisibleNotifier.value = _iveInlineAskCount > 0;
+}
+
+/// Wrap a screen's own dedicated "Perguntar à IVE" CTA with this so
+/// IveOverlay (Android only) hides its floating avatar while it's on
+/// screen, instead of showing two redundant ways to reach the same chat.
+/// Purely a presence marker -- renders [child] unchanged, no visual effect
+/// of its own.
+class IveInlineAskPresence extends StatefulWidget {
+  const IveInlineAskPresence({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  State<IveInlineAskPresence> createState() => _IveInlineAskPresenceState();
+}
+
+class _IveInlineAskPresenceState extends State<IveInlineAskPresence> {
+  @override
+  void initState() {
+    super.initState();
+    _iveInlineAskCountChanged(1);
+  }
+
+  @override
+  void dispose() {
+    _iveInlineAskCountChanged(-1);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
+
 // ── Public helper ─────────────────────────────────────────────────────────────
 
 // IVE-COMMERCIAL-FOUNDATION-11 — `request` is now required: this is the
