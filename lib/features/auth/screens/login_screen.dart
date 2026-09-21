@@ -121,19 +121,43 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ?.copyWith(color: Colors.white54),
                   ),
                   const SizedBox(height: 40),
-                  OutlinedButton.icon(
+                  // GATE-17-FINAL-CLOSURE (Section 11, text-scale physical
+                  // regression, 2026-09-22) — OutlinedButton.icon's own Row
+                  // (icon + label) has no width guard on the label: at 1.3x
+                  // Android text scale, "Continuar com Google"/"Continue
+                  // with Google" no longer fits and the button overflows by
+                  // a fixed 39px, reproduced consistently on device (and
+                  // gone again at 1.0x, confirming text scale as the
+                  // trigger). Built with an explicit Row instead of the
+                  // `.icon` factory so the label can be wrapped in
+                  // Flexible + TextOverflow.ellipsis -- shrinks to fit
+                  // instead of overflowing, at any text scale.
+                  OutlinedButton(
                     onPressed: isLoading ? null : _submitGoogle,
-                    icon: isLoading
-                        ? const SizedBox(
-                            height: 18,
-                            width: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.g_mobiledata_rounded, size: 26),
-                    label: Text(t.authContinueWithGoogle),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
                       side: const BorderSide(color: Colors.white24),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        isLoading
+                            ? const SizedBox(
+                                height: 18,
+                                width: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.g_mobiledata_rounded, size: 26),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            t.authContinueWithGoogle,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 20),
