@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart' show SchedulerPhase;
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -257,10 +258,36 @@ final rootNavigatorKey = GlobalKey<NavigatorState>();
 // /login with a valid session nothing ever re-checks.
 class GoRouterRefreshStream extends ChangeNotifier {
   GoRouterRefreshStream(Stream<dynamic> stream) {
-    _subscription = stream.listen((_) => notifyListeners());
+    _subscription = stream.listen((_) => _notify());
   }
 
   late final StreamSubscription<dynamic> _subscription;
+
+  // PHYSICAL REGRESSION (found on real device, 2026-09-21) — GoTrue's
+  // onAuthStateChange fires its first event (AuthChangeEvent.initialSession)
+  // essentially immediately once subscribed, which lands during Flutter's
+  // very first frame (confirmed reproducible on every cold start: the crash
+  // below always appeared right after "Supabase init completed" in logcat,
+  // and again on sign-out, whose SIGNED_OUT event hits the exact same path).
+  // notifyListeners() -> GoRouter.refresh() -> a redirect-driven rebuild of
+  // routed widgets -- which can land IveNotifier's own constructor-time
+  // ref.listen(ecosystemScoresProvider, ...) callback (ive_provider.dart)
+  // squarely inside Flutter's persistentCallbacks scheduler phase, which
+  // Riverpod treats identically to a build()/initState() call and refuses
+  // ("FlutterError: Tried to modify a provider while the widget tree was
+  // building", surfaced as a StateNotifierListenerError on 'IveNotifier').
+  // Deferring to a post-frame callback whenever a frame is actually in
+  // progress is the standard fix for this class of refreshListenable timing
+  // issue -- outside a frame (the overwhelmingly common case: a real
+  // SIGNED_IN/SIGNED_OUT triggered by user action) it still notifies
+  // immediately, same as before.
+  void _notify() {
+    if (WidgetsBinding.instance.schedulerPhase == SchedulerPhase.idle) {
+      notifyListeners();
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+    }
+  }
 
   @override
   void dispose() {

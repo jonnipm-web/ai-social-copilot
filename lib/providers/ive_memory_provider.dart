@@ -1,3 +1,4 @@
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -33,10 +34,30 @@ class IveMemoryNotifier extends StateNotifier<IveMemory> {
 
   // ── API pública ───────────────────────────────────────────────────────────
 
+  // GATE-17-FINAL-CLOSURE (Section 12, physical crash, 2026-09-21) — same
+  // confirmed trigger as IveNotifier.setRoute (see its own comment):
+  // IveRouteObserver.didPush firing during the Navigator's own first mount
+  // calls _IveOverlayState._onRouteChange, which calls THIS setRoute right
+  // alongside IveNotifier's. Deferred the same way.
   Future<void> setRoute(String route) async {
     if (route == state.lastRoute) return;
-    state = state.copyWith(lastRoute: route);
-    _persist((prefs) => prefs.setString(_kLastRoute, route));
+    _runSafely(() {
+      state = state.copyWith(lastRoute: route);
+      _persist((prefs) => prefs.setString(_kLastRoute, route));
+    });
+  }
+
+  void _runSafely(void Function() mutate) {
+    void apply() {
+      if (!mounted) return;
+      mutate();
+    }
+
+    if (SchedulerBinding.instance.schedulerPhase == SchedulerPhase.idle) {
+      apply();
+    } else {
+      SchedulerBinding.instance.addPostFrameCallback((_) => apply());
+    }
   }
 
   Future<void> setActiveProject(String id, String name) async {

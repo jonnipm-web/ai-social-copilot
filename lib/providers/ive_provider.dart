@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants/app_constants.dart';
@@ -80,7 +81,7 @@ class IveNotifier extends StateNotifier<IveState> {
     // para o app inteiro, sem projeto específico em foco).
     _ref.listen<AsyncValue<IveContextData>>(
       iveContextDataProvider(null),
-      (_, next) => next.whenData(_onContextData),
+      (_, next) => next.whenData((ctx) => _runSafely(() => _onContextData(ctx))),
     );
 
     // Mantém snapshot de memória atualizado quando scores mudam
@@ -92,11 +93,46 @@ class IveNotifier extends StateNotifier<IveState> {
         };
         final health =
             _ref.read(iveContextDataProvider(null)).valueOrNull?.healthScore ?? 0;
-        _ref
-            .read(iveMemoryProvider.notifier)
-            .updateEcosystemSnapshot(health: health, scores: snapshot);
+        _runSafely(() => _ref.read(iveMemoryProvider.notifier).updateEcosystemSnapshot(
+              health: health,
+              scores: snapshot,
+            ));
       }),
     );
+  }
+
+  // GATE-17-FINAL-CLOSURE (Section 12, physical crash found 2026-09-21,
+  // root cause independently confirmed by Codex read-only trace back to
+  // 0f080a9 -- pre-existing, not introduced by this session's auth work) —
+  // both `ref.listen` callbacks above fire whenever THEIR provider emits,
+  // which can land while Flutter is mid-frame (build/layout/paint) -- most
+  // commonly right after the first auth event resolves and
+  // IveOverlay/IveNotifier are constructed for the very first time. Both
+  // callbacks end up assigning `state =` (the ecosystem-scores one via
+  // iveMemoryProvider.notifier.updateEcosystemSnapshot(...), a DIFFERENT
+  // provider; the context-data one via this notifier's OWN `state =` inside
+  // _onContextData/_showTransient/etc.) -- Riverpod's build-time guard
+  // rejects either kind of mutation identically when it happens
+  // synchronously in that window ("Tried to modify a provider while the
+  // widget tree was building", surfaced as a StateNotifierListenerError on
+  // IveNotifier; reproduced on every physical cold start and on sign-out,
+  // and fixing only the ecosystem-scores path first was NOT sufficient --
+  // this one is independently reachable). A microtask is not reliable here
+  // -- it can still run before the current frame finishes;
+  // addPostFrameCallback guarantees the mutation only runs once the frame
+  // is fully done. `mounted` guards against this notifier being disposed
+  // before the deferred callback fires.
+  void _runSafely(void Function() mutate) {
+    void apply() {
+      if (!mounted) return;
+      mutate();
+    }
+
+    if (SchedulerBinding.instance.schedulerPhase == SchedulerPhase.idle) {
+      apply();
+    } else {
+      SchedulerBinding.instance.addPostFrameCallback((_) => apply());
+    }
   }
 
   final Ref _ref;
@@ -245,15 +281,30 @@ class IveNotifier extends StateNotifier<IveState> {
 
   // ── Route control ─────────────────────────────────────────────────────────
 
+  // GATE-17-FINAL-CLOSURE (Section 12, physical crash, 2026-09-21) — the
+  // CONFIRMED trigger (full stack trace captured via a temporary debug
+  // instrumentation pass, then removed): IveRouteObserver.didPush ->
+  // IveRouteObserver._notify (ive_overlay.dart) -> iveRouteNotifier.value=
+  // -> _IveOverlayState._onRouteChange -> setRoute() -> here. A
+  // NavigatorObserver's didPush can fire synchronously during the
+  // Navigator's own FIRST mount (NavigatorState.restoreState ->
+  // RestorationMixin.didChangeDependencies -> StatefulElement._firstBuild),
+  // which is squarely inside Flutter's build phase -- this has nothing to
+  // do with auth/Supabase timing (both of those were real but separate
+  // risks, already hardened above and in app.dart's GoRouterRefreshStream;
+  // neither one is what this specific crash needed). Deferred the same way
+  // via _runSafely.
   void setRoute(String route) {
     if (route == _currentRoute) return;
     _currentRoute = route;
     _msgIndex     = 0;
-    // Limpa issue ao trocar de tela
-    if (state.activeIssue != null) {
-      state = state.copyWith(clearIssue: true, bubbleVisible: false);
-    }
-    _showMessage(route, 0);
+    _runSafely(() {
+      // Limpa issue ao trocar de tela
+      if (state.activeIssue != null) {
+        state = state.copyWith(clearIssue: true, bubbleVisible: false);
+      }
+      _showMessage(route, 0);
+    });
     _scheduleCycle(route);
   }
 
