@@ -45,10 +45,15 @@ class DriveFile {
 }
 
 class DriveService {
+  // PLAY-READINESS-18 (Section 14) -- text/csv added. DriveFile.isTxt
+  // already matches any "text/*" mimeType (see below), so a CSV file
+  // flows through the exact same download-as-text path TXT/Google Docs
+  // already use -- no new code, just letting the Drive query surface it.
   static const _supportedMimes =
       "mimeType='application/vnd.google-apps.document' OR "
       "mimeType='application/pdf' OR "
       "mimeType='text/plain' OR "
+      "mimeType='text/csv' OR "
       "mimeType='application/vnd.openxmlformats-officedocument.wordprocessingml.document'";
 
   final _googleSignIn = GoogleSignIn(

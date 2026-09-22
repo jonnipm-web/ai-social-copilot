@@ -377,7 +377,7 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
                   : _files.isEmpty
                       ? const Center(
                           child: Text(
-                            'Nenhum arquivo encontrado.\nSão suportados: Google Docs, PDF, DOCX e TXT.',
+                            'Nenhum arquivo encontrado.\nSão suportados: Google Docs, PDF, DOCX, TXT e CSV.',
                             style: TextStyle(color: Colors.white38, height: 1.6),
                             textAlign: TextAlign.center,
                           ),

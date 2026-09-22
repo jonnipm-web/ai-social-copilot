@@ -76,8 +76,8 @@ const List<ModuleDefinition> kModuleRegistry = [
     edgeFunctions: ['extract-knowledge', 'process-file'],
     databaseDependencies: ['knowledge_items', 'knowledge_analysis'],
     aiDependency: true,
-    readinessPt: 'Totalmente funcional. Inclui import local (PDF/DOCX/TXT) e Google Drive. RLS e isolamento entre usuários verificados ao vivo em produção em missão anterior.',
-    readinessEn: 'Fully functional. Includes local import (PDF/DOCX/TXT) and Google Drive. RLS and cross-user isolation verified live in production in a prior mission.',
+    readinessPt: 'Totalmente funcional. Inclui import local (PDF/DOCX/TXT/CSV) e Google Drive. RLS e isolamento entre usuários verificados ao vivo em produção em missão anterior.',
+    readinessEn: 'Fully functional. Includes local import (PDF/DOCX/TXT/CSV) and Google Drive. RLS and cross-user isolation verified live in production in a prior mission.',
     releaseClassification: ModuleReleaseClass.commercialV1,
   ),
   ModuleDefinition(
@@ -314,8 +314,8 @@ const List<ModuleDefinition> kModuleRegistry = [
   ),
   ModuleDefinition(
     moduleId: 'file-import',
-    namePt: 'Importação de Arquivos (PDF/DOCX/TXT)',
-    nameEn: 'File Import (PDF/DOCX/TXT)',
+    namePt: 'Importação de Arquivos (PDF/DOCX/TXT/CSV)',
+    nameEn: 'File Import (PDF/DOCX/TXT/CSV)',
     status: ModuleStatus.active,
     adminVisible: true,
     adminClickable: true,

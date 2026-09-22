@@ -278,7 +278,7 @@ class _KnowledgeItemFormScreenState
                   onImported: (name) => setState(() => _importedFileName = name),
                 ),
               ] else if (_sourceType == 'file') ...[
-                const _Label('Importar Arquivo (PDF, DOCX, TXT)'),
+                const _Label('Importar Arquivo (PDF, DOCX, TXT, CSV)'),
                 const SizedBox(height: 8),
                 _FileImportSection(
                   importing:        _importing,
@@ -597,7 +597,7 @@ class _FileImportSection extends StatelessWidget {
                 ),
                 SizedBox(height: 4),
                 Text(
-                  'PDF, DOCX ou TXT',
+                  'PDF, DOCX, TXT ou CSV',
                   style: TextStyle(color: Colors.white38, fontSize: 12),
                 ),
               ],
@@ -780,7 +780,7 @@ class _DriveImportSection extends StatelessWidget {
             ),
             SizedBox(height: 4),
             Text(
-              'Google Docs, PDF, DOCX ou TXT',
+              'Google Docs, PDF, DOCX, TXT ou CSV',
               style: TextStyle(color: Colors.white38, fontSize: 12),
             ),
           ],

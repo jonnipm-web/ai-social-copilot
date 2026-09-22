@@ -25,7 +25,14 @@ class FileImportService {
 
   static const _processFileFunction = 'process-file';
 
-  static const _supportedExtensions = ['pdf', 'docx', 'txt'];
+  // PLAY-READINESS-18 (Section 14) -- CSV added alongside TXT: it's
+  // plain text (no binary/zip parsing risk like XLSX/PPTX would be), so
+  // it reuses the exact same client-side decode + size-cap path as TXT
+  // below rather than a new pipeline. XLSX/PPTX/images/ZIP remain
+  // deliberately unsupported -- see the mission report's Format
+  // Capability Matrix for why each of those needs real parsing
+  // infrastructure this isn't the place to improvise.
+  static const _supportedExtensions = ['pdf', 'docx', 'txt', 'csv'];
 
   // IVE-COMMERCIAL-TARGETED-REMEDIATION-04 — nenhum destes tinha timeout
   // antes, o que permitia a UI ficar presa em "Extraindo texto…"
@@ -74,10 +81,13 @@ class FileImportService {
     );
     if (bytes.isEmpty) throw Exception('Não foi possível ler o arquivo.');
 
-    // TXT nunca passa pelo process-file (que já checa tamanho antes de
-    // decodificar) -- sem este teto, um .txt gigante seria decodificado e
-    // mantido inteiro em memória sem nenhum limite.
-    if (extension == 'txt') {
+    // TXT e CSV nunca passam pelo process-file (que já checa tamanho antes
+    // de decodificar) -- sem este teto, um arquivo gigante seria
+    // decodificado e mantido inteiro em memória sem nenhum limite. CSV é
+    // tratado como texto puro (mesma decodificação, mesmo teto) -- não há
+    // parsing de colunas/linhas aqui, o conteúdo bruto vai para o campo de
+    // texto do Knowledge item exatamente como um .txt colado manualmente.
+    if (extension == 'txt' || extension == 'csv') {
       if (bytes.length > AppConstants.maxLocalImportBytes) {
         throw Exception('Arquivo de texto muito grande. O limite é de aproximadamente 6 MB.');
       }
@@ -85,7 +95,7 @@ class FileImportService {
       return FileImportResult(
         text:      text,
         fileName:  fileName,
-        fileType:  'txt',
+        fileType:  extension,
         charCount: text.length,
       );
     }
