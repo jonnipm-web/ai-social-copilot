@@ -15,6 +15,7 @@ import '../../../providers/profile_provider.dart';
 import '../../../providers/project_intelligence_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import '../../../shared/widgets/ive_exclusion_region.dart';
 
 // IVE-COMMERCIAL-TARGETED-REMEDIATION-06S — same fix as
 // dashboard_screen.dart's shortcuts: several cards here (the AppBar's
@@ -700,15 +701,24 @@ class _ProjectRow extends StatelessWidget {
                   ]),
                 ]),
           ),
-          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Text('$ecosystemScore',
-                style: TextStyle(
-                    color: _scoreColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16)),
-            Text(recommendation,
-                style: TextStyle(color: _scoreColor, fontSize: 9)),
-          ]),
+          // GATE-17-FINAL-CLOSURE (IVE Adaptive Resting Placement) —
+          // physically reproduced collision: the floating IVE avatar's
+          // fixed resting corner sat on top of a project's priority
+          // score. Reports its geometry so the placement engine steers
+          // clear; renders unchanged otherwise (ive_exclusion_region.dart).
+          // Safe per-row: each mounted project row registers/unregisters
+          // its own region.
+          IveExclusionRegion(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              Text('$ecosystemScore',
+                  style: TextStyle(
+                      color: _scoreColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16)),
+              Text(recommendation,
+                  style: TextStyle(color: _scoreColor, fontSize: 9)),
+            ]),
+          ),
         ]),
       ),
     );

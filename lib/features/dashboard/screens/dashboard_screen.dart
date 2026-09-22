@@ -12,6 +12,7 @@ import '../../../providers/persona_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/quota_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import '../../../shared/widgets/ive_exclusion_region.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -157,11 +158,19 @@ class DashboardScreen extends ConsumerWidget {
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: _ShortcutCard(
-                            icon: Icons.campaign_rounded,
-                            label: 'Campanhas',
-                            locked: !isModuleActionable('campaigns', isAdmin: isAdmin),
-                            onTap: shortcutTap('campaigns', AppConstants.routeCampaigns),
+                          // GATE-17-FINAL-CLOSURE (IVE Adaptive Resting
+                          // Placement) — physically reproduced collision:
+                          // the floating IVE avatar's fixed resting corner
+                          // sat on top of this card. Reports its geometry
+                          // so the placement engine steers clear; renders
+                          // unchanged otherwise (ive_exclusion_region.dart).
+                          child: IveExclusionRegion(
+                            child: _ShortcutCard(
+                              icon: Icons.campaign_rounded,
+                              label: 'Campanhas',
+                              locked: !isModuleActionable('campaigns', isAdmin: isAdmin),
+                              onTap: shortcutTap('campaigns', AppConstants.routeCampaigns),
+                            ),
                           ),
                         ),
                       ],

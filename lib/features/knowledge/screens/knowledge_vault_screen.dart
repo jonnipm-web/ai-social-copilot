@@ -13,6 +13,7 @@ import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/context_copilot_widget.dart';
+import '../../../shared/widgets/ive_exclusion_region.dart';
 
 class KnowledgeVaultScreen extends ConsumerStatefulWidget {
   const KnowledgeVaultScreen({super.key});
@@ -677,14 +678,23 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
                           .replaceFirst(':id', item.id),
                     ),
                   ),
-                  _ActionButton(
-                    label: item.projectId == null
-                        ? 'Adicionar a Projeto'
-                        : 'Trocar Projeto',
-                    icon: Icons.folder_special_rounded,
-                    color: const Color(0xFF00BCD4),
-                    onTap: () => _showProjectPicker(
-                      context, ref, item, projects, onInvalidate,
+                  // GATE-17-FINAL-CLOSURE (IVE Adaptive Resting Placement)
+                  // — physically reproduced collision: the floating IVE
+                  // avatar's fixed resting corner sat on top of this
+                  // button. Reports its geometry so the placement engine
+                  // steers clear; renders unchanged otherwise
+                  // (ive_exclusion_region.dart). Safe per-list-item: each
+                  // mounted card registers/unregisters its own region.
+                  IveExclusionRegion(
+                    child: _ActionButton(
+                      label: item.projectId == null
+                          ? 'Adicionar a Projeto'
+                          : 'Trocar Projeto',
+                      icon: Icons.folder_special_rounded,
+                      color: const Color(0xFF00BCD4),
+                      onTap: () => _showProjectPicker(
+                        context, ref, item, projects, onInvalidate,
+                      ),
                     ),
                   ),
                   // IVE-EXPERIENCE-V1-06 (Section 22) — only once there is

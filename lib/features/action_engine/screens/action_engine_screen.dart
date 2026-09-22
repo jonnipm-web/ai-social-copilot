@@ -8,6 +8,7 @@ import '../../../providers/action_queue_provider.dart';
 import '../../../providers/feature_flag_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import '../../../shared/widgets/ive_exclusion_region.dart';
 import 'action_detail_screen.dart';
 
 // ── Colors ───────────────────────────────────────────────────────────────────
@@ -455,8 +456,15 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
                 const SizedBox(width: 8),
               ],
               if (item.status == 'executing' && !_loading) ...[
-                _ActionBtn('Concluir', _kGreen, () => _run(
-                    () => notifier.complete(item.id, title: item.title))),
+                // GATE-17-FINAL-CLOSURE (IVE Adaptive Resting Placement) —
+                // physically reproduced collision: the floating IVE avatar's
+                // fixed resting corner sat on top of this button. Reports
+                // its geometry so the placement engine steers clear;
+                // renders unchanged otherwise (ive_exclusion_region.dart).
+                IveExclusionRegion(
+                  child: _ActionBtn('Concluir', _kGreen, () => _run(
+                      () => notifier.complete(item.id, title: item.title))),
+                ),
                 const SizedBox(width: 8),
                 _ActionBtn('Pausar', _kOrange, () => _run(
                     () => notifier.approve(item.id, title: item.title))),
