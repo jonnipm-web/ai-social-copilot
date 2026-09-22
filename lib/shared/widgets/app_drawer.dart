@@ -32,11 +32,12 @@ import '../../providers/profile_provider.dart';
 List<ModuleDefinition> visibleDrawerModules({
   required bool isAdmin,
   required bool isPro,
+  bool isPremium = false,
 }) {
   return kModuleRegistry.where((m) {
     if (m.route == null) return false;
     if (m.route == AppConstants.routeUpgrade) return false;
-    return m.visibleFor(isAdmin: isAdmin, isPro: isPro) && m.commercialEnabled;
+    return m.visibleFor(isAdmin: isAdmin, isPro: isPro, isPremium: isPremium) && m.commercialEnabled;
   }).toList();
 }
 
@@ -74,7 +75,11 @@ class _DrawerContent extends ConsumerWidget {
     // Navegação comercial: só módulos habilitados para o plano do usuário,
     // com rota própria. Ver visibleDrawerModules() acima para a razão de
     // routeUpgrade ser excluído deste loop.
-    final visibleModules = visibleDrawerModules(isAdmin: false, isPro: isPro);
+    final visibleModules = visibleDrawerModules(
+      isAdmin: false,
+      isPro: isPro,
+      isPremium: profile?.isPremium ?? false,
+    );
 
     return SafeArea(
       child: Column(

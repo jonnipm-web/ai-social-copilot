@@ -38,6 +38,21 @@ String extractErrorMessage(dynamic e) {
     return 'Você atingiu o limite mensal de análises de IA do seu plano. Faça upgrade para o Pro para continuar.';
   }
 
+  // MODULE-FOUNDATION-AND-ENTITLEMENT-02 — contrato de erro da autoridade de
+  // entitlement do servidor (supabase/functions/_shared/entitlement.ts):
+  // `error` é um CÓDIGO estável, traduzido só aqui. Checado antes dos
+  // padrões genéricos de 401/503 abaixo.
+  final entitlementCode = entitlementErrorCode(e);
+  if (entitlementCode != null) {
+    return switch (entitlementCode) {
+      'PLAN_REQUIRED' => 'Este recurso faz parte de um plano superior. Faça upgrade para continuar.',
+      'MODULE_NOT_AVAILABLE' => 'Este recurso ainda não está disponível para a sua conta.',
+      'MODULE_DISABLED' => 'Este recurso foi desativado.',
+      'ENTITLEMENT_UNAVAILABLE' => 'Não foi possível verificar o seu acesso agora. Tente novamente.',
+      _ => 'Sua sessão expirou. Faça login novamente.',
+    };
+  }
+
   if (str.contains('SocketException') ||
       str.contains('ClientException') ||
       str.contains('NetworkException') ||
@@ -63,6 +78,31 @@ String extractErrorMessage(dynamic e) {
 bool isQuotaExceededError(dynamic e) {
   return e.toString().contains('QUOTA_EXCEEDED');
 }
+
+/// MODULE-FOUNDATION-AND-ENTITLEMENT-02 — códigos públicos de negação de
+/// entitlement do servidor. A ordem importa só para strings que contenham
+/// mais de um código (não esperado).
+const kEntitlementErrorCodes = [
+  'PLAN_REQUIRED',
+  'MODULE_NOT_AVAILABLE',
+  'MODULE_DISABLED',
+  'ENTITLEMENT_UNAVAILABLE',
+  'AUTH_REQUIRED',
+];
+
+/// O código de entitlement presente no erro, ou null. Só para UX (mensagem
+/// e botão de upgrade) — a decisão já foi tomada pelo servidor.
+String? entitlementErrorCode(dynamic e) {
+  final str = e.toString();
+  for (final c in kEntitlementErrorCodes) {
+    if (str.contains(c)) return c;
+  }
+  return null;
+}
+
+/// Verdadeiro quando o servidor negou por plano insuficiente — telas podem
+/// oferecer "Fazer upgrade", como já fazem para QUOTA_EXCEEDED.
+bool isPlanRequiredError(dynamic e) => entitlementErrorCode(e) == 'PLAN_REQUIRED';
 
 void showErrorSnack(BuildContext context, String message) {
   ScaffoldMessenger.of(context).showSnackBar(

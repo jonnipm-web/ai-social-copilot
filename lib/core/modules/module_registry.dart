@@ -564,7 +564,7 @@ const List<ModuleDefinition> kModuleRegistry = [
     adminVisible: true,
     adminClickable: false,
     commercialEnabled: false,
-    minimumPlan: ModulePlan.admin,
+    minimumPlan: ModulePlan.free, // admin-only via lifecycle (não liberado), não via plano
     route: null,
     edgeFunctions: ['decision-simulator'],
     aiDependency: true,
@@ -581,7 +581,7 @@ const List<ModuleDefinition> kModuleRegistry = [
     adminVisible: true,
     adminClickable: true,
     commercialEnabled: false,
-    minimumPlan: ModulePlan.admin,
+    minimumPlan: ModulePlan.free, // admin-only via lifecycle (não liberado), não via plano
     route: AppConstants.routeIntelligenceDebug,
     readinessPt: 'Ferramenta interna de observabilidade/auditoria. Corrigido nesta missão: não tinha nenhum gate de admin (nem visual, nem de rota) apesar de expor dados de score de todos os projetos -- agora exige role admin.',
     readinessEn: 'Internal observability/audit tool. Fixed in this mission: had no admin gate at all (neither visual nor route-level) despite exposing score data for every project -- now requires the admin role.',
@@ -596,7 +596,7 @@ const List<ModuleDefinition> kModuleRegistry = [
     adminVisible: true,
     adminClickable: true,
     commercialEnabled: false,
-    minimumPlan: ModulePlan.admin,
+    minimumPlan: ModulePlan.free, // admin-only via lifecycle (não liberado), não via plano
     route: AppConstants.routeAdmin,
     databaseDependencies: ['profiles'],
     readinessPt: 'Totalmente funcional. Autorização real via RLS (admin_all_profiles) + gatilho de proteção contra auto-promoção -- verificado ao vivo, sem regressão.',
@@ -626,7 +626,7 @@ const List<ModuleDefinition> kModuleRegistry = [
     adminVisible: true,
     adminClickable: false,
     commercialEnabled: false,
-    minimumPlan: ModulePlan.admin,
+    minimumPlan: ModulePlan.free, // admin-only via lifecycle (não liberado), não via plano
     route: null,
     readinessPt: 'NÃO EXISTE neste repositório. Confirmado por busca exaustiva (grep por "quant"/"backtest"/"paper trading"/"live trading"/"broker"/etc. em todo o repositório): zero código, zero rota, zero modelo. A própria documentação de planejamento do produto (docs/showcase/SHOW_00_CAPABILITY_GAP_MATRIX.md) já registra isto como um repositório externo e separado, nunca integrado, classificado internamente como prioridade P3/futura.',
     readinessEn: 'DOES NOT EXIST in this repository. Confirmed by exhaustive search (grep for "quant"/"backtest"/"paper trading"/"live trading"/"broker"/etc. across the whole repo): zero code, zero route, zero model. The product\'s own planning documentation (docs/showcase/SHOW_00_CAPABILITY_GAP_MATRIX.md) already records this as a separate, external, never-integrated repository, internally classified as P3/future priority.',

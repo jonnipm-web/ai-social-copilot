@@ -87,7 +87,7 @@ void main() {
     );
 
     test('FREE -> admin/internal route -> redirectDenied', () {
-      final module = _module(commercialEnabled: true, minimumPlan: ModulePlan.admin);
+      final module = _module(commercialEnabled: false, minimumPlan: ModulePlan.free, moduleId: 'internal-admin-only');
       expect(
         decideForModule(module: module, isAlwaysAllowed: false, isAdmin: false, isPro: false, profileResolved: true),
         RouteDecision.redirectDenied,
@@ -95,7 +95,7 @@ void main() {
     });
 
     test('PRO -> admin/internal route -> redirectDenied (PRO plan does not imply admin)', () {
-      final module = _module(commercialEnabled: true, minimumPlan: ModulePlan.admin);
+      final module = _module(commercialEnabled: false, minimumPlan: ModulePlan.free, moduleId: 'internal-admin-only');
       expect(
         decideForModule(module: module, isAlwaysAllowed: false, isAdmin: false, isPro: true, profileResolved: true),
         RouteDecision.redirectDenied,
@@ -106,7 +106,7 @@ void main() {
       for (final module in [
         _module(commercialEnabled: false, minimumPlan: ModulePlan.free),
         _module(commercialEnabled: false, minimumPlan: ModulePlan.pro),
-        _module(commercialEnabled: true, minimumPlan: ModulePlan.admin),
+        _module(commercialEnabled: false, minimumPlan: ModulePlan.free, moduleId: 'internal-admin-only'),
       ]) {
         expect(
           decideForModule(module: module, isAlwaysAllowed: false, isAdmin: true, isPro: false, profileResolved: true),
@@ -120,7 +120,7 @@ void main() {
       // isAlwaysAllowed=true short-circuits before the module is even
       // consulted, matching how evaluateRouteAccess never looks the module
       // up for these paths (routeMayBeRestricted returns false for them).
-      final wouldOtherwiseBeDenied = _module(commercialEnabled: false, minimumPlan: ModulePlan.admin);
+      final wouldOtherwiseBeDenied = _module(commercialEnabled: false, minimumPlan: ModulePlan.pro);
       expect(
         decideForModule(module: wouldOtherwiseBeDenied, isAlwaysAllowed: true, isAdmin: false, isPro: false, profileResolved: true),
         RouteDecision.allow,
