@@ -26,6 +26,17 @@ import {
 const NOW = new Date("2026-09-18T12:00:00.000Z");
 const FUTURE = new Date("2026-09-18T13:00:00.000Z").toISOString();
 const PAST = new Date("2026-09-18T11:00:00.000Z").toISOString();
+// MODULE-PORTFOLIO-ARCHITECTURE-01 -- the F-08 and N-04 regression tests
+// below deliberately omit/garble `opts.now`, so the validator falls back to
+// the REAL clock. They previously reused FUTURE (a fixed 2026-09-18T13:00Z
+// instant), which made them fail deterministically once that instant passed
+// (the validator was right to reject an expired REQUESTED gate). Real-clock
+// tests use fixed instants far enough in the future to stay deterministic.
+const REAL_CLOCK_FUTURE = "2099-01-01T00:00:00.000Z";
+const REAL_CLOCK_PAST = "2026-09-18T11:55:00.000Z";
+function realClockRequest(): Record<string, unknown> {
+  return baseRequest({ requested_at: REAL_CLOCK_PAST, expires_at: REAL_CLOCK_FUTURE });
+}
 
 function uuid(seed: string): string {
   // Deterministic, valid-shaped UUID v4 for reproducible fixtures.
@@ -781,12 +792,12 @@ Deno.test("F-08 regression (round 2): explicit null for the options parameter be
     request_id: uuid("req1"),
     action: "core.generate_strategy",
     state: "REQUESTED",
-    expires_at: FUTURE,
+    expires_at: REAL_CLOCK_FUTURE,
   };
   // deno-lint-ignore no-explicit-any
   assertValid(validateHumanGateRecord(validGate, null as any), "F-08: null opts on validateHumanGateRecord must not throw");
   // deno-lint-ignore no-explicit-any
-  assertValid(validateExecutionRequest(baseRequest(), null as any), "F-08: null opts on validateExecutionRequest must not throw");
+  assertValid(validateExecutionRequest(realClockRequest(), null as any), "F-08: null opts on validateExecutionRequest must not throw");
 
   const validDelegation: Record<string, unknown> = {
     contract_version: "1.0",
@@ -794,8 +805,8 @@ Deno.test("F-08 regression (round 2): explicit null for the options parameter be
     issuer: { type: "service", id: "ive", auth_ref: "svc:ive-core" },
     subject: { type: "user", id: "user-42", auth_ref: "usr:session-abc123" },
     audience: "aef.core",
-    issued_at: "2026-09-18T11:55:00.000Z",
-    expires_at: FUTURE,
+    issued_at: REAL_CLOCK_PAST,
+    expires_at: REAL_CLOCK_FUTURE,
     nonce: "nonce-f8-aaaaaaaaaaaa",
     purpose: "test",
     scope: ["core.generate_strategy"],
@@ -814,9 +825,9 @@ Deno.test("N-04 regression (round 3): a malformed opts.now does not throw, falls
   // validators.ts, which falls back to the real current time for any
   // non-Date or Invalid Date value, exactly as if `now` had been omitted.
   // deno-lint-ignore no-explicit-any
-  assertValid(validateExecutionRequest(baseRequest(), { now: "not-a-Date" as any }), "N-04: string now on validateExecutionRequest must not throw");
+  assertValid(validateExecutionRequest(realClockRequest(), { now: "not-a-Date" as any }), "N-04: string now on validateExecutionRequest must not throw");
   // deno-lint-ignore no-explicit-any
-  assertValid(validateExecutionRequest(baseRequest(), { now: new Date("not-a-real-date") as any }), "N-04: Invalid Date now on validateExecutionRequest must not throw");
+  assertValid(validateExecutionRequest(realClockRequest(), { now: new Date("not-a-real-date") as any }), "N-04: Invalid Date now on validateExecutionRequest must not throw");
 
   const gate = {
     contract_version: "1.0",
@@ -824,7 +835,7 @@ Deno.test("N-04 regression (round 3): a malformed opts.now does not throw, falls
     request_id: uuid("req1"),
     action: "core.generate_strategy",
     state: "REQUESTED",
-    expires_at: FUTURE,
+    expires_at: REAL_CLOCK_FUTURE,
   };
   // deno-lint-ignore no-explicit-any
   assertValid(validateHumanGateRecord(gate, { now: "not-a-Date" as any }), "N-04: string now on validateHumanGateRecord must not throw");

@@ -1,0 +1,266 @@
+# Module Architecture — InsightValues Core + Module Lab
+
+Mission: `INSIGHTVALUES-MODULE-PORTFOLIO-ARCHITECTURE-01`
+Status: PROPOSAL. No runtime code is introduced by this document. Every
+"proposed" item below needs its own mission and gate before implementation.
+Gate owner: Agente Martins / Paulo
+
+Companion docs: `MODULE_PORTFOLIO.md` (inventory), `MODULE_DEPENDENCY_MAP.md`
+(graph), `MODULE_PROMOTION_GATE.md` (lifecycle + gate). Existing docs this
+builds on and does not replace: `docs/commercial/MODULE_LIFECYCLE_MATRIX.md`,
+`PROJECT_CONTEXT_CONTRACT.md`, `IVE_INTERACTION_AND_QUOTA_CONTRACT.md`,
+`COMMERCIAL_PRODUCT_ARCHITECTURE.md`, `aef/README.md`, `contracts/aef/README.md`.
+
+## 1. Two lines, one Core
+
+```
+                 ┌──────────── InsightValues CORE (shared) ────────────┐
+                 │ Auth · Projects · Knowledge · Quota · Entitlements  │
+                 │ IVE Intelligence · Context Copilot · Module Registry│
+                 │ AEF contracts/kernel · Diagnostics                  │
+                 └──────────────▲───────────────────────▲──────────────┘
+                                │                       │
+     COMMERCIAL / STABLE  ──────┘                       └──── MODULE LAB / NEXT
+     claude/commercial-experience-closure-16r              claude/insightvalues-module-architecture
+     Android release, Play-18, P0/P1 only                   new capabilities, isolated, flag-off
+                                │                       │
+                                └──── Promotion Gate ◄──┘   (MODULE_PROMOTION_GATE.md)
+```
+
+Rules:
+
+1. Module Lab never writes to the commercial branch or `main`.
+2. Commercial fixes flow **into** Module Lab by merge from the commercial
+   branch (or from `main` once reconciled) at explicit sync points, never the
+   other way around without a Promotion Gate.
+3. A Module Lab capability reaches users only through the existing registry
+   switch (`commercialEnabled`) after its gate — it can ship dark
+   (`commercialEnabled: false`, route-denied) long before that.
+
+## 2. Module Lab baseline (decision record)
+
+| Item | Value |
+|---|---|
+| origin/main | `ff8ef34` |
+| Commercial branch head | `a1fa942` (`claude/commercial-experience-closure-16r`) |
+| 17A approved checkpoint | `c36edf5` (ancestor of `a1fa942`) |
+| Merge-base main↔commercial | `f9c20f7` |
+| main-only commits | 20 (AEF contracts + kernel v0, deploy pipeline P0/P1 shell-injection fixes, governance gate) |
+| commercial-only commits | 23 (IVE, Android, auth, Knowledge, Play-18 security) |
+| Module Lab base | `a1fa942` + merge of `origin/main` → `ffd7361` |
+
+Why not `main`: it lacks the entire 17A Core (447-test commercial state).
+Why not `c36edf5`: the two Play-18 commits after it are security hardening
+(`ccb065c` disables a compromised keystore pipeline; `a1fa942` adds the
+prompt-injection delimiter in `extract-knowledge` + CSV import, physically
+verified). Excluding them would leave the lab with an armed compromised
+pipeline. Neither commit adds release-signing material.
+Why merge `main`: `main` touches zero files under `lib/` — it only adds
+`aef/`, `contracts/aef/`, workflow hardening, scripts and docs. The merge
+was conflict-free (`git merge-tree`), and AEF is a Module Lab dependency.
+Known inheritance: Play-18 is **not concluded**; later Play-18 commits will
+reach Module Lab only through an explicit sync merge.
+
+## 3. InsightValues Core — definition
+
+A capability is **Core** when at least two independent modules depend on it
+and it owns a security or data boundary. By that rule, Core is:
+
+| Core capability | Owns | Why Core |
+|---|---|---|
+| Auth & Identity | user identity, sessions | every EF and table |
+| Projects / Project Context | project ownership boundary | Knowledge, MI, Opportunity, Action, IVE, Copilot |
+| Knowledge | source → normalized content | Opportunity provenance, Strategy, Website, IVE, Copilot |
+| Usage / Quota | AI cost reservation/refund | every AI EF |
+| Entitlements | plan + module availability | every commercial surface |
+| Module Registry + Route Policy | module identity & availability metadata | Admin, drawer, route guard |
+| IVE Intelligence + Context Copilot | assistant context, interaction contract | every screen |
+| AEF contracts + kernel | governed execution | every future write-capable agent path |
+| Diagnostics | forensic telemetry | all |
+
+Not Core (modules that consume Core): Website Analyzer, Market Intelligence,
+Opportunity Lab, Action Engine, Content/marketing suite, Executive layer,
+Social, Quant, Impact.
+
+## 4. IVE architecture — presentational vs intelligence
+
+| Layer | Components | Reusable by new modules? |
+|---|---|---|
+| **Presentational IVE** | `features/ive/visual/*` (fallback avatar, status ring, speech anchor), `ive_overlay.dart`, `ive_placement_engine.dart`, `ive_exclusion_region.dart`, intro gate/sheet, detail sheet, explain button | Yes, as-is — modules register exclusion regions / ask-IVE CTAs; they never own avatar code. Rive stays frozen. |
+| **Intelligence IVE** | `ive_provider.dart` (state/expressions), `ive_context_provider.dart` (project-scoped context, ecosystem alerts), `IveInteractionRequest` (Ask-IVE contract), `IveIssue` (error taxonomy), `ive_event_bus.dart`, EF `context-copilot` | Yes — `IveInteractionRequest` + `context-copilot` identity fields (`project_id`, `source_module`, `source_entity_type`, `source_entity_id`, `correlation_id`) are already the right shape for any module to ask IVE about its own entities. |
+| **Memory** | `ive_memory_provider.dart` (SharedPreferences) and `business_memory` (server) | Gap: device-local memory cannot follow the user to Web/Extension (duplication D2). |
+| **Tool access** | none | Correct today. IVE has **no** tool-execution capability in the app; any future tool use must go through AEF (§5). |
+
+IVE Core status: **PARTIAL** — intelligence contract and backend are real;
+memory is split and client-bound; route awareness is per-screen
+(`IveInteractionRequest` call sites), not a registry-driven capability map;
+no tool layer (by design).
+
+## 5. AEF architecture (verified state)
+
+`aef/README.md` + code confirm the historical record is still true on this base:
+
+- Kernel pipeline: identity → contract validation → delegation → policy →
+  Human Gate → idempotency → sealed tool registry → mock execution → receipt.
+- USER identity verified via GoTrue; SERVICE/SYSTEM = `UNSUPPORTED_BY_V0`, fail-closed (F-02 closed for USER only).
+- All stores in-memory; all tools mock; zero network exposure; zero runtime callers (`grep` of `lib/` and `supabase/functions/`).
+- F-09 (consequential-action risk taxonomy incl. Impact) still deferred.
+- CI: `edge-function-tests.yml` type-checks/lints/tests `contracts/aef` and `aef/` on PRs to `main`.
+
+AEF status: **PARTIAL** (tested library, not a running system).
+`IV-AEF-PERSISTENCE-01` remains the planned next AEF mission — not started here.
+
+**Gap found in this audit:** the external IVE Strategic Execution Agent
+(`jonnipm-web/insightvalues-ive-agent`, Cloud Run) writes `action_queue`
+rows autonomously with the user's JWT. RLS bounds it to the user's own data
+(no privilege escalation), but it runs **outside** AEF: no Human Gate, no
+ExecutionReceipt, no idempotency guard. This contradicts
+`contracts/aef/NO_DIRECT_EXECUTION.md`'s intent. See finding MPA-F04.
+
+## 6. Knowledge as transversal infrastructure
+
+Current pipeline (verified):
+
+```
+SOURCE            local file (SAF picker) · Google Drive (drive.readonly) · manual text · URL
+ → VALIDATE       auth gate · extension/MIME allowlist (PDF/DOCX/TXT/CSV) · 6 MB cap · DOCX zip-bomb guard
+ → EXTRACT        client-side decode (TXT/CSV) · EF process-file (PDF/DOCX) · Drive export for native Docs
+ → NORMALIZE      knowledge_items.content + auto_title/auto_type/auto_niche/auto_audience
+ → KNOWLEDGE      knowledge_items (RLS, project_id) · knowledge_analysis · knowledge_strategies
+ → PROJECT CTX    project_id binding · document_context_builder.dart
+ → INTELLIGENCE   extract-knowledge (prompt-injection delimiter) · Opportunity knowledge_item_ids · IVE context · Copilot
+```
+
+Knowledge Core status: **PARTIAL** as infrastructure (READY as a commercial feature):
+- no chunking/embedding/semantic retrieval — consumers receive whole-document text;
+- provenance is recorded on Opportunity (`knowledge_item_ids`) but not uniformly (Website Analyzer links `knowledge_item_id` yet has no `project_id`);
+- Drive scope is broader than needed (`drive.readonly`, already flagged in registry notes).
+
+Rule for Module Lab: **no module creates its own document store.** New
+sources (e.g. social exports, financial CSVs for Quant) enter through the
+same SOURCE→VALIDATE→EXTRACT stages and land in `knowledge_items` with a
+`source_type`.
+
+## 7. Entitlements — availability vs usage
+
+Current (verified):
+- `profiles.role ∈ {free, pro, premium, beta_tester, admin}` — **one column
+  carries both authorization role and commercial plan**. `beta_tester` and
+  `admin` are not plans; `premium` has no `ModulePlan` counterpart (the client
+  collapses it to `isPro`).
+- Module availability = `ModuleDefinition.commercialEnabled` + `minimumPlan`,
+  enforced by `route_policy.dart` **in the client only**.
+- Usage = server-side quota reservation (`try_reserve_ai_quota`) per AI call.
+- A second availability switch exists in the `feature_flags` table (D1).
+- Stripe writes `profiles.role` via `apply_stripe_subscription_state` (service_role only).
+
+Consequence: a free user holding a valid JWT can call the Edge Function of a
+module that is `commercialEnabled: false` (e.g. `generate-campaign`,
+`improve-post`, `decision-simulator`) directly. Quota still bounds cost, RLS
+still bounds data — so this is a monetization/boundary gap, not a data
+exposure. See MPA-F03.
+
+Proposed target (not implemented):
+
+```
+PLAN          (commercial)  free | pro | premium | business | enterprise      ← billing writes this
+ROLE          (authz)       user | admin | beta_tester (+ org roles later)     ← admin writes this
+MODULE AVAIL. (server)      module_id × plan → enabled                          ← one authority, replaces feature_flags
+USAGE         (server)      credits / AI calls / actions per period             ← existing quota RPCs
+```
+
+Server enforcement: a shared `_shared/entitlement.ts` check in each EF,
+keyed by the same `moduleId` as the client registry, evaluated **before**
+quota reservation. Individual / Professional / Small Business / Enterprise
+become plan values + usage limits, not new code paths. Pricing is out of scope.
+
+## 8. Security architecture — module threat model
+
+| Threat | Current control (verified) | Gap for Module Lab |
+|---|---|---|
+| Tenant isolation | RLS enabled on all 45 tables **per migration source** (45 CREATE TABLE, 45 ENABLE ROW LEVEL SECURITY) — static evidence only; live production RLS NOT_VERIFIED in this mission; `user_id` tenancy | No org/workspace tenant — enterprise needs a second isolation axis |
+| Project isolation | ownership triggers (`validate_asset_*_ownership`), opportunity↔knowledge server-side filter (6941a00) | `website_analyses`, `copilot_sessions` not project-bound |
+| Authorization | `_shared/auth.ts` on every business EF; admin via RLS + anti-self-promotion trigger | module availability client-only (§7) |
+| Prompt injection | `<documento_do_usuario>` delimiter in `extract-knowledge` | other EFs that embed user/web content (analyze-website, market-analysis, context-copilot) should adopt the same pattern; no tool execution exists, which bounds blast radius |
+| Tool misuse | IVE has no tools; AEF tools are mock + sealed registry | external agent writes outside AEF (MPA-F04) |
+| SSRF | `_shared/safe_fetch.ts` (analyze-website, extract-knowledge) | any new fetching module must use it — make it a gate item |
+| Data exfiltration | no outbound integrations besides Drive (read) and LLM calls | Social/Impact would add outbound surfaces |
+| Secrets | CI secrets; governance deploy allowlist | **compromised KEYSTORE_* secrets still present; compromised pipeline still armed on `main`** (MPA-F01) |
+| Admin escalation | `prevent_self_privilege_escalation` trigger, role CHECK | role/plan conflation means billing code writes the authz column (MPA-F03) |
+| Cross-module access | modules read each other's tables directly via RLS | no module-level data scopes; acceptable until enterprise |
+| Human Gate | AEF v0 only (not wired) | required for any write-capable automation |
+| Audit trail | quota reservations, diagnostic events, processed webhook events | no per-action audit log for user-visible automated actions |
+| Rate limiting / quota | server-side quota + idempotency | not per-module |
+
+## 9. Module Contract — proposal
+
+The contract **already exists** (`ModuleDefinition`). Proposal: extend it,
+do not replace it. New optional fields, all with safe defaults so the 37
+existing entries compile unchanged:
+
+```dart
+// PROPOSAL ONLY — not implemented in this mission.
+final ModuleLifecycle lifecycle;          // EXPERIMENTAL…DEPRECATED (MODULE_PROMOTION_GATE.md); derives today's `status`
+final ModuleRiskClass riskClass;          // A (read-only) · B (writes own data) · C (external/destructive/financial)
+final List<String> dataScopes;            // tables read/written, e.g. ['knowledge_items:r', 'action_queue:w']
+final List<String> toolScopes;            // AEF tool ids this module may request (empty = none)
+final List<String> dependsOnModules;      // moduleIds — enables a CI cycle check
+final IveIntegration iveIntegration;      // none | askIve | contextProvider | agentTools
+final AefIntegration aefIntegration;      // none | receiptsOnly | humanGated
+final Set<ModuleSurface> surfaces;        // android, web, pwa, extension, backend
+final String? telemetryNamespace;         // diagnostic/analytics event prefix
+final String? featureFlag;                // single availability key (replaces feature_flags table usage)
+final List<String> migrationDependencies; // migration file names required
+```
+
+And one structural change: `minimumPlan` must be mirrored server-side
+(§7). Until then, the client registry is presentation + navigation only —
+exactly what its own header already says.
+
+## 10. Multi-surface architecture
+
+Flutter already builds Android and Web from one codebase (`deploy-web.yml`
+→ GitHub Pages on push to `main`). Business logic is split between
+Dart services (client) and Edge Functions (server).
+
+| Capability | Surface-independent today? | Needed for Web/PWA/Extension |
+|---|---|---|
+| Auth | yes (GoTrue) | extension OAuth flow (chrome.identity) |
+| Knowledge ingestion | partially — TXT/CSV decode is client-side Dart | move decode into `process-file` so non-Flutter clients reuse it |
+| Market / Opportunity / Action generation | yes (EFs) | none |
+| Context Copilot | yes (EF, identity fields) | `source_module` values for "browser page" contexts |
+| IVE context assembly | **no** — `ive_context_provider.dart` aggregates in Dart | server-side context endpoint |
+| IVE memory | **no** — SharedPreferences | server memory (D2) |
+| Module availability | **no** — Dart registry | server entitlement (§7) |
+| Quota | yes (RPC) | none |
+
+Browser Extension (not implemented): the minimum surface-independent
+contracts it needs are (1) server entitlement check, (2) server-side IVE
+context assembly, (3) server-side memory, (4) `context-copilot` accepting a
+page-context source with SSRF-safe fetching and the injection delimiter.
+
+## 11. Future enterprise requirements (not for MVP)
+
+organization · workspace · members · org roles (RBAC, later ABAC) · SSO
+(SAML/OIDC) · SCIM · org-level audit log · retention policies · data
+residency · policy engine · multi-step approval chains (AEF Human Gate is
+the natural base) · shared Knowledge per workspace · organizational memory.
+
+Blocking prerequisites already visible: plan/role separation (§7), a tenant
+axis above `user_id`, server-side module availability. None should be built
+before a paying individual/professional base exists.
+
+## 12. Findings and disposition (Claude audit + Codex round 1)
+
+| ID | Sev | Finding | Codex | Disposition |
+|---|---|---|---|---|
+| MPA-F01 | P1 | `origin/main` still has the compromised keystore pipeline armed: `build-android.yml` runs on every push to `main` with `secrets.KEYSTORE_*`, `generate-keystore.yml` holds a plaintext password, and the four `KEYSTORE_*` Actions secrets still exist. Fixed only on the commercial line (`ccb065c`), which this branch inherits. | CX-04 | ESCALATED — Owner: delete/rotate `KEYSTORE_*` secrets (neutralizes all three workflows without touching `main`); promote `ccb065c` to `main` through the commercial gate. |
+| MPA-F02 | P1 | `ccb065c` and `a1fa942` on the commercial branch are **authored by Codex**. Global governance makes Codex read-only unless a mission explicitly authorizes writes; the authorization is not verifiable from the repo. | — | ESCALATED — Agente Martins to confirm the Play-18 authorization. Content of both commits reviewed and inherited deliberately (§2). |
+| MPA-F03 | P1 (architecture) / P2 (current commercial impact) | Module availability and plan are enforced client-side only; no EF checks module × plan (verified: `generate-campaign` authenticates + reserves quota, no entitlement). Today no released module is PRO-only, so the bypass reaches unreleased-but-working modules, bounded by the user's own quota and RLS. | CX-01 (P1) | ACCEPTED. Architecture: hard blocker added to the Promotion Gate (no module with an EF reaches RELEASE_CANDIDATE without server entitlement). Implementation DEFERRED to a dedicated mission (runtime change out of scope here). OPEN. |
+| MPA-F04 | P1 (conditional) | External IVE agent writes `action_queue` outside AEF (no Human Gate/receipt/idempotency). Deployment state of the Cloud Run service not verified. | CX-03 | ESCALATED — Owner to confirm whether the service is live; Promotion Gate hard blocker added. OPEN. |
+| MPA-F05 | P3 (residual) | Route-classification invariant test was a hand-maintained mirror of `app.dart`, so a new route missing from both lists fell through to "allow" with CI green — false guarantee in `MODULE_LIFECYCLE_MATRIX.md` §2. | CX-02 (P1) | FIXED — new source-derived test in `route_policy_test.dart`. Mutation evidence (Claude, this mission): removing the `/roi-tracker` ownership entry made the new test fail with `Unclassified app.dart routes … [routeRoiTracker (/roi-tracker)]`; file restored. Codex R2: VERIFIED_FIXED (scoped). Residual P3: routes declared outside `lib/app.dart` or via route-list spreads/ShellRoute are not scanned; `module == null` / unknown `moduleId` fail-open is client UX, not an authorization boundary. |
+| MPA-F06 | P1 (escalated) | Project-ownership migration (`20260919…`, already on `main`) can leave pre-existing mismatched rows readable/deletable but un-updatable. Pre-existing and self-documented in the migration; affected-row count in production unknown. | CX-05 (P1) | ACCEPTED at Codex's severity (Claude initially P2; agreed after R2 because the production count cannot be verified here). Gate item G14 added. ESCALATED — Owner/Agente Martins: run the read-only preflight query in production. No disagreement left open. |
+| MPA-F07 | P2 | AEF tests F-08/N-04 used a fixed 2026-09-18T13:00Z expiry while relying on the real clock → deterministic failure since that instant; CI on `main` fails for any PR touching `aef/` or `supabase/functions/`. | CX-08 (on first fix) | FIXED on Module Lab (fixed far-future instants, no `Date.now()`); 138/138. `main` still affected until synced. |
+| MPA-F08 | P2 | Doc inaccuracies: registry count, feature-flag count, RLS evidence level, graph caveats. | CX-06/07/09/10 | FIXED. |
+| MPA-F09 | P2 | Project `CLAUDE.md` ("maximum automation… create migrations without asking") is weaker than the global governance policy (owner approval, production protection). | — | RECORDED, not rewritten (mission §07). Global policy prevails. |
+| MPA-F10 | P3 | Environment: Flutter 3.47.4 at `~/flutter` not on PATH; Supabase CLI absent; Deno 2.9.6 at `~/.deno`. Main clone and commercial worktree carry uncommitted work. | — | RECORDED; nothing touched. |

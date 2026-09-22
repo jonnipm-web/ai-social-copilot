@@ -12,6 +12,8 @@
 // "pure policy logic... tested without requiring full Supabase integration"
 // split the mission asked for.
 
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:ai_social_copilot/core/modules/module_definition.dart';
@@ -384,6 +386,54 @@ void main() {
                 !kDeliberatelyUnclassifiedRoutes.contains(r))
             .toList();
         expect(unresolved, isEmpty, reason: 'Unclassified app.dart routes (would silently fail-open): $unresolved');
+      },
+    );
+
+    test(
+      'every GoRoute path in lib/app.dart SOURCE is classified -- derived from the '
+      'source file, not a hand-maintained mirror',
+      () {
+        // MODULE-PORTFOLIO-ARCHITECTURE-01 (Codex CX-02): the test above
+        // mirrors app.dart's route list by hand, so a route added to
+        // app.dart but not to that list would still fall through to
+        // "unclassified -> allow" with CI green. Module Lab ships modules
+        // dark (commercialEnabled:false, route-denied), which only holds if
+        // every real route is classified. This test reads the routes from
+        // the source itself.
+        final appSource = File('lib/app.dart').readAsStringSync();
+        final constantsSource =
+            File('lib/core/constants/app_constants.dart').readAsStringSync();
+
+        final routeValues = <String, String>{
+          for (final m in RegExp(r"static const (route\w+)\s*=\s*'([^']*)'")
+              .allMatches(constantsSource))
+            m.group(1)!: m.group(2)!,
+        };
+        final routeNames = RegExp(r'path:\s*AppConstants\.(route\w+)')
+            .allMatches(appSource)
+            .map((m) => m.group(1)!)
+            .toList();
+
+        // A GoRoute declared with a literal path (not an AppConstants
+        // constant) would escape the extraction above -- fail loudly instead.
+        expect(routeNames.length, RegExp(r'GoRoute\(').allMatches(appSource).length,
+            reason: 'Every GoRoute in app.dart must use `path: AppConstants.routeX`');
+        expect(routeNames, isNotEmpty);
+
+        const resolvedEarlier = {AppConstants.routeSplash, AppConstants.routeLogin};
+        final unresolved = <String>[];
+        for (final name in routeNames) {
+          final path = routeValues[name];
+          expect(path, isNotNull, reason: 'AppConstants.$name not found in app_constants.dart');
+          if (resolvedEarlier.contains(path)) continue;
+          if (!kRouteModuleOwnership.containsKey(path) &&
+              !kAlwaysAllowedRoutes.contains(path) &&
+              !kDeliberatelyUnclassifiedRoutes.contains(path)) {
+            unresolved.add('$name ($path)');
+          }
+        }
+        expect(unresolved, isEmpty,
+            reason: 'Unclassified app.dart routes (would silently fail-open): $unresolved');
       },
     );
 
