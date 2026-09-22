@@ -15,11 +15,22 @@ this directory contains a credential literal.
 
 Apply (on a branch cut from `main`, by whoever the gate authorizes):
 
+These files do not exist on `main`, so extract them first (Codex fix
+verification finding), then switch:
+
 ```bash
+LAB=origin/claude/insightvalues-module-architecture
+T=docs/architecture/modules/main-transport
+mkdir -p /tmp/iv-transport
+for f in 0001-aef-fix-clock-dependent-validator-tests.patch \
+         0002-ci-disable-legacy-keystore-workflows.patch \
+         0003-generate-keystore.yml.replacement; do
+  git show "$LAB:$T/$f" > "/tmp/iv-transport/$f"
+done
 git switch -c fix/main-transport origin/main
-git apply docs/architecture/modules/main-transport/0001-aef-fix-clock-dependent-validator-tests.patch
-git apply docs/architecture/modules/main-transport/0002-ci-disable-legacy-keystore-workflows.patch
-cp docs/architecture/modules/main-transport/0003-generate-keystore.yml.replacement .github/workflows/generate-keystore.yml
+git apply /tmp/iv-transport/0001-aef-fix-clock-dependent-validator-tests.patch
+git apply /tmp/iv-transport/0002-ci-disable-legacy-keystore-workflows.patch
+cp /tmp/iv-transport/0003-generate-keystore.yml.replacement .github/workflows/generate-keystore.yml
 deno test --allow-read contracts/aef/validators_test.ts   # expect all green
 ```
 

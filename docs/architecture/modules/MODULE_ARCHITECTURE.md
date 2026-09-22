@@ -277,6 +277,9 @@ before a paying individual/professional base exists.
 | CXF-04 | P3 | Accepted (cheap). | FIXED: invalid `ENTITLEMENT_SUBJECT_ROLES` fails closed with a log line (EN-36) |
 | CXF-05 | P2 | Accepted. | FIXED: `scripts/ci/run_disposable_db_tests.sh` + CI job `disposable-db-rls-ci` (PostgreSQL 17 service; refuses non-local hosts); path filter now includes migrations and SQL tests |
 | CXF-06 | P3 | Accepted. | FIXED: commercial GH test asserts the source was consulted; mutation (gate removed from `revenue-planner`) fails 4 tests |
+| CXV-01 (fix verification) | P2 | Accepted — transport README steps referenced files absent on `main`. | FIXED: extract-then-switch procedure, re-verified |
+| CXV-02 (fix verification) | P2 | Partly accepted — the harness proves the gate ran and did not deny, not a full 200 path; full 200 paths with a free subject are exercised by the per-function tests of analyze-website, extract-knowledge, generate-strategy, context-copilot and process-file. | P3 residual (backlog: per-function valid bodies in the harness) |
+| CXV-03 (fix verification) | P2 | **Rejected — false positive**: `test-key-ci` (pre-existing on `main`) and the ephemeral CI Postgres password are placeholders that grant access to nothing real. | NO_CHANGE |
 
 ## 13. Entitlement Core (MODULE-FOUNDATION-AND-ENTITLEMENT-02)
 
