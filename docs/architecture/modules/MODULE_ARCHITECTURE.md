@@ -1,8 +1,10 @@
 # Module Architecture — InsightValues Core + Module Lab
 
 Mission: `INSIGHTVALUES-MODULE-PORTFOLIO-ARCHITECTURE-01`
-Status: PROPOSAL. No runtime code is introduced by this document. Every
-"proposed" item below needs its own mission and gate before implementation.
+Status: §1–§11 were the mission-01 PROPOSAL. §13 (Entitlement Core) is
+IMPLEMENTED in Module Lab by MODULE-FOUNDATION-AND-ENTITLEMENT-02 — not
+deployed, migration not applied to production. §12.1/§12.2 supersede the
+mission-01 status of MPA-F01..F07 (e.g. MPA-F04 re-classified in §12.1).
 Gate owner: Agente Martins / Paulo
 
 Companion docs: `MODULE_PORTFOLIO.md` (inventory), `MODULE_DEPENDENCY_MAP.md`
@@ -258,6 +260,24 @@ before a paying individual/professional base exists.
 | MPA-F07 | P2 | Fix preserved in Lab; transport patch `main-transport/0001-*` applies cleanly to `origin/main`. | AEF_DATE_FIX_READY_FOR_MAIN = YES |
 | MPA-F11 | P3 | Pre-existing Deno lint issues in `_shared/quota.ts`, `quota_realdb_test.ts`, `project_ownership_realdb_test.ts` and 6 EF test files (identical on HEAD). | PRE_EXISTING, backlog |
 
+### 12.2 Codex dispositions (MODULE-FOUNDATION-AND-ENTITLEMENT-02)
+
+| ID | Codex sev | Claude evaluation | Resolution |
+|---|---|---|---|
+| CX1-01 | P1 | Accepted — enforcement not yet wired at Gate 1 (by design of the gate order). | FIXED: 17/17 wired, MP-06 + GH-* |
+| CX1-02 | P1 | Accepted — one column cannot hold "paying beta tester" / "admin who subscribes". | FIXED in Lab: `subject_roles` migration + `ProfilePlanAndSubjectRolesSource` behind rollout flag (EN-32/33/34, RLS T09/T10) |
+| CX1-03 | P1 | **Rejected as a defect** — existing `beta`-status modules staying admin-only is deliberate legacy preservation (the client already denied them); exposing them is a product decision. | OWNER DECISION (per-module `lifecycleOverride`) |
+| CX1-04 | P2 | Accepted. | FIXED: `isSubjectBoundTo` (EN-30/31) |
+| CX1-05 | P2 | Accepted. | FIXED: executed harness for all 17 functions (GH-*) |
+| CX1-06 | P2 | Accepted — live admin/self-promotion behaviour cannot be verified here. | NOT_VERIFIED (documented §13.11) |
+| CX1-07 | P2 | Accepted. | FIXED: pseudonymous `subject_ref`, no raw id/token/body (EN-35). Limitation: the hash is not keyed — anyone who already knows a user UUID can recompute it. |
+| CXF-01 | P1 | Accepted — the diff of `generate-keystore.yml` necessarily reproduced the removed hardcoded password. Caught **before push**; the local commit was amended so the literal was never published by this branch. | FIXED: `0003-generate-keystore.yml.replacement` (whole file, literal redacted); 0 literals in 9e9b53f..HEAD |
+| CXF-02 | P2 | Accepted. | FIXED: MP-09 (no function of any kind may serve a CONSEQUENTIAL module) + MP-10 (closed allowlist of non-MODULE kinds) |
+| CXF-03 | P2 | Accepted. | FIXED: exact code match in `entitlementErrorCode` + collision tests |
+| CXF-04 | P3 | Accepted (cheap). | FIXED: invalid `ENTITLEMENT_SUBJECT_ROLES` fails closed with a log line (EN-36) |
+| CXF-05 | P2 | Accepted. | FIXED: `scripts/ci/run_disposable_db_tests.sh` + CI job `disposable-db-rls-ci` (PostgreSQL 17 service; refuses non-local hosts); path filter now includes migrations and SQL tests |
+| CXF-06 | P3 | Accepted. | FIXED: commercial GH test asserts the source was consulted; mutation (gate removed from `revenue-planner`) fails 4 tests |
+
 ## 13. Entitlement Core (MODULE-FOUNDATION-AND-ENTITLEMENT-02)
 
 Implemented in Module Lab. **Not deployed; migration not applied to production.**
@@ -398,8 +418,15 @@ Controlled rollout: (1) Owner runs the read-only preflight
 `supabase/tests/preflight_ownership_and_entitlement_readonly.sql`;
 (2) apply the migration; (3) deploy the EFs with the default legacy source;
 (4) set `ENTITLEMENT_SUBJECT_ROLES=1` to read roles from the new table.
-Rollback: unset the flag (instant) → redeploy previous EF versions if needed →
-`DROP TABLE public.subject_roles` (nothing depends on it). No user is
+Rollback — **order matters**: first unset the flag everywhere (instant),
+then redeploy previous EF versions if needed, and only then
+`DROP TABLE public.subject_roles` (nothing else depends on it). Dropping the
+table while any function still has the flag set denies every protected
+call (fail closed, an outage — never a grant).
+
+CI: `edge-function-tests.yml` job `disposable-db-rls-ci` applies every
+migration to a PostgreSQL 17 service container and runs the RLS test via
+`scripts/ci/run_disposable_db_tests.sh` (which refuses any non-local host). No user is
 reclassified at any step. Revoking a role = remove it from `subject_roles`
 and from `profiles.role` if it is a legacy role there.
 
@@ -416,4 +443,9 @@ VERIFIED (Module Lab): decision logic, default deny, forged client state,
 subject binding, 17/17 EF wiring executed, client/server parity, registry
 drift, RLS of the new table on a disposable database, legacy role mapping.
 NOT_VERIFIED: production RLS, deployed EF behaviour, live admin/self-promotion
-trigger behaviour, Supabase log retention/access for the audit lines.
+trigger behaviour, Supabase log retention/access for the audit lines, the
+CI jobs on GitHub until a run on this branch completes.
+
+Cost: each protected call adds one primary-key read of the caller's own
+`profiles` row (plus one `subject_roles` read once the flag is on) before
+quota — the same order of magnitude as the existing quota RPC.
