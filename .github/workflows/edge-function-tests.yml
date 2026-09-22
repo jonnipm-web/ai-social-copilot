@@ -39,6 +39,33 @@ jobs:
             --allow-net=deno.land,esm.sh \
             supabase/functions/_shared/quota_test.ts
 
+  entitlement-core-ci:
+    name: Server-side entitlement + Promotion Gate (MODULE-FOUNDATION-AND-ENTITLEMENT-02)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Type-check entitlement authority, module policy and every Edge Function
+        run: |
+          deno check supabase/functions/_shared/entitlement.ts supabase/functions/_shared/module_policy.ts             supabase/functions/*/index.ts
+
+      - name: Lint entitlement core
+        run: |
+          deno lint supabase/functions/_shared/entitlement.ts supabase/functions/_shared/entitlement_test.ts             supabase/functions/_shared/entitlement_test_support.ts supabase/functions/_shared/entitlement_vectors_test.ts             supabase/functions/_shared/module_policy.ts supabase/functions/_shared/module_policy_test.ts             supabase/functions/_shared/module_gate_handlers_test.ts supabase/functions/module-access/
+
+      - name: Entitlement authority, shared decision vectors, Promotion Gate invariants, executed gate on all 17 module functions
+        env:
+          DENO_TESTING: "1"
+          GROQ_API_KEY: "test-key-ci"
+        run: |
+          deno test --allow-env --allow-read --allow-net=deno.land,esm.sh             supabase/functions/_shared/entitlement_test.ts             supabase/functions/_shared/entitlement_vectors_test.ts             supabase/functions/_shared/module_policy_test.ts             supabase/functions/_shared/module_gate_handlers_test.ts             supabase/functions/module-access/index_test.ts
+
   contract-and-aef-ci:
     name: AEF contract + kernel CI (IV-AEF-FOUNDATION-01)
     runs-on: ubuntu-latest

@@ -11,6 +11,7 @@
 import { assertEquals, assertStringIncludes, assertNotEquals } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
 import { AuthClient } from '../_shared/auth.ts';
 import { QuotaClient } from '../_shared/quota.ts';
+import { withSubject } from '../_shared/entitlement_test_support.ts';
 
 // Fake quota RPC — allowed by default; tests that need "exceeded" or
 // "refund was called" override rpcOverrides/refundCalls directly.
@@ -79,7 +80,10 @@ globalThis.fetch = async (input: string | URL | Request, options?: RequestInit):
 };
 
 // DENO_TESTING deve estar definido antes desta linha para suprimir serve().
-const { handler } = await import('./index.ts');
+const { handler: moduleHandler } = await import('./index.ts');
+// MODULE-FOUNDATION-AND-ENTITLEMENT-02 — the handler now checks server-side
+// entitlement; its module is COMMERCIAL/free, so the pre-existing tests run as a free user.
+const handler = withSubject(moduleHandler, 'free');
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 // Por padrão inclui Authorization Bearer para simular sessão autenticada.

@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { AuthClient, AuthError, resolveAuthenticatedUser, unauthorizedResponse } from '../_shared/auth.ts';
+import { AuthenticatedUser, AuthClient, AuthError, resolveAuthenticatedUser, unauthorizedResponse } from '../_shared/auth.ts';
+import { EntitlementSubjectSource, requireModuleAccess } from '../_shared/entitlement.ts';
 import { QuotaClient, quotaBlockedResponse, refundQuota, reserveQuota } from '../_shared/quota.ts';
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
@@ -146,6 +147,7 @@ export async function handler(
   req: Request,
   authClient?: AuthClient,
   quotaClient?: QuotaClient,
+  subjectSource?: EntitlementSubjectSource,
 ): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -155,12 +157,20 @@ export async function handler(
   // exige uma sessão de usuário real via getUser() e falha fechado (401)
   // para qualquer outro caso — chave anon, JWT inválido/expirado, erro do
   // serviço de auth. Nenhuma chamada ao Groq ocorre antes disso.
+  let authUser: AuthenticatedUser;
   try {
-    await resolveAuthenticatedUser(req, authClient);
+    authUser = await resolveAuthenticatedUser(req, authClient);
   } catch (e) {
     if (e instanceof AuthError) return unauthorizedResponse(corsHeaders);
     throw e;
   }
+
+  // MODULE-FOUNDATION-AND-ENTITLEMENT-02 — server-side entitlement: the server
+  // (supabase/functions/_shared/module_policy.ts), not the client registry,
+  // decides whether this caller may use 'context-copilot'. Runs after authentication
+  // and before any quota reservation or AI call. Fails closed.
+  const access = await requireModuleAccess(req, authUser, 'context-copilot', corsHeaders, subjectSource);
+  if (!access.allowed) return access.response;
 
   let quotaReserved = false;
   // IVE-COMMERCIAL-QUOTA-HARDENING-13 — hoisted above the try block (not

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { AuthError, resolveAuthenticatedUser, unauthorizedResponse } from "../_shared/auth.ts";
-import { quotaBlockedResponse, refundQuota, reserveQuota } from "../_shared/quota.ts";
+import { AuthClient, AuthenticatedUser, AuthError, resolveAuthenticatedUser, unauthorizedResponse } from "../_shared/auth.ts";
+import { EntitlementSubjectSource, requireModuleAccess } from "../_shared/entitlement.ts";
+import { QuotaClient, quotaBlockedResponse, refundQuota, reserveQuota } from "../_shared/quota.ts";
 
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") ?? "";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
@@ -30,18 +31,33 @@ Receba um texto e retorne SOMENTE um JSON válido, sem markdown, sem explicaçõ
 As notas devem ser de 0 a 10 com uma casa decimal, avaliando o texto ORIGINAL.
 Retorne apenas o JSON. Nenhum texto antes ou depois.`;
 
-serve(async (req) => {
+// Exportado para testes (MODULE-FOUNDATION-AND-ENTITLEMENT-02). Em produção,
+// serve() chama esta função com os clients reais.
+export async function handler(
+  req: Request,
+  authClient?: AuthClient,
+  quotaClient?: QuotaClient,
+  subjectSource?: EntitlementSubjectSource,
+): Promise<Response> {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   // IVE-COMMERCIAL-AUTH-01 — exige sessão de usuário real antes do Groq. Falha fechado.
+  let authUser: AuthenticatedUser;
   try {
-    await resolveAuthenticatedUser(req);
+    authUser = await resolveAuthenticatedUser(req, authClient);
   } catch (e) {
     if (e instanceof AuthError) return unauthorizedResponse(corsHeaders);
     throw e;
   }
+
+  // MODULE-FOUNDATION-AND-ENTITLEMENT-02 — server-side entitlement: the server
+  // (supabase/functions/_shared/module_policy.ts), not the client registry,
+  // decides whether this caller may use 'improve-post'. Runs after authentication
+  // and before any quota reservation or AI call. Fails closed.
+  const access = await requireModuleAccess(req, authUser, 'improve-post', corsHeaders, subjectSource);
+  if (!access.allowed) return access.response;
 
   let quotaReserved = false;
   let idempotencyKey: string | undefined;
@@ -80,7 +96,7 @@ serve(async (req) => {
       }
     }
 
-    const quota = await reserveQuota(req, undefined, idempotencyKey, 'improve-post');
+    const quota = await reserveQuota(req, quotaClient, idempotencyKey, 'improve-post');
     if (!quota.allowed) return quotaBlockedResponse(corsHeaders, quota);
     quotaReserved = true;
     quotaResult = quota;
@@ -105,7 +121,7 @@ serve(async (req) => {
     if (!groqRes.ok) {
       const err = await groqRes.text();
       console.error("Groq error:", err);
-      await refundQuota(req, undefined, quotaResult);
+      await refundQuota(req, quotaClient, quotaResult);
       return new Response(
         JSON.stringify({ error: "Falha ao processar com a IA. Tente novamente." }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -118,7 +134,7 @@ serve(async (req) => {
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       console.error("JSON não encontrado:", rawText);
-      await refundQuota(req, undefined, quotaResult);
+      await refundQuota(req, quotaClient, quotaResult);
       return new Response(
         JSON.stringify({ error: "Resposta inválida da IA. Tente novamente." }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -129,7 +145,7 @@ serve(async (req) => {
 
     for (const field of ["improved_text", "professional_version", "casual_version", "persuasive_version", "comment_reply", "scores"]) {
       if (!(field in result)) {
-        await refundQuota(req, undefined, quotaResult);
+        await refundQuota(req, quotaClient, quotaResult);
         return new Response(
           JSON.stringify({ error: `Campo '${field}' ausente na resposta da IA.` }),
           { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -143,10 +159,14 @@ serve(async (req) => {
     });
   } catch (e) {
     console.error("Erro inesperado:", e);
-    if (quotaReserved) await refundQuota(req, undefined, quotaResult);
+    if (quotaReserved) await refundQuota(req, quotaClient, quotaResult);
     return new Response(
       JSON.stringify({ error: "Erro interno. Tente novamente." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
-});
+}
+
+if (Deno.env.get('DENO_TESTING') !== '1') {
+  serve((req) => handler(req));
+}

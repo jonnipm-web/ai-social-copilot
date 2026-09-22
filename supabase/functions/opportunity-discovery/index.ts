@@ -1,7 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { AuthError, resolveAuthenticatedUser, unauthorizedResponse } from "../_shared/auth.ts";
+import { AuthClient, AuthenticatedUser, AuthError, resolveAuthenticatedUser, unauthorizedResponse } from "../_shared/auth.ts";
+import { EntitlementSubjectSource, requireModuleAccess } from "../_shared/entitlement.ts";
 import { normalizeLanguage, withLanguageDirective } from "../_shared/language.ts";
-import { quotaBlockedResponse, refundQuota, reserveQuota } from "../_shared/quota.ts";
+import { QuotaClient, quotaBlockedResponse, refundQuota, reserveQuota } from "../_shared/quota.ts";
 
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") ?? "";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
@@ -48,18 +49,33 @@ Regras:
 - Retorne entre 5 e 8 oportunidades rankeadas por opportunity_score decrescente
 - Seja específico e acionável`;
 
-serve(async (req) => {
+// Exportado para testes (MODULE-FOUNDATION-AND-ENTITLEMENT-02). Em produção,
+// serve() chama esta função com os clients reais.
+export async function handler(
+  req: Request,
+  authClient?: AuthClient,
+  quotaClient?: QuotaClient,
+  subjectSource?: EntitlementSubjectSource,
+): Promise<Response> {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   // IVE-COMMERCIAL-AUTH-01 — exige sessão de usuário real antes do Groq. Falha fechado.
+  let authUser: AuthenticatedUser;
   try {
-    await resolveAuthenticatedUser(req);
+    authUser = await resolveAuthenticatedUser(req, authClient);
   } catch (e) {
     if (e instanceof AuthError) return unauthorizedResponse(corsHeaders);
     throw e;
   }
+
+  // MODULE-FOUNDATION-AND-ENTITLEMENT-02 — server-side entitlement: the server
+  // (supabase/functions/_shared/module_policy.ts), not the client registry,
+  // decides whether this caller may use 'opportunity-discovery'. Runs after authentication
+  // and before any quota reservation or AI call. Fails closed.
+  const access = await requireModuleAccess(req, authUser, 'opportunity-discovery', corsHeaders, subjectSource);
+  if (!access.allowed) return access.response;
 
   let quotaReserved = false;
   let idempotencyKey: string | undefined;
@@ -76,7 +92,7 @@ serve(async (req) => {
       });
     }
 
-    const quota = await reserveQuota(req, undefined, idempotencyKey, 'opportunity-discovery');
+    const quota = await reserveQuota(req, quotaClient, idempotencyKey, 'opportunity-discovery');
     if (!quota.allowed) return quotaBlockedResponse(corsHeaders, quota);
     quotaReserved = true;
     quotaResult = quota;
@@ -115,10 +131,14 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    if (quotaReserved) await refundQuota(req, undefined, quotaResult);
+    if (quotaReserved) await refundQuota(req, quotaClient, quotaResult);
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-});
+}
+
+if (Deno.env.get('DENO_TESTING') !== '1') {
+  serve((req) => handler(req));
+}

@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { AuthError, resolveAuthenticatedUser, unauthorizedResponse } from '../_shared/auth.ts';
-import { quotaBlockedResponse, refundQuota, reserveQuota } from '../_shared/quota.ts';
+import { AuthClient, AuthenticatedUser, AuthError, resolveAuthenticatedUser, unauthorizedResponse } from '../_shared/auth.ts';
+import { EntitlementSubjectSource, requireModuleAccess } from '../_shared/entitlement.ts';
+import { QuotaClient, quotaBlockedResponse, refundQuota, reserveQuota } from '../_shared/quota.ts';
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const corsHeaders = {
@@ -8,16 +9,31 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req) => {
+// Exportado para testes (MODULE-FOUNDATION-AND-ENTITLEMENT-02). Em produção,
+// serve() chama esta função com os clients reais.
+export async function handler(
+  req: Request,
+  authClient?: AuthClient,
+  quotaClient?: QuotaClient,
+  subjectSource?: EntitlementSubjectSource,
+): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   // IVE-COMMERCIAL-AUTH-01 — exige sessão de usuário real antes do Groq. Falha fechado.
+  let authUser: AuthenticatedUser;
   try {
-    await resolveAuthenticatedUser(req);
+    authUser = await resolveAuthenticatedUser(req, authClient);
   } catch (e) {
     if (e instanceof AuthError) return unauthorizedResponse(corsHeaders);
     throw e;
   }
+
+  // MODULE-FOUNDATION-AND-ENTITLEMENT-02 — server-side entitlement: the server
+  // (supabase/functions/_shared/module_policy.ts), not the client registry,
+  // decides whether this caller may use 'opportunity-lab'. Runs after authentication
+  // and before any quota reservation or AI call. Fails closed.
+  const access = await requireModuleAccess(req, authUser, 'opportunity-lab', corsHeaders, subjectSource);
+  if (!access.allowed) return access.response;
 
   let quotaReserved = false;
   let idempotencyKey: string | undefined;
@@ -68,7 +84,7 @@ Tipos válidos para opportunity_type: expansão, novo produto, novo nicho, afili
 Scores devem ser inteiros entre 0 e 100.
 final_score = média ponderada dos demais scores.`;
 
-    const quota = await reserveQuota(req, undefined, idempotencyKey, 'generate-project-opportunities');
+    const quota = await reserveQuota(req, quotaClient, idempotencyKey, 'generate-project-opportunities');
     if (!quota.allowed) return quotaBlockedResponse(corsHeaders, quota);
     quotaReserved = true;
     quotaResult = quota;
@@ -97,7 +113,7 @@ final_score = média ponderada dos demais scores.`;
 
     if (!resp.ok) {
       const err = await resp.text();
-      await refundQuota(req, undefined, quotaResult);
+      await refundQuota(req, quotaClient, quotaResult);
       return Response.json({ error: `Groq error: ${err}` }, { status: 502, headers: corsHeaders });
     }
 
@@ -108,7 +124,7 @@ final_score = média ponderada dos demais scores.`;
     try {
       parsed = JSON.parse(content);
     } catch {
-      await refundQuota(req, undefined, quotaResult);
+      await refundQuota(req, quotaClient, quotaResult);
       return Response.json(
         { error: 'JSON inválido retornado pelo modelo', raw: content },
         { status: 502, headers: corsHeaders },
@@ -121,7 +137,11 @@ final_score = média ponderada dos demais scores.`;
 
     return Response.json(parsed, { headers: corsHeaders });
   } catch (e) {
-    if (quotaReserved) await refundQuota(req, undefined, quotaResult);
+    if (quotaReserved) await refundQuota(req, quotaClient, quotaResult);
     return Response.json({ error: String(e) }, { status: 500, headers: corsHeaders });
   }
-});
+}
+
+if (Deno.env.get('DENO_TESTING') !== '1') {
+  serve((req) => handler(req));
+}

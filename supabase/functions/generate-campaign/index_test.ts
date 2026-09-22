@@ -8,6 +8,7 @@
 import { assertEquals } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
 import { AuthClient } from '../_shared/auth.ts';
 import { QuotaClient } from '../_shared/quota.ts';
+import { failingSubjectSource, fakeSubjectSource, withSubject } from '../_shared/entitlement_test_support.ts';
 
 let groqCalled = false;
 let groqShouldFail = false;
@@ -36,7 +37,11 @@ globalThis.fetch = async (input: string | URL | Request): Promise<Response> => {
 };
 
 // DENO_TESTING deve estar definido antes desta linha para suprimir serve().
-const { handler } = await import('./index.ts');
+const { handler: moduleHandler } = await import('./index.ts');
+// MODULE-FOUNDATION-AND-ENTITLEMENT-02 — the handler now checks server-side
+// entitlement; 'campaigns' is INTERNAL (admin-only) in the server policy, so the pre-existing
+// success-path tests run as an admin; GC-ENT-* below cover the free-user denial.
+const handler = withSubject(moduleHandler, 'admin');
 
 const validUserClient: AuthClient = {
   auth: {
@@ -103,4 +108,30 @@ Deno.test('GC-5: Groq falha depois da cota reservada -> devolve a unidade', asyn
   } finally {
     groqShouldFail = false;
   }
+});
+
+// ── MODULE-FOUNDATION-AND-ENTITLEMENT-02 — server-side entitlement ──────
+
+Deno.test('GC-ENT-1: free user calling the INTERNAL campaigns module directly -> 403 MODULE_NOT_AVAILABLE, no quota, no Groq', async () => {
+  groqCalled = false;
+  let quotaCalls = 0;
+  const countingQuota: QuotaClient = {
+    // deno-lint-ignore require-await
+    async rpc() { quotaCalls++; return { data: { allowed: true, used: 1, limit: 100, role: 'free' }, error: null }; },
+  };
+  for (const role of ['free', 'pro', 'premium', 'beta_tester']) {
+    const res = await moduleHandler(req({ ...BODY, plan: 'premium', role: 'admin' }), validUserClient, countingQuota, fakeSubjectSource(role));
+    assertEquals(res.status, 403, role);
+    assertEquals((await res.json()).error, 'MODULE_NOT_AVAILABLE');
+  }
+  assertEquals(quotaCalls, 0);
+  assertEquals(groqCalled, false);
+});
+
+Deno.test('GC-ENT-2: entitlement source outage -> 503 ENTITLEMENT_UNAVAILABLE, fail closed, no Groq', async () => {
+  groqCalled = false;
+  const res = await moduleHandler(req(BODY), validUserClient, fakeQuotaClient, failingSubjectSource);
+  assertEquals(res.status, 503);
+  assertEquals((await res.json()).error, 'ENTITLEMENT_UNAVAILABLE');
+  assertEquals(groqCalled, false);
 });
