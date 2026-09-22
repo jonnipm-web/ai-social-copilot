@@ -252,11 +252,23 @@ export function subjectFromPlanAndRoleRows(
 }
 
 /** Operational rollout switch (a FEATURE FLAG in the §14 sense — it changes
- * where roles are read from, never who is entitled to what by policy). */
+ * where roles are read from, never who is entitled to what by policy).
+ * Unset or "0" → legacy source; "1" → subject_roles source. Any other value
+ * is a misconfiguration and fails closed (Codex Final CXF-04) instead of
+ * silently ignoring the operator's intent. */
 export function defaultSubjectSource(): EntitlementSubjectSource {
-  return Deno.env.get('ENTITLEMENT_SUBJECT_ROLES') === '1'
-    ? new ProfilePlanAndSubjectRolesSource()
-    : new LegacyProfileRoleSubjectSource();
+  const flag = Deno.env.get('ENTITLEMENT_SUBJECT_ROLES');
+  if (flag === undefined || flag === '' || flag === '0') return new LegacyProfileRoleSubjectSource();
+  if (flag === '1') return new ProfilePlanAndSubjectRolesSource();
+  return new MisconfiguredSubjectSource();
+}
+
+class MisconfiguredSubjectSource implements EntitlementSubjectSource {
+  // deno-lint-ignore require-await
+  async resolveUserSubject(): Promise<EntitlementSubject> {
+    console.error(JSON.stringify({ event: 'entitlement_misconfigured', setting: 'ENTITLEMENT_SUBJECT_ROLES', expected: ['0', '1'] }));
+    throw new EntitlementSourceError('ENTITLEMENT_SUBJECT_ROLES must be unset, "0" or "1"');
+  }
 }
 
 const KNOWN_SOURCES: ReadonlySet<string> = new Set(['legacy_profiles_role', 'profiles_plan_and_subject_roles']);

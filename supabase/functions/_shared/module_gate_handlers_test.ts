@@ -121,7 +121,11 @@ for (const { fn, moduleId, lifecycle } of moduleFunctions) {
   } else {
     Deno.test(`GH ${fn}: '${moduleId}' is COMMERCIAL/free → a free user passes the gate (legacy behavior preserved)`, async () => {
       reset();
-      const res = await handlers.get(fn)!(req('session-jwt', {}), auth, quota, fakeSubjectSource('free'));
+      const src = fakeSubjectSource('free');
+      const res = await handlers.get(fn)!(req('session-jwt', {}), auth, quota, src);
+      // Codex Final CXF-06 — prove the gate actually ran (a removed gate
+      // would leave the source unconsulted), not just that nothing denied.
+      assertEquals(src.calls, 1, `${fn} must consult the entitlement source exactly once`);
       const body = await res.clone().json().catch(() => ({}));
       assert(![401, 403, 503].includes(res.status) || !['AUTH_REQUIRED', 'MODULE_NOT_AVAILABLE', 'MODULE_DISABLED', 'PLAN_REQUIRED', 'ENTITLEMENT_UNAVAILABLE'].includes(body.error),
         `${fn} was blocked by entitlement: ${res.status} ${JSON.stringify(body)}`);

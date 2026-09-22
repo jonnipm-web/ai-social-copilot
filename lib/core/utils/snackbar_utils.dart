@@ -80,8 +80,7 @@ bool isQuotaExceededError(dynamic e) {
 }
 
 /// MODULE-FOUNDATION-AND-ENTITLEMENT-02 — códigos públicos de negação de
-/// entitlement do servidor. A ordem importa só para strings que contenham
-/// mais de um código (não esperado).
+/// entitlement do servidor (supabase/functions/_shared/entitlement.ts).
 const kEntitlementErrorCodes = [
   'PLAN_REQUIRED',
   'MODULE_NOT_AVAILABLE',
@@ -90,14 +89,18 @@ const kEntitlementErrorCodes = [
   'AUTH_REQUIRED',
 ];
 
-/// O código de entitlement presente no erro, ou null. Só para UX (mensagem
-/// e botão de upgrade) — a decisão já foi tomada pelo servidor.
+/// O código de entitlement do erro, ou null. Só para UX (mensagem e botão de
+/// upgrade) — a decisão já foi tomada pelo servidor.
+///
+/// Igualdade EXATA (Codex Final CXF-03): os services relançam o campo
+/// `error` do servidor como `Exception(code)`, então só `code` ou
+/// `Exception: code` contam. Uma mensagem qualquer que apenas CONTENHA um
+/// desses textos (ex.: erro do provedor de IA) não é classificada como
+/// negação de acesso.
 String? entitlementErrorCode(dynamic e) {
-  final str = e.toString();
-  for (final c in kEntitlementErrorCodes) {
-    if (str.contains(c)) return c;
-  }
-  return null;
+  var str = e.toString().trim();
+  if (str.startsWith('Exception: ')) str = str.substring('Exception: '.length).trim();
+  return kEntitlementErrorCodes.contains(str) ? str : null;
 }
 
 /// Verdadeiro quando o servidor negou por plano insuficiente — telas podem

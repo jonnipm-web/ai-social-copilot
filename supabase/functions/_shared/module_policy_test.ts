@@ -93,3 +93,27 @@ Deno.test('MP-08 production code never imports the test-only entitlement helpers
   }
   assertEquals(offenders, []);
 });
+
+Deno.test('MP-09 PROMOTION GATE: no Edge Function of ANY kind serves a CONSEQUENTIAL module while AEF persistence is unavailable (Codex CXF-02)', () => {
+  if (AEF_PERSISTENCE_AVAILABLE) return;
+  const consequential = new Set(
+    Object.entries(MODULE_POLICY.modules).filter(([, m]) => m.actionClass === 'CONSEQUENTIAL').map(([id]) => id),
+  );
+  const paths = Object.entries(MODULE_POLICY.edgeFunctions)
+    .filter(([, p]) => p.moduleId !== undefined && consequential.has(p.moduleId))
+    .map(([fn]) => fn);
+  assertEquals(paths, [], 'a class C capability may only execute through AEF (Human Gate + receipt)');
+});
+
+Deno.test('MP-10 non-MODULE kinds are a closed, reviewed allowlist — a new function cannot dodge the gate by picking another kind', () => {
+  const nonModule = Object.entries(MODULE_POLICY.edgeFunctions)
+    .filter(([, p]) => p.kind !== 'MODULE')
+    .map(([fn, p]) => `${fn}:${p.kind}`)
+    .sort();
+  assertEquals(nonModule, [
+    'create-checkout-session:BILLING',
+    'ive-agent-runner:RETIRED',
+    'module-access:ENTITLEMENT',
+    'stripe-webhook:PUBLIC_WEBHOOK',
+  ]);
+});

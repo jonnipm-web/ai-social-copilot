@@ -12,6 +12,9 @@ import {
   EntitlementSourceError,
   listModuleDecisions,
   mapLegacyProfileRole,
+  defaultSubjectSource,
+  LegacyProfileRoleSubjectSource,
+  ProfilePlanAndSubjectRolesSource,
   requireModuleAccess,
   type Role,
   subjectFromPlanAndRoleRows,
@@ -359,4 +362,35 @@ Deno.test('EN-35 audit log never carries the raw user id, the token or the body'
     assertFalse(line.includes(leak), `log leaked ${leak}`);
   }
   assert(/"subject_ref":"[0-9a-f]{16}"/.test(line));
+});
+
+// ── Rollout flag (Codex Final CXF-04) ────────────────────────────────────
+
+Deno.test('EN-36 ENTITLEMENT_SUBJECT_ROLES: unset/0 → legacy, 1 → subject_roles, anything else fails closed', async () => {
+  const prev = Deno.env.get('ENTITLEMENT_SUBJECT_ROLES');
+  try {
+    Deno.env.delete('ENTITLEMENT_SUBJECT_ROLES');
+    assert(defaultSubjectSource() instanceof LegacyProfileRoleSubjectSource);
+    Deno.env.set('ENTITLEMENT_SUBJECT_ROLES', '0');
+    assert(defaultSubjectSource() instanceof LegacyProfileRoleSubjectSource);
+    Deno.env.set('ENTITLEMENT_SUBJECT_ROLES', '1');
+    assert(defaultSubjectSource() instanceof ProfilePlanAndSubjectRolesSource);
+    const errs: string[] = [];
+    const origErr = console.error;
+    console.error = (...a: unknown[]) => { errs.push(a.map(String).join(' ')); };
+    try {
+      for (const v of ['true', 'yes', 'on', ' 1', '2']) {
+        Deno.env.set('ENTITLEMENT_SUBJECT_ROLES', v);
+        const r = await requireModuleAccess(reqWith(), USER, 'knowledge-vault', CORS);
+        assertFalse(r.allowed, v);
+        if (!r.allowed) assertEquals(r.response.status, 503);
+      }
+    } finally {
+      console.error = origErr;
+    }
+    assert(errs.some((l) => l.includes('entitlement_misconfigured')));
+  } finally {
+    if (prev === undefined) Deno.env.delete('ENTITLEMENT_SUBJECT_ROLES');
+    else Deno.env.set('ENTITLEMENT_SUBJECT_ROLES', prev);
+  }
 });

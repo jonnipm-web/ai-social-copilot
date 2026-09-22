@@ -59,4 +59,18 @@ void main() {
     expect(extractErrorMessage(Exception('QUOTA_EXCEEDED')), contains('limite'));
     expect(entitlementErrorCode(Exception('QUOTA_EXCEEDED')), isNull);
   });
+
+  test('only an exact code is classified — substring collisions are not (Codex Final CXF-03)', () {
+    for (final s in [
+      'provider rejected prompt: PLAN_REQUIRED token',
+      'MODULE_NOT_AVAILABLE_SOON',
+      'xAUTH_REQUIRED',
+      'Exception: upstream said ENTITLEMENT_UNAVAILABLE',
+    ]) {
+      expect(entitlementErrorCode(Exception(s)), isNull, reason: s);
+      expect(isPlanRequiredError(Exception(s)), isFalse, reason: s);
+    }
+    expect(entitlementErrorCode('PLAN_REQUIRED'), 'PLAN_REQUIRED');
+    expect(entitlementErrorCode(Exception(' MODULE_DISABLED ')), 'MODULE_DISABLED');
+  });
 }
