@@ -1,0 +1,636 @@
+{
+ "version": 1,
+ "description": "Shared entitlement decision vectors. Server (supabase/functions/_shared/entitlement_vectors_test.ts) and client (test/core/modules/entitlement_parity_test.dart) must both satisfy every case. Client mapping: ALLOW->allow, PLAN_REQUIRED->redirectUpgrade, any other code->redirectDenied.",
+ "cases": [
+  {
+   "legacyRole": "free",
+   "lifecycle": "EXPERIMENTAL",
+   "minimumPlan": "free",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "pro",
+   "lifecycle": "EXPERIMENTAL",
+   "minimumPlan": "free",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "premium",
+   "lifecycle": "EXPERIMENTAL",
+   "minimumPlan": "free",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "beta_tester",
+   "lifecycle": "EXPERIMENTAL",
+   "minimumPlan": "free",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "admin",
+   "lifecycle": "EXPERIMENTAL",
+   "minimumPlan": "free",
+   "expected": "ALLOW"
+  },
+  {
+   "legacyRole": "free",
+   "lifecycle": "EXPERIMENTAL",
+   "minimumPlan": "pro",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "pro",
+   "lifecycle": "EXPERIMENTAL",
+   "minimumPlan": "pro",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "premium",
+   "lifecycle": "EXPERIMENTAL",
+   "minimumPlan": "pro",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "beta_tester",
+   "lifecycle": "EXPERIMENTAL",
+   "minimumPlan": "pro",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "admin",
+   "lifecycle": "EXPERIMENTAL",
+   "minimumPlan": "pro",
+   "expected": "ALLOW"
+  },
+  {
+   "legacyRole": "free",
+   "lifecycle": "EXPERIMENTAL",
+   "minimumPlan": "premium",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "pro",
+   "lifecycle": "EXPERIMENTAL",
+   "minimumPlan": "premium",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "premium",
+   "lifecycle": "EXPERIMENTAL",
+   "minimumPlan": "premium",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "beta_tester",
+   "lifecycle": "EXPERIMENTAL",
+   "minimumPlan": "premium",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "admin",
+   "lifecycle": "EXPERIMENTAL",
+   "minimumPlan": "premium",
+   "expected": "ALLOW"
+  },
+  {
+   "legacyRole": "free",
+   "lifecycle": "INTERNAL",
+   "minimumPlan": "free",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "pro",
+   "lifecycle": "INTERNAL",
+   "minimumPlan": "free",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "premium",
+   "lifecycle": "INTERNAL",
+   "minimumPlan": "free",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "beta_tester",
+   "lifecycle": "INTERNAL",
+   "minimumPlan": "free",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "admin",
+   "lifecycle": "INTERNAL",
+   "minimumPlan": "free",
+   "expected": "ALLOW"
+  },
+  {
+   "legacyRole": "free",
+   "lifecycle": "INTERNAL",
+   "minimumPlan": "pro",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "pro",
+   "lifecycle": "INTERNAL",
+   "minimumPlan": "pro",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "premium",
+   "lifecycle": "INTERNAL",
+   "minimumPlan": "pro",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "beta_tester",
+   "lifecycle": "INTERNAL",
+   "minimumPlan": "pro",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "admin",
+   "lifecycle": "INTERNAL",
+   "minimumPlan": "pro",
+   "expected": "ALLOW"
+  },
+  {
+   "legacyRole": "free",
+   "lifecycle": "INTERNAL",
+   "minimumPlan": "premium",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "pro",
+   "lifecycle": "INTERNAL",
+   "minimumPlan": "premium",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "premium",
+   "lifecycle": "INTERNAL",
+   "minimumPlan": "premium",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "beta_tester",
+   "lifecycle": "INTERNAL",
+   "minimumPlan": "premium",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "admin",
+   "lifecycle": "INTERNAL",
+   "minimumPlan": "premium",
+   "expected": "ALLOW"
+  },
+  {
+   "legacyRole": "free",
+   "lifecycle": "ALPHA",
+   "minimumPlan": "free",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "pro",
+   "lifecycle": "ALPHA",
+   "minimumPlan": "free",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "premium",
+   "lifecycle": "ALPHA",
+   "minimumPlan": "free",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "beta_tester",
+   "lifecycle": "ALPHA",
+   "minimumPlan": "free",
+   "expected": "ALLOW"
+  },
+  {
+   "legacyRole": "admin",
+   "lifecycle": "ALPHA",
+   "minimumPlan": "free",
+   "expected": "ALLOW"
+  },
+  {
+   "legacyRole": "free",
+   "lifecycle": "ALPHA",
+   "minimumPlan": "pro",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "pro",
+   "lifecycle": "ALPHA",
+   "minimumPlan": "pro",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "premium",
+   "lifecycle": "ALPHA",
+   "minimumPlan": "pro",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "beta_tester",
+   "lifecycle": "ALPHA",
+   "minimumPlan": "pro",
+   "expected": "PLAN_REQUIRED"
+  },
+  {
+   "legacyRole": "admin",
+   "lifecycle": "ALPHA",
+   "minimumPlan": "pro",
+   "expected": "ALLOW"
+  },
+  {
+   "legacyRole": "free",
+   "lifecycle": "ALPHA",
+   "minimumPlan": "premium",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "pro",
+   "lifecycle": "ALPHA",
+   "minimumPlan": "premium",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "premium",
+   "lifecycle": "ALPHA",
+   "minimumPlan": "premium",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "beta_tester",
+   "lifecycle": "ALPHA",
+   "minimumPlan": "premium",
+   "expected": "PLAN_REQUIRED"
+  },
+  {
+   "legacyRole": "admin",
+   "lifecycle": "ALPHA",
+   "minimumPlan": "premium",
+   "expected": "ALLOW"
+  },
+  {
+   "legacyRole": "free",
+   "lifecycle": "BETA",
+   "minimumPlan": "free",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "pro",
+   "lifecycle": "BETA",
+   "minimumPlan": "free",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "premium",
+   "lifecycle": "BETA",
+   "minimumPlan": "free",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "beta_tester",
+   "lifecycle": "BETA",
+   "minimumPlan": "free",
+   "expected": "ALLOW"
+  },
+  {
+   "legacyRole": "admin",
+   "lifecycle": "BETA",
+   "minimumPlan": "free",
+   "expected": "ALLOW"
+  },
+  {
+   "legacyRole": "free",
+   "lifecycle": "BETA",
+   "minimumPlan": "pro",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "pro",
+   "lifecycle": "BETA",
+   "minimumPlan": "pro",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "premium",
+   "lifecycle": "BETA",
+   "minimumPlan": "pro",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "beta_tester",
+   "lifecycle": "BETA",
+   "minimumPlan": "pro",
+   "expected": "PLAN_REQUIRED"
+  },
+  {
+   "legacyRole": "admin",
+   "lifecycle": "BETA",
+   "minimumPlan": "pro",
+   "expected": "ALLOW"
+  },
+  {
+   "legacyRole": "free",
+   "lifecycle": "BETA",
+   "minimumPlan": "premium",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "pro",
+   "lifecycle": "BETA",
+   "minimumPlan": "premium",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "premium",
+   "lifecycle": "BETA",
+   "minimumPlan": "premium",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "beta_tester",
+   "lifecycle": "BETA",
+   "minimumPlan": "premium",
+   "expected": "PLAN_REQUIRED"
+  },
+  {
+   "legacyRole": "admin",
+   "lifecycle": "BETA",
+   "minimumPlan": "premium",
+   "expected": "ALLOW"
+  },
+  {
+   "legacyRole": "free",
+   "lifecycle": "RELEASE_CANDIDATE",
+   "minimumPlan": "free",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "pro",
+   "lifecycle": "RELEASE_CANDIDATE",
+   "minimumPlan": "free",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "premium",
+   "lifecycle": "RELEASE_CANDIDATE",
+   "minimumPlan": "free",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "beta_tester",
+   "lifecycle": "RELEASE_CANDIDATE",
+   "minimumPlan": "free",
+   "expected": "ALLOW"
+  },
+  {
+   "legacyRole": "admin",
+   "lifecycle": "RELEASE_CANDIDATE",
+   "minimumPlan": "free",
+   "expected": "ALLOW"
+  },
+  {
+   "legacyRole": "free",
+   "lifecycle": "RELEASE_CANDIDATE",
+   "minimumPlan": "pro",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "pro",
+   "lifecycle": "RELEASE_CANDIDATE",
+   "minimumPlan": "pro",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "premium",
+   "lifecycle": "RELEASE_CANDIDATE",
+   "minimumPlan": "pro",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "beta_tester",
+   "lifecycle": "RELEASE_CANDIDATE",
+   "minimumPlan": "pro",
+   "expected": "PLAN_REQUIRED"
+  },
+  {
+   "legacyRole": "admin",
+   "lifecycle": "RELEASE_CANDIDATE",
+   "minimumPlan": "pro",
+   "expected": "ALLOW"
+  },
+  {
+   "legacyRole": "free",
+   "lifecycle": "RELEASE_CANDIDATE",
+   "minimumPlan": "premium",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "pro",
+   "lifecycle": "RELEASE_CANDIDATE",
+   "minimumPlan": "premium",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "premium",
+   "lifecycle": "RELEASE_CANDIDATE",
+   "minimumPlan": "premium",
+   "expected": "MODULE_NOT_AVAILABLE"
+  },
+  {
+   "legacyRole": "beta_tester",
+   "lifecycle": "RELEASE_CANDIDATE",
+   "minimumPlan": "premium",
+   "expected": "PLAN_REQUIRED"
+  },
+  {
+   "legacyRole": "admin",
+   "lifecycle": "RELEASE_CANDIDATE",
+   "minimumPlan": "premium",
+   "expected": "ALLOW"
+  },
+  {
+   "legacyRole": "free",
+   "lifecycle": "COMMERCIAL",
+   "minimumPlan": "free",
+   "expected": "ALLOW"
+  },
+  {
+   "legacyRole": "pro",
+   "lifecycle": "COMMERCIAL",
+   "minimumPlan": "free",
+   "expected": "ALLOW"
+  },
+  {
+   "legacyRole": "premium",
+   "lifecycle": "COMMERCIAL",
+   "minimumPlan": "free",
+   "expected": "ALLOW"
+  },
+  {
+   "legacyRole": "beta_tester",
+   "lifecycle": "COMMERCIAL",
+   "minimumPlan": "free",
+   "expected": "ALLOW"
+  },
+  {
+   "legacyRole": "admin",
+   "lifecycle": "COMMERCIAL",
+   "minimumPlan": "free",
+   "expected": "ALLOW"
+  },
+  {
+   "legacyRole": "free",
+   "lifecycle": "COMMERCIAL",
+   "minimumPlan": "pro",
+   "expected": "PLAN_REQUIRED"
+  },
+  {
+   "legacyRole": "pro",
+   "lifecycle": "COMMERCIAL",
+   "minimumPlan": "pro",
+   "expected": "ALLOW"
+  },
+  {
+   "legacyRole": "premium",
+   "lifecycle": "COMMERCIAL",
+   "minimumPlan": "pro",
+   "expected": "ALLOW"
+  },
+  {
+   "legacyRole": "beta_tester",
+   "lifecycle": "COMMERCIAL",
+   "minimumPlan": "pro",
+   "expected": "PLAN_REQUIRED"
+  },
+  {
+   "legacyRole": "admin",
+   "lifecycle": "COMMERCIAL",
+   "minimumPlan": "pro",
+   "expected": "ALLOW"
+  },
+  {
+   "legacyRole": "free",
+   "lifecycle": "COMMERCIAL",
+   "minimumPlan": "premium",
+   "expected": "PLAN_REQUIRED"
+  },
+  {
+   "legacyRole": "pro",
+   "lifecycle": "COMMERCIAL",
+   "minimumPlan": "premium",
+   "expected": "PLAN_REQUIRED"
+  },
+  {
+   "legacyRole": "premium",
+   "lifecycle": "COMMERCIAL",
+   "minimumPlan": "premium",
+   "expected": "ALLOW"
+  },
+  {
+   "legacyRole": "beta_tester",
+   "lifecycle": "COMMERCIAL",
+   "minimumPlan": "premium",
+   "expected": "PLAN_REQUIRED"
+  },
+  {
+   "legacyRole": "admin",
+   "lifecycle": "COMMERCIAL",
+   "minimumPlan": "premium",
+   "expected": "ALLOW"
+  },
+  {
+   "legacyRole": "free",
+   "lifecycle": "DEPRECATED",
+   "minimumPlan": "free",
+   "expected": "MODULE_DISABLED"
+  },
+  {
+   "legacyRole": "pro",
+   "lifecycle": "DEPRECATED",
+   "minimumPlan": "free",
+   "expected": "MODULE_DISABLED"
+  },
+  {
+   "legacyRole": "premium",
+   "lifecycle": "DEPRECATED",
+   "minimumPlan": "free",
+   "expected": "MODULE_DISABLED"
+  },
+  {
+   "legacyRole": "beta_tester",
+   "lifecycle": "DEPRECATED",
+   "minimumPlan": "free",
+   "expected": "MODULE_DISABLED"
+  },
+  {
+   "legacyRole": "admin",
+   "lifecycle": "DEPRECATED",
+   "minimumPlan": "free",
+   "expected": "MODULE_DISABLED"
+  },
+  {
+   "legacyRole": "free",
+   "lifecycle": "DEPRECATED",
+   "minimumPlan": "pro",
+   "expected": "MODULE_DISABLED"
+  },
+  {
+   "legacyRole": "pro",
+   "lifecycle": "DEPRECATED",
+   "minimumPlan": "pro",
+   "expected": "MODULE_DISABLED"
+  },
+  {
+   "legacyRole": "premium",
+   "lifecycle": "DEPRECATED",
+   "minimumPlan": "pro",
+   "expected": "MODULE_DISABLED"
+  },
+  {
+   "legacyRole": "beta_tester",
+   "lifecycle": "DEPRECATED",
+   "minimumPlan": "pro",
+   "expected": "MODULE_DISABLED"
+  },
+  {
+   "legacyRole": "admin",
+   "lifecycle": "DEPRECATED",
+   "minimumPlan": "pro",
+   "expected": "MODULE_DISABLED"
+  },
+  {
+   "legacyRole": "free",
+   "lifecycle": "DEPRECATED",
+   "minimumPlan": "premium",
+   "expected": "MODULE_DISABLED"
+  },
+  {
+   "legacyRole": "pro",
+   "lifecycle": "DEPRECATED",
+   "minimumPlan": "premium",
+   "expected": "MODULE_DISABLED"
+  },
+  {
+   "legacyRole": "premium",
+   "lifecycle": "DEPRECATED",
+   "minimumPlan": "premium",
+   "expected": "MODULE_DISABLED"
+  },
+  {
+   "legacyRole": "beta_tester",
+   "lifecycle": "DEPRECATED",
+   "minimumPlan": "premium",
+   "expected": "MODULE_DISABLED"
+  },
+  {
+   "legacyRole": "admin",
+   "lifecycle": "DEPRECATED",
+   "minimumPlan": "premium",
+   "expected": "MODULE_DISABLED"
+  }
+ ]
+}
