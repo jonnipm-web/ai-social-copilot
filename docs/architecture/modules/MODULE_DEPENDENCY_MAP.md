@@ -6,9 +6,10 @@ Status: AUDIT (derived from tables, Edge Functions, providers and registry
 
 ## 1. Graph
 
-Conceptual graph (data and call dependencies). It does not show a
-"server entitlement" node because none exists (see MODULE_ARCHITECTURE.md §7,
-MPA-F03). The external-agent edge comes from the separate repository
+Conceptual graph (data and call dependencies). Since
+MODULE-FOUNDATION-AND-ENTITLEMENT-02 every module Edge Function depends on
+the server entitlement authority (`SENT` below; MODULE_ARCHITECTURE.md §13),
+which depends only on Auth and the caller's own profile/role rows. The external-agent edge comes from the separate repository
 `insightvalues-ive-agent`; its live Cloud Run deployment was not verified.
 
 ```mermaid
@@ -18,6 +19,17 @@ graph TD
   KNOW[Knowledge]
   QUOTA[Usage / Quota]
   ENT[Entitlements: profiles.role + Registry]
+  SENT[Server Entitlement Authority: module_policy + entitlement.ts]
+  SENT --> AUTH
+  SENT --> ENT
+  WEB --> SENT
+  MI --> SENT
+  OPP --> SENT
+  ACT --> SENT
+  KNOW --> SENT
+  COP --> SENT
+  CONTENT --> SENT
+  IVE -. discovers capabilities via module-access .-> SENT
   REG[Module Registry + Route Policy]
   IVE[IVE Intelligence]
   COP[Context Copilot EF]
@@ -92,11 +104,15 @@ graph TD
    acceptable, but it means IVE context cannot be assembled without the
    Flutter client. Blocking for Web-without-Flutter and Extension.
 3. **Entitlement ↔ Billing:** Stripe writes `profiles.role`, which is also
-   the admin/beta authorization column. A billing defect can therefore
+   the admin/beta authorization column. (Module Lab: roles move to
+   `subject_roles`, migration 20260923000000, not yet applied — after the
+   rollout flag is set, billing can no longer rewrite authorization.) A billing defect can therefore
    change authorization state (bounded by the role CHECK and service_role-only
    RPC, but coupled by design).
 4. **Two availability authorities:** `feature_flags` table and registry
-   `commercialEnabled` both gate Opportunity Lab / Action Engine.
+   `commercialEnabled` both gate Opportunity Lab / Action Engine. The server
+   entitlement authority is now the grant; `feature_flags` may only narrow
+   (debt D1, not refactored).
 5. **Command Center / Executive layer** aggregate client-side across 4+
    modules — any schema change in those modules breaks them silently
    (no shared contract type across modules; the provenance columns

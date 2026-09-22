@@ -143,36 +143,17 @@ same SOURCE→VALIDATE→EXTRACT stages and land in `knowledge_items` with a
 
 ## 7. Entitlements — availability vs usage
 
-Current (verified):
-- `profiles.role ∈ {free, pro, premium, beta_tester, admin}` — **one column
-  carries both authorization role and commercial plan**. `beta_tester` and
-  `admin` are not plans; `premium` has no `ModulePlan` counterpart (the client
-  collapses it to `isPro`).
-- Module availability = `ModuleDefinition.commercialEnabled` + `minimumPlan`,
-  enforced by `route_policy.dart` **in the client only**.
-- Usage = server-side quota reservation (`try_reserve_ai_quota`) per AI call.
-- A second availability switch exists in the `feature_flags` table (D1).
-- Stripe writes `profiles.role` via `apply_stripe_subscription_state` (service_role only).
+**Status after MODULE-FOUNDATION-AND-ENTITLEMENT-02: implemented in Module
+Lab — see §13.** Kept here as the problem record from mission 01:
 
-Consequence: a free user holding a valid JWT can call the Edge Function of a
-module that is `commercialEnabled: false` (e.g. `generate-campaign`,
-`improve-post`, `decision-simulator`) directly. Quota still bounds cost, RLS
-still bounds data — so this is a monetization/boundary gap, not a data
-exposure. See MPA-F03.
-
-Proposed target (not implemented):
-
-```
-PLAN          (commercial)  free | pro | premium | business | enterprise      ← billing writes this
-ROLE          (authz)       user | admin | beta_tester (+ org roles later)     ← admin writes this
-MODULE AVAIL. (server)      module_id × plan → enabled                          ← one authority, replaces feature_flags
-USAGE         (server)      credits / AI calls / actions per period             ← existing quota RPCs
-```
-
-Server enforcement: a shared `_shared/entitlement.ts` check in each EF,
-keyed by the same `moduleId` as the client registry, evaluated **before**
-quota reservation. Individual / Professional / Small Business / Enterprise
-become plan values + usage limits, not new code paths. Pricing is out of scope.
+- `profiles.role ∈ {free, pro, premium, beta_tester, admin}` carried both
+  authorization role and commercial plan in one column; `premium` had no
+  `ModulePlan` counterpart and `ModulePlan.admin` modelled a role as a plan.
+- Module availability (`commercialEnabled` + `minimumPlan`) was enforced
+  **only in the client**; a free user with a valid JWT could call the Edge
+  Function of an unreleased module directly (MPA-F03). Quota and RLS still
+  bounded cost and data.
+- Two availability switches existed (`feature_flags` table and the registry, D1).
 
 ## 8. Security architecture — module threat model
 
@@ -264,3 +245,175 @@ before a paying individual/professional base exists.
 | MPA-F08 | P2 | Doc inaccuracies: registry count, feature-flag count, RLS evidence level, graph caveats. | CX-06/07/09/10 | FIXED. |
 | MPA-F09 | P2 | Project `CLAUDE.md` ("maximum automation… create migrations without asking") is weaker than the global governance policy (owner approval, production protection). | — | RECORDED, not rewritten (mission §07). Global policy prevails. |
 | MPA-F10 | P3 | Environment: Flutter 3.47.4 at `~/flutter` not on PATH; Supabase CLI absent; Deno 2.9.6 at `~/.deno`. Main clone and commercial worktree carry uncommitted work. | — | RECORDED; nothing touched. |
+
+### 12.1 Updates from MODULE-FOUNDATION-AND-ENTITLEMENT-02
+
+| ID | Sev (now) | Resolution | Status |
+|---|---|---|---|
+| MPA-F01 | P1 → OWNER_ACTION | Evidence corrects the `ccb065c` narrative: the four `KEYSTORE_*` secrets (created 2026-07-14 with `fd8e0fb`, a fixed CI key for the Google Sign-In SHA-1) predate `generate-keystore.yml` (2026-07-28, **0 runs**, different secret names). Classified **STALE** legacy CI key, not the Play upload key; still consumed by `build-android.yml` on `main` (91 successful runs, last 2026-09-18). Lab is safe (inherits `ccb065c`: 0 active `secrets.KEYSTORE` references). Transport patch `main-transport/0002-*` applies cleanly to `origin/main`. | Lab: SAFE · main: OWNER_ACTION (delete secrets or promote patch) |
+| MPA-F02 | P1 → P3 | The repository's local `.git/config` sets `user.name=Codex`, `user.email=noreply@openai.com` (since 2026-07-18): **234 commits** carry that author, including Claude's own mission-01 commits. `ccb065c`/`a1fa942` were made in the commercial worktree with `Co-Authored-By: Claude Sonnet 5`. Content reviewed on merit and kept. | **METADATA_ONLY**; Owner may fix the repo identity (commits of this mission pass an explicit Claude identity per command) |
+| MPA-F03 | P1 | Server-side entitlement authority built and wired into 17/17 module Edge Functions (§13). | FIXED in Module Lab (not deployed) |
+| MPA-F04 | P1 → P2 | The external agent only **inserts** suggestions (`action_queue` with `origin: 'ive_agent'`, deterministic id; `business_memory` with a source tag) under the user's own JWT/RLS; no external side effects → AEF class REVERSIBLE (B), not CONSEQUENTIAL (C). No caller in this repo; Cloud Run deployment state NOT_VERIFIABLE (production read not authorized). Class C remains blocked by MP-03. | BLOCKED_BY_GATE |
+| MPA-F06 | P1 | The ownership migration is **already applied in production** (version 20260915194037), so the preflight is now a post-hoc check for stuck rows. Read-only aggregate query delivered: `supabase/tests/preflight_ownership_and_entitlement_readonly.sql`. An automated production read was denied by the session's permission policy and not retried. | READY_FOR_OWNER |
+| MPA-F07 | P2 | Fix preserved in Lab; transport patch `main-transport/0001-*` applies cleanly to `origin/main`. | AEF_DATE_FIX_READY_FOR_MAIN = YES |
+| MPA-F11 | P3 | Pre-existing Deno lint issues in `_shared/quota.ts`, `quota_realdb_test.ts`, `project_ownership_realdb_test.ts` and 6 EF test files (identical on HEAD). | PRE_EXISTING, backlog |
+
+## 13. Entitlement Core (MODULE-FOUNDATION-AND-ENTITLEMENT-02)
+
+Implemented in Module Lab. **Not deployed; migration not applied to production.**
+
+### 13.1 Domain model — five separate responsibilities
+
+```
+IDENTITY      subject {type, id}        auth.ts resolveAuthenticatedUser (GoTrue)       user today; organization/workspace reserved
+ROLE          admin | beta_tester       subject_roles (+ legacy profiles.role)           what you may administer / preview
+PLAN          free < pro < premium      profiles.role (Stripe writes it)                 what you paid for
+AVAILABILITY  lifecycle + minimumPlan   _shared/module_policy.ts (server manifest)       whether a module is exposed, and to which plan
+USAGE         quota per period          _shared/quota.ts + try_reserve_ai_quota          how much you may still consume (unchanged)
+```
+
+Rules: ROLE ≠ PLAN · PLAN ≠ AVAILABILITY · AVAILABILITY ≠ QUOTA. Admin and
+beta_tester are never plans (`ModulePlan` is now `free/pro/premium`; the old
+`ModulePlan.admin` was removed and "admin-only" is expressed by lifecycle).
+
+Request order in every protected Edge Function:
+`authenticate → entitlement → quota → operation` (checked by MP-06 and by
+the executed harness GH-*).
+
+### 13.2 Server authority
+
+`supabase/functions/_shared/entitlement.ts`:
+
+- `mapLegacyProfileRole` — the only place the legacy column is split
+  (free/pro/premium → plan; admin/beta_tester → role on plan free; anything
+  else → plan `null` → deny).
+- `decideModuleAccess(subject, moduleId)` — pure, deterministic, default deny:
+  unauthenticated → `AUTH_REQUIRED`; unknown module → `MODULE_NOT_AVAILABLE`;
+  DEPRECATED → `MODULE_DISABLED`; unknown plan → `ENTITLEMENT_UNAVAILABLE`;
+  admin → allow; EXPERIMENTAL/INTERNAL → `MODULE_NOT_AVAILABLE`;
+  ALPHA/BETA/RC → beta_tester required; plan below minimum → `PLAN_REQUIRED`.
+- `requireModuleAccess(req, user, moduleId, cors, source?)` — the one call
+  each module EF makes; any exception or an unbound subject → 503, fail closed.
+- `isSubjectBoundTo` — a source's answer must be exactly the authenticated
+  user, from a known source, with a real plan and known roles (Codex CX1-04).
+- Nothing from the request body or custom headers is read to decide access.
+
+### 13.3 Lifecycle → access
+
+| Lifecycle | free | pro | premium | beta_tester (own plan) | admin |
+|---|---|---|---|---|---|
+| COMMERCIAL | by plan | by plan | by plan | by plan | allow |
+| RELEASE_CANDIDATE / BETA / ALPHA | deny | deny | deny | allow if plan ≥ minimum | allow |
+| INTERNAL / EXPERIMENTAL | deny | deny | deny | deny | allow |
+| DEPRECATED | deny | deny | deny | deny | deny |
+
+Admin policy: admins reach every non-deprecated module, **server-side and
+audited** (`ADMIN_ROLE` decisions are always logged) — parity with the
+legacy client route guard, not a new privilege. Beta policy: beta_tester is
+never an implicit pro/premium.
+
+Existing registry mapping (derived, legacy-preserving): released →
+COMMERCIAL; planned/inDevelopment → EXPERIMENTAL; disabled → DEPRECATED;
+every other unreleased module → INTERNAL (admin-only, exactly as the client
+already behaved). No module is BETA today; exposing the executive layer to
+beta testers is an Owner product decision (explicit `lifecycleOverride`).
+
+### 13.4 Single source of truth and drift
+
+- The server manifest (`module_policy.ts`, JSON block) is authoritative for
+  lifecycle / minimumPlan / actionClass and the Edge Function → module map.
+- The Flutter registry stays authoritative for presentation.
+- `test/core/modules/server_module_policy_drift_test.dart` fails CI if the two
+  disagree (ids, lifecycle, plan, commercialEnabled ⇔ COMMERCIAL, EF names).
+- `contracts/entitlements/decision_vectors.v1.json` (105 cases) must be
+  satisfied by **both** the server decision (`entitlement_vectors_test.ts`)
+  and the client route guard (`entitlement_parity_test.dart`).
+
+### 13.5 Feature flags vs entitlement vs registry vs quota
+
+| Concept | Owns | Where |
+|---|---|---|
+| Module registry | what a capability is (identity, presentation) | `module_registry.dart` |
+| Entitlement | who may use it (plan, role, lifecycle) | `module_policy.ts` + `entitlement.ts` |
+| Feature flag | operational rollout / kill switch — never a grant | `feature_flags` table (legacy; 2 of 6 flags duplicate availability = debt D1); `ENTITLEMENT_SUBJECT_ROLES` env |
+| Quota | how much may be consumed | `quota.ts` (unchanged) |
+
+A feature flag may only narrow what entitlement allows. D1 is not refactored
+in this mission (no functional need for the Entitlement Core).
+
+### 13.6 Edge Function enforcement matrix (21)
+
+| Kind | Functions | Entitlement |
+|---|---|---|
+| MODULE (17) | analyze-website, competitor-discovery, content-cluster, context-copilot, decision-simulator, extract-knowledge, gap-analysis, generate-campaign, generate-project-actions, generate-project-opportunities, generate-strategy, improve-post, market-analysis, niche-discovery, opportunity-discovery, process-file, revenue-planner | `requireModuleAccess` — **17/17 wired**, static (MP-06) + executed (GH-*) |
+| ENTITLEMENT (1) | module-access (new) | the discovery endpoint itself; auth required |
+| BILLING (1) | create-checkout-session | auth only — upgrade must stay reachable (parity with `kAlwaysAllowedRoutes`) |
+| PUBLIC_WEBHOOK (1) | stripe-webhook | Stripe signature, no user |
+| RETIRED (1) | ive-agent-runner | 410 for everyone |
+
+Intended behaviour change vs production: direct calls to `generate-campaign`,
+`improve-post` (INTERNAL) and `decision-simulator` (EXPERIMENTAL) by
+non-admins now get 403. No commercial screen calls them (their only callers
+are route-denied screens); the project bootstrap calls `revenue-planner`,
+`generate-project-opportunities` and `generate-project-actions`, all
+COMMERCIAL/free.
+
+### 13.7 Error contract
+
+`{ "error": CODE, "module_id": ..., "required_plan"?: ..., "correlation_id": ... }`
+— `AUTH_REQUIRED` 401 · `MODULE_NOT_AVAILABLE` 403 · `MODULE_DISABLED` 403 ·
+`PLAN_REQUIRED` 403 · `ENTITLEMENT_UNAVAILABLE` 503. `QUOTA_EXCEEDED` (429) is
+unchanged and separate. Lifecycle and internal reasons are never returned.
+Flutter translates the codes in `core/utils/snackbar_utils.dart`. Audit
+lines log a pseudonymous `subject_ref`, never the raw id, token or body.
+
+### 13.8 Client, IVE and AEF boundaries
+
+- The Flutter route guard mirrors server semantics for UX (lifecycle,
+  premium, beta) and is **not** a security boundary. An unresolved profile
+  never unlocks a paid or beta route.
+- IVE capability discovery: `module-access` EF → `EntitlementService` →
+  `serverModuleAccessProvider` (`ServerModuleAccess`, default-deny cache). IVE
+  offers only `allowedModuleIds` and never infers entitlement from the UI; an
+  error means "nothing extra", never "everything". Not yet consumed by a
+  screen (no new autonomous tools in this mission).
+- AEF boundary: entitlement answers "may this subject use this capability";
+  AEF answers "may this action execute, with which approval and receipt".
+  Future flow: `IDENTITY → ENTITLEMENT → MODULE → AEF POLICY → HUMAN GATE → TOOL → RECEIPT`.
+  `actionClass` (READ_ONLY / REVERSIBLE / CONSEQUENTIAL — AEF's own taxonomy)
+  is promotion metadata, not runtime enforcement; MP-03 blocks any
+  CONSEQUENTIAL module from RC/COMMERCIAL while `AEF_PERSISTENCE_AVAILABLE = false`.
+
+### 13.9 Storage, migration and rollback
+
+Migration `20260923000000_entitlement_subject_roles.sql` (Lab only): additive
+`public.subject_roles`, RLS select-own, no client writes, backfill of existing
+admin/beta_tester, idempotent. `profiles.role` untouched and still written by
+Stripe as the PLAN. Verified on a disposable PostgreSQL 17 with all 17
+migrations applied: `supabase/tests/entitlement_subject_roles_rls_test.sql`
+(owner, non-owner, anon, self-grant, service_role, CHECKs, billing rewrite)
+PASS, mutation-checked (a permissive SELECT or INSERT policy makes it fail).
+
+Controlled rollout: (1) Owner runs the read-only preflight
+`supabase/tests/preflight_ownership_and_entitlement_readonly.sql`;
+(2) apply the migration; (3) deploy the EFs with the default legacy source;
+(4) set `ENTITLEMENT_SUBJECT_ROLES=1` to read roles from the new table.
+Rollback: unset the flag (instant) → redeploy previous EF versions if needed →
+`DROP TABLE public.subject_roles` (nothing depends on it). No user is
+reclassified at any step. Revoking a role = remove it from `subject_roles`
+and from `profiles.role` if it is a legacy role there.
+
+### 13.10 Tenancy (future-proofing, not tenant-ready)
+
+`subject_type` is part of the subject and of the `subject_roles` primary key;
+the CHECK allows only `user`. Organization/workspace needs membership, scope
+and data isolation in the decision — not built (YAGNI). `isSubjectBoundTo`
+rejects non-user subjects until then.
+
+### 13.11 Verified vs not verified
+
+VERIFIED (Module Lab): decision logic, default deny, forged client state,
+subject binding, 17/17 EF wiring executed, client/server parity, registry
+drift, RLS of the new table on a disposable database, legacy role mapping.
+NOT_VERIFIED: production RLS, deployed EF behaviour, live admin/self-promotion
+trigger behaviour, Supabase log retention/access for the audit lines.

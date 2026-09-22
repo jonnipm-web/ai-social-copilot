@@ -1,7 +1,10 @@
 # Module Lifecycle & Promotion Gate
 
 Mission: `INSIGHTVALUES-MODULE-PORTFOLIO-ARCHITECTURE-01`
-Status: DEFINED (process). Enforcement is by mission review + Codex, not yet by CI.
+Status: DEFINED. Since MODULE-FOUNDATION-AND-ENTITLEMENT-02 the two hard
+blockers and the entitlement invariants are **enforced by CI**
+(`edge-function-tests.yml` job `entitlement-core-ci` + `flutter test`);
+the remaining dimensions are enforced by mission review + Codex.
 Gate owner: Agente Martins (technical) · Paulo (commercial promotion)
 
 ## 1. Lifecycle
@@ -13,9 +16,9 @@ EXPERIMENTAL → INTERNAL → ALPHA → BETA → RELEASE_CANDIDATE → COMMERCIA
 | State | Who can reach it | Registry today (`ModuleStatus` / flags) | Lives on |
 |---|---|---|---|
 | EXPERIMENTAL | developers only; may not compile into release | not registered, or `planned`/`inDevelopment`, `adminClickable: false` | Module Lab branch only |
-| INTERNAL | admin | `internal`, `minimumPlan: admin`, `commercialEnabled: false` | Module Lab |
-| ALPHA | admin + named testers | `inDevelopment`, `commercialEnabled: false` (+ `beta_tester` role once plan/role are separated) | Module Lab |
-| BETA | opt-in users | `beta`, `commercialEnabled: false` or plan-gated | Module Lab → may be synced to commercial dark |
+| INTERNAL | admin (server: `ADMIN_ROLE`, audited) | derived for every unreleased module not planned/in development; `commercialEnabled: false` | Module Lab |
+| ALPHA | admin + beta_tester role (on its own plan) | explicit `lifecycleOverride` | Module Lab |
+| BETA | admin + beta_tester role (on its own plan) | explicit `lifecycleOverride` | Module Lab → may be synced to commercial dark |
 | RELEASE_CANDIDATE | same as BETA, frozen scope | `beta` | commercial branch, flag-off |
 | COMMERCIAL | plan-entitled users | `active`, `commercialEnabled: true` | commercial / main |
 | DEPRECATED | nobody new; data retained | `disabled`, `commercialEnabled: false` | any |
@@ -32,7 +35,7 @@ Each dimension is PASS / N/A (with reason) / FAIL. "N/A" needs a written reason.
 | # | Dimension | Minimum evidence |
 |---|---|---|
 | G1 | FUNCTIONAL | acceptance criteria met; physical Android run for mobile surfaces |
-| G2 | SECURITY | RLS on every new table; server-side authz in every new EF; SSRF via `safe_fetch` for any outbound fetch; injection delimiter for user/web content in prompts; Codex adversarial review for CLASS D triggers |
+| G2 | SECURITY | RLS on every new table (disposable-DB test like `supabase/tests/entitlement_subject_roles_rls_test.sql`); every new EF classified in `module_policy.ts` and, if MODULE-kind, gated by `requireModuleAccess` (CI: MP-04/MP-06/GH-*); SSRF via `safe_fetch` for any outbound fetch; injection delimiter for user/web content in prompts; Codex adversarial review for CLASS D triggers |
 | G3 | AUTOMATION | structured inputs/outputs documented; IVE can invoke it through `IveInteractionRequest`/`context-copilot`; any write path is AEF-compatible |
 | G4 | MONETIZATION | who pays, target plan, usage unit, cost per unit, API dependency |
 | G5 | IVE INTEGRATION | Ask-IVE entry points; context contribution; exclusion regions for any new floating UI |
@@ -54,7 +57,7 @@ Each dimension is PASS / N/A (with reason) / FAIL. "N/A" needs a written reason.
 | INTERNAL → ALPHA | + G1, G14 |
 | ALPHA → BETA | + G3, G5, G6, G7, G9, G12 |
 | BETA → RELEASE_CANDIDATE | all G1–G14; Codex review PASS or PASS_WITH_FINDINGS with no P0/P1 |
-| BETA → RELEASE_CANDIDATE (hard blocker) | any module that exposes an Edge Function must be covered by **server-side entitlement** (module × plan checked in the EF before quota reservation, MPA-F03); any write-capable agent path must run through AEF with persistent Human Gate + receipts (MPA-F04) |
+| BETA → RELEASE_CANDIDATE (hard blocker, CI-enforced) | every Edge Function is classified (MP-04) and every MODULE-kind function calls `requireModuleAccess` after auth and before quota (MP-06 static + GH-* executed denial tests: 401/503/403 with zero quota RPC and zero outbound fetch); server manifest and Flutter registry agree (drift test); client and server satisfy the shared decision vectors; no CONSEQUENTIAL (class C) module at RC/COMMERCIAL while `AEF_PERSISTENCE_AVAILABLE = false` (MP-03) |
 | RELEASE_CANDIDATE → COMMERCIAL | **P0 = 0 · P1 = 0 · Codex = PASS · security = PASS · entitlement defined (plan + usage unit) · telemetry defined · rollback proven** · Owner approval (Paulo) |
 | any → DEPRECATED | data-retention decision, route removal plan, registry entry kept (never deleted — registry rule) |
 
