@@ -7,6 +7,9 @@ on:
       - 'supabase/functions/**'
       - 'contracts/aef/**'
       - 'aef/**'
+      - 'supabase/migrations/**'
+      - 'supabase/tests/**'
+      - 'scripts/ci/run_disposable_db_tests.sh'
   workflow_dispatch:
 
 jobs:
@@ -65,6 +68,33 @@ jobs:
           GROQ_API_KEY: "test-key-ci"
         run: |
           deno test --allow-env --allow-read --allow-net=deno.land,esm.sh             supabase/functions/_shared/entitlement_test.ts             supabase/functions/_shared/entitlement_vectors_test.ts             supabase/functions/_shared/module_policy_test.ts             supabase/functions/_shared/module_gate_handlers_test.ts             supabase/functions/module-access/index_test.ts
+
+  disposable-db-rls-ci:
+    name: Migrations + RLS on a disposable PostgreSQL 17 (MODULE-FOUNDATION-AND-ENTITLEMENT-02)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: ci-disposable-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply stubs + every migration, prove idempotency, run subject_roles RLS tests
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGPASSWORD: ci-disposable-only
+        run: bash scripts/ci/run_disposable_db_tests.sh
 
   contract-and-aef-ci:
     name: AEF contract + kernel CI (IV-AEF-FOUNDATION-01)
