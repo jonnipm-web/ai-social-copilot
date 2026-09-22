@@ -1,90 +1,41 @@
-name: LEGACY — GERAR APK
+name: LEGACY — GERAR APK (DESATIVADO — incidente de segurança)
 
+# PLAY-READINESS-18 — DISABLED, DO NOT RE-ENABLE.
+#
+# This workflow used to auto-trigger on every push to `main` and:
+#   - discarded the real, committed android/ folder via
+#     `flutter create --platforms android`, rebuilding from a bare
+#     template that has NONE of this project's actual Android config
+#     (16KB page-size fix, correct applicationId defaultConfig, manifest,
+#     permissions, etc.);
+#   - signed the resulting APK using secrets.KEYSTORE_BASE64 and related
+#     secrets -- the same secret names generate-keystore.yml's own
+#     (compromised, plaintext-password) output was meant to populate. See
+#     that file's own disabled-workflow comment for the full incident.
+#
+# The correct, currently-active CI gate for this project is
+# .github/workflows/flutter-validation.yml, which builds DEBUG only from
+# the real committed android/ folder and explicitly does not touch any
+# release-signing secret.
+#
+# The trigger below is intentionally removed so this workflow can never
+# run, accidentally or otherwise, while it remains in the repository for
+# historical/audit reference.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
+    inputs:
+      disabled_notice:
+        description: "This workflow is permanently disabled -- see the comment at the top of this file."
+        required: false
+        default: "disabled"
 
 jobs:
-  build:
+  disabled:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Baixar código do repositório
-        uses: actions/checkout@v4
-
-      - name: Configurar Java 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Configurar Flutter (versao estavel mais recente)
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: false
-
-      - name: Criar arquivo .env com as credenciais
+      - name: Refuse to run
         run: |
-          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" > .env
-          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
-
-      - name: Adicionar suporte à plataforma Android
-        run: flutter create --platforms android --project-name ai_social_copilot .
-
-      - name: Fixar AGP para 8.11.1 (compativel com Flutter Gradle plugin)
-        run: |
-          if [ -f android/settings.gradle.kts ]; then
-            sed -i 's/id("com.android.application") version "[^"]*"/id("com.android.application") version "8.11.1"/g' android/settings.gradle.kts
-            sed -i 's/id("com.android.library") version "[^"]*"/id("com.android.library") version "8.11.1"/g' android/settings.gradle.kts
-            echo "=== settings.gradle.kts ===" && cat android/settings.gradle.kts
-          fi
-
-      - name: Configurar Google Sign-In (google-services.json + strings.xml)
-        run: |
-          cp android/app/google-services.json android/app/google-services.json || true
-          mkdir -p android/app/src/main/res/values
-          printf '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <string name="app_name">AI Social Copilot</string>\n    <string name="default_web_client_id">221504834589-jll1257ccns2sprai9ps949rv21gf7p2.apps.googleusercontent.com</string>\n</resources>\n' \
-            > android/app/src/main/res/values/strings.xml
-
-      - name: Configurar keystore fixo para assinatura release
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-          KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
-          KEYSTORE_KEY_ALIAS: ${{ secrets.KEYSTORE_KEY_ALIAS }}
-          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
-        run: |
-          echo "$KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
-          echo "Keystore decodificado com sucesso"
-          GRADLE=android/app/build.gradle.kts
-          sed -i 's/    buildTypes {/    signingConfigs {\n        create("release") {\n            storeFile = file("release.keystore")\n            storePassword = System.getenv("KEYSTORE_STORE_PASSWORD")\n            keyAlias = System.getenv("KEYSTORE_KEY_ALIAS")\n            keyPassword = System.getenv("KEYSTORE_KEY_PASSWORD")\n        }\n    }\n    buildTypes {/' "$GRADLE"
-          sed -i 's/signingConfig = signingConfigs.getByName("debug")/signingConfig = signingConfigs.getByName("release")/' "$GRADLE"
-          echo "=== build.gradle.kts ===" && cat "$GRADLE"
-
-      - name: Instalar dependências
-        run: flutter pub get
-
-      - name: Corrigir file_picker para AGP 8.x (jcenter e namespace se necessario)
-        run: |
-          find ~/.pub-cache -path "*/file_picker-*/android/build.gradle" | while read f; do
-            sed -i 's/jcenter()/mavenCentral()/g' "$f"
-            if ! grep -q 'namespace' "$f"; then
-              sed -i '/^android {/a\    namespace "com.mr.flutter.plugin.filepicker"' "$f"
-            fi
-            echo "=== $f ===" && cat "$f"
-          done
-
-      - name: Build APK release
-        env:
-          KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
-          KEYSTORE_KEY_ALIAS: ${{ secrets.KEYSTORE_KEY_ALIAS }}
-          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
-        run: flutter build apk --release
-
-      - name: Publicar APK como artefato
-        uses: actions/upload-artifact@v4
-        with:
-          name: ai-social-copilot-android
-          path: build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 30
+          echo "This workflow is permanently disabled due to a security incident."
+          echo "See the comment block at the top of .github/workflows/build-android.yml"
+          echo "Use flutter-validation.yml (debug-only, real android/ folder) instead."
+          exit 1
