@@ -23,6 +23,50 @@ name: Deploy Edge Functions (controlled, single-function)
 # selection/validation logic and is the same script
 # .github/workflows/deploy-selftest.yml uses to prove this behavior on
 # every push, without ever calling `supabase` or touching production.
+#
+# IV-SECURITY-REMEDIATION-03: this job also runs
+# scripts/ci/check_deploy_governance.sh before resolving/deploying
+# anything. Before this, the repo-wide static invariants it enforces
+# (no-verify-jwt exception list, allowlist/config.toml consistency, the
+# ive-agent-runner/context-copilot/wildcard checks) were only ever
+# exercised by deploy-selftest.yml, a separate, non-blocking workflow --
+# a Codex adversarial review correctly noted this meant a real
+# deploy could proceed even while that static gate was failing.
+# resolve_deploy_selection.sh's own checks (allowlist membership, the
+# ive-agent-runner hard block, name-format validation) were always
+# enforced at deploy time regardless; this closes the remaining gap.
+#
+# IV-DEPLOY-PIPELINE-SECURITY-01: `${{ inputs.function }}` /
+# `${{ needs.resolve.outputs.function }}` used to be interpolated
+# directly into these run: blocks' shell text (`'${{ inputs.function }}'`).
+# GitHub Actions' `${{ }}` is a raw text substitution into the script
+# BEFORE bash ever parses it -- a `function` value containing a single
+# quote (in a single-quoted context) or a double quote (in a
+# double-quoted context) broke out of the intended argument and ran
+# arbitrary shell in this job, including the `deploy` job where
+# SUPABASE_ACCESS_TOKEN is present in the environment. Proven locally
+# with a benign payload (a marker-file creation, no secrets touched) in
+# both a single-quote and a double-quote context before this fix; see
+# the mission report for the exact reproduction. This bypassed every
+# governance control below it -- resolve_deploy_selection.sh's own
+# allowlist/format/hard-block checks never even ran on the attacker's
+# actual payload, since the injection happened in this workflow's shell
+# text, not as an argument the script received.
+#
+# Fixed by passing the input through `env:` instead: GitHub Actions sets
+# an actual OS environment variable from the expression (no shell
+# re-parsing involved), and every reference below uses a properly
+# double-quoted shell variable ("$FUNCTION_INPUT"), which bash treats as
+# one opaque string value regardless of its content -- no quote,
+# semicolon, backtick, `$()`, or newline in the input can become shell
+# syntax. resolve_deploy_selection.sh's existing strict format check
+# (`[a-z0-9]([a-z0-9-]*[a-z0-9])?` only) still runs exactly as before and
+# still rejects anything else, now as originally intended -- this fix
+# does not duplicate or replace that validation, it just stops bypassing
+# it. `workflow_dispatch` still requires existing repo write access to
+# trigger at all; this fix removes a privilege-escalation-shaped
+# shortcut for that same actor, it does not change who can invoke the
+# workflow.
 
 on:
   workflow_dispatch:
@@ -48,24 +92,32 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Require explicit confirmation
+        env:
+          CONFIRM_INPUT: ${{ inputs.confirm }}
         run: |
-          if [ "${{ inputs.confirm }}" != "DEPLOY" ]; then
+          if [ "$CONFIRM_INPUT" != "DEPLOY" ]; then
             echo "Confirmation failed. Set confirm=DEPLOY to proceed." >&2
             exit 1
           fi
 
+      - name: Repo-wide deploy governance gate (DG2) -- must pass before any resolution/deploy
+        run: |
+          bash scripts/ci/check_deploy_governance.sh
+
       - name: Resolve and validate function selection (no production access)
         id: resolve
+        env:
+          FUNCTION_INPUT: ${{ inputs.function }}
         run: |
           set -euo pipefail
-          echo "Requested function: '${{ inputs.function }}'"
-          ARGS="$(bash scripts/ci/resolve_deploy_selection.sh '${{ inputs.function }}')"
+          echo "Requested function: '$FUNCTION_INPUT'"
+          ARGS="$(bash scripts/ci/resolve_deploy_selection.sh "$FUNCTION_INPUT")"
           echo "Resolved argv (one per line):"
           echo "$ARGS"
-          echo "function=${{ inputs.function }}" >> "$GITHUB_OUTPUT"
+          echo "function=$FUNCTION_INPUT" >> "$GITHUB_OUTPUT"
           {
             echo "## Deploy resolution"
-            echo "Requested: \`${{ inputs.function }}\`"
+            echo "Requested: \`$FUNCTION_INPUT\`"
             echo '```'
             echo "supabase $ARGS"
             echo '```'
@@ -84,8 +136,9 @@ jobs:
       - name: Deploy exactly one function (re-resolved, never trusts the prior job's output alone)
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          FUNCTION_INPUT: ${{ needs.resolve.outputs.function }}
         run: |
           set -euo pipefail
-          mapfile -t ARGS < <(bash scripts/ci/resolve_deploy_selection.sh '${{ needs.resolve.outputs.function }}')
+          mapfile -t ARGS < <(bash scripts/ci/resolve_deploy_selection.sh "$FUNCTION_INPUT")
           echo "→ Running: supabase ${ARGS[*]}"
           supabase "${ARGS[@]}"

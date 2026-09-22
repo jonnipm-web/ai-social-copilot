@@ -24,6 +24,17 @@ jobs:
       FLAVOR: iveAvatarLab
       TARGET: lib/main_ive_avatar_lab.dart
       APK_NAME: app-iveAvatarLab-debug.apk
+      # IV-DEPLOY-PIPELINE-SECURITY-01: set once at job level so every step
+      # references the value as a properly quoted shell variable
+      # ("$SOURCE_REF_INPUT") instead of interpolating
+      # ${{ inputs.source_ref }} directly into run: shell text -- the same
+      # GitHub Actions script-injection class fixed in
+      # deploy-edge-functions.yml. This job never had Supabase/Firebase/
+      # production-keystore secrets in scope (see this file's header), so
+      # the impact was bounded to the runner itself/build artifact, not
+      # credential exposure -- still a real code-execution defect, fixed
+      # the same way regardless.
+      SOURCE_REF_INPUT: ${{ inputs.source_ref }}
 
     steps:
       # ── 1. Checkout da source_ref (código do Avatar) ─────────────────────────
@@ -37,7 +48,7 @@ jobs:
       - name: Registrar referência compilada
         run: |
           echo "=== REFERÊNCIA COMPILADA ==="
-          echo "source_ref (input):  ${{ inputs.source_ref }}"
+          echo "source_ref (input):  $SOURCE_REF_INPUT"
           echo "branch atual:        $(git branch --show-current || echo '(detached HEAD)')"
           echo "commit HEAD:         $(git rev-parse HEAD)"
           echo "commit curto:        $(git rev-parse --short HEAD)"
@@ -222,7 +233,7 @@ jobs:
           COMMIT_SHA=$(git rev-parse HEAD)
           COMMIT_SHORT=$(git rev-parse --short HEAD)
           NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          SOURCE_REF="${{ inputs.source_ref }}"
+          SOURCE_REF="$SOURCE_REF_INPUT"
 
           FLUTTER_VER=$(flutter --version 2>/dev/null | grep "Flutter" | awk '{print $2}' || echo "unknown")
           DART_VER=$(dart --version 2>&1 | awk '{print $4}')
@@ -300,7 +311,7 @@ jobs:
           echo "╔════════════════════════════════════════════════════════╗"
           echo "║      IVE AVATAR LAB — BUILD CONCLUÍDO                 ║"
           echo "╠════════════════════════════════════════════════════════╣"
-          echo "║  source_ref:   ${{ inputs.source_ref }}"
+          echo "║  source_ref:   $SOURCE_REF_INPUT"
           echo "║  Package:      ${{ env.APK_PACKAGE }}"
           echo "║  Versão:       ${{ env.APK_VERSION_NAME }} (${{ env.APK_VERSION_CODE }})"
           echo "║  Tamanho:      ${{ env.APK_SIZE_MB }} MB"

@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://insightvalues.internal/contracts/aef/execution-receipt.v1.schema.json",
+  "title": "ExecutionReceipt v1",
+  "description": "What a future AEF records after governing (and, if allowed, executing) an action. This is AEF OPERATIONAL TRUTH ('did AEF run this, under what policy decision, with what outcome') -- it is explicitly NOT Evidence & Trust's domain truth ('is this claim/entity verified'). Do not merge the two schemas even if they seem to overlap superficially; they answer different questions for different audiences and evolve independently (see README).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "receipt_id",
+    "request_id",
+    "actor",
+    "action",
+    "policy_decision",
+    "started_at",
+    "outcome"
+  ],
+  "properties": {
+    "contract_version": { "type": "string", "const": "1.0" },
+    "receipt_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "request_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "actor": { "$ref": "execution-request.v1.schema.json#/definitions/Actor" },
+    "action": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+    },
+    "policy_decision": {
+      "type": "string",
+      "enum": ["ALLOWED", "DENIED"],
+      "description": "What the (future) AEF policy engine decided -- independent of and prior to actual execution outcome. A DENIED receipt records a request that was correctly refused; it is not a failure of the contract, it is proof the contract worked."
+    },
+    "human_gate_ref": {
+      "type": ["string", "null"],
+      "maxLength": 200
+    },
+    "tool": {
+      "type": ["string", "null"],
+      "maxLength": 200,
+      "description": "Which tool/adapter actually performed the action, if any."
+    },
+    "started_at": { "type": "string", "format": "date-time" },
+    "completed_at": { "type": ["string", "null"], "format": "date-time" },
+    "outcome": {
+      "type": "string",
+      "enum": ["SUCCESS", "FAILURE", "PARTIAL", "ROLLED_BACK", "NOT_EXECUTED"],
+      "description": "NOT_EXECUTED covers policy_decision=DENIED (nothing ran) as well as any consequential action correctly blocked by the failure model (Section 15) before execution."
+    },
+    "verification_ref": {
+      "type": ["string", "null"],
+      "maxLength": 300,
+      "description": "Reference to independent evidence that the action actually happened as recorded (e.g. a re-query confirming state changed) -- distinct from the domain-truth verification Evidence & Trust would separately record."
+    },
+    "error": {
+      "type": ["string", "null"],
+      "maxLength": 1000
+    },
+    "rollback_ref": {
+      "type": ["string", "null"],
+      "maxLength": 300
+    },
+    "deployment_identity": {
+      "type": ["string", "null"],
+      "maxLength": 200,
+      "description": "E.g. a commit SHA or deployed version identifier for whatever code executed this action -- ties an ExecutionReceipt back to Deployment/Runtime Truth (see docs/ive/OUT_OF_BAND_DEPLOYMENT_THREAT_MODEL.md from a prior mission)."
+    }
+  }
+}
