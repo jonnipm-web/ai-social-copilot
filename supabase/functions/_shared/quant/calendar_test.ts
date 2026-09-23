@@ -173,3 +173,14 @@ Deno.test('SF-07 DAILY bars stamped with a local evening time map to the exchang
   const labels = [dailyBar('2026-01-15'), dailyBar('2026-01-16')];
   assertEquals(assessSessionFreshness(labels, 'DAILY', 'XNYS', labels[1].t, Date.UTC(2026, 0, 17, 12)).context.nonSessionBars, 0);
 });
+
+Deno.test('CAL-08 Codex CXF2-01 rejected with evidence: US markets were OPEN on 2021-06-18; Juneteenth closures start in 2022', () => {
+  // Juneteenth became a federal holiday on 2021-06-17; NYSE/Nasdaq traded on
+  // Friday 2021-06-18 and first closed for Juneteenth on 2022-06-20 (observed).
+  // Sources: Fortune 2021-06-18 "Juneteenth … markets open"; NY Fed operating
+  // policy 2021-06-17; NYSE rule filing SR-NYSE-2021-56 (adds the holiday from 2022).
+  assertEquals(isTradingDay(NYSE, '2021-06-18'), true);
+  assertEquals(isTradingDay(NASDAQ, '2021-06-18'), true);
+  assertEquals(isTradingDay(NYSE, '2022-06-20'), false);
+  assertEquals(isTradingDay(NYSE, '2027-06-18'), false); // June 19 2027 is a Saturday → Friday observed
+});

@@ -67,3 +67,11 @@ Date-only daily bars are session-date labels, not instants.
 Codex claimed 2021-12-31 should be a US holiday. NYSE Rule 7.2: when New
 Year's Day falls on a Saturday the market is **not** closed on the
 preceding Friday — NYSE traded on 2021-12-31. Test CAL-07 pins this.
+
+## 6. Codex CXF2-01 (rejected, pinned)
+
+Codex Final claimed NYSE closed on 2021-06-18 for Juneteenth. US equity
+markets were **open** that day (Fortune, 2021-06-18: "Juneteenth … markets
+open"; NY Fed operating policy 2021-06-17); exchanges first closed for
+Juneteenth in 2022 (observed Monday 2022-06-20). NYSE filing SR-NYSE-2021-56
+adds the holiday from 2022. Test CAL-08 pins this.
