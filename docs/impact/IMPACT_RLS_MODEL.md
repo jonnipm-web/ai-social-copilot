@@ -144,3 +144,12 @@ the review fields, only from PENDING / NEEDS_CONTEXT. Composite FKs
 PostgreSQL 17 (`impact_evidence_rls_test.sql`, 52 checks: owner,
 cross-user, cross-investigation, cross-project, anon, privileges, spoofing).
 The V03b table count is now 11.
+
+Concurrency (Codex I3F-01 / I3V-01): artifact and evidence writes take the
+investigation-row lock before their cross-row checks; lock order is always
+candidate row → investigation row (a promotion locks its candidate first),
+so concurrent review / promotion / artifact / evidence writers serialize
+without deadlock (two-session CI test `impact_evidence_race_test.sh`, 4
+orders). The checks assume READ COMMITTED (PostgREST / Supabase default);
+running these writes under REPEATABLE READ or SERIALIZABLE is not supported
+(residual, documented). Orphan-source reconciliation (I3F-03) is deferred.

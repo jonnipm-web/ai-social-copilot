@@ -390,6 +390,13 @@ BEGIN
   -- artifact-bound locator.
   -- The source of an artifact carries ONLY reviewed candidates of it: no
   -- free-form evidence may cite an artifact source (review cannot be skipped).
+  -- Lock order everywhere is candidate row → investigation row (a review
+  -- UPDATE locks its candidate, then the audit writer locks the investigation);
+  -- a promotion therefore locks its candidate FIRST (Codex I3V-01: no deadlock).
+  IF NEW.locator ? 'artifact' THEN
+    PERFORM 1 FROM public.impact_evidence_candidates c
+    WHERE c.investigation_id = NEW.investigation_id AND c.ref || '.ev' = NEW.ref FOR UPDATE;
+  END IF;
   -- Same investigation-row lock as impact_artifacts_validate (Codex I3F-01).
   PERFORM 1 FROM public.impact_investigations WHERE id = NEW.investigation_id FOR UPDATE;
   IF (NEW.locator IS NULL OR NOT NEW.locator ? 'artifact')

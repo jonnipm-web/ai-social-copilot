@@ -53,10 +53,10 @@ echo "$out" | grep -qE '^IMPACT_REGISTRY_RLS: PASS [0-9]+ checks$'
 out="$(run -d "$DB" -tA -f "$ROOT/supabase/tests/impact_evidence_rls_test.sql")"
 echo "$out" | tail -1
 echo "$out" | grep -qE '^IMPACT_EVIDENCE_RLS: PASS [0-9]+ checks$'
-# Codex I3F-01: artifact vs free-form evidence on one source, two sessions, both orders.
+# Codex I3F-01 / I3V-01: concurrent writers (artifact vs evidence; review vs promotion), two sessions, both orders.
 out="$(bash "$ROOT/supabase/tests/impact_evidence_race_test.sh" "$PSQL" -h "$HOST" -v ON_ERROR_STOP=1 -q -d "$DB")"
 echo "$out" | tail -1
-echo "$out" | grep -qx 'IMPACT_EVIDENCE_RACE: PASS 2 orders'
+echo "$out" | grep -qx 'IMPACT_EVIDENCE_RACE: PASS 4 orders'
 
 # IV-IMPACT-I1 — engine → database parity: rows produced by the REAL Lab flow
 # (engine + store row mappers) must satisfy every database invariant.

@@ -33,4 +33,15 @@ race "$(ev e-race2 art-race2)" "$(art art-race2 7)" 'IMPACT_ARTIFACT_SOURCE_INVA
 
 got="$("${P[@]}" -tA -c "SELECT (SELECT count(*) FROM public.impact_artifacts WHERE ref LIKE 'art-race%') || '/' || (SELECT count(*) FROM public.impact_evidence WHERE ref LIKE 'e-race%') || '/' || public.impact_audit_chain_ok('$IE');")"
 [ "$got" = "1/1/true" ] || { echo "IMPACT_EVIDENCE_RACE: FAIL (state $got)"; exit 1; }
-echo "IMPACT_EVIDENCE_RACE: PASS 2 orders"
+
+# Codex I3V-01: a review and a promotion of the SAME candidate, both orders —
+# one wins, the other fails with an invariant error, never a deadlock (40P01).
+"${P[@]}" -c "SET ROLE service_role; INSERT INTO public.impact_evidence_candidates (investigation_id, ref, artifact_ref, artifact_hash, locator, excerpt, excerpt_hash, claim_ref, generation_method, created_by)
+  VALUES ('$IE','k-race','art-1',repeat('1',64),'{\"kind\":\"TEXT_LINES\",\"lineStart\":1,\"lineEnd\":1}','Annual report.',encode(sha256(convert_to('Annual report.','UTF8')),'hex'),'c2','ANALYST_LOCATOR','$UE');" >/dev/null
+promote() { echo "INSERT INTO public.impact_evidence (investigation_id, ref, claim_ref, source_ref, about_org_ref, relationship, relationship_basis, excerpt, excerpt_hash, locator, personal_data, added_at, created_by) VALUES ('$IE','$1.ev','c2','art-1','org-wellspring','CONTEXTUALIZES','HUMAN_ASSESSED','Annual report.',encode(sha256(convert_to('Annual report.','UTF8')),'hex'),jsonb_build_object('artifact', jsonb_build_object('ref','art-1','hash',repeat('1',64),'locator','{\"kind\":\"TEXT_LINES\",\"lineStart\":1,\"lineEnd\":1}'::jsonb)),'NONE','2026-09-22T00:00:00Z','$UE');"; }
+reject() { echo "UPDATE public.impact_evidence_candidates SET review_status = 'REJECTED', reviewed_by = '$UE', reviewed_at = '2026-09-22T00:00:00Z', updated_by = '$UE' WHERE investigation_id = '$IE' AND ref = '$1';"; }
+race "$(reject k3)" "$(promote k3)" 'IMPACT_ARTIFACT_EVIDENCE_INVALID'
+race "$(promote k-race)" "$(reject k-race)" 'IMPACT_CANDIDATE_INVALID'
+got="$("${P[@]}" -tA -c "SELECT string_agg(ref || ':' || review_status, ',' ORDER BY ref) || '/' || (SELECT count(*) FROM public.impact_evidence WHERE ref IN ('k3.ev','k-race.ev')) || '/' || public.impact_audit_chain_ok('$IE') FROM public.impact_evidence_candidates WHERE ref IN ('k3','k-race');")"
+[ "$got" = "k-race:ACCEPTED,k3:REJECTED/1/true" ] || { echo "IMPACT_EVIDENCE_RACE: FAIL (review race state $got)"; exit 1; }
+echo "IMPACT_EVIDENCE_RACE: PASS 4 orders"
