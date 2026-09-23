@@ -55,3 +55,17 @@ provider   provenance   provider     entity   verification  indicators  report
 | Projects | `Investigation.projectId` + actor project check | Persisted with owner/project RLS. |
 | AEF | `requestImpactAction()` returns BLOCKED for class C | Impact → ActionIntent → AEF → policy → Human Gate → tool → receipt. |
 | Providers | `ImpactSourceProvider` + capability declaration | Registry adapters per jurisdiction through `safe_fetch.ts`. |
+
+## I1 — Persistence and Lab API
+
+```
+client (admin) ──JWT──► impact-lab EF ─ auth ─ entitlement('impact') ─ schema
+                              │ reads: caller JWT → PostgreSQL RLS
+                              │ engine: server clock + server provider registry
+                              └ writes: service_role → DB invariants + trigger audit
+```
+
+The pure core stays pure: the Lab service receives a store, the caller id and
+the server clock by injection; only `impact-lab/` touches Supabase. See
+IMPACT_PERSISTENCE_MODEL.md, IMPACT_RLS_MODEL.md, IMPACT_LAB_API.md and
+IMPACT_PROVIDER_REGISTRY.md.

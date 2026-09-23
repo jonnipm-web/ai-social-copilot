@@ -32,3 +32,18 @@ persistence, network, auth or external actions).
   never a paid badge.
 - Ads must not be shown next to reports in a way that implies endorsement;
   advertiser categories for Impact pages need a policy before ads ship.
+
+## Status after I1
+
+I1 (Lab persistence + RLS + Lab EF + server provider registry) is complete in
+the Lab: migration not applied to production, EF not deployed.
+
+Before any non-Lab exposure: decide the service_role residual (option A
+least-privilege writer role or B database-side procedures —
+IMPACT_RLS_MODEL.md §6), apply the migration through the normal production
+gate, add the EF to the deploy allowlist through its own gate.
+
+Next gate candidates (decision for Agente Martins): **I2 Registry
+Intelligence** (first real registry adapter via safe_fetch) — recommended,
+since identity confirmation now depends only on provider snapshots — or the
+architectural closure of the service_role residual first.

@@ -58,3 +58,16 @@ beneficiary, organization, audit, registry, news, Knowledge — across `lib/`,
 | `flutter analyze --fatal-warnings --no-fatal-infos` | PASS (0 errors, 0 warnings, 448 infos) |
 | `flutter test` | PASS 462/462 |
 | Deno (`_shared/`, `module-access/`, `aef/`, `contracts/aef/validators_test.ts`) | PASS 346/346 (real-DB tests self-skip without a DB) |
+
+## 5. I1 — Persistence + RLS (IV-IMPACT-I1-PERSISTENCE-RLS-01)
+
+| Asset | Classification | Where |
+|---|---|---|
+| Lab persistence (8 tables, RLS, invariants, trigger-written audit) | EXPERIMENTAL — **not applied to production** | `supabase/migrations/20260924010000_impact_lab_persistence.sql` |
+| Server-side provider registry (closes CF-06) | EXPERIMENTAL | `_shared/impact/provider_registry.ts` |
+| Lab contract / store / service | EXPERIMENTAL | `_shared/impact/lab_{contract,store,service}.ts` |
+| `impact-lab` Edge Function (admin-only) | EXPERIMENTAL — **not deployed** | `supabase/functions/impact-lab/` |
+| DB tests (RLS + invariants, engine-row parity) | CI (`disposable-db-rls-ci`) | `supabase/tests/impact_lab_rls_test.sql`, `impact_lab_engine_rows.ts` |
+
+Docs: IMPACT_PERSISTENCE_MODEL · IMPACT_RLS_MODEL · IMPACT_LAB_API ·
+IMPACT_PROVIDER_REGISTRY.

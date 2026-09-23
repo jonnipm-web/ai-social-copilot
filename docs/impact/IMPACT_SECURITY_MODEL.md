@@ -80,3 +80,13 @@ indicators require human review.
 Source metadata: while the investigation exists · snapshots: 730 days ·
 user evidence: 365 days · verification results: history kept with the
 investigation · audit trail: 2,555 days. Enforced with persistence.
+
+## 9. I1 update
+
+- RLS is now **applicable and tested** on PostgreSQL 17 (122 checks,
+  mutation-tested) — see IMPACT_RLS_MODEL.md. Section 3 above is superseded.
+- CF-06 closed (server-side provider registry, IMPACT_PROVIDER_REGISTRY.md).
+- The Lab Edge Function adds: strict schemas (unknown fields rejected), 64 KiB
+  body limit, per-investigation limits, 404 for foreign ids (no existence
+  oracle), allowlisted logs, no LLM/network/quota, class C blocked.
+- Escalated: service_role root-of-trust residual (IMPACT_RLS_MODEL.md §6).
