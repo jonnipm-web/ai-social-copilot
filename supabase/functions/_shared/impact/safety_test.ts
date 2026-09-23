@@ -97,7 +97,7 @@ Deno.test('RS-6 an LLM claim candidate cannot smuggle a verification status', ()
 Deno.test('OB-1 observability events are allowlist-only; free text, PII, tokens and unknown fields are refused', () => {
   const ok = buildImpactEvent({
     event: 'impact.verification', investigation_id: 'inv-1', claims_count: 3, evidence_count: 7, conflicts_count: 1,
-    verification_status: 'INCONCLUSIVE', latency_ms: 12.4, policy_version: 'impact-verification/1+impact-source-authority/1+impact-temporal/1',
+    verification_status: 'INCONCLUSIVE', latency_ms: 12.4, policy_version: 'impact-verification/2+impact-source-authority/2+impact-temporal/2',
   });
   assert(ok);
   assertEquals(ok!.latency_ms, 12);

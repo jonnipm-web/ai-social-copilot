@@ -38,9 +38,10 @@ import type {
   LegalStage,
   ReviewState,
   Source,
+  TrustedProviderRef,
 } from './types.ts';
 
-export const VERIFICATION_ENGINE_VERSION = 'impact-verification/1';
+export const VERIFICATION_ENGINE_VERSION = 'impact-verification/2';
 export const IMPACT_POLICY_VERSION =
   `${VERIFICATION_ENGINE_VERSION}+${SOURCE_AUTHORITY_POLICY_VERSION}+${TEMPORAL_POLICY_VERSION}`;
 
@@ -51,8 +52,10 @@ export interface HumanReviewRecord {
   readonly reviewedAt: string;
   /** Opaque reviewer reference (never a name/e-mail). */
   readonly reviewerRef: string;
-  /** The review applies only to the exact evidence set it looked at. */
-  readonly evidenceSetHash: string;
+  /** The review applies only to the exact state it looked at: evidence set,
+   * flagged (untrusted) sources, subject identity, dispute and trusted
+   * providers (Codex G1-04). Any change re-opens review. */
+  readonly reviewBindingHash: string;
 }
 
 export interface VerificationContext {
@@ -62,6 +65,9 @@ export interface VerificationContext {
   /** Sources in which untrusted_content.ts found embedded instructions. */
   readonly flaggedSourceIds?: readonly string[];
   readonly humanReview?: HumanReviewRecord;
+  /** Server-side provider registry. Required: without it nothing can be
+   * independent (fail closed, Codex G1-01). */
+  readonly trustedProviders: readonly TrustedProviderRef[];
 }
 
 export interface VerificationInput {
@@ -131,6 +137,7 @@ export interface VerificationResult {
   readonly evaluatedAt: string;
   readonly policyVersion: string;
   readonly evidenceSetHash: string;
+  readonly reviewBindingHash: string;
   /** Contract literals — checked by tests and by the report renderer. */
   readonly isFindingOfWrongdoing: false;
   readonly absenceOfEvidenceIsNotEvidenceOfWrongdoing: true;
@@ -183,7 +190,8 @@ export async function computeEvidenceSetHash(
         ? {
           id: s.id, type: s.type, publisher: s.publisher, publisherOrganizationId: s.publisherOrganizationId,
           retrievedAt: s.retrievedAt, publishedAt: s.publishedAt, newsGenre: s.newsGenre, status: s.status,
-          contentHash: s.contentHash, userSubmitted: s.userSubmitted,
+          contentHash: s.contentHash, userSubmitted: s.userSubmitted, jurisdiction: s.jurisdiction, uri: s.uri,
+          retention: s.retention, acquisition: s.acquisition,
         }
         : null,
     };
@@ -252,6 +260,8 @@ export async function verifyClaim(
   let staleCount = 0;
   const seenContentHashes = new Map<string, string>(); // contentHash → sourceId
   const flagged = new Set(ctx.flaggedSourceIds ?? []);
+  if (!Array.isArray(ctx.trustedProviders)) return fail('INTERNAL_ERROR', 'trustedProviders required');
+  const providers = new Map(ctx.trustedProviders.map((p) => [p.id, p]));
 
   const ordered = [...input.evidence].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   for (const e of ordered) {
@@ -276,7 +286,7 @@ export async function verifyClaim(
       rules.push('R04_LLM_LINK_NOT_COUNTED');
       continue;
     }
-    const authority = authorityFor(src, claim);
+    const authority = authorityFor(src, claim, providers);
     if (authority === 'NONE') { exclude('OUT_OF_AUTHORITY_SCOPE', 'OUT_OF_AUTHORITY_SCOPE'); rules.push('R05_OUT_OF_SCOPE'); continue; }
 
     const er = effectiveRelationship(claim, e);
@@ -369,6 +379,7 @@ export async function verifyClaim(
       claimId: claim.id,
       kind: withValues && !allKinds.has('CONTRADICTS') ? 'QUANTITY_DISAGREEMENT' : 'SUPPORT_VS_CONTRADICTION',
       positions: counted.map(position),
+      basis: 'INDEPENDENT_SOURCES',
       resolution: 'UNRESOLVED',
     });
   };
@@ -416,6 +427,7 @@ export async function verifyClaim(
       claimId: claim.id,
       kind: selfDisagreeing.some((a) => a.reportedValue !== undefined) ? 'QUANTITY_DISAGREEMENT' : 'SUPPORT_VS_CONTRADICTION',
       positions: selfDisagreeing.map(position),
+      basis: 'SELF_REPORTED_ONLY',
       resolution: 'UNRESOLVED',
     });
     rules.push('S09_SELF_REPORTED_INCONSISTENCY_RECORDED');
@@ -459,9 +471,15 @@ export async function verifyClaim(
   if (conflicts.length > 0) review.add('CONFLICT');
 
   const evidenceSetHash = await computeEvidenceSetHash(claim, input.evidence, sources);
+  const relevantFlags = [...flagged].filter((id) => sources.has(id)).sort();
+  const providerKey = [...ctx.trustedProviders]
+    .map((p) => `${p.id}:${p.sourceType}:${[...p.jurisdictions].sort().join('+')}`).sort();
+  const reviewBindingHash = await sha256Hex(canonical({
+    evidenceSetHash, flagged: relevantFlags, identity: ctx.subjectIdentity, dispute: !!ctx.openDispute, providers: providerKey,
+  }));
   let reviewState: ReviewState = review.size > 0 ? 'REVIEW_REQUIRED' : 'AUTOMATED';
   if (ctx.humanReview) {
-    if (ctx.humanReview.evidenceSetHash === evidenceSetHash && parseIsoMs(ctx.humanReview.reviewedAt) !== null) {
+    if (ctx.humanReview.reviewBindingHash === reviewBindingHash && parseIsoMs(ctx.humanReview.reviewedAt) !== null) {
       reviewState = 'HUMAN_REVIEWED';
       rules.push('H01_HUMAN_REVIEW_BOUND_TO_EVIDENCE_SET');
     } else {
@@ -478,7 +496,7 @@ export async function verifyClaim(
   else displayClass = 'CLAIM';
 
   const ctxKey = canonical({
-    identity: ctx.subjectIdentity, dispute: !!ctx.openDispute, flagged: [...flagged].sort(),
+    identity: ctx.subjectIdentity, dispute: !!ctx.openDispute, flagged: relevantFlags, providers: providerKey,
     review: ctx.humanReview ?? null,
   });
   const resultId = `vr_${
@@ -511,6 +529,7 @@ export async function verifyClaim(
     evaluatedAt: ctx.evaluatedAt,
     policyVersion: IMPACT_POLICY_VERSION,
     evidenceSetHash,
+    reviewBindingHash,
     isFindingOfWrongdoing: false as const,
     absenceOfEvidenceIsNotEvidenceOfWrongdoing: true as const,
   }));

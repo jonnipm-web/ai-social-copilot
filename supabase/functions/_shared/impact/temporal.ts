@@ -16,7 +16,7 @@
 import { parseIsoMs } from './provenance.ts';
 import type { ClaimKind, Period } from './types.ts';
 
-export const TEMPORAL_POLICY_VERSION = 'impact-temporal/1';
+export const TEMPORAL_POLICY_VERSION = 'impact-temporal/2';
 
 const DAY_MS = 86_400_000;
 
@@ -32,10 +32,15 @@ export function isStateClaim(kind: ClaimKind): boolean {
   return STATE_CLAIM_MAX_AGE_DAYS[kind] !== undefined;
 }
 
-/** Point in time the evidence speaks about: the end of its observed period
- * if known, else when the source was published, else when it was retrieved. */
+/** Point in time the evidence speaks about: the EARLIEST of the end of its
+ * observed period, the publication date and the retrieval date. A source
+ * cannot speak about anything later than when it was published/retrieved,
+ * so a future-dated `observedPeriod.to` can never make old evidence look
+ * current (Codex G1-02). */
 export function evidenceAsOfMs(observed: Period | undefined, publishedAt: string | undefined, retrievedAt: string): number {
-  return parseIsoMs(observed?.to) ?? parseIsoMs(publishedAt) ?? (parseIsoMs(retrievedAt) as number);
+  const candidates = [parseIsoMs(observed?.to), parseIsoMs(publishedAt), parseIsoMs(retrievedAt)]
+    .filter((v): v is number => v !== null);
+  return Math.min(...candidates);
 }
 
 export function isStale(kind: ClaimKind, asOfMs: number, evaluatedAtMs: number): boolean {

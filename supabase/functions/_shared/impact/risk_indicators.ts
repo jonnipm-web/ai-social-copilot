@@ -47,7 +47,8 @@ export type IndicatorCode =
   | 'UNVERIFIED_CLAIMS'
   | 'ONLY_SELF_REPORTED_EVIDENCE'
   | 'OUTDATED_EVIDENCE'
-  | 'UNRESOLVED_ALLEGATION';
+  | 'UNRESOLVED_ALLEGATION'
+  | 'INCONSISTENT_SELF_REPORTING';
 
 const POLARITY: Readonly<Record<IndicatorCode, IndicatorPolarity>> = {
   VERIFIED_REGISTRATION: 'POSITIVE',
@@ -66,6 +67,7 @@ const POLARITY: Readonly<Record<IndicatorCode, IndicatorPolarity>> = {
   ONLY_SELF_REPORTED_EVIDENCE: 'INFORMATION_GAP',
   OUTDATED_EVIDENCE: 'INFORMATION_GAP',
   UNRESOLVED_ALLEGATION: 'INFORMATION_GAP',
+  INCONSISTENT_SELF_REPORTING: 'INFORMATION_GAP',
 };
 
 export function polarityOf(code: IndicatorCode): IndicatorPolarity {
@@ -135,8 +137,13 @@ export function deriveIndicators(input: IndicatorInput): readonly Indicator[] {
     if (r.sufficiency === 'MULTI_SOURCE_SUPPORT' && r.status === 'SUPPORTED') {
       out.push(ind('MULTI_SOURCE_CORROBORATION', [r.claimId, ...r.supporting.map((a) => a.evidenceId)]));
     }
-    if (r.conflicts.length > 0) {
-      out.push(ind('CONFLICTING_CLAIMS', [r.claimId, ...r.conflicts.flatMap((c) => c.positions.map((p) => p.evidenceId))]));
+    const indepConflicts = r.conflicts.filter((c) => c.basis === 'INDEPENDENT_SOURCES');
+    const selfConflicts = r.conflicts.filter((c) => c.basis === 'SELF_REPORTED_ONLY');
+    if (indepConflicts.length > 0) {
+      out.push(ind('CONFLICTING_CLAIMS', [r.claimId, ...indepConflicts.flatMap((c) => c.positions.map((p) => p.evidenceId))]));
+    }
+    if (selfConflicts.length > 0) {
+      out.push(ind('INCONSISTENT_SELF_REPORTING', [r.claimId, ...selfConflicts.flatMap((c) => c.positions.map((p) => p.evidenceId))]));
     }
     if (r.status === 'CONTRADICTED' && kind !== 'LEGAL_REGISTRATION') {
       out.push(ind('CLAIM_CONTRADICTED_BY_INDEPENDENT_SOURCE', [r.claimId, ...r.contradicting.map((a) => a.evidenceId)]));

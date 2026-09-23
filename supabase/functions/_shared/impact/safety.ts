@@ -28,7 +28,7 @@
  *   organization fraudulent, a scam, corrupt, criminal, guilty — nor
  *   "trustworthy"/"safe to donate". This applies in PT and EN.
  */
-import type { Claim, ClaimKind, Period } from './types.ts';
+import type { Claim, ClaimKind, ClaimStatus, Period } from './types.ts';
 import type { VerificationResult } from './verification.ts';
 
 // ── Unicode word boundary ───────────────────────────────────────────────────
@@ -181,18 +181,77 @@ const VERDICT_PATTERNS: readonly [VerdictCategory, RegExp][] = ([
   ['DISTRUST_VERDICT', /\b(do\s+not|don'?t|never)\s+(trust|donate\s+to)\b|\bn[ãa]o\s+(confie|doe)\b/i],
 ] as [VerdictCategory, RegExp][]).map(([c, re]) => [c, uw(re)]);
 
+// Confusable folding (Codex G1-03): Cyrillic/Greek letters that render like
+// Latin ones are mapped to Latin before any guard runs; invisible characters
+// are removed; a second pass also strips combining marks.
+const CONFUSABLES: Readonly<Record<string, string>> = {
+  'а': 'a', 'в': 'b', 'е': 'e', 'к': 'k', 'м': 'm', 'н': 'h', 'о': 'o', 'р': 'p', 'с': 'c', 'т': 't', 'у': 'y',
+  'х': 'x', 'і': 'i', 'ї': 'i', 'ј': 'j', 'ѕ': 's', 'ԁ': 'd', 'һ': 'h', 'ӏ': 'l', 'ԛ': 'q', 'ԝ': 'w', 'ɡ': 'g',
+  'ı': 'i', 'ո': 'n', 'ս': 'u', 'А': 'A', 'В': 'B', 'Е': 'E', 'К': 'K', 'М': 'M', 'Н': 'H', 'О': 'O', 'Р': 'P',
+  'С': 'C', 'Т': 'T', 'У': 'Y', 'Х': 'X', 'І': 'I', 'Ј': 'J', 'Ѕ': 'S', 'α': 'a', 'β': 'b', 'ε': 'e', 'ι': 'i',
+  'κ': 'k', 'ν': 'v', 'ο': 'o', 'ρ': 'p', 'τ': 't', 'υ': 'u', 'χ': 'x', 'Α': 'A', 'Β': 'B', 'Ε': 'E', 'Ζ': 'Z',
+  'Η': 'H', 'Ι': 'I', 'Κ': 'K', 'Μ': 'M', 'Ν': 'N', 'Ο': 'O', 'Ρ': 'P', 'Τ': 'T', 'Υ': 'Y', 'Χ': 'X',
+};
+const INVISIBLE = /[­͏؜ᅟᅠ឴឵᠎​-‏‪-‮⁠-⁤⁪-⁯﻿]/gu;
+
+/** NFKC + invisible-character removal + confusable folding. */
+export function normalizeForGuard(text: string): string {
+  return [...text.normalize('NFKC').replace(INVISIBLE, '')].map((ch) => CONFUSABLES[ch] ?? ch).join('');
+}
+
+function stripMarks(text: string): string {
+  return text.normalize('NFD').replace(/\p{M}+/gu, '').normalize('NFC');
+}
+
+/** A token mixing Latin with Cyrillic/Greek letters is a spoofing signal. */
+export function hasMixedScript(text: string): boolean {
+  for (const token of text.normalize('NFKC').replace(INVISIBLE, '').split(/[^\p{L}\p{M}]+/u)) {
+    if (/\p{Script=Latin}/u.test(token) && /[\p{Script=Cyrillic}\p{Script=Greek}]/u.test(token)) return true;
+  }
+  return false;
+}
+
 export function findVerdictLanguage(text: string): readonly VerdictCategory[] {
-  const t = text.normalize('NFKC');
-  return [...new Set(VERDICT_PATTERNS.filter(([, re]) => re.test(t)).map(([c]) => c))].sort();
+  const folded = normalizeForGuard(text);
+  const variants = [folded, stripMarks(folded)];
+  return [...new Set(VERDICT_PATTERNS.filter(([, re]) => variants.some((t) => re.test(t))).map(([c]) => c))].sort();
 }
 
 export type NarrativeViolation =
   | { readonly kind: 'VERDICT_LANGUAGE'; readonly category: VerdictCategory }
   | { readonly kind: 'UNKNOWN_EVIDENCE_REFERENCE'; readonly ref: string }
   | { readonly kind: 'STATUS_NOT_IN_RESULT'; readonly status: string }
-  | { readonly kind: 'UNGROUNDED_NUMBER'; readonly value: string };
+  | { readonly kind: 'UNGROUNDED_NUMBER'; readonly value: string }
+  | { readonly kind: 'MIXED_SCRIPT' };
 
-const STATUS_WORDS = ['SUPPORTED', 'PARTIALLY_SUPPORTED', 'CONTRADICTED', 'INCONCLUSIVE', 'OUTDATED', 'UNVERIFIED', 'DISPUTED'];
+/** Status codes and their natural-language forms (PT/EN), matched
+ * case-insensitively, longest phrase first ("não verificada" before
+ * "verificada", "partially supported" before "supported"). */
+const STATUS_PHRASES: readonly [ClaimStatus, string][] = ([
+  ['SUPPORTED', ['supported', 'sustentada', 'sustentado', 'confirmed', 'confirmada', 'confirmado', 'verified', 'verificada', 'verificado', 'corroborated', 'corroborada']],
+  ['PARTIALLY_SUPPORTED', ['partially supported', 'parcialmente sustentada', 'partially confirmed', 'parcialmente confirmada']],
+  ['CONTRADICTED', ['contradicted', 'contrariada', 'contradita', 'refuted', 'refutada', 'disproven', 'desmentida', 'debunked']],
+  ['INCONCLUSIVE', ['inconclusive', 'inconclusiva', 'inconclusivo']],
+  ['OUTDATED', ['outdated', 'desatualizada', 'desatualizado']],
+  ['UNVERIFIED', ['unverified', 'não verificada', 'nao verificada', 'não verificado', 'nao verificado', 'not verified']],
+  ['DISPUTED', ['disputed', 'contestada', 'em contestação', 'em contestacao']],
+] as [ClaimStatus, string[]][])
+  .flatMap(([s, phrases]) => phrases.map((p) => [s, p] as [ClaimStatus, string]))
+  .sort((a, b) => b[1].length - a[1].length);
+
+export function statusesMentioned(narrative: string): ReadonlySet<ClaimStatus> {
+  let t = normalizeForGuard(narrative).toLowerCase().replace(/_/g, ' ');
+  const found = new Set<ClaimStatus>();
+  for (const [status, phrase] of STATUS_PHRASES) {
+    const re = uw(new RegExp(`\\b${phrase.replace(/\s+/g, String.raw`[\s-]+`)}\\b`, 'gi'));
+    if (re.test(t)) {
+      found.add(status);
+      re.lastIndex = 0;
+      t = t.replace(re, ' ');
+    }
+  }
+  return found;
+}
 
 /**
  * Validates an LLM explanation of a verification result. The narrative is
@@ -206,6 +265,7 @@ export function checkNarrative(
   extraAllowedNumbers: readonly number[] = [],
 ): { readonly ok: boolean; readonly violations: readonly NarrativeViolation[] } {
   const v: NarrativeViolation[] = [];
+  if (hasMixedScript(narrative)) v.push({ kind: 'MIXED_SCRIPT' });
   for (const category of findVerdictLanguage(narrative)) v.push({ kind: 'VERDICT_LANGUAGE', category });
 
   const known = new Set(
@@ -215,10 +275,8 @@ export function checkNarrative(
   for (const m of narrative.matchAll(/\[ev:([A-Za-z0-9_.:-]+)\]/g)) {
     if (!known.has(m[1])) v.push({ kind: 'UNKNOWN_EVIDENCE_REFERENCE', ref: m[1] });
   }
-  for (const s of STATUS_WORDS) {
-    if (new RegExp(`\\b${s}\\b`).test(narrative) && s !== result.status && s !== result.underlyingStatus) {
-      v.push({ kind: 'STATUS_NOT_IN_RESULT', status: s });
-    }
+  for (const s of statusesMentioned(narrative.replace(/\[ev:[^\]]*\]/g, ' '))) {
+    if (s !== result.status && s !== result.underlyingStatus) v.push({ kind: 'STATUS_NOT_IN_RESULT', status: s });
   }
   const allowed = new Set<string>(extraAllowedNumbers.map(String));
   for (const a of [...result.supporting, ...result.partiallySupporting, ...result.contradicting, ...result.contextual]) {

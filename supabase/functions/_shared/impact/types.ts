@@ -142,6 +142,27 @@ export type SourceStatus = 'ACTIVE' | 'UPDATED' | 'RETRACTED' | 'UNAVAILABLE';
 /** How much of the source the platform keeps (IMPACT_SOURCE_MODEL.md §4). */
 export type RetentionMode = 'REFERENCE_ONLY' | 'HASH_ONLY' | 'EXCERPT_AND_HASH' | 'SNAPSHOT';
 
+/**
+ * How the platform obtained the source. Only material fetched by a TRUSTED
+ * provider declared for that source type (and jurisdiction) can be
+ * independent/authoritative: a source's `type` and `publisher` are otherwise
+ * just labels someone typed, and a self-published report relabelled as an
+ * "audit" must not become independent evidence (Codex G1-01).
+ */
+export type Acquisition =
+  | { readonly method: 'PROVIDER'; readonly providerId: string }
+  | { readonly method: 'USER_UPLOAD' }
+  | { readonly method: 'ANALYST_ENTRY' };
+
+/** A provider the server trusts for one source type (from provider.ts
+ * descriptors; never from the client). */
+export interface TrustedProviderRef {
+  readonly id: string;
+  readonly sourceType: SourceType;
+  /** ISO 3166-1 alpha-2 codes the provider covers. */
+  readonly jurisdictions: readonly string[];
+}
+
 export interface Source {
   readonly id: string;
   readonly type: SourceType;
@@ -159,6 +180,7 @@ export interface Source {
   readonly retention: RetentionMode;
   /** SHA-256 hex of the retrieved content when retention ≠ REFERENCE_ONLY. */
   readonly contentHash?: string;
+  readonly acquisition: Acquisition;
   /** Uploaded by a user — never a verified fact by itself. */
   readonly userSubmitted?: boolean;
 }
@@ -321,6 +343,10 @@ export type ExclusionReason =
 export interface ConflictRecord {
   readonly claimId: string;
   readonly kind: 'QUANTITY_DISAGREEMENT' | 'SUPPORT_VS_CONTRADICTION';
+  /** INDEPENDENT_SOURCES: independent sources disagree (CONCERN-worthy).
+   * SELF_REPORTED_ONLY: the organization's own materials disagree with its
+   * claim — often a correction; shown as an information gap, never a concern. */
+  readonly basis: 'INDEPENDENT_SOURCES' | 'SELF_REPORTED_ONLY';
   /** Every position, side by side, with its source — no winner chosen. */
   readonly positions: readonly {
     readonly evidenceId: string;

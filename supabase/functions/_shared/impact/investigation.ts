@@ -19,7 +19,7 @@
  * immutable-and-final.
  */
 import { fail, ok, type ImpactResult } from './errors.ts';
-import { isValidId, parseIsoMs, sha256Hex, validateSource } from './provenance.ts';
+import { isOneOf, isValidId, parseIsoMs, sha256Hex, SOURCE_STATUSES, validateSource } from './provenance.ts';
 import type { Claim, EvidenceItem, Source, SourceStatus } from './types.ts';
 import { verifyClaim, type VerificationContext, type VerificationResult } from './verification.ts';
 
@@ -173,6 +173,8 @@ export class Investigation {
     if (!a.ok) return a;
     const s = this.#sources.get(sourceId);
     if (!s) return fail('INVALID_SOURCE', 'unknown source');
+    if (!isOneOf(status, SOURCE_STATUSES)) return fail('INVALID_SOURCE', 'unknown source status');
+    if (parseIsoMs(at) === null) return fail('INVALID_SOURCE', 'timestamp required');
     this.#sources.set(sourceId, Object.freeze({ ...s, status }));
     const affected = [...this.#evidence.values()].filter((e) => e.sourceId === sourceId).map((e) => e.claimId);
     const claims = [...new Set(affected)].sort();

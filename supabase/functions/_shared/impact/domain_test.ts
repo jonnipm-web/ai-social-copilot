@@ -1,7 +1,7 @@
 // IV-IMPACT-FOUNDATION-01 — entity resolution, providers/normalization,
 // financial/metrics/affiliation, investigation workspace, report.
 import { assert, assertEquals } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
-import { EVALUATED_AT, goldenCases, ORGS, SOURCES, XA } from './fixtures/golden.ts';
+import { EVALUATED_AT, FIXTURE_PROVIDERS, goldenCases, ORGS, SOURCES, XA } from './fixtures/golden.ts';
 import { identityStatusFor, normalizeDomain, normalizeName, normalizeRegistration, resolveEntity } from './entity_resolution.ts';
 import { deriveAffiliation, levelCanSubstantiate, spendingShares } from './financial_and_metrics.ts';
 import { type Actor, Investigation, verifyAuditChain } from './investigation.ts';
@@ -158,7 +158,7 @@ Deno.test('FM-3 affiliation: naming an organization is CLAIMED; VERIFIED needs a
   const campaign = { id: 'camp-1', claimedOrganizationId: 'org-hopebridge' };
   assertEquals(deriveAffiliation(campaign), 'CLAIMED_AFFILIATION');
   assertEquals(deriveAffiliation({ id: 'camp-2' }), 'UNKNOWN_AFFILIATION');
-  const base = { claimKind: 'AFFILIATION' as const, subjectCampaignId: 'camp-1', subjectOrganizationId: 'org-hopebridge', subjectIdentity: 'CONFIRMED' as const };
+  const base = { claimKind: 'AFFILIATION' as const, subjectCampaignId: 'camp-1', subjectOrganizationId: 'org-hopebridge', subjectIdentity: 'CONFIRMED' as const, trustedProviders: FIXTURE_PROVIDERS };
   assertEquals(deriveAffiliation(campaign, { ...base, status: 'SUPPORTED' }), 'VERIFIED_AFFILIATION');
   assertEquals(deriveAffiliation(campaign, { ...base, status: 'SUPPORTED', subjectCampaignId: 'camp-other' }), 'CLAIMED_AFFILIATION');
   assertEquals(deriveAffiliation(campaign, { ...base, status: 'SUPPORTED', subjectIdentity: 'PROBABLE' }), 'CLAIMED_AFFILIATION');
@@ -185,7 +185,7 @@ Deno.test('IW-1 non-owner and cross-project actors are denied on every operation
   const { w, g } = await workspace();
   const deny = (r: { ok: boolean; error?: { code: string } }) => assertEquals(r.ok ? 'OK' : r.error!.code, 'CROSS_INVESTIGATION_DENIED');
   deny(w.authorize(OTHER));
-  deny(await w.verify(OTHER, g.claim.id, { evaluatedAt: EVALUATED_AT, subjectIdentity: 'CONFIRMED' }));
+  deny(await w.verify(OTHER, g.claim.id, { evaluatedAt: EVALUATED_AT, subjectIdentity: 'CONFIRMED', trustedProviders: FIXTURE_PROVIDERS }));
   deny(await w.addSource(OTHER, SOURCES.registry, EVALUATED_AT));
   deny(await w.updateSourceStatus(OTHER, SOURCES.govWells.id, 'RETRACTED', EVALUATED_AT));
   // same subject whose project access was revoked
@@ -204,7 +204,7 @@ Deno.test('IW-2 records from another investigation are refused', async () => {
 
 Deno.test('IW-3 versioned history: retraction + re-verification appends, never overwrites; dispute → DISPUTED', async () => {
   const { w, g } = await workspace();
-  const ctx = { evaluatedAt: EVALUATED_AT, subjectIdentity: 'CONFIRMED' as const };
+  const ctx = { evaluatedAt: EVALUATED_AT, subjectIdentity: 'CONFIRMED' as const, trustedProviders: FIXTURE_PROVIDERS };
   const v1 = await w.verify(OWNER, g.claim.id, ctx);
   assert(v1.ok && v1.value.status === 'SUPPORTED');
   const affected = await w.updateSourceStatus(OWNER, SOURCES.academicWells.id, 'RETRACTED', '2026-09-24T00:00:00Z');
@@ -232,7 +232,7 @@ Deno.test('IW-3 versioned history: retraction + re-verification appends, never o
 
 Deno.test('IW-4 audit trail is hash-chained, contains ids/codes only, and detects tampering', async () => {
   const { w, g } = await workspace();
-  await w.verify(OWNER, g.claim.id, { evaluatedAt: EVALUATED_AT, subjectIdentity: 'CONFIRMED' });
+  await w.verify(OWNER, g.claim.id, { evaluatedAt: EVALUATED_AT, subjectIdentity: 'CONFIRMED', trustedProviders: FIXTURE_PROVIDERS });
   const trail = w.auditTrail();
   assert(await verifyAuditChain(trail));
   const flat = JSON.stringify(trail);

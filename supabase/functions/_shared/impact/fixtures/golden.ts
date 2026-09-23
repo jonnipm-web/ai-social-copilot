@@ -10,7 +10,7 @@
  * every expected field.
  */
 import { sha256Hex } from '../provenance.ts';
-import type { Claim, EvidenceItem, Organization, Source } from '../types.ts';
+import type { Claim, EvidenceItem, Organization, Source, SourceType, TrustedProviderRef } from '../types.ts';
 import type { ClaimStatus, EvidenceSufficiency, EpistemicClass, GapCode, ReviewState } from '../types.ts';
 import type { VerificationContext } from '../verification.ts';
 import type { IndicatorCode } from '../risk_indicators.ts';
@@ -50,7 +50,18 @@ export const ORGS: Readonly<Record<string, Organization>> = {
   },
 };
 
+/** One trusted fixture provider per source type, covering jurisdiction XA
+ * only. In production this list comes from the server-side provider
+ * registry, never from the client. */
+export const FIXTURE_PROVIDERS: readonly TrustedProviderRef[] = ([
+  'OFFICIAL_REGISTRY', 'ORGANIZATION_WEBSITE', 'GOVERNMENT_RECORD', 'FINANCIAL_REPORT', 'AUDITED_REPORT',
+  'COURT_RECORD', 'REGULATOR', 'NEWS', 'ACADEMIC', 'NGO_DATABASE', 'SOCIAL_MEDIA',
+] as SourceType[]).map((t) => ({ id: `fixture-${t.toLowerCase()}`, sourceType: t, jurisdictions: ['XA'] }));
+
+export const providerFor = (t: SourceType) => ({ method: 'PROVIDER' as const, providerId: `fixture-${t.toLowerCase()}` });
+
 const src = (s: Partial<Source> & Pick<Source, 'id' | 'type' | 'publisher'>): Source => ({
+  acquisition: providerFor(s.type),
   retrievedAt: '2026-09-01T00:00:00Z',
   status: 'ACTIVE',
   retention: 'EXCERPT_AND_HASH',
@@ -172,7 +183,7 @@ export interface GoldenCase {
   readonly documentText?: string;
 }
 
-const CONFIRMED: VerificationContext = { evaluatedAt: EVALUATED_AT, subjectIdentity: 'CONFIRMED' };
+const CONFIRMED: VerificationContext = { evaluatedAt: EVALUATED_AT, subjectIdentity: 'CONFIRMED', trustedProviders: FIXTURE_PROVIDERS };
 
 export async function goldenCases(): Promise<readonly GoldenCase[]> {
   const excerptA = 'HopeBridge Foundation — charity number XA-1234567 — status: registered.';
@@ -286,7 +297,7 @@ export async function goldenCases(): Promise<readonly GoldenCase[]> {
         aboutOrganizationId: 'org-northstar', relationship: 'SUPPORTS', observedPeriod: { to: '2026-09-01' },
       })],
       sources: [SOURCES.registryCandidate, SOURCES.nsWebsite],
-      ctx: { evaluatedAt: EVALUATED_AT, subjectIdentity: 'UNCERTAIN' },
+      ctx: { evaluatedAt: EVALUATED_AT, subjectIdentity: 'UNCERTAIN', trustedProviders: FIXTURE_PROVIDERS },
       expected: {
         status: 'UNVERIFIED', sufficiency: 'NO_EVIDENCE', displayClass: 'ABSENCE_OF_EVIDENCE', reviewState: 'REVIEW_REQUIRED',
         gapsInclude: ['IDENTITY_UNCONFIRMED'], excludedIds: ['ev-e1'],
@@ -356,7 +367,7 @@ export async function goldenCases(): Promise<readonly GoldenCase[]> {
         reportedQuantity: { metric: 'schools_built', value: 50, unit: 'count' }, observedPeriod: { from: '2025-01-01', to: '2025-12-31' },
       })],
       sources: [SOURCES.injectedReport],
-      ctx: { evaluatedAt: EVALUATED_AT, subjectIdentity: 'CONFIRMED', flaggedSourceIds: [SOURCES.injectedReport.id] },
+      ctx: { evaluatedAt: EVALUATED_AT, subjectIdentity: 'CONFIRMED', flaggedSourceIds: [SOURCES.injectedReport.id], trustedProviders: FIXTURE_PROVIDERS },
       documentText: INJECTED_DOCUMENT_TEXT,
       expected: {
         status: 'UNVERIFIED', sufficiency: 'SELF_REPORTED', displayClass: 'CLAIM', reviewState: 'REVIEW_REQUIRED',

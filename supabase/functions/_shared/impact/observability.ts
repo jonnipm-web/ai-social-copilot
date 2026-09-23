@@ -9,6 +9,8 @@
  */
 
 const ID_OR_CODE = /^[A-Za-z0-9][A-Za-z0-9_.:+/-]{0,127}$/;
+/** A bare JWT would pass the id pattern — refuse it explicitly. */
+const JWT_SHAPE = /^eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*\.?[A-Za-z0-9_-]*$/;
 
 const ALLOWED: Readonly<Record<string, 'id' | 'count' | 'code'>> = {
   event: 'code',
@@ -32,13 +34,13 @@ export type ImpactLogEvent = Readonly<Record<string, string | number>>;
 export function buildImpactEvent(fields: Record<string, unknown>): ImpactLogEvent | null {
   const out: Record<string, string | number> = {};
   for (const [k, v] of Object.entries(fields)) {
-    const kind = ALLOWED[k];
+    const kind = Object.prototype.hasOwnProperty.call(ALLOWED, k) ? ALLOWED[k] : undefined;
     if (!kind) return null;
     if (kind === 'count') {
       if (typeof v !== 'number' || !Number.isFinite(v) || v < 0) return null;
       out[k] = Math.round(v);
     } else {
-      if (typeof v !== 'string' || !ID_OR_CODE.test(v)) return null;
+      if (typeof v !== 'string' || !ID_OR_CODE.test(v) || JWT_SHAPE.test(v)) return null;
       out[k] = v;
     }
   }

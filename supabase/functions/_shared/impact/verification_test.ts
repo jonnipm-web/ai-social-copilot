@@ -1,14 +1,15 @@
 // IV-IMPACT-FOUNDATION-01 — Verification Engine, source authority, temporal,
 // provenance and adversarial cases. Fictitious organizations only.
 import { assert, assertEquals, assertNotEquals } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
-import { EVALUATED_AT, hash, SOURCES } from './fixtures/golden.ts';
+import { EVALUATED_AT, FIXTURE_PROVIDERS, hash, providerFor, SOURCES } from './fixtures/golden.ts';
 import { checkReferenceUri, sha256Hex } from './provenance.ts';
 import { deriveIndicators } from './risk_indicators.ts';
 import { authorityFor } from './source_authority.ts';
 import type { Claim, EvidenceItem, Source } from './types.ts';
 import { verifyClaim, type VerificationContext } from './verification.ts';
 
-const CTX: VerificationContext = { evaluatedAt: EVALUATED_AT, subjectIdentity: 'CONFIRMED' };
+const CTX: VerificationContext = { evaluatedAt: EVALUATED_AT, subjectIdentity: 'CONFIRMED', trustedProviders: FIXTURE_PROVIDERS };
+const TRUSTED = new Map(FIXTURE_PROVIDERS.map((p) => [p.id, p]));
 const ORG = 'org-hopebridge';
 
 const claim = (over: Partial<Claim> = {}): Claim => ({
@@ -22,7 +23,7 @@ const ev = (id: string, sourceId: string, over: Partial<EvidenceItem> = {}): Evi
   observedPeriod: { from: '2025-01-01', to: '2025-12-31' }, ...over,
 });
 const news = (id: string, publisher: string, over: Partial<Source> = {}): Source => ({
-  id, type: 'NEWS', newsGenre: 'REPORTING', publisher, retrievedAt: '2026-09-01T00:00:00Z', status: 'ACTIVE',
+  id, type: 'NEWS', newsGenre: 'REPORTING', publisher, acquisition: providerFor('NEWS'), retrievedAt: '2026-09-01T00:00:00Z', status: 'ACTIVE',
   retention: 'EXCERPT_AND_HASH', contentHash: hash(id.replace(/[^a-f0-9]/g, '') + 'ab'), ...over,
 });
 async function run(c: Claim, evidence: EvidenceItem[], sources: Source[], ctx: VerificationContext = CTX) {
@@ -35,30 +36,30 @@ async function run(c: Claim, evidence: EvidenceItem[], sources: Source[], ctx: V
 
 Deno.test('SA-1 self-published material is SELF_REPORTED whatever its type (even "official-looking")', () => {
   const c = claim({ kind: 'LEGAL_REGISTRATION' });
-  assertEquals(authorityFor({ ...SOURCES.registry, publisherOrganizationId: ORG }, c), 'SELF_REPORTED');
-  assertEquals(authorityFor(SOURCES.hbAudited, claim({ kind: 'FINANCIAL' })), 'INDEPENDENT');
-  assertEquals(authorityFor({ ...SOURCES.hbAudited, publisherOrganizationId: ORG }, claim({ kind: 'FINANCIAL' })), 'SELF_REPORTED');
+  assertEquals(authorityFor({ ...SOURCES.registry, publisherOrganizationId: ORG }, c, TRUSTED), 'SELF_REPORTED');
+  assertEquals(authorityFor(SOURCES.hbAudited, claim({ kind: 'FINANCIAL' }), TRUSTED), 'INDEPENDENT');
+  assertEquals(authorityFor({ ...SOURCES.hbAudited, publisherOrganizationId: ORG }, claim({ kind: 'FINANCIAL' }), TRUSTED), 'SELF_REPORTED');
 });
 
 Deno.test('SA-2 a registry is authoritative for registration but has NO scope over impact outputs', () => {
-  assertEquals(authorityFor(SOURCES.registry, claim({ kind: 'LEGAL_REGISTRATION' })), 'AUTHORITATIVE');
-  assertEquals(authorityFor(SOURCES.registry, claim({ kind: 'IMPACT_OUTPUT' })), 'NONE');
-  assertEquals(authorityFor(SOURCES.registry, claim({ kind: 'BENEFICIARY_COUNT' })), 'NONE');
+  assertEquals(authorityFor(SOURCES.registry, claim({ kind: 'LEGAL_REGISTRATION' }), TRUSTED), 'AUTHORITATIVE');
+  assertEquals(authorityFor(SOURCES.registry, claim({ kind: 'IMPACT_OUTPUT' }), TRUSTED), 'NONE');
+  assertEquals(authorityFor(SOURCES.registry, claim({ kind: 'BENEFICIARY_COUNT' }), TRUSTED), 'NONE');
 });
 
 Deno.test('SA-3 news: only REPORTING corroborates; journalism never establishes registration', () => {
   const c = claim();
-  assertEquals(authorityFor(news('n1', 'Paper'), c), 'INDEPENDENT');
+  assertEquals(authorityFor(news('n1', 'Paper'), c, TRUSTED), 'INDEPENDENT');
   for (const g of ['OPINION', 'ALLEGATION', 'CORRECTION'] as const) {
-    assertEquals(authorityFor(news('n1', 'Paper', { newsGenre: g }), c), 'CONTEXTUAL');
+    assertEquals(authorityFor(news('n1', 'Paper', { newsGenre: g }), c, TRUSTED), 'CONTEXTUAL');
   }
-  assertEquals(authorityFor(news('n1', 'Paper'), claim({ kind: 'LEGAL_REGISTRATION' })), 'CONTEXTUAL');
+  assertEquals(authorityFor(news('n1', 'Paper'), claim({ kind: 'LEGAL_REGISTRATION' }), TRUSTED), 'CONTEXTUAL');
 });
 
 Deno.test('SA-4 social media proves attribution only; user uploads are USER_SUBMITTED even if labelled official', () => {
-  const social: Source = { ...news('s1', 'account @x'), type: 'SOCIAL_MEDIA', newsGenre: undefined, retention: 'HASH_ONLY' };
-  assertEquals(authorityFor(social, claim()), 'ATTRIBUTION_ONLY');
-  assertEquals(authorityFor({ ...SOURCES.registry, userSubmitted: true }, claim({ kind: 'LEGAL_REGISTRATION' })), 'USER_SUBMITTED');
+  const social: Source = { ...news('s1', 'account @x'), type: 'SOCIAL_MEDIA', newsGenre: undefined, retention: 'HASH_ONLY', acquisition: providerFor('SOCIAL_MEDIA') };
+  assertEquals(authorityFor(social, claim(), TRUSTED), 'ATTRIBUTION_ONLY');
+  assertEquals(authorityFor({ ...SOURCES.registry, userSubmitted: true }, claim({ kind: 'LEGAL_REGISTRATION' }), TRUSTED), 'USER_SUBMITTED');
 });
 
 // ── Engine rules ───────────────────────────────────────────────────────────
@@ -126,7 +127,7 @@ Deno.test('VE-7 a news ALLEGATION is context only: never a contradiction, flagge
 });
 
 Deno.test('VE-8 court record: CHARGED is never guilt; CONVICTED is shown with its exact stage', async () => {
-  const court: Source = { ...SOURCES.registry, id: 'src-court', type: 'COURT_RECORD', publisher: 'Exampleland Court (fixture)', retention: 'EXCERPT_AND_HASH', contentHash: hash('c0') };
+  const court: Source = { ...SOURCES.registry, id: 'src-court', type: 'COURT_RECORD', acquisition: providerFor('COURT_RECORD'), publisher: 'Exampleland Court (fixture)', retention: 'EXCERPT_AND_HASH', contentHash: hash('c0') };
   const c = claim({ kind: 'REGULATORY_STATUS', quantity: undefined, level: undefined, period: undefined, text: 'No regulatory action against us.' });
   const charged = await run(c, [ev('e1', 'src-court', { relationship: 'CONTRADICTS', legalStage: 'CHARGED', observedPeriod: { to: '2026-08-01' } })], [court]);
   assertNotEquals(charged.status, 'CONTRADICTED');
@@ -189,7 +190,7 @@ Deno.test('VE-13 human review binds to the exact evidence set; new evidence re-o
   const s = news('n1', 'Tabloid', { newsGenre: 'ALLEGATION' });
   const first = await run(claim(), [ev('e1', 'n1')], [s]);
   assertEquals(first.reviewState, 'REVIEW_REQUIRED');
-  const review = { reviewedAt: '2026-09-22T00:00:00Z', reviewerRef: 'rev-1', evidenceSetHash: first.evidenceSetHash };
+  const review = { reviewedAt: '2026-09-22T00:00:00Z', reviewerRef: 'rev-1', reviewBindingHash: first.reviewBindingHash };
   const reviewed = await run(claim(), [ev('e1', 'n1')], [s], { ...CTX, humanReview: review });
   assertEquals(reviewed.reviewState, 'HUMAN_REVIEWED');
   const more = await run(claim(), [ev('e1', 'n1'), ev('e2', SOURCES.govWells.id)], [s, SOURCES.govWells], { ...CTX, humanReview: review });
@@ -199,7 +200,7 @@ Deno.test('VE-13 human review binds to the exact evidence set; new evidence re-o
 Deno.test('VE-14 results are deeply frozen and versioned', async () => {
   const v = await run(claim(), [ev('e1', SOURCES.govWells.id)], [SOURCES.govWells]);
   assert(Object.isFrozen(v) && Object.isFrozen(v.supporting) && Object.isFrozen(v.supporting[0]));
-  assert(v.policyVersion.startsWith('impact-verification/1+impact-source-authority/1+impact-temporal/1'));
+  assert(v.policyVersion.startsWith('impact-verification/2+impact-source-authority/2+impact-temporal/2'));
   const later = await run(claim(), [ev('e1', SOURCES.govWells.id)], [SOURCES.govWells], { ...CTX, evaluatedAt: '2026-10-01T00:00:00Z' });
   assertNotEquals(v.resultId, later.resultId);
   assertEquals(v.evidenceSetHash, later.evidenceSetHash);

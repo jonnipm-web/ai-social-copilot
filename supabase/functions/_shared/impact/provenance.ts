@@ -41,7 +41,47 @@ export function isValidId(id: unknown): id is string {
 export function parseIsoMs(s: unknown): number | null {
   if (typeof s !== 'string' || !ISO_RE.test(s)) return null;
   const ms = Date.parse(s);
-  return Number.isFinite(ms) ? ms : null;
+  if (!Number.isFinite(ms)) return null;
+  // Reject calendar overflow (2025-02-30 must not silently become March 2).
+  const [y, m, d] = s.slice(0, 10).split('-').map(Number);
+  const cal = new Date(Date.UTC(y, m - 1, d));
+  if (cal.getUTCFullYear() !== y || cal.getUTCMonth() !== m - 1 || cal.getUTCDate() !== d) return null;
+  return ms;
+}
+
+/** Own-property membership — never matches prototype keys such as
+ * "constructor", "toString" or "__proto__" (fail closed on unknown enums). */
+export function isOneOf<T extends string>(v: unknown, allowed: readonly T[]): v is T {
+  return typeof v === 'string' && (allowed as readonly string[]).includes(v);
+}
+
+export const SOURCE_TYPES = [
+  'OFFICIAL_REGISTRY', 'ORGANIZATION_WEBSITE', 'GOVERNMENT_RECORD', 'FINANCIAL_REPORT', 'AUDITED_REPORT',
+  'COURT_RECORD', 'REGULATOR', 'NEWS', 'ACADEMIC', 'NGO_DATABASE', 'SOCIAL_MEDIA', 'USER_DOCUMENT', 'OTHER',
+] as const;
+export const SOURCE_STATUSES = ['ACTIVE', 'UPDATED', 'RETRACTED', 'UNAVAILABLE'] as const;
+export const RETENTION_MODES = ['REFERENCE_ONLY', 'HASH_ONLY', 'EXCERPT_AND_HASH', 'SNAPSHOT'] as const;
+export const NEWS_GENRES = ['REPORTING', 'OPINION', 'ALLEGATION', 'CORRECTION'] as const;
+export const CLAIM_KINDS = [
+  'LEGAL_REGISTRATION', 'OPERATING_HISTORY', 'FINANCIAL', 'IMPACT_OUTPUT', 'IMPACT_OUTCOME',
+  'BENEFICIARY_COUNT', 'AFFILIATION', 'GOVERNANCE', 'REGULATORY_STATUS', 'OTHER',
+] as const;
+export const CLAIM_ORIGINS = ['MANUAL', 'STRUCTURED_IMPORT', 'LLM_EXTRACTED'] as const;
+export const IMPACT_LEVELS = ['INPUT', 'ACTIVITY', 'OUTPUT', 'OUTCOME', 'IMPACT'] as const;
+export const LEGAL_STAGES = [
+  'INVESTIGATION_OPENED', 'CHARGED', 'CONVICTED', 'ACQUITTED', 'DISMISSED', 'SANCTIONED', 'SETTLED',
+  'UNDER_APPEAL', 'OVERTURNED', 'CLOSED_NO_ACTION',
+] as const;
+
+/** A period must be real dates, from ≤ to, and must not start after `notAfterMs`. */
+export function isValidPeriod(p: { from?: string; to?: string } | undefined, notAfterMs?: number): boolean {
+  if (p === undefined) return true;
+  const from = p.from === undefined ? null : parseIsoMs(p.from);
+  const to = p.to === undefined ? null : parseIsoMs(p.to);
+  if ((p.from !== undefined && from === null) || (p.to !== undefined && to === null)) return false;
+  if (from !== null && to !== null && from > to) return false;
+  if (notAfterMs !== undefined && from !== null && from > notAfterMs) return false;
+  return true;
 }
 
 // ── Reference safety (SSRF pre-guard) ───────────────────────────────────────
@@ -139,7 +179,19 @@ export function validateSource(s: Source, evaluatedAtMs: number): ImpactResult<S
   if (typeof s.publisher !== 'string' || !s.publisher.trim() || s.publisher.length > LIMITS.maxPublisherLength) {
     return fail('INVALID_SOURCE', 'publisher required', { sourceId: s.id });
   }
-  if (!(s.type in MAX_RETENTION)) return fail('INVALID_SOURCE', 'unknown source type', { sourceId: s.id });
+  if (!isOneOf(s.type, SOURCE_TYPES)) return fail('INVALID_SOURCE', 'unknown source type', { sourceId: s.id });
+  if (!isOneOf(s.status, SOURCE_STATUSES)) return fail('INVALID_SOURCE', 'unknown source status', { sourceId: s.id });
+  if (!isOneOf(s.retention, RETENTION_MODES)) return fail('INVALID_SOURCE', 'unknown retention', { sourceId: s.id });
+  if (s.newsGenre !== undefined && !isOneOf(s.newsGenre, NEWS_GENRES)) {
+    return fail('INVALID_SOURCE', 'unknown news genre', { sourceId: s.id });
+  }
+  const a = s.acquisition;
+  if (!a || !(a.method === 'USER_UPLOAD' || a.method === 'ANALYST_ENTRY' || (a.method === 'PROVIDER' && isValidId(a.providerId)))) {
+    return fail('INVALID_SOURCE', 'acquisition (PROVIDER+providerId | USER_UPLOAD | ANALYST_ENTRY) required', { sourceId: s.id });
+  }
+  if (s.jurisdiction !== undefined && !/^[A-Za-z]{2}$/.test(s.jurisdiction.country ?? '')) {
+    return fail('INVALID_SOURCE', 'jurisdiction.country must be ISO 3166-1 alpha-2', { sourceId: s.id });
+  }
   const retrieved = parseIsoMs(s.retrievedAt);
   if (retrieved === null) return fail('INVALID_SOURCE', 'retrievedAt required', { sourceId: s.id });
   if (retrieved > evaluatedAtMs) return fail('INVALID_SOURCE', 'retrievedAt is in the future', { sourceId: s.id });
@@ -147,7 +199,6 @@ export function validateSource(s: Source, evaluatedAtMs: number): ImpactResult<S
     const pub = parseIsoMs(s.publishedAt);
     if (pub === null || pub > retrieved) return fail('INVALID_SOURCE', 'publishedAt invalid or after retrieval', { sourceId: s.id });
   }
-  if (RETENTION_RANK[s.retention] === undefined) return fail('INVALID_SOURCE', 'unknown retention', { sourceId: s.id });
   if (RETENTION_RANK[s.retention] > RETENTION_RANK[MAX_RETENTION[s.type]]) {
     return fail('INVALID_SOURCE', 'retention exceeds policy for this source type', { sourceId: s.id, type: s.type });
   }
@@ -171,6 +222,10 @@ export function validateClaim(c: Claim, investigationId: string): ImpactResult<C
     return fail('CROSS_INVESTIGATION_DENIED', 'claim belongs to another investigation', { claimId: c.id });
   }
   if (!isValidId(c.subjectOrganizationId)) return fail('INVALID_CLAIM', 'subject required', { claimId: c.id });
+  if (!isOneOf(c.kind, CLAIM_KINDS)) return fail('INVALID_CLAIM', 'unknown claim kind', { claimId: c.id });
+  if (!isOneOf(c.origin, CLAIM_ORIGINS)) return fail('INVALID_CLAIM', 'unknown claim origin', { claimId: c.id });
+  if (c.level !== undefined && !isOneOf(c.level, IMPACT_LEVELS)) return fail('INVALID_CLAIM', 'unknown impact level', { claimId: c.id });
+  if (!isValidPeriod(c.period)) return fail('INVALID_CLAIM', 'invalid or reversed period', { claimId: c.id });
   if (typeof c.text !== 'string' || !c.text.trim() || c.text.length > LIMITS.maxTextLength) {
     return fail('INVALID_CLAIM', 'claim text required and bounded', { claimId: c.id });
   }
@@ -223,8 +278,14 @@ export async function validateEvidence(
       return fail('INVALID_EVIDENCE', 'excerpt does not match its hash (tampered or unhashed)', { evidenceId: e.id });
     }
   }
-  for (const p of [e.observedPeriod?.from, e.observedPeriod?.to]) {
-    if (p !== undefined && parseIsoMs(p) === null) return fail('INVALID_EVIDENCE', 'invalid observedPeriod', { evidenceId: e.id });
+  if (e.level !== undefined && !isOneOf(e.level, IMPACT_LEVELS)) return fail('INVALID_EVIDENCE', 'unknown impact level', { evidenceId: e.id });
+  if (e.legalStage !== undefined && !isOneOf(e.legalStage, LEGAL_STAGES)) {
+    return fail('INVALID_EVIDENCE', 'unknown legal stage', { evidenceId: e.id });
+  }
+  // Evidence cannot describe a state that begins after the source was retrieved.
+  const retrievedMs = parseIsoMs(sources.get(e.sourceId)!.retrievedAt)!;
+  if (!isValidPeriod(e.observedPeriod, retrievedMs)) {
+    return fail('INVALID_EVIDENCE', 'observedPeriod invalid, reversed or starting after retrieval', { evidenceId: e.id });
   }
   return ok(e);
 }
