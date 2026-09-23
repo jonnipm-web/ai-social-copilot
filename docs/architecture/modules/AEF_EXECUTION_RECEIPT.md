@@ -41,7 +41,9 @@ No payload, prompt, credential or free text. `reason_code` is a code
 
 `aef_verify_receipt({receipt})` → valid only if: the receipt id exists; the
 submitted object equals the stored jsonb exactly; the stored hash matches
-its content; and the hash is anchored by a `RECEIPT_ISSUED` event.
+its content; the hash is anchored by a `RECEIPT_ISSUED` event whose own
+event hash is intact; and the subject's whole audit chain verifies
+(`RECEIPT_ANCHOR_INVALID` / `RECEIPT_CHAIN_INVALID`, Codex G1-04, T17c/d).
 Tested: altered field → `RECEIPT_MISMATCH`; invented id → `RECEIPT_UNKNOWN`;
 malformed → `RECEIPT_MALFORMED`; a v0 in-memory `buildSuccess()` receipt →
 invalid (PG-16, SQL T11).

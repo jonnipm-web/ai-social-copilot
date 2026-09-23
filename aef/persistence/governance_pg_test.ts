@@ -438,3 +438,32 @@ Deno.test({ name: "PG-18 an approval given under another policy version is inval
   assertEquals(after.operation.state, "INVALIDATED");
   assertEquals(h.ledger.invocations.size, 0);
 }});
+
+Deno.test({ name: "PG-19 the tool sees only the approved binding: unbound request fields cannot change its input (Codex G1-01)", ignore, fn: async () => {
+  const w = await world();
+  const h = harness(w);
+  const first = req(w.a, { project: w.projectA.toUpperCase(), extra: { parameters: undefined } });
+  const pending = expectStatus(await h.gov.submit(first, w.tokA), "AWAITING_APPROVAL");
+  expectStatus(await approve(h, w, pending), "AUTHORIZED");
+  const later = Date.now() + 60_000;
+  const variant = {
+    ...structuredClone(first),
+    request_id: crypto.randomUUID(),
+    correlation_id: crypto.randomUUID(),
+    requested_at: new Date(later).toISOString(),
+    expires_at: new Date(later + 60_000).toISOString(),
+    parameters: {},
+    metadata: { injected: "x" },
+  };
+  expectStatus(await h.gov.submit(variant, w.tokA), "FINAL");
+  assertEquals(h.ledger.seenRequests.length, 1);
+  const seen = h.ledger.seenRequests[0] as unknown as Record<string, unknown>;
+  assertEquals(seen.request_id, pending.operation.operationId, "server-owned id, not the client's");
+  assertEquals(seen.actor, { type: "user", id: w.a, auth_ref: `usr:${w.a}` });
+  assertEquals(seen.parameters, {});
+  assertEquals(seen.resource, { type: "project", id: w.projectA });
+  for (const unbound of ["correlation_id", "idempotency_key", "metadata", "human_gate_ref", "delegation_ref", "constraints", "context_ref"]) {
+    assertEquals(seen[unbound], undefined, unbound);
+  }
+  assert(Object.isFrozen(seen) && Object.isFrozen(seen.parameters));
+}});

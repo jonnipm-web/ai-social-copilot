@@ -276,12 +276,86 @@ BEGIN
     'subject_id', 'a1000000-0000-4000-8000-00000000000a')), 'OPERATION_TERMINAL', 'T13c cancel terminal');
 END $$;
 
--- ── T14 guard triggers stop service_role from bypassing the state machine ─
+-- ── T14s service_role: only the ten RPCs; no direct writes, no helpers ───
+-- (Codex Gate 1 G1-02/G1-03)
 DO $$
 DECLARE r jsonb; v_op uuid;
 BEGIN
   r := pg_temp.reg('a1000000-0000-4000-8000-00000000000a', 'a3000000-0000-4000-8000-000000000040', 'key-guard');
   v_op := (r #>> '{operation,operation_id}')::uuid;
+  PERFORM set_config('aef.t.op_guard', v_op::text, false);
+  BEGIN
+    INSERT INTO public.aef_operations (id, subject_id, request_id, idempotency_key_hash, domain, action, tool_id,
+      action_class, payload_hash, payload_bytes, binding_hash, policy_version, risk_version, requires_human_gate, state, expires_at)
+    VALUES (gen_random_uuid(), 'a1000000-0000-4000-8000-00000000000a', gen_random_uuid(), repeat('1', 64), 'internal',
+      'internal.mock_effect_reversible', 'internal.mock_effect_reversible', 'REVERSIBLE', repeat('2', 64), 10, repeat('3', 64),
+      'aef-policy/2026-09-25.1', 'aef-risk/2026-09-25.1', false, 'AUTHORIZED', now() + interval '1 hour');
+    RAISE EXCEPTION 'T14s-a service_role inserted an operation directly';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+  BEGIN
+    UPDATE public.aef_operations SET state = 'AUTHORIZED' WHERE id = v_op;
+    RAISE EXCEPTION 'T14s-b service_role updated an operation directly';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+  BEGIN
+    UPDATE public.aef_human_gates SET state = 'AUTHORIZED', approver_id = 'a1000000-0000-4000-8000-00000000000a' WHERE operation_id = v_op;
+    RAISE EXCEPTION 'T14s-c service_role approved a gate directly';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+  BEGIN
+    INSERT INTO public.aef_audit_events (subject_id, seq, event_type, occurred_at, prev_hash, event_hash)
+    VALUES ('a1000000-0000-4000-8000-00000000000a', 999, 'FORGED', now(), repeat('0', 64), repeat('1', 64));
+    RAISE EXCEPTION 'T14s-d service_role inserted an audit event directly';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+  BEGIN
+    DELETE FROM public.aef_receipts;
+    RAISE EXCEPTION 'T14s-e service_role deleted receipts';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+  BEGIN
+    PERFORM public.aef__audit_append('a1000000-0000-4000-8000-00000000000a', NULL, 'FORGED', NULL, NULL, 'FAKE', NULL);
+    RAISE EXCEPTION 'T14s-f service_role called aef__audit_append';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+  BEGIN
+    PERFORM public.aef__op_to(v_op, 'REJECTED', 'FAKE');
+    RAISE EXCEPTION 'T14s-g service_role called aef__op_to';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+  BEGIN
+    PERFORM public.aef__issue_receipt(v_op);
+    RAISE EXCEPTION 'T14s-h service_role called aef__issue_receipt';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+  IF (SELECT state FROM public.aef_operations WHERE id = v_op) <> 'AWAITING_APPROVAL' THEN
+    RAISE EXCEPTION 'T14s operation changed';
+  END IF;
+END $$;
+RESET ROLE;
+
+-- ── T14p privilege catalog: each layer checked on its own ────────────────
+DO $$
+DECLARE f record; t text; r text;
+BEGIN
+  FOR f IN SELECT p.oid, p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+            WHERE n.nspname = 'public' AND left(p.proname, 4) = 'aef_' LOOP
+    FOREACH r IN ARRAY ARRAY['anon', 'authenticated'] LOOP
+      IF has_function_privilege(r, f.oid, 'EXECUTE') THEN RAISE EXCEPTION 'T14p % can execute %', r, f.proname; END IF;
+    END LOOP;
+    IF left(f.proname, 5) = 'aef__' AND has_function_privilege('service_role', f.oid, 'EXECUTE') THEN
+      RAISE EXCEPTION 'T14p service_role can execute internal helper %', f.proname;
+    END IF;
+    IF left(f.proname, 5) <> 'aef__' AND NOT has_function_privilege('service_role', f.oid, 'EXECUTE') THEN
+      RAISE EXCEPTION 'T14p service_role cannot execute RPC %', f.proname;
+    END IF;
+  END LOOP;
+  FOREACH t IN ARRAY ARRAY['aef_operations', 'aef_human_gates', 'aef_receipts', 'aef_audit_events', 'aef_audit_heads'] LOOP
+    FOREACH r IN ARRAY ARRAY['anon', 'authenticated', 'service_role'] LOOP
+      IF has_table_privilege(r, 'public.' || t, 'INSERT,UPDATE,DELETE,TRUNCATE') THEN
+        RAISE EXCEPTION 'T14p % has a write privilege on %', r, t;
+      END IF;
+    END LOOP;
+  END LOOP;
+END $$;
+
+-- ── T14 guard triggers hold even for the table owner (defense in depth) ───
+DO $$
+DECLARE v_op uuid := current_setting('aef.t.op_guard')::uuid;
+BEGIN
   BEGIN
     UPDATE public.aef_operations SET state = 'AUTHORIZED' WHERE id = v_op;
     RAISE EXCEPTION 'T14a authorized without an approved gate';
@@ -307,11 +381,15 @@ BEGIN
   BEGIN
     DELETE FROM public.aef_operations WHERE id = v_op;
     RAISE EXCEPTION 'T14f operation deleted';
-  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+  EXCEPTION WHEN raise_exception THEN IF SQLERRM NOT LIKE 'AEF_GUARD%' THEN RAISE; END IF; END;
   BEGIN
-    UPDATE public.aef_receipts SET receipt_hash = repeat('0', 64);
-    RAISE EXCEPTION 'T14g receipt updated';
-  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+    INSERT INTO public.aef_operations (id, subject_id, request_id, idempotency_key_hash, domain, action, tool_id,
+      action_class, payload_hash, payload_bytes, binding_hash, policy_version, risk_version, requires_human_gate, state, expires_at)
+    VALUES (gen_random_uuid(), 'a1000000-0000-4000-8000-00000000000a', gen_random_uuid(), repeat('1', 64), 'internal',
+      'internal.mock_effect_consequential', 'internal.mock_effect_consequential', 'CONSEQUENTIAL', repeat('2', 64), 10, repeat('3', 64),
+      'aef-policy/2026-09-25.1', 'aef-risk/2026-09-25.1', true, 'AUTHORIZED', now() + interval '1 hour');
+    RAISE EXCEPTION 'T14g gated operation inserted already AUTHORIZED';
+  EXCEPTION WHEN raise_exception THEN IF SQLERRM NOT LIKE 'AEF_GUARD%' THEN RAISE; END IF; END;
   BEGIN
     INSERT INTO public.aef_receipts (id, operation_id, subject_id, receipt, receipt_hash)
     SELECT gen_random_uuid(), v_op, 'a1000000-0000-4000-8000-00000000000a', '{"outcome":"SUCCESS"}', repeat('0', 64);
@@ -327,7 +405,6 @@ BEGIN
     RAISE EXCEPTION 'T14j forged audit event';
   EXCEPTION WHEN raise_exception THEN IF SQLERRM NOT LIKE 'AEF_GUARD%' THEN RAISE; END IF; END;
 END $$;
-RESET ROLE;
 
 -- Even the table owner / superuser hits the append-only guards.
 DO $$ BEGIN
@@ -417,6 +494,34 @@ BEGIN
   IF (r ->> 'valid')::boolean IS NOT FALSE OR r ->> 'reason' <> 'EVENT_HASH_INVALID' THEN
     RAISE EXCEPTION 'T17b tampering not detected: %', r;
   END IF;
+END $$;
+RESET ROLE;
+
+-- T17c/d receipt verification rejects a tampered anchor and a tampered chain (Codex Gate 1 G1-04).
+SET session_replication_role = replica;
+UPDATE public.aef_audit_events SET reason_code = 'TAMPERED'
+ WHERE operation_id = current_setting('aef.t.op_a')::uuid AND event_type = 'RECEIPT_ISSUED';
+SET session_replication_role = origin;
+SET ROLE service_role;
+DO $$
+DECLARE r jsonb;
+BEGIN
+  r := public.aef_verify_receipt(jsonb_build_object('receipt', current_setting('aef.t.receipt_a')::jsonb));
+  IF r ->> 'reason' IS DISTINCT FROM 'RECEIPT_ANCHOR_INVALID' THEN RAISE EXCEPTION 'T17c tampered anchor accepted: %', r; END IF;
+END $$;
+RESET ROLE;
+SET session_replication_role = replica;
+UPDATE public.aef_audit_events SET reason_code = 'SUCCESS'
+ WHERE operation_id = current_setting('aef.t.op_a')::uuid AND event_type = 'RECEIPT_ISSUED';
+UPDATE public.aef_audit_events SET reason_code = 'TAMPERED'
+ WHERE subject_id = 'a1000000-0000-4000-8000-00000000000a' AND seq = 1;
+SET session_replication_role = origin;
+SET ROLE service_role;
+DO $$
+DECLARE r jsonb;
+BEGIN
+  r := public.aef_verify_receipt(jsonb_build_object('receipt', current_setting('aef.t.receipt_a')::jsonb));
+  IF r ->> 'reason' IS DISTINCT FROM 'RECEIPT_CHAIN_INVALID' THEN RAISE EXCEPTION 'T17d tampered chain accepted: %', r; END IF;
 END $$;
 RESET ROLE;
 

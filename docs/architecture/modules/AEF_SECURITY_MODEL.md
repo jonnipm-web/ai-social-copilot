@@ -1,8 +1,8 @@
 # AEF Security Model (persistent)
 
 Mission `IV-AEF-PERSISTENCE-01`. Threat → control → proof (executed test).
-SQL tests: `supabase/tests/aef_persistence_rls_test.sql` (T00..T17b).
-Integration: `aef/persistence/governance_pg_test.ts` (PG-01..18, real
+SQL tests: `supabase/tests/aef_persistence_rls_test.sql` (T00..T17d, T14s).
+Integration: `aef/persistence/governance_pg_test.ts` (PG-01..19, real
 PostgreSQL). Unit: `governance_unit_test.ts` (GU), `canonical_test.ts` (CJ),
 `ive_intent_mapping_test.ts` (IM).
 
@@ -13,7 +13,7 @@ PostgreSQL). Unit: `governance_unit_test.ts` (GU), `canonical_test.ts` (CJ),
 | `anon` | nothing (no grant on tables or functions) | T01 |
 | `authenticated` (owner) | SELECT own operations (minus `execution_token`), gates, receipts, audit events | RLS `subject_id = auth.uid()`; T02/T03 |
 | `authenticated` (foreign) | sees nothing of another subject | T02 |
-| `service_role` | EXECUTE on `aef_*` functions; SELECT/INSERT/UPDATE (no DELETE/TRUNCATE) | privileged infrastructure identity; **RLS does not restrict it**; guard triggers still do (T14) |
+| `service_role` | EXECUTE on the ten `aef_*` RPCs; SELECT on tables; **no** INSERT/UPDATE/DELETE, **no** `aef__*` helpers | privileged infrastructure identity; RLS does not restrict it, privileges do: it can change state only through the RPCs (T14s) |
 | table owner / superuser | can disable triggers | out of the application trust boundary; tampering is then *detectable* (hash chain, T17b), not preventable |
 | SERVICE / SYSTEM actors | `UNSUPPORTED_BY_V0` | no service identity exists; unchanged from v0 |
 
@@ -33,8 +33,10 @@ PostgreSQL). Unit: `governance_unit_test.ts` (GU), `canonical_test.ts` (CJ),
 | 10 | Foreign / unknown project | ownership checked in SQL; same code for both | T07a/b, PG-05, PG-17 |
 | 11 | Mass assignment into RPCs | one jsonb arg, key allowlist, JSON type checks | T06a..f, GU-09 |
 | 12 | End user writes tables | no INSERT/UPDATE/DELETE grant | T04 |
-| 13 | service_role skips a state / reverts a terminal / rewrites bound columns | guard triggers | T14a..e |
-| 14 | Forged receipt | DB-issued only, insert-consistency trigger, verify = exact match + hash + chain anchor | T11, T14h, PG-16 |
+| 13 | service_role skips a state / inserts an operation / forges audit via helpers | no direct write grant, no helper EXECUTE; RPCs are the only path | T14s-a..h |
+| 13b | owner skips a state / reverts a terminal / rewrites bound columns | guard triggers (apply to the owner) | T14a..j |
+| 14 | Forged receipt | DB-issued only, insert-consistency trigger, verify = exact match + hash + intact anchor + intact chain | T11, T14h, T17c/d, PG-16 |
+| 14b | Tool input differs from the approved binding | tool request rebuilt from the hashed payload + bound + server-owned fields only | PG-19 |
 | 15 | Receipt / audit altered after the fact | append-only triggers (even for the owner) | T14g, T15a..c |
 | 16 | Audit altered with triggers disabled | per-subject hash chain verification | T17b |
 | 17 | Invented success after crash / timeout / store failure | UNKNOWN_OUTCOME; OUTCOME_UNCONFIRMED; no retry | PG-11..13, GU-05 |
@@ -45,7 +47,7 @@ PostgreSQL). Unit: `governance_unit_test.ts` (GU), `canonical_test.ts` (CJ),
 | 22 | Oversized input / resource exhaustion | payload ≤ 16 KiB, depth ≤ 8, ≤ 1000 nodes; TTL ≤ 24 h; gate ≤ 1 h; lease ≤ 5 min | CJ-04, T06d, PG-06 |
 | 23 | Secrets / PII in storage or logs | only ids, hashes, codes; no logging added | schema review |
 | 24 | Tool reaches real systems | only mock tools registered; real IVE actions have no tool | PG-17, tool registry |
-| 25 | Privilege expansion through functions | SECURITY INVOKER everywhere, pinned search_path, EXECUTE revoked from PUBLIC/anon/authenticated | T01, T05 |
+| 25 | Privilege expansion through functions | SECURITY DEFINER only on the ten RPCs (pinned search_path, no dynamic SQL, EXECUTE only service_role); helpers/triggers not executable by any API role | T01, T05, T14s |
 
 ## v1 restrictions (fail closed)
 
@@ -57,12 +59,15 @@ PostgreSQL). Unit: `governance_unit_test.ts` (GU), `canonical_test.ts` (CJ),
 
 ## Residual risks (documented, not closed here)
 
-- service_role compromise = full control of AEF state (inherent to the
-  Supabase model; mitigated by triggers + detectable tampering, not
-  prevented).
+- service_role compromise = can call the RPCs with any subject it chooses
+  (the RPCs trust the service for identity and policy); it can no longer
+  write tables or forge audit events directly. Inherent to a server-side
+  identity; mitigated, not prevented.
+- No privacy-erasure / retention procedure for AEF records (Codex G1-06,
+  DEFERRED — needs an Owner/architect retention decision before
+  production).
 - `UNKNOWN_OUTCOME` has no reconciliation workflow yet.
 - Self-approval is the only approval mode (no four-eyes).
 - The audit trail grows with refused attempts of verified users (bounded
   per request; no rate limit in this layer).
-- No privacy-erasure procedure for AEF records yet.
 - Not deployed; production behavior NOT_VERIFIED.

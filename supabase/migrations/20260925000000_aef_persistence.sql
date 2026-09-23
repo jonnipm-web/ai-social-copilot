@@ -13,9 +13,11 @@
 --   * receipts and audit events are append-only (UPDATE/DELETE/TRUNCATE
 --     rejected) and hash-anchored (per-subject hash chain).
 -- End users (authenticated) may only SELECT their own rows. anon: nothing.
--- service_role is privileged infrastructure: RLS does not restrict it; the
--- guard triggers still do (a superuser can disable triggers — documented in
--- AEF_SECURITY_MODEL.md).
+-- service_role (privileged infrastructure) may only SELECT and call the ten
+-- aef_* RPCs; it has no direct INSERT/UPDATE/DELETE and cannot call the
+-- internal aef__* helpers. The RPCs are SECURITY DEFINER with a pinned
+-- search_path; the guard triggers apply to the owner too (a superuser can
+-- disable triggers — tampering is then detectable, AEF_SECURITY_MODEL.md).
 --
 -- No payload, prompt, JWT, credential or free text is stored: only ids,
 -- hashes, codes and timestamps. Idempotency keys are stored hashed.
@@ -580,7 +582,7 @@ END $$;
 
 -- ── RPC: register (create or idempotent replay) ─────────────────────────
 CREATE OR REPLACE FUNCTION public.aef_register_operation(p jsonb) RETURNS jsonb
-LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE
   v_subject uuid; v_request uuid; v_key text; v_domain text; v_action text; v_tool text; v_class text;
   v_rtype text; v_rid text; v_project uuid; v_payload_hash text; v_payload_bytes int;
@@ -687,7 +689,7 @@ END $$;
 
 -- ── RPC: human decision ─────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.aef_decide_gate(p jsonb) RETURNS jsonb
-LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE
   v_gate uuid; v_approver uuid; v_decision text; v_binding text; v_policy text;
   v_op uuid; o public.aef_operations; g public.aef_human_gates;
@@ -744,7 +746,7 @@ END $$;
 
 -- ── RPC: execution claim (the only path to EXECUTING) ───────────────────
 CREATE OR REPLACE FUNCTION public.aef_claim_execution(p jsonb) RETURNS jsonb
-LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE
   v_op uuid; v_subject uuid; v_binding text; v_policy text; v_lease int;
   o public.aef_operations; g public.aef_human_gates; v_token uuid := gen_random_uuid();
@@ -796,7 +798,7 @@ END $$;
 
 -- ── RPC: execution completion ───────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.aef_complete_execution(p jsonb) RETURNS jsonb
-LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE v_op uuid; v_token uuid; v_result text; o public.aef_operations;
 BEGIN
   BEGIN
@@ -828,7 +830,7 @@ END $$;
 
 -- ── RPC: cancellation (never compensates) ───────────────────────────────
 CREATE OR REPLACE FUNCTION public.aef_cancel_operation(p jsonb) RETURNS jsonb
-LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE v_op uuid; v_subject uuid; o public.aef_operations;
 BEGIN
   BEGIN
@@ -859,7 +861,7 @@ END $$;
 
 -- ── RPC: recovery sweep (expired approvals, crashed executions) ─────────
 CREATE OR REPLACE FUNCTION public.aef_recover(p jsonb) RETURNS jsonb
-LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE v_limit int; o public.aef_operations; v_unknown int := 0; v_expired int := 0;
 BEGIN
   BEGIN
@@ -895,7 +897,7 @@ END $$;
 
 -- ── RPC: read ───────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.aef_get_operation(p jsonb) RETURNS jsonb
-LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE v_op uuid; v_subject uuid;
 BEGIN
   BEGIN
@@ -912,7 +914,7 @@ BEGIN
 END $$;
 
 CREATE OR REPLACE FUNCTION public.aef_record_denial(p jsonb) RETURNS jsonb
-LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE v_subject uuid; v_code text;
 BEGIN
   BEGIN
@@ -928,8 +930,8 @@ END $$;
 
 -- ── RPC: integrity verification ─────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.aef_verify_receipt(p jsonb) RETURNS jsonb
-LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
-DECLARE v_receipt jsonb; v_id uuid; r public.aef_receipts;
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE v_receipt jsonb; v_id uuid; r public.aef_receipts; e public.aef_audit_events;
 BEGIN
   BEGIN
     PERFORM public.aef__check_keys(p, ARRAY['receipt']);
@@ -951,16 +953,26 @@ BEGIN
   IF r.receipt_hash <> public.aef__sha256(r.receipt::text) THEN
     RETURN jsonb_build_object('ok', true, 'valid', false, 'reason', 'RECEIPT_HASH_INVALID');
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM public.aef_audit_events e
-                  WHERE e.subject_id = r.subject_id AND e.operation_id = r.operation_id
-                    AND e.event_type = 'RECEIPT_ISSUED' AND e.ref_hash = r.receipt_hash) THEN
+  SELECT * INTO e FROM public.aef_audit_events
+   WHERE subject_id = r.subject_id AND operation_id = r.operation_id
+     AND event_type = 'RECEIPT_ISSUED' AND ref_hash = r.receipt_hash;
+  IF NOT FOUND THEN
     RETURN jsonb_build_object('ok', true, 'valid', false, 'reason', 'RECEIPT_NOT_ANCHORED');
+  END IF;
+  -- Codex Gate 1 G1-04: the anchor must itself be intact, and so must the
+  -- whole chain it belongs to.
+  IF e.event_hash <> public.aef__event_hash(e.subject_id, e.seq, e.operation_id, e.event_type, e.from_state, e.to_state,
+                                            e.reason_code, e.ref_hash, e.occurred_at, e.prev_hash) THEN
+    RETURN jsonb_build_object('ok', true, 'valid', false, 'reason', 'RECEIPT_ANCHOR_INVALID');
+  END IF;
+  IF (public.aef_verify_audit_chain(jsonb_build_object('subject_id', r.subject_id)) ->> 'valid')::boolean IS NOT TRUE THEN
+    RETURN jsonb_build_object('ok', true, 'valid', false, 'reason', 'RECEIPT_CHAIN_INVALID');
   END IF;
   RETURN jsonb_build_object('ok', true, 'valid', true, 'receipt_hash', r.receipt_hash);
 END $$;
 
 CREATE OR REPLACE FUNCTION public.aef_verify_audit_chain(p jsonb) RETURNS jsonb
-LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE v_subject uuid; e public.aef_audit_events; v_prev text := repeat('0', 64); v_seq bigint := 0; h public.aef_audit_heads;
 BEGIN
   BEGIN
@@ -1021,15 +1033,24 @@ GRANT SELECT (id, subject_id, request_id, domain, action, tool_id, action_class,
               authorized_at, completed_at, updated_at, expires_at)
   ON public.aef_operations TO authenticated;
 GRANT SELECT ON public.aef_human_gates, public.aef_receipts, public.aef_audit_events TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.aef_operations, public.aef_human_gates, public.aef_audit_heads TO service_role;
-GRANT SELECT, INSERT ON public.aef_receipts, public.aef_audit_events TO service_role;
+-- Codex Gate 1 G1-02/G1-03: service_role gets NO direct write privilege on
+-- any AEF table and cannot call the internal aef__* helpers. The ten RPCs
+-- below (SECURITY DEFINER, pinned search_path, owned by the migration owner)
+-- are the only mutation path; service_role may only read, for operations
+-- tooling.
+GRANT SELECT ON public.aef_operations, public.aef_human_gates, public.aef_receipts,
+                public.aef_audit_events, public.aef_audit_heads TO service_role;
 
 DO $$
-DECLARE f regprocedure;
+DECLARE f regprocedure; v_name text;
 BEGIN
-  FOR f IN SELECT p.oid::regprocedure FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+  FOR f, v_name IN SELECT p.oid::regprocedure, p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
             WHERE n.nspname = 'public' AND left(p.proname, 4) = 'aef_' LOOP
-    EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC, anon, authenticated', f);
-    EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO service_role', f);
+    EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC, anon, authenticated, service_role', f);
+    IF v_name IN ('aef_register_operation', 'aef_decide_gate', 'aef_claim_execution', 'aef_complete_execution',
+                  'aef_cancel_operation', 'aef_recover', 'aef_get_operation', 'aef_record_denial',
+                  'aef_verify_receipt', 'aef_verify_audit_chain') THEN
+      EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO service_role', f);
+    END IF;
   END LOOP;
 END $$;

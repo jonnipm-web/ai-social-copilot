@@ -75,8 +75,16 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const HEX64 = /^[0-9a-f]{64}$/;
 
-/** Everything the tool can observe is bound into the payload hash. */
-function boundPayload(request: ExecutionRequest): Record<string, unknown> {
+interface BoundPayload {
+  intent: string;
+  parameters: Record<string, unknown>;
+  constraints: ExecutionRequest["constraints"] | null;
+  quant_execution_tier: ExecutionRequest["quant_execution_tier"] | null;
+  context_ref: string | null;
+}
+
+/** The client-supplied part of what the tool observes; hashed into payload_hash. */
+function boundPayload(request: ExecutionRequest): BoundPayload {
   return {
     intent: request.intent,
     parameters: request.parameters ?? {},
@@ -86,11 +94,41 @@ function boundPayload(request: ExecutionRequest): Record<string, unknown> {
   };
 }
 
-/** The exact request a tool receives: bound fields only (no metadata). */
-function toolRequest(request: ExecutionRequest): ExecutionRequest {
-  const copy = structuredClone(request);
-  delete copy.metadata;
-  return Object.freeze(copy);
+/**
+ * The exact request a tool receives (Codex Gate 1 G1-01). Built ONLY from:
+ *   - the normalized, hashed payload (so equal hash ⇒ equal tool input,
+ *     whatever the client sent for omitted-vs-empty fields);
+ *   - fields bound in the DB binding hash (domain, action, resource);
+ *   - server-owned values (verified subject, the durable operation id and
+ *     its expiry, the execution time).
+ * Never from unbound client fields (request_id, correlation_id, timestamps,
+ * idempotency_key, metadata, human_gate_ref, delegation_ref).
+ */
+function toolRequest(request: ExecutionRequest, payload: BoundPayload, subjectId: string, op: { operationId: string; expiresAt: string }, now: Date): ExecutionRequest {
+  const built: ExecutionRequest = {
+    contract_version: "1.0",
+    request_id: op.operationId,
+    requested_at: now.toISOString(),
+    expires_at: op.expiresAt,
+    actor: { type: "user", id: subjectId, auth_ref: `usr:${subjectId}` },
+    intent: payload.intent,
+    domain: request.domain,
+    action: request.action,
+    parameters: structuredClone(payload.parameters),
+  };
+  if (request.resource) built.resource = { type: request.resource.type, id: request.resource.id.toLowerCase() };
+  if (payload.constraints !== null) built.constraints = structuredClone(payload.constraints);
+  if (payload.quant_execution_tier !== null) built.quant_execution_tier = payload.quant_execution_tier;
+  if (payload.context_ref !== null) built.context_ref = payload.context_ref;
+  return deepFreeze(built);
+}
+
+function deepFreeze<T>(v: T): T {
+  if (typeof v === "object" && v !== null) {
+    for (const child of Object.values(v)) deepFreeze(child);
+    Object.freeze(v);
+  }
+  return v;
 }
 
 type CompletionResult = "SUCCEEDED" | "FAILED_NO_SIDE_EFFECT" | "FAILED_AFTER_SIDE_EFFECT" | "UNKNOWN_OUTCOME";
@@ -241,7 +279,7 @@ export class AefGovernance {
       return current.ok ? this.present(current, true) : deny(current.code);
     }
 
-    const result = await this.runTool(request, op.operationId);
+    const result = await this.runTool(toolRequest(request, boundPayload(request), subjectId, op, this.now()), op.operationId);
     let completed;
     try {
       completed = await this.deps.store.completeExecution({
@@ -260,14 +298,14 @@ export class AefGovernance {
     return shown.status === "FINAL" ? shown : { status: "OUTCOME_UNCONFIRMED", code: "STORE_PROTOCOL_ERROR", operationId: op.operationId };
   }
 
-  private async runTool(request: ExecutionRequest, operationId: string): Promise<CompletionResult> {
+  private async runTool(input: ExecutionRequest, operationId: string): Promise<CompletionResult> {
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
     const timeout = new Promise<"TIMEOUT">((resolve) => {
       timer = setTimeout(() => resolve("TIMEOUT"), this.deps.toolTimeoutMs ?? TOOL_TIMEOUT_MS);
     });
     try {
-      const invocation = this.#execute(toolRequest(request), { operationId, signal: controller.signal });
+      const invocation = this.#execute(input, { operationId, signal: controller.signal });
       if (!invocation) return "FAILED_NO_SIDE_EFFECT"; // unregistered at execution time: nothing ran
       const raced = await Promise.race([invocation, timeout]);
       if (raced === "TIMEOUT") {

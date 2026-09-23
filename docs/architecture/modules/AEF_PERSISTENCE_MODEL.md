@@ -33,12 +33,12 @@ Idempotency keys are stored as `sha256('aef-idem/1:' || subject || ':' || key)`.
 
 | Hash | Computed by | Content |
 |---|---|---|
-| `payload_hash` | service (`canonical.ts`) | canonical JSON of `{intent, parameters, constraints, quant_execution_tier, context_ref}` — everything the tool can observe |
+| `payload_hash` | service (`canonical.ts`) | canonical JSON of the normalized `{intent, parameters, constraints, quant_execution_tier, context_ref}` — the client-supplied part of the tool input. The tool receives a request rebuilt from exactly this object plus bound fields (domain, action, resource) and server-owned values (subject, operation id, expiry); unbound client fields never reach it (Codex G1-01, test PG-19) |
 | `binding_hash` | database | `jsonb_build_array('aef-binding/1', subject, domain, action, tool, class, resource_type, resource_id, payload_hash, policy_version, risk_version, requires_gate)` |
 | `receipt_hash` | database | `sha256(receipt::text)` (jsonb text is deterministic) |
 | `event_hash` | database | `jsonb_build_array('aef-audit/1', subject, seq, op, type, from, to, reason, ref_hash, ts, prev_hash)` |
 
-## Functions (EXECUTE: service_role only)
+## Functions (EXECUTE: service_role only — the only write path)
 
 | Function | Effect |
 |---|---|
@@ -51,9 +51,16 @@ Idempotency keys are stored as `sha256('aef-idem/1:' || subject || ':' || key)`.
 | `aef_get_operation`, `aef_record_denial`, `aef_verify_receipt`, `aef_verify_audit_chain` | read / audit / integrity |
 
 Every function takes exactly one jsonb object and rejects unknown keys and
-wrong JSON types (`ARGUMENT_REJECTED`) — no mass assignment. Functions are
-`SECURITY INVOKER` with a pinned `search_path`: no `SECURITY DEFINER`
-anywhere, so no privilege expansion.
+wrong JSON types (`ARGUMENT_REJECTED`) — no mass assignment.
+
+Privilege model (after Codex Gate 1 G1-02/G1-03): the ten RPCs are
+`SECURITY DEFINER` (owner = migration owner) with `search_path = public,
+pg_temp`, and are the **only** way to change AEF state. service_role has
+SELECT only on the tables — no INSERT/UPDATE/DELETE — and no EXECUTE on the
+internal `aef__*` helpers or trigger functions. PUBLIC/anon/authenticated
+have no EXECUTE on anything `aef_*`. The definer functions only ever act on
+AEF tables and `projects` (read), take no identifiers used in dynamic SQL,
+and run with a pinned search path (tests T01, T05, T14s).
 
 ## Concurrency
 
@@ -93,8 +100,10 @@ the audit trail. A privacy-erasure procedure for AEF records is **deferred**
 
 ## Rollback
 
-The migration is additive (new tables/functions only). Rollback on a
-database where it was applied = drop the five `aef_*` tables and the
-`aef_*` functions; nothing else references them. The guard triggers block
-`TRUNCATE`/`DELETE`, so rollback requires `DROP TABLE` by the owner — a
-deliberate, reviewable act.
+The migration is additive (new tables/functions only; no existing object
+or row is touched). Rollback = `supabase/rollbacks/20260925000000_aef_persistence.down.sql`
+(ordered: non-trigger functions → tables → trigger functions, one
+transaction, self-verifying). It is tested on a disposable database that
+holds AEF data: down, verify nothing `aef_*` remains, re-apply the
+migration (`AEF_ROLLBACK: PASS`, CI-asserted). Destructive: requires
+explicit owner approval (Codex G1-05).

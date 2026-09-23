@@ -71,6 +71,12 @@ else
   echo "AEF_PG_INTEGRATION: PASS"
 fi
 
+# Rollback (Codex Gate 1 G1-05): the documented down script must remove every
+# AEF object from a database that holds data, and the migration must re-apply.
+run -d "$DB" -f "$ROOT/supabase/rollbacks/20260925000000_aef_persistence.down.sql" >/dev/null
+apply "$DB" "$ROOT/supabase/migrations/20260925000000_aef_persistence.sql"
+echo "AEF_ROLLBACK: PASS"
+
 # Legacy-data upgrade (Codex Gate 1 IG1-04): seed with today's schema, then
 # apply the memory migration on top of that data.
 run -d "$UPG" -f "$ROOT/supabase/tests/support/supabase_stubs.sql"
