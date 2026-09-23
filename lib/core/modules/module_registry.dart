@@ -633,4 +633,19 @@ const List<ModuleDefinition> kModuleRegistry = [
     releaseClassification: ModuleReleaseClass.externalPlanned,
     notes: 'QUANT_STATUS: NOT_IMPLEMENTED. QUANT_COMMERCIAL_RECOMMENDATION: SEPARATE_PRODUCT. adminClickable=false: não há nada para abrir. Nenhuma execução financeira ao vivo existe ou foi ativada -- não há o que "ativar" (não existe código).',
   ),
+  ModuleDefinition(
+    moduleId: 'impact',
+    namePt: 'InsightValues Impact',
+    nameEn: 'InsightValues Impact',
+    status: ModuleStatus.inDevelopment,
+    adminVisible: true,
+    adminClickable: false,
+    commercialEnabled: false,
+    minimumPlan: ModulePlan.free, // admin-only via lifecycle (EXPERIMENTAL), não via plano
+    route: null,
+    readinessPt: 'IV-IMPACT-FOUNDATION-01: núcleo de evidência e verificação no servidor (supabase/functions/_shared/impact/) -- determinístico, sem rede, sem LLM, sem persistência, sem Edge Function e sem tela. Não emite veredito, score ou ranking; ausência de evidência nunca vira acusação.',
+    readinessEn: 'IV-IMPACT-FOUNDATION-01: server-side evidence and verification core (supabase/functions/_shared/impact/) -- deterministic, no network, no LLM, no persistence, no Edge Function and no screen. Emits no verdict, score or ranking; absence of evidence never becomes an accusation.',
+    releaseClassification: ModuleReleaseClass.internalTooling,
+    notes: 'Impact Lab (branch claude/insightvalues-impact-foundation). Ações classe C (acusação pública, contato externo, doação) NÃO implementadas -- futuramente somente via AEF + Human Gate. adminClickable=false: não há tela.',
+  ),
 ];
