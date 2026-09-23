@@ -2,7 +2,7 @@
 
 Mission `IV-AEF-PERSISTENCE-01`. Threat → control → proof (executed test).
 SQL tests: `supabase/tests/aef_persistence_rls_test.sql` (T00..T17d, T14s).
-Integration: `aef/persistence/governance_pg_test.ts` (PG-01..19, real
+Integration: `aef/persistence/governance_pg_test.ts` (PG-01..21, real
 PostgreSQL). Unit: `governance_unit_test.ts` (GU), `canonical_test.ts` (CJ),
 `ive_intent_mapping_test.ts` (IM).
 
@@ -45,7 +45,7 @@ PostgreSQL). Unit: `governance_unit_test.ts` (GU), `canonical_test.ts` (CJ),
 | 20 | IVE intent as authority | strict mapping, subject from credential, no approval | IM-*, PG-17 |
 | 20b | Authority aliases in the payload (`owner_id`, `risk`, `tool_allowed`…) | refused at any depth, normalized names | PG-06, IM-09 |
 | 21 | Payload ambiguity | canonical JSON, no coercion, no normalization, bounded | CJ-01..05 |
-| 22 | Oversized input / resource exhaustion | payload ≤ 16 KiB, depth ≤ 8, ≤ 1000 nodes; TTL ≤ 24 h; gate ≤ 1 h; lease ≤ 5 min; ≤ 50 open operations per subject (soft) | CJ-04, T06d, PG-06, T18 |
+| 22 | Oversized input / resource exhaustion | payload ≤ 16 KiB, depth ≤ 8, ≤ 1000 nodes; TTL ≤ 24 h; gate ≤ 1 h; lease ≤ 5 min; ≤ 50 open operations per subject (soft) | CJ-04, T06d, PG-06, T18, PG-21 |
 | 23 | Secrets / PII in storage or logs | only ids, hashes, codes; no logging added | schema review |
 | 24 | Tool reaches real systems | only mock tools registered; real IVE actions have no tool | PG-17, tool registry |
 | 25 | Privilege expansion through functions | SECURITY DEFINER only on the ten RPCs (pinned search_path, no dynamic SQL, EXECUTE only service_role); helpers/triggers not executable by any API role | T01, T05, T14s |
@@ -102,6 +102,8 @@ All reviews READ-ONLY, new thread each, no-write snapshot verified before/after.
 | | | G3-02 authority aliases allowed in parameters | P2 | ACCEPTED — alias denylist in mapping and AEF (IM-09, PG-06, mutant M20) |
 | FINAL full diff 2197759..d77367f | PASS WITH FINDINGS (no P0/P1; A1–A10, A13–A15 HOLD) | CF-01 no admission / retention bounds | P2 | PARTIALLY ACCEPTED — open-operation cap 50/subject (T18, mutant M21); audit retention / rate limit DEFERRED to AEF hardening |
 | | | CF-02 rollback not migration-scoped | P2 | ACCEPTED — rollback drops only the 5 tables + 36 functions by exact name; runner proves an unrelated `aef_*` object survives |
+| CF fix verification (on 99f0c8f) | PASS WITH FINDINGS | CF-01 PARTIALLY FIXED (retention deferred), CF-02 FIXED | — | — |
+| | | CFV-01 admission pre-check could refuse a concurrent replay | P2 | ACCEPTED — admission moved after conflict resolution, inside a subtransaction (PG-21, mutant M21) |
 
 Mutation proof: 21/21 mutants killed (M01–M21: idempotency conflict,
 ownership, claim state, binding, policy version, recovery outcome, RLS,

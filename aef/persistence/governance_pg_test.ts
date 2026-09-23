@@ -512,3 +512,16 @@ Deno.test({ name: "PG-20 a tool that ignores the abort and applies its effect la
   assertEquals(later.receipt!.receipt.outcome, "UNKNOWN_OUTCOME", "a late effect never rewrites the durable record");
   assertEquals(h.ledger.invocations.get(operationId), 1, "and is never retried");
 }});
+
+Deno.test({ name: `PG-21 admission: at the open-operation limit, ${CONCURRENCY} concurrent replays of the last admitted key are never refused (Codex CFV-01)`, ignore, fn: async () => {
+  const w = await world();
+  const h = harness(w);
+  for (let i = 0; i < 49; i++) expectStatus(await h.gov.submit(req(w.a), w.tokA), "AWAITING_APPROVAL");
+  const key = crypto.randomUUID();
+  const results = await Promise.all(Array.from({ length: CONCURRENCY }, () => h.gov.submit(req(w.a, { key }), w.tokA)));
+  const ids = new Set(results.map((r) => expectStatus(r, "AWAITING_APPROVAL").operation.operationId));
+  assertEquals(ids.size, 1, "the 50th operation is admitted once; every concurrent replay returns it");
+  assertEquals(expectStatus(await h.gov.submit(req(w.a), w.tokA), "DENIED").code, "OPEN_OPERATION_LIMIT", "the 51st is refused");
+  const rows = await runPsql(PG!, `SELECT count(*) FROM public.aef_operations WHERE subject_id = '${w.a}' AND state = 'AWAITING_APPROVAL';`);
+  assertEquals(rows[0], "50");
+}});

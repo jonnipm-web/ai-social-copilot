@@ -653,24 +653,28 @@ BEGIN
                                                     v_rtype, v_rid, v_payload_hash, v_policy, v_risk, v_gated)::text);
   v_expires := now() + make_interval(secs => v_ttl);
 
-  -- Admission (Codex Final CF-01): at most 50 open operations per subject.
-  -- Soft limit (not serialized: a burst can overshoot by its concurrency);
-  -- replays of an existing key are never refused by it.
-  IF NOT EXISTS (SELECT 1 FROM public.aef_operations WHERE subject_id = v_subject AND idempotency_key_hash = v_key_hash)
-     AND (SELECT count(*) FROM public.aef_operations
-           WHERE subject_id = v_subject AND state IN ('AWAITING_APPROVAL', 'AUTHORIZED', 'EXECUTING')) >= 50 THEN
+  -- Admission (Codex Final CF-01, CFV-01): at most 50 open operations per
+  -- subject. Checked AFTER the idempotency conflict is resolved, inside a
+  -- subtransaction that undoes the insert, so a replay of an existing key
+  -- (even one still being committed concurrently) is never refused by it.
+  -- Soft limit: concurrent first registrations can overshoot slightly.
+  BEGIN
+    INSERT INTO public.aef_operations (id, subject_id, request_id, idempotency_key_hash, domain, action, tool_id,
+      action_class, resource_type, resource_id, project_id, payload_hash, payload_bytes, binding_hash,
+      policy_version, risk_version, requires_human_gate, state, expires_at)
+    VALUES (v_op_id, v_subject, v_request, v_key_hash, v_domain, v_action, v_tool,
+      v_class, v_rtype, v_rid, v_project, v_payload_hash, v_payload_bytes, v_binding,
+      v_policy, v_risk, v_gated, CASE WHEN v_gated THEN 'AWAITING_APPROVAL' ELSE 'AUTHORIZED' END, v_expires)
+    ON CONFLICT DO NOTHING;
+    GET DIAGNOSTICS v_rows = ROW_COUNT;
+    IF v_rows = 1 AND (SELECT count(*) FROM public.aef_operations
+                        WHERE subject_id = v_subject AND state IN ('AWAITING_APPROVAL', 'AUTHORIZED', 'EXECUTING')) > 50 THEN
+      RAISE EXCEPTION 'AEF_ADMISSION: open operation limit' USING ERRCODE = 'AE002';
+    END IF;
+  EXCEPTION WHEN SQLSTATE 'AE002' THEN
     PERFORM public.aef__audit_append(v_subject, NULL, 'REQUEST_DENIED', NULL, NULL, 'OPEN_OPERATION_LIMIT');
     RETURN public.aef__err('OPEN_OPERATION_LIMIT');
-  END IF;
-
-  INSERT INTO public.aef_operations (id, subject_id, request_id, idempotency_key_hash, domain, action, tool_id,
-    action_class, resource_type, resource_id, project_id, payload_hash, payload_bytes, binding_hash,
-    policy_version, risk_version, requires_human_gate, state, expires_at)
-  VALUES (v_op_id, v_subject, v_request, v_key_hash, v_domain, v_action, v_tool,
-    v_class, v_rtype, v_rid, v_project, v_payload_hash, v_payload_bytes, v_binding,
-    v_policy, v_risk, v_gated, CASE WHEN v_gated THEN 'AWAITING_APPROVAL' ELSE 'AUTHORIZED' END, v_expires)
-  ON CONFLICT DO NOTHING;
-  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  END;
 
   IF v_rows = 0 THEN
     SELECT * INTO v_existing FROM public.aef_operations
