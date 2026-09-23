@@ -45,6 +45,16 @@ Baseline at audit: AEF 138 tests, Edge Functions 373, Flutter 482, analyze
 | G14 | No resource ownership check | a request can name another user's project |
 | G15 | IVE → AEF mapping undefined | `IveActionIntent` has no documented translation or validation |
 
+## Update — IV-AEF-HARDENING-01 (2026-09-26)
+
+Gaps closed after the persistence mission: retention (policy table,
+`aef_purge`, tombstones, checkpointed audit pruning, legal hold), erasure
+(`aef_erase_subject`), audit growth control (coalesced denial counters),
+UNKNOWN_OUTCOME reconciliation (`aef_reconcile`, append-only), receipt
+format `aef-receipt/1.1` (v1 kept verbatim), and a READ-ONLY production
+privilege preflight script (result NOT_VERIFIED). Still not runtime-available:
+`AEF_PERSISTENCE_AVAILABLE = false`, no endpoint, mock tools only.
+
 ## What is kept
 
 The v0 kernel and its 138 tests stay unchanged: it remains the reference

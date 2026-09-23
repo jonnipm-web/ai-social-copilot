@@ -25,6 +25,15 @@ export const STORE_CODES = [
   "CANCEL_NOT_ALLOWED_IN_FLIGHT",
   "OPERATION_TERMINAL",
   "OPEN_OPERATION_LIMIT",
+  // IV-AEF-HARDENING-01
+  "IDEMPOTENCY_KEY_RETIRED",
+  "NOT_RECONCILABLE",
+  "ALREADY_RECONCILED",
+  "RECONCILER_NOT_AUTHORIZED",
+  "ERASURE_ACCOUNT_ACTIVE",
+  "ERASURE_BLOCKED_HOLD",
+  "ERASURE_BLOCKED_ACTIVE",
+  "ERASURE_BLOCKED_UNRECONCILED",
 ] as const;
 export type StoreCode = typeof STORE_CODES[number];
 
@@ -42,7 +51,8 @@ export type AefErrorCode =
   | "STORE_UNAVAILABLE"
   | "STORE_PROTOCOL_ERROR"
   | "INTENT_INVALID"
-  | "INTENT_ACTION_UNKNOWN";
+  | "INTENT_ACTION_UNKNOWN"
+  | "NO_VERIFIER";
 
 export function isStoreCode(v: unknown): v is StoreCode {
   return typeof v === "string" && (STORE_CODES as readonly string[]).includes(v);

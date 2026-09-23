@@ -75,6 +75,20 @@ function opView(state: string, payloadHash: string, extra: Record<string, unknow
   };
 }
 
+/** A well-formed aef-receipt/1.1 EXECUTION receipt for OP. */
+function executionReceipt(finalState: string, outcome: string): Record<string, unknown> {
+  const ts = "2026-09-26T00:00:00.000000Z";
+  return {
+    receipt_version: "aef-receipt/1.1", receipt_kind: "EXECUTION", receipt_id: "a6000000-0000-4000-8000-000000000001",
+    operation_id: OP, request_id: "a6000000-0000-4000-8000-000000000002", subject_id: USER, domain: "internal",
+    action: MOCK_REVERSIBLE_TOOL, tool_id: MOCK_REVERSIBLE_TOOL, action_class: "REVERSIBLE", resource_type: null,
+    resource_id: null, binding_hash: HEX("b"), payload_hash: HEX("a"), policy_version: "p", risk_version: "r",
+    human_gate_id: null, approver_id: null, policy_decision: "ALLOWED", outcome, final_state: finalState,
+    reason_code: "TOOL_SUCCEEDED", side_effect_observed: true, attempt_count: 1, registered_at: ts, authorized_at: ts,
+    completed_at: ts,
+  };
+}
+
 /** Echo the payload hash the service computed, like the real DB does. */
 const registerAuthorized = (args: Record<string, unknown>) => ({ ok: true, outcome: "CREATED", ...opView("AUTHORIZED", String(args.payload_hash)) });
 const status = (r: GovernanceResult) => r.status === "DENIED" || r.status === "OUTCOME_UNCONFIRMED" ? `${r.status}:${r.code}` : r.status;
@@ -188,10 +202,7 @@ Deno.test("GU-10 execution capability is claimed once: a second service cannot b
 
 Deno.test("GU-11 the tool receives a frozen copy of the bound request, without metadata", async () => {
   let payloadHash = "";
-  const receipt = () => ({
-    receipt: { receipt_id: "a6000000-0000-4000-8000-000000000001", operation_id: OP, outcome: "SUCCESS", final_state: "SUCCEEDED", binding_hash: HEX("b") },
-    receipt_hash: HEX("c"),
-  });
+  const receipt = () => ({ receipt: executionReceipt("SUCCEEDED", "SUCCESS"), receipt_hash: HEX("c") });
   const { gov, ledger } = setup({
     aef_register_operation: (a) => { payloadHash = String(a.payload_hash); return registerAuthorized(a); },
     aef_claim_execution: () => ({ ok: true, execution_token: "a5000000-0000-4000-8000-000000000001", ...opView("EXECUTING", payloadHash) }),

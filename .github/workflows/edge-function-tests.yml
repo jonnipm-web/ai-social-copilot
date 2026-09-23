@@ -106,6 +106,10 @@ jobs:
           grep -qx 'AEF_PERSISTENCE_RLS: PASS' db.log
           grep -qx 'AEF_PG_INTEGRATION: PASS' db.log
           grep -qx 'AEF_ROLLBACK: PASS' db.log
+          grep -qx 'AEF_HARDENING: PASS' db.log
+          grep -qx 'AEF_HARDENING_ROLLBACK_REFUSAL: PASS' db.log
+          grep -qx 'AEF_LEGACY: PASS' db.log
+          grep -qx 'AEF_LEGACY: DOWN_OK' db.log
 
   contract-and-aef-ci:
     name: AEF contract + kernel CI (IV-AEF-FOUNDATION-01)
@@ -147,3 +151,7 @@ jobs:
           deno test --allow-read --allow-env \
             aef/persistence/canonical_test.ts aef/persistence/ive_intent_mapping_test.ts \
             aef/persistence/governance_unit_test.ts
+
+      - name: Receipt v1 / v1.1 validator vs JSON Schema parity (IV-AEF-HARDENING-01)
+        run: |
+          deno test --allow-read --allow-net=registry.npmjs.org aef/persistence/receipt_v1_1_test.ts

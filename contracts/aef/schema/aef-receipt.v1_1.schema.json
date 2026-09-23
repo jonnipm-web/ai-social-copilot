@@ -1,0 +1,799 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://insightvalues.internal/contracts/aef/aef-receipt.v1_1.schema.json",
+  "title": "Persisted AEF receipt (aef-receipt/1 legacy, aef-receipt/1.1)",
+  "description": "Server-issued, immutable, hash-anchored receipt stored by the persistent AEF (IV-AEF-HARDENING-01). aef-receipt/1 receipts are legacy and never rewritten; aef-receipt/1.1 adds receipt_kind and the RECONCILIATION kind, an append-only complementary record for an UNKNOWN_OUTCOME operation. No payload, prompt, credential or free text. Distinct from the wire ExecutionReceipt v1 (execution-receipt.v1.schema.json), which is unchanged.",
+  "oneOf": [
+    {
+      "title": "aef-receipt/1 EXECUTION (legacy, read-only)",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "receipt_version",
+        "receipt_id",
+        "operation_id",
+        "request_id",
+        "subject_id",
+        "domain",
+        "action",
+        "tool_id",
+        "action_class",
+        "resource_type",
+        "resource_id",
+        "binding_hash",
+        "payload_hash",
+        "policy_version",
+        "risk_version",
+        "human_gate_id",
+        "approver_id",
+        "policy_decision",
+        "outcome",
+        "final_state",
+        "reason_code",
+        "side_effect_observed",
+        "attempt_count",
+        "registered_at",
+        "authorized_at",
+        "completed_at"
+      ],
+      "properties": {
+        "receipt_version": {
+          "const": "aef-receipt/1"
+        },
+        "receipt_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "request_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "subject_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "domain": {
+          "enum": [
+            "core",
+            "quant",
+            "impact",
+            "internal"
+          ]
+        },
+        "action": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*([.][a-z][a-z0-9_]*)+$"
+        },
+        "tool_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "action_class": {
+          "enum": [
+            "READ_ONLY",
+            "REVERSIBLE",
+            "CONSEQUENTIAL"
+          ]
+        },
+        "resource_type": {
+          "enum": [
+            "project",
+            null
+          ]
+        },
+        "resource_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "binding_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "payload_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "policy_version": {
+          "type": "string",
+          "pattern": "^[a-z0-9._/-]{1,64}$"
+        },
+        "risk_version": {
+          "type": "string",
+          "pattern": "^[a-z0-9._/-]{1,64}$"
+        },
+        "human_gate_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "approver_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "policy_decision": {
+          "enum": [
+            "ALLOWED",
+            "DENIED"
+          ]
+        },
+        "outcome": {
+          "enum": [
+            "SUCCESS",
+            "FAILURE",
+            "PARTIAL",
+            "NOT_EXECUTED",
+            "UNKNOWN_OUTCOME"
+          ]
+        },
+        "final_state": {
+          "enum": [
+            "SUCCEEDED",
+            "FAILED",
+            "UNKNOWN_OUTCOME",
+            "REJECTED",
+            "EXPIRED",
+            "CANCELLED",
+            "INVALIDATED"
+          ]
+        },
+        "reason_code": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[A-Z][A-Z0-9_]{0,63}$"
+        },
+        "side_effect_observed": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "attempt_count": {
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "registered_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[.][0-9]{6}Z$"
+        },
+        "authorized_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[.][0-9]{6}Z$"
+        },
+        "completed_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[.][0-9]{6}Z$"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "final_state": {
+                "const": "SUCCEEDED"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "outcome": {
+                "enum": [
+                  "SUCCESS"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "final_state": {
+                "const": "FAILED"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "outcome": {
+                "enum": [
+                  "FAILURE",
+                  "PARTIAL"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "final_state": {
+                "const": "UNKNOWN_OUTCOME"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "outcome": {
+                "enum": [
+                  "UNKNOWN_OUTCOME"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "final_state": {
+                "const": "REJECTED"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "outcome": {
+                "enum": [
+                  "NOT_EXECUTED"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "final_state": {
+                "const": "EXPIRED"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "outcome": {
+                "enum": [
+                  "NOT_EXECUTED"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "final_state": {
+                "const": "CANCELLED"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "outcome": {
+                "enum": [
+                  "NOT_EXECUTED"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "final_state": {
+                "const": "INVALIDATED"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "outcome": {
+                "enum": [
+                  "NOT_EXECUTED"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "resource_type": {
+                "const": null
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "resource_id": {
+                "type": "null"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "resource_id": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "title": "aef-receipt/1.1 EXECUTION",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "receipt_version",
+        "receipt_kind",
+        "receipt_id",
+        "operation_id",
+        "request_id",
+        "subject_id",
+        "domain",
+        "action",
+        "tool_id",
+        "action_class",
+        "resource_type",
+        "resource_id",
+        "binding_hash",
+        "payload_hash",
+        "policy_version",
+        "risk_version",
+        "human_gate_id",
+        "approver_id",
+        "policy_decision",
+        "outcome",
+        "final_state",
+        "reason_code",
+        "side_effect_observed",
+        "attempt_count",
+        "registered_at",
+        "authorized_at",
+        "completed_at"
+      ],
+      "properties": {
+        "receipt_version": {
+          "const": "aef-receipt/1.1"
+        },
+        "receipt_kind": {
+          "const": "EXECUTION"
+        },
+        "receipt_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "request_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "subject_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "domain": {
+          "enum": [
+            "core",
+            "quant",
+            "impact",
+            "internal"
+          ]
+        },
+        "action": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*([.][a-z][a-z0-9_]*)+$"
+        },
+        "tool_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "action_class": {
+          "enum": [
+            "READ_ONLY",
+            "REVERSIBLE",
+            "CONSEQUENTIAL"
+          ]
+        },
+        "resource_type": {
+          "enum": [
+            "project",
+            null
+          ]
+        },
+        "resource_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "binding_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "payload_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "policy_version": {
+          "type": "string",
+          "pattern": "^[a-z0-9._/-]{1,64}$"
+        },
+        "risk_version": {
+          "type": "string",
+          "pattern": "^[a-z0-9._/-]{1,64}$"
+        },
+        "human_gate_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "approver_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "policy_decision": {
+          "enum": [
+            "ALLOWED",
+            "DENIED"
+          ]
+        },
+        "outcome": {
+          "enum": [
+            "SUCCESS",
+            "FAILURE",
+            "PARTIAL",
+            "NOT_EXECUTED",
+            "UNKNOWN_OUTCOME"
+          ]
+        },
+        "final_state": {
+          "enum": [
+            "SUCCEEDED",
+            "FAILED",
+            "UNKNOWN_OUTCOME",
+            "REJECTED",
+            "EXPIRED",
+            "CANCELLED",
+            "INVALIDATED"
+          ]
+        },
+        "reason_code": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[A-Z][A-Z0-9_]{0,63}$"
+        },
+        "side_effect_observed": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "attempt_count": {
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "registered_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[.][0-9]{6}Z$"
+        },
+        "authorized_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[.][0-9]{6}Z$"
+        },
+        "completed_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[.][0-9]{6}Z$"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "final_state": {
+                "const": "SUCCEEDED"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "outcome": {
+                "enum": [
+                  "SUCCESS"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "final_state": {
+                "const": "FAILED"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "outcome": {
+                "enum": [
+                  "FAILURE",
+                  "PARTIAL"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "final_state": {
+                "const": "UNKNOWN_OUTCOME"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "outcome": {
+                "enum": [
+                  "UNKNOWN_OUTCOME"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "final_state": {
+                "const": "REJECTED"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "outcome": {
+                "enum": [
+                  "NOT_EXECUTED"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "final_state": {
+                "const": "EXPIRED"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "outcome": {
+                "enum": [
+                  "NOT_EXECUTED"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "final_state": {
+                "const": "CANCELLED"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "outcome": {
+                "enum": [
+                  "NOT_EXECUTED"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "final_state": {
+                "const": "INVALIDATED"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "outcome": {
+                "enum": [
+                  "NOT_EXECUTED"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "resource_type": {
+                "const": null
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "resource_id": {
+                "type": "null"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "resource_id": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "title": "aef-receipt/1.1 RECONCILIATION",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "receipt_version",
+        "receipt_kind",
+        "receipt_id",
+        "operation_id",
+        "request_id",
+        "subject_id",
+        "action",
+        "tool_id",
+        "binding_hash",
+        "original_receipt_id",
+        "original_receipt_hash",
+        "original_outcome",
+        "verdict",
+        "reconciler_kind",
+        "reconciler_ref",
+        "evidence_kind",
+        "evidence_hash",
+        "operation_policy_version",
+        "operation_risk_version",
+        "policy_version",
+        "risk_version",
+        "reconciled_at"
+      ],
+      "properties": {
+        "receipt_version": {
+          "const": "aef-receipt/1.1"
+        },
+        "receipt_kind": {
+          "const": "RECONCILIATION"
+        },
+        "receipt_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "request_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "subject_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "action": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*([.][a-z][a-z0-9_]*)+$"
+        },
+        "tool_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "binding_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "original_receipt_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "original_receipt_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "original_outcome": {
+          "const": "UNKNOWN_OUTCOME"
+        },
+        "verdict": {
+          "enum": [
+            "CONFIRMED_APPLIED",
+            "CONFIRMED_NOT_APPLIED"
+          ]
+        },
+        "reconciler_kind": {
+          "enum": [
+            "VERIFIER",
+            "OPERATOR"
+          ]
+        },
+        "reconciler_ref": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "evidence_kind": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]{0,63}$"
+        },
+        "evidence_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "operation_policy_version": {
+          "type": "string",
+          "pattern": "^[a-z0-9._/-]{1,64}$"
+        },
+        "operation_risk_version": {
+          "type": "string",
+          "pattern": "^[a-z0-9._/-]{1,64}$"
+        },
+        "policy_version": {
+          "type": "string",
+          "pattern": "^[a-z0-9._/-]{1,64}$"
+        },
+        "risk_version": {
+          "type": "string",
+          "pattern": "^[a-z0-9._/-]{1,64}$"
+        },
+        "reconciled_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[.][0-9]{6}Z$"
+        }
+      }
+    }
+  ]
+}

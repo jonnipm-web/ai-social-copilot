@@ -15,6 +15,7 @@
  *   - tests: testing/psql_transport.ts (one psql process = one connection).
  */
 import { isStoreCode, type StoreCode } from "./errors.ts";
+import { validateAefReceipt } from "./receipt_v1_1.ts";
 
 export const AEF_RPC_NAMES = [
   "aef_register_operation",
@@ -27,6 +28,9 @@ export const AEF_RPC_NAMES = [
   "aef_record_denial",
   "aef_verify_receipt",
   "aef_verify_audit_chain",
+  "aef_reconcile",
+  "aef_purge",
+  "aef_erase_subject",
 ] as const;
 export type AefRpcName = typeof AEF_RPC_NAMES[number];
 
@@ -108,10 +112,22 @@ export interface PersistedReceipt {
   receiptHash: string;
 }
 
+/** aef-receipt/1.1 kind RECONCILIATION (IV-AEF-HARDENING-01). */
+export interface ReconciliationReceipt {
+  receipt: Readonly<Record<string, unknown>> & {
+    receipt_id: string;
+    verdict: "CONFIRMED_APPLIED" | "CONFIRMED_NOT_APPLIED";
+    original_receipt_hash: string;
+  };
+  receiptHash: string;
+}
+
 export interface StoreView {
   operation: OperationView;
   gate: GateView | null;
   receipt: PersistedReceipt | null;
+  /** Present only for a reconciled UNKNOWN_OUTCOME; the receipt above is never changed by it. */
+  reconciliation: ReconciliationReceipt | null;
 }
 
 export type StoreReply<T = StoreView> = ({ ok: true } & T) | { ok: false; code: StoreCode; state: string | null };
@@ -184,6 +200,8 @@ function parseReceipt(v: unknown, op: OperationView): PersistedReceipt | null {
   const wrap = rec(v, "receipt");
   const r = rec(wrap.receipt, "receipt.receipt");
   const receiptHash = str(wrap, "receipt_hash", HEX64);
+  const shape = validateAefReceipt(r);
+  if (!shape.ok || shape.kind !== "EXECUTION") throw new StoreProtocolError("receipt: invalid shape");
   str(r, "receipt_id", UUID);
   oneOf(r, "outcome", RECEIPT_OUTCOMES);
   if (r.operation_id !== op.operationId || r.final_state !== op.state || r.binding_hash !== op.bindingHash) {
@@ -192,9 +210,24 @@ function parseReceipt(v: unknown, op: OperationView): PersistedReceipt | null {
   return deepFreeze({ receipt: r as PersistedReceipt["receipt"], receiptHash });
 }
 
+function parseReconciliation(v: unknown, op: OperationView, receipt: PersistedReceipt | null): ReconciliationReceipt | null {
+  if (v === null || v === undefined) return null;
+  const wrap = rec(v, "reconciliation");
+  const r = rec(wrap.receipt, "reconciliation.receipt");
+  const receiptHash = str(wrap, "receipt_hash", HEX64);
+  const shape = validateAefReceipt(r);
+  if (!shape.ok || shape.kind !== "RECONCILIATION") throw new StoreProtocolError("reconciliation: invalid shape");
+  if (op.state !== "UNKNOWN_OUTCOME" || !receipt || r.operation_id !== op.operationId || r.binding_hash !== op.bindingHash
+      || r.original_receipt_hash !== receipt.receiptHash) {
+    throw new StoreProtocolError("reconciliation does not belong to this operation");
+  }
+  return deepFreeze({ receipt: r as ReconciliationReceipt["receipt"], receiptHash });
+}
+
 function parseView(o: Record<string, unknown>): StoreView {
   const operation = parseOperation(o.operation);
-  return { operation, gate: parseGate(o.gate), receipt: parseReceipt(o.receipt, operation) };
+  const receipt = parseReceipt(o.receipt, operation);
+  return { operation, gate: parseGate(o.gate), receipt, reconciliation: parseReconciliation(o.reconciliation, operation, receipt) };
 }
 
 function parseError(o: Record<string, unknown>): { ok: false; code: StoreCode; state: string | null } {
@@ -275,12 +308,40 @@ export class PostgresAefStore {
     if (o.ok !== true) throw new StoreProtocolError("record_denial failed");
   }
 
-  async recover(limit: number): Promise<{ unknownOutcome: number; expired: number }> {
+  async recover(limit: number): Promise<{ unknownOutcome: number; expired: number; coalescedFlushed: number }> {
     const o = await this.reply("aef_recover", { limit });
-    if (o.ok !== true || typeof o.unknown_outcome !== "number" || typeof o.expired !== "number") {
+    if (o.ok !== true || typeof o.unknown_outcome !== "number" || typeof o.expired !== "number" || typeof o.coalesced_flushed !== "number") {
       throw new StoreProtocolError("recover: invalid reply");
     }
-    return { unknownOutcome: o.unknown_outcome, expired: o.expired };
+    return { unknownOutcome: o.unknown_outcome, expired: o.expired, coalescedFlushed: o.coalesced_flushed };
+  }
+
+  reconcile(args: {
+    operation_id: string;
+    verdict: "CONFIRMED_APPLIED" | "CONFIRMED_NOT_APPLIED";
+    reconciler_kind: "VERIFIER" | "OPERATOR";
+    reconciler_id: string;
+    evidence_kind: string;
+    evidence_ref: string;
+    policy_version: string;
+    risk_version: string;
+  }) {
+    return this.viewReply("aef_reconcile", { ...args });
+  }
+
+  async purge(limit: number): Promise<{ purgedOperations: number; prunedEvents: number; policyRef: string }> {
+    const o = await this.reply("aef_purge", { limit });
+    if (o.ok !== true || typeof o.purged_operations !== "number" || typeof o.pruned_events !== "number") {
+      throw new StoreProtocolError("purge: invalid reply");
+    }
+    return { purgedOperations: o.purged_operations, prunedEvents: o.pruned_events, policyRef: str(o, "policy_ref") };
+  }
+
+  async eraseSubject(subjectId: string): Promise<{ ok: true; outcome: "ERASED" | "ALREADY_ERASED" } | { ok: false; code: StoreCode }> {
+    const o = await this.reply("aef_erase_subject", { subject_id: subjectId });
+    if (o.ok === false) return { ok: false, code: parseError(o).code };
+    if (o.ok !== true || (o.outcome !== "ERASED" && o.outcome !== "ALREADY_ERASED")) throw new StoreProtocolError("erase: invalid reply");
+    return { ok: true, outcome: o.outcome };
   }
 
   async verifyReceipt(receipt: unknown): Promise<{ valid: boolean; reason: string | null }> {

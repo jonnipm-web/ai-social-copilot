@@ -56,7 +56,43 @@ export type GovernanceResult =
   /** Terminal, with the persisted receipt. */
   | ({ status: "FINAL"; replayed: boolean } & StoreView)
   /** The tool was invoked but its outcome could not be durably recorded. Never a success. */
-  | { status: "OUTCOME_UNCONFIRMED"; code: AefErrorCode; operationId: string };
+  | { status: "OUTCOME_UNCONFIRMED"; code: AefErrorCode; operationId: string }
+  /** Reconciliation attempted but the verifier could not establish the truth: nothing recorded, still UNKNOWN_OUTCOME. */
+  | { status: "REMAINS_UNKNOWN"; operationId: string };
+
+/**
+ * A server-side check of whether an UNKNOWN_OUTCOME operation's effect really
+ * happened (IV-AEF-HARDENING-01). It queries the external system itself; it
+ * never trusts the subject. It must also be registered in the database
+ * (aef_reconciliation_verifiers, owner-managed) for the same tool, or the
+ * database refuses its verdict.
+ */
+export interface ReconciliationVerifier {
+  verifierId: string;
+  toolId: string;
+  check(input: { operationId: string; signal: AbortSignal }): Promise<{
+    verdict: "APPLIED" | "NOT_APPLIED" | "UNKNOWN";
+    evidenceKind: string;
+    evidenceRef: string;
+  }>;
+}
+
+/** Server-owned, sealed at startup like the ToolRegistry. */
+export class ReconciliationVerifierRegistry {
+  #byTool = new Map<string, ReconciliationVerifier>();
+  #sealed = false;
+  register(v: ReconciliationVerifier): void {
+    if (this.#sealed) throw new Error("ReconciliationVerifierRegistry is sealed");
+    if (this.#byTool.has(v.toolId)) throw new Error(`duplicate verifier for ${v.toolId}`);
+    this.#byTool.set(v.toolId, Object.freeze({ ...v }));
+  }
+  seal(): void {
+    this.#sealed = true;
+  }
+  get(toolId: string): ReconciliationVerifier | undefined {
+    return this.#byTool.get(toolId);
+  }
+}
 
 export interface AefGovernanceDeps {
   identityResolver: IdentityResolver;
@@ -64,6 +100,7 @@ export interface AefGovernanceDeps {
   store: PostgresAefStore;
   now?: () => Date;
   toolTimeoutMs?: number;
+  verifiers?: ReconciliationVerifierRegistry;
 }
 
 type Denied = { status: "DENIED"; code: AefErrorCode };
@@ -75,6 +112,7 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const HEX64 = /^[0-9a-f]{64}$/;
+const EVIDENCE_KIND = /^[A-Z][A-Z0-9_]{0,63}$/;
 
 interface BoundPayload {
   intent: string;
@@ -234,7 +272,12 @@ export class AefGovernance {
     if (!registered.ok) return deny(registered.code);
     if (registered.operation.payloadHash !== payloadHash) return deny("STORE_PROTOCOL_ERROR");
 
-    const view: StoreView = { operation: registered.operation, gate: registered.gate, receipt: registered.receipt };
+    const view: StoreView = {
+      operation: registered.operation,
+      gate: registered.gate,
+      receipt: registered.receipt,
+      reconciliation: registered.reconciliation,
+    };
     if (view.operation.state === "AUTHORIZED") {
       return this.execute(subjectId, view, request, registered.replayed);
     }
@@ -389,8 +432,112 @@ export class AefGovernance {
   }
 
   /** Infrastructure sweep (scheduler), no end-user entry point. */
-  recover(limit = 100): Promise<{ unknownOutcome: number; expired: number }> {
+  recover(limit = 100): Promise<{ unknownOutcome: number; expired: number; coalescedFlushed: number }> {
     return this.deps.store.recover(limit);
+  }
+
+  /**
+   * The subject asks the server to reconcile one of its UNKNOWN_OUTCOME
+   * operations (IV-AEF-HARDENING-01). The subject only triggers the check:
+   * the verdict comes from the server-registered verifier of the tool, and
+   * the database accepts it only from a verifier registered for that tool.
+   * Inconclusive, failing or slow verifiers record nothing (REMAINS_UNKNOWN).
+   * Nothing is ever re-executed or compensated.
+   */
+  async reconcile(input: unknown, credential: RawCredential): Promise<GovernanceResult> {
+    const parsed = this.operationInput(input);
+    if (!parsed) return deny("INPUT_REJECTED");
+    const subjectId = await this.verifiedUser(parsed.actor, credential);
+    if (!subjectId) return deny("AUTH_FAILED");
+    let current;
+    try {
+      current = await this.deps.store.getOperation({ operation_id: parsed.operationId, subject_id: subjectId });
+    } catch (err) {
+      return this.storeFailure(err);
+    }
+    if (!current.ok) return deny(current.code);
+    if (current.operation.state !== "UNKNOWN_OUTCOME") return deny("NOT_RECONCILABLE");
+    if (current.reconciliation) return this.present(current, true);
+    const verifier = this.deps.verifiers?.get(current.operation.toolId);
+    if (!verifier) return deny("NO_VERIFIER");
+
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let outcome;
+    try {
+      outcome = await Promise.race([
+        verifier.check({ operationId: current.operation.operationId, signal: controller.signal }),
+        new Promise<"TIMEOUT">((resolve) => (timer = setTimeout(() => resolve("TIMEOUT"), this.deps.toolTimeoutMs ?? TOOL_TIMEOUT_MS))),
+      ]);
+    } catch {
+      outcome = "TIMEOUT" as const;
+    } finally {
+      clearTimeout(timer);
+      controller.abort();
+    }
+    if (outcome === "TIMEOUT" || !outcome || (outcome.verdict !== "APPLIED" && outcome.verdict !== "NOT_APPLIED")) {
+      return { status: "REMAINS_UNKNOWN", operationId: current.operation.operationId };
+    }
+    try {
+      const reply = await this.deps.store.reconcile({
+        operation_id: current.operation.operationId,
+        verdict: outcome.verdict === "APPLIED" ? "CONFIRMED_APPLIED" : "CONFIRMED_NOT_APPLIED",
+        reconciler_kind: "VERIFIER",
+        reconciler_id: verifier.verifierId,
+        evidence_kind: outcome.evidenceKind,
+        evidence_ref: outcome.evidenceRef,
+        policy_version: AEF_POLICY_VERSION,
+        risk_version: AEF_RISK_VERSION,
+      });
+      return reply.ok ? this.present(reply, false) : deny(reply.code);
+    } catch (err) {
+      return this.storeFailure(err);
+    }
+  }
+
+  /**
+   * Human reconciliation by an operator (IV-AEF-HARDENING-01). `input` is
+   * exactly { operation_id, verdict, evidence_kind, evidence_ref, operator }.
+   * The operator is the verified credential holder; the database accepts
+   * only an admin (subject_roles) who is not the operation's subject.
+   */
+  async reconcileByOperator(input: unknown, credential: RawCredential): Promise<GovernanceResult> {
+    if (!isRecord(input)) return deny("INPUT_REJECTED");
+    const allowed = new Set(["operation_id", "verdict", "evidence_kind", "evidence_ref", "operator"]);
+    if (Object.keys(input).some((k) => !allowed.has(k))) return deny("INPUT_REJECTED");
+    const { operation_id, verdict, evidence_kind, evidence_ref, operator } = input;
+    if (typeof operation_id !== "string" || !UUID.test(operation_id)) return deny("INPUT_REJECTED");
+    if (verdict !== "CONFIRMED_APPLIED" && verdict !== "CONFIRMED_NOT_APPLIED") return deny("INPUT_REJECTED");
+    if (typeof evidence_kind !== "string" || !EVIDENCE_KIND.test(evidence_kind)) return deny("INPUT_REJECTED");
+    if (typeof evidence_ref !== "string" || evidence_ref.length < 1 || evidence_ref.length > 200) return deny("INPUT_REJECTED");
+    const operatorId = await this.verifiedUser(operator, credential);
+    if (!operatorId) return deny("AUTH_FAILED");
+    try {
+      const reply = await this.deps.store.reconcile({
+        operation_id: operation_id.toLowerCase(),
+        verdict,
+        reconciler_kind: "OPERATOR",
+        reconciler_id: operatorId,
+        evidence_kind,
+        evidence_ref,
+        policy_version: AEF_POLICY_VERSION,
+        risk_version: AEF_RISK_VERSION,
+      });
+      return reply.ok ? this.present(reply, false) : deny(reply.code);
+    } catch (err) {
+      return this.storeFailure(err);
+    }
+  }
+
+  /** Retention purge (scheduler). The policy lives in the database. */
+  purge(limit = 200): Promise<{ purgedOperations: number; prunedEvents: number; policyRef: string }> {
+    return this.deps.store.purge(limit);
+  }
+
+  /** Called by the account-deletion pipeline after the auth user is gone. */
+  eraseSubject(subjectId: string) {
+    if (!UUID.test(subjectId)) return Promise.resolve({ ok: false as const, code: "ARGUMENT_REJECTED" as const });
+    return this.deps.store.eraseSubject(subjectId.toLowerCase());
   }
 
   /** A receipt is genuine only if it matches, byte for byte, the stored and chain-anchored one. */

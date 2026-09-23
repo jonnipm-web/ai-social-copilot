@@ -54,32 +54,56 @@ check() {
 check "$DB" entitlement_subject_roles_rls_test.sql 'SUBJECT_ROLES_RLS: PASS'
 check "$DB" ive_memory_rls_test.sql 'IVE_MEMORY_RLS: PASS'
 check "$DB" aef_persistence_rls_test.sql 'AEF_PERSISTENCE_RLS: PASS'
+check "$DB" aef_hardening_test.sql 'AEF_HARDENING: PASS'
+# IV-AEF-HARDENING-01: once purge/erasure/reconciliation evidence exists the
+# hardening rollback must refuse (and change nothing).
+if run -d "$DB" -f "$ROOT/supabase/rollbacks/20260926000000_aef_hardening.down.sql" >/dev/null 2>&1; then
+  echo "hardening rollback did not refuse on a database holding hardening evidence" >&2; exit 1
+fi
+run -d "$DB" -tA -c "SELECT 1 FROM public.aef_idempotency_tombstones LIMIT 1;" | grep -qx 1
+echo "AEF_HARDENING_ROLLBACK_REFUSAL: PASS"
 
-# IV-AEF-PERSISTENCE-01: the AEF governance service end-to-end against this
-# real database (concurrency, crash recovery, idempotency, forgery). Needs
-# Deno; skipping must be explicit (AEF_PG_INTEGRATION=skip), never silent.
+# The AEF governance service end-to-end against a real database (concurrency,
+# crash recovery, idempotency, forgery, reconciliation, retention, erasure).
+# Needs Deno; skipping must be explicit (AEF_PG_INTEGRATION=skip), never silent.
 AEF_PG_DB_NAME="${DB}_aef"
+RB="${DB}_rb"
 run -d postgres -c "CREATE DATABASE $AEF_PG_DB_NAME;"
-trap 'run -d postgres -c "DROP DATABASE IF EXISTS $DB;" >/dev/null 2>&1 || true; run -d postgres -c "DROP DATABASE IF EXISTS $UPG;" >/dev/null 2>&1 || true; run -d postgres -c "DROP DATABASE IF EXISTS $AEF_PG_DB_NAME;" >/dev/null 2>&1 || true' EXIT
+run -d postgres -c "CREATE DATABASE $RB;"
+trap 'for d in $DB $UPG $AEF_PG_DB_NAME $RB; do run -d postgres -c "DROP DATABASE IF EXISTS $d;" >/dev/null 2>&1 || true; done' EXIT
 run -d "$AEF_PG_DB_NAME" -f "$ROOT/supabase/tests/support/supabase_stubs.sql"
 for m in $(ls "$ROOT"/supabase/migrations/*.sql | sort); do apply "$AEF_PG_DB_NAME" "$m"; done
 if [[ "${AEF_PG_INTEGRATION:-run}" == "skip" ]]; then
   echo "AEF_PG_INTEGRATION: SKIPPED (explicit)"
 else
-  ( cd "$ROOT" && AEF_PG_DB="$AEF_PG_DB_NAME" PGHOST="$HOST" PSQL="$PSQL" \
-      "${DENO:-deno}" test --allow-run --allow-env --allow-read aef/persistence/governance_pg_test.ts )
+  ( cd "$ROOT" && AEF_PG_DB="$AEF_PG_DB_NAME" PGHOST="$HOST" PSQL="$PSQL"       "${DENO:-deno}" test --allow-run --allow-env --allow-read         aef/persistence/governance_pg_test.ts aef/persistence/hardening_pg_test.ts )
   echo "AEF_PG_INTEGRATION: PASS"
 fi
 
-# Rollback (Codex Gate 1 G1-05): the documented down script must remove every
-# AEF object from a database that holds data, and the migration must re-apply.
-run -d "$DB" -c "CREATE FUNCTION public.aef_unrelated_sentinel() RETURNS int LANGUAGE sql AS 'SELECT 1';"
-run -d "$DB" -f "$ROOT/supabase/rollbacks/20260925000000_aef_persistence.down.sql" >/dev/null
-left="$(run -d "$DB" -tA -c "SELECT (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relkind = 'r' AND left(c.relname, 4) = 'aef_') || '|' || (SELECT string_agg(p.proname, ',') FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'public' AND left(p.proname, 4) = 'aef_');")"
+# Full cycle on a dedicated database: persistence only → v1 data → hardening
+# UP → v1 untouched → hardening DOWN → still verifiable → persistence DOWN
+# (scoped: an unrelated aef_* object survives) → both UP → hardening suite.
+HARDENING_MIGRATION="20260926000000_aef_hardening.sql"
+run -d "$RB" -f "$ROOT/supabase/tests/support/supabase_stubs.sql"
+for m in $(ls "$ROOT"/supabase/migrations/*.sql | sort); do
+  [[ "$(basename "$m")" == "$HARDENING_MIGRATION" ]] && continue
+  apply "$RB" "$m"
+done
+check "$RB" aef_hardening_legacy_test.sql 'AEF_LEGACY: SEEDED' -v phase=seed
+apply "$RB" "$ROOT/supabase/migrations/$HARDENING_MIGRATION"
+check "$RB" aef_hardening_legacy_test.sql 'AEF_LEGACY: PASS' -v phase=verify
+run -d "$RB" -f "$ROOT/supabase/rollbacks/20260926000000_aef_hardening.down.sql" >/dev/null
+check "$RB" aef_hardening_legacy_test.sql 'AEF_LEGACY: DOWN_OK' -v phase=down
+run -d "$RB" -c "DROP TABLE public.aef_legacy_probe;"
+run -d "$RB" -c "CREATE FUNCTION public.aef_unrelated_sentinel() RETURNS int LANGUAGE sql AS 'SELECT 1';"
+run -d "$RB" -f "$ROOT/supabase/rollbacks/20260925000000_aef_persistence.down.sql" >/dev/null
+left="$(run -d "$RB" -tA -c "SELECT (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relkind = 'r' AND left(c.relname, 4) = 'aef_') || '|' || (SELECT string_agg(p.proname, ',') FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'public' AND left(p.proname, 4) = 'aef_');")"
 # Codex Final CF-02: every AEF object gone, the unrelated sentinel untouched.
 [[ "$left" == "0|aef_unrelated_sentinel" ]] || { echo "rollback left: $left" >&2; exit 1; }
-run -d "$DB" -c "DROP FUNCTION public.aef_unrelated_sentinel();"
-apply "$DB" "$ROOT/supabase/migrations/20260925000000_aef_persistence.sql"
+run -d "$RB" -c "DROP FUNCTION public.aef_unrelated_sentinel();"
+apply "$RB" "$ROOT/supabase/migrations/20260925000000_aef_persistence.sql"
+apply "$RB" "$ROOT/supabase/migrations/$HARDENING_MIGRATION"
+check "$RB" aef_hardening_test.sql 'AEF_HARDENING: PASS'
 echo "AEF_ROLLBACK: PASS"
 
 # Legacy-data upgrade (Codex Gate 1 IG1-04): seed with today's schema, then

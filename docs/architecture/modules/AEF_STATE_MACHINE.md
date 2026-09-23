@@ -63,9 +63,8 @@ gate requirement, creation and expiry time.
 | approval window passes | `EXPIRED` (lazily on next touch, or by `aef_recover`) | — |
 | policy version changes before execution | `INVALIDATED` | — |
 
-`UNKNOWN_OUTCOME` is terminal for automation. Reconciliation (a human or a
-tool-specific verifier deciding what really happened) is out of scope and
-must be a future, explicit, audited transition — never an automatic retry.
+`UNKNOWN_OUTCOME` is terminal for automation. Reconciliation (IV-AEF-HARDENING-01) does not add a transition: it appends a separate, immutable record beside the operation (AEF_UNKNOWN_OUTCOME_RECONCILIATION.md), and purge/erasure delete terminal records only through `aef_purge` / `aef_erase_subject`. Nothing is ever retried
+automatically.
 
 ## Clock
 

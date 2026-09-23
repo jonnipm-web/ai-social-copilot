@@ -13,7 +13,7 @@ PostgreSQL). Unit: `governance_unit_test.ts` (GU), `canonical_test.ts` (CJ),
 | `anon` | nothing (no grant on tables or functions) | T01 |
 | `authenticated` (owner) | SELECT own operations (minus `execution_token`), gates, receipts, audit events | RLS `subject_id = auth.uid()`; T02/T03 |
 | `authenticated` (foreign) | sees nothing of another subject | T02 |
-| `service_role` | EXECUTE on the ten `aef_*` RPCs; SELECT on tables; **no** INSERT/UPDATE/DELETE, **no** `aef__*` helpers | privileged infrastructure identity; RLS does not restrict it, privileges do: it can change state only through the RPCs (T14s) |
+| `service_role` | EXECUTE on the thirteen `aef_*` RPCs (10 + `aef_reconcile`, `aef_purge`, `aef_erase_subject`); SELECT on tables; **no** INSERT/UPDATE/DELETE, **no** `aef__*` helpers | privileged infrastructure identity; RLS does not restrict it, privileges do: it can change state only through the RPCs (T14s) |
 | table owner / superuser | can disable triggers | out of the application trust boundary; tampering is then *detectable* (hash chain, T17b), not preventable |
 | SERVICE / SYSTEM actors | `UNSUPPORTED_BY_V0` | no service identity exists; unchanged from v0 |
 
@@ -50,6 +50,32 @@ PostgreSQL). Unit: `governance_unit_test.ts` (GU), `canonical_test.ts` (CJ),
 | 24 | Tool reaches real systems | only mock tools registered; real IVE actions have no tool | PG-17, tool registry |
 | 25 | Privilege expansion through functions | SECURITY DEFINER only on the ten RPCs (pinned search_path, no dynamic SQL, EXECUTE only service_role); helpers/triggers not executable by any API role | T01, T05, T14s |
 
+## Hardening (IV-AEF-HARDENING-01)
+
+Trust boundary, unchanged: service_role is the AEF service itself. It can
+call the RPCs with any subject id (the RPCs trust the service for identity
+and policy); it cannot write any AEF table, call internal helpers, delete
+evidence, forge a tombstone/erasure record or reconcile without an
+authorized reconciler. Retention and erasure deletes happen only inside
+`aef_purge` / `aef_erase_subject`.
+
+| # | Threat | Control | Proof |
+|---|---|---|---|
+| H1 | Purge lets a key/request id run again | idempotency tombstone, checked before and after insert | H03j/k, HP-08, mutant HM05 |
+| H2 | Premature purge / purge of open, unknown or held operations | policy days, terminal only, UNKNOWN only when reconciled, legal hold | H03a..e, HM07, HM08 |
+| H3 | Purge breaks verifiability | OPERATION_PURGED event, checkpoint-based chain verification, live evidence never pruned | H03h, H04a..e |
+| H4 | Erasure of another subject / damage to other chains | subject-scoped deletes; per-subject chains | H08k, HP-09, HM09 |
+| H5 | Erasure while evidence is still needed | account must be deleted; hold, in-flight execution, unreconciled unknown block it | H08a..e, HM10 |
+| H6 | Erased operator identity lingers | reconciler_id nulled, receipt holds only a hash | H08l..o |
+| H7 | Audit flooding (own chain or victim's via approval spam) | per-subject window, coalesced durable counters, no drop | H05, H09, HP-10, HM01 |
+| H8 | Silencing security events via quota | counts preserved per code and anchored in the chain | H05d/g, HM02, HM11 |
+| H9 | Reconciliation without authority / by the subject | registered verifier for the tool, or admin operator ≠ subject | H06a..c, HP-03/04, HM03 |
+| H10 | UNKNOWN_OUTCOME turned into success / history rewritten | append-only record, operation & original receipt immutable, verdict set closed | H06i..p, RV-02, HM04 |
+| H11 | Forged / unbound reconciliation receipt | insert guard, verification (stored equality + hash + anchor + chain), bound to original receipt hash | H06m, HM06, RV-02 |
+| H12 | Deleting evidence with the maintenance flag | no API role holds DELETE; flag is transaction-local inside the two definer RPCs | H07a..i, HM12 |
+| H13 | Legacy v1 receipts reinterpreted | stored as issued; validator refuses a v1 receipt with a kind | L01/L02, RV-02 |
+| H14 | Rollback silently destroying evidence | hardening rollback refuses when tombstones/checkpoints/erasures/reconciliations/counters exist | AEF_HARDENING_ROLLBACK_REFUSAL |
+
 ## v1 restrictions (fail closed)
 
 - Delegation (`delegation_ref`) → `DELEGATION_UNSUPPORTED`.
@@ -64,16 +90,18 @@ PostgreSQL). Unit: `governance_unit_test.ts` (GU), `canonical_test.ts` (CJ),
   (the RPCs trust the service for identity and policy); it can no longer
   write tables or forge audit events directly. Inherent to a server-side
   identity; mitigated, not prevented.
-- No privacy-erasure / retention procedure for AEF records (Codex G1-06,
-  DEFERRED — needs an Owner/architect retention decision before
-  production).
+- Retention periods are provisional defaults (365 / 730 days) pending the
+  Owner's legal decision; the mechanism is implemented (IV-AEF-HARDENING-01).
 - `UNKNOWN_OUTCOME` has no reconciliation workflow yet. A tool that
   ignores the abort can still apply its effect after AEF recorded
   `UNKNOWN_OUTCOME` (PG-20): the record stays truthful ("unknown"), the
   effect is not prevented. Real tools must honor the abort signal and be
   idempotent on the operation id.
-- Audit growth from refused requests of a verified user is not rate
-  limited (Codex G2-03, DEFERRED to AEF hardening).
+- Audit growth is bounded per subject and window (coalescing,
+  IV-AEF-HARDENING-01); request-level throttling belongs to the future
+  runtime endpoint.
+- Reconciliation verifiers exist only as test mocks; with no verifier
+  registered, only an admin operator can reconcile (by design).
 - Self-approval is the only approval mode (no four-eyes).
 - The audit trail grows with refused attempts of verified users (bounded
   per request; no rate limit in this layer).
