@@ -34,6 +34,12 @@ export async function sha256Hex(s: string): Promise<string> {
   return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+/** SHA-256 of raw BYTES (artifact integrity hash, I3). */
+export async function sha256Bytes(b: Uint8Array): Promise<string> {
+  const d = await crypto.subtle.digest('SHA-256', b as Uint8Array<ArrayBuffer>);
+  return [...new Uint8Array(d)].map((x) => x.toString(16).padStart(2, '0')).join('');
+}
+
 export function isValidId(id: unknown): id is string {
   return typeof id === 'string' && id.length > 0 && id.length <= LIMITS.maxIdLength && ID_RE.test(id);
 }
@@ -302,7 +308,14 @@ export async function validateEvidence(
   if (e.excerpt !== undefined) {
     if (e.excerpt.length > LIMITS.maxExcerptLength) return fail('INVALID_EVIDENCE', 'excerpt too long', { evidenceId: e.id });
     const src = sources.get(e.sourceId)!;
-    if (src.retention !== 'EXCERPT_AND_HASH' && src.retention !== 'SNAPSHOT') {
+    // I3: the ONE exception to the source retention rule — a reviewed,
+    // server-extracted, PII-redacted candidate excerpt (≤ 1000 chars) of an
+    // uploaded artifact whose original is NOT retained. The store and the
+    // database both require it to be the promotion of a real candidate.
+    const artifactExcerpt = e.locator?.artifact !== undefined && src.type === 'USER_DOCUMENT'
+      && src.acquisition.method === 'USER_UPLOAD' && src.retention === 'HASH_ONLY' && src.contentHash === e.locator.artifact.hash
+      && e.relationshipBasis === 'HUMAN_ASSESSED' && e.excerpt.length <= 1000;
+    if (src.retention !== 'EXCERPT_AND_HASH' && src.retention !== 'SNAPSHOT' && !artifactExcerpt) {
       return fail('INVALID_EVIDENCE', 'source retention does not allow storing an excerpt', { evidenceId: e.id });
     }
     if (!e.excerptHash || e.excerptHash !== (await sha256Hex(e.excerpt))) {

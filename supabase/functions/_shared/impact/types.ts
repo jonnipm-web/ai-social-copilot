@@ -317,6 +317,13 @@ export interface EvidenceLocator {
   readonly section?: string;
   readonly charStart?: number;
   readonly charEnd?: number;
+  /** I3: evidence promoted from an artifact candidate — bound to the artifact
+   * version (file hash) and the verifiable locator inside it. Server-set only. */
+  readonly artifact?: {
+    readonly ref: string;
+    readonly hash: string;
+    readonly locator: import('./artifact_model.ts').ArtifactLocator;
+  };
 }
 
 export interface EvidenceItem {

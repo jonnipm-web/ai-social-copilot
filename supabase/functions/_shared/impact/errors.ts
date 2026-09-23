@@ -36,6 +36,12 @@ export type ImpactErrorCode =
   | 'REGISTRY_RATE_LIMITED'
   | 'REGISTRY_RESPONSE_INVALID'
   | 'ORGANIZATION_AMBIGUOUS'
+  // I3 Evidence Collection — operational / validation states, never a signal about an organization.
+  | 'UNSUPPORTED_FILE_TYPE'
+  | 'FILE_TOO_LARGE'
+  | 'FILE_SIGNATURE_INVALID'
+  | 'LOCATOR_INVALID'
+  | 'EVIDENCE_REVIEW_REQUIRED'
   | 'INTERNAL_ERROR';
 
 export const IMPACT_ERROR_CODES: readonly ImpactErrorCode[] = Object.freeze([
@@ -66,6 +72,11 @@ export const IMPACT_ERROR_CODES: readonly ImpactErrorCode[] = Object.freeze([
   'REGISTRY_RATE_LIMITED',
   'REGISTRY_RESPONSE_INVALID',
   'ORGANIZATION_AMBIGUOUS',
+  'UNSUPPORTED_FILE_TYPE',
+  'FILE_TOO_LARGE',
+  'FILE_SIGNATURE_INVALID',
+  'LOCATOR_INVALID',
+  'EVIDENCE_REVIEW_REQUIRED',
   'INTERNAL_ERROR',
 ]);
 
