@@ -48,6 +48,12 @@ out="$(run -d "$DB" -tA -f "$ROOT/supabase/tests/impact_registry_rls_test.sql")"
 echo "$out" | tail -1
 echo "$out" | grep -qE '^IMPACT_REGISTRY_RLS: PASS [0-9]+ checks$'
 
+# IV-IMPACT-I3-EVIDENCE-COLLECTION-01 — artifacts, evidence candidates,
+# human review → promotion, RLS (migration 20260926010000).
+out="$(run -d "$DB" -tA -f "$ROOT/supabase/tests/impact_evidence_rls_test.sql")"
+echo "$out" | tail -1
+echo "$out" | grep -qE '^IMPACT_EVIDENCE_RLS: PASS [0-9]+ checks$'
+
 # IV-IMPACT-I1 — engine → database parity: rows produced by the REAL Lab flow
 # (engine + store row mappers) must satisfy every database invariant.
 if command -v deno >/dev/null 2>&1; then

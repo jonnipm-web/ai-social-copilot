@@ -153,7 +153,7 @@ jobs:
           deno check supabase/functions/_shared/impact/*.ts supabase/functions/_shared/impact/fixtures/*.ts supabase/functions/impact-lab/*.ts supabase/functions/_shared/impact_registry/*.ts supabase/tests/impact_lab_engine_rows.ts
           deno lint supabase/functions/_shared/impact/ supabase/functions/impact-lab/ supabase/functions/_shared/impact_registry/
 
-      - name: Run Impact tests (golden A-H, adversarial, boundary tripwires, Lab service)
+      - name: Run Impact tests (golden A-H, adversarial, boundary tripwires, Lab service, I3 file matrix + evidence collection)
         run: |
           deno test --allow-read --allow-net=deno.land,esm.sh supabase/functions/_shared/impact/
 
