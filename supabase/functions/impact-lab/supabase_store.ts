@@ -17,7 +17,10 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.116.0';
 import { fail, type ImpactErrorCode, ok, type ImpactResult } from '../_shared/impact/errors.ts';
 import type {
+  CandidateReview,
   ImpactLabStore,
+  StoredArtifact,
+  StoredCandidate,
   InvestigationData,
   InvestigationRecord,
   NewInvestigation,
@@ -61,6 +64,8 @@ export function mapDbError(e: PgError | null | undefined): ImpactErrorCode {
   if (/IMPACT_DISPUTE_ALREADY_RESOLVED|IMPACT_NOOP/.test(msg)) return 'ALREADY_EXISTS';
   if (/IMPACT_ACTOR_NOT_OWNER/.test(msg)) return 'INVESTIGATION_NOT_FOUND';
   if (/IMPACT_RESULT_INCONSISTENT/.test(msg)) return 'INTERNAL_ERROR';
+  if (/IMPACT_LOCATOR_INVALID/.test(msg)) return 'LOCATOR_INVALID';
+  if (/IMPACT_(ARTIFACT|CANDIDATE)_/.test(msg)) return 'INVALID_REQUEST';
   if (code === '23503' || code === '23514' || code === '22007' || code === '23502' || /IMPACT_(TEMPORAL|INVALID_TIMESTAMP|DISPUTE_EVIDENCE)/.test(msg)) {
     return 'INVALID_REQUEST';
   }
@@ -140,6 +145,52 @@ export function rowToRegistryConflict(r: Row): StoredRegistryConflict {
     canonicalOrgId: r.canonical_org_id as string,
     sourceRef: r.source_ref as string,
     otherSourceRef: r.other_source_ref as string,
+  };
+}
+
+// ── I3 artifacts / candidates ─────────────────────────────────────────────
+
+export function artifactToRow(investigationId: string, a: StoredArtifact, actorId: string): Row {
+  return {
+    investigation_id: investigationId, ref: a.ref, source_ref: a.sourceRef, artifact_type: a.type, origin_type: a.origin,
+    original_filename: a.originalFilename, media_type: a.mediaType, size_bytes: a.sizeBytes, file_hash: a.fileHash,
+    normalized_content_hash: a.normalizedContentHash, hash_algorithm: 'SHA-256', version: a.version, supersedes_ref: a.supersedesRef,
+    cloud_provider: a.cloudProvider, cloud_file_ref: a.cloudFileRef, source_modified_at: a.sourceModifiedAt,
+    extraction_status: a.extractionStatus, extractor_version: a.extraction.extractorVersion, extraction_summary: a.extraction,
+    ingested_at: a.ingestedAt, created_by: actorId,
+  };
+}
+
+export function rowToArtifact(r: Row): StoredArtifact {
+  return {
+    ref: r.ref as string, sourceRef: r.source_ref as string, type: r.artifact_type as StoredArtifact['type'],
+    origin: r.origin_type as StoredArtifact['origin'], originalFilename: r.original_filename as string, mediaType: r.media_type as string,
+    sizeBytes: Number(r.size_bytes), fileHash: r.file_hash as string, normalizedContentHash: (r.normalized_content_hash as string | null) ?? null,
+    version: Number(r.version), supersedesRef: (r.supersedes_ref as string | null) ?? null,
+    cloudProvider: (r.cloud_provider as StoredArtifact['cloudProvider']) ?? null, cloudFileRef: (r.cloud_file_ref as string | null) ?? null,
+    sourceModifiedAt: (r.source_modified_at as string | null) ?? null, extractionStatus: r.extraction_status as StoredArtifact['extractionStatus'],
+    extraction: r.extraction_summary as StoredArtifact['extraction'], ingestedAt: r.ingested_at as string,
+  };
+}
+
+export function candidateToRow(investigationId: string, c: StoredCandidate, actorId: string): Row {
+  return {
+    investigation_id: investigationId, ref: c.ref, artifact_ref: c.artifactRef, artifact_hash: c.artifactHash, locator: c.locator,
+    excerpt: c.excerpt, excerpt_hash: c.excerptHash, claim_ref: c.claimRef, proposed_relationship: c.proposedRelationship,
+    generation_method: c.method, review_reasons: [...c.reviewReasons], created_by: actorId,
+  };
+}
+
+export function rowToCandidate(r: Row): StoredCandidate {
+  return {
+    ref: r.ref as string, artifactRef: r.artifact_ref as string, artifactHash: r.artifact_hash as string,
+    locator: r.locator as StoredCandidate['locator'], excerpt: r.excerpt as string, excerptHash: r.excerpt_hash as string,
+    claimRef: (r.claim_ref as string | null) ?? null, proposedRelationship: (r.proposed_relationship as StoredCandidate['proposedRelationship']) ?? null,
+    method: r.generation_method as StoredCandidate['method'], reviewReasons: (r.review_reasons as StoredCandidate['reviewReasons']) ?? [],
+    reviewStatus: r.review_status as StoredCandidate['reviewStatus'],
+    reviewRelationship: (r.review_relationship as StoredCandidate['reviewRelationship']) ?? null,
+    reviewClaimRef: (r.review_claim_ref as string | null) ?? null, reviewAboutOrgRef: (r.review_about_org_ref as string | null) ?? null,
+    evidenceRef: (r.evidence_ref as string | null) ?? null, reviewedAt: (r.reviewed_at as string | null) ?? null,
   };
 }
 
@@ -290,15 +341,17 @@ export class SupabaseImpactLabStore implements ImpactLabStore {
   async loadInvestigationData(id: string): Promise<ImpactResult<InvestigationData>> {
     const q = (t: string, order: string, ascending = true, limit = READ_LIMIT) =>
       this.user.from(t).select('*').eq('investigation_id', id).order(order, { ascending }).limit(limit);
-    const [s, c, e, lv, v, d, rc] = await Promise.all([
+    const [s, c, e, lv, v, d, rc, ar, ca] = await Promise.all([
       q('impact_sources', 'created_at'), q('impact_claims', 'created_at'), q('impact_evidence', 'created_at'),
       // I1G1-02: latest per claim from the security_invoker view — never truncated by history length.
       q('impact_latest_verifications', 'claim_ref'),
       q('impact_verifications', 'version', false, 500),
       q('impact_disputes', 'created_at'),
       q('impact_registry_conflicts', 'seq'),
+      q('impact_artifacts', 'created_at'),
+      q('impact_evidence_candidates', 'created_at', true, 5_000),
     ]);
-    for (const r of [s, c, e, lv, v, d, rc]) if (r.error) return dbFail(r.error);
+    for (const r of [s, c, e, lv, v, d, rc, ar, ca]) if (r.error) return dbFail(r.error);
     return ok({
       sources: (s.data as Row[]).map(rowToSource),
       claims: (c.data as Row[]).map(rowToClaim),
@@ -307,6 +360,8 @@ export class SupabaseImpactLabStore implements ImpactLabStore {
       verifications: (v.data as Row[]).map(rowToVerification),
       disputes: (d.data as Row[]).map(rowToDispute),
       registryConflicts: (rc.data as Row[]).map(rowToRegistryConflict),
+      artifacts: (ar.data as Row[]).map(rowToArtifact),
+      candidates: (ca.data as Row[]).map(rowToCandidate),
     });
   }
   async listAudit(id: string): Promise<ImpactResult<readonly StoredAuditEvent[]>> {
@@ -393,6 +448,24 @@ export class SupabaseImpactLabStore implements ImpactLabStore {
       .eq('investigation_id', investigationId).eq('ref', ref).is('resolution', null).select('ref');
     if (error) return dbFail(error);
     return (data as Row[]).length === 1 ? ok(true) : fail('ALREADY_EXISTS', 'dispute already resolved');
+  }
+  async insertArtifact(investigationId: string, a: StoredArtifact, actorId: string): Promise<ImpactResult<true>> {
+    const { error } = await this.service.from('impact_artifacts').insert(artifactToRow(investigationId, a, actorId));
+    return error ? dbFail(error) : ok(true);
+  }
+  async insertCandidates(investigationId: string, cs: readonly StoredCandidate[], actorId: string): Promise<ImpactResult<true>> {
+    // One INSERT statement: all candidates of a request, or none.
+    const { error } = await this.service.from('impact_evidence_candidates').insert(cs.map((c) => candidateToRow(investigationId, c, actorId)));
+    return error ? dbFail(error) : ok(true);
+  }
+  async reviewCandidate(investigationId: string, ref: string, r: CandidateReview, actorId: string): Promise<ImpactResult<true>> {
+    const { data, error } = await this.service.from('impact_evidence_candidates').update({
+      review_status: r.status, review_relationship: r.relationship, review_claim_ref: r.claimRef, review_about_org_ref: r.aboutOrgRef,
+      evidence_ref: r.evidenceRef, reviewed_by: actorId, reviewed_at: r.reviewedAt, updated_by: actorId, updated_at: new Date().toISOString(),
+    }).eq('investigation_id', investigationId).eq('ref', ref).in('review_status', ['PENDING', 'NEEDS_CONTEXT']).select('ref');
+    if (error) return dbFail(error);
+    // Codex I1F-03 pattern: success only if a row actually transitioned.
+    return (data as Row[]).length === 1 ? ok(true) : fail('ALREADY_EXISTS', 'candidate already reviewed');
   }
 }
 

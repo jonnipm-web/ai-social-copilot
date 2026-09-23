@@ -29,14 +29,18 @@
  */
 import { requestImpactAction } from './boundaries.ts';
 import { resolveEntity } from './entity_resolution.ts';
+import { ARTIFACT_LIMITS, ARTIFACT_POLICY_VERSION, locatorFitsSummary, locatorKey } from './artifact_model.ts';
+import { detectArtifact } from './artifact_detect.ts';
+import { extractArtifact } from './artifact_extract.ts';
+import { analystCandidate, autoCandidates, type CandidateDraft } from './evidence_candidates.ts';
 import { REGISTRY_CONFLICT_EXPLANATIONS, resolveOrganization, snapshotFresh } from './organization_identity.ts';
 import { registryStatement } from './registry_claims.ts';
 import { contentFingerprint, detectSyndicationMarkers, similaritySketch } from './source_lineage.ts';
 import { fail, ok, type ImpactResult } from './errors.ts';
 import { LAB_LIMITS, type LabRequest } from './lab_contract.ts';
-import type { ImpactLabStore, InvestigationData, InvestigationRecord, StoredDispute, StoredSource } from './lab_store.ts';
+import type { ImpactLabStore, InvestigationData, InvestigationRecord, StoredArtifact, StoredCandidate, StoredDispute, StoredSource } from './lab_store.ts';
 import { normalizeDomain } from './entity_resolution.ts';
-import { parseIsoMs, sha256Hex, validateClaim, validateEvidence, validateSource } from './provenance.ts';
+import { parseIsoMs, sha256Bytes, sha256Hex, validateClaim, validateEvidence, validateSource } from './provenance.ts';
 import { ingestProviderRecord, PROVIDER_REGISTRY_VERSION, type ProviderRegistry, searchProvider, SERVER_PROVIDER_REGISTRY } from './provider_registry.ts';
 import { buildImpactReport } from './report.ts';
 import { deriveIndicators } from './risk_indicators.ts';
@@ -61,6 +65,8 @@ export interface LabResponse {
     /** I2 registry lookups: provider id + identity outcome + candidate count (ids/codes only). */
     readonly registry?: { readonly providerId: string; readonly outcome: string; readonly candidates: number };
     readonly lineageLinks?: number;
+    /** I3 artifact ingestion: type / extraction status / size / candidates (no content). */
+    readonly artifact?: { readonly type: string; readonly status: string; readonly sizeBytes: number; readonly candidates: number };
   };
 }
 
@@ -249,6 +255,25 @@ async function reverify(store: ImpactLabStore, actor: LabActor, inv: Investigati
   return await verifyAndStore(store, actor, inv, fresh.value, claimRef, now, null, providers);
 }
 
+/** Public view of an artifact: provenance + structure, never content. */
+function artifactView(a: StoredArtifact) {
+  return {
+    ref: a.ref, sourceRef: a.sourceRef, type: a.type, origin: a.origin, originalFilename: a.originalFilename, mediaType: a.mediaType,
+    sizeBytes: a.sizeBytes, fileHash: a.fileHash, hashAlgorithm: 'SHA-256', normalizedContentHash: a.normalizedContentHash,
+    version: a.version, supersedesRef: a.supersedesRef, cloudProvider: a.cloudProvider, cloudFileRef: a.cloudFileRef,
+    sourceModifiedAt: a.sourceModifiedAt, extractionStatus: a.extractionStatus, extraction: a.extraction, ingestedAt: a.ingestedAt,
+    originalBytesRetained: false,
+  };
+}
+
+function candidateView(c: StoredCandidate) {
+  return {
+    ref: c.ref, artifactRef: c.artifactRef, artifactHash: c.artifactHash, locator: c.locator, excerpt: c.excerpt, claimRef: c.claimRef,
+    proposedRelationship: c.proposedRelationship, method: c.method, reviewReasons: c.reviewReasons, reviewStatus: c.reviewStatus,
+    evidenceRef: c.evidenceRef, isEvidence: c.reviewStatus === 'ACCEPTED',
+  };
+}
+
 /** Public view of a registry snapshot: identity + provenance, never raw payload. */
 function snapshotView(ref: string, active: boolean, r: NonNullable<StoredSource['snapshot']>, providers: ProviderRegistry, nowMs: number) {
   const d = providers.get(r.providerId)?.descriptor;
@@ -394,6 +419,8 @@ export async function handleLabRequest(
           conflictExplanations: REGISTRY_CONFLICT_EXPLANATIONS,
           conflictIsNotWrongdoing: true,
         },
+        artifacts: data.value.artifacts.map(artifactView),
+        candidates: data.value.candidates.map(candidateView),
         claims: data.value.claims,
         evidence: data.value.evidence,
         verifications: [...data.value.verifications].sort((a, b) => a.result.claimId.localeCompare(b.result.claimId) || a.version - b.version)
@@ -633,6 +660,224 @@ export async function handleLabRequest(
       const e1 = await store.insertEvidence(inv.value.id, st.evidence, actor.userId);
       if (!e1.ok) return e1; // the claim is persisted: an identical retry repairs the evidence
       return ok({ action: req.action, data: { claimRef: st.claim.id, evidenceRef: st.evidence.id, text: st.claim.text, period: st.claim.period } });
+    }
+
+    case 'ingest_artifact': {
+      // I3: the SERVER decodes, validates, hashes and extracts; nothing the
+      // client says about the file (type, hash, text, authority) is trusted.
+      const a = req.artifact;
+      let bytes: Uint8Array;
+      try {
+        const bin = atob(a.contentBase64);
+        bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+      } catch {
+        return fail('INVALID_REQUEST', 'contentBase64 is not valid base64');
+      }
+      if (bytes.length > ARTIFACT_LIMITS.maxBytes) return fail('FILE_TOO_LARGE', 'file exceeds the artifact size limit');
+      const detected = await detectArtifact(bytes, a.filename, a.mediaType);
+      if (!detected.ok) return detected; // nothing is persisted for a rejected file
+      const fileHash = await sha256Bytes(bytes);
+      const extraction = await extractArtifact(detected.value.type, bytes, detected.value.text);
+      const identity = inv.value.subjectIdentity;
+      const claimsById = new Map(data.value.claims.map((c) => [c.id, c]));
+
+      // Same bytes in THIS investigation → REUSE (never a second artifact).
+      // Dedup is per investigation only: another user's identical file is
+      // invisible here (no cross-investigation side channel).
+      const existing = data.value.artifacts.find((x) => x.fileHash === fileHash);
+      const artifactRef = existing?.ref ?? a.ref;
+      if (!existing && data.value.artifacts.some((x) => x.ref === a.ref)) {
+        return fail('ALREADY_EXISTS', 'artifact ref holds another file; attach a new version with supersedes_ref');
+      }
+
+      // Validate every requested candidate BEFORE anything is written.
+      const requested: { ref: string; draft: CandidateDraft }[] = [];
+      for (const c of a.candidates) {
+        if (c.claimRef && !claimsById.has(c.claimRef)) return fail('INVALID_REQUEST', 'unknown claim');
+        const d = analystCandidate(extraction, c, identity);
+        if (!d.ok) return d;
+        if (d.value === 'MINOR_DATA_RISK') return fail('SENSITIVE_DATA_REJECTED', 'excerpt looks like personal data about a minor');
+        requested.push({ ref: c.ref, draft: d.value });
+      }
+
+      let version = existing?.version ?? 1;
+      if (!existing) {
+        if (data.value.artifacts.length >= ARTIFACT_LIMITS.maxArtifactsPerInvestigation) return fail('LIMIT_EXCEEDED', 'too many artifacts');
+        if (a.supersedesRef) {
+          const prior = data.value.artifacts.find((x) => x.ref === a.supersedesRef);
+          if (!prior) return fail('INVALID_REQUEST', 'unknown artifact to supersede');
+          if (data.value.artifacts.some((x) => x.supersedesRef === prior.ref)) return fail('ALREADY_EXISTS', 'artifact already superseded');
+          version = prior.version + 1;
+        }
+        const text = extraction.segments.map((x) => x.text).join('\n');
+        const priorSource = data.value.sources.find((x) => x.source.id === artifactRef);
+        if (priorSource) {
+          // Repair of a half-written ingestion: the same bytes' source exists without its artifact.
+          if (priorSource.source.acquisition.method !== 'USER_UPLOAD' || priorSource.source.contentHash !== fileHash) {
+            return fail('ALREADY_EXISTS', 'source ref already used');
+          }
+        } else {
+          if (data.value.sources.length >= LAB_LIMITS.maxSourcesPerInvestigation) return fail('LIMIT_EXCEEDED', 'too many sources');
+          const provider = a.cloud?.provider;
+          const src: Source = {
+            id: artifactRef,
+            type: 'USER_DOCUMENT',
+            publisher: provider ? `Cloud import (${provider}, client-declared)` : 'User upload',
+            retrievedAt: now,
+            status: 'ACTIVE',
+            retention: 'HASH_ONLY', // I1 policy for USER_DOCUMENT kept: the ORIGINAL is not retained; reviewed excerpts live in candidates
+            contentHash: fileHash, // server-computed; USER_UPLOAD never becomes provider provenance (CF-06)
+            acquisition: { method: 'USER_UPLOAD' },
+            userSubmitted: true,
+            ...(text.trim()
+              ? {
+                contentFingerprint: await contentFingerprint(text.slice(0, 20_000)),
+                similaritySketch: similaritySketch(text.slice(0, 20_000)),
+                syndicationMarkers: detectSyndicationMarkers(text.slice(0, 20_000)),
+              }
+              : {}),
+          };
+          const v = validateSource(src, nowMs);
+          if (!v.ok) return v;
+          const r = await store.insertSource(inv.value.id, { source: src, snapshot: null }, actor.userId);
+          if (!r.ok) return r;
+        }
+        const art: StoredArtifact = {
+          ref: artifactRef, sourceRef: artifactRef, type: detected.value.type, origin: a.origin, originalFilename: detected.value.filename,
+          mediaType: detected.value.mediaType, sizeBytes: bytes.length, fileHash,
+          normalizedContentHash: text.trim() ? await contentFingerprint(text) : null,
+          version, supersedesRef: a.supersedesRef ?? null, cloudProvider: a.cloud?.provider ?? null, cloudFileRef: a.cloud?.fileRef ?? null,
+          sourceModifiedAt: a.cloud?.modifiedAt ?? null, extractionStatus: extraction.summary.status, extraction: extraction.summary, ingestedAt: now,
+        };
+        const r2 = await store.insertArtifact(inv.value.id, art, actor.userId);
+        if (!r2.ok) return r2; // the source is kept: an identical retry completes the artifact
+      }
+      let artifact = existing;
+      if (!artifact) {
+        const again = await load(store, inv.value.id);
+        if (!again.ok) return again;
+        artifact = again.value.artifacts.find((x) => x.ref === artifactRef);
+      }
+      if (!artifact) return fail('INTERNAL_ERROR', 'artifact not readable after write');
+
+      // Candidates: analyst-requested (+ deterministic ones on first ingestion only).
+      const auto = existing ? { drafts: [], skippedMinorRisk: 0 } : autoCandidates(extraction, data.value.claims, identity);
+      const drafts = [
+        ...requested,
+        ...auto.drafts.map((d, i) => ({ ref: `${artifactRef}.auto${i + 1}`, draft: d })),
+      ];
+      const toInsert: StoredCandidate[] = [];
+      const replayed: string[] = [];
+      for (const { ref, draft } of drafts) {
+        if (!locatorFitsSummary(draft.locator, artifact.extraction)) return fail('LOCATOR_INVALID', 'locator outside the artifact structure');
+        const prior = data.value.candidates.find((x) => x.ref === ref);
+        if (prior) {
+          if (prior.artifactRef === artifactRef && locatorKey(prior.locator) === locatorKey(draft.locator) && prior.excerpt === draft.excerpt) {
+            replayed.push(ref);
+            continue;
+          }
+          return fail('ALREADY_EXISTS', 'candidate ref already used');
+        }
+        toInsert.push({
+          ref, artifactRef, artifactHash: artifact.fileHash, locator: draft.locator, excerpt: draft.excerpt, excerptHash: await sha256Hex(draft.excerpt),
+          claimRef: draft.claimRef ?? null, proposedRelationship: draft.proposedRelationship ?? null, method: draft.method,
+          reviewReasons: draft.reviewReasons, reviewStatus: 'PENDING', reviewRelationship: null, reviewClaimRef: null, reviewAboutOrgRef: null,
+          evidenceRef: null, reviewedAt: null,
+        });
+      }
+      if (data.value.candidates.length + toInsert.length > ARTIFACT_LIMITS.maxCandidatesPerInvestigation) return fail('LIMIT_EXCEEDED', 'too many candidates');
+      if (toInsert.length) {
+        const r3 = await store.insertCandidates(inv.value.id, toInsert, actor.userId);
+        if (!r3.ok) return r3;
+      }
+      return ok({
+        action: req.action,
+        data: {
+          artifact: artifactView(artifact),
+          duplicate: !!existing,
+          candidates: toInsert.map(candidateView),
+          replayedCandidates: replayed,
+          skippedMinorDataRisk: auto.skippedMinorRisk,
+          // Candidates are not evidence and not facts; a human review is required.
+          candidatesAreNotEvidence: true,
+          policyVersion: ARTIFACT_POLICY_VERSION,
+        },
+        metrics: { artifact: { type: artifact.type, status: artifact.extractionStatus, sizeBytes: artifact.sizeBytes, candidates: toInsert.length } },
+      });
+    }
+
+    case 'review_candidate': {
+      const rv = req.review;
+      const cand = data.value.candidates.find((x) => x.ref === rv.candidateRef);
+      if (!cand) return fail('INVALID_REQUEST', 'unknown candidate');
+      const artifact = data.value.artifacts.find((x) => x.ref === cand.artifactRef)!;
+      const evidenceRef = `${cand.ref}.ev`;
+      if (rv.decision !== 'ACCEPTED') {
+        if (rv.relationship || rv.claimRef || rv.aboutOrgRef || rv.personalData || rv.observedPeriod) {
+          return fail('INVALID_REQUEST', 'only an ACCEPTED review carries a relationship');
+        }
+        if (cand.reviewStatus === rv.decision && rv.decision === 'REJECTED') return ok({ action: req.action, data: { candidate: candidateView(cand), replayed: true } });
+        if (cand.reviewStatus === 'ACCEPTED' || cand.reviewStatus === 'REJECTED') return fail('ALREADY_EXISTS', 'candidate already reviewed');
+        const r = await store.reviewCandidate(inv.value.id, cand.ref, {
+          status: rv.decision, relationship: null, claimRef: null, aboutOrgRef: null, evidenceRef: null, reviewedAt: now,
+        }, actor.userId);
+        if (!r.ok) return r;
+        return ok({ action: req.action, data: { candidateRef: cand.ref, reviewStatus: rv.decision, humanReviewIsNotVerification: true } });
+      }
+      // ACCEPTED → promotion to evidence (USER_UPLOAD: contextual, never authority).
+      const claimRef = rv.claimRef ?? cand.claimRef ?? undefined;
+      if (cand.claimRef && rv.claimRef && cand.claimRef !== rv.claimRef) return fail('INVALID_REQUEST', 'candidate belongs to another claim');
+      if (!claimRef || !rv.relationship || !rv.aboutOrgRef || !rv.personalData) {
+        return fail('EVIDENCE_REVIEW_REQUIRED', 'accepting needs claim_ref, relationship, about_org_ref and personal_data');
+      }
+      const claim = data.value.claims.find((c) => c.id === claimRef);
+      if (!claim) return fail('INVALID_REQUEST', 'unknown claim');
+      const e: EvidenceItem = {
+        id: evidenceRef,
+        investigationId: inv.value.id,
+        claimId: claimRef,
+        sourceId: artifact.sourceRef,
+        aboutOrganizationId: rv.aboutOrgRef,
+        relationship: rv.relationship,
+        relationshipBasis: 'HUMAN_ASSESSED',
+        ...(rv.observedPeriod ? { observedPeriod: rv.observedPeriod } : {}),
+        excerpt: cand.excerpt,
+        excerptHash: cand.excerptHash,
+        locator: { artifact: { ref: artifact.ref, hash: artifact.fileHash, locator: cand.locator } },
+        personalData: rv.personalData,
+        addedAt: now,
+      };
+      if (cand.reviewStatus === 'ACCEPTED') {
+        const same = cand.reviewClaimRef === claimRef && cand.reviewRelationship === rv.relationship && cand.reviewAboutOrgRef === rv.aboutOrgRef;
+        return same ? ok({ action: req.action, data: { candidate: candidateView(cand), evidenceRef, replayed: true } }) : fail('ALREADY_EXISTS', 'candidate already reviewed');
+      }
+      if (cand.reviewStatus === 'REJECTED') return fail('ALREADY_EXISTS', 'candidate already reviewed');
+      const priorEv = data.value.evidence.find((x) => x.id === evidenceRef);
+      if (priorEv) {
+        // Repair: the evidence was written but the review was not.
+        const matches = priorEv.claimId === claimRef && priorEv.relationship === rv.relationship && priorEv.aboutOrganizationId === rv.aboutOrgRef
+          && priorEv.excerpt === cand.excerpt && priorEv.locator?.artifact?.hash === artifact.fileHash;
+        if (!matches) return fail('ALREADY_EXISTS', 'evidence ref already used');
+      } else {
+        if (data.value.evidence.length >= LAB_LIMITS.maxEvidencePerInvestigation) return fail('LIMIT_EXCEEDED', 'too much evidence');
+        const ve = await validateEvidence(e, claim, sourcesById);
+        if (!ve.ok) return ve;
+        const r = await store.insertEvidence(inv.value.id, e, actor.userId);
+        if (!r.ok) return r;
+      }
+      const r = await store.reviewCandidate(inv.value.id, cand.ref, {
+        status: 'ACCEPTED', relationship: rv.relationship, claimRef, aboutOrgRef: rv.aboutOrgRef, evidenceRef, reviewedAt: now,
+      }, actor.userId);
+      if (!r.ok) return r;
+      return ok({
+        action: req.action,
+        data: {
+          candidateRef: cand.ref, reviewStatus: 'ACCEPTED', evidenceRef, claimRef,
+          // A human accepting a candidate is not a verification: run_verification decides, and
+          // an uploaded document stays USER_SUBMITTED (never authority).
+          humanReviewIsNotVerification: true,
+        },
+      });
     }
 
     case 'run_verification': {

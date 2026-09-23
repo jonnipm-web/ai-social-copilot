@@ -149,3 +149,38 @@ Deno.test('EF-09 I2 registry events are safe: ids, codes and counts only (no org
   assertEquals([done.registry_outcome, done.candidates_count, done.source_provider], ['AMBIGUOUS', 2, 'fixture-xa-charity-registry']);
   assertEquals(e.logs.join('\n').includes('Example Aid'), false);
 });
+
+Deno.test('EF-10 I3 body limits are per action: only ingest_artifact may exceed the standard body size', async () => {
+  const e = env();
+  const inv = (await e.send('jwt-admin-a', { action: 'create_investigation', subject: SUBJECT })).body.data as Record<string, unknown>;
+  const id = inv.investigationId as string;
+  const text = 'HopeBridge Foundation line\n'.repeat(12_000); // ≈ 320 KB file, > maxBodyBytes once base64-encoded
+  const ok = await e.send('jwt-admin-a', { action: 'ingest_artifact', investigation_id: id, artifact: { ref: 'art-1', filename: 'r.txt', contentBase64: btoa(text), origin: 'USER_UPLOAD' } });
+  assertEquals(ok.status, 200);
+  const padded = await e.send('jwt-admin-a', { action: 'get_investigation', investigation_id: id, pad: 'x'.repeat(200_000) });
+  assertEquals([padded.status, padded.body.error], [413, 'PAYLOAD_TOO_LARGE']);
+  const huge = await e.send('jwt-admin-a', '{"action":"ingest_artifact","x":"' + 'a'.repeat(10 * 1024 * 1024) + '"}');
+  assertEquals([huge.status, huge.body.error], [413, 'PAYLOAD_TOO_LARGE']);
+});
+
+Deno.test('EF-11 I3 file errors map to 415 / 400; artifact events carry type/status/size only — never names or content', async () => {
+  const e = env();
+  const inv = (await e.send('jwt-admin-a', { action: 'create_investigation', subject: SUBJECT })).body.data as Record<string, unknown>;
+  const id = inv.investigationId as string;
+  const zip = await e.send('jwt-admin-a', { action: 'ingest_artifact', investigation_id: id, artifact: { ref: 'a', filename: 'secret-donors.zip', contentBase64: btoa('x'), origin: 'USER_UPLOAD' } });
+  assertEquals([zip.status, zip.body.error], [415, 'UNSUPPORTED_FILE_TYPE']);
+  const sig = await e.send('jwt-admin-a', { action: 'ingest_artifact', investigation_id: id, artifact: { ref: 'a', filename: 'x.pdf', contentBase64: btoa('MZ..'), origin: 'USER_UPLOAD' } });
+  assertEquals([sig.status, sig.body.error], [400, 'FILE_SIGNATURE_INVALID']);
+  const body = 'HopeBridge Foundation report\nPrivate donor Jane Example gave money.\n';
+  const r = await e.send('jwt-admin-a', { action: 'ingest_artifact', investigation_id: id, artifact: { ref: 'art-2', filename: 'private-donors.txt', contentBase64: btoa(body), origin: 'USER_UPLOAD', candidates: [{ ref: 'k1', locator: { kind: 'TEXT_LINES', lineStart: 2, lineEnd: 2 } }] } });
+  assertEquals(r.status, 200);
+  const rv = await e.send('jwt-admin-a', { action: 'review_candidate', investigation_id: id, candidate_ref: 'k1', decision: 'REJECTED' });
+  assertEquals(rv.status, 200);
+  const all = e.logs.join('\n');
+  for (const secret of ['private-donors', 'secret-donors', 'Jane Example', 'HopeBridge Foundation report']) assert(!all.includes(secret), secret);
+  const events = e.logs.map((l) => JSON.parse(l) as Record<string, unknown>);
+  assert(events.some((x) => x.event === 'impact.artifact_ingestion_completed' && x.artifact_type === 'TEXT' && typeof x.size_bytes === 'number'));
+  assert(events.some((x) => x.event === 'impact.artifact_ingestion_failed'));
+  assert(events.some((x) => x.event === 'impact.candidate_reviewed' && x.review_status === 'REJECTED'));
+  assertEquals(fetchCalls, 0);
+});

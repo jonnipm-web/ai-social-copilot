@@ -17,7 +17,13 @@
  * canonical organization id, or "this record belongs to this organization".
  * A client may submit content TEXT (the server fingerprints it and keeps only
  * the hashes) and a merge-only `derivedFrom` label.
+ *
+ * I3: artifact bytes arrive as base64 and are hashed by the SERVER; there is
+ * no field for a file hash, an excerpt, a reviewer, "reviewed", "verified",
+ * "official", "authoritative", "independent" or "fact". Locators are parsed
+ * strictly and re-validated against the server's own extraction.
  */
+import { type ArtifactLocator, CLOUD_PROVIDERS, type CloudProvider, parseLocator } from './artifact_model.ts';
 import { fail, ok, type ImpactResult } from './errors.ts';
 import { CLAIM_KINDS, IMPACT_LEVELS, isOneOf, isValidId, LEGAL_STAGES, NEWS_GENRES, parseIsoMs, SOURCE_TYPES } from './provenance.ts';
 import type { ClaimKind, ImpactLevel, LegalStage, NewsGenre, OrganizationType, SourceStatus, SourceType } from './types.ts';
@@ -36,6 +42,9 @@ export const LAB_LIMITS = Object.freeze({
   /** I2: content text a client may submit for lineage fingerprinting (never stored). */
   maxContentText: 20_000,
   maxQueryField: 200,
+  /** I3: body limit for ingest_artifact only (6 MB file ≈ 8 MB base64). Every other action keeps maxBodyBytes. */
+  maxArtifactBodyBytes: 9 * 1024 * 1024,
+  maxArtifactBase64: 8_400_000,
 });
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -86,6 +95,35 @@ export interface SourceInput {
   readonly derivedFrom?: string;
   /** I2: content text for server-side fingerprinting; only hashes are persisted. */
   readonly contentText?: string;
+}
+
+export interface CandidateRequestInput {
+  readonly ref: string;
+  readonly locator: ArtifactLocator;
+  readonly quote?: string;
+  readonly claimRef?: string;
+  readonly proposedRelationship?: typeof RELATIONSHIPS[number];
+}
+
+export interface ArtifactInput {
+  readonly ref: string;
+  readonly filename: string;
+  readonly mediaType?: string;
+  readonly contentBase64: string;
+  readonly origin: 'USER_UPLOAD' | 'CLOUD_IMPORT';
+  readonly cloud?: { readonly provider: CloudProvider; readonly fileRef: string; readonly modifiedAt?: string };
+  readonly supersedesRef?: string;
+  readonly candidates: readonly CandidateRequestInput[];
+}
+
+export interface CandidateReviewInput {
+  readonly candidateRef: string;
+  readonly decision: 'ACCEPTED' | 'REJECTED' | 'NEEDS_CONTEXT';
+  readonly relationship?: typeof RELATIONSHIPS[number];
+  readonly claimRef?: string;
+  readonly aboutOrgRef?: string;
+  readonly personalData?: typeof PERSONAL[number];
+  readonly observedPeriod?: { readonly from?: string; readonly to?: string };
 }
 
 export interface RegistryQueryInput {
@@ -144,7 +182,10 @@ export type LabRequest =
   | { readonly action: 'request_external_action'; readonly kind: string }
   // I2 Registry Intelligence
   | { readonly action: 'search_registry'; readonly investigationId: string; readonly providerId: string; readonly query: RegistryQueryInput }
-  | { readonly action: 'import_registry_claim'; readonly investigationId: string; readonly sourceRef: string; readonly ref: string };
+  | { readonly action: 'import_registry_claim'; readonly investigationId: string; readonly sourceRef: string; readonly ref: string }
+  // I3 Evidence Collection
+  | { readonly action: 'ingest_artifact'; readonly investigationId: string; readonly artifact: ArtifactInput }
+  | { readonly action: 'review_candidate'; readonly investigationId: string; readonly review: CandidateReviewInput };
 
 export type LabAction = LabRequest['action'];
 
@@ -267,6 +308,51 @@ function source(v: unknown): SourceInput {
   };
 }
 
+const B64_RE = /^[A-Za-z0-9+/]*={0,2}$/;
+
+function artifactInput(v: unknown): ArtifactInput {
+  const o = obj(v, 'artifact', ['ref', 'filename', 'mediaType', 'contentBase64', 'origin', 'cloud', 'supersedesRef', 'candidates']);
+  const b64 = o.contentBase64;
+  if (typeof b64 !== 'string' || !b64 || b64.length > LAB_LIMITS.maxArtifactBase64 || b64.length % 4 !== 0 || !B64_RE.test(b64)) {
+    throw new Bad('contentBase64 must be canonical base64 within the size limit');
+  }
+  const origin = en(o, 'origin', ['USER_UPLOAD', 'CLOUD_IMPORT'] as const, false) ?? 'USER_UPLOAD';
+  let cloud: ArtifactInput['cloud'];
+  if (o.cloud !== undefined) {
+    const c = obj(o.cloud, 'artifact.cloud', ['provider', 'fileRef', 'modifiedAt']);
+    cloud = { provider: en(c, 'provider', CLOUD_PROVIDERS)!, fileRef: id(c, 'fileRef')!, ...(c.modifiedAt !== undefined ? { modifiedAt: iso(c, 'modifiedAt')! } : {}) };
+  }
+  if ((origin === 'CLOUD_IMPORT') !== (cloud !== undefined)) throw new Bad('cloud metadata is required for, and only for, CLOUD_IMPORT');
+  const reqs = o.candidates === undefined ? [] : (() => {
+    if (!Array.isArray(o.candidates) || o.candidates.length > 20) throw new Bad('candidates must be a list ≤ 20');
+    return o.candidates.map((x, n) => {
+      const c = obj(x, `candidates[${n}]`, ['ref', 'locator', 'quote', 'claimRef', 'proposedRelationship']);
+      const locator = parseLocator(c.locator);
+      if (!locator) throw new Bad(`candidates[${n}].locator invalid`);
+      return {
+        ref: id(c, 'ref')!, locator, quote: str(c, 'quote', 1_000, false), claimRef: id(c, 'claimRef', false),
+        proposedRelationship: en(c, 'proposedRelationship', RELATIONSHIPS, false),
+      };
+    });
+  })();
+  return {
+    ref: id(o, 'ref')!, filename: str(o, 'filename', 200)!, mediaType: str(o, 'mediaType', 100, false), contentBase64: b64, origin, cloud,
+    supersedesRef: id(o, 'supersedesRef', false), candidates: reqs,
+  };
+}
+
+function candidateReview(top: Obj): CandidateReviewInput {
+  return {
+    candidateRef: id(top, 'candidate_ref')!,
+    decision: en(top, 'decision', ['ACCEPTED', 'REJECTED', 'NEEDS_CONTEXT'] as const)!,
+    relationship: en(top, 'relationship', RELATIONSHIPS, false),
+    claimRef: id(top, 'claim_ref', false),
+    aboutOrgRef: id(top, 'about_org_ref', false),
+    personalData: en(top, 'personal_data', PERSONAL, false),
+    observedPeriod: period(top.observed_period, 'observed_period'),
+  };
+}
+
 function registryQuery(v: unknown): RegistryQueryInput {
   const o = obj(v, 'query', ['name', 'registration', 'scheme', 'domain', 'country']);
   const country = o.country;
@@ -337,7 +423,8 @@ export function parseLabRequest(body: unknown): ImpactResult<LabRequest> {
   try {
     const top = obj(body, 'request', ['action', 'investigation_id', 'subject', 'project_id', 'lang', 'source', 'provider_id',
       'record_id', 'ref', 'source_ref', 'status', 'claim', 'evidence', 'claim_ref', 'idempotency_key',
-      'human_review_binding_hash', 'kind', 'submitted_evidence_refs', 'dispute_ref', 'resolution', 'query']);
+      'human_review_binding_hash', 'kind', 'submitted_evidence_refs', 'dispute_ref', 'resolution', 'query', 'artifact',
+      'candidate_ref', 'decision', 'relationship', 'about_org_ref', 'personal_data', 'observed_period']);
     const action = top.action;
     const allowOnly = (keys: string[]) => {
       for (const k of Object.keys(top)) if (k !== 'action' && !keys.includes(k)) throw new Bad(`field "${k}" not allowed for ${String(action)}`);
@@ -392,6 +479,12 @@ export function parseLabRequest(body: unknown): ImpactResult<LabRequest> {
       case 'search_registry':
         allowOnly(['investigation_id', 'provider_id', 'query']);
         return ok({ action, investigationId: inv(), providerId: id(top, 'provider_id')!, query: registryQuery(top.query) });
+      case 'ingest_artifact':
+        allowOnly(['investigation_id', 'artifact']);
+        return ok({ action, investigationId: inv(), artifact: artifactInput(top.artifact) });
+      case 'review_candidate':
+        allowOnly(['investigation_id', 'candidate_ref', 'decision', 'relationship', 'claim_ref', 'about_org_ref', 'personal_data', 'observed_period']);
+        return ok({ action, investigationId: inv(), review: candidateReview(top) });
       case 'import_registry_claim':
         allowOnly(['investigation_id', 'source_ref', 'ref']);
         return ok({ action, investigationId: inv(), sourceRef: id(top, 'source_ref')!, ref: id(top, 'ref')! });

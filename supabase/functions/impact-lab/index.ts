@@ -61,6 +61,11 @@ const HTTP: Readonly<Partial<Record<ImpactErrorCode, number>>> = {
   ORGANIZATION_AMBIGUOUS: 409,
   ENTITY_MATCH_UNCERTAIN: 409,
   SOURCE_UNAVAILABLE: 409,
+  UNSUPPORTED_FILE_TYPE: 415,
+  FILE_TOO_LARGE: 413,
+  FILE_SIGNATURE_INVALID: 400,
+  LOCATOR_INVALID: 400,
+  EVIDENCE_REVIEW_REQUIRED: 400,
   INTERNAL_ERROR: 500,
 };
 
@@ -76,12 +81,14 @@ function errorResponse(e: ImpactError, correlationId: string): Response {
   return json(status, body);
 }
 
-async function readBody(req: Request): Promise<{ ok: true; text: string } | { ok: false; code: ImpactErrorCode }> {
+async function readBody(req: Request): Promise<{ ok: true; text: string; bytes: number } | { ok: false; code: ImpactErrorCode }> {
+  // I3: the absolute ceiling is the artifact body; every OTHER action is held
+  // to maxBodyBytes after parsing (see handler).
   const declared = Number(req.headers.get('Content-Length') ?? '0');
-  if (declared > LAB_LIMITS.maxBodyBytes) return { ok: false, code: 'PAYLOAD_TOO_LARGE' };
+  if (declared > LAB_LIMITS.maxArtifactBodyBytes) return { ok: false, code: 'PAYLOAD_TOO_LARGE' };
   const buf = new Uint8Array(await req.arrayBuffer());
-  if (buf.byteLength > LAB_LIMITS.maxBodyBytes) return { ok: false, code: 'PAYLOAD_TOO_LARGE' };
-  return { ok: true, text: new TextDecoder().decode(buf) };
+  if (buf.byteLength > LAB_LIMITS.maxArtifactBodyBytes) return { ok: false, code: 'PAYLOAD_TOO_LARGE' };
+  return { ok: true, text: new TextDecoder().decode(buf), bytes: buf.byteLength };
 }
 
 export async function handler(
@@ -115,6 +122,11 @@ export async function handler(
     raw = JSON.parse(body.text);
   } catch {
     return errorResponse({ code: 'INVALID_REQUEST', message: 'body must be JSON' }, correlationId);
+  }
+  // Size before contract: only ingest_artifact may use the artifact ceiling.
+  const isIngest = typeof raw === 'object' && raw !== null && (raw as Record<string, unknown>).action === 'ingest_artifact';
+  if (!isIngest && body.bytes > LAB_LIMITS.maxBodyBytes) {
+    return errorResponse({ code: 'PAYLOAD_TOO_LARGE', message: 'request body too large' }, correlationId);
   }
   const parsed = parseLabRequest(raw);
   if (!parsed.ok) return errorResponse(parsed.error, correlationId);
@@ -162,6 +174,16 @@ export async function handler(
       registryEvent(result.error.code === 'REGISTRY_RATE_LIMITED' ? 'provider_rate_limited' : 'registry_lookup_failed', { source_provider: providerId, error_code: result.error.code });
     }
   }
+  // I3 (§85): artifact events — type / status / size / counts only, never content or file names.
+  if (action === 'ingest_artifact') {
+    const m = result.ok ? result.value.metrics?.artifact : undefined;
+    registryEvent(result.ok ? 'artifact_ingestion_completed' : 'artifact_ingestion_failed', result.ok && m
+      ? { artifact_type: m.type, extraction_status: m.status, size_bytes: m.sizeBytes, candidates_count: m.candidates }
+      : { error_code: result.ok ? 'UNKNOWN' : result.error.code });
+    if (m) registryEvent(m.status === 'SUCCESS' || m.status === 'PARTIAL' ? 'extraction_completed' : 'extraction_failed', { extraction_status: m.status });
+    if (m && m.candidates > 0) registryEvent('candidate_created', { candidates_count: m.candidates });
+  }
+  if (action === 'review_candidate' && result.ok) registryEvent('candidate_reviewed', { review_status: String(result.value.data.reviewStatus ?? 'REPLAYED') });
   if (result.ok && (result.value.metrics?.lineageLinks ?? 0) > 0) {
     registryEvent('lineage_detected', { lineage_links_count: result.value.metrics!.lineageLinks! });
   }

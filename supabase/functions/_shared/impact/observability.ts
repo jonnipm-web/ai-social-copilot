@@ -31,6 +31,11 @@ const ALLOWED: Readonly<Record<string, 'id' | 'count' | 'code'>> = {
   registry_outcome: 'code',
   candidates_count: 'count',
   lineage_links_count: 'count',
+  // I3 Evidence Collection (codes / counts only — never file names, excerpts or hashes)
+  artifact_type: 'code',
+  extraction_status: 'code',
+  size_bytes: 'count',
+  review_status: 'code',
 };
 
 /** Safe registry event names (mission §76). */
