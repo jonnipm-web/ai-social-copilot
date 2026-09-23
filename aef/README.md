@@ -6,6 +6,15 @@ the contract foundation from `IVE-AEF-CONTRACT-SECURITY-GATE-01`
 fail-closed, auditable, testable, non-autonomous, non-production** --
 see Section 3 of the mission brief.
 
+> **Update — `IV-AEF-PERSISTENCE-01`:** a durable governance layer now
+> lives in `aef/persistence/` (PostgreSQL state machine in migration
+> `20260925000000_aef_persistence.sql`, Lab only, not applied anywhere).
+> The in-memory kernel below is unchanged and remains the reference
+> pipeline. See `docs/architecture/modules/AEF_PERSISTENCE_MODEL.md`,
+> `AEF_STATE_MACHINE.md`, `AEF_HUMAN_GATE.md`, `AEF_EXECUTION_RECEIPT.md`,
+> `AEF_SECURITY_MODEL.md` and `IVE_AEF_CONTRACT.md`. Still: no endpoint, no
+> deploy, mock tools only, `AEF_PERSISTENCE_AVAILABLE = false`.
+
 ## What this is NOT
 
 - **Not a network service.** No public API, no Edge Function, no Cloud

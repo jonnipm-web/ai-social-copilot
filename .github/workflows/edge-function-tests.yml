@@ -88,13 +88,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Apply stubs + every migration, prove idempotency, run subject_roles RLS tests
+      - name: Setup Deno (AEF persistence integration tests, IV-AEF-PERSISTENCE-01)
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Apply stubs + every migration, prove idempotency, run RLS + AEF persistence tests
         env:
           PGHOST: 127.0.0.1
           PGPORT: "5432"
           PGUSER: postgres
           PGPASSWORD: ci-disposable-only
-        run: bash scripts/ci/run_disposable_db_tests.sh
+          DENO: deno
+        run: |
+          set -o pipefail
+          bash scripts/ci/run_disposable_db_tests.sh | tee db.log
+          grep -qx 'AEF_PERSISTENCE_RLS: PASS' db.log
+          grep -qx 'AEF_PG_INTEGRATION: PASS' db.log
 
   contract-and-aef-ci:
     name: AEF contract + kernel CI (IV-AEF-FOUNDATION-01)
@@ -111,12 +121,12 @@ jobs:
       - name: Type-check contracts/aef and aef/
         run: |
           deno check contracts/aef/*.ts contracts/aef/schema_parity_test.ts \
-            aef/*.ts aef/adapters/*.ts
+            aef/*.ts aef/adapters/*.ts aef/persistence/*.ts aef/persistence/testing/*.ts
 
       - name: Lint contracts/aef and aef/
         run: |
           deno lint contracts/aef/*.ts contracts/aef/schema_parity_test.ts \
-            aef/*.ts aef/adapters/*.ts
+            aef/*.ts aef/adapters/*.ts aef/persistence/*.ts aef/persistence/testing/*.ts
 
       - name: Run contract validator tests (65 cases)
         run: |
@@ -130,3 +140,9 @@ jobs:
         run: |
           deno test --allow-read --allow-net=deno.land,esm.sh \
             aef/kernel_test.ts aef/adapters/supabase_identity_resolver_test.ts
+
+      - name: Run AEF persistence unit tests (no database; PG tests run in disposable-db-rls-ci)
+        run: |
+          deno test --allow-read --allow-env \
+            aef/persistence/canonical_test.ts aef/persistence/ive_intent_mapping_test.ts \
+            aef/persistence/governance_unit_test.ts

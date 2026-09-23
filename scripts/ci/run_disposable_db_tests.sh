@@ -53,6 +53,23 @@ check() {
 }
 check "$DB" entitlement_subject_roles_rls_test.sql 'SUBJECT_ROLES_RLS: PASS'
 check "$DB" ive_memory_rls_test.sql 'IVE_MEMORY_RLS: PASS'
+check "$DB" aef_persistence_rls_test.sql 'AEF_PERSISTENCE_RLS: PASS'
+
+# IV-AEF-PERSISTENCE-01: the AEF governance service end-to-end against this
+# real database (concurrency, crash recovery, idempotency, forgery). Needs
+# Deno; skipping must be explicit (AEF_PG_INTEGRATION=skip), never silent.
+AEF_PG_DB_NAME="${DB}_aef"
+run -d postgres -c "CREATE DATABASE $AEF_PG_DB_NAME;"
+trap 'run -d postgres -c "DROP DATABASE IF EXISTS $DB;" >/dev/null 2>&1 || true; run -d postgres -c "DROP DATABASE IF EXISTS $UPG;" >/dev/null 2>&1 || true; run -d postgres -c "DROP DATABASE IF EXISTS $AEF_PG_DB_NAME;" >/dev/null 2>&1 || true' EXIT
+run -d "$AEF_PG_DB_NAME" -f "$ROOT/supabase/tests/support/supabase_stubs.sql"
+for m in $(ls "$ROOT"/supabase/migrations/*.sql | sort); do apply "$AEF_PG_DB_NAME" "$m"; done
+if [[ "${AEF_PG_INTEGRATION:-run}" == "skip" ]]; then
+  echo "AEF_PG_INTEGRATION: SKIPPED (explicit)"
+else
+  ( cd "$ROOT" && AEF_PG_DB="$AEF_PG_DB_NAME" PGHOST="$HOST" PSQL="$PSQL" \
+      "${DENO:-deno}" test --allow-run --allow-env --allow-read aef/persistence/governance_pg_test.ts )
+  echo "AEF_PG_INTEGRATION: PASS"
+fi
 
 # Legacy-data upgrade (Codex Gate 1 IG1-04): seed with today's schema, then
 # apply the memory migration on top of that data.

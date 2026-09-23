@@ -71,10 +71,12 @@ export interface ModulePolicyDoc {
 }
 
 /**
- * AEF persistence (persistent Human Gate records + ExecutionReceipts,
- * IV-AEF-PERSISTENCE-01) does not exist yet. While false, no module whose
- * actionClass is CONSEQUENTIAL may be RELEASE_CANDIDATE or COMMERCIAL —
- * enforced by module_policy_test.ts, not just documented.
+ * AEF persistence (persistent Human Gate records + ExecutionReceipts) is
+ * implemented and tested in the Module Lab (IV-AEF-PERSISTENCE-01) but is
+ * NOT available at runtime: the migration is not applied, no endpoint
+ * exists and IVE is not wired to it. Flip only in the runtime-integration
+ * gate. While false, no module whose actionClass is CONSEQUENTIAL may be
+ * RELEASE_CANDIDATE or COMMERCIAL — enforced by module_policy_test.ts.
  */
 export const AEF_PERSISTENCE_AVAILABLE = false;
 

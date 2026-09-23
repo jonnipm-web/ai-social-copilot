@@ -100,12 +100,26 @@ export interface ToolDefinition {
    * signature has no access to any credential, network client, or
    * secret -- it receives only the already-governed request.
    */
-  execute(request: ExecutionRequest): Promise<ToolExecutionResult>;
+  execute(request: ExecutionRequest, context?: ToolExecutionContext): Promise<ToolExecutionResult>;
+}
+
+/** Supplied by the persistent governance service (IV-AEF-PERSISTENCE-01); the in-memory v0 kernel passes none. */
+export interface ToolExecutionContext {
+  /** The durable operation this invocation belongs to. */
+  operationId: string;
+  /** Aborted when the governance service stops waiting (timeout). */
+  signal: AbortSignal;
 }
 
 export interface ToolExecutionResult {
   outcome: "SUCCESS" | "FAILURE";
   detail?: string;
+  /**
+   * For FAILURE: whether any side effect happened before the failure.
+   * Omitted = unknown, which the persistent service records as
+   * UNKNOWN_OUTCOME (never as a clean failure).
+   */
+  sideEffect?: "NONE" | "APPLIED";
 }
 
 // ---------------------------------------------------------------------

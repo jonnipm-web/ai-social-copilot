@@ -39,7 +39,7 @@
  * only, always safe to expose).
  */
 import type { ExecutionRequest } from "../contracts/aef/types.ts";
-import type { ActionClassification, ToolDefinition, ToolExecutionResult } from "./types.ts";
+import type { ActionClassification, ToolDefinition, ToolExecutionContext, ToolExecutionResult } from "./types.ts";
 
 export interface ToolDescriptor {
   toolId: string;
@@ -49,7 +49,7 @@ export interface ToolDescriptor {
 }
 
 /** A bound execution function returned by `claimExecutionRights()` -- looks up AND executes in one step, so the raw `execute` closure is never separately observable. Returns undefined for an unregistered domain+action. */
-export type ExecuteFn = (request: ExecutionRequest) => Promise<ToolExecutionResult> | undefined;
+export type ExecuteFn = (request: ExecutionRequest, context?: ToolExecutionContext) => Promise<ToolExecutionResult> | undefined;
 
 export class ToolRegistry {
   #tools = new Map<string, ToolDefinition>();
@@ -116,10 +116,10 @@ export class ToolRegistry {
     // and execution-capability issuance close together, in one step.
     this.#sealed = true;
     const tools = this.#tools;
-    return (request: ExecutionRequest) => {
+    return (request: ExecutionRequest, context?: ToolExecutionContext) => {
       const tool = tools.get(registryKey(request.domain, request.action));
       if (!tool) return undefined;
-      return tool.execute(request);
+      return tool.execute(request, context);
     };
   }
 }
