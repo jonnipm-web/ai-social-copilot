@@ -51,7 +51,7 @@ export function registryStatement(p: {
     period: Object.freeze({ from: asOf, to: asOf }),
     sourceId: p.source.id,
     extractedAt: p.now,
-    origin: 'STRUCTURED_IMPORT',
+    origin: 'REGISTRY_IMPORT', // server-only origin (Codex I2F2-01)
   });
   const from = r.status === 'REGISTERED' && r.registeredOn && r.registeredOn.slice(0, 10) <= asOf ? r.registeredOn.slice(0, 10) : asOf;
   const evidence: EvidenceItem = Object.freeze({

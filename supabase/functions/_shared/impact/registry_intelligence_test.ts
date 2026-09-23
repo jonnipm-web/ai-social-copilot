@@ -780,3 +780,18 @@ Deno.test('I2F-01 a failed evidence write after the claim is repaired by an iden
   await t.must(UA, { action: 'add_claim', investigation_id: inv, claim: { ref: 'c-x', kind: 'LEGAL_REGISTRATION', text: 'x', sourceRef: 'src-own', origin: 'STRUCTURED_IMPORT' } });
   assertEquals(await t.code(UA, { action: 'import_registry_claim', investigation_id: inv, source_ref: 'src-own', ref: 'c-x' }), 'ALREADY_EXISTS');
 });
+
+Deno.test('I2F2-01 a client-crafted claim identical to the registry statement can never receive REGISTRY_RECORD evidence', async () => {
+  const t = setup();
+  const inv = await newInv(t);
+  await t.must(UA, { action: 'ingest_provider_record', investigation_id: inv, provider_id: 'fixture-xa-charity-registry', record_id: 'xa-1234567', ref: 'src-own' });
+  const text = 'Exampleland Charity Registry (fixture) lists charity-number XA1234567 ("HopeBridge Foundation") with status REGISTERED as of 2026-08-31. [synthetic fixture]';
+  await t.must(UA, { action: 'add_claim', investigation_id: inv, claim: { ref: 'c-stmt', kind: 'LEGAL_REGISTRATION', text, sourceRef: 'src-own', origin: 'STRUCTURED_IMPORT', period: { from: '2026-08-31', to: '2026-08-31' } } });
+  assertEquals(await t.code(UA, { action: 'import_registry_claim', investigation_id: inv, source_ref: 'src-own', ref: 'c-stmt' }), 'ALREADY_EXISTS');
+  assertEquals(t.db.investigations.get(inv)!.evidence.has('c-stmt.rec'), false);
+  // the server-only origin is not representable by a client
+  assertEquals(await t.code(UA, { action: 'add_claim', investigation_id: inv, claim: { ref: 'c-2', kind: 'LEGAL_REGISTRATION', text, sourceRef: 'src-own', origin: 'REGISTRY_IMPORT' } }), 'INVALID_REQUEST');
+  // a genuine import under another ref works and is REGISTRY_IMPORT
+  await t.must(UA, { action: 'import_registry_claim', investigation_id: inv, source_ref: 'src-own', ref: 'c-real' });
+  assertEquals(t.db.investigations.get(inv)!.claims.get('c-real')!.origin, 'REGISTRY_IMPORT');
+});

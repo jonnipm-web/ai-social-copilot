@@ -91,5 +91,10 @@ A caller cannot say "this registry record belongs to this organization":
 - defense in depth: the engine excludes it anyway
   (`R03B_REGISTRY_RECORD_OF_ANOTHER_ENTITY`, MUT-02) and the database refuses
   a stored result counting it (I2-39b);
-- REGISTRY_RECORD evidence must carry the server statement text, as-of period
-  and subject, recomputed in SQL (I2-41..44; Codex I2G1-03).
+- registry statements carry the SERVER-ONLY claim origin `REGISTRY_IMPORT`
+  (not representable in the client contract); the database accepts such a
+  claim only as the exact statement of its own ACTIVE snapshot about the
+  subject, and REGISTRY_RECORD evidence only for such a claim (text, as-of
+  period, observed period and subject recomputed in SQL — Codex I2G1-03,
+  I2F2-01; I2-43..47). A failed evidence write is repaired by an identical
+  retry (I2F-01).

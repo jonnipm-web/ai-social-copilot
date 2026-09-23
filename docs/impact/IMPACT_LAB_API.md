@@ -80,7 +80,7 @@ secrets or personal data (EF-05).
 |---|---|---|
 | `search_registry` | `investigation_id`, `provider_id`, `query {name?, registration?, scheme?, domain?, country?}` | read-only; returns `outcome` (EXACT/STRONG/AMBIGUOUS/NO_MATCH), ≤ 10 candidates with signals, `requiresReview`, `identityStatus`, `absenceIsNotEvidenceOfWrongdoing: true`; nothing persisted or attached |
 | `ingest_provider_record` | unchanged fields | identical data → `replayed: true` with the existing `sourceRef`; changed data → new snapshot; response carries `canonicalOrgId`, snapshot view (freshness, authority metadata), `registryConflicts` |
-| `import_registry_claim` | `investigation_id`, `source_ref`, `ref` | neutral registry statement + REGISTRY_RECORD evidence; only from an ACTIVE snapshot that CONFIRMS the subject (`ENTITY_MATCH_UNCERTAIN` otherwise); idempotent retry |
+| `import_registry_claim` | `investigation_id`, `source_ref`, `ref` | neutral registry statement (origin `REGISTRY_IMPORT`, server-only) + REGISTRY_RECORD evidence; only from an ACTIVE snapshot that CONFIRMS the subject (`ENTITY_MATCH_UNCERTAIN` otherwise); identical retry replays or repairs a missing evidence row (`repaired: true`); any other reuse of the ref → ALREADY_EXISTS |
 | `add_source` | + `contentText?` (≤ 20,000, never stored), `derivedFrom?` | server computes fingerprint, sketch, markers |
 
 `get_investigation` adds `registry { snapshots, conflicts, conflictExplanations, conflictIsNotWrongdoing: true }`.

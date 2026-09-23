@@ -233,6 +233,32 @@ CREATE UNIQUE INDEX IF NOT EXISTS impact_sources_snapshot_key ON public.impact_s
 CREATE INDEX IF NOT EXISTS impact_sources_canonical_idx ON public.impact_sources (investigation_id, canonical_org_id)
   WHERE canonical_org_id IS NOT NULL;
 
+-- ── claims: server-only REGISTRY_IMPORT origin (Codex I2F2-01) ─────────────
+ALTER TABLE public.impact_claims DROP CONSTRAINT IF EXISTS impact_claims_origin_check;
+ALTER TABLE public.impact_claims ADD CONSTRAINT impact_claims_origin_check
+  CHECK (origin IN ('MANUAL','STRUCTURED_IMPORT','LLM_EXTRACTED','REGISTRY_IMPORT'));
+-- A REGISTRY_IMPORT claim is exactly the registry statement of its own ACTIVE
+-- provider snapshot, about the subject, for the registry as-of date.
+CREATE OR REPLACE FUNCTION public.impact_registry_claim_validate() RETURNS trigger
+LANGUAGE plpgsql SET search_path = '' AS $$
+DECLARE v_src public.impact_sources%ROWTYPE;
+BEGIN
+  IF NEW.origin <> 'REGISTRY_IMPORT' THEN RETURN NEW; END IF;
+  SELECT * INTO v_src FROM public.impact_sources s WHERE s.investigation_id = NEW.investigation_id AND s.ref = NEW.source_ref;
+  IF v_src.acquisition_method IS DISTINCT FROM 'PROVIDER' OR v_src.snapshot IS NULL OR v_src.status <> 'ACTIVE'
+     OR NEW.kind <> 'LEGAL_REGISTRATION'
+     OR NEW.claim_text IS DISTINCT FROM public.impact_registry_statement_text(v_src.publisher, v_src.snapshot)
+     OR NEW.period_from IS DISTINCT FROM public.impact_registry_asof(v_src.snapshot)
+     OR NEW.period_to IS DISTINCT FROM public.impact_registry_asof(v_src.snapshot)
+     OR NOT public.impact_snapshot_identifies_subject(NEW.investigation_id, v_src.snapshot) THEN
+    RAISE EXCEPTION 'IMPACT_REGISTRY_CLAIM_INVALID: not the registry statement of its own snapshot' USING ERRCODE = '23514';
+  END IF;
+  RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS impact_registry_claim_validate ON public.impact_claims;
+CREATE TRIGGER impact_registry_claim_validate BEFORE INSERT ON public.impact_claims
+  FOR EACH ROW EXECUTE FUNCTION public.impact_registry_claim_validate();
+
 -- ── evidence: REGISTRY_RECORD basis ────────────────────────────────────────
 
 ALTER TABLE public.impact_evidence DROP CONSTRAINT IF EXISTS impact_evidence_basis_check;
@@ -275,7 +301,7 @@ BEGIN
     IF v_src.acquisition_method IS DISTINCT FROM 'PROVIDER' OR v_src.snapshot IS NULL OR v_src.status <> 'ACTIVE'
        OR NEW.relationship <> 'SUPPORTS' OR NEW.personal_data <> 'NONE'
        OR NEW.about_org_ref IS DISTINCT FROM v_subject
-       OR v_claim.source_ref IS DISTINCT FROM NEW.source_ref OR v_claim.origin IS DISTINCT FROM 'STRUCTURED_IMPORT'
+       OR v_claim.source_ref IS DISTINCT FROM NEW.source_ref OR v_claim.origin IS DISTINCT FROM 'REGISTRY_IMPORT'
        OR v_claim.kind IS DISTINCT FROM 'LEGAL_REGISTRATION'
        OR v_claim.claim_text IS DISTINCT FROM public.impact_registry_statement_text(v_src.publisher, v_src.snapshot)
        OR v_claim.period_from IS DISTINCT FROM v_asof OR v_claim.period_to IS DISTINCT FROM v_asof

@@ -216,14 +216,24 @@ SET ROLE service_role;
 INSERT INTO public.impact_claims (investigation_id, ref, kind, claim_text, subject_org_ref, source_ref, extracted_at, origin, period_from, period_to, created_by) VALUES
   (:IC, 'c-stmt', 'LEGAL_REGISTRATION',
    public.impact_registry_statement_text('Exampleland Charity Registry (fixture)', (SELECT snapshot FROM public.impact_sources WHERE investigation_id = :IC AND ref = 'src-ch')),
-   'org-northstar', 'src-ch', '2026-09-02T00:00:00Z', 'STRUCTURED_IMPORT', '2026-09-01', '2026-09-01', :UC),
-  (:IC, 'c-forged', 'LEGAL_REGISTRATION', 'Exampleland Charity Registry (fixture) lists charity-number XA9990001 ("northstar relief") with status REGISTERED as of 2026-09-01. [synthetic fixture]',
-   'org-northstar', 'src-ch', '2026-09-02T00:00:00Z', 'STRUCTURED_IMPORT', '2026-09-01', '2026-09-01', :UC),
-  (:IC, 'c-period', 'LEGAL_REGISTRATION',
+   'org-northstar', 'src-ch', '2026-09-02T00:00:00Z', 'REGISTRY_IMPORT', '2026-09-01', '2026-09-01', :UC),
+  (:IC, 'c-crafted', 'LEGAL_REGISTRATION',
    public.impact_registry_statement_text('Exampleland Charity Registry (fixture)', (SELECT snapshot FROM public.impact_sources WHERE investigation_id = :IC AND ref = 'src-ch')),
-   'org-northstar', 'src-ch', '2026-09-02T00:00:00Z', 'STRUCTURED_IMPORT', '2020-01-01', '2020-01-01', :UC),
+   'org-northstar', 'src-ch', '2026-09-02T00:00:00Z', 'STRUCTURED_IMPORT', '2026-09-01', '2026-09-01', :UC),
   (:IC, 'c-man', 'LEGAL_REGISTRATION', 'Northstar is registered.', 'org-northstar', 'src-ch', '2026-09-02T00:00:00Z', 'MANUAL', NULL, NULL, :UC),
   (:IC, 'c-news', 'LEGAL_REGISTRATION', 'Northstar is registered.', 'org-northstar', 'n-ok', '2026-09-02T00:00:00Z', 'STRUCTURED_IMPORT', NULL, NULL, :UC);
+SELECT pg_temp.expect_fail('I2-45 a REGISTRY_IMPORT claim that is not its snapshot''s statement (status forged)',
+  $$INSERT INTO public.impact_claims (investigation_id, ref, kind, claim_text, subject_org_ref, source_ref, extracted_at, origin, period_from, period_to, created_by)
+    VALUES ('c2222222-0000-0000-0000-00000000000c', 'c-forged', 'LEGAL_REGISTRATION', 'Exampleland Charity Registry (fixture) lists charity-number XA9990001 ("northstar relief") with status REGISTERED as of 2026-09-01. [synthetic fixture]',
+      'org-northstar', 'src-ch', '2026-09-02T00:00:00Z', 'REGISTRY_IMPORT', '2026-09-01', '2026-09-01', 'cccccccc-0000-0000-0000-00000000000c')$$, 'IMPACT_REGISTRY_CLAIM_INVALID');
+SELECT pg_temp.expect_fail('I2-46 a REGISTRY_IMPORT claim moved to another period',
+  $$INSERT INTO public.impact_claims (investigation_id, ref, kind, claim_text, subject_org_ref, source_ref, extracted_at, origin, period_from, period_to, created_by)
+    VALUES ('c2222222-0000-0000-0000-00000000000c', 'c-period', 'LEGAL_REGISTRATION',
+      public.impact_registry_statement_text('Exampleland Charity Registry (fixture)', (SELECT snapshot FROM public.impact_sources WHERE investigation_id = 'c2222222-0000-0000-0000-00000000000c' AND ref = 'src-ch')),
+      'org-northstar', 'src-ch', '2026-09-02T00:00:00Z', 'REGISTRY_IMPORT', '2020-01-01', '2020-01-01', 'cccccccc-0000-0000-0000-00000000000c')$$, 'IMPACT_REGISTRY_CLAIM_INVALID');
+SELECT pg_temp.expect_fail('I2-47 REGISTRY_RECORD evidence for a client-crafted claim with the exact statement text (Codex I2F2-01)',
+  $$INSERT INTO public.impact_evidence (investigation_id, ref, claim_ref, source_ref, about_org_ref, relationship, relationship_basis, observed_from, observed_to, personal_data, added_at, created_by)
+    VALUES ('c2222222-0000-0000-0000-00000000000c', 'e-cr', 'c-crafted', 'src-ch', 'org-northstar', 'SUPPORTS', 'REGISTRY_RECORD', '2026-09-01', '2026-09-01', 'NONE', '2026-09-02T00:00:00Z', 'cccccccc-0000-0000-0000-00000000000c')$$, 'IMPACT_REGISTRY_RECORD_INVALID');
 SELECT pg_temp.expect_fail('I2-25 REGISTRY_RECORD evidence from a non-provider source',
   $$INSERT INTO public.impact_evidence (investigation_id, ref, claim_ref, source_ref, about_org_ref, relationship, relationship_basis, personal_data, added_at, created_by)
     VALUES ('c2222222-0000-0000-0000-00000000000c', 'e-x1', 'c-news', 'n-ok', 'org-northstar', 'SUPPORTS', 'REGISTRY_RECORD', 'NONE', '2026-09-02T00:00:00Z', 'cccccccc-0000-0000-0000-00000000000c')$$, 'IMPACT_REGISTRY_RECORD_INVALID');
@@ -235,12 +245,6 @@ SELECT pg_temp.expect_fail('I2-27 REGISTRY_RECORD evidence for a manually writte
     VALUES ('c2222222-0000-0000-0000-00000000000c', 'e-x3', 'c-man', 'src-ch', 'org-northstar', 'SUPPORTS', 'REGISTRY_RECORD', 'NONE', '2026-09-02T00:00:00Z', 'cccccccc-0000-0000-0000-00000000000c')$$, 'IMPACT_REGISTRY_RECORD_INVALID');
 INSERT INTO public.impact_evidence (investigation_id, ref, claim_ref, source_ref, about_org_ref, relationship, relationship_basis, observed_from, observed_to, personal_data, added_at, created_by)
 VALUES (:IC, 'c-stmt.rec', 'c-stmt', 'src-ch', 'org-northstar', 'SUPPORTS', 'REGISTRY_RECORD', '2026-09-01', '2026-09-01', 'NONE', '2026-09-02T00:00:00Z', :UC);
-SELECT pg_temp.expect_fail('I2-41 REGISTRY_RECORD evidence for a claim whose text is not the registry statement (status forged)',
-  $$INSERT INTO public.impact_evidence (investigation_id, ref, claim_ref, source_ref, about_org_ref, relationship, relationship_basis, observed_from, observed_to, personal_data, added_at, created_by)
-    VALUES ('c2222222-0000-0000-0000-00000000000c', 'e-f1', 'c-forged', 'src-ch', 'org-northstar', 'SUPPORTS', 'REGISTRY_RECORD', '2026-09-01', '2026-09-01', 'NONE', '2026-09-02T00:00:00Z', 'cccccccc-0000-0000-0000-00000000000c')$$, 'IMPACT_REGISTRY_RECORD_INVALID');
-SELECT pg_temp.expect_fail('I2-42 REGISTRY_RECORD evidence for a statement moved to another period',
-  $$INSERT INTO public.impact_evidence (investigation_id, ref, claim_ref, source_ref, about_org_ref, relationship, relationship_basis, observed_from, observed_to, personal_data, added_at, created_by)
-    VALUES ('c2222222-0000-0000-0000-00000000000c', 'e-f2', 'c-period', 'src-ch', 'org-northstar', 'SUPPORTS', 'REGISTRY_RECORD', '2026-09-01', '2026-09-01', 'NONE', '2026-09-02T00:00:00Z', 'cccccccc-0000-0000-0000-00000000000c')$$, 'IMPACT_REGISTRY_RECORD_INVALID');
 SELECT pg_temp.expect_fail('I2-43 REGISTRY_RECORD evidence about another organization ref',
   $$INSERT INTO public.impact_evidence (investigation_id, ref, claim_ref, source_ref, about_org_ref, relationship, relationship_basis, observed_from, observed_to, personal_data, added_at, created_by)
     VALUES ('c2222222-0000-0000-0000-00000000000c', 'e-f3', 'c-stmt', 'src-ch', 'org-other', 'SUPPORTS', 'REGISTRY_RECORD', '2026-09-01', '2026-09-01', 'NONE', '2026-09-02T00:00:00Z', 'cccccccc-0000-0000-0000-00000000000c')$$, 'IMPACT_REGISTRY_RECORD_INVALID');

@@ -66,7 +66,7 @@ export const CLAIM_KINDS = [
   'LEGAL_REGISTRATION', 'OPERATING_HISTORY', 'FINANCIAL', 'IMPACT_OUTPUT', 'IMPACT_OUTCOME',
   'BENEFICIARY_COUNT', 'AFFILIATION', 'GOVERNANCE', 'REGULATORY_STATUS', 'OTHER',
 ] as const;
-export const CLAIM_ORIGINS = ['MANUAL', 'STRUCTURED_IMPORT', 'LLM_EXTRACTED'] as const;
+export const CLAIM_ORIGINS = ['MANUAL', 'STRUCTURED_IMPORT', 'LLM_EXTRACTED', 'REGISTRY_IMPORT'] as const;
 export const IMPACT_LEVELS = ['INPUT', 'ACTIVITY', 'OUTPUT', 'OUTCOME', 'IMPACT'] as const;
 export const LEGAL_STAGES = [
   'INVESTIGATION_OPENED', 'CHARGED', 'CONVICTED', 'ACQUITTED', 'DISMISSED', 'SANCTIONED', 'SETTLED',
@@ -288,7 +288,7 @@ export async function validateEvidence(
   if (e.relationshipBasis === 'REGISTRY_RECORD') {
     const src = sources.get(e.sourceId)!;
     if (src.acquisition.method !== 'PROVIDER' || src.retention !== 'SNAPSHOT' || e.relationship !== 'SUPPORTS'
-        || claim.sourceId !== e.sourceId || claim.origin !== 'STRUCTURED_IMPORT' || e.personalData !== 'NONE') {
+        || claim.sourceId !== e.sourceId || claim.origin !== 'REGISTRY_IMPORT' || e.personalData !== 'NONE') {
       return fail('INVALID_EVIDENCE', 'REGISTRY_RECORD evidence must be the provider record supporting its own registry statement', { evidenceId: e.id });
     }
   }

@@ -611,7 +611,8 @@ export async function handleLabRequest(
         // both exist and REPAIRS the missing evidence otherwise; anything else
         // reusing the ref is a different request. Success is never reported
         // unless both rows exist.
-        const same = prior.sourceId === req.sourceRef && prior.text === st.claim.text && prior.origin === 'STRUCTURED_IMPORT'
+        // I2F2-01: only a claim this action generated (server-only origin) can be replayed or repaired.
+        const same = prior.sourceId === req.sourceRef && prior.text === st.claim.text && prior.origin === 'REGISTRY_IMPORT'
           && prior.kind === 'LEGAL_REGISTRATION' && prior.period?.from === st.claim.period?.from && prior.period?.to === st.claim.period?.to;
         if (!same) return fail('ALREADY_EXISTS', 'claim ref already used');
         const priorEv = data.value.evidence.find((e) => e.id === st.evidence.id);
