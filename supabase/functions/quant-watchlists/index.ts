@@ -1,7 +1,10 @@
 // quant-watchlists — IV-QUANT-DATA-PLANE-AND-API-02.
 //
-// Watchlist CRUD for module 'quant-analytics' (READ_ONLY analytics state,
-// INTERNAL). authenticate → entitlement → body limits → strict schema →
+// Watchlist CRUD for module 'quant-watchlists' (REVERSIBLE user state,
+// INTERNAL) — split from the READ_ONLY 'quant-analytics' module because it
+// persists data (Codex CXA-02). The database enforces the same INTERNAL
+// boundary for direct PostgREST access (Codex CXA-01).
+// authenticate → entitlement → body limits → strict schema →
 // project ownership (create with project_id) → storage as the CALLER (their
 // JWT, so Postgres RLS from migration 20260924000000 is the isolation
 // authority; no service role). Instruments are validated with the
@@ -61,7 +64,7 @@ export async function handler(
     throw e;
   }
 
-  const access = await requireModuleAccess(req, authUser, 'quant-analytics', quantCorsHeaders, subjectSource);
+  const access = await requireModuleAccess(req, authUser, 'quant-watchlists', quantCorsHeaders, subjectSource);
   if (!access.allowed) return access.response;
 
   const started = performance.now();

@@ -115,7 +115,8 @@ export const MODULE_POLICY: ModulePolicyDoc =
     "admin-panel": { "lifecycle": "INTERNAL", "minimumPlan": "free", "actionClass": "REVERSIBLE" },
     "ive-avatar": { "lifecycle": "COMMERCIAL", "minimumPlan": "free", "actionClass": "READ_ONLY" },
     "ive-quant": { "lifecycle": "EXPERIMENTAL", "minimumPlan": "free", "actionClass": "CONSEQUENTIAL" },
-    "quant-analytics": { "lifecycle": "INTERNAL", "minimumPlan": "free", "actionClass": "READ_ONLY" }
+    "quant-analytics": { "lifecycle": "INTERNAL", "minimumPlan": "free", "actionClass": "READ_ONLY" },
+    "quant-watchlists": { "lifecycle": "INTERNAL", "minimumPlan": "free", "actionClass": "REVERSIBLE" }
   },
   "edgeFunctions": {
     "analyze-website": { "kind": "MODULE", "moduleId": "website-analyzer" },
@@ -136,7 +137,7 @@ export const MODULE_POLICY: ModulePolicyDoc =
     "process-file": { "kind": "MODULE", "moduleId": "file-import" },
     "revenue-planner": { "kind": "MODULE", "moduleId": "revenue-planner" },
     "quant-analyze": { "kind": "MODULE", "moduleId": "quant-analytics" },
-    "quant-watchlists": { "kind": "MODULE", "moduleId": "quant-analytics" },
+    "quant-watchlists": { "kind": "MODULE", "moduleId": "quant-watchlists" },
     "create-checkout-session": { "kind": "BILLING" },
     "module-access": { "kind": "ENTITLEMENT" },
     "stripe-webhook": { "kind": "PUBLIC_WEBHOOK" },

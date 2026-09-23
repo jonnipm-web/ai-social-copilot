@@ -7,6 +7,14 @@
 -- Security model (docs/quant/QUANT_WATCHLIST_MODEL.md):
 --   * RLS on both tables; every policy is `user_id = auth.uid()`; items also
 --     require the parent watchlist to belong to the same user.
+--   * Module entitlement is ALSO enforced here (Codex CXA-01): module
+--     'quant-watchlists' is INTERNAL (admin-only), so every policy requires
+--     public.quant_watchlists_access_allowed() — true only for a caller whose
+--     own server-managed role is admin (profiles.role, or subject_roles when
+--     that table exists). Direct PostgREST access therefore cannot bypass the
+--     Edge Function's entitlement gate. Promoting the module beyond INTERNAL
+--     REQUIRES a new migration replacing this predicate; the Deno drift test
+--     QB-16 fails CI if module_policy.ts and this predicate disagree.
 --   * anon: no privileges at all. authenticated: SELECT/INSERT/DELETE, and
 --     UPDATE of `name` ONLY (column privilege) — user_id/project_id/items
 --     can never be rewritten, so a row cannot be moved to another user or
@@ -93,18 +101,39 @@ DROP TRIGGER IF EXISTS quant_watchlist_items_before_insert ON public.quant_watch
 CREATE TRIGGER quant_watchlist_items_before_insert BEFORE INSERT ON public.quant_watchlist_items
   FOR EACH ROW EXECUTE FUNCTION public.quant_watchlist_items_before_insert();
 
+-- ── module entitlement predicate (INTERNAL = admin-only) ───────────────────
+-- SECURITY INVOKER: reads only the caller's OWN profile / role rows under
+-- their existing RLS; grants nothing. Fails closed (NULL uid → false).
+CREATE OR REPLACE FUNCTION public.quant_watchlists_access_allowed()
+RETURNS boolean LANGUAGE plpgsql STABLE SECURITY INVOKER SET search_path = public, pg_temp AS $$
+DECLARE
+  uid uuid := auth.uid();
+  allowed boolean := false;
+BEGIN
+  IF uid IS NULL THEN
+    RETURN false;
+  END IF;
+  SELECT EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = uid AND p.role = 'admin') INTO allowed;
+  IF NOT allowed AND to_regclass('public.subject_roles') IS NOT NULL THEN
+    EXECUTE 'SELECT EXISTS (SELECT 1 FROM public.subject_roles r WHERE r.subject_type = ''user'' AND r.subject_id = $1 AND r.role = ''admin'')'
+      INTO allowed USING uid;
+  END IF;
+  RETURN coalesce(allowed, false);
+END $$;
+
 -- ── RLS ──────────────────────────────────────────────────────────────────
 ALTER TABLE public.quant_watchlists ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.quant_watchlist_items ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS quant_watchlists_select_own ON public.quant_watchlists;
 CREATE POLICY quant_watchlists_select_own ON public.quant_watchlists
-  FOR SELECT TO authenticated USING (user_id = auth.uid());
+  FOR SELECT TO authenticated USING (user_id = auth.uid() AND public.quant_watchlists_access_allowed());
 
 DROP POLICY IF EXISTS quant_watchlists_insert_own ON public.quant_watchlists;
 CREATE POLICY quant_watchlists_insert_own ON public.quant_watchlists
   FOR INSERT TO authenticated WITH CHECK (
     user_id = auth.uid()
+    AND public.quant_watchlists_access_allowed()
     AND (project_id IS NULL OR EXISTS (
       SELECT 1 FROM public.projects p WHERE p.id = project_id AND p.user_id = auth.uid()
     ))
@@ -112,26 +141,28 @@ CREATE POLICY quant_watchlists_insert_own ON public.quant_watchlists
 
 DROP POLICY IF EXISTS quant_watchlists_update_own ON public.quant_watchlists;
 CREATE POLICY quant_watchlists_update_own ON public.quant_watchlists
-  FOR UPDATE TO authenticated USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+  FOR UPDATE TO authenticated USING (user_id = auth.uid() AND public.quant_watchlists_access_allowed())
+  WITH CHECK (user_id = auth.uid() AND public.quant_watchlists_access_allowed());
 
 DROP POLICY IF EXISTS quant_watchlists_delete_own ON public.quant_watchlists;
 CREATE POLICY quant_watchlists_delete_own ON public.quant_watchlists
-  FOR DELETE TO authenticated USING (user_id = auth.uid());
+  FOR DELETE TO authenticated USING (user_id = auth.uid() AND public.quant_watchlists_access_allowed());
 
 DROP POLICY IF EXISTS quant_watchlist_items_select_own ON public.quant_watchlist_items;
 CREATE POLICY quant_watchlist_items_select_own ON public.quant_watchlist_items
-  FOR SELECT TO authenticated USING (user_id = auth.uid());
+  FOR SELECT TO authenticated USING (user_id = auth.uid() AND public.quant_watchlists_access_allowed());
 
 DROP POLICY IF EXISTS quant_watchlist_items_insert_own ON public.quant_watchlist_items;
 CREATE POLICY quant_watchlist_items_insert_own ON public.quant_watchlist_items
   FOR INSERT TO authenticated WITH CHECK (
     user_id = auth.uid()
+    AND public.quant_watchlists_access_allowed()
     AND EXISTS (SELECT 1 FROM public.quant_watchlists w WHERE w.id = watchlist_id AND w.user_id = auth.uid())
   );
 
 DROP POLICY IF EXISTS quant_watchlist_items_delete_own ON public.quant_watchlist_items;
 CREATE POLICY quant_watchlist_items_delete_own ON public.quant_watchlist_items
-  FOR DELETE TO authenticated USING (user_id = auth.uid());
+  FOR DELETE TO authenticated USING (user_id = auth.uid() AND public.quant_watchlists_access_allowed());
 
 -- ── privileges (explicit; override Supabase default grants) ──────────────
 REVOKE ALL ON public.quant_watchlists FROM PUBLIC, anon, authenticated;
@@ -142,4 +173,6 @@ GRANT SELECT, INSERT, DELETE ON public.quant_watchlist_items TO authenticated;
 GRANT ALL ON public.quant_watchlists, public.quant_watchlist_items TO service_role;
 
 REVOKE ALL ON FUNCTION public.quant_watchlists_before_write() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.quant_watchlists_access_allowed() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.quant_watchlists_access_allowed() TO authenticated;
 REVOKE ALL ON FUNCTION public.quant_watchlist_items_before_insert() FROM PUBLIC, anon, authenticated;

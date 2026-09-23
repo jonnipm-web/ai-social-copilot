@@ -9,8 +9,16 @@ SET search_path = public, extensions;
 -- ── fixtures (as the migration owner) ─────────────────────────────────
 INSERT INTO auth.users (id, email) VALUES
   ('1a000000-0000-4000-8000-00000000000a', 'qa@test.invalid'),
-  ('1b000000-0000-4000-8000-00000000000b', 'qb@test.invalid')
+  ('1b000000-0000-4000-8000-00000000000b', 'qb@test.invalid'),
+  ('1c000000-0000-4000-8000-00000000000c', 'qc@test.invalid')
 ON CONFLICT (id) DO NOTHING;
+-- Module 'quant-watchlists' is INTERNAL: A and B are admins (entitled), C is a
+-- plain free user (authenticated but NOT entitled — Codex CXA-01).
+INSERT INTO public.profiles (id, email, role) VALUES
+  ('1a000000-0000-4000-8000-00000000000a', 'qa@test.invalid', 'admin'),
+  ('1b000000-0000-4000-8000-00000000000b', 'qb@test.invalid', 'admin'),
+  ('1c000000-0000-4000-8000-00000000000c', 'qc@test.invalid', 'free')
+ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role;
 INSERT INTO public.projects (id, user_id, name) VALUES
   ('2a000000-0000-4000-8000-00000000000a', '1a000000-0000-4000-8000-00000000000a', 'Project A'),
   ('2b000000-0000-4000-8000-00000000000b', '1b000000-0000-4000-8000-00000000000b', 'Project B')
@@ -171,5 +179,59 @@ DO $$ BEGIN
     RAISE EXCEPTION 'Q08 project deletion did not detach the watchlist';
   END IF;
 END $$;
+
+-- ── Q09 authenticated but NOT entitled (free user): direct PostgREST-style
+--        access is denied even on rows that belong to them (Codex CXA-01) ──
+INSERT INTO public.quant_watchlists (id, user_id, name) VALUES
+  ('3c000000-0000-4000-8000-00000000000c', '1c000000-0000-4000-8000-00000000000c', 'C seeded by owner');
+SELECT pg_temp.act_as('1c000000-0000-4000-8000-00000000000c');
+SET ROLE authenticated;
+DO $$ BEGIN
+  IF public.quant_watchlists_access_allowed() THEN RAISE EXCEPTION 'Q09 free user reported as entitled'; END IF;
+  IF (SELECT count(*) FROM public.quant_watchlists) <> 0 THEN RAISE EXCEPTION 'Q09 non-entitled SELECT sees rows (even own)'; END IF;
+  BEGIN INSERT INTO public.quant_watchlists (name) VALUES ('c direct');
+    RAISE EXCEPTION 'Q09 non-entitled INSERT allowed';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+  BEGIN INSERT INTO public.quant_watchlist_items (watchlist_id, asset_class, symbol, currency)
+    VALUES ('3c000000-0000-4000-8000-00000000000c', 'EQUITY', 'AAPL', 'USD');
+    RAISE EXCEPTION 'Q09 non-entitled item INSERT allowed';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+  UPDATE public.quant_watchlists SET name = 'c renamed' WHERE id = '3c000000-0000-4000-8000-00000000000c';
+  DELETE FROM public.quant_watchlists WHERE id = '3c000000-0000-4000-8000-00000000000c';
+END $$;
+RESET ROLE;
+DO $$ BEGIN
+  IF (SELECT name FROM public.quant_watchlists WHERE id = '3c000000-0000-4000-8000-00000000000c') <> 'C seeded by owner' THEN
+    RAISE EXCEPTION 'Q09 non-entitled UPDATE/DELETE took effect';
+  END IF;
+END $$;
+
+-- ── Q10 losing the admin role revokes direct access immediately ──────────
+-- Operator action (service role), as prevent_self_privilege_escalation requires.
+SELECT set_config('request.jwt.claim.sub', '', false), set_config('request.jwt.claim.role', 'service_role', false);
+UPDATE public.profiles SET role = 'free' WHERE id = '1b000000-0000-4000-8000-00000000000b';
+SELECT pg_temp.act_as('1b000000-0000-4000-8000-00000000000b');
+SET ROLE authenticated;
+DO $$ BEGIN
+  BEGIN INSERT INTO public.quant_watchlists (name) VALUES ('b after demotion');
+    RAISE EXCEPTION 'Q10 demoted user can still INSERT';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $$;
+RESET ROLE;
+-- subject_roles admin (when that table exists) also entitles.
+DO $$ BEGIN
+  IF to_regclass('public.subject_roles') IS NOT NULL THEN
+    INSERT INTO public.subject_roles (subject_type, subject_id, role, source)
+    VALUES ('user', '1b000000-0000-4000-8000-00000000000b', 'admin', 'operator_grant') ON CONFLICT DO NOTHING;
+  END IF;
+END $$;
+SELECT pg_temp.act_as('1b000000-0000-4000-8000-00000000000b');
+SET ROLE authenticated;
+DO $$ BEGIN
+  IF to_regclass('public.subject_roles') IS NOT NULL AND NOT public.quant_watchlists_access_allowed() THEN
+    RAISE EXCEPTION 'Q10 subject_roles admin not recognised';
+  END IF;
+END $$;
+RESET ROLE;
 
 SELECT 'QUANT_WATCHLISTS_RLS: PASS';

@@ -141,18 +141,24 @@ Deno.test('QB-20 AEF hard-denies real-money quant tiers even with a human gate r
 
 // ------------------------------------------------------------ IV-QUANT-DATA-PLANE-AND-API-02: module split
 
-Deno.test('QB-13 split: quant-analytics is READ_ONLY + INTERNAL and owns the Quant APIs; ive-quant stays CONSEQUENTIAL with none', () => {
+Deno.test('QB-13 split: quant-analytics READ_ONLY owns analysis, quant-watchlists REVERSIBLE owns persistence, ive-quant CONSEQUENTIAL owns none', () => {
   const qa = MODULE_POLICY.modules['quant-analytics'];
   assert(qa, 'quant-analytics must be registered server-side');
   assertEquals([qa.lifecycle, qa.actionClass], ['INTERNAL', 'READ_ONLY']);
   assertEquals([MODULE_POLICY.modules['ive-quant'].lifecycle, MODULE_POLICY.modules['ive-quant'].actionClass], ['EXPERIMENTAL', 'CONSEQUENTIAL']);
   const byModule = (m: string) => Object.entries(MODULE_POLICY.edgeFunctions).filter(([, p]) => p.moduleId === m).map(([fn]) => fn).sort();
-  assertEquals(byModule('quant-analytics'), ['quant-analyze', 'quant-watchlists']);
+  assertEquals(byModule('quant-analytics'), ['quant-analyze']);
+  // Codex CXA-02: persistent writes are REVERSIBLE, so they live in their own module.
+  const qw = MODULE_POLICY.modules['quant-watchlists'];
+  assertEquals([qw.lifecycle, qw.actionClass], ['INTERNAL', 'REVERSIBLE']);
+  assertEquals(byModule('quant-watchlists'), ['quant-watchlists']);
   assertEquals(byModule('ive-quant'), []);
-  for (const role of ['free', 'pro', 'premium', 'beta_tester']) {
-    assertEquals(decideModuleAccess(subject(role), 'quant-analytics').code, 'MODULE_NOT_AVAILABLE', role);
+  for (const m of ['quant-analytics', 'quant-watchlists']) {
+    for (const role of ['free', 'pro', 'premium', 'beta_tester']) {
+      assertEquals(decideModuleAccess(subject(role), m).code, 'MODULE_NOT_AVAILABLE', `${m}/${role}`);
+    }
+    assertEquals(decideModuleAccess(subject('admin'), m).allowed, true, m);
   }
-  assertEquals(decideModuleAccess(subject('admin'), 'quant-analytics').allowed, true);
 });
 
 Deno.test('QB-14 Quant Edge Functions: no AEF/IVE/LLM import, no raw fetch, no service role, gate on quant-analytics', async () => {
@@ -162,7 +168,8 @@ Deno.test('QB-14 Quant Edge Functions: no AEF/IVE/LLM import, no raw fetch, no s
     assert(!/aef\/|contracts\/aef|_shared\/ive\/|context-copilot|groq|openai|anthropic/i.test(src), `${f}: forbidden dependency`);
     assert(!/SERVICE_ROLE|createServiceClient/.test(src), `${f}: service role`);
     if (f.endsWith('index.ts')) {
-      assert(/requireModuleAccess\(req, authUser, 'quant-analytics'/.test(src), `${f}: must gate on quant-analytics`);
+      const owner = f.includes('quant-watchlists') ? 'quant-watchlists' : 'quant-analytics';
+      assert(src.includes(`requireModuleAccess(req, authUser, '${owner}'`), `${f}: must gate on ${owner}`);
       assert(!/'ive-quant'/.test(src.replace(/\/\/.*$/gm, '')), `${f}: must not serve ive-quant`);
     }
   }
@@ -175,4 +182,19 @@ Deno.test('QB-15 CXR-01 accepted residual is pinned: "first"/"primeiro" pass gro
   assertEquals(checkNarrativeGrounding({ template: 'primeiro resultado' }, req).grounded, true);
   const doc = await Deno.readTextFile(new URL('../../../../docs/quant/QUANT_SECURITY_MODEL.md', import.meta.url));
   assert(/"first", "primeiro"/.test(doc), 'residual must stay documented');
+});
+
+Deno.test('QB-16 drift: the DB entitlement predicate of quant-watchlists matches its server lifecycle (Codex CXA-01)', async () => {
+  const sql = await Deno.readTextFile(new URL('../../../migrations/20260924000000_quant_watchlists.sql', import.meta.url));
+  const lifecycle = MODULE_POLICY.modules['quant-watchlists'].lifecycle;
+  // INTERNAL/EXPERIMENTAL = admin-only. Any promotion needs a NEW migration that
+  // replaces the predicate, and this test must be updated with it.
+  assert(lifecycle === 'INTERNAL' || lifecycle === 'EXPERIMENTAL', `lifecycle ${lifecycle} needs a new DB predicate migration`);
+  const fn = sql.slice(sql.indexOf('FUNCTION public.quant_watchlists_access_allowed()'), sql.indexOf('-- ── RLS'));
+  assert(/p\.role = 'admin'/.test(fn) && /r\.role = ''admin''/.test(fn), 'predicate must be admin-only');
+  assert(!/beta_tester|'pro'|'premium'|'free'/.test(fn), 'predicate must not admit plans or beta testers while INTERNAL');
+  assert(/SECURITY INVOKER/.test(fn) && !/SECURITY DEFINER/.test(fn), 'predicate must not expand privilege');
+  const policies = [...sql.matchAll(/CREATE POLICY (\w+)[\s\S]*?;/g)];
+  assertEquals(policies.length, 7);
+  for (const p of policies) assert(p[0].includes('quant_watchlists_access_allowed()'), `${p[1]} lacks the entitlement predicate`);
 });

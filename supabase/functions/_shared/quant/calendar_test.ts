@@ -148,3 +148,15 @@ Deno.test('SF-06 long history starting before the supported range keeps calendar
   assertEquals([r.context.basis, r.freshness.state, r.context.missingSessions], ['MARKET_CALENDAR', 'FRESH', null]);
   assert(r.context.nonSessionBars === 0);
 });
+
+Deno.test('CAL-07 Codex CXA-03 rejected with evidence: NYSE Rule 7.2 — a Saturday New Year is NOT observed on Friday Dec 31', () => {
+  // NYSE was open on Friday 2021-12-31 (New Year's Day 2022 fell on a Saturday
+  // and was not observed); 2022-01-03 was a normal session. Pinned so the
+  // rule cannot be "fixed" into a wrong closure.
+  assertEquals(isTradingDay(NYSE, '2021-12-31'), true);
+  assertEquals(isTradingDay(NYSE, '2022-01-03'), true);
+  assertEquals(isTradingDay(NYSE, '2022-01-01'), false); // Saturday
+  const bars = [dailyBar('2021-12-30'), dailyBar('2021-12-31')];
+  const r = assessSessionFreshness(bars, 'DAILY', 'XNYS', bars[1].t, Date.UTC(2022, 0, 3, 12));
+  assertEquals([r.freshness.state, r.context.sessionsBehind, r.context.missingSessions], ['FRESH', 0, 0]);
+});
