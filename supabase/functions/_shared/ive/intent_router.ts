@@ -42,7 +42,10 @@ const CONSEQUENTIAL: readonly { re: RegExp; action: string }[] = [
   { re: /\b(pague|pagar|pay|cobre|cobrar|charge|reembolse|reembolsar|refund|cancele (?:a |minha )?assinatura|cancel (?:my |the )?subscription)\b/, action: 'payment' },
   { re: /\b(compre|comprar|venda|vender|buy|sell|invista|investir|invest|opere|operar|execute (?:a |the )?(?:ordem|order|trade)|executar (?:a )?ordem|place (?:an |the )?order)\b/, action: 'trade_order' },
   { re: /\b(transfira|transferir|transfer|saque|sacar|withdraw|pix)\b.{0,30}\b(dinheiro|money|fundos|funds|saldo|balance|reais|dolares|dollars|conta|account)\b/, action: 'transfer_funds' },
-  { re: /\b(delete|deletar|apague|apagar|exclua|excluir|remova todos|remova todas|remove all|wipe)\b/, action: 'delete_data' },
+  { re: /\b(delete|deletar|apague|apagar|exclua|excluir|remova|remover|remove|wipe)\b/, action: 'delete_data' },
+  // Codex Final IF-03 — indirect / pronoun forms.
+  { re: /\b(envie|enviar|mande|mandar|send)\s+(isso|isto|ele|ela|eles|elas|it|this|that|them|agora|now)\b/, action: 'send_message' },
+  { re: /\b(execute|executar|execute o|rode|rodar|run|dispare|disparar|trigger|acione|acionar)\b.{0,20}\b(workflow|workflows|fluxo|fluxos|automacao|automacoes|automation|automations|script|job|rotina|pipeline)\b/, action: 'execute_workflow' },
 ];
 
 function consequentialIn(text: string): string | null {

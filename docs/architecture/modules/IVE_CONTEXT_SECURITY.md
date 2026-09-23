@@ -1,8 +1,13 @@
 # IVE Context Security
 
 Mission: `IVE-INTELLIGENCE-CORE-01`. Threat → control → proof. "Proof" names
-the executed test; everything is VERIFIED in Module Lab tests and
-NOT_VERIFIED in production (nothing deployed).
+the executed test. Evidence level (Codex Final IF-04):
+
+- Deno and Flutter tests: executed locally by Claude, by Codex (Deno), and in
+  GitHub Actions on this branch (`edge-function-tests.yml`, `flutter-validation.yml`).
+- SQL/RLS tests: executed locally by Claude on a disposable PostgreSQL 17 and
+  in the CI job `disposable-db-rls-ci`; Codex (read-only) did not execute them.
+- Production: NOT_VERIFIED — nothing is deployed, the migration is not applied.
 
 | # | Threat | Control | Proof |
 |---|---|---|---|
@@ -25,6 +30,8 @@ NOT_VERIFIED in production (nothing deployed).
 | 17 | Cross-user leak on a shared device (logout/login) | session reset + owner-bound device memory + race guard | `ive_session_isolation_test.dart` (mutation-checked) |
 | 18 | Telemetry leakage | shape-only logs | IS-03 |
 | 19 | Memory written into a foreign project | RLS WITH CHECK ownership | `ive_memory_rls_test.sql` T02/T06 (mutation-checked) |
+| 20 | A late model response after sign-out applied to (or crashing) the next session | `mounted` guard after every await, legacy and core paths | `ive_core_copilot_test.dart` late-response test (mutation reproduces `Bad state … after dispose`) |
+| 21 | Legacy writers break or mislabel memory after the migration | trigger re-derives scope on project moves; agent rows keep `external_agent_derived` | `ive_memory_rls_test.sql` T09b/T09c (fail on the pre-fix migration) |
 
 Residual risks (documented, not closed here): lexical intent routing can
 still miss novel phrasing (mitigated: no execution capability exists);

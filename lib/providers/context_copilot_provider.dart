@@ -174,6 +174,11 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
         },
       );
 
+      // IVE-INTELLIGENCE-CORE-01 — the conversation may have been disposed
+      // while awaiting (sign-out / user change resets it): a late response
+      // must neither touch a disposed notifier nor reach another session.
+      if (!mounted) return;
+
       final data = res.data as Map<String, dynamic>? ?? {};
 
       final sources  = (data['sources']  as List?)?.map((e) => e.toString()).toList() ?? [];
@@ -223,6 +228,7 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
       // isto só força a UI a reconsultá-lo.
       _ref.invalidate(currentQuotaProvider);
     } catch (e) {
+      if (!mounted) return;
       state = state.copyWith(
         loading: false,
         error:   e.toString(),
@@ -272,6 +278,10 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
 
     try {
       final result = await _ref.read(iveIntelligenceServiceProvider).ask(request);
+      // IVE-INTELLIGENCE-CORE-01 — the conversation may have been disposed
+      // while awaiting (sign-out / user change resets it): a late response
+      // must neither touch a disposed notifier nor reach another session.
+      if (!mounted) return;
       final assistantTurn = CopilotTurn(
         role: 'assistant',
         content: result.answer ?? '',
@@ -294,6 +304,7 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
       );
       if (!result.requiresAef) _ref.invalidate(currentQuotaProvider);
     } catch (e) {
+      if (!mounted) return;
       final failure = e is IveIntelligenceException ? e.failure : IveFailure.unknown;
       state = state.copyWith(loading: false, failure: failure);
       _ref.read(iveProvider.notifier).completeInteraction(interactionToken, success: false);
@@ -325,7 +336,7 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
     return out;
   }
 
-    void clearHistory() => state = const CopilotState();
+  void clearHistory() => state = const CopilotState();
 }
 
 // ── Provider ──────────────────────────────────────────────────────────────────

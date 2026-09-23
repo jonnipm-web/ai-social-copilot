@@ -2,6 +2,8 @@
 // minimal request (no client-built context, no device memory), project-scoped
 // conversations (project switch), AEF and failure states.
 
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -116,6 +118,18 @@ void main() {
     final c2 = container(degraded);
     await c2.read(contextCopilotProvider(key).notifier).send(message: 'x', screenName: 'Projeto', context: _ctx('pb'));
     expect(c2.read(contextCopilotProvider(key)).turns.last.degradedContext, isTrue);
+  });
+
+  test('a response arriving after sign-out (conversation reset) is dropped, not applied or thrown', () async {
+    final pending = Completer<IveIntelligenceResult>();
+    final svc = _FakeService((_) => pending.future);
+    final c = container(svc);
+    const key = ('Projeto', 'pa');
+    final sent = c.read(contextCopilotProvider(key).notifier).send(message: 'q', screenName: 'Projeto', context: _ctx('pa'));
+    c.invalidate(contextCopilotProvider); // what sign-out does (resetIveSessionState)
+    pending.complete(_answer('late answer for the previous user'));
+    await sent; // must not throw StateError on the disposed notifier
+    expect(c.read(contextCopilotProvider(key)).turns, isEmpty);
   });
 
   test('production default: the Intelligence Core path is disabled (compile-time flag off)', () async {

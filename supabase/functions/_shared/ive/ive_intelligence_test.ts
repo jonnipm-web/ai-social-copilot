@@ -457,6 +457,12 @@ Deno.test('G1-02 obfuscated or history-embedded consequential requests still rou
     'dispare a newsletter para os leads',
     'agende o post para amanhã',
     'share this on linkedin',
+    // Codex Final IF-03
+    'execute the workflow',
+    'rode a automação de follow-up',
+    'send it',
+    'mande isso agora',
+    'remove this action',
   ]) {
     const r = await run('jwt-a', base({ message }));
     assertEquals(r.json.status, 'ACTION_REQUIRES_AEF', JSON.stringify(message));

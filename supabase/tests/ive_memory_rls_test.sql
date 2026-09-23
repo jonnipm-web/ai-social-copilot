@@ -122,6 +122,32 @@ UPDATE public.business_memory SET status = 'superseded' WHERE dedup_key = 'k1';
 INSERT INTO public.business_memory (user_id, memory_type, title, content, source, origin, dedup_key)
 VALUES ('a1000000-0000-0000-0000-00000000000a', 'preference', 't', 'Prefers weekly summaries', 'ive_intelligence_core', 'ive_derived', 'k1');
 
+-- ── T09b legacy writer moves a memory project → none → project without
+--         mentioning scope: scope follows (Codex Final IF-01) ──────────────
+INSERT INTO public.business_memory (id, user_id, project_id, memory_type, title, content, source)
+VALUES ('a3000000-0000-0000-0000-0000000000a9', 'a1000000-0000-0000-0000-00000000000a', 'a2000000-0000-0000-0000-0000000000a1', 'goal', 't', 'moving memory', 'legacy');
+UPDATE public.business_memory SET project_id = NULL WHERE id = 'a3000000-0000-0000-0000-0000000000a9';
+DO $$ BEGIN
+  IF (SELECT scope FROM public.business_memory WHERE id = 'a3000000-0000-0000-0000-0000000000a9') <> 'user' THEN
+    RAISE EXCEPTION 'T09b scope not re-derived when project_id was cleared';
+  END IF;
+END $$;
+UPDATE public.business_memory SET project_id = 'a2000000-0000-0000-0000-0000000000a2' WHERE id = 'a3000000-0000-0000-0000-0000000000a9';
+DO $$ BEGIN
+  IF (SELECT scope FROM public.business_memory WHERE id = 'a3000000-0000-0000-0000-0000000000a9') <> 'project' THEN
+    RAISE EXCEPTION 'T09b scope not re-derived when project_id was set';
+  END IF;
+END $$;
+
+-- ── T09c a NEW external-agent row gets truthful provenance (IF-02) ──────
+INSERT INTO public.business_memory (id, user_id, memory_type, title, content, source)
+VALUES ('a3000000-0000-0000-0000-0000000000aa', 'a1000000-0000-0000-0000-00000000000a', 'decision', 't', 'agent wrote this', 'ive_strategic_execution_agent');
+DO $$ BEGIN
+  IF (SELECT origin FROM public.business_memory WHERE id = 'a3000000-0000-0000-0000-0000000000aa') <> 'external_agent_derived' THEN
+    RAISE EXCEPTION 'T09c future agent row mislabeled';
+  END IF;
+END $$;
+
 -- ── T10 oversized NEW content rejected ──────────────────────────────────
 DO $$ BEGIN
   BEGIN

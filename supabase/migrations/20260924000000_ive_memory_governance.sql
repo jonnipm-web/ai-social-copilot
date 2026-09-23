@@ -59,7 +59,19 @@ BEGIN
     NEW.scope := CASE WHEN NEW.project_id IS NULL THEN 'user' ELSE 'project' END;
   END IF;
   IF TG_OP = 'UPDATE' THEN
+    -- Codex Final IF-01 — a legacy writer that moves a memory between a
+    -- project and "no project" without mentioning scope: re-derive it
+    -- instead of letting the scope/project consistency check reject the row.
+    IF NEW.project_id IS DISTINCT FROM OLD.project_id AND NEW.scope IS NOT DISTINCT FROM OLD.scope THEN
+      NEW.scope := CASE WHEN NEW.project_id IS NULL THEN 'user' ELSE 'project' END;
+    END IF;
     NEW.updated_at := now();
+  END IF;
+  -- Codex Final IF-02 — the external agent inserts with its own source tag
+  -- and no origin (it predates the column): keep provenance truthful for
+  -- FUTURE rows too, not only the backfilled ones.
+  IF TG_OP = 'INSERT' AND NEW.source = 'ive_strategic_execution_agent' AND NEW.origin = 'user_authored' THEN
+    NEW.origin := 'external_agent_derived';
   END IF;
   RETURN NEW;
 END $$;
