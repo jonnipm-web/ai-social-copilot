@@ -73,7 +73,7 @@ export function validateAefReceipt(value: unknown): ReceiptValidation {
     for (const k of ["binding_hash", "original_receipt_hash", "reconciler_ref", "evidence_hash"]) check(errors, isStr(r[k], HEX64), k);
     for (const k of ["operation_policy_version", "operation_risk_version", "policy_version", "risk_version"]) check(errors, isStr(r[k], VERSION), k);
     check(errors, isStr(r.action, ACTION), "action");
-    check(errors, isStr(r.tool_id) && (r.tool_id as string).length <= 200, "tool_id");
+    check(errors, isStr(r.tool_id) && (r.tool_id as string).length >= 1 && (r.tool_id as string).length <= 200, "tool_id");
     check(errors, r.original_outcome === "UNKNOWN_OUTCOME", "original_outcome must be UNKNOWN_OUTCOME");
     check(errors, r.verdict === "CONFIRMED_APPLIED" || r.verdict === "CONFIRMED_NOT_APPLIED", "verdict");
     check(errors, r.reconciler_kind === "VERIFIER" || r.reconciler_kind === "OPERATOR", "reconciler_kind");
@@ -90,7 +90,7 @@ export function validateAefReceipt(value: unknown): ReceiptValidation {
     check(errors, isStr(r.action, ACTION), "action");
     check(errors, ["core", "quant", "impact", "internal"].includes(r.domain as string), "domain");
     check(errors, ["READ_ONLY", "REVERSIBLE", "CONSEQUENTIAL"].includes(r.action_class as string), "action_class");
-    check(errors, isStr(r.tool_id) && (r.tool_id as string).length <= 200, "tool_id");
+    check(errors, isStr(r.tool_id) && (r.tool_id as string).length >= 1 && (r.tool_id as string).length <= 200, "tool_id");
     check(errors, (r.resource_type === null && r.resource_id === null) ||
       (r.resource_type === "project" && isStr(r.resource_id, UUID)), "resource");
     check(errors, isStrOrNull(r.human_gate_id, UUID) && isStrOrNull(r.approver_id, UUID), "gate refs");

@@ -92,6 +92,13 @@ done
 check "$RB" aef_hardening_legacy_test.sql 'AEF_LEGACY: SEEDED' -v phase=seed
 apply "$RB" "$ROOT/supabase/migrations/$HARDENING_MIGRATION"
 check "$RB" aef_hardening_legacy_test.sql 'AEF_LEGACY: PASS' -v phase=verify
+# Codex HG1-04: an active legal hold (or a registered verifier / changed
+# policy) makes the rollback refuse; nothing changes.
+run -d "$RB" -c "INSERT INTO public.aef_legal_holds (subject_id, reason_code) VALUES ('c7000000-0000-4000-8000-00000000000c', 'AUDIT_HOLD');"
+if run -d "$RB" -f "$ROOT/supabase/rollbacks/20260926000000_aef_hardening.down.sql" >/dev/null 2>&1; then
+  echo "hardening rollback ignored an active legal hold" >&2; exit 1
+fi
+run -d "$RB" -c "DELETE FROM public.aef_legal_holds;"
 run -d "$RB" -f "$ROOT/supabase/rollbacks/20260926000000_aef_hardening.down.sql" >/dev/null
 check "$RB" aef_hardening_legacy_test.sql 'AEF_LEGACY: DOWN_OK' -v phase=down
 run -d "$RB" -c "DROP TABLE public.aef_legacy_probe;"

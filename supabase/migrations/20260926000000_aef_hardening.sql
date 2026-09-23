@@ -131,6 +131,44 @@ CREATE TABLE IF NOT EXISTS public.aef_erasures (
   counts       jsonb NOT NULL
 );
 
+-- ── per-subject serialization (Codex HG1-01, HG2-02) ───────────────────
+-- Transaction-scoped advisory lock per subject: erasure takes it exclusive
+-- (blocking), registration shared (blocking), legal-hold writes exclusive
+-- (trigger), purge exclusive with try-lock only (never waits → no deadlock).
+CREATE OR REPLACE FUNCTION public.aef__subject_lock_key(p_subject uuid) RETURNS bigint
+LANGUAGE sql IMMUTABLE SET search_path = pg_catalog, pg_temp AS $$
+  SELECT hashtextextended('aef-subject:' || p_subject::text, 0)
+$$;
+
+CREATE OR REPLACE FUNCTION public.aef__erased(p_subject uuid) RETURNS boolean
+LANGUAGE sql STABLE SET search_path = pg_catalog, pg_temp AS $$
+  SELECT EXISTS (SELECT 1 FROM public.aef_erasures
+                  WHERE subject_ref = public.aef__sha256('aef-erasure/1:' || p_subject::text))
+$$;
+
+-- Closed set of denial codes (Codex HG1-03): aef_record_denial accepts only
+-- these, and coalescing maps anything else to UNLISTED, so the number of
+-- pending counters per subject is bounded by this list.
+CREATE OR REPLACE FUNCTION public.aef__denial_codes() RETURNS text[]
+LANGUAGE sql IMMUTABLE SET search_path = pg_catalog, pg_temp AS $$
+  SELECT ARRAY['INVALID_REQUEST', 'DELEGATION_UNSUPPORTED', 'CLIENT_APPROVAL_REJECTED', 'IDEMPOTENCY_KEY_REQUIRED',
+               'RESOURCE_TYPE_UNSUPPORTED', 'UNKNOWN_TOOL', 'POLICY_DENIED', 'PAYLOAD_INVALID', 'PAYLOAD_TOO_LARGE',
+               'RESOURCE_FORBIDDEN', 'REQUEST_REPLAYED', 'IDEMPOTENCY_CONFLICT', 'OPEN_OPERATION_LIMIT',
+               'IDEMPOTENCY_KEY_RETIRED', 'APPROVER_NOT_AUTHORIZED', 'APPROVAL_BINDING_MISMATCH']
+$$;
+
+CREATE OR REPLACE FUNCTION public.aef__guard_legal_holds() RETURNS trigger
+LANGUAGE plpgsql SET search_path = pg_catalog, pg_temp AS $$
+BEGIN
+  -- Serialize with purge / erasure of the same subject: a hold committed
+  -- before they take the subject lock is always seen by their re-check.
+  PERFORM pg_advisory_xact_lock(public.aef__subject_lock_key(CASE WHEN TG_OP = 'DELETE' THEN OLD.subject_id ELSE NEW.subject_id END));
+  IF TG_OP = 'UPDATE' AND NEW.subject_id <> OLD.subject_id THEN
+    RAISE EXCEPTION 'AEF_GUARD: a legal hold cannot move to another subject';
+  END IF;
+  RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
+END $$;
+
 -- ── maintenance flag (purge / erasure only) ─────────────────────────────
 CREATE OR REPLACE FUNCTION public.aef__maintenance() RETURNS boolean
 LANGUAGE sql STABLE SET search_path = pg_catalog, pg_temp AS $$
@@ -199,7 +237,8 @@ BEGIN
     END IF;
     IF w.recorded >= pol.denial_window_limit THEN
       INSERT INTO public.aef_audit_pending (subject_id, event_type, reason_code, count, first_at)
-      VALUES (p_subject, p_event, coalesce(p_reason, 'UNSPECIFIED'), 1, clock_timestamp())
+      VALUES (p_subject, p_event,
+              CASE WHEN p_reason = ANY (public.aef__denial_codes()) THEN p_reason ELSE 'UNLISTED' END, 1, clock_timestamp())
       ON CONFLICT (subject_id, event_type, reason_code) DO UPDATE SET count = public.aef_audit_pending.count + 1;
       RETURN;
     END IF;
@@ -211,25 +250,23 @@ END $$;
 -- ── guards for the new tables ───────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.aef__guard_reconciliations() RETURNS trigger
 LANGUAGE plpgsql SET search_path = pg_catalog, pg_temp AS $$
-DECLARE o public.aef_operations;
+DECLARE o public.aef_operations; r public.aef_receipts;
 BEGIN
   IF TG_OP = 'DELETE' THEN
     IF public.aef__maintenance() THEN RETURN OLD; END IF;
     RAISE EXCEPTION 'AEF_GUARD: reconciliations are append-only';
   END IF;
   IF TG_OP = 'UPDATE' THEN
-    -- Only erasure may detach an erased operator (reconciler_id → NULL).
-    IF public.aef__maintenance() AND OLD.reconciler_kind = 'OPERATOR' AND NEW.reconciler_id IS NULL
-       AND (NEW.id, NEW.operation_id, NEW.subject_id, NEW.verdict, NEW.reconciler_kind, NEW.evidence_kind, NEW.evidence_hash,
-            NEW.policy_version, NEW.risk_version, NEW.receipt, NEW.receipt_hash, NEW.reconciled_at)
-           IS NOT DISTINCT FROM
-           (OLD.id, OLD.operation_id, OLD.subject_id, OLD.verdict, OLD.reconciler_kind, OLD.evidence_kind, OLD.evidence_hash,
-            OLD.policy_version, OLD.risk_version, OLD.receipt, OLD.receipt_hash, OLD.reconciled_at) THEN
-      RETURN NEW;
-    END IF;
     RAISE EXCEPTION 'AEF_GUARD: reconciliations are append-only';
   END IF;
   SELECT * INTO o FROM public.aef_operations WHERE id = NEW.operation_id;
+  SELECT * INTO r FROM public.aef_receipts WHERE operation_id = NEW.operation_id;
+  -- Codex HG3-02: bound to the operation's original receipt; HG3-03: no raw operator id.
+  IF NOT FOUND OR NEW.receipt ->> 'original_receipt_id' IS DISTINCT FROM r.id::text
+     OR NEW.receipt ->> 'original_receipt_hash' IS DISTINCT FROM r.receipt_hash
+     OR (NEW.reconciler_kind = 'OPERATOR' AND NEW.reconciler_id IS NOT NULL) THEN
+    RAISE EXCEPTION 'AEF_GUARD: reconciliation is not bound to the original receipt';
+  END IF;
   IF NOT FOUND OR o.state <> 'UNKNOWN_OUTCOME' OR NEW.subject_id <> o.subject_id
      OR NEW.receipt ->> 'receipt_id' IS DISTINCT FROM NEW.id::text
      OR NEW.receipt ->> 'receipt_kind' IS DISTINCT FROM 'RECONCILIATION'
@@ -268,6 +305,9 @@ BEGIN
   RAISE EXCEPTION 'AEF_GUARD: the erasure log is written only by erasure and never changed';
 END $$;
 
+DROP TRIGGER IF EXISTS aef_legal_holds_guard ON public.aef_legal_holds;
+CREATE TRIGGER aef_legal_holds_guard BEFORE INSERT OR UPDATE OR DELETE ON public.aef_legal_holds
+  FOR EACH ROW EXECUTE FUNCTION public.aef__guard_legal_holds();
 DROP TRIGGER IF EXISTS aef_reconciliations_guard ON public.aef_reconciliations;
 CREATE TRIGGER aef_reconciliations_guard BEFORE INSERT OR UPDATE OR DELETE ON public.aef_reconciliations
   FOR EACH ROW EXECUTE FUNCTION public.aef__guard_reconciliations();
@@ -358,6 +398,8 @@ BEGIN
   IF (v_kind = 'VERIFIER' AND NOT EXISTS (SELECT 1 FROM public.aef_reconciliation_verifiers
                                            WHERE verifier_id = v_reconciler AND tool_id = o.tool_id AND enabled))
      OR (v_kind = 'OPERATOR' AND (v_operator = o.subject_id
+         OR NOT EXISTS (SELECT 1 FROM auth.users WHERE id = v_operator)
+         OR public.aef__erased(v_operator)
          OR NOT EXISTS (SELECT 1 FROM public.subject_roles
                          WHERE subject_type = 'user' AND subject_id = v_operator AND role = 'admin'))) THEN
     PERFORM public.aef__audit_append(o.subject_id, o.id, 'RECONCILIATION_DENIED', NULL, NULL, 'RECONCILER_NOT_AUTHORIZED');
@@ -379,7 +421,7 @@ BEGIN
   v_hash := public.aef__sha256(v_receipt::text);
   INSERT INTO public.aef_reconciliations (id, operation_id, subject_id, verdict, reconciler_kind, reconciler_id,
     evidence_kind, evidence_hash, policy_version, risk_version, receipt, receipt_hash)
-  VALUES (v_id, o.id, o.subject_id, v_verdict, v_kind, v_reconciler, v_evidence_kind,
+  VALUES (v_id, o.id, o.subject_id, v_verdict, v_kind, CASE WHEN v_kind = 'OPERATOR' THEN NULL ELSE v_reconciler END, v_evidence_kind,
     v_receipt ->> 'evidence_hash', v_policy, v_risk, v_receipt, v_hash);
   PERFORM public.aef__audit_append(o.subject_id, o.id, 'RECONCILIATION_RECORDED', 'UNKNOWN_OUTCOME', v_verdict, v_kind, v_hash);
   RETURN jsonb_build_object('ok', true) || public.aef__view(o.id);
@@ -418,6 +460,11 @@ BEGIN
      LIMIT v_limit
      FOR UPDATE OF op SKIP LOCKED
   LOOP
+    -- Codex HG1-01: serialize with legal holds / erasure; never wait (skip).
+    IF NOT pg_try_advisory_xact_lock(public.aef__subject_lock_key(o.subject_id))
+       OR EXISTS (SELECT 1 FROM public.aef_legal_holds h WHERE h.subject_id = o.subject_id AND h.released_at IS NULL) THEN
+      CONTINUE;
+    END IF;
     SELECT receipt_hash INTO v_rh FROM public.aef_receipts WHERE operation_id = o.id;
     DELETE FROM public.aef_reconciliations WHERE operation_id = o.id;
     DELETE FROM public.aef_receipts WHERE operation_id = o.id;
@@ -437,6 +484,10 @@ BEGIN
      LIMIT v_limit
      FOR UPDATE OF h SKIP LOCKED
   LOOP
+    IF NOT pg_try_advisory_xact_lock(public.aef__subject_lock_key(s))
+       OR EXISTS (SELECT 1 FROM public.aef_legal_holds lh WHERE lh.subject_id = s AND lh.released_at IS NULL) THEN
+      CONTINUE;
+    END IF;
     SELECT last_seq INTO v_last FROM public.aef_audit_heads WHERE subject_id = s;
     SELECT min(e.seq) - 1 INTO v_cut FROM public.aef_audit_events e
      WHERE e.subject_id = s
@@ -475,6 +526,9 @@ BEGIN
   EXCEPTION WHEN SQLSTATE 'AE001' THEN
     RETURN public.aef__err('ARGUMENT_REJECTED');
   END;
+  -- Codex HG2-02: exclusive per-subject lock — registration (shared) and
+  -- legal-hold writes serialize with the whole erasure.
+  PERFORM pg_advisory_xact_lock(public.aef__subject_lock_key(v_subject));
   PERFORM set_config('aef.maintenance', 'on', true);
   SELECT * INTO pol FROM public.aef_retention_policy WHERE id;
   v_ref := public.aef__sha256('aef-erasure/1:' || v_subject::text);
@@ -495,8 +549,9 @@ BEGIN
           AND NOT EXISTS (SELECT 1 FROM public.aef_reconciliations rc WHERE rc.operation_id = op.id)) THEN
     RETURN public.aef__err('ERASURE_BLOCKED_UNRECONCILED');
   END IF;
-  PERFORM 1 FROM public.aef_audit_heads WHERE subject_id = v_subject FOR UPDATE;
+  -- Codex HG2-01: same order as every append (window → head).
   PERFORM 1 FROM public.aef_audit_windows WHERE subject_id = v_subject FOR UPDATE;
+  PERFORM 1 FROM public.aef_audit_heads WHERE subject_id = v_subject FOR UPDATE;
 
   DELETE FROM public.aef_reconciliations WHERE subject_id = v_subject; GET DIAGNOSTICS v_n = ROW_COUNT;
   v_counts := v_counts || jsonb_build_object('reconciliations', v_n);
@@ -515,10 +570,6 @@ BEGIN
   DELETE FROM public.aef_audit_heads WHERE subject_id = v_subject;
   DELETE FROM public.aef_idempotency_tombstones WHERE subject_id = v_subject; GET DIAGNOSTICS v_n = ROW_COUNT;
   v_counts := v_counts || jsonb_build_object('tombstones', v_n);
-  UPDATE public.aef_reconciliations SET reconciler_id = NULL
-   WHERE reconciler_kind = 'OPERATOR' AND reconciler_id = v_subject::text;
-  GET DIAGNOSTICS v_n = ROW_COUNT;
-  v_counts := v_counts || jsonb_build_object('operator_detachments', v_n);
 
   INSERT INTO public.aef_erasures (id, subject_ref, counts) VALUES (gen_random_uuid(), v_ref, v_counts)
   ON CONFLICT (subject_ref) DO NOTHING;
@@ -602,6 +653,13 @@ BEGIN
       RETURN jsonb_build_object('ok', true, 'valid', false, 'reason', 'RECEIPT_UNKNOWN');
     END IF;
     v_anchor := 'RECONCILIATION_RECORDED';
+    -- Codex HG3-02: the referenced original receipt must exist and match.
+    IF NOT EXISTS (SELECT 1 FROM public.aef_receipts o
+                    WHERE o.operation_id = v_op AND o.id::text = v_stored ->> 'original_receipt_id'
+                      AND o.receipt_hash = v_stored ->> 'original_receipt_hash'
+                      AND o.receipt_hash = public.aef__sha256(o.receipt::text)) THEN
+      RETURN jsonb_build_object('ok', true, 'valid', false, 'reason', 'RECEIPT_ORIGINAL_MISMATCH');
+    END IF;
   END IF;
   IF v_stored <> v_receipt THEN
     RETURN jsonb_build_object('ok', true, 'valid', false, 'reason', 'RECEIPT_MISMATCH');
@@ -884,6 +942,11 @@ BEGIN
     RETURN public.aef__err('ARGUMENT_REJECTED');
   END;
 
+  PERFORM pg_advisory_xact_lock_shared(public.aef__subject_lock_key(v_subject));
+  IF public.aef__erased(v_subject) THEN
+    RETURN public.aef__err('SUBJECT_ERASED');
+  END IF;
+
   IF (v_rtype IS NULL) <> (v_rid IS NULL) THEN
     RETURN public.aef__err('ARGUMENT_REJECTED');
   END IF;
@@ -989,6 +1052,27 @@ BEGIN
     PERFORM public.aef__audit_append(v_subject, v_op_id, 'GATE_REQUESTED', NULL, 'REVIEW_REQUIRED', NULL, v_binding);
   END IF;
   RETURN jsonb_build_object('ok', true, 'outcome', 'CREATED') || public.aef__view(v_op_id);
+END $$;
+
+CREATE OR REPLACE FUNCTION public.aef_record_denial(p jsonb) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
+DECLARE v_subject uuid; v_code text;
+BEGIN
+  BEGIN
+    PERFORM public.aef__check_keys(p, ARRAY['subject_id', 'reason_code']);
+    v_subject := public.aef__uuid(p, 'subject_id', true);
+    v_code := public.aef__text(p, 'reason_code', true, 64, '^[A-Z][A-Z0-9_]{0,63}$');
+  EXCEPTION WHEN SQLSTATE 'AE001' THEN
+    RETURN public.aef__err('ARGUMENT_REJECTED');
+  END;
+  IF NOT (v_code = ANY (public.aef__denial_codes())) THEN
+    RETURN public.aef__err('ARGUMENT_REJECTED');
+  END IF;
+  IF public.aef__erased(v_subject) THEN
+    RETURN public.aef__err('SUBJECT_ERASED');
+  END IF;
+  PERFORM public.aef__audit_append(v_subject, NULL, 'REQUEST_DENIED', NULL, NULL, v_code);
+  RETURN jsonb_build_object('ok', true);
 END $$;
 
 CREATE OR REPLACE FUNCTION public.aef_recover(p jsonb) RETURNS jsonb

@@ -40,7 +40,7 @@ established afterwards, by whom, and on what evidence.
 | Reconciler | Accepted only if | Identity in the receipt |
 |---|---|---|
 | `VERIFIER` | a server-side verifier (`ReconciliationVerifierRegistry`, sealed) that queries the external system, **and** registered for the operation's tool in `aef_reconciliation_verifiers` (owner-managed, empty by default) | `sha256('aef-reconciler/1:VERIFIER:' || id)` |
-| `OPERATOR` | a verified user with role `admin` in `subject_roles`, who is **not** the operation's subject | `sha256('aef-reconciler/1:OPERATOR:' || uuid)` (raw id kept in a column end users cannot read; nulled if the operator is erased) |
+| `OPERATOR` | a verified user with role `admin` in `subject_roles`, who is **not** the operation's subject, whose account still exists and who was never erased (Codex HG1-02) | `sha256('aef-reconciler/1:OPERATOR:' || uuid)` only — the raw operator id is never stored (Codex HG3-03) |
 
 The subject can *ask* for a verifier check (`reconcile`) but can never
 supply a verdict; a request carrying a verdict is refused (`INPUT_REJECTED`).
@@ -63,7 +63,10 @@ reconciliation · server timestamp · original receipt id/hash · binding hash.
   original receipt and the reconciliation (H06n, HP-06).
 - Inconclusive / failing / slow verifier → nothing recorded (HP-02).
 - Forged or altered reconciliation receipts are refused by
-  `aef_verify_receipt` (H06m); the receipt must stay anchored and the chain
-  intact.
+  `aef_verify_receipt` (H06m); the receipt must stay anchored, the chain
+  intact, and the referenced original receipt must exist with exactly the
+  referenced hash — enforced at insert (guard) and at verification, so even
+  an owner-level re-pointing with every hash recomputed is refused
+  (`RECEIPT_ORIGINAL_MISMATCH`, Codex HG3-02, H11).
 - Reconciled operations become purgeable only after the reconciliation
   itself is past retention; unreconciled ones never are (H03b, HP-08).

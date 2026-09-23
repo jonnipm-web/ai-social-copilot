@@ -63,6 +63,8 @@ const INVALID: [string, Record<string, unknown>][] = [
   ["raw evidence smuggled in", { ...reconciliation(), evidence_ref: "ticket-123" }],
   ["reconciliation without original hash", (() => { const r = reconciliation(); delete r.original_receipt_hash; return r; })()],
   ["execution fields on a reconciliation", { ...reconciliation(), outcome: "SUCCESS" }],
+  ["empty tool id (Codex HG3-04)", { ...executionV11(), tool_id: "" }],
+  ["empty tool id on a reconciliation", { ...reconciliation(), tool_id: "" }],
 ];
 
 Deno.test("RV-01 valid receipts: TS validator and JSON Schema both accept, with the right version/kind", () => {

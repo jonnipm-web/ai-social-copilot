@@ -14,7 +14,7 @@ PostgreSQL). Unit: `governance_unit_test.ts` (GU), `canonical_test.ts` (CJ),
 | `authenticated` (owner) | SELECT own operations (minus `execution_token`), gates, receipts, audit events | RLS `subject_id = auth.uid()`; T02/T03 |
 | `authenticated` (foreign) | sees nothing of another subject | T02 |
 | `service_role` | EXECUTE on the thirteen `aef_*` RPCs (10 + `aef_reconcile`, `aef_purge`, `aef_erase_subject`); SELECT on tables; **no** INSERT/UPDATE/DELETE, **no** `aef__*` helpers | privileged infrastructure identity; RLS does not restrict it, privileges do: it can change state only through the RPCs (T14s) |
-| table owner / superuser | can disable triggers | out of the application trust boundary; tampering is then *detectable* (hash chain, T17b), not preventable |
+| table owner / superuser | can disable triggers | out of the application trust boundary. Tampering that does not recompute the chain is detected (T17b, T17c/d, H05g, H11); an owner who recomputes every hash — or forges a pruning checkpoint and the head together — can make a chain verify (Codex HG3-01). Closing that requires anchoring chain heads outside the database (e.g. periodic signed/published head hashes): DEFERRED |
 | SERVICE / SYSTEM actors | `UNSUPPORTED_BY_V0` | no service identity exists; unchanged from v0 |
 
 ## Threats
@@ -74,7 +74,13 @@ authorized reconciler. Retention and erasure deletes happen only inside
 | H11 | Forged / unbound reconciliation receipt | insert guard, verification (stored equality + hash + anchor + chain), bound to original receipt hash | H06m, HM06, RV-02 |
 | H12 | Deleting evidence with the maintenance flag | no API role holds DELETE; flag is transaction-local inside the two definer RPCs | H07a..i, HM12 |
 | H13 | Legacy v1 receipts reinterpreted | stored as issued; validator refuses a v1 receipt with a kind | L01/L02, RV-02 |
-| H14 | Rollback silently destroying evidence | hardening rollback refuses when tombstones/checkpoints/erasures/reconciliations/counters exist | AEF_HARDENING_ROLLBACK_REFUSAL |
+| H14 | Rollback silently destroying evidence or control state | hardening rollback refuses when tombstones/checkpoints/erasures/reconciliations/counters, active legal holds, registered verifiers or a changed policy exist | AEF_HARDENING_ROLLBACK_REFUSAL, runner hold check |
+| H15 | Hold placed while purge/erasure runs (race) | per-subject advisory lock: hold trigger exclusive, erasure exclusive + re-check, purge try-lock + re-check | HP-11, HP-15 (deterministic), HM15 |
+| H16 | Recovery vs erasure deadlock | one lock order everywhere: window → head | HP-12, HP-14 (deterministic), HM14 |
+| H17 | Erased subject re-created / key reused after erasure | registration shared lock + `SUBJECT_ERASED`; denial recording refused | H10a..d, HP-13, HM16 |
+| H18 | Unbounded pending counters via invented codes | closed code set; unknown → `UNLISTED` | H10e/f, HM17 |
+| H19 | Erased or deleted operator reconciles | operator must exist in auth.users and not be erased | H08m, HM18 |
+| H20 | Reconciliation re-pointed at another receipt | guard + verification bind to the original receipt id/hash | H11, HM19 |
 
 ## v1 restrictions (fail closed)
 

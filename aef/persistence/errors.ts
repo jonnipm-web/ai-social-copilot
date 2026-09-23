@@ -34,6 +34,7 @@ export const STORE_CODES = [
   "ERASURE_BLOCKED_HOLD",
   "ERASURE_BLOCKED_ACTIVE",
   "ERASURE_BLOCKED_UNRECONCILED",
+  "SUBJECT_ERASED",
 ] as const;
 export type StoreCode = typeof STORE_CODES[number];
 

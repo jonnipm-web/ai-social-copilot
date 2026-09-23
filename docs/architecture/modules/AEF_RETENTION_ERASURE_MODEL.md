@@ -44,7 +44,7 @@ CHECK constraints (30..3650 days). The legal/compliance periods are an
 | C. receipts (+ reconciliations) | with their operation | with their operation | same as A | receipt hash in the tombstone and in the chain (`RECEIPT_ISSUED`, `OPERATION_PURGED`); `aef_verify_receipt` → `RECEIPT_UNKNOWN` |
 | D. audit events | never pruned past an event of a live operation | `audit_retention_days` after `occurred_at` | prefix only, contiguous, stops at the first event that is recent or belongs to an operation that still exists; not under legal hold | **checkpoint** (last pruned seq + hash): verification restarts from it |
 | E. audit heads | kept | kept | only erasure deletes a head | — |
-| tombstones | kept indefinitely | — | only erasure deletes them | — |
+| tombstones | kept for the subject's lifetime | — | only erasure deletes them; afterwards the subject itself is refused (`SUBJECT_ERASED`), so no key can be reused | — |
 
 Why tombstones are kept: purging an operation must never let its idempotency
 key or request id start a *new* operation (that would be a second execution
@@ -54,12 +54,19 @@ when the purge commits while the registration is waiting on the unique index
 (post-insert re-check, SQLSTATE AE003).
 
 Legal / compliance hold: `aef_legal_holds` (owner-managed) blocks purge,
-audit pruning and erasure for a subject.
+audit pruning and erasure for a subject. Holds, purge, erasure and
+registration are serialized per subject with a transaction-scoped advisory
+lock (Codex HG1-01, HG2-02): writing a hold takes it exclusively (trigger),
+erasure takes it exclusively and re-checks, registration takes it shared,
+purge only *tries* it and re-checks the hold (it never waits, so it cannot
+deadlock). A hold committed before the purge/erasure reaches the subject is
+always honored (HP-11).
 
 ## Erasure (`aef_erase_subject`)
 
-Chosen strategy: **hard delete of the subject's AEF records + subject
-detachment + minimized erasure record.** Rationale:
+Chosen strategy: **hard delete of the subject's AEF records + a minimized,
+pseudonymous erasure record + refusal of the erased subject afterwards.**
+Rationale:
 
 - Per-subject hash chains mean deleting one subject's whole chain cannot
   affect any other subject's chain or receipt (tested: H08k, HP-09).
@@ -76,11 +83,16 @@ Behavior:
 | legal hold | `ERASURE_BLOCKED_HOLD` |
 | an execution in flight | `ERASURE_BLOCKED_ACTIVE` |
 | unreconciled UNKNOWN_OUTCOME (policy flag) | `ERASURE_BLOCKED_UNRECONCILED` |
-| otherwise | deletes operations, gates, receipts, reconciliations, audit events/head/window/pending/coalesced/checkpoint, tombstones of the subject; sets `reconciler_id = NULL` where the subject acted as operator on others' reconciliations (their receipts carry only a hash, so they still verify); writes `aef_erasures` (sha256 subject ref, counts) → `ERASED` |
+| otherwise | deletes operations, gates, receipts, reconciliations, audit events/head/window/pending/coalesced/checkpoint and tombstones of the subject; writes `aef_erasures` (sha256 subject ref, counts) → `ERASED`. Where the subject acted as operator on others' reconciliations nothing needs detaching: operator ids are never stored, only a hash in the receipt (Codex HG3-03), and an erased operator can never reconcile again (HG1-02) |
 | repeated | `ALREADY_ERASED` (idempotent; concurrent calls: exactly one `ERASED`, HP-09) |
 
 Server-authoritative: only the account-deletion pipeline (service_role)
-calls it; there is no end-user entry point.
+calls it; there is no end-user entry point. After erasure the database
+refuses the subject everywhere it could re-create data: registration
+(`SUBJECT_ERASED`, also for a registration racing the erasure — HP-13),
+`aef_record_denial` (`SUBJECT_ERASED`), operator reconciliation
+(`RECONCILER_NOT_AUTHORIZED`). Erasure locks window before head, like every
+append, so it cannot deadlock with recovery (HG2-01, HP-12).
 
 ## Owner decisions (not blocking; safe defaults in place)
 

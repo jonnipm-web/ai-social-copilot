@@ -23,6 +23,11 @@ grow a chain (its own, or a victim's via approval spam) without bound.
 - Beyond that, each event increments a **durable counter**
   (`aef_audit_pending`, keyed by subject, event type and reason code). The
   count is never lost: it survives restarts and is part of erasure.
+- The reason codes form a **closed set** (Codex HG1-03):
+  `aef_record_denial` accepts only the 16 known denial codes, and
+  coalescing maps any other code to `UNLISTED`, so a subject has at most
+  ~17 pending counters per event type — a caller cannot create unbounded rows
+  by inventing codes (H10e/f).
 - When the window closes (next coalescible event after it, or the
   `aef_recover` sweep), each counter is flushed as **one** chain event
   `DENIALS_COALESCED` (reason = the code) whose `ref_hash` commits to the
@@ -31,8 +36,7 @@ grow a chain (its own, or a victim's via approval spam) without bound.
   detected (`COALESCED_MISMATCH`, H05g). The event hash formula is
   unchanged, so pre-hardening chains stay valid.
 
-Result: at most `limit + number_of_distinct_codes` events per subject per
-window, with every denial accounted for (`individual + pending + coalesced =
+Result: at most `limit + 17` events per subject per window, with every denial accounted for (`individual + pending + coalesced =
 total`, proven with 3,000 sequential and 400 concurrent denials).
 
 ## Security properties

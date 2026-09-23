@@ -334,3 +334,103 @@ Deno.test({ name: `HP-10 denial flood: ${N}×10 concurrent denials — bounded s
   assert((await h.gov.recover()).coalescedFlushed >= 1);
   assertEquals((await h.gov.verifyAuditChain(w.a)).valid, true);
 }});
+
+Deno.test({ name: "HP-11 legal hold racing retention: a hold committed before the purge touches the subject is always honored (Codex HG1-01)", ignore, fn: async () => {
+  const w = await world();
+  const h = harness(w);
+  const ops: string[] = [];
+  for (let i = 0; i < 10; i++) ops.push(st(await h.gov.submit(req(w.a), w.tokA), "FINAL").operation.operationId);
+  await asReplica(`UPDATE public.aef_operations SET completed_at = now() - interval '400 days' WHERE subject_id = '${w.a}';`);
+  const holdAt: number[] = [];
+  await Promise.all([
+    ...Array.from({ length: 5 }, () => h.gov.purge()),
+    (async () => {
+      await sql(`INSERT INTO public.aef_legal_holds (subject_id, reason_code) VALUES ('${w.a}', 'RACE_HOLD');`);
+      holdAt.push(Date.now());
+    })(),
+  ]);
+  // Whatever the interleaving: once the hold is committed, nothing more of A is ever purged.
+  const before = Number((await sql(`SELECT count(*) FROM public.aef_operations WHERE subject_id = '${w.a}';`))[0]);
+  for (let i = 0; i < 3; i++) await h.gov.purge();
+  const after = Number((await sql(`SELECT count(*) FROM public.aef_operations WHERE subject_id = '${w.a}';`))[0]);
+  assertEquals(after, before, "purge ignored a committed legal hold");
+  assert(holdAt.length === 1);
+  assertEquals((await h.gov.verifyAuditChain(w.a)).valid, true);
+}});
+
+Deno.test({ name: "HP-12 recovery flushing a denial window racing erasure: no deadlock, erasure completes (Codex HG2-01)", ignore, fn: async () => {
+  const w = await world();
+  const h = harness(w);
+  for (let i = 0; i < 30; i++) assertEquals(code(await h.gov.submit(req(w.a, { action: "internal.no_such_tool" }), w.tokA)), "UNKNOWN_TOOL");
+  await sql(`UPDATE public.aef_audit_windows SET window_start = now() - interval '2 minutes' WHERE subject_id = '${w.a}';`);
+  await sql(`DELETE FROM auth.users WHERE id = '${w.a}';`);
+  const results = await Promise.allSettled([
+    ...Array.from({ length: 10 }, () => h.gov.recover()),
+    ...Array.from({ length: 10 }, () => h.gov.eraseSubject(w.a)),
+  ]);
+  for (const r of results) assertEquals(r.status, "fulfilled", `a call failed (deadlock?): ${JSON.stringify(r)}`);
+  const left = await sql(`SELECT (SELECT count(*) FROM public.aef_audit_events WHERE subject_id = '${w.a}')
+    + (SELECT count(*) FROM public.aef_audit_pending WHERE subject_id = '${w.a}')
+    + (SELECT count(*) FROM public.aef_audit_windows WHERE subject_id = '${w.a}');`);
+  assertEquals(left[0], "0");
+}});
+
+Deno.test({ name: "HP-13 registration racing erasure, and reuse after erasure: never an operation outliving the erasure (Codex HG2-02)", ignore, fn: async () => {
+  const w = await world();
+  const h = harness(w);
+  const old = req(w.a);
+  st(await h.gov.submit(old, w.tokA), "FINAL");
+  await sql(`DELETE FROM auth.users WHERE id = '${w.a}';`);
+  // The identity resolver still accepts the token here on purpose: the database must refuse on its own.
+  const results = await Promise.allSettled([
+    ...Array.from({ length: 10 }, () => h.gov.submit(req(w.a), w.tokA)),
+    ...Array.from({ length: 5 }, () => h.gov.eraseSubject(w.a)),
+  ]);
+  for (const r of results) assertEquals(r.status, "fulfilled", JSON.stringify(r));
+  const left = await sql(`SELECT count(*) FROM public.aef_operations WHERE subject_id = '${w.a}';`);
+  const erased = await h.gov.eraseSubject(w.a);
+  assert(erased.ok);
+  const after = await sql(`SELECT count(*) FROM public.aef_operations WHERE subject_id = '${w.a}';`);
+  assertEquals(after[0], "0", `operations survived erasure (before final erase: ${left[0]})`);
+  assertEquals(code(await h.gov.submit({ ...structuredClone(old), request_id: crypto.randomUUID() }, w.tokA)), "SUBJECT_ERASED");
+  assertEquals(code(await h.gov.submit(req(w.a), w.tokA)), "SUBJECT_ERASED");
+  assertEquals(h.ledger.totalEffects() <= 11, true);
+}});
+
+const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+Deno.test({ name: "HP-14 deterministic: a session holding the denial window (recovery order window → head) never deadlocks an erasure (Codex HG2-01)", ignore, fn: async () => {
+  const w = await world();
+  const h = harness(w);
+  for (let i = 0; i < 3; i++) assertEquals(code(await h.gov.submit(req(w.a, { action: "internal.no_such_tool" }), w.tokA)), "UNKNOWN_TOOL");
+  await sql(`DELETE FROM auth.users WHERE id = '${w.a}';`);
+  // Session R follows the append/recovery lock order: window, pause, then head.
+  const recovery = sql(`BEGIN;
+    SELECT 1 FROM public.aef_audit_windows WHERE subject_id = '${w.a}' FOR UPDATE;
+    SELECT pg_sleep(2);
+    SELECT 1 FROM public.aef_audit_heads WHERE subject_id = '${w.a}' FOR UPDATE;
+    COMMIT;`);
+  await pause(700);
+  const [r, e] = await Promise.allSettled([recovery, h.gov.eraseSubject(w.a)]);
+  assertEquals(r.status, "fulfilled", `recovery-order session failed (deadlock?): ${JSON.stringify(r)}`);
+  assertEquals(e.status, "fulfilled", `erasure failed (deadlock?): ${JSON.stringify(e)}`);
+  assertEquals((e as PromiseFulfilledResult<{ ok: boolean }>).value.ok, true);
+}});
+
+Deno.test({ name: "HP-15 deterministic: while a legal hold is being written for a subject, retention purges nothing of it (Codex HG1-01)", ignore, fn: async () => {
+  const w = await world();
+  const h = harness(w);
+  for (let i = 0; i < 3; i++) st(await h.gov.submit(req(w.a), w.tokA), "FINAL");
+  await asReplica(`UPDATE public.aef_operations SET completed_at = now() - interval '400 days' WHERE subject_id = '${w.a}';`);
+  const holder = sql(`BEGIN;
+    INSERT INTO public.aef_legal_holds (subject_id, reason_code) VALUES ('${w.a}', 'PENDING_HOLD');
+    SELECT pg_sleep(2);
+    COMMIT;`);
+  await pause(700);
+  await h.gov.purge();
+  await holder;
+  const left = await sql(`SELECT count(*) FROM public.aef_operations WHERE subject_id = '${w.a}';`);
+  assertEquals(left[0], "3", "purge deleted data of a subject whose legal hold was being placed");
+  await h.gov.purge();
+  assertEquals((await sql(`SELECT count(*) FROM public.aef_operations WHERE subject_id = '${w.a}';`))[0], "3", "hold not honored after commit");
+}});

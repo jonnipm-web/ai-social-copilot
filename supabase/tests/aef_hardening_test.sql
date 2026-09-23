@@ -321,6 +321,9 @@ BEGIN
     RAISE EXCEPTION 'H06j reconciliation receipt wrong or not minimized: %', r;
   END IF;
   PERFORM set_config('aef.t.recon_receipt', r #>> '{reconciliation,receipt}', false);
+  IF (SELECT reconciler_id FROM public.aef_reconciliations WHERE operation_id = v_unknown) IS NOT NULL THEN
+    RAISE EXCEPTION 'H06j2 raw operator id stored (Codex HG3-03)';
+  END IF;
   PERFORM pg_temp.expect(public.aef_reconcile(base || '{"reconciler_kind":"OPERATOR","reconciler_id":"a7000000-0000-4000-8000-000000000007","verdict":"CONFIRMED_NOT_APPLIED"}'),
     'ALREADY_RECONCILED', 'H06k second reconciliation');
   IF (public.aef_verify_receipt(jsonb_build_object('receipt', current_setting('aef.t.recon_receipt')::jsonb)) ->> 'valid')::boolean IS NOT TRUE THEN
@@ -502,7 +505,11 @@ DECLARE r jsonb;
 BEGIN
   r := public.aef_erase_subject('{"subject_id":"a7000000-0000-4000-8000-000000000007"}');
   PERFORM pg_temp.expect(r, NULL, 'H08l erase operator');
-  IF (r #>> '{counts,operator_detachments}')::int <> 1 THEN RAISE EXCEPTION 'H08m operator not detached: %', r; END IF;
+  -- Codex HG1-02: an erased operator can never reconcile again, even with its role row left behind.
+  PERFORM pg_temp.expect(public.aef_reconcile(jsonb_build_object('operation_id', current_setting('aef.t.h_unknown2'),
+    'verdict', 'CONFIRMED_APPLIED', 'reconciler_kind', 'OPERATOR', 'reconciler_id', 'a7000000-0000-4000-8000-000000000007',
+    'evidence_kind', 'SUPPORT_TICKET', 'evidence_ref', 't', 'policy_version', 'aef-policy/2026-09-25.1',
+    'risk_version', 'aef-risk/2026-09-25.1')), 'RECONCILER_NOT_AUTHORIZED', 'H08m erased operator reconciles');
   IF (public.aef_verify_receipt(jsonb_build_object('receipt', current_setting('aef.t.recon_receipt')::jsonb)) ->> 'valid')::boolean IS NOT TRUE THEN
     RAISE EXCEPTION 'H08n reconciliation of another subject no longer verifies after operator erasure';
   END IF;
@@ -528,6 +535,67 @@ BEGIN
     INTO v_total;
   IF v_events > 20 THEN RAISE EXCEPTION 'H09a % events stored for one window', v_events; END IF;
   IF v_total <> 3000 THEN RAISE EXCEPTION 'H09b denials lost: % of 3000 accounted', v_total; END IF;
+END $$;
+RESET ROLE;
+
+-- ── H10 an erased subject cannot come back; denial codes are a closed set ─
+SET ROLE service_role;
+DO $$
+DECLARE i int; v_rows bigint;
+BEGIN
+  PERFORM pg_temp.expect(pg_temp.reg('f1000000-0000-4000-8000-00000000000f', 'f-1'), 'SUBJECT_ERASED', 'H10a erased subject re-registers old key');
+  PERFORM pg_temp.expect(pg_temp.reg('f1000000-0000-4000-8000-00000000000f', 'f-new'), 'SUBJECT_ERASED', 'H10b erased subject registers');
+  PERFORM pg_temp.expect(public.aef_record_denial('{"subject_id":"f1000000-0000-4000-8000-00000000000f","reason_code":"UNKNOWN_TOOL"}'),
+    'SUBJECT_ERASED', 'H10c denial recreates erased chain');
+  IF EXISTS (SELECT 1 FROM public.aef_audit_heads WHERE subject_id = 'f1000000-0000-4000-8000-00000000000f')
+     OR EXISTS (SELECT 1 FROM public.aef_audit_windows WHERE subject_id = 'f1000000-0000-4000-8000-00000000000f') THEN
+    RAISE EXCEPTION 'H10d erased subject data re-created';
+  END IF;
+  PERFORM pg_temp.expect(public.aef_record_denial('{"subject_id":"b9000000-0000-4000-8000-00000000000b","reason_code":"R0000001"}'),
+    'ARGUMENT_REJECTED', 'H10e invented denial code');
+  FOR i IN 1..500 LOOP
+    PERFORM public.aef_record_denial(jsonb_build_object('subject_id', 'b9000000-0000-4000-8000-00000000000b',
+      'reason_code', (ARRAY['UNKNOWN_TOOL', 'RESOURCE_FORBIDDEN', 'POLICY_DENIED', 'INVALID_REQUEST'])[1 + i % 4]));
+  END LOOP;
+  SELECT count(*) INTO v_rows FROM public.aef_audit_pending WHERE subject_id = 'b9000000-0000-4000-8000-00000000000b';
+  IF v_rows > 16 THEN RAISE EXCEPTION 'H10f pending rows unbounded: %', v_rows; END IF;
+END $$;
+RESET ROLE;
+
+-- ── H11 owner-level tamper: a reconciliation re-pointed at another original
+-- receipt, with every hash and the chain recomputed, is still refused
+-- (Codex HG3-02). Runs last: it deliberately corrupts D's records.
+DO $$
+DECLARE v_rec public.aef_reconciliations; v_new jsonb; v_hash text; e record; v_prev text; v_eh text;
+BEGIN
+  SET LOCAL session_replication_role = replica;
+  SELECT * INTO v_rec FROM public.aef_reconciliations WHERE operation_id = current_setting('aef.t.d_unknown')::uuid;
+  v_new := jsonb_set(v_rec.receipt, '{original_receipt_hash}', to_jsonb(repeat('f', 64)));
+  v_hash := public.aef__sha256(v_new::text);
+  UPDATE public.aef_reconciliations SET receipt = v_new, receipt_hash = v_hash WHERE id = v_rec.id;
+  UPDATE public.aef_audit_events SET ref_hash = v_hash
+   WHERE subject_id = v_rec.subject_id AND event_type = 'RECONCILIATION_RECORDED' AND ref_hash = v_rec.receipt_hash;
+  SELECT event_hash INTO v_prev FROM public.aef_audit_events WHERE subject_id = v_rec.subject_id
+     AND seq = (SELECT min(seq) - 1 FROM public.aef_audit_events WHERE subject_id = v_rec.subject_id);
+  v_prev := coalesce(v_prev, (SELECT event_hash FROM public.aef_audit_checkpoints WHERE subject_id = v_rec.subject_id), repeat('0', 64));
+  FOR e IN SELECT * FROM public.aef_audit_events WHERE subject_id = v_rec.subject_id ORDER BY seq LOOP
+    v_eh := public.aef__event_hash(e.subject_id, e.seq, e.operation_id, e.event_type, e.from_state, e.to_state,
+                                   e.reason_code, e.ref_hash, e.occurred_at, v_prev);
+    UPDATE public.aef_audit_events SET prev_hash = v_prev, event_hash = v_eh WHERE id = e.id;
+    v_prev := v_eh;
+  END LOOP;
+  UPDATE public.aef_audit_heads SET last_hash = v_prev WHERE subject_id = v_rec.subject_id;
+  PERFORM set_config('aef.t.tampered_recon', v_new::text, false);
+END $$;
+SET ROLE service_role;
+DO $$
+DECLARE r jsonb;
+BEGIN
+  IF NOT pg_temp.chain_ok('d1000000-0000-4000-8000-00000000000d') THEN RAISE EXCEPTION 'H11 setup: chain not rebuilt'; END IF;
+  r := public.aef_verify_receipt(jsonb_build_object('receipt', current_setting('aef.t.tampered_recon')::jsonb));
+  IF r ->> 'reason' IS DISTINCT FROM 'RECEIPT_ORIGINAL_MISMATCH' THEN
+    RAISE EXCEPTION 'H11 reconciliation re-pointed at another original receipt accepted: %', r;
+  END IF;
 END $$;
 RESET ROLE;
 

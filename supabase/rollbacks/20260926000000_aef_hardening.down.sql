@@ -14,8 +14,15 @@ BEGIN;
 DO $$ BEGIN
   IF EXISTS (SELECT 1 FROM public.aef_idempotency_tombstones) OR EXISTS (SELECT 1 FROM public.aef_audit_checkpoints)
      OR EXISTS (SELECT 1 FROM public.aef_erasures) OR EXISTS (SELECT 1 FROM public.aef_reconciliations)
-     OR EXISTS (SELECT 1 FROM public.aef_audit_coalesced) OR EXISTS (SELECT 1 FROM public.aef_audit_pending) THEN
-    RAISE EXCEPTION 'AEF hardening rollback refused: purge/erasure/reconciliation/coalesced evidence exists';
+     OR EXISTS (SELECT 1 FROM public.aef_audit_coalesced) OR EXISTS (SELECT 1 FROM public.aef_audit_pending)
+     -- Codex HG1-04: nor while control state would be silently lost.
+     OR EXISTS (SELECT 1 FROM public.aef_legal_holds WHERE released_at IS NULL)
+     OR EXISTS (SELECT 1 FROM public.aef_reconciliation_verifiers)
+     OR NOT EXISTS (SELECT 1 FROM public.aef_retention_policy
+                     WHERE policy_ref = 'aef-retention/2026-09-26.1-provisional' AND terminal_retention_days = 365
+                       AND audit_retention_days = 730 AND denial_window_seconds = 60 AND denial_window_limit = 20
+                       AND erasure_blocks_on_unreconciled) THEN
+    RAISE EXCEPTION 'AEF hardening rollback refused: purge/erasure/reconciliation/coalesced evidence or hold/verifier/policy state exists';
   END IF;
 END $$;
 
@@ -376,6 +383,21 @@ BEGIN
   RETURN jsonb_build_object('ok', true, 'outcome', 'CREATED') || public.aef__view(v_op_id);
 END $$;
 
+CREATE OR REPLACE FUNCTION public.aef_record_denial(p jsonb) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
+DECLARE v_subject uuid; v_code text;
+BEGIN
+  BEGIN
+    PERFORM public.aef__check_keys(p, ARRAY['subject_id', 'reason_code']);
+    v_subject := public.aef__uuid(p, 'subject_id', true);
+    v_code := public.aef__text(p, 'reason_code', true, 64, '^[A-Z][A-Z0-9_]{0,63}$');
+  EXCEPTION WHEN SQLSTATE 'AE001' THEN
+    RETURN public.aef__err('ARGUMENT_REJECTED');
+  END;
+  PERFORM public.aef__audit_append(v_subject, NULL, 'REQUEST_DENIED', NULL, NULL, v_code);
+  RETURN jsonb_build_object('ok', true);
+END $$;
+
 CREATE OR REPLACE FUNCTION public.aef_recover(p jsonb) RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
 DECLARE v_limit int; o public.aef_operations; v_unknown int := 0; v_expired int := 0;
@@ -516,6 +538,10 @@ DROP FUNCTION IF EXISTS public.aef__guard_maintenance_only();
 DROP FUNCTION IF EXISTS public.aef__guard_append_only();
 DROP FUNCTION IF EXISTS public.aef__guard_erasures();
 DROP FUNCTION IF EXISTS public.aef__maintenance();
+DROP FUNCTION IF EXISTS public.aef__guard_legal_holds();
+DROP FUNCTION IF EXISTS public.aef__denial_codes();
+DROP FUNCTION IF EXISTS public.aef__erased(uuid);
+DROP FUNCTION IF EXISTS public.aef__subject_lock_key(uuid);
 
 -- 4. privileges exactly as after the persistence migration
 DO $$
