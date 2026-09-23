@@ -195,8 +195,9 @@ export class Investigation {
     const claim = this.#claims.get(claimId);
     if (!claim) return fail('INVALID_CLAIM', 'unknown claim');
     const evidence = [...this.#evidence.values()].filter((e) => e.claimId === claimId);
-    const ids = new Set([claim.sourceId, ...evidence.map((e) => e.sourceId)]);
-    const sources = [...ids].map((id) => this.#sources.get(id)!);
+    // All sources of the investigation: syndication links through sources
+    // that carry no evidence for this claim still merge voices (Codex FV4-01).
+    const sources = [...this.#sources.values()];
     const openDispute = [...this.#disputes.values()].some((d) => d.claimId === claimId && !d.resolution);
     const r = await verifyClaim({ claim, evidence, sources }, { ...ctx, openDispute: ctx.openDispute || openDispute });
     if (!r.ok) return r;

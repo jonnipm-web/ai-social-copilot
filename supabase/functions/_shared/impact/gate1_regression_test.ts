@@ -257,6 +257,10 @@ Deno.test('FV4-01 a chain through a non-counted intermediate source is still one
     assertEquals(v.sufficiency, 'INDEPENDENT_SUPPORT');
     assertEquals(deriveIndicators({ results: [v] }).some((i) => i.code === 'MULTI_SOURCE_CORROBORATION'), false);
   }
+  // the intermediate lineage is part of the evidence-set identity
+  const withB = await run(wellsClaim, [ev('e8', 'n8', sx(20)), ev('e10', 'na0', sx(20))], [a, b, c]);
+  const withoutB = await run(wellsClaim, [ev('e8', 'n8', sx(20)), ev('e10', 'na0', sx(20))], [a, c]);
+  assertNotEquals(withB.evidenceSetHash, withoutB.evidenceSetHash);
   // cycle through an unreferenced node, and a self-link, are harmless
   const x = news('nb1', 'X', { syndicatedFrom: 'Hub' });
   const hub = news('nb2', 'Hub', { syndicatedFrom: 'Y' });

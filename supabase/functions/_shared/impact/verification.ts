@@ -239,7 +239,11 @@ export async function computeEvidenceSetHash(
     subjectProjectId: claim.subjectProjectId, subjectCampaignId: claim.subjectCampaignId, period: claim.period,
     sourceId: claim.sourceId, origin: claim.origin,
   };
-  return await sha256Hex(canonical({ claim: c, claimTextHash: await sha256Hex(claim.text), items }));
+  // Syndication links of ALL supplied sources affect voice counting, so they
+  // are part of the evidence set identity.
+  const lineage = [...sources.values()].filter((s) => s.syndicatedFrom)
+    .map((s) => `${s.id}|${normPublisher(s.publisher)}|${normPublisher(s.syndicatedFrom!)}`).sort();
+  return await sha256Hex(canonical({ claim: c, claimTextHash: await sha256Hex(claim.text), items, lineage }));
 }
 
 function effectiveRelationship(
