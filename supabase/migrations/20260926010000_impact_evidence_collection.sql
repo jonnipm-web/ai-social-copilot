@@ -18,7 +18,8 @@
 --     (PENDING / NEEDS_CONTEXT → ACCEPTED | REJECTED | NEEDS_CONTEXT), by the
 --     owner. ACCEPTED requires the promoted evidence row to match the
 --     candidate exactly (claim, source, excerpt, locator, relationship).
---   * evidence carrying an artifact locator can only be such a promotion.
+--   * evidence carrying an artifact locator can only be such a promotion, and
+--     inserting it IS the acceptance (same statement: atomic).
 --   * audit: ARTIFACT_INGESTED, ARTIFACT_VERSIONED, EXTRACTION_COMPLETED,
 --     EVIDENCE_CANDIDATE_CREATED, EVIDENCE_CANDIDATE_REVIEWED, EVIDENCE_PROMOTED.
 --
@@ -42,6 +43,13 @@ BEGIN
   RETURN n;
 END $$;
 
+-- A strictly positive JSON integer (1.5, "1", 0, -1 are not).
+CREATE OR REPLACE FUNCTION public.impact_pos_int(v jsonb) RETURNS boolean
+LANGUAGE sql IMMUTABLE SET search_path = '' AS $$
+  SELECT coalesce(jsonb_typeof(v) = 'number' AND (v #>> '{}')::numeric >= 1
+    AND (v #>> '{}')::numeric = trunc((v #>> '{}')::numeric) AND (v #>> '{}')::numeric < 1e9, false)
+$$;
+
 -- Structural locator validity against the artifact's structure index
 -- (artifact_model.ts locatorFitsSummary twin). Content validity is checked by
 -- the server at ingestion against its own extraction.
@@ -55,14 +63,12 @@ DECLARE
 BEGIN
   IF jsonb_typeof(l) <> 'object' OR jsonb_typeof(s) <> 'object' THEN RETURN false; END IF;
   IF k = 'PDF_PAGE' THEN
-    RETURN t = 'PDF' AND (l - 'kind' - 'page') = '{}'::jsonb AND jsonb_typeof(l->'page') = 'number'
-      AND (l->>'page')::numeric >= 1 AND (l->>'page')::numeric <= coalesce((s->>'pages')::numeric, 0);
+    RETURN t = 'PDF' AND (l - 'kind' - 'page') = '{}'::jsonb AND public.impact_pos_int(l->'page') AND (l->>'page')::numeric <= coalesce((s->>'pages')::numeric, 0);
   ELSIF k = 'DOCX_PARAGRAPH' THEN
-    RETURN t = 'DOCX' AND (l - 'kind' - 'paragraph') = '{}'::jsonb AND jsonb_typeof(l->'paragraph') = 'number'
-      AND (l->>'paragraph')::numeric >= 1 AND (l->>'paragraph')::numeric <= coalesce((s->>'paragraphs')::numeric, 0);
+    RETURN t = 'DOCX' AND (l - 'kind' - 'paragraph') = '{}'::jsonb AND public.impact_pos_int(l->'paragraph') AND (l->>'paragraph')::numeric <= coalesce((s->>'paragraphs')::numeric, 0);
   ELSIF k = 'DOCX_TABLE_CELL' THEN
     RETURN t = 'DOCX' AND (l - 'kind' - 'table' - 'row' - 'cell') = '{}'::jsonb
-      AND (l->>'table')::numeric >= 1 AND (l->>'row')::numeric >= 1 AND (l->>'cell')::numeric >= 1
+      AND public.impact_pos_int(l->'table') AND public.impact_pos_int(l->'row') AND public.impact_pos_int(l->'cell')
       AND (l->>'row')::numeric <= jsonb_array_length(coalesce(s->'tables'->((l->>'table')::int - 1), '[]'::jsonb))
       AND (l->>'cell')::numeric <= coalesce((s->'tables'->((l->>'table')::int - 1)->>((l->>'row')::int - 1))::numeric, 0);
   ELSIF k = 'SHEET_CELL' THEN
@@ -73,14 +79,15 @@ BEGIN
     RETURN sh IS NOT NULL AND m[2]::int <= (sh->>'rows')::int AND public.impact_column_index(m[1]) <= (sh->>'columns')::int;
   ELSIF k = 'CSV_CELL' THEN
     RETURN t = 'CSV' AND (l - 'kind' - 'row' - 'column') = '{}'::jsonb
-      AND (l->>'row')::numeric >= 1 AND (l->>'column')::numeric >= 1
+      AND public.impact_pos_int(l->'row') AND public.impact_pos_int(l->'column')
       AND (l->>'row')::numeric <= coalesce((s->>'rows')::numeric, 0) AND (l->>'column')::numeric <= coalesce((s->>'columns')::numeric, 0);
   ELSIF k = 'JSON_POINTER' THEN
     RETURN t = 'JSON' AND (l - 'kind' - 'pointer') = '{}'::jsonb AND jsonb_typeof(l->'pointer') = 'string'
       AND length(l->>'pointer') <= 500 AND (l->>'pointer' = '' OR left(l->>'pointer', 1) = '/');
   ELSIF k = 'TEXT_LINES' THEN
     RETURN t IN ('TEXT', 'MARKDOWN') AND (l - 'kind' - 'lineStart' - 'lineEnd') = '{}'::jsonb
-      AND (l->>'lineStart')::numeric >= 1 AND (l->>'lineEnd')::numeric >= (l->>'lineStart')::numeric
+      AND public.impact_pos_int(l->'lineStart') AND public.impact_pos_int(l->'lineEnd')
+      AND (l->>'lineEnd')::numeric >= (l->>'lineStart')::numeric
       AND (l->>'lineEnd')::numeric - (l->>'lineStart')::numeric < 200
       AND (l->>'lineEnd')::numeric <= coalesce((s->>'lines')::numeric, 0);
   END IF;
@@ -174,6 +181,12 @@ BEGIN
      OR v_src.content_hash IS DISTINCT FROM NEW.file_hash OR v_src.retention IS DISTINCT FROM 'HASH_ONLY'
      OR NOT v_src.user_submitted OR v_src.snapshot IS NOT NULL THEN
     RAISE EXCEPTION 'IMPACT_ARTIFACT_SOURCE_INVALID: artifact source must be its own USER_UPLOAD document' USING ERRCODE = '23514';
+  END IF;
+  -- A half-written ingestion's source is completed only while it is untouched:
+  -- a source already cited by free-form evidence can never become an artifact
+  -- source (its evidence would bypass candidate review) — Codex I3G2-02.
+  IF EXISTS (SELECT 1 FROM public.impact_evidence e WHERE e.investigation_id = NEW.investigation_id AND e.source_ref = NEW.source_ref) THEN
+    RAISE EXCEPTION 'IMPACT_ARTIFACT_SOURCE_INVALID: source already carries evidence' USING ERRCODE = '23514';
   END IF;
   IF NEW.supersedes_ref IS NOT NULL THEN
     PERFORM 1 FROM public.impact_investigations WHERE id = NEW.investigation_id FOR UPDATE;
@@ -276,6 +289,16 @@ BEGIN
                                'reviewed_by','reviewed_at','updated_by','updated_at']) THEN
     RAISE EXCEPTION 'IMPACT_IMMUTABLE_FIELD: only the review can be recorded' USING ERRCODE = '42501';
   END IF;
+  -- ACCEPTED is written ONLY by the promotion trigger, in the same statement
+  -- as the evidence insert (atomic: no evidence without its review, no review
+  -- without its evidence) — Codex I3G2-01.
+  IF NEW.review_status = 'ACCEPTED' AND pg_trigger_depth() < 2 THEN
+    RAISE EXCEPTION 'IMPACT_CANDIDATE_INVALID: acceptance happens only by promoting the candidate to evidence' USING ERRCODE = '42501';
+  END IF;
+  IF NEW.review_status <> 'ACCEPTED' AND EXISTS (SELECT 1 FROM public.impact_evidence e
+       WHERE e.investigation_id = NEW.investigation_id AND e.ref = NEW.ref || '.ev') THEN
+    RAISE EXCEPTION 'IMPACT_CANDIDATE_INVALID: the candidate was already promoted' USING ERRCODE = '42501';
+  END IF;
   IF NEW.review_status = 'ACCEPTED' THEN
     SELECT * INTO v_ev FROM public.impact_evidence e WHERE e.investigation_id = NEW.investigation_id AND e.ref = NEW.evidence_ref;
     IF v_ev.ref IS NULL OR v_ev.claim_ref <> NEW.review_claim_ref OR v_ev.source_ref <> v_art.source_ref
@@ -286,6 +309,25 @@ BEGIN
     END IF;
   END IF;
   RETURN NEW;
+END $$;
+
+-- Promotion: inserting the artifact-bound evidence row IS the acceptance.
+-- Runs AFTER INSERT (after impact_audit_writes, alphabetical), so the audit
+-- order is EVIDENCE_ADDED → EVIDENCE_CANDIDATE_REVIEWED → EVIDENCE_PROMOTED.
+CREATE OR REPLACE FUNCTION public.impact_promote_candidate() RETURNS trigger
+LANGUAGE plpgsql SET search_path = '' AS $$
+BEGIN
+  IF NEW.locator IS NULL OR NOT NEW.locator ? 'artifact' THEN RETURN NULL; END IF;
+  UPDATE public.impact_evidence_candidates c SET
+    review_status = 'ACCEPTED', review_relationship = NEW.relationship, review_claim_ref = NEW.claim_ref,
+    review_about_org_ref = NEW.about_org_ref, evidence_ref = NEW.ref, reviewed_by = NEW.created_by,
+    reviewed_at = NEW.added_at, updated_by = NEW.created_by, updated_at = now()
+  WHERE c.investigation_id = NEW.investigation_id AND c.ref || '.ev' = NEW.ref
+    AND c.review_status IN ('PENDING', 'NEEDS_CONTEXT');
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'IMPACT_ARTIFACT_EVIDENCE_INVALID: no reviewable candidate to promote' USING ERRCODE = '23514';
+  END IF;
+  RETURN NULL;
 END $$;
 
 -- ── evidence validation (20260925010000 + artifact-bound evidence) ─────────
@@ -511,6 +553,10 @@ CREATE TRIGGER impact_artifacts_validate BEFORE INSERT ON public.impact_artifact
 DROP TRIGGER IF EXISTS impact_candidates_guard ON public.impact_evidence_candidates;
 CREATE TRIGGER impact_candidates_guard BEFORE INSERT OR UPDATE ON public.impact_evidence_candidates
   FOR EACH ROW EXECUTE FUNCTION public.impact_candidates_guard();
+
+DROP TRIGGER IF EXISTS impact_promote_candidate ON public.impact_evidence;
+CREATE TRIGGER impact_promote_candidate AFTER INSERT ON public.impact_evidence
+  FOR EACH ROW EXECUTE FUNCTION public.impact_promote_candidate();
 
 DROP TRIGGER IF EXISTS impact_append_only ON public.impact_artifacts;
 CREATE TRIGGER impact_append_only BEFORE UPDATE ON public.impact_artifacts

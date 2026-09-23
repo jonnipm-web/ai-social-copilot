@@ -45,6 +45,10 @@ Each arrow is a separate, audited step. Nothing skips a step:
     personal-data class (else `EVIDENCE_REVIEW_REQUIRED`) and promotes the
     candidate to evidence `<candidate>.ev`, basis `HUMAN_ASSESSED`, bound to
     `{artifact: {ref, hash, locator}}` and the artifact's own source;
+  - the promotion is **atomic** (Codex I3G2-01): inserting the bound evidence
+    row IS the acceptance — a database trigger (`impact_promote_candidate`)
+    marks the candidate ACCEPTED in the same statement; a direct update to
+    ACCEPTED is refused, and a promoted candidate can never be rejected;
   - response carries `humanReviewIsNotVerification: true`.
 
 Evidence citing an artifact's source can ONLY be such a promotion (TS store
@@ -71,9 +75,17 @@ and any future LLM output can only ever be a candidate (review required).
   identical retry completes a half-written ingestion (EC-20).
 - Replayed candidates (same ref, locator, excerpt) are reported, never
   duplicated; a ref reused for other content → `ALREADY_EXISTS`.
-- Promotion is repairable: evidence first, then the review update; the
-  identical retry completes it (EC-22). The database update only transitions
-  from `PENDING`/`NEEDS_CONTEXT` (row-count checked).
+- Promotion is one write (evidence insert + acceptance in one statement): a
+  failure leaves the candidate PENDING with no evidence; the identical retry
+  promotes once (EC-22). REJECTED / NEEDS_CONTEXT updates only transition from
+  `PENDING`/`NEEDS_CONTEXT` (row-count checked) and never after a promotion.
+- A failed or racing ingestion may leave its source without an artifact
+  (Codex I3G2-02, partially accepted). Such a source is exactly what a client
+  can already declare with `add_source` (`USER_UPLOAD`, `HASH_ONLY`,
+  USER_SUBMITTED, never counted, no excerpt allowed), so it opens no path
+  around review; and once cited by free-form evidence it can never be adopted
+  as an artifact source (TS + SQL). The Lab API has no delete, so such an
+  orphan stays until the investigation is removed.
 - Concurrency is resolved by database uniques: `(investigation, ref)`,
   `(investigation, file_hash)`, `(investigation, supersedes_ref)`.
 - Mobile / interrupted uploads: one request carries the whole file (≤ 6 MB);

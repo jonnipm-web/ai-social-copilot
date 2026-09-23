@@ -92,7 +92,7 @@ for (const c of m.claims.values()) out.push(row('impact_claims', claimToRow(inv,
 for (const c of m.candidates.values()) out.push(row('impact_evidence_candidates', candidateToRow(inv, c, OWNER), ['locator'], ['review_reasons']));
 for (const e of m.evidence.values()) out.push(row('impact_evidence', evidenceToRow(inv, e, OWNER), ['locator']));
 for (const c of m.candidates.values()) {
-  if (c.reviewStatus === 'PENDING') continue;
+  if (c.reviewStatus === 'PENDING' || c.reviewStatus === 'ACCEPTED') continue; // ACCEPTED: promoted by the evidence insert itself
   out.push(`UPDATE public.impact_evidence_candidates SET review_status = ${lit(c.reviewStatus)}, review_relationship = ${lit(c.reviewRelationship)}, review_claim_ref = ${lit(c.reviewClaimRef)}, review_about_org_ref = ${lit(c.reviewAboutOrgRef)}, evidence_ref = ${lit(c.evidenceRef)}, reviewed_by = '${OWNER}', reviewed_at = ${lit(c.reviewedAt)}, updated_by = '${OWNER}', updated_at = now() WHERE investigation_id = '${inv}' AND ref = ${lit(c.ref)};`);
 }
 // disputes/status changes interleave with verifications exactly as they happened

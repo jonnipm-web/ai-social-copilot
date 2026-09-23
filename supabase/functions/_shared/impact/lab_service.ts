@@ -852,22 +852,13 @@ export async function handleLabRequest(
         return same ? ok({ action: req.action, data: { candidate: candidateView(cand), evidenceRef, replayed: true } }) : fail('ALREADY_EXISTS', 'candidate already reviewed');
       }
       if (cand.reviewStatus === 'REJECTED') return fail('ALREADY_EXISTS', 'candidate already reviewed');
-      const priorEv = data.value.evidence.find((x) => x.id === evidenceRef);
-      if (priorEv) {
-        // Repair: the evidence was written but the review was not.
-        const matches = priorEv.claimId === claimRef && priorEv.relationship === rv.relationship && priorEv.aboutOrganizationId === rv.aboutOrgRef
-          && priorEv.excerpt === cand.excerpt && priorEv.locator?.artifact?.hash === artifact.fileHash;
-        if (!matches) return fail('ALREADY_EXISTS', 'evidence ref already used');
-      } else {
-        if (data.value.evidence.length >= LAB_LIMITS.maxEvidencePerInvestigation) return fail('LIMIT_EXCEEDED', 'too much evidence');
-        const ve = await validateEvidence(e, claim, sourcesById);
-        if (!ve.ok) return ve;
-        const r = await store.insertEvidence(inv.value.id, e, actor.userId);
-        if (!r.ok) return r;
-      }
-      const r = await store.reviewCandidate(inv.value.id, cand.ref, {
-        status: 'ACCEPTED', relationship: rv.relationship, claimRef, aboutOrgRef: rv.aboutOrgRef, evidenceRef, reviewedAt: now,
-      }, actor.userId);
+      if (data.value.evidence.some((x) => x.id === evidenceRef)) return fail('ALREADY_EXISTS', 'evidence ref already used');
+      if (data.value.evidence.length >= LAB_LIMITS.maxEvidencePerInvestigation) return fail('LIMIT_EXCEEDED', 'too much evidence');
+      const ve = await validateEvidence(e, claim, sourcesById);
+      if (!ve.ok) return ve;
+      // ONE write: inserting the bound evidence IS the acceptance (the store /
+      // database promote the candidate in the same statement — Codex I3G2-01).
+      const r = await store.insertEvidence(inv.value.id, e, actor.userId);
       if (!r.ok) return r;
       return ok({
         action: req.action,

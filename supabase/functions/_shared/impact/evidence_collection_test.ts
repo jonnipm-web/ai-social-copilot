@@ -328,19 +328,59 @@ Deno.test('EC-21 identical ingest replay: requested candidates are replayed, nev
   assertEquals(await t.code(UA, ingest(inv, { candidates: [{ ref: 'k1', locator: { kind: 'TEXT_LINES', lineStart: 2, lineEnd: 2 } }] })), 'ALREADY_EXISTS');
 });
 
-Deno.test('EC-22 promotion repair: evidence written, review lost → identical retry completes the review', async () => {
+Deno.test('EC-22 promotion is atomic: a failed evidence write leaves the candidate PENDING; the retry promotes once', async () => {
   const t = setup();
   const inv = await investigation(t);
   await t.must(UA, ingest(inv));
   const rv = { action: 'review_candidate', investigation_id: inv, candidate_ref: 'art-report.auto1', decision: 'ACCEPTED', relationship: 'SUPPORTS', claim_ref: 'c-wells', about_org_ref: 'org-wellspring', personal_data: 'NONE' };
-  t.db.failNextWrite = true; // the review update is the write after the evidence
-  const first = await t.code(UA, rv);
+  t.db.failNextEvidence = true;
+  assertEquals(await t.code(UA, rv), 'INTERNAL_ERROR');
   const m = t.db.investigations.get(inv)!;
-  if (first !== 'OK') {
-    assertEquals(m.candidates.get('art-report.auto1')!.reviewStatus, 'PENDING');
-    await t.must(UA, rv);
-  }
+  assertEquals([m.candidates.get('art-report.auto1')!.reviewStatus, m.evidence.has('art-report.auto1.ev')], ['PENDING', false]);
+  await t.must(UA, rv);
   assertEquals([m.candidates.get('art-report.auto1')!.reviewStatus, m.evidence.has('art-report.auto1.ev')], ['ACCEPTED', true]);
+  assertEquals(m.audit.filter((e) => e.eventType === 'EVIDENCE_PROMOTED').length, 1);
+});
+
+Deno.test('EC-25 (Codex I3G2-01) the store refuses acceptance without evidence and rejection after promotion', async () => {
+  const t = setup();
+  const inv = await investigation(t);
+  await t.must(UA, ingest(inv, { candidates: [{ ref: 'k1', locator: { kind: 'TEXT_LINES', lineStart: 1, lineEnd: 1 } }] }));
+  const store = new InMemoryImpactLabStore(t.db, UA);
+  const direct = await store.reviewCandidate(inv, 'k1', { status: 'ACCEPTED', relationship: 'SUPPORTS', claimRef: 'c-wells', aboutOrgRef: 'org-wellspring', evidenceRef: 'k1.ev', reviewedAt: NOW }, UA);
+  assertEquals(direct.ok ? 'OK' : direct.error.code, 'INVALID_REQUEST');
+  await t.must(UA, { action: 'review_candidate', investigation_id: inv, candidate_ref: 'k1', decision: 'ACCEPTED', relationship: 'CONTEXTUALIZES', claim_ref: 'c-wells', about_org_ref: 'org-wellspring', personal_data: 'NONE' });
+  const reject = await store.reviewCandidate(inv, 'k1', { status: 'REJECTED', relationship: null, claimRef: null, aboutOrgRef: null, evidenceRef: null, reviewedAt: NOW }, UA);
+  assertEquals(reject.ok ? 'OK' : reject.error.code, 'ALREADY_EXISTS');
+  assertEquals(t.db.investigations.get(inv)!.candidates.get('k1')!.reviewStatus, 'ACCEPTED');
+});
+
+Deno.test('EC-26 (Codex I3G2-02) a source already cited by evidence is never adopted as an artifact source', async () => {
+  const t = setup();
+  const inv = await investigation(t);
+  const hash = await sha256Bytes(utf8(REPORT));
+  // a user-declared upload source with the same ref and hash, cited freely (I1 capability)
+  await t.must(UA, { action: 'add_source', investigation_id: inv, source: { ref: 'art-report', type: 'USER_DOCUMENT', publisher: 'User upload', retrievedAt: '2026-09-01T00:00:00Z', retention: 'HASH_ONLY', contentHash: hash, userUpload: true } });
+  await t.must(UA, { action: 'add_evidence', investigation_id: inv, evidence: { ref: 'e-free', claimRef: 'c-wells', sourceRef: 'art-report', aboutOrgRef: 'org-wellspring', relationship: 'CONTEXTUALIZES', basis: 'HUMAN_ASSESSED', personalData: 'NONE' } });
+  const r = await t.code(UA, ingest(inv));
+  assert(r !== 'OK', 'the artifact must not adopt a cited source');
+  assertEquals(t.db.investigations.get(inv)!.artifacts.size, 0);
+});
+
+Deno.test('EC-27 (Codex I3G2-04) the in-memory twin enforces locator structure and excerpt hash like SQL', async () => {
+  const t = setup();
+  const inv = await investigation(t);
+  await t.must(UA, ingest(inv));
+  const store = new InMemoryImpactLabStore(t.db, UA);
+  const a = t.db.investigations.get(inv)!.artifacts.get('art-report')!;
+  const base = {
+    artifactRef: 'art-report', artifactHash: a.fileHash, excerpt: 'x', claimRef: null, proposedRelationship: null, method: 'ANALYST_LOCATOR' as const,
+    reviewReasons: [], reviewStatus: 'PENDING' as const, reviewRelationship: null, reviewClaimRef: null, reviewAboutOrgRef: null, evidenceRef: null, reviewedAt: null,
+  };
+  const outside = await store.insertCandidates(inv, [{ ...base, ref: 'kx', locator: { kind: 'TEXT_LINES', lineStart: 99, lineEnd: 99 }, excerptHash: await sha256Bytes(utf8('x')) }], UA);
+  assertEquals(outside.ok ? 'OK' : outside.error.code, 'LOCATOR_INVALID');
+  const forged = await store.insertCandidates(inv, [{ ...base, ref: 'ky', locator: { kind: 'TEXT_LINES', lineStart: 1, lineEnd: 1 }, excerptHash: '0'.repeat(64) }], UA);
+  assertEquals(forged.ok ? 'OK' : forged.error.code, 'INVALID_REQUEST');
 });
 
 // ── limits / language ──────────────────────────────────────────────────────

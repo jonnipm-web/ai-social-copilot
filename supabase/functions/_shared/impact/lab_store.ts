@@ -15,7 +15,7 @@
  */
 import { fail, ok, type ImpactResult } from './errors.ts';
 import { registryConflicts, type RegistryConflictKind } from './organization_identity.ts';
-import { type ArtifactLocator, type ArtifactOrigin, type ArtifactType, type CloudProvider, type ExtractionStatus, type ExtractionSummary, locatorKey } from './artifact_model.ts';
+import { type ArtifactLocator, type ArtifactOrigin, type ArtifactType, type CloudProvider, type ExtractionStatus, type ExtractionSummary, locatorFitsSummary, locatorKey } from './artifact_model.ts';
 import type { CandidateMethod, CandidateRelationship, CandidateReviewReason } from './evidence_candidates.ts';
 import type { CanonicalRegistryRecord } from './provider.ts';
 import { sha256Hex } from './provenance.ts';
@@ -402,6 +402,7 @@ export class InMemoryImpactLabStore implements ImpactLabStore {
     // promotion of one of its own reviewable candidates (same locator/excerpt).
     const art = [...w.value.artifacts.values()].find((a) => a.sourceRef === e.sourceId);
     const bound = e.locator?.artifact;
+    let promoted: StoredCandidate | undefined;
     if (art || bound) {
       const cand = [...w.value.candidates.values()].find((c) => `${c.ref}.ev` === e.id);
       const cArt = cand ? w.value.artifacts.get(cand.artifactRef) : undefined;
@@ -411,9 +412,19 @@ export class InMemoryImpactLabStore implements ImpactLabStore {
         || (cand.claimRef !== null && cand.claimRef !== e.claimId)) {
         return fail<true>('INVALID_REQUEST', 'artifact evidence must be the promotion of one of its candidates');
       }
+      promoted = cand;
     }
     w.value.evidence.set(e.id, Object.freeze({ ...e }));
     await this.db.appendAudit(w.value, 'EVIDENCE_ADDED', actorId, [e.id, e.claimId, e.sourceId], [e.relationship, e.relationshipBasis]);
+    if (promoted) {
+      // Twin of impact_promote_candidate: the evidence insert IS the acceptance (atomic).
+      w.value.candidates.set(promoted.ref, Object.freeze({
+        ...promoted, reviewStatus: 'ACCEPTED', reviewRelationship: e.relationship, reviewClaimRef: e.claimId,
+        reviewAboutOrgRef: e.aboutOrganizationId, evidenceRef: e.id, reviewedAt: e.addedAt,
+      }));
+      await this.db.appendAudit(w.value, 'EVIDENCE_CANDIDATE_REVIEWED', actorId, [promoted.ref], ['ACCEPTED']);
+      await this.db.appendAudit(w.value, 'EVIDENCE_PROMOTED', actorId, [promoted.ref, e.id, e.claimId], [e.relationship]);
+    }
     return ok(true as const);
   }
   async insertVerification(investigationId: string, r: VerificationResult, idempotencyKey: string | null, actorId: string) {
@@ -478,6 +489,8 @@ export class InMemoryImpactLabStore implements ImpactLabStore {
     const m = w.value;
     if (m.artifacts.has(a.ref)) return fail<true>('ALREADY_EXISTS', 'artifact ref exists');
     if ([...m.artifacts.values()].some((x) => x.fileHash === a.fileHash)) return fail<true>('ALREADY_EXISTS', 'artifact already recorded');
+    // Codex I3G2-02: a source already cited by evidence never becomes an artifact source.
+    if ([...m.evidence.values()].some((e) => e.sourceId === a.sourceRef)) return fail<true>('INVALID_REQUEST', 'source already carries evidence');
     const src = m.sources.get(a.sourceRef);
     if (!src || src.source.acquisition.method !== 'USER_UPLOAD' || src.source.type !== 'USER_DOCUMENT' || src.source.retention !== 'HASH_ONLY' || !src.source.userSubmitted || src.snapshot || src.source.contentHash !== a.fileHash || a.sourceRef !== a.ref) {
       return fail<true>('INVALID_REQUEST', 'artifact source mismatch');
@@ -504,6 +517,9 @@ export class InMemoryImpactLabStore implements ImpactLabStore {
       if (m.candidates.has(c.ref) || cs.filter((x) => x.ref === c.ref).length > 1) return fail<true>('ALREADY_EXISTS', 'candidate ref exists');
       if (c.claimRef && !m.claims.has(c.claimRef)) return fail<true>('INVALID_REQUEST', 'unknown claim');
       if (c.reviewStatus !== 'PENDING' || c.evidenceRef) return fail<true>('INVALID_REQUEST', 'candidates start PENDING');
+      // Twin of impact_candidates_guard (Codex I3G2-04): structure-bound locator, recomputed excerpt hash.
+      if (!locatorFitsSummary(c.locator, a.extraction)) return fail<true>('LOCATOR_INVALID', 'locator outside the artifact structure');
+      if (!c.excerpt || c.excerpt.length > 1000 || c.excerptHash !== await sha256Hex(c.excerpt)) return fail<true>('INVALID_REQUEST', 'excerpt hash mismatch');
     }
     for (const c of cs) {
       m.candidates.set(c.ref, Object.freeze({ ...c }));
@@ -518,15 +534,10 @@ export class InMemoryImpactLabStore implements ImpactLabStore {
     const c = m.candidates.get(ref);
     if (!c) return fail<true>('INVALID_REQUEST', 'unknown candidate');
     if (c.reviewStatus !== 'PENDING' && c.reviewStatus !== 'NEEDS_CONTEXT') return fail<true>('ALREADY_EXISTS', 'candidate already reviewed');
-    if (r.status === 'ACCEPTED') {
-      const a = m.artifacts.get(c.artifactRef)!;
-      const e = r.evidenceRef ? m.evidence.get(r.evidenceRef) : undefined;
-      if (!e || e.sourceId !== a.sourceRef || e.claimId !== r.claimRef || e.excerpt !== c.excerpt || e.relationship !== r.relationship
-          || e.relationshipBasis !== 'HUMAN_ASSESSED' || e.aboutOrganizationId !== r.aboutOrgRef || e.locator?.artifact?.hash !== c.artifactHash
-          || (c.claimRef !== null && c.claimRef !== r.claimRef)) {
-        return fail<true>('INVALID_REQUEST', 'promoted evidence does not match the candidate');
-      }
-    } else if (r.evidenceRef || r.relationship || r.claimRef || r.aboutOrgRef) {
+    // Twin of impact_candidates_guard: ACCEPTED only through the evidence insert (atomic promotion).
+    if (r.status === 'ACCEPTED') return fail<true>('INVALID_REQUEST', 'acceptance happens only by promoting the candidate to evidence');
+    if (m.evidence.has(`${ref}.ev`)) return fail<true>('ALREADY_EXISTS', 'the candidate was already promoted');
+    if (r.evidenceRef || r.relationship || r.claimRef || r.aboutOrgRef) {
       return fail<true>('INVALID_REQUEST', 'only an accepted candidate is promoted');
     }
     m.candidates.set(ref, Object.freeze({
@@ -534,7 +545,6 @@ export class InMemoryImpactLabStore implements ImpactLabStore {
       evidenceRef: r.evidenceRef, reviewedAt: r.reviewedAt,
     }));
     await this.db.appendAudit(m, 'EVIDENCE_CANDIDATE_REVIEWED', actorId, [ref], [r.status]);
-    if (r.status === 'ACCEPTED') await this.db.appendAudit(m, 'EVIDENCE_PROMOTED', actorId, [ref, r.evidenceRef!, r.claimRef!], [r.relationship!]);
     return ok(true as const);
   }
 }
