@@ -756,3 +756,27 @@ Deno.test('I2G3-02 no registry outcome ever becomes a concern: removed/dissolved
   const g2 = await offline.must(UA, { action: 'get_investigation', investigation_id: inv2 });
   assertEquals((g2.data.indicators as Json[]).length, 0);
 });
+
+Deno.test('I2F-01 a failed evidence write after the claim is repaired by an identical retry; a different retry is refused', async () => {
+  const t = setup();
+  const inv = await newInv(t);
+  await t.must(UA, { action: 'ingest_provider_record', investigation_id: inv, provider_id: 'fixture-xa-charity-registry', record_id: 'xa-1234567', ref: 'src-own' });
+  await t.must(UA, { action: 'ingest_provider_record', investigation_id: inv, provider_id: 'fixture-xa-company-registry', record_id: 'xa-c-778899', ref: 'src-co' });
+  t.db.failNextEvidence = true;
+  assertEquals(await t.code(UA, { action: 'import_registry_claim', investigation_id: inv, source_ref: 'src-own', ref: 'c-stmt' }), 'INTERNAL_ERROR');
+  const m = t.db.investigations.get(inv)!;
+  assertEquals([m.claims.has('c-stmt'), m.evidence.has('c-stmt.rec')], [true, false]); // the partial state the finding describes
+  // a DIFFERENT request reusing the ref is refused, never used to "repair"
+  assertEquals(await t.code(UA, { action: 'import_registry_claim', investigation_id: inv, source_ref: 'src-co', ref: 'c-stmt' }), 'ALREADY_EXISTS');
+  const r = await t.must(UA, { action: 'import_registry_claim', investigation_id: inv, source_ref: 'src-own', ref: 'c-stmt' }, '2026-09-23T13:00:00Z');
+  assertEquals([r.data.repaired, m.evidence.get('c-stmt.rec')?.relationshipBasis], [true, 'REGISTRY_RECORD']);
+  const again = await t.must(UA, { action: 'import_registry_claim', investigation_id: inv, source_ref: 'src-own', ref: 'c-stmt' });
+  assertEquals(again.data.replayed, true);
+  const v = (await t.must(UA, { action: 'run_verification', investigation_id: inv, claim_ref: 'c-stmt' })).data.verification as Json;
+  assertEquals([v.status, v.displayClass], ['SUPPORTED', 'FACT']);
+  const g = await t.must(UA, { action: 'get_investigation', investigation_id: inv });
+  assertEquals((g.data.audit as Json).chainOk, true);
+  // a client-added evidence that squats the generated evidence ref is not replayed as registry evidence
+  await t.must(UA, { action: 'add_claim', investigation_id: inv, claim: { ref: 'c-x', kind: 'LEGAL_REGISTRATION', text: 'x', sourceRef: 'src-own', origin: 'STRUCTURED_IMPORT' } });
+  assertEquals(await t.code(UA, { action: 'import_registry_claim', investigation_id: inv, source_ref: 'src-own', ref: 'c-x' }), 'ALREADY_EXISTS');
+});

@@ -585,7 +585,6 @@ export async function handleLabRequest(
     }
 
     case 'import_registry_claim': {
-      if (data.value.claims.length >= LAB_LIMITS.maxClaimsPerInvestigation) return fail('LIMIT_EXCEEDED', 'too many claims');
       const s = data.value.sources.find((x) => x.source.id === req.sourceRef);
       if (!s || !s.snapshot || s.source.acquisition.method !== 'PROVIDER' || !providers.get(s.source.acquisition.providerId)) {
         return fail('INVALID_REQUEST', 'source is not a trusted registry snapshot');
@@ -601,23 +600,37 @@ export async function handleLabRequest(
         record: s.snapshot, source: s.source, investigationId: inv.value.id, subjectRef: inv.value.subjectOrgRef, claimRef: req.ref, now,
       });
       const prior = data.value.claims.find((c) => c.id === req.ref);
-      if (prior) {
-        // Idempotent retry: same snapshot, same statement → replay; anything else is a different request.
-        const priorEv = data.value.evidence.find((e) => e.id === st.evidence.id);
-        if (prior.sourceId === req.sourceRef && prior.text === st.claim.text && prior.origin === 'STRUCTURED_IMPORT' && priorEv) {
-          return ok({ action: req.action, data: { claimRef: prior.id, evidenceRef: priorEv.id, text: prior.text, replayed: true } });
-        }
-        return fail('ALREADY_EXISTS', 'claim ref already used');
-      }
       const vc = validateClaim(st.claim, inv.value.id);
       if (!vc.ok) return vc;
       const srcMap = new Map(sourcesById);
       const ve = await validateEvidence(st.evidence, st.claim, srcMap);
       if (!ve.ok) return ve;
+      if (prior) {
+        // Codex I2F-01: claim and evidence are two writes. An IDENTICAL retry
+        // (same snapshot, same generated statement and period) replays when
+        // both exist and REPAIRS the missing evidence otherwise; anything else
+        // reusing the ref is a different request. Success is never reported
+        // unless both rows exist.
+        const same = prior.sourceId === req.sourceRef && prior.text === st.claim.text && prior.origin === 'STRUCTURED_IMPORT'
+          && prior.kind === 'LEGAL_REGISTRATION' && prior.period?.from === st.claim.period?.from && prior.period?.to === st.claim.period?.to;
+        if (!same) return fail('ALREADY_EXISTS', 'claim ref already used');
+        const priorEv = data.value.evidence.find((e) => e.id === st.evidence.id);
+        if (priorEv) {
+          if (priorEv.relationshipBasis !== 'REGISTRY_RECORD' || priorEv.sourceId !== req.sourceRef || priorEv.claimId !== prior.id) {
+            return fail('ALREADY_EXISTS', 'evidence ref already used');
+          }
+          return ok({ action: req.action, data: { claimRef: prior.id, evidenceRef: priorEv.id, text: prior.text, replayed: true } });
+        }
+        const repaired = await store.insertEvidence(inv.value.id, { ...st.evidence, claimId: prior.id }, actor.userId);
+        if (!repaired.ok) return repaired;
+        return ok({ action: req.action, data: { claimRef: prior.id, evidenceRef: st.evidence.id, text: prior.text, repaired: true } });
+      }
+      // I1F2-01 pattern: the limit applies to NEW claims only, so a retry can always repair.
+      if (data.value.claims.length >= LAB_LIMITS.maxClaimsPerInvestigation) return fail('LIMIT_EXCEEDED', 'too many claims');
       const c1 = await store.insertClaim(inv.value.id, st.claim, actor.userId);
       if (!c1.ok) return c1;
       const e1 = await store.insertEvidence(inv.value.id, st.evidence, actor.userId);
-      if (!e1.ok) return e1;
+      if (!e1.ok) return e1; // the claim is persisted: an identical retry repairs the evidence
       return ok({ action: req.action, data: { claimRef: st.claim.id, evidenceRef: st.evidence.id, text: st.claim.text, period: st.claim.period } });
     }
 

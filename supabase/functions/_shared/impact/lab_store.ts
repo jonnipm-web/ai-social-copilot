@@ -179,6 +179,8 @@ export class InMemoryImpactDatabase {
   failNextWrite = false;
   /** Test hook: simulate a failure of the next verification insert only. */
   failNextVerification = false;
+  /** Test hook: simulate a failure of the next evidence insert only (I2F-01). */
+  failNextEvidence = false;
   async appendAudit(m: MemInvestigation, type: string, actor: string, refs: string[], codes: string[]) {
     const seq = m.rec.auditSeq + 1;
     const base = { seq, atText: this.nextAt(), eventType: type, actorRef: actor, refs, codes, prevHash: m.rec.auditHead };
@@ -314,6 +316,10 @@ export class InMemoryImpactLabStore implements ImpactLabStore {
     return ok(true as const);
   }
   async insertEvidence(investigationId: string, e: EvidenceItem, actorId: string) {
+    if (this.db.failNextEvidence) {
+      this.db.failNextEvidence = false;
+      return fail<true>('INTERNAL_ERROR', 'simulated failure after the claim write');
+    }
     const w = this.writable(investigationId);
     if (!w.ok) return w;
     if (!w.value.claims.has(e.claimId) || !w.value.sources.has(e.sourceId)) return fail<true>('INVALID_REQUEST', 'unknown claim or source');
