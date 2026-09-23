@@ -1,7 +1,7 @@
 # Impact — Verification Model
 
 Code: `verification.ts`, `temporal.ts`, `risk_indicators.ts`.
-Policy version: `impact-verification/2+impact-source-authority/2+impact-temporal/2` (bumped after Codex Gate 1).
+Policy version: `impact-verification/3+impact-source-authority/3+impact-temporal/2` (bumped after Codex Gate 1 and Codex Final).
 
 ## 1. Contract
 
@@ -23,7 +23,8 @@ and the literals `isFindingOfWrongdoing: false`,
 R01 retracted · R02 changed · R03 entity mismatch · R04 LLM link not counted ·
 R05 out of scope · R06 units · R07 non-final legal stage is not a
 contradiction · R08 news allegation is context · R09 output ≠ outcome ·
-R10 period mismatch · R11 stale state evidence · R12 duplicate content.
+R10 period mismatch · R11 stale state evidence · R12 duplicate content ·
+R13 one voice per publisher (latest statement of each publisher identity).
 Survivors with AUTHORITATIVE/INDEPENDENT authority and a non-context
 relationship are **counted**; the rest are **contextual**.
 
@@ -50,8 +51,8 @@ State claims (registration, regulatory status, governance: 365 days;
 affiliation: 180 days) — older evidence is STALE and cannot establish the
 current state. The evidence's as-of date is the EARLIEST of observedPeriod.to,
 publishedAt and retrievedAt, so a future-dated period cannot make old evidence
-current; reversed periods, periods starting after retrieval and impossible
-calendar dates are rejected (Codex G1-02). Period claims — evidence whose observed period does not
+current; reversed periods, periods starting or ending after retrieval and
+impossible calendar dates are rejected (Codex G1-02, CF-02). Period claims — evidence whose observed period does not
 overlap is excluded. Unknown bounds never create a mismatch. The clock is
 injected (`evaluatedAt`).
 

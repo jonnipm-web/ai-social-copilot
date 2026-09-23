@@ -7,6 +7,7 @@
 | Cross-user access | `Investigation.authorize` (owner ref) | IW-1 |
 | Cross-project access | actor must own `projectId` (also at create) | IW-1 |
 | Cross-investigation records | investigationId check in engine + workspace | PV-1, IW-2 |
+| Cross-subject attribution inside an investigation | claims must be about the investigation subject | CF-01 |
 | Forged organization / fake registration number | entity resolution; only CONFIRMED merges; DISTINCT on number mismatch | ER-1..6 |
 | False entity merge | name never identity; identity cap S10 | ER-2, VE-9, GOLDEN-E |
 | Malformed evidence / oversize | validation + limits (text 4k, excerpt 2k, 200 items/claim) | PV-5, PV-6 |
@@ -15,8 +16,11 @@
 | Stale registry record | state-claim staleness | GOLDEN-D |
 | Source poisoning | per-publisher counting, content-hash dedupe, authority table | VE-6, SA-1..4 |
 | Forged provenance (self report relabelled as audit/registry) | provenance gate: independence only via trusted provider for that type+jurisdiction | G1-01a/b/c |
-| Future/reversed dates making stale data current | earliest as-of, period validation, calendar check | G1-02a/b |
-| Unknown / prototype-key enum values | own-property allowlists for every enum; status updates validated | G1-05a/b |
+| Future/reversed dates making stale data current | earliest as-of, period (start and end) ≤ retrieval, calendar check | G1-02a/b, CF-02 |
+| Jurisdiction omission | jurisdiction-bound types need an explicit jurisdiction | CF-03 |
+| Syndication / publisher variants | publisher identity via syndicatedFrom, one voice per publisher | CF-04 |
+| Caller-supplied provider registry | must be server-built at integration (I1) | CF-06 (deferred) |
+| Unknown / prototype-key enum values | own-property allowlists for every enum; status and dispute updates validated | G1-05a/b, CF-05 |
 | Review binding bypass | reviewBindingHash covers flags, identity, dispute, providers | G1-04 |
 | Prompt injection | engine never reads text; scan flags; wrapper; grounding | GOLDEN-H/H2, RS-4..6 |
 | LLM hallucination / authority | LLM_SUGGESTED excluded; `checkNarrative` (case-insensitive PT/EN status phrases, confusable folding, invisible-char stripping, mark stripping, mixed-script rejection) | VE-2, RS-2, RS-3, G1-03a/b |

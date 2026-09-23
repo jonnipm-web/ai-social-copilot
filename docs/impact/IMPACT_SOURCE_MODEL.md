@@ -20,7 +20,7 @@ over real-world impact. An organization's website proves that the
 organization **made** a claim, not that it is true. A social-media post
 proves "this account published this".
 
-## 3. Authority table (`impact-source-authority/2`)
+## 3. Authority table (`impact-source-authority/3`)
 
 Decision order: user-submitted / USER_UPLOAD → USER_SUBMITTED; publisher is
 the claim's subject → SELF_REPORTED (whatever the type); social media →
@@ -29,8 +29,10 @@ ATTRIBUTION_ONLY; news → only REPORTING can corroborate; else table; then the
 the source was acquired by a provider in the server-side trusted registry
 (`VerificationContext.trustedProviders`, required) whose declared source type
 equals the source's type and whose jurisdictions include the source's
-jurisdiction. Analyst-typed sources, unknown providers and relabelled types
-are capped at CONTEXTUAL — a self-published report labelled "audit" cannot
+jurisdiction. Jurisdiction-bound types (OFFICIAL_REGISTRY, REGULATOR,
+COURT_RECORD, GOVERNMENT_RECORD) must carry an explicit jurisdiction to be
+independent (Codex CF-03). Analyst-typed sources, unknown providers and
+relabelled types are capped at CONTEXTUAL — a self-published report labelled "audit" cannot
 become independent evidence.
 
 | Source | Registration / regulatory | Outputs / outcomes / beneficiaries | Financial | Other |
@@ -73,6 +75,10 @@ previous results.
 
 ## 6. Providers
 
+The trusted-provider registry passed to the engine must be built server-side
+from provider descriptors, never from request input — the pure core cannot
+authenticate it (Codex CF-06, DEFERRED to I1 integration).
+
 `ImpactSourceProvider { descriptor; searchOrganization?(); fetchRegistryRecord?() }`
 with `ProviderDescriptor` = id, sourceType, capabilities, jurisdictions,
 authorityScope, freshnessDays, retrievalMethod. Undeclared capability →
@@ -86,7 +92,18 @@ US IRS exempt-org data, Brazilian registries, regulators/courts, reputable
 news/search APIs — each a separate gate, via `safe_fetch.ts`, respecting
 robots/terms/authentication, no aggressive scraping.
 
-## 7. News and social media
+## 7. Publisher identity and syndication
+
+Publisher identity = normalized `syndicatedFrom ?? publisher` (the provider
+sets `syndicatedFrom` for wire/republished copies). Among counted items from
+the same publisher identity only the most recent statement counts
+(`SUPERSEDED_BY_SAME_PUBLISHER`): a republished copy is never a second
+independent voice or an artificial conflict, and a publisher's correction
+supersedes its earlier report (Codex CF-04). Residual (DEFERRED to I2):
+syndicated copies whose provider does not supply `syndicatedFrom` and whose
+content hash differs cannot be recognised deterministically.
+
+## 8. News and social media
 
 NEWS genres: REPORTING (can corroborate outputs/history), OPINION,
 ALLEGATION, CORRECTION (context only). No aggregator. Social media: not
