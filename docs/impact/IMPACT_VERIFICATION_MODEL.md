@@ -1,7 +1,7 @@
 # Impact — Verification Model
 
 Code: `verification.ts`, `temporal.ts`, `risk_indicators.ts`.
-Policy version: `impact-verification/4+impact-source-authority/3+impact-temporal/2` (bumped after Codex Gate 1 and Codex Final).
+Policy version: `impact-verification/5+impact-source-authority/3+impact-temporal/2` (bumped after Codex Gate 1 and Codex Final).
 
 ## 1. Contract
 
@@ -23,8 +23,7 @@ and the literals `isFindingOfWrongdoing: false`,
 R01 retracted · R02 changed · R03 entity mismatch · R04 LLM link not counted ·
 R05 out of scope · R06 units · R07 non-final legal stage is not a
 contradiction · R08 news allegation is context · R09 output ≠ outcome ·
-R10 period mismatch · R11 stale state evidence · R12 duplicate content ·
-R13 superseded by an explicit correction · R14 syndicated copy of a counted original.
+R10 period mismatch · R11 stale state evidence · R12 duplicate content.
 Survivors with AUTHORITATIVE/INDEPENDENT authority and a non-context
 relationship are **counted**; the rest are **contextual**.
 
@@ -85,7 +84,9 @@ REGULATORY_OR_COURT_RECORD (final adverse stage only, stage carried),
 UNVERIFIED_AFFILIATION.
 INFORMATION_GAP: UNVERIFIED_CLAIMS, ONLY_SELF_REPORTED_EVIDENCE,
 OUTDATED_EVIDENCE, UNRESOLVED_ALLEGATION, INCONSISTENT_SELF_REPORTING.
-CONFLICTING_CLAIMS is raised only for conflicts between independent sources.
+CONFLICTING_CLAIMS is raised only for conflicts between different publisher
+identities; same-publisher disagreement → INCONSISTENT_PUBLISHER_REPORTING
+(information gap).
 
 Every indicator carries its basis ids and `isProofOfWrongdoing: false`.
 Not indicators on their own: absence of evidence, high overhead, an

@@ -182,13 +182,9 @@ export interface Source {
   readonly contentHash?: string;
   readonly acquisition: Acquisition;
   /** Original publisher when this is a syndicated/wire copy (set by the
-   * provider). Publisher identity = syndicatedFrom ?? publisher, so a
-   * republished story is never a second independent voice (Codex CF-04). */
+   * provider). Affects COUNTING only: a republished story is never a second
+   * independent voice. It never removes evidence (Codex CF-04, FV2-02). */
   readonly syndicatedFrom?: string;
-  /** Explicit correction lineage: this source replaces that source (a
-   * publisher's correction/update). Only explicit lineage supersedes —
-   * never "same publisher, later date" (Codex FV-01). */
-  readonly supersedesSourceId?: string;
   /** Uploaded by a user — never a verified fact by itself. */
   readonly userSubmitted?: boolean;
 }
@@ -346,17 +342,18 @@ export type ExclusionReason =
   | 'UNCONFIRMED_LLM_LINK'
   | 'SOURCE_RETRACTED'
   | 'SOURCE_CHANGED'
-  | 'DUPLICATE_CONTENT'
-  | 'SYNDICATED_COPY'
-  | 'SUPERSEDED_BY_CORRECTION';
+  | 'DUPLICATE_CONTENT';
 
 export interface ConflictRecord {
   readonly claimId: string;
   readonly kind: 'QUANTITY_DISAGREEMENT' | 'SUPPORT_VS_CONTRADICTION';
   /** INDEPENDENT_SOURCES: independent sources disagree (CONCERN-worthy).
    * SELF_REPORTED_ONLY: the organization's own materials disagree with its
-   * claim — often a correction; shown as an information gap, never a concern. */
-  readonly basis: 'INDEPENDENT_SOURCES' | 'SELF_REPORTED_ONLY';
+   * claim — often a correction; shown as an information gap, never a concern.
+   * SAME_PUBLISHER: the disagreeing positions come from ONE publisher
+   * identity (e.g. a report and its later correction, or a wire copy) —
+   * inconclusive + review, information gap, never a concern (Codex FV-01). */
+  readonly basis: 'INDEPENDENT_SOURCES' | 'SAME_PUBLISHER' | 'SELF_REPORTED_ONLY';
   /** Every position, side by side, with its source — no winner chosen. */
   readonly positions: readonly {
     readonly evidenceId: string;

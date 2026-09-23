@@ -41,7 +41,7 @@ import type {
   TrustedProviderRef,
 } from './types.ts';
 
-export const VERIFICATION_ENGINE_VERSION = 'impact-verification/4';
+export const VERIFICATION_ENGINE_VERSION = 'impact-verification/5';
 export const IMPACT_POLICY_VERSION =
   `${VERIFICATION_ENGINE_VERSION}+${SOURCE_AUTHORITY_POLICY_VERSION}+${TEMPORAL_POLICY_VERSION}`;
 
@@ -152,6 +152,27 @@ function normPublisher(p: string): string {
   return p.normalize('NFKC').trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
+/**
+ * Publisher identity for COUNTING (Codex CF-04, FV2-02/03). A syndicated copy
+ * counts as its original publisher; chains of copies are followed through the
+ * sources in this set (copy of a copy), with a cycle guard. Lineage never
+ * removes evidence: at worst a forged label lowers the corroboration count —
+ * it cannot create SUPPORTED/CONTRADICTED or hide a disagreement.
+ */
+function publisherKeyOf(src: Source, sources: ReadonlyMap<string, Source>): string {
+  const byPublisher = new Map<string, Source>();
+  for (const s of sources.values()) if (s.syndicatedFrom) byPublisher.set(normPublisher(s.publisher), s);
+  let key = normPublisher(src.syndicatedFrom ?? src.publisher);
+  const seen = new Set<string>([normPublisher(src.publisher)]);
+  while (!seen.has(key)) {
+    seen.add(key);
+    const next = byPublisher.get(key);
+    if (!next?.syndicatedFrom) break;
+    key = normPublisher(next.syndicatedFrom);
+  }
+  return key;
+}
+
 function canonical(v: unknown): string {
   if (v === undefined) return 'null';
   if (v === null || typeof v !== 'object') return JSON.stringify(v);
@@ -194,7 +215,6 @@ export async function computeEvidenceSetHash(
           retrievedAt: s.retrievedAt, publishedAt: s.publishedAt, newsGenre: s.newsGenre, status: s.status,
           contentHash: s.contentHash, userSubmitted: s.userSubmitted, jurisdiction: s.jurisdiction, uri: s.uri,
           retention: s.retention, acquisition: s.acquisition, syndicatedFrom: s.syndicatedFrom,
-          supersedesSourceId: s.supersedesSourceId,
         }
         : null,
     };
@@ -343,7 +363,7 @@ export async function verifyClaim(
       sourceId: src.id,
       sourceType: src.type,
       publisher: src.publisher,
-      publisherKey: normPublisher(src.syndicatedFrom ?? src.publisher),
+      publisherKey: publisherKeyOf(src, sources),
       authority,
       declaredRelationship: e.relationship,
       effectiveRelationship: rel,
@@ -357,46 +377,6 @@ export async function verifyClaim(
     } else {
       contextual.push(assessed);
       if (authority === 'USER_SUBMITTED') review.add('USER_SUBMITTED_MATERIAL');
-    }
-  }
-
-  // Lineage (Codex CF-04 / FV-01). Only EXPLICIT lineage collapses evidence:
-  //  - a source superseded by a correction present in this set
-  //    (another source's supersedesSourceId) no longer counts;
-  //  - a syndicated copy (syndicatedFrom) is the original publisher's voice:
-  //    when an item from that publisher is also counted, the copy adds
-  //    nothing and cannot create corroboration or a conflict.
-  // Distinct reports from the same publisher are NOT collapsed: they stay
-  // separate positions (a disagreement is recorded as a conflict), and
-  // count as ONE publisher for sufficiency (publisherKey).
-  {
-    const supersededIds = new Set([...sources.values()].map((x) => x.supersedesSourceId).filter((x): x is string => !!x));
-    const originalKeys = new Set(
-      counted.filter((a) => !sources.get(a.sourceId)!.syndicatedFrom && !supersededIds.has(a.sourceId)).map((a) => a.publisherKey),
-    );
-    for (let i = counted.length - 1; i >= 0; i--) {
-      const a = counted[i];
-      const src = sources.get(a.sourceId)!;
-      if (supersededIds.has(a.sourceId)) {
-        excluded.push({ evidenceId: a.evidenceId, reason: 'SUPERSEDED_BY_CORRECTION' });
-        counted.splice(i, 1);
-        rules.push('R13_SUPERSEDED_BY_CORRECTION');
-      } else if (src.syndicatedFrom && originalKeys.has(a.publisherKey)) {
-        excluded.push({ evidenceId: a.evidenceId, reason: 'SYNDICATED_COPY' });
-        counted.splice(i, 1);
-        rules.push('R14_SYNDICATED_COPY');
-      }
-    }
-    // Two syndicated copies of the same original (original absent): keep one.
-    const seenCopy = new Set<string>();
-    for (let i = 0; i < counted.length; i++) {
-      const a = counted[i];
-      if (!sources.get(a.sourceId)!.syndicatedFrom) continue;
-      if (seenCopy.has(a.publisherKey)) {
-        excluded.push({ evidenceId: a.evidenceId, reason: 'SYNDICATED_COPY' });
-        counted.splice(i--, 1);
-        rules.push('R14_SYNDICATED_COPY');
-      } else seenCopy.add(a.publisherKey);
     }
   }
 
@@ -423,7 +403,7 @@ export async function verifyClaim(
       claimId: claim.id,
       kind: withValues && !allKinds.has('CONTRADICTS') ? 'QUANTITY_DISAGREEMENT' : 'SUPPORT_VS_CONTRADICTION',
       positions: counted.map(position),
-      basis: 'INDEPENDENT_SOURCES',
+      basis: new Set(counted.map((a) => a.publisherKey)).size > 1 ? 'INDEPENDENT_SOURCES' : 'SAME_PUBLISHER',
       resolution: 'UNRESOLVED',
     });
   };

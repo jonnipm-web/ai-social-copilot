@@ -194,9 +194,6 @@ export function validateSource(s: Source, evaluatedAtMs: number): ImpactResult<S
   if (s.syndicatedFrom !== undefined && (typeof s.syndicatedFrom !== 'string' || !s.syndicatedFrom.trim() || s.syndicatedFrom.length > LIMITS.maxPublisherLength)) {
     return fail('INVALID_SOURCE', 'syndicatedFrom must be a non-empty publisher', { sourceId: s.id });
   }
-  if (s.supersedesSourceId !== undefined && (!isValidId(s.supersedesSourceId) || s.supersedesSourceId === s.id)) {
-    return fail('INVALID_SOURCE', 'supersedesSourceId must reference another source', { sourceId: s.id });
-  }
   if (s.jurisdiction !== undefined && !/^[A-Za-z]{2}$/.test(s.jurisdiction.country ?? '')) {
     return fail('INVALID_SOURCE', 'jurisdiction.country must be ISO 3166-1 alpha-2', { sourceId: s.id });
   }

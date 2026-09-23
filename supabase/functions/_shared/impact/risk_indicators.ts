@@ -48,7 +48,8 @@ export type IndicatorCode =
   | 'ONLY_SELF_REPORTED_EVIDENCE'
   | 'OUTDATED_EVIDENCE'
   | 'UNRESOLVED_ALLEGATION'
-  | 'INCONSISTENT_SELF_REPORTING';
+  | 'INCONSISTENT_SELF_REPORTING'
+  | 'INCONSISTENT_PUBLISHER_REPORTING';
 
 const POLARITY: Readonly<Record<IndicatorCode, IndicatorPolarity>> = {
   VERIFIED_REGISTRATION: 'POSITIVE',
@@ -68,6 +69,7 @@ const POLARITY: Readonly<Record<IndicatorCode, IndicatorPolarity>> = {
   OUTDATED_EVIDENCE: 'INFORMATION_GAP',
   UNRESOLVED_ALLEGATION: 'INFORMATION_GAP',
   INCONSISTENT_SELF_REPORTING: 'INFORMATION_GAP',
+  INCONSISTENT_PUBLISHER_REPORTING: 'INFORMATION_GAP',
 };
 
 export function polarityOf(code: IndicatorCode): IndicatorPolarity {
@@ -141,6 +143,10 @@ export function deriveIndicators(input: IndicatorInput): readonly Indicator[] {
     const selfConflicts = r.conflicts.filter((c) => c.basis === 'SELF_REPORTED_ONLY');
     if (indepConflicts.length > 0) {
       out.push(ind('CONFLICTING_CLAIMS', [r.claimId, ...indepConflicts.flatMap((c) => c.positions.map((p) => p.evidenceId))]));
+    }
+    const samePublisher = r.conflicts.filter((c) => c.basis === 'SAME_PUBLISHER');
+    if (samePublisher.length > 0) {
+      out.push(ind('INCONSISTENT_PUBLISHER_REPORTING', [r.claimId, ...samePublisher.flatMap((c) => c.positions.map((p) => p.evidenceId))]));
     }
     if (selfConflicts.length > 0) {
       out.push(ind('INCONSISTENT_SELF_REPORTING', [r.claimId, ...selfConflicts.flatMap((c) => c.positions.map((p) => p.evidenceId))]));

@@ -94,20 +94,24 @@ robots/terms/authentication, no aggressive scraping.
 
 ## 7. Publisher identity, syndication and corrections
 
-Publisher identity = normalized `syndicatedFrom ?? publisher`. Only EXPLICIT
-lineage collapses evidence (Codex CF-04, FV-01):
+**Lineage never removes evidence** (Codex CF-04, FV-01, FV2-01..04).
 
-- `syndicatedFrom` (set by the provider): a wire/republished copy is the
-  original publisher's voice — when the original is also counted the copy is
-  excluded (`SYNDICATED_COPY`), so it cannot fake corroboration or a conflict;
-- `supersedesSourceId`: an explicit correction/update replaces the earlier
-  source (`SUPERSEDED_BY_CORRECTION`).
+- Publisher identity (for COUNTING only) = normalized `syndicatedFrom ??
+  publisher`, followed transitively through the sources in the set (copy of a
+  copy) with a cycle guard. A syndicated copy therefore never adds an
+  independent voice (no fake MULTI_SOURCE). A forged `syndicatedFrom` can at
+  most lower the corroboration count; it cannot create SUPPORTED/CONTRADICTED
+  or hide a disagreement.
+- Every counted item keeps its own position. Disagreement inside one
+  publisher identity is a conflict with `basis: SAME_PUBLISHER` →
+  INCONCLUSIVE + review, indicator INCONSISTENT_PUBLISHER_REPORTING
+  (information gap, never a concern).
+- Corrections use the audited path: `Investigation.updateSourceStatus`
+  (UPDATED / RETRACTED) on the original source. There is no free-form
+  "supersedes" pointer.
 
-Distinct reports from the same publisher are never collapsed by date: they
-remain separate positions (a disagreement is recorded as a conflict) and count
-as ONE publisher for sufficiency. Residual (DEFERRED to I2): copies whose
-provider supplies no `syndicatedFrom` and whose content hash differs cannot
-be recognised deterministically.
+Residual (DEFERRED to I2): copies whose provider supplies no
+`syndicatedFrom` and whose content hash differs count as separate publishers.
 
 ## 8. News and social media
 
