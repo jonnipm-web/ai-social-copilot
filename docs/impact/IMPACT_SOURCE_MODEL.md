@@ -114,6 +114,13 @@ robots/terms/authentication, no aggressive scraping.
   (UPDATED / RETRACTED) on the original source. There is no free-form
   "supersedes" pointer.
 
+Scope (Codex FV5-01, accepted as intended): lineage is investigation-wide —
+`Investigation.verify()` supplies every source of the investigation, so a
+syndication link recorded for another claim can merge two voices here. This
+is deliberately conservative: it can only understate corroboration (never
+create support, contradiction or a concern), and the links are part of
+`evidenceSetHash`.
+
 Residual (DEFERRED to I2): copies whose provider supplies no
 `syndicatedFrom` and whose content hash differs count as separate publishers.
 
