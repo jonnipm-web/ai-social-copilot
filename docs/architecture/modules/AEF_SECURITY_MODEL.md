@@ -45,7 +45,7 @@ PostgreSQL). Unit: `governance_unit_test.ts` (GU), `canonical_test.ts` (CJ),
 | 20 | IVE intent as authority | strict mapping, subject from credential, no approval | IM-*, PG-17 |
 | 20b | Authority aliases in the payload (`owner_id`, `risk`, `tool_allowed`…) | refused at any depth, normalized names | PG-06, IM-09 |
 | 21 | Payload ambiguity | canonical JSON, no coercion, no normalization, bounded | CJ-01..05 |
-| 22 | Oversized input / resource exhaustion | payload ≤ 16 KiB, depth ≤ 8, ≤ 1000 nodes; TTL ≤ 24 h; gate ≤ 1 h; lease ≤ 5 min | CJ-04, T06d, PG-06 |
+| 22 | Oversized input / resource exhaustion | payload ≤ 16 KiB, depth ≤ 8, ≤ 1000 nodes; TTL ≤ 24 h; gate ≤ 1 h; lease ≤ 5 min; ≤ 50 open operations per subject (soft) | CJ-04, T06d, PG-06, T18 |
 | 23 | Secrets / PII in storage or logs | only ids, hashes, codes; no logging added | schema review |
 | 24 | Tool reaches real systems | only mock tools registered; real IVE actions have no tool | PG-17, tool registry |
 | 25 | Privilege expansion through functions | SECURITY DEFINER only on the ten RPCs (pinned search_path, no dynamic SQL, EXECUTE only service_role); helpers/triggers not executable by any API role | T01, T05, T14s |
@@ -100,10 +100,12 @@ All reviews READ-ONLY, new thread each, no-write snapshot verified before/after.
 | | | G2-03 unbounded denial audit growth | P2 | DEFERRED — AEF hardening (rate limit / retention) |
 | G3 IVE/AEF boundary (on 027d286) | PASS WITH FINDINGS | G3-01 action map shallow-frozen, override unenforced | P2 | ACCEPTED — `defineIveActionTable` (IM-08) |
 | | | G3-02 authority aliases allowed in parameters | P2 | ACCEPTED — alias denylist in mapping and AEF (IM-09, PG-06, mutant M20) |
+| FINAL full diff 2197759..d77367f | PASS WITH FINDINGS (no P0/P1; A1–A10, A13–A15 HOLD) | CF-01 no admission / retention bounds | P2 | PARTIALLY ACCEPTED — open-operation cap 50/subject (T18, mutant M21); audit retention / rate limit DEFERRED to AEF hardening |
+| | | CF-02 rollback not migration-scoped | P2 | ACCEPTED — rollback drops only the 5 tables + 36 functions by exact name; runner proves an unrelated `aef_*` object survives |
 
-Mutation proof: 20/20 mutants killed (M01–M20: idempotency conflict,
+Mutation proof: 21/21 mutants killed (M01–M21: idempotency conflict,
 ownership, claim state, binding, policy version, recovery outcome, RLS,
 audit hash, late completion, foreign approver, client approval, undeclared
 failure, timeout, claim-less execution, payload echo, helper EXECUTE, raw
 tool input, chain check in receipt verification, search_path, authority
-aliases).
+aliases, open-operation cap).

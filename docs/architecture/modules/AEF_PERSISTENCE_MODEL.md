@@ -102,8 +102,9 @@ the audit trail. A privacy-erasure procedure for AEF records is **deferred**
 
 The migration is additive (new tables/functions only; no existing object
 or row is touched). Rollback = `supabase/rollbacks/20260925000000_aef_persistence.down.sql`
-(ordered: non-trigger functions → tables → trigger functions, one
-transaction, self-verifying). It is tested on a disposable database that
+(one transaction; drops exactly the 5 tables and 36 functions this
+migration creates, by name — Codex CF-02 — so unrelated `aef_*` objects
+survive, which the runner checks). It is tested on a disposable database that
 holds AEF data: down, verify nothing `aef_*` remains, re-apply the
 migration (`AEF_ROLLBACK: PASS`, CI-asserted). Destructive: requires
 explicit owner approval (Codex G1-05).

@@ -24,6 +24,7 @@ export const STORE_CODES = [
   "EXECUTION_TOKEN_INVALID",
   "CANCEL_NOT_ALLOWED_IN_FLIGHT",
   "OPERATION_TERMINAL",
+  "OPEN_OPERATION_LIMIT",
 ] as const;
 export type StoreCode = typeof STORE_CODES[number];
 

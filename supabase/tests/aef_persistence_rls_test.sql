@@ -502,6 +502,30 @@ BEGIN
 END $$;
 RESET ROLE;
 
+-- ── T18 admission: at most 50 open operations per subject (Codex Final CF-01)
+SET ROLE service_role;
+DO $$
+DECLARE r jsonb; i int; v_first text;
+BEGIN
+  FOR i IN 1..50 LOOP
+    r := pg_temp.reg('c1000000-0000-4000-8000-00000000000c', gen_random_uuid()::text, 'cap-' || i,
+                     '{"resource_type":null,"resource_id":null}');
+    PERFORM pg_temp.expect(r, NULL, 'T18 open op ' || i);
+    IF i = 1 THEN v_first := r #>> '{operation,operation_id}'; END IF;
+  END LOOP;
+  PERFORM pg_temp.expect(pg_temp.reg('c1000000-0000-4000-8000-00000000000c', gen_random_uuid()::text, 'cap-51',
+                         '{"resource_type":null,"resource_id":null}'), 'OPEN_OPERATION_LIMIT', 'T18a 51st open op');
+  r := pg_temp.reg('c1000000-0000-4000-8000-00000000000c', gen_random_uuid()::text, 'cap-1', '{"resource_type":null,"resource_id":null}');
+  IF r ->> 'outcome' IS DISTINCT FROM 'REPLAY' THEN RAISE EXCEPTION 'T18b replay refused at the limit: %', r; END IF;
+  PERFORM pg_temp.expect(public.aef_cancel_operation(jsonb_build_object('operation_id', v_first,
+    'subject_id', 'c1000000-0000-4000-8000-00000000000c')), NULL, 'T18c cancel one');
+  PERFORM pg_temp.expect(pg_temp.reg('c1000000-0000-4000-8000-00000000000c', gen_random_uuid()::text, 'cap-51',
+                         '{"resource_type":null,"resource_id":null}'), NULL, 'T18d room again after a terminal state');
+  PERFORM pg_temp.expect(pg_temp.reg('a1000000-0000-4000-8000-00000000000a', gen_random_uuid()::text, 'other-subject',
+                         '{"resource_type":null,"resource_id":null}'), NULL, 'T18e other subjects unaffected');
+END $$;
+RESET ROLE;
+
 -- T17c/d receipt verification rejects a tampered anchor and a tampered chain (Codex Gate 1 G1-04).
 SET session_replication_role = replica;
 UPDATE public.aef_audit_events SET reason_code = 'TAMPERED'

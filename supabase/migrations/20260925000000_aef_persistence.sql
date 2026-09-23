@@ -167,6 +167,8 @@ CREATE TABLE IF NOT EXISTS public.aef_operations (
 CREATE INDEX IF NOT EXISTS aef_operations_subject_idx ON public.aef_operations (subject_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS aef_operations_open_idx ON public.aef_operations (state, lease_expires_at, expires_at)
   WHERE state IN ('AWAITING_APPROVAL', 'AUTHORIZED', 'EXECUTING');
+CREATE INDEX IF NOT EXISTS aef_operations_open_subject_idx ON public.aef_operations (subject_id)
+  WHERE state IN ('AWAITING_APPROVAL', 'AUTHORIZED', 'EXECUTING');
 
 CREATE TABLE IF NOT EXISTS public.aef_human_gates (
   id              uuid PRIMARY KEY,
@@ -650,6 +652,16 @@ BEGIN
   v_binding := public.aef__sha256(jsonb_build_array('aef-binding/1', v_subject, v_domain, v_action, v_tool, v_class,
                                                     v_rtype, v_rid, v_payload_hash, v_policy, v_risk, v_gated)::text);
   v_expires := now() + make_interval(secs => v_ttl);
+
+  -- Admission (Codex Final CF-01): at most 50 open operations per subject.
+  -- Soft limit (not serialized: a burst can overshoot by its concurrency);
+  -- replays of an existing key are never refused by it.
+  IF NOT EXISTS (SELECT 1 FROM public.aef_operations WHERE subject_id = v_subject AND idempotency_key_hash = v_key_hash)
+     AND (SELECT count(*) FROM public.aef_operations
+           WHERE subject_id = v_subject AND state IN ('AWAITING_APPROVAL', 'AUTHORIZED', 'EXECUTING')) >= 50 THEN
+    PERFORM public.aef__audit_append(v_subject, NULL, 'REQUEST_DENIED', NULL, NULL, 'OPEN_OPERATION_LIMIT');
+    RETURN public.aef__err('OPEN_OPERATION_LIMIT');
+  END IF;
 
   INSERT INTO public.aef_operations (id, subject_id, request_id, idempotency_key_hash, domain, action, tool_id,
     action_class, resource_type, resource_id, project_id, payload_hash, payload_bytes, binding_hash,

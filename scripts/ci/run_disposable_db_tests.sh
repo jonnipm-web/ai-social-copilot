@@ -73,7 +73,12 @@ fi
 
 # Rollback (Codex Gate 1 G1-05): the documented down script must remove every
 # AEF object from a database that holds data, and the migration must re-apply.
+run -d "$DB" -c "CREATE FUNCTION public.aef_unrelated_sentinel() RETURNS int LANGUAGE sql AS 'SELECT 1';"
 run -d "$DB" -f "$ROOT/supabase/rollbacks/20260925000000_aef_persistence.down.sql" >/dev/null
+left="$(run -d "$DB" -tA -c "SELECT (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relkind = 'r' AND left(c.relname, 4) = 'aef_') || '|' || (SELECT string_agg(p.proname, ',') FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'public' AND left(p.proname, 4) = 'aef_');")"
+# Codex Final CF-02: every AEF object gone, the unrelated sentinel untouched.
+[[ "$left" == "0|aef_unrelated_sentinel" ]] || { echo "rollback left: $left" >&2; exit 1; }
+run -d "$DB" -c "DROP FUNCTION public.aef_unrelated_sentinel();"
 apply "$DB" "$ROOT/supabase/migrations/20260925000000_aef_persistence.sql"
 echo "AEF_ROLLBACK: PASS"
 
