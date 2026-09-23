@@ -103,6 +103,12 @@ graph TD
    modules' providers. Today this is Dart-level coupling inside one app,
    acceptable, but it means IVE context cannot be assembled without the
    Flutter client. Blocking for Web-without-Flutter and Extension.
+   **Resolved in Module Lab (IVE-INTELLIGENCE-CORE-01):** the server
+   Intelligence Core (`_shared/ive/context_assembler.ts`) depends on Auth,
+   the Entitlement authority, Projects, Knowledge, Opportunity/Action data
+   and `business_memory` directly — no Flutter provider in the path — so any
+   surface can reach it through `ive-intelligence`. The Dart aggregation
+   remains for the legacy commercial path only.
 3. **Entitlement ↔ Billing:** Stripe writes `profiles.role`, which is also
    the admin/beta authorization column. (Module Lab: roles move to
    `subject_roles`, migration 20260923000000, not yet applied — after the

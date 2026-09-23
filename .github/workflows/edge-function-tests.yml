@@ -60,14 +60,14 @@ jobs:
 
       - name: Lint entitlement core
         run: |
-          deno lint supabase/functions/_shared/entitlement.ts supabase/functions/_shared/entitlement_test.ts             supabase/functions/_shared/entitlement_test_support.ts supabase/functions/_shared/entitlement_vectors_test.ts             supabase/functions/_shared/module_policy.ts supabase/functions/_shared/module_policy_test.ts             supabase/functions/_shared/module_gate_handlers_test.ts supabase/functions/module-access/
+          deno lint supabase/functions/_shared/entitlement.ts supabase/functions/_shared/entitlement_test.ts             supabase/functions/_shared/entitlement_test_support.ts supabase/functions/_shared/entitlement_vectors_test.ts             supabase/functions/_shared/module_policy.ts supabase/functions/_shared/module_policy_test.ts             supabase/functions/_shared/module_gate_handlers_test.ts supabase/functions/module-access/ supabase/functions/_shared/ive/ supabase/functions/ive-intelligence/ supabase/functions/ive-memory/
 
-      - name: Entitlement authority, shared decision vectors, Promotion Gate invariants, executed gate on all 17 module functions
+      - name: Entitlement authority, decision vectors, Promotion Gate invariants, executed gate on every module function, IVE Intelligence Core (isolation, injection, AEF routing, memory)
         env:
           DENO_TESTING: "1"
           GROQ_API_KEY: "test-key-ci"
         run: |
-          deno test --allow-env --allow-read --allow-net=deno.land,esm.sh             supabase/functions/_shared/entitlement_test.ts             supabase/functions/_shared/entitlement_vectors_test.ts             supabase/functions/_shared/module_policy_test.ts             supabase/functions/_shared/module_gate_handlers_test.ts             supabase/functions/module-access/index_test.ts
+          deno test --allow-env --allow-read --allow-net=deno.land,esm.sh             supabase/functions/_shared/entitlement_test.ts             supabase/functions/_shared/entitlement_vectors_test.ts             supabase/functions/_shared/module_policy_test.ts             supabase/functions/_shared/module_gate_handlers_test.ts             supabase/functions/module-access/index_test.ts supabase/functions/_shared/ive/
 
   disposable-db-rls-ci:
     name: Migrations + RLS on a disposable PostgreSQL 17 (MODULE-FOUNDATION-AND-ENTITLEMENT-02)

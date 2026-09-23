@@ -98,6 +98,16 @@ memory is split and client-bound; route awareness is per-screen
 (`IveInteractionRequest` call sites), not a registry-driven capability map;
 no tool layer (by design).
 
+**Update (IVE-INTELLIGENCE-CORE-01, Module Lab, not deployed):** a server-side
+IVE Intelligence Core now assembles context itself (verified project,
+entitlement-gated sources, owner-filtered knowledge and memory, provenance,
+budgets), routes consequential intents to AEF, and serves Android and Web
+through one contract; device-local IVE memory is bound to its owner and wiped
+on user change; durable memory is governed on `business_memory`. See
+`IVE_INTELLIGENCE_ARCHITECTURE.md`, `IVE_MEMORY_MODEL.md`,
+`IVE_CONTEXT_SECURITY.md`. The commercial build keeps the legacy path until
+promotion (`--dart-define=IVE_INTELLIGENCE_CORE`).
+
 ## 5. AEF architecture (verified state)
 
 `aef/README.md` + code confirm the historical record is still true on this base:
