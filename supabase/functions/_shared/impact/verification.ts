@@ -41,7 +41,7 @@ import type {
   TrustedProviderRef,
 } from './types.ts';
 
-export const VERIFICATION_ENGINE_VERSION = 'impact-verification/7';
+export const VERIFICATION_ENGINE_VERSION = 'impact-verification/8';
 export const IMPACT_POLICY_VERSION =
   `${VERIFICATION_ENGINE_VERSION}+${SOURCE_AUTHORITY_POLICY_VERSION}+${TEMPORAL_POLICY_VERSION}`;
 
@@ -317,6 +317,8 @@ export async function verifyClaim(
     }
     if (src.status === 'RETRACTED') { exclude('SOURCE_RETRACTED', 'SOURCE_RETRACTED'); rules.push('R01_SOURCE_RETRACTED'); continue; }
     if (src.status === 'UPDATED') { exclude('SOURCE_CHANGED', 'SOURCE_CHANGED'); rules.push('R02_SOURCE_CHANGED'); continue; }
+    // Codex I1G2-01: a source that can no longer be consulted cannot keep sustaining a conclusion.
+    if (src.status === 'UNAVAILABLE') { exclude('SOURCE_UNAVAILABLE', 'SOURCE_UNAVAILABLE'); rules.push('R02B_SOURCE_UNAVAILABLE'); continue; }
     if (e.aboutOrganizationId !== claim.subjectOrganizationId) {
       exclude('ENTITY_MISMATCH', 'IDENTITY_UNCONFIRMED');
       rules.push('R03_ENTITY_MISMATCH');

@@ -69,7 +69,9 @@ Conceptual retention periods: `RETENTION_POLICY` in `provenance.ts`
 ## 5. Changing / deleted sources
 
 Status UPDATED → evidence excluded (`SOURCE_CHANGED`) until re-extracted;
-RETRACTED → excluded (`SOURCE_RETRACTED`). `Investigation.updateSourceStatus`
+RETRACTED → excluded (`SOURCE_RETRACTED`); UNAVAILABLE → excluded
+(`SOURCE_UNAVAILABLE`, I1 Gate 2) — a source that can no longer be consulted
+cannot keep sustaining a conclusion. `Investigation.updateSourceStatus`
 lists affected claims and logs `REVERIFICATION_REQUIRED`. History keeps the
 previous results.
 

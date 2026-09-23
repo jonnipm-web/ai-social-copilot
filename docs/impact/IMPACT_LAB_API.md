@@ -17,12 +17,12 @@ no quota (no paid call), no class C action.
 | `archive_investigation` | `investigation_id` | final |
 | `add_source` | `source {ref, type, publisher, publisherOrgRef?, uri?, retrievedAt, publishedAt?, jurisdictionCountry?, newsGenre?, retention (REFERENCE_ONLY\|HASH_ONLY\|EXCERPT_AND_HASH), contentHash?, syndicatedFrom?, userUpload?}` | acquisition = ANALYST_ENTRY / USER_UPLOAD (never PROVIDER) |
 | `ingest_provider_record` | `provider_id`, `record_id`, `ref` | the server fetches from the **server registry** and builds the PROVIDER source + snapshot |
-| `update_source_status` | `source_ref`, `status (UPDATED\|RETRACTED\|UNAVAILABLE)` | affected claims → `reverificationRequired` |
+| `update_source_status` | `source_ref`, `status (UPDATED\|RETRACTED\|UNAVAILABLE)` | affected claims → `reverificationRequired`; unchanged status → `ALREADY_EXISTS` |
 | `add_claim` | `claim {ref, kind, text, textLanguage?, quantity?, level?, claimantOrgRef?, claimantLabel?, subjectProjectRef?, subjectCampaignRef?, period?, sourceRef, origin (MANUAL\|STRUCTURED_IMPORT)}` | subject = investigation subject; `extractedAt` |
 | `add_evidence` | `evidence {ref, claimRef, sourceRef, aboutOrgRef, relationship, basis, reportedQuantity?, level?, observedPeriod?, excerpt?, locator?, personalData (NONE\|AGGREGATED\|PUBLIC_OFFICIAL_ROLE), legalStage?}` | `excerptHash`, `addedAt`, injection scan |
-| `run_verification` | `claim_ref`, `idempotency_key?`, `human_review_binding_hash?` | `evaluatedAt`, trusted providers, identity status, flags, open dispute, version |
-| `open_dispute` | `ref`, `claim_ref`, `kind`, `submitted_evidence_refs` | `openedAt` |
-| `resolve_dispute` | `dispute_ref`, `resolution` | `resolvedAt` |
+| `run_verification` | `claim_ref`, `idempotency_key?` (bound to the claim: reuse for another claim → `ALREADY_EXISTS`), `human_review_binding_hash?` | `evaluatedAt`, trusted providers, identity status, flags, open dispute, version |
+| `open_dispute` | `ref`, `claim_ref`, `kind`, `submitted_evidence_refs` | `openedAt`; re-verifies at once → latest state `DISPUTED` (I1G2-02) |
+| `resolve_dispute` | `dispute_ref`, `resolution` | `resolvedAt`; re-verifies at once |
 | `request_external_action` | `kind` | class C → `403 ACTION_BLOCKED`, `requires: AEF_HUMAN_GATE` |
 
 Unknown actions and **unknown fields** are rejected (`INVALID_REQUEST`) — this

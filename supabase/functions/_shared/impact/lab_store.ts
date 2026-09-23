@@ -243,6 +243,7 @@ export class InMemoryImpactLabStore implements ImpactLabStore {
   async archiveInvestigation(id: string, actorId: string) {
     const w = this.writable(id);
     if (!w.ok) return w;
+    if (actorId !== w.value.rec.ownerId) return fail<true>('INVESTIGATION_NOT_FOUND', 'actor is not the owner');
     w.value.rec = { ...w.value.rec, status: 'ARCHIVED' };
     await this.db.appendAudit(w.value, 'INVESTIGATION_ARCHIVED', actorId, [], ['ARCHIVED']);
     return ok(true as const);
@@ -260,6 +261,7 @@ export class InMemoryImpactLabStore implements ImpactLabStore {
     if (!w.ok) return w;
     const s = w.value.sources.get(ref);
     if (!s) return fail<true>('INVALID_REQUEST', 'unknown source');
+    if (s.source.status === status) return fail<true>('ALREADY_EXISTS', 'status unchanged');
     w.value.sources.set(ref, Object.freeze({ ...s, source: Object.freeze({ ...s.source, status }) }));
     if (s.source.status !== status) {
       await this.db.appendAudit(w.value, 'SOURCE_STATUS_CHANGED', actorId, [ref], [status, 'REVERIFICATION_REQUIRED']);

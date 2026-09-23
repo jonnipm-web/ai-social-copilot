@@ -36,12 +36,20 @@ BEGIN
 END $$;
 
 CREATE FUNCTION pg_temp.vres(p_inv text, p_claim text, p_rid text, p_status text, p_under text, p_suff text, p_class text,
-  p_review text, p_policy text, p_eval text, p_conflicts jsonb DEFAULT '[]'::jsonb) RETURNS jsonb LANGUAGE sql AS $$
+  p_review text, p_policy text, p_eval text, p_conflicts jsonb DEFAULT '[]'::jsonb, p_supporting jsonb DEFAULT '[]'::jsonb,
+  p_identity text DEFAULT 'CONFIRMED') RETURNS jsonb LANGUAGE sql AS $$
   SELECT jsonb_build_object('resultId', p_rid, 'investigationId', p_inv, 'claimId', p_claim, 'status', p_status,
     'underlyingStatus', p_under, 'sufficiency', p_suff, 'displayClass', p_class, 'reviewState', p_review,
     'policyVersion', p_policy, 'evidenceSetHash', repeat('d', 64), 'reviewBindingHash', repeat('e', 64),
     'evaluatedAt', p_eval, 'conflicts', p_conflicts, 'isFindingOfWrongdoing', false,
-    'absenceOfEvidenceIsNotEvidenceOfWrongdoing', true)
+    'absenceOfEvidenceIsNotEvidenceOfWrongdoing', true, 'supporting', p_supporting, 'partiallySupporting', '[]'::jsonb,
+    'contradicting', '[]'::jsonb, 'contextual', '[]'::jsonb, 'excluded', '[]'::jsonb, 'gaps', '[]'::jsonb, 'rulesApplied', '[]'::jsonb,
+    'subjectIdentity', p_identity,
+    'claimKind', (SELECT kind FROM public.impact_claims WHERE investigation_id = p_inv::uuid AND ref = p_claim),
+    'subjectOrganizationId', (SELECT subject_org_ref FROM public.impact_investigations WHERE id = p_inv::uuid))
+$$;
+CREATE FUNCTION pg_temp.item(p_ev text, p_src text, p_auth text) RETURNS jsonb LANGUAGE sql AS $$
+  SELECT jsonb_build_object('evidenceId', p_ev, 'sourceId', p_src, 'authority', p_auth, 'effectiveRelationship', 'SUPPORTS')
 $$;
 
 CREATE FUNCTION pg_temp.act_as(uid text) RETURNS void LANGUAGE plpgsql AS $$
@@ -104,7 +112,7 @@ INSERT INTO public.impact_verifications (investigation_id, claim_ref, result_id,
   (:IA, 'c1', 'vr_' || repeat('1', 32), 'SUPPORTED', 'SUPPORTED', 'INDEPENDENT_SUPPORT', 'FACT', 'AUTOMATED', 'impact-verification/7',
    repeat('d', 64), repeat('e', 64), '2026-09-23T00:00:00Z', 0,
    pg_temp.vres(:IA, 'c1', 'vr_' || repeat('1', 32), 'SUPPORTED', 'SUPPORTED', 'INDEPENDENT_SUPPORT', 'FACT', 'AUTOMATED',
-     'impact-verification/7', '2026-09-23T00:00:00Z'), :UA),
+     'impact-verification/7', '2026-09-23T00:00:00Z', '[]'::jsonb, jsonb_build_array(pg_temp.item('e1', 'src-reg', 'AUTHORITATIVE'))), :UA),
   (:IB, 'c1', 'vr_' || repeat('2', 32), 'UNVERIFIED', 'UNVERIFIED', 'SELF_REPORTED', 'CLAIM', 'AUTOMATED', 'impact-verification/7',
    repeat('d', 64), repeat('e', 64), '2026-09-23T00:00:00Z', 0,
    pg_temp.vres(:IB, 'c1', 'vr_' || repeat('2', 32), 'UNVERIFIED', 'UNVERIFIED', 'SELF_REPORTED', 'CLAIM', 'AUTOMATED',
@@ -293,6 +301,40 @@ SELECT pg_temp.expect_fail('G14 a result JSON belonging to another investigation
     VALUES ('a2222222-0000-0000-0000-00000000000a', 'c2', 'vr_' || repeat('a', 32), 'UNVERIFIED', 'UNVERIFIED', 'NO_EVIDENCE', 'CLAIM', 'AUTOMATED', 'p', repeat('d', 64), repeat('e', 64), '2026-09-23',
       pg_temp.vres('b2222222-0000-0000-0000-00000000000b', 'c2', 'vr_' || repeat('a', 32), 'UNVERIFIED', 'UNVERIFIED', 'NO_EVIDENCE', 'CLAIM', 'AUTOMATED', 'p', '2026-09-23'), 'aaaaaaaa-0000-0000-0000-00000000000a')$$, '23514');
 
+-- ── G2: Codex I1 Gate 2 ───────────────────────────────────────────────────
+SELECT pg_temp.expect_fail('G2-05 a no-op source status write is refused (every write is audited)',
+  $$UPDATE public.impact_sources SET status = 'ACTIVE', updated_by = 'aaaaaaaa-0000-0000-0000-00000000000a'
+    WHERE investigation_id = 'a2222222-0000-0000-0000-00000000000a' AND ref = 'src-web'$$, 'IMPACT_NOOP');
+SELECT pg_temp.expect_fail('G2-06a SUPPORTED without supporting items',
+  $$INSERT INTO public.impact_verifications (investigation_id, claim_ref, result_id, status, underlying_status, sufficiency, display_class, review_state, policy_version, evidence_set_hash, review_binding_hash, evaluated_at, result, created_by)
+    VALUES ('a2222222-0000-0000-0000-00000000000a', 'c2', 'vr_' || repeat('b', 32), 'SUPPORTED', 'SUPPORTED', 'MULTI_SOURCE_SUPPORT', 'CLAIM', 'AUTOMATED', 'p', repeat('d', 64), repeat('e', 64), '2026-09-23',
+      pg_temp.vres('a2222222-0000-0000-0000-00000000000a', 'c2', 'vr_' || repeat('b', 32), 'SUPPORTED', 'SUPPORTED', 'MULTI_SOURCE_SUPPORT', 'CLAIM', 'AUTOMATED', 'p', '2026-09-23'), 'aaaaaaaa-0000-0000-0000-00000000000a')$$, 'IMPACT_RESULT_INCONSISTENT');
+SELECT pg_temp.expect_fail('G2-06b counted evidence from an analyst (non-PROVIDER) source',
+  $$INSERT INTO public.impact_verifications (investigation_id, claim_ref, result_id, status, underlying_status, sufficiency, display_class, review_state, policy_version, evidence_set_hash, review_binding_hash, evaluated_at, result, created_by)
+    VALUES ('a2222222-0000-0000-0000-00000000000a', 'c2', 'vr_' || repeat('c', 32), 'SUPPORTED', 'SUPPORTED', 'INDEPENDENT_SUPPORT', 'CLAIM', 'AUTOMATED', 'p', repeat('d', 64), repeat('e', 64), '2026-09-23',
+      pg_temp.vres('a2222222-0000-0000-0000-00000000000a', 'c2', 'vr_' || repeat('c', 32), 'SUPPORTED', 'SUPPORTED', 'INDEPENDENT_SUPPORT', 'CLAIM', 'AUTOMATED', 'p', '2026-09-23', '[]'::jsonb,
+        jsonb_build_array(pg_temp.item('e2', 'src-web', 'INDEPENDENT'))), 'aaaaaaaa-0000-0000-0000-00000000000a')$$, 'IMPACT_RESULT_INCONSISTENT');
+SELECT pg_temp.expect_fail('G2-06c a result citing evidence of another claim',
+  $$INSERT INTO public.impact_verifications (investigation_id, claim_ref, result_id, status, underlying_status, sufficiency, display_class, review_state, policy_version, evidence_set_hash, review_binding_hash, evaluated_at, result, created_by)
+    VALUES ('a2222222-0000-0000-0000-00000000000a', 'c2', 'vr_' || repeat('d', 32), 'SUPPORTED', 'SUPPORTED', 'INDEPENDENT_SUPPORT', 'CLAIM', 'AUTOMATED', 'p', repeat('d', 64), repeat('e', 64), '2026-09-23',
+      pg_temp.vres('a2222222-0000-0000-0000-00000000000a', 'c2', 'vr_' || repeat('d', 32), 'SUPPORTED', 'SUPPORTED', 'INDEPENDENT_SUPPORT', 'CLAIM', 'AUTOMATED', 'p', '2026-09-23', '[]'::jsonb,
+        jsonb_build_array(pg_temp.item('e1', 'src-reg', 'AUTHORITATIVE'))), 'aaaaaaaa-0000-0000-0000-00000000000a')$$, 'IMPACT_RESULT_INCONSISTENT');
+SELECT pg_temp.expect_fail('G2-06d FACT backed only by an INDEPENDENT (non-authoritative) item',
+  $$INSERT INTO public.impact_verifications (investigation_id, claim_ref, result_id, status, underlying_status, sufficiency, display_class, review_state, policy_version, evidence_set_hash, review_binding_hash, evaluated_at, result, created_by)
+    VALUES ('a2222222-0000-0000-0000-00000000000a', 'c1', 'vr_' || repeat('e', 32), 'SUPPORTED', 'SUPPORTED', 'INDEPENDENT_SUPPORT', 'FACT', 'AUTOMATED', 'p', repeat('d', 64), repeat('e', 64), '2026-09-23',
+      pg_temp.vres('a2222222-0000-0000-0000-00000000000a', 'c1', 'vr_' || repeat('e', 32), 'SUPPORTED', 'SUPPORTED', 'INDEPENDENT_SUPPORT', 'FACT', 'AUTOMATED', 'p', '2026-09-23', '[]'::jsonb,
+        jsonb_build_array(pg_temp.item('e1', 'src-reg', 'INDEPENDENT'))), 'aaaaaaaa-0000-0000-0000-00000000000a')$$, 'IMPACT_RESULT_INCONSISTENT');
+SELECT pg_temp.expect_fail('G2-06e an unconfirmed identity cannot yield SUPPORTED',
+  $$INSERT INTO public.impact_verifications (investigation_id, claim_ref, result_id, status, underlying_status, sufficiency, display_class, review_state, policy_version, evidence_set_hash, review_binding_hash, evaluated_at, result, created_by)
+    VALUES ('a2222222-0000-0000-0000-00000000000a', 'c1', 'vr_' || repeat('f', 32), 'SUPPORTED', 'SUPPORTED', 'INDEPENDENT_SUPPORT', 'FACT', 'AUTOMATED', 'p', repeat('d', 64), repeat('e', 64), '2026-09-23',
+      pg_temp.vres('a2222222-0000-0000-0000-00000000000a', 'c1', 'vr_' || repeat('f', 32), 'SUPPORTED', 'SUPPORTED', 'INDEPENDENT_SUPPORT', 'FACT', 'AUTOMATED', 'p', '2026-09-23', '[]'::jsonb,
+        jsonb_build_array(pg_temp.item('e1', 'src-reg', 'AUTHORITATIVE')), 'UNCERTAIN'), 'aaaaaaaa-0000-0000-0000-00000000000a')$$, 'IMPACT_RESULT_INCONSISTENT');
+SELECT pg_temp.expect_fail('G2-06f a result whose claimKind disagrees with the stored claim',
+  $$INSERT INTO public.impact_verifications (investigation_id, claim_ref, result_id, status, underlying_status, sufficiency, display_class, review_state, policy_version, evidence_set_hash, review_binding_hash, evaluated_at, result, created_by)
+    VALUES ('a2222222-0000-0000-0000-00000000000a', 'c2', 'vr_' || repeat('0', 31) || '1', 'UNVERIFIED', 'UNVERIFIED', 'NO_EVIDENCE', 'CLAIM', 'AUTOMATED', 'p', repeat('d', 64), repeat('e', 64), '2026-09-23',
+      pg_temp.vres('a2222222-0000-0000-0000-00000000000a', 'c2', 'vr_' || repeat('0', 31) || '1', 'UNVERIFIED', 'UNVERIFIED', 'NO_EVIDENCE', 'CLAIM', 'AUTOMATED', 'p', '2026-09-23') || '{"claimKind":"LEGAL_REGISTRATION"}'::jsonb,
+      'aaaaaaaa-0000-0000-0000-00000000000a')$$, 'IMPACT_RESULT_INCONSISTENT');
+
 -- I1G1-02: the latest version is always available, however long the history is.
 DO $$
 DECLARE i int;
@@ -393,7 +435,11 @@ UPDATE public.projects SET user_id = :UA WHERE id = 'a1111111-0000-0000-0000-000
 
 -- ── R: archive lifecycle ────────────────────────────────────────────────────
 SET ROLE service_role;
-UPDATE public.impact_investigations SET status = 'ARCHIVED' WHERE id = :IB;
+SELECT pg_temp.expect_fail('R00 archiving by a non-owner actor is refused (I1G2-04)',
+  $$UPDATE public.impact_investigations SET status = 'ARCHIVED', updated_by = 'aaaaaaaa-0000-0000-0000-00000000000a' WHERE id = 'b2222222-0000-0000-0000-00000000000b'$$, 'IMPACT_ACTOR_NOT_OWNER');
+SELECT pg_temp.expect_fail('R00b archiving without an actor is refused',
+  $$UPDATE public.impact_investigations SET status = 'ARCHIVED' WHERE id = 'b2222222-0000-0000-0000-00000000000b'$$, 'IMPACT_ACTOR_NOT_OWNER');
+UPDATE public.impact_investigations SET status = 'ARCHIVED', updated_by = :UB WHERE id = :IB;
 SELECT pg_temp.expect_fail('R01 archived investigations accept no new records',
   $$INSERT INTO public.impact_sources (investigation_id, ref, source_type, publisher, retrieved_at, retention, content_hash, acquisition_method, created_by)
     VALUES ('b2222222-0000-0000-0000-00000000000b', 'src-x', 'NEWS', 'Paper', '2026-09-01', 'HASH_ONLY', repeat('f', 64), 'ANALYST_ENTRY', 'bbbbbbbb-0000-0000-0000-00000000000b')$$, 'IMPACT_INVESTIGATION_NOT_ACTIVE');

@@ -393,3 +393,51 @@ Deno.test('LS-25 resource limits: duplicate refs are refused and limits are enfo
   for (let i = 2; i <= 200; i++) await t.must(UA, { action: 'add_source', investigation_id: inv, source: { ...src, ref: `s${i}` } });
   assertEquals(await t.code(UA, { action: 'add_source', investigation_id: inv, source: { ...src, ref: 's201' } }), 'LIMIT_EXCEEDED');
 });
+
+// ── Codex I1 Gate 2 regressions ────────────────────────────────────────────
+
+async function supportedRegistrationClaim(t: ReturnType<typeof setup>) {
+  const inv = await investigationWithRegistry(t);
+  await t.must(UA, { action: 'add_claim', investigation_id: inv, claim: { ref: 'c1', kind: 'LEGAL_REGISTRATION', text: 'Registered.', sourceRef: 'src-web', origin: 'MANUAL' } });
+  await t.must(UA, { action: 'add_claim', investigation_id: inv, claim: { ref: 'c2', kind: 'OTHER', text: 'Other.', sourceRef: 'src-web', origin: 'MANUAL' } });
+  await t.must(UA, { action: 'add_evidence', investigation_id: inv, evidence: { ref: 'e1', claimRef: 'c1', sourceRef: 'src-reg', aboutOrgRef: 'org-hopebridge', relationship: 'SUPPORTS', basis: 'HUMAN_ASSESSED', observedPeriod: { to: '2026-09-01' }, personalData: 'NONE' } });
+  return inv;
+}
+
+Deno.test('G2-01 an UNAVAILABLE source no longer sustains a conclusion', async () => {
+  const t = setup();
+  const inv = await supportedRegistrationClaim(t);
+  assertEquals(((await t.must(UA, { action: 'run_verification', investigation_id: inv, claim_ref: 'c1' })).data.verification as Json).status, 'SUPPORTED');
+  await t.must(UA, { action: 'update_source_status', investigation_id: inv, source_ref: 'src-reg', status: 'UNAVAILABLE' });
+  const v = (await t.must(UA, { action: 'run_verification', investigation_id: inv, claim_ref: 'c1' }, '2026-09-24T00:00:00Z')).data.verification as Json;
+  assertEquals(v.status, 'UNVERIFIED');
+  assert((v.gaps as string[]).includes('SOURCE_UNAVAILABLE'));
+});
+
+Deno.test('G2-02 opening a dispute persists DISPUTED immediately; resolving re-verifies', async () => {
+  const t = setup();
+  const inv = await supportedRegistrationClaim(t);
+  await t.must(UA, { action: 'run_verification', investigation_id: inv, claim_ref: 'c1' });
+  const opened = await t.must(UA, { action: 'open_dispute', investigation_id: inv, ref: 'd1', claim_ref: 'c1', kind: 'CORRECTION_REQUEST' });
+  assertEquals((opened.data.verification as Json).status, 'DISPUTED');
+  const g = await t.must(UA, { action: 'get_investigation', investigation_id: inv });
+  const latest = ((g.data.report as Json).claims as Json[]).find((c) => c.claimId === 'c1')!;
+  assertEquals(latest.status, 'DISPUTED');
+  const resolved = await t.must(UA, { action: 'resolve_dispute', investigation_id: inv, dispute_ref: 'd1', resolution: 'WITHDRAWN' });
+  assertEquals((resolved.data.verification as Json).status, 'SUPPORTED');
+});
+
+Deno.test('G2-03 an idempotency key cannot replay a different claim', async () => {
+  const t = setup();
+  const inv = await supportedRegistrationClaim(t);
+  const key = '9e9e9e9e-0000-4000-8000-000000000002';
+  await t.must(UA, { action: 'run_verification', investigation_id: inv, claim_ref: 'c1', idempotency_key: key });
+  assertEquals(await t.code(UA, { action: 'run_verification', investigation_id: inv, claim_ref: 'c2', idempotency_key: key }), 'ALREADY_EXISTS');
+});
+
+Deno.test('G2-05 a no-op source status change is refused (nothing unaudited)', async () => {
+  const t = setup();
+  const inv = await supportedRegistrationClaim(t);
+  await t.must(UA, { action: 'update_source_status', investigation_id: inv, source_ref: 'src-reg', status: 'RETRACTED' });
+  assertEquals(await t.code(UA, { action: 'update_source_status', investigation_id: inv, source_ref: 'src-reg', status: 'RETRACTED' }), 'ALREADY_EXISTS');
+});

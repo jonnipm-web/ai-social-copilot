@@ -36,7 +36,7 @@ RLS on all 8 tables (not FORCEd: the table owner is only used by migrations and 
 SECURITY INVOKER (a caller can only verify chains it can read);
 `impact_append_audit()` is not executable by `anon`/`authenticated`.
 
-## 4. Matrix (tested on PostgreSQL 17 — `impact_lab_rls_test.sql`, 106 checks)
+## 4. Matrix (tested on PostgreSQL 17 — `impact_lab_rls_test.sql`, 115 checks)
 
 | Case | Result | Checks |
 |---|---|---|
@@ -62,6 +62,10 @@ SECURITY INVOKER (a caller can only verify chains it can read);
 | service_role verification columns ≠ result JSON, FACT not SUPPORTED, foreign result | DENY | G12–G14 |
 | Latest version after 2,001 runs | correct (view) | G15–G16 |
 | Direct DELETE even as superuser | DENY | D01–D02 |
+| Archive by a non-owner actor / without actor | DENY | R00, R00b |
+| No-op (unaudited) status write | DENY | G2-05 |
+| Stored result not backed by matching evidence / counted item without PROVIDER provenance / citing another claim's evidence / FACT without AUTHORITATIVE item / unconfirmed identity supporting / wrong claim kind | DENY | G2-06a–f |
+| Real engine + store rows (full Lab flow) satisfy every invariant | PASS | `impact_lab_engine_rows.ts` (IMPACT_ENGINE_ROWS) |
 
 The suite was mutation-tested: a permissive child policy, a client insert
 grant, a mutable verification history, a removed owner/project guard and a

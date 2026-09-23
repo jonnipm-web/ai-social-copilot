@@ -329,6 +329,7 @@ export type GapCode =
   | 'UNITS_NOT_COMPARABLE'
   | 'SOURCE_RETRACTED'
   | 'SOURCE_CHANGED'
+  | 'SOURCE_UNAVAILABLE'
   | 'ALLEGATION_UNRESOLVED'
   | 'UNTRUSTED_INSTRUCTIONS_DETECTED';
 
@@ -342,6 +343,7 @@ export type ExclusionReason =
   | 'UNCONFIRMED_LLM_LINK'
   | 'SOURCE_RETRACTED'
   | 'SOURCE_CHANGED'
+  | 'SOURCE_UNAVAILABLE'
   | 'DUPLICATE_CONTENT';
 
 export interface ConflictRecord {

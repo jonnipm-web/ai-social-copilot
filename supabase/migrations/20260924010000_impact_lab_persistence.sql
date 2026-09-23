@@ -99,6 +99,7 @@ CREATE TABLE IF NOT EXISTS public.impact_investigations (
   status            text        NOT NULL DEFAULT 'ACTIVE',
   audit_seq         integer     NOT NULL DEFAULT 0,
   audit_head        text        NOT NULL DEFAULT repeat('0', 64),
+  updated_by        uuid        NULL,
   created_at        timestamptz NOT NULL DEFAULT now(),
   updated_at        timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT impact_investigations_pkey PRIMARY KEY (id),
@@ -548,6 +549,10 @@ BEGIN
     IF OLD.status = 'ARCHIVED' AND NEW.status <> 'ARCHIVED' THEN
       RAISE EXCEPTION 'IMPACT_ARCHIVED_IS_FINAL' USING ERRCODE = '42501';
     END IF;
+    -- Codex I1G2-04: a lifecycle change must be made by the owner.
+    IF NEW.status <> OLD.status AND NEW.updated_by IS DISTINCT FROM NEW.owner_id THEN
+      RAISE EXCEPTION 'IMPACT_ACTOR_NOT_OWNER' USING ERRCODE = '42501';
+    END IF;
   END IF;
   IF NEW.project_id IS NOT NULL
      AND (TG_OP = 'INSERT' OR NEW.project_id IS DISTINCT FROM OLD.project_id)
@@ -576,6 +581,8 @@ BEGIN
     RAISE EXCEPTION 'IMPACT_IMMUTABLE_FIELD: only source status can change' USING ERRCODE = '42501';
   END IF;
   IF NEW.updated_by IS NULL THEN RAISE EXCEPTION 'IMPACT_ACTOR_REQUIRED' USING ERRCODE = '23502'; END IF;
+  -- Codex I1G2-05: every accepted write is audited, so a no-op write is refused.
+  IF NEW.status = OLD.status THEN RAISE EXCEPTION 'IMPACT_NOOP: status unchanged' USING ERRCODE = '22023'; END IF;
   RETURN NEW;
 END $$;
 
@@ -623,6 +630,64 @@ BEGIN
   RETURN NEW;
 END $$;
 
+-- Codex I1G2-06: the stored engine result must be internally consistent with
+-- the investigation it is stored in. Every evidence item it cites must be
+-- evidence of THIS claim; counted (supporting / partial / contradicting) items
+-- must come from PROVIDER sources (independence requires trusted provenance);
+-- the status must be backed by items of the matching kind; a FACT needs an
+-- AUTHORITATIVE supporting item; an unconfirmed identity cannot yield a
+-- supported/contradicted underlying status; gaps/rules/kind/subject match.
+CREATE OR REPLACE FUNCTION public.impact_verifications_validate() RETURNS trigger
+LANGUAGE plpgsql SET search_path = '' AS $$
+DECLARE
+  r jsonb := NEW.result;
+  v_kind text;
+  v_subject text;
+  v_n_sup int := jsonb_array_length(coalesce(r->'supporting', '[]'::jsonb));
+  v_n_par int := jsonb_array_length(coalesce(r->'partiallySupporting', '[]'::jsonb));
+  v_n_con int := jsonb_array_length(coalesce(r->'contradicting', '[]'::jsonb));
+BEGIN
+  SELECT c.kind INTO v_kind FROM public.impact_claims c WHERE c.investigation_id = NEW.investigation_id AND c.ref = NEW.claim_ref;
+  SELECT i.subject_org_ref INTO v_subject FROM public.impact_investigations i WHERE i.id = NEW.investigation_id;
+  IF r->>'claimKind' IS DISTINCT FROM v_kind OR r->>'subjectOrganizationId' IS DISTINCT FROM v_subject
+     OR coalesce(r->'gaps', '[]'::jsonb) <> to_jsonb(NEW.gaps) OR coalesce(r->'rulesApplied', '[]'::jsonb) <> to_jsonb(NEW.rules_applied) THEN
+    RAISE EXCEPTION 'IMPACT_RESULT_INCONSISTENT: kind/subject/gaps/rules' USING ERRCODE = '23514';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM jsonb_array_elements(
+      coalesce(r->'supporting', '[]') || coalesce(r->'partiallySupporting', '[]') || coalesce(r->'contradicting', '[]')
+      || coalesce(r->'contextual', '[]') || coalesce(r->'excluded', '[]')) AS it(x)
+    WHERE NOT EXISTS (SELECT 1 FROM public.impact_evidence e WHERE e.investigation_id = NEW.investigation_id
+                        AND e.ref = x->>'evidenceId' AND e.claim_ref = NEW.claim_ref)) THEN
+    RAISE EXCEPTION 'IMPACT_RESULT_INCONSISTENT: cites evidence that is not of this claim' USING ERRCODE = '23514';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM jsonb_array_elements(
+      coalesce(r->'supporting', '[]') || coalesce(r->'partiallySupporting', '[]') || coalesce(r->'contradicting', '[]')) AS it(x)
+    WHERE x->>'authority' NOT IN ('AUTHORITATIVE', 'INDEPENDENT')
+       OR NOT EXISTS (SELECT 1 FROM public.impact_evidence e JOIN public.impact_sources s
+                        ON s.investigation_id = e.investigation_id AND s.ref = e.source_ref
+                      WHERE e.investigation_id = NEW.investigation_id AND e.ref = x->>'evidenceId'
+                        AND s.ref = x->>'sourceId' AND s.acquisition_method = 'PROVIDER')) THEN
+    RAISE EXCEPTION 'IMPACT_RESULT_INCONSISTENT: counted evidence without trusted provenance' USING ERRCODE = '23514';
+  END IF;
+  IF (NEW.underlying_status = 'SUPPORTED' AND v_n_sup = 0)
+     OR (NEW.underlying_status = 'PARTIALLY_SUPPORTED' AND v_n_par = 0)
+     OR (NEW.underlying_status = 'CONTRADICTED' AND v_n_con = 0)
+     OR (NEW.underlying_status IN ('UNVERIFIED', 'OUTDATED') AND v_n_sup + v_n_par + v_n_con > 0) THEN
+    RAISE EXCEPTION 'IMPACT_RESULT_INCONSISTENT: status not backed by matching evidence' USING ERRCODE = '23514';
+  END IF;
+  IF NEW.display_class = 'FACT' AND NOT EXISTS (
+       SELECT 1 FROM jsonb_array_elements(coalesce(r->'supporting', '[]')) AS it(x) WHERE x->>'authority' = 'AUTHORITATIVE') THEN
+    RAISE EXCEPTION 'IMPACT_RESULT_INCONSISTENT: FACT without an authoritative source' USING ERRCODE = '23514';
+  END IF;
+  IF r->>'subjectIdentity' IS DISTINCT FROM 'CONFIRMED'
+     AND NEW.underlying_status IN ('SUPPORTED', 'PARTIALLY_SUPPORTED', 'CONTRADICTED') THEN
+    RAISE EXCEPTION 'IMPACT_RESULT_INCONSISTENT: unconfirmed identity cannot support or contradict' USING ERRCODE = '23514';
+  END IF;
+  RETURN NEW;
+END $$;
+
 -- Disputes: cited evidence must belong to the disputed claim; a dispute can
 -- only be resolved once and nothing else changes.
 CREATE OR REPLACE FUNCTION public.impact_disputes_guard() RETURNS trigger
@@ -658,7 +723,7 @@ BEGIN
     IF TG_OP = 'INSERT' THEN
       PERFORM public.impact_append_audit(NEW.id, 'INVESTIGATION_CREATED', NEW.owner_id::text, ARRAY[NEW.subject_org_ref], '{}');
     ELSIF NEW.status = 'ARCHIVED' AND OLD.status <> 'ARCHIVED' THEN
-      PERFORM public.impact_append_audit(NEW.id, 'INVESTIGATION_ARCHIVED', NEW.owner_id::text, '{}', ARRAY['ARCHIVED']);
+      PERFORM public.impact_append_audit(NEW.id, 'INVESTIGATION_ARCHIVED', NEW.updated_by::text, '{}', ARRAY['ARCHIVED']);
     END IF;
   ELSIF TG_TABLE_NAME = 'impact_sources' THEN
     IF TG_OP = 'INSERT' THEN
@@ -748,6 +813,9 @@ CREATE TRIGGER impact_evidence_validate BEFORE INSERT ON public.impact_evidence
 DROP TRIGGER IF EXISTS impact_verifications_version ON public.impact_verifications;
 CREATE TRIGGER impact_verifications_version BEFORE INSERT ON public.impact_verifications
   FOR EACH ROW EXECUTE FUNCTION public.impact_verifications_version();
+DROP TRIGGER IF EXISTS impact_verifications_validate ON public.impact_verifications;
+CREATE TRIGGER impact_verifications_validate BEFORE INSERT ON public.impact_verifications
+  FOR EACH ROW EXECUTE FUNCTION public.impact_verifications_validate();
 DROP TRIGGER IF EXISTS impact_disputes_guard ON public.impact_disputes;
 CREATE TRIGGER impact_disputes_guard BEFORE INSERT OR UPDATE ON public.impact_disputes
   FOR EACH ROW EXECUTE FUNCTION public.impact_disputes_guard();

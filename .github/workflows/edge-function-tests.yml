@@ -88,6 +88,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Deno (Impact engine-rows parity)
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
       - name: Apply stubs + every migration, prove idempotency, run subject_roles RLS tests
         env:
           PGHOST: 127.0.0.1

@@ -1,7 +1,7 @@
 # Impact — Verification Model
 
 Code: `verification.ts`, `temporal.ts`, `risk_indicators.ts`.
-Policy version: `impact-verification/7+impact-source-authority/3+impact-temporal/2` (bumped after Codex Gate 1 and Codex Final).
+Policy version: `impact-verification/8+impact-source-authority/3+impact-temporal/2` (bumped after Codex Gate 1 and Codex Final).
 
 ## 1. Contract
 
@@ -20,7 +20,7 @@ and the literals `isFindingOfWrongdoing: false`,
 
 ## 2. Pipeline per evidence item (rule ids)
 
-R01 retracted · R02 changed · R03 entity mismatch · R04 LLM link not counted ·
+R01 retracted · R02 changed · R02B unavailable (I1G2-01) · R03 entity mismatch · R04 LLM link not counted ·
 R05 out of scope · R06 units · R07 non-final legal stage is not a
 contradiction · R08 news allegation is context · R09 output ≠ outcome ·
 R10 period mismatch · R11 stale state evidence · R12 duplicate content.

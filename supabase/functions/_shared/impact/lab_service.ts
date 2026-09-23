@@ -106,6 +106,57 @@ function summary(r: VerificationResult, version: number) {
   };
 }
 
+interface StoredRun {
+  readonly result: VerificationResult;
+  readonly version: number;
+  readonly replayed: boolean;
+  readonly evidenceCount: number;
+}
+
+/** Engine run with SERVER inputs only, persisted as a new version. */
+async function verifyAndStore(
+  store: ImpactLabStore,
+  actor: LabActor,
+  inv: InvestigationRecord,
+  data: InvestigationData,
+  claimRef: string,
+  now: string,
+  idempotencyKey: string | null,
+  humanReviewBindingHash?: string,
+): Promise<ImpactResult<StoredRun>> {
+  const claim = data.claims.find((c) => c.id === claimRef);
+  if (!claim) return fail('INVALID_REQUEST', 'unknown claim');
+  const evidence = data.evidence.filter((e) => e.claimId === claim.id);
+  // Untrusted-content boundary: excerpts carrying instructions flag their source (review), never obeyed.
+  const flagged = [...new Set(evidence.filter((e) => e.excerpt && scanUntrustedContent(e.excerpt).flagged).map((e) => e.sourceId))];
+  const openDispute = data.disputes.some((d) => d.claimRef === claim.id && d.resolution === null);
+  const r = await verifyClaim(
+    { claim, evidence, sources: data.sources.map((s) => s.source) },
+    {
+      evaluatedAt: now,
+      subjectIdentity: subjectIdentityFrom(inv, data.sources),
+      openDispute,
+      flaggedSourceIds: flagged,
+      trustedProviders: trustedProviderRefs(), // CF-06: server registry only
+      ...(humanReviewBindingHash
+        ? { humanReview: { reviewedAt: now, reviewerRef: await actorRefOf(actor.userId), reviewBindingHash: humanReviewBindingHash } }
+        : {}),
+    },
+  );
+  if (!r.ok) return r;
+  const stored = await store.insertVerification(inv.id, r.value, idempotencyKey, actor.userId);
+  if (!stored.ok) return stored;
+  // Codex I1G2-03: an idempotency key replays only the SAME claim.
+  if (stored.value.result.claimId !== claim.id) return fail('ALREADY_EXISTS', 'idempotency key already used for another claim');
+  return ok({ result: stored.value.result, version: stored.value.version, replayed: stored.value.result.resultId !== r.value.resultId, evidenceCount: evidence.length });
+}
+
+async function reverify(store: ImpactLabStore, actor: LabActor, inv: InvestigationRecord, claimRef: string, now: string) {
+  const fresh = await load(store, inv.id);
+  if (!fresh.ok) return fresh;
+  return await verifyAndStore(store, actor, inv, fresh.value, claimRef, now, null);
+}
+
 export async function handleLabRequest(
   store: ImpactLabStore,
   actor: LabActor,
@@ -272,7 +323,10 @@ export async function handleLabRequest(
     }
 
     case 'update_source_status': {
-      if (!sourcesById.has(req.sourceRef)) return fail('INVALID_REQUEST', 'unknown source');
+      const current = sourcesById.get(req.sourceRef);
+      if (!current) return fail('INVALID_REQUEST', 'unknown source');
+      // Codex I1G2-05: no silent no-op writes (the database refuses them too).
+      if (current.status === req.status) return fail('ALREADY_EXISTS', 'source already has that status');
       const r = await store.updateSourceStatus(inv.value.id, req.sourceRef, req.status, actor.userId);
       if (!r.ok) return r;
       const affected = [...new Set(data.value.evidence.filter((e) => e.sourceId === req.sourceRef).map((e) => e.claimId))].sort();
@@ -340,33 +394,13 @@ export async function handleLabRequest(
     }
 
     case 'run_verification': {
-      const claim = data.value.claims.find((c) => c.id === req.claimRef);
-      if (!claim) return fail('INVALID_REQUEST', 'unknown claim');
-      const evidence = data.value.evidence.filter((e) => e.claimId === claim.id);
-      // Untrusted-content boundary: excerpts carrying instructions flag their source (review), never obeyed.
-      const flagged = [...new Set(evidence.filter((e) => e.excerpt && scanUntrustedContent(e.excerpt).flagged).map((e) => e.sourceId))];
-      const openDispute = data.value.disputes.some((d) => d.claimRef === claim.id && d.resolution === null);
-      const r = await verifyClaim(
-        { claim, evidence, sources: data.value.sources.map((s) => s.source) },
-        {
-          evaluatedAt: now,
-          subjectIdentity: subjectIdentityFrom(inv.value, data.value.sources),
-          openDispute,
-          flaggedSourceIds: flagged,
-          trustedProviders: trustedProviderRefs(), // CF-06: server registry only
-          ...(req.humanReviewBindingHash
-            ? { humanReview: { reviewedAt: now, reviewerRef: await actorRefOf(actor.userId), reviewBindingHash: req.humanReviewBindingHash } }
-            : {}),
-        },
-      );
-      if (!r.ok) return r;
-      const stored = await store.insertVerification(inv.value.id, r.value, req.idempotencyKey ?? null, actor.userId);
-      if (!stored.ok) return stored;
-      const result = stored.value.result;
+      if (!data.value.claims.some((c) => c.id === req.claimRef)) return fail('INVALID_REQUEST', 'unknown claim');
+      const v = await verifyAndStore(store, actor, inv.value, data.value, req.claimRef, now, req.idempotencyKey ?? null, req.humanReviewBindingHash);
+      if (!v.ok) return v;
       return ok({
         action: req.action,
-        data: { verification: summary(result, stored.value.version), indicators: deriveIndicators({ results: [result] }), replayed: result.resultId !== r.value.resultId },
-        metrics: { evidence: evidence.length, conflicts: result.conflicts.length, status: result.status },
+        data: { verification: summary(v.value.result, v.value.version), indicators: deriveIndicators({ results: [v.value.result] }), replayed: v.value.replayed },
+        metrics: { evidence: v.value.evidenceCount, conflicts: v.value.result.conflicts.length, status: v.value.result.status },
       });
     }
 
@@ -383,7 +417,10 @@ export async function handleLabRequest(
         resolution: null, resolvedAt: null,
       }, actor.userId);
       if (!r.ok) return r;
-      return ok({ action: req.action, data: { disputeRef: req.ref, claimRef: req.claimRef, reverificationRequired: [req.claimRef] } });
+      // Codex I1G2-02: the persisted latest state becomes DISPUTED immediately.
+      const v = await reverify(store, actor, inv.value, req.claimRef, now);
+      if (!v.ok) return v;
+      return ok({ action: req.action, data: { disputeRef: req.ref, claimRef: req.claimRef, verification: summary(v.value.result, v.value.version) } });
     }
 
     case 'resolve_dispute': {
@@ -391,7 +428,9 @@ export async function handleLabRequest(
       if (!d) return fail('INVALID_REQUEST', 'unknown dispute');
       const r = await store.resolveDispute(inv.value.id, req.disputeRef, req.resolution, now, actor.userId);
       if (!r.ok) return r;
-      return ok({ action: req.action, data: { disputeRef: req.disputeRef, resolution: req.resolution, reverificationRequired: [d.claimRef] } });
+      const v = await reverify(store, actor, inv.value, d.claimRef, now);
+      if (!v.ok) return v;
+      return ok({ action: req.action, data: { disputeRef: req.disputeRef, resolution: req.resolution, verification: summary(v.value.result, v.value.version) } });
     }
   }
   return fail('INVALID_REQUEST', 'unknown action');

@@ -57,7 +57,9 @@ export function mapDbError(e: PgError | null | undefined): ImpactErrorCode {
   if (code === '23505') return 'ALREADY_EXISTS';
   if (/IMPACT_INVESTIGATION_NOT_ACTIVE/.test(msg)) return 'INVESTIGATION_NOT_ACTIVE';
   if (/IMPACT_PROJECT_NOT_OWNED/.test(msg)) return 'INVESTIGATION_NOT_FOUND';
-  if (/IMPACT_DISPUTE_ALREADY_RESOLVED/.test(msg)) return 'ALREADY_EXISTS';
+  if (/IMPACT_DISPUTE_ALREADY_RESOLVED|IMPACT_NOOP/.test(msg)) return 'ALREADY_EXISTS';
+  if (/IMPACT_ACTOR_NOT_OWNER/.test(msg)) return 'INVESTIGATION_NOT_FOUND';
+  if (/IMPACT_RESULT_INCONSISTENT/.test(msg)) return 'INTERNAL_ERROR';
   if (code === '23503' || code === '23514' || code === '22007' || code === '23502' || /IMPACT_(TEMPORAL|INVALID_TIMESTAMP|DISPUTE_EVIDENCE)/.test(msg)) {
     return 'INVALID_REQUEST';
   }
@@ -302,8 +304,8 @@ export class SupabaseImpactLabStore implements ImpactLabStore {
     if (error) return dbFail(error);
     return ok(rowToInvestigation(data as Row));
   }
-  async archiveInvestigation(id: string, _actorId: string): Promise<ImpactResult<true>> {
-    const { error } = await this.service.from('impact_investigations').update({ status: 'ARCHIVED', updated_at: new Date().toISOString() })
+  async archiveInvestigation(id: string, actorId: string): Promise<ImpactResult<true>> {
+    const { error } = await this.service.from('impact_investigations').update({ status: 'ARCHIVED', updated_by: actorId, updated_at: new Date().toISOString() })
       .eq('id', id).eq('status', 'ACTIVE');
     return error ? dbFail(error) : ok(true);
   }

@@ -41,3 +41,18 @@ echo "$out" | grep -qx 'SUBJECT_ROLES_RLS: PASS'
 out="$(run -d "$DB" -tA -f "$ROOT/supabase/tests/impact_lab_rls_test.sql")"
 echo "$out" | tail -1
 echo "$out" | grep -qE '^IMPACT_LAB_RLS: PASS [0-9]+ checks$'
+
+# IV-IMPACT-I1 — engine → database parity: rows produced by the REAL Lab flow
+# (engine + store row mappers) must satisfy every database invariant.
+if command -v deno >/dev/null 2>&1; then
+  rows="$(mktemp)"
+  deno run --allow-read "$ROOT/supabase/tests/impact_lab_engine_rows.ts" > "$rows"
+  out="$(run -d "$DB" -tA -f "$rows")"
+  rm -f "$rows"
+  echo "$out" | tail -1
+  echo "$out" | grep -qE '^IMPACT_ENGINE_ROWS: PASS '
+elif [ "${CI:-}" = "true" ]; then
+  echo "deno is required in CI for the Impact engine-rows parity test" >&2; exit 1
+else
+  echo "IMPACT_ENGINE_ROWS: skipped locally (deno not on PATH)"
+fi
