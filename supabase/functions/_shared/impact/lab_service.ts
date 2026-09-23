@@ -107,12 +107,25 @@ export function withDisputeOverlay(r: VerificationResult, disputes: readonly Sto
   return r;
 }
 
-/** Latest summary for a claim when no re-verification is pending (retry = replay, no new version). */
-function settledLatest(data: InvestigationData, claimRef: string) {
+/**
+ * Retry replay (I1F2-02 / I1F3-01): the stored latest result is replayed only
+ * if a FRESH engine run over the current state yields the same status,
+ * underlying status, evidence-set hash and review binding. Any change in
+ * sources, evidence, disputes, identity or time-dependent rules returns null,
+ * and the caller stores a new version.
+ */
+async function settledLatest(actor: LabActor, inv: InvestigationRecord, data: InvestigationData, claimRef: string, now: string) {
   const latest = data.latestVerifications.find((v) => v.result.claimId === claimRef);
-  if (!latest) return null;
+  const claim = data.claims.find((c) => c.id === claimRef);
+  if (!latest || !claim) return null;
   const read = withDisputeOverlay(latest.result, data.disputes);
-  return read.reverificationPending ? null : summary(read, latest.version);
+  if (read.reverificationPending) return null;
+  const fresh = await computeVerification(actor, inv, data, claim, data.evidence.filter((e) => e.claimId === claimRef), now);
+  if (!fresh.ok) return null;
+  const f = fresh.value;
+  const same = f.status === latest.result.status && f.underlyingStatus === latest.result.underlyingStatus &&
+    f.evidenceSetHash === latest.result.evidenceSetHash && f.reviewBindingHash === latest.result.reviewBindingHash;
+  return same ? summary(read, latest.version) : null;
 }
 
 function summary(r: ReadResult, version: number) {
@@ -159,10 +172,29 @@ async function verifyAndStore(
   const claim = data.claims.find((c) => c.id === claimRef);
   if (!claim) return fail('INVALID_REQUEST', 'unknown claim');
   const evidence = data.evidence.filter((e) => e.claimId === claim.id);
+  const r = await computeVerification(actor, inv, data, claim, evidence, now, humanReviewBindingHash);
+  if (!r.ok) return r;
+  const stored = await store.insertVerification(inv.id, r.value, idempotencyKey, actor.userId);
+  if (!stored.ok) return stored;
+  // Codex I1G2-03: an idempotency key replays only the SAME claim.
+  if (stored.value.result.claimId !== claim.id) return fail('ALREADY_EXISTS', 'idempotency key already used for another claim');
+  return ok({ result: stored.value.result, version: stored.value.version, replayed: stored.value.result.resultId !== r.value.resultId, evidenceCount: evidence.length });
+}
+
+/** Pure engine run with SERVER inputs only (nothing persisted). */
+async function computeVerification(
+  actor: LabActor,
+  inv: InvestigationRecord,
+  data: InvestigationData,
+  claim: Claim,
+  evidence: readonly EvidenceItem[],
+  now: string,
+  humanReviewBindingHash?: string,
+): Promise<ImpactResult<VerificationResult>> {
   // Untrusted-content boundary: excerpts carrying instructions flag their source (review), never obeyed.
   const flagged = [...new Set(evidence.filter((e) => e.excerpt && scanUntrustedContent(e.excerpt).flagged).map((e) => e.sourceId))];
   const openDispute = data.disputes.some((d) => d.claimRef === claim.id && d.resolution === null);
-  const r = await verifyClaim(
+  return await verifyClaim(
     { claim, evidence, sources: data.sources.map((s) => s.source) },
     {
       evaluatedAt: now,
@@ -175,12 +207,6 @@ async function verifyAndStore(
         : {}),
     },
   );
-  if (!r.ok) return r;
-  const stored = await store.insertVerification(inv.id, r.value, idempotencyKey, actor.userId);
-  if (!stored.ok) return stored;
-  // Codex I1G2-03: an idempotency key replays only the SAME claim.
-  if (stored.value.result.claimId !== claim.id) return fail('ALREADY_EXISTS', 'idempotency key already used for another claim');
-  return ok({ result: stored.value.result, version: stored.value.version, replayed: stored.value.result.resultId !== r.value.resultId, evidenceCount: evidence.length });
 }
 
 async function reverify(store: ImpactLabStore, actor: LabActor, inv: InvestigationRecord, claimRef: string, now: string) {
@@ -449,10 +475,14 @@ export async function handleLabRequest(
       }
       if (existing) {
         // Retry of the same dispute (I1F-02): repair the re-verification instead of failing.
-        if (existing.claimRef !== req.claimRef || existing.kind !== req.kind || existing.resolution !== null) {
+        const a = [...existing.submittedEvidenceRefs].sort();
+        const b = [...req.submittedEvidenceRefs].sort();
+        const sameRefs = a.length === b.length && a.every((r, i) => r === b[i]);
+        // I1F3-02: only an IDENTICAL request is a retry.
+        if (existing.claimRef !== req.claimRef || existing.kind !== req.kind || existing.resolution !== null || !sameRefs) {
           return fail('ALREADY_EXISTS', 'dispute ref already used');
         }
-        const settled = settledLatest(data.value, req.claimRef);
+        const settled = await settledLatest(actor, inv.value, data.value, req.claimRef, now);
         if (settled) return ok({ action: req.action, data: { disputeRef: req.ref, claimRef: req.claimRef, verification: settled, replayed: true } });
       } else {
         const r = await store.insertDispute(inv.value.id, {
@@ -476,7 +506,7 @@ export async function handleLabRequest(
         if (!r.ok) return r;
       } else {
         // Retry of the same resolution: repair only if the read state is still pending (I1F-02 / I1F2-02).
-        const settled = settledLatest(data.value, d.claimRef);
+        const settled = await settledLatest(actor, inv.value, data.value, d.claimRef, now);
         if (settled) return ok({ action: req.action, data: { disputeRef: req.disputeRef, resolution: req.resolution, verification: settled, replayed: true } });
       }
       const v = await reverify(store, actor, inv.value, d.claimRef, now);

@@ -502,3 +502,28 @@ Deno.test('I1F2-02 repeating a successful open/resolve replays without appending
   const again2 = await t.must(UA, { action: 'resolve_dispute', investigation_id: inv, dispute_ref: 'd1', resolution: 'UPHELD' });
   assertEquals([again2.data.replayed, (again2.data.verification as Json).status, count()], [true, 'SUPPORTED', after]);
 });
+
+Deno.test('I1F3-01 a retry never replays a result the current state no longer produces', async () => {
+  const t = setup();
+  const inv = await supportedRegistrationClaim(t);
+  const opened = await t.must(UA, { action: 'open_dispute', investigation_id: inv, ref: 'd1', claim_ref: 'c1', kind: 'CORRECTION_REQUEST' });
+  assertEquals((opened.data.verification as Json).underlyingStatus, 'SUPPORTED');
+  await t.must(UA, { action: 'update_source_status', investigation_id: inv, source_ref: 'src-reg', status: 'RETRACTED' });
+  const retry = await t.must(UA, { action: 'open_dispute', investigation_id: inv, ref: 'd1', claim_ref: 'c1', kind: 'CORRECTION_REQUEST' });
+  const v = retry.data.verification as Json;
+  assertEquals([v.status, v.underlyingStatus], ['DISPUTED', 'UNVERIFIED']);
+  assertEquals(retry.data.replayed, undefined);
+  const inv2 = await supportedRegistrationClaim(t);
+  await t.must(UA, { action: 'open_dispute', investigation_id: inv2, ref: 'd1', claim_ref: 'c1', kind: 'CORRECTION_REQUEST' });
+  await t.must(UA, { action: 'resolve_dispute', investigation_id: inv2, dispute_ref: 'd1', resolution: 'UPHELD' });
+  await t.must(UA, { action: 'update_source_status', investigation_id: inv2, source_ref: 'src-reg', status: 'UNAVAILABLE' });
+  const r2 = await t.must(UA, { action: 'resolve_dispute', investigation_id: inv2, dispute_ref: 'd1', resolution: 'UPHELD' });
+  assertEquals((r2.data.verification as Json).status, 'UNVERIFIED');
+});
+
+Deno.test('I1F3-02 a retry with different cited evidence is a different request', async () => {
+  const t = setup();
+  const inv = await supportedRegistrationClaim(t);
+  await t.must(UA, { action: 'open_dispute', investigation_id: inv, ref: 'd1', claim_ref: 'c1', kind: 'CORRECTION_REQUEST' });
+  assertEquals(await t.code(UA, { action: 'open_dispute', investigation_id: inv, ref: 'd1', claim_ref: 'c1', kind: 'CORRECTION_REQUEST', submitted_evidence_refs: ['e1'] }), 'ALREADY_EXISTS');
+});
