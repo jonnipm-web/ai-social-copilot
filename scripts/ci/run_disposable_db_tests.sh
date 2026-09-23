@@ -36,3 +36,8 @@ echo "re-applied $(basename "$last") (idempotency)"
 out="$(run -d "$DB" -tA -f "$ROOT/supabase/tests/entitlement_subject_roles_rls_test.sql")"
 echo "$out" | tail -1
 echo "$out" | grep -qx 'SUBJECT_ROLES_RLS: PASS'
+
+# IV-IMPACT-I1-PERSISTENCE-RLS-01 — Impact Lab RLS / invariants (migration 20260924010000).
+out="$(run -d "$DB" -tA -f "$ROOT/supabase/tests/impact_lab_rls_test.sql")"
+echo "$out" | tail -1
+echo "$out" | grep -qE '^IMPACT_LAB_RLS: PASS [0-9]+ checks$'
