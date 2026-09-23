@@ -22,7 +22,7 @@ API must follow.
 | Calculation manipulation | engine is pure, deterministic, versioned; `analysisId` binds engine version + data hash + options | persist `contentHash` with artifacts |
 | Client-forged metrics | metrics computed server-side only; nothing accepts a metric from a client | API accepts data/instrument references, never metrics |
 | Entitlement bypass | `ive-quant` EXPERIMENTAL ⇒ admin-only (QB-11); MP-09 forbids an Edge Function for it | `requireModuleAccess` after auth, before work; plan never from body |
-| LLM hallucinated numbers | `checkNarrativeGrounding` rejects ungrounded numbers / unknown fact ids | narrator output must pass the guard or be discarded |
+| LLM hallucinated numbers | template narratives: figures only via `{{FACT_ID}}`; `renderNarrative` refuses digits, numeric chars, %, number words, unknown/malformed placeholders | narrator output must render or be discarded |
 | Future broker credential leakage | no broker code, no credential type, QB-04 forbids execution symbols | credentials only inside a future AEF-governed broker adapter |
 
 ## 2. Server authority
@@ -68,6 +68,13 @@ without legal/regulatory analysis. This is enforced architecturally (no
 recommendation type, descriptive-only signals, narrative rules, no
 execution path), not by a disclaimer.
 
+## 5a. Codex Gate 1 hardening (summary)
+
+Instrument identity is validated/canonicalized at every entry point
+(series, portfolio, watchlist); series are deep-frozen; empty datasets
+fail; `sourceAsOf` must agree with the data; non-finite results fail
+closed; no price-basis inference. Full list: mission report §41.
+
 ## 6. Observability
 
 `quantLogEvent` is the only log shape: analysis id, provider id, instrument
@@ -75,3 +82,14 @@ count, dataset size, period, calculation types, freshness, latency, error
 code. Built from an allowlist with a safe-token filter, so symbols,
 quantities, prices, portfolio composition, document text and keys cannot
 be logged (test AN-50).
+
+## 7. Residual risks (accepted, documented)
+
+* **Narrative misattribution**: a narrator can cite a real fact under a
+  wrong description (e.g. present volatility as a return). Placeholders
+  carry labels, but semantic correctness of prose is not machine-checked.
+* **Excluded number words**: "one", "um", "uma" double as articles and are
+  not blocked; Roman numerals written with Latin letters ("IV") are
+  indistinguishable from words.
+* **Calendar-naive freshness and gaps** until an exchange calendar exists.
+* **Float64 analytics** are not a ledger (see QUANT_CALCULATION_SPEC §1).

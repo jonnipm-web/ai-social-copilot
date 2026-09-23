@@ -57,7 +57,7 @@ False positives excluded after inspection: `SingleTickerProviderStateMixin`
 ## 4. What this mission added
 
 `supabase/functions/_shared/quant/` — the Quant Foundation core (pure
-TypeScript/Deno, server-side), 81 tests, and `docs/quant/`. See
+TypeScript/Deno, server-side), 96 tests, and `docs/quant/`. See
 QUANT_ARCHITECTURE.md.
 
 ## 5. Existing *financial-looking* capabilities outside Quant (observation)

@@ -31,10 +31,13 @@ export interface Signal {
 }
 
 /**
- * Moving-average crossover observations: a cross at t when
- * sign(fast_t − slow_t) differs from sign(fast_{t−1} − slow_{t−1}) and the
- * new sign is non-zero. Touching (equality) is not a cross. No trading
- * rule is implied.
+ * Moving-average crossover observations. Let s_t = sign(fast_t − slow_t)
+ * and p = the last NON-ZERO sign before t. A cross is reported at t when
+ * p ≠ 0, s_t ≠ 0 and s_t ≠ p. Consequences (pinned by tests, Codex Gate 1 CX1-08):
+ *   above → equal → above   no cross (a touch)
+ *   above → equal → below   CROSSED_BELOW, reported at the first bar strictly below
+ *   below → equal → above   CROSSED_ABOVE, reported at the first bar strictly above
+ * No trading rule is implied.
  */
 export function movingAverageCrossovers(
   prices: readonly number[],

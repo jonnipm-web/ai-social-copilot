@@ -226,7 +226,7 @@ Deno.test('DT-33 numbers: plain decimals only', () => {
 Deno.test('DT-34 malformed CSV rows are rejected with location', () => {
   const r = parseOhlcvCsv('date,open,high,low,close\n2026-01-05,1,1,1,1\n2026-01-06,1,1,1\n');
   assertEquals(code(r), 'INVALID_DATASET');
-  assert(!r.ok && r.error.details?.line === 3);
+  assert(!r.ok && r.error.details?.record === 3);
   assertEquals(code(parseOhlcvCsv('date,open,high,low,close\n2026-01-05,1,1,1,abc\n')), 'INVALID_DATASET');
   assertEquals(code(parseOhlcvCsv('date,open,high,low,close\n2026-01-05,1,1,1,\n')), 'INVALID_DATASET');
   assertEquals(code(parseOhlcvCsv('date,open,high,low,close\n2026-01-05,"1,1,1,1\n')), 'INVALID_DATASET');

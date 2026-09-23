@@ -40,9 +40,17 @@ engine never reads the wall clock.
 | WEEKLY | 10 days | 21 days | STALE | 1 day |
 | MONTHLY | 35 days | 70 days | STALE | 1 day |
 
-* Reference time is the **newest bar timestamp** (assumption
-  `FRESHNESS_REFERENCE`). Daily bars are labelled 00:00Z of the session
-  date, so age is over-stated by up to one day — the conservative direction.
+* Reference time (assumption `FRESHNESS_REFERENCE`): `provenance.sourceAsOf`
+  when declared, otherwise the newest bar timestamp. `createPriceSeries`
+  rejects (`DATA_QUALITY_ERROR`) a `sourceAsOf` outside
+  [newest bar, newest bar + one bar span] (Codex Gate 1 CX1-01: a provider
+  claiming 2020 data while returning 2026 bars was reported FRESH), and
+  `validateProvenance` rejects `sourceAsOf` later than `retrievedAt` + 5 min.
+  Daily bars without `sourceAsOf` are labelled 00:00Z of the session date,
+  so age is over-stated by up to one day — the conservative direction.
+* An unusable clock or timestamp yields UNKNOWN (and `analyzeSeries`
+  returns INVALID_PARAMETER for an unusable clock) — never an exception
+  (Claude finding CL-02).
 * Daily thresholds are **calendar-naive**: wide enough to span a weekend plus
   one holiday. A longer market closure can read DELAYED; an exchange
   calendar (Q1) will tighten this.
@@ -54,7 +62,9 @@ engine never reads the wall clock.
 
 ## 5. Time series
 
-`PriceBar.t` is epoch ms UTC (safe integer). Prices must be finite and > 0,
+`PriceBar.t` is epoch ms UTC (safe integer) in [1800-01-01, 2300-01-01) —
+outside it `INVALID_DATASET` (Claude finding CL-01: timestamps beyond the
+ECMAScript Date range crashed `toISOString()`). Prices must be finite and > 0,
 volume finite and ≥ 0, `low ≤ min(open, close)`, `high ≥ max(open, close)`.
 `adjustedClose` is on every bar or on none.
 
@@ -78,6 +88,13 @@ market and does not analyze 24/7 asset classes.
 | > 50 000 bars | `DATASET_TOO_LARGE` |
 | currency ≠ instrument currency | `CURRENCY_MISMATCH` |
 | unsupported asset class | `UNSUPPORTED_ASSET_CLASS` |
+| malformed instrument identity | `INVALID_INSTRUMENT` (validated + canonicalized by `createInstrument`, CX1-05) |
+| zero bars | `INSUFFICIENT_DATA` (never an empty successful series, CX1-09) |
+| `sourceAsOf` inconsistent with bars | `DATA_QUALITY_ERROR` (CX1-01) |
+
+The returned `PriceSeries` is a deep-frozen copy: bars, instrument,
+provenance and warnings cannot be mutated, and later mutation of the
+caller's input objects does not reach it (CX1-06).
 
 Pair-wise alignment (`alignOnTimestamps`) is an inner join: a timestamp
 missing on either side is dropped from both — no forward fill.

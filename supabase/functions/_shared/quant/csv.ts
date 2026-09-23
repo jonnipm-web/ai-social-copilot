@@ -68,7 +68,7 @@ function parseRecords(text: string): QuantResult<string[][]> {
       continue;
     }
     if (c === '"') {
-      if (field.length > 0) return fail('INVALID_DATASET', 'quote inside an unquoted field', { line: rows.length + 1 });
+      if (field.length > 0) return fail('INVALID_DATASET', 'quote inside an unquoted field', { record: rows.length + 1 });
       quoted = true;
       i++;
     } else if (c === ',') {
@@ -165,12 +165,13 @@ export function parseOhlcvCsv(
   const rows: RawBarInput[] = [];
   for (let r = 1; r < records.length; r++) {
     const rec = records[r];
-    const line = r + 1;
+    // 1-based record number (header = 1); blank lines are not counted.
+    const record = r + 1;
     if (rec.length !== header.length) {
-      return fail('INVALID_DATASET', 'row has a different number of fields than the header', { line });
+      return fail('INVALID_DATASET', 'row has a different number of fields than the header', { record });
     }
     const t = parseStrictTimestamp(rec[colIndex.get('t')!]);
-    if (t === null) return fail('INVALID_DATASET', 'invalid or ambiguous timestamp', { line, column: 'date' });
+    if (t === null) return fail('INVALID_DATASET', 'invalid or ambiguous timestamp', { record, column: 'date' });
     const num = (col: Column): number | null | undefined => {
       const idx = colIndex.get(col);
       if (idx === undefined) return undefined;
@@ -180,7 +181,7 @@ export function parseOhlcvCsv(
     for (const col of ['open', 'high', 'low', 'close', 'volume', 'adjustedClose'] as const) {
       const v = num(col);
       if (v === undefined) continue;
-      if (v === null) return fail('INVALID_DATASET', 'invalid or missing number', { line, column: col });
+      if (v === null) return fail('INVALID_DATASET', 'invalid or missing number', { record, column: col });
       out[col] = v;
     }
     rows.push(out as unknown as RawBarInput);

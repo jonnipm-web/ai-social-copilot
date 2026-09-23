@@ -62,7 +62,7 @@ SOURCE (FixtureProvider | CSV | future provider)
   → [STORE/CACHE — not in Foundation, see QUANT_DATA_MODEL §8]
   → ANALYZE (metrics/risk/signals via analysis.analyzeSeries)
   → QuantAnalysisResult
-  → buildExplanationRequest → (future) IVE narrator → checkNarrativeGrounding
+  → buildExplanationRequest → (future) IVE narrator template → renderNarrative (grounding check)
 ```
 
 Calculations never read provider JSON; they receive `number[]` extracted
@@ -112,8 +112,15 @@ order or call time (test AN-31).
   pre-formatted facts (`source: 'DETERMINISTIC_ENGINE'`), formulas, period,
   freshness, evidence strength, warning codes, limitations and rules — no
   raw bars, no user documents.
-* `checkNarrativeGrounding(narrative, request)` rejects any numeric token
-  not present in the facts and any citation of an unknown fact id.
+* The narrator returns a **template** in which every figure is a
+  `{{FACT_ID}}` placeholder (period dates/bar count are facts too).
+  `renderNarrative` substitutes the engine's display strings and refuses a
+  template that `checkNarrativeGrounding` rejects: any Unicode digit,
+  numeric character (½ ² Ⅳ ①), percent sign, EN/PT number word, unknown or
+  malformed placeholder, or an empty template (Codex Gate 1 CX1-04 — the
+  first version scanned only ASCII digits in free text and accepted
+  "one hundred percent" or Arabic-Indic digits). Residual risks are listed
+  in QUANT_SECURITY_MODEL §7.
 * **Contract, not dependency**: `QuantNarrator` is an interface. IVE
   INTELLIGENCE CORE is built in parallel and is not imported (tripwire
   QB-03). Integration happens in a future Promotion/Integration Gate.

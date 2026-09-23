@@ -26,6 +26,26 @@ function requireSeries(values: readonly number[], min: number, what: string): Qu
   return ok(values);
 }
 
+/** Every successful result must be finite: finite inputs can still overflow
+ * (e.g. MAX_VALUE / MIN_VALUE). Codex Gate 1 CX1-02. */
+function finite<T extends number | readonly (number | null)[]>(v: T): QuantResult<T> {
+  const bad = typeof v === 'number' ? !Number.isFinite(v) : v.some((x) => x !== null && !Number.isFinite(x));
+  return bad ? fail('CALCULATION_ERROR', 'result is not a finite number', { reason: 'NON_FINITE_RESULT' }) : ok(v);
+}
+
+/**
+ * True when the dispersion of `values` is below float64 resolution relative
+ * to their magnitude, i.e. the series is constant up to rounding noise.
+ * Returns of a constant-growth series (100, 110, 121, 133.1) differ only in
+ * the last ulp; treating that noise as variance produced a Sharpe of ~1e16
+ * and an arbitrary correlation (Claude finding CL-03). Threshold: RMS
+ * deviation ≤ 64 ulp of the largest |value|.
+ */
+export function isNumericallyConstant(values: readonly number[], sumSqDev: number): boolean {
+  const maxAbs = values.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
+  return Math.sqrt(sumSqDev / values.length) <= 64 * Number.EPSILON * maxAbs;
+}
+
 function requireWindow(window: number, max: number): QuantResult<number> {
   if (!Number.isSafeInteger(window) || window < 1) return fail('INVALID_PARAMETER', 'window must be a positive integer');
   if (window > max) return fail('INSUFFICIENT_DATA', 'window longer than the series', { window, length: max });
@@ -38,7 +58,7 @@ export function simpleReturns(prices: readonly number[]): QuantResult<number[]> 
   if (!p.ok) return p;
   const out: number[] = [];
   for (let i = 1; i < prices.length; i++) out.push(prices[i] / prices[i - 1] - 1);
-  return ok(out);
+  return finite(out);
 }
 
 /** ℓ_t = ln(P_t / P_{t-1}). Length n−1. */
@@ -47,14 +67,14 @@ export function logReturns(prices: readonly number[]): QuantResult<number[]> {
   if (!p.ok) return p;
   const out: number[] = [];
   for (let i = 1; i < prices.length; i++) out.push(Math.log(prices[i] / prices[i - 1]));
-  return ok(out);
+  return finite(out);
 }
 
 /** P_{n−1} / P_0 − 1 (price return over the whole series). */
 export function cumulativeReturn(prices: readonly number[]): QuantResult<number> {
   const p = requirePrices(prices, 2);
   if (!p.ok) return p;
-  return ok(prices[prices.length - 1] / prices[0] - 1);
+  return finite(prices[prices.length - 1] / prices[0] - 1);
 }
 
 /** Π(1 + r_t) − 1 — compounding a return series. For returns derived from
@@ -64,7 +84,7 @@ export function compoundReturns(returns: readonly number[]): QuantResult<number>
   if (!r.ok) return r;
   if (returns.some((x) => x <= -1)) return fail('CALCULATION_ERROR', 'a return <= -100% cannot be compounded');
   // Sum of logs is more stable than a running product for long series.
-  return ok(Math.expm1(fsum(returns.map((x) => Math.log1p(x)))));
+  return finite(Math.expm1(fsum(returns.map((x) => Math.log1p(x)))));
 }
 
 /** Rolling k-period return: P_t / P_{t−k} − 1 for t = k..n−1; entries 0..k−1 are null (not computable, never filled). */
@@ -73,7 +93,7 @@ export function rollingReturns(prices: readonly number[], window: number): Quant
   if (!p.ok) return p;
   const w = requireWindow(window, prices.length - 1);
   if (!w.ok) return w;
-  return ok(prices.map((pt, t) => (t < window ? null : pt / prices[t - window] - 1)));
+  return finite(prices.map((pt, t) => (t < window ? null : pt / prices[t - window] - 1)));
 }
 
 export interface VolatilityOptions {
@@ -97,11 +117,11 @@ export function volatility(returns: readonly number[], opts: VolatilityOptions):
     return fail('INVALID_PARAMETER', 'periodsPerYear must be > 0 or null');
   }
   const perPeriod = Math.sqrt(variance(returns, 1));
-  return ok({
-    perPeriod,
-    annualized: opts.periodsPerYear === null ? null : perPeriod * Math.sqrt(opts.periodsPerYear),
-    observations: returns.length,
-  });
+  const annualized = opts.periodsPerYear === null ? null : perPeriod * Math.sqrt(opts.periodsPerYear);
+  if (!Number.isFinite(perPeriod) || (annualized !== null && !Number.isFinite(annualized))) {
+    return fail('CALCULATION_ERROR', 'volatility is not a finite number', { reason: 'NON_FINITE_RESULT' });
+  }
+  return ok({ perPeriod, annualized, observations: returns.length });
 }
 
 /** DD_t = P_t / max_{s<=t} P_s − 1. Always <= 0 (convention: drawdowns are non-positive). */
@@ -159,9 +179,19 @@ export function simpleMovingAverage(values: readonly number[], window: number): 
   if (!v.ok) return v;
   const w = requireWindow(window, values.length);
   if (!w.ok) return w;
-  // Each window is summed independently (O(n·k)) instead of a running sum:
-  // a running add/subtract accumulates drift over long series. k is small in practice.
-  return ok(values.map((_, t) => (t < window - 1 ? null : fsum(values.slice(t - window + 1, t + 1)) / window)));
+  // O(n) with bounded drift (Codex Gate 1 CX1-07: the per-window fsum was
+  // O(n·k), i.e. ~2.5e9 operations per 50 000-bar series with a 50 000
+  // window). The window sum is recomputed exactly with fsum once every k
+  // steps (n/k recomputes × k terms = O(n)); between recomputes it is
+  // updated by add/subtract, so rounding drift spans at most k−1 updates.
+  const out: (number | null)[] = new Array(values.length).fill(null);
+  let sum = 0;
+  for (let t = window - 1; t < values.length; t++) {
+    if ((t - (window - 1)) % window === 0) sum = fsum(values.slice(t - window + 1, t + 1));
+    else sum += values[t] - values[t - window];
+    out[t] = sum / window;
+  }
+  return finite(out);
 }
 
 /** Minimum paired observations for a correlation to be reported. With n = 2
@@ -179,9 +209,17 @@ export function pearsonCorrelation(x: readonly number[], y: readonly number[]): 
   const dx = x.map((v) => v - mx), dy = y.map((v) => v - my);
   const sxx = fsum(dx.map((d) => d * d));
   const syy = fsum(dy.map((d) => d * d));
-  if (sxx === 0 || syy === 0) return fail('CALCULATION_ERROR', 'correlation undefined for a constant series', { reason: 'ZERO_VARIANCE' });
+  if (!Number.isFinite(sxx) || !Number.isFinite(syy)) {
+    return fail('CALCULATION_ERROR', 'correlation inputs overflow', { reason: 'NON_FINITE_RESULT' });
+  }
+  if (sxx === 0 || syy === 0 || isNumericallyConstant(x, sxx) || isNumericallyConstant(y, syy)) {
+    return fail('CALCULATION_ERROR', 'correlation undefined for a (numerically) constant series', { reason: 'ZERO_VARIANCE' });
+  }
   const sxy = fsum(dx.map((d, i) => d * dy[i]));
-  const r = sxy / Math.sqrt(sxx * syy);
+  // sqrt(sxx)·sqrt(syy) instead of sqrt(sxx·syy): the product can overflow
+  // even when each factor is finite.
+  const r = sxy / (Math.sqrt(sxx) * Math.sqrt(syy));
+  if (!Number.isFinite(r)) return fail('CALCULATION_ERROR', 'correlation is not a finite number', { reason: 'NON_FINITE_RESULT' });
   // Guard only against floating overshoot past the mathematical bound.
   return ok(Math.max(-1, Math.min(1, r)));
 }
@@ -201,7 +239,10 @@ export function sharpeRatio(returns: readonly number[], a: SharpeAssumptions): Q
   const r = requireSeries(returns, 2, 'returns');
   if (!r.ok) return r;
   const excess = returns.map((x) => x - a.riskFreeRatePerPeriod);
-  const sd = Math.sqrt(variance(excess, 1));
-  if (sd === 0) return fail('CALCULATION_ERROR', 'Sharpe undefined for zero-variance returns', { reason: 'ZERO_VARIANCE' });
-  return ok((mean(excess) / sd) * Math.sqrt(a.periodsPerYear));
+  const v = variance(excess, 1);
+  if (!Number.isFinite(v)) return fail('CALCULATION_ERROR', 'Sharpe inputs overflow', { reason: 'NON_FINITE_RESULT' });
+  if (v === 0 || isNumericallyConstant(excess, v * (excess.length - 1))) {
+    return fail('CALCULATION_ERROR', 'Sharpe undefined for (numerically) zero-variance returns', { reason: 'ZERO_VARIANCE' });
+  }
+  return finite((mean(excess) / Math.sqrt(v)) * Math.sqrt(a.periodsPerYear));
 }

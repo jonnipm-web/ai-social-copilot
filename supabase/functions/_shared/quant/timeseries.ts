@@ -16,10 +16,14 @@
  *  - missing values are never filled; a row missing a required field is
  *    rejected, and gaps between bars are only reported, never interpolated
  *  - adjustedClose must be present on every bar or on none
+ *  - timestamps must fall in [1800-01-01, 2300-01-01) UTC
+ *
+ * A PriceSeries is deeply frozen: bars, instrument, provenance and warnings
+ * cannot be mutated after validation (Codex Gate 1 CX1-06).
  */
 import { fail, ok, type QuantResult, type QuantWarning } from './errors.ts';
-import { type InstrumentIdentity, requireFoundationSupported } from './instrument.ts';
-import { type DataProvenance, type Frequency, validateProvenance } from './provenance.ts';
+import { createInstrument, type InstrumentIdentity, requireFoundationSupported } from './instrument.ts';
+import { type DataProvenance, type Frequency, parseIsoUtc, validateProvenance } from './provenance.ts';
 
 export interface PriceBar {
   /** Bar timestamp, epoch ms UTC. For DAILY bars from date-only sources this
@@ -57,6 +61,22 @@ export interface PriceSeries {
 export const MAX_BARS_PER_SERIES = 50_000;
 
 const DAY = 86_400_000;
+/** Plausible bar-time range. Also keeps every timestamp inside the ECMAScript
+ * Date range, so toISOString() can never throw (Claude finding CL-01). */
+export const MIN_BAR_T = Date.UTC(1800, 0, 1);
+export const MAX_BAR_T = Date.UTC(2300, 0, 1);
+
+/** Nominal span of one bar: provenance.sourceAsOf must fall within
+ * [newest bar t, newest bar t + span] (Codex Gate 1 CX1-01). */
+export const BAR_SPAN_MS: Readonly<Record<Frequency, number>> = {
+  INTRADAY_1M: 60_000,
+  INTRADAY_5M: 300_000,
+  INTRADAY_1H: 3_600_000,
+  DAILY: DAY,
+  WEEKLY: 7 * DAY,
+  MONTHLY: 31 * DAY,
+};
+
 /** Calendar-naive gap thresholds (a larger spacing is reported, never filled). */
 const GAP_THRESHOLD_MS: Partial<Record<Frequency, number>> = {
   DAILY: 4 * DAY,
@@ -87,8 +107,8 @@ export function normalizeBars(
   for (let i = 0; i < raw.length; i++) {
     const r = raw[i];
     if (!r || typeof r !== 'object') return fail('INVALID_DATASET', 'bar must be an object', { row: i });
-    if (typeof r.t !== 'number' || !Number.isSafeInteger(r.t)) {
-      return fail('INVALID_DATASET', 'invalid timestamp', { row: i, field: 't' });
+    if (typeof r.t !== 'number' || !Number.isSafeInteger(r.t) || r.t < MIN_BAR_T || r.t >= MAX_BAR_T) {
+      return fail('INVALID_DATASET', 'invalid or out-of-range timestamp', { row: i, field: 't' });
     }
     for (const f of ['open', 'high', 'low', 'close'] as const) {
       if (!isFinitePositive(r[f])) return fail('INVALID_DATASET', 'price must be a finite number > 0', { row: i, field: f });
@@ -174,40 +194,68 @@ export function normalizeBars(
   return ok({ bars: unique, warnings });
 }
 
-/** The only constructor of a PriceSeries. */
+function deepFreeze<T>(v: T): T {
+  if (v && typeof v === 'object' && !Object.isFrozen(v)) {
+    for (const k of Object.keys(v)) deepFreeze((v as Record<string, unknown>)[k]);
+    Object.freeze(v);
+  }
+  return v;
+}
+
+/**
+ * The only constructor of a PriceSeries. Validates and canonicalizes the
+ * instrument (Codex Gate 1 CX1-05), validates provenance, requires at least
+ * one bar (CX1-09), checks that provenance.sourceAsOf agrees with the newest
+ * bar (CX1-01), and returns a deep-frozen copy (CX1-06).
+ */
 export function createPriceSeries(
   instrument: InstrumentIdentity,
   provenance: DataProvenance,
   raw: readonly RawBarInput[],
   maxBars: number = MAX_BARS_PER_SERIES,
 ): QuantResult<PriceSeries> {
-  const supported = requireFoundationSupported(instrument);
+  const inst = createInstrument(instrument);
+  if (!inst.ok) return inst;
+  const supported = requireFoundationSupported(inst.value);
   if (!supported.ok) return supported;
   const prov = validateProvenance(provenance);
   if (!prov.ok) return prov;
-  if (provenance.currency !== instrument.currency) {
+  if (provenance.currency !== inst.value.currency) {
     return fail('CURRENCY_MISMATCH', 'dataset currency differs from instrument currency', {
-      instrumentCurrency: instrument.currency,
+      instrumentCurrency: inst.value.currency,
       datasetCurrency: provenance.currency,
     });
   }
   const norm = normalizeBars(raw, provenance.frequency, maxBars);
   if (!norm.ok) return norm;
-  return ok(Object.freeze({
-    instrument,
+  const bars = norm.value.bars;
+  if (bars.length === 0) return fail('INSUFFICIENT_DATA', 'dataset has no bars');
+  if (provenance.sourceAsOf !== undefined) {
+    const asOf = parseIsoUtc(provenance.sourceAsOf) as number;
+    const newest = bars[bars.length - 1].t;
+    if (asOf < newest || asOf > newest + BAR_SPAN_MS[provenance.frequency]) {
+      return fail('DATA_QUALITY_ERROR', 'provenance sourceAsOf disagrees with the newest bar', {
+        sourceAsOf: provenance.sourceAsOf,
+        newestBar: new Date(newest).toISOString(),
+      });
+    }
+  }
+  return ok(deepFreeze({
+    instrument: structuredClone(inst.value),
     frequency: provenance.frequency,
-    provenance,
-    bars: Object.freeze(norm.value.bars),
-    normalizationWarnings: Object.freeze(norm.value.warnings),
+    provenance: structuredClone(provenance),
+    bars: bars.map((b) => ({ ...b })),
+    normalizationWarnings: structuredClone(norm.value.warnings),
   }));
 }
 
+/**
+ * Which price the calculations use. There is NO inference from field
+ * presence (Codex Gate 1 CX1-03): the default is always 'close', and
+ * 'adjustedClose' must be requested explicitly. `provenance.adjustment`
+ * describes the OHLC fields; the adjustedClose column is provider-defined.
+ */
 export type PriceBasis = 'close' | 'adjustedClose';
-
-/** adjustedClose when every bar has it, else close. Always recorded as an assumption. */
-export function defaultPriceBasis(series: PriceSeries): PriceBasis {
-  return series.bars.length > 0 && series.bars.every((b) => b.adjustedClose !== undefined) ? 'adjustedClose' : 'close';
-}
 
 export function pricesOf(series: PriceSeries, basis: PriceBasis): QuantResult<number[]> {
   if (basis === 'adjustedClose') {

@@ -116,6 +116,8 @@ export class FixtureProvider implements MarketDataProvider {
       return fail('INVALID_PARAMETER', 'invalid time range');
     }
     const bars = d.bars.filter((b) => (b.t as number) >= req.fromT && (b.t as number) <= req.toT);
+    // Codex Gate 1 CX1-09: an empty range is a failure, never an empty-but-successful series.
+    if (bars.length === 0) return fail('INSUFFICIENT_DATA', 'no bars in the requested range');
     const newest = bars.reduce<number | null>((m, b) => (m === null || (b.t as number) > m ? (b.t as number) : m), null);
     return ok({ data: [...bars], provenance: this.provenance(d, newest) });
   }

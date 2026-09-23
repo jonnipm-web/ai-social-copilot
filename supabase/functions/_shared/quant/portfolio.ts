@@ -11,12 +11,13 @@
  */
 import { fail, ok, type QuantResult, type QuantWarning } from './errors.ts';
 import { fsum } from './numeric.ts';
-import { type InstrumentIdentity, instrumentKey } from './instrument.ts';
-import { assessFreshness, DEFAULT_FRESHNESS_POLICIES, type FreshnessAssessment, type Frequency, parseIsoUtc } from './provenance.ts';
+import { createInstrument, type InstrumentIdentity, instrumentKey, requireFoundationSupported } from './instrument.ts';
+import { ALL_FREQUENCIES, assessFreshness, DEFAULT_FRESHNESS_POLICIES, type FreshnessAssessment, type Frequency, parseIsoUtc } from './provenance.ts';
 import { concentration, type Concentration, validateWeights, type WeightEntry } from './risk.ts';
 import { type PriceBasis, type PriceSeries, pricesOf } from './timeseries.ts';
 
 export const MAX_PORTFOLIO_POSITIONS = 500;
+
 
 export interface PortfolioPosition {
   readonly instrument: InstrumentIdentity;
@@ -66,8 +67,14 @@ export function validatePortfolio(p: ManualPortfolio): QuantResult<ManualPortfol
     return fail('DATASET_TOO_LARGE', 'too many positions', { max: MAX_PORTFOLIO_POSITIONS });
   }
   const seen = new Set<string>();
+  const positions: PortfolioPosition[] = [];
   for (const pos of p.positions) {
-    const key = instrumentKey(pos.instrument);
+    // Codex Gate 1 CX1-05: the same identity + asset-class boundary as createPriceSeries.
+    const inst = createInstrument(pos?.instrument);
+    if (!inst.ok) return inst;
+    const supported = requireFoundationSupported(inst.value);
+    if (!supported.ok) return supported;
+    const key = instrumentKey(inst.value);
     if (seen.has(key)) return fail('INVALID_PORTFOLIO', 'duplicate position for the same instrument', { key });
     seen.add(key);
     if (!Number.isFinite(pos.quantity) || pos.quantity <= 0) {
@@ -76,15 +83,16 @@ export function validatePortfolio(p: ManualPortfolio): QuantResult<ManualPortfol
     if (pos.costBasisPerUnit !== undefined && (!Number.isFinite(pos.costBasisPerUnit) || pos.costBasisPerUnit <= 0)) {
       return fail('INVALID_PORTFOLIO', 'costBasisPerUnit must be finite and > 0', { key });
     }
-    if (pos.instrument.currency !== p.baseCurrency) {
+    if (inst.value.currency !== p.baseCurrency) {
       return fail('CURRENCY_MISMATCH', 'position currency differs from portfolio base currency and no FX conversion is available', {
         key,
-        positionCurrency: pos.instrument.currency,
+        positionCurrency: inst.value.currency,
         baseCurrency: p.baseCurrency,
       });
     }
+    positions.push({ ...pos, instrument: inst.value });
   }
-  return ok(p);
+  return ok({ source: p.source, baseCurrency: p.baseCurrency, positions });
 }
 
 /** Market value = quantity × price (float64, unrounded). weight_i = MV_i / Σ MV. */
@@ -97,7 +105,7 @@ export function valuePortfolio(
   if (!v.ok) return v;
   const rows: { key: string; pos: PortfolioPosition; px: PricePoint; mv: number; fresh: FreshnessAssessment }[] = [];
   const warnings: QuantWarning[] = [];
-  for (const pos of p.positions) {
+  for (const pos of v.value.positions) {
     const key = instrumentKey(pos.instrument);
     const px = prices.get(key);
     if (!px) return fail('INSUFFICIENT_DATA', 'no price for position', { key });
@@ -105,14 +113,18 @@ export function valuePortfolio(
     if (px.currency !== p.baseCurrency) {
       return fail('CURRENCY_MISMATCH', 'price currency differs from portfolio base currency', { key, priceCurrency: px.currency });
     }
+    // Claude finding CL-04: never index the policy table with an unvalidated key.
+    if (!ALL_FREQUENCIES.includes(px.frequency)) return fail('INVALID_DATASET', 'unknown price frequency', { key });
     const policy = DEFAULT_FRESHNESS_POLICIES[px.frequency];
-    if (!policy) return fail('INVALID_DATASET', 'unknown price frequency', { key });
     const fresh = assessFreshness(parseIsoUtc(px.asOf), nowMs, policy);
     if (fresh.state === 'STALE') warnings.push({ code: 'DATA_STALE', message: 'a position is valued with a stale price', details: { key } });
     if (fresh.state === 'DELAYED') warnings.push({ code: 'DATA_DELAYED', message: 'a position is valued with a delayed price', details: { key } });
     if (fresh.state === 'UNKNOWN') warnings.push({ code: 'FRESHNESS_UNKNOWN', message: 'price age unknown', details: { key } });
     const mv = pos.quantity * px.price;
-    if (!Number.isFinite(mv)) return fail('CALCULATION_ERROR', 'market value overflow', { key });
+    if (!Number.isFinite(mv)) return fail('CALCULATION_ERROR', 'market value overflow', { key, reason: 'NON_FINITE_RESULT' });
+    if (pos.costBasisPerUnit !== undefined && !Number.isFinite(px.price / pos.costBasisPerUnit - 1)) {
+      return fail('CALCULATION_ERROR', 'unrealized return overflow', { key, reason: 'NON_FINITE_RESULT' });
+    }
     rows.push({ key, pos, px, mv, fresh });
   }
   const total = fsum(rows.map((r) => r.mv));
@@ -170,5 +182,7 @@ export function buyAndHoldReturn(
     const i1 = s.bars.findIndex((b) => b.t === endT);
     parts.push(entry.weight * (px.value[i1] / px.value[i0] - 1));
   }
-  return ok({ value: fsum(parts), startT, endT });
+  const value = fsum(parts);
+  if (!Number.isFinite(value)) return fail('CALCULATION_ERROR', 'buy-and-hold return is not finite', { reason: 'NON_FINITE_RESULT' });
+  return ok({ value, startT, endT });
 }

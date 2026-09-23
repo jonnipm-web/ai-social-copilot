@@ -7,7 +7,7 @@
  */
 import { assert, assertEquals, assertNotEquals } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
 import { analyzeSeries, FORMULAS, type QuantAnalysisResult } from './analysis.ts';
-import { buildExplanationRequest, checkNarrativeGrounding } from './ive_boundary.ts';
+import { buildExplanationRequest, checkNarrativeGrounding, renderNarrative } from './ive_boundary.ts';
 import { instrumentKey } from './instrument.ts';
 import { quantLogEvent } from './observability.ts';
 import { buyAndHoldReturn, type ManualPortfolio, type PricePoint, valuePortfolio } from './portfolio.ts';
@@ -230,9 +230,11 @@ Deno.test('AN-33 annualization must be stated; bad options rejected', async () =
 });
 Deno.test('AN-34 insufficient data: one bar → INSUFFICIENT_DATA; two bars → no volatility, warned', async () => {
   const s = await g1Series();
-  const one = val(createPriceSeries(INSTR_A, s.provenance, s.bars.slice(0, 1)));
+  // Slicing changes the newest bar, so the provider's sourceAsOf no longer applies (CX1-01).
+  const { sourceAsOf: _asOf, ...prov } = s.provenance;
+  const one = val(createPriceSeries(INSTR_A, prov, s.bars.slice(0, 1)));
   assertEquals(code(await analyzeSeries(one, { periodsPerYear: 252 }, clock)), 'INSUFFICIENT_DATA');
-  const two = val(createPriceSeries(INSTR_A, s.provenance, s.bars.slice(0, 2)));
+  const two = val(createPriceSeries(INSTR_A, prov, s.bars.slice(0, 2)));
   const r = val(await analyzeSeries(two, { periodsPerYear: 252 }, clock));
   assertEquals(r.risk, null);
   assert(!r.metrics.some((m) => m.id === 'VOLATILITY_PER_PERIOD'));
@@ -267,17 +269,21 @@ Deno.test('AN-40 explanation request carries pre-computed facts, formulas, cavea
   assert(req.rules.some((r) => /not recommendations/i.test(r)));
   assert(!JSON.stringify(req).includes('"bars":[')); // no raw price rows handed to the narrator
 });
-Deno.test('AN-41 grounding guard: a narrative quoting the facts passes; an invented number is rejected', async () => {
+Deno.test('AN-41 grounding: a placeholder template renders engine values; invented numbers and unknown facts are rejected', async () => {
   const req = buildExplanationRequest(await g1Result());
-  const good = checkNarrativeGrounding({
-    text: 'Between 2026-01-05 and 2026-01-09 (5 bars) the cumulative return was -1.99% and the max drawdown -10.90%. Data is synthetic, so evidence is weak.',
-    citedFactIds: ['CUMULATIVE_RETURN', 'MAX_DRAWDOWN'],
-  }, req);
-  assertEquals(good, { grounded: true, ungroundedNumbers: [], unknownFactIds: [] });
-  const invented = checkNarrativeGrounding({ text: 'Volatility is about 45% and the price will reach 130.', citedFactIds: ['VOLATILITY_FORECAST'] }, req);
+  const template = 'Between {{PERIOD_START}} and {{PERIOD_END}} ({{PERIOD_BARS}} bars) the cumulative return was {{CUMULATIVE_RETURN}} and the max drawdown {{MAX_DRAWDOWN}}. Data is synthetic, so evidence is weak.';
+  const good = checkNarrativeGrounding({ template }, req);
+  assertEquals(good.grounded, true);
+  assertEquals(good.citedFactIds, ['PERIOD_START', 'PERIOD_END', 'PERIOD_BARS', 'CUMULATIVE_RETURN', 'MAX_DRAWDOWN']);
+  assertEquals(
+    val(renderNarrative({ template }, req)),
+    'Between 2026-01-05 and 2026-01-09 (5 bars) the cumulative return was -1.99% and the max drawdown -10.90%. Data is synthetic, so evidence is weak.',
+  );
+  const invented = checkNarrativeGrounding({ template: 'Volatility is about 45% and the price will reach 130 per {{VOLATILITY_FORECAST}}.' }, req);
   assertEquals(invented.grounded, false);
-  assertEquals(invented.ungroundedNumbers, ['45%', '130']);
+  assertEquals(invented.ungroundedNumbers, ['45', '130', '%']);
   assertEquals(invented.unknownFactIds, ['VOLATILITY_FORECAST']);
+  assertEquals(code(renderNarrative({ template: 'up 45%' }, req)), 'CALCULATION_ERROR');
 });
 Deno.test('AN-42 display precision is separate from computation precision', async () => {
   const r = await g1Result();

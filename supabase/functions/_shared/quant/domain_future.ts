@@ -4,7 +4,9 @@
  * provider, no persistence, no UI.
  */
 import { fail, ok, type QuantResult } from './errors.ts';
-import { type InstrumentIdentity, instrumentKey } from './instrument.ts';
+import { createInstrument, type InstrumentIdentity, instrumentKey } from './instrument.ts';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 // --- Watchlist ---------------------------------------------------------------
 
@@ -17,18 +19,24 @@ export interface Watchlist {
   readonly instruments: readonly InstrumentIdentity[];
 }
 
-/** Dedupes by canonical instrument key (keeps first) and bounds size. */
+/** Validates every instrument, dedupes by canonical key (keeps first), bounds
+ * size, and checks the projectId FORMAT only — ownership is a server-side
+ * RLS/ownership check, never implied by this function (Codex Gate 1 CX1-10). */
 export function normalizeWatchlist(w: Watchlist): QuantResult<Watchlist> {
   const name = typeof w?.name === 'string' ? w.name.trim() : '';
   if (name.length === 0 || name.length > 80) return fail('INVALID_PARAMETER', 'watchlist name must be 1..80 characters');
   if (!Array.isArray(w.instruments)) return fail('INVALID_PARAMETER', 'instruments must be an array');
+  if (w.projectId !== undefined && !UUID_RE.test(w.projectId)) return fail('INVALID_PARAMETER', 'projectId must be a UUID');
+  if (w.instruments.length > 4 * MAX_WATCHLIST_ITEMS) return fail('DATASET_TOO_LARGE', 'too many watchlist items', { max: MAX_WATCHLIST_ITEMS });
   const seen = new Set<string>();
   const instruments: InstrumentIdentity[] = [];
-  for (const i of w.instruments) {
-    const k = instrumentKey(i);
+  for (const raw of w.instruments) {
+    const inst = createInstrument(raw);
+    if (!inst.ok) return inst;
+    const k = instrumentKey(inst.value);
     if (seen.has(k)) continue;
     seen.add(k);
-    instruments.push(i);
+    instruments.push(inst.value);
   }
   if (instruments.length > MAX_WATCHLIST_ITEMS) return fail('DATASET_TOO_LARGE', 'too many watchlist items', { max: MAX_WATCHLIST_ITEMS });
   return ok({ name, ...(w.projectId ? { projectId: w.projectId } : {}), instruments });

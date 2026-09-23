@@ -56,8 +56,13 @@ export function validateProvenance(p: DataProvenance): QuantResult<DataProvenanc
     return fail('INVALID_DATASET', 'invalid providerKind', { field: 'providerKind' });
   }
   if (parseIsoUtc(p.retrievedAt) === null) return fail('INVALID_DATASET', 'retrievedAt must be ISO 8601 UTC', { field: 'retrievedAt' });
-  if (p.sourceAsOf !== undefined && parseIsoUtc(p.sourceAsOf) === null) {
-    return fail('INVALID_DATASET', 'sourceAsOf must be ISO 8601 UTC', { field: 'sourceAsOf' });
+  if (p.sourceAsOf !== undefined) {
+    const asOf = parseIsoUtc(p.sourceAsOf);
+    if (asOf === null) return fail('INVALID_DATASET', 'sourceAsOf must be ISO 8601 UTC', { field: 'sourceAsOf' });
+    // Data cannot be retrieved before the moment it describes (5 min clock-skew allowance).
+    if (asOf > (parseIsoUtc(p.retrievedAt) as number) + 5 * 60_000) {
+      return fail('INVALID_DATASET', 'sourceAsOf is later than retrievedAt', { field: 'sourceAsOf' });
+    }
   }
   if (!ALL_FREQUENCIES.includes(p.frequency)) return fail('INVALID_DATASET', 'invalid frequency', { field: 'frequency' });
   if (!/^[A-Z]{3}$/.test(p.currency ?? '')) return fail('INVALID_DATASET', 'currency must be ISO 4217', { field: 'currency' });
@@ -128,19 +133,27 @@ export interface FreshnessAssessment {
   /** Age in ms of the newest datum relative to `now`; null when unknown. */
   readonly ageMs: number | null;
   readonly asOf: string | null;
-  readonly evaluatedAt: string;
+  /** null only when the injected clock itself is unusable. */
+  readonly evaluatedAt: string | null;
 }
+
+/** ECMAScript Date range limit (±8.64e15 ms). */
+export const MAX_DATE_MS = 8.64e15;
 
 export function assessFreshness(
   asOfMs: number | null,
   nowMs: number,
   policy: FreshnessPolicy,
 ): FreshnessAssessment {
-  const evaluatedAt = new Date(nowMs).toISOString();
-  if (asOfMs === null || !Number.isFinite(asOfMs) || !Number.isFinite(nowMs)) {
-    return { state: 'UNKNOWN', ageMs: null, asOf: null, evaluatedAt };
-  }
-  const asOf = new Date(asOfMs).toISOString();
+  // Claude finding CL-02: toISOString() throws RangeError outside the Date
+  // range, so every conversion is guarded — an unusable clock or timestamp
+  // yields UNKNOWN, never an exception.
+  const iso = (ms: number | null): string | null =>
+    ms !== null && Number.isFinite(ms) && Math.abs(ms) <= MAX_DATE_MS ? new Date(ms).toISOString() : null;
+  const evaluatedAt = iso(nowMs);
+  const asOf = iso(asOfMs);
+  if (asOf === null || evaluatedAt === null) return { state: 'UNKNOWN', ageMs: null, asOf, evaluatedAt };
+  asOfMs = asOfMs as number;
   const age = nowMs - asOfMs;
   if (age < -policy.futureToleranceMs) return { state: 'UNKNOWN', ageMs: age, asOf, evaluatedAt };
   const ageMs = Math.max(0, age);

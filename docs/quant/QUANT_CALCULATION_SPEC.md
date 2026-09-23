@@ -19,6 +19,16 @@ No LLM participates in any calculation.
   accounting/settlement feature (cash balances, fees, P&L booking) needs
   decimal/minor-unit integer arithmetic and is out of Quant Foundation scope.
 * **Percentages** are ratios internally (0.1 = 10 %).
+* **Every successful result is finite** (Codex Gate 1 CX1-02): finite inputs
+  can still overflow (`MAX_VALUE / MIN_VALUE`, squared deviations of 1e308);
+  any non-finite intermediate or output returns `CALCULATION_ERROR`
+  `reason: NON_FINITE_RESULT`, never `ok(Infinity)`.
+* **Numerically constant series** (Claude finding CL-03): returns of a
+  constant-growth series (100, 110, 121, 133.1…) differ only in the last ulp.
+  Without a guard that noise produced a Sharpe of 1.2e16 and a correlation of
+  −0.87. A series whose RMS deviation is ≤ 64 ulp of its largest |value|
+  (`isNumericallyConstant`) is treated as zero-variance for Sharpe and
+  Pearson (`ZERO_VARIANCE`). Volatility still reports the measured (≈ 0) σ.
 * **Test tolerances**: goldens use relative 1e−12 (each value is < 20
   float ops ≈ ≤ 4.4e−15 relative error; ~200× margin, while any formula error
   is ≥ 1e−6). Seeded property tests over ≤ 500-point series use 1e−10 (≤ 500
@@ -34,9 +44,13 @@ No LLM participates in any calculation.
 | `compoundReturns` | exp(Σ log1p rₜ) − 1 | returns | scalar | any rₜ ≤ −1 → CALCULATION_ERROR |
 | `rollingReturns(k)` | Pₜ/Pₜ₋ₖ − 1 | 1 ≤ k ≤ n−1 | first k entries null | k invalid → INVALID_PARAMETER / INSUFFICIENT_DATA |
 
-Price basis: `adjustedClose` when present on every bar, else `close`;
-recorded as assumption `PRICE_BASIS`. `close` on UNADJUSTED/UNKNOWN data
-raises `ADJUSTMENT_UNKNOWN` (splits/dividends can distort returns).
+Price basis (Codex Gate 1 CX1-03): **always `close` unless the caller
+explicitly asks for `adjustedClose`** — no inference from field presence.
+Recorded as assumption `PRICE_BASIS`. `close` on UNADJUSTED/UNKNOWN data
+raises `ADJUSTMENT_UNKNOWN`; `adjustedClose` always raises
+`ADJUSTED_CLOSE_PROVIDER_DEFINED` (with the OHLC adjustment in details),
+because `provenance.adjustment` describes the OHLC fields and the
+adjusted-close method is provider-defined.
 
 ## 3. Volatility
 
@@ -57,8 +71,11 @@ prior peak (peak/trough null). One price ⇒ MDD 0.
 ## 5. Moving average
 
 SMAₜ(k) = (1/k)·Σ_{i=t−k+1..t} Pᵢ for t ≥ k−1; earlier entries are `null`
-(never filled). Each window is summed independently with `fsum` (no
-running-sum drift). SMA(1) = identity (tested).
+(never filled). O(n) (Codex Gate 1 CX1-07 — the first version was O(n·k),
+~2.5e9 operations for 50 000 bars with a 50 000 window): the window sum is
+recomputed exactly with `fsum` once every k steps and updated by
+add/subtract in between, so drift spans < k updates (verified ≤ 1e−9
+relative against exact sums for k up to 50 000). SMA(1) = identity (tested).
 
 ## 6. Correlation
 
@@ -89,9 +106,12 @@ Assumption `RISK_FREE_RATE` recorded.
 
 ## 9. Signals
 
-MA crossover (fast < slow): cross at t when sign(fast−slow) changes to a
-non-zero sign vs the last non-zero sign; touching is not a cross. Output is
-`DESCRIPTIVE`, `isRecommendation: false`.
+MA crossover (fast < slow): with sₜ = sign(fast−slow) and p the last
+non-zero sign before t, a cross is reported at t when p ≠ 0, sₜ ≠ 0 and
+sₜ ≠ p (Codex Gate 1 CX1-08, pinned by tests): above→equal→above is a touch
+(no cross); above→equal→below is CROSSED_BELOW at the first bar strictly
+below; below→equal→above is CROSSED_ABOVE. Output is `DESCRIPTIVE`,
+`isRecommendation: false`.
 
 ## 10. Golden datasets and verification
 

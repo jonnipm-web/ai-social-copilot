@@ -24,10 +24,11 @@ import {
   type FreshnessAssessment,
   type FreshnessState,
   type Frequency,
+  parseIsoUtc,
 } from './provenance.ts';
 import { seriesRiskOverview, type SeriesRiskOverview } from './risk.ts';
 import { movingAverageCrossovers, type Signal } from './signals.ts';
-import { defaultPriceBasis, type PriceBasis, type PriceSeries, pricesOf } from './timeseries.ts';
+import { type PriceBasis, type PriceSeries, pricesOf } from './timeseries.ts';
 
 export const QUANT_ENGINE_VERSION = 'quant-foundation-0.1.0';
 export const ANALYSIS_SCHEMA_VERSION = 1;
@@ -156,12 +157,19 @@ export async function analyzeSeries(
 
   const nowMs = clock();
   const lastT = series.bars[series.bars.length - 1].t;
-  const freshness = assessFreshness(lastT, nowMs, DEFAULT_FRESHNESS_POLICIES[series.frequency]);
+  // Freshness reference (Codex Gate 1 CX1-01): the provider's sourceAsOf when
+  // declared — createPriceSeries already proved it lies within one bar span
+  // after the newest bar — otherwise the newest bar timestamp.
+  const sourceAsOfMs = parseIsoUtc(series.provenance.sourceAsOf);
+  const freshnessRef = sourceAsOfMs ?? lastT;
+  const freshness = assessFreshness(freshnessRef, nowMs, DEFAULT_FRESHNESS_POLICIES[series.frequency]);
+  if (freshness.evaluatedAt === null) return fail('INVALID_PARAMETER', 'clock returned an unusable time');
   if (options.acceptedFreshness && !options.acceptedFreshness.includes(freshness.state)) {
     return fail('STALE_DATA', 'data freshness not accepted for this analysis', { state: freshness.state });
   }
 
-  const basis = options.priceBasis ?? defaultPriceBasis(series);
+  const basis: PriceBasis = options.priceBasis ?? 'close';
+  if (basis !== 'close' && basis !== 'adjustedClose') return fail('INVALID_PARAMETER', 'unknown priceBasis');
   const pricesR = pricesOf(series, basis);
   if (!pricesR.ok) return pricesR;
   const prices = pricesR.value;
@@ -173,8 +181,16 @@ export async function analyzeSeries(
   if (freshness.state === 'UNKNOWN') warnings.push({ code: 'FRESHNESS_UNKNOWN', message: 'data age could not be established' });
   const strength = evidenceStrength(series.provenance);
   if (strength === 'WEAK') warnings.push({ code: 'PROVENANCE_WEAK', message: 'provenance does not support strong evidence' });
-  if (series.provenance.adjustment === 'UNKNOWN' || (basis === 'close' && series.provenance.adjustment === 'UNADJUSTED')) {
-    warnings.push({ code: 'ADJUSTMENT_UNKNOWN', message: 'prices may not reflect splits/dividends; returns across corporate actions can be wrong' });
+  // Codex Gate 1 CX1-03: always say how the analyzed price relates to corporate actions.
+  if (basis === 'close' && (series.provenance.adjustment === 'UNKNOWN' || series.provenance.adjustment === 'UNADJUSTED')) {
+    warnings.push({ code: 'ADJUSTMENT_UNKNOWN', message: 'close prices may not reflect splits/dividends; returns across corporate actions can be wrong' });
+  }
+  if (basis === 'adjustedClose') {
+    warnings.push({
+      code: 'ADJUSTED_CLOSE_PROVIDER_DEFINED',
+      message: 'returns use the provider adjustedClose column; its adjustment method is provider-defined, not declared in provenance',
+      details: { ohlcAdjustment: series.provenance.adjustment },
+    });
   }
 
   const metrics: MetricEntry[] = [];
@@ -226,8 +242,10 @@ export async function analyzeSeries(
         id: 'SHARPE_RATIO', value: s.value, unit: 'RATIO', formulaId: 'SHARPE_V1', observations: rets.value.length,
         parameters: { riskFreeRatePerPeriod: options.sharpe.riskFreeRatePerPeriod, periodsPerYear: options.sharpe.periodsPerYear },
       });
-    } else if (s.error.code === 'CALCULATION_ERROR' || s.error.code === 'INSUFFICIENT_DATA') {
-      warnings.push({ code: s.error.code === 'CALCULATION_ERROR' ? 'ZERO_VARIANCE' : 'INSUFFICIENT_DATA_FOR_METRIC', message: 'Sharpe ratio undefined', details: { metric: 'SHARPE' } });
+    } else if (s.error.code === 'CALCULATION_ERROR' && s.error.details?.reason === 'ZERO_VARIANCE') {
+      warnings.push({ code: 'ZERO_VARIANCE', message: 'Sharpe ratio undefined for zero-variance returns', details: { metric: 'SHARPE' } });
+    } else if (s.error.code === 'INSUFFICIENT_DATA') {
+      warnings.push({ code: 'INSUFFICIENT_DATA_FOR_METRIC', message: 'Sharpe ratio needs more returns', details: { metric: 'SHARPE' } });
     } else return s;
   }
 
@@ -245,7 +263,7 @@ export async function analyzeSeries(
     { code: 'ANNUALIZATION', value: options.periodsPerYear },
     { code: 'NO_INTERPOLATION', value: null },
     { code: 'CALENDAR_NAIVE', value: null },
-    { code: 'FRESHNESS_REFERENCE', value: 'newest bar timestamp' },
+    { code: 'FRESHNESS_REFERENCE', value: sourceAsOfMs !== null ? 'provenance.sourceAsOf' : 'newest bar timestamp' },
   ];
   if (options.periodsPerYear !== null) assumptions.push({ code: 'SQRT_TIME_SCALING', value: null });
   if (options.sharpe) assumptions.push({ code: 'RISK_FREE_RATE', value: options.sharpe.riskFreeRatePerPeriod });
