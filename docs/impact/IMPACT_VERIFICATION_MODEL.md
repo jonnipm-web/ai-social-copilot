@@ -1,7 +1,7 @@
 # Impact — Verification Model
 
 Code: `verification.ts`, `temporal.ts`, `risk_indicators.ts`.
-Policy version: `impact-verification/3+impact-source-authority/3+impact-temporal/2` (bumped after Codex Gate 1 and Codex Final).
+Policy version: `impact-verification/4+impact-source-authority/3+impact-temporal/2` (bumped after Codex Gate 1 and Codex Final).
 
 ## 1. Contract
 
@@ -24,7 +24,7 @@ R01 retracted · R02 changed · R03 entity mismatch · R04 LLM link not counted 
 R05 out of scope · R06 units · R07 non-final legal stage is not a
 contradiction · R08 news allegation is context · R09 output ≠ outcome ·
 R10 period mismatch · R11 stale state evidence · R12 duplicate content ·
-R13 one voice per publisher (latest statement of each publisher identity).
+R13 superseded by an explicit correction · R14 syndicated copy of a counted original.
 Survivors with AUTHORITATIVE/INDEPENDENT authority and a non-context
 relationship are **counted**; the rest are **contextual**.
 

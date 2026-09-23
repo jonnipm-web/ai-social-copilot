@@ -111,7 +111,7 @@ Deno.test('VE-6 source poisoning: many items from ONE publisher count as one pub
   const v = await run(claim(), [ev('e1', 'n1'), ev('e2', 'n2'), ev('e3', 'n3')], [s1, s2, s3]);
   assertEquals(v.status, 'SUPPORTED');
   assertEquals(v.sufficiency, 'INDEPENDENT_SUPPORT'); // not MULTI_SOURCE
-  assertEquals(v.excluded.map((x) => x.reason).sort(), ['DUPLICATE_CONTENT', 'SUPERSEDED_BY_SAME_PUBLISHER']);
+  assertEquals(v.excluded, [{ evidenceId: 'e3', reason: 'DUPLICATE_CONTENT' }]);
 });
 
 Deno.test('VE-7 a news ALLEGATION is context only: never a contradiction, flagged for review', async () => {
@@ -200,7 +200,7 @@ Deno.test('VE-13 human review binds to the exact evidence set; new evidence re-o
 Deno.test('VE-14 results are deeply frozen and versioned', async () => {
   const v = await run(claim(), [ev('e1', SOURCES.govWells.id)], [SOURCES.govWells]);
   assert(Object.isFrozen(v) && Object.isFrozen(v.supporting) && Object.isFrozen(v.supporting[0]));
-  assert(v.policyVersion.startsWith('impact-verification/3+impact-source-authority/3+impact-temporal/2'));
+  assert(v.policyVersion.startsWith('impact-verification/4+impact-source-authority/3+impact-temporal/2'));
   const later = await run(claim(), [ev('e1', SOURCES.govWells.id)], [SOURCES.govWells], { ...CTX, evaluatedAt: '2026-10-01T00:00:00Z' });
   assertNotEquals(v.resultId, later.resultId);
   assertEquals(v.evidenceSetHash, later.evidenceSetHash);

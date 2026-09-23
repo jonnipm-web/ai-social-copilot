@@ -92,16 +92,22 @@ US IRS exempt-org data, Brazilian registries, regulators/courts, reputable
 news/search APIs — each a separate gate, via `safe_fetch.ts`, respecting
 robots/terms/authentication, no aggressive scraping.
 
-## 7. Publisher identity and syndication
+## 7. Publisher identity, syndication and corrections
 
-Publisher identity = normalized `syndicatedFrom ?? publisher` (the provider
-sets `syndicatedFrom` for wire/republished copies). Among counted items from
-the same publisher identity only the most recent statement counts
-(`SUPERSEDED_BY_SAME_PUBLISHER`): a republished copy is never a second
-independent voice or an artificial conflict, and a publisher's correction
-supersedes its earlier report (Codex CF-04). Residual (DEFERRED to I2):
-syndicated copies whose provider does not supply `syndicatedFrom` and whose
-content hash differs cannot be recognised deterministically.
+Publisher identity = normalized `syndicatedFrom ?? publisher`. Only EXPLICIT
+lineage collapses evidence (Codex CF-04, FV-01):
+
+- `syndicatedFrom` (set by the provider): a wire/republished copy is the
+  original publisher's voice — when the original is also counted the copy is
+  excluded (`SYNDICATED_COPY`), so it cannot fake corroboration or a conflict;
+- `supersedesSourceId`: an explicit correction/update replaces the earlier
+  source (`SUPERSEDED_BY_CORRECTION`).
+
+Distinct reports from the same publisher are never collapsed by date: they
+remain separate positions (a disagreement is recorded as a conflict) and count
+as ONE publisher for sufficiency. Residual (DEFERRED to I2): copies whose
+provider supplies no `syndicatedFrom` and whose content hash differs cannot
+be recognised deterministically.
 
 ## 8. News and social media
 

@@ -41,7 +41,7 @@ import type {
   TrustedProviderRef,
 } from './types.ts';
 
-export const VERIFICATION_ENGINE_VERSION = 'impact-verification/3';
+export const VERIFICATION_ENGINE_VERSION = 'impact-verification/4';
 export const IMPACT_POLICY_VERSION =
   `${VERIFICATION_ENGINE_VERSION}+${SOURCE_AUTHORITY_POLICY_VERSION}+${TEMPORAL_POLICY_VERSION}`;
 
@@ -194,6 +194,7 @@ export async function computeEvidenceSetHash(
           retrievedAt: s.retrievedAt, publishedAt: s.publishedAt, newsGenre: s.newsGenre, status: s.status,
           contentHash: s.contentHash, userSubmitted: s.userSubmitted, jurisdiction: s.jurisdiction, uri: s.uri,
           retention: s.retention, acquisition: s.acquisition, syndicatedFrom: s.syndicatedFrom,
+          supersedesSourceId: s.supersedesSourceId,
         }
         : null,
     };
@@ -359,23 +360,43 @@ export async function verifyClaim(
     }
   }
 
-  // One voice per publisher (Codex CF-04): among counted items from the same
-  // publisher identity only the most recent statement counts — a newer
-  // statement supersedes (e.g. corrects) an older one, and a republished copy
-  // never becomes a second independent source or an artificial conflict.
+  // Lineage (Codex CF-04 / FV-01). Only EXPLICIT lineage collapses evidence:
+  //  - a source superseded by a correction present in this set
+  //    (another source's supersedesSourceId) no longer counts;
+  //  - a syndicated copy (syndicatedFrom) is the original publisher's voice:
+  //    when an item from that publisher is also counted, the copy adds
+  //    nothing and cannot create corroboration or a conflict.
+  // Distinct reports from the same publisher are NOT collapsed: they stay
+  // separate positions (a disagreement is recorded as a conflict), and
+  // count as ONE publisher for sufficiency (publisherKey).
   {
-    const latest = new Map<string, AssessedEvidence>();
-    for (const a of counted) {
-      const p = latest.get(a.publisherKey);
-      if (!p || a.asOf > p.asOf || (a.asOf === p.asOf && a.evidenceId > p.evidenceId)) latest.set(a.publisherKey, a);
-    }
-    const keep = new Set([...latest.values()].map((a) => a.evidenceId));
+    const supersededIds = new Set([...sources.values()].map((x) => x.supersedesSourceId).filter((x): x is string => !!x));
+    const originalKeys = new Set(
+      counted.filter((a) => !sources.get(a.sourceId)!.syndicatedFrom && !supersededIds.has(a.sourceId)).map((a) => a.publisherKey),
+    );
     for (let i = counted.length - 1; i >= 0; i--) {
-      if (!keep.has(counted[i].evidenceId)) {
-        excluded.push({ evidenceId: counted[i].evidenceId, reason: 'SUPERSEDED_BY_SAME_PUBLISHER' });
+      const a = counted[i];
+      const src = sources.get(a.sourceId)!;
+      if (supersededIds.has(a.sourceId)) {
+        excluded.push({ evidenceId: a.evidenceId, reason: 'SUPERSEDED_BY_CORRECTION' });
         counted.splice(i, 1);
-        rules.push('R13_ONE_VOICE_PER_PUBLISHER');
+        rules.push('R13_SUPERSEDED_BY_CORRECTION');
+      } else if (src.syndicatedFrom && originalKeys.has(a.publisherKey)) {
+        excluded.push({ evidenceId: a.evidenceId, reason: 'SYNDICATED_COPY' });
+        counted.splice(i, 1);
+        rules.push('R14_SYNDICATED_COPY');
       }
+    }
+    // Two syndicated copies of the same original (original absent): keep one.
+    const seenCopy = new Set<string>();
+    for (let i = 0; i < counted.length; i++) {
+      const a = counted[i];
+      if (!sources.get(a.sourceId)!.syndicatedFrom) continue;
+      if (seenCopy.has(a.publisherKey)) {
+        excluded.push({ evidenceId: a.evidenceId, reason: 'SYNDICATED_COPY' });
+        counted.splice(i--, 1);
+        rules.push('R14_SYNDICATED_COPY');
+      } else seenCopy.add(a.publisherKey);
     }
   }
 

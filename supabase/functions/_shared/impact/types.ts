@@ -185,6 +185,10 @@ export interface Source {
    * provider). Publisher identity = syndicatedFrom ?? publisher, so a
    * republished story is never a second independent voice (Codex CF-04). */
   readonly syndicatedFrom?: string;
+  /** Explicit correction lineage: this source replaces that source (a
+   * publisher's correction/update). Only explicit lineage supersedes —
+   * never "same publisher, later date" (Codex FV-01). */
+  readonly supersedesSourceId?: string;
   /** Uploaded by a user — never a verified fact by itself. */
   readonly userSubmitted?: boolean;
 }
@@ -343,7 +347,8 @@ export type ExclusionReason =
   | 'SOURCE_RETRACTED'
   | 'SOURCE_CHANGED'
   | 'DUPLICATE_CONTENT'
-  | 'SUPERSEDED_BY_SAME_PUBLISHER';
+  | 'SYNDICATED_COPY'
+  | 'SUPERSEDED_BY_CORRECTION';
 
 export interface ConflictRecord {
   readonly claimId: string;

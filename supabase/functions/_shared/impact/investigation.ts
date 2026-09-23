@@ -225,7 +225,9 @@ export class Investigation {
     if (!isOneOf(d.kind, DISPUTE_KINDS)) return fail('INVALID_CLAIM', 'unknown dispute kind');
     if (parseIsoMs(d.openedAt) === null) return fail('INVALID_CLAIM', 'openedAt required');
     if (!Array.isArray(d.submittedEvidenceIds)) return fail('INVALID_EVIDENCE', 'submittedEvidenceIds required');
-    for (const id of d.submittedEvidenceIds) if (!this.#evidence.has(id)) return fail('INVALID_EVIDENCE', 'unknown evidence');
+    for (const id of d.submittedEvidenceIds) {
+      if (this.#evidence.get(id)?.claimId !== d.claimId) return fail('INVALID_EVIDENCE', 'evidence must belong to the disputed claim');
+    }
     this.#disputes.set(d.id, Object.freeze({ ...d, submittedEvidenceIds: Object.freeze([...d.submittedEvidenceIds]) }));
     await this.#log(d.openedAt, 'DISPUTE_OPENED', actor, [d.id, d.claimId, ...d.submittedEvidenceIds], [d.kind]);
     return ok(true);

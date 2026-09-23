@@ -216,28 +216,57 @@ Deno.test('CF-03 jurisdiction-bound sources without a jurisdiction are never ind
   assertEquals(authorityFor(SOURCES.registry, regClaim, TRUSTED), 'AUTHORITATIVE');
 });
 
-Deno.test('CF-04 syndicated copies and repeated statements are one voice per publisher', async () => {
+Deno.test('CF-04 explicit lineage only: syndicated copies add no voice; corrections supersede; same-publisher reports stay separate', async () => {
   const q = (v: number) => ({ metric: 'wells_built', value: v, unit: 'count' });
   const c: Claim = { ...finClaim, kind: 'IMPACT_OUTPUT', quantity: q(20), text: '20 wells.' };
   const news = (id: string, publisher: string, over: Partial<Source> = {}): Source => ({
     id, type: 'NEWS', newsGenre: 'REPORTING', publisher, acquisition: providerFor('NEWS'), retrievedAt: '2026-09-01T00:00:00Z',
     status: 'ACTIVE', retention: 'EXCERPT_AND_HASH', contentHash: hash(id.replace(/[^a-f0-9]/g, '') + 'cd'), ...over,
   });
-  const wire = news('n1', 'Wire Service', { publishedAt: '2026-03-01T00:00:00Z' });
-  const copy = news('n2', 'Wire Service via Outlet', { syndicatedFrom: 'Wire Service', publishedAt: '2026-03-02T00:00:00Z' });
   const sx = (v: number) => ({ relationshipBasis: 'STRUCTURED_MATCH' as const, reportedQuantity: q(v) });
-  // wire supports, syndicated copy (with wrapper) contradicts → no artificial conflict
+  const wire = news('n1', 'Wire Service', { publishedAt: '2026-03-01T00:00:00Z' });
+  const copy = news('n2', 'Outlet', { syndicatedFrom: 'Wire Service', publishedAt: '2026-03-02T00:00:00Z' });
+  // syndicated copy with a wrapper that "contradicts" → no artificial conflict
   const v = await run(c, [ev('e1', 'n1', sx(20)), ev('e2', 'n2', sx(0))], [wire, copy]);
   assertEquals(v.conflicts, []);
-  assert(v.excluded.some((x) => x.reason === 'SUPERSEDED_BY_SAME_PUBLISHER'));
+  assertEquals(v.status, 'SUPPORTED');
+  assert(v.excluded.some((x) => x.evidenceId === 'e2' && x.reason === 'SYNDICATED_COPY'));
   assertEquals(deriveIndicators({ results: [v] }).some((i) => i.code === 'CONFLICTING_CLAIMS'), false);
   // two corroborating copies of the same wire story are not MULTI_SOURCE
   const both = await run(c, [ev('e1', 'n1', sx(20)), ev('e2', 'n2', sx(20))], [wire, copy]);
   assertEquals(both.sufficiency, 'INDEPENDENT_SUPPORT');
-  // a publisher's later correction supersedes its earlier report
-  const later = news('n3', 'Wire Service', { publishedAt: '2026-05-01T00:00:00Z' });
-  const corrected = await run(c, [ev('e1', 'n1', sx(20)), ev('e3', 'n3', sx(12))], [wire, later]);
+  // explicit correction lineage supersedes the earlier report
+  const correction = news('n3', 'Wire Service', { publishedAt: '2026-05-01T00:00:00Z', supersedesSourceId: 'n1' });
+  const corrected = await run(c, [ev('e1', 'n1', sx(20)), ev('e3', 'n3', sx(12))], [wire, correction]);
   assertEquals(corrected.status, 'PARTIALLY_SUPPORTED');
+  assert(corrected.excluded.some((x) => x.evidenceId === 'e1' && x.reason === 'SUPERSEDED_BY_CORRECTION'));
+});
+
+Deno.test('FV-01 distinct reports from the same publisher are never collapsed: a disagreement stays a recorded conflict', async () => {
+  const q = (v: number) => ({ metric: 'wells_built', value: v, unit: 'count' });
+  const c: Claim = { ...finClaim, kind: 'IMPACT_OUTPUT', quantity: q(20), text: '20 wells.' };
+  const news = (id: string, over: Partial<Source> = {}): Source => ({
+    id, type: 'NEWS', newsGenre: 'REPORTING', publisher: 'Same Outlet', acquisition: providerFor('NEWS'),
+    retrievedAt: '2026-09-01T00:00:00Z', status: 'ACTIVE', retention: 'EXCERPT_AND_HASH',
+    contentHash: hash(id.replace(/[^a-f0-9]/g, '') + 'ee'), ...over,
+  });
+  const sx = (v: number) => ({ relationshipBasis: 'STRUCTURED_MATCH' as const, reportedQuantity: q(v) });
+  const a = news('na', { publishedAt: '2025-04-01T00:00:00Z' });
+  const b = news('nb', { publishedAt: '2025-05-01T00:00:00Z' });
+  const v = await run(c, [ev('e1', 'na', sx(20)), ev('e2', 'nb', sx(0))], [a, b]);
+  assertNotEquals(v.status, 'CONTRADICTED');
+  assertEquals(v.status, 'INCONCLUSIVE');
+  assertEquals(v.conflicts.length, 1);
+  assertEquals(v.excluded, []);
+  assertEquals(deriveIndicators({ results: [v] }).some((i) => i.code === 'CLAIM_CONTRADICTED_BY_INDEPENDENT_SOURCE'), false);
+  // ...and two agreeing reports from one outlet are still ONE publisher
+  const agree = await run(c, [ev('e1', 'na', sx(20)), ev('e2', 'nb', sx(22))], [a, b]);
+  assertEquals(agree.sufficiency, 'INDEPENDENT_SUPPORT');
+});
+
+Deno.test('FV-01b supersedesSourceId must reference another valid source id', async () => {
+  const bad: Source = { ...SOURCES.govWells, id: 'src-self', supersedesSourceId: 'src-self' };
+  assertEquals(await code(finClaim, [], [bad]), 'INVALID_SOURCE');
 });
 
 Deno.test('CF-05 dispute kinds, resolutions and timestamps are validated at runtime', async () => {
@@ -254,6 +283,7 @@ Deno.test('CF-05 dispute kinds, resolutions and timestamps are validated at runt
   ];
   // deno-lint-ignore no-explicit-any
   for (const d of bad) assertEquals((await w.openDispute(owner, d as any)).ok, false, d.id);
+  assertEquals((await w.openDispute(owner, { id: 'd9', claimId: 'c1', kind: 'ORGANIZATION_RESPONSE', openedAt: EVALUATED_AT, submittedEvidenceIds: ['ev-of-another-claim'] })).ok, false);
   assert((await w.openDispute(owner, { id: 'd4', claimId: 'c1', kind: 'ORGANIZATION_RESPONSE', openedAt: EVALUATED_AT, submittedEvidenceIds: [] })).ok);
   // deno-lint-ignore no-explicit-any
   assertEquals((await w.resolveDispute(owner, 'd4', 'UNKNOWN_RESOLUTION' as any, EVALUATED_AT)).ok, false);
