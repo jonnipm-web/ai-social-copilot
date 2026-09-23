@@ -148,3 +148,36 @@ audit hash, late completion, foreign approver, client approval, undeclared
 failure, timeout, claim-less execution, payload echo, helper EXECUTE, raw
 tool input, chain check in receipt verification, search_path, authority
 aliases, open-operation cap).
+
+## Codex gates — IV-AEF-HARDENING-01
+
+All READ-ONLY, new thread each, no-write snapshot verified before/after.
+
+| Gate (commit) | Verdict | Finding | Sev | Disposition |
+|---|---|---|---|---|
+| G1 security (64497c6) | FAIL | HG1-01 legal-hold race with purge/erasure | P1 | ACCEPTED — per-subject advisory lock protocol (114923f; HP-11, HP-15, HM15) |
+| | | HG1-02 erased operator can reconcile again | P1 | ACCEPTED — active, never-erased account required (H08m, HM18) |
+| | | HG1-03 unbounded pending counters via invented codes | P1 | ACCEPTED — closed code list, UNLISTED (H10e/f, HM17) |
+| | | HG1-04 rollback refusal incomplete | P2 | ACCEPTED — holds/verifiers/policy refuse too (runner) |
+| G2 concurrency (64497c6) | FAIL | HG2-01 recovery × erasure deadlock (head/window order) | P1 | ACCEPTED — window → head everywhere (HP-12, HP-14, HM14) |
+| | | HG2-02 erasure not atomic with registration; reuse | P1 | ACCEPTED — shared lock + SUBJECT_ERASED (HP-13, H10, HM16) |
+| | | HG2-03 race coverage | P2 | ACCEPTED — HP-11..HP-18 |
+| G3 receipts (64497c6) | PASS WITH FINDINGS | HG3-01 owner-level checkpoint forgery | P2 | DEFERRED — docs corrected; external head anchoring is future work |
+| | | HG3-02 reconciliation not bound to the original receipt | P2 | ACCEPTED — guard + verification (H11, HM19) |
+| | | HG3-03 raw operator id stored | P2 | ACCEPTED — never stored (H06j2) |
+| | | HG3-04 empty tool_id parity | P2 | ACCEPTED — RV-02 |
+| G1 verification (114923f) | PASS WITH FINDINGS | HG1V-01 runtime not executed by reviewer | P2 | ACCEPTED — executed locally and in CI |
+| G2 verification (114923f) | FAIL | HG2V-01 recovery "window → operation" vs erasure deadlock | P1 | REJECTED as described (recovery never waits: SKIP LOCKED) — hardened anyway (recovery try-lock, HP-16); Codex Final confirmed no cycle remains |
+| | | HG2V-02 denial recording races erasure | P1 | ACCEPTED — shared lock (fef8f38; HP-18, HM20) |
+| | | HG2V-03 tests not modelling the cycle | P2 | ACCEPTED — HP-16/17/18 |
+| — | — | (found by Claude) decide_gate on an operation deleted meanwhile | P2 | FIXED — GATE_NOT_FOUND (HP-17, HM21) |
+| G3 verification (114923f) | PASS WITH FINDINGS | HG3V-01 stale doc row | P2 | ACCEPTED |
+| FINAL f00b45c..fef8f38 | FAIL | HCF-01 operator reconciliation is self-attested | P1 | ACCEPTED — operator path disabled by default, Owner decision to enable (e469fa4; H06-0, HP-19, HM22); verification: FIXED |
+| | | HCF-02 identity bound by the service, not the RPC | P2 | ACCEPTED — documented (service_role boundary) |
+| | | HCF-03 stale RPC count | P3 | ACCEPTED |
+| FINAL verification (e469fa4) | PASS WITH FINDINGS | HCFV-01 new column not added on re-apply over an intermediate version | P2 | ACCEPTED — ADD COLUMN IF NOT EXISTS (verified re-apply over fef8f38) |
+| | | HCFV-02 stale migration comment | P3 | ACCEPTED |
+
+Mutation proof (this mission): 22/22 hardening mutants killed (HM01–HM22),
+plus persistence mutants M01/M02/M06/M10 re-run against the redefined
+copies: killed.

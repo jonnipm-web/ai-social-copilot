@@ -35,6 +35,9 @@ CREATE TABLE IF NOT EXISTS public.aef_retention_policy (
   operator_reconciliation_enabled boolean NOT NULL DEFAULT false,
   CONSTRAINT aef_retention_audit_outlives_operations CHECK (audit_retention_days >= terminal_retention_days)
 );
+-- Idempotent across intermediate versions of this migration (Codex HCFV-01).
+ALTER TABLE public.aef_retention_policy
+  ADD COLUMN IF NOT EXISTS operator_reconciliation_enabled boolean NOT NULL DEFAULT false;
 INSERT INTO public.aef_retention_policy (id, policy_ref, terminal_retention_days, audit_retention_days,
                                          denial_window_seconds, denial_window_limit, erasure_blocks_on_unreconciled)
 VALUES (true, 'aef-retention/2026-09-26.1-provisional', 365, 730, 60, 20, true)
@@ -64,7 +67,8 @@ CREATE TABLE IF NOT EXISTS public.aef_idempotency_tombstones (
 );
 
 -- Server-registered reconciliation verifiers (per tool). EMPTY by default:
--- without a registered verifier only an operator can reconcile.
+-- with no registered verifier and the operator path disabled (default),
+-- nothing can be reconciled (fail closed).
 CREATE TABLE IF NOT EXISTS public.aef_reconciliation_verifiers (
   verifier_id    text PRIMARY KEY CHECK (verifier_id ~ '^[a-z][a-z0-9_.-]{2,63}$'),
   tool_id        text NOT NULL CHECK (length(tool_id) BETWEEN 1 AND 200),
