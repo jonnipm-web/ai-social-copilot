@@ -124,6 +124,8 @@ export interface CandidateReviewInput {
   readonly aboutOrgRef?: string;
   readonly personalData?: typeof PERSONAL[number];
   readonly observedPeriod?: { readonly from?: string; readonly to?: string };
+  /** Required to attribute a SUBJECT_NOT_MENTIONED candidate to the investigation subject. */
+  readonly subjectConfirmed?: boolean;
 }
 
 export interface RegistryQueryInput {
@@ -350,6 +352,7 @@ function candidateReview(top: Obj): CandidateReviewInput {
     aboutOrgRef: id(top, 'about_org_ref', false),
     personalData: en(top, 'personal_data', PERSONAL, false),
     observedPeriod: period(top.observed_period, 'observed_period'),
+    ...(top.subject_confirmed !== undefined ? { subjectConfirmed: (() => { if (typeof top.subject_confirmed !== 'boolean') throw new Bad('subject_confirmed must be boolean'); return top.subject_confirmed; })() } : {}),
   };
 }
 
@@ -424,7 +427,7 @@ export function parseLabRequest(body: unknown): ImpactResult<LabRequest> {
     const top = obj(body, 'request', ['action', 'investigation_id', 'subject', 'project_id', 'lang', 'source', 'provider_id',
       'record_id', 'ref', 'source_ref', 'status', 'claim', 'evidence', 'claim_ref', 'idempotency_key',
       'human_review_binding_hash', 'kind', 'submitted_evidence_refs', 'dispute_ref', 'resolution', 'query', 'artifact',
-      'candidate_ref', 'decision', 'relationship', 'about_org_ref', 'personal_data', 'observed_period']);
+      'candidate_ref', 'decision', 'relationship', 'about_org_ref', 'personal_data', 'observed_period', 'subject_confirmed']);
     const action = top.action;
     const allowOnly = (keys: string[]) => {
       for (const k of Object.keys(top)) if (k !== 'action' && !keys.includes(k)) throw new Bad(`field "${k}" not allowed for ${String(action)}`);
@@ -483,7 +486,7 @@ export function parseLabRequest(body: unknown): ImpactResult<LabRequest> {
         allowOnly(['investigation_id', 'artifact']);
         return ok({ action, investigationId: inv(), artifact: artifactInput(top.artifact) });
       case 'review_candidate':
-        allowOnly(['investigation_id', 'candidate_ref', 'decision', 'relationship', 'claim_ref', 'about_org_ref', 'personal_data', 'observed_period']);
+        allowOnly(['investigation_id', 'candidate_ref', 'decision', 'relationship', 'claim_ref', 'about_org_ref', 'personal_data', 'observed_period', 'subject_confirmed']);
         return ok({ action, investigationId: inv(), review: candidateReview(top) });
       case 'import_registry_claim':
         allowOnly(['investigation_id', 'source_ref', 'ref']);

@@ -244,7 +244,7 @@ CREATE TABLE IF NOT EXISTS public.impact_evidence_candidates (
     (proposed_relationship IS NULL OR proposed_relationship IN ('SUPPORTS','CONTRADICTS','CONTEXTUALIZES'))
     AND (review_relationship IS NULL OR review_relationship IN ('SUPPORTS','CONTRADICTS','CONTEXTUALIZES'))),
   CONSTRAINT impact_evidence_candidates_reasons_check CHECK (review_reasons <@ ARRAY['AUTOMATED_MATCH','SUBJECT_NOT_MENTIONED',
-    'UNTRUSTED_INSTRUCTIONS','PII_REDACTED','EXCERPT_TRUNCATED','FORMULA_CELL','EXTRACTION_PARTIAL']::text[]),
+    'UNTRUSTED_INSTRUCTIONS','PII_REDACTED','EXCERPT_TRUNCATED','FORMULA_CELL','EXTRACTION_PARTIAL','VERDICT_LANGUAGE']::text[]),
   CONSTRAINT impact_evidence_candidates_status_check CHECK (review_status IN ('PENDING','ACCEPTED','REJECTED','NEEDS_CONTEXT')),
   -- Only ACCEPTED carries a promotion; the other states carry none.
   CONSTRAINT impact_evidence_candidates_promotion_check CHECK (

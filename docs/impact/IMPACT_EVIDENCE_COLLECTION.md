@@ -57,10 +57,28 @@ allowlist).
 
 ## 3. Candidate review reasons (computed, never client-set)
 
-`AUTOMATED_MATCH`, `SUBJECT_NOT_MENTIONED` (multi-entity / subject isolation),
-`UNTRUSTED_INSTRUCTIONS` (prompt-injection scan), `PII_REDACTED`,
-`EXCERPT_TRUNCATED`, `FORMULA_CELL`, `EXTRACTION_PARTIAL`.
-Personal data about a minor (minor term + age/birth pattern) is never stored:
+`AUTOMATED_MATCH`, `SUBJECT_NOT_MENTIONED` (multi-entity / subject isolation —
+a subject name glued to another capitalized name such as "… Foundation
+International" does not count as a mention), `UNTRUSTED_INSTRUCTIONS`
+(prompt-injection scan after removing invisible / bidi characters and folding
+Cyrillic/Greek homoglyphs; mixed-script words are flagged), `PII_REDACTED`,
+`EXCERPT_TRUNCATED`, `FORMULA_CELL`, `EXTRACTION_PARTIAL`, `VERDICT_LANGUAGE`
+(the quoted text accuses or endorses).
+
+Every candidate carries `excerptAttribution: "QUOTED_FROM_USER_UPLOAD"`: an
+excerpt is a faithful quote of a user-provided document, never a statement of
+the platform, and must be displayed as an attributed quote.
+Accepting a `SUBJECT_NOT_MENTIONED` candidate **for the investigation
+subject** requires `subject_confirmed: true` (else `EVIDENCE_REVIEW_REQUIRED`).
+
+Automatic value matches ignore numbers that are part of a date, time, range,
+id, signed value or percentage (`20/05/2025`, `10:20`, `2019-20`, `#20`, `20%`).
+Redaction before storage: e-mails (also `[at]`/`[dot]` obfuscated), phone-like
+numbers, IBANs, formatted national ids (CPF, CNPJ, SSN-style) and long digit
+runs. Names and street addresses cannot be detected deterministically: the
+reviewer must classify `personal_data` before any promotion (residual).
+Personal data about a minor (minor term + numeric or written age, or birth
+wording, in EN / PT / ES) is never stored:
 analyst request → `SENSITIVE_DATA_REJECTED`; automatic → skipped and counted.
 
 ## 4. Generation methods
@@ -109,6 +127,12 @@ and any future LLM output can only ever be a candidate (review required).
   original file, which is hashed and extracted by the server. No write to
   `knowledge_items` in I3.
 - **Storage**: no bucket is created or used; original bytes are not retained.
+  What IS stored (Codex I3G3-07): the sanitized filename, media type, size,
+  hashes, client-declared cloud reference, the structure index (incl. sheet
+  names), candidate excerpts (≤ 1000 chars, redacted) and — after review —
+  the same excerpt on the promoted evidence row. "Originals not retained" does
+  not mean "no document content stored"; retention obligations apply to
+  these derived fields.
 
 ## 7. Absence is not a signal
 

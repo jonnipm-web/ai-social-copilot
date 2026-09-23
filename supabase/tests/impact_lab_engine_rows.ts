@@ -64,7 +64,7 @@ const ingest = await call({ action: 'ingest_artifact', investigation_id: inv, ar
 } });
 const auto = ((ingest.data as Record<string, unknown>).candidates as { ref: string; method: string }[]).find((c) => c.method === 'AUTO_VALUE_MATCH');
 if (!auto) throw new Error('expected a deterministic value-match candidate');
-await call({ action: 'review_candidate', investigation_id: inv, candidate_ref: auto.ref, decision: 'ACCEPTED', relationship: 'SUPPORTS', claim_ref: 'c-wells', about_org_ref: 'org-hopebridge', personal_data: 'AGGREGATED' });
+await call({ action: 'review_candidate', investigation_id: inv, candidate_ref: auto.ref, decision: 'ACCEPTED', relationship: 'SUPPORTS', claim_ref: 'c-wells', about_org_ref: 'org-hopebridge', personal_data: 'AGGREGATED', subject_confirmed: true });
 await call({ action: 'review_candidate', investigation_id: inv, candidate_ref: 'k-inject', decision: 'REJECTED' });
 await call({ action: 'run_verification', investigation_id: inv, claim_ref: 'c-wells' }); // human review is not verification
 

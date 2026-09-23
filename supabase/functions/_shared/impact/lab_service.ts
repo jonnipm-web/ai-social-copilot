@@ -271,6 +271,8 @@ function candidateView(c: StoredCandidate) {
     ref: c.ref, artifactRef: c.artifactRef, artifactHash: c.artifactHash, locator: c.locator, excerpt: c.excerpt, claimRef: c.claimRef,
     proposedRelationship: c.proposedRelationship, method: c.method, reviewReasons: c.reviewReasons, reviewStatus: c.reviewStatus,
     evidenceRef: c.evidenceRef, isEvidence: c.reviewStatus === 'ACCEPTED',
+    // The excerpt is QUOTED from a user-provided document: never a statement of the platform (Codex I3G3-05).
+    excerptAttribution: 'QUOTED_FROM_USER_UPLOAD' as const,
   };
 }
 
@@ -832,6 +834,10 @@ export async function handleLabRequest(
       }
       const claim = data.value.claims.find((c) => c.id === claimRef);
       if (!claim) return fail('INVALID_REQUEST', 'unknown claim');
+      // Codex I3G3-06: the server's own isolation warning must be resolved explicitly.
+      if (cand.reviewReasons.includes('SUBJECT_NOT_MENTIONED') && rv.aboutOrgRef === inv.value.subjectOrgRef && rv.subjectConfirmed !== true) {
+        return fail('EVIDENCE_REVIEW_REQUIRED', 'the excerpt does not name the subject: confirm the attribution (subject_confirmed) or attribute it to another organization');
+      }
       const e: EvidenceItem = {
         id: evidenceRef,
         investigationId: inv.value.id,
