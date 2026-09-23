@@ -130,3 +130,24 @@ jobs:
         run: |
           deno test --allow-read --allow-net=deno.land,esm.sh \
             aef/kernel_test.ts aef/adapters/supabase_identity_resolver_test.ts
+
+  impact-foundation-ci:
+    name: Impact evidence/verification core (IV-IMPACT-FOUNDATION-01)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Type-check and lint the Impact core
+        run: |
+          deno check supabase/functions/_shared/impact/*.ts supabase/functions/_shared/impact/fixtures/*.ts
+          deno lint supabase/functions/_shared/impact/
+
+      - name: Run Impact tests (golden A-H, adversarial, boundary tripwires)
+        run: |
+          deno test --allow-read --allow-net=deno.land,esm.sh supabase/functions/_shared/impact/
