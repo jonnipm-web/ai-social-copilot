@@ -48,9 +48,23 @@ const CONSEQUENTIAL: readonly { re: RegExp; action: string }[] = [
   { re: /\b(execute|executar|execute o|rode|rodar|run|dispare|disparar|trigger|acione|acionar)\b.{0,20}\b(workflow|workflows|fluxo|fluxos|automacao|automacoes|automation|automations|script|job|rotina|pipeline)\b/, action: 'execute_workflow' },
 ];
 
+/** "Como remover um projeto?" / "How do I delete a project?" ask HOW, they
+ * do not ask IVE to do it (Codex fix verification P2). Applied only to
+ * delete_data, whose verbs are the ones commonly used in help questions;
+ * publish/send/pay/trade stay conservative. */
+const INFORMATIONAL = /^\s*(como|how|posso|pode me explicar|can i|could i|should i|what|qual|quais|por que|porque|why|onde|where)\b/;
+
+function isInformational(view: string): boolean {
+  return INFORMATIONAL.test(view) || view.trim().endsWith('?');
+}
+
 function consequentialIn(text: string): string | null {
   for (const view of [canonicalize(text), squash(text)]) {
-    for (const c of CONSEQUENTIAL) if (c.re.test(view)) return c.action;
+    for (const c of CONSEQUENTIAL) {
+      if (!c.re.test(view)) continue;
+      if (c.action === 'delete_data' && isInformational(canonicalize(text))) continue;
+      return c.action;
+    }
   }
   return null;
 }
