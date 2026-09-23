@@ -147,6 +147,10 @@ export async function analyzeSeries(
   if (!options || !('periodsPerYear' in options)) {
     return fail('INVALID_PARAMETER', 'periodsPerYear must be stated explicitly (number or null)');
   }
+  // Codex Final CXF-03: validate even when volatility is later skipped (2 bars).
+  if (options.periodsPerYear !== null && !(Number.isFinite(options.periodsPerYear) && options.periodsPerYear > 0)) {
+    return fail('INVALID_PARAMETER', 'periodsPerYear must be a finite number > 0, or null');
+  }
   if (options.projectId !== undefined && !UUID_RE.test(options.projectId)) {
     return fail('INVALID_PARAMETER', 'projectId must be a UUID');
   }

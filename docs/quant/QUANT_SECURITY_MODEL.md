@@ -88,8 +88,16 @@ be logged (test AN-50).
 * **Narrative misattribution**: a narrator can cite a real fact under a
   wrong description (e.g. present volatility as a return). Placeholders
   carry labels, but semantic correctness of prose is not machine-checked.
-* **Excluded number words**: "one", "um", "uma" double as articles and are
-  not blocked; Roman numerals written with Latin letters ("IV") are
-  indistinguishable from words.
+* **Excluded number words**: "one", "um", "uma", "first", "primeiro" double
+  as articles/ordinary words and are not blocked; Roman numerals written
+  with Latin letters ("IV") are indistinguishable from words; number words
+  in languages other than EN/PT are not detected (the narrator contract
+  restricts output to EN/PT). Zero-width/bidi/control characters are
+  rejected (Codex Final CXF-02), so split words cannot evade the lexicon.
+  Acceptable for the Foundation because no narrator integration exists;
+  must be re-assessed at the IVE Quant integration gate (Q6).
+* **Forged explanation requests**: `renderNarrative` refuses facts that do
+  not look like engine output (CXF-01); the robust fix — an opaque,
+  engine-signed request — belongs to the Q6 integration gate.
 * **Calendar-naive freshness and gaps** until an exchange calendar exists.
 * **Float64 analytics** are not a ledger (see QUANT_CALCULATION_SPEC §1).

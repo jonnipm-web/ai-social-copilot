@@ -75,7 +75,10 @@ SMAₜ(k) = (1/k)·Σ_{i=t−k+1..t} Pᵢ for t ≥ k−1; earlier entries are `
 ~2.5e9 operations for 50 000 bars with a 50 000 window): the window sum is
 recomputed exactly with `fsum` once every k steps and updated by
 add/subtract in between, so drift spans < k updates (verified ≤ 1e−9
-relative against exact sums for k up to 50 000). SMA(1) = identity (tested).
+relative against exact sums for k up to 50 000). When the value leaving the
+window exceeds 1024× the new window sum (a spike leaving a window of small
+values), the window is recomputed exactly — without this a 1e17 spike made
+SMA(2) of the following 1s read 0 (Codex Final CXF-06). SMA(1) = identity (tested).
 
 ## 6. Correlation
 

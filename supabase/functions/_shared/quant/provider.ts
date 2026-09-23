@@ -71,7 +71,8 @@ export class FixtureProvider implements MarketDataProvider {
   private readonly byKey: Map<string, FixtureDataset>;
 
   constructor(datasets: readonly FixtureDataset[], private readonly clock: () => number) {
-    this.byKey = new Map(datasets.map((d) => [instrumentKey(d.instrument), d]));
+    // Codex Final CXF-04: own a private deep copy; never hand out internal objects.
+    this.byKey = new Map(datasets.map((d) => [instrumentKey(d.instrument), structuredClone(d)]));
   }
 
   private provenance(d: FixtureDataset, sourceAsOfT: number | null): DataProvenance {
@@ -91,7 +92,7 @@ export class FixtureProvider implements MarketDataProvider {
   async lookupInstrument(query: string): Promise<QuantResult<InstrumentIdentity[]>> {
     const q = String(query ?? '').trim().toUpperCase();
     if (q.length === 0 || q.length > 32) return fail('INVALID_PARAMETER', 'query must be 1..32 characters');
-    return ok([...this.byKey.values()].map((d) => d.instrument).filter((i) => i.symbol === q));
+    return ok([...this.byKey.values()].map((d) => d.instrument).filter((i) => i.symbol === q).map((i) => structuredClone(i)));
   }
 
   // deno-lint-ignore require-await
@@ -119,6 +120,6 @@ export class FixtureProvider implements MarketDataProvider {
     // Codex Gate 1 CX1-09: an empty range is a failure, never an empty-but-successful series.
     if (bars.length === 0) return fail('INSUFFICIENT_DATA', 'no bars in the requested range');
     const newest = bars.reduce<number | null>((m, b) => (m === null || (b.t as number) > m ? (b.t as number) : m), null);
-    return ok({ data: [...bars], provenance: this.provenance(d, newest) });
+    return ok({ data: structuredClone(bars), provenance: this.provenance(d, newest) });
   }
 }

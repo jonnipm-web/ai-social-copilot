@@ -184,11 +184,22 @@ export function simpleMovingAverage(values: readonly number[], window: number): 
   // window). The window sum is recomputed exactly with fsum once every k
   // steps (n/k recomputes × k terms = O(n)); between recomputes it is
   // updated by add/subtract, so rounding drift spans at most k−1 updates.
+  // Codex Final CXF-06: when the outgoing value dominates the new window sum
+  // (e.g. a 1e17 spike leaving a window of 1s), add/subtract cancels
+  // catastrophically (SMA 0 instead of 1), so the window is recomputed
+  // exactly. For positive inputs a trigger needs the outgoing value to exceed
+  // CANCELLATION_RATIO × everything left in the window, which bounds how often
+  // it can fire across the float64 range.
+  const CANCELLATION_RATIO = 1024;
   const out: (number | null)[] = new Array(values.length).fill(null);
   let sum = 0;
   for (let t = window - 1; t < values.length; t++) {
     if ((t - (window - 1)) % window === 0) sum = fsum(values.slice(t - window + 1, t + 1));
-    else sum += values[t] - values[t - window];
+    else {
+      const outgoing = values[t - window];
+      sum += values[t] - outgoing;
+      if (Math.abs(outgoing) > CANCELLATION_RATIO * Math.abs(sum)) sum = fsum(values.slice(t - window + 1, t + 1));
+    }
     out[t] = sum / window;
   }
   return finite(out);

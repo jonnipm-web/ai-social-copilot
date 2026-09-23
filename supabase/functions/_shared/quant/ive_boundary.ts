@@ -64,6 +64,7 @@ export const NARRATIVE_RULES: readonly string[] = [
   'Never compute, estimate, extrapolate or round a financial figure yourself.',
   'State the analysis period and the data freshness; never describe historical data as current.',
   'Signals are descriptive observations, not recommendations. Do not recommend buying, selling or holding.',
+  'Write in English or Portuguese only.',
   'Mention every warning code that affects interpretation (stale data, weak provenance, unadjusted prices).',
   'Separate facts (from `facts`) from interpretation, and label interpretation as such.',
 ];
@@ -125,6 +126,10 @@ const NUMBER_WORDS = [
   'quatrocent[oa]s', 'quinhent[oa]s', 'seiscent[oa]s', 'setecent[oa]s', 'oitocent[oa]s', 'novecent[oa]s', 'mil',
   'milh[aã]o', 'milh[oõ]es', 'bilh[aã]o', 'bilh[oõ]es', 'trilh[aã]o', 'trilh[oõ]es', 'porcento', 'metade', 'dobro',
   'dobrou', 'triplo', 'triplicou', 'dezenas?', 'd[uú]zias?',
+  // Ordinals (Codex Final CXF-02). "first"/"primeiro" excluded like "one"/"um".
+  'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth', 'tenth', 'hundredth', 'thousandth',
+  'segund[oa]s?', 'terceir[oa]s?', 'quart[oa]s?', 'quint[oa]s?', 's[eé]tim[oa]s?', 'oitav[oa]s?', 'non[oa]s?',
+  'd[eé]cim[oa]s?', 'cent[eé]sim[oa]s?', 'mil[eé]sim[oa]s?',
 ];
 const NUMBER_WORD_RE = new RegExp(`(?<![\\p{L}])(?:${NUMBER_WORDS.join('|')})(?![\\p{L}])`, 'giu');
 
@@ -161,7 +166,11 @@ export function checkNarrativeGrounding(narrative: QuantNarrative, req: QuantExp
   // Anything that still looks like a placeholder is malformed (wrong case, bad chars): fail closed.
   for (const m of rest.matchAll(/\{\{[^{}]{0,64}\}\}|\{\{|\}\}/g)) unknownFactIds.push(m[0]);
   const restRaw = raw.replace(PLACEHOLDER_RE, ' ');
+  // Codex Final CXF-02: format/control characters (zero-width, bidi) can split
+  // a number word ("t\u200Bwo") so it evades the lexicon — reject them outright.
+  const hidden = [...restRaw.matchAll(/[\p{Cf}\p{Co}]|[\p{Cc}--[\n\t\r]]/gv)].map((m) => `U+${m[0].codePointAt(0)!.toString(16).toUpperCase()}`);
   const ungroundedNumbers = [
+    ...hidden,
     ...new Set([...restRaw.matchAll(NUMERIC_CHAR_RE), ...rest.matchAll(NUMERIC_CHAR_RE)].map((m) => m[0])),
     ...[...rest.matchAll(PERCENT_RE)].map((m) => m[0]),
     ...[...rest.matchAll(NUMBER_WORD_RE)].map((m) => m[0]),
@@ -176,6 +185,17 @@ export function checkNarrativeGrounding(narrative: QuantNarrative, req: QuantExp
 
 /** Renders a grounded template by substituting engine display strings; refuses ungrounded ones. */
 export function renderNarrative(narrative: QuantNarrative, req: QuantExplanationRequest): QuantResult<string> {
+  // Codex Final CXF-01: the substituted values are trusted only if they look
+  // like engine output — no placeholder syntax, no control/format chars,
+  // bounded length, engine source.
+  for (const f of req.facts) {
+    if (
+      f.source !== 'DETERMINISTIC_ENGINE' || typeof f.display !== 'string' || f.display.length > 64 ||
+      /[{}]/.test(f.display) || /[\p{Cc}\p{Cf}\p{Co}]/u.test(f.display)
+    ) {
+      return fail('CALCULATION_ERROR', 'explanation request contains a fact that is not engine output', { reason: 'FORGED_FACT' });
+    }
+  }
   const report = checkNarrativeGrounding(narrative, req);
   if (!report.grounded) {
     return fail('CALCULATION_ERROR', 'narrative is not grounded in engine facts', {

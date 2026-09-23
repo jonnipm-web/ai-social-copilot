@@ -177,14 +177,14 @@ Deno.test('CX1-06 a PriceSeries is deeply immutable and detached from its inputs
 
 // ------------------------------------------------------------------ CX1-07
 
-Deno.test('CX1-07 SMA is O(n): 50 000 bars × 8 windows up to 50 000 stay fast and match exact sums', () => {
+Deno.test('CX1-07 SMA is O(n): 50 000 bars × 8 windows up to 50 000 match exact sums', () => {
   const n = 50_000;
   const values = Array.from({ length: n }, (_, i) => 100 + Math.sin(i / 50) * 20 + (i % 7) * 0.013);
   const windows = [2, 3, 7, 100, 1_000, 25_000, 49_999, 50_000];
-  const t0 = performance.now();
+  // No wall-clock assertion (Codex Final CXF-06: flaky on slow runners). The
+  // O(n) property is structural (see metrics.ts); the old O(n·k) version needed
+  // ~6e9 additions for this input and would time the suite out.
   const results = windows.map((w) => val(simpleMovingAverage(values, w)));
-  const elapsed = performance.now() - t0;
-  assert(elapsed < 3_000, `SMA took ${elapsed} ms`);
   // Accuracy vs an exact per-window fsum at sampled points. Drift spans < k
   // updates of O(ε·max|x|) each; relative 1e−9 bounds k ≤ 50 000 with margin.
   windows.forEach((w, wi) => {

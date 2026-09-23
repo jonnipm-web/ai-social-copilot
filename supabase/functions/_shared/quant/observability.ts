@@ -39,6 +39,12 @@ export interface QuantLogInput {
 }
 
 const SAFE_TOKEN_RE = /^[A-Za-z0-9_:.\-]{1,64}$/;
+const FRESHNESS_STATES: ReadonlySet<string> = new Set(['FRESH', 'DELAYED', 'STALE', 'UNKNOWN']);
+const ERROR_CODES: ReadonlySet<string> = new Set([
+  'INVALID_INSTRUMENT', 'INVALID_DATASET', 'DATASET_TOO_LARGE', 'INSUFFICIENT_DATA', 'STALE_DATA', 'PROVIDER_UNAVAILABLE',
+  'UNSUPPORTED_ASSET_CLASS', 'CURRENCY_MISMATCH', 'ENTITLEMENT_DENIED', 'CALCULATION_ERROR', 'DATA_QUALITY_ERROR',
+  'INVALID_PORTFOLIO', 'INVALID_PARAMETER',
+] satisfies QuantErrorCode[]);
 
 function safe(v: string | null | undefined): string | null {
   return typeof v === 'string' && SAFE_TOKEN_RE.test(v) ? v : null;
@@ -54,8 +60,9 @@ export function quantLogEvent(i: QuantLogInput): QuantLogEvent {
     period_start: safe(i.periodStart),
     period_end: safe(i.periodEnd),
     calculations: (i.calculations ?? []).map((c) => safe(c)).filter((c): c is string => c !== null).slice(0, 32),
-    freshness: i.freshness ?? null,
+    // Codex Final CXF-05: enums are checked at runtime too, not only by type.
+    freshness: typeof i.freshness === 'string' && FRESHNESS_STATES.has(i.freshness) ? i.freshness : null,
     latency_ms: Number.isFinite(i.latencyMs) ? Math.max(0, Math.round(i.latencyMs)) : 0,
-    error_code: i.errorCode ?? null,
+    error_code: typeof i.errorCode === 'string' && ERROR_CODES.has(i.errorCode) ? i.errorCode : null,
   };
 }
