@@ -62,7 +62,14 @@ Deno.test('MP-05 every MODULE-kind function maps to a known module', () => {
 Deno.test('MP-06 PROMOTION GATE: every MODULE-kind function enforces its own module server-side, after auth and before quota', async () => {
   for (const [fn, p] of Object.entries(MODULE_POLICY.edgeFunctions)) {
     if (p.kind !== 'MODULE') continue;
-    const src = await Deno.readTextFile(new URL(`../${fn}/index.ts`, import.meta.url));
+    const gatePath = p.gateFile ? `../${p.gateFile}` : `../${fn}/index.ts`;
+    const src = await Deno.readTextFile(new URL(gatePath, import.meta.url));
+    if (p.gateFile) {
+      // The delegating index.ts must actually route through that shared handler.
+      const index = await Deno.readTextFile(new URL(`../${fn}/index.ts`, import.meta.url));
+      const base = p.gateFile.split('/').pop()!;
+      assert(index.includes(base.replace(/\.ts$/, '')), `${fn}/index.ts must delegate to ${p.gateFile}`);
+    }
     const call = new RegExp(`requireModuleAccess\\(\\s*req,\\s*\\w+,\\s*'${p.moduleId}'`);
     const m = call.exec(src);
     assert(m, `${fn} must call requireModuleAccess(req, <user>, '${p.moduleId}', ...)`);

@@ -28,6 +28,7 @@
  *   Promotion Gate) that any IVE/agent path may request from this module.
  *   Human-driven UI flows (e.g. Stripe checkout) are not agent-invocable
  *   and do not raise it.
+ * - edgeFunctions.gateFile: optional; see EdgeFunctionPolicy.
  * - edgeFunctions.kind: MODULE (entitlement required, moduleId mandatory) |
  *   BILLING | ENTITLEMENT | PUBLIC_WEBHOOK | RETIRED (no module gate; each
  *   has its own boundary, documented in MODULE_ARCHITECTURE.md §13).
@@ -57,6 +58,10 @@ export type EdgeFunctionKind = "MODULE" | "BILLING" | "ENTITLEMENT" | "PUBLIC_WE
 export interface EdgeFunctionPolicy {
   kind: EdgeFunctionKind;
   moduleId?: string;
+  /** When the function delegates to a shared handler, the file (relative
+   * to supabase/functions/) where authentication + requireModuleAccess run.
+   * MP-06 checks the gate order in that file instead of index.ts. */
+  gateFile?: string;
 }
 
 export interface ModulePolicyDoc {
@@ -134,6 +139,8 @@ export const MODULE_POLICY: ModulePolicyDoc =
     "opportunity-discovery": { "kind": "MODULE", "moduleId": "opportunity-discovery" },
     "process-file": { "kind": "MODULE", "moduleId": "file-import" },
     "revenue-planner": { "kind": "MODULE", "moduleId": "revenue-planner" },
+    "ive-intelligence": { "kind": "MODULE", "moduleId": "context-copilot", "gateFile": "_shared/ive/intelligence.ts" },
+    "ive-memory": { "kind": "MODULE", "moduleId": "context-copilot", "gateFile": "_shared/ive/memory_endpoint.ts" },
     "create-checkout-session": { "kind": "BILLING" },
     "module-access": { "kind": "ENTITLEMENT" },
     "stripe-webhook": { "kind": "PUBLIC_WEBHOOK" },
