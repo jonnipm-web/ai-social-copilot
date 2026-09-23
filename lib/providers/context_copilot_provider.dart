@@ -6,33 +6,54 @@ import '../core/diagnostics/diagnostic_logger_service.dart';
 import '../core/diagnostics/diagnostic_models.dart';
 import '../data/models/copilot_context_data.dart';
 import '../data/models/copilot_turn.dart';
+import '../data/models/ive_intelligence.dart';
+import '../data/services/ive_intelligence_service.dart';
 import 'diagnostic_session_provider.dart';
 import 'ive_memory_provider.dart';
 import 'ive_provider.dart';
+import 'language_provider.dart';
 import 'quota_provider.dart';
 
 // ── State ────────────────────────────────────────────────────────────────────
+
+/// IVE-INTELLIGENCE-CORE-01 — routes the chat through the server IVE
+/// Intelligence Core (`ive-intelligence`) instead of the legacy
+/// client-built context. Compile-time switch
+/// (`--dart-define=IVE_INTELLIGENCE_CORE=true`): OFF by default, because the
+/// new Edge Function is not deployed; the commercial path stays unchanged.
+const bool kIveIntelligenceCoreEnabled = bool.fromEnvironment('IVE_INTELLIGENCE_CORE');
+
+final iveIntelligenceServiceProvider = Provider<IveIntelligenceService>((_) => IveIntelligenceService());
+
+/// Overridable in tests; production value is the compile-time switch.
+final iveIntelligenceCoreEnabledProvider = Provider<bool>((_) => kIveIntelligenceCoreEnabled);
 
 class CopilotState {
   final List<CopilotTurn> turns;
   final bool loading;
   final String? error;
 
+  /// Structured failure from the Intelligence Core (translated by the UI).
+  final IveFailure? failure;
+
   const CopilotState({
     this.turns   = const [],
     this.loading = false,
     this.error,
+    this.failure,
   });
 
   CopilotState copyWith({
     List<CopilotTurn>? turns,
     bool? loading,
     String? error,
+    IveFailure? failure,
   }) =>
       CopilotState(
         turns:   turns   ?? this.turns,
         loading: loading ?? this.loading,
         error:   error,
+        failure: failure,
       );
 }
 
@@ -67,6 +88,15 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
     required CopilotContextData context,
     String? idempotencyKey,
   }) async {
+    if (_ref.read(iveIntelligenceCoreEnabledProvider)) {
+      return _sendViaCore(
+        message: message,
+        screenName: screenName,
+        context: context,
+        idempotencyKey: idempotencyKey,
+      );
+    }
+
     final userTurn = CopilotTurn(
       role:      'user',
       content:   message,
@@ -210,7 +240,92 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
     }
   }
 
-  void clearHistory() => state = const CopilotState();
+  /// IVE-INTELLIGENCE-CORE-01 — Android and Web send the SAME minimal
+  /// request; the server assembles identity, capabilities, project,
+  /// knowledge and memory itself. Only the project id (a request the server
+  /// verifies) is taken from the screen's context; the screen-built
+  /// documents/opportunities/etc. and device-local recent questions are not
+  /// sent at all.
+  Future<void> _sendViaCore({
+    required String message,
+    required String screenName,
+    required CopilotContextData context,
+    String? idempotencyKey,
+  }) async {
+    final previousTurns = state.turns;
+    final userTurn = CopilotTurn(role: 'user', content: message, timestamp: DateTime.now());
+    state = state.copyWith(turns: [...previousTurns, userTurn], loading: true);
+    final interactionToken = _ref.read(iveProvider.notifier).beginThinking();
+    final correlationId = context.correlationId ?? newDiagnosticCorrelationId();
+    final stopwatch = Stopwatch()..start();
+
+    final request = IveIntelligenceRequest(
+      message: message,
+      surface: currentIveSurface(),
+      locale: iveLocaleFor(_ref.read(languageProvider).languageCode),
+      projectId: context.projectId,
+      conversation: _historyForCore(previousTurns),
+      sourceModule: context.sourceModule ?? screenName,
+      idempotencyKey: idempotencyKey,
+      correlationId: correlationId,
+    );
+
+    try {
+      final result = await _ref.read(iveIntelligenceServiceProvider).ask(request);
+      final assistantTurn = CopilotTurn(
+        role: 'assistant',
+        content: result.answer ?? '',
+        sources: result.sourceLabels,
+        requiresAef: result.requiresAef,
+        suggestedActions: result.suggestedActions,
+        degradedContext: result.degraded.isNotEmpty,
+        timestamp: DateTime.now(),
+      );
+      state = state.copyWith(turns: [...state.turns, assistantTurn], loading: false);
+      _ref.read(iveProvider.notifier).completeInteraction(interactionToken, success: true);
+      _ref.read(diagnosticSessionProvider.notifier).logEvent(
+        category: DiagnosticCategory.ai,
+        eventName: 'ive_core_request_completed',
+        operation: screenName,
+        correlationId: correlationId,
+        status: result.requiresAef ? 'requires_aef' : 'success',
+        durationMs: stopwatch.elapsedMilliseconds,
+        metadata: {'sources': result.sourceLabels.length, 'degraded': result.degraded.length},
+      );
+      if (!result.requiresAef) _ref.invalidate(currentQuotaProvider);
+    } catch (e) {
+      final failure = e is IveIntelligenceException ? e.failure : IveFailure.unknown;
+      state = state.copyWith(loading: false, failure: failure);
+      _ref.read(iveProvider.notifier).completeInteraction(interactionToken, success: false);
+      _ref.read(diagnosticSessionProvider.notifier).logEvent(
+        category: DiagnosticCategory.ai,
+        eventName: 'ive_core_request_completed',
+        operation: screenName,
+        correlationId: correlationId,
+        status: 'failure',
+        durationMs: stopwatch.elapsedMilliseconds,
+        metadata: {'failure': failure.name},
+      );
+    }
+  }
+
+  /// The visible transcript minus every AEF exchange (the consequential
+  /// request AND the AEF notice): the server re-scans recent user turns for
+  /// consequential intents, so resending "publique o post" would keep
+  /// routing the next, unrelated questions to AEF.
+  static List<IveConversationTurn> _historyForCore(List<CopilotTurn> turns) {
+    final out = <IveConversationTurn>[];
+    for (var i = 0; i < turns.length; i++) {
+      final t = turns[i];
+      if (t.requiresAef) continue;
+      final nextIsAef = i + 1 < turns.length && turns[i + 1].requiresAef;
+      if (t.role == 'user' && nextIsAef) continue;
+      out.add(IveConversationTurn(role: t.role, content: t.content));
+    }
+    return out;
+  }
+
+    void clearHistory() => state = const CopilotState();
 }
 
 // ── Provider ──────────────────────────────────────────────────────────────────

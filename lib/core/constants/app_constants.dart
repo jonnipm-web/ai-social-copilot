@@ -145,6 +145,8 @@ class AppConstants {
   static const edgeFunctionContextCopilot = 'context-copilot';
   // MODULE-FOUNDATION-AND-ENTITLEMENT-02 — capability discovery (server authority).
   static const edgeFunctionModuleAccess = 'module-access';
+  // IVE-INTELLIGENCE-CORE-01 — server IVE Intelligence Core (Module Lab; not deployed).
+  static const edgeFunctionIveIntelligence = 'ive-intelligence';
 
   // Fase 10L — Decision Simulator (IVE v1.1)
   static const edgeFunctionDecisionSimulator = 'decision-simulator';

@@ -1,3 +1,5 @@
+import 'ive_intelligence.dart';
+
 class CopilotTurn {
   final String role; // 'user' | 'assistant'
   final String content;
@@ -7,6 +9,18 @@ class CopilotTurn {
   final CopilotActionSuggestion? actionSuggestion;
   final DateTime timestamp;
 
+  /// IVE-INTELLIGENCE-CORE-01 — the server routed this request to AEF
+  /// (consequential action); the UI shows a localized explanation instead
+  /// of an answer. Nothing was executed.
+  final bool requiresAef;
+
+  /// Server-validated capability suggestions (never derived from free text).
+  final List<IveSuggestedAction> suggestedActions;
+
+  /// Part of the optional context (knowledge/memory/project state) could not
+  /// be loaded; the UI flags the answer as partial.
+  final bool degradedContext;
+
   const CopilotTurn({
     required this.role,
     required this.content,
@@ -15,6 +29,9 @@ class CopilotTurn {
     this.confidence = 70,
     this.actionSuggestion,
     required this.timestamp,
+    this.requiresAef = false,
+    this.suggestedActions = const [],
+    this.degradedContext = false,
   });
 
   Map<String, dynamic> toHistoryMap() => {'role': role, 'content': content};
@@ -27,6 +44,9 @@ class CopilotTurn {
         confidence:       confidence,
         actionSuggestion: actionSuggestion,
         timestamp:        timestamp,
+        requiresAef:      requiresAef,
+        suggestedActions: suggestedActions,
+        degradedContext:  degradedContext,
       );
 }
 

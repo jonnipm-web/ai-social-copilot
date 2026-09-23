@@ -4,16 +4,19 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/diagnostics/diagnostic_models.dart';
+import '../../core/modules/module_registry.dart';
 import '../../core/ui/breakpoints.dart';
 import '../../core/utils/uuid_v4.dart';
 import '../../data/models/copilot_context_data.dart';
 import '../../data/models/copilot_turn.dart';
+import '../../data/models/ive_intelligence.dart';
 import '../../data/models/ive_interaction_request.dart';
 import '../../features/ive/visual/ive_avatar.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/context_copilot_provider.dart';
 import '../../providers/diagnostic_session_provider.dart';
 import 'ai_execution_confirmation.dart';
+import 'ive_failure_messages.dart';
 
 // COMMERCIAL-EXPERIENCE-CLOSURE-16 — owner feedback (live physical/web QA,
 // both platforms): while the chat dialog/sheet is open, IveOverlay's own
@@ -391,6 +394,14 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
   // so they can act on it there. `generate_roadmap` has no dedicated
   // screen anywhere in this app (confirmed by repository search) — it
   // stays truthfully disabled rather than pointed at a fake destination.
+  // IVE-INTELLIGENCE-CORE-01 — navigation to a server-validated capability;
+  // the route guard (and, for data, the server) still decides access.
+  void _openRouteFromSuggestion(String route) {
+    final router = GoRouter.of(context);
+    Navigator.of(context).pop();
+    router.go(route);
+  }
+
   void _handleActionSuggestion(CopilotActionSuggestion action) {
     final l10n = AppLocalizations.of(context)!;
     String? route;
@@ -482,7 +493,17 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
               ? _empty()
               : _messages(state.turns),
         ),
-        if (state.error != null)
+        // IVE-INTELLIGENCE-CORE-01 — structured failures are translated;
+        // the legacy path keeps its previous error line.
+        if (state.failure != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Text(
+              iveFailureMessage(AppLocalizations.of(context)!, state.failure!),
+              style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+            ),
+          )
+        else if (state.error != null)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: Text(
@@ -648,6 +669,7 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
         itemCount:  turns.length,
         itemBuilder: (_, i) => _TurnBubble(
           turn: turns[i],
+          onRouteTap: _openRouteFromSuggestion,
           onActionTap: turns[i].actionSuggestion != null
               ? () => _handleActionSuggestion(turns[i].actionSuggestion!)
               : null,
@@ -765,7 +787,8 @@ String _screenScores(AppLocalizations l) => l.iveScreenScores;
 class _TurnBubble extends StatelessWidget {
   final CopilotTurn   turn;
   final VoidCallback? onActionTap;
-  const _TurnBubble({required this.turn, this.onActionTap});
+  final void Function(String route)? onRouteTap;
+  const _TurnBubble({required this.turn, this.onActionTap, this.onRouteTap});
 
   @override
   Widget build(BuildContext ctx) {
@@ -789,13 +812,25 @@ class _TurnBubble extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              turn.content,
+              // IVE-INTELLIGENCE-CORE-01 — a consequential request is
+              // explained, never answered as if it had been done.
+              turn.requiresAef ? AppLocalizations.of(ctx)!.iveCoreRequiresAef : turn.content,
               style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.4),
             ),
+            if (!isUser && turn.degradedContext)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  AppLocalizations.of(ctx)!.iveCoreDegradedContext,
+                  style: const TextStyle(color: Colors.amberAccent, fontSize: 11),
+                ),
+              ),
             if (!isUser && (turn.sources.isNotEmpty || turn.confidence > 0))
               _meta(turn),
             if (!isUser && turn.actionSuggestion != null)
               _actionChip(turn.actionSuggestion!, onActionTap),
+            if (!isUser)
+              for (final a in turn.suggestedActions) ..._capabilityChip(ctx, a),
           ],
         ),
       ),
@@ -808,11 +843,40 @@ class _TurnBubble extends StatelessWidget {
           spacing: 6,
           runSpacing: 4,
           children: [
-            _badge('${turn.confidence}% conf.', Colors.white24),
+            if (turn.confidence > 0) _badge('${turn.confidence}% conf.', Colors.white24),
             ...turn.sources.take(3).map((s) => _badge(s, const Color(0xFF3D3A5C))),
           ],
         ),
       );
+
+  /// Server-validated capability suggestion → navigation only. The module
+  /// must exist in the registry and have a route; an unavailable module is
+  /// offered only as an upgrade (the server decided that), never opened.
+  List<Widget> _capabilityChip(BuildContext ctx, IveSuggestedAction a) {
+    final module = kModuleRegistry.where((m) => m.moduleId == a.capabilityId).firstOrNull;
+    if (module == null || onRouteTap == null) return const [];
+    final isEn = Localizations.localeOf(ctx).languageCode == 'en';
+    final String? route = a.kind == 'upgrade' ? AppConstants.routeUpgrade : (a.available ? module.route : null);
+    if (route == null) return const [];
+    final label = a.kind == 'upgrade'
+        ? '${isEn ? module.nameEn : module.namePt} · ${isEn ? 'Upgrade' : 'Plano'}'
+        : (isEn ? module.nameEn : module.namePt);
+    return [
+      InkWell(
+        onTap: () => onRouteTap!(route),
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          margin: const EdgeInsets.only(top: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            border: Border.all(color: const Color(0xFF6C63FF), width: 1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 12)),
+        ),
+      ),
+    ];
+  }
 
   Widget _badge(String text, Color bg) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

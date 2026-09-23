@@ -250,5 +250,16 @@
   "oppTypeSaas": "SaaS",
   "oppTypeEbook": "Ebook",
   "oppTypeCurso": "Course",
-  "oppTypeAssinatura": "Subscription"
+  "oppTypeAssinatura": "Subscription",
+  "iveCoreRequiresAef": "This action has consequences outside the app (publishing, sending, paying, trading or deleting). IVE does not execute actions like this: they require approval through the governed execution flow.",
+  "iveCoreProjectForbidden": "This project is not available to your account.",
+  "iveCoreModelUnavailable": "IVE is temporarily unavailable. No analysis was charged. Please try again.",
+  "iveCoreContextUnavailable": "The project context could not be loaded right now. Please try again.",
+  "iveCoreInvalidRequest": "This question could not be sent. Please review it and try again.",
+  "iveCoreSurfaceNotSupported": "IVE is not available on this platform yet.",
+  "iveCoreSessionExpired": "Your session has expired. Please sign in again.",
+  "iveCoreAccessDenied": "This feature is not available to your account.",
+  "iveCoreQuotaExceeded": "You have reached your plan's AI analysis limit.",
+  "iveCoreGenericError": "Something went wrong while talking to IVE. Please try again.",
+  "iveCoreDegradedContext": "Answer with partial context: some of your data could not be loaded."
 }
