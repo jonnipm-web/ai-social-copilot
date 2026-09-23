@@ -141,7 +141,9 @@ Deno.test('ID-07 dissolved vs active with similar names: both shown, status is a
   const d = await search(t, await newInv(t), { name: 'Northstar Relief', country: 'XA' });
   assertEquals(d.outcome, 'AMBIGUOUS');
   const removed = cands(d).find((c) => c.status === 'REMOVED')!;
-  assert((removed.signals as string[]).includes('DISSOLVED_OR_REMOVED'));
+  // Codex I2G3-02: lifecycle is a typed neutral fact, not an identity signal
+  assertEquals(removed.lifecycle, { status: 'REMOVED', active: false, isFindingOfWrongdoing: false });
+  assert(!(removed.signals as string[]).some((x) => /DISSOLVED|REMOVED/.test(x)));
   assert(cands(d).some((c) => c.status === 'REGISTERED'));
   assertEquals(d.absenceIsNotEvidenceOfWrongdoing, true);
   assertEquals(JSON.stringify(d).match(/fraud|scam|suspicious|concern/i), null);
@@ -733,4 +735,24 @@ Deno.test('I2G2-04 (rejected) sketch cost is linear: maximum-size text, 200 sour
   for (let i = 0; i < 200; i++) similaritySketch(`${i} ${text}`);
   const ms = performance.now() - t0;
   assert(ms < 20_000, `200 max-size sketches took ${ms} ms`);
+});
+
+Deno.test('I2G3-02 no registry outcome ever becomes a concern: removed/dissolved, ambiguous, no-match, conflicts, stale, provider failure', async () => {
+  const t = setup();
+  const inv = await newInv(t, NS);
+  for (const q of [{ name: 'Northstar Relief', country: 'XA' }, { name: 'Example Aid Trust' }, { name: 'Nobody Here At All' }, { registration: 'XA-0000000' }]) {
+    const d = await search(t, inv, q);
+    assertEquals(JSON.stringify(d).match(/concern|fraud|suspicious|risk/i), null, JSON.stringify(q));
+  }
+  await t.must(UA, { action: 'ingest_provider_record', investigation_id: inv, provider_id: 'fixture-xa-charity-registry', record_id: 'xa-9990001', ref: 'src-ch' });
+  await t.must(UA, { action: 'ingest_provider_record', investigation_id: inv, provider_id: 'fixture-xa-company-registry', record_id: 'xa-c-990001', ref: 'src-co' });
+  await t.must(UA, { action: 'import_registry_claim', investigation_id: inv, source_ref: 'src-ch', ref: 'c-stmt' });
+  await t.must(UA, { action: 'run_verification', investigation_id: inv, claim_ref: 'c-stmt' });
+  const g = await t.must(UA, { action: 'get_investigation', investigation_id: inv, lang: 'en' });
+  assertEquals((g.data.indicators as Json[]).filter((i) => i.polarity === 'CONCERN'), []);
+  const offline = setup({ providers: registryWith([northstarRaw('REMOVED', '2026-09-01T00:00:00Z', { dissolved_on: '2025-01-15' })], false) });
+  const inv2 = await newInv(offline, NS);
+  assertEquals(await offline.code(UA, { action: 'search_registry', investigation_id: inv2, provider_id: 'fixture-xa-charity-registry', query: { name: 'x' } }), 'REGISTRY_UNAVAILABLE');
+  const g2 = await offline.must(UA, { action: 'get_investigation', investigation_id: inv2 });
+  assertEquals((g2.data.indicators as Json[]).length, 0);
 });

@@ -45,6 +45,12 @@ name that is not a registry name stays EXACT but `requiresReview`
 country is given and a registry never answers for another jurisdiction;
 candidates are bounded (10) and truncation is disclosed.
 
+Registry lifecycle (REGISTERED / REMOVED / DISSOLVED / verbatim detail) is
+returned as a typed `lifecycle` fact with `isFindingOfWrongdoing: false`,
+separate from identity-matching `signals` (Codex I2G3-02); no registry outcome
+(removed, ambiguous, no match, conflict, stale, provider failure) produces a
+concern indicator (test I2G3-02).
+
 ## 4. Names
 
 Normalization helps search and must never erase a legal distinction:

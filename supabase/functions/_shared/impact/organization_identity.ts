@@ -50,7 +50,6 @@ export type IdentitySignal =
   | 'FORMER_NAME_EQUAL'
   | 'NAME_SIMILAR'
   | 'NAME_DIFFERENT'
-  | 'DISSOLVED_OR_REMOVED'
   | 'STALE_SNAPSHOT'
   | 'SYNTHETIC_FIXTURE';
 
@@ -73,6 +72,15 @@ export interface IdentityCandidate {
   readonly legalName: string;
   readonly country: string;
   readonly status: RegistryStatus;
+  /** Registry lifecycle as a FACT about the listing — never an indicator, a
+   * concern or a signal about conduct (Codex I2G3-02). Kept apart from the
+   * identity-matching `signals` so no consumer can mix them. */
+  readonly lifecycle: {
+    readonly status: RegistryStatus;
+    readonly statusDetail?: string;
+    readonly active: boolean;
+    readonly isFindingOfWrongdoing: false;
+  };
   readonly signals: readonly IdentitySignal[];
   readonly snapshotFresh: boolean;
   readonly retrievedAt: string;
@@ -136,7 +144,7 @@ export function resolveOrganization(
   // snapshot represents it; the group key is its smallest canonical id.
   const byOrg = new Map<string, CanonicalRegistryRecord>();
   const groupIds = new Map<string, readonly string[]>();
-  const pick =(rs: readonly CanonicalRegistryRecord[]) => {
+  const pick = (rs: readonly CanonicalRegistryRecord[]) => {
     const parent = new Map<string, string>();
     const find = (x: string): string => {
       if (!parent.has(x)) parent.set(x, x);
@@ -209,13 +217,17 @@ export function resolveOrganization(
     const signals = [...new Set<IdentitySignal>([
       ...(extra.get(key) ?? []),
       ...nameSignals(q.name, r),
-      ...(r.status === 'DISSOLVED' || r.status === 'REMOVED' ? ['DISSOLVED_OR_REMOVED' as const] : []),
       ...(fresh ? [] : ['STALE_SNAPSHOT' as const]),
       ...(r.synthetic ? ['SYNTHETIC_FIXTURE' as const] : []),
     ])].sort();
     return Object.freeze({
       canonicalOrgId: r.canonicalOrgId, canonicalIds: Object.freeze(groupIds.get(key) ?? [...r.canonicalIds]), providerId: r.providerId, recordId: r.recordId, legalName: r.name,
-      country: r.jurisdiction.country, status: r.status, signals: Object.freeze(signals), snapshotFresh: fresh,
+      country: r.jurisdiction.country, status: r.status,
+      lifecycle: Object.freeze({
+        status: r.status, ...(r.statusDetail ? { statusDetail: r.statusDetail } : {}),
+        active: r.status === 'REGISTERED', isFindingOfWrongdoing: false as const,
+      }),
+      signals: Object.freeze(signals), snapshotFresh: fresh,
       retrievedAt: r.retrievedAt, ...(r.sourceAsOf ? { sourceAsOf: r.sourceAsOf } : {}), synthetic: r.synthetic,
     });
   });

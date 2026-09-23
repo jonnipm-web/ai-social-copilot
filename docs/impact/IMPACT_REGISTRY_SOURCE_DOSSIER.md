@@ -82,3 +82,8 @@ Lab-only. All deterministic tests use synthetic fixtures (XA/XB).
 3. The provider is composed into the Lab registry **and** added to
    `public.impact_trusted_provider` in a migration (drift test PD-01).
 4. Service-role gate re-evaluated (options A/B) if data leaves the Lab.
+5. **Egress pinning** (Codex I2G3-01, DEFERRED from I2): `safe_fetch.ts`
+   validates DNS and then `fetch()` resolves again (rebinding window). Before
+   any real registry is composed, pin the connection to the validated address
+   or route egress through an allowlisting proxy (`EGRESS_PINNING_REQUIRED`
+   blocker in `catalog.ts`, asserted by CAT-01).

@@ -14,7 +14,14 @@ import { CHARITY_COMMISSION, CHARITY_COMMISSION_HOST } from './charity_commissio
 import { COMPANIES_HOUSE, COMPANIES_HOUSE_HOST } from './companies_house.ts';
 import { IRS_EO_BMF, IRS_HOST } from './irs_eo_bmf.ts';
 
-export type EnablementBlocker = 'OWNER_CREDENTIAL_REQUIRED' | 'TERMS_REQUIRE_CONFIRMATION' | 'BULK_INGESTION_PIPELINE_REQUIRED';
+export type EnablementBlocker =
+  | 'OWNER_CREDENTIAL_REQUIRED'
+  | 'TERMS_REQUIRE_CONFIRMATION'
+  | 'BULK_INGESTION_PIPELINE_REQUIRED'
+  // Codex I2G3-01: safe_fetch validates DNS and then fetch() resolves again
+  // (rebinding window). Before ANY real registry is composed, egress must be
+  // pinned to the validated address or routed through an allowlisting proxy.
+  | 'EGRESS_PINNING_REQUIRED';
 
 export interface RealRegistryEntry {
   readonly descriptor: ProviderDescriptor;
@@ -24,7 +31,7 @@ export interface RealRegistryEntry {
 }
 
 export const REAL_REGISTRY_CATALOG: readonly RealRegistryEntry[] = Object.freeze([
-  Object.freeze({ descriptor: COMPANIES_HOUSE, hosts: [COMPANIES_HOUSE_HOST], enabledInLab: false as const, blockers: ['OWNER_CREDENTIAL_REQUIRED', 'TERMS_REQUIRE_CONFIRMATION'] as const }),
-  Object.freeze({ descriptor: CHARITY_COMMISSION, hosts: [CHARITY_COMMISSION_HOST], enabledInLab: false as const, blockers: ['OWNER_CREDENTIAL_REQUIRED', 'TERMS_REQUIRE_CONFIRMATION'] as const }),
-  Object.freeze({ descriptor: IRS_EO_BMF, hosts: [IRS_HOST], enabledInLab: false as const, blockers: ['TERMS_REQUIRE_CONFIRMATION', 'BULK_INGESTION_PIPELINE_REQUIRED'] as const }),
+  Object.freeze({ descriptor: COMPANIES_HOUSE, hosts: [COMPANIES_HOUSE_HOST], enabledInLab: false as const, blockers: ['OWNER_CREDENTIAL_REQUIRED', 'TERMS_REQUIRE_CONFIRMATION', 'EGRESS_PINNING_REQUIRED'] as const }),
+  Object.freeze({ descriptor: CHARITY_COMMISSION, hosts: [CHARITY_COMMISSION_HOST], enabledInLab: false as const, blockers: ['OWNER_CREDENTIAL_REQUIRED', 'TERMS_REQUIRE_CONFIRMATION', 'EGRESS_PINNING_REQUIRED'] as const }),
+  Object.freeze({ descriptor: IRS_EO_BMF, hosts: [IRS_HOST], enabledInLab: false as const, blockers: ['TERMS_REQUIRE_CONFIRMATION', 'BULK_INGESTION_PIPELINE_REQUIRED', 'EGRESS_PINNING_REQUIRED'] as const }),
 ]);

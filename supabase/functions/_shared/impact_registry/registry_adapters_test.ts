@@ -239,7 +239,7 @@ Deno.test('CAT-01 no real registry is enabled in the Lab (not in the server regi
     assertEquals(e.enabledInLab, false);
     assert(!trusted.has(e.descriptor.id), e.descriptor.id);
     assertEquals([e.descriptor.synthetic, e.descriptor.official, e.descriptor.termsStatus], [false, true, 'REQUIRES_CONFIRMATION']);
-    assert(e.blockers.length > 0);
+    assert(e.blockers.includes('EGRESS_PINNING_REQUIRED'), `${e.descriptor.id}: DNS-rebinding residual must block enablement`);
   }
 });
 
