@@ -67,6 +67,8 @@ export interface OrganizationQuery {
   readonly scheme?: string;
   readonly domain?: string;
   readonly country?: string;
+  /** ISO 3166-2 subdivision (e.g. US-WY) for registries partitioned by region. */
+  readonly subdivision?: string;
 }
 
 export interface RawRegistryRecord {
@@ -103,6 +105,9 @@ export interface CanonicalRegistryRecord {
   readonly name: string;
   readonly organizationType: OrganizationType;
   readonly status: RegistryStatus;
+  /** Registry-specific status code kept verbatim (e.g. "liquidation",
+   * "irs-status-01") when the canonical status cannot express it (I2). */
+  readonly statusDetail?: string;
   readonly registeredOn?: string;
   readonly statusAsOf?: string;
   readonly dissolvedOn?: string;
@@ -177,6 +182,10 @@ export async function normalizeRegistryRecord(
   if (!type || !status || !ORG_TYPES.has(type) || !REGISTRY_STATUSES.has(status)) {
     return fail('INVALID_SOURCE', 'unknown organization type or status', { recordId: raw.recordId });
   }
+  const statusDetail = p.status_detail === undefined ? undefined : str(p.status_detail, 40);
+  if (statusDetail === null || (statusDetail !== undefined && !/^[a-z0-9-]{1,40}$/.test(statusDetail))) {
+    return fail('INVALID_SOURCE', 'invalid status detail', { recordId: raw.recordId });
+  }
   const retrievedMs = parseIsoMs(raw.retrievedAt)!;
   for (const d of ['registered_on', 'status_as_of', 'dissolved_on', 'source_as_of'] as const) {
     if (p[d] === undefined) continue;
@@ -236,7 +245,7 @@ export async function normalizeRegistryRecord(
   if (!isValidId(own)) return fail('INVALID_SOURCE', 'registration does not form a valid canonical id', { recordId: raw.recordId });
   const canonicalIds = [own, ...crossReferences.map((x) => canonicalOrgId(x.country, x.scheme, x.value))];
   const data = {
-    country, scheme, registrationNumber, name, type, status, registeredOn: p.registered_on ?? null, statusAsOf: p.status_as_of ?? null,
+    country, scheme, registrationNumber, name, type, status, statusDetail: statusDetail ?? null, registeredOn: p.registered_on ?? null, statusAsOf: p.status_as_of ?? null,
     dissolvedOn: p.dissolved_on ?? null, sourceAsOf: p.source_as_of ?? null, formerNames, tradingNames, crossReferences, domains,
   };
   return ok(Object.freeze({
@@ -257,6 +266,7 @@ export async function normalizeRegistryRecord(
     name,
     organizationType: type as OrganizationType,
     status: status as RegistryStatus,
+    ...(statusDetail ? { statusDetail } : {}),
     ...(p.registered_on ? { registeredOn: p.registered_on as string } : {}),
     ...(p.status_as_of ? { statusAsOf: p.status_as_of as string } : {}),
     ...(p.dissolved_on ? { dissolvedOn: p.dissolved_on as string } : {}),

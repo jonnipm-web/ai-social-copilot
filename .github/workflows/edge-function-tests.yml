@@ -150,12 +150,16 @@ jobs:
 
       - name: Type-check and lint the Impact core and the impact-lab Edge Function
         run: |
-          deno check supabase/functions/_shared/impact/*.ts supabase/functions/_shared/impact/fixtures/*.ts supabase/functions/impact-lab/*.ts
-          deno lint supabase/functions/_shared/impact/ supabase/functions/impact-lab/
+          deno check supabase/functions/_shared/impact/*.ts supabase/functions/_shared/impact/fixtures/*.ts supabase/functions/impact-lab/*.ts supabase/functions/_shared/impact_registry/*.ts supabase/tests/impact_lab_engine_rows.ts
+          deno lint supabase/functions/_shared/impact/ supabase/functions/impact-lab/ supabase/functions/_shared/impact_registry/
 
       - name: Run Impact tests (golden A-H, adversarial, boundary tripwires, Lab service)
         run: |
           deno test --allow-read --allow-net=deno.land,esm.sh supabase/functions/_shared/impact/
+
+      - name: Run registry adapter tests OFFLINE (IV-IMPACT-I2; no network, fixtures only)
+        run: |
+          deno test --allow-read --allow-net=deno.land,esm.sh supabase/functions/_shared/impact_registry/ supabase/functions/_shared/safe_fetch_test.ts
 
       - name: Run impact-lab Edge Function tests (IV-IMPACT-I1)
         env:
