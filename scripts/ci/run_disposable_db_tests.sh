@@ -54,7 +54,7 @@ out="$(run -d "$DB" -tA -f "$ROOT/supabase/tests/impact_evidence_rls_test.sql")"
 echo "$out" | tail -1
 echo "$out" | grep -qE '^IMPACT_EVIDENCE_RLS: PASS [0-9]+ checks$'
 # Codex I3F-01 / I3V-01: concurrent writers (artifact vs evidence; review vs promotion), two sessions, both orders.
-out="$(bash "$ROOT/supabase/tests/impact_evidence_race_test.sh" "$PSQL" -h "$HOST" -v ON_ERROR_STOP=1 -q -d "$DB")"
+out="$(bash "$ROOT/supabase/tests/impact_evidence_race_test.sh" "$PSQL" -h "$HOST" -v ON_ERROR_STOP=1 -q -d "$DB" 2>&1)" || { echo "$out"; exit 1; }
 echo "$out" | tail -1
 echo "$out" | grep -qx 'IMPACT_EVIDENCE_RACE: PASS 4 orders'
 

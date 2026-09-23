@@ -17,10 +17,17 @@ ev() { echo "INSERT INTO public.impact_evidence (investigation_id, ref, claim_re
   ('$IE','art-race1','USER_DOCUMENT','u','2026-09-20T00:00:00Z','HASH_ONLY',repeat('6',64),'USER_UPLOAD',true,'$UE'),
   ('$IE','art-race2','USER_DOCUMENT','u','2026-09-20T00:00:00Z','HASH_ONLY',repeat('7',64),'USER_UPLOAD',true,'$UE');" >/dev/null
 
-race() { # $1 = first (holds the lock 2 s), $2 = second, $3 = expected error of the second
-  "${P[@]}" -c "BEGIN; SET LOCAL ROLE service_role; $1 SELECT pg_sleep(2); COMMIT;" >/dev/null 2>&1 &
+race() { # $1 = first (holds its locks), $2 = second, $3 = expected error of the second
+  PGAPPNAME=impact-race-holder "${P[@]}" -c "BEGIN; SET LOCAL ROLE service_role; $1 SELECT pg_sleep(3); COMMIT;" >/dev/null 2>&1 &
   local holder=$!
-  sleep 0.7
+  # Deterministic: start the second writer only once the holder has written
+  # and is sleeping inside its transaction (no fixed timing assumption).
+  local tries=0
+  until [ "$("${P[@]}" -tA -c "SELECT count(*) FROM pg_stat_activity WHERE application_name = 'impact-race-holder' AND wait_event = 'PgSleep'")" = "1" ]; do
+    tries=$((tries + 1))
+    if [ "$tries" -gt 100 ]; then echo "IMPACT_EVIDENCE_RACE: FAIL (holder never reached its sleep)"; wait "$holder" || true; exit 1; fi
+    sleep 0.1
+  done
   local out
   if out="$("${P[@]}" -c "SET ROLE service_role; $2" 2>&1)"; then
     echo "IMPACT_EVIDENCE_RACE: FAIL (second writer succeeded)"; wait "$holder"; exit 1
