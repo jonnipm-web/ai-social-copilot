@@ -149,6 +149,10 @@ const MAX_RETENTION: Readonly<Record<SourceType, RetentionMode>> = {
   OTHER: 'REFERENCE_ONLY',
 };
 
+export const SYNDICATION_MARKER_VALUES = [
+  'ORIGINALLY_PUBLISHED', 'REPUBLISHED_FROM', 'VIA_CREDIT', 'WIRE_AFP', 'WIRE_AP', 'WIRE_REUTERS',
+] as const;
+
 const RETENTION_RANK: Readonly<Record<RetentionMode, number>> = {
   REFERENCE_ONLY: 0,
   HASH_ONLY: 1,
@@ -193,6 +197,18 @@ export function validateSource(s: Source, evaluatedAtMs: number): ImpactResult<S
   }
   if (s.syndicatedFrom !== undefined && (typeof s.syndicatedFrom !== 'string' || !s.syndicatedFrom.trim() || s.syndicatedFrom.length > LIMITS.maxPublisherLength)) {
     return fail('INVALID_SOURCE', 'syndicatedFrom must be a non-empty publisher', { sourceId: s.id });
+  }
+  if (s.derivedFrom !== undefined && (typeof s.derivedFrom !== 'string' || !s.derivedFrom.trim() || s.derivedFrom.length > LIMITS.maxPublisherLength)) {
+    return fail('INVALID_SOURCE', 'derivedFrom must be a non-empty publisher', { sourceId: s.id });
+  }
+  if (s.contentFingerprint !== undefined && !(typeof s.contentFingerprint === 'string' && HASH_RE.test(s.contentFingerprint))) {
+    return fail('INVALID_SOURCE', 'contentFingerprint must be sha-256 hex', { sourceId: s.id });
+  }
+  if (s.similaritySketch !== undefined && !(typeof s.similaritySketch === 'string' && /^[0-9a-f]{256}$/.test(s.similaritySketch))) {
+    return fail('INVALID_SOURCE', 'similaritySketch malformed', { sourceId: s.id });
+  }
+  if (s.syndicationMarkers !== undefined && !(Array.isArray(s.syndicationMarkers) && s.syndicationMarkers.every((m) => isOneOf(m, SYNDICATION_MARKER_VALUES)))) {
+    return fail('INVALID_SOURCE', 'unknown syndication marker', { sourceId: s.id });
   }
   if (s.jurisdiction !== undefined && !/^[A-Za-z]{2}$/.test(s.jurisdiction.country ?? '')) {
     return fail('INVALID_SOURCE', 'jurisdiction.country must be ISO 3166-1 alpha-2', { sourceId: s.id });
@@ -263,8 +279,18 @@ export async function validateEvidence(
   if (!['SUPPORTS', 'CONTRADICTS', 'CONTEXTUALIZES'].includes(e.relationship)) {
     return fail('INVALID_EVIDENCE', 'unknown relationship', { evidenceId: e.id });
   }
-  if (!['STRUCTURED_MATCH', 'HUMAN_ASSESSED', 'LLM_SUGGESTED'].includes(e.relationshipBasis)) {
+  if (!['STRUCTURED_MATCH', 'HUMAN_ASSESSED', 'LLM_SUGGESTED', 'REGISTRY_RECORD'].includes(e.relationshipBasis)) {
     return fail('INVALID_EVIDENCE', 'relationshipBasis required', { evidenceId: e.id });
+  }
+  // I2: registry-record evidence only exists as a server-generated statement
+  // of a trusted provider's own record, supporting the claim made FROM that
+  // same record (registry_claims.ts). Anything else is a forgery.
+  if (e.relationshipBasis === 'REGISTRY_RECORD') {
+    const src = sources.get(e.sourceId)!;
+    if (src.acquisition.method !== 'PROVIDER' || src.retention !== 'SNAPSHOT' || e.relationship !== 'SUPPORTS'
+        || claim.sourceId !== e.sourceId || claim.origin !== 'STRUCTURED_IMPORT' || e.personalData !== 'NONE') {
+      return fail('INVALID_EVIDENCE', 'REGISTRY_RECORD evidence must be the provider record supporting its own registry statement', { evidenceId: e.id });
+    }
   }
   if (e.relationshipBasis === 'STRUCTURED_MATCH' && !(claim.quantity && e.reportedQuantity)) {
     return fail('INVALID_EVIDENCE', 'STRUCTURED_MATCH requires structured quantities on claim and evidence', { evidenceId: e.id });

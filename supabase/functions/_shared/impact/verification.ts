@@ -23,7 +23,8 @@
 import { fail, ok, type ImpactResult } from './errors.ts';
 import { parseIsoMs, sha256Hex, validateClaim, validateEvidence, validateSource, LIMITS } from './provenance.ts';
 import { authorityFor, isIndependentScope, SOURCE_AUTHORITY_POLICY_VERSION, type AuthorityScope } from './source_authority.ts';
-import { evidenceAsOfMs, isStale, isStateClaim, periodsOverlap, TEMPORAL_POLICY_VERSION } from './temporal.ts';
+import { analyzeIndependence, type IndependenceAnalysis, LINEAGE_POLICY_VERSION } from './source_lineage.ts';
+import { evidenceAsOfMs, isStale, isStateClaim, periodsOverlap, stalenessReferenceMs, TEMPORAL_POLICY_VERSION } from './temporal.ts';
 import type {
   Claim,
   ClaimStatus,
@@ -41,9 +42,9 @@ import type {
   TrustedProviderRef,
 } from './types.ts';
 
-export const VERIFICATION_ENGINE_VERSION = 'impact-verification/8';
+export const VERIFICATION_ENGINE_VERSION = 'impact-verification/9';
 export const IMPACT_POLICY_VERSION =
-  `${VERIFICATION_ENGINE_VERSION}+${SOURCE_AUTHORITY_POLICY_VERSION}+${TEMPORAL_POLICY_VERSION}`;
+  `${VERIFICATION_ENGINE_VERSION}+${SOURCE_AUTHORITY_POLICY_VERSION}+${TEMPORAL_POLICY_VERSION}+${LINEAGE_POLICY_VERSION}`;
 
 /** Outcome of entity resolution for the claim's subject (entity_resolution.ts). */
 export type SubjectIdentityStatus = 'CONFIRMED' | 'PROBABLE' | 'UNCERTAIN' | 'UNRESOLVED';
@@ -108,7 +109,8 @@ export type ReviewReason =
   | 'IDENTITY_NOT_CONFIRMED'
   | 'UNTRUSTED_INSTRUCTIONS'
   | 'OPEN_DISPUTE'
-  | 'USER_SUBMITTED_MATERIAL';
+  | 'USER_SUBMITTED_MATERIAL'
+  | 'POSSIBLE_LINEAGE';
 
 export interface VerificationResult {
   readonly resultId: string;
@@ -140,6 +142,8 @@ export interface VerificationResult {
   readonly policyVersion: string;
   readonly evidenceSetHash: string;
   readonly reviewBindingHash: string;
+  /** Source lineage and independence of the evidence (I2, CF-04). */
+  readonly lineage: IndependenceAnalysis;
   /** Contract literals — checked by tests and by the report renderer. */
   readonly isFindingOfWrongdoing: false;
   readonly absenceOfEvidenceIsNotEvidenceOfWrongdoing: true;
@@ -150,41 +154,6 @@ const NON_FINAL_STAGES: ReadonlySet<LegalStage> = new Set(['INVESTIGATION_OPENED
 
 function normPublisher(p: string): string {
   return p.normalize('NFKC').trim().toLowerCase().replace(/\s+/g, ' ');
-}
-
-/**
- * Number of independent VOICES among counted items (Codex CF-04, FV3-02/03).
- * Publishers linked by `syndicatedFrom` (in either direction, transitively)
- * form one voice: union-find over normalized names, so the result does not
- * depend on input order, copies of copies collapse, and cycles merge into one
- * voice. An unverified `syndicatedFrom` label can therefore only MERGE voices
- * (lower corroboration) — never split them, never create a status, and never
- * change how a disagreement is classified (that uses the raw publisher).
- */
-function countIndependentVoices(counted: readonly AssessedEvidence[], sources: ReadonlyMap<string, Source>): number {
-  const parent = new Map<string, string>();
-  const find = (x: string): string => {
-    let r = x;
-    while (parent.has(r) && parent.get(r) !== r) r = parent.get(r)!;
-    parent.set(x, r);
-    return r;
-  };
-  const union = (a: string, b: string) => {
-    const [ra, rb] = [find(a), find(b)];
-    if (ra !== rb) (ra < rb ? parent.set(rb, ra) : parent.set(ra, rb));
-  };
-  const node = (k: string) => {
-    if (!parent.has(k)) parent.set(k, k);
-    return k;
-  };
-  // Edges from EVERY validated source in the set — not only counted ones — so
-  // a chain through an intermediate source that carries no counted evidence
-  // still collapses into one voice (Codex FV4-01).
-  for (const s of sources.values()) {
-    if (s.syndicatedFrom) union(node(normPublisher(s.publisher)), node(normPublisher(s.syndicatedFrom)));
-  }
-  for (const a of counted) node(a.publisherKey);
-  return new Set(counted.map((a) => find(a.publisherKey))).size;
 }
 
 export function canonical(v: unknown): string {
@@ -229,6 +198,8 @@ export async function computeEvidenceSetHash(
           retrievedAt: s.retrievedAt, publishedAt: s.publishedAt, newsGenre: s.newsGenre, status: s.status,
           contentHash: s.contentHash, userSubmitted: s.userSubmitted, jurisdiction: s.jurisdiction, uri: s.uri,
           retention: s.retention, acquisition: s.acquisition, syndicatedFrom: s.syndicatedFrom,
+          derivedFrom: s.derivedFrom, contentFingerprint: s.contentFingerprint, similaritySketch: s.similaritySketch,
+          syndicationMarkers: s.syndicationMarkers,
         }
         : null,
     };
@@ -239,10 +210,17 @@ export async function computeEvidenceSetHash(
     subjectProjectId: claim.subjectProjectId, subjectCampaignId: claim.subjectCampaignId, period: claim.period,
     sourceId: claim.sourceId, origin: claim.origin,
   };
-  // Syndication links of ALL supplied sources affect voice counting, so they
-  // are part of the evidence set identity.
-  const lineage = [...sources.values()].filter((s) => s.syndicatedFrom)
-    .map((s) => `${s.id}|${normPublisher(s.publisher)}|${normPublisher(s.syndicatedFrom!)}`).sort();
+  // Lineage inputs of ALL supplied sources affect voice counting (I2: also
+  // derivation, content fingerprints, sketches and markers), so they are part
+  // of the evidence set identity.
+  const lineage = [...sources.values()]
+    .filter((s) => s.syndicatedFrom || s.derivedFrom || s.contentFingerprint || s.similaritySketch || s.syndicationMarkers?.length)
+    .map((s) => canonical({
+      id: s.id, publisher: normPublisher(s.publisher), syndicatedFrom: s.syndicatedFrom ? normPublisher(s.syndicatedFrom) : null,
+      derivedFrom: s.derivedFrom ? normPublisher(s.derivedFrom) : null, fingerprint: s.contentFingerprint ?? null,
+      sketch: s.similaritySketch ?? null, markers: [...(s.syndicationMarkers ?? [])].sort(),
+      publishedAt: s.publishedAt ?? null, retrievedAt: s.retrievedAt,
+    })).sort();
   return await sha256Hex(canonical({ claim: c, claimTextHash: await sha256Hex(claim.text), items, lineage }));
 }
 
@@ -361,8 +339,16 @@ export async function verifyClaim(
       rules.push('R10_PERIOD_MISMATCH');
       continue;
     }
+    // I2 temporal identity: a STATE claim about a past period is judged by
+    // evidence about THAT period — a later registry status is never applied
+    // retroactively (and vice versa).
+    if (isStateClaim(claim.kind) && claim.period && e.observedPeriod && !periodsOverlap(claim.period, e.observedPeriod)) {
+      exclude('PERIOD_MISMATCH', 'PERIOD_NOT_COVERED');
+      rules.push('R10B_STATE_PERIOD_MISMATCH');
+      continue;
+    }
     const asOfMs = evidenceAsOfMs(e.observedPeriod, src.publishedAt, src.retrievedAt);
-    if (isStale(claim.kind, asOfMs, evaluatedAtMs)) {
+    if (isStale(claim.kind, asOfMs, stalenessReferenceMs(claim.period, evaluatedAtMs))) {
       exclude('STALE', 'EVIDENCE_OUTDATED');
       staleCount++;
       rules.push('R11_STALE_STATE_EVIDENCE');
@@ -495,8 +481,27 @@ export async function verifyClaim(
     rules.push('S11_OPEN_DISPUTE');
   }
 
-  // Sufficiency describes the evidence base, not the organization.
-  const independentVoices = countIndependentVoices(counted, sources);
+  // Sufficiency describes the evidence base, not the organization. Voices
+  // come from the lineage analysis (I2, CF-04): syndicated / derived /
+  // possibly-copied material merges into one voice, and sources whose
+  // independence is not positively established count as one voice at most.
+  const lineage = analyzeIndependence(
+    counted,
+    [...new Set(input.evidence.map((e) => e.sourceId))],
+    sources,
+    providers,
+  );
+  const independentVoices = lineage.voices;
+  if (lineage.mergedByLineage) rules.push('L01_LINEAGE_MERGED_VOICES');
+  if (lineage.possibleLineage) {
+    gaps.add('POSSIBLE_LINEAGE');
+    review.add('POSSIBLE_LINEAGE');
+    rules.push('L02_POSSIBLE_LINEAGE_REVIEW');
+  }
+  if (counted.length > 0 && lineage.establishedVoices === 0) {
+    gaps.add('INDEPENDENCE_NOT_ESTABLISHED');
+    rules.push('L03_INDEPENDENCE_NOT_ESTABLISHED');
+  }
   let sufficiency: EvidenceSufficiency;
   if (counted.length === 0 && contextual.length === 0) sufficiency = 'NO_EVIDENCE';
   else if (conflicts.some((c) => c.positions.some((p) => counted.some((a) => a.evidenceId === p.evidenceId)))) {
@@ -517,7 +522,7 @@ export async function verifyClaim(
   const evidenceSetHash = await computeEvidenceSetHash(claim, input.evidence, sources);
   const relevantFlags = [...flagged].filter((id) => sources.has(id)).sort();
   const providerKey = [...ctx.trustedProviders]
-    .map((p) => `${p.id}:${p.sourceType}:${[...p.jurisdictions].sort().join('+')}`).sort();
+    .map((p) => `${p.id}:${p.sourceType}:${[...p.jurisdictions].sort().join('+')}:${p.primaryPublisher ? 'primary' : 'secondary'}`).sort();
   const reviewBindingHash = await sha256Hex(canonical({
     evidenceSetHash, flagged: relevantFlags, identity: ctx.subjectIdentity, dispute: !!ctx.openDispute, providers: providerKey,
   }));
@@ -574,6 +579,7 @@ export async function verifyClaim(
     policyVersion: IMPACT_POLICY_VERSION,
     evidenceSetHash,
     reviewBindingHash,
+    lineage,
     isFindingOfWrongdoing: false as const,
     absenceOfEvidenceIsNotEvidenceOfWrongdoing: true as const,
   }));

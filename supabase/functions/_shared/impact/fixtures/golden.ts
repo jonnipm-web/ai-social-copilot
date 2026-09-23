@@ -56,7 +56,11 @@ export const ORGS: Readonly<Record<string, Organization>> = {
 export const FIXTURE_PROVIDERS: readonly TrustedProviderRef[] = ([
   'OFFICIAL_REGISTRY', 'ORGANIZATION_WEBSITE', 'GOVERNMENT_RECORD', 'FINANCIAL_REPORT', 'AUDITED_REPORT',
   'COURT_RECORD', 'REGULATOR', 'NEWS', 'ACADEMIC', 'NGO_DATABASE', 'SOCIAL_MEDIA',
-] as SourceType[]).map((t) => ({ id: `fixture-${t.toLowerCase()}`, sourceType: t, jurisdictions: ['XA'] }));
+] as SourceType[]).map((t) => ({
+  id: `fixture-${t.toLowerCase()}`, sourceType: t, jurisdictions: ['XA'],
+  // I2: only bodies that publish their OWN primary records are primary publishers.
+  primaryPublisher: ['OFFICIAL_REGISTRY', 'COURT_RECORD', 'REGULATOR', 'GOVERNMENT_RECORD'].includes(t),
+}));
 
 export const providerFor = (t: SourceType) => ({ method: 'PROVIDER' as const, providerId: `fixture-${t.toLowerCase()}` });
 
@@ -346,10 +350,13 @@ export async function goldenCases(): Promise<readonly GoldenCase[]> {
       sources: [SOURCES.govWells, SOURCES.academicWells, SOURCES.hbWebsite],
       ctx: CONFIRMED,
       expected: {
-        status: 'SUPPORTED', sufficiency: 'MULTI_SOURCE_SUPPORT', displayClass: 'CLAIM', reviewState: 'AUTOMATED',
-        gapsInclude: [], gapsExclude: ['NO_INDEPENDENT_SOURCE'], supportingIds: ['ev-g1', 'ev-g2'],
-        indicatorsInclude: ['INDEPENDENT_IMPACT_EVIDENCE', 'MULTI_SOURCE_CORROBORATION'],
-        indicatorsExclude: ['CONFLICTING_CLAIMS'], noConcernIndicators: true,
+        // I2 (CF-04): the government record is a primary publisher (established
+        // original); the academic study's independence from it is NOT
+        // established (it may reuse the same data) → one voice, not multi-source.
+        status: 'SUPPORTED', sufficiency: 'INDEPENDENT_SUPPORT', displayClass: 'CLAIM', reviewState: 'AUTOMATED',
+        gapsInclude: [], gapsExclude: ['NO_INDEPENDENT_SOURCE', 'INDEPENDENCE_NOT_ESTABLISHED'], supportingIds: ['ev-g1', 'ev-g2'],
+        indicatorsInclude: ['INDEPENDENT_IMPACT_EVIDENCE'],
+        indicatorsExclude: ['CONFLICTING_CLAIMS', 'MULTI_SOURCE_CORROBORATION'], noConcernIndicators: true,
       },
     },
     {

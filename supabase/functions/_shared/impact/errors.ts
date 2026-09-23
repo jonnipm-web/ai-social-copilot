@@ -32,6 +32,10 @@ export type ImpactErrorCode =
   | 'ALREADY_EXISTS'
   | 'LIMIT_EXCEEDED'
   | 'PAYLOAD_TOO_LARGE'
+  // I2 Registry Intelligence — operational states, never a finding about an organization.
+  | 'REGISTRY_RATE_LIMITED'
+  | 'REGISTRY_RESPONSE_INVALID'
+  | 'ORGANIZATION_AMBIGUOUS'
   | 'INTERNAL_ERROR';
 
 export const IMPACT_ERROR_CODES: readonly ImpactErrorCode[] = Object.freeze([
@@ -59,6 +63,9 @@ export const IMPACT_ERROR_CODES: readonly ImpactErrorCode[] = Object.freeze([
   'ALREADY_EXISTS',
   'LIMIT_EXCEEDED',
   'PAYLOAD_TOO_LARGE',
+  'REGISTRY_RATE_LIMITED',
+  'REGISTRY_RESPONSE_INVALID',
+  'ORGANIZATION_AMBIGUOUS',
   'INTERNAL_ERROR',
 ]);
 

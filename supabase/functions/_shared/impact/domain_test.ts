@@ -66,8 +66,10 @@ Deno.test('ER-6 domain + name agree → PROBABLE only; nothing comparable → IN
 });
 
 Deno.test('ER-7 normalizers', () => {
-  assertEquals(normalizeName('The HopeBridge Foundation, Ltd.'), 'hopebridge foundation');
-  assertEquals(normalizeName('Fundação Esperança LTDA'), 'fundacao esperanca');
+  // I2: legal forms are canonicalized, never dropped (Ltd = Limited, but Ltd ≠ Inc).
+  assertEquals(normalizeName('The HopeBridge Foundation, Ltd.'), 'hopebridge foundation ltd');
+  assertEquals(normalizeName('HopeBridge Foundation Limited'), 'hopebridge foundation ltd');
+  assertEquals(normalizeName('Fundação Esperança LTDA'), 'fundacao esperanca ltda');
   assertEquals(normalizeRegistration(' xa-123.456/7 '), 'XA1234567');
   assertEquals(normalizeDomain('HTTPS://WWW.Example.org:443/path?q'), 'example.org');
   assertEquals(normalizeDomain('http://127.0.0.1/'), null);
@@ -84,6 +86,13 @@ const DESC: ProviderDescriptor = {
   authorityScope: ['LEGAL_REGISTRATION', 'REGULATORY_STATUS'],
   freshnessDays: 7,
   retrievalMethod: 'FIXTURE',
+  official: true,
+  authorityClass: 'STATUTORY_REGISTER',
+  primaryPublisher: true,
+  dataScope: 'synthetic',
+  adapterVersion: 'fixture-adapter/2',
+  termsStatus: 'SYNTHETIC',
+  synthetic: true,
 };
 const RAW: RawRegistryRecord[] = [
   {
@@ -223,7 +232,7 @@ Deno.test('IW-3 versioned history: retraction + re-verification appends, never o
   const h = w.history(g.claim.id);
   assertEquals(h.length, 4);
   assertEquals(h[0].resultId, v1.value.resultId); // first result still there, unchanged
-  assertEquals(h[0].sufficiency, 'MULTI_SOURCE_SUPPORT');
+  assertEquals(h[0].sufficiency, 'INDEPENDENT_SUPPORT'); // I2: academic independence from the gov record not established
   const types = w.auditTrail().map((e) => e.type);
   for (const t of ['SOURCE_STATUS_CHANGED', 'STATUS_CHANGED', 'DISPUTE_OPENED', 'DISPUTE_RESOLVED', 'CORRECTION', 'VERIFICATION_RUN']) {
     assert(types.includes(t as never), t);

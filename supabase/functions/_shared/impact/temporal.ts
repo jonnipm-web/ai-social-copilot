@@ -16,7 +16,7 @@
 import { parseIsoMs } from './provenance.ts';
 import type { ClaimKind, Period } from './types.ts';
 
-export const TEMPORAL_POLICY_VERSION = 'impact-temporal/2';
+export const TEMPORAL_POLICY_VERSION = 'impact-temporal/3';
 
 const DAY_MS = 86_400_000;
 
@@ -47,6 +47,17 @@ export function isStale(kind: ClaimKind, asOfMs: number, evaluatedAtMs: number):
   const maxDays = STATE_CLAIM_MAX_AGE_DAYS[kind];
   if (maxDays === undefined) return false;
   return evaluatedAtMs - asOfMs > maxDays * DAY_MS;
+}
+
+/**
+ * Point in time a STATE claim is about (I2 temporal identity): a claim whose
+ * period ENDED in the past ("was registered in 2015") is judged at the end of
+ * that period, not today — otherwise every historical statement would look
+ * stale, and today's status would be applied retroactively.
+ */
+export function stalenessReferenceMs(claimPeriod: Period | undefined, evaluatedAtMs: number): number {
+  const to = parseIsoMs(claimPeriod?.to);
+  return to !== null && to < evaluatedAtMs ? to : evaluatedAtMs;
 }
 
 /** Inclusive overlap. Unknown bounds are open (−∞/+∞): missing information

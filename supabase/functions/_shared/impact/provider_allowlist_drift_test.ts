@@ -5,12 +5,24 @@
 import { assertEquals } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
 import { trustedProviderRefs } from './provider_registry.ts';
 import { authorityFor } from './source_authority.ts';
-import { CLAIM_KINDS, NEWS_GENRES, SOURCE_TYPES } from './provenance.ts';
+import { CLAIM_KINDS, NEWS_GENRES, SOURCE_TYPES, SYNDICATION_MARKER_VALUES } from './provenance.ts';
+import { SYNDICATION_MARKERS } from './source_lineage.ts';
 import type { Claim, Source, TrustedProviderRef } from './types.ts';
 
+/** The effective SQL definition is the block in the LATEST migration that has one. */
+async function latestBlock(begin: string, end: string): Promise<string> {
+  const dir = new URL('../../../migrations/', import.meta.url);
+  const files: string[] = [];
+  for await (const e of Deno.readDir(dir)) if (e.isFile && e.name.endsWith('.sql')) files.push(e.name);
+  for (const f of files.sort().reverse()) {
+    const sql = await Deno.readTextFile(new URL(f, dir));
+    if (sql.includes(begin)) return sql.slice(sql.indexOf(begin), sql.indexOf(end));
+  }
+  throw new Error(`no ${begin} block`);
+}
+
 Deno.test('PD-01 SQL provider allowlist == server provider registry', async () => {
-  const sql = await Deno.readTextFile(new URL('../../../migrations/20260924010000_impact_lab_persistence.sql', import.meta.url));
-  const block = sql.slice(sql.indexOf('-- BEGIN_IMPACT_PROVIDER_ALLOWLIST'), sql.indexOf('-- END_IMPACT_PROVIDER_ALLOWLIST'));
+  const block = await latestBlock('-- BEGIN_IMPACT_PROVIDER_ALLOWLIST', '-- END_IMPACT_PROVIDER_ALLOWLIST');
   const inSql = [...block.matchAll(/\('([^']+)',\s*'([^']+)',\s*'([^']+)'\)/g)].map((m) => `${m[1]}|${m[2]}|${m[3]}`).sort();
   const inCode = trustedProviderRefs().flatMap((p) => p.jurisdictions.map((j) => `${p.id}|${p.sourceType}|${j}`)).sort();
   assertEquals(inSql, inCode);
@@ -21,11 +33,10 @@ Deno.test('PD-01 SQL provider allowlist == server provider registry', async () =
 // (type, kind, genre) cells where authorityFor() can yield AUTHORITATIVE or
 // INDEPENDENT for a trusted-provider source.
 Deno.test('PD-02 SQL independent-authority table == source_authority.ts', async () => {
-  const sql = await Deno.readTextFile(new URL('../../../migrations/20260924010000_impact_lab_persistence.sql', import.meta.url));
-  const block = sql.slice(sql.indexOf('-- BEGIN_IMPACT_AUTHORITY_TABLE'), sql.indexOf('-- END_IMPACT_AUTHORITY_TABLE'));
+  const block = await latestBlock('-- BEGIN_IMPACT_AUTHORITY_TABLE', '-- END_IMPACT_AUTHORITY_TABLE');
   const inSql = [...block.matchAll(/\('([A-Z_]+)',\s*'([A-Z_]+)',\s*(NULL|'[A-Z_]+'),\s*'([A-Z_]+)'\)/g)]
     .map((m) => `${m[1]}|${m[2]}|${m[3] === 'NULL' ? '-' : m[3].replaceAll("'", '')}|${m[4]}`).sort();
-  const trusted = new Map<string, TrustedProviderRef>(SOURCE_TYPES.map((t) => [`p-${t}`, { id: `p-${t}`, sourceType: t, jurisdictions: ['XA'] }]));
+  const trusted = new Map<string, TrustedProviderRef>(SOURCE_TYPES.map((t) => [`p-${t}`, { id: `p-${t}`, sourceType: t, jurisdictions: ['XA'], primaryPublisher: true }]));
   const inCode: string[] = [];
   for (const t of SOURCE_TYPES) {
     for (const k of CLAIM_KINDS) {
@@ -37,4 +48,12 @@ Deno.test('PD-02 SQL independent-authority table == source_authority.ts', async 
     }
   }
   assertEquals(inSql, inCode.sort());
+});
+
+// I2: the SQL syndication-marker allowlist == the markers the server can derive.
+Deno.test('PD-03 SQL syndication markers == source_lineage.ts', async () => {
+  const block = await latestBlock('-- BEGIN_IMPACT_SYNDICATION_MARKERS', '-- END_IMPACT_SYNDICATION_MARKERS');
+  const inSql = [...block.matchAll(/'([A-Z_]+)'/g)].map((m) => m[1]).sort();
+  assertEquals(inSql, [...SYNDICATION_MARKERS].sort());
+  assertEquals([...SYNDICATION_MARKER_VALUES].sort(), [...SYNDICATION_MARKERS].sort());
 });

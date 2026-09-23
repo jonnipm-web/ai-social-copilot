@@ -29,6 +29,8 @@ export type EntityMatchOutcome =
   | 'INSUFFICIENT_IDENTIFIERS';
 
 export type MatchSignal =
+  | 'FORMER_NAME_EQUAL' //  a name equals a registry-declared FORMER name (I2)
+  | 'NAME_DIFFERENT' //     both sides named, no name equal/similar (review signal, I2)
   | 'REGISTRATION_EQUAL'
   | 'REGISTRATION_DIFFERENT'
   | 'DOMAIN_EQUAL'
@@ -44,14 +46,21 @@ export interface EntityMatch {
   readonly canAutoMerge: boolean;
 }
 
-const LEGAL_SUFFIXES = [
-  'ltd', 'limited', 'inc', 'incorporated', 'llc', 'cic', 'cio', 'plc', 'ltda', 'sa', 'gmbh', 'ev', 'eireli', 'me',
-];
+/**
+ * Equivalent spellings of the SAME legal form collapse to one token; different
+ * legal forms stay different (I2): "X Ltd" = "X Limited", but "X Ltd" ≠ "X Inc"
+ * and "X Foundation" ≠ "X Trust". Normalization helps search; it must never
+ * erase a legally relevant distinction.
+ */
+const LEGAL_FORM_EQUIVALENTS: ReadonlyMap<string, string> = new Map([
+  ['limited', 'ltd'], ['incorporated', 'inc'], ['corporation', 'corp'], ['company', 'co'],
+  ['limitada', 'ltda'], ['cia', 'co'], ['companhia', 'co'],
+]);
 
 export function normalizeName(name: string): string {
-  const base = name.normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase()
+  const base = name.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
     .replace(/&/g, ' and ').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
-  const words = base.split(' ').filter((w) => w && !LEGAL_SUFFIXES.includes(w) && w !== 'the');
+  const words = base.split(' ').filter((w) => w && w !== 'the').map((w) => LEGAL_FORM_EQUIVALENTS.get(w) ?? w);
   return words.join(' ');
 }
 
@@ -77,11 +86,18 @@ function countryOf(j: Jurisdiction): string {
 }
 
 function names(id: OrganizationIdentity): Set<string> {
-  return new Set([id.legalName, id.publicName, ...(id.aliases ?? [])].filter((n): n is string => !!n).map(normalizeName).filter(Boolean));
+  return new Set(
+    [id.legalName, id.publicName, ...(id.aliases ?? []), ...(id.tradingNames ?? [])]
+      .filter((n): n is string => !!n).map(normalizeName).filter(Boolean),
+  );
+}
+
+function formerNames(id: OrganizationIdentity): Set<string> {
+  return new Set((id.formerNames ?? []).map((f) => normalizeName(f.name)).filter(Boolean));
 }
 
 /** Token-set Jaccard similarity — a hint only, never identity. */
-function nameSimilarity(a: string, b: string): number {
+export function nameSimilarity(a: string, b: string): number {
   const ta = new Set(a.split(' '));
   const tb = new Set(b.split(' '));
   const inter = [...ta].filter((t) => tb.has(t)).length;
@@ -111,8 +127,16 @@ export function resolveEntity(a: OrganizationIdentity, b: OrganizationIdentity):
 
   const na = names(a);
   const nb = names(b);
+  const fa = formerNames(a);
+  const fb = formerNames(b);
   if ([...na].some((n) => nb.has(n))) signals.add('NAME_EQUAL');
   else if ([...na].some((x) => [...nb].some((y) => nameSimilarity(x, y) >= 0.5))) signals.add('NAME_SIMILAR');
+  // A former name is a name the entity legally held — a signal, never a merge
+  // by itself (two entities can share an old name).
+  if ([...na].some((n) => fb.has(n)) || [...nb].some((n) => fa.has(n))) signals.add('FORMER_NAME_EQUAL');
+  if (na.size && nb.size && !signals.has('NAME_EQUAL') && !signals.has('NAME_SIMILAR') && !signals.has('FORMER_NAME_EQUAL')) {
+    signals.add('NAME_DIFFERENT');
+  }
 
   const ca = new Set((a.jurisdictions ?? []).concat((a.registrations ?? []).map((r) => r.jurisdiction)).map(countryOf));
   const cb = new Set((b.jurisdictions ?? []).concat((b.registrations ?? []).map((r) => r.jurisdiction)).map(countryOf));
@@ -132,7 +156,7 @@ export function resolveEntity(a: OrganizationIdentity, b: OrganizationIdentity):
   if (has('COUNTRY_DIFFERENT') && !has('DOMAIN_EQUAL')) {
     return out(has('NAME_EQUAL') || has('NAME_SIMILAR') ? 'ENTITY_MATCH_UNCERTAIN' : 'DISTINCT');
   }
-  if (has('NAME_EQUAL') || has('NAME_SIMILAR') || has('DOMAIN_EQUAL')) return out('ENTITY_MATCH_UNCERTAIN');
+  if (has('NAME_EQUAL') || has('NAME_SIMILAR') || has('FORMER_NAME_EQUAL') || has('DOMAIN_EQUAL')) return out('ENTITY_MATCH_UNCERTAIN');
   if (signals.size === 0) return out('INSUFFICIENT_IDENTIFIERS');
   return out('ENTITY_MATCH_UNCERTAIN');
 }

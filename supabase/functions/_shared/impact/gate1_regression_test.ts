@@ -242,9 +242,22 @@ Deno.test('CF-04 syndicated copies never add an independent voice', async () => 
   // FV3-03: a cycle is ONE voice — never MULTI_SOURCE corroboration
   assertEquals(cyc.sufficiency, 'INDEPENDENT_SUPPORT');
   assertEquals(deriveIndicators({ results: [cyc] }).some((i) => i.code === 'MULTI_SOURCE_CORROBORATION'), false);
-  // a forged label can only MERGE voices (lower corroboration), never split them
+  // I2: two different publishers are NOT two independent voices unless their
+  // independence is established (UNKNOWN lineage ≠ independent).
   const indep = await run(wellsClaim, [ev('e1', 'n1', sx(20)), ev('e2', 'nz', sx(20))], [wire, news('nz', 'Other Paper')]);
-  assertEquals(indep.sufficiency, 'MULTI_SOURCE_SUPPORT');
+  assertEquals(indep.sufficiency, 'INDEPENDENT_SUPPORT');
+  assert(indep.gaps.includes('INDEPENDENCE_NOT_ESTABLISHED'));
+  // Established originals (primary publishers) ARE separate voices, and a
+  // forged label can only MERGE them (lower corroboration), never split them.
+  const gov = (id: string, publisher: string, over: Partial<Source> = {}): Source => ({
+    ...news(id, publisher, over), type: 'GOVERNMENT_RECORD', newsGenre: undefined, acquisition: providerFor('GOVERNMENT_RECORD'), jurisdiction: { country: 'XA' },
+  });
+  const two = await run(wellsClaim, [ev('e1', 'g1', sx(20)), ev('e2', 'g2', sx(20))], [gov('g1', 'Ministry A'), gov('g2', 'Agency B')]);
+  assertEquals(two.sufficiency, 'MULTI_SOURCE_SUPPORT');
+  const forged = await run(wellsClaim, [ev('e1', 'g1', sx(20)), ev('e2', 'g2', sx(20))], [gov('g1', 'Ministry A'), gov('g2', 'Agency B', { syndicatedFrom: 'Ministry A' })]);
+  assertEquals(forged.sufficiency, 'INDEPENDENT_SUPPORT');
+  assertEquals(forged.status, 'SUPPORTED');
+  assertEquals(forged.excluded, []);
 });
 
 Deno.test('FV4-01 a chain through a non-counted intermediate source is still one voice', async () => {
@@ -267,7 +280,9 @@ Deno.test('FV4-01 a chain through a non-counted intermediate source is still one
   const y = news('nb3', 'Y', { syndicatedFrom: 'X' });
   const self = news('nb4', 'Self', { syndicatedFrom: 'self' });
   const v = await run(wellsClaim, [ev('e11', 'nb1', sx(20)), ev('e13', 'nb3', sx(20)), ev('e14', 'nb4', sx(20))], [x, hub, y, self]);
-  assertEquals(v.sufficiency, 'MULTI_SOURCE_SUPPORT'); // {X,Hub,Y} + {Self} = 2 voices
+  // {X,Hub,Y} + {Self}: two lineage components, but neither is an established
+  // original → one voice at most (I2).
+  assertEquals(v.sufficiency, 'INDEPENDENT_SUPPORT');
 });
 
 Deno.test('FV3-02 publisher-voice resolution is independent of input order (all permutations)', async () => {
@@ -329,7 +344,7 @@ Deno.test('FV2-01 corrections go through the audited source-status path, not a f
   const smuggled = { ...news('nb', 'Other'), supersedesSourceId: 'na' } as any;
   const v = await run(wellsClaim, [ev('e1', 'na', sx(20)), ev('e2', 'nb', sx(20))], [a, smuggled]);
   assertEquals(v.excluded, []);
-  assertEquals(v.sufficiency, 'MULTI_SOURCE_SUPPORT');
+  assertEquals(v.sufficiency, 'INDEPENDENT_SUPPORT'); // I2: unestablished news = one voice
 });
 
 Deno.test('CF-05 dispute kinds, resolutions and timestamps are validated at runtime', async () => {
