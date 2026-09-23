@@ -47,7 +47,16 @@ export function scanXml(xml: string): XmlScan {
         i = end + 3;
         continue;
       }
-      const gt = xml.indexOf('>', lt + 1);
+      // Quote-aware, forward-only: a '>' inside a quoted attribute value does
+      // not end the tag (Codex I3F-02). Every character is visited once.
+      let gt = -1;
+      let quote = '';
+      for (let j = lt + 1; j < n; j++) {
+        const ch = xml[j];
+        if (quote) { if (ch === quote) quote = ''; } else if (ch === '"' || ch === "'") quote = ch;
+        else if (ch === '>') { gt = j; break; }
+        else if (ch === '<') break; // a new tag before this one closed: malformed
+      }
       if (gt < 0) { bad = true; return; }
       i = gt + 1;
       const c = xml[lt + 1];
@@ -66,14 +75,15 @@ export function scanXml(xml: string): XmlScan {
   return { tokens: gen(), malformed: () => bad };
 }
 
-/** Value of attribute `key` (first occurrence preceded by whitespace), linear. */
+/** Value of attribute `key` (first occurrence preceded by whitespace; "…" or '…'), linear. */
 export function xmlAttr(attrs: string, key: string): string | undefined {
-  const needle = `${key}="`;
+  const needle = `${key}=`;
   let at = attrs.indexOf(needle);
   while (at >= 0) {
-    if (at === 0 || WS.has(attrs[at - 1])) {
-      const start = at + needle.length;
-      const end = attrs.indexOf('"', start);
+    const q = attrs[at + needle.length];
+    if ((at === 0 || WS.has(attrs[at - 1])) && (q === '"' || q === "'")) {
+      const start = at + needle.length + 1;
+      const end = attrs.indexOf(q, start);
       return end < 0 ? undefined : attrs.slice(start, end);
     }
     at = attrs.indexOf(needle, at + 1);

@@ -332,3 +332,19 @@ Deno.test('G1-04 sheet names in the structure index are bounded labels without c
   assert(name.length <= 100 && !name.includes('\u202E'));
   assertEquals(findSegment(r.x, { kind: 'SHEET_CELL', sheet: name, cell: 'A1' })?.text, '1');
 });
+
+Deno.test('F3-01 (Codex I3F-02) quote-aware XML: ">" inside attribute values and single-quoted attributes', async () => {
+  const xlsx = await makeZip([
+    { name: '[Content_Types].xml', data: CT_XLSX },
+    { name: 'xl/workbook.xml', data: `<workbook><sheets><sheet name="A>B" r:id='rId1'/></sheets></workbook>` },
+    { name: 'xl/_rels/workbook.xml.rels', data: `<Relationships><Relationship Id='rId1' Target="worksheets/sheet1.xml"/></Relationships>` },
+    { name: 'xl/worksheets/sheet1.xml', data: `<worksheet><sheetData><row><c r='B2' t="inlineStr"><is><t>Wells: 20</t></is></c></row></sheetData></worksheet>` },
+  ]);
+  const r = await run(xlsx, 'q.xlsx');
+  assert(r.code === 'OK');
+  assertEquals([r.x.summary.status, r.x.summary.sheets?.[0].name], ['SUCCESS', 'A>B']);
+  assertEquals(findSegment(r.x, { kind: 'SHEET_CELL', sheet: 'A>B', cell: 'B2' })?.text, 'Wells: 20');
+  const unclosed = await makeZip([{ name: '[Content_Types].xml', data: CT_DOCX }, { name: 'word/document.xml', data: '<w:p><w:r><w:t>ok</w:t></w:r></w:p><w:p a="' + 'x'.repeat(500_000) }]);
+  const u = await run(unclosed, 'u.docx');
+  assert(u.code === 'OK' && u.x.summary.status === 'PARTIAL' && u.x.summary.notes.includes('MALFORMED_XML'));
+});

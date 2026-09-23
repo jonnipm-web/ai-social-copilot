@@ -174,6 +174,10 @@ CREATE OR REPLACE FUNCTION public.impact_artifacts_validate() RETURNS trigger
 LANGUAGE plpgsql SET search_path = '' AS $$
 DECLARE v_src public.impact_sources%ROWTYPE; v_prior_version integer;
 BEGIN
+  -- Serialize every artifact / evidence write of the investigation BEFORE the
+  -- checks below, so a concurrent free-form evidence insert and an artifact
+  -- insert on the same source cannot both pass (Codex I3F-01).
+  PERFORM 1 FROM public.impact_investigations WHERE id = NEW.investigation_id FOR UPDATE;
   SELECT * INTO v_src FROM public.impact_sources s WHERE s.investigation_id = NEW.investigation_id AND s.ref = NEW.source_ref;
   -- The artifact's source is a USER_UPLOAD document carrying the file hash —
   -- never PROVIDER provenance, never a snapshot, never authority.
@@ -189,7 +193,6 @@ BEGIN
     RAISE EXCEPTION 'IMPACT_ARTIFACT_SOURCE_INVALID: source already carries evidence' USING ERRCODE = '23514';
   END IF;
   IF NEW.supersedes_ref IS NOT NULL THEN
-    PERFORM 1 FROM public.impact_investigations WHERE id = NEW.investigation_id FOR UPDATE;
     SELECT a.version INTO v_prior_version FROM public.impact_artifacts a
     WHERE a.investigation_id = NEW.investigation_id AND a.ref = NEW.supersedes_ref;
     IF v_prior_version IS NULL OR NEW.version <> v_prior_version + 1 THEN
@@ -387,6 +390,8 @@ BEGIN
   -- artifact-bound locator.
   -- The source of an artifact carries ONLY reviewed candidates of it: no
   -- free-form evidence may cite an artifact source (review cannot be skipped).
+  -- Same investigation-row lock as impact_artifacts_validate (Codex I3F-01).
+  PERFORM 1 FROM public.impact_investigations WHERE id = NEW.investigation_id FOR UPDATE;
   IF (NEW.locator IS NULL OR NOT NEW.locator ? 'artifact')
      AND EXISTS (SELECT 1 FROM public.impact_artifacts a WHERE a.investigation_id = NEW.investigation_id AND a.source_ref = NEW.source_ref) THEN
     RAISE EXCEPTION 'IMPACT_ARTIFACT_EVIDENCE_INVALID: artifact sources carry only reviewed candidates' USING ERRCODE = '23514';
