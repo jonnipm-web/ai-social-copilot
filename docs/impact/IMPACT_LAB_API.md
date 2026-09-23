@@ -49,6 +49,13 @@ is how `owner_id`, `user_id`, `role`, `plan`, `status`, `acquisition`,
 | REGISTRY_UNAVAILABLE | 503 |
 | INTERNAL_ERROR | 500 |
 
+`get_investigation.latest` / `report` apply a deterministic dispute overlay
+(Codex I1F-02): an open dispute always reads as `DISPUTED`, a resolved one never
+keeps reading as `DISPUTED`; either case is flagged `reverificationPending`
+until a new version is stored. Retrying `open_dispute` / `resolve_dispute`
+with the same arguments repairs a failed re-verification. Archive and status
+updates succeed only if a row actually changed (I1F-03).
+
 No response contains a verdict/score/trust/fraud field; verification payloads
 carry `isFindingOfWrongdoing: false`, `policyVersion`, `evidenceSetHash`,
 `reviewBindingHash`, `rulesApplied`, conflicts and gaps.

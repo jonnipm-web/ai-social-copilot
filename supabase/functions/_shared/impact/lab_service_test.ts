@@ -441,3 +441,37 @@ Deno.test('G2-05 a no-op source status change is refused (nothing unaudited)', a
   await t.must(UA, { action: 'update_source_status', investigation_id: inv, source_ref: 'src-reg', status: 'RETRACTED' });
   assertEquals(await t.code(UA, { action: 'update_source_status', investigation_id: inv, source_ref: 'src-reg', status: 'RETRACTED' }), 'ALREADY_EXISTS');
 });
+
+// ── Codex I1 Final regressions ─────────────────────────────────────────────
+
+Deno.test('F-02a a failed re-verification after opening a dispute never leaves an undisputed latest state; a retry repairs it', async () => {
+  const t = setup();
+  const inv = await supportedRegistrationClaim(t);
+  await t.must(UA, { action: 'run_verification', investigation_id: inv, claim_ref: 'c1' });
+  t.db.failNextVerification = true;
+  assertEquals(await t.code(UA, { action: 'open_dispute', investigation_id: inv, ref: 'd1', claim_ref: 'c1', kind: 'CORRECTION_REQUEST' }), 'INTERNAL_ERROR');
+  const g = await t.must(UA, { action: 'get_investigation', investigation_id: inv });
+  const latest = (g.data.latest as Json[]).find((v) => v.claimRef === 'c1')!;
+  assertEquals([latest.status, latest.reverificationPending], ['DISPUTED', true]);
+  assertEquals(((g.data.report as Json).claims as Json[]).find((c) => c.claimId === 'c1')!.status, 'DISPUTED');
+  const retry = await t.must(UA, { action: 'open_dispute', investigation_id: inv, ref: 'd1', claim_ref: 'c1', kind: 'CORRECTION_REQUEST' });
+  assertEquals((retry.data.verification as Json).status, 'DISPUTED');
+  const g2 = await t.must(UA, { action: 'get_investigation', investigation_id: inv });
+  assertEquals((g2.data.latest as Json[]).find((v) => v.claimRef === 'c1')!.reverificationPending, undefined);
+  // a different dispute on the same ref is refused
+  assertEquals(await t.code(UA, { action: 'open_dispute', investigation_id: inv, ref: 'd1', claim_ref: 'c2', kind: 'CORRECTION_REQUEST' }), 'ALREADY_EXISTS');
+});
+
+Deno.test('F-02b a failed re-verification after resolving never keeps showing DISPUTED as final; a retry repairs it', async () => {
+  const t = setup();
+  const inv = await supportedRegistrationClaim(t);
+  await t.must(UA, { action: 'open_dispute', investigation_id: inv, ref: 'd1', claim_ref: 'c1', kind: 'CORRECTION_REQUEST' });
+  t.db.failNextVerification = true;
+  assertEquals(await t.code(UA, { action: 'resolve_dispute', investigation_id: inv, dispute_ref: 'd1', resolution: 'WITHDRAWN' }), 'INTERNAL_ERROR');
+  const g = await t.must(UA, { action: 'get_investigation', investigation_id: inv });
+  const latest = (g.data.latest as Json[]).find((v) => v.claimRef === 'c1')!;
+  assertEquals([latest.status, latest.displayClass, latest.reverificationPending], ['SUPPORTED', 'UNKNOWN', true]);
+  const retry = await t.must(UA, { action: 'resolve_dispute', investigation_id: inv, dispute_ref: 'd1', resolution: 'WITHDRAWN' });
+  assertEquals((retry.data.verification as Json).status, 'SUPPORTED');
+  assertEquals(await t.code(UA, { action: 'resolve_dispute', investigation_id: inv, dispute_ref: 'd1', resolution: 'CORRECTED' }), 'ALREADY_EXISTS');
+});

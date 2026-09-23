@@ -87,6 +87,43 @@ LANGUAGE sql IMMUTABLE SET search_path = '' AS $$
 $$;
 -- END_IMPACT_PROVIDER_ALLOWLIST
 
+-- Source authority cells that can count as corroboration (AUTHORITATIVE /
+-- INDEPENDENT), mirrored from source_authority.ts (impact-source-authority/3)
+-- and drift-tested against authorityFor() (Codex I1F-01). Every other
+-- (type, kind, genre) is non-independent and can never be counted.
+-- BEGIN_IMPACT_AUTHORITY_TABLE
+CREATE OR REPLACE FUNCTION public.impact_independent_authority(p_type text, p_kind text, p_genre text) RETURNS text
+LANGUAGE sql IMMUTABLE SET search_path = '' AS $$
+  SELECT a.scope FROM (VALUES
+    ('OFFICIAL_REGISTRY', 'LEGAL_REGISTRATION', NULL, 'AUTHORITATIVE'),
+    ('OFFICIAL_REGISTRY', 'OPERATING_HISTORY', NULL, 'INDEPENDENT'),
+    ('OFFICIAL_REGISTRY', 'GOVERNANCE', NULL, 'INDEPENDENT'),
+    ('OFFICIAL_REGISTRY', 'REGULATORY_STATUS', NULL, 'AUTHORITATIVE'),
+    ('GOVERNMENT_RECORD', 'LEGAL_REGISTRATION', NULL, 'INDEPENDENT'),
+    ('GOVERNMENT_RECORD', 'OPERATING_HISTORY', NULL, 'INDEPENDENT'),
+    ('GOVERNMENT_RECORD', 'FINANCIAL', NULL, 'INDEPENDENT'),
+    ('GOVERNMENT_RECORD', 'IMPACT_OUTPUT', NULL, 'INDEPENDENT'),
+    ('GOVERNMENT_RECORD', 'IMPACT_OUTCOME', NULL, 'INDEPENDENT'),
+    ('GOVERNMENT_RECORD', 'BENEFICIARY_COUNT', NULL, 'INDEPENDENT'),
+    ('AUDITED_REPORT', 'FINANCIAL', NULL, 'INDEPENDENT'),
+    ('COURT_RECORD', 'REGULATORY_STATUS', NULL, 'AUTHORITATIVE'),
+    ('REGULATOR', 'LEGAL_REGISTRATION', NULL, 'AUTHORITATIVE'),
+    ('REGULATOR', 'GOVERNANCE', NULL, 'INDEPENDENT'),
+    ('REGULATOR', 'REGULATORY_STATUS', NULL, 'AUTHORITATIVE'),
+    ('NEWS', 'OPERATING_HISTORY', 'REPORTING', 'INDEPENDENT'),
+    ('NEWS', 'IMPACT_OUTPUT', 'REPORTING', 'INDEPENDENT'),
+    ('NEWS', 'IMPACT_OUTCOME', 'REPORTING', 'INDEPENDENT'),
+    ('NEWS', 'BENEFICIARY_COUNT', 'REPORTING', 'INDEPENDENT'),
+    ('NEWS', 'AFFILIATION', 'REPORTING', 'INDEPENDENT'),
+    ('NEWS', 'GOVERNANCE', 'REPORTING', 'INDEPENDENT'),
+    ('ACADEMIC', 'IMPACT_OUTPUT', NULL, 'INDEPENDENT'),
+    ('ACADEMIC', 'IMPACT_OUTCOME', NULL, 'INDEPENDENT'),
+    ('ACADEMIC', 'BENEFICIARY_COUNT', NULL, 'INDEPENDENT')
+  ) AS a(source_type, claim_kind, news_genre, scope)
+  WHERE a.source_type = p_type AND a.claim_kind = p_kind AND a.news_genre IS NOT DISTINCT FROM p_genre
+$$;
+-- END_IMPACT_AUTHORITY_TABLE
+
 -- ── investigations ──────────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS public.impact_investigations (
@@ -661,15 +698,38 @@ BEGIN
                         AND e.ref = x->>'evidenceId' AND e.claim_ref = NEW.claim_ref)) THEN
     RAISE EXCEPTION 'IMPACT_RESULT_INCONSISTENT: cites evidence that is not of this claim' USING ERRCODE = '23514';
   END IF;
+  -- Codex I1F-01: every COUNTED item is re-derived from the stored evidence and
+  -- source rows — authority from the mirrored table, trusted PROVIDER
+  -- provenance, ACTIVE source, not self-published, not user-submitted, not an
+  -- LLM suggestion, about the subject, and an effective relationship that the
+  -- stored relationship/basis/quantities actually produce (a non-final legal
+  -- stage never contradicts).
   IF EXISTS (
-    SELECT 1 FROM jsonb_array_elements(
-      coalesce(r->'supporting', '[]') || coalesce(r->'partiallySupporting', '[]') || coalesce(r->'contradicting', '[]')) AS it(x)
-    WHERE x->>'authority' NOT IN ('AUTHORITATIVE', 'INDEPENDENT')
-       OR NOT EXISTS (SELECT 1 FROM public.impact_evidence e JOIN public.impact_sources s
-                        ON s.investigation_id = e.investigation_id AND s.ref = e.source_ref
-                      WHERE e.investigation_id = NEW.investigation_id AND e.ref = x->>'evidenceId'
-                        AND s.ref = x->>'sourceId' AND s.acquisition_method = 'PROVIDER')) THEN
-    RAISE EXCEPTION 'IMPACT_RESULT_INCONSISTENT: counted evidence without trusted provenance' USING ERRCODE = '23514';
+    SELECT 1
+    FROM (SELECT x, 'SUPPORTS' AS tag FROM jsonb_array_elements(coalesce(r->'supporting', '[]')) AS a(x)
+          UNION ALL SELECT x, 'PARTIALLY_SUPPORTS' FROM jsonb_array_elements(coalesce(r->'partiallySupporting', '[]')) AS b(x)
+          UNION ALL SELECT x, 'CONTRADICTS' FROM jsonb_array_elements(coalesce(r->'contradicting', '[]')) AS c(x)) AS it
+    LEFT JOIN public.impact_evidence e ON e.investigation_id = NEW.investigation_id AND e.ref = it.x->>'evidenceId' AND e.claim_ref = NEW.claim_ref
+    LEFT JOIN public.impact_sources s ON s.investigation_id = e.investigation_id AND s.ref = e.source_ref
+    LEFT JOIN public.impact_claims cl ON cl.investigation_id = NEW.investigation_id AND cl.ref = NEW.claim_ref
+    WHERE e.ref IS NULL OR s.ref IS NULL
+       OR it.x->>'sourceId' IS DISTINCT FROM s.ref
+       OR it.x->>'effectiveRelationship' IS DISTINCT FROM it.tag
+       OR s.acquisition_method <> 'PROVIDER' OR s.status <> 'ACTIVE' OR s.user_submitted
+       OR s.publisher_org_ref IS NOT DISTINCT FROM v_subject
+       OR e.relationship_basis = 'LLM_SUGGESTED' OR e.about_org_ref IS DISTINCT FROM v_subject
+       OR it.x->>'authority' IS DISTINCT FROM public.impact_independent_authority(s.source_type, cl.kind, s.news_genre)
+       OR (it.tag = 'CONTRADICTS' AND e.legal_stage IN ('INVESTIGATION_OPENED', 'CHARGED', 'UNDER_APPEAL'))
+       OR (e.relationship_basis = 'HUMAN_ASSESSED' AND it.tag IS DISTINCT FROM
+             CASE e.relationship WHEN 'SUPPORTS' THEN 'SUPPORTS' WHEN 'CONTRADICTS' THEN 'CONTRADICTS' END)
+       OR (e.relationship_basis = 'STRUCTURED_MATCH' AND (
+             cl.quantity_metric IS DISTINCT FROM e.reported_metric OR cl.quantity_unit IS DISTINCT FROM e.reported_unit
+             OR it.tag IS DISTINCT FROM CASE
+               WHEN e.reported_value >= cl.quantity_value THEN 'SUPPORTS'
+               WHEN e.reported_value = 0 THEN 'CONTRADICTS'
+               ELSE 'PARTIALLY_SUPPORTS' END))
+  ) THEN
+    RAISE EXCEPTION 'IMPACT_RESULT_INCONSISTENT: counted evidence not derivable from stored evidence' USING ERRCODE = '23514';
   END IF;
   IF (NEW.underlying_status = 'SUPPORTED' AND v_n_sup = 0)
      OR (NEW.underlying_status = 'PARTIALLY_SUPPORTED' AND v_n_par = 0)

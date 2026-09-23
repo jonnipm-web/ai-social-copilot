@@ -21,7 +21,7 @@ import { requestImpactAction } from './boundaries.ts';
 import { resolveEntity } from './entity_resolution.ts';
 import { fail, ok, type ImpactResult } from './errors.ts';
 import { LAB_LIMITS, type LabRequest } from './lab_contract.ts';
-import type { ImpactLabStore, InvestigationData, InvestigationRecord, StoredSource } from './lab_store.ts';
+import type { ImpactLabStore, InvestigationData, InvestigationRecord, StoredDispute, StoredSource } from './lab_store.ts';
 import { normalizeDomain } from './entity_resolution.ts';
 import { parseIsoMs, sha256Hex, validateClaim, validateEvidence, validateSource } from './provenance.ts';
 import { getRegisteredProvider, ingestProviderRecord, PROVIDER_REGISTRY_VERSION, trustedProviderRefs } from './provider_registry.ts';
@@ -84,7 +84,30 @@ function latestByClaim(data: InvestigationData): Map<string, VerificationResult>
   return new Map([...out].map(([k, x]) => [k, x.r]));
 }
 
-function summary(r: VerificationResult, version: number) {
+/**
+ * Codex I1F-02: a dispute write and its re-verification are separate writes,
+ * so reads never trust the latest stored version alone. An open dispute is
+ * always shown as DISPUTED (exactly what the engine yields with openDispute),
+ * and a DISPUTED version whose dispute was resolved shows the underlying
+ * status as UNKNOWN-class — both flagged reverificationPending until a new
+ * version is stored. Nothing here invents support or contradiction.
+ */
+export type ReadResult = VerificationResult & { readonly reverificationPending?: true };
+export function withDisputeOverlay(r: VerificationResult, disputes: readonly StoredDispute[]): ReadResult {
+  const open = disputes.some((d) => d.claimRef === r.claimId && d.resolution === null);
+  if (open && r.status !== 'DISPUTED') {
+    return {
+      ...r, status: 'DISPUTED', displayClass: 'CONFLICT', reviewState: 'REVIEW_REQUIRED',
+      reviewReasons: [...new Set([...r.reviewReasons, 'OPEN_DISPUTE' as const])].sort(), reverificationPending: true,
+    };
+  }
+  if (!open && r.status === 'DISPUTED') {
+    return { ...r, status: r.underlyingStatus, displayClass: 'UNKNOWN', reviewState: 'REVIEW_REQUIRED', reverificationPending: true };
+  }
+  return r;
+}
+
+function summary(r: ReadResult, version: number) {
   return {
     version,
     resultId: r.resultId,
@@ -103,6 +126,7 @@ function summary(r: VerificationResult, version: number) {
     evidenceSetHash: r.evidenceSetHash,
     reviewBindingHash: r.reviewBindingHash,
     isFindingOfWrongdoing: r.isFindingOfWrongdoing,
+    ...(r.reverificationPending ? { reverificationPending: true } : {}),
   };
 }
 
@@ -228,7 +252,7 @@ export async function handleLabRequest(
     const chain = await store.auditChainOk(inv.value.id);
     if (!chain.ok) return chain;
     const latest = latestByClaim(data.value);
-    const results = [...latest.values()];
+    const results = [...latest.values()].map((r) => withDisputeOverlay(r, data.value.disputes));
     const indicators = deriveIndicators({ results });
     const report = buildImpactReport({
       organization: { id: inv.value.subjectOrgRef, type: inv.value.subjectOrgType, identity: inv.value.subjectIdentity },
@@ -252,6 +276,7 @@ export async function handleLabRequest(
         evidence: data.value.evidence,
         verifications: [...data.value.verifications].sort((a, b) => a.result.claimId.localeCompare(b.result.claimId) || a.version - b.version)
           .map((v) => summary(v.result, v.version)),
+        latest: results.map((r) => summary(r, data.value.latestVerifications.find((v) => v.result.claimId === r.claimId)?.version ?? 0)),
         disputes: data.value.disputes,
         indicators,
         report,
@@ -412,11 +437,19 @@ export async function handleLabRequest(
           return fail('INVALID_REQUEST', 'evidence must belong to the disputed claim');
         }
       }
-      const r = await store.insertDispute(inv.value.id, {
-        ref: req.ref, claimRef: req.claimRef, kind: req.kind, openedAt: now, submittedEvidenceRefs: req.submittedEvidenceRefs,
-        resolution: null, resolvedAt: null,
-      }, actor.userId);
-      if (!r.ok) return r;
+      const existing = data.value.disputes.find((d) => d.ref === req.ref);
+      if (existing) {
+        // Retry of the same dispute (I1F-02): repair the re-verification instead of failing.
+        if (existing.claimRef !== req.claimRef || existing.kind !== req.kind || existing.resolution !== null) {
+          return fail('ALREADY_EXISTS', 'dispute ref already used');
+        }
+      } else {
+        const r = await store.insertDispute(inv.value.id, {
+          ref: req.ref, claimRef: req.claimRef, kind: req.kind, openedAt: now, submittedEvidenceRefs: req.submittedEvidenceRefs,
+          resolution: null, resolvedAt: null,
+        }, actor.userId);
+        if (!r.ok) return r;
+      }
       // Codex I1G2-02: the persisted latest state becomes DISPUTED immediately.
       const v = await reverify(store, actor, inv.value, req.claimRef, now);
       if (!v.ok) return v;
@@ -426,8 +459,11 @@ export async function handleLabRequest(
     case 'resolve_dispute': {
       const d = data.value.disputes.find((x) => x.ref === req.disputeRef);
       if (!d) return fail('INVALID_REQUEST', 'unknown dispute');
-      const r = await store.resolveDispute(inv.value.id, req.disputeRef, req.resolution, now, actor.userId);
-      if (!r.ok) return r;
+      if (d.resolution !== null && d.resolution !== req.resolution) return fail('ALREADY_EXISTS', 'dispute already resolved');
+      if (d.resolution === null) {
+        const r = await store.resolveDispute(inv.value.id, req.disputeRef, req.resolution, now, actor.userId);
+        if (!r.ok) return r;
+      } // else: retry of the same resolution — repair the re-verification (I1F-02)
       const v = await reverify(store, actor, inv.value, d.claimRef, now);
       if (!v.ok) return v;
       return ok({ action: req.action, data: { disputeRef: req.disputeRef, resolution: req.resolution, verification: summary(v.value.result, v.value.version) } });

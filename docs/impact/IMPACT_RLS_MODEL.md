@@ -36,7 +36,7 @@ RLS on all 8 tables (not FORCEd: the table owner is only used by migrations and 
 SECURITY INVOKER (a caller can only verify chains it can read);
 `impact_append_audit()` is not executable by `anon`/`authenticated`.
 
-## 4. Matrix (tested on PostgreSQL 17 — `impact_lab_rls_test.sql`, 115 checks)
+## 4. Matrix (tested on PostgreSQL 17 — `impact_lab_rls_test.sql`, 122 checks)
 
 | Case | Result | Checks |
 |---|---|---|
@@ -65,6 +65,7 @@ SECURITY INVOKER (a caller can only verify chains it can read);
 | Archive by a non-owner actor / without actor | DENY | R00, R00b |
 | No-op (unaudited) status write | DENY | G2-05 |
 | Stored result not backed by matching evidence / counted item without PROVIDER provenance / citing another claim's evidence / FACT without AUTHORITATIVE item / unconfirmed identity supporting / wrong claim kind | DENY | G2-06a–f |
+| Counted item not derivable from stored rows (contextual / LLM-suggested / other organization / recast relationship / RETRACTED source / wrong authority cell); genuine derivation accepted | DENY / ALLOW (control) | F01–F07 |
 | Real engine + store rows (full Lab flow) satisfy every invariant | PASS | `impact_lab_engine_rows.ts` (IMPACT_ENGINE_ROWS) |
 
 The suite was mutation-tested: a permissive child policy, a client insert
@@ -86,10 +87,20 @@ allowlist + declared type/jurisdiction + mandatory snapshot, owner-only actors,
 append-only history, result/column consistency and engine invariants (FACT ⇒
 SUPPORTED, DISPUTED ⇒ CONFLICT).
 
+Codex Final (I1F-01) additionally re-derives, in the database, every COUNTED
+item of a stored result from the stored evidence and source rows: authority
+from a mirrored copy of the source-authority table (drift-tested, PD-02),
+trusted PROVIDER provenance, ACTIVE source, not self-published, not
+user-submitted, not LLM-suggested, about the subject, and the effective
+relationship the stored relationship/basis/quantities produce (non-final legal
+stages never contradict).
+
 What remains possible for a holder of the `service_role` key: inserting rows
-that are *internally consistent* but fabricated (e.g. a PROVIDER source for the
-allowlisted provider with an invented snapshot, or a well-formed verification
-result that the engine never computed). The database cannot re-run the
+that are *internally consistent* but fabricated — e.g. a PROVIDER source for
+the allowlisted provider with an invented snapshot, or a result that omits
+engine exclusions the database does not re-run (period/level mismatch,
+staleness, duplicate content, publisher-voice counting, sufficiency
+labels). The database cannot re-run the
 TypeScript engine or re-fetch a provider. Closing this fully needs an
 architectural choice — **ARCHITECTURAL DECISION REQUIRED**:
 

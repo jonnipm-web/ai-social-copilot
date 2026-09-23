@@ -72,7 +72,7 @@ Deno.test('SS-02 reads go through the caller-JWT client (RLS); writes through se
       return { data: { id: INV, owner_id: ACTOR, project_id: null, subject_org_ref: 'org-x', subject_org_type: 'NGO', subject_identity: {}, status: 'ACTIVE', audit_seq: 1, audit_head: 'a'.repeat(64), created_at: 'x' }, error: null };
     }
     if (c.op === 'insert' && c.table === 'impact_verifications') return { data: { version: 1, result: {}, idempotency_key: null }, error: null };
-    if (c.op === 'update' && c.table === 'impact_disputes') return { data: [{ ref: 'd1' }], error: null };
+    if (c.op === 'update') return { data: [{ ref: 'x' }], error: null };
     return { data: c.op === 'select' ? [] : null, error: null, count: 0 };
   };
   const store = new SupabaseImpactLabStore(fakeClient('user', calls, respond), fakeClient('service', calls, respond));
@@ -147,4 +147,14 @@ Deno.test('SS-04 an idempotent retry that races returns the winning row, not a d
   const s = await store.insertVerification(INV, r.value, '9e9e9e9e-0000-4000-8000-000000000001', ACTOR);
   assert(s.ok);
   assertEquals(s.value.version, 3);
+});
+
+Deno.test('SS-05 an archive or status update that changes no row is reported as a failure, not success (I1F-03)', async () => {
+  const calls: Call[] = [];
+  const respond = (c: Call) => (c.op === 'update' ? { data: [], error: null } : { data: null, error: null });
+  const store = new SupabaseImpactLabStore(fakeClient('user', calls, respond), fakeClient('service', calls, respond));
+  const a = await store.archiveInvestigation(INV, ACTOR);
+  assertEquals(a.ok ? 'OK' : a.error.code, 'INVESTIGATION_NOT_ACTIVE');
+  const u = await store.updateSourceStatus(INV, 'src-x', 'RETRACTED', ACTOR);
+  assertEquals(u.ok ? 'OK' : u.error.code, 'INVALID_REQUEST');
 });

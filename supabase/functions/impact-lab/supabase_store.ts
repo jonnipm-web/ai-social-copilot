@@ -305,18 +305,21 @@ export class SupabaseImpactLabStore implements ImpactLabStore {
     return ok(rowToInvestigation(data as Row));
   }
   async archiveInvestigation(id: string, actorId: string): Promise<ImpactResult<true>> {
-    const { error } = await this.service.from('impact_investigations').update({ status: 'ARCHIVED', updated_by: actorId, updated_at: new Date().toISOString() })
-      .eq('id', id).eq('status', 'ACTIVE');
-    return error ? dbFail(error) : ok(true);
+    const { data, error } = await this.service.from('impact_investigations').update({ status: 'ARCHIVED', updated_by: actorId, updated_at: new Date().toISOString() })
+      .eq('id', id).eq('status', 'ACTIVE').select('id');
+    if (error) return dbFail(error);
+    // Codex I1F-03: success only if a row actually transitioned.
+    return (data as Row[] | null)?.length === 1 ? ok(true) : fail('INVESTIGATION_NOT_ACTIVE', 'investigation is not active');
   }
   async insertSource(investigationId: string, s: StoredSource, actorId: string): Promise<ImpactResult<true>> {
     const { error } = await this.service.from('impact_sources').insert(sourceToRow(investigationId, s, actorId));
     return error ? dbFail(error) : ok(true);
   }
   async updateSourceStatus(investigationId: string, ref: string, status: SourceStatus, actorId: string): Promise<ImpactResult<true>> {
-    const { error } = await this.service.from('impact_sources').update({ status, updated_by: actorId, updated_at: new Date().toISOString() })
-      .eq('investigation_id', investigationId).eq('ref', ref);
-    return error ? dbFail(error) : ok(true);
+    const { data, error } = await this.service.from('impact_sources').update({ status, updated_by: actorId, updated_at: new Date().toISOString() })
+      .eq('investigation_id', investigationId).eq('ref', ref).select('ref');
+    if (error) return dbFail(error);
+    return (data as Row[] | null)?.length === 1 ? ok(true) : fail('INVALID_REQUEST', 'source not updated');
   }
   async insertClaim(investigationId: string, c: Claim, actorId: string): Promise<ImpactResult<true>> {
     const { error } = await this.service.from('impact_claims').insert(claimToRow(investigationId, c, actorId));

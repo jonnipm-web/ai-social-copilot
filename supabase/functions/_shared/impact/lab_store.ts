@@ -164,6 +164,8 @@ export class InMemoryImpactDatabase {
   }
   /** Test hook: simulate a database failure on the next write. */
   failNextWrite = false;
+  /** Test hook: simulate a failure of the next verification insert only. */
+  failNextVerification = false;
   async appendAudit(m: MemInvestigation, type: string, actor: string, refs: string[], codes: string[]) {
     const seq = m.rec.auditSeq + 1;
     const base = { seq, atText: this.nextAt(), eventType: type, actorRef: actor, refs, codes, prevHash: m.rec.auditHead };
@@ -288,6 +290,10 @@ export class InMemoryImpactLabStore implements ImpactLabStore {
     return ok(true as const);
   }
   async insertVerification(investigationId: string, r: VerificationResult, idempotencyKey: string | null, actorId: string) {
+    if (this.db.failNextVerification) {
+      this.db.failNextVerification = false;
+      return fail<StoredVerification>('INTERNAL_ERROR', 'simulated failure after the dispute write');
+    }
     const w = this.writable(investigationId);
     if (!w.ok) return w;
     const m = w.value;
