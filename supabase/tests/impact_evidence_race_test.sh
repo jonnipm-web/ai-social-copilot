@@ -49,6 +49,6 @@ promote() { echo "INSERT INTO public.impact_evidence (investigation_id, ref, cla
 reject() { echo "UPDATE public.impact_evidence_candidates SET review_status = 'REJECTED', reviewed_by = '$UE', reviewed_at = '2026-09-22T00:00:00Z', updated_by = '$UE' WHERE investigation_id = '$IE' AND ref = '$1';"; }
 race "$(reject k3)" "$(promote k3)" 'IMPACT_ARTIFACT_EVIDENCE_INVALID'
 race "$(promote k-race)" "$(reject k-race)" 'IMPACT_CANDIDATE_INVALID'
-got="$("${P[@]}" -tA -c "SELECT string_agg(ref || ':' || review_status, ',' ORDER BY ref) || '/' || (SELECT count(*) FROM public.impact_evidence WHERE ref IN ('k3.ev','k-race.ev')) || '/' || public.impact_audit_chain_ok('$IE') FROM public.impact_evidence_candidates WHERE ref IN ('k3','k-race');")"
+got="$("${P[@]}" -tA -c "SELECT string_agg(ref || ':' || review_status, ',' ORDER BY ref COLLATE \"C\") || '/' || (SELECT count(*) FROM public.impact_evidence WHERE ref IN ('k3.ev','k-race.ev')) || '/' || public.impact_audit_chain_ok('$IE') FROM public.impact_evidence_candidates WHERE ref IN ('k3','k-race');")"
 [ "$got" = "k-race:ACCEPTED,k3:REJECTED/1/true" ] || { echo "IMPACT_EVIDENCE_RACE: FAIL (review race state $got)"; exit 1; }
 echo "IMPACT_EVIDENCE_RACE: PASS 4 orders"

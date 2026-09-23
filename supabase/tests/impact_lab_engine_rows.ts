@@ -135,7 +135,7 @@ out.push(`DO $$ BEGIN
     RAISE EXCEPTION 'ENGINE_ROWS: latest view wrong';
   END IF;
   -- I3: the database audits exactly the artifact/candidate events of its TS twin.
-  IF (SELECT coalesce(string_agg(event_type, ',' ORDER BY event_type), '') FROM public.impact_audit_events WHERE investigation_id = '${inv}'
+  IF (SELECT coalesce(string_agg(event_type, ',' ORDER BY event_type COLLATE "C"), '') FROM public.impact_audit_events WHERE investigation_id = '${inv}'
       AND event_type IN ('ARTIFACT_INGESTED','ARTIFACT_VERSIONED','EXTRACTION_COMPLETED','EVIDENCE_CANDIDATE_CREATED','EVIDENCE_CANDIDATE_REVIEWED','EVIDENCE_PROMOTED'))
      <> '${m.audit.map((a) => a.eventType).filter((t) => /^(ARTIFACT_|EXTRACTION_|EVIDENCE_CANDIDATE_|EVIDENCE_PROMOTED)/.test(t)).sort().join(',')}' THEN
     RAISE EXCEPTION 'ENGINE_ROWS: artifact audit events differ from the TS twin';
