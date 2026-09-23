@@ -85,8 +85,11 @@ quality. A conflict is never fraud, corruption or deception.
 A caller cannot say "this registry record belongs to this organization":
 - registry-statement claims are generated only from a snapshot whose
   registration CONFIRMS the investigation subject;
-- evidence citing a registry snapshot of another organization is excluded
-  (`R03B_REGISTRY_RECORD_OF_ANOTHER_ENTITY`) — found and fixed in I2 (the gap
-  existed since I1);
-- the database refuses a stored result counting a snapshot that shares no
-  canonical id with the subject's declared registrations (I2-39).
+- evidence declared ABOUT the subject from a registry snapshot of another
+  organization is refused at insertion (Lab `ENTITY_MATCH_UNCERTAIN`; DB
+  `IMPACT_ENTITY_MISMATCH`, I2-39) — gap found in I2, present since I1;
+- defense in depth: the engine excludes it anyway
+  (`R03B_REGISTRY_RECORD_OF_ANOTHER_ENTITY`, MUT-02) and the database refuses
+  a stored result counting it (I2-39b);
+- REGISTRY_RECORD evidence must carry the server statement text, as-of period
+  and subject, recomputed in SQL (I2-41..44; Codex I2G1-03).
