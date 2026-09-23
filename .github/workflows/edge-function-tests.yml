@@ -69,6 +69,27 @@ jobs:
         run: |
           deno test --allow-env --allow-read --allow-net=deno.land,esm.sh             supabase/functions/_shared/entitlement_test.ts             supabase/functions/_shared/entitlement_vectors_test.ts             supabase/functions/_shared/module_policy_test.ts             supabase/functions/_shared/module_gate_handlers_test.ts             supabase/functions/module-access/index_test.ts
 
+  quant-foundation-ci:
+    name: Quant Foundation deterministic engine (IV-QUANT-FOUNDATION-01)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Type-check and lint the Quant core
+        run: |
+          deno check supabase/functions/_shared/quant/*.ts supabase/functions/_shared/quant/fixtures/*.ts
+          deno lint supabase/functions/_shared/quant/
+
+      - name: Goldens, edge cases, seeded invariants, boundary tripwires (no network in the suite)
+        run: |
+          deno test --allow-read --allow-net=deno.land,esm.sh supabase/functions/_shared/quant/
+
   disposable-db-rls-ci:
     name: Migrations + RLS on a disposable PostgreSQL 17 (MODULE-FOUNDATION-AND-ENTITLEMENT-02)
     runs-on: ubuntu-latest
