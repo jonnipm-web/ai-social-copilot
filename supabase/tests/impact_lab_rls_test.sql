@@ -47,6 +47,12 @@ END $$;
 \set IA '''a2222222-0000-0000-0000-00000000000a'''
 \set IB '''b2222222-0000-0000-0000-00000000000b'''
 
+-- ── parity vector: SQL audit hash format == lab_store.ts auditHash() ────────
+SELECT pg_temp.expect_eq('H01 audit hash parity with TypeScript',
+  (SELECT (encode(sha256(convert_to(concat_ws('|', 1::text, '2026-09-23T00:00:00.000000Z', 'INVESTIGATION_CREATED', 'u',
+     '00000000-0000-0000-0000-000000000000'::uuid::text, array_to_string(ARRAY['org-x','r2'], ','), array_to_string(ARRAY['A'], ','),
+     repeat('0', 64)), 'UTF8')), 'hex') = 'b811626c996e5ca8cb396747421edcaf32a43a178f575b16b8f5bb40d1d48fbf')::int), 1);
+
 -- ── fixtures (superuser) ────────────────────────────────────────────────────
 INSERT INTO auth.users (id, email) VALUES
   ('aaaaaaaa-0000-0000-0000-00000000000a', 'user-a@test.invalid'),

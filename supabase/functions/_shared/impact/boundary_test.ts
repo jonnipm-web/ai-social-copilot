@@ -81,12 +81,16 @@ Deno.test('BT-3 no verdict/score/ranking/execution surface is exported', async (
   assertEquals(Object.values(EDITORIAL_INDEPENDENCE).every((v) => v === false), true);
 });
 
-Deno.test('BT-4 module "impact" is EXPERIMENTAL in the server policy (admin-only), highest action class REVERSIBLE', () => {
+Deno.test('BT-4 module "impact" is EXPERIMENTAL (admin-only), highest action class REVERSIBLE, served only by impact-lab', () => {
   const p = MODULE_POLICY.modules[IMPACT_MODULE_ID];
   assert(p, 'impact must be registered');
   assertEquals(p.lifecycle, 'EXPERIMENTAL');
   assertEquals(p.actionClass, 'REVERSIBLE');
-  assertEquals(Object.values(MODULE_POLICY.edgeFunctions).some((e) => e.moduleId === IMPACT_MODULE_ID), false, 'no Edge Function in the Foundation');
+  // I1: exactly one Edge Function serves the module — the admin-only Lab API.
+  assertEquals(
+    Object.entries(MODULE_POLICY.edgeFunctions).filter(([, e]) => e.moduleId === IMPACT_MODULE_ID).map(([fn, e]) => [fn, e.kind]),
+    [['impact-lab', 'MODULE']],
+  );
 });
 
 const subject = (plan: EntitlementSubject['plan'], roles: Role[] = []): EntitlementSubject => ({
