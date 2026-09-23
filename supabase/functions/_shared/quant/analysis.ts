@@ -16,21 +16,22 @@ import { mean } from './numeric.ts';
 import { type InstrumentIdentity, instrumentKey } from './instrument.ts';
 import { cumulativeReturn, logReturns, sharpeRatio, type SharpeAssumptions, simpleMovingAverage, simpleReturns } from './metrics.ts';
 import {
-  assessFreshness,
   type DataProvenance,
-  DEFAULT_FRESHNESS_POLICIES,
   type EvidenceStrength,
   evidenceStrength,
   type FreshnessAssessment,
   type FreshnessState,
   type Frequency,
+  MAX_DATE_MS,
   parseIsoUtc,
 } from './provenance.ts';
 import { seriesRiskOverview, type SeriesRiskOverview } from './risk.ts';
+import { assessSessionFreshness, type CalendarContext } from './session_freshness.ts';
 import { movingAverageCrossovers, type Signal } from './signals.ts';
 import { type PriceBasis, type PriceSeries, pricesOf } from './timeseries.ts';
 
-export const QUANT_ENGINE_VERSION = 'quant-foundation-0.1.0';
+/** 0.2.0 (IV-QUANT-DATA-PLANE-AND-API-02): market-calendar freshness. Metric formulas unchanged. */
+export const QUANT_ENGINE_VERSION = 'quant-foundation-0.2.0';
 export const ANALYSIS_SCHEMA_VERSION = 1;
 
 export type FormulaId =
@@ -80,7 +81,7 @@ export interface MetricEntry {
 }
 
 export interface Assumption {
-  readonly code: 'PRICE_BASIS' | 'ANNUALIZATION' | 'NO_INTERPOLATION' | 'CALENDAR_NAIVE' | 'SQRT_TIME_SCALING' | 'RISK_FREE_RATE' | 'FRESHNESS_REFERENCE';
+  readonly code: 'PRICE_BASIS' | 'ANNUALIZATION' | 'NO_INTERPOLATION' | 'CALENDAR_NAIVE' | 'MARKET_CALENDAR' | 'SQRT_TIME_SCALING' | 'RISK_FREE_RATE' | 'FRESHNESS_REFERENCE';
   readonly value: string | number | null;
 }
 
@@ -104,6 +105,8 @@ export interface QuantAnalysisResult {
     readonly provenance: DataProvenance;
     readonly contentHash: string;
     readonly freshness: FreshnessAssessment;
+    /** Which calendar judged freshness, market state, sessions behind/missing. */
+    readonly calendar: CalendarContext;
     readonly evidenceStrength: EvidenceStrength;
   };
   readonly metrics: readonly MetricEntry[];
@@ -166,7 +169,10 @@ export async function analyzeSeries(
   // after the newest bar — otherwise the newest bar timestamp.
   const sourceAsOfMs = parseIsoUtc(series.provenance.sourceAsOf);
   const freshnessRef = sourceAsOfMs ?? lastT;
-  const freshness = assessFreshness(freshnessRef, nowMs, DEFAULT_FRESHNESS_POLICIES[series.frequency]);
+  if (!Number.isFinite(nowMs) || Math.abs(nowMs) > MAX_DATE_MS) return fail('INVALID_PARAMETER', 'clock returned an unusable time');
+  const { freshness, context: calendar } = assessSessionFreshness(
+    series.bars, series.frequency, series.instrument.exchangeMic, freshnessRef, nowMs,
+  );
   if (freshness.evaluatedAt === null) return fail('INVALID_PARAMETER', 'clock returned an unusable time');
   if (options.acceptedFreshness && !options.acceptedFreshness.includes(freshness.state)) {
     return fail('STALE_DATA', 'data freshness not accepted for this analysis', { state: freshness.state });
@@ -179,7 +185,18 @@ export async function analyzeSeries(
   const prices = pricesR.value;
 
   const warnings: QuantWarning[] = [...series.normalizationWarnings];
-  warnings.push({ code: 'CALENDAR_NAIVE', message: 'no exchange calendar applied; gaps are reported, not filled' });
+  if (calendar.basis === 'CALENDAR_NAIVE') {
+    warnings.push({ code: 'CALENDAR_NAIVE', message: 'no supported exchange calendar for this instrument/frequency/date; freshness is calendar-naive and gaps are reported, not filled' });
+  }
+  if (calendar.missingSessions) {
+    warnings.push({ code: 'MISSING_SESSIONS', message: 'trading sessions inside the period have no bar; values were NOT interpolated', details: { sessions: calendar.missingSessions } });
+  }
+  if (calendar.nonSessionBars) {
+    warnings.push({ code: 'NON_SESSION_BARS', message: 'bars are dated on non-trading days of the exchange calendar', details: { bars: calendar.nonSessionBars } });
+  }
+  if (calendar.partialSessionBar) {
+    warnings.push({ code: 'PARTIAL_SESSION_BAR', message: 'the newest daily bar belongs to a session that has not completed; its close is provisional' });
+  }
   if (freshness.state === 'DELAYED') warnings.push({ code: 'DATA_DELAYED', message: 'newest bar is older than the fresh threshold' });
   if (freshness.state === 'STALE') warnings.push({ code: 'DATA_STALE', message: 'newest bar is stale; results describe the past period only' });
   if (freshness.state === 'UNKNOWN') warnings.push({ code: 'FRESHNESS_UNKNOWN', message: 'data age could not be established' });
@@ -266,7 +283,7 @@ export async function analyzeSeries(
     { code: 'PRICE_BASIS', value: basis },
     { code: 'ANNUALIZATION', value: options.periodsPerYear },
     { code: 'NO_INTERPOLATION', value: null },
-    { code: 'CALENDAR_NAIVE', value: null },
+    calendar.basis === 'MARKET_CALENDAR' ? { code: 'MARKET_CALENDAR', value: calendar.calendar } : { code: 'CALENDAR_NAIVE', value: null },
     { code: 'FRESHNESS_REFERENCE', value: sourceAsOfMs !== null ? 'provenance.sourceAsOf' : 'newest bar timestamp' },
   ];
   if (options.periodsPerYear !== null) assumptions.push({ code: 'SQRT_TIME_SCALING', value: null });
@@ -290,7 +307,7 @@ export async function analyzeSeries(
       bars: series.bars.length,
       frequency: series.frequency,
     },
-    dataSnapshot: { provenance: series.provenance, contentHash, freshness, evidenceStrength: strength },
+    dataSnapshot: { provenance: series.provenance, contentHash, freshness, calendar, evidenceStrength: strength },
     metrics,
     signals,
     risk,

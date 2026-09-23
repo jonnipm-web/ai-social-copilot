@@ -20,7 +20,8 @@ export type QuantErrorCode =
   | 'CALCULATION_ERROR'
   | 'DATA_QUALITY_ERROR'
   | 'INVALID_PORTFOLIO'
-  | 'INVALID_PARAMETER';
+  | 'INVALID_PARAMETER'
+  | 'PROJECT_ACCESS_DENIED';
 
 export type QuantErrorDetails = Record<string, string | number | boolean | null>;
 
@@ -58,6 +59,9 @@ export type QuantWarningCode =
   | 'ADJUSTMENT_UNKNOWN'
   | 'ADJUSTED_CLOSE_PROVIDER_DEFINED'
   | 'CALENDAR_NAIVE'
+  | 'MISSING_SESSIONS'
+  | 'NON_SESSION_BARS'
+  | 'PARTIAL_SESSION_BAR'
   | 'INSUFFICIENT_DATA_FOR_METRIC'
   | 'ZERO_VARIANCE';
 
