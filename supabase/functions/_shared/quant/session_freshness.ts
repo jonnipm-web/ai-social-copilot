@@ -62,9 +62,16 @@ function naive(asOfMs: number, nowMs: number, frequency: Frequency, cal: Calenda
   };
 }
 
-/** Session date of a bar: DAILY bars are UTC-midnight session labels; intraday bars are instants. */
+/**
+ * Session date of a bar. A DAILY bar stamped exactly 00:00Z is a date-only
+ * session LABEL (CSV `YYYY-MM-DD`) → that date. Any other instant (e.g.
+ * `2026-01-16T21:00:00-05:00`) is converted to the exchange-local date, so a
+ * Friday-evening New York bar is not misfiled as Saturday UTC (Claude finding
+ * H-F: it produced UNKNOWN freshness and a false NON_SESSION_BARS).
+ */
 function barSession(t: number, frequency: Frequency, tz: string): string {
-  return frequency === 'DAILY' ? new Date(t).toISOString().slice(0, 10) : localDateTime(t, tz).date;
+  if (frequency === 'DAILY' && t % 86_400_000 === 0) return new Date(t).toISOString().slice(0, 10);
+  return localDateTime(t, tz).date;
 }
 
 export function assessSessionFreshness(

@@ -160,3 +160,16 @@ Deno.test('CAL-07 Codex CXA-03 rejected with evidence: NYSE Rule 7.2 — a Satur
   const r = assessSessionFreshness(bars, 'DAILY', 'XNYS', bars[1].t, Date.UTC(2022, 0, 3, 12));
   assertEquals([r.freshness.state, r.context.sessionsBehind, r.context.missingSessions], ['FRESH', 0, 0]);
 });
+
+Deno.test('SF-07 DAILY bars stamped with a local evening time map to the exchange-local session (finding H-F)', () => {
+  // Friday 2026-01-16 21:00 New York = 2026-01-17T02:00Z (Saturday in UTC).
+  const bars: PriceBar[] = [
+    { t: Date.parse('2026-01-15T21:00:00-05:00'), open: 1, high: 1, low: 1, close: 1 },
+    { t: Date.parse('2026-01-16T21:00:00-05:00'), open: 1, high: 1, low: 1, close: 1 },
+  ];
+  const r = assessSessionFreshness(bars, 'DAILY', 'XNYS', bars[1].t, Date.UTC(2026, 0, 17, 12));
+  assertEquals([r.freshness.state, r.context.sessionsBehind, r.context.nonSessionBars, r.context.missingSessions], ['FRESH', 0, 0, 0]);
+  // Date-only labels keep their calendar date (unchanged behaviour).
+  const labels = [dailyBar('2026-01-15'), dailyBar('2026-01-16')];
+  assertEquals(assessSessionFreshness(labels, 'DAILY', 'XNYS', labels[1].t, Date.UTC(2026, 0, 17, 12)).context.nonSessionBars, 0);
+});
