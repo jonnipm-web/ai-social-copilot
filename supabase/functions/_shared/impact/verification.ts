@@ -41,7 +41,7 @@ import type {
   TrustedProviderRef,
 } from './types.ts';
 
-export const VERIFICATION_ENGINE_VERSION = 'impact-verification/5';
+export const VERIFICATION_ENGINE_VERSION = 'impact-verification/6';
 export const IMPACT_POLICY_VERSION =
   `${VERIFICATION_ENGINE_VERSION}+${SOURCE_AUTHORITY_POLICY_VERSION}+${TEMPORAL_POLICY_VERSION}`;
 
@@ -84,7 +84,7 @@ export interface AssessedEvidence {
   readonly sourceId: string;
   readonly sourceType: Source['type'];
   readonly publisher: string;
-  /** Normalized identity of the original publisher (syndicatedFrom ?? publisher). */
+  /** Normalized RAW publisher (never the syndicatedFrom label — Codex FV3-01). */
   readonly publisherKey: string;
   readonly authority: AuthorityScope;
   readonly declaredRelationship: EvidenceRelationship;
@@ -153,24 +153,36 @@ function normPublisher(p: string): string {
 }
 
 /**
- * Publisher identity for COUNTING (Codex CF-04, FV2-02/03). A syndicated copy
- * counts as its original publisher; chains of copies are followed through the
- * sources in this set (copy of a copy), with a cycle guard. Lineage never
- * removes evidence: at worst a forged label lowers the corroboration count —
- * it cannot create SUPPORTED/CONTRADICTED or hide a disagreement.
+ * Number of independent VOICES among counted items (Codex CF-04, FV3-02/03).
+ * Publishers linked by `syndicatedFrom` (in either direction, transitively)
+ * form one voice: union-find over normalized names, so the result does not
+ * depend on input order, copies of copies collapse, and cycles merge into one
+ * voice. An unverified `syndicatedFrom` label can therefore only MERGE voices
+ * (lower corroboration) — never split them, never create a status, and never
+ * change how a disagreement is classified (that uses the raw publisher).
  */
-function publisherKeyOf(src: Source, sources: ReadonlyMap<string, Source>): string {
-  const byPublisher = new Map<string, Source>();
-  for (const s of sources.values()) if (s.syndicatedFrom) byPublisher.set(normPublisher(s.publisher), s);
-  let key = normPublisher(src.syndicatedFrom ?? src.publisher);
-  const seen = new Set<string>([normPublisher(src.publisher)]);
-  while (!seen.has(key)) {
-    seen.add(key);
-    const next = byPublisher.get(key);
-    if (!next?.syndicatedFrom) break;
-    key = normPublisher(next.syndicatedFrom);
+function countIndependentVoices(counted: readonly AssessedEvidence[], sources: ReadonlyMap<string, Source>): number {
+  const parent = new Map<string, string>();
+  const find = (x: string): string => {
+    let r = x;
+    while (parent.has(r) && parent.get(r) !== r) r = parent.get(r)!;
+    parent.set(x, r);
+    return r;
+  };
+  const union = (a: string, b: string) => {
+    const [ra, rb] = [find(a), find(b)];
+    if (ra !== rb) (ra < rb ? parent.set(rb, ra) : parent.set(ra, rb));
+  };
+  for (const a of counted) {
+    parent.set(a.publisherKey, parent.get(a.publisherKey) ?? a.publisherKey);
+    const from = sources.get(a.sourceId)?.syndicatedFrom;
+    if (from) {
+      const k = normPublisher(from);
+      parent.set(k, parent.get(k) ?? k);
+      union(a.publisherKey, k);
+    }
   }
-  return key;
+  return new Set(counted.map((a) => find(a.publisherKey))).size;
 }
 
 function canonical(v: unknown): string {
@@ -363,7 +375,7 @@ export async function verifyClaim(
       sourceId: src.id,
       sourceType: src.type,
       publisher: src.publisher,
-      publisherKey: publisherKeyOf(src, sources),
+      publisherKey: normPublisher(src.publisher),
       authority,
       declaredRelationship: e.relationship,
       effectiveRelationship: rel,
@@ -476,13 +488,13 @@ export async function verifyClaim(
   }
 
   // Sufficiency describes the evidence base, not the organization.
-  const indepPublishers = new Set(counted.map((a) => a.publisherKey));
+  const independentVoices = countIndependentVoices(counted, sources);
   let sufficiency: EvidenceSufficiency;
   if (counted.length === 0 && contextual.length === 0) sufficiency = 'NO_EVIDENCE';
   else if (conflicts.some((c) => c.positions.some((p) => counted.some((a) => a.evidenceId === p.evidenceId)))) {
     sufficiency = 'CONFLICTING_EVIDENCE';
-  } else if (indepPublishers.size >= 2) sufficiency = 'MULTI_SOURCE_SUPPORT';
-  else if (indepPublishers.size === 1) sufficiency = 'INDEPENDENT_SUPPORT';
+  } else if (independentVoices >= 2) sufficiency = 'MULTI_SOURCE_SUPPORT';
+  else if (independentVoices === 1) sufficiency = 'INDEPENDENT_SUPPORT';
   else if (contextual.every((a) => a.authority === 'SELF_REPORTED')) sufficiency = 'SELF_REPORTED';
   else sufficiency = 'SINGLE_SOURCE';
 

@@ -18,7 +18,7 @@
 | Forged provenance (self report relabelled as audit/registry) | provenance gate: independence only via trusted provider for that type+jurisdiction | G1-01a/b/c |
 | Future/reversed dates making stale data current | earliest as-of, period (start and end) ≤ retrieval, calendar check | G1-02a/b, CF-02 |
 | Jurisdiction omission | jurisdiction-bound types need an explicit jurisdiction | CF-03 |
-| Syndication / publisher variants | lineage never removes evidence; syndicatedFrom only affects counting (transitive, cycle-safe); same-publisher disagreement stays a visible conflict; corrections only via audited source status | CF-04, FV-01, FV2-01..03 |
+| Syndication / publisher variants | lineage never removes evidence; syndicatedFrom only merges voices for counting (union-find, order-independent, cycle-safe); conflict basis uses the raw publisher; corrections only via audited source status | CF-04, FV-01, FV2-01..03, FV3-01..03 |
 | Caller-supplied provider registry | must be server-built at integration (I1) | CF-06 (deferred) |
 | Unknown / prototype-key enum values | own-property allowlists for every enum; status and dispute updates validated | G1-05a/b, CF-05 |
 | Review binding bypass | reviewBindingHash covers flags, identity, dispute, providers | G1-04 |

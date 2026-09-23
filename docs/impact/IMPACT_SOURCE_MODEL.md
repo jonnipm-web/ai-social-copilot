@@ -96,14 +96,17 @@ robots/terms/authentication, no aggressive scraping.
 
 **Lineage never removes evidence** (Codex CF-04, FV-01, FV2-01..04).
 
-- Publisher identity (for COUNTING only) = normalized `syndicatedFrom ??
-  publisher`, followed transitively through the sources in the set (copy of a
-  copy) with a cycle guard. A syndicated copy therefore never adds an
-  independent voice (no fake MULTI_SOURCE). A forged `syndicatedFrom` can at
-  most lower the corroboration count; it cannot create SUPPORTED/CONTRADICTED
-  or hide a disagreement.
-- Every counted item keeps its own position. Disagreement inside one
-  publisher identity is a conflict with `basis: SAME_PUBLISHER` →
+- Independent VOICES (for sufficiency only) = connected components of
+  publishers linked by `syndicatedFrom` (union-find: order-independent,
+  transitive, cycles merge). A syndicated copy never adds a voice (no fake
+  MULTI_SOURCE). An unverified `syndicatedFrom` can only MERGE voices, i.e.
+  lower corroboration; it cannot split voices, create SUPPORTED/CONTRADICTED,
+  hide a disagreement, or change a conflict's basis (Codex FV3-01..03).
+- Conflict basis uses the RAW normalized publisher: disagreement between
+  different raw publishers is always INDEPENDENT_SOURCES (CONCERN stays
+  visible), even if one claims to syndicate the other.
+- Every counted item keeps its own position. Disagreement inside one raw
+  publisher is a conflict with `basis: SAME_PUBLISHER` →
   INCONCLUSIVE + review, indicator INCONSISTENT_PUBLISHER_REPORTING
   (information gap, never a concern).
 - Corrections use the audited path: `Investigation.updateSourceStatus`

@@ -239,6 +239,30 @@ Deno.test('CF-04 syndicated copies never add an independent voice', async () => 
   const y = news('ny', 'Y', { syndicatedFrom: 'X' });
   const cyc = await run(wellsClaim, [ev('e1', 'nx', sx(20)), ev('e2', 'ny', sx(20))], [x, y]);
   assertEquals(cyc.status, 'SUPPORTED');
+  // FV3-03: a cycle is ONE voice — never MULTI_SOURCE corroboration
+  assertEquals(cyc.sufficiency, 'INDEPENDENT_SUPPORT');
+  assertEquals(deriveIndicators({ results: [cyc] }).some((i) => i.code === 'MULTI_SOURCE_CORROBORATION'), false);
+  // a forged label can only MERGE voices (lower corroboration), never split them
+  const indep = await run(wellsClaim, [ev('e1', 'n1', sx(20)), ev('e2', 'nz', sx(20))], [wire, news('nz', 'Other Paper')]);
+  assertEquals(indep.sufficiency, 'MULTI_SOURCE_SUPPORT');
+});
+
+Deno.test('FV3-02 publisher-voice resolution is independent of input order (all permutations)', async () => {
+  const s1 = news('n4', 'Outlet', { syndicatedFrom: 'Wire A' });
+  const s2 = news('n5', 'Outlet', { syndicatedFrom: 'Wire B' });
+  const s3 = news('n6', 'Aggregator', { syndicatedFrom: 'Outlet' });
+  const s4 = news('n7', 'Wire B');
+  const srcs = [s1, s2, s3, s4];
+  const evs = [ev('e4', 'n4', sx(20)), ev('e5', 'n5', sx(20)), ev('e6', 'n6', sx(21)), ev('e7', 'n7', sx(0))];
+  const perms = <T>(xs: T[]): T[][] => xs.length <= 1 ? [xs] : xs.flatMap((x, i) => perms([...xs.slice(0, i), ...xs.slice(i + 1)]).map((p) => [x, ...p]));
+  const seen = new Set<string>();
+  for (const ps of perms(srcs)) {
+    for (const pe of [evs, [...evs].reverse()]) {
+      const v = await run(wellsClaim, pe, ps);
+      seen.add(JSON.stringify([v.resultId, v.status, v.sufficiency, v.conflicts.map((c) => c.basis), deriveIndicators({ results: [v] }).map((i) => i.code)]));
+    }
+  }
+  assertEquals(seen.size, 1);
 });
 
 Deno.test('FV2-02 a forged syndicatedFrom cannot suppress an opposing report (it stays a visible conflict)', async () => {
@@ -249,8 +273,10 @@ Deno.test('FV2-02 a forged syndicatedFrom cannot suppress an opposing report (it
   assertEquals(v.excluded, []);
   assertEquals(v.conflicts.length, 1);
   assertEquals(v.reviewState, 'REVIEW_REQUIRED');
-  const ind = deriveIndicators({ results: [v] });
-  assertEquals(ind.filter((i) => i.polarity === 'CONCERN'), []);
+  // FV3-01: the forged label cannot reclassify a cross-publisher conflict —
+  // the concern stays visible.
+  assertEquals(v.conflicts[0].basis, 'INDEPENDENT_SOURCES');
+  assert(deriveIndicators({ results: [v] }).some((i) => i.code === 'CONFLICTING_CLAIMS'));
   // and the reverse direction cannot manufacture a contradiction
   const r = await run(wellsClaim, [ev('e1', 'na', sx(0)), ev('e2', 'nb', sx(20))], [a, b]);
   assertNotEquals(r.status, 'CONTRADICTED');
