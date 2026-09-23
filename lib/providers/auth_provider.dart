@@ -4,6 +4,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/diagnostics/diagnostic_models.dart';
 import '../data/services/auth_service.dart';
 import 'diagnostic_session_provider.dart';
+import 'ive_memory_provider.dart';
+import 'ive_session_isolation.dart';
 import 'profile_provider.dart';
 import 'quota_provider.dart';
 
@@ -49,6 +51,23 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
     _ref.invalidate(currentQuotaProvider);
   }
 
+  // IVE-INTELLIGENCE-CORE-01 (IVE-F01) — after a successful sign-in, bind the
+  // IVE's device-local state to the user who is now signed in; if it
+  // belonged to someone else it is wiped (transcripts, capability cache,
+  // project context, device memory). Best effort: never blocks sign-in.
+  Future<void> _bindIveToCurrentUser() async {
+    if (state.hasError) return;
+    try {
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId == null) return;
+      await bindIveSessionToUser(
+        userId: userId,
+        invalidate: _ref.invalidate,
+        memory: _ref.read(iveMemoryProvider.notifier),
+      );
+    } catch (_) {}
+  }
+
   // IVE-COMMERCIAL-OBSERVABILITY-07A — AUTH category (mission section 04:
   // "signed-in state, sign-in success/failure category, sign-out, profile
   // resolution, role/plan resolution. NEVER credentials/tokens."). Logs
@@ -75,6 +94,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
     );
     _logAuth('sign_in', success: !state.hasError, method: 'password');
     _invalidateProfile();
+    await _bindIveToCurrentUser();
   }
 
   Future<void> signUp({
@@ -87,6 +107,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
     );
     _logAuth('sign_up', success: !state.hasError, method: 'password');
     _invalidateProfile();
+    await _bindIveToCurrentUser();
   }
 
   Future<void> signInWithGoogle() async {
@@ -94,6 +115,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
     state = await AsyncValue.guard(_service.signInWithGoogle);
     _logAuth('sign_in', success: !state.hasError, method: 'google');
     _invalidateProfile();
+    await _bindIveToCurrentUser();
   }
 
   Future<void> signOut() async {
@@ -117,6 +139,13 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
     // force that here when nothing about the auth state actually changed).
     if (!state.hasError) {
       _ref.read(diagnosticSessionProvider.notifier).reset();
+      // IVE-INTELLIGENCE-CORE-01 (IVE-F01) — the outgoing user's IVE
+      // conversation, capability cache, project context and device-local
+      // memory must not reach whoever signs in next on this device.
+      await resetIveSessionState(
+        invalidate: _ref.invalidate,
+        memory: _ref.read(iveMemoryProvider.notifier),
+      );
     }
   }
 }

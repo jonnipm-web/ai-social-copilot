@@ -15,6 +15,7 @@ import 'core/diagnostics/ive_forensic_snapshot.dart';
 import 'core/modules/route_policy.dart';
 import 'core/theme/app_theme.dart';
 import 'data/models/profile.dart';
+import 'providers/ive_session_isolation.dart';
 import 'providers/diagnostic_session_provider.dart';
 import 'providers/profile_provider.dart';
 import 'l10n/app_localizations.dart';
@@ -783,6 +784,9 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    // IVE-INTELLIGENCE-CORE-01 (IVE-F01) — keeps IVE state bound to the
+    // signed-in user on every sign-in/sign-out path.
+    ref.watch(iveSessionGuardProvider);
     final locale = ref.watch(languageProvider);
     ref.listen<AsyncValue<Profile?>>(currentProfileProvider, (previous, next) {
       _maybeRecoverDiagnosticSession(next);
