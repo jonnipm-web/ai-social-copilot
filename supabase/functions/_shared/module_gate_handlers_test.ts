@@ -64,9 +64,10 @@ function reset() {
   quotaCalls = 0;
 }
 
-Deno.test('GH-00 every MODULE-kind function (17) exports an injectable handler', () => {
+Deno.test('GH-00 every MODULE-kind function (19) exports an injectable handler', () => {
   assertEquals(handlers.size, moduleFunctions.length);
-  assertEquals(moduleFunctions.length, 17);
+  // 17 + quant-analyze + quant-watchlists (IV-QUANT-DATA-PLANE-AND-API-02).
+  assertEquals(moduleFunctions.length, 19);
 });
 
 for (const { fn, moduleId, lifecycle } of moduleFunctions) {

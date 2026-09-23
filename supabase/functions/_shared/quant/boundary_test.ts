@@ -37,9 +37,9 @@ function code(src: string): string {
 Deno.test('QB-01 production modules exist and are all covered by this tripwire', async () => {
   const names = (await productionModules()).map((m) => m.name);
   assertEquals(names, [
-    'analysis.ts', 'csv.ts', 'display.ts', 'domain_future.ts', 'errors.ts', 'instrument.ts', 'ive_boundary.ts',
-    'metrics.ts', 'numeric.ts', 'observability.ts', 'portfolio.ts', 'provenance.ts', 'provider.ts', 'risk.ts',
-    'signals.ts', 'timeseries.ts',
+    'analysis.ts', 'api_contract.ts', 'calendar.ts', 'csv.ts', 'display.ts', 'domain_future.ts', 'errors.ts', 'instrument.ts',
+    'ive_boundary.ts', 'metrics.ts', 'numeric.ts', 'observability.ts', 'portfolio.ts', 'provenance.ts', 'provider.ts', 'risk.ts',
+    'session_freshness.ts', 'signals.ts', 'timeseries.ts', 'watchlist_contract.ts',
   ]);
 });
 
@@ -137,4 +137,42 @@ Deno.test('QB-20 AEF hard-denies real-money quant tiers even with a human gate r
     const d = checkDomainBoundary(req, 'CONSEQUENTIAL');
     assert(d !== null && d.decision === 'DENY', tier);
   }
+});
+
+// ------------------------------------------------------------ IV-QUANT-DATA-PLANE-AND-API-02: module split
+
+Deno.test('QB-13 split: quant-analytics is READ_ONLY + INTERNAL and owns the Quant APIs; ive-quant stays CONSEQUENTIAL with none', () => {
+  const qa = MODULE_POLICY.modules['quant-analytics'];
+  assert(qa, 'quant-analytics must be registered server-side');
+  assertEquals([qa.lifecycle, qa.actionClass], ['INTERNAL', 'READ_ONLY']);
+  assertEquals([MODULE_POLICY.modules['ive-quant'].lifecycle, MODULE_POLICY.modules['ive-quant'].actionClass], ['EXPERIMENTAL', 'CONSEQUENTIAL']);
+  const byModule = (m: string) => Object.entries(MODULE_POLICY.edgeFunctions).filter(([, p]) => p.moduleId === m).map(([fn]) => fn).sort();
+  assertEquals(byModule('quant-analytics'), ['quant-analyze', 'quant-watchlists']);
+  assertEquals(byModule('ive-quant'), []);
+  for (const role of ['free', 'pro', 'premium', 'beta_tester']) {
+    assertEquals(decideModuleAccess(subject(role), 'quant-analytics').code, 'MODULE_NOT_AVAILABLE', role);
+  }
+  assertEquals(decideModuleAccess(subject('admin'), 'quant-analytics').allowed, true);
+});
+
+Deno.test('QB-14 Quant Edge Functions: no AEF/IVE/LLM import, no raw fetch, no service role, gate on quant-analytics', async () => {
+  for (const f of ['../../quant-analyze/index.ts', '../../quant-watchlists/index.ts', '../quant_server.ts']) {
+    const src = code(await Deno.readTextFile(new URL(f, import.meta.url)));
+    assert(!/\bfetch\s*\(/.test(src), `${f}: raw fetch`);
+    assert(!/aef\/|contracts\/aef|_shared\/ive\/|context-copilot|groq|openai|anthropic/i.test(src), `${f}: forbidden dependency`);
+    assert(!/SERVICE_ROLE|createServiceClient/.test(src), `${f}: service role`);
+    if (f.endsWith('index.ts')) {
+      assert(/requireModuleAccess\(req, authUser, 'quant-analytics'/.test(src), `${f}: must gate on quant-analytics`);
+      assert(!/'ive-quant'/.test(src.replace(/\/\/.*$/gm, '')), `${f}: must not serve ive-quant`);
+    }
+  }
+});
+
+Deno.test('QB-15 CXR-01 accepted residual is pinned: "first"/"primeiro" pass grounding until the Q6 gate', async () => {
+  const { checkNarrativeGrounding } = await import('./ive_boundary.ts');
+  const req = { facts: [], period: { start: '', end: '', bars: 0 } } as unknown as Parameters<typeof checkNarrativeGrounding>[1];
+  assertEquals(checkNarrativeGrounding({ template: 'first result' }, req).grounded, true);
+  assertEquals(checkNarrativeGrounding({ template: 'primeiro resultado' }, req).grounded, true);
+  const doc = await Deno.readTextFile(new URL('../../../../docs/quant/QUANT_SECURITY_MODEL.md', import.meta.url));
+  assert(/"first", "primeiro"/.test(doc), 'residual must stay documented');
 });

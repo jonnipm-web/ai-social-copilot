@@ -76,7 +76,7 @@ jobs:
           deno test --allow-env --allow-read --allow-net=deno.land,esm.sh             supabase/functions/_shared/entitlement_test.ts             supabase/functions/_shared/entitlement_vectors_test.ts             supabase/functions/_shared/module_policy_test.ts             supabase/functions/_shared/module_gate_handlers_test.ts             supabase/functions/module-access/index_test.ts
 
   quant-foundation-ci:
-    name: Quant Foundation deterministic engine (IV-QUANT-FOUNDATION-01)
+    name: Quant engine + quant-analytics APIs (IV-QUANT-FOUNDATION-01 / DATA-PLANE-AND-API-02)
     runs-on: ubuntu-latest
 
     steps:
@@ -87,14 +87,20 @@ jobs:
         with:
           deno-version: v2.x
 
-      - name: Type-check and lint the Quant core
+      - name: Type-check and lint the Quant core and Quant Edge Functions
         run: |
-          deno check supabase/functions/_shared/quant/*.ts supabase/functions/_shared/quant/fixtures/*.ts
-          deno lint supabase/functions/_shared/quant/
+          deno check supabase/functions/_shared/quant/*.ts supabase/functions/_shared/quant/fixtures/*.ts             supabase/functions/_shared/quant_server.ts supabase/functions/quant-analyze/*.ts supabase/functions/quant-watchlists/*.ts
+          deno lint supabase/functions/_shared/quant/ supabase/functions/_shared/quant_server.ts             supabase/functions/quant-analyze/ supabase/functions/quant-watchlists/
 
-      - name: Goldens, edge cases, seeded invariants, boundary tripwires (no network in the suite)
+      - name: Goldens, edge cases, seeded invariants, calendars, boundary tripwires (no network in the suite)
         run: |
           deno test --allow-read --allow-net=deno.land,esm.sh supabase/functions/_shared/quant/
+
+      - name: quant-analyze + quant-watchlists API tests (auth, entitlement, ownership, schema, limits, logging)
+        env:
+          DENO_TESTING: "1"
+        run: |
+          deno test --allow-env --allow-read --allow-net=deno.land,esm.sh             supabase/functions/quant-analyze/index_test.ts supabase/functions/quant-watchlists/index_test.ts
 
   disposable-db-rls-ci:
     name: Migrations + RLS on a disposable PostgreSQL 17 (MODULE-FOUNDATION-AND-ENTITLEMENT-02)
