@@ -58,6 +58,8 @@ export interface ProviderDescriptor {
   readonly termsStatus: TermsStatus;
   /** Marked in every record and response: fixture data is never real. */
   readonly synthetic: boolean;
+  /** Upstream origin shared by providers serving the same records (I2G2-06). */
+  readonly originId?: string;
 }
 
 export interface OrganizationQuery {

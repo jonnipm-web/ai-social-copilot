@@ -162,6 +162,15 @@ ALTER TABLE public.impact_sources ADD CONSTRAINT impact_sources_lineage_check CH
   -- END_IMPACT_SYNDICATION_MARKERS
 );
 
+-- Codex I2G2-03: lineage columns describe CLIENT-submitted material only. A
+-- provider row never carries them, so no writer can use them to merge or
+-- split the voices of trusted sources (voices are counted on trusted sources).
+ALTER TABLE public.impact_sources DROP CONSTRAINT IF EXISTS impact_sources_provider_lineage_check;
+ALTER TABLE public.impact_sources ADD CONSTRAINT impact_sources_provider_lineage_check CHECK (
+  acquisition_method <> 'PROVIDER' OR (
+    derived_from IS NULL AND content_fingerprint IS NULL AND similarity_sketch IS NULL
+    AND cardinality(syndication_markers) = 0 AND syndicated_from IS NULL));
+
 -- A provider snapshot must be internally consistent and minimal: its canonical
 -- id is derived from its own country/scheme/number, it belongs to the row's
 -- provider and jurisdiction, and it never carries people (officers,

@@ -185,7 +185,7 @@ export function composeProviderRegistry(entries: readonly RegisteredProvider[]):
   const refs = Object.freeze([...map.values()].map((p) =>
     Object.freeze({
       id: p.descriptor.id, sourceType: p.descriptor.sourceType, jurisdictions: p.descriptor.jurisdictions,
-      primaryPublisher: p.descriptor.primaryPublisher,
+      primaryPublisher: p.descriptor.primaryPublisher, originId: p.descriptor.originId ?? p.descriptor.id,
     })
   ));
   const list = Object.freeze([...map.values()]);

@@ -134,6 +134,14 @@ SELECT pg_temp.expect_fail('I2-07h a dissolution before the registration (Codex 
   $$INSERT INTO public.impact_sources (investigation_id, ref, source_type, publisher, retrieved_at, retention, content_hash, acquisition_method, acquisition_provider_id, jurisdiction_country, jurisdiction_registry, snapshot, created_by)
     VALUES ('c2222222-0000-0000-0000-00000000000c', 'src-f1h', 'OFFICIAL_REGISTRY', 'X', '2026-09-01T00:00:00Z', 'SNAPSHOT', repeat('3', 64), 'PROVIDER', 'fixture-xa-charity-registry', 'XA', 'fixture-xa-charity-registry',
       pg_temp.snap('fixture-xa-charity-registry', 'xa-12', 'XA', 'charity-number', 'XA12', 'n', 'DISSOLVED', '3') || '{"registeredOn":"2020-01-01","dissolvedOn":"2019-01-01"}', 'cccccccc-0000-0000-0000-00000000000c')$$, '23514');
+SELECT pg_temp.expect_fail('I2-07i a provider row cannot carry client lineage columns (Codex I2G2-03)',
+  $$INSERT INTO public.impact_sources (investigation_id, ref, source_type, publisher, retrieved_at, retention, content_hash, acquisition_method, acquisition_provider_id, jurisdiction_country, jurisdiction_registry, snapshot, content_fingerprint, similarity_sketch, created_by)
+    VALUES ('c2222222-0000-0000-0000-00000000000c', 'src-f1i', 'OFFICIAL_REGISTRY', 'X', '2026-09-01T00:00:00Z', 'SNAPSHOT', repeat('3', 64), 'PROVIDER', 'fixture-xa-charity-registry', 'XA', 'fixture-xa-charity-registry',
+      pg_temp.snap('fixture-xa-charity-registry', 'xa-13', 'XA', 'charity-number', 'XA13', 'n', 'REGISTERED', '3'), repeat('a', 64), repeat('b', 256), 'cccccccc-0000-0000-0000-00000000000c')$$, '23514');
+SELECT pg_temp.expect_fail('I2-07j a provider row cannot carry a syndication label (Codex I2G2-03)',
+  $$INSERT INTO public.impact_sources (investigation_id, ref, source_type, publisher, retrieved_at, retention, content_hash, acquisition_method, acquisition_provider_id, jurisdiction_country, jurisdiction_registry, snapshot, syndicated_from, created_by)
+    VALUES ('c2222222-0000-0000-0000-00000000000c', 'src-f1j', 'OFFICIAL_REGISTRY', 'X', '2026-09-01T00:00:00Z', 'SNAPSHOT', repeat('3', 64), 'PROVIDER', 'fixture-xa-charity-registry', 'XA', 'fixture-xa-charity-registry',
+      pg_temp.snap('fixture-xa-charity-registry', 'xa-14', 'XA', 'charity-number', 'XA14', 'n', 'REGISTERED', '3'), 'Ministry A', 'cccccccc-0000-0000-0000-00000000000c')$$, '23514');
 SELECT pg_temp.expect_fail('I2-08 a snapshot carrying people (trustees) is refused — PII minimization',
   $$INSERT INTO public.impact_sources (investigation_id, ref, source_type, publisher, retrieved_at, retention, content_hash, acquisition_method, acquisition_provider_id, jurisdiction_country, jurisdiction_registry, snapshot, created_by)
     VALUES ('c2222222-0000-0000-0000-00000000000c', 'src-f2', 'OFFICIAL_REGISTRY', 'X', '2026-09-01T00:00:00Z', 'SNAPSHOT', repeat('4', 64), 'PROVIDER', 'fixture-xa-charity-registry', 'XA', 'fixture-xa-charity-registry',

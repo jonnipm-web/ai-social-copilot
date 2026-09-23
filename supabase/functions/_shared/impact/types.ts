@@ -177,6 +177,10 @@ export interface TrustedProviderRef {
    * a court's own docket): material it serves is ORIGINAL by provenance —
    * the only way independence is ever established positively (I2, CF-04). */
   readonly primaryPublisher: boolean;
+  /** Upstream origin (I2G2-06): two providers serving the same upstream records
+   * (e.g. an API and a bulk dump of one register) share an originId and count
+   * as ONE voice. Defaults to the provider id. */
+  readonly originId?: string;
 }
 
 export interface Source {

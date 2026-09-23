@@ -22,7 +22,7 @@
  */
 import { fail, ok, type ImpactResult } from './errors.ts';
 import { parseIsoMs, sha256Hex, validateClaim, validateEvidence, validateSource, LIMITS } from './provenance.ts';
-import { authorityFor, isIndependentScope, SOURCE_AUTHORITY_POLICY_VERSION, type AuthorityScope } from './source_authority.ts';
+import { authorityFor, hasTrustedProvenance, isIndependentScope, SOURCE_AUTHORITY_POLICY_VERSION, type AuthorityScope } from './source_authority.ts';
 import { analyzeIndependence, type IndependenceAnalysis, LINEAGE_POLICY_VERSION } from './source_lineage.ts';
 import { evidenceAsOfMs, isStale, isStateClaim, periodsOverlap, stalenessReferenceMs, TEMPORAL_POLICY_VERSION } from './temporal.ts';
 import type {
@@ -365,7 +365,10 @@ export async function verifyClaim(
       rules.push('R11_STALE_STATE_EVIDENCE');
       continue;
     }
-    if (src.contentHash) {
+    // Codex I2G2-02: duplicate-content exclusion only between sources whose
+    // hash was computed by a trusted provider — a client-declared hash can
+    // never exclude (hide) another source's evidence.
+    if (src.contentHash && hasTrustedProvenance(src, providers)) {
       const prior = seenContentHashes.get(src.contentHash);
       if (prior !== undefined && prior !== src.id) {
         exclude('DUPLICATE_CONTENT');
@@ -504,7 +507,7 @@ export async function verifyClaim(
   );
   const independentVoices = lineage.voices;
   if (lineage.mergedByLineage) rules.push('L01_LINEAGE_MERGED_VOICES');
-  if (lineage.possibleLineage) {
+  if (lineage.possibleLineage || lineage.comparisonTruncated) {
     gaps.add('POSSIBLE_LINEAGE');
     review.add('POSSIBLE_LINEAGE');
     rules.push('L02_POSSIBLE_LINEAGE_REVIEW');
@@ -533,7 +536,7 @@ export async function verifyClaim(
   const evidenceSetHash = await computeEvidenceSetHash(claim, input.evidence, sources);
   const relevantFlags = [...flagged].filter((id) => sources.has(id)).sort();
   const providerKey = [...ctx.trustedProviders]
-    .map((p) => `${p.id}:${p.sourceType}:${[...p.jurisdictions].sort().join('+')}:${p.primaryPublisher ? 'primary' : 'secondary'}`).sort();
+    .map((p) => `${p.id}:${p.sourceType}:${[...p.jurisdictions].sort().join('+')}:${p.primaryPublisher ? 'primary' : 'secondary'}:${p.originId ?? p.id}`).sort();
   const foreignKey = [...foreign].filter((id) => sources.has(id)).sort();
   const reviewBindingHash = await sha256Hex(canonical({
     evidenceSetHash, flagged: relevantFlags, identity: ctx.subjectIdentity, dispute: !!ctx.openDispute, providers: providerKey,

@@ -252,8 +252,10 @@ Deno.test('CF-04 syndicated copies never add an independent voice', async () => 
   const gov = (id: string, publisher: string, over: Partial<Source> = {}): Source => ({
     ...news(id, publisher, over), type: 'GOVERNMENT_RECORD', newsGenre: undefined, acquisition: providerFor('GOVERNMENT_RECORD'), jurisdiction: { country: 'XA' },
   });
+  // Codex I2G2-06: two records served by the SAME provider share one upstream
+  // origin → one voice (two distinct primary origins → L-06 in registry_intelligence_test.ts).
   const two = await run(wellsClaim, [ev('e1', 'g1', sx(20)), ev('e2', 'g2', sx(20))], [gov('g1', 'Ministry A'), gov('g2', 'Agency B')]);
-  assertEquals(two.sufficiency, 'MULTI_SOURCE_SUPPORT');
+  assertEquals(two.sufficiency, 'INDEPENDENT_SUPPORT');
   const forged = await run(wellsClaim, [ev('e1', 'g1', sx(20)), ev('e2', 'g2', sx(20))], [gov('g1', 'Ministry A'), gov('g2', 'Agency B', { syndicatedFrom: 'Ministry A' })]);
   assertEquals(forged.sufficiency, 'INDEPENDENT_SUPPORT');
   assertEquals(forged.status, 'SUPPORTED');

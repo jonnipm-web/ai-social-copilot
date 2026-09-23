@@ -56,6 +56,28 @@ Lineage inputs of all sources are part of `evidenceSetHash`; results are
 order-independent; comparisons are bounded (200 sources, 50 reported links);
 marker regexes are linear (L-13).
 
+## 4b. Codex Gate 2 hardening (impact-lineage/2)
+
+- Voices are counted on a graph of **trusted-provenance sources only**. A
+  client-declared `syndicatedFrom` / `derivedFrom` (analyst or user source) is
+  a descriptive annotation: it sets that source's lineage state but can never
+  bridge two established originals and lower their corroboration (I2G2-01).
+- Duplicate-content exclusion (R12) compares only hashes computed by trusted
+  providers: a client-declared `contentHash` can never exclude or hide another
+  source's evidence (I2G2-02).
+- Provider rows cannot carry client lineage columns (DB CHECK, I2G2-03); the
+  database cannot recompute fingerprints of text it deliberately does not
+  store — beyond that CHECK this is the documented SERVICE_ROLE_TRUST_GATE =
+  LAB_ONLY boundary.
+- Providers serving the same upstream records share an `originId` → one voice
+  (I2G2-06).
+- Pairwise comparison overflow (> 200 sketched sources) is disclosed as
+  `comparisonTruncated` and requires review (I2G2-05); the Lab caps sources at
+  200 per investigation anyway.
+- Normalization keeps letters and digits of every script (I2G2-07).
+- Sketch cost is linear (I2G2-04 rejected: 200 maximum-size sketches ≈ 1 s;
+  each is computed once, at `add_source`).
+
 ## 5. CF-04 — CLOSED
 
 Criterion (mission §32): known syndication / republication must never be

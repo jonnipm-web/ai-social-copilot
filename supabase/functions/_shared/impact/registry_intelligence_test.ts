@@ -665,3 +665,72 @@ Deno.test('MUT-05 identity confirmation is load-bearing (an unconfirmed subject 
   const src = [gov('g1', 'Ministry of Water')];
   assertEquals((await run(src, [ev('e1', 'g1')], { ...CTX, subjectIdentity: 'UNCERTAIN' })).status, 'INCONCLUSIVE');
 });
+
+// ════════════════════════ Codex Gate 2 regressions (I2G2-*) ════════════════
+
+const analyst = (id: string, publisher: string, over: Partial<Source> = {}): Source => ({
+  id, type: 'NEWS', newsGenre: 'REPORTING', publisher, retrievedAt: '2026-09-01T00:00:00Z', status: 'ACTIVE', retention: 'HASH_ONLY',
+  contentHash: hex('e'), acquisition: { method: 'ANALYST_ENTRY' }, ...over,
+});
+
+Deno.test('I2G2-01 a client-declared label cannot bridge two established originals (no corroboration suppression)', async () => {
+  const g1 = gov('g1', 'Ministry of Water');
+  const g2 = gov('g2', 'National Statistics Agency', {}, 'p-gov2');
+  for (const bridge of [
+    analyst('a1', 'National Statistics Agency', { syndicatedFrom: 'Ministry of Water' }),
+    analyst('a2', 'National Statistics Agency', { derivedFrom: 'Ministry of Water' }),
+    analyst('a3', 'Ministry of Water', { contentFingerprint: hex('c'), similaritySketch: similaritySketch(BODY), syndicationMarkers: ['WIRE_REUTERS'] }),
+  ]) {
+    const v = await run([g1, g2, bridge], [ev('e1', 'g1'), ev('e2', 'g2')]);
+    assertEquals([v.sufficiency, v.lineage.establishedVoices], ['MULTI_SOURCE_SUPPORT', 2], bridge.id);
+    // the label still DESCRIBES the analyst source
+    assertEquals(v.status, 'SUPPORTED');
+  }
+});
+
+Deno.test('I2G2-02 a client-declared content hash can never exclude trusted evidence or hide a conflict', async () => {
+  const g1 = gov('g1', 'Ministry of Water', { contentHash: hex('7') });
+  const forged = analyst('a0', 'Copycat', { contentHash: hex('7') }); // same hash, visible in responses
+  const aEv: EvidenceItem = { ...ev('a-ev', 'a0'), relationship: 'CONTRADICTS' }; // id sorts before 'e1'
+  const v = await run([g1, forged], [aEv, ev('e1', 'g1')]);
+  assertEquals(v.excluded.filter((x) => x.reason === 'DUPLICATE_CONTENT'), []);
+  assertEquals([v.status, v.supporting.map((a) => a.evidenceId)], ['SUPPORTED', ['e1']]);
+  // between TRUSTED sources, an identical provider hash still deduplicates
+  const g1b = gov('g1b', 'Ministry of Water', { contentHash: hex('7') });
+  const d = await run([g1, g1b], [ev('e1', 'g1'), ev('e2', 'g1b')]);
+  assertEquals(d.excluded.map((x) => x.reason), ['DUPLICATE_CONTENT']);
+});
+
+Deno.test('I2G2-05 more sketched sources than can be compared → disclosed and review required (never silent)', async () => {
+  const many = Array.from({ length: 201 }, (_, i) => news(`n${String(i).padStart(3, '0')}`, `Paper ${i}`, { contentFingerprint: hex('1').slice(0, 60) + String(i).padStart(4, '0'), similaritySketch: similaritySketch(`story ${i} unique words here`) }));
+  const v = await run(many, [ev('e1', 'n000')]);
+  assertEquals(v.lineage.comparisonTruncated, true);
+  assertEquals(v.reviewState, 'REVIEW_REQUIRED');
+  assert(v.gaps.includes('POSSIBLE_LINEAGE'));
+});
+
+Deno.test('I2G2-06 two providers serving the same upstream origin are ONE voice', async () => {
+  const sameOrigin: TrustedProviderRef[] = [
+    { id: 'p-api', sourceType: 'GOVERNMENT_RECORD', jurisdictions: ['XA'], primaryPublisher: true, originId: 'xa-ministry' },
+    { id: 'p-bulk', sourceType: 'GOVERNMENT_RECORD', jurisdictions: ['XA'], primaryPublisher: true, originId: 'xa-ministry' },
+  ];
+  const v = await run([gov('g1', 'Ministry (API)', {}, 'p-api'), gov('g2', 'Ministry (bulk file)', {}, 'p-bulk')], [ev('e1', 'g1'), ev('e2', 'g2')], { ...CTX, trustedProviders: sameOrigin });
+  assertEquals([v.sufficiency, v.lineage.establishedVoices], ['INDEPENDENT_SUPPORT', 1]);
+  const distinct = sameOrigin.map((p) => ({ ...p, originId: undefined }));
+  const w = await run([gov('g1', 'Ministry (API)', {}, 'p-api'), gov('g2', 'Ministry (bulk file)', {}, 'p-bulk')], [ev('e1', 'g1'), ev('e2', 'g2')], { ...CTX, trustedProviders: distinct });
+  assertEquals(w.sufficiency, 'MULTI_SOURCE_SUPPORT');
+});
+
+Deno.test('I2G2-07 content of every script is kept by normalization (no cross-script collisions)', async () => {
+  assertNotEquals(await contentFingerprint('alpha проект'), await contentFingerprint('alpha'));
+  assertNotEquals(await contentFingerprint('援助 20'), await contentFingerprint('20'));
+  assertEquals(await contentFingerprint('Ação Social'), await contentFingerprint('acao social'));
+});
+
+Deno.test('I2G2-04 (rejected) sketch cost is linear: maximum-size text, 200 sources, bounded time', () => {
+  const text = 'word '.repeat(4_000).slice(0, 20_000);
+  const t0 = performance.now();
+  for (let i = 0; i < 200; i++) similaritySketch(`${i} ${text}`);
+  const ms = performance.now() - t0;
+  assert(ms < 20_000, `200 max-size sketches took ${ms} ms`);
+});

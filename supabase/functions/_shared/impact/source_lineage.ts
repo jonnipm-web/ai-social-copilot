@@ -24,12 +24,18 @@
  *    computed from submitted text; provider flags come from the server
  *    registry). A client cannot send "independent", "original" or a
  *    fingerprint — see lab_contract.ts.
+ *  - VOICES are counted on a graph of TRUSTED-provenance sources only (Codex
+ *    I2G2-01): a client-declared label (syndicatedFrom / derivedFrom on an
+ *    analyst or user source) describes that source's lineage but can never
+ *    bridge two established originals and lower their corroboration.
+ *    Trusted sources of the same upstream ORIGIN (provider originId) are one
+ *    voice even under different provider ids (I2G2-06).
  */
 import { sha256Hex } from './provenance.ts';
 import { hasTrustedProvenance } from './source_authority.ts';
 import type { Source, SyndicationMarker, TrustedProviderRef } from './types.ts';
 
-export const LINEAGE_POLICY_VERSION = 'impact-lineage/1';
+export const LINEAGE_POLICY_VERSION = 'impact-lineage/2';
 
 export const LINEAGE_LIMITS = Object.freeze({
   /** Content text accepted for fingerprinting (characters). */
@@ -38,7 +44,9 @@ export const LINEAGE_LIMITS = Object.freeze({
   maxSourcesCompared: 200,
   sketchSlots: 32,
   shingleWords: 5,
-  /** Fraction of equal MinHash slots from which two texts are POSSIBLE copies. */
+  /** Fraction of equal MinHash slots from which two texts are POSSIBLE copies.
+   * Beyond maxSourcesCompared the comparison is NOT silently truncated: the
+   * result is flagged `comparisonTruncated` and requires review (I2G2-05). */
   nearDuplicateThreshold: 0.8,
   /** Links reported per result (the analysis itself is never truncated). */
   maxReportedLinks: 50,
@@ -80,6 +88,8 @@ export interface IndependenceAnalysis {
   readonly mergedByLineage: boolean;
   /** A POSSIBLE link (similarity / marker) touches counted items. */
   readonly possibleLineage: boolean;
+  /** More sketched sources than can be compared pairwise — review required. */
+  readonly comparisonTruncated: boolean;
 }
 
 // ── content normalization, fingerprint, sketch, markers ────────────────────
@@ -95,8 +105,9 @@ export function normalizeContent(text: string): string {
     .replace(/(https?:\/\/[^\s?#]+)[?#]\S*/g, '$1') //             tracking params / fragments
     .replace(/\b\d{1,2}:\d{2}(?::\d{2})?\s*(?:am|pm)?(?:\s*(?:gmt|utc|bst|cet|cest|et|edt|est|pt|pdt|pst))?\b/g, ' ') // UI clock times
     .replace(/\b(?:updated|published|posted)?\s*\d+\s+(?:seconds?|minutes?|mins?|hours?|hrs?|days?)\s+ago\b/g, ' ')
-    .normalize('NFKD').replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, ' ')
+    .normalize('NFKD').replace(/\p{M}+/gu, '')
+    // Letters and digits of EVERY script are content (Codex I2G2-07).
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -215,6 +226,65 @@ export function analyzeIndependence(
   sources: ReadonlyMap<string, Source>,
   trustedProviders: ReadonlyMap<string, TrustedProviderRef>,
 ): IndependenceAnalysis {
+  const all = [...sources.values()].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  const trusted = (s: Source) => hasTrustedProvenance(s, trustedProviders);
+  const refOf = (s: Source) => trustedProviders.get((s.acquisition as { providerId: string }).providerId);
+  const established = (s: Source) => trusted(s) && refOf(s)?.primaryPublisher === true;
+
+  // Descriptive graph: every supplied source (states and reported links).
+  const full = buildGraph(all, () => null);
+  // Voice graph: trusted-provenance sources only; same upstream origin = one voice.
+  const voice = buildGraph(all.filter(trusted), (s) => `origin:${refOf(s)?.originId ?? refOf(s)?.id ?? ''}`);
+
+  const stateOf = (s: Source): LineageState => {
+    // A primary register publishes its own records: it is the origin even if
+    // someone else copied it (an incoming similarity link does not demote it).
+    if (established(s) && !s.syndicatedFrom && !s.derivedFrom) return 'ORIGINAL';
+    if (full.syndicated.has(s.id)) return 'SYNDICATED';
+    if (full.derived.has(s.id)) return 'DERIVED';
+    if (full.possible.has(s.id)) return 'POSSIBLE_LINEAGE';
+    return 'UNKNOWN';
+  };
+
+  const countedComponents = new Map<string, boolean>(); // voice root → has established original
+  const rawPublishersPerRoot = new Map<string, Set<string>>();
+  for (const c of counted) {
+    const s = sources.get(c.sourceId);
+    if (!s || !trusted(s)) continue; // counted items always have trusted provenance
+    const root = voice.find(`src:${s.id}`);
+    countedComponents.set(root, (countedComponents.get(root) ?? false) || stateOf(s) === 'ORIGINAL');
+    rawPublishersPerRoot.set(root, new Set([...(rawPublishersPerRoot.get(root) ?? []), normalizedPublisherKey(s.publisher)]));
+  }
+  const establishedVoices = [...countedComponents.values()].filter(Boolean).length;
+  const voices = establishedVoices + (establishedVoices === 0 && countedComponents.size > 0 ? 1 : 0);
+  const mergedByLineage = [...rawPublishersPerRoot.values()].some((p) => p.size > 1);
+  const touchesCounted = (l: LineageLink) => countedComponents.has(voice.endpointRoot(l.from)) || countedComponents.has(voice.endpointRoot(l.to));
+  const possibleLineage = voice.links.some((l) => l.certainty === 'POSSIBLE' && touchesCounted(l));
+
+  const refs = new Set(referenced);
+  const relevantRoots = new Set([...refs].filter((id) => sources.has(id)).map((id) => full.find(`src:${id}`)));
+  const reported = full.links
+    .filter((l) => relevantRoots.has(full.endpointRoot(l.from)) || relevantRoots.has(full.endpointRoot(l.to)))
+    .sort((a, b) => `${a.from}|${a.to}|${a.kind}`.localeCompare(`${b.from}|${b.to}|${b.kind}`))
+    .slice(0, LINEAGE_LIMITS.maxReportedLinks);
+
+  return Object.freeze({
+    policyVersion: LINEAGE_POLICY_VERSION,
+    voices,
+    establishedVoices,
+    sources: Object.freeze([...refs].filter((id) => sources.has(id)).sort().map((id) => {
+      const s = sources.get(id)!;
+      return Object.freeze({ sourceId: id, state: stateOf(s), established: stateOf(s) === 'ORIGINAL' });
+    })),
+    links: Object.freeze(reported),
+    mergedByLineage,
+    possibleLineage,
+    comparisonTruncated: full.truncated || voice.truncated,
+  });
+}
+
+/** Union-find lineage graph over `list` (deterministic: `list` is id-sorted). */
+function buildGraph(list: readonly Source[], originOf: (s: Source) => string | null) {
   const parent = new Map<string, string>();
   const find = (x: string): string => {
     if (!parent.has(x)) parent.set(x, x);
@@ -234,14 +304,14 @@ export function analyzeIndependence(
     const wire = WIRE_PUBLISHERS.get(k);
     return wire ? `wire:${wire}` : `publisher:${k}`;
   };
-
-  const all = [...sources.values()].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   const syndicated = new Set<string>();
   const derived = new Set<string>();
   const possible = new Set<string>();
 
-  for (const s of all) {
+  for (const s of list) {
     union(src(s.id), pub(normalizedPublisherKey(s.publisher))); // one publisher = one voice
+    const origin = originOf(s);
+    if (origin) union(src(s.id), origin); //                         one upstream origin = one voice
     if (s.syndicatedFrom) {
       union(pub(normalizedPublisherKey(s.publisher)), pub(normalizedPublisherKey(s.syndicatedFrom)));
       links.push({ from: s.id, to: pub(normalizedPublisherKey(s.syndicatedFrom)), kind: 'DECLARED_SYNDICATION', certainty: 'DECLARED' });
@@ -265,7 +335,7 @@ export function analyzeIndependence(
   // Identical normalized content: the earliest (publishedAt ?? retrievedAt,
   // then id) is the candidate original; later copies are SYNDICATED.
   const byPrint = new Map<string, Source[]>();
-  for (const s of all) if (s.contentFingerprint) byPrint.set(s.contentFingerprint, [...(byPrint.get(s.contentFingerprint) ?? []), s]);
+  for (const s of list) if (s.contentFingerprint) byPrint.set(s.contentFingerprint, [...(byPrint.get(s.contentFingerprint) ?? []), s]);
   for (const group of byPrint.values()) {
     if (group.length < 2) continue;
     const order = [...group].sort((a, b) => {
@@ -280,8 +350,10 @@ export function analyzeIndependence(
     }
   }
 
-  // Near-duplicates (bounded pairwise comparison).
-  const sketched = all.filter((s) => isSketch(s.similaritySketch)).slice(0, LINEAGE_LIMITS.maxSourcesCompared);
+  // Near-duplicates: bounded pairwise comparison; overflow is disclosed, never silent.
+  const allSketched = list.filter((s) => isSketch(s.similaritySketch));
+  const truncated = allSketched.length > LINEAGE_LIMITS.maxSourcesCompared;
+  const sketched = allSketched.slice(0, LINEAGE_LIMITS.maxSourcesCompared);
   for (let i = 0; i < sketched.length; i++) {
     for (let j = i + 1; j < sketched.length; j++) {
       const a = sketched[i];
@@ -295,54 +367,6 @@ export function analyzeIndependence(
       }
     }
   }
-
-  const established = (s: Source) => hasTrustedProvenance(s, trustedProviders) && trustedProviders.get(
-    (s.acquisition as { providerId: string }).providerId,
-  )?.primaryPublisher === true;
-  const stateOf = (s: Source): LineageState => {
-    // A primary register publishes its own records: it is the origin even if
-    // someone else copied it (an incoming similarity link does not demote it).
-    if (established(s) && !s.syndicatedFrom && !s.derivedFrom) return 'ORIGINAL';
-    if (syndicated.has(s.id)) return 'SYNDICATED';
-    if (derived.has(s.id)) return 'DERIVED';
-    if (possible.has(s.id)) return 'POSSIBLE_LINEAGE';
-    return 'UNKNOWN';
-  };
-
-  const countedComponents = new Map<string, boolean>(); // root → has established original
-  const rawPublishersPerRoot = new Map<string, Set<string>>();
-  for (const c of counted) {
-    const s = sources.get(c.sourceId);
-    if (!s) continue;
-    const root = find(src(s.id));
-    countedComponents.set(root, (countedComponents.get(root) ?? false) || stateOf(s) === 'ORIGINAL');
-    rawPublishersPerRoot.set(root, new Set([...(rawPublishersPerRoot.get(root) ?? []), normalizedPublisherKey(s.publisher)]));
-  }
-  const establishedVoices = [...countedComponents.values()].filter(Boolean).length;
-  const voices = establishedVoices + (establishedVoices === 0 && countedComponents.size > 0 ? 1 : 0);
-  const mergedByLineage = [...rawPublishersPerRoot.values()].some((p) => p.size > 1);
-
-  const endpointRoot = (x: string) => find(x.startsWith('publisher:') || x.startsWith('wire:') ? x : src(x));
-  const touchesCounted = (l: LineageLink) => countedComponents.has(endpointRoot(l.from)) || countedComponents.has(endpointRoot(l.to));
-  const possibleLineage = links.some((l) => l.certainty === 'POSSIBLE' && touchesCounted(l));
-
-  const refs = new Set(referenced);
-  const relevantRoots = new Set([...refs].filter((id) => sources.has(id)).map((id) => find(src(id))));
-  const reported = links
-    .filter((l) => relevantRoots.has(endpointRoot(l.from)) || relevantRoots.has(endpointRoot(l.to)))
-    .sort((a, b) => `${a.from}|${a.to}|${a.kind}`.localeCompare(`${b.from}|${b.to}|${b.kind}`))
-    .slice(0, LINEAGE_LIMITS.maxReportedLinks);
-
-  return Object.freeze({
-    policyVersion: LINEAGE_POLICY_VERSION,
-    voices,
-    establishedVoices,
-    sources: Object.freeze([...refs].filter((id) => sources.has(id)).sort().map((id) => {
-      const s = sources.get(id)!;
-      return Object.freeze({ sourceId: id, state: stateOf(s), established: stateOf(s) === 'ORIGINAL' });
-    })),
-    links: Object.freeze(reported),
-    mergedByLineage,
-    possibleLineage,
-  });
+  const endpointRoot = (x: string) => find(x.includes(':') && !x.startsWith('src:') && /^(publisher|wire|origin):/.test(x) ? x : src(x));
+  return { find, links, syndicated, derived, possible, truncated, endpointRoot };
 }
