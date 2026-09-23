@@ -181,6 +181,10 @@ export interface Source {
   /** SHA-256 hex of the retrieved content when retention ≠ REFERENCE_ONLY. */
   readonly contentHash?: string;
   readonly acquisition: Acquisition;
+  /** Original publisher when this is a syndicated/wire copy (set by the
+   * provider). Publisher identity = syndicatedFrom ?? publisher, so a
+   * republished story is never a second independent voice (Codex CF-04). */
+  readonly syndicatedFrom?: string;
   /** Uploaded by a user — never a verified fact by itself. */
   readonly userSubmitted?: boolean;
 }
@@ -338,7 +342,8 @@ export type ExclusionReason =
   | 'UNCONFIRMED_LLM_LINK'
   | 'SOURCE_RETRACTED'
   | 'SOURCE_CHANGED'
-  | 'DUPLICATE_CONTENT';
+  | 'DUPLICATE_CONTENT'
+  | 'SUPERSEDED_BY_SAME_PUBLISHER';
 
 export interface ConflictRecord {
   readonly claimId: string;

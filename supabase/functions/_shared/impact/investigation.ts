@@ -57,8 +57,10 @@ export interface AuditEvent {
   readonly hash: string;
 }
 
-export type DisputeKind = 'ORGANIZATION_RESPONSE' | 'CORRECTION_REQUEST' | 'RETRACTION_REQUEST' | 'SOURCE_UPDATE';
-export type DisputeResolution = 'CORRECTED' | 'UPHELD' | 'WITHDRAWN' | 'SOURCE_RETRACTED';
+export const DISPUTE_KINDS = ['ORGANIZATION_RESPONSE', 'CORRECTION_REQUEST', 'RETRACTION_REQUEST', 'SOURCE_UPDATE'] as const;
+export const DISPUTE_RESOLUTIONS = ['CORRECTED', 'UPHELD', 'WITHDRAWN', 'SOURCE_RETRACTED'] as const;
+export type DisputeKind = typeof DISPUTE_KINDS[number];
+export type DisputeResolution = typeof DISPUTE_RESOLUTIONS[number];
 
 export interface Dispute {
   readonly id: string;
@@ -149,6 +151,11 @@ export class Investigation {
     const a = this.authorize(actor);
     if (!a.ok) return a;
     if (claim.investigationId !== this.id) return fail('CROSS_INVESTIGATION_DENIED', 'claim belongs to another investigation');
+    // Single-subject investigations (Codex CF-01): a claim about another
+    // organization belongs to that organization's own investigation.
+    if (claim.subjectOrganizationId !== this.subjectOrganizationId) {
+      return fail('CROSS_INVESTIGATION_DENIED', 'claim subject differs from the investigation subject');
+    }
     if (this.#claims.has(claim.id)) return fail('INVALID_CLAIM', 'claim already exists');
     if (!this.#sources.has(claim.sourceId)) return fail('INVALID_CLAIM', 'claim source not in this investigation');
     this.#claims.set(claim.id, Object.freeze({ ...claim }));
@@ -215,6 +222,9 @@ export class Investigation {
     if (!a.ok) return a;
     if (!this.#claims.has(d.claimId)) return fail('INVALID_CLAIM', 'unknown claim');
     if (!isValidId(d.id) || this.#disputes.has(d.id)) return fail('INVALID_CLAIM', 'invalid or duplicate dispute id');
+    if (!isOneOf(d.kind, DISPUTE_KINDS)) return fail('INVALID_CLAIM', 'unknown dispute kind');
+    if (parseIsoMs(d.openedAt) === null) return fail('INVALID_CLAIM', 'openedAt required');
+    if (!Array.isArray(d.submittedEvidenceIds)) return fail('INVALID_EVIDENCE', 'submittedEvidenceIds required');
     for (const id of d.submittedEvidenceIds) if (!this.#evidence.has(id)) return fail('INVALID_EVIDENCE', 'unknown evidence');
     this.#disputes.set(d.id, Object.freeze({ ...d, submittedEvidenceIds: Object.freeze([...d.submittedEvidenceIds]) }));
     await this.#log(d.openedAt, 'DISPUTE_OPENED', actor, [d.id, d.claimId, ...d.submittedEvidenceIds], [d.kind]);
@@ -226,6 +236,8 @@ export class Investigation {
     if (!a.ok) return a;
     const d = this.#disputes.get(id);
     if (!d || d.resolution) return fail('INVALID_CLAIM', 'unknown or already resolved dispute');
+    if (!isOneOf(resolution, DISPUTE_RESOLUTIONS)) return fail('INVALID_CLAIM', 'unknown dispute resolution');
+    if (parseIsoMs(at) === null) return fail('INVALID_CLAIM', 'timestamp required');
     this.#disputes.set(id, Object.freeze({ ...d, resolution, resolvedAt: at }));
     await this.#log(at, 'DISPUTE_RESOLVED', actor, [id, d.claimId], [resolution, 'REVERIFICATION_REQUIRED']);
     if (resolution === 'CORRECTED') await this.#log(at, 'CORRECTION', actor, [d.claimId], ['CORRECTED']);

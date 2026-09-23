@@ -41,7 +41,7 @@ import type {
   TrustedProviderRef,
 } from './types.ts';
 
-export const VERIFICATION_ENGINE_VERSION = 'impact-verification/2';
+export const VERIFICATION_ENGINE_VERSION = 'impact-verification/3';
 export const IMPACT_POLICY_VERSION =
   `${VERIFICATION_ENGINE_VERSION}+${SOURCE_AUTHORITY_POLICY_VERSION}+${TEMPORAL_POLICY_VERSION}`;
 
@@ -84,6 +84,8 @@ export interface AssessedEvidence {
   readonly sourceId: string;
   readonly sourceType: Source['type'];
   readonly publisher: string;
+  /** Normalized identity of the original publisher (syndicatedFrom ?? publisher). */
+  readonly publisherKey: string;
   readonly authority: AuthorityScope;
   readonly declaredRelationship: EvidenceRelationship;
   readonly effectiveRelationship: EffectiveRelationship;
@@ -191,7 +193,7 @@ export async function computeEvidenceSetHash(
           id: s.id, type: s.type, publisher: s.publisher, publisherOrganizationId: s.publisherOrganizationId,
           retrievedAt: s.retrievedAt, publishedAt: s.publishedAt, newsGenre: s.newsGenre, status: s.status,
           contentHash: s.contentHash, userSubmitted: s.userSubmitted, jurisdiction: s.jurisdiction, uri: s.uri,
-          retention: s.retention, acquisition: s.acquisition,
+          retention: s.retention, acquisition: s.acquisition, syndicatedFrom: s.syndicatedFrom,
         }
         : null,
     };
@@ -340,6 +342,7 @@ export async function verifyClaim(
       sourceId: src.id,
       sourceType: src.type,
       publisher: src.publisher,
+      publisherKey: normPublisher(src.syndicatedFrom ?? src.publisher),
       authority,
       declaredRelationship: e.relationship,
       effectiveRelationship: rel,
@@ -353,6 +356,26 @@ export async function verifyClaim(
     } else {
       contextual.push(assessed);
       if (authority === 'USER_SUBMITTED') review.add('USER_SUBMITTED_MATERIAL');
+    }
+  }
+
+  // One voice per publisher (Codex CF-04): among counted items from the same
+  // publisher identity only the most recent statement counts — a newer
+  // statement supersedes (e.g. corrects) an older one, and a republished copy
+  // never becomes a second independent source or an artificial conflict.
+  {
+    const latest = new Map<string, AssessedEvidence>();
+    for (const a of counted) {
+      const p = latest.get(a.publisherKey);
+      if (!p || a.asOf > p.asOf || (a.asOf === p.asOf && a.evidenceId > p.evidenceId)) latest.set(a.publisherKey, a);
+    }
+    const keep = new Set([...latest.values()].map((a) => a.evidenceId));
+    for (let i = counted.length - 1; i >= 0; i--) {
+      if (!keep.has(counted[i].evidenceId)) {
+        excluded.push({ evidenceId: counted[i].evidenceId, reason: 'SUPERSEDED_BY_SAME_PUBLISHER' });
+        counted.splice(i, 1);
+        rules.push('R13_ONE_VOICE_PER_PUBLISHER');
+      }
     }
   }
 
@@ -452,7 +475,7 @@ export async function verifyClaim(
   }
 
   // Sufficiency describes the evidence base, not the organization.
-  const indepPublishers = new Set(counted.map((a) => normPublisher(a.publisher)));
+  const indepPublishers = new Set(counted.map((a) => a.publisherKey));
   let sufficiency: EvidenceSufficiency;
   if (counted.length === 0 && contextual.length === 0) sufficiency = 'NO_EVIDENCE';
   else if (conflicts.some((c) => c.positions.some((p) => counted.some((a) => a.evidenceId === p.evidenceId)))) {

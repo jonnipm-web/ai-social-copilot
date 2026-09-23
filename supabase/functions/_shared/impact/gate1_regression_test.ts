@@ -73,9 +73,10 @@ Deno.test('G1-01c a source without acquisition, or with a missing trustedProvide
 
 const regClaim: Claim = { ...finClaim, kind: 'LEGAL_REGISTRATION', text: 'We are registered.' };
 
-Deno.test('G1-02a a future observedPeriod.to cannot make 2020 evidence current', async () => {
+Deno.test('G1-02a a future observedPeriod.to is rejected; 2020 evidence stays OUTDATED', async () => {
   const old: Source = { ...SOURCES.registry, id: 'src-reg-2020', retrievedAt: '2020-01-01T00:00:00Z', contentHash: hash('20') };
-  const v = await run(regClaim, [ev('e1', old.id, { observedPeriod: { to: '2099-01-01' } })], [old]);
+  assertEquals(await code(regClaim, [ev('e1', old.id, { observedPeriod: { to: '2099-01-01' } })], [old]), 'INVALID_EVIDENCE');
+  const v = await run(regClaim, [ev('e1', old.id, { observedPeriod: { to: '2020-01-01' } })], [old]);
   assertEquals(v.status, 'OUTDATED');
 });
 
@@ -183,6 +184,81 @@ Deno.test('G1-06 evidenceSetHash changes when jurisdiction, uri, retention or ac
     const v = await run(finClaim, [ev('e1', SOURCES.hbAudited.id)], [{ ...SOURCES.hbAudited, ...c }]);
     assertNotEquals(v.evidenceSetHash, base.evidenceSetHash, JSON.stringify(c));
   }
+});
+
+// ── Codex Final findings ───────────────────────────────────────────────────
+
+Deno.test('CF-01 an investigation only accepts claims about its own subject', async () => {
+  const owner: Actor = { subjectRef: 'subj-owner', projectIds: [] };
+  const inv = await Investigation.create(owner, { id: 'inv-1', subjectOrganizationId: ORG, createdAt: '2026-09-02T00:00:00Z' });
+  assert(inv.ok);
+  assert((await inv.value.addSource(owner, SOURCES.hbWebsite, EVALUATED_AT)).ok);
+  const r = await inv.value.addClaim(owner, { ...finClaim, subjectOrganizationId: 'org-other' }, EVALUATED_AT);
+  assertEquals(r.ok ? 'OK' : r.error.code, 'CROSS_INVESTIGATION_DENIED');
+  assert((await inv.value.addClaim(owner, finClaim, EVALUATED_AT)).ok);
+});
+
+Deno.test('CF-02 an observed period extending past retrieval is rejected', async () => {
+  const src: Source = { ...SOURCES.govWells, id: 'src-gov-mid', retrievedAt: '2026-06-01T00:00:00Z', contentHash: hash('26') };
+  const q = { metric: 'wells_built', value: 20, unit: 'count' };
+  const c: Claim = { ...finClaim, kind: 'IMPACT_OUTPUT', quantity: q, period: { from: '2026-01-01', to: '2026-12-31' }, text: '20 wells in 2026.' };
+  assertEquals(await code(c, [ev('e1', src.id, { relationshipBasis: 'STRUCTURED_MATCH', reportedQuantity: q, observedPeriod: { from: '2026-01-01', to: '2026-12-31' } })], [src]), 'INVALID_EVIDENCE');
+  const ok = await run(c, [ev('e1', src.id, { relationshipBasis: 'STRUCTURED_MATCH', reportedQuantity: q, observedPeriod: { from: '2026-01-01', to: '2026-06-01' } })], [src]);
+  assertEquals(ok.status, 'SUPPORTED');
+});
+
+Deno.test('CF-03 jurisdiction-bound sources without a jurisdiction are never independent', () => {
+  for (const type of ['OFFICIAL_REGISTRY', 'REGULATOR', 'COURT_RECORD', 'GOVERNMENT_RECORD'] as const) {
+    const s: Source = { ...SOURCES.registry, id: `src-${type}`, type, acquisition: providerFor(type), jurisdiction: undefined, retention: 'EXCERPT_AND_HASH' };
+    const kind = type === 'GOVERNMENT_RECORD' ? 'IMPACT_OUTPUT' : 'REGULATORY_STATUS';
+    assertEquals(authorityFor(s, { ...finClaim, kind }, TRUSTED), 'CONTEXTUAL', type);
+  }
+  assertEquals(authorityFor(SOURCES.registry, regClaim, TRUSTED), 'AUTHORITATIVE');
+});
+
+Deno.test('CF-04 syndicated copies and repeated statements are one voice per publisher', async () => {
+  const q = (v: number) => ({ metric: 'wells_built', value: v, unit: 'count' });
+  const c: Claim = { ...finClaim, kind: 'IMPACT_OUTPUT', quantity: q(20), text: '20 wells.' };
+  const news = (id: string, publisher: string, over: Partial<Source> = {}): Source => ({
+    id, type: 'NEWS', newsGenre: 'REPORTING', publisher, acquisition: providerFor('NEWS'), retrievedAt: '2026-09-01T00:00:00Z',
+    status: 'ACTIVE', retention: 'EXCERPT_AND_HASH', contentHash: hash(id.replace(/[^a-f0-9]/g, '') + 'cd'), ...over,
+  });
+  const wire = news('n1', 'Wire Service', { publishedAt: '2026-03-01T00:00:00Z' });
+  const copy = news('n2', 'Wire Service via Outlet', { syndicatedFrom: 'Wire Service', publishedAt: '2026-03-02T00:00:00Z' });
+  const sx = (v: number) => ({ relationshipBasis: 'STRUCTURED_MATCH' as const, reportedQuantity: q(v) });
+  // wire supports, syndicated copy (with wrapper) contradicts → no artificial conflict
+  const v = await run(c, [ev('e1', 'n1', sx(20)), ev('e2', 'n2', sx(0))], [wire, copy]);
+  assertEquals(v.conflicts, []);
+  assert(v.excluded.some((x) => x.reason === 'SUPERSEDED_BY_SAME_PUBLISHER'));
+  assertEquals(deriveIndicators({ results: [v] }).some((i) => i.code === 'CONFLICTING_CLAIMS'), false);
+  // two corroborating copies of the same wire story are not MULTI_SOURCE
+  const both = await run(c, [ev('e1', 'n1', sx(20)), ev('e2', 'n2', sx(20))], [wire, copy]);
+  assertEquals(both.sufficiency, 'INDEPENDENT_SUPPORT');
+  // a publisher's later correction supersedes its earlier report
+  const later = news('n3', 'Wire Service', { publishedAt: '2026-05-01T00:00:00Z' });
+  const corrected = await run(c, [ev('e1', 'n1', sx(20)), ev('e3', 'n3', sx(12))], [wire, later]);
+  assertEquals(corrected.status, 'PARTIALLY_SUPPORTED');
+});
+
+Deno.test('CF-05 dispute kinds, resolutions and timestamps are validated at runtime', async () => {
+  const owner: Actor = { subjectRef: 'subj-owner', projectIds: [] };
+  const inv = await Investigation.create(owner, { id: 'inv-1', subjectOrganizationId: ORG, createdAt: '2026-09-02T00:00:00Z' });
+  assert(inv.ok);
+  const w = inv.value;
+  assert((await w.addSource(owner, SOURCES.hbWebsite, EVALUATED_AT)).ok);
+  assert((await w.addClaim(owner, finClaim, EVALUATED_AT)).ok);
+  const bad = [
+    { id: 'd1', claimId: 'c1', kind: 'UNKNOWN_KIND', openedAt: EVALUATED_AT, submittedEvidenceIds: [] },
+    { id: 'd2', claimId: 'c1', kind: 'constructor', openedAt: EVALUATED_AT, submittedEvidenceIds: [] },
+    { id: 'd3', claimId: 'c1', kind: 'ORGANIZATION_RESPONSE', openedAt: 'not-a-date', submittedEvidenceIds: [] },
+  ];
+  // deno-lint-ignore no-explicit-any
+  for (const d of bad) assertEquals((await w.openDispute(owner, d as any)).ok, false, d.id);
+  assert((await w.openDispute(owner, { id: 'd4', claimId: 'c1', kind: 'ORGANIZATION_RESPONSE', openedAt: EVALUATED_AT, submittedEvidenceIds: [] })).ok);
+  // deno-lint-ignore no-explicit-any
+  assertEquals((await w.resolveDispute(owner, 'd4', 'UNKNOWN_RESOLUTION' as any, EVALUATED_AT)).ok, false);
+  assertEquals((await w.resolveDispute(owner, 'd4', 'CORRECTED', 'yesterday')).ok, false);
+  assert((await w.resolveDispute(owner, 'd4', 'CORRECTED', EVALUATED_AT)).ok);
 });
 
 // ── Claude review findings ─────────────────────────────────────────────────

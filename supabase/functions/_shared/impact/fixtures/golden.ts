@@ -96,7 +96,7 @@ export const SOURCES = {
   }),
   govSchools: src({
     id: 'src-gov-schools-2024', type: 'GOVERNMENT_RECORD', publisher: 'Exampleland Ministry of Education (fixture)',
-    retention: 'SNAPSHOT', contentHash: hash('d1'),
+    retention: 'SNAPSHOT', contentHash: hash('d1'), jurisdiction: XA,
   }),
   newsSchools: src({
     id: 'src-news-schools', type: 'NEWS', newsGenre: 'REPORTING', publisher: 'The Example Tribune (fixture)',
@@ -112,7 +112,7 @@ export const SOURCES = {
   }),
   govWells: src({
     id: 'src-gov-wells-2025', type: 'GOVERNMENT_RECORD', publisher: 'Exampleland Water Authority (fixture)',
-    retention: 'SNAPSHOT', contentHash: hash('f1'),
+    retention: 'SNAPSHOT', contentHash: hash('f1'), jurisdiction: XA,
   }),
   academicWells: src({
     id: 'src-academic-wells', type: 'ACADEMIC', publisher: 'Journal of Fictional Development Studies',

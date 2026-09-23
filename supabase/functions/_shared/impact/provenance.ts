@@ -73,14 +73,16 @@ export const LEGAL_STAGES = [
   'UNDER_APPEAL', 'OVERTURNED', 'CLOSED_NO_ACTION',
 ] as const;
 
-/** A period must be real dates, from ≤ to, and must not start after `notAfterMs`. */
+/** A period must be real dates, from ≤ to, and must lie entirely at or
+ * before `notAfterMs` (Codex CF-02: a source cannot have observed any part
+ * of a period after it was retrieved). */
 export function isValidPeriod(p: { from?: string; to?: string } | undefined, notAfterMs?: number): boolean {
   if (p === undefined) return true;
   const from = p.from === undefined ? null : parseIsoMs(p.from);
   const to = p.to === undefined ? null : parseIsoMs(p.to);
   if ((p.from !== undefined && from === null) || (p.to !== undefined && to === null)) return false;
   if (from !== null && to !== null && from > to) return false;
-  if (notAfterMs !== undefined && from !== null && from > notAfterMs) return false;
+  if (notAfterMs !== undefined && ((from !== null && from > notAfterMs) || (to !== null && to > notAfterMs))) return false;
   return true;
 }
 
@@ -189,6 +191,9 @@ export function validateSource(s: Source, evaluatedAtMs: number): ImpactResult<S
   if (!a || !(a.method === 'USER_UPLOAD' || a.method === 'ANALYST_ENTRY' || (a.method === 'PROVIDER' && isValidId(a.providerId)))) {
     return fail('INVALID_SOURCE', 'acquisition (PROVIDER+providerId | USER_UPLOAD | ANALYST_ENTRY) required', { sourceId: s.id });
   }
+  if (s.syndicatedFrom !== undefined && (typeof s.syndicatedFrom !== 'string' || !s.syndicatedFrom.trim() || s.syndicatedFrom.length > LIMITS.maxPublisherLength)) {
+    return fail('INVALID_SOURCE', 'syndicatedFrom must be a non-empty publisher', { sourceId: s.id });
+  }
   if (s.jurisdiction !== undefined && !/^[A-Za-z]{2}$/.test(s.jurisdiction.country ?? '')) {
     return fail('INVALID_SOURCE', 'jurisdiction.country must be ISO 3166-1 alpha-2', { sourceId: s.id });
   }
@@ -285,7 +290,7 @@ export async function validateEvidence(
   // Evidence cannot describe a state that begins after the source was retrieved.
   const retrievedMs = parseIsoMs(sources.get(e.sourceId)!.retrievedAt)!;
   if (!isValidPeriod(e.observedPeriod, retrievedMs)) {
-    return fail('INVALID_EVIDENCE', 'observedPeriod invalid, reversed or starting after retrieval', { evidenceId: e.id });
+    return fail('INVALID_EVIDENCE', 'observedPeriod invalid, reversed or extending past retrieval', { evidenceId: e.id });
   }
   return ok(e);
 }

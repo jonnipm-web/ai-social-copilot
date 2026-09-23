@@ -23,7 +23,7 @@
  */
 import type { Claim, ClaimKind, Source, TrustedProviderRef } from './types.ts';
 
-export const SOURCE_AUTHORITY_POLICY_VERSION = 'impact-source-authority/2';
+export const SOURCE_AUTHORITY_POLICY_VERSION = 'impact-source-authority/3';
 
 export type AuthorityScope =
   | 'AUTHORITATIVE'
@@ -149,11 +149,16 @@ function lookup(t: KindTable, kind: ClaimKind): AuthorityScope {
   return Object.prototype.hasOwnProperty.call(t, kind) ? (t[kind] as AuthorityScope) : t.default;
 }
 
+/** Source types whose authority is legal/territorial: independence requires
+ * an explicit jurisdiction covered by the provider (Codex CF-03). */
+const JURISDICTION_BOUND: ReadonlySet<Source['type']> = new Set(['OFFICIAL_REGISTRY', 'REGULATOR', 'COURT_RECORD', 'GOVERNMENT_RECORD']);
+
 export function hasTrustedProvenance(source: Source, trustedProviders: ReadonlyMap<string, TrustedProviderRef>): boolean {
   const a = source.acquisition;
   if (!a || a.method !== 'PROVIDER') return false;
   const p = trustedProviders.get(a.providerId);
   if (!p || p.sourceType !== source.type) return false;
+  if (JURISDICTION_BOUND.has(source.type) && !source.jurisdiction) return false;
   if (source.jurisdiction && !p.jurisdictions.includes(source.jurisdiction.country.toUpperCase())) return false;
   return true;
 }
