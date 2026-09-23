@@ -69,6 +69,11 @@ export interface VerificationContext {
   /** Server-side provider registry. Required: without it nothing can be
    * independent (fail closed, Codex G1-01). */
   readonly trustedProviders: readonly TrustedProviderRef[];
+  /** I2 entity-spoofing guard: registry sources whose snapshot does NOT
+   * resolve to the claim subject (server-derived by entity resolution). A
+   * caller labelling another organization's registry record as "about" the
+   * subject gets it excluded as ENTITY_MISMATCH. */
+  readonly foreignRegistrySourceIds?: readonly string[];
 }
 
 export interface VerificationInput {
@@ -279,6 +284,7 @@ export async function verifyClaim(
   let staleCount = 0;
   const seenContentHashes = new Map<string, string>(); // contentHash → sourceId
   const flagged = new Set(ctx.flaggedSourceIds ?? []);
+  const foreign = new Set(ctx.foreignRegistrySourceIds ?? []);
   if (!Array.isArray(ctx.trustedProviders)) return fail('INTERNAL_ERROR', 'trustedProviders required');
   const providers = new Map(ctx.trustedProviders.map((p) => [p.id, p]));
 
@@ -300,6 +306,11 @@ export async function verifyClaim(
     if (e.aboutOrganizationId !== claim.subjectOrganizationId) {
       exclude('ENTITY_MISMATCH', 'IDENTITY_UNCONFIRMED');
       rules.push('R03_ENTITY_MISMATCH');
+      continue;
+    }
+    if (foreign.has(src.id)) {
+      exclude('ENTITY_MISMATCH', 'IDENTITY_UNCONFIRMED');
+      rules.push('R03B_REGISTRY_RECORD_OF_ANOTHER_ENTITY');
       continue;
     }
     if (e.relationshipBasis === 'LLM_SUGGESTED') {
@@ -523,8 +534,10 @@ export async function verifyClaim(
   const relevantFlags = [...flagged].filter((id) => sources.has(id)).sort();
   const providerKey = [...ctx.trustedProviders]
     .map((p) => `${p.id}:${p.sourceType}:${[...p.jurisdictions].sort().join('+')}:${p.primaryPublisher ? 'primary' : 'secondary'}`).sort();
+  const foreignKey = [...foreign].filter((id) => sources.has(id)).sort();
   const reviewBindingHash = await sha256Hex(canonical({
     evidenceSetHash, flagged: relevantFlags, identity: ctx.subjectIdentity, dispute: !!ctx.openDispute, providers: providerKey,
+    ...(foreignKey.length ? { foreign: foreignKey } : {}),
   }));
   let reviewState: ReviewState = review.size > 0 ? 'REVIEW_REQUIRED' : 'AUTOMATED';
   if (ctx.humanReview) {
@@ -546,7 +559,7 @@ export async function verifyClaim(
 
   const ctxKey = canonical({
     identity: ctx.subjectIdentity, dispute: !!ctx.openDispute, flagged: relevantFlags, providers: providerKey,
-    review: ctx.humanReview ?? null,
+    review: ctx.humanReview ?? null, ...(foreignKey.length ? { foreign: foreignKey } : {}),
   });
   const resultId = `vr_${
     (await sha256Hex(`${IMPACT_POLICY_VERSION}|${claim.id}|${ctx.evaluatedAt}|${evidenceSetHash}|${ctxKey}`)).slice(0, 32)

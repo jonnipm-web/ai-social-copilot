@@ -231,6 +231,10 @@ async function computeVerification(
       subjectIdentity: subjectIdentityFrom(inv, data.sources, providers),
       openDispute,
       flaggedSourceIds: flagged,
+      // I2 entity-spoofing guard: a registry snapshot counts only for the organization it CONFIRMS.
+      foreignRegistrySourceIds: data.sources
+        .filter((s) => s.snapshot && resolveEntity(inv.subjectIdentity, s.snapshot.identity).outcome !== 'CONFIRMED_MATCH')
+        .map((s) => s.source.id),
       trustedProviders: providers.trustedRefs(), // CF-06: server registry only
       ...(humanReviewBindingHash
         ? { humanReview: { reviewedAt: now, reviewerRef: await actorRefOf(actor.userId), reviewBindingHash: humanReviewBindingHash } }
@@ -336,7 +340,10 @@ export async function handleLabRequest(
         metrics: { registry: { providerId: reg.descriptor.id, outcome: 'NO_MATCH', candidates: 0 } },
       });
     }
-    const found = await searchProvider(reg.descriptor.id, q, providers);
+    // A registration is the identifier: the registry is asked for it ALONE, so a
+    // mismatching name surfaces as a review signal instead of hiding the match.
+    const providerQuery = q.registration ? { registration: q.registration, scheme: q.scheme, country: q.country } : q;
+    const found = await searchProvider(reg.descriptor.id, providerQuery, providers);
     if (!found.ok) return found; // REGISTRY_UNAVAILABLE etc. — an operational state, never "not registered"
     const res = resolveOrganization(q, found.value, now, (id) => providers.get(id)?.descriptor.freshnessDays ?? 0);
     return ok({

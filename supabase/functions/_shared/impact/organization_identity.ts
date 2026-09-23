@@ -66,6 +66,8 @@ export type IdentityReason =
 
 export interface IdentityCandidate {
   readonly canonicalOrgId: string;
+  /** Every registration the registries declare for this organization. */
+  readonly canonicalIds: readonly string[];
   readonly providerId: string;
   readonly recordId: string;
   readonly legalName: string;
@@ -128,14 +130,33 @@ export function resolveOrganization(
   const inJurisdiction = records.filter((r) => !country || r.jurisdiction.country === country);
   if (country && inJurisdiction.length < records.length) reasons.add('OTHER_JURISDICTION_IGNORED');
 
-  // One entry per canonical organization (newest snapshot represents it).
+  // One entry per ORGANIZATION: records whose canonical ids intersect (a
+  // registry's own cross-reference, e.g. a charity's company number) are one
+  // organization — joined by identifiers only, never by names. The newest
+  // snapshot represents it; the group key is its smallest canonical id.
   const byOrg = new Map<string, CanonicalRegistryRecord>();
-  const pick = (rs: readonly CanonicalRegistryRecord[]) => {
-    const m = new Map<string, CanonicalRegistryRecord>();
-    for (const r of rs) {
-      const cur = m.get(r.canonicalOrgId);
-      if (!cur || r.retrievedAt > cur.retrievedAt || (r.retrievedAt === cur.retrievedAt && r.recordId < cur.recordId)) m.set(r.canonicalOrgId, r);
+  const groupIds = new Map<string, readonly string[]>();
+  const pick =(rs: readonly CanonicalRegistryRecord[]) => {
+    const parent = new Map<string, string>();
+    const find = (x: string): string => {
+      if (!parent.has(x)) parent.set(x, x);
+      let r = x;
+      while (parent.get(r) !== r) r = parent.get(r)!;
+      return r;
+    };
+    for (const r of rs) for (const c of r.canonicalIds) {
+      const [a, b] = [find(r.canonicalOrgId), find(c)];
+      if (a !== b) (a < b ? parent.set(b, a) : parent.set(a, b));
     }
+    const m = new Map<string, CanonicalRegistryRecord>();
+    const ids = new Map<string, Set<string>>();
+    for (const r of rs) {
+      const k = find(r.canonicalOrgId);
+      ids.set(k, new Set([...(ids.get(k) ?? []), ...r.canonicalIds]));
+      const cur = m.get(k);
+      if (!cur || r.retrievedAt > cur.retrievedAt || (r.retrievedAt === cur.retrievedAt && r.recordId < cur.recordId)) m.set(k, r);
+    }
+    for (const [k, v] of ids) groupIds.set(k, [...v].sort());
     return m;
   };
 
@@ -149,7 +170,8 @@ export function resolveOrganization(
     );
     for (const [k, v] of pick(hits)) {
       byOrg.set(k, v);
-      extra.set(k, [v.registrationNumber === reg ? 'REGISTRATION_EQUAL' : 'CROSS_REFERENCE_EQUAL']);
+      const direct = hits.some((h) => h.registrationNumber === reg && groupIds.get(k)?.includes(h.canonicalOrgId));
+      extra.set(k, [direct ? 'REGISTRATION_EQUAL' : 'CROSS_REFERENCE_EQUAL']);
     }
     if (byOrg.size === 0) { outcome = 'NO_MATCH'; reasons.add('REGISTRATION_NOT_FOUND'); } // never falls back to a name
     else if (byOrg.size > 1) { outcome = 'AMBIGUOUS'; reasons.add('MULTIPLE_ORGANIZATIONS'); }
@@ -162,7 +184,7 @@ export function resolveOrganization(
     const dom = q.domain ? normalizeDomain(q.domain) : null;
     const domainHits = dom ? pick(inJurisdiction.filter((r) => r.domains.includes(dom))) : new Map();
     if (dom && domainHits.size > 0) {
-      for (const [k, v] of domainHits) { byOrg.set(k, v); extra.set(k, ['DOMAIN_EQUAL']); }
+      for (const [k, v] of domainHits as Map<string, CanonicalRegistryRecord>) { byOrg.set(k, v); extra.set(k, ['DOMAIN_EQUAL']); }
       if (byOrg.size > 1) { outcome = 'AMBIGUOUS'; reasons.add('MULTIPLE_ORGANIZATIONS'); }
       else if (nameMatches(nameSignals(q.name, [...byOrg.values()][0])) && q.name) outcome = 'STRONG';
       else { outcome = 'AMBIGUOUS'; reasons.add('DOMAIN_ONLY'); }
@@ -180,19 +202,19 @@ export function resolveOrganization(
     reasons.add('NO_IDENTIFIERS');
   }
 
-  const all = [...byOrg.values()].sort((a, b) => (a.canonicalOrgId < b.canonicalOrgId ? -1 : 1));
+  const all = [...byOrg.entries()].sort(([a], [b]) => (a < b ? -1 : 1));
   if (all.length > IDENTITY_LIMITS.maxCandidates) reasons.add('CANDIDATES_TRUNCATED');
-  const candidates = all.slice(0, IDENTITY_LIMITS.maxCandidates).map((r) => {
+  const candidates = all.slice(0, IDENTITY_LIMITS.maxCandidates).map(([key, r]) => {
     const fresh = snapshotFresh(r, freshnessDays(r.providerId), evaluatedAtMs);
     const signals = [...new Set<IdentitySignal>([
-      ...(extra.get(r.canonicalOrgId) ?? []),
+      ...(extra.get(key) ?? []),
       ...nameSignals(q.name, r),
       ...(r.status === 'DISSOLVED' || r.status === 'REMOVED' ? ['DISSOLVED_OR_REMOVED' as const] : []),
       ...(fresh ? [] : ['STALE_SNAPSHOT' as const]),
       ...(r.synthetic ? ['SYNTHETIC_FIXTURE' as const] : []),
     ])].sort();
     return Object.freeze({
-      canonicalOrgId: r.canonicalOrgId, providerId: r.providerId, recordId: r.recordId, legalName: r.name,
+      canonicalOrgId: r.canonicalOrgId, canonicalIds: Object.freeze(groupIds.get(key) ?? [...r.canonicalIds]), providerId: r.providerId, recordId: r.recordId, legalName: r.name,
       country: r.jurisdiction.country, status: r.status, signals: Object.freeze(signals), snapshotFresh: fresh,
       retrievedAt: r.retrievedAt, ...(r.sourceAsOf ? { sourceAsOf: r.sourceAsOf } : {}), synthetic: r.synthetic,
     });

@@ -226,6 +226,16 @@ BEGIN
        OR (e.relationship_basis = 'HUMAN_ASSESSED' AND it.tag IS DISTINCT FROM
              CASE e.relationship WHEN 'SUPPORTS' THEN 'SUPPORTS' WHEN 'CONTRADICTS' THEN 'CONTRADICTS' END)
        OR (e.relationship_basis = 'REGISTRY_RECORD' AND it.tag IS DISTINCT FROM 'SUPPORTS')
+       -- I2 entity-spoofing guard: a registry snapshot counts only for the
+       -- organization it identifies — one of its canonical ids must be a
+       -- registration declared for the investigation subject.
+       OR (s.snapshot IS NOT NULL AND NOT EXISTS (
+             SELECT 1 FROM public.impact_investigations inv,
+                  jsonb_array_elements(coalesce(inv.subject_identity->'registrations', '[]'::jsonb)) AS reg(r)
+             WHERE inv.id = NEW.investigation_id
+               AND (s.snapshot->'canonicalIds') ? public.impact_canonical_org_id(
+                     reg.r->'jurisdiction'->>'country', reg.r->>'scheme',
+                     upper(regexp_replace(normalize(reg.r->>'value', NFKC), '[[:space:]./-]', '', 'g')))))
        OR (e.relationship_basis = 'STRUCTURED_MATCH' AND (
              cl.quantity_metric IS DISTINCT FROM e.reported_metric OR cl.quantity_unit IS DISTINCT FROM e.reported_unit
              OR it.tag IS DISTINCT FROM CASE

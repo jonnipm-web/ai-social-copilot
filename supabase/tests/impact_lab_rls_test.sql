@@ -95,7 +95,8 @@ ON CONFLICT (id) DO NOTHING;
 SET ROLE service_role;
 
 INSERT INTO public.impact_investigations (id, owner_id, project_id, subject_org_ref, subject_org_type, subject_identity)
-VALUES (:IA, :UA, 'a1111111-0000-0000-0000-00000000000a', 'org-hopebridge', 'FOUNDATION', '{"legalName":"HopeBridge Foundation"}'),
+VALUES (:IA, :UA, 'a1111111-0000-0000-0000-00000000000a', 'org-hopebridge', 'FOUNDATION',
+        '{"legalName":"HopeBridge Foundation","registrations":[{"jurisdiction":{"country":"XA"},"scheme":"charity-number","value":"XA-1234567"}]}'),
        (:IB, :UB, NULL, 'org-northstar', 'NGO', '{"legalName":"Northstar Relief Initiative"}');
 
 INSERT INTO public.impact_sources (investigation_id, ref, source_type, publisher, publisher_org_ref, retrieved_at, retention,

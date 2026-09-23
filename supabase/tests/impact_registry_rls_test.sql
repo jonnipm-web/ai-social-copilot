@@ -61,7 +61,7 @@ INSERT INTO auth.users (id, email) VALUES
   ('dddddddd-0000-0000-0000-00000000000d', 'user-d@test.invalid')
 ON CONFLICT (id) DO NOTHING;
 INSERT INTO public.impact_investigations (id, owner_id, subject_org_ref, subject_org_type, subject_identity) VALUES
-  (:IC, :UC, 'org-northstar', 'COMMUNITY_PROJECT', '{"legalName":"Northstar Relief"}'),
+  (:IC, :UC, 'org-northstar', 'COMMUNITY_PROJECT', '{"legalName":"Northstar Relief","registrations":[{"jurisdiction":{"country":"XA"},"scheme":"charity-number","value":"XA-999.0001"}]}'),
   (:ID, :UD, 'org-northstar', 'COMMUNITY_PROJECT', '{"legalName":"Northstar Relief"}');
 
 -- ── parity vector with organization_identity.ts canonicalOrgId ─────────────
@@ -201,6 +201,41 @@ SELECT pg_temp.expect_fail('I2-28 a stored result cannot count a REGISTRY_RECORD
         'contradicting', jsonb_build_array(jsonb_build_object('evidenceId', 'c-stmt.rec', 'sourceId', 'src-ch', 'authority', 'AUTHORITATIVE', 'effectiveRelationship', 'CONTRADICTS')),
         'contextual', '[]'::jsonb, 'excluded', '[]'::jsonb, 'gaps', '[]'::jsonb, 'rulesApplied', '[]'::jsonb, 'subjectIdentity', 'CONFIRMED',
         'claimKind', 'LEGAL_REGISTRATION', 'subjectOrganizationId', 'org-northstar'), 'cccccccc-0000-0000-0000-00000000000c')$$, 'IMPACT_RESULT_INCONSISTENT');
+
+-- Entity spoofing: another organization's registry record cited as evidence "about" the subject.
+INSERT INTO public.impact_sources (investigation_id, ref, source_type, publisher, retrieved_at, retention, content_hash,
+  acquisition_method, acquisition_provider_id, jurisdiction_country, jurisdiction_registry, snapshot, created_by) VALUES
+  (:IC, 'src-other', 'OFFICIAL_REGISTRY', 'Exampleland Charity Registry (fixture)', '2026-09-01T00:00:00Z', 'SNAPSHOT', repeat('4', 64),
+   'PROVIDER', 'fixture-xa-charity-registry', 'XA', 'fixture-xa-charity-registry',
+   pg_temp.snap('fixture-xa-charity-registry', 'xa-1234567', 'XA', 'charity-number', 'XA1234567', 'hopebridge foundation', 'REGISTERED', '4'), :UC);
+INSERT INTO public.impact_claims (investigation_id, ref, kind, claim_text, subject_org_ref, source_ref, extracted_at, origin, created_by) VALUES
+  (:IC, 'c-sp', 'LEGAL_REGISTRATION', 'Northstar is registered.', 'org-northstar', 'n-ok', '2026-09-02T00:00:00Z', 'MANUAL', :UC);
+INSERT INTO public.impact_evidence (investigation_id, ref, claim_ref, source_ref, about_org_ref, relationship, relationship_basis, observed_to, personal_data, added_at, created_by)
+VALUES (:IC, 'e-sp', 'c-sp', 'src-other', 'org-northstar', 'SUPPORTS', 'HUMAN_ASSESSED', '2026-09-01', 'NONE', '2026-09-02T00:00:00Z', :UC),
+       (:IC, 'e-own', 'c-sp', 'src-ch-v2', 'org-northstar', 'SUPPORTS', 'HUMAN_ASSESSED', '2026-09-01', 'NONE', '2026-09-02T00:00:00Z', :UC);
+SELECT pg_temp.expect_fail('I2-39 a stored result cannot count ANOTHER organization''s registry record for the subject',
+  $$INSERT INTO public.impact_verifications (investigation_id, claim_ref, result_id, status, underlying_status, sufficiency, display_class, review_state, policy_version, evidence_set_hash, review_binding_hash, evaluated_at, result, created_by)
+    VALUES ('c2222222-0000-0000-0000-00000000000c', 'c-sp', 'vr_' || repeat('a', 32), 'SUPPORTED', 'SUPPORTED', 'INDEPENDENT_SUPPORT', 'FACT', 'AUTOMATED', 'p', repeat('d', 64), repeat('e', 64), '2026-09-23',
+      jsonb_build_object('resultId', 'vr_' || repeat('a', 32), 'investigationId', 'c2222222-0000-0000-0000-00000000000c', 'claimId', 'c-sp', 'status', 'SUPPORTED',
+        'underlyingStatus', 'SUPPORTED', 'sufficiency', 'INDEPENDENT_SUPPORT', 'displayClass', 'FACT', 'reviewState', 'AUTOMATED', 'policyVersion', 'p',
+        'evidenceSetHash', repeat('d', 64), 'reviewBindingHash', repeat('e', 64), 'evaluatedAt', '2026-09-23', 'conflicts', '[]'::jsonb,
+        'isFindingOfWrongdoing', false, 'absenceOfEvidenceIsNotEvidenceOfWrongdoing', true, 'partiallySupporting', '[]'::jsonb, 'contradicting', '[]'::jsonb,
+        'supporting', jsonb_build_array(jsonb_build_object('evidenceId', 'e-sp', 'sourceId', 'src-other', 'authority', 'AUTHORITATIVE', 'effectiveRelationship', 'SUPPORTS')),
+        'contextual', '[]'::jsonb, 'excluded', '[]'::jsonb, 'gaps', '[]'::jsonb, 'rulesApplied', '[]'::jsonb, 'subjectIdentity', 'CONFIRMED',
+        'claimKind', 'LEGAL_REGISTRATION', 'subjectOrganizationId', 'org-northstar'), 'cccccccc-0000-0000-0000-00000000000c')$$, 'IMPACT_RESULT_INCONSISTENT');
+INSERT INTO public.impact_verifications (investigation_id, claim_ref, result_id, status, underlying_status, sufficiency, display_class, review_state, policy_version, evidence_set_hash, review_binding_hash, evaluated_at, result, created_by)
+VALUES (:IC, 'c-sp', 'vr_' || repeat('b', 32), 'SUPPORTED', 'SUPPORTED', 'INDEPENDENT_SUPPORT', 'FACT', 'AUTOMATED', 'p', repeat('d', 64), repeat('e', 64), '2026-09-23',
+  jsonb_build_object('resultId', 'vr_' || repeat('b', 32), 'investigationId', 'c2222222-0000-0000-0000-00000000000c', 'claimId', 'c-sp', 'status', 'SUPPORTED',
+        'underlyingStatus', 'SUPPORTED', 'sufficiency', 'INDEPENDENT_SUPPORT', 'displayClass', 'FACT', 'reviewState', 'AUTOMATED', 'policyVersion', 'p',
+        'evidenceSetHash', repeat('d', 64), 'reviewBindingHash', repeat('e', 64), 'evaluatedAt', '2026-09-23', 'conflicts', '[]'::jsonb,
+        'isFindingOfWrongdoing', false, 'absenceOfEvidenceIsNotEvidenceOfWrongdoing', true, 'partiallySupporting', '[]'::jsonb, 'contradicting', '[]'::jsonb,
+        'supporting', jsonb_build_array(jsonb_build_object('evidenceId', 'e-own', 'sourceId', 'src-ch-v2', 'authority', 'AUTHORITATIVE', 'effectiveRelationship', 'SUPPORTS')),
+        'contextual', '[]'::jsonb, 'excluded', '[]'::jsonb, 'gaps', '[]'::jsonb, 'rulesApplied', '[]'::jsonb, 'subjectIdentity', 'CONFIRMED',
+        'claimKind', 'LEGAL_REGISTRATION', 'subjectOrganizationId', 'org-northstar'), :UC);
+RESET ROLE;
+SELECT pg_temp.expect_eq('I2-40 the subject''s OWN registry record (declared as "XA-999.0001", normalized) is countable',
+  (SELECT count(*)::text FROM public.impact_verifications WHERE investigation_id = :IC AND claim_ref = 'c-sp'), '1');
+SET ROLE service_role;
 
 -- Cross-investigation: the same organization in D's investigation never conflicts with C's snapshots.
 INSERT INTO public.impact_sources (investigation_id, ref, source_type, publisher, retrieved_at, retention, content_hash,
