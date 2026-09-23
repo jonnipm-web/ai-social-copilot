@@ -143,11 +143,17 @@ jobs:
         with:
           deno-version: v2.x
 
-      - name: Type-check and lint the Impact core
+      - name: Type-check and lint the Impact core and the impact-lab Edge Function
         run: |
-          deno check supabase/functions/_shared/impact/*.ts supabase/functions/_shared/impact/fixtures/*.ts
-          deno lint supabase/functions/_shared/impact/
+          deno check supabase/functions/_shared/impact/*.ts supabase/functions/_shared/impact/fixtures/*.ts supabase/functions/impact-lab/*.ts
+          deno lint supabase/functions/_shared/impact/ supabase/functions/impact-lab/
 
-      - name: Run Impact tests (golden A-H, adversarial, boundary tripwires)
+      - name: Run Impact tests (golden A-H, adversarial, boundary tripwires, Lab service)
         run: |
           deno test --allow-read --allow-net=deno.land,esm.sh supabase/functions/_shared/impact/
+
+      - name: Run impact-lab Edge Function tests (IV-IMPACT-I1)
+        env:
+          DENO_TESTING: "1"
+        run: |
+          deno test --allow-env --allow-read --allow-net=deno.land,esm.sh supabase/functions/impact-lab/
