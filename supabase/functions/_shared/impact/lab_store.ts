@@ -68,6 +68,9 @@ export interface InvestigationData {
   readonly sources: readonly StoredSource[];
   readonly claims: readonly Claim[];
   readonly evidence: readonly EvidenceItem[];
+  /** Latest version per claim — complete, however long the history (I1G1-02). */
+  readonly latestVerifications: readonly StoredVerification[];
+  /** Recent history, newest first (bounded; for display only). */
   readonly verifications: readonly StoredVerification[];
   readonly disputes: readonly StoredDispute[];
 }
@@ -88,7 +91,8 @@ export interface NewInvestigation {
 export interface ImpactLabStore {
   getInvestigation(id: string): Promise<ImpactResult<InvestigationRecord | null>>;
   listInvestigations(): Promise<ImpactResult<readonly InvestigationRecord[]>>;
-  countOwnedInvestigations(): Promise<ImpactResult<number>>;
+  /** Counts every investigation of the owner (including project-hidden ones). */
+  countOwnedInvestigations(ownerId: string): Promise<ImpactResult<number>>;
   projectOwnedByCaller(projectId: string): Promise<ImpactResult<boolean>>;
   loadInvestigationData(id: string): Promise<ImpactResult<InvestigationData>>;
   listAudit(id: string): Promise<ImpactResult<readonly StoredAuditEvent[]>>;
@@ -195,20 +199,23 @@ export class InMemoryImpactLabStore implements ImpactLabStore {
   listInvestigations() {
     return Promise.resolve(ok([...this.db.investigations.keys()].map((k) => this.own(k)).filter((m) => !!m).map((m) => m!.rec)));
   }
-  countOwnedInvestigations() {
-    return Promise.resolve(ok([...this.db.investigations.values()].filter((m) => m.rec.ownerId === this.callerId).length));
+  countOwnedInvestigations(ownerId: string) {
+    return Promise.resolve(ok([...this.db.investigations.values()].filter((m) => m.rec.ownerId === ownerId).length));
   }
   projectOwnedByCaller(projectId: string) {
     return Promise.resolve(ok(this.db.projects.get(projectId) === this.callerId));
   }
   loadInvestigationData(id: string): Promise<ImpactResult<InvestigationData>> {
     const m = this.own(id);
-    if (!m) return Promise.resolve(ok({ sources: [], claims: [], evidence: [], verifications: [], disputes: [] }));
+    if (!m) return Promise.resolve(ok({ sources: [], claims: [], evidence: [], latestVerifications: [], verifications: [], disputes: [] }));
+    const latest = new Map<string, StoredVerification>();
+    for (const v of m.verifications) latest.set(v.result.claimId, v); // insertion order = version order
     return Promise.resolve(ok({
       sources: [...m.sources.values()],
       claims: [...m.claims.values()],
       evidence: [...m.evidence.values()],
-      verifications: [...m.verifications],
+      latestVerifications: [...latest.values()],
+      verifications: [...m.verifications].reverse().slice(0, 500),
       disputes: [...m.disputes.values()],
     }));
   }

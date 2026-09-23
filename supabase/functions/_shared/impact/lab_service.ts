@@ -77,7 +77,7 @@ export function subjectIdentityFrom(inv: InvestigationRecord, sources: readonly 
 
 function latestByClaim(data: InvestigationData): Map<string, VerificationResult> {
   const out = new Map<string, { v: number; r: VerificationResult }>();
-  for (const s of data.verifications) {
+  for (const s of data.latestVerifications) {
     const cur = out.get(s.result.claimId);
     if (!cur || s.version > cur.v) out.set(s.result.claimId, { v: s.version, r: s.result });
   }
@@ -134,7 +134,7 @@ export async function handleLabRequest(
     }
 
     case 'create_investigation': {
-      const count = await store.countOwnedInvestigations();
+      const count = await store.countOwnedInvestigations(actor.userId);
       if (!count.ok) return count;
       if (count.value >= LAB_LIMITS.maxInvestigationsPerOwner) return fail('LIMIT_EXCEEDED', 'too many investigations');
       if (req.projectId) {
@@ -199,7 +199,8 @@ export async function handleLabRequest(
         sources: data.value.sources.map((s) => ({ ...s.source, provenance: { acquisition: s.source.acquisition, hasSnapshot: !!s.snapshot } })),
         claims: data.value.claims,
         evidence: data.value.evidence,
-        verifications: data.value.verifications.map((v) => summary(v.result, v.version)),
+        verifications: [...data.value.verifications].sort((a, b) => a.result.claimId.localeCompare(b.result.claimId) || a.version - b.version)
+          .map((v) => summary(v.result, v.version)),
         disputes: data.value.disputes,
         indicators,
         report,

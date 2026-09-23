@@ -23,7 +23,7 @@ false`). There is no verdict, score, trust or fraud column anywhere (tested).
 | `impact_verifications` | versioned engine results (full result JSON + queryable columns) | append-only |
 | `impact_conflicts` | queryable conflicts, expanded from each verification by trigger | append-only |
 | `impact_disputes` | right-to-respond / corrections | resolution recorded once |
-| `impact_audit_events` | hash-chained trail, written only by triggers | append-only |
+| `impact_audit_events` | hash-chained trail, written only by SECURITY DEFINER triggers (no role can insert directly) | append-only |
 
 **Not persisted (decision):** organizations other than the subject (the
 subject's identity snapshot lives on the investigation row — one subject per
@@ -67,6 +67,10 @@ verbatim for audit/replay) and `positions` (conflict positions).
 - Audit appends lock the investigation row, so the chain never forks.
 - A retried `run_verification` without a key re-evaluates at the new server
   time (a legitimate new version: staleness depends on time).
+- The latest version per claim is read from the `impact_latest_verifications`
+  view (`security_invoker`, RLS applies) — complete whatever the history
+  length (Codex I1G1-02; tested with 2,001 versions). History is returned
+  newest-first and bounded.
 
 ## 6. Lifecycle / deletion
 

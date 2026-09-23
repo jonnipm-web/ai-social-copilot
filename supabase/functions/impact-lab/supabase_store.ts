@@ -252,8 +252,9 @@ export class SupabaseImpactLabStore implements ImpactLabStore {
     if (error) return dbFail(error);
     return ok((data as Row[]).map(rowToInvestigation));
   }
-  async countOwnedInvestigations(): Promise<ImpactResult<number>> {
-    const { count, error } = await this.user.from('impact_investigations').select('id', { count: 'exact', head: true });
+  async countOwnedInvestigations(ownerId: string): Promise<ImpactResult<number>> {
+    // Service read by owner: project-hidden investigations still count toward the limit.
+    const { count, error } = await this.service.from('impact_investigations').select('id', { count: 'exact', head: true }).eq('owner_id', ownerId);
     if (error) return dbFail(error);
     return ok(count ?? 0);
   }
@@ -263,16 +264,21 @@ export class SupabaseImpactLabStore implements ImpactLabStore {
     return ok(!!data);
   }
   async loadInvestigationData(id: string): Promise<ImpactResult<InvestigationData>> {
-    const q = (t: string, order: string) => this.user.from(t).select('*').eq('investigation_id', id).order(order, { ascending: true }).limit(READ_LIMIT);
-    const [s, c, e, v, d] = await Promise.all([
+    const q = (t: string, order: string, ascending = true, limit = READ_LIMIT) =>
+      this.user.from(t).select('*').eq('investigation_id', id).order(order, { ascending }).limit(limit);
+    const [s, c, e, lv, v, d] = await Promise.all([
       q('impact_sources', 'created_at'), q('impact_claims', 'created_at'), q('impact_evidence', 'created_at'),
-      q('impact_verifications', 'version'), q('impact_disputes', 'created_at'),
+      // I1G1-02: latest per claim from the security_invoker view — never truncated by history length.
+      q('impact_latest_verifications', 'claim_ref'),
+      q('impact_verifications', 'version', false, 500),
+      q('impact_disputes', 'created_at'),
     ]);
-    for (const r of [s, c, e, v, d]) if (r.error) return dbFail(r.error);
+    for (const r of [s, c, e, lv, v, d]) if (r.error) return dbFail(r.error);
     return ok({
       sources: (s.data as Row[]).map(rowToSource),
       claims: (c.data as Row[]).map(rowToClaim),
       evidence: (e.data as Row[]).map(rowToEvidence),
+      latestVerifications: (lv.data as Row[]).map(rowToVerification),
       verifications: (v.data as Row[]).map(rowToVerification),
       disputes: (d.data as Row[]).map(rowToDispute),
     });

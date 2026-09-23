@@ -29,6 +29,14 @@
 --     triggers in the same transaction as the write it records.
 --   * No column can hold a verdict, score, "trusted" or "fraud" flag, and a
 --     persisted verification must carry isFindingOfWrongdoing = false.
+--   * Codex I1 Gate 1 (I1G1-01): audit events and conflicts are written ONLY
+--     by SECURITY DEFINER triggers (service_role has no INSERT/UPDATE on them
+--     and cannot call the appender); every child row's created_by/updated_by
+--     must be the investigation owner; PROVIDER provenance must name a provider
+--     of the server allowlist with its declared type/jurisdiction and carry a
+--     snapshot; verification columns must equal the engine result JSON.
+--     Residual (escalated): a holder of the service_role key can still write
+--     internally consistent rows — see docs/impact/IMPACT_RLS_MODEL.md §6.
 --
 -- Domain timestamps (retrievedAt, publishedAt, periods, …) are stored as the
 -- canonical ISO text the engine hashed, so re-reading them reproduces the same
@@ -67,6 +75,17 @@ BEGIN
 EXCEPTION WHEN datetime_field_overflow OR invalid_datetime_format THEN
   RAISE EXCEPTION 'IMPACT_INVALID_TIMESTAMP: %', v USING ERRCODE = '22007';
 END $$;
+
+-- Server provider allowlist (MUST equal trustedProviderRefs() in
+-- supabase/functions/_shared/impact/provider_registry.ts — drift-tested).
+-- BEGIN_IMPACT_PROVIDER_ALLOWLIST
+CREATE OR REPLACE FUNCTION public.impact_trusted_provider(p_id text, p_type text, p_country text) RETURNS boolean
+LANGUAGE sql IMMUTABLE SET search_path = '' AS $$
+  SELECT (p_id, p_type, p_country) IN (
+    ('fixture-xa-charity-registry', 'OFFICIAL_REGISTRY', 'XA')
+  )
+$$;
+-- END_IMPACT_PROVIDER_ALLOWLIST
 
 -- ── investigations ──────────────────────────────────────────────────────────
 
@@ -153,7 +172,15 @@ CREATE TABLE IF NOT EXISTS public.impact_sources (
     AND ((acquisition_method = 'PROVIDER') = (acquisition_provider_id IS NOT NULL))
     AND (acquisition_provider_id IS NULL OR public.impact_is_ref(acquisition_provider_id))),
   CONSTRAINT impact_sources_syndication_check CHECK (syndicated_from IS NULL OR length(btrim(syndicated_from)) BETWEEN 1 AND 300),
-  CONSTRAINT impact_sources_snapshot_check CHECK (snapshot IS NULL OR (retention = 'SNAPSHOT' AND jsonb_typeof(snapshot) = 'object'))
+  CONSTRAINT impact_sources_snapshot_check CHECK (snapshot IS NULL OR (retention = 'SNAPSHOT' AND jsonb_typeof(snapshot) = 'object')),
+  -- PROVIDER provenance only for an allowlisted provider, with its declared
+  -- type and jurisdiction and the provider snapshot; nothing else has a snapshot.
+  CONSTRAINT impact_sources_provider_check CHECK (
+    CASE WHEN acquisition_method = 'PROVIDER'
+      THEN snapshot IS NOT NULL AND retention = 'SNAPSHOT'
+           AND public.impact_trusted_provider(acquisition_provider_id, source_type, jurisdiction_country)
+           AND jurisdiction_registry = acquisition_provider_id
+      ELSE snapshot IS NULL END)
 );
 CREATE INDEX IF NOT EXISTS impact_sources_investigation_idx ON public.impact_sources (investigation_id, created_at);
 
@@ -321,7 +348,23 @@ CREATE TABLE IF NOT EXISTS public.impact_verifications (
     AND result->'absenceOfEvidenceIsNotEvidenceOfWrongdoing' = 'true'::jsonb
     AND result->>'resultId' = result_id
     AND result->>'status' = status
-    AND result->>'claimId' = claim_ref),
+    AND result->>'underlyingStatus' = underlying_status
+    AND result->>'sufficiency' = sufficiency
+    AND result->>'displayClass' = display_class
+    AND result->>'reviewState' = review_state
+    AND result->>'policyVersion' = policy_version
+    AND result->>'evidenceSetHash' = evidence_set_hash
+    AND result->>'reviewBindingHash' = review_binding_hash
+    AND result->>'evaluatedAt' = evaluated_at
+    AND result->>'claimId' = claim_ref
+    AND result->>'investigationId' = investigation_id::text
+    AND jsonb_typeof(coalesce(result->'conflicts', '[]'::jsonb)) = 'array'
+    AND jsonb_array_length(coalesce(result->'conflicts', '[]'::jsonb)) = conflict_count),
+  -- Engine invariants: only an authoritative SUPPORTED result is a FACT; a
+  -- DISPUTED result is always shown as a CONFLICT.
+  CONSTRAINT impact_verifications_semantics_check CHECK (
+    (display_class <> 'FACT' OR status = 'SUPPORTED')
+    AND (status <> 'DISPUTED' OR display_class = 'CONFLICT')),
   CONSTRAINT impact_verifications_conflicts_check CHECK (conflict_count >= 0)
 );
 CREATE INDEX IF NOT EXISTS impact_verifications_claim_idx ON public.impact_verifications (investigation_id, claim_ref, version DESC);
@@ -423,6 +466,17 @@ BEGIN
   RETURN OLD;
 END $$;
 
+-- Audit events and conflicts can only be inserted from inside the Impact
+-- triggers (nested trigger depth), never by a direct INSERT — by any role.
+CREATE OR REPLACE FUNCTION public.impact_guard_trigger_only() RETURNS trigger
+LANGUAGE plpgsql SET search_path = '' AS $$
+BEGIN
+  IF pg_trigger_depth() < 2 THEN
+    RAISE EXCEPTION 'IMPACT_TRIGGER_ONLY: % rows are written by the database only', TG_TABLE_NAME USING ERRCODE = '42501';
+  END IF;
+  RETURN NEW;
+END $$;
+
 -- Appends one hash-chained audit event. Serialized per investigation by the
 -- row lock on the investigation (concurrent writers queue, never fork the chain).
 CREATE OR REPLACE FUNCTION public.impact_append_audit(
@@ -487,6 +541,9 @@ BEGIN
     END IF;
     IF NEW.audit_seq < OLD.audit_seq THEN
       RAISE EXCEPTION 'IMPACT_AUDIT_REWIND' USING ERRCODE = '42501';
+    END IF;
+    IF (NEW.audit_seq <> OLD.audit_seq OR NEW.audit_head <> OLD.audit_head) AND pg_trigger_depth() < 2 THEN
+      RAISE EXCEPTION 'IMPACT_TRIGGER_ONLY: the audit head is written by the database only' USING ERRCODE = '42501';
     END IF;
     IF OLD.status = 'ARCHIVED' AND NEW.status <> 'ARCHIVED' THEN
       RAISE EXCEPTION 'IMPACT_ARCHIVED_IS_FINAL' USING ERRCODE = '42501';
@@ -594,7 +651,7 @@ END $$;
 
 -- Audit producers (same transaction as the write they record).
 CREATE OR REPLACE FUNCTION public.impact_audit_writes() RETURNS trigger
-LANGUAGE plpgsql SET search_path = '' AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
 DECLARE v_prev_status text;
 BEGIN
   IF TG_TABLE_NAME = 'impact_investigations' THEN
@@ -653,12 +710,23 @@ BEGIN
   RETURN NULL;
 END $$;
 
--- Archived investigations accept no new child records.
+-- Child writes: the investigation must be ACTIVE (inserts AND updates) and
+-- the recorded actor must be the investigation owner — a service-layer bug
+-- that writes into another user's investigation is refused here.
 CREATE OR REPLACE FUNCTION public.impact_require_active() RETURNS trigger
 LANGUAGE plpgsql SET search_path = '' AS $$
+DECLARE
+  v_status text;
+  v_owner uuid;
+  v_actor uuid;
 BEGIN
-  IF (SELECT status FROM public.impact_investigations WHERE id = NEW.investigation_id) IS DISTINCT FROM 'ACTIVE' THEN
+  SELECT status, owner_id INTO v_status, v_owner FROM public.impact_investigations WHERE id = NEW.investigation_id;
+  IF v_status IS DISTINCT FROM 'ACTIVE' THEN
     RAISE EXCEPTION 'IMPACT_INVESTIGATION_NOT_ACTIVE' USING ERRCODE = '42501';
+  END IF;
+  v_actor := CASE WHEN TG_OP = 'INSERT' THEN (to_jsonb(NEW)->>'created_by')::uuid ELSE (to_jsonb(NEW)->>'updated_by')::uuid END;
+  IF v_actor IS DISTINCT FROM v_owner THEN
+    RAISE EXCEPTION 'IMPACT_ACTOR_NOT_OWNER' USING ERRCODE = '42501';
   END IF;
   RETURN NEW;
 END $$;
@@ -698,10 +766,19 @@ BEGIN
     EXECUTE format('DROP TRIGGER IF EXISTS impact_no_direct_delete ON public.%I', t);
     EXECUTE format('CREATE TRIGGER impact_no_direct_delete BEFORE DELETE ON public.%I FOR EACH ROW EXECUTE FUNCTION public.impact_guard_no_direct_delete()', t);
   END LOOP;
-  -- child writes need an ACTIVE investigation
-  FOREACH t IN ARRAY ARRAY['impact_sources','impact_claims','impact_evidence','impact_verifications','impact_disputes'] LOOP
+  -- child writes need an ACTIVE investigation and the owner as actor
+  FOREACH t IN ARRAY ARRAY['impact_claims','impact_evidence','impact_verifications'] LOOP
     EXECUTE format('DROP TRIGGER IF EXISTS impact_require_active ON public.%I', t);
     EXECUTE format('CREATE TRIGGER impact_require_active BEFORE INSERT ON public.%I FOR EACH ROW EXECUTE FUNCTION public.impact_require_active()', t);
+  END LOOP;
+  FOREACH t IN ARRAY ARRAY['impact_sources','impact_disputes'] LOOP
+    EXECUTE format('DROP TRIGGER IF EXISTS impact_require_active ON public.%I', t);
+    EXECUTE format('CREATE TRIGGER impact_require_active BEFORE INSERT OR UPDATE ON public.%I FOR EACH ROW EXECUTE FUNCTION public.impact_require_active()', t);
+  END LOOP;
+  -- database-only tables
+  FOREACH t IN ARRAY ARRAY['impact_audit_events','impact_conflicts'] LOOP
+    EXECUTE format('DROP TRIGGER IF EXISTS impact_trigger_only ON public.%I', t);
+    EXECUTE format('CREATE TRIGGER impact_trigger_only BEFORE INSERT ON public.%I FOR EACH ROW EXECUTE FUNCTION public.impact_guard_trigger_only()', t);
   END LOOP;
   -- audit producers
   FOREACH t IN ARRAY ARRAY['impact_investigations','impact_sources','impact_claims','impact_evidence','impact_verifications','impact_disputes'] LOOP
@@ -718,7 +795,9 @@ BEGIN
   FOREACH t IN ARRAY ARRAY['impact_investigations','impact_sources','impact_claims','impact_evidence',
                            'impact_verifications','impact_conflicts','impact_disputes','impact_audit_events'] LOOP
     EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);
-    EXECUTE format('ALTER TABLE public.%I FORCE ROW LEVEL SECURITY', t);
+    -- NO FORCE: the table owner is only used by migrations and the SECURITY
+    -- DEFINER audit writer; clients never act as the owner.
+    EXECUTE format('ALTER TABLE public.%I NO FORCE ROW LEVEL SECURITY', t);
     EXECUTE format('REVOKE ALL ON TABLE public.%I FROM anon', t);
     EXECUTE format('REVOKE ALL ON TABLE public.%I FROM PUBLIC', t);
     EXECUTE format('REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLE public.%I FROM authenticated', t);
@@ -750,12 +829,28 @@ DO $$
 DECLARE t text;
 BEGIN
   FOREACH t IN ARRAY ARRAY['impact_investigations','impact_sources','impact_claims','impact_evidence',
-                           'impact_verifications','impact_conflicts','impact_disputes','impact_audit_events'] LOOP
+                           'impact_verifications','impact_disputes'] LOOP
+    EXECUTE format('REVOKE ALL ON TABLE public.%I FROM service_role', t);
     EXECUTE format('GRANT SELECT, INSERT, UPDATE ON TABLE public.%I TO service_role', t);
+  END LOOP;
+  -- audit and conflicts: database-written only
+  FOREACH t IN ARRAY ARRAY['impact_audit_events','impact_conflicts'] LOOP
+    EXECUTE format('REVOKE ALL ON TABLE public.%I FROM service_role', t);
+    EXECUTE format('GRANT SELECT ON TABLE public.%I TO service_role', t);
   END LOOP;
 END $$;
 
 -- Helper functions: internal only, except the chain verifier (invoker rights).
-REVOKE ALL ON FUNCTION public.impact_append_audit(uuid, text, text, text[], text[]) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.impact_append_audit(uuid, text, text, text[], text[]) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.impact_audit_writes() FROM PUBLIC, anon, authenticated, service_role;
+
+-- Latest verification per claim (I1G1-02): complete regardless of history
+-- length. security_invoker → the caller's RLS applies.
+CREATE OR REPLACE VIEW public.impact_latest_verifications WITH (security_invoker = true) AS
+  SELECT DISTINCT ON (v.investigation_id, v.claim_ref) v.*
+  FROM public.impact_verifications v
+  ORDER BY v.investigation_id, v.claim_ref, v.version DESC;
+REVOKE ALL ON public.impact_latest_verifications FROM PUBLIC, anon, authenticated, service_role;
+GRANT SELECT ON public.impact_latest_verifications TO authenticated, service_role;
 REVOKE ALL ON FUNCTION public.impact_audit_chain_ok(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.impact_audit_chain_ok(uuid) TO authenticated, service_role;

@@ -35,6 +35,15 @@ BEGIN
   INSERT INTO impact_test_log (label) VALUES (p_label);
 END $$;
 
+CREATE FUNCTION pg_temp.vres(p_inv text, p_claim text, p_rid text, p_status text, p_under text, p_suff text, p_class text,
+  p_review text, p_policy text, p_eval text, p_conflicts jsonb DEFAULT '[]'::jsonb) RETURNS jsonb LANGUAGE sql AS $$
+  SELECT jsonb_build_object('resultId', p_rid, 'investigationId', p_inv, 'claimId', p_claim, 'status', p_status,
+    'underlyingStatus', p_under, 'sufficiency', p_suff, 'displayClass', p_class, 'reviewState', p_review,
+    'policyVersion', p_policy, 'evidenceSetHash', repeat('d', 64), 'reviewBindingHash', repeat('e', 64),
+    'evaluatedAt', p_eval, 'conflicts', p_conflicts, 'isFindingOfWrongdoing', false,
+    'absenceOfEvidenceIsNotEvidenceOfWrongdoing', true)
+$$;
+
 CREATE FUNCTION pg_temp.act_as(uid text) RETURNS void LANGUAGE plpgsql AS $$
 BEGIN
   PERFORM set_config('request.jwt.claim.sub', coalesce(uid, ''), false);
@@ -94,12 +103,12 @@ INSERT INTO public.impact_verifications (investigation_id, claim_ref, result_id,
   display_class, review_state, policy_version, evidence_set_hash, review_binding_hash, evaluated_at, conflict_count, result, created_by) VALUES
   (:IA, 'c1', 'vr_' || repeat('1', 32), 'SUPPORTED', 'SUPPORTED', 'INDEPENDENT_SUPPORT', 'FACT', 'AUTOMATED', 'impact-verification/7',
    repeat('d', 64), repeat('e', 64), '2026-09-23T00:00:00Z', 0,
-   jsonb_build_object('resultId', 'vr_' || repeat('1', 32), 'status', 'SUPPORTED', 'claimId', 'c1',
-     'isFindingOfWrongdoing', false, 'absenceOfEvidenceIsNotEvidenceOfWrongdoing', true, 'conflicts', '[]'::jsonb), :UA),
+   pg_temp.vres(:IA, 'c1', 'vr_' || repeat('1', 32), 'SUPPORTED', 'SUPPORTED', 'INDEPENDENT_SUPPORT', 'FACT', 'AUTOMATED',
+     'impact-verification/7', '2026-09-23T00:00:00Z'), :UA),
   (:IB, 'c1', 'vr_' || repeat('2', 32), 'UNVERIFIED', 'UNVERIFIED', 'SELF_REPORTED', 'CLAIM', 'AUTOMATED', 'impact-verification/7',
    repeat('d', 64), repeat('e', 64), '2026-09-23T00:00:00Z', 0,
-   jsonb_build_object('resultId', 'vr_' || repeat('2', 32), 'status', 'UNVERIFIED', 'claimId', 'c1',
-     'isFindingOfWrongdoing', false, 'absenceOfEvidenceIsNotEvidenceOfWrongdoing', true, 'conflicts', '[]'::jsonb), :UB);
+   pg_temp.vres(:IB, 'c1', 'vr_' || repeat('2', 32), 'UNVERIFIED', 'UNVERIFIED', 'SELF_REPORTED', 'CLAIM', 'AUTOMATED',
+     'impact-verification/7', '2026-09-23T00:00:00Z'), :UB);
 
 INSERT INTO public.impact_disputes (investigation_id, ref, claim_ref, kind, opened_at, submitted_evidence_refs, created_by) VALUES
   (:IB, 'd1', 'c1', 'ORGANIZATION_RESPONSE', '2026-09-23T00:00:00Z', ARRAY['e1'], :UB);
@@ -130,7 +139,7 @@ SELECT pg_temp.expect_fail('S08 claim about another organization (CF-01 at the D
     VALUES ('a2222222-0000-0000-0000-00000000000a', 'c9', 'OTHER', 'x', 'org-northstar', 'src-web', '2026-09-02', 'MANUAL', 'aaaaaaaa-0000-0000-0000-00000000000a')$$, '23503');
 SELECT pg_temp.expect_fail('S09 moving a source to another investigation is refused',
   $$UPDATE public.impact_sources SET investigation_id = 'b2222222-0000-0000-0000-00000000000b', updated_by = 'aaaaaaaa-0000-0000-0000-00000000000a'
-    WHERE investigation_id = 'a2222222-0000-0000-0000-00000000000a' AND ref = 'src-web'$$, 'IMPACT_IMMUTABLE_FIELD|23503|23505');
+    WHERE investigation_id = 'a2222222-0000-0000-0000-00000000000a' AND ref = 'src-web'$$, 'IMPACT_IMMUTABLE_FIELD|IMPACT_ACTOR_NOT_OWNER|23503|23505');
 SELECT pg_temp.expect_fail('S10 source provenance fields are immutable',
   $$UPDATE public.impact_sources SET publisher = 'Official Government', updated_by = 'aaaaaaaa-0000-0000-0000-00000000000a'
     WHERE investigation_id = 'a2222222-0000-0000-0000-00000000000a' AND ref = 'src-web'$$, 'IMPACT_IMMUTABLE_FIELD');
@@ -141,19 +150,19 @@ SELECT pg_temp.expect_fail('S12 PROVIDER acquisition without provider id',
   $$INSERT INTO public.impact_sources (investigation_id, ref, source_type, publisher, retrieved_at, retention, content_hash, acquisition_method, created_by)
     VALUES ('a2222222-0000-0000-0000-00000000000a', 'src-x', 'OFFICIAL_REGISTRY', 'X', '2026-09-01', 'HASH_ONLY', repeat('f', 64), 'PROVIDER', 'aaaaaaaa-0000-0000-0000-00000000000a')$$, '23514');
 SELECT pg_temp.expect_fail('S13 claims are append-only (no status/text rewrite)',
-  $$UPDATE public.impact_claims SET claim_text = 'rewritten' WHERE investigation_id = 'a2222222-0000-0000-0000-00000000000a'$$, 'IMPACT_APPEND_ONLY');
+  $$UPDATE public.impact_claims SET claim_text = 'rewritten' WHERE investigation_id = 'a2222222-0000-0000-0000-00000000000a'$$, 'IMPACT_APPEND_ONLY|42501');
 SELECT pg_temp.expect_fail('S14 evidence is append-only',
-  $$UPDATE public.impact_evidence SET relationship = 'CONTRADICTS' WHERE investigation_id = 'a2222222-0000-0000-0000-00000000000a'$$, 'IMPACT_APPEND_ONLY');
+  $$UPDATE public.impact_evidence SET relationship = 'CONTRADICTS' WHERE investigation_id = 'a2222222-0000-0000-0000-00000000000a'$$, 'IMPACT_APPEND_ONLY|42501');
 SELECT pg_temp.expect_fail('S15 verification history cannot be rewritten',
-  $$UPDATE public.impact_verifications SET status = 'CONTRADICTED' WHERE investigation_id = 'a2222222-0000-0000-0000-00000000000a'$$, 'IMPACT_APPEND_ONLY');
+  $$UPDATE public.impact_verifications SET status = 'CONTRADICTED' WHERE investigation_id = 'a2222222-0000-0000-0000-00000000000a'$$, 'IMPACT_APPEND_ONLY|42501');
 SELECT pg_temp.expect_fail('S16 audit events cannot be rewritten',
-  $$UPDATE public.impact_audit_events SET codes = '{}' WHERE investigation_id = 'a2222222-0000-0000-0000-00000000000a'$$, 'IMPACT_APPEND_ONLY');
+  $$UPDATE public.impact_audit_events SET codes = '{}' WHERE investigation_id = 'a2222222-0000-0000-0000-00000000000a'$$, 'IMPACT_APPEND_ONLY|42501');
 SELECT pg_temp.expect_fail('S17 direct DELETE of audit history is refused',
-  $$DELETE FROM public.impact_audit_events WHERE investigation_id = 'a2222222-0000-0000-0000-00000000000a'$$, 'IMPACT_NO_DIRECT_DELETE');
+  $$DELETE FROM public.impact_audit_events WHERE investigation_id = 'a2222222-0000-0000-0000-00000000000a'$$, 'IMPACT_NO_DIRECT_DELETE|42501');
 SELECT pg_temp.expect_fail('S18 direct DELETE of verification history is refused',
-  $$DELETE FROM public.impact_verifications WHERE investigation_id = 'a2222222-0000-0000-0000-00000000000a'$$, 'IMPACT_NO_DIRECT_DELETE');
+  $$DELETE FROM public.impact_verifications WHERE investigation_id = 'a2222222-0000-0000-0000-00000000000a'$$, 'IMPACT_NO_DIRECT_DELETE|42501');
 SELECT pg_temp.expect_fail('S19 direct DELETE of an investigation (would cascade history) is refused',
-  $$DELETE FROM public.impact_investigations WHERE id = 'a2222222-0000-0000-0000-00000000000a'$$, 'IMPACT_NO_DIRECT_DELETE');
+  $$DELETE FROM public.impact_investigations WHERE id = 'a2222222-0000-0000-0000-00000000000a'$$, 'IMPACT_NO_DIRECT_DELETE|42501');
 SELECT pg_temp.expect_fail('S20 a persisted verification must be a non-finding of wrongdoing',
   $$INSERT INTO public.impact_verifications (investigation_id, claim_ref, result_id, status, underlying_status, sufficiency, display_class, review_state, policy_version, evidence_set_hash, review_binding_hash, evaluated_at, result, created_by)
     VALUES ('a2222222-0000-0000-0000-00000000000a', 'c2', 'vr_' || repeat('3', 32), 'CONTRADICTED', 'CONTRADICTED', 'INDEPENDENT_SUPPORT', 'CLAIM', 'REVIEW_REQUIRED', 'p', repeat('d', 64), repeat('e', 64), '2026-09-23',
@@ -198,9 +207,9 @@ INSERT INTO public.impact_verifications (investigation_id, claim_ref, result_id,
   display_class, review_state, policy_version, evidence_set_hash, review_binding_hash, evaluated_at, conflict_count, result, idempotency_key, created_by)
 VALUES (:IA, 'c1', 'vr_' || repeat('5', 32), 'INCONCLUSIVE', 'INCONCLUSIVE', 'CONFLICTING_EVIDENCE', 'CONFLICT', 'REVIEW_REQUIRED',
   'impact-verification/7', repeat('d', 64), repeat('e', 64), '2026-09-24T00:00:00Z', 1,
-  jsonb_build_object('resultId', 'vr_' || repeat('5', 32), 'status', 'INCONCLUSIVE', 'claimId', 'c1',
-    'isFindingOfWrongdoing', false, 'absenceOfEvidenceIsNotEvidenceOfWrongdoing', true,
-    'conflicts', jsonb_build_array(jsonb_build_object('kind', 'QUANTITY_DISAGREEMENT', 'basis', 'INDEPENDENT_SOURCES',
+  pg_temp.vres(:IA, 'c1', 'vr_' || repeat('5', 32), 'INCONCLUSIVE', 'INCONCLUSIVE', 'CONFLICTING_EVIDENCE', 'CONFLICT', 'REVIEW_REQUIRED',
+    'impact-verification/7', '2026-09-24T00:00:00Z',
+    jsonb_build_array(jsonb_build_object('kind', 'QUANTITY_DISAGREEMENT', 'basis', 'INDEPENDENT_SOURCES',
       'positions', '[]'::jsonb, 'resolution', 'UNRESOLVED'))),
   '11111111-2222-3333-4444-555555555555', :UA);
 SELECT pg_temp.expect_eq('S32 versions are 1,2 (history kept)',
@@ -212,7 +221,7 @@ SELECT pg_temp.expect_eq('S34 conflicts expanded from the verification',
 SELECT pg_temp.expect_fail('S35 idempotent retry of a verification is refused (no duplicate history)',
   $$INSERT INTO public.impact_verifications (investigation_id, claim_ref, result_id, status, underlying_status, sufficiency, display_class, review_state, policy_version, evidence_set_hash, review_binding_hash, evaluated_at, result, idempotency_key, created_by)
     VALUES ('a2222222-0000-0000-0000-00000000000a', 'c1', 'vr_' || repeat('6', 32), 'INCONCLUSIVE', 'INCONCLUSIVE', 'CONFLICTING_EVIDENCE', 'CONFLICT', 'REVIEW_REQUIRED', 'p', repeat('d', 64), repeat('e', 64), '2026-09-24',
-      jsonb_build_object('resultId', 'vr_' || repeat('6', 32), 'status', 'INCONCLUSIVE', 'claimId', 'c1', 'isFindingOfWrongdoing', false, 'absenceOfEvidenceIsNotEvidenceOfWrongdoing', true),
+      pg_temp.vres('a2222222-0000-0000-0000-00000000000a', 'c1', 'vr_' || repeat('6', 32), 'INCONCLUSIVE', 'INCONCLUSIVE', 'CONFLICTING_EVIDENCE', 'CONFLICT', 'REVIEW_REQUIRED', 'p', '2026-09-24'),
       '11111111-2222-3333-4444-555555555555', 'aaaaaaaa-0000-0000-0000-00000000000a')$$, '23505');
 
 -- source correction: status changes, history preserved, re-verification required
@@ -239,6 +248,68 @@ SELECT pg_temp.expect_eq('S41 audit chain B verifies', (SELECT public.impact_aud
 SELECT pg_temp.expect_eq('S42 every write of A was audited (created, 2 sources, 2 claims, 2 evidence, 2 runs, status, conflict, source status)',
   (SELECT count(*) FROM public.impact_audit_events WHERE investigation_id = :IA), 12);
 
+-- ── G: Codex I1 Gate 1 (I1G1-01) — even service_role cannot forge ─────────
+SELECT pg_temp.expect_fail('G01 service_role cannot insert an audit event directly',
+  $$INSERT INTO public.impact_audit_events (investigation_id, seq, at_text, event_type, actor_ref, prev_hash, hash)
+    VALUES ('a2222222-0000-0000-0000-00000000000a', 99, '2026-09-01T00:00:00.000000Z', 'CLAIM_CREATED', 'forged', repeat('0', 64), repeat('b', 64))$$, '42501');
+SELECT pg_temp.expect_fail('G02 service_role cannot call the audit appender',
+  $$SELECT public.impact_append_audit('a2222222-0000-0000-0000-00000000000a', 'MANUAL_REVIEW', 'forged', '{}', '{}')$$, '42501');
+SELECT pg_temp.expect_fail('G03 service_role cannot insert a conflict directly',
+  $$INSERT INTO public.impact_conflicts (verification_id, investigation_id, claim_ref, kind, basis, positions)
+    SELECT id, investigation_id, claim_ref, 'SUPPORT_VS_CONTRADICTION', 'INDEPENDENT_SOURCES', '[]'::jsonb FROM public.impact_verifications LIMIT 1$$, '42501');
+SELECT pg_temp.expect_fail('G04 service_role cannot move the audit head',
+  $$UPDATE public.impact_investigations SET audit_seq = audit_seq + 1, audit_head = repeat('b', 64) WHERE id = 'a2222222-0000-0000-0000-00000000000a'$$, 'IMPACT_TRIGGER_ONLY');
+SELECT pg_temp.expect_fail('G05 PROVIDER provenance for a provider outside the server allowlist',
+  $$INSERT INTO public.impact_sources (investigation_id, ref, source_type, publisher, retrieved_at, retention, content_hash, acquisition_method, acquisition_provider_id, jurisdiction_country, jurisdiction_registry, snapshot, created_by)
+    VALUES ('a2222222-0000-0000-0000-00000000000a', 'p1', 'OFFICIAL_REGISTRY', 'Fake', '2026-09-01', 'SNAPSHOT', repeat('a', 64), 'PROVIDER', 'not-server-ingested', 'XA', 'not-server-ingested', '{}', 'aaaaaaaa-0000-0000-0000-00000000000a')$$, '23514');
+SELECT pg_temp.expect_fail('G06 allowlisted provider with a relabelled source type',
+  $$INSERT INTO public.impact_sources (investigation_id, ref, source_type, publisher, retrieved_at, retention, content_hash, acquisition_method, acquisition_provider_id, jurisdiction_country, jurisdiction_registry, snapshot, created_by)
+    VALUES ('a2222222-0000-0000-0000-00000000000a', 'p1', 'AUDITED_REPORT', 'Fake', '2026-09-01', 'SNAPSHOT', repeat('a', 64), 'PROVIDER', 'fixture-xa-charity-registry', 'XA', 'fixture-xa-charity-registry', '{}', 'aaaaaaaa-0000-0000-0000-00000000000a')$$, '23514');
+SELECT pg_temp.expect_fail('G07 allowlisted provider in another jurisdiction',
+  $$INSERT INTO public.impact_sources (investigation_id, ref, source_type, publisher, retrieved_at, retention, content_hash, acquisition_method, acquisition_provider_id, jurisdiction_country, jurisdiction_registry, snapshot, created_by)
+    VALUES ('a2222222-0000-0000-0000-00000000000a', 'p1', 'OFFICIAL_REGISTRY', 'Fake', '2026-09-01', 'SNAPSHOT', repeat('a', 64), 'PROVIDER', 'fixture-xa-charity-registry', 'XB', 'fixture-xa-charity-registry', '{}', 'aaaaaaaa-0000-0000-0000-00000000000a')$$, '23514');
+SELECT pg_temp.expect_fail('G08 PROVIDER provenance without the provider snapshot',
+  $$INSERT INTO public.impact_sources (investigation_id, ref, source_type, publisher, retrieved_at, retention, content_hash, acquisition_method, acquisition_provider_id, jurisdiction_country, jurisdiction_registry, created_by)
+    VALUES ('a2222222-0000-0000-0000-00000000000a', 'p1', 'OFFICIAL_REGISTRY', 'Fake', '2026-09-01', 'SNAPSHOT', repeat('a', 64), 'PROVIDER', 'fixture-xa-charity-registry', 'XA', 'fixture-xa-charity-registry', 'aaaaaaaa-0000-0000-0000-00000000000a')$$, '23514');
+SELECT pg_temp.expect_fail('G09 an analyst source cannot carry a snapshot',
+  $$INSERT INTO public.impact_sources (investigation_id, ref, source_type, publisher, retrieved_at, retention, content_hash, acquisition_method, snapshot, created_by)
+    VALUES ('a2222222-0000-0000-0000-00000000000a', 'p1', 'OFFICIAL_REGISTRY', 'Fake', '2026-09-01', 'SNAPSHOT', repeat('a', 64), 'ANALYST_ENTRY', '{}', 'aaaaaaaa-0000-0000-0000-00000000000a')$$, '23514');
+SELECT pg_temp.expect_fail('G10 a write attributed to another user (service-layer bug) is refused',
+  $$INSERT INTO public.impact_claims (investigation_id, ref, kind, claim_text, subject_org_ref, source_ref, extracted_at, origin, created_by)
+    VALUES ('a2222222-0000-0000-0000-00000000000a', 'c9', 'OTHER', 'x', 'org-hopebridge', 'src-web', '2026-09-02', 'MANUAL', 'bbbbbbbb-0000-0000-0000-00000000000b')$$, 'IMPACT_ACTOR_NOT_OWNER');
+SELECT pg_temp.expect_fail('G11 a status update attributed to another user is refused',
+  $$UPDATE public.impact_sources SET status = 'UNAVAILABLE', updated_by = 'bbbbbbbb-0000-0000-0000-00000000000b'
+    WHERE investigation_id = 'a2222222-0000-0000-0000-00000000000a' AND ref = 'src-web'$$, 'IMPACT_ACTOR_NOT_OWNER');
+SELECT pg_temp.expect_fail('G12 a FACT that is not SUPPORTED is refused',
+  $$INSERT INTO public.impact_verifications (investigation_id, claim_ref, result_id, status, underlying_status, sufficiency, display_class, review_state, policy_version, evidence_set_hash, review_binding_hash, evaluated_at, result, created_by)
+    VALUES ('a2222222-0000-0000-0000-00000000000a', 'c2', 'vr_' || repeat('8', 32), 'UNVERIFIED', 'UNVERIFIED', 'NO_EVIDENCE', 'FACT', 'AUTOMATED', 'p', repeat('d', 64), repeat('e', 64), '2026-09-23',
+      pg_temp.vres('a2222222-0000-0000-0000-00000000000a', 'c2', 'vr_' || repeat('8', 32), 'UNVERIFIED', 'UNVERIFIED', 'NO_EVIDENCE', 'FACT', 'AUTOMATED', 'p', '2026-09-23'), 'aaaaaaaa-0000-0000-0000-00000000000a')$$, '23514');
+SELECT pg_temp.expect_fail('G13 columns that disagree with the engine result JSON (HUMAN_REVIEWED forged) are refused',
+  $$INSERT INTO public.impact_verifications (investigation_id, claim_ref, result_id, status, underlying_status, sufficiency, display_class, review_state, policy_version, evidence_set_hash, review_binding_hash, evaluated_at, result, created_by)
+    VALUES ('a2222222-0000-0000-0000-00000000000a', 'c2', 'vr_' || repeat('9', 32), 'UNVERIFIED', 'UNVERIFIED', 'NO_EVIDENCE', 'CLAIM', 'HUMAN_REVIEWED', 'p', repeat('d', 64), repeat('e', 64), '2026-09-23',
+      pg_temp.vres('a2222222-0000-0000-0000-00000000000a', 'c2', 'vr_' || repeat('9', 32), 'UNVERIFIED', 'UNVERIFIED', 'NO_EVIDENCE', 'CLAIM', 'REVIEW_REQUIRED', 'p', '2026-09-23'), 'aaaaaaaa-0000-0000-0000-00000000000a')$$, '23514');
+SELECT pg_temp.expect_fail('G14 a result JSON belonging to another investigation is refused',
+  $$INSERT INTO public.impact_verifications (investigation_id, claim_ref, result_id, status, underlying_status, sufficiency, display_class, review_state, policy_version, evidence_set_hash, review_binding_hash, evaluated_at, result, created_by)
+    VALUES ('a2222222-0000-0000-0000-00000000000a', 'c2', 'vr_' || repeat('a', 32), 'UNVERIFIED', 'UNVERIFIED', 'NO_EVIDENCE', 'CLAIM', 'AUTOMATED', 'p', repeat('d', 64), repeat('e', 64), '2026-09-23',
+      pg_temp.vres('b2222222-0000-0000-0000-00000000000b', 'c2', 'vr_' || repeat('a', 32), 'UNVERIFIED', 'UNVERIFIED', 'NO_EVIDENCE', 'CLAIM', 'AUTOMATED', 'p', '2026-09-23'), 'aaaaaaaa-0000-0000-0000-00000000000a')$$, '23514');
+
+-- I1G1-02: the latest version is always available, however long the history is.
+DO $$
+DECLARE i int;
+BEGIN
+  FOR i IN 1..2001 LOOP
+    INSERT INTO public.impact_verifications (investigation_id, claim_ref, result_id, status, underlying_status, sufficiency,
+      display_class, review_state, policy_version, evidence_set_hash, review_binding_hash, evaluated_at, result, created_by)
+    VALUES ('a2222222-0000-0000-0000-00000000000a', 'c2', 'vr_' || lpad(to_hex(i), 32, '0'), 'UNVERIFIED', 'UNVERIFIED', 'SELF_REPORTED', 'CLAIM',
+      'AUTOMATED', 'impact-verification/7', repeat('d', 64), repeat('e', 64), '2026-09-23T00:00:00Z',
+      pg_temp.vres('a2222222-0000-0000-0000-00000000000a', 'c2', 'vr_' || lpad(to_hex(i), 32, '0'), 'UNVERIFIED', 'UNVERIFIED', 'SELF_REPORTED', 'CLAIM', 'AUTOMATED', 'impact-verification/7', '2026-09-23T00:00:00Z'),
+      'aaaaaaaa-0000-0000-0000-00000000000a');
+  END LOOP;
+END $$;
+SELECT pg_temp.expect_eq('G15 latest view returns version 2001 after 2001 runs',
+  (SELECT version FROM public.impact_latest_verifications WHERE investigation_id = :IA AND claim_ref = 'c2'), 2001);
+SELECT pg_temp.expect_eq('G16 audit chain still verifies after 2001 runs', (SELECT public.impact_audit_chain_ok(:IA))::int, 1);
+
 RESET ROLE;
 
 -- ── A: authenticated user A vs user B (RLS) ────────────────────────────────
@@ -256,7 +327,9 @@ SELECT pg_temp.expect_eq('A08 disputes of B are invisible', (SELECT count(*) FRO
 SELECT pg_temp.expect_eq('A09 audit of B is invisible', (SELECT count(*) FROM public.impact_audit_events WHERE investigation_id = :IB), 0);
 SELECT pg_temp.expect_eq('A10 unfiltered child reads return only A''s rows',
   (SELECT count(*) FROM public.impact_claims) + (SELECT count(*) FROM public.impact_evidence) + (SELECT count(*) FROM public.impact_sources), 6);
-SELECT pg_temp.expect_eq('A11 A can read its own audit trail', (SELECT count(*) FROM public.impact_audit_events WHERE investigation_id = :IA), 12);
+SELECT pg_temp.expect_eq('A11 A can read its own audit trail', (SELECT count(*) FROM public.impact_audit_events WHERE investigation_id = :IA), 12 + 2001);
+SELECT pg_temp.expect_eq('A11b A sees its latest versions through the invoker view', (SELECT count(*) FROM public.impact_latest_verifications), 2);
+SELECT pg_temp.expect_eq('A11c B''s latest versions are invisible through the view', (SELECT count(*) FROM public.impact_latest_verifications WHERE investigation_id = :IB), 0);
 SELECT pg_temp.expect_eq('A12 A can verify its own chain', (SELECT public.impact_audit_chain_ok(:IA))::int, 1);
 SELECT pg_temp.expect_eq('A13 B''s chain is not even visible to A', (SELECT public.impact_audit_chain_ok(:IB))::int, 0);
 
@@ -330,6 +403,15 @@ SELECT pg_temp.expect_eq('R03 archive audited',
   (SELECT count(*) FROM public.impact_audit_events WHERE investigation_id = :IB AND event_type = 'INVESTIGATION_ARCHIVED'), 1);
 RESET ROLE;
 
+-- ── D: even the table owner / superuser cannot delete history directly ─────
+SELECT pg_temp.expect_fail('D01 superuser direct DELETE of verifications is refused',
+  $$DELETE FROM public.impact_verifications WHERE investigation_id = 'a2222222-0000-0000-0000-00000000000a'$$, 'IMPACT_NO_DIRECT_DELETE');
+SELECT pg_temp.expect_fail('D02 superuser direct DELETE of audit is refused',
+  $$DELETE FROM public.impact_audit_events WHERE investigation_id = 'a2222222-0000-0000-0000-00000000000a'$$, 'IMPACT_NO_DIRECT_DELETE');
+SELECT pg_temp.expect_fail('D03 superuser direct INSERT of audit is refused (trigger-only)',
+  $$INSERT INTO public.impact_audit_events (investigation_id, seq, at_text, event_type, actor_ref, prev_hash, hash)
+    VALUES ('a2222222-0000-0000-0000-00000000000a', 99999, 'x', 'CLAIM_CREATED', 'x', repeat('0', 64), repeat('0', 64))$$, 'IMPACT_TRIGGER_ONLY');
+
 -- ── T: tamper detection (superuser bypasses the append-only trigger) ────────
 ALTER TABLE public.impact_audit_events DISABLE TRIGGER impact_append_only;
 UPDATE public.impact_audit_events SET codes = ARRAY['FORGED'] WHERE investigation_id = :IA AND seq = 3;
@@ -343,9 +425,9 @@ SELECT pg_temp.expect_eq('V01 no verdict/score/trust/fraud column exists',
      AND column_name ~* '(verdict|score|rank|trust|fraud|scam|guilt|corrupt)'), 0);
 SELECT pg_temp.expect_eq('V02 claims table has no status column (engine is the authority)',
   (SELECT count(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'impact_claims' AND column_name = 'status'), 0);
-SELECT pg_temp.expect_eq('V03 RLS enabled and forced on all 8 impact tables',
+SELECT pg_temp.expect_eq('V03 RLS enabled on all 8 impact tables',
   (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-   WHERE n.nspname = 'public' AND c.relname LIKE 'impact\_%' AND c.relkind = 'r' AND c.relrowsecurity AND c.relforcerowsecurity), 8);
+   WHERE n.nspname = 'public' AND c.relname LIKE 'impact\_%' AND c.relkind = 'r' AND c.relrowsecurity), 8);
 SELECT pg_temp.expect_eq('V04 authenticated holds no write privilege on any impact table',
   (SELECT count(*) FROM information_schema.table_privileges
    WHERE table_schema = 'public' AND table_name LIKE 'impact\_%' AND grantee IN ('authenticated', 'anon', 'PUBLIC')

@@ -89,6 +89,10 @@ Deno.test('SS-02 reads go through the caller-JWT client (RLS); writes through se
   await store.projectOwnedByCaller(INV);
   const reads = calls.splice(0);
   assert(reads.every((c) => c.client === 'user'), 'every read uses the caller JWT client');
+  assert(reads.some((c) => c.table === 'impact_latest_verifications'), 'latest versions come from the view');
+  await store.countOwnedInvestigations(ACTOR);
+  const count = calls.splice(0)[0];
+  assertEquals([count.client, count.filters], ['service', [['owner_id', ACTOR]]]);
   assert(reads.filter((c) => c.op === 'select' && c.table.startsWith('impact_') && c.table !== 'impact_investigations').every((c) => c.filters.some(([k, v]) => k === 'investigation_id' && v === INV)));
 
   await store.createInvestigation({ ownerId: ACTOR, projectId: null, subjectOrgRef: 'org-x', subjectOrgType: 'NGO', subjectIdentity: {} });
