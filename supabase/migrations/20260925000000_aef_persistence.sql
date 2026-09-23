@@ -16,7 +16,7 @@
 -- service_role (privileged infrastructure) may only SELECT and call the ten
 -- aef_* RPCs; it has no direct INSERT/UPDATE/DELETE and cannot call the
 -- internal aef__* helpers. The RPCs are SECURITY DEFINER with a pinned
--- search_path; the guard triggers apply to the owner too (a superuser can
+-- search_path (pg_catalog, pg_temp; every object schema-qualified); the guard triggers apply to the owner too (a superuser can
 -- disable triggers — tampering is then detectable, AEF_SECURITY_MODEL.md).
 --
 -- No payload, prompt, JWT, credential or free text is stored: only ids,
@@ -26,23 +26,23 @@
 
 -- ── helpers ─────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.aef__sha256(p text) RETURNS text
-LANGUAGE sql IMMUTABLE STRICT SET search_path = pg_catalog AS $$
+LANGUAGE sql IMMUTABLE STRICT SET search_path = pg_catalog, pg_temp AS $$
   SELECT encode(sha256(convert_to(p, 'UTF8')), 'hex')
 $$;
 
 CREATE OR REPLACE FUNCTION public.aef__ts(p timestamptz) RETURNS text
-LANGUAGE sql IMMUTABLE SET search_path = pg_catalog AS $$
+LANGUAGE sql IMMUTABLE SET search_path = pg_catalog, pg_temp AS $$
   SELECT CASE WHEN p IS NULL THEN NULL
               ELSE to_char(p AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') END
 $$;
 
 CREATE OR REPLACE FUNCTION public.aef__is_terminal(p_state text) RETURNS boolean
-LANGUAGE sql IMMUTABLE SET search_path = pg_catalog AS $$
+LANGUAGE sql IMMUTABLE SET search_path = pg_catalog, pg_temp AS $$
   SELECT p_state IN ('SUCCEEDED', 'FAILED', 'UNKNOWN_OUTCOME', 'REJECTED', 'EXPIRED', 'CANCELLED', 'INVALIDATED')
 $$;
 
 CREATE OR REPLACE FUNCTION public.aef__outcome_for(p_state text, p_side_effect boolean) RETURNS text
-LANGUAGE sql IMMUTABLE SET search_path = pg_catalog AS $$
+LANGUAGE sql IMMUTABLE SET search_path = pg_catalog, pg_temp AS $$
   SELECT CASE p_state
     WHEN 'SUCCEEDED' THEN 'SUCCESS'
     WHEN 'FAILED' THEN CASE WHEN p_side_effect IS TRUE THEN 'PARTIAL' ELSE 'FAILURE' END
@@ -55,7 +55,7 @@ LANGUAGE sql IMMUTABLE SET search_path = pg_catalog AS $$
 $$;
 
 CREATE OR REPLACE FUNCTION public.aef__err(p_code text, p_state text DEFAULT NULL) RETURNS jsonb
-LANGUAGE sql IMMUTABLE SET search_path = pg_catalog AS $$
+LANGUAGE sql IMMUTABLE SET search_path = pg_catalog, pg_temp AS $$
   SELECT CASE WHEN p_state IS NULL THEN jsonb_build_object('ok', false, 'code', p_code)
               ELSE jsonb_build_object('ok', false, 'code', p_code, 'state', p_state) END
 $$;
@@ -63,7 +63,7 @@ $$;
 -- Argument parsing. Every RPC takes ONE jsonb object; unknown keys are a
 -- mass-assignment attempt and are rejected (SQLSTATE AE001 → ARGUMENT_REJECTED).
 CREATE OR REPLACE FUNCTION public.aef__check_keys(p jsonb, p_allowed text[]) RETURNS void
-LANGUAGE plpgsql IMMUTABLE SET search_path = pg_catalog AS $$
+LANGUAGE plpgsql IMMUTABLE SET search_path = pg_catalog, pg_temp AS $$
 BEGIN
   IF p IS NULL OR jsonb_typeof(p) <> 'object' THEN
     RAISE EXCEPTION 'AEF_ARGUMENT: object required' USING ERRCODE = 'AE001';
@@ -74,7 +74,7 @@ BEGIN
 END $$;
 
 CREATE OR REPLACE FUNCTION public.aef__text(p jsonb, p_key text, p_required boolean, p_max int, p_re text DEFAULT NULL) RETURNS text
-LANGUAGE plpgsql IMMUTABLE SET search_path = pg_catalog AS $$
+LANGUAGE plpgsql IMMUTABLE SET search_path = pg_catalog, pg_temp AS $$
 DECLARE v text;
 BEGIN
   IF NOT (p ? p_key) OR jsonb_typeof(p -> p_key) = 'null' THEN
@@ -92,7 +92,7 @@ BEGIN
 END $$;
 
 CREATE OR REPLACE FUNCTION public.aef__uuid(p jsonb, p_key text, p_required boolean) RETURNS uuid
-LANGUAGE plpgsql IMMUTABLE SET search_path = pg_catalog AS $$
+LANGUAGE plpgsql IMMUTABLE SET search_path = pg_catalog, pg_temp AS $$
 DECLARE v text;
 BEGIN
   v := public.aef__text(p, p_key, p_required, 36, '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
@@ -100,7 +100,7 @@ BEGIN
 END $$;
 
 CREATE OR REPLACE FUNCTION public.aef__int(p jsonb, p_key text, p_required boolean, p_min int, p_max int) RETURNS int
-LANGUAGE plpgsql IMMUTABLE SET search_path = pg_catalog AS $$
+LANGUAGE plpgsql IMMUTABLE SET search_path = pg_catalog, pg_temp AS $$
 DECLARE n numeric;
 BEGIN
   IF NOT (p ? p_key) OR jsonb_typeof(p -> p_key) = 'null' THEN
@@ -118,7 +118,7 @@ BEGIN
 END $$;
 
 CREATE OR REPLACE FUNCTION public.aef__bool(p jsonb, p_key text) RETURNS boolean
-LANGUAGE plpgsql IMMUTABLE SET search_path = pg_catalog AS $$
+LANGUAGE plpgsql IMMUTABLE SET search_path = pg_catalog, pg_temp AS $$
 BEGIN
   IF jsonb_typeof(p -> p_key) IS DISTINCT FROM 'boolean' THEN
     RAISE EXCEPTION 'AEF_ARGUMENT: % must be a boolean', p_key USING ERRCODE = 'AE001';
@@ -222,14 +222,14 @@ CREATE INDEX IF NOT EXISTS aef_audit_events_operation_idx ON public.aef_audit_ev
 CREATE OR REPLACE FUNCTION public.aef__event_hash(
   p_subject uuid, p_seq bigint, p_op uuid, p_event text, p_from text, p_to text,
   p_reason text, p_ref text, p_at timestamptz, p_prev text) RETURNS text
-LANGUAGE sql IMMUTABLE SET search_path = public, pg_temp AS $$
+LANGUAGE sql IMMUTABLE SET search_path = pg_catalog, pg_temp AS $$
   SELECT public.aef__sha256(jsonb_build_array('aef-audit/1', p_subject, p_seq, p_op, p_event, p_from, p_to,
                                               p_reason, p_ref, public.aef__ts(p_at), p_prev)::text)
 $$;
 
 CREATE OR REPLACE FUNCTION public.aef__audit_append(
   p_subject uuid, p_op uuid, p_event text, p_from text, p_to text, p_reason text, p_ref text DEFAULT NULL) RETURNS void
-LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql SET search_path = pg_catalog, pg_temp AS $$
 DECLARE v_seq bigint; v_prev text; v_at timestamptz := clock_timestamp(); v_hash text;
 BEGIN
   INSERT INTO public.aef_audit_heads (subject_id, last_seq, last_hash)
@@ -245,7 +245,7 @@ END $$;
 
 -- ── guard triggers (defense in depth; apply to service_role too) ────────
 CREATE OR REPLACE FUNCTION public.aef__guard_operations() RETURNS trigger
-LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql SET search_path = pg_catalog, pg_temp AS $$
 DECLARE g public.aef_human_gates;
 BEGIN
   IF TG_OP = 'DELETE' THEN
@@ -322,7 +322,7 @@ BEGIN
 END $$;
 
 CREATE OR REPLACE FUNCTION public.aef__guard_gates() RETURNS trigger
-LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql SET search_path = pg_catalog, pg_temp AS $$
 DECLARE o public.aef_operations;
 BEGIN
   IF TG_OP = 'DELETE' THEN
@@ -382,7 +382,7 @@ BEGIN
 END $$;
 
 CREATE OR REPLACE FUNCTION public.aef__guard_receipts() RETURNS trigger
-LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql SET search_path = pg_catalog, pg_temp AS $$
 DECLARE o public.aef_operations;
 BEGIN
   IF TG_OP <> 'INSERT' THEN
@@ -405,7 +405,7 @@ BEGIN
 END $$;
 
 CREATE OR REPLACE FUNCTION public.aef__guard_audit_events() RETURNS trigger
-LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql SET search_path = pg_catalog, pg_temp AS $$
 BEGIN
   IF TG_OP <> 'INSERT' THEN
     RAISE EXCEPTION 'AEF_GUARD: audit events are append-only';
@@ -418,7 +418,7 @@ BEGIN
 END $$;
 
 CREATE OR REPLACE FUNCTION public.aef__guard_audit_heads() RETURNS trigger
-LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql SET search_path = pg_catalog, pg_temp AS $$
 BEGIN
   IF TG_OP = 'DELETE' THEN
     RAISE EXCEPTION 'AEF_GUARD: audit heads are never deleted';
@@ -439,7 +439,7 @@ BEGIN
 END $$;
 
 CREATE OR REPLACE FUNCTION public.aef__guard_truncate() RETURNS trigger
-LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql SET search_path = pg_catalog, pg_temp AS $$
 BEGIN
   RAISE EXCEPTION 'AEF_GUARD: % cannot be truncated', TG_TABLE_NAME;
 END $$;
@@ -472,7 +472,7 @@ END $$;
 
 -- ── state-machine helpers (caller holds the operation row lock) ─────────
 CREATE OR REPLACE FUNCTION public.aef__op_json(o public.aef_operations) RETURNS jsonb
-LANGUAGE sql STABLE SET search_path = public, pg_temp AS $$
+LANGUAGE sql STABLE SET search_path = pg_catalog, pg_temp AS $$
   SELECT jsonb_build_object(
     'operation_id', o.id, 'state', o.state, 'state_reason', o.state_reason,
     'action', o.action, 'tool_id', o.tool_id, 'action_class', o.action_class,
@@ -483,27 +483,27 @@ LANGUAGE sql STABLE SET search_path = public, pg_temp AS $$
 $$;
 
 CREATE OR REPLACE FUNCTION public.aef__gate_json(p_op uuid) RETURNS jsonb
-LANGUAGE sql STABLE SET search_path = public, pg_temp AS $$
+LANGUAGE sql STABLE SET search_path = pg_catalog, pg_temp AS $$
   SELECT jsonb_build_object('gate_id', g.id, 'state', g.state, 'binding_hash', g.binding_hash,
                             'approver_id', g.approver_id, 'expires_at', public.aef__ts(g.expires_at))
   FROM public.aef_human_gates g WHERE g.operation_id = p_op
 $$;
 
 CREATE OR REPLACE FUNCTION public.aef__receipt_json(p_op uuid) RETURNS jsonb
-LANGUAGE sql STABLE SET search_path = public, pg_temp AS $$
+LANGUAGE sql STABLE SET search_path = pg_catalog, pg_temp AS $$
   SELECT jsonb_build_object('receipt', r.receipt, 'receipt_hash', r.receipt_hash)
   FROM public.aef_receipts r WHERE r.operation_id = p_op
 $$;
 
 CREATE OR REPLACE FUNCTION public.aef__view(p_op uuid) RETURNS jsonb
-LANGUAGE sql STABLE SET search_path = public, pg_temp AS $$
+LANGUAGE sql STABLE SET search_path = pg_catalog, pg_temp AS $$
   SELECT jsonb_build_object('operation', public.aef__op_json(o), 'gate', public.aef__gate_json(o.id),
                             'receipt', public.aef__receipt_json(o.id))
   FROM public.aef_operations o WHERE o.id = p_op
 $$;
 
 CREATE OR REPLACE FUNCTION public.aef__issue_receipt(p_op uuid) RETURNS void
-LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql SET search_path = pg_catalog, pg_temp AS $$
 DECLARE o public.aef_operations; g public.aef_human_gates; v_id uuid := gen_random_uuid(); r jsonb; h text;
 BEGIN
   SELECT * INTO o FROM public.aef_operations WHERE id = p_op;
@@ -529,7 +529,7 @@ BEGIN
 END $$;
 
 CREATE OR REPLACE FUNCTION public.aef__op_to(p_op uuid, p_to text, p_reason text, p_side_effect boolean DEFAULT NULL) RETURNS void
-LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql SET search_path = pg_catalog, pg_temp AS $$
 DECLARE v_from text; v_subject uuid;
 BEGIN
   SELECT state, subject_id INTO v_from, v_subject FROM public.aef_operations WHERE id = p_op;
@@ -544,7 +544,7 @@ BEGIN
 END $$;
 
 CREATE OR REPLACE FUNCTION public.aef__gate_to(p_op uuid, p_to text, p_reason text, p_approver uuid DEFAULT NULL) RETURNS void
-LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql SET search_path = pg_catalog, pg_temp AS $$
 DECLARE g public.aef_human_gates;
 BEGIN
   SELECT * INTO g FROM public.aef_human_gates WHERE operation_id = p_op FOR UPDATE;
@@ -561,7 +561,7 @@ END $$;
 -- Expires a locked, open operation (and its gate) when its deadline passed.
 -- Returns true when it expired the operation now.
 CREATE OR REPLACE FUNCTION public.aef__expire_if_due(p_op uuid) RETURNS boolean
-LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql SET search_path = pg_catalog, pg_temp AS $$
 DECLARE o public.aef_operations; g public.aef_human_gates; v_gate_due boolean := false;
 BEGIN
   SELECT * INTO o FROM public.aef_operations WHERE id = p_op;
@@ -582,7 +582,7 @@ END $$;
 
 -- ── RPC: register (create or idempotent replay) ─────────────────────────
 CREATE OR REPLACE FUNCTION public.aef_register_operation(p jsonb) RETURNS jsonb
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
 DECLARE
   v_subject uuid; v_request uuid; v_key text; v_domain text; v_action text; v_tool text; v_class text;
   v_rtype text; v_rid text; v_project uuid; v_payload_hash text; v_payload_bytes int;
@@ -689,7 +689,7 @@ END $$;
 
 -- ── RPC: human decision ─────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.aef_decide_gate(p jsonb) RETURNS jsonb
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
 DECLARE
   v_gate uuid; v_approver uuid; v_decision text; v_binding text; v_policy text;
   v_op uuid; o public.aef_operations; g public.aef_human_gates;
@@ -746,7 +746,7 @@ END $$;
 
 -- ── RPC: execution claim (the only path to EXECUTING) ───────────────────
 CREATE OR REPLACE FUNCTION public.aef_claim_execution(p jsonb) RETURNS jsonb
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
 DECLARE
   v_op uuid; v_subject uuid; v_binding text; v_policy text; v_lease int;
   o public.aef_operations; g public.aef_human_gates; v_token uuid := gen_random_uuid();
@@ -798,7 +798,7 @@ END $$;
 
 -- ── RPC: execution completion ───────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.aef_complete_execution(p jsonb) RETURNS jsonb
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
 DECLARE v_op uuid; v_token uuid; v_result text; o public.aef_operations;
 BEGIN
   BEGIN
@@ -830,7 +830,7 @@ END $$;
 
 -- ── RPC: cancellation (never compensates) ───────────────────────────────
 CREATE OR REPLACE FUNCTION public.aef_cancel_operation(p jsonb) RETURNS jsonb
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
 DECLARE v_op uuid; v_subject uuid; o public.aef_operations;
 BEGIN
   BEGIN
@@ -861,7 +861,7 @@ END $$;
 
 -- ── RPC: recovery sweep (expired approvals, crashed executions) ─────────
 CREATE OR REPLACE FUNCTION public.aef_recover(p jsonb) RETURNS jsonb
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
 DECLARE v_limit int; o public.aef_operations; v_unknown int := 0; v_expired int := 0;
 BEGIN
   BEGIN
@@ -897,7 +897,7 @@ END $$;
 
 -- ── RPC: read ───────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.aef_get_operation(p jsonb) RETURNS jsonb
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
 DECLARE v_op uuid; v_subject uuid;
 BEGIN
   BEGIN
@@ -914,7 +914,7 @@ BEGIN
 END $$;
 
 CREATE OR REPLACE FUNCTION public.aef_record_denial(p jsonb) RETURNS jsonb
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
 DECLARE v_subject uuid; v_code text;
 BEGIN
   BEGIN
@@ -930,7 +930,7 @@ END $$;
 
 -- ── RPC: integrity verification ─────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.aef_verify_receipt(p jsonb) RETURNS jsonb
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
 DECLARE v_receipt jsonb; v_id uuid; r public.aef_receipts; e public.aef_audit_events;
 BEGIN
   BEGIN
@@ -972,7 +972,7 @@ BEGIN
 END $$;
 
 CREATE OR REPLACE FUNCTION public.aef_verify_audit_chain(p jsonb) RETURNS jsonb
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
 DECLARE v_subject uuid; e public.aef_audit_events; v_prev text := repeat('0', 64); v_seq bigint := 0; h public.aef_audit_heads;
 BEGIN
   BEGIN

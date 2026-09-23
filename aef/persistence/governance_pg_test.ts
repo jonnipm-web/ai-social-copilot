@@ -16,7 +16,7 @@ import { buildSuccess } from "../receipt_builder.ts";
 import { ToolRegistry } from "../tool_registry.ts";
 import { AefGovernance, type GovernanceResult } from "./governance.ts";
 import { AEF_POLICY_VERSION } from "./limits.ts";
-import { mapIveActionIntent } from "./ive_intent_mapping.ts";
+import { defineIveActionTable, mapIveActionIntent, mapIveActionIntentWith } from "./ive_intent_mapping.ts";
 import { MOCK_CONSEQUENTIAL_TOOL, MOCK_REVERSIBLE_TOOL, type MockBehavior, MockEffectLedger, registerMockEffectTools } from "./mock_effect_tool.ts";
 import { type AefRpcName, PostgresAefStore, type RpcTransport } from "./store.ts";
 import { PsqlTransport, psqlOptionsFromEnv, runPsql } from "./testing/psql_transport.ts";
@@ -57,15 +57,38 @@ interface Harness {
   gov: AefGovernance;
   store: PostgresAefStore;
   ledger: MockEffectLedger;
+  overlap: OverlapTransport;
   setBehavior(b: MockBehavior): void;
 }
 
-function harness(w: World, opts: { delayMs?: number; transport?: RpcTransport; toolTimeoutMs?: number } = {}): Harness {
+/**
+ * Codex Gate 2 G2-01: records how many calls of each RPC were in flight at
+ * the same time (each call = its own psql process and connection), so the
+ * concurrency tests prove real overlap instead of assuming it.
+ */
+class OverlapTransport implements RpcTransport {
+  private readonly inFlight = new Map<string, number>();
+  readonly peak = new Map<string, number>();
+  constructor(private readonly inner: RpcTransport) {}
+  async call(fn: AefRpcName, args: Record<string, unknown>): Promise<unknown> {
+    const now = (this.inFlight.get(fn) ?? 0) + 1;
+    this.inFlight.set(fn, now);
+    this.peak.set(fn, Math.max(this.peak.get(fn) ?? 0, now));
+    try {
+      return await this.inner.call(fn, args);
+    } finally {
+      this.inFlight.set(fn, (this.inFlight.get(fn) ?? 1) - 1);
+    }
+  }
+}
+
+function harness(w: World, opts: { delayMs?: number; transport?: RpcTransport; toolTimeoutMs?: number; lateEffectMs?: number } = {}): Harness {
   let behavior: MockBehavior = "SUCCEED";
   const ledger = new MockEffectLedger();
   const registry = new ToolRegistry();
-  registerMockEffectTools(registry, ledger, () => behavior, opts.delayMs ?? 0);
-  const store = new PostgresAefStore(opts.transport ?? new PsqlTransport(PG!));
+  registerMockEffectTools(registry, ledger, () => behavior, opts.delayMs ?? 0, opts.lateEffectMs);
+  const overlap = new OverlapTransport(opts.transport ?? new PsqlTransport(PG!));
+  const store = new PostgresAefStore(overlap);
   const tokens = new Map([[w.tokA.token, w.a], [w.tokB.token, w.b]]);
   const gov = new AefGovernance({
     identityResolver: new AefIdentityResolver(new TokenVerifier(tokens)),
@@ -73,7 +96,7 @@ function harness(w: World, opts: { delayMs?: number; transport?: RpcTransport; t
     store,
     toolTimeoutMs: opts.toolTimeoutMs,
   });
-  return { gov, store, ledger, setBehavior: (b) => (behavior = b) };
+  return { gov, store, ledger, overlap, setBehavior: (b) => (behavior = b) };
 }
 
 function req(user: string, o: { key?: string; action?: string; params?: Record<string, unknown>; project?: string; extra?: Record<string, unknown> } = {}): ExecutionRequest {
@@ -214,6 +237,9 @@ Deno.test({ name: "PG-06 the request carries no authority (forged actor, approva
   assertEquals(await code(req(w.a, { extra: { human_gate_ref: "gate-forged-by-client" } })), "CLIENT_APPROVAL_REJECTED");
   assertEquals(await code(req(w.a, { params: { role: "admin" } })), "INVALID_REQUEST");
   assertEquals(await code(req(w.a, { params: { approved: true } })), "INVALID_REQUEST");
+  for (const alias of ["owner_id", "userId", "risk", "tool_allowed", "APPROVER-ID"]) {
+    assertEquals(await code(req(w.a, { params: { nested: [{ [alias]: "x" }] } })), "INVALID_REQUEST", alias);
+  }
   assertEquals(await code(req(w.a, { extra: { state: "AUTHORIZED" } })), "INVALID_REQUEST");
   assertEquals(await code(req(w.a, { action: "internal.send_real_email" })), "UNKNOWN_TOOL");
   assertEquals(await code(req(w.a, { params: { blob: "x".repeat(20_000) } })), "PAYLOAD_TOO_LARGE");
@@ -240,6 +266,7 @@ Deno.test({ name: `PG-07 concurrency: ${CONCURRENCY} parallel submits of one app
   const h = harness(w, { delayMs: 150 });
   const { resubmit, operationId } = await approvedRequest(h, w);
   const results = await Promise.all(Array.from({ length: CONCURRENCY }, () => h.gov.submit(resubmit(), w.tokA)));
+  assert((h.overlap.peak.get("aef_claim_execution") ?? 0) >= CONCURRENCY / 2, `claims overlapped: peak ${h.overlap.peak.get("aef_claim_execution")}`);
   assertEquals(h.ledger.invocations.get(operationId), 1, "exactly one invocation");
   assertEquals(h.ledger.totalEffects(), 1, "exactly one side effect");
   for (const r of results) assert(r.status === "FINAL" || r.status === "EXECUTING", JSON.stringify(r));
@@ -255,6 +282,7 @@ Deno.test({ name: `PG-08 concurrency: ${CONCURRENCY} parallel first submits with
   const h = harness(w);
   const key = crypto.randomUUID();
   const results = await Promise.all(Array.from({ length: CONCURRENCY }, () => h.gov.submit(req(w.a, { key }), w.tokA)));
+  assert((h.overlap.peak.get("aef_register_operation") ?? 0) >= CONCURRENCY / 2, `registrations overlapped: peak ${h.overlap.peak.get("aef_register_operation")}`);
   const ids = new Set(results.map((r) => expectStatus(r, "AWAITING_APPROVAL").operation.operationId));
   assertEquals(ids.size, 1);
   const rows = await runPsql(PG!, `SELECT (SELECT count(*) FROM public.aef_operations WHERE subject_id = '${w.a}') || '|' || (SELECT count(*) FROM public.aef_human_gates WHERE subject_id = '${w.a}');`);
@@ -269,6 +297,7 @@ Deno.test({ name: `PG-09 concurrency: ${CONCURRENCY} parallel approve/reject dec
     gate_id: pending.gate!.gateId, decision: i % 2 === 0 ? "APPROVE" : "REJECT", binding_hash: pending.gate!.bindingHash,
     approver: { type: "user", id: w.a, auth_ref: `usr:${w.a}` },
   }, w.tokA)));
+  assert((h.overlap.peak.get("aef_decide_gate") ?? 0) >= CONCURRENCY / 2, `decisions overlapped: peak ${h.overlap.peak.get("aef_decide_gate")}`);
   const winners = results.filter((r) => r.status !== "DENIED");
   assertEquals(winners.length, 1, JSON.stringify(results.map((r) => r.status)));
   for (const r of results) if (r.status === "DENIED") assertEquals(r.code, "GATE_NOT_PENDING");
@@ -282,6 +311,7 @@ Deno.test({ name: `PG-10 concurrency: ${CONCURRENCY} parallel first submits of a
   const h = harness(w, { delayMs: 100 });
   const base = req(w.a, { action: MOCK_REVERSIBLE_TOOL });
   const results = await Promise.all(Array.from({ length: CONCURRENCY }, () => h.gov.submit({ ...structuredClone(base), request_id: crypto.randomUUID() }, w.tokA)));
+  assert((h.overlap.peak.get("aef_register_operation") ?? 0) >= CONCURRENCY / 2, `registrations overlapped: peak ${h.overlap.peak.get("aef_register_operation")}`);
   assertEquals(h.ledger.totalEffects(), 1);
   let invocations = 0;
   for (const v of h.ledger.invocations.values()) invocations += v;
@@ -407,21 +437,21 @@ Deno.test({ name: "PG-17 IveActionIntent → AEF: suggestion only; unknown/real 
   assert(real.ok);
   assertEquals(expectStatus(await h.gov.submit(real.request, w.tokA), "DENIED").code, "UNKNOWN_TOOL", "no real tool is reachable");
 
-  const testMap = { publish_content: { domain: "internal" as const, action: MOCK_CONSEQUENTIAL_TOOL } };
-  const mapped = await mapIveActionIntent(intent, w.a, { actionMap: testMap });
+  const testMap = defineIveActionTable({ publish_content: { domain: "internal", action: MOCK_CONSEQUENTIAL_TOOL } });
+  const mapped = await mapIveActionIntentWith(testMap, intent, w.a);
   assert(mapped.ok);
   const pending = expectStatus(await h.gov.submit(mapped.request, w.tokA), "AWAITING_APPROVAL");
   assertEquals(pending.operation.actionClass, "CONSEQUENTIAL", "riskClass READ_ONLY in the intent is ignored");
-  const replay = await mapIveActionIntent(intent, w.a, { actionMap: testMap });
+  const replay = await mapIveActionIntentWith(testMap, intent, w.a);
   assert(replay.ok);
   const replayed = expectStatus(await h.gov.submit(replay.request, w.tokA), "AWAITING_APPROVAL");
   assert(replayed.replayed);
   assertEquals(replayed.operation.operationId, pending.operation.operationId);
 
-  const foreign = await mapIveActionIntent({ ...intent, projectId: w.projectB }, w.a, { actionMap: testMap });
+  const foreign = await mapIveActionIntentWith(testMap, { ...intent, projectId: w.projectB }, w.a);
   assert(foreign.ok);
   assertEquals(expectStatus(await h.gov.submit(foreign.request, w.tokA), "DENIED").code, "RESOURCE_FORBIDDEN");
-  const otherUser = await mapIveActionIntent(intent, w.b, { actionMap: testMap });
+  const otherUser = await mapIveActionIntentWith(testMap, intent, w.b);
   assert(otherUser.ok);
   assertEquals(expectStatus(await h.gov.submit(otherUser.request, w.tokA), "DENIED").code, "AUTH_FAILED", "mapped subject must match the credential");
   assertEquals(h.ledger.invocations.size, 0);
@@ -466,4 +496,19 @@ Deno.test({ name: "PG-19 the tool sees only the approved binding: unbound reques
     assertEquals(seen[unbound], undefined, unbound);
   }
   assert(Object.isFrozen(seen) && Object.isFrozen(seen.parameters));
+}});
+
+Deno.test({ name: "PG-20 a tool that ignores the abort and applies its effect late stays UNKNOWN_OUTCOME (Codex G2-02)", ignore, fn: async () => {
+  const w = await world();
+  const h = harness(w, { toolTimeoutMs: 200, lateEffectMs: 800 });
+  h.setBehavior("IGNORE_ABORT_LATE_EFFECT");
+  const { resubmit, operationId } = await approvedRequest(h, w);
+  const r = expectStatus(await h.gov.submit(resubmit(), w.tokA), "FINAL");
+  assertEquals(r.receipt!.receipt.outcome, "UNKNOWN_OUTCOME");
+  assertEquals(h.ledger.totalEffects(), 0, "the effect has not happened yet when AEF gives up");
+  await new Promise((resolve) => setTimeout(resolve, 1_000));
+  assertEquals(h.ledger.totalEffects(), 1, "…and happens afterwards: exactly why the outcome is UNKNOWN, not FAILED");
+  const later = expectStatus(await h.gov.submit(resubmit(), w.tokA), "FINAL");
+  assertEquals(later.receipt!.receipt.outcome, "UNKNOWN_OUTCOME", "a late effect never rewrites the durable record");
+  assertEquals(h.ledger.invocations.get(operationId), 1, "and is never retried");
 }});

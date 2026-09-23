@@ -336,6 +336,11 @@ BEGIN
     FOREACH r IN ARRAY ARRAY['anon', 'authenticated'] LOOP
       IF has_function_privilege(r, f.oid, 'EXECUTE') THEN RAISE EXCEPTION 'T14p % can execute %', r, f.proname; END IF;
     END LOOP;
+    -- Codex G1V-02: no AEF function resolves names through a writable schema.
+    IF NOT EXISTS (SELECT 1 FROM pg_proc p, unnest(p.proconfig) c
+                    WHERE p.oid = f.oid AND c = 'search_path=pg_catalog, pg_temp') THEN
+      RAISE EXCEPTION 'T14p % does not pin search_path to pg_catalog, pg_temp', f.proname;
+    END IF;
     IF left(f.proname, 5) = 'aef__' AND has_function_privilege('service_role', f.oid, 'EXECUTE') THEN
       RAISE EXCEPTION 'T14p service_role can execute internal helper %', f.proname;
     END IF;

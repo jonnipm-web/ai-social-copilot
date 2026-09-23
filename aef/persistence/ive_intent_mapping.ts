@@ -24,15 +24,46 @@
  * future runtime integration.
  */
 import type { Domain, ExecutionRequest } from "../../contracts/aef/types.ts";
+import { findAuthorityAlias } from "./authority_aliases.ts";
 import { canonicalJson, sha256Hex } from "./canonical.ts";
 import type { AefErrorCode } from "./errors.ts";
 
-export type IveActionTarget = { domain: Domain; action: string } | { deny: AefErrorCode };
+export type IveActionTarget = Readonly<{ domain: Domain; action: string }> | Readonly<{ deny: AefErrorCode }>;
+declare const ACTION_TABLE: unique symbol;
+/** A validated, deeply frozen action table — only obtainable from defineIveActionTable(). */
+export type IveActionTable = Readonly<Record<string, IveActionTarget>> & { readonly [ACTION_TABLE]: true };
+
+const TABLES = new WeakSet<object>();
+const ACTION_KEY = /^[a-z][a-z0-9_]{0,63}$/;
+const TABLE_DOMAINS: readonly Domain[] = ["core", "internal"];
+
+/**
+ * Builds an action table (Codex Gate 3 G3-01): entries are validated and the
+ * table is frozen in depth, so neither the table nor any target can be
+ * mutated after construction. Quant/Impact targets are refused here.
+ */
+export function defineIveActionTable(entries: Record<string, { domain: Domain; action: string } | { deny: AefErrorCode }>): IveActionTable {
+  const table: Record<string, IveActionTarget> = Object.create(null);
+  for (const [key, target] of Object.entries(entries)) {
+    if (!ACTION_KEY.test(key)) throw new Error(`invalid IVE action key '${key}'`);
+    if ("deny" in target) {
+      table[key] = Object.freeze({ deny: target.deny });
+      continue;
+    }
+    if (!TABLE_DOMAINS.includes(target.domain) || !target.action.startsWith(`${target.domain}.`)) {
+      throw new Error(`invalid IVE action target for '${key}'`);
+    }
+    table[key] = Object.freeze({ domain: target.domain, action: target.action });
+  }
+  Object.freeze(table);
+  TABLES.add(table);
+  return table as IveActionTable;
+}
 
 /** Server-owned. None of these actions has a registered tool today, so they
  * are all refused as UNKNOWN_TOOL by the governance service: IVE cannot
  * cause any real action through AEF in this mission. */
-export const IVE_ACTION_MAP: Readonly<Record<string, IveActionTarget>> = Object.freeze({
+export const IVE_ACTION_MAP: IveActionTable = defineIveActionTable({
   publish_content: { domain: "core", action: "core.publish_content" },
   send_message: { domain: "core", action: "core.send_message" },
   payment: { domain: "core", action: "core.payment" },
@@ -58,11 +89,20 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
 
 export interface IveMappingOptions {
   now?: Date;
-  /** Test wiring only; production uses IVE_ACTION_MAP. */
-  actionMap?: Readonly<Record<string, IveActionTarget>>;
 }
 
-export async function mapIveActionIntent(
+/** Production entry point: always the server-owned IVE_ACTION_MAP. */
+export function mapIveActionIntent(raw: unknown, verifiedUserId: string, opts: IveMappingOptions = {}): Promise<IveMappingResult> {
+  return mapIveActionIntentWith(IVE_ACTION_MAP, raw, verifiedUserId, opts);
+}
+
+/**
+ * Explicit wiring point (tests, and the future runtime integration) — the
+ * table must come from defineIveActionTable(). A table is not authority:
+ * every mapped action still needs a registered tool and passes AEF policy.
+ */
+export async function mapIveActionIntentWith(
+  table: IveActionTable,
   raw: unknown,
   verifiedUserId: string,
   opts: IveMappingOptions = {},
@@ -80,10 +120,11 @@ export async function mapIveActionIntent(
   if (riskClass !== "READ_ONLY" && riskClass !== "REVERSIBLE" && riskClass !== "CONSEQUENTIAL") return fail("INTENT_INVALID");
   if (typeof contextRef !== "string" || !UUID.test(contextRef)) return fail("INTENT_INVALID");
   if (!isPlainObject(parameters)) return fail("INTENT_INVALID");
+  if (findAuthorityAlias(parameters)) return fail("INTENT_INVALID");
 
-  const map = opts.actionMap ?? IVE_ACTION_MAP;
-  if (!Object.prototype.hasOwnProperty.call(map, requestedAction)) return fail("INTENT_ACTION_UNKNOWN");
-  const target = map[requestedAction];
+  if (!TABLES.has(table)) return fail("INTENT_ACTION_UNKNOWN");
+  if (!Object.prototype.hasOwnProperty.call(table, requestedAction)) return fail("INTENT_ACTION_UNKNOWN");
+  const target = table[requestedAction];
   if ("deny" in target) return fail(target.deny);
 
   const canonical = canonicalJson({

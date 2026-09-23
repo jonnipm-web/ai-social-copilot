@@ -18,7 +18,9 @@ export type MockBehavior =
   | "FAIL_AFTER_EFFECT"
   | "FAIL_UNDECLARED"
   | "THROW_AFTER_EFFECT"
-  | "HANG";
+  | "HANG"
+  /** Ignores the abort signal and applies its effect after `lateEffectMs` (Codex G2-02). */
+  | "IGNORE_ABORT_LATE_EFFECT";
 
 export class MockEffectLedger {
   readonly invocations = new Map<string, number>();
@@ -47,6 +49,8 @@ export interface MockEffectToolOptions {
   behavior: () => MockBehavior;
   /** Simulated work before the effect (ms); lets concurrency tests overlap. */
   delayMs?: number;
+  /** For IGNORE_ABORT_LATE_EFFECT. */
+  lateEffectMs?: number;
 }
 
 function wait(ms: number, signal?: AbortSignal): Promise<void> {
@@ -85,6 +89,10 @@ export function createMockEffectTool(opts: MockEffectToolOptions): ToolDefinitio
         case "THROW_AFTER_EFFECT":
           opts.ledger.applyEffect(operationId);
           throw new Error("mock threw after its effect");
+        case "IGNORE_ABORT_LATE_EFFECT":
+          await wait(opts.lateEffectMs ?? 500);
+          opts.ledger.applyEffect(operationId);
+          return { outcome: "SUCCESS", detail: "late effect after the caller gave up" };
         case "HANG":
           // Never settles on its own; resolves only when the caller aborts.
           await new Promise<void>((resolve) => {
@@ -106,6 +114,7 @@ export function registerMockEffectTools(
   ledger: MockEffectLedger,
   behavior: () => MockBehavior,
   delayMs = 0,
+  lateEffectMs?: number,
 ): void {
   registry.register(createMockEffectTool({
     toolId: MOCK_CONSEQUENTIAL_TOOL,
@@ -114,6 +123,7 @@ export function registerMockEffectTools(
     ledger,
     behavior,
     delayMs,
+    lateEffectMs,
   }));
   registry.register(createMockEffectTool({
     toolId: MOCK_REVERSIBLE_TOOL,
@@ -122,5 +132,6 @@ export function registerMockEffectTools(
     ledger,
     behavior,
     delayMs,
+    lateEffectMs,
   }));
 }

@@ -16,12 +16,12 @@ output of a language-model pipeline and is treated as untrusted input.
 | IveActionIntent field | Treatment |
 |---|---|
 | (whole object) | exactly these six keys; any other key → `INTENT_INVALID` |
-| `requestedAction` | looked up in the server-owned, frozen `IVE_ACTION_MAP` (own properties only); unknown → `INTENT_ACTION_UNKNOWN`; `trade_order` → `POLICY_DENIED` |
+| `requestedAction` | looked up in the server-owned `IVE_ACTION_MAP` (built by `defineIveActionTable`: validated, frozen in depth, null-prototype, own properties only); unknown → `INTENT_ACTION_UNKNOWN`; `trade_order` → `POLICY_DENIED`. The only other entry point, `mapIveActionIntentWith(table, …)`, accepts only tables made by `defineIveActionTable` (no Quant/Impact targets) — Codex G3-01 |
 | `projectId` | UUID or null → `resource {type: "project"}`; ownership verified by the database at registration (`RESOURCE_FORBIDDEN`) |
 | `riskClass` | validated, **ignored for authority**; class and gate come from the tool registry + policy |
 | `capabilityId` | validated; carried only as `metadata.capability_hint` (not bound, not seen by the tool) |
 | `contextRef` | UUID (IVE's server correlation id); bound into the payload |
-| `parameters` | plain object; canonicalized and size-bounded; prohibited authority fields rejected by the contract validator |
+| `parameters` | plain object; canonicalized and size-bounded; contract prohibited fields **and** the AEF authority aliases (`owner_id`, `user_id`, `subject_id`, `risk`, `tool_allowed`, `approver_id`, … any case/separator, any depth) are refused — Codex G3-02 |
 | subject | **only** the caller's verified user id — never from the intent |
 | idempotency key | `ive:` + sha256(canonical{contextRef, requestedAction, projectId, parameters}) → a replayed intent maps to the same durable operation |
 | approval | none: the mapped request never carries `human_gate_ref` |
@@ -36,6 +36,8 @@ IVE therefore cannot cause any real action through AEF in this mission.
 | Attempt | Result |
 |---|---|
 | forged user / role / plan / admin / approval / tool / risk key | `INTENT_INVALID` |
+| authority alias nested in `parameters` | `INTENT_INVALID` (mapping) / `INVALID_REQUEST` (AEF) |
+| hand-made or mutated action table | `INTENT_ACTION_UNKNOWN` / `TypeError` (frozen) |
 | intent subject ≠ credential | `AUTH_FAILED` (contract identity check) |
 | foreign or unknown project | `RESOURCE_FORBIDDEN` |
 | unknown / prototype-named action | `INTENT_ACTION_UNKNOWN` |

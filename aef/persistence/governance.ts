@@ -32,6 +32,7 @@ import type { Actor, ExecutionRequest } from "../../contracts/aef/types.ts";
 import { evaluatePolicy } from "../policy_evaluator.ts";
 import type { ExecuteFn, ToolRegistry } from "../tool_registry.ts";
 import type { IdentityResolver, RawCredential, ToolExecutionResult } from "../types.ts";
+import { findAuthorityAlias } from "./authority_aliases.ts";
 import { canonicalJson, sha256Hex } from "./canonical.ts";
 import type { AefErrorCode } from "./errors.ts";
 import {
@@ -186,6 +187,7 @@ export class AefGovernance {
     const request = rawRequest as ExecutionRequest;
 
     // Persistence v1 restrictions (AEF_SECURITY_MODEL.md).
+    if (findAuthorityAlias([request.parameters, request.constraints])) return this.denyAudited(subjectId, "INVALID_REQUEST");
     if (request.delegation_ref) return this.denyAudited(subjectId, "DELEGATION_UNSUPPORTED");
     if (request.human_gate_ref) return this.denyAudited(subjectId, "CLIENT_APPROVAL_REJECTED");
     if (!request.idempotency_key) return this.denyAudited(subjectId, "IDEMPOTENCY_KEY_REQUIRED");

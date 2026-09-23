@@ -43,6 +43,7 @@ PostgreSQL). Unit: `governance_unit_test.ts` (GU), `canonical_test.ts` (CJ),
 | 18 | Late success rewriting history | completion requires state EXECUTING + token | T16c, PG-12 |
 | 19 | Store down or replying garbage | fail closed; tool never runs without a claim | GU-01..04 |
 | 20 | IVE intent as authority | strict mapping, subject from credential, no approval | IM-*, PG-17 |
+| 20b | Authority aliases in the payload (`owner_id`, `risk`, `tool_allowed`…) | refused at any depth, normalized names | PG-06, IM-09 |
 | 21 | Payload ambiguity | canonical JSON, no coercion, no normalization, bounded | CJ-01..05 |
 | 22 | Oversized input / resource exhaustion | payload ≤ 16 KiB, depth ≤ 8, ≤ 1000 nodes; TTL ≤ 24 h; gate ≤ 1 h; lease ≤ 5 min | CJ-04, T06d, PG-06 |
 | 23 | Secrets / PII in storage or logs | only ids, hashes, codes; no logging added | schema review |
@@ -66,8 +67,43 @@ PostgreSQL). Unit: `governance_unit_test.ts` (GU), `canonical_test.ts` (CJ),
 - No privacy-erasure / retention procedure for AEF records (Codex G1-06,
   DEFERRED — needs an Owner/architect retention decision before
   production).
-- `UNKNOWN_OUTCOME` has no reconciliation workflow yet.
+- `UNKNOWN_OUTCOME` has no reconciliation workflow yet. A tool that
+  ignores the abort can still apply its effect after AEF recorded
+  `UNKNOWN_OUTCOME` (PG-20): the record stays truthful ("unknown"), the
+  effect is not prevented. Real tools must honor the abort signal and be
+  idempotent on the operation id.
+- Audit growth from refused requests of a verified user is not rate
+  limited (Codex G2-03, DEFERRED to AEF hardening).
 - Self-approval is the only approval mode (no four-eyes).
 - The audit trail grows with refused attempts of verified users (bounded
   per request; no rate limit in this layer).
 - Not deployed; production behavior NOT_VERIFIED.
+
+## Codex gates — findings and dispositions
+
+All reviews READ-ONLY, new thread each, no-write snapshot verified before/after.
+
+| Gate | Verdict | Finding | Sev | Disposition |
+|---|---|---|---|---|
+| G1 persistence/authorization (on 3f753d5) | FAIL | G1-01 tool input not fully bound | P1 | ACCEPTED — fixed 027d286 (PG-19) |
+| | | G1-02 service_role direct writes | P1 | ACCEPTED — fixed 027d286 (T14s, T14p) |
+| | | G1-03 service_role could call aef__* helpers | P1 | ACCEPTED — fixed 027d286 (T14s, T14p) |
+| | | G1-04 receipt verify ignored anchor/chain | P2 | ACCEPTED — fixed 027d286 (T17c/d) |
+| | | G1-05 rollback not executable | P2 | ACCEPTED — fixed 027d286 (AEF_ROLLBACK) |
+| | | G1-06 no retention/erasure | P2 | DEFERRED — Owner/architect retention decision |
+| G1 fix verification (on 027d286) | PASS WITH FINDINGS | G1-01..05 FIXED, G1-06 documented | — | — |
+| | | G1V-01 PG-19 not executed by reviewer | P2 | ACCEPTED — executed locally and in CI |
+| | | G1V-02 definer search_path included public | P2 | ACCEPTED — every AEF function pinned to `pg_catalog, pg_temp`, asserted (T14p, mutant M19) |
+| | | G1V-03 retention | P3 | DEFERRED (same as G1-06) |
+| G2 concurrency/failure (on 027d286) | PASS WITH FINDINGS | G2-01 concurrency tests lacked overlap proof | P2 | ACCEPTED — overlap instrumentation, peak ≥ 20 of 40 asserted (PG-07..10) |
+| | | G2-02 abort-ignoring tool crossing the lease untested | P2 | ACCEPTED — PG-20 + documented residual |
+| | | G2-03 unbounded denial audit growth | P2 | DEFERRED — AEF hardening (rate limit / retention) |
+| G3 IVE/AEF boundary (on 027d286) | PASS WITH FINDINGS | G3-01 action map shallow-frozen, override unenforced | P2 | ACCEPTED — `defineIveActionTable` (IM-08) |
+| | | G3-02 authority aliases allowed in parameters | P2 | ACCEPTED — alias denylist in mapping and AEF (IM-09, PG-06, mutant M20) |
+
+Mutation proof: 20/20 mutants killed (M01–M20: idempotency conflict,
+ownership, claim state, binding, policy version, recovery outcome, RLS,
+audit hash, late completion, foreign approver, client approval, undeclared
+failure, timeout, claim-less execution, payload echo, helper EXECUTE, raw
+tool input, chain check in receipt verification, search_path, authority
+aliases).
