@@ -6,8 +6,10 @@ The product must never turn uncertainty into an accusation.
 
 No output may call an organization fraudulent, a scam, corrupt, criminal or
 guilty, nor "trustworthy"/"safe to donate"/"don't donate" — in PT or EN.
-`findVerdictLanguage()` (Unicode-aware) guards generated text and LLM
-narratives; the report builder self-checks its templates and throws if one
+`findVerdictLanguage()` (Unicode-aware; NFKC, invisible characters removed,
+Cyrillic/Greek confusables folded, combining marks stripped) guards generated
+text and LLM narratives, and `checkNarrative()` also rejects mixed-script
+tokens; the report builder self-checks its templates and throws if one
 ever produced verdict language. There is no verdict, score, rank or
 "trust" field in any type (BT-3, RP-1).
 
@@ -33,6 +35,8 @@ EXPERIMENTAL.
 | Negative records are updatable (dispute, correction, retraction) | VE-11, VE-12, IW-3 |
 | LLM cannot declare fraud or invent evidence/status/numbers | RS-2, RS-3 |
 | High overhead is not an indicator | FM-1 |
+| An organization correcting its own figure is not a CONCERN | C-01 |
+| A relabelled self-published report cannot become independent | G1-01a/b |
 | Adversarial fixtures use fictitious organizations only | BT-10 |
 
 ## 4. Disputed claims / right to respond (foundation)

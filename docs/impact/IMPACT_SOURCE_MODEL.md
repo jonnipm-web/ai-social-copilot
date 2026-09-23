@@ -7,7 +7,7 @@ Code: `types.ts` (`Source`), `source_authority.ts`, `provenance.ts`, `provider.t
 type · publisher · publisherOrganizationId (makes it self-reported for that
 org) · uri (reference only) · retrievedAt · publishedAt · jurisdiction ·
 newsGenre (NEWS) · status (ACTIVE / UPDATED / RETRACTED / UNAVAILABLE) ·
-retention · contentHash (SHA-256) · userSubmitted.
+retention · contentHash (SHA-256) · **acquisition** (PROVIDER+providerId | USER_UPLOAD | ANALYST_ENTRY, mandatory) · userSubmitted.
 
 Types: OFFICIAL_REGISTRY, ORGANIZATION_WEBSITE, GOVERNMENT_RECORD,
 FINANCIAL_REPORT, AUDITED_REPORT, COURT_RECORD, REGULATOR, NEWS, ACADEMIC,
@@ -20,11 +20,18 @@ over real-world impact. An organization's website proves that the
 organization **made** a claim, not that it is true. A social-media post
 proves "this account published this".
 
-## 3. Authority table (`impact-source-authority/1`)
+## 3. Authority table (`impact-source-authority/2`)
 
-Decision order: user-submitted → USER_SUBMITTED; publisher is the claim's
-subject → SELF_REPORTED (whatever the type); social media → ATTRIBUTION_ONLY;
-news → only REPORTING can corroborate; else table.
+Decision order: user-submitted / USER_UPLOAD → USER_SUBMITTED; publisher is
+the claim's subject → SELF_REPORTED (whatever the type); social media →
+ATTRIBUTION_ONLY; news → only REPORTING can corroborate; else table; then the
+**provenance gate** (Codex G1-01): AUTHORITATIVE/INDEPENDENT survive only when
+the source was acquired by a provider in the server-side trusted registry
+(`VerificationContext.trustedProviders`, required) whose declared source type
+equals the source's type and whose jurisdictions include the source's
+jurisdiction. Analyst-typed sources, unknown providers and relabelled types
+are capped at CONTEXTUAL — a self-published report labelled "audit" cannot
+become independent evidence.
 
 | Source | Registration / regulatory | Outputs / outcomes / beneficiaries | Financial | Other |
 |---|---|---|---|---|

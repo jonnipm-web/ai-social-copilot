@@ -14,14 +14,18 @@
 | Deleted/changed source | UPDATED/RETRACTED excluded; re-verification logged | VE-11, IW-3 |
 | Stale registry record | state-claim staleness | GOLDEN-D |
 | Source poisoning | per-publisher counting, content-hash dedupe, authority table | VE-6, SA-1..4 |
+| Forged provenance (self report relabelled as audit/registry) | provenance gate: independence only via trusted provider for that type+jurisdiction | G1-01a/b/c |
+| Future/reversed dates making stale data current | earliest as-of, period validation, calendar check | G1-02a/b |
+| Unknown / prototype-key enum values | own-property allowlists for every enum; status updates validated | G1-05a/b |
+| Review binding bypass | reviewBindingHash covers flags, identity, dispute, providers | G1-04 |
 | Prompt injection | engine never reads text; scan flags; wrapper; grounding | GOLDEN-H/H2, RS-4..6 |
-| LLM hallucination / authority | LLM_SUGGESTED excluded; `checkNarrative` | VE-2, RS-2, RS-3 |
+| LLM hallucination / authority | LLM_SUGGESTED excluded; `checkNarrative` (case-insensitive PT/EN status phrases, confusable folding, invisible-char stripping, mark stripping, mixed-script rejection) | VE-2, RS-2, RS-3, G1-03a/b |
 | HTML injection | report is structured data; generated text is fixed templates; renderers must escape | RP-1 |
 | URL SSRF / redirect abuse | `checkReferenceUri` (scheme, credentials, loopback/private/link-local/metadata, numeric shorthands, internal TLDs); no fetch in Impact; future fetch only via `safe_fetch.ts` (DNS check, redirect re-validation, size/time limits) | SSRF-1/2, BT-1 |
 | Entitlement bypass | module `impact` EXPERIMENTAL → admin-only via Entitlement Core; client fields not an input | BT-4..6 |
 | Public action bypass | class C has no executor; unknown actions fail closed | BT-7, BT-3 |
 | Ads/pay-to-trust | commercial metadata excluded from hash and engine | VE-15 |
-| Log leakage | allowlist-only events | OB-1 |
+| Log leakage | allowlist-only events (own-property keys; JWT-shaped values refused) | OB-1, C-02 |
 
 Residual (documented, inherited): DNS-rebinding window in `safe_fetch.ts`
 (no connection pinning) — relevant only when a network provider is added.

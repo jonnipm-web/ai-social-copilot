@@ -1,20 +1,20 @@
 # Impact — Verification Model
 
 Code: `verification.ts`, `temporal.ts`, `risk_indicators.ts`.
-Policy version: `impact-verification/1+impact-source-authority/1+impact-temporal/1`.
+Policy version: `impact-verification/2+impact-source-authority/2+impact-temporal/2` (bumped after Codex Gate 1).
 
 ## 1. Contract
 
 ```
 verifyClaim({claim, evidence[], sources[]}, {evaluatedAt, subjectIdentity,
-             openDispute?, flaggedSourceIds?, humanReview?})
+             trustedProviders, openDispute?, flaggedSourceIds?, humanReview?})
   → ImpactResult<VerificationResult>
 ```
 
 `VerificationResult`: status, underlyingStatus, sufficiency, displayClass,
 supporting / partiallySupporting / contradicting / contextual / excluded,
 conflicts, gaps, reviewState + reasons, rulesApplied (ordered rule ids),
-subjectIdentity, evaluatedAt, policyVersion, evidenceSetHash, resultId,
+subjectIdentity, evaluatedAt, policyVersion, evidenceSetHash, reviewBindingHash, resultId,
 and the literals `isFindingOfWrongdoing: false`,
 `absenceOfEvidenceIsNotEvidenceOfWrongdoing: true`. Deep-frozen.
 
@@ -37,7 +37,7 @@ relationship are **counted**; the rest are **contextual**.
 | S05 | authoritative items agree | their relationship decides (within scope); S06 records lower-tier disagreement as a conflict |
 | S07 | independent items disagree | INCONCLUSIVE + ConflictRecord |
 | S08 | independent items agree | SUPPORTED / PARTIALLY_SUPPORTED / CONTRADICTED |
-| S09 | subject's own reports disagree with its claim | conflict recorded (context, never a contradiction by itself) |
+| S09 | subject's own reports disagree with its claim | conflict recorded with `basis: SELF_REPORTED_ONLY` (context, never a contradiction; indicator INCONSISTENT_SELF_REPORTING = information gap) |
 | S10 | subject identity not CONFIRMED | SUPPORTED/PARTIAL/CONTRADICTED → INCONCLUSIVE (false-attribution guard) |
 | S11 | open dispute | DISPUTED (underlyingStatus kept) |
 
@@ -48,7 +48,10 @@ Conflicts list every position with its source and value;
 
 State claims (registration, regulatory status, governance: 365 days;
 affiliation: 180 days) — older evidence is STALE and cannot establish the
-current state. Period claims — evidence whose observed period does not
+current state. The evidence's as-of date is the EARLIEST of observedPeriod.to,
+publishedAt and retrievedAt, so a future-dated period cannot make old evidence
+current; reversed periods, periods starting after retrieval and impossible
+calendar dates are rejected (Codex G1-02). Period claims — evidence whose observed period does not
 overlap is excluded. Unknown bounds never create a mismatch. The clock is
 injected (`evaluatedAt`).
 
@@ -57,12 +60,16 @@ injected (`evaluatedAt`).
 AUTOMATED · REVIEW_REQUIRED · HUMAN_REVIEWED. Review required on:
 contradiction, conflict, allegation, legal record, identity not confirmed,
 untrusted instructions, open dispute, user-submitted material. A human review
-binds to the exact `evidenceSetHash`; new evidence re-opens review (H02).
+binds to `reviewBindingHash` = hash(evidenceSetHash, flagged sources in this
+evidence set, subject identity, dispute, trusted providers); any change
+re-opens review (H02, Codex G1-04).
 
 ## 6. Versioning
 
 `evidenceSetHash` = SHA-256 over an **explicit field list** of claim,
-evidence and provenance-relevant source fields (extra metadata cannot enter).
+evidence and every provenance field of the sources (type, publisher, dates,
+status, contentHash, jurisdiction, uri, retention, acquisition — Codex G1-06);
+extra metadata cannot enter.
 `resultId` = hash(policy, claim, evaluatedAt, evidenceSetHash, context).
 `Investigation.verify()` appends to history; nothing is overwritten
 (`STATUS_CHANGED` audit event when the status moves).
@@ -76,7 +83,8 @@ DOMAIN_MISMATCH, CONFLICTING_CLAIMS, CLAIM_CONTRADICTED_BY_INDEPENDENT_SOURCE,
 REGULATORY_OR_COURT_RECORD (final adverse stage only, stage carried),
 UNVERIFIED_AFFILIATION.
 INFORMATION_GAP: UNVERIFIED_CLAIMS, ONLY_SELF_REPORTED_EVIDENCE,
-OUTDATED_EVIDENCE, UNRESOLVED_ALLEGATION.
+OUTDATED_EVIDENCE, UNRESOLVED_ALLEGATION, INCONSISTENT_SELF_REPORTING.
+CONFLICTING_CLAIMS is raised only for conflicts between independent sources.
 
 Every indicator carries its basis ids and `isProofOfWrongdoing: false`.
 Not indicators on their own: absence of evidence, high overhead, an
