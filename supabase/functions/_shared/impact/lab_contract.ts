@@ -10,6 +10,13 @@
  * investigation subject on a claim, source acquisition / provider id /
  * "trusted" / authority, excerpt hash, claim or verification status,
  * evaluatedAt, version, audit fields. The server derives all of them.
+ *
+ * I2: lineage and registry authority are server-derived too — there is no
+ * field for "independent", "original", lineage state, content fingerprint,
+ * similarity sketch, syndication markers, provider authority/official flag,
+ * canonical organization id, or "this record belongs to this organization".
+ * A client may submit content TEXT (the server fingerprints it and keeps only
+ * the hashes) and a merge-only `derivedFrom` label.
  */
 import { fail, ok, type ImpactResult } from './errors.ts';
 import { CLAIM_KINDS, IMPACT_LEVELS, isOneOf, isValidId, LEGAL_STAGES, NEWS_GENRES, parseIsoMs, SOURCE_TYPES } from './provenance.ts';
@@ -26,6 +33,9 @@ export const LAB_LIMITS = Object.freeze({
   maxEvidencePerInvestigation: 1_000,
   maxDisputesPerInvestigation: 100,
   maxInvestigationsPerOwner: 100,
+  /** I2: content text a client may submit for lineage fingerprinting (never stored). */
+  maxContentText: 20_000,
+  maxQueryField: 200,
 });
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -72,6 +82,18 @@ export interface SourceInput {
   readonly contentHash?: string;
   readonly syndicatedFrom?: string;
   readonly userUpload?: boolean;
+  /** I2: merge-only lineage hint (this material cites / summarizes that publisher). */
+  readonly derivedFrom?: string;
+  /** I2: content text for server-side fingerprinting; only hashes are persisted. */
+  readonly contentText?: string;
+}
+
+export interface RegistryQueryInput {
+  readonly name?: string;
+  readonly registration?: string;
+  readonly scheme?: string;
+  readonly domain?: string;
+  readonly country?: string;
 }
 
 export interface ClaimInput {
@@ -119,7 +141,10 @@ export type LabRequest =
   | { readonly action: 'run_verification'; readonly investigationId: string; readonly claimRef: string; readonly idempotencyKey?: string; readonly humanReviewBindingHash?: string }
   | { readonly action: 'open_dispute'; readonly investigationId: string; readonly ref: string; readonly claimRef: string; readonly kind: typeof DISPUTE_KINDS[number]; readonly submittedEvidenceRefs: readonly string[] }
   | { readonly action: 'resolve_dispute'; readonly investigationId: string; readonly disputeRef: string; readonly resolution: typeof DISPUTE_RESOLUTIONS[number] }
-  | { readonly action: 'request_external_action'; readonly kind: string };
+  | { readonly action: 'request_external_action'; readonly kind: string }
+  // I2 Registry Intelligence
+  | { readonly action: 'search_registry'; readonly investigationId: string; readonly providerId: string; readonly query: RegistryQueryInput }
+  | { readonly action: 'import_registry_claim'; readonly investigationId: string; readonly sourceRef: string; readonly ref: string };
 
 export type LabAction = LabRequest['action'];
 
@@ -217,7 +242,7 @@ function subject(v: unknown): SubjectInput {
 
 function source(v: unknown): SourceInput {
   const o = obj(v, 'source', ['ref', 'type', 'publisher', 'publisherOrgRef', 'uri', 'retrievedAt', 'publishedAt',
-    'jurisdictionCountry', 'newsGenre', 'retention', 'contentHash', 'syndicatedFrom', 'userUpload']);
+    'jurisdictionCountry', 'newsGenre', 'retention', 'contentHash', 'syndicatedFrom', 'userUpload', 'derivedFrom', 'contentText']);
   const contentHash = o.contentHash;
   if (contentHash !== undefined && (typeof contentHash !== 'string' || !HASH_RE.test(contentHash))) throw new Bad('contentHash must be sha-256 hex');
   const jc = o.jurisdictionCountry;
@@ -237,7 +262,24 @@ function source(v: unknown): SourceInput {
     contentHash: contentHash as string | undefined,
     syndicatedFrom: str(o, 'syndicatedFrom', LAB_LIMITS.maxShort, false),
     userUpload: o.userUpload as boolean | undefined,
+    derivedFrom: str(o, 'derivedFrom', LAB_LIMITS.maxShort, false),
+    contentText: str(o, 'contentText', LAB_LIMITS.maxContentText, false),
   };
+}
+
+function registryQuery(v: unknown): RegistryQueryInput {
+  const o = obj(v, 'query', ['name', 'registration', 'scheme', 'domain', 'country']);
+  const country = o.country;
+  if (country !== undefined && (typeof country !== 'string' || !/^[A-Z]{2}$/.test(country))) throw new Bad('query.country must be ISO alpha-2');
+  const q: RegistryQueryInput = {
+    name: str(o, 'name', LAB_LIMITS.maxQueryField, false),
+    registration: str(o, 'registration', 60, false),
+    scheme: str(o, 'scheme', 60, false),
+    domain: str(o, 'domain', 253, false),
+    country: country as string | undefined,
+  };
+  if (!q.name && !q.registration && !q.domain) throw new Bad('query needs a name, registration or domain');
+  return q;
 }
 
 function claim(v: unknown): ClaimInput {
@@ -295,7 +337,7 @@ export function parseLabRequest(body: unknown): ImpactResult<LabRequest> {
   try {
     const top = obj(body, 'request', ['action', 'investigation_id', 'subject', 'project_id', 'lang', 'source', 'provider_id',
       'record_id', 'ref', 'source_ref', 'status', 'claim', 'evidence', 'claim_ref', 'idempotency_key',
-      'human_review_binding_hash', 'kind', 'submitted_evidence_refs', 'dispute_ref', 'resolution']);
+      'human_review_binding_hash', 'kind', 'submitted_evidence_refs', 'dispute_ref', 'resolution', 'query']);
     const action = top.action;
     const allowOnly = (keys: string[]) => {
       for (const k of Object.keys(top)) if (k !== 'action' && !keys.includes(k)) throw new Bad(`field "${k}" not allowed for ${String(action)}`);
@@ -347,6 +389,12 @@ export function parseLabRequest(body: unknown): ImpactResult<LabRequest> {
       case 'resolve_dispute':
         allowOnly(['investigation_id', 'dispute_ref', 'resolution']);
         return ok({ action, investigationId: inv(), disputeRef: id(top, 'dispute_ref')!, resolution: en(top, 'resolution', DISPUTE_RESOLUTIONS)! });
+      case 'search_registry':
+        allowOnly(['investigation_id', 'provider_id', 'query']);
+        return ok({ action, investigationId: inv(), providerId: id(top, 'provider_id')!, query: registryQuery(top.query) });
+      case 'import_registry_claim':
+        allowOnly(['investigation_id', 'source_ref', 'ref']);
+        return ok({ action, investigationId: inv(), sourceRef: id(top, 'source_ref')!, ref: id(top, 'ref')! });
       case 'request_external_action':
         allowOnly(['kind']);
         if (typeof top.kind !== 'string' || top.kind.length > 64) throw new Bad('kind must be a string');

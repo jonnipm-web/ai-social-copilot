@@ -29,8 +29,13 @@ const inv = (await call({
   subject: { ref: 'org-hopebridge', type: 'FOUNDATION', identity: { legalName: 'HopeBridge Foundation', registrations: [{ country: 'XA', scheme: 'charity-number', value: 'XA-1234567' }], domains: ['hopebridge.example'] } },
 })).data.investigationId as string;
 await call({ action: 'ingest_provider_record', investigation_id: inv, provider_id: 'fixture-xa-charity-registry', record_id: 'xa-1234567', ref: 'src-reg' });
+// I2: the same organization in the company register (cross-referenced) spells
+// its name differently → the database must record the same NAME_MISMATCH conflict.
+await call({ action: 'ingest_provider_record', investigation_id: inv, provider_id: 'fixture-xa-company-registry', record_id: 'xa-c-778899', ref: 'src-co' });
+// I2: re-ingesting identical data replays (no second row).
+await call({ action: 'ingest_provider_record', investigation_id: inv, provider_id: 'fixture-xa-company-registry', record_id: 'xa-c-778899', ref: 'src-co-again' });
 await call({ action: 'add_source', investigation_id: inv, source: { ref: 'src-web', type: 'ORGANIZATION_WEBSITE', publisher: 'HopeBridge Foundation', publisherOrgRef: 'org-hopebridge', retrievedAt: '2026-09-01T00:00:00Z', retention: 'EXCERPT_AND_HASH', contentHash: 'b'.repeat(64) } });
-await call({ action: 'add_source', investigation_id: inv, source: { ref: 'src-news', type: 'NEWS', newsGenre: 'ALLEGATION', publisher: 'Tabloid (fixture)', retrievedAt: '2026-09-01T00:00:00Z', retention: 'HASH_ONLY', contentHash: 'c'.repeat(64) } });
+await call({ action: 'add_source', investigation_id: inv, source: { ref: 'src-news', type: 'NEWS', newsGenre: 'ALLEGATION', publisher: 'Tabloid (fixture)', retrievedAt: '2026-09-01T00:00:00Z', retention: 'HASH_ONLY', contentHash: 'c'.repeat(64), contentText: 'Republished from Wire (fixture) via Reuters. HopeBridge wells story.', derivedFrom: 'Wire (fixture)' } });
 await call({ action: 'add_claim', investigation_id: inv, claim: { ref: 'c-reg', kind: 'LEGAL_REGISTRATION', text: 'HopeBridge Foundation is a registered charity.', sourceRef: 'src-web', origin: 'MANUAL' } });
 await call({ action: 'add_claim', investigation_id: inv, claim: { ref: 'c-wells', kind: 'IMPACT_OUTPUT', text: 'We built 20 wells.', quantity: { metric: 'wells_built', value: 20, unit: 'count' }, sourceRef: 'src-web', origin: 'MANUAL' } });
 await call({ action: 'add_evidence', investigation_id: inv, evidence: { ref: 'e-reg', claimRef: 'c-reg', sourceRef: 'src-reg', aboutOrgRef: 'org-hopebridge', relationship: 'SUPPORTS', basis: 'HUMAN_ASSESSED', observedPeriod: { to: '2026-09-01' }, personalData: 'NONE' } });
@@ -42,6 +47,9 @@ await call({ action: 'open_dispute', investigation_id: inv, ref: 'd1', claim_ref
 await call({ action: 'resolve_dispute', investigation_id: inv, dispute_ref: 'd1', resolution: 'UPHELD' }); // SUPPORTED again
 await call({ action: 'update_source_status', investigation_id: inv, source_ref: 'src-reg', status: 'UNAVAILABLE' });
 await call({ action: 'run_verification', investigation_id: inv, claim_ref: 'c-reg' }); // UNVERIFIED (I1G2-01)
+// I2: server-generated registry statement from the company-register snapshot.
+await call({ action: 'import_registry_claim', investigation_id: inv, source_ref: 'src-co', ref: 'c-regstmt' });
+await call({ action: 'run_verification', investigation_id: inv, claim_ref: 'c-regstmt' }); // SUPPORTED / FACT (REGISTRY_RECORD)
 
 // ── emit SQL in the order the Edge Function wrote it ──────────────────────
 const m = db.investigations.get(inv)!;
@@ -60,7 +68,7 @@ out.push(row('impact_investigations', {
   id: inv, owner_id: OWNER, subject_org_ref: m.rec.subjectOrgRef, subject_org_type: m.rec.subjectOrgType, subject_identity: m.rec.subjectIdentity,
 }, ['subject_identity']));
 for (const s of m.sources.values()) {
-  out.push(row('impact_sources', { ...sourceToRow(inv, { ...s, source: { ...s.source, status: 'ACTIVE' } }, OWNER) }, ['snapshot']));
+  out.push(row('impact_sources', { ...sourceToRow(inv, { ...s, source: { ...s.source, status: 'ACTIVE' } }, OWNER) }, ['snapshot'], ['syndication_markers']));
 }
 for (const c of m.claims.values()) out.push(row('impact_claims', claimToRow(inv, c, OWNER)));
 for (const e of m.evidence.values()) out.push(row('impact_evidence', evidenceToRow(inv, e, OWNER), ['locator']));
@@ -92,9 +100,18 @@ out.push(`DO $$ BEGIN
     RAISE EXCEPTION 'ENGINE_ROWS: persisted statuses differ from the engine';
   END IF;
   IF NOT public.impact_audit_chain_ok('${inv}') THEN RAISE EXCEPTION 'ENGINE_ROWS: audit chain broken'; END IF;
+  -- I2: the database trigger derives exactly the registry conflicts of its TS twin.
+  IF (SELECT coalesce(string_agg(kind || ':' || source_ref || '>' || other_source_ref || ':' || canonical_org_id, ' ' ORDER BY seq), '')
+      FROM public.impact_registry_conflicts WHERE investigation_id = '${inv}') <> '${m.registryConflicts.map((c) => `${c.kind}:${c.sourceRef}>${c.otherSourceRef}:${c.canonicalOrgId}`).join(' ')}' THEN
+    RAISE EXCEPTION 'ENGINE_ROWS: registry conflicts differ from the TS twin';
+  END IF;
+  IF (SELECT count(*) FROM public.impact_sources WHERE investigation_id = '${inv}' AND snapshot IS NOT NULL) <> ${[...m.sources.values()].filter((x) => x.snapshot).length} THEN
+    RAISE EXCEPTION 'ENGINE_ROWS: snapshot rows differ';
+  END IF;
   IF (SELECT status FROM public.impact_latest_verifications WHERE investigation_id = '${inv}' AND claim_ref = 'c-reg') <> 'UNVERIFIED' THEN
     RAISE EXCEPTION 'ENGINE_ROWS: latest view wrong';
   END IF;
 END $$;`);
-out.push(`SELECT 'IMPACT_ENGINE_ROWS: PASS ${verifs.length} verifications (${statuses})';`);
+if (m.registryConflicts.length !== 1) throw new Error('expected one registry conflict in the flow');
+out.push(`SELECT 'IMPACT_ENGINE_ROWS: PASS ${verifs.length} verifications (${statuses}) + ${m.registryConflicts.length} registry conflict';`);
 console.log(out.join('\n'));

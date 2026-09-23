@@ -23,6 +23,7 @@ import type {
   NewInvestigation,
   StoredAuditEvent,
   StoredDispute,
+  StoredRegistryConflict,
   StoredSource,
   StoredVerification,
 } from '../_shared/impact/lab_store.ts';
@@ -96,6 +97,11 @@ export function sourceToRow(investigationId: string, s: StoredSource, actorId: s
     syndicated_from: src.syndicatedFrom ?? null,
     user_submitted: src.userSubmitted === true,
     snapshot: s.snapshot ?? null,
+    // I2 lineage signals (server-derived); canonical_org_id is a generated column.
+    derived_from: src.derivedFrom ?? null,
+    content_fingerprint: src.contentFingerprint ?? null,
+    similarity_sketch: src.similaritySketch ?? null,
+    syndication_markers: [...(src.syndicationMarkers ?? [])],
     created_by: actorId,
   };
 }
@@ -118,7 +124,23 @@ export function rowToSource(r: Row): StoredSource {
     : { method: r.acquisition_method };
   put(s, 'syndicatedFrom', r.syndicated_from);
   if (r.user_submitted === true) s.userSubmitted = true;
+  put(s, 'derivedFrom', r.derived_from);
+  put(s, 'contentFingerprint', r.content_fingerprint);
+  put(s, 'similaritySketch', r.similarity_sketch);
+  if (r.content_fingerprint !== null && r.content_fingerprint !== undefined) {
+    // markers are only ever derived together with the fingerprint
+    s.syndicationMarkers = Array.isArray(r.syndication_markers) ? r.syndication_markers : [];
+  }
   return { source: s as unknown as Source, snapshot: (r.snapshot as CanonicalRegistryRecord | null) ?? null };
+}
+
+export function rowToRegistryConflict(r: Row): StoredRegistryConflict {
+  return {
+    kind: r.kind as StoredRegistryConflict['kind'],
+    canonicalOrgId: r.canonical_org_id as string,
+    sourceRef: r.source_ref as string,
+    otherSourceRef: r.other_source_ref as string,
+  };
 }
 
 export function claimToRow(investigationId: string, c: Claim, actorId: string): Row {
@@ -268,14 +290,15 @@ export class SupabaseImpactLabStore implements ImpactLabStore {
   async loadInvestigationData(id: string): Promise<ImpactResult<InvestigationData>> {
     const q = (t: string, order: string, ascending = true, limit = READ_LIMIT) =>
       this.user.from(t).select('*').eq('investigation_id', id).order(order, { ascending }).limit(limit);
-    const [s, c, e, lv, v, d] = await Promise.all([
+    const [s, c, e, lv, v, d, rc] = await Promise.all([
       q('impact_sources', 'created_at'), q('impact_claims', 'created_at'), q('impact_evidence', 'created_at'),
       // I1G1-02: latest per claim from the security_invoker view — never truncated by history length.
       q('impact_latest_verifications', 'claim_ref'),
       q('impact_verifications', 'version', false, 500),
       q('impact_disputes', 'created_at'),
+      q('impact_registry_conflicts', 'seq'),
     ]);
-    for (const r of [s, c, e, lv, v, d]) if (r.error) return dbFail(r.error);
+    for (const r of [s, c, e, lv, v, d, rc]) if (r.error) return dbFail(r.error);
     return ok({
       sources: (s.data as Row[]).map(rowToSource),
       claims: (c.data as Row[]).map(rowToClaim),
@@ -283,6 +306,7 @@ export class SupabaseImpactLabStore implements ImpactLabStore {
       latestVerifications: (lv.data as Row[]).map(rowToVerification),
       verifications: (v.data as Row[]).map(rowToVerification),
       disputes: (d.data as Row[]).map(rowToDispute),
+      registryConflicts: (rc.data as Row[]).map(rowToRegistryConflict),
     });
   }
   async listAudit(id: string): Promise<ImpactResult<readonly StoredAuditEvent[]>> {

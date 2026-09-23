@@ -14,6 +14,7 @@
  * (parity vector asserted in lab_service_test.ts and impact_lab_rls_test.sql).
  */
 import { fail, ok, type ImpactResult } from './errors.ts';
+import { registryConflicts, type RegistryConflictKind } from './organization_identity.ts';
 import type { CanonicalRegistryRecord } from './provider.ts';
 import { sha256Hex } from './provenance.ts';
 import type { Claim, EvidenceItem, OrganizationIdentity, OrganizationType, Source, SourceStatus } from './types.ts';
@@ -53,6 +54,15 @@ export interface StoredDispute {
   readonly resolvedAt: string | null;
 }
 
+/** Two ACTIVE registry snapshots of one organization disagree (I2). Written
+ * only by the database trigger (and its in-memory twin); never a finding. */
+export interface StoredRegistryConflict {
+  readonly kind: RegistryConflictKind;
+  readonly canonicalOrgId: string;
+  readonly sourceRef: string;
+  readonly otherSourceRef: string;
+}
+
 export interface StoredAuditEvent {
   readonly seq: number;
   readonly atText: string;
@@ -73,6 +83,8 @@ export interface InvestigationData {
   /** Recent history, newest first (bounded; for display only). */
   readonly verifications: readonly StoredVerification[];
   readonly disputes: readonly StoredDispute[];
+  /** I2: registry disagreements between snapshots of the same organization. */
+  readonly registryConflicts: readonly StoredRegistryConflict[];
 }
 
 export interface NewInvestigation {
@@ -145,6 +157,7 @@ interface MemInvestigation {
   evidence: Map<string, EvidenceItem>;
   verifications: StoredVerification[];
   disputes: Map<string, StoredDispute>;
+  registryConflicts: StoredRegistryConflict[];
   audit: StoredAuditEvent[];
 }
 
@@ -209,7 +222,7 @@ export class InMemoryImpactLabStore implements ImpactLabStore {
   }
   loadInvestigationData(id: string): Promise<ImpactResult<InvestigationData>> {
     const m = this.own(id);
-    if (!m) return Promise.resolve(ok({ sources: [], claims: [], evidence: [], latestVerifications: [], verifications: [], disputes: [] }));
+    if (!m) return Promise.resolve(ok({ sources: [], claims: [], evidence: [], latestVerifications: [], verifications: [], disputes: [], registryConflicts: [] }));
     const latest = new Map<string, StoredVerification>();
     for (const v of m.verifications) latest.set(v.result.claimId, v); // insertion order = version order
     return Promise.resolve(ok({
@@ -219,6 +232,7 @@ export class InMemoryImpactLabStore implements ImpactLabStore {
       latestVerifications: [...latest.values()],
       verifications: [...m.verifications].reverse().slice(0, 500),
       disputes: [...m.disputes.values()],
+      registryConflicts: [...m.registryConflicts],
     }));
   }
   listAudit(id: string) {
@@ -237,7 +251,7 @@ export class InMemoryImpactLabStore implements ImpactLabStore {
       subjectOrgType: n.subjectOrgType, subjectIdentity: n.subjectIdentity, status: 'ACTIVE', auditSeq: 0,
       auditHead: AUDIT_GENESIS, createdAt: this.db.nextAt(),
     };
-    const m: MemInvestigation = { rec, sources: new Map(), claims: new Map(), evidence: new Map(), verifications: [], disputes: new Map(), audit: [] };
+    const m: MemInvestigation = { rec, sources: new Map(), claims: new Map(), evidence: new Map(), verifications: [], disputes: new Map(), registryConflicts: [], audit: [] };
     this.db.investigations.set(rec.id, m);
     await this.db.appendAudit(m, 'INVESTIGATION_CREATED', n.ownerId, [n.subjectOrgRef], []);
     return ok(m.rec);
@@ -254,8 +268,27 @@ export class InMemoryImpactLabStore implements ImpactLabStore {
     const w = this.writable(investigationId);
     if (!w.ok) return w;
     if (w.value.sources.has(s.source.id)) return fail<true>('ALREADY_EXISTS', 'source ref exists');
+    const snap = s.snapshot;
+    // Mirrors impact_sources_snapshot_key: one row per (provider, record, data).
+    if (snap && [...w.value.sources.values()].some((o) =>
+      o.snapshot && o.snapshot.providerId === snap.providerId && o.snapshot.recordId === snap.recordId && o.snapshot.dataHash === snap.dataHash
+    )) return fail<true>('ALREADY_EXISTS', 'registry snapshot already recorded');
+    const before = [...w.value.sources.entries()];
     w.value.sources.set(s.source.id, Object.freeze({ ...s }));
     await this.db.appendAudit(w.value, 'SOURCE_ADDED', actorId, [s.source.id], [s.source.type, s.source.acquisition.method]);
+    if (snap) {
+      // Twin of the SQL trigger: snapshot event, then one conflict row + event per disagreement.
+      const update = before.some(([, o]) => o.snapshot?.providerId === snap.providerId && o.snapshot?.recordId === snap.recordId);
+      await this.db.appendAudit(w.value, 'REGISTRY_SNAPSHOT_RECORDED', actorId, [s.source.id], [snap.canonicalOrgId, snap.status, update ? 'UPDATE' : 'NEW']);
+      const conflicts = registryConflicts(
+        { sourceRef: s.source.id, active: true, record: snap },
+        before.filter(([, o]) => o.snapshot).map(([ref, o]) => ({ sourceRef: ref, active: o.source.status === 'ACTIVE', record: o.snapshot! })),
+      );
+      for (const c of conflicts) {
+        w.value.registryConflicts.push(Object.freeze({ ...c }));
+        await this.db.appendAudit(w.value, 'REGISTRY_CONFLICT_RECORDED', actorId, [c.sourceRef, c.otherSourceRef], [c.kind, c.canonicalOrgId]);
+      }
+    }
     return ok(true as const);
   }
   async updateSourceStatus(investigationId: string, ref: string, status: SourceStatus, actorId: string) {

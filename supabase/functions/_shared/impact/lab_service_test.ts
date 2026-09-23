@@ -65,7 +65,11 @@ Deno.test('LS-00 audit hash parity vector (same constant asserted in impact_lab_
 
 Deno.test('LS-01 CF-06: the trusted registry is server-composed, frozen and not addressable by prototype keys', () => {
   const refs = trustedProviderRefs();
-  assertEquals(refs.map((r) => [r.id, r.sourceType]), [['fixture-xa-charity-registry', 'OFFICIAL_REGISTRY']]);
+  assertEquals(refs.map((r) => [r.id, r.sourceType, r.primaryPublisher]), [
+    ['fixture-xa-charity-registry', 'OFFICIAL_REGISTRY', true],
+    ['fixture-xa-company-registry', 'OFFICIAL_REGISTRY', true],
+    ['fixture-xb-charity-registry', 'OFFICIAL_REGISTRY', true],
+  ]);
   assert(Object.isFrozen(refs) && Object.isFrozen(refs[0]));
   for (const k of ['__proto__', 'constructor', 'toString', 'fake-government', '']) assertEquals(getRegisteredProvider(k), undefined, k);
 });
@@ -317,7 +321,7 @@ Deno.test('LS-18 Case H through the Lab: an injected excerpt is flagged, never o
   const v = (await t.must(UA, { action: 'run_verification', investigation_id: inv, claim_ref: 'c1' })).data.verification as Json;
   assertEquals([v.status, v.reviewState], ['UNVERIFIED', 'REVIEW_REQUIRED']);
   assert((v.gaps as string[]).includes('UNTRUSTED_INSTRUCTIONS_DETECTED'));
-  assertEquals(trustedProviderRefs().length, 1); // registry untouched
+  assertEquals(trustedProviderRefs().length, 3); // registry untouched
 });
 
 Deno.test('LS-19 human review binds to the exact state; a stale binding keeps REVIEW_REQUIRED', async () => {
@@ -356,7 +360,7 @@ Deno.test('LS-22 audit trail: every write recorded, chain verifies, no content o
   await t.must(UA, { action: 'add_claim', investigation_id: inv, claim: { ref: 'c1', kind: 'OTHER', text: 'A distinctive claim sentence 12345.', sourceRef: 'src-web', origin: 'MANUAL' } });
   const g = await t.must(UA, { action: 'get_investigation', investigation_id: inv });
   const audit = g.data.audit as Json;
-  assertEquals([audit.chainOk, audit.events], [true, 4]); // created, 2 sources, claim
+  assertEquals([audit.chainOk, audit.events], [true, 5]); // created, registry source + REGISTRY_SNAPSHOT_RECORDED (I2), web source, claim
   const m = t.db.investigations.get(inv)!;
   assertEquals(JSON.stringify(m.audit).includes('distinctive claim sentence'), false);
   (m.audit as unknown as Json[])[1] = { ...m.audit[1], codes: ['FORGED'] };

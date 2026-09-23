@@ -58,6 +58,17 @@ BEGIN
   PERFORM set_config('request.jwt.claim.role', CASE WHEN uid IS NULL THEN 'anon' ELSE 'authenticated' END, false);
 END $$;
 
+-- I2 (20260925010000): a provider snapshot must be the canonical record the
+-- server builds (consistent canonical id, provider, jurisdiction, retrieval).
+CREATE FUNCTION pg_temp.snap(p_record text, p_hash_char text, p_status text DEFAULT 'REGISTERED') RETURNS jsonb LANGUAGE sql AS $$
+  SELECT jsonb_build_object('providerId', 'fixture-xa-charity-registry', 'recordId', p_record,
+    'registrationNumber', 'XA1234567', 'scheme', 'charity-number',
+    'jurisdiction', jsonb_build_object('country', 'XA', 'registry', 'fixture-xa-charity-registry'),
+    'canonicalOrgId', 'XA:charity-number:XA1234567', 'canonicalIds', jsonb_build_array('XA:charity-number:XA1234567'),
+    'nameKey', 'hopebridge foundation', 'name', 'HopeBridge Foundation', 'status', p_status,
+    'dataHash', repeat(p_hash_char, 64), 'retrievedAt', '2026-09-01T00:00:00Z')
+$$;
+
 -- ids
 \set UA '''aaaaaaaa-0000-0000-0000-00000000000a'''
 \set UB '''bbbbbbbb-0000-0000-0000-00000000000b'''
@@ -92,7 +103,7 @@ INSERT INTO public.impact_sources (investigation_id, ref, source_type, publisher
   (:IA, 'src-web', 'ORGANIZATION_WEBSITE', 'HopeBridge Foundation', 'org-hopebridge', '2026-09-01T00:00:00Z',
    'EXCERPT_AND_HASH', repeat('b', 64), 'ANALYST_ENTRY', NULL, NULL, NULL, :UA),
   (:IA, 'src-reg', 'OFFICIAL_REGISTRY', 'Exampleland Charity Registry (fixture)', NULL, '2026-09-01T00:00:00Z',
-   'SNAPSHOT', repeat('a', 64), 'PROVIDER', 'fixture-xa-charity-registry', 'XA', '{"registrationNumber":"XA1234567"}', :UA),
+   'SNAPSHOT', repeat('a', 64), 'PROVIDER', 'fixture-xa-charity-registry', 'XA', pg_temp.snap('xa-1234567', 'a'), :UA),
   (:IB, 'src-web', 'ORGANIZATION_WEBSITE', 'Northstar Relief Initiative', 'org-northstar', '2026-09-01T00:00:00Z',
    'EXCERPT_AND_HASH', repeat('c', 64), 'ANALYST_ENTRY', NULL, NULL, NULL, :UB);
 
@@ -253,8 +264,8 @@ SELECT pg_temp.expect_fail('S39 a dispute is resolved only once',
 -- audit chain intact for both investigations
 SELECT pg_temp.expect_eq('S40 audit chain A verifies', (SELECT public.impact_audit_chain_ok(:IA))::int, 1);
 SELECT pg_temp.expect_eq('S41 audit chain B verifies', (SELECT public.impact_audit_chain_ok(:IB))::int, 1);
-SELECT pg_temp.expect_eq('S42 every write of A was audited (created, 2 sources, 2 claims, 2 evidence, 2 runs, status, conflict, source status)',
-  (SELECT count(*) FROM public.impact_audit_events WHERE investigation_id = :IA), 12);
+SELECT pg_temp.expect_eq('S42 every write of A was audited (created, 2 sources + I2 registry snapshot event, 2 claims, 2 evidence, 2 runs, status, conflict, source status)',
+  (SELECT count(*) FROM public.impact_audit_events WHERE investigation_id = :IA), 13);
 
 -- ── G: Codex I1 Gate 1 (I1G1-01) — even service_role cannot forge ─────────
 SELECT pg_temp.expect_fail('G01 service_role cannot insert an audit event directly',
@@ -369,7 +380,7 @@ SELECT pg_temp.expect_eq('A08 disputes of B are invisible', (SELECT count(*) FRO
 SELECT pg_temp.expect_eq('A09 audit of B is invisible', (SELECT count(*) FROM public.impact_audit_events WHERE investigation_id = :IB), 0);
 SELECT pg_temp.expect_eq('A10 unfiltered child reads return only A''s rows',
   (SELECT count(*) FROM public.impact_claims) + (SELECT count(*) FROM public.impact_evidence) + (SELECT count(*) FROM public.impact_sources), 6);
-SELECT pg_temp.expect_eq('A11 A can read its own audit trail', (SELECT count(*) FROM public.impact_audit_events WHERE investigation_id = :IA), 12 + 2001);
+SELECT pg_temp.expect_eq('A11 A can read its own audit trail', (SELECT count(*) FROM public.impact_audit_events WHERE investigation_id = :IA), 13 + 2001);
 SELECT pg_temp.expect_eq('A11b A sees its latest versions through the invoker view', (SELECT count(*) FROM public.impact_latest_verifications), 2);
 SELECT pg_temp.expect_eq('A11c B''s latest versions are invisible through the view', (SELECT count(*) FROM public.impact_latest_verifications WHERE investigation_id = :IB), 0);
 SELECT pg_temp.expect_eq('A12 A can verify its own chain', (SELECT public.impact_audit_chain_ok(:IA))::int, 1);
@@ -464,7 +475,7 @@ SET ROLE service_role;
 INSERT INTO public.impact_sources (investigation_id, ref, source_type, publisher, retrieved_at, retention, content_hash,
   acquisition_method, acquisition_provider_id, jurisdiction_country, jurisdiction_registry, snapshot, created_by)
 VALUES (:IA, 'src-reg2', 'OFFICIAL_REGISTRY', 'Exampleland Charity Registry (fixture)', '2026-09-01T00:00:00Z', 'SNAPSHOT', repeat('7', 64),
-  'PROVIDER', 'fixture-xa-charity-registry', 'XA', 'fixture-xa-charity-registry', '{"registrationNumber":"XA1234567"}', :UA);
+  'PROVIDER', 'fixture-xa-charity-registry', 'XA', 'fixture-xa-charity-registry', pg_temp.snap('xa-1234567', '7'), :UA);
 INSERT INTO public.impact_evidence (investigation_id, ref, claim_ref, source_ref, about_org_ref, relationship, relationship_basis, observed_to, personal_data, added_at, created_by) VALUES
   (:IA, 'e3', 'c1', 'src-reg2', 'org-hopebridge', 'CONTEXTUALIZES', 'HUMAN_ASSESSED', '2026-09-01', 'NONE', '2026-09-02T00:00:00Z', :UA),
   (:IA, 'e4', 'c1', 'src-reg2', 'org-hopebridge', 'SUPPORTS', 'LLM_SUGGESTED', '2026-09-01', 'NONE', '2026-09-02T00:00:00Z', :UA),
@@ -509,9 +520,12 @@ SELECT pg_temp.expect_eq('V01 no verdict/score/trust/fraud column exists',
      AND column_name ~* '(verdict|score|rank|trust|fraud|scam|guilt|corrupt)'), 0);
 SELECT pg_temp.expect_eq('V02 claims table has no status column (engine is the authority)',
   (SELECT count(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'impact_claims' AND column_name = 'status'), 0);
-SELECT pg_temp.expect_eq('V03 RLS enabled on all 8 impact tables',
+SELECT pg_temp.expect_eq('V03 RLS enabled on EVERY impact table (8 from I1 + impact_registry_conflicts from I2)',
   (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-   WHERE n.nspname = 'public' AND c.relname LIKE 'impact\_%' AND c.relkind = 'r' AND c.relrowsecurity), 8);
+   WHERE n.nspname = 'public' AND c.relname LIKE 'impact\_%' AND c.relkind = 'r' AND NOT c.relrowsecurity), 0);
+SELECT pg_temp.expect_eq('V03b impact table count (a new table must be added to this suite deliberately)',
+  (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+   WHERE n.nspname = 'public' AND c.relname LIKE 'impact\_%' AND c.relkind = 'r'), 9);
 SELECT pg_temp.expect_eq('V04 authenticated holds no write privilege on any impact table',
   (SELECT count(*) FROM information_schema.table_privileges
    WHERE table_schema = 'public' AND table_name LIKE 'impact\_%' AND grantee IN ('authenticated', 'anon', 'PUBLIC')
