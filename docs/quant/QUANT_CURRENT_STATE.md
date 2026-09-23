@@ -67,3 +67,43 @@ revenue ranges, "investment_score" and ROI figures about *business niches*.
 Those numbers are LLM-generated, not computed. They are out of Quant scope
 and untouched, but they are the opposite of the Quant principle (engine
 calculates, LLM explains) and are recorded as an out-of-scope finding.
+
+## 6. Foundation closure (IV-QUANT-DATA-PLANE-AND-API-02, internal gate)
+
+`IV-QUANT-FOUNDATION-01: CONDITIONAL_PASS → PASS` (the Foundation report is
+not rewritten; this is the closure evidence):
+
+| Evidence | Result |
+|---|---|
+| Local suites on 8d429eb | Quant 102/102 · EF 207/207 · AEF 138/138 · deploy governance OK |
+| Remote CI (commit 30c804b = 8d429eb + push trigger only) | Edge Function Tests run 35836935956 ✅ (5 jobs) · Flutter Validation run 35836935976 ✅ (analyze 448 infos, 462 tests) |
+| Codex recheck (new thread, read-only, post-8d429eb) | PASS WITH FINDINGS — CXF-01/03/04/05/06 hold, CXF-02 partial; 0 P0/P1; CXR-01 (P2, "first/primeiro" residual) DEFERRED to Q6, pinned by test QB-15 |
+
+Remote CI became possible by adding a `push` trigger scoped to
+`claude/insightvalues-quant-**` (workflow_dispatch needs the workflow on
+the default branch; the lab line does not open PRs to main).
+
+## 7. Data plane + API (IV-QUANT-DATA-PLANE-AND-API-02)
+
+* Module split (Option A, approved): `quant-analytics` READ_ONLY/INTERNAL
+  (`quant-analyze`), `quant-watchlists` REVERSIBLE/INTERNAL
+  (`quant-watchlists`; split after Codex CXA-02), `ive-quant`
+  CONSEQUENTIAL/EXPERIMENTAL with no Edge Function (MP-09 untouched).
+* APIs: QUANT_API_CONTRACT.md. Persistence: QUANT_WATCHLIST_MODEL.md.
+  Calendars: QUANT_MARKET_CALENDAR.md. Vendors: QUANT_VENDOR_ASSESSMENT.md.
+* Lab UI: `/quant-lab` (admin-only), `lib/features/quant_lab/`.
+* Legacy risk record: QUANT_LEGACY_LLM_NUMERIC_RISK.md.
+
+## 8. Performance (measured, 5-run median, local Deno 2.9.6)
+
+| Stage | 50 000 daily rows, 2.44 MB CSV, 8 SMA windows (2…50 000), crossover, Sharpe |
+|---|---|
+| CSV parse | 178 ms |
+| normalize + provenance | 57 ms |
+| calculate (engine + calendar) | 160 ms |
+| full pipeline (JSON → schema → CSV → series → analysis) | 358 ms |
+| heap used after runs | 69 MB (RSS 442 MB includes the Deno runtime) |
+
+No optimization was done without a measured need; the worst case is well
+inside Edge Function time limits. Memory headroom on the Edge runtime must
+be re-measured on the platform before any promotion.

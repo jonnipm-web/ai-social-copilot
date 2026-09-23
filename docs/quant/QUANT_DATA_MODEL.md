@@ -135,3 +135,13 @@ The Foundation persists **nothing**: no migration, no table, no bucket.
 | analysis artifacts | Postgres row per `QuantAnalysisResult` (JSONB), owner + project scoped | only when a UI needs history |
 | market-data cache | NOT millions of bars in Supabase. Short-TTL cache keyed by `(instrumentKey, frequency, range, adjustment, provider)`; object storage or a columnar store if volume demands — architectural decision | Q1 |
 | raw datasets (uploads) | Knowledge / Storage bucket with existing ownership; normalized on read | Q1 |
+
+## 9. Storage decisions (IV-QUANT-DATA-PLANE-AND-API-02)
+
+| Kind | Now | Why |
+|---|---|---|
+| Watchlists (user-owned state) | **persisted** — `quant_watchlists`, `quant_watchlist_items` (QUANT_WATCHLIST_MODEL.md) | small, user-owned, needs RLS |
+| Uploaded CSV datasets | **not persisted** — validated and analyzed in-request | no need yet; avoids storing user financial files |
+| Analysis results | **not persisted** — reproducible from dataset + options (`analysisId`) | no history UI yet |
+| Market bars | **not persisted** | no vendor; never millions of bars in Supabase |
+| Knowledge files | reused only as a future source; the Lab imports a local `.csv` client-side (same 5 MB cap) and sends it to the API | no new bucket |

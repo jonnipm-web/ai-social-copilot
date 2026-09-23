@@ -179,3 +179,30 @@ execute.
 
 Not implemented. Future role: UNSTRUCTURED EVIDENCE SOURCE, never a
 substitute for structured price/fundamental data.
+
+## 13. Data plane and module split (IV-QUANT-DATA-PLANE-AND-API-02)
+
+```
+client (Quant Lab / future surfaces)
+  → quant-analyze  [quant-analytics · READ_ONLY · INTERNAL]
+      auth → entitlement → body caps → strict schema → project ownership
+      → csv.ts → createPriceSeries (server-set provenance) → analyzeSeries
+      (calendar-aware freshness) → QuantAnalysisResult
+  → quant-watchlists [quant-watchlists · REVERSIBLE · INTERNAL]
+      auth → entitlement → schema → canonical identity → Postgres as the caller (RLS + DB entitlement predicate)
+ive-quant [CONSEQUENTIAL · EXPERIMENTAL] → no Edge Function (MP-09) → future AEF path only
+```
+
+* Pure contracts stay in `_shared/quant/` (tripwires QB-01..04 extended);
+  all I/O adapters live in `_shared/quant_server.ts`.
+* ANALYSIS ≠ ACTION: nothing in either API can reach AEF, a broker or an
+  LLM (QB-14). The only writes are the user's own watchlists (REVERSIBLE).
+* Cache (not built): a future provider cache must key on
+  `(instrumentKey, frequency, range, adjustment, providerId)` and store the
+  provenance with the bars; a cache hit must never drop `sourceAsOf`/`retrievedAt`.
+* IVE Core: still a contract (`QuantNarrator`); nothing imported.
+* **Impact shared-core opportunity (documented only, not extracted):** the
+  provenance/evidence-strength model (`DataProvenance`, `evidenceStrength`,
+  `UntrustedDocumentEvidence`) and the allowlisted-log pattern are
+  domain-neutral and could become an Evidence/Provenance core shared with
+  InsightValues Impact — decision for a future integration gate.

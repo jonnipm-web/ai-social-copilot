@@ -84,6 +84,9 @@ class AppConstants {
   // Fase 10F — Intelligence Debug & Observability
   static const routeIntelligenceDebug    = '/intelligence-debug';
 
+  // IV-QUANT-DATA-PLANE-AND-API-02 — Quant Lab (INTERNAL, admin-only)
+  static const routeQuantLab             = '/quant-lab';
+
   // IVE-COMMERCIAL-RELEASE-CONTROL-PLANE-01
   static const routeAccount              = '/account';
   static const routeAbout                = '/about';

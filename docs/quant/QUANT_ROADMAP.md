@@ -30,7 +30,7 @@ Codex review, CSV → analysis end-to-end on the server, watchlist table with
 RLS + disposable-DB tests, calendar-aware freshness, vendor audit report
 (no purchase).
 
-## 3. ARCHITECTURAL DECISION REQUIRED — analytics vs execution module
+## 3. RESOLVED (Owner + Agente Martins: Option A) — analytics vs execution module
 
 ```
 CURRENT STATE: one server module 'ive-quant' = EXPERIMENTAL / CONSEQUENTIAL.
@@ -76,3 +76,36 @@ Billing is untouched by this mission.
 | Automation | PARTIAL | ingestion (CSV/fixture), normalization, calculation, structured results and safe log events are automatable and deterministic; no scheduler, alerts or live ingestion yet |
 | Monetization | PARTIAL | entitlement hook exists (`ive-quant` admin-only), tier matrix drafted; no tier activated, no API to meter |
 | Security | PASS (Foundation scope) | no surface, tripwires, entitlement deny, AEF deny, no secrets, allowlisted logs, untrusted-content boundary |
+
+## 6. Re-evaluation after IV-QUANT-DATA-PLANE-AND-API-02
+
+| Phase | Status | Evidence / next need |
+|---|---|---|
+| Q0 Foundation | **PASS** (closed in mission 02) | remote CI green, Codex recheck 0 P0/P1 |
+| Q1 Data plane / API | **DONE (Lab)** except a real provider | quant-analyze, quant-watchlists, RLS, calendars; real vendor blocked on licence answers (QUANT_VENDOR_ASSESSMENT §4) |
+| Q2 Analytics + Lab | **Lab surface done** (admin-only); multi-instrument comparison not started | next: comparison + correlation over several uploaded series |
+| Q3 Portfolio intelligence | not started — do **not** start before Q1 provider + FX provenance | engine functions exist (Foundation) |
+| Q4 Risk | not started | needs Q3 |
+| Q5 Fundamentals | not started | vendor decision |
+| Q6 IVE Quant | contract only | IVE-INTELLIGENCE-CORE PASS + integration gate; resolve CXR-01 residual there |
+| Q7 Backtesting | not started | point-in-time data (Sharadar-class) |
+| Q8 Alerts | not started | needs provider + scheduler + rate limits |
+| Q9 Broker read-only | not started | legal + CLASS D |
+| Q10 Controlled execution | blocked by design | AEF persistence + Human Gate + regulatory analysis |
+
+Order change vs mission 01: vendor licensing is now the critical path for
+Q1→Q2 value; Q6 can proceed in parallel once IVE Core passes.
+
+## 7. Recommended next Quant gate
+
+**IV-QUANT-PROVIDER-AND-PROMOTION-READINESS-03**:
+1. Owner obtains written licence answers from the PRIMARY/SECONDARY vendors
+   (display rights, US + LSE, delay, fees) — Owner decision + cost approval.
+2. First real `MarketDataProvider` behind `safe_fetch` with recorded
+   fixtures; provider cache keyed with provenance.
+3. Per-user rate limit (429) for Quant APIs.
+4. Multi-series analytics in the Lab (comparison, correlation matrix).
+5. Physical Android run + web build of `/quant-lab` (G1/G9/G10 evidence).
+6. Promotion Gate review of `quant-analytics` INTERNAL → ALPHA (beta
+   testers): requires a new `quant_watchlists_access_allowed()` migration
+   (QB-16) and CLASS D review.

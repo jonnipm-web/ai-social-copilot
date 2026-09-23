@@ -101,3 +101,26 @@ be logged (test AN-50).
   engine-signed request — belongs to the Q6 integration gate.
 * **Calendar-naive freshness and gaps** until an exchange calendar exists.
 * **Float64 analytics** are not a ledger (see QUANT_CALCULATION_SPEC §1).
+
+## 8. Data plane threat model (IV-QUANT-DATA-PLANE-AND-API-02)
+
+| Threat | Mitigation | Test |
+|---|---|---|
+| Forged JWT / anon key | `resolveAuthenticatedUser` (GoTrue getUser) | GH-*, QA-40, QW-04 |
+| Forged user_id / plan / role / module_access in body | strict schema rejects unknown fields (400) | QA-10, QW-05 |
+| Entitlement bypass via API | `requireModuleAccess` before any work; fail closed on source outage | GH-*, QB-13 |
+| Entitlement bypass via direct PostgREST (CXA-01) | RLS predicate `quant_watchlists_access_allowed()` + drift test | Q09, Q10, QB-16 |
+| Forged / foreign projectId | ownership via caller JWT (API) + RLS WITH CHECK (DB); lookup failure → 503 | QA-41, QW-03, Q02, Q05 |
+| Cross-user watchlist | owner RLS; immutable user/project | Q04, Q05, QW-02 |
+| Malformed / oversized CSV, NaN/Infinity, timestamps | csv.ts + normalization; body cap streamed | QA-20..22 |
+| Calculation DoS | bounded rows/windows, O(n) SMA; measured 358 ms worst case | QA-20, CX1-07, perf |
+| Provider poisoning / forged provenance | server-set USER_UPLOAD provenance; no client trust/sourceAsOf | QA-01, QA-10 |
+| Stale data shown as fresh | calendar-aware sessions; unknown calendar → naive + warning | QA-30, SF-*, CAL-* |
+| Currency mismatch | instrument ↔ provenance currency check | DT-27 |
+| SSRF | no URL input, no fetch in Quant EFs | QA-51, QB-14 |
+| Vendor-key leakage | no vendor, no key; future provider rules §4 | QB-02 |
+| LLM numerical authority | no LLM in either API | QA-51, QB-14 |
+| Broker path from analytics | none; AEF deny unchanged | QB-04, QB-14, QB-20 |
+| Log leakage | allowlisted events | QA-50, QW-07 |
+
+Legacy commercial LLM-generated numbers: QUANT_LEGACY_LLM_NUMERIC_RISK.md.

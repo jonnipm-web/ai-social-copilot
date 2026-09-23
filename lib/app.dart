@@ -69,6 +69,7 @@ import 'features/opportunity_lab/screens/opportunity_detail_screen.dart';
 import 'features/action_engine/screens/action_engine_screen.dart';
 import 'features/action_engine/screens/action_detail_screen.dart';
 import 'features/dashboard/screens/executive_dashboard_screen.dart';
+import 'features/quant_lab/quant_lab_screen.dart';
 import 'features/debug/screens/intelligence_debug_hub_screen.dart';
 
 final _iveObserver = IveRouteObserver();
@@ -666,6 +667,12 @@ final _router = GoRouter(
     GoRoute(
       path: AppConstants.routeIntelligenceDebug,
       builder: (_, __) => const IntelligenceDebugHubScreen(),
+    ),
+
+    // ── IV-QUANT-DATA-PLANE-AND-API-02 — Quant Lab (INTERNAL, admin-only) ─
+    GoRoute(
+      path: AppConstants.routeQuantLab,
+      builder: (_, __) => const QuantLabScreen(),
     ),
   ],
 );
