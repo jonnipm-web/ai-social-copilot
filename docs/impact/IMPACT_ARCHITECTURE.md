@@ -86,3 +86,21 @@ verifyClaim ─► analyzeIndependence (lineage) ─► sufficiency; R03B entity
 The pure core has no network; the network layer lives outside it and is only
 reached through composed providers. No real registry is composed in the Lab.
 See IMPACT_REGISTRY_INTELLIGENCE.md.
+
+## I3 — Evidence Collection
+
+```
+ingest_artifact ─► base64 decode ─► detectArtifact (signature/MIME/ext, refusals)
+                ─► sha256Bytes (FILE_HASH) ─► extractArtifact (bounded, per format)
+                ─► REUSE? (same hash in THIS investigation) / version chain
+                ─► USER_UPLOAD source (HASH_ONLY) ─► impact_artifacts (structure index only)
+                ─► candidates (analyst locator validated against the extraction;
+                   AUTO_VALUE_MATCH) ─► impact_evidence_candidates (PENDING)
+review_candidate ─► ACCEPTED: evidence <cand>.ev (HUMAN_ASSESSED, {artifact:{ref,hash,locator}})
+                    then review update  │ REJECTED / NEEDS_CONTEXT: review only
+run_verification ─► unchanged engine (USER_SUBMITTED never counted as authority)
+```
+
+No network, no LLM, no storage bucket, no new dependency. Cloud files are
+downloaded by the client (Drive `drive.readonly`) and uploaded as
+CLOUD_IMPORT. See IMPACT_EVIDENCE_COLLECTION.md.

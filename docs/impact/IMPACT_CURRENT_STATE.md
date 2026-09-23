@@ -87,3 +87,20 @@ IMPACT_PROVIDER_REGISTRY.
 Decision recorded: SERVICE_ROLE_TRUST_GATE = LAB_ONLY (IMPACT_RLS_MODEL.md §6).
 Docs: IMPACT_REGISTRY_INTELLIGENCE · IMPACT_ORGANIZATION_IDENTITY ·
 IMPACT_SOURCE_LINEAGE · IMPACT_REGISTRY_SOURCE_DOSSIER.
+
+## 7. I3 — Evidence Collection (IV-IMPACT-I3-EVIDENCE-COLLECTION-01)
+
+| Asset | Classification | Where |
+|---|---|---|
+| File detection + bounded extractors (PDF, DOCX, XLSX, CSV, JSON, TXT/MD; bounded ZIP) | EXPERIMENTAL | `_shared/impact/artifact_*.ts` |
+| Evidence candidates (analyst locator, deterministic value match; PII / minor / injection / subject flags) | EXPERIMENTAL | `_shared/impact/evidence_candidates.ts` |
+| Lab actions `ingest_artifact`, `review_candidate` | EXPERIMENTAL (admin-only, EF not deployed) | `_shared/impact/lab_service.ts`, `impact-lab/` |
+| Migration (`impact_artifacts`, `impact_evidence_candidates`, artifact-bound evidence rule, 6 audit events) | EXPERIMENTAL — **not applied to production** | `supabase/migrations/20260926010000_impact_evidence_collection.sql` |
+| DB tests | CI (`disposable-db-rls-ci`) | `supabase/tests/impact_evidence_rls_test.sql` |
+
+Pre-existing assets audited, not changed: `knowledge_items` (text, no bytes /
+hash), `process-file` EF (regex PDF, fflate DOCX), `extract-knowledge` (URL
+fetch via safe_fetch — not used by Impact), Flutter `drive_service.dart`
+(`drive.readonly`, client-side download). No storage bucket exists or was
+created. Docs: IMPACT_EVIDENCE_COLLECTION · IMPACT_ARTIFACT_MODEL ·
+IMPACT_FILE_SECURITY.

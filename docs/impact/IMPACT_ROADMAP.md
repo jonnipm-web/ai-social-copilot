@@ -61,3 +61,17 @@ Next gate candidates (decision for Agente Martins — NOT started):
 user-submitted evidence with review), or a "Registry Enablement" gate that
 turns on ONE real registry (Charity Commission or Companies House) once the
 Owner has confirmed terms and created the credential.
+
+## Status after I3
+
+Evidence Collection is complete in the Lab: uploaded / cloud-imported files
+are hashed and extracted by the server, candidates are reviewed by a human
+and promoted to bounded, locator-bound evidence that never counts as
+authority. Not done on purpose: OCR, URL fetching (egress pinning), direct
+Knowledge Vault linkage, storage of originals, LLM suggestions, billing.
+
+Next gate candidates (decision for Agente Martins — NOT started): **I4**
+(e.g. verification reporting / dossier export over the evidence graph), a
+Registry Enablement gate (one real registry after Owner terms + credential),
+or an OCR / URL-snapshot boundary gate (requires egress pinning). The
+service-role A/B re-evaluation stays mandatory before any non-Lab exposure.

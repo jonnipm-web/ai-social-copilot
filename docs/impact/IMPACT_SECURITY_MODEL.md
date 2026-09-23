@@ -104,3 +104,20 @@ privileged infrastructure root; RLS does not restrict it; the I1/I2 database
 invariants still apply to it. I2 adds no new service_role privilege beyond
 INSERT on the extended `impact_sources` columns (all CHECK-constrained) and
 SELECT on `impact_registry_conflicts` (written only by the trigger).
+
+## I3 notes
+
+- Files: server-side detection and bounded parsing (IMPACT_FILE_SECURITY.md);
+  executables, archives, macro documents, legacy OLE2 and disguised binaries
+  refused; nothing persisted for a refused file.
+- Trust: the server computes the file hash; the client cannot declare hash,
+  type, text, excerpt, method, review or authority (strict contract).
+- Spoofing blocked in TS and SQL: hash (artifact ↔ source ↔ candidate),
+  locator (structure + extraction), review (candidates born PENDING, final
+  states immutable, owner-only actor), evidence (artifact sources carry only
+  promoted candidates matching excerpt/locator/claim).
+- Human review ≠ verification; USER_UPLOAD never becomes authority.
+- service_role not expanded beyond LAB_ONLY: INSERT/SELECT on artifacts,
+  INSERT/SELECT/UPDATE (review fields only, trigger-enforced) on candidates,
+  no DELETE. Residual: `file_hash` trusted from the server path.
+- Observability: artifact events carry codes, sizes and counts only.

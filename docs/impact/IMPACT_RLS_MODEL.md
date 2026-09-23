@@ -132,3 +132,15 @@ service_role write, trigger-only insert, append-only, no direct delete
 identity consistency and no people keys (I2-07..11), lineage column CHECKs
 (I2-12..15), idempotent snapshot key (I2-06), REGISTRY_RECORD evidence rules
 (I2-25..28), counted registry evidence must belong to the subject (I2-39).
+
+## 8. I3 additions (`20260926010000`)
+
+`impact_artifacts` and `impact_evidence_candidates`: RLS on, SELECT for the
+investigation owner (parent policy), no client write, no direct delete (even
+service_role), `impact_require_active` on insert/update (ACTIVE investigation,
+owner actor). Artifacts are append-only. Candidate updates may change only
+the review fields, only from PENDING / NEEDS_CONTEXT. Composite FKs
+`(investigation_id, ref)` bind every child to its investigation. Tested on
+PostgreSQL 17 (`impact_evidence_rls_test.sql`, 52 checks: owner,
+cross-user, cross-investigation, cross-project, anon, privileges, spoofing).
+The V03b table count is now 11.
