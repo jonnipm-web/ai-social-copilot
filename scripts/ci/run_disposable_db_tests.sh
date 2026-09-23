@@ -36,3 +36,9 @@ echo "re-applied $(basename "$last") (idempotency)"
 out="$(run -d "$DB" -tA -f "$ROOT/supabase/tests/entitlement_subject_roles_rls_test.sql")"
 echo "$out" | tail -1
 echo "$out" | grep -qx 'SUBJECT_ROLES_RLS: PASS'
+
+# IV-QUANT-DATA-PLANE-AND-API-02 — Quant watchlists RLS (owner CRUD, cross-user,
+# anonymous, cross-project, immutable columns, limits, canonical identity).
+qout="$(run -d "$DB" -tA -f "$ROOT/supabase/tests/quant_watchlists_rls_test.sql")"
+echo "$qout" | tail -1
+echo "$qout" | grep -qx 'QUANT_WATCHLISTS_RLS: PASS'
