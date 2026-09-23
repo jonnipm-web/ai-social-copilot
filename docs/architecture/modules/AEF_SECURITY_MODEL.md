@@ -48,13 +48,15 @@ PostgreSQL). Unit: `governance_unit_test.ts` (GU), `canonical_test.ts` (CJ),
 | 22 | Oversized input / resource exhaustion | payload ≤ 16 KiB, depth ≤ 8, ≤ 1000 nodes; TTL ≤ 24 h; gate ≤ 1 h; lease ≤ 5 min; ≤ 50 open operations per subject (soft) | CJ-04, T06d, PG-06, T18, PG-21 |
 | 23 | Secrets / PII in storage or logs | only ids, hashes, codes; no logging added | schema review |
 | 24 | Tool reaches real systems | only mock tools registered; real IVE actions have no tool | PG-17, tool registry |
-| 25 | Privilege expansion through functions | SECURITY DEFINER only on the ten RPCs (pinned search_path, no dynamic SQL, EXECUTE only service_role); helpers/triggers not executable by any API role | T01, T05, T14s |
+| 25 | Privilege expansion through functions | SECURITY DEFINER only on the thirteen RPCs (pinned search_path, no dynamic SQL, EXECUTE only service_role); helpers/triggers not executable by any API role | T01, T05, T14s |
 
 ## Hardening (IV-AEF-HARDENING-01)
 
 Trust boundary, unchanged: service_role is the AEF service itself. It can
 call the RPCs with any subject id (the RPCs trust the service for identity
-and policy); it cannot write any AEF table, call internal helpers, delete
+and policy — Human Gate approver and operator identities are bound to the
+verified credential by the TypeScript service, not by `auth.uid()` at the
+RPC layer; Codex HCF-02); it cannot write any AEF table, call internal helpers, delete
 evidence, forge a tombstone/erasure record or reconcile without an
 authorized reconciler. Retention and erasure deletes happen only inside
 `aef_purge` / `aef_erase_subject`.

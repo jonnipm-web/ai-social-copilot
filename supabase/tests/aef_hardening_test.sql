@@ -281,6 +281,17 @@ UPDATE public.aef_audit_coalesced SET count = 5 WHERE subject_id = 'e1000000-000
 SET session_replication_role = origin;
 
 -- ── H06 reconciliation ──────────────────────────────────────────────────
+-- Codex HCF-01: the operator path is disabled until the Owner enables it.
+SET ROLE service_role;
+DO $$ BEGIN
+  PERFORM pg_temp.expect(public.aef_reconcile(jsonb_build_object('operation_id', current_setting('aef.t.d_unknown'),
+    'verdict', 'CONFIRMED_APPLIED', 'reconciler_kind', 'OPERATOR', 'reconciler_id', 'a7000000-0000-4000-8000-000000000007',
+    'evidence_kind', 'SUPPORT_TICKET', 'evidence_ref', 't', 'policy_version', 'aef-policy/2026-09-25.1',
+    'risk_version', 'aef-risk/2026-09-25.1')), 'RECONCILER_NOT_AUTHORIZED', 'H06-0 operator path disabled by default');
+  IF EXISTS (SELECT 1 FROM public.aef_reconciliations) THEN RAISE EXCEPTION 'H06-0 recorded while disabled'; END IF;
+END $$;
+RESET ROLE;
+UPDATE public.aef_retention_policy SET operator_reconciliation_enabled = true WHERE id;  -- Owner decision (test)
 SET ROLE service_role;
 DO $$
 DECLARE v_unknown uuid := current_setting('aef.t.d_unknown')::uuid; r jsonb; v_orig text; v_ok uuid;

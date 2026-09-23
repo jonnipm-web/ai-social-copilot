@@ -28,6 +28,7 @@ H03/H04/H07/H08, `hardening_pg_test.ts` HP-08/HP-09.
 | `audit_retention_days` | 730 (≥ terminal) | audit prefix becomes prunable |
 | `denial_window_seconds` / `denial_window_limit` | 60 / 20 | audit rate limit (AEF_AUDIT_RATE_LIMIT.md) |
 | `erasure_blocks_on_unreconciled` | true | erasure refused while an UNKNOWN_OUTCOME is unreconciled |
+| `operator_reconciliation_enabled` | false | human (operator) reconciliation allowed at all (Owner decision; AEF_UNKNOWN_OUTCOME_RECONCILIATION.md) |
 | `policy_ref` | `aef-retention/2026-09-26.1-provisional` | version of the policy in force (returned by every purge) |
 
 **The periods are provisional engineering defaults, not legal periods.**
@@ -106,3 +107,5 @@ skips a subject whose erasure holds the lock, so they cannot deadlock
    record).
 3. Who may place/release legal holds and through which audited path (today:
    owner SQL only).
+4. Whether to enable human (operator) reconciliation of UNKNOWN_OUTCOME
+   (default: disabled; only registered verifiers reconcile).

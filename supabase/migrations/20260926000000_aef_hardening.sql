@@ -29,6 +29,10 @@ CREATE TABLE IF NOT EXISTS public.aef_retention_policy (
   denial_window_seconds           integer NOT NULL CHECK (denial_window_seconds BETWEEN 10 AND 3600),
   denial_window_limit             integer NOT NULL CHECK (denial_window_limit BETWEEN 1 AND 1000),
   erasure_blocks_on_unreconciled  boolean NOT NULL,
+  -- Codex HCF-01: an operator's reconciliation is a human attestation, not a
+  -- machine-checked proof. Disabled until the Owner explicitly enables it;
+  -- until then only server-registered verifiers can reconcile.
+  operator_reconciliation_enabled boolean NOT NULL DEFAULT false,
   CONSTRAINT aef_retention_audit_outlives_operations CHECK (audit_retention_days >= terminal_retention_days)
 );
 INSERT INTO public.aef_retention_policy (id, policy_ref, terminal_retention_days, audit_retention_days,
@@ -362,6 +366,7 @@ DECLARE
   v_op uuid; v_verdict text; v_kind text; v_reconciler text; v_evidence_kind text; v_evidence_ref text;
   v_policy text; v_risk text; o public.aef_operations; r public.aef_receipts; v_operator uuid;
   v_id uuid := gen_random_uuid(); v_receipt jsonb; v_hash text; v_at timestamptz := now();
+  pol public.aef_retention_policy;
 BEGIN
   BEGIN
     PERFORM public.aef__check_keys(p, ARRAY['operation_id', 'verdict', 'reconciler_kind', 'reconciler_id',
@@ -395,6 +400,11 @@ BEGIN
     RETURN public.aef__err('ALREADY_RECONCILED', o.state);
   END IF;
 
+  SELECT * INTO pol FROM public.aef_retention_policy WHERE id;
+  IF v_kind = 'OPERATOR' AND pol.operator_reconciliation_enabled IS NOT TRUE THEN
+    PERFORM public.aef__audit_append(o.subject_id, o.id, 'RECONCILIATION_DENIED', NULL, NULL, 'OPERATOR_PATH_DISABLED');
+    RETURN public.aef__err('RECONCILER_NOT_AUTHORIZED');
+  END IF;
   IF (v_kind = 'VERIFIER' AND NOT EXISTS (SELECT 1 FROM public.aef_reconciliation_verifiers
                                            WHERE verifier_id = v_reconciler AND tool_id = o.tool_id AND enabled))
      OR (v_kind = 'OPERATOR' AND (v_operator = o.subject_id

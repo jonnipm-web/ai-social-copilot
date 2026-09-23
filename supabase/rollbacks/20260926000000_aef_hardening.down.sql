@@ -21,7 +21,7 @@ DO $$ BEGIN
      OR NOT EXISTS (SELECT 1 FROM public.aef_retention_policy
                      WHERE policy_ref = 'aef-retention/2026-09-26.1-provisional' AND terminal_retention_days = 365
                        AND audit_retention_days = 730 AND denial_window_seconds = 60 AND denial_window_limit = 20
-                       AND erasure_blocks_on_unreconciled) THEN
+                       AND erasure_blocks_on_unreconciled AND NOT operator_reconciliation_enabled) THEN
     RAISE EXCEPTION 'AEF hardening rollback refused: purge/erasure/reconciliation/coalesced evidence or hold/verifier/policy state exists';
   END IF;
 END $$;

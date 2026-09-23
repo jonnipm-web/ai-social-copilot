@@ -42,6 +42,16 @@ established afterwards, by whom, and on what evidence.
 | `VERIFIER` | a server-side verifier (`ReconciliationVerifierRegistry`, sealed) that queries the external system, **and** registered for the operation's tool in `aef_reconciliation_verifiers` (owner-managed, empty by default) | `sha256('aef-reconciler/1:VERIFIER:' || id)` |
 | `OPERATOR` | a verified user with role `admin` in `subject_roles`, who is **not** the operation's subject, whose account still exists and who was never erased (Codex HG1-02) | `sha256('aef-reconciler/1:OPERATOR:' || uuid)` only — the raw operator id is never stored (Codex HG3-03) |
 
+**The operator path is disabled by default** (`aef_retention_policy.
+operator_reconciliation_enabled = false`, Codex HCF-01): an operator's
+verdict is a human attestation by an accountable admin — the database can
+record who (hashed), when and on what referenced evidence (hashed), but it
+cannot prove the evidence. Enabling it is an **Owner decision**; until then
+an UNKNOWN_OUTCOME can only be reconciled by a server-registered verifier
+(none is registered by default, so by default nothing is reconciled —
+fail closed). The receipt's `reconciler_kind` always distinguishes a human
+attestation (`OPERATOR`) from a verifier check (`VERIFIER`).
+
 The subject can *ask* for a verifier check (`reconcile`) but can never
 supply a verdict; a request carrying a verdict is refused (`INPUT_REJECTED`).
 Refused attempts are audited (`RECONCILIATION_DENIED`).

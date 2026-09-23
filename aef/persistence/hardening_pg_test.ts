@@ -205,6 +205,7 @@ Deno.test({ name: "HP-03 only the subject can trigger a check, and only for UNKN
 }});
 
 Deno.test({ name: "HP-04 operator reconciliation: admin only, never the subject, identity from the credential", ignore, fn: async () => {
+  await sql(`UPDATE public.aef_retention_policy SET operator_reconciliation_enabled = true WHERE id;`);
   const w = await world();
   const h = harness(w);
   const { operationId } = await unknownOp(h, w);
@@ -502,4 +503,18 @@ Deno.test({ name: "HP-18 deterministic: a denial racing the erasure of its subje
     + (SELECT count(*) FROM public.aef_audit_windows WHERE subject_id = '${w.a}')
     + (SELECT count(*) FROM public.aef_audit_pending WHERE subject_id = '${w.a}');`);
   assertEquals(left[0], "0", "the erased subject was re-created by a racing denial");
+}});
+
+Deno.test({ name: "HP-19 operator reconciliation is refused while the Owner has not enabled it (Codex HCF-01)", ignore, fn: async () => {
+  await sql(`UPDATE public.aef_retention_policy SET operator_reconciliation_enabled = false WHERE id;`);
+  try {
+    const w = await world();
+    const h = harness(w);
+    const { operationId } = await unknownOp(h, w);
+    const r = await h.gov.reconcileByOperator({ operation_id: operationId, verdict: "CONFIRMED_APPLIED", evidence_kind: "SUPPORT_TICKET", evidence_ref: "invented", operator: actor(w.admin) }, w.tokAdmin);
+    assertEquals(code(r), "RECONCILER_NOT_AUTHORIZED");
+    assertEquals((await sql(`SELECT count(*) FROM public.aef_reconciliations WHERE operation_id = '${operationId}';`))[0], "0");
+  } finally {
+    await sql(`UPDATE public.aef_retention_policy SET operator_reconciliation_enabled = true WHERE id;`);
+  }
 }});
