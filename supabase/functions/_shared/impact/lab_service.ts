@@ -29,7 +29,7 @@ import { buildImpactReport } from './report.ts';
 import { deriveIndicators } from './risk_indicators.ts';
 import { scanUntrustedContent } from './safety.ts';
 import type { Claim, EvidenceItem, Jurisdiction, OrganizationIdentity, Source } from './types.ts';
-import { IMPACT_POLICY_VERSION, type SubjectIdentityStatus, type VerificationResult, verifyClaim } from './verification.ts';
+import { canonical, IMPACT_POLICY_VERSION, type SubjectIdentityStatus, type VerificationResult, verifyClaim } from './verification.ts';
 
 export interface LabActor {
   /** auth.users id, derived from the verified session — never from the body. */
@@ -108,11 +108,12 @@ export function withDisputeOverlay(r: VerificationResult, disputes: readonly Sto
 }
 
 /**
- * Retry replay (I1F2-02 / I1F3-01): the stored latest result is replayed only
- * if a FRESH engine run over the current state yields the same status,
- * underlying status, evidence-set hash and review binding. Any change in
- * sources, evidence, disputes, identity or time-dependent rules returns null,
- * and the caller stores a new version.
+ * Retry replay (I1F2-02 / I1F3-01 / I1F3-03): the stored latest result is
+ * replayed only if a FRESH engine run over the current state is canonically
+ * IDENTICAL to it: every field, including resultId, evaluatedAt, reviewState,
+ * gaps, rules and classifications. A retry at a later time, after any state
+ * change, or over a human-reviewed result (the retry carries no review) returns
+ * null, and the caller stores a new version.
  */
 async function settledLatest(actor: LabActor, inv: InvestigationRecord, data: InvestigationData, claimRef: string, now: string) {
   const latest = data.latestVerifications.find((v) => v.result.claimId === claimRef);
@@ -122,10 +123,7 @@ async function settledLatest(actor: LabActor, inv: InvestigationRecord, data: In
   if (read.reverificationPending) return null;
   const fresh = await computeVerification(actor, inv, data, claim, data.evidence.filter((e) => e.claimId === claimRef), now);
   if (!fresh.ok) return null;
-  const f = fresh.value;
-  const same = f.status === latest.result.status && f.underlyingStatus === latest.result.underlyingStatus &&
-    f.evidenceSetHash === latest.result.evidenceSetHash && f.reviewBindingHash === latest.result.reviewBindingHash;
-  return same ? summary(read, latest.version) : null;
+  return canonical(fresh.value) === canonical(latest.result) ? summary(read, latest.version) : null;
 }
 
 function summary(r: ReadResult, version: number) {

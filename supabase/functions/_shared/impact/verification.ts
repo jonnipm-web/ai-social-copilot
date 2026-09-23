@@ -187,7 +187,7 @@ function countIndependentVoices(counted: readonly AssessedEvidence[], sources: R
   return new Set(counted.map((a) => find(a.publisherKey))).size;
 }
 
-function canonical(v: unknown): string {
+export function canonical(v: unknown): string {
   if (v === undefined) return 'null';
   if (v === null || typeof v !== 'object') return JSON.stringify(v);
   if (Array.isArray(v)) return `[${v.map(canonical).join(',')}]`;

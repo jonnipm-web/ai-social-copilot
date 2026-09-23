@@ -527,3 +527,59 @@ Deno.test('I1F3-02 a retry with different cited evidence is a different request'
   await t.must(UA, { action: 'open_dispute', investigation_id: inv, ref: 'd1', claim_ref: 'c1', kind: 'CORRECTION_REQUEST' });
   assertEquals(await t.code(UA, { action: 'open_dispute', investigation_id: inv, ref: 'd1', claim_ref: 'c1', kind: 'CORRECTION_REQUEST', submitted_evidence_refs: ['e1'] }), 'ALREADY_EXISTS');
 });
+
+Deno.test('I1F3-03 a retry at a later time is a new evaluation, never a stale replay', async () => {
+  const t = setup();
+  const inv = await supportedRegistrationClaim(t);
+  const T2 = '2026-09-23T13:00:00Z';
+  const count = () => t.db.investigations.get(inv)!.verifications.length;
+  const opened = await t.must(UA, { action: 'open_dispute', investigation_id: inv, ref: 'd1', claim_ref: 'c1', kind: 'CORRECTION_REQUEST' });
+  const before = count();
+  const retryOpen = await t.must(UA, { action: 'open_dispute', investigation_id: inv, ref: 'd1', claim_ref: 'c1', kind: 'CORRECTION_REQUEST' }, T2);
+  const vo = retryOpen.data.verification as Json;
+  assertEquals([retryOpen.data.replayed, vo.evaluatedAt, count()], [undefined, T2, before + 1]);
+  assert(vo.resultId !== (opened.data.verification as Json).resultId);
+  const resolved = await t.must(UA, { action: 'resolve_dispute', investigation_id: inv, dispute_ref: 'd1', resolution: 'UPHELD' }, T2);
+  const T3 = '2026-09-23T14:00:00Z';
+  const retryResolve = await t.must(UA, { action: 'resolve_dispute', investigation_id: inv, dispute_ref: 'd1', resolution: 'UPHELD' }, T3);
+  const vr = retryResolve.data.verification as Json;
+  assertEquals([retryResolve.data.replayed, vr.evaluatedAt, vr.status], [undefined, T3, 'SUPPORTED']);
+  assert(vr.resultId !== (resolved.data.verification as Json).resultId);
+});
+
+Deno.test('I1F3-03 a HUMAN_REVIEWED latest result is never replayed by a dispute retry', async () => {
+  const t = setup();
+  const inv = await supportedRegistrationClaim(t);
+  await t.must(UA, { action: 'open_dispute', investigation_id: inv, ref: 'd1', claim_ref: 'c1', kind: 'CORRECTION_REQUEST' });
+  const res = (await t.must(UA, { action: 'resolve_dispute', investigation_id: inv, dispute_ref: 'd1', resolution: 'UPHELD' })).data.verification as Json;
+  const hr = (await t.must(UA, { action: 'run_verification', investigation_id: inv, claim_ref: 'c1', human_review_binding_hash: res.reviewBindingHash })).data.verification as Json;
+  assertEquals(hr.reviewState, 'HUMAN_REVIEWED');
+  const retry = await t.must(UA, { action: 'resolve_dispute', investigation_id: inv, dispute_ref: 'd1', resolution: 'UPHELD' });
+  const v = retry.data.verification as Json;
+  assertEquals(retry.data.replayed, undefined);
+  assert(v.reviewState !== 'HUMAN_REVIEWED');
+});
+
+Deno.test('I1F3-03 a replay is canonically identical to the fresh engine result', async () => {
+  const t = setup();
+  const inv = await supportedRegistrationClaim(t);
+  await t.must(UA, { action: 'open_dispute', investigation_id: inv, ref: 'd1', claim_ref: 'c1', kind: 'CORRECTION_REQUEST' });
+  const first = await t.must(UA, { action: 'resolve_dispute', investigation_id: inv, dispute_ref: 'd1', resolution: 'UPHELD' });
+  const again = await t.must(UA, { action: 'resolve_dispute', investigation_id: inv, dispute_ref: 'd1', resolution: 'UPHELD' });
+  assertEquals(again.data.replayed, true);
+  assertEquals(again.data.verification, first.data.verification);
+});
+
+Deno.test('I1F3-03 multiple disputes: replay only once every dispute is settled, in any order', async () => {
+  const t = setup();
+  const inv = await supportedRegistrationClaim(t);
+  await t.must(UA, { action: 'open_dispute', investigation_id: inv, ref: 'd1', claim_ref: 'c1', kind: 'CORRECTION_REQUEST' });
+  await t.must(UA, { action: 'open_dispute', investigation_id: inv, ref: 'd2', claim_ref: 'c1', kind: 'CORRECTION_REQUEST' });
+  await t.must(UA, { action: 'resolve_dispute', investigation_id: inv, dispute_ref: 'd2', resolution: 'WITHDRAWN' });
+  const r1 = await t.must(UA, { action: 'resolve_dispute', investigation_id: inv, dispute_ref: 'd2', resolution: 'WITHDRAWN' });
+  assertEquals((r1.data.verification as Json).status, 'DISPUTED');
+  await t.must(UA, { action: 'resolve_dispute', investigation_id: inv, dispute_ref: 'd1', resolution: 'UPHELD' });
+  const r2 = await t.must(UA, { action: 'resolve_dispute', investigation_id: inv, dispute_ref: 'd2', resolution: 'WITHDRAWN' });
+  assertEquals([(r2.data.verification as Json).status, r2.data.replayed], ['SUPPORTED', true]);
+  assertEquals(await t.code(UA, { action: 'resolve_dispute', investigation_id: inv, dispute_ref: 'd2', resolution: 'UPHELD' }), 'ALREADY_EXISTS');
+});
