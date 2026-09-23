@@ -66,7 +66,7 @@ authorized reconciler. Retention and erasure deletes happen only inside
 | H3 | Purge breaks verifiability | OPERATION_PURGED event, checkpoint-based chain verification, live evidence never pruned | H03h, H04a..e |
 | H4 | Erasure of another subject / damage to other chains | subject-scoped deletes; per-subject chains | H08k, HP-09, HM09 |
 | H5 | Erasure while evidence is still needed | account must be deleted; hold, in-flight execution, unreconciled unknown block it | H08a..e, HM10 |
-| H6 | Erased operator identity lingers | reconciler_id nulled, receipt holds only a hash | H08l..o |
+| H6 | Erased operator identity lingers | operator ids are never stored (receipt holds only a hash); an erased or deleted operator cannot reconcile | H06j2, H08m |
 | H7 | Audit flooding (own chain or victim's via approval spam) | per-subject window, coalesced durable counters, no drop | H05, H09, HP-10, HM01 |
 | H8 | Silencing security events via quota | counts preserved per code and anchored in the chain | H05d/g, HM02, HM11 |
 | H9 | Reconciliation without authority / by the subject | registered verifier for the tool, or admin operator ≠ subject | H06a..c, HP-03/04, HM03 |
@@ -76,8 +76,9 @@ authorized reconciler. Retention and erasure deletes happen only inside
 | H13 | Legacy v1 receipts reinterpreted | stored as issued; validator refuses a v1 receipt with a kind | L01/L02, RV-02 |
 | H14 | Rollback silently destroying evidence or control state | hardening rollback refuses when tombstones/checkpoints/erasures/reconciliations/counters, active legal holds, registered verifiers or a changed policy exist | AEF_HARDENING_ROLLBACK_REFUSAL, runner hold check |
 | H15 | Hold placed while purge/erasure runs (race) | per-subject advisory lock: hold trigger exclusive, erasure exclusive + re-check, purge try-lock + re-check | HP-11, HP-15 (deterministic), HM15 |
-| H16 | Recovery vs erasure deadlock | one lock order everywhere: window → head | HP-12, HP-14 (deterministic), HM14 |
-| H17 | Erased subject re-created / key reused after erasure | registration shared lock + `SUBJECT_ERASED`; denial recording refused | H10a..d, HP-13, HM16 |
+| H16 | Recovery vs erasure deadlock | one lock order everywhere (window → head); recovery never waits on windows or operations (SKIP LOCKED) and skips a subject being erased (try-lock) | HP-12, HP-14 (deterministic), HP-16, HM14 |
+| H17 | Erased subject re-created / key reused after erasure | registration and denial recording take the subject lock shared and refuse erased subjects (`SUBJECT_ERASED`); recovery skips a subject being erased | H10a..d, HP-13, HP-18, HM16 |
+| H21 | Decision on an operation deleted meanwhile (purge/erasure) | `aef_decide_gate` re-checks existence after locking → `GATE_NOT_FOUND` | HP-17 |
 | H18 | Unbounded pending counters via invented codes | closed code set; unknown → `UNLISTED` | H10e/f, HM17 |
 | H19 | Erased or deleted operator reconciles | operator must exist in auth.users and not be erased | H08m, HM18 |
 | H20 | Reconciliation re-pointed at another receipt | guard + verification bind to the original receipt id/hash | H11, HM19 |

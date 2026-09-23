@@ -398,6 +398,62 @@ BEGIN
   RETURN jsonb_build_object('ok', true);
 END $$;
 
+CREATE OR REPLACE FUNCTION public.aef_decide_gate(p jsonb) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
+DECLARE
+  v_gate uuid; v_approver uuid; v_decision text; v_binding text; v_policy text;
+  v_op uuid; o public.aef_operations; g public.aef_human_gates;
+BEGIN
+  BEGIN
+    PERFORM public.aef__check_keys(p, ARRAY['gate_id', 'approver_id', 'decision', 'binding_hash', 'policy_version']);
+    v_gate := public.aef__uuid(p, 'gate_id', true);
+    v_approver := public.aef__uuid(p, 'approver_id', true);
+    v_decision := public.aef__text(p, 'decision', true, 8, '^(APPROVE|REJECT)$');
+    v_binding := public.aef__text(p, 'binding_hash', true, 64, '^[0-9a-f]{64}$');
+    v_policy := public.aef__text(p, 'policy_version', true, 64, '^[a-z0-9._/-]{1,64}$');
+  EXCEPTION WHEN SQLSTATE 'AE001' THEN
+    RETURN public.aef__err('ARGUMENT_REJECTED');
+  END;
+
+  SELECT operation_id INTO v_op FROM public.aef_human_gates WHERE id = v_gate;
+  IF NOT FOUND THEN
+    RETURN public.aef__err('GATE_NOT_FOUND');
+  END IF;
+  -- Lock order everywhere: operation row, then gate row, then audit head.
+  SELECT * INTO o FROM public.aef_operations WHERE id = v_op FOR UPDATE;
+  SELECT * INTO g FROM public.aef_human_gates WHERE id = v_gate FOR UPDATE;
+
+  IF v_approver <> o.subject_id THEN
+    -- Recorded in the owner's chain; the caller learns nothing (no oracle).
+    PERFORM public.aef__audit_append(o.subject_id, o.id, 'APPROVAL_DENIED', NULL, NULL, 'APPROVER_NOT_AUTHORIZED');
+    RETURN public.aef__err('GATE_NOT_FOUND');
+  END IF;
+  IF public.aef__expire_if_due(o.id) THEN
+    RETURN public.aef__err('GATE_EXPIRED', 'EXPIRED');
+  END IF;
+  IF g.state <> 'REVIEW_REQUIRED' THEN
+    RETURN public.aef__err('GATE_NOT_PENDING', g.state);
+  END IF;
+  IF v_binding <> g.binding_hash THEN
+    PERFORM public.aef__audit_append(o.subject_id, o.id, 'APPROVAL_DENIED', NULL, NULL, 'APPROVAL_BINDING_MISMATCH');
+    RETURN public.aef__err('APPROVAL_BINDING_MISMATCH');
+  END IF;
+  IF v_policy <> o.policy_version THEN
+    PERFORM public.aef__gate_to(o.id, 'INVALIDATED', 'POLICY_VERSION_CHANGED');
+    PERFORM public.aef__op_to(o.id, 'INVALIDATED', 'POLICY_VERSION_CHANGED');
+    RETURN public.aef__err('POLICY_VERSION_CHANGED', 'INVALIDATED');
+  END IF;
+
+  IF v_decision = 'APPROVE' THEN
+    PERFORM public.aef__gate_to(o.id, 'AUTHORIZED', 'APPROVED_BY_SUBJECT', v_approver);
+    PERFORM public.aef__op_to(o.id, 'AUTHORIZED', 'APPROVED_BY_SUBJECT');
+  ELSE
+    PERFORM public.aef__gate_to(o.id, 'REJECTED', 'REJECTED_BY_SUBJECT', v_approver);
+    PERFORM public.aef__op_to(o.id, 'REJECTED', 'REJECTED_BY_SUBJECT');
+  END IF;
+  RETURN jsonb_build_object('ok', true) || public.aef__view(o.id);
+END $$;
+
 CREATE OR REPLACE FUNCTION public.aef_recover(p jsonb) RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
 DECLARE v_limit int; o public.aef_operations; v_unknown int := 0; v_expired int := 0;

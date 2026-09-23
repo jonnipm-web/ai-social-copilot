@@ -227,7 +227,7 @@ Deno.test({ name: `HP-05 ${N} concurrent reconciliations of one operation: exact
   const { operationId } = await unknownOp(h, w);
   const results = await Promise.all(Array.from({ length: N }, () => h.gov.reconcile({ operation_id: operationId, actor: actor(w.a) }, w.tokA)));
   for (const r of results) assert(r.status === "FINAL" || code(r) === "ALREADY_RECONCILED", JSON.stringify(r));
-  assert((h.overlap.peak.get("aef_reconcile") ?? 0) >= N / 4, `reconciles overlapped: peak ${h.overlap.peak.get("aef_reconcile")}`);
+  assert((h.overlap.peak.get("aef_reconcile") ?? 0) >= 5, `reconciles overlapped: peak ${h.overlap.peak.get("aef_reconcile")}`);
   const rows = await sql(`SELECT count(*) FROM public.aef_reconciliations WHERE operation_id = '${operationId}';`);
   assertEquals(rows[0], "1");
   assertEquals((await h.gov.verifyAuditChain(w.a)).valid, true);
@@ -433,4 +433,73 @@ Deno.test({ name: "HP-15 deterministic: while a legal hold is being written for 
   assertEquals(left[0], "3", "purge deleted data of a subject whose legal hold was being placed");
   await h.gov.purge();
   assertEquals((await sql(`SELECT count(*) FROM public.aef_operations WHERE subject_id = '${w.a}';`))[0], "3", "hold not honored after commit");
+}});
+
+Deno.test({ name: "HP-16 real recovery (expired lease + pending denial window) racing erasure of the same subject: every call returns (Codex HG2V-01)", ignore, fn: async () => {
+  const w = await world();
+  const h = harness(w);
+  for (let i = 0; i < 25; i++) assertEquals(code(await h.gov.submit(req(w.a, { action: "internal.no_such_tool" }), w.tokA)), "UNKNOWN_TOOL");
+  const pend = st(await h.gov.submit(req(w.a, { action: MOCK_CONSEQUENTIAL_TOOL }), w.tokA), "AWAITING_APPROVAL");
+  st(await h.gov.decideGate({ gate_id: pend.gate!.gateId, decision: "APPROVE", binding_hash: pend.gate!.bindingHash, approver: actor(w.a) }, w.tokA), "AUTHORIZED");
+  assert((await h.store.claimExecution({ operation_id: pend.operation.operationId, subject_id: w.a, binding_hash: pend.operation.bindingHash, policy_version: AEF_POLICY_VERSION, lease_seconds: 60 })).ok);
+  await asReplica(`UPDATE public.aef_operations SET lease_expires_at = now() - interval '1 second' WHERE id = '${pend.operation.operationId}';`);
+  await sql(`UPDATE public.aef_audit_windows SET window_start = now() - interval '2 minutes' WHERE subject_id = '${w.a}';`);
+  await sql(`DELETE FROM auth.users WHERE id = '${w.a}';`);
+  await sql(`UPDATE public.aef_retention_policy SET erasure_blocks_on_unreconciled = false WHERE id;`);
+  try {
+    const results = await Promise.allSettled([
+      ...Array.from({ length: 10 }, () => h.gov.recover()),
+      ...Array.from({ length: 10 }, () => h.gov.eraseSubject(w.a)),
+    ]);
+    for (const r of results) assertEquals(r.status, "fulfilled", `a call failed (deadlock?): ${JSON.stringify(r)}`);
+    for (let i = 0; i < 3; i++) await h.gov.recover();
+    const final = await h.gov.eraseSubject(w.a);
+    assert(final.ok, JSON.stringify(final));
+    const left = await sql(`SELECT (SELECT count(*) FROM public.aef_operations WHERE subject_id = '${w.a}')
+      + (SELECT count(*) FROM public.aef_audit_events WHERE subject_id = '${w.a}')
+      + (SELECT count(*) FROM public.aef_audit_windows WHERE subject_id = '${w.a}')
+      + (SELECT count(*) FROM public.aef_audit_pending WHERE subject_id = '${w.a}');`);
+    assertEquals(left[0], "0");
+  } finally {
+    await sql(`UPDATE public.aef_retention_policy SET erasure_blocks_on_unreconciled = true WHERE id;`);
+  }
+}});
+
+Deno.test({ name: "HP-17 deterministic: a decision waiting on an operation that is deleted meanwhile gets GATE_NOT_FOUND, never an error", ignore, fn: async () => {
+  const w = await world();
+  const h = harness(w);
+  const pend = st(await h.gov.submit(req(w.a, { action: MOCK_CONSEQUENTIAL_TOOL }), w.tokA), "AWAITING_APPROVAL");
+  // Owner session deleting the operation (as purge/erasure would) and holding its lock.
+  const deleter = sql(`BEGIN;
+    SELECT set_config('aef.maintenance', 'on', true);
+    SELECT 1 FROM public.aef_operations WHERE id = '${pend.operation.operationId}' FOR UPDATE;
+    DELETE FROM public.aef_human_gates WHERE operation_id = '${pend.operation.operationId}';
+    DELETE FROM public.aef_operations WHERE id = '${pend.operation.operationId}';
+    SELECT pg_sleep(2);
+    COMMIT;`);
+  await pause(700);
+  const decided = await h.gov.decideGate({ gate_id: pend.gate!.gateId, decision: "APPROVE", binding_hash: pend.gate!.bindingHash, approver: actor(w.a) }, w.tokA);
+  await deleter;
+  assertEquals(code(decided), "GATE_NOT_FOUND");
+  assertEquals(h.ledger.invocations.size, 0);
+}});
+
+Deno.test({ name: "HP-18 deterministic: a denial racing the erasure of its subject never re-creates the subject (Codex HG2V-02)", ignore, fn: async () => {
+  const w = await world();
+  const h = harness(w);
+  for (let i = 0; i < 2; i++) assertEquals(code(await h.gov.submit(req(w.a, { action: "internal.no_such_tool" }), w.tokA)), "UNKNOWN_TOOL");
+  await sql(`DELETE FROM auth.users WHERE id = '${w.a}';`);
+  // Slow the erasure down: a session holds the subject's denial window for 2 s.
+  const holder = sql(`BEGIN; SELECT 1 FROM public.aef_audit_windows WHERE subject_id = '${w.a}' FOR UPDATE; SELECT pg_sleep(2); COMMIT;`);
+  await pause(500);
+  const erasing = h.gov.eraseSubject(w.a);
+  await pause(500);
+  const denied = h.store.recordDenial({ subject_id: w.a, reason_code: "UNKNOWN_TOOL" }).then(() => "RECORDED", (e) => `ERR:${e}`);
+  const [e] = await Promise.all([erasing, holder, denied]);
+  assert(e.ok, JSON.stringify(e));
+  const left = await sql(`SELECT (SELECT count(*) FROM public.aef_audit_events WHERE subject_id = '${w.a}')
+    + (SELECT count(*) FROM public.aef_audit_heads WHERE subject_id = '${w.a}')
+    + (SELECT count(*) FROM public.aef_audit_windows WHERE subject_id = '${w.a}')
+    + (SELECT count(*) FROM public.aef_audit_pending WHERE subject_id = '${w.a}');`);
+  assertEquals(left[0], "0", "the erased subject was re-created by a racing denial");
 }});

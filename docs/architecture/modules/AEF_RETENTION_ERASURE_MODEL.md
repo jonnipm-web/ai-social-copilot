@@ -90,9 +90,12 @@ Server-authoritative: only the account-deletion pipeline (service_role)
 calls it; there is no end-user entry point. After erasure the database
 refuses the subject everywhere it could re-create data: registration
 (`SUBJECT_ERASED`, also for a registration racing the erasure — HP-13),
-`aef_record_denial` (`SUBJECT_ERASED`), operator reconciliation
+`aef_record_denial` (`SUBJECT_ERASED`, serialized with the erasure by the
+shared subject lock — HP-18), operator reconciliation
 (`RECONCILER_NOT_AUTHORIZED`). Erasure locks window before head, like every
-append, so it cannot deadlock with recovery (HG2-01, HP-12).
+append; recovery never waits on windows or operations (SKIP LOCKED) and
+skips a subject whose erasure holds the lock, so they cannot deadlock
+(HG2-01, HP-12/14/16).
 
 ## Owner decisions (not blocking; safe defaults in place)
 
