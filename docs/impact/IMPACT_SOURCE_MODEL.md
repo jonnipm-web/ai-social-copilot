@@ -97,7 +97,8 @@ robots/terms/authentication, no aggressive scraping.
 **Lineage never removes evidence** (Codex CF-04, FV-01, FV2-01..04).
 
 - Independent VOICES (for sufficiency only) = connected components of
-  publishers linked by `syndicatedFrom` (union-find: order-independent,
+  publishers linked by `syndicatedFrom` across ALL sources in the set, counted
+  or not (union-find: order-independent,
   transitive, cycles merge). A syndicated copy never adds a voice (no fake
   MULTI_SOURCE). An unverified `syndicatedFrom` can only MERGE voices, i.e.
   lower corroboration; it cannot split voices, create SUPPORTED/CONTRADICTED,

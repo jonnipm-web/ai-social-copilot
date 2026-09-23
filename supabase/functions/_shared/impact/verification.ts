@@ -41,7 +41,7 @@ import type {
   TrustedProviderRef,
 } from './types.ts';
 
-export const VERIFICATION_ENGINE_VERSION = 'impact-verification/6';
+export const VERIFICATION_ENGINE_VERSION = 'impact-verification/7';
 export const IMPACT_POLICY_VERSION =
   `${VERIFICATION_ENGINE_VERSION}+${SOURCE_AUTHORITY_POLICY_VERSION}+${TEMPORAL_POLICY_VERSION}`;
 
@@ -173,15 +173,17 @@ function countIndependentVoices(counted: readonly AssessedEvidence[], sources: R
     const [ra, rb] = [find(a), find(b)];
     if (ra !== rb) (ra < rb ? parent.set(rb, ra) : parent.set(ra, rb));
   };
-  for (const a of counted) {
-    parent.set(a.publisherKey, parent.get(a.publisherKey) ?? a.publisherKey);
-    const from = sources.get(a.sourceId)?.syndicatedFrom;
-    if (from) {
-      const k = normPublisher(from);
-      parent.set(k, parent.get(k) ?? k);
-      union(a.publisherKey, k);
-    }
+  const node = (k: string) => {
+    if (!parent.has(k)) parent.set(k, k);
+    return k;
+  };
+  // Edges from EVERY validated source in the set — not only counted ones — so
+  // a chain through an intermediate source that carries no counted evidence
+  // still collapses into one voice (Codex FV4-01).
+  for (const s of sources.values()) {
+    if (s.syndicatedFrom) union(node(normPublisher(s.publisher)), node(normPublisher(s.syndicatedFrom)));
   }
+  for (const a of counted) node(a.publisherKey);
   return new Set(counted.map((a) => find(a.publisherKey))).size;
 }
 

@@ -1,7 +1,7 @@
 # Impact — Verification Model
 
 Code: `verification.ts`, `temporal.ts`, `risk_indicators.ts`.
-Policy version: `impact-verification/6+impact-source-authority/3+impact-temporal/2` (bumped after Codex Gate 1 and Codex Final).
+Policy version: `impact-verification/7+impact-source-authority/3+impact-temporal/2` (bumped after Codex Gate 1 and Codex Final).
 
 ## 1. Contract
 

@@ -200,7 +200,7 @@ Deno.test('VE-13 human review binds to the exact evidence set; new evidence re-o
 Deno.test('VE-14 results are deeply frozen and versioned', async () => {
   const v = await run(claim(), [ev('e1', SOURCES.govWells.id)], [SOURCES.govWells]);
   assert(Object.isFrozen(v) && Object.isFrozen(v.supporting) && Object.isFrozen(v.supporting[0]));
-  assert(v.policyVersion.startsWith('impact-verification/6+impact-source-authority/3+impact-temporal/2'));
+  assert(v.policyVersion.startsWith('impact-verification/7+impact-source-authority/3+impact-temporal/2'));
   const later = await run(claim(), [ev('e1', SOURCES.govWells.id)], [SOURCES.govWells], { ...CTX, evaluatedAt: '2026-10-01T00:00:00Z' });
   assertNotEquals(v.resultId, later.resultId);
   assertEquals(v.evidenceSetHash, later.evidenceSetHash);

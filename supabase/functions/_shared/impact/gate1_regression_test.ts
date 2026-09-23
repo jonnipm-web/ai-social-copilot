@@ -247,6 +247,25 @@ Deno.test('CF-04 syndicated copies never add an independent voice', async () => 
   assertEquals(indep.sufficiency, 'MULTI_SOURCE_SUPPORT');
 });
 
+Deno.test('FV4-01 a chain through a non-counted intermediate source is still one voice', async () => {
+  const a = news('n8', 'Outlet A', { syndicatedFrom: 'Wire B' });
+  const b = news('n9', ' WIRE  b ', { syndicatedFrom: 'Wire C' }); // supplied, no evidence item
+  const c = news('na0', 'Wire C');
+  for (const order of [[a, b, c], [c, b, a], [b, c, a]]) {
+    const v = await run(wellsClaim, [ev('e8', 'n8', sx(20)), ev('e10', 'na0', sx(20))], order);
+    assertEquals(v.status, 'SUPPORTED');
+    assertEquals(v.sufficiency, 'INDEPENDENT_SUPPORT');
+    assertEquals(deriveIndicators({ results: [v] }).some((i) => i.code === 'MULTI_SOURCE_CORROBORATION'), false);
+  }
+  // cycle through an unreferenced node, and a self-link, are harmless
+  const x = news('nb1', 'X', { syndicatedFrom: 'Hub' });
+  const hub = news('nb2', 'Hub', { syndicatedFrom: 'Y' });
+  const y = news('nb3', 'Y', { syndicatedFrom: 'X' });
+  const self = news('nb4', 'Self', { syndicatedFrom: 'self' });
+  const v = await run(wellsClaim, [ev('e11', 'nb1', sx(20)), ev('e13', 'nb3', sx(20)), ev('e14', 'nb4', sx(20))], [x, hub, y, self]);
+  assertEquals(v.sufficiency, 'MULTI_SOURCE_SUPPORT'); // {X,Hub,Y} + {Self} = 2 voices
+});
+
 Deno.test('FV3-02 publisher-voice resolution is independent of input order (all permutations)', async () => {
   const s1 = news('n4', 'Outlet', { syndicatedFrom: 'Wire A' });
   const s2 = news('n5', 'Outlet', { syndicatedFrom: 'Wire B' });
