@@ -60,6 +60,10 @@ verify_jwt = true
 [functions.process-file]
 verify_jwt = true
 
+# IV-IMPACT-I1 — Impact Lab (EXPERIMENTAL, admin-only). Not deployed by this mission.
+[functions.impact-lab]
+verify_jwt = true
+
 [functions.create-checkout-session]
 verify_jwt = true
 

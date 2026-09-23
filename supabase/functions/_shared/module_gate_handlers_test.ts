@@ -64,9 +64,9 @@ function reset() {
   quotaCalls = 0;
 }
 
-Deno.test('GH-00 every MODULE-kind function (17) exports an injectable handler', () => {
+Deno.test('GH-00 every MODULE-kind function (18) exports an injectable handler', () => {
   assertEquals(handlers.size, moduleFunctions.length);
-  assertEquals(moduleFunctions.length, 17);
+  assertEquals(moduleFunctions.length, 18);
 });
 
 for (const { fn, moduleId, lifecycle } of moduleFunctions) {

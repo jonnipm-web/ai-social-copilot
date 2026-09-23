@@ -643,8 +643,9 @@ const List<ModuleDefinition> kModuleRegistry = [
     commercialEnabled: false,
     minimumPlan: ModulePlan.free, // admin-only via lifecycle (EXPERIMENTAL), não via plano
     route: null,
-    readinessPt: 'IV-IMPACT-FOUNDATION-01: núcleo de evidência e verificação no servidor (supabase/functions/_shared/impact/) -- determinístico, sem rede, sem LLM, sem persistência, sem Edge Function e sem tela. Não emite veredito, score ou ranking; ausência de evidência nunca vira acusação.',
-    readinessEn: 'IV-IMPACT-FOUNDATION-01: server-side evidence and verification core (supabase/functions/_shared/impact/) -- deterministic, no network, no LLM, no persistence, no Edge Function and no screen. Emits no verdict, score or ranking; absence of evidence never becomes an accusation.',
+    edgeFunctions: ['impact-lab'],
+    readinessPt: 'IV-IMPACT-I1: núcleo de evidência/verificação + persistência Lab (migration não aplicada em produção, RLS testada em PostgreSQL descartável) + Edge Function impact-lab só para admin (não deployada). Sem rede, sem LLM, sem tela. Não emite veredito, score ou ranking; ausência de evidência nunca vira acusação.',
+    readinessEn: 'IV-IMPACT-I1: evidence/verification core + Lab persistence (migration not applied to production, RLS tested on a disposable PostgreSQL) + admin-only impact-lab Edge Function (not deployed). No network, no LLM, no screen. Emits no verdict, score or ranking; absence of evidence never becomes an accusation.',
     releaseClassification: ModuleReleaseClass.internalTooling,
     notes: 'Impact Lab (branch claude/insightvalues-impact-foundation). Ações classe C (acusação pública, contato externo, doação) NÃO implementadas -- futuramente somente via AEF + Human Gate. adminClickable=false: não há tela.',
   ),

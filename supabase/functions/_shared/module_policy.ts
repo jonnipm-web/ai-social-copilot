@@ -136,6 +136,7 @@ export const MODULE_POLICY: ModulePolicyDoc =
     "process-file": { "kind": "MODULE", "moduleId": "file-import" },
     "revenue-planner": { "kind": "MODULE", "moduleId": "revenue-planner" },
     "create-checkout-session": { "kind": "BILLING" },
+    "impact-lab": { "kind": "MODULE", "moduleId": "impact" },
     "module-access": { "kind": "ENTITLEMENT" },
     "stripe-webhook": { "kind": "PUBLIC_WEBHOOK" },
     "ive-agent-runner": { "kind": "RETIRED" }
