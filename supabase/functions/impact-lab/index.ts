@@ -12,7 +12,9 @@
 //   → PERSISTENCE (service role; database re-enforces invariants)
 //   → STRUCTURED RESPONSE (codes, never narrative-only; no verdict fields).
 //
-// No LLM, no outbound fetch, no quota (no paid AI call), no class C action.
+// No LLM, no quota (no paid AI call), no class C action. Outbound fetch only
+// through a composed registry adapter (_shared/impact_registry/, safe_fetch +
+// host allowlist) — none is composed in the Lab (synthetic registries only).
 // NOT DEPLOYED by this mission. Not on .github/deploy-allowlist.tsv.
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { AuthClient, AuthenticatedUser, AuthError, resolveAuthenticatedUser, unauthorizedResponse } from '../_shared/auth.ts';
@@ -54,6 +56,11 @@ const HTTP: Readonly<Partial<Record<ImpactErrorCode, number>>> = {
   LIMIT_EXCEEDED: 429,
   PAYLOAD_TOO_LARGE: 413,
   REGISTRY_UNAVAILABLE: 503,
+  REGISTRY_RATE_LIMITED: 429,
+  REGISTRY_RESPONSE_INVALID: 502,
+  ORGANIZATION_AMBIGUOUS: 409,
+  ENTITY_MATCH_UNCERTAIN: 409,
+  SOURCE_UNAVAILABLE: 409,
   INTERNAL_ERROR: 500,
 };
 
@@ -138,6 +145,26 @@ export async function handler(
       : { error_code: result.error.code }),
   });
   if (event) log(JSON.stringify(event));
+
+  // I2 (§76): safe registry / lineage events — ids, codes and counts only.
+  const action = parsed.value.action;
+  const registryEvent = (name: string, extra: Record<string, unknown>) => {
+    const e = buildImpactEvent({ event: `impact.${name}`, correlation_id: correlationId, ...(investigationId ? { investigation_id: investigationId } : {}), latency_ms: performance.now() - started, ...extra });
+    if (e) log(JSON.stringify(e));
+  };
+  if (action === 'search_registry' || action === 'ingest_provider_record') {
+    const providerId = parsed.value.providerId;
+    if (result.ok && result.value.metrics?.registry) {
+      const r = result.value.metrics.registry;
+      registryEvent('registry_lookup_completed', { source_provider: r.providerId, registry_outcome: r.outcome, candidates_count: r.candidates });
+      if (r.outcome === 'AMBIGUOUS') registryEvent('identity_ambiguous', { source_provider: r.providerId, candidates_count: r.candidates });
+    } else if (!result.ok) {
+      registryEvent(result.error.code === 'REGISTRY_RATE_LIMITED' ? 'provider_rate_limited' : 'registry_lookup_failed', { source_provider: providerId, error_code: result.error.code });
+    }
+  }
+  if (result.ok && (result.value.metrics?.lineageLinks ?? 0) > 0) {
+    registryEvent('lineage_detected', { lineage_links_count: result.value.metrics!.lineageLinks! });
+  }
 
   if (!result.ok) return errorResponse(result.error, correlationId);
   return json(200, { ok: true, action: result.value.action, data: result.value.data, correlation_id: correlationId });

@@ -71,3 +71,19 @@ beneficiary, organization, audit, registry, news, Knowledge — across `lib/`,
 
 Docs: IMPACT_PERSISTENCE_MODEL · IMPACT_RLS_MODEL · IMPACT_LAB_API ·
 IMPACT_PROVIDER_REGISTRY.
+
+## 6. I2 — Registry Intelligence (IV-IMPACT-I2-REGISTRY-INTELLIGENCE-01)
+
+| Asset | Classification | Where |
+|---|---|---|
+| Organization identity (canonical id, conservative resolution, former names, registry conflicts) | EXPERIMENTAL | `_shared/impact/organization_identity.ts` |
+| Source lineage / independence (CF-04 closed) | EXPERIMENTAL | `_shared/impact/source_lineage.ts` |
+| Registry-statement claims (REGISTRY_RECORD evidence) | EXPERIMENTAL | `_shared/impact/registry_claims.ts` |
+| Server registry: 3 SYNTHETIC registries (XA charity, XA company, XB charity) | EXPERIMENTAL | `_shared/impact/provider_registry.ts` |
+| Real adapters (Companies House, Charity Commission, IRS EO BMF) behind safe_fetch + host allowlist | written + offline-tested, **NOT enabled** | `_shared/impact_registry/` |
+| Migration (lineage columns, snapshot identity, registry conflicts, REGISTRY_RECORD, entity-spoof guard) | EXPERIMENTAL — **not applied to production** | `supabase/migrations/20260925010000_impact_registry_intelligence.sql` |
+| DB tests | CI (`disposable-db-rls-ci`) | `supabase/tests/impact_registry_rls_test.sql` |
+
+Decision recorded: SERVICE_ROLE_TRUST_GATE = LAB_ONLY (IMPACT_RLS_MODEL.md §6).
+Docs: IMPACT_REGISTRY_INTELLIGENCE · IMPACT_ORGANIZATION_IDENTITY ·
+IMPACT_SOURCE_LINEAGE · IMPACT_REGISTRY_SOURCE_DOSSIER.

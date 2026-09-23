@@ -73,3 +73,18 @@ One allowlisted JSON line per request: `event (impact.lab.<action>)`,
 `correlation_id`, `investigation_id`, `latency_ms`, `policy_version`, counts,
 `verification_status`, `error_code`. Never claim text, excerpts, JWTs,
 secrets or personal data (EF-05).
+
+## I2 actions (Registry Intelligence)
+
+| action | fields | notes |
+|---|---|---|
+| `search_registry` | `investigation_id`, `provider_id`, `query {name?, registration?, scheme?, domain?, country?}` | read-only; returns `outcome` (EXACT/STRONG/AMBIGUOUS/NO_MATCH), ≤ 10 candidates with signals, `requiresReview`, `identityStatus`, `absenceIsNotEvidenceOfWrongdoing: true`; nothing persisted or attached |
+| `ingest_provider_record` | unchanged fields | identical data → `replayed: true` with the existing `sourceRef`; changed data → new snapshot; response carries `canonicalOrgId`, snapshot view (freshness, authority metadata), `registryConflicts` |
+| `import_registry_claim` | `investigation_id`, `source_ref`, `ref` | neutral registry statement + REGISTRY_RECORD evidence; only from an ACTIVE snapshot that CONFIRMS the subject (`ENTITY_MATCH_UNCERTAIN` otherwise); idempotent retry |
+| `add_source` | + `contentText?` (≤ 20,000, never stored), `derivedFrom?` | server computes fingerprint, sketch, markers |
+
+`get_investigation` adds `registry { snapshots, conflicts, conflictExplanations, conflictIsNotWrongdoing: true }`.
+New error codes: REGISTRY_RATE_LIMITED (429), REGISTRY_RESPONSE_INVALID (502),
+ORGANIZATION_AMBIGUOUS (409). Fields that do not exist for a client:
+independent, lineage, fingerprint, sketch, markers, official, authority,
+primaryPublisher, canonicalOrgId (L-14, S-02).

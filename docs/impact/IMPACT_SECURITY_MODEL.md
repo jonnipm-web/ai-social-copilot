@@ -19,7 +19,13 @@
 | Future/reversed dates making stale data current | earliest as-of, period (start and end) ≤ retrieval, calendar check | G1-02a/b, CF-02 |
 | Jurisdiction omission | jurisdiction-bound types need an explicit jurisdiction | CF-03 |
 | Syndication / publisher variants | lineage never removes evidence; syndicatedFrom only merges voices for counting (union-find, order-independent, cycle-safe); conflict basis uses the raw publisher; corrections only via audited source status | CF-04, FV-01, FV2-01..03, FV3-01..03 |
-| Caller-supplied provider registry | must be server-built at integration (I1) | CF-06 (deferred) |
+| Caller-supplied provider registry | server-composed registry (I1); authority metadata server-owned (I2) | CF-06 CLOSED, LS-01, S-01 |
+| Unestablished / syndicated sources inflating corroboration | lineage analysis: only established originals are separate voices; unknown lineage = one voice at most | CF-04 CLOSED, L-01..10, MUT-03 |
+| Entity spoofing (another organization's registry record cited for the subject) | engine R03B + DB subject-registration guard; registry claims only from a confirming snapshot | ID-15, I2-39/40, MUT-02 |
+| Entity collision / cross-jurisdiction merge | canonical id country:scheme:number; names never identity; grouping by identifiers only | ID-02..11 |
+| Registry SSRF / redirect / oversize | transport: exact host allowlist per hop, https, SSRF guard, size/time caps, content type, no retry | RT-01..05 |
+| PII in registry data | people never requested/parsed/stored; DB refuses snapshots with people keys | CH-01, CC-01, IRS-01, S-04, I2-08 |
+| Provider failure read as a finding | operational error codes only; nothing persisted or inferred | S-05, RT-02 |
 | Unknown / prototype-key enum values | own-property allowlists for every enum; status and dispute updates validated | G1-05a/b, CF-05 |
 | Review binding bypass | reviewBindingHash covers flags, identity, dispute, providers | G1-04 |
 | Prompt injection | engine never reads text; scan flags; wrapper; grounding | GOLDEN-H/H2, RS-4..6 |
@@ -90,3 +96,11 @@ investigation · audit trail: 2,555 days. Enforced with persistence.
   body limit, per-investigation limits, 404 for foreign ids (no existence
   oracle), allowlisted logs, no LLM/network/quota, class C blocked.
 - Escalated: service_role root-of-trust residual (IMPACT_RLS_MODEL.md §6).
+
+## I2 notes
+
+SERVICE_ROLE_TRUST_GATE = LAB_ONLY (Owner + Agente Martins): service_role is
+privileged infrastructure root; RLS does not restrict it; the I1/I2 database
+invariants still apply to it. I2 adds no new service_role privilege beyond
+INSERT on the extended `impact_sources` columns (all CHECK-constrained) and
+SELECT on `impact_registry_conflicts` (written only by the trigger).

@@ -116,3 +116,19 @@ architectural choice — **ARCHITECTURAL DECISION REQUIRED**:
 
 Recommendation: C for the Lab (EXPERIMENTAL, admin-only, not deployed); decide
 A or B before any non-Lab exposure.
+
+## 7. Decision and I2 additions
+
+**SERVICE_ROLE_TRUST_GATE = LAB_ONLY** (decided by the Owner + Agente Martins
+for IV-IMPACT-I2): option C is accepted exclusively in the Lab. Mandatory
+re-evaluation of options A/B before any Alpha, non-admin user, public deploy,
+real sensitive data, automated publication, commercial operation or
+consequential external integration.
+
+I2 (`20260925010000`): `impact_registry_conflicts` — RLS on, SELECT for the
+investigation owner (parent policy) and service_role, no client or
+service_role write, trigger-only insert, append-only, no direct delete
+(I2-17..24, 30..35). New invariants that also bind service_role: snapshot
+identity consistency and no people keys (I2-07..11), lineage column CHECKs
+(I2-12..15), idempotent snapshot key (I2-06), REGISTRY_RECORD evidence rules
+(I2-25..28), counted registry evidence must belong to the subject (I2-39).

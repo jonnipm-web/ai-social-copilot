@@ -7,7 +7,7 @@ persistence, network, auth or external actions).
 | Phase | Scope | Why here |
 |---|---|---|
 | **I1 Persistence + RLS + Lab EF** | Lab-only migration (investigations, sources, claims, evidence, results history, audit, disputes), owner/project RLS with disposable-DB tests, one admin-only `impact-lab` Edge Function (auth → entitlement → engine), observability wiring | Nothing is stored today; RLS is NOT_APPLICABLE until this exists |
-| **I2 Registry Intelligence** | First real registry adapter (one jurisdiction), via `safe_fetch.ts`, terms/robots review, freshness; entity-resolution against real records | Identity is the foundation of every other claim |
+| **I2 Registry Intelligence** ✅ Lab | Identity model, lineage (CF-04), registry adapters (UK/US) via `safe_fetch.ts`, dossier; real registries NOT enabled | Identity is the foundation of every other claim |
 | **I3 Evidence Collection** | Knowledge Vault integration for documents (hash + locator), user-submitted evidence flow with review | Reuses existing owner-scoped ingestion |
 | **I4 Claim Extraction (LLM, bounded)** | LLM extraction through `acceptLlmClaimCandidates` + `checkNarrative`; adversarial prompt-injection suite | LLM helps, never decides |
 | **I5 Organization Profiles (Lab UI)** | Minimal EXPERIMENTAL Flutter screen rendering `ImpactReport` (PT/EN), admin-only | UI after semantics are proven |
@@ -47,3 +47,17 @@ Next gate candidates (decision for Agente Martins): **I2 Registry
 Intelligence** (first real registry adapter via safe_fetch) — recommended,
 since identity confirmation now depends only on provider snapshots — or the
 architectural closure of the service_role residual first.
+
+## Status after I2
+
+Registry Intelligence is complete in the Lab (synthetic registries; real
+adapters written, offline-tested, one controlled read-only smoke; none
+enabled). Before enabling a real registry: Owner terms/licence confirmation
+and credentials (dossier §6). Before any non-Lab exposure: service-role gate
+A/B re-evaluation.
+
+Next gate candidates (decision for Agente Martins — NOT started):
+**I3 Evidence Collection** (Knowledge Vault documents, hash + locator,
+user-submitted evidence with review), or a "Registry Enablement" gate that
+turns on ONE real registry (Charity Commission or Companies House) once the
+Owner has confirmed terms and created the credential.

@@ -114,7 +114,7 @@ Deno.test('EF-05 full flow is structured, owner-scoped and makes zero network ca
   const all = e.logs.join('\n');
   assertEquals(all.includes('secret-looking claim'), false);
   assertEquals(all.includes('jwt-admin'), false);
-  assert(e.logs.every((l) => Object.keys(JSON.parse(l)).every((k) => ['event', 'correlation_id', 'investigation_id', 'latency_ms', 'policy_version', 'claims_count', 'evidence_count', 'conflicts_count', 'verification_status', 'error_code'].includes(k))));
+  assert(e.logs.every((l) => Object.keys(JSON.parse(l)).every((k) => ['event', 'correlation_id', 'investigation_id', 'latency_ms', 'policy_version', 'claims_count', 'evidence_count', 'conflicts_count', 'verification_status', 'error_code', 'source_provider', 'registry_outcome', 'candidates_count', 'lineage_links_count'].includes(k))));
 });
 
 Deno.test('EF-06 class C requests → 403 ACTION_BLOCKED requiring AEF_HUMAN_GATE', async () => {
@@ -131,4 +131,21 @@ Deno.test('EF-07 internal failures return 500 without internal details', async (
   const body = await res.json();
   assertEquals([res.status, body.error], [500, 'INTERNAL_ERROR']);
   assertEquals(JSON.stringify(body).includes('secret'), false);
+});
+
+Deno.test('EF-09 I2 registry events are safe: ids, codes and counts only (no organization names)', async () => {
+  const e = env();
+  const id = ((await e.send('jwt-admin-a', { action: 'create_investigation', subject: SUBJECT })).body.data as Record<string, unknown>).investigationId as string;
+  const s = await e.send('jwt-admin-a', { action: 'search_registry', investigation_id: id, provider_id: 'fixture-xa-charity-registry', query: { name: 'Example Aid Trust', country: 'XA' } });
+  assertEquals(s.status, 200);
+  const miss = await e.send('jwt-admin-a', { action: 'search_registry', investigation_id: id, provider_id: 'gb-companies-house', query: { name: 'x' } });
+  assertEquals([miss.status, miss.body.error], [400, 'CAPABILITY_NOT_SUPPORTED']);
+  const events = e.logs.map((l) => JSON.parse(l) as Record<string, unknown>);
+  const names = events.map((x) => x.event);
+  assert(names.includes('impact.registry_lookup_completed'));
+  assert(names.includes('impact.identity_ambiguous'));
+  assert(names.includes('impact.registry_lookup_failed'));
+  const done = events.find((x) => x.event === 'impact.registry_lookup_completed')!;
+  assertEquals([done.registry_outcome, done.candidates_count, done.source_provider], ['AMBIGUOUS', 2, 'fixture-xa-charity-registry']);
+  assertEquals(e.logs.join('\n').includes('Example Aid'), false);
 });

@@ -27,7 +27,17 @@ const ALLOWED: Readonly<Record<string, 'id' | 'count' | 'code'>> = {
   error_code: 'code',
   policy_version: 'code',
   correlation_id: 'id',
+  // I2 Registry Intelligence (ids / codes / counts only — never names or payloads)
+  registry_outcome: 'code',
+  candidates_count: 'count',
+  lineage_links_count: 'count',
 };
+
+/** Safe registry event names (mission §76). */
+export const REGISTRY_EVENTS = Object.freeze([
+  'registry_lookup_started', 'registry_lookup_completed', 'registry_lookup_failed',
+  'identity_ambiguous', 'lineage_detected', 'provider_rate_limited',
+] as const);
 
 export type ImpactLogEvent = Readonly<Record<string, string | number>>;
 

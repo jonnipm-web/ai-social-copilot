@@ -69,3 +69,20 @@ The pure core stays pure: the Lab service receives a store, the caller id and
 the server clock by injection; only `impact-lab/` touches Supabase. See
 IMPACT_PERSISTENCE_MODEL.md, IMPACT_RLS_MODEL.md, IMPACT_LAB_API.md and
 IMPACT_PROVIDER_REGISTRY.md.
+
+## I2 — Registry Intelligence
+
+```
+search_registry ─► server provider registry ─► provider (fixture | adapter)
+                                                  │ adapters: _shared/impact_registry/
+                                                  │ transport → safe_fetch (host allowlist per hop)
+                   ◄─ canonical records ◄─ normalizeRegistryRecord (pure)
+resolveOrganization (pure) ─► EXACT / STRONG / AMBIGUOUS / NO_MATCH (nothing attached)
+ingest_provider_record ─► snapshot source (idempotent / versioned) ─► DB trigger: registry conflicts
+import_registry_claim ─► registry statement + REGISTRY_RECORD evidence (subject must be CONFIRMED)
+verifyClaim ─► analyzeIndependence (lineage) ─► sufficiency; R03B entity guard; R10B temporal
+```
+
+The pure core has no network; the network layer lives outside it and is only
+reached through composed providers. No real registry is composed in the Lab.
+See IMPACT_REGISTRY_INTELLIGENCE.md.

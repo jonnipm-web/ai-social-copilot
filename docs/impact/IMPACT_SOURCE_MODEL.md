@@ -123,8 +123,10 @@ is deliberately conservative: it can only understate corroboration (never
 create support, contradiction or a concern), and the links are part of
 `evidenceSetHash`.
 
-Residual (DEFERRED to I2): copies whose provider supplies no
-`syndicatedFrom` and whose content hash differs count as separate publishers.
+Residual (closed in I2 — IMPACT_SOURCE_LINEAGE.md): copies whose provider
+supplies no `syndicatedFrom` no longer count as separate voices — unknown
+lineage is not independence, and fingerprints / near-duplicates / markers
+merge copies. CF-04 CLOSED.
 
 ## 8. News and social media
 
