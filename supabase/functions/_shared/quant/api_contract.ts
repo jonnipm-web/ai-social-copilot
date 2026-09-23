@@ -99,7 +99,10 @@ function parseOptions(v: unknown): QuantResult<SeriesAnalysisOptions> {
     out.priceBasis = (v.price_basis === 'close' ? 'close' : 'adjustedClose') as PriceBasis;
   }
   if (v.sma_windows !== undefined) {
-    if (!Array.isArray(v.sma_windows)) return fail('INVALID_PARAMETER', 'sma_windows must be an array', { field: 'options.sma_windows' });
+    // Bounded BEFORE iterating (Codex CXN-04); the engine allows at most 8 windows.
+    if (!Array.isArray(v.sma_windows) || v.sma_windows.length > 8) {
+      return fail('INVALID_PARAMETER', 'sma_windows must be an array of at most 8 windows', { field: 'options.sma_windows' });
+    }
     const ws: number[] = [];
     for (const w of v.sma_windows) {
       const r = positiveInt(w, 'options.sma_windows', 50_000);
@@ -128,7 +131,7 @@ function parseOptions(v: unknown): QuantResult<SeriesAnalysisOptions> {
     out.sharpe = { riskFreeRatePerPeriod: v.sharpe.risk_free_rate_per_period, periodsPerYear: v.sharpe.periods_per_year };
   }
   if (v.accepted_freshness !== undefined) {
-    if (!Array.isArray(v.accepted_freshness) || v.accepted_freshness.length === 0 || v.accepted_freshness.some((s) => !FRESHNESS.includes(s as FreshnessState))) {
+    if (!Array.isArray(v.accepted_freshness) || v.accepted_freshness.length === 0 || v.accepted_freshness.length > 4 || v.accepted_freshness.some((s) => !FRESHNESS.includes(s as FreshnessState))) {
       return fail('INVALID_PARAMETER', 'accepted_freshness must list FRESH|DELAYED|STALE|UNKNOWN', { field: 'options.accepted_freshness' });
     }
     out.acceptedFreshness = v.accepted_freshness as FreshnessState[];
@@ -178,6 +181,9 @@ export function parseAnalyzeRequest(body: unknown): QuantResult<AnalyzeRequest> 
  * calculation input.
  */
 export async function runAnalyze(req: AnalyzeRequest, nowMs: number): Promise<QuantResult<QuantAnalysisResult>> {
+  // The clock becomes provenance.retrievedAt below: validate it before any
+  // Date conversion (Codex CXN-03 — toISOString() throws outside ±8.64e15).
+  if (!Number.isFinite(nowMs) || Math.abs(nowMs) > 8.64e15) return fail('INVALID_PARAMETER', 'server clock returned an unusable time');
   const parsed = parseOhlcvCsv(req.csv);
   if (!parsed.ok) return parsed;
   const provenance: DataProvenance = {

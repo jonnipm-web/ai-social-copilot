@@ -203,6 +203,16 @@ export async function analyzeSeries(
   const strength = evidenceStrength(series.provenance);
   if (strength === 'WEAK') warnings.push({ code: 'PROVENANCE_WEAK', message: 'provenance does not support strong evidence' });
   // Codex Gate 1 CX1-03: always say how the analyzed price relates to corporate actions.
+  // Codex CXN-01: an adjustment claim that does not come from a provider is
+  // unverifiable — a user can label raw prices "adjusted". The corporate-action
+  // caveat can therefore never be suppressed by a client/fixture declaration.
+  if (series.provenance.trust !== 'PROVIDER_REPORTED' && series.provenance.adjustment !== 'UNKNOWN' && series.provenance.adjustment !== 'UNADJUSTED') {
+    warnings.push({
+      code: 'ADJUSTMENT_UNVERIFIED',
+      message: 'adjustment policy was declared by the data supplier, not verified; returns across corporate actions can be wrong',
+      details: { declaredAdjustment: series.provenance.adjustment, trust: series.provenance.trust },
+    });
+  }
   if (basis === 'close' && (series.provenance.adjustment === 'UNKNOWN' || series.provenance.adjustment === 'UNADJUSTED')) {
     warnings.push({ code: 'ADJUSTMENT_UNKNOWN', message: 'close prices may not reflect splits/dividends; returns across corporate actions can be wrong' });
   }

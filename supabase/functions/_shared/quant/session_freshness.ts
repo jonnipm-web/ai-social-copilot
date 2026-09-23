@@ -86,7 +86,7 @@ export function assessSessionFreshness(
     return naive(asOfMs, nowMs, frequency, null, null);
   }
   const clock = marketClock(cal, nowMs);
-  if (!clock) return naive(asOfMs, nowMs, frequency, cal.id, cal.timezone);
+  if (!clock) return naive(asOfMs, nowMs, frequency, cal.id, cal.timezone); // naive handles unusable clocks without throwing
   const evaluatedAt = new Date(nowMs).toISOString();
 
   if (frequency === 'DAILY') {

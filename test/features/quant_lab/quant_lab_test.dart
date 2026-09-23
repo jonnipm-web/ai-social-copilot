@@ -171,6 +171,26 @@ void main() {
       expect(v.riskNotImplemented, contains('VAR'));
     });
 
+    test('malformed responses only ever throw FormatException (Codex CXN-05)', () {
+      Map<String, dynamic> mutate(void Function(Map<String, dynamic>) f) {
+        final m = sampleAnalysis();
+        f(m);
+        return m;
+      }
+      final cases = [
+        mutate((m) => m['instruments'] = <dynamic>[]),
+        mutate((m) => (m['period'] as Map)['start'] = '2026'),
+        mutate((m) => m['metrics'] = [<String, dynamic>{'id': 'X'}]),
+        mutate((m) => m['metrics'] = [42]),
+        mutate((m) => m.remove('dataSnapshot')),
+        mutate((m) => (m['dataSnapshot'] as Map)['calendar'] = 'nope'),
+      ];
+      for (final c in cases) {
+        expect(() => QuantAnalysisView.fromJson(c), throwsFormatException);
+      }
+      expect(outcomeFromResponse(200, {'analysis': mutate((m) => m['instruments'] = <dynamic>[])}).errorCode, 'MALFORMED_RESPONSE');
+    });
+
     test('server error codes and malformed bodies map to stable outcomes', () {
       expect(outcomeFromResponse(403, {'error': 'MODULE_NOT_AVAILABLE'}).errorCode, 'MODULE_NOT_AVAILABLE');
       final f = outcomeFromResponse(400, {'error': 'INVALID_PARAMETER', 'details': {'field': 'options.sma_windows'}});

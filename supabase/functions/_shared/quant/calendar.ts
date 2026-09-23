@@ -288,7 +288,8 @@ export const EOD_PUBLICATION_GRACE_MS = 2 * 60 * 60 * 1000;
 
 /** Market state at `nowMs`, or null when the calendar cannot answer (out of range). */
 export function marketClock(cal: MarketCalendar, nowMs: number): MarketClock | null {
-  if (!Number.isFinite(nowMs)) return null;
+  // Outside the ECMAScript Date range Intl/Date conversion throws — Codex CXN-03.
+  if (!Number.isFinite(nowMs) || Math.abs(nowMs) > 8.64e15) return null;
   const local = localDateTime(nowMs, cal.timezone);
   if (isTradingDay(cal, local.date) === null) return null;
   const today = sessionTimes(cal, local.date);

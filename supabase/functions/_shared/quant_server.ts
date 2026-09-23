@@ -50,8 +50,9 @@ export async function readJsonBody(
   req: Request,
   maxBytes: number,
 ): Promise<{ ok: true; value: unknown } | { ok: false; code: 'DATASET_TOO_LARGE' | 'UNSUPPORTED_MEDIA_TYPE' | 'INVALID_JSON' }> {
-  const ct = (req.headers.get('Content-Type') ?? '').toLowerCase();
-  if (!ct.startsWith('application/json')) return { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' };
+  // Exact media type (parameters such as charset allowed) — Codex CXN-02.
+  const mediaType = (req.headers.get('Content-Type') ?? '').split(';')[0].trim().toLowerCase();
+  if (mediaType !== 'application/json') return { ok: false, code: 'UNSUPPORTED_MEDIA_TYPE' };
   const declared = Number(req.headers.get('Content-Length') ?? '0');
   if (Number.isFinite(declared) && declared > maxBytes) return { ok: false, code: 'DATASET_TOO_LARGE' };
   if (!req.body) return { ok: false, code: 'INVALID_JSON' };

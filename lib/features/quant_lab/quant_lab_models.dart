@@ -161,9 +161,27 @@ class QuantAnalysisView {
   final List<String> riskNotImplemented;
   final List<String> signals;
 
-  /// Parses `response.analysis`. Throws [FormatException] on any shape mismatch,
-  /// so a malformed response can never render as partial numbers.
+  /// Parses `response.analysis`. Throws [FormatException] — and only
+  /// FormatException — on any shape mismatch (Codex CXN-05), so a malformed
+  /// response can never render as partial numbers or crash the screen.
   factory QuantAnalysisView.fromJson(Map<String, dynamic> json) {
+    try {
+      return QuantAnalysisView._parse(json);
+    } on FormatException {
+      rethrow;
+    } catch (e) {
+      throw FormatException('quant-analyze: malformed response (${e.runtimeType})');
+    }
+  }
+
+  static final _isoDay = RegExp(r'^\d{4}-\d{2}-\d{2}');
+
+  static String _day(String iso) {
+    if (!_isoDay.hasMatch(iso)) throw FormatException('quant-analyze: bad date $iso');
+    return iso.substring(0, 10);
+  }
+
+  static QuantAnalysisView _parse(Map<String, dynamic> json) {
     T req<T>(Map<String, dynamic> m, String k) {
       final v = m[k];
       if (v is! T) throw FormatException('quant-analyze: unexpected field $k');
@@ -171,7 +189,9 @@ class QuantAnalysisView {
     }
 
     Map<String, dynamic> obj(Map<String, dynamic> m, String k) => Map<String, dynamic>.from(req<Map>(m, k));
-    final instrument = Map<String, dynamic>.from((req<List>(json, 'instruments')).first as Map);
+    final instruments = req<List>(json, 'instruments');
+    if (instruments.isEmpty) throw const FormatException('quant-analyze: no instrument');
+    final instrument = Map<String, dynamic>.from(instruments.first as Map);
     final period = obj(json, 'period');
     final snap = obj(json, 'dataSnapshot');
     final prov = obj(snap, 'provenance');
@@ -186,8 +206,8 @@ class QuantAnalysisView {
       instrumentLabel: '${req<String>(instrument, 'assetClass')} · ${req<String>(instrument, 'symbol')}'
           '${mic != null ? ' · $mic' : ''} · $currency',
       currency: currency,
-      periodStart: req<String>(period, 'start').substring(0, 10),
-      periodEnd: req<String>(period, 'end').substring(0, 10),
+      periodStart: _day(req<String>(period, 'start')),
+      periodEnd: _day(req<String>(period, 'end')),
       bars: req<int>(period, 'bars'),
       frequency: req<String>(period, 'frequency'),
       providerId: req<String>(prov, 'providerId'),

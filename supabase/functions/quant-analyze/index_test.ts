@@ -251,3 +251,43 @@ Deno.test('QA-51 the API never fetches (no SSRF surface, no LLM, no provider cal
   const src = await Deno.readTextFile(new URL('./index.ts', import.meta.url));
   assert(!/\bfetch\s*\(/.test(src) && !/groq|openai|anthropic/i.test(src.replace(/\/\/.*$/gm, '')));
 });
+
+// ---------------------------------------------------------------- Codex numerical/API gate regressions
+
+Deno.test('CXN-01 a client-declared adjustment can never suppress the corporate-action caveat', async () => {
+  const split = 'date,open,high,low,close\n2026-01-05,100,100,100,100\n2026-01-06,10,10,10,10\n2026-01-07,10.5,10.5,10.5,10.5\n';
+  for (const adjustment of ['UNADJUSTED', 'SPLIT_ADJUSTED', 'SPLIT_AND_DIVIDEND_ADJUSTED', 'UNKNOWN']) {
+    for (const price_basis of ['close', undefined]) {
+      const opts = price_basis ? { periods_per_year: 252, price_basis } : { periods_per_year: 252 };
+      const r = await call(post(body({ options: opts }, { csv: split, adjustment })));
+      assertEquals(r.status, 200, adjustment);
+      const codes = r.json.analysis.warnings.map((w: { code: string }) => w.code);
+      assert(codes.includes('ADJUSTMENT_UNVERIFIED') || codes.includes('ADJUSTMENT_UNKNOWN'), `${adjustment}: caveat suppressed`);
+    }
+  }
+});
+
+Deno.test('CXN-02 exact media type: charset allowed, look-alikes rejected with 415', async () => {
+  assertEquals((await call(post(body(), 'jwt-a', { 'Content-Type': 'application/json; charset=utf-8' }))).status, 200);
+  for (const ct of ['application/jsonx', 'application/json-patch+json', 'text/json', 'application/x-json']) {
+    const r = await call(post(body(), 'jwt-a', { 'Content-Type': ct }));
+    assertEquals([r.status, r.json.error], [415, 'UNSUPPORTED_MEDIA_TYPE'], ct);
+  }
+});
+
+Deno.test('CXN-03 an out-of-range clock yields a structured 400, never an exception', async () => {
+  for (const t of [8.7e15, -8.7e15, NaN, Infinity]) {
+    const r = await call(post(body()), deps({ clock: () => t }));
+    assertEquals([r.status, r.json.error], [400, 'INVALID_PARAMETER'], String(t));
+  }
+  const { marketClock, calendarForMic } = await import('../_shared/quant/calendar.ts');
+  assertEquals(marketClock(calendarForMic('XNYS')!, 8.7e15), null);
+});
+
+Deno.test('CXN-04 oversized option arrays are rejected before iteration', async () => {
+  const huge = Array.from({ length: 200_000 }, () => 2);
+  const r = await call(post(body({ options: { periods_per_year: 252, sma_windows: huge } })));
+  assertEquals([r.status, r.json.details?.field], [400, 'options.sma_windows']);
+  const f = await call(post(body({ options: { periods_per_year: 252, accepted_freshness: ['FRESH', 'FRESH', 'FRESH', 'FRESH', 'FRESH'] } })));
+  assertEquals(f.status, 400);
+});
