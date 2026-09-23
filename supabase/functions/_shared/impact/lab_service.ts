@@ -107,6 +107,14 @@ export function withDisputeOverlay(r: VerificationResult, disputes: readonly Sto
   return r;
 }
 
+/** Latest summary for a claim when no re-verification is pending (retry = replay, no new version). */
+function settledLatest(data: InvestigationData, claimRef: string) {
+  const latest = data.latestVerifications.find((v) => v.result.claimId === claimRef);
+  if (!latest) return null;
+  const read = withDisputeOverlay(latest.result, data.disputes);
+  return read.reverificationPending ? null : summary(read, latest.version);
+}
+
 function summary(r: ReadResult, version: number) {
   return {
     version,
@@ -430,19 +438,22 @@ export async function handleLabRequest(
     }
 
     case 'open_dispute': {
-      if (data.value.disputes.length >= LAB_LIMITS.maxDisputesPerInvestigation) return fail('LIMIT_EXCEEDED', 'too many disputes');
+      const existing = data.value.disputes.find((d) => d.ref === req.ref);
+      // I1F2-01: a retry is recognised BEFORE the limit, so it can always repair.
+      if (!existing && data.value.disputes.length >= LAB_LIMITS.maxDisputesPerInvestigation) return fail('LIMIT_EXCEEDED', 'too many disputes');
       if (!data.value.claims.some((c) => c.id === req.claimRef)) return fail('INVALID_REQUEST', 'unknown claim');
       for (const ref of req.submittedEvidenceRefs) {
         if (data.value.evidence.find((e) => e.id === ref)?.claimId !== req.claimRef) {
           return fail('INVALID_REQUEST', 'evidence must belong to the disputed claim');
         }
       }
-      const existing = data.value.disputes.find((d) => d.ref === req.ref);
       if (existing) {
         // Retry of the same dispute (I1F-02): repair the re-verification instead of failing.
         if (existing.claimRef !== req.claimRef || existing.kind !== req.kind || existing.resolution !== null) {
           return fail('ALREADY_EXISTS', 'dispute ref already used');
         }
+        const settled = settledLatest(data.value, req.claimRef);
+        if (settled) return ok({ action: req.action, data: { disputeRef: req.ref, claimRef: req.claimRef, verification: settled, replayed: true } });
       } else {
         const r = await store.insertDispute(inv.value.id, {
           ref: req.ref, claimRef: req.claimRef, kind: req.kind, openedAt: now, submittedEvidenceRefs: req.submittedEvidenceRefs,
@@ -463,7 +474,11 @@ export async function handleLabRequest(
       if (d.resolution === null) {
         const r = await store.resolveDispute(inv.value.id, req.disputeRef, req.resolution, now, actor.userId);
         if (!r.ok) return r;
-      } // else: retry of the same resolution — repair the re-verification (I1F-02)
+      } else {
+        // Retry of the same resolution: repair only if the read state is still pending (I1F-02 / I1F2-02).
+        const settled = settledLatest(data.value, d.claimRef);
+        if (settled) return ok({ action: req.action, data: { disputeRef: req.disputeRef, resolution: req.resolution, verification: settled, replayed: true } });
+      }
       const v = await reverify(store, actor, inv.value, d.claimRef, now);
       if (!v.ok) return v;
       return ok({ action: req.action, data: { disputeRef: req.disputeRef, resolution: req.resolution, verification: summary(v.value.result, v.value.version) } });

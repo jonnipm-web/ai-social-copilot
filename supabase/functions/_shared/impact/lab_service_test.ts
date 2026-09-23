@@ -475,3 +475,30 @@ Deno.test('F-02b a failed re-verification after resolving never keeps showing DI
   assertEquals((retry.data.verification as Json).status, 'SUPPORTED');
   assertEquals(await t.code(UA, { action: 'resolve_dispute', investigation_id: inv, dispute_ref: 'd1', resolution: 'CORRECTED' }), 'ALREADY_EXISTS');
 });
+
+Deno.test('I1F2-01 a retry at the dispute limit still repairs the pending state', async () => {
+  const t = setup();
+  const inv = await supportedRegistrationClaim(t);
+  for (let i = 0; i < 99; i++) {
+    await t.must(UA, { action: 'open_dispute', investigation_id: inv, ref: `dx${i}`, claim_ref: 'c2', kind: 'CORRECTION_REQUEST' });
+  }
+  t.db.failNextVerification = true;
+  assertEquals(await t.code(UA, { action: 'open_dispute', investigation_id: inv, ref: 'd100', claim_ref: 'c1', kind: 'CORRECTION_REQUEST' }), 'INTERNAL_ERROR');
+  const retry = await t.must(UA, { action: 'open_dispute', investigation_id: inv, ref: 'd100', claim_ref: 'c1', kind: 'CORRECTION_REQUEST' });
+  assertEquals((retry.data.verification as Json).status, 'DISPUTED');
+  assertEquals(await t.code(UA, { action: 'open_dispute', investigation_id: inv, ref: 'd101', claim_ref: 'c1', kind: 'CORRECTION_REQUEST' }), 'LIMIT_EXCEEDED');
+});
+
+Deno.test('I1F2-02 repeating a successful open/resolve replays without appending versions', async () => {
+  const t = setup();
+  const inv = await supportedRegistrationClaim(t);
+  await t.must(UA, { action: 'open_dispute', investigation_id: inv, ref: 'd1', claim_ref: 'c1', kind: 'CORRECTION_REQUEST' });
+  const count = () => t.db.investigations.get(inv)!.verifications.length;
+  const before = count();
+  const again = await t.must(UA, { action: 'open_dispute', investigation_id: inv, ref: 'd1', claim_ref: 'c1', kind: 'CORRECTION_REQUEST' });
+  assertEquals([again.data.replayed, count()], [true, before]);
+  await t.must(UA, { action: 'resolve_dispute', investigation_id: inv, dispute_ref: 'd1', resolution: 'UPHELD' });
+  const after = count();
+  const again2 = await t.must(UA, { action: 'resolve_dispute', investigation_id: inv, dispute_ref: 'd1', resolution: 'UPHELD' });
+  assertEquals([again2.data.replayed, (again2.data.verification as Json).status, count()], [true, 'SUPPORTED', after]);
+});
