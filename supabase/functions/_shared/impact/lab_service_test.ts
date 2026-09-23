@@ -154,7 +154,8 @@ Deno.test('LS-08 identity comes only from provider snapshots: a look-alike regis
   assertEquals(r.data.subjectIdentityStatus, 'UNRESOLVED');
   await t.must(UA, { action: 'add_source', investigation_id: inv, source: { ref: 'src-web', type: 'ORGANIZATION_WEBSITE', publisher: 'HopeBridge Foundation', publisherOrgRef: 'org-hopebridge', retrievedAt: '2026-09-01T00:00:00Z', retention: 'HASH_ONLY', contentHash: 'b'.repeat(64) } });
   await t.must(UA, { action: 'add_claim', investigation_id: inv, claim: { ref: 'c1', kind: 'LEGAL_REGISTRATION', text: 'We are registered.', sourceRef: 'src-web', origin: 'MANUAL' } });
-  await t.must(UA, { action: 'add_evidence', investigation_id: inv, evidence: { ref: 'e1', claimRef: 'c1', sourceRef: 'src-other', aboutOrgRef: 'org-hopebridge', relationship: 'CONTRADICTS', basis: 'HUMAN_ASSESSED', personalData: 'NONE' } });
+  // I2 (Codex I2G1-03): a look-alike record cannot even be declared as evidence about the subject.
+  assertEquals(await t.code(UA, { action: 'add_evidence', investigation_id: inv, evidence: { ref: 'e1', claimRef: 'c1', sourceRef: 'src-other', aboutOrgRef: 'org-hopebridge', relationship: 'CONTRADICTS', basis: 'HUMAN_ASSESSED', personalData: 'NONE' } }), 'ENTITY_MATCH_UNCERTAIN');
   const v = (await t.must(UA, { action: 'run_verification', investigation_id: inv, claim_ref: 'c1' })).data.verification as Json;
   assertNotEquals(v.status, 'CONTRADICTED'); // no false accusation from an unconfirmed identity
   assert((v.gaps as string[]).includes('IDENTITY_UNCONFIRMED'));

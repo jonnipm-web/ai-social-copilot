@@ -240,10 +240,13 @@ Deno.test('ID-15 entity spoofing: another organization\'s record can neither gen
   await t.must(UA, { action: 'ingest_provider_record', investigation_id: inv, provider_id: 'fixture-xa-charity-registry', record_id: 'xa-7654321', ref: 'src-other' });
   assertEquals(await t.code(UA, { action: 'import_registry_claim', investigation_id: inv, source_ref: 'src-other', ref: 'c-x' }), 'ENTITY_MATCH_UNCERTAIN');
   await t.must(UA, { action: 'add_claim', investigation_id: inv, claim: { ref: 'c1', kind: 'LEGAL_REGISTRATION', text: 'HopeBridge is registered.', sourceRef: 'src-own', origin: 'MANUAL' } });
-  await t.must(UA, { action: 'add_evidence', investigation_id: inv, evidence: { ref: 'e-spoof', claimRef: 'c1', sourceRef: 'src-other', aboutOrgRef: 'org-hopebridge', relationship: 'SUPPORTS', basis: 'HUMAN_ASSESSED', observedPeriod: { to: '2026-08-31' }, personalData: 'NONE' } });
+  // Codex I2G1-03: refused already when the evidence is declared (the engine's
+  // R03B exclusion stays as defense in depth — MUT-02).
+  assertEquals(await t.code(UA, { action: 'add_evidence', investigation_id: inv, evidence: { ref: 'e-spoof', claimRef: 'c1', sourceRef: 'src-other', aboutOrgRef: 'org-hopebridge', relationship: 'SUPPORTS', basis: 'HUMAN_ASSESSED', observedPeriod: { to: '2026-08-31' }, personalData: 'NONE' } }), 'ENTITY_MATCH_UNCERTAIN');
+  // the other organization's record may still be cited as evidence about THAT organization (context)
+  await t.must(UA, { action: 'add_evidence', investigation_id: inv, evidence: { ref: 'e-ctx', claimRef: 'c1', sourceRef: 'src-other', aboutOrgRef: 'org-northstar', relationship: 'CONTEXTUALIZES', basis: 'HUMAN_ASSESSED', observedPeriod: { to: '2026-08-31' }, personalData: 'NONE' } });
   const v = (await t.must(UA, { action: 'run_verification', investigation_id: inv, claim_ref: 'c1' })).data.verification as Json;
   assertEquals(v.status, 'UNVERIFIED');
-  assert((v.rulesApplied as string[]).includes('R03B_REGISTRY_RECORD_OF_ANOTHER_ENTITY'));
   // the subject's own record, cited the same way, counts
   await t.must(UA, { action: 'add_evidence', investigation_id: inv, evidence: { ref: 'e-own', claimRef: 'c1', sourceRef: 'src-own', aboutOrgRef: 'org-hopebridge', relationship: 'SUPPORTS', basis: 'HUMAN_ASSESSED', observedPeriod: { to: '2026-08-31' }, personalData: 'NONE' } });
   const v2 = (await t.must(UA, { action: 'run_verification', investigation_id: inv, claim_ref: 'c1' })).data.verification as Json;

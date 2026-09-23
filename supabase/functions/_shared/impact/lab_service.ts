@@ -553,6 +553,12 @@ export async function handleLabRequest(
       const claim = data.value.claims.find((c) => c.id === i.claimRef);
       if (!claim) return fail('INVALID_REQUEST', 'unknown claim');
       if (!sourcesById.has(i.sourceRef)) return fail('INVALID_REQUEST', 'unknown source');
+      // I2 entity-spoofing guard (Codex I2G1-03): a caller cannot declare that a
+      // registry record of another organization is ABOUT the subject.
+      const snap = data.value.sources.find((x) => x.source.id === i.sourceRef)?.snapshot;
+      if (snap && i.aboutOrgRef === inv.value.subjectOrgRef && resolveEntity(inv.value.subjectIdentity, snap.identity).outcome !== 'CONFIRMED_MATCH') {
+        return fail('ENTITY_MATCH_UNCERTAIN', 'registry record does not identify the investigation subject');
+      }
       const e: EvidenceItem = {
         id: i.ref,
         investigationId: inv.value.id,

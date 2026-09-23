@@ -49,11 +49,88 @@ LANGUAGE sql IMMUTABLE SET search_path = '' AS $$
 $$;
 -- END_IMPACT_PROVIDER_ALLOWLIST
 
--- Canonical organization id: COUNTRY:scheme:NUMBER (organization_identity.ts
--- canonicalOrgId; the number arrives already normalized by the server).
+-- Registration normalization — IDENTICAL to entity_resolution.ts
+-- normalizeRegistration (NFKC, upper case, spaces / - . / removed). Codex I2G1-02.
+CREATE OR REPLACE FUNCTION public.impact_norm_registration(p text) RETURNS text
+LANGUAGE sql IMMUTABLE SET search_path = '' AS $$
+  SELECT upper(regexp_replace(normalize(p, NFKC), '[[:space:]./-]', '', 'g'))
+$$;
+
+-- Canonical organization id: COUNTRY:scheme:NUMBER (organization_identity.ts canonicalOrgId).
 CREATE OR REPLACE FUNCTION public.impact_canonical_org_id(p_country text, p_scheme text, p_number text) RETURNS text
 LANGUAGE sql IMMUTABLE SET search_path = '' AS $$
-  SELECT upper(btrim(p_country)) || ':' || regexp_replace(lower(btrim(p_scheme)), '[^a-z0-9-]+', '-', 'g') || ':' || p_number
+  SELECT upper(btrim(p_country)) || ':' || regexp_replace(lower(btrim(p_scheme)), '[^a-z0-9-]+', '-', 'g') || ':'
+         || public.impact_norm_registration(p_number)
+$$;
+
+-- Codex I2G1-01: canonicalIds must be EXACTLY the record's own canonical id plus
+-- the canonical ids of its declared cross-references (same jurisdiction,
+-- normalized values, no duplicates) — no extra identity can be smuggled in.
+CREATE OR REPLACE FUNCTION public.impact_snapshot_ids_ok(s jsonb) RETURNS boolean
+LANGUAGE sql IMMUTABLE SET search_path = '' AS $$
+  SELECT jsonb_typeof(s->'crossReferences') = 'array'
+    AND jsonb_typeof(s->'canonicalIds') = 'array'
+    AND NOT EXISTS (
+      SELECT 1 FROM jsonb_array_elements(s->'crossReferences') AS x(v)
+      WHERE jsonb_typeof(x.v) <> 'object'
+         OR x.v->>'country' IS DISTINCT FROM s->'jurisdiction'->>'country'
+         OR coalesce(x.v->>'scheme', '') = '' OR coalesce(x.v->>'value', '') = ''
+         OR x.v->>'value' IS DISTINCT FROM public.impact_norm_registration(x.v->>'value'))
+    AND jsonb_array_length(s->'canonicalIds') = (SELECT count(DISTINCT v) FROM jsonb_array_elements_text(s->'canonicalIds') AS c(v))
+    AND (SELECT coalesce(array_agg(v ORDER BY v COLLATE "C"), '{}') FROM (SELECT DISTINCT v FROM jsonb_array_elements_text(s->'canonicalIds') AS c(v)) q)
+      = (SELECT coalesce(array_agg(v ORDER BY v COLLATE "C"), '{}') FROM (
+           SELECT s->>'canonicalOrgId' AS v
+           UNION
+           SELECT public.impact_canonical_org_id(x.v->>'country', x.v->>'scheme', x.v->>'value')
+           FROM jsonb_array_elements(s->'crossReferences') AS x(v)) q)
+$$;
+
+-- Codex I2G1-04: registry dates cannot be later than the retrieval, a
+-- dissolution needs a DISSOLVED/REMOVED status and cannot precede the
+-- registration, former-name periods are not reversed (provider.ts twin).
+CREATE OR REPLACE FUNCTION public.impact_snapshot_temporal_ok(s jsonb) RETURNS boolean
+LANGUAGE sql IMMUTABLE SET search_path = '' AS $$
+  SELECT public.impact_is_iso(s->>'retrievedAt')
+    AND NOT EXISTS (
+      SELECT 1 FROM (VALUES (s->>'statusAsOf'), (s->>'sourceAsOf'), (s->>'registeredOn'), (s->>'dissolvedOn')) AS d(v)
+      WHERE d.v IS NOT NULL AND (NOT public.impact_is_iso(d.v) OR public.impact_ts(d.v) > public.impact_ts(s->>'retrievedAt')))
+    AND (s->>'dissolvedOn' IS NULL OR s->>'status' IN ('DISSOLVED', 'REMOVED'))
+    AND (s->>'dissolvedOn' IS NULL OR s->>'registeredOn' IS NULL
+         OR public.impact_ts(s->>'dissolvedOn') >= public.impact_ts(s->>'registeredOn'))
+    AND (s->'formerNames' IS NULL OR (jsonb_typeof(s->'formerNames') = 'array' AND NOT EXISTS (
+      SELECT 1 FROM jsonb_array_elements(s->'formerNames') AS f(v)
+      WHERE (f.v->>'from' IS NOT NULL AND NOT public.impact_is_iso(f.v->>'from'))
+         OR (f.v->>'to' IS NOT NULL AND NOT public.impact_is_iso(f.v->>'to'))
+         OR (f.v->>'from' IS NOT NULL AND f.v->>'to' IS NOT NULL AND public.impact_ts(f.v->>'from') > public.impact_ts(f.v->>'to')))))
+$$;
+
+-- Registry as-of date (registry_claims.ts registryAsOf): the earliest of
+-- statusAsOf, sourceAsOf, retrievedAt (first wins on ties), as YYYY-MM-DD.
+CREATE OR REPLACE FUNCTION public.impact_registry_asof(s jsonb) RETURNS text
+LANGUAGE sql IMMUTABLE SET search_path = '' AS $$
+  SELECT left(d.v, 10) FROM (VALUES (1, s->>'statusAsOf'), (2, s->>'sourceAsOf'), (3, s->>'retrievedAt')) AS d(n, v)
+  WHERE d.v IS NOT NULL AND public.impact_is_iso(d.v)
+  ORDER BY public.impact_ts(d.v), d.n LIMIT 1
+$$;
+
+-- Registry statement text (registry_claims.ts registryStatement) — the only
+-- text a REGISTRY_RECORD-backed claim may carry (Codex I2G1-03).
+CREATE OR REPLACE FUNCTION public.impact_registry_statement_text(p_publisher text, s jsonb) RETURNS text
+LANGUAGE sql IMMUTABLE SET search_path = '' AS $$
+  SELECT p_publisher || ' lists ' || (s->>'scheme') || ' ' || (s->>'registrationNumber') || ' ("' || (s->>'name')
+         || '") with status ' || (s->>'status') || ' as of ' || public.impact_registry_asof(s) || '.'
+         || CASE WHEN (s->>'synthetic') = 'true' THEN ' [synthetic fixture]' ELSE '' END
+$$;
+
+-- Does a snapshot identify the investigation subject? One of its canonical ids
+-- must be a registration declared for the subject (entity-spoofing guard).
+CREATE OR REPLACE FUNCTION public.impact_snapshot_identifies_subject(p_investigation uuid, s jsonb) RETURNS boolean
+LANGUAGE sql STABLE SET search_path = '' AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.impact_investigations inv,
+         jsonb_array_elements(coalesce(inv.subject_identity->'registrations', '[]'::jsonb)) AS reg(r)
+    WHERE inv.id = p_investigation
+      AND (s->'canonicalIds') ? public.impact_canonical_org_id(reg.r->'jurisdiction'->>'country', reg.r->>'scheme', reg.r->>'value'))
 $$;
 
 -- Registry status → comparable class (organization_identity.ts registryStatusClass).
@@ -93,10 +170,15 @@ ALTER TABLE public.impact_sources DROP CONSTRAINT IF EXISTS impact_sources_snaps
 ALTER TABLE public.impact_sources ADD CONSTRAINT impact_sources_snapshot_identity_check CHECK (
   snapshot IS NULL OR (
     snapshot->>'registrationNumber' ~ '^[A-Z0-9_:]{1,60}$'
+    AND snapshot->>'registrationNumber' = public.impact_norm_registration(snapshot->>'registrationNumber')
     AND snapshot->>'canonicalOrgId' = public.impact_canonical_org_id(snapshot->'jurisdiction'->>'country', snapshot->>'scheme', snapshot->>'registrationNumber')
     AND snapshot->>'canonicalOrgId' ~ '^[A-Za-z0-9_.:-]{1,128}$'
-    AND jsonb_typeof(snapshot->'canonicalIds') = 'array'
     AND snapshot->'canonicalIds'->>0 = snapshot->>'canonicalOrgId'
+    AND public.impact_snapshot_ids_ok(snapshot)
+    AND public.impact_snapshot_temporal_ok(snapshot)
+    AND length(coalesce(snapshot->>'name', '')) BETWEEN 1 AND 300
+    AND length(coalesce(snapshot->>'scheme', '')) BETWEEN 1 AND 60
+    AND jsonb_typeof(snapshot->'synthetic') = 'boolean'
     AND snapshot->>'providerId' = acquisition_provider_id
     AND snapshot->'jurisdiction'->>'country' = jurisdiction_country
     AND snapshot->>'retrievedAt' = retrieved_at
@@ -154,6 +236,8 @@ DECLARE
   v_retrieved timestamptz;
   v_src public.impact_sources%ROWTYPE;
   v_claim public.impact_claims%ROWTYPE;
+  v_subject text;
+  v_asof text;
 BEGIN
   SELECT * INTO v_src FROM public.impact_sources s WHERE s.investigation_id = NEW.investigation_id AND s.ref = NEW.source_ref;
   v_retrieved := public.impact_ts(v_src.retrieved_at);
@@ -166,14 +250,32 @@ BEGIN
      OR (NEW.observed_to IS NOT NULL AND public.impact_ts(NEW.observed_to) > v_retrieved) THEN
     RAISE EXCEPTION 'IMPACT_TEMPORAL: observed period extends past retrieval' USING ERRCODE = '22007';
   END IF;
+  SELECT i.subject_org_ref INTO v_subject FROM public.impact_investigations i WHERE i.id = NEW.investigation_id;
+  -- I2 entity-spoofing guard (Codex I2G1-03): evidence declared to be ABOUT the
+  -- subject cannot come from a registry snapshot that does not identify it.
+  IF v_src.snapshot IS NOT NULL AND NEW.about_org_ref = v_subject
+     AND NOT public.impact_snapshot_identifies_subject(NEW.investigation_id, v_src.snapshot) THEN
+    RAISE EXCEPTION 'IMPACT_ENTITY_MISMATCH: registry record of another organization' USING ERRCODE = '23514';
+  END IF;
   -- I2: registry-record evidence is only the provider record supporting the
-  -- registry statement generated from that same record.
+  -- registry statement generated from that same record — subject, text,
+  -- period and observed period all derived from the stored snapshot.
   IF NEW.relationship_basis = 'REGISTRY_RECORD' THEN
     SELECT * INTO v_claim FROM public.impact_claims c WHERE c.investigation_id = NEW.investigation_id AND c.ref = NEW.claim_ref;
-    IF v_src.acquisition_method IS DISTINCT FROM 'PROVIDER' OR v_src.snapshot IS NULL
+    v_asof := public.impact_registry_asof(v_src.snapshot);
+    IF v_src.acquisition_method IS DISTINCT FROM 'PROVIDER' OR v_src.snapshot IS NULL OR v_src.status <> 'ACTIVE'
        OR NEW.relationship <> 'SUPPORTS' OR NEW.personal_data <> 'NONE'
+       OR NEW.about_org_ref IS DISTINCT FROM v_subject
        OR v_claim.source_ref IS DISTINCT FROM NEW.source_ref OR v_claim.origin IS DISTINCT FROM 'STRUCTURED_IMPORT'
-       OR v_claim.kind IS DISTINCT FROM 'LEGAL_REGISTRATION' THEN
+       OR v_claim.kind IS DISTINCT FROM 'LEGAL_REGISTRATION'
+       OR v_claim.claim_text IS DISTINCT FROM public.impact_registry_statement_text(v_src.publisher, v_src.snapshot)
+       OR v_claim.period_from IS DISTINCT FROM v_asof OR v_claim.period_to IS DISTINCT FROM v_asof
+       OR NEW.observed_to IS DISTINCT FROM v_asof
+       OR NEW.observed_from IS DISTINCT FROM (CASE
+            WHEN v_src.snapshot->>'status' = 'REGISTERED' AND v_src.snapshot->>'registeredOn' IS NOT NULL
+                 AND left(v_src.snapshot->>'registeredOn', 10) <= v_asof THEN left(v_src.snapshot->>'registeredOn', 10)
+            ELSE v_asof END)
+       OR NOT public.impact_snapshot_identifies_subject(NEW.investigation_id, v_src.snapshot) THEN
       RAISE EXCEPTION 'IMPACT_REGISTRY_RECORD_INVALID: not the provider record of its own registry statement' USING ERRCODE = '23514';
     END IF;
   END IF;
@@ -229,13 +331,7 @@ BEGIN
        -- I2 entity-spoofing guard: a registry snapshot counts only for the
        -- organization it identifies — one of its canonical ids must be a
        -- registration declared for the investigation subject.
-       OR (s.snapshot IS NOT NULL AND NOT EXISTS (
-             SELECT 1 FROM public.impact_investigations inv,
-                  jsonb_array_elements(coalesce(inv.subject_identity->'registrations', '[]'::jsonb)) AS reg(r)
-             WHERE inv.id = NEW.investigation_id
-               AND (s.snapshot->'canonicalIds') ? public.impact_canonical_org_id(
-                     reg.r->'jurisdiction'->>'country', reg.r->>'scheme',
-                     upper(regexp_replace(normalize(reg.r->>'value', NFKC), '[[:space:]./-]', '', 'g')))))
+       OR (s.snapshot IS NOT NULL AND NOT public.impact_snapshot_identifies_subject(NEW.investigation_id, s.snapshot))
        OR (e.relationship_basis = 'STRUCTURED_MATCH' AND (
              cl.quantity_metric IS DISTINCT FROM e.reported_metric OR cl.quantity_unit IS DISTINCT FROM e.reported_unit
              OR it.tag IS DISTINCT FROM CASE

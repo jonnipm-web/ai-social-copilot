@@ -65,6 +65,7 @@ CREATE FUNCTION pg_temp.snap(p_record text, p_hash_char text, p_status text DEFA
     'registrationNumber', 'XA1234567', 'scheme', 'charity-number',
     'jurisdiction', jsonb_build_object('country', 'XA', 'registry', 'fixture-xa-charity-registry'),
     'canonicalOrgId', 'XA:charity-number:XA1234567', 'canonicalIds', jsonb_build_array('XA:charity-number:XA1234567'),
+    'crossReferences', '[]'::jsonb, 'synthetic', true,
     'nameKey', 'hopebridge foundation', 'name', 'HopeBridge Foundation', 'status', p_status,
     'dataHash', repeat(p_hash_char, 64), 'retrievedAt', '2026-09-01T00:00:00Z')
 $$;

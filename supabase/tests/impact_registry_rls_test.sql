@@ -47,8 +47,11 @@ LANGUAGE sql AS $$
   SELECT jsonb_build_object('providerId', p_provider, 'recordId', p_record, 'registrationNumber', p_number, 'scheme', p_scheme,
     'jurisdiction', jsonb_build_object('country', p_country, 'registry', p_provider),
     'canonicalOrgId', public.impact_canonical_org_id(p_country, p_scheme, p_number),
-    'canonicalIds', jsonb_build_array(public.impact_canonical_org_id(p_country, p_scheme, p_number)) || p_cross,
-    'nameKey', p_name_key, 'name', p_name_key, 'status', p_status, 'dataHash', repeat(p_hash_char, 64), 'retrievedAt', p_retrieved)
+    'crossReferences', p_cross,
+    'canonicalIds', jsonb_build_array(public.impact_canonical_org_id(p_country, p_scheme, p_number))
+      || coalesce((SELECT jsonb_agg(public.impact_canonical_org_id(x->>'country', x->>'scheme', x->>'value')) FROM jsonb_array_elements(p_cross) AS t(x)), '[]'::jsonb),
+    'nameKey', p_name_key, 'name', p_name_key, 'status', p_status, 'synthetic', true,
+    'dataHash', repeat(p_hash_char, 64), 'retrievedAt', p_retrieved)
 $$;
 
 \set UC '''cccccccc-0000-0000-0000-00000000000c'''
@@ -75,13 +78,13 @@ INSERT INTO public.impact_sources (investigation_id, ref, source_type, publisher
   (:IC, 'src-ch', 'OFFICIAL_REGISTRY', 'Exampleland Charity Registry (fixture)', '2026-09-01T00:00:00Z', 'SNAPSHOT', repeat('1', 64),
    'PROVIDER', 'fixture-xa-charity-registry', 'XA', 'fixture-xa-charity-registry',
    pg_temp.snap('fixture-xa-charity-registry', 'xa-9990001', 'XA', 'charity-number', 'XA9990001', 'northstar relief', 'REMOVED', '1',
-     '["XA:company-number:XAC990001"]'), :UC);
+     '[{"country":"XA","scheme":"company-number","value":"XAC990001"}]'), :UC);
 INSERT INTO public.impact_sources (investigation_id, ref, source_type, publisher, retrieved_at, retention, content_hash,
   acquisition_method, acquisition_provider_id, jurisdiction_country, jurisdiction_registry, snapshot, created_by) VALUES
   (:IC, 'src-co', 'OFFICIAL_REGISTRY', 'Exampleland Company Registry (fixture)', '2026-09-02T00:00:00Z', 'SNAPSHOT', repeat('2', 64),
    'PROVIDER', 'fixture-xa-company-registry', 'XA', 'fixture-xa-company-registry',
    pg_temp.snap('fixture-xa-company-registry', 'xa-c-990001', 'XA', 'company-number', 'XAC990001', 'northstar relief', 'REGISTERED', '2',
-     '["XA:charity-number:XA9990001"]', '2026-09-02T00:00:00Z'), :UC);
+     '[{"country":"XA","scheme":"charity-number","value":"XA9990001"}]', '2026-09-02T00:00:00Z'), :UC);
 RESET ROLE;
 
 SELECT pg_temp.expect_eq('I2-02 cross-referenced registries that disagree on status → exactly one STATUS_MISMATCH, no winner',
@@ -100,11 +103,37 @@ SET ROLE service_role;
 SELECT pg_temp.expect_fail('I2-06 identical registry data twice (retry) is ONE row',
   $$INSERT INTO public.impact_sources (investigation_id, ref, source_type, publisher, retrieved_at, retention, content_hash, acquisition_method, acquisition_provider_id, jurisdiction_country, jurisdiction_registry, snapshot, created_by)
     VALUES ('c2222222-0000-0000-0000-00000000000c', 'src-ch-dup', 'OFFICIAL_REGISTRY', 'X', '2026-09-01T00:00:00Z', 'SNAPSHOT', repeat('1', 64), 'PROVIDER', 'fixture-xa-charity-registry', 'XA', 'fixture-xa-charity-registry',
-      pg_temp.snap('fixture-xa-charity-registry', 'xa-9990001', 'XA', 'charity-number', 'XA9990001', 'northstar relief', 'REMOVED', '1', '["XA:company-number:XAC990001"]'), 'cccccccc-0000-0000-0000-00000000000c')$$, '23505');
+      pg_temp.snap('fixture-xa-charity-registry', 'xa-9990001', 'XA', 'charity-number', 'XA9990001', 'northstar relief', 'REMOVED', '1', '[{"country":"XA","scheme":"company-number","value":"XAC990001"}]'), 'cccccccc-0000-0000-0000-00000000000c')$$, '23505');
 SELECT pg_temp.expect_fail('I2-07 forged canonical id (not derived from country/scheme/number)',
   $$INSERT INTO public.impact_sources (investigation_id, ref, source_type, publisher, retrieved_at, retention, content_hash, acquisition_method, acquisition_provider_id, jurisdiction_country, jurisdiction_registry, snapshot, created_by)
     VALUES ('c2222222-0000-0000-0000-00000000000c', 'src-f1', 'OFFICIAL_REGISTRY', 'X', '2026-09-01T00:00:00Z', 'SNAPSHOT', repeat('3', 64), 'PROVIDER', 'fixture-xa-charity-registry', 'XA', 'fixture-xa-charity-registry',
       pg_temp.snap('fixture-xa-charity-registry', 'xa-1', 'XA', 'charity-number', 'XA1', 'n', 'REGISTERED', '3') || '{"canonicalOrgId":"XA:charity-number:XA9990001"}', 'cccccccc-0000-0000-0000-00000000000c')$$, '23514');
+SELECT pg_temp.expect_fail('I2-07b an extra canonical id not backed by a declared cross-reference (Codex I2G1-01)',
+  $$INSERT INTO public.impact_sources (investigation_id, ref, source_type, publisher, retrieved_at, retention, content_hash, acquisition_method, acquisition_provider_id, jurisdiction_country, jurisdiction_registry, snapshot, created_by)
+    VALUES ('c2222222-0000-0000-0000-00000000000c', 'src-f1b', 'OFFICIAL_REGISTRY', 'X', '2026-09-01T00:00:00Z', 'SNAPSHOT', repeat('3', 64), 'PROVIDER', 'fixture-xa-charity-registry', 'XA', 'fixture-xa-charity-registry',
+      jsonb_set(pg_temp.snap('fixture-xa-charity-registry', 'xa-1234567', 'XA', 'charity-number', 'XA1234567', 'hopebridge foundation', 'REGISTERED', '3'), '{canonicalIds}', '["XA:charity-number:XA1234567","XA:charity-number:XA9990001"]'), 'cccccccc-0000-0000-0000-00000000000c')$$, '23514');
+SELECT pg_temp.expect_fail('I2-07c a cross-reference in another jurisdiction (Codex I2G1-01)',
+  $$INSERT INTO public.impact_sources (investigation_id, ref, source_type, publisher, retrieved_at, retention, content_hash, acquisition_method, acquisition_provider_id, jurisdiction_country, jurisdiction_registry, snapshot, created_by)
+    VALUES ('c2222222-0000-0000-0000-00000000000c', 'src-f1c', 'OFFICIAL_REGISTRY', 'X', '2026-09-01T00:00:00Z', 'SNAPSHOT', repeat('3', 64), 'PROVIDER', 'fixture-xa-charity-registry', 'XA', 'fixture-xa-charity-registry',
+      pg_temp.snap('fixture-xa-charity-registry', 'xa-1234567', 'XA', 'charity-number', 'XA1234567', 'hopebridge foundation', 'REGISTERED', '3', '[{"country":"XB","scheme":"charity-number","value":"XB1234567"}]'), 'cccccccc-0000-0000-0000-00000000000c')$$, '23514');
+SELECT pg_temp.expect_fail('I2-07d an unnormalized registration number (Codex I2G1-02)',
+  $$INSERT INTO public.impact_sources (investigation_id, ref, source_type, publisher, retrieved_at, retention, content_hash, acquisition_method, acquisition_provider_id, jurisdiction_country, jurisdiction_registry, snapshot, created_by)
+    VALUES ('c2222222-0000-0000-0000-00000000000c', 'src-f1d', 'OFFICIAL_REGISTRY', 'X', '2026-09-01T00:00:00Z', 'SNAPSHOT', repeat('3', 64), 'PROVIDER', 'fixture-xa-charity-registry', 'XA', 'fixture-xa-charity-registry',
+      jsonb_set(pg_temp.snap('fixture-xa-charity-registry', 'xa-9', 'XA', 'charity-number', 'XA9', 'n', 'REGISTERED', '3'), '{registrationNumber}', '"XA-9"'), 'cccccccc-0000-0000-0000-00000000000c')$$, '23514');
+SELECT pg_temp.expect_eq('I2-07e SQL canonical normalization == TS (XA-12.3 4 → XA1234)',
+  public.impact_canonical_org_id('xa', 'Charity Number', 'xa-12.3 4'), 'XA:charity-number:XA1234');
+SELECT pg_temp.expect_fail('I2-07f a registry date later than the retrieval (Codex I2G1-04)',
+  $$INSERT INTO public.impact_sources (investigation_id, ref, source_type, publisher, retrieved_at, retention, content_hash, acquisition_method, acquisition_provider_id, jurisdiction_country, jurisdiction_registry, snapshot, created_by)
+    VALUES ('c2222222-0000-0000-0000-00000000000c', 'src-f1f', 'OFFICIAL_REGISTRY', 'X', '2026-09-01T00:00:00Z', 'SNAPSHOT', repeat('3', 64), 'PROVIDER', 'fixture-xa-charity-registry', 'XA', 'fixture-xa-charity-registry',
+      pg_temp.snap('fixture-xa-charity-registry', 'xa-10', 'XA', 'charity-number', 'XA10', 'n', 'REGISTERED', '3') || '{"statusAsOf":"2027-01-01"}', 'cccccccc-0000-0000-0000-00000000000c')$$, '23514');
+SELECT pg_temp.expect_fail('I2-07g a dissolution date on an active record, or before the registration (Codex I2G1-04)',
+  $$INSERT INTO public.impact_sources (investigation_id, ref, source_type, publisher, retrieved_at, retention, content_hash, acquisition_method, acquisition_provider_id, jurisdiction_country, jurisdiction_registry, snapshot, created_by)
+    VALUES ('c2222222-0000-0000-0000-00000000000c', 'src-f1g', 'OFFICIAL_REGISTRY', 'X', '2026-09-01T00:00:00Z', 'SNAPSHOT', repeat('3', 64), 'PROVIDER', 'fixture-xa-charity-registry', 'XA', 'fixture-xa-charity-registry',
+      pg_temp.snap('fixture-xa-charity-registry', 'xa-11', 'XA', 'charity-number', 'XA11', 'n', 'REGISTERED', '3') || '{"dissolvedOn":"2025-01-01"}', 'cccccccc-0000-0000-0000-00000000000c')$$, '23514');
+SELECT pg_temp.expect_fail('I2-07h a dissolution before the registration (Codex I2G1-04)',
+  $$INSERT INTO public.impact_sources (investigation_id, ref, source_type, publisher, retrieved_at, retention, content_hash, acquisition_method, acquisition_provider_id, jurisdiction_country, jurisdiction_registry, snapshot, created_by)
+    VALUES ('c2222222-0000-0000-0000-00000000000c', 'src-f1h', 'OFFICIAL_REGISTRY', 'X', '2026-09-01T00:00:00Z', 'SNAPSHOT', repeat('3', 64), 'PROVIDER', 'fixture-xa-charity-registry', 'XA', 'fixture-xa-charity-registry',
+      pg_temp.snap('fixture-xa-charity-registry', 'xa-12', 'XA', 'charity-number', 'XA12', 'n', 'DISSOLVED', '3') || '{"registeredOn":"2020-01-01","dissolvedOn":"2019-01-01"}', 'cccccccc-0000-0000-0000-00000000000c')$$, '23514');
 SELECT pg_temp.expect_fail('I2-08 a snapshot carrying people (trustees) is refused — PII minimization',
   $$INSERT INTO public.impact_sources (investigation_id, ref, source_type, publisher, retrieved_at, retention, content_hash, acquisition_method, acquisition_provider_id, jurisdiction_country, jurisdiction_registry, snapshot, created_by)
     VALUES ('c2222222-0000-0000-0000-00000000000c', 'src-f2', 'OFFICIAL_REGISTRY', 'X', '2026-09-01T00:00:00Z', 'SNAPSHOT', repeat('4', 64), 'PROVIDER', 'fixture-xa-charity-registry', 'XA', 'fixture-xa-charity-registry',
@@ -158,7 +187,7 @@ INSERT INTO public.impact_sources (investigation_id, ref, source_type, publisher
   (:IC, 'src-ch-v2', 'OFFICIAL_REGISTRY', 'Exampleland Charity Registry (fixture)', '2026-09-03T00:00:00Z', 'SNAPSHOT', repeat('9', 64),
    'PROVIDER', 'fixture-xa-charity-registry', 'XA', 'fixture-xa-charity-registry',
    pg_temp.snap('fixture-xa-charity-registry', 'xa-9990001', 'XA', 'charity-number', 'XA9990001', 'northstar relief', 'REGISTERED', '9',
-     '["XA:company-number:XAC990001"]', '2026-09-03T00:00:00Z'), :UC);
+     '[{"country":"XA","scheme":"company-number","value":"XAC990001"}]', '2026-09-03T00:00:00Z'), :UC);
 RESET ROLE;
 SELECT pg_temp.expect_eq('I2-21 changed registry data = new version (UPDATE), old snapshot kept, no self-conflict; RETRACTED company snapshot ignored',
   (SELECT (SELECT count(*) FROM public.impact_sources WHERE investigation_id = :IC AND snapshot->>'recordId' = 'xa-9990001')::text
@@ -177,7 +206,14 @@ SELECT pg_temp.expect_fail('I2-24 even the table owner cannot delete a registry 
 -- ── REGISTRY_RECORD evidence ───────────────────────────────────────────────
 SET ROLE service_role;
 INSERT INTO public.impact_claims (investigation_id, ref, kind, claim_text, subject_org_ref, source_ref, extracted_at, origin, period_from, period_to, created_by) VALUES
-  (:IC, 'c-stmt', 'LEGAL_REGISTRATION', 'Registry lists charity-number XA9990001 with status REMOVED as of 2025-01-15.', 'org-northstar', 'src-ch', '2026-09-02T00:00:00Z', 'STRUCTURED_IMPORT', '2025-01-15', '2025-01-15', :UC),
+  (:IC, 'c-stmt', 'LEGAL_REGISTRATION',
+   public.impact_registry_statement_text('Exampleland Charity Registry (fixture)', (SELECT snapshot FROM public.impact_sources WHERE investigation_id = :IC AND ref = 'src-ch')),
+   'org-northstar', 'src-ch', '2026-09-02T00:00:00Z', 'STRUCTURED_IMPORT', '2026-09-01', '2026-09-01', :UC),
+  (:IC, 'c-forged', 'LEGAL_REGISTRATION', 'Exampleland Charity Registry (fixture) lists charity-number XA9990001 ("northstar relief") with status REGISTERED as of 2026-09-01. [synthetic fixture]',
+   'org-northstar', 'src-ch', '2026-09-02T00:00:00Z', 'STRUCTURED_IMPORT', '2026-09-01', '2026-09-01', :UC),
+  (:IC, 'c-period', 'LEGAL_REGISTRATION',
+   public.impact_registry_statement_text('Exampleland Charity Registry (fixture)', (SELECT snapshot FROM public.impact_sources WHERE investigation_id = :IC AND ref = 'src-ch')),
+   'org-northstar', 'src-ch', '2026-09-02T00:00:00Z', 'STRUCTURED_IMPORT', '2020-01-01', '2020-01-01', :UC),
   (:IC, 'c-man', 'LEGAL_REGISTRATION', 'Northstar is registered.', 'org-northstar', 'src-ch', '2026-09-02T00:00:00Z', 'MANUAL', NULL, NULL, :UC),
   (:IC, 'c-news', 'LEGAL_REGISTRATION', 'Northstar is registered.', 'org-northstar', 'n-ok', '2026-09-02T00:00:00Z', 'STRUCTURED_IMPORT', NULL, NULL, :UC);
 SELECT pg_temp.expect_fail('I2-25 REGISTRY_RECORD evidence from a non-provider source',
@@ -190,7 +226,19 @@ SELECT pg_temp.expect_fail('I2-27 REGISTRY_RECORD evidence for a manually writte
   $$INSERT INTO public.impact_evidence (investigation_id, ref, claim_ref, source_ref, about_org_ref, relationship, relationship_basis, personal_data, added_at, created_by)
     VALUES ('c2222222-0000-0000-0000-00000000000c', 'e-x3', 'c-man', 'src-ch', 'org-northstar', 'SUPPORTS', 'REGISTRY_RECORD', 'NONE', '2026-09-02T00:00:00Z', 'cccccccc-0000-0000-0000-00000000000c')$$, 'IMPACT_REGISTRY_RECORD_INVALID');
 INSERT INTO public.impact_evidence (investigation_id, ref, claim_ref, source_ref, about_org_ref, relationship, relationship_basis, observed_from, observed_to, personal_data, added_at, created_by)
-VALUES (:IC, 'c-stmt.rec', 'c-stmt', 'src-ch', 'org-northstar', 'SUPPORTS', 'REGISTRY_RECORD', '2025-01-15', '2025-01-15', 'NONE', '2026-09-02T00:00:00Z', :UC);
+VALUES (:IC, 'c-stmt.rec', 'c-stmt', 'src-ch', 'org-northstar', 'SUPPORTS', 'REGISTRY_RECORD', '2026-09-01', '2026-09-01', 'NONE', '2026-09-02T00:00:00Z', :UC);
+SELECT pg_temp.expect_fail('I2-41 REGISTRY_RECORD evidence for a claim whose text is not the registry statement (status forged)',
+  $$INSERT INTO public.impact_evidence (investigation_id, ref, claim_ref, source_ref, about_org_ref, relationship, relationship_basis, observed_from, observed_to, personal_data, added_at, created_by)
+    VALUES ('c2222222-0000-0000-0000-00000000000c', 'e-f1', 'c-forged', 'src-ch', 'org-northstar', 'SUPPORTS', 'REGISTRY_RECORD', '2026-09-01', '2026-09-01', 'NONE', '2026-09-02T00:00:00Z', 'cccccccc-0000-0000-0000-00000000000c')$$, 'IMPACT_REGISTRY_RECORD_INVALID');
+SELECT pg_temp.expect_fail('I2-42 REGISTRY_RECORD evidence for a statement moved to another period',
+  $$INSERT INTO public.impact_evidence (investigation_id, ref, claim_ref, source_ref, about_org_ref, relationship, relationship_basis, observed_from, observed_to, personal_data, added_at, created_by)
+    VALUES ('c2222222-0000-0000-0000-00000000000c', 'e-f2', 'c-period', 'src-ch', 'org-northstar', 'SUPPORTS', 'REGISTRY_RECORD', '2026-09-01', '2026-09-01', 'NONE', '2026-09-02T00:00:00Z', 'cccccccc-0000-0000-0000-00000000000c')$$, 'IMPACT_REGISTRY_RECORD_INVALID');
+SELECT pg_temp.expect_fail('I2-43 REGISTRY_RECORD evidence about another organization ref',
+  $$INSERT INTO public.impact_evidence (investigation_id, ref, claim_ref, source_ref, about_org_ref, relationship, relationship_basis, observed_from, observed_to, personal_data, added_at, created_by)
+    VALUES ('c2222222-0000-0000-0000-00000000000c', 'e-f3', 'c-stmt', 'src-ch', 'org-other', 'SUPPORTS', 'REGISTRY_RECORD', '2026-09-01', '2026-09-01', 'NONE', '2026-09-02T00:00:00Z', 'cccccccc-0000-0000-0000-00000000000c')$$, 'IMPACT_REGISTRY_RECORD_INVALID');
+SELECT pg_temp.expect_fail('I2-44 REGISTRY_RECORD evidence with an observed period that is not the as-of date',
+  $$INSERT INTO public.impact_evidence (investigation_id, ref, claim_ref, source_ref, about_org_ref, relationship, relationship_basis, observed_from, observed_to, personal_data, added_at, created_by)
+    VALUES ('c2222222-0000-0000-0000-00000000000c', 'e-f4', 'c-stmt', 'src-ch', 'org-northstar', 'SUPPORTS', 'REGISTRY_RECORD', '2015-01-01', '2026-09-01', 'NONE', '2026-09-02T00:00:00Z', 'cccccccc-0000-0000-0000-00000000000c')$$, 'IMPACT_REGISTRY_RECORD_INVALID');
 SELECT pg_temp.expect_fail('I2-28 a stored result cannot count a REGISTRY_RECORD item as a contradiction',
   $$INSERT INTO public.impact_verifications (investigation_id, claim_ref, result_id, status, underlying_status, sufficiency, display_class, review_state, policy_version, evidence_set_hash, review_binding_hash, evaluated_at, result, created_by)
     VALUES ('c2222222-0000-0000-0000-00000000000c', 'c-stmt', 'vr_' || repeat('c', 32), 'CONTRADICTED', 'CONTRADICTED', 'INDEPENDENT_SUPPORT', 'CLAIM', 'AUTOMATED', 'p', repeat('d', 64), repeat('e', 64), '2026-09-23',
@@ -210,17 +258,20 @@ INSERT INTO public.impact_sources (investigation_id, ref, source_type, publisher
    pg_temp.snap('fixture-xa-charity-registry', 'xa-1234567', 'XA', 'charity-number', 'XA1234567', 'hopebridge foundation', 'REGISTERED', '4'), :UC);
 INSERT INTO public.impact_claims (investigation_id, ref, kind, claim_text, subject_org_ref, source_ref, extracted_at, origin, created_by) VALUES
   (:IC, 'c-sp', 'LEGAL_REGISTRATION', 'Northstar is registered.', 'org-northstar', 'n-ok', '2026-09-02T00:00:00Z', 'MANUAL', :UC);
+SELECT pg_temp.expect_fail('I2-39 evidence ABOUT the subject cannot come from another organization''s registry record (Codex I2G1-03)',
+  $$INSERT INTO public.impact_evidence (investigation_id, ref, claim_ref, source_ref, about_org_ref, relationship, relationship_basis, observed_to, personal_data, added_at, created_by)
+    VALUES ('c2222222-0000-0000-0000-00000000000c', 'e-sp', 'c-sp', 'src-other', 'org-northstar', 'SUPPORTS', 'HUMAN_ASSESSED', '2026-09-01', 'NONE', '2026-09-02T00:00:00Z', 'cccccccc-0000-0000-0000-00000000000c')$$, 'IMPACT_ENTITY_MISMATCH');
 INSERT INTO public.impact_evidence (investigation_id, ref, claim_ref, source_ref, about_org_ref, relationship, relationship_basis, observed_to, personal_data, added_at, created_by)
-VALUES (:IC, 'e-sp', 'c-sp', 'src-other', 'org-northstar', 'SUPPORTS', 'HUMAN_ASSESSED', '2026-09-01', 'NONE', '2026-09-02T00:00:00Z', :UC),
+VALUES (:IC, 'e-other-ctx', 'c-sp', 'src-other', 'org-hopebridge', 'CONTEXTUALIZES', 'HUMAN_ASSESSED', '2026-09-01', 'NONE', '2026-09-02T00:00:00Z', :UC),
        (:IC, 'e-own', 'c-sp', 'src-ch-v2', 'org-northstar', 'SUPPORTS', 'HUMAN_ASSESSED', '2026-09-01', 'NONE', '2026-09-02T00:00:00Z', :UC);
-SELECT pg_temp.expect_fail('I2-39 a stored result cannot count ANOTHER organization''s registry record for the subject',
+SELECT pg_temp.expect_fail('I2-39b a stored result cannot count ANOTHER organization''s registry record for the subject',
   $$INSERT INTO public.impact_verifications (investigation_id, claim_ref, result_id, status, underlying_status, sufficiency, display_class, review_state, policy_version, evidence_set_hash, review_binding_hash, evaluated_at, result, created_by)
     VALUES ('c2222222-0000-0000-0000-00000000000c', 'c-sp', 'vr_' || repeat('a', 32), 'SUPPORTED', 'SUPPORTED', 'INDEPENDENT_SUPPORT', 'FACT', 'AUTOMATED', 'p', repeat('d', 64), repeat('e', 64), '2026-09-23',
       jsonb_build_object('resultId', 'vr_' || repeat('a', 32), 'investigationId', 'c2222222-0000-0000-0000-00000000000c', 'claimId', 'c-sp', 'status', 'SUPPORTED',
         'underlyingStatus', 'SUPPORTED', 'sufficiency', 'INDEPENDENT_SUPPORT', 'displayClass', 'FACT', 'reviewState', 'AUTOMATED', 'policyVersion', 'p',
         'evidenceSetHash', repeat('d', 64), 'reviewBindingHash', repeat('e', 64), 'evaluatedAt', '2026-09-23', 'conflicts', '[]'::jsonb,
         'isFindingOfWrongdoing', false, 'absenceOfEvidenceIsNotEvidenceOfWrongdoing', true, 'partiallySupporting', '[]'::jsonb, 'contradicting', '[]'::jsonb,
-        'supporting', jsonb_build_array(jsonb_build_object('evidenceId', 'e-sp', 'sourceId', 'src-other', 'authority', 'AUTHORITATIVE', 'effectiveRelationship', 'SUPPORTS')),
+        'supporting', jsonb_build_array(jsonb_build_object('evidenceId', 'e-other-ctx', 'sourceId', 'src-other', 'authority', 'AUTHORITATIVE', 'effectiveRelationship', 'SUPPORTS')),
         'contextual', '[]'::jsonb, 'excluded', '[]'::jsonb, 'gaps', '[]'::jsonb, 'rulesApplied', '[]'::jsonb, 'subjectIdentity', 'CONFIRMED',
         'claimKind', 'LEGAL_REGISTRATION', 'subjectOrganizationId', 'org-northstar'), 'cccccccc-0000-0000-0000-00000000000c')$$, 'IMPACT_RESULT_INCONSISTENT');
 INSERT INTO public.impact_verifications (investigation_id, claim_ref, result_id, status, underlying_status, sufficiency, display_class, review_state, policy_version, evidence_set_hash, review_binding_hash, evaluated_at, result, created_by)
@@ -243,7 +294,7 @@ INSERT INTO public.impact_sources (investigation_id, ref, source_type, publisher
   (:ID, 'src-co', 'OFFICIAL_REGISTRY', 'Exampleland Company Registry (fixture)', '2026-09-02T00:00:00Z', 'SNAPSHOT', repeat('2', 64),
    'PROVIDER', 'fixture-xa-company-registry', 'XA', 'fixture-xa-company-registry',
    pg_temp.snap('fixture-xa-company-registry', 'xa-c-990001', 'XA', 'company-number', 'XAC990001', 'northstar relief', 'REGISTERED', '2',
-     '["XA:charity-number:XA9990001"]', '2026-09-02T00:00:00Z'), :UD);
+     '[{"country":"XA","scheme":"charity-number","value":"XA9990001"}]', '2026-09-02T00:00:00Z'), :UD);
 RESET ROLE;
 SELECT pg_temp.expect_eq('I2-29 conflict detection never crosses investigations',
   (SELECT count(*)::text FROM public.impact_registry_conflicts WHERE investigation_id = :ID), '0');
