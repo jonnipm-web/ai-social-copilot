@@ -22,7 +22,8 @@ export function finish(type: ArtifactType, status: ExtractionStatus, segments: S
   if (segments.length > bounded.length) notes.push('TRUNCATED_SEGMENTS');
   return Object.freeze({
     summary: Object.freeze({
-      type, status: status === 'SUCCESS' && notes.some((n) => n.startsWith('TRUNCATED')) ? 'PARTIAL' : status,
+      // Anything not read in full is PARTIAL, never SUCCESS (Codex I3G1-02).
+      type, status: status === 'SUCCESS' && notes.some((n) => /^(TRUNCATED|MALFORMED|UNSUPPORTED)_/.test(n)) ? 'PARTIAL' : status,
       extractorVersion: EXTRACTOR_VERSION, segments: bounded.length, notes: Object.freeze([...new Set(notes)].sort()), ...extra,
     }),
     segments: Object.freeze(bounded),

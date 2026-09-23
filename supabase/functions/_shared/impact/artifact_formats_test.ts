@@ -265,3 +265,70 @@ Deno.test('F-LOC-02 locatorFitsSummary mirrors the SQL impact_locator_fits vecto
   ];
   assertEquals(got, [true, false, false, true, false, false]);
 });
+
+// ── Codex Gate 1 regressions (I3G1-01..05) ─────────────────────────────────
+
+const ms = async (f: () => Promise<unknown>) => { const t = performance.now(); await f(); return performance.now() - t; };
+
+Deno.test('G1-01 hostile XML is scanned in linear time (unterminated <si>, <c>, < floods)', async () => {
+  const n = 1_000_000;
+  const docx = await makeZip([{ name: '[Content_Types].xml', data: CT_DOCX }, { name: 'word/document.xml', data: '<'.repeat(n) }]);
+  const xlsx = await makeZip([
+    { name: '[Content_Types].xml', data: CT_XLSX },
+    { name: 'xl/workbook.xml', data: '<workbook><sheets><sheet name="S" r:id="rId1"/></sheets></workbook>' },
+    { name: 'xl/_rels/workbook.xml.rels', data: '<Relationships><Relationship Id="rId1" Target="worksheets/sheet1.xml"/></Relationships>' },
+    { name: 'xl/sharedStrings.xml', data: '<sst>' + '<si>'.repeat(n / 4) },
+    { name: 'xl/worksheets/sheet1.xml', data: '<worksheet><sheetData>' + '<c r="A1">'.repeat(n / 10) },
+  ]);
+  for (const [bytes, name] of [[docx, 'flood.docx'], [xlsx, 'flood.xlsx']] as const) {
+    let r: Awaited<ReturnType<typeof run>> | undefined;
+    const t = await ms(async () => { r = await run(bytes, name); });
+    assert(t < 5_000, `${name} took ${t.toFixed(0)} ms`);
+    assert(r!.code !== 'OK' || r!.x.summary.status !== 'SUCCESS', `${name} must not claim SUCCESS`);
+  }
+});
+
+Deno.test('G1-02 anything not read in full is PARTIAL, never SUCCESS', async () => {
+  const long = await run(await makePdf(['word '.repeat(50_000)]), 'long.pdf');
+  assert(long.code === 'OK');
+  assertEquals(long.x.summary.status, 'PARTIAL');
+  assert(long.x.summary.notes.includes('TRUNCATED_PAGE_TEXT'));
+  const docx = await makeZip([{ name: '[Content_Types].xml', data: CT_DOCX }, { name: 'word/document.xml', data: '<w:document><w:body><w:p><w:r><w:t>Readable text.</w:t></w:r></w:p><w:p unterminated' }]);
+  const r = await run(docx, 'cut.docx');
+  assert(r.code === 'OK');
+  assertEquals(r.x.summary.status, 'PARTIAL');
+  assert(r.x.summary.notes.includes('MALFORMED_XML'));
+  const many = await makeXlsx([{ name: 'S', cells: { A1: 1 } }], []);
+  const sst = await makeZip([
+    { name: '[Content_Types].xml', data: CT_XLSX },
+    { name: 'xl/workbook.xml', data: '<workbook><sheets><sheet name="S" r:id="rId1"/></sheets></workbook>' },
+    { name: 'xl/_rels/workbook.xml.rels', data: '<Relationships><Relationship Id="rId1" Target="worksheets/sheet1.xml"/></Relationships>' },
+    { name: 'xl/sharedStrings.xml', data: '<sst>' + '<si><t>x</t></si>'.repeat(ARTIFACT_LIMITS.maxXlsxCells + 5) + '</sst>' },
+    { name: 'xl/worksheets/sheet1.xml', data: '<worksheet><sheetData><row><c r="A1" t="s"><v>0</v></c></row></sheetData></worksheet>' },
+  ]);
+  void many;
+  const x = await run(sst, 'sst.xlsx');
+  assert(x.code === 'OK');
+  assertEquals(x.x.summary.status, 'PARTIAL');
+  assert(x.x.summary.notes.includes('TRUNCATED_SHARED_STRINGS'));
+});
+
+Deno.test('G1-03 PDF/ZIP polyglots and OOXML with embedded OLE / ActiveX are refused; printer settings are fine', async () => {
+  const pdf = await makePdf(['Visible text.']);
+  const zip = await makeZip([{ name: 'payload.txt', data: 'hidden' }]);
+  assertEquals((await run(concat([pdf, zip]), 'poly.pdf')).code, 'FILE_SIGNATURE_INVALID');
+  const ole = await makeDocx({ paragraphs: ['x'], extra: [{ name: 'word/embeddings/oleObject1.bin', data: new Uint8Array([0xd0, 0xcf, 0x11, 0xe0]) }] });
+  assertEquals((await run(ole, 'ole.docx')).code, 'UNSUPPORTED_FILE_TYPE');
+  const ax = await makeXlsx([{ name: 'S', cells: { A1: 1 } }], [{ name: 'xl/activeX/activeX1.xml', data: '<ax/>' }]);
+  assertEquals((await run(ax, 'ax.xlsx')).code, 'UNSUPPORTED_FILE_TYPE');
+  const printer = await makeXlsx([{ name: 'S', cells: { A1: 1 } }], [{ name: 'xl/printerSettings/printerSettings1.bin', data: new Uint8Array([1, 2]) }]);
+  assertEquals((await run(printer, 'p.xlsx')).code, 'OK');
+});
+
+Deno.test('G1-04 sheet names in the structure index are bounded labels without control / bidi characters', async () => {
+  const r = await run(await makeXlsx([{ name: 'Data\u202Egnp.exe' + 'x'.repeat(300), cells: { A1: 1 } }]), 'n.xlsx');
+  assert(r.code === 'OK');
+  const name = r.x.summary.sheets![0].name;
+  assert(name.length <= 100 && !name.includes('\u202E'));
+  assertEquals(findSegment(r.x, { kind: 'SHEET_CELL', sheet: name, cell: 'A1' })?.text, '1');
+});

@@ -22,6 +22,30 @@ interface PdfObject { dict: string; stream?: Uint8Array }
 
 const latin = (b: Uint8Array) => new TextDecoder('latin1').decode(b);
 
+/** The value after `/Key` in a dictionary: `[ ... ]` array text, or the next
+ * token run up to a delimiter. Linear: indexOf only moves forward. */
+function dictValue(dict: string, key: string): string | undefined {
+  let at = dict.indexOf(key);
+  while (at >= 0) {
+    const after = at + key.length;
+    const ch = dict[after];
+    if (ch === undefined || !/[A-Za-z0-9]/.test(ch)) {
+      let i = after;
+      while (i < dict.length && ' \t\r\n'.includes(dict[i])) i++;
+      if (dict[i] === '[') {
+        const end = dict.indexOf(']', i + 1);
+        return end < 0 ? undefined : dict.slice(i, end + 1);
+      }
+      let j = i;
+      if (dict[j] === '/') j++;
+      while (j < dict.length && j - i < 64 && !'/[]<>()'.includes(dict[j])) j++;
+      return dict.slice(i, j).trim();
+    }
+    at = dict.indexOf(key, at + 1);
+  }
+  return undefined;
+}
+
 function parseObjects(bytes: Uint8Array, s: string, objs: Map<number, PdfObject>) {
   const re = /(\d{1,7})\s+(\d{1,5})\s+obj\b/g;
   let m: RegExpExecArray | null;
@@ -53,7 +77,7 @@ function parseObjects(bytes: Uint8Array, s: string, objs: Map<number, PdfObject>
 
 async function streamData(o: PdfObject, budget: InflateBudget): Promise<Uint8Array | null> {
   if (!o.stream) return null;
-  const filter = /\/Filter\s*(\[[^\]]*\]|\/\w+)/.exec(o.dict)?.[1] ?? '';
+  const filter = dictValue(o.dict, '/Filter') ?? '';
   const filters = filter.match(/\/\w+/g) ?? [];
   if (filters.length === 0) { budget.take(o.stream.length); return o.stream; }
   if (filters.length === 1 && filters[0] === '/FlateDecode') return await inflateBounded(o.stream, 'deflate', MAX_STREAM, budget);
@@ -68,12 +92,18 @@ async function expandObjectStreams(objs: Map<number, PdfObject>, budget: Inflate
     const n = Number(/\/N\s+(\d+)/.exec(o.dict)?.[1] ?? 0);
     const first = Number(/\/First\s+(\d+)/.exec(o.dict)?.[1] ?? 0);
     const text = latin(data);
+    if (!(first >= 0 && first <= text.length)) continue;
     const header = text.slice(0, first).trim().split(/\s+/).map(Number);
+    // Entries must be increasing, non-overlapping and inside the stream: an
+    // attacker cannot make thousands of objects alias one huge slice.
+    let prevEnd = first;
     for (let i = 0; i < Math.min(n, header.length / 2) && objs.size < ARTIFACT_LIMITS.maxPdfObjects; i++) {
       const num = header[2 * i];
       const off = first + header[2 * i + 1];
-      const next = i + 1 < n ? first + header[2 * i + 3] : text.length;
-      if (!objs.has(num) && Number.isFinite(off)) objs.set(num, { dict: text.slice(off, next) });
+      const next = i + 1 < n && 2 * i + 3 < header.length ? first + header[2 * i + 3] : text.length;
+      if (!Number.isInteger(num) || !Number.isInteger(off) || !Number.isInteger(next) || off < prevEnd || next < off || next > text.length) break;
+      prevEnd = next;
+      if (!objs.has(num)) objs.set(num, { dict: text.slice(off, next) });
     }
   }
 }
@@ -93,7 +123,7 @@ function pageTree(objs: Map<number, PdfObject>): number[] {
     const o = objs.get(n);
     if (!o) continue;
     if (/\/Type\s*\/Pages\b/.test(o.dict)) {
-      const kids = /\/Kids\s*\[([^\]]*)\]/.exec(o.dict)?.[1] ?? '';
+      const kids = dictValue(o.dict, '/Kids') ?? '';
       const r = refs(kids);
       for (let i = r.length - 1; i >= 0; i--) stack.push({ n: r[i], d: d + 1 });
     } else if (/\/Type\s*\/Page\b/.test(o.dict)) {
@@ -199,7 +229,7 @@ export async function extractPdf(bytes: Uint8Array): Promise<Extraction> {
   let unreadable = 0;
   for (let p = 0; p < pages.length; p++) {
     const page = objs.get(pages[p])!;
-    const contents = /\/Contents\s*(\[[^\]]*\]|\d+\s+\d+\s+R)/.exec(page.dict)?.[1] ?? '';
+    const contents = dictValue(page.dict, '/Contents') ?? '';
     let text = '';
     for (const r of refs(contents)) {
       const o = objs.get(r);
@@ -207,7 +237,7 @@ export async function extractPdf(bytes: Uint8Array): Promise<Extraction> {
       const data = await streamData(o, budget);
       if (!data) { notes.push('UNSUPPORTED_STREAM_FILTER'); continue; }
       text += `${contentText(latin(data))}\n`;
-      if (text.length > MAX_PAGE_TEXT) break;
+      if (text.length > MAX_PAGE_TEXT) { text = text.slice(0, MAX_PAGE_TEXT); notes.push('TRUNCATED_PAGE_TEXT'); break; }
     }
     text = text.trim();
     if (text && readable(text)) segments.push({ locator: { kind: 'PDF_PAGE', page: p + 1 }, text });

@@ -68,6 +68,18 @@ function binaryKind(b: Uint8Array): string | null {
   return null;
 }
 
+/** A ZIP end-of-central-directory record that ends exactly at end of file
+ * (what unzip tools look for, whatever precedes it). Bounded: last 64 KiB. */
+function trailingZipDirectory(b: Uint8Array): boolean {
+  for (let i = b.length - 22; i >= Math.max(0, b.length - 22 - 65_535); i--) {
+    if (b[i] === 0x50 && b[i + 1] === 0x4b && b[i + 2] === 0x05 && b[i + 3] === 0x06) {
+      const commentLen = b[i + 20] | (b[i + 21] << 8);
+      if (i + 22 + commentLen === b.length) return true;
+    }
+  }
+  return false;
+}
+
 export async function detectArtifact(bytes: Uint8Array, filename: string, declaredMime?: string): Promise<ImpactResult<DetectedArtifact>> {
   const name = sanitizeFilename(filename);
   if (!name) return fail('INVALID_REQUEST', 'invalid filename');
@@ -88,7 +100,9 @@ export async function detectArtifact(bytes: Uint8Array, filename: string, declar
   if (type === 'PDF') {
     // The header may follow a little junk; nothing else counts as a PDF.
     const head = new TextDecoder('latin1').decode(bytes.subarray(0, 1024));
-    return head.includes('%PDF-') ? out() : fail('FILE_SIGNATURE_INVALID', 'not a PDF');
+    if (!head.includes('%PDF-')) return fail('FILE_SIGNATURE_INVALID', 'not a PDF');
+    // PDF/ZIP polyglot (a structurally valid ZIP directory at the end): refused (Codex I3G1-03).
+    return trailingZipDirectory(bytes) ? fail('FILE_SIGNATURE_INVALID', 'PDF carries an embedded archive') : out();
   }
   if (type === 'DOCX' || type === 'XLSX') {
     if (!isZip(bytes)) return fail('FILE_SIGNATURE_INVALID', `not an OOXML ${type} container`);
@@ -97,7 +111,10 @@ export async function detectArtifact(bytes: Uint8Array, filename: string, declar
       const main = type === 'DOCX' ? 'word/document.xml' : 'xl/workbook.xml';
       if (!idx.entries.has('[Content_Types].xml') || !idx.entries.has(main)) return fail('FILE_SIGNATURE_INVALID', `not an OOXML ${type} document`);
       // Macro-bearing workbooks/documents are refused (never executed, never parsed).
-      if (idx.names.some((n) => /vbaProject\.bin$/i.test(n) || /\.(bin|exe|dll|js|vbs|ps1)$/i.test(n) && /(^|\/)activeX|vba/i.test(n))) {
+      // Macro / ActiveX / embedded OLE objects are refused (Codex I3G1-03); plain
+      // printer settings (`printerSettings*.bin`) are inert and allowed.
+      if (idx.names.some((n) => /vba(Project|Data)|(^|\/)activeX\/|oleObject[^/]*$|(^|\/)embeddings\/.*\.(bin|exe|dll|js|vbs|ps1|docm|xlsm|pptm)$/i.test(n)
+        || /\.(exe|dll|js|vbs|ps1|scr|com|bat|cmd|jar)$/i.test(n))) {
         return fail('UNSUPPORTED_FILE_TYPE', 'macro-enabled documents are not accepted');
       }
       const ct = await readZipEntry(bytes, idx, '[Content_Types].xml', new InflateBudget(1024 * 1024), 512 * 1024);

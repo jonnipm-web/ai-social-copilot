@@ -16,7 +16,7 @@ Policy `impact-artifact/1`, extractor `impact-extractor/1`.
 | `normalized_content_hash` | **NORMALIZED_CONTENT_HASH**: lineage fingerprint of the extracted text (different file, same text ⇒ same value) — never used as the file identity |
 | `version` / `supersedes_ref` | version chain, prior + 1, never forked |
 | `extraction_status` | SUCCESS · PARTIAL · FAILED · UNSUPPORTED · OCR_REQUIRED |
-| `extraction_summary` | structure index only (pages, paragraphs, table shapes, sheets {name, rows, columns}, rows, columns, lines, JSON nodes, notes) — no content keys (CHECK) |
+| `extraction_summary` | structure index only (pages, paragraphs, table shapes, sheets {name, rows, columns}, rows, columns, lines, JSON nodes, notes) — no content keys (CHECK); sheet names are the only document-derived strings (bounded labels) |
 
 The artifact's **source** row: `USER_DOCUMENT`, acquisition `USER_UPLOAD`,
 retention `HASH_ONLY` (the original is not retained — I1 policy for user
