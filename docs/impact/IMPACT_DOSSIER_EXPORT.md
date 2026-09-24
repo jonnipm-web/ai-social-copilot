@@ -51,3 +51,25 @@ implemented (no dependency added); the text is printable.
 No public URL, no share link, no indexing, no publication path exists
 (`publish_dossier` / `share_dossier` are unknown actions, DX-04 / EF-12).
 Public sharing is a future, separately governed gate.
+
+## Gate 3 hardening (Codex I4G3)
+
+- **Envelope authenticity (I4G3-01)**: the content hash does not cover the
+  envelope. `verify_dossier` accepts the presented envelope
+  (`kind, snapshotRef, generatedAt, auditSeq, auditHead`) and answers
+  `envelopeState`: MATCHES_REGISTRATION · MISMATCH · LIVE_VIEW_NOT_A_SNAPSHOT ·
+  NOT_PROVIDED. `verifyDossierIntegrity` reports `envelopeCovered: false`.
+- **Server-side screening (I4G3-02)**: every exported free-text value
+  (claim texts, excerpts, publishers, URIs, syndication labels, declared
+  identity strings) is screened whatever personal-data class was declared:
+  minor-risk text withheld; e-mails, phones, ids, IBANs redacted
+  (`PERSONAL_DATA_REDACTED`). `quotedDataFields` lists the fields that carry
+  quoted source text. Names / street addresses of private people are not
+  detectable deterministically (residual; reviewer classification applies).
+- **Neutral wording (I4G3-03)**: the epistemic class ALLEGATION is labelled
+  "Third-party assertion, not established" / "Afirmação de terceiro, não
+  estabelecida" — the platform never accuses.
+- **Rate limiting (I4G3-04, deferred)**: the admin-only, undeployed Lab has
+  no rate-limit infrastructure; the current hash is visible only to the
+  investigation's owner (no cross-user oracle). Throttling is a requirement
+  of any product / non-admin exposure gate.

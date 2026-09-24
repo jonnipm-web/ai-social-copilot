@@ -484,11 +484,23 @@ export async function handleLabRequest(
       const snap = await store.findDossierSnapshot(inv.value.id, req.contentHash);
       if (!snap.ok) return snap;
       const state = !snap.value ? 'NOT_ISSUED' : snap.value.contentHash === contentHash ? 'CURRENT' : 'STALE';
+      // The hash covers the CONTENT only; the envelope a holder presents is checked against the
+      // register (Codex I4G3-01): a LIVE view is never an issued snapshot, and a SNAPSHOT envelope
+      // must match the registration exactly (ref, issue date, audit-chain position).
+      const e = req.envelope;
+      const envelopeState = !e ? 'NOT_PROVIDED'
+        : e.kind === 'LIVE' ? 'LIVE_VIEW_NOT_A_SNAPSHOT'
+        : snap.value && e.snapshotRef === snap.value.ref && Date.parse(e.generatedAt) === Date.parse(snap.value.exportedAt)
+            && e.auditSeq === snap.value.auditSeq && e.auditHead === snap.value.auditHead
+          ? 'MATCHES_REGISTRATION' : 'MISMATCH';
       return ok({
         action: req.action,
         data: {
           state,
-          snapshot: snap.value ? { ref: snap.value.ref, exportedAt: snap.value.exportedAt, asOf: snap.value.asOf, dossierStatus: snap.value.dossierStatus } : null,
+          envelopeState,
+          snapshot: snap.value
+            ? { ref: snap.value.ref, exportedAt: snap.value.exportedAt, asOf: snap.value.asOf, dossierStatus: snap.value.dossierStatus, auditSeq: snap.value.auditSeq, auditHead: snap.value.auditHead }
+            : null,
           currentContentHash: contentHash,
           // Integrity is not truth: a CURRENT snapshot is unaltered, not "correct".
           integrityIsNotTruth: true,

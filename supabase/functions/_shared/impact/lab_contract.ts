@@ -130,6 +130,15 @@ export interface CandidateReviewInput {
   readonly subjectConfirmed?: boolean;
 }
 
+/** The envelope of an exported dossier as presented by its holder (checked against the server register). */
+export interface PresentedEnvelope {
+  readonly kind: 'LIVE' | 'SNAPSHOT';
+  readonly snapshotRef?: string;
+  readonly generatedAt: string;
+  readonly auditSeq: number;
+  readonly auditHead: string;
+}
+
 export interface RegistryQueryInput {
   readonly name?: string;
   readonly registration?: string;
@@ -177,7 +186,7 @@ export type LabRequest =
   // I4 Verification Dossier — the client names the investigation and a language; nothing else.
   | { readonly action: 'get_dossier'; readonly investigationId: string; readonly lang: 'pt' | 'en' }
   | { readonly action: 'export_dossier'; readonly investigationId: string; readonly lang: 'pt' | 'en' }
-  | { readonly action: 'verify_dossier'; readonly investigationId: string; readonly contentHash: string }
+  | { readonly action: 'verify_dossier'; readonly investigationId: string; readonly contentHash: string; readonly envelope?: PresentedEnvelope }
   | { readonly action: 'archive_investigation'; readonly investigationId: string }
   | { readonly action: 'add_source'; readonly investigationId: string; readonly source: SourceInput }
   | { readonly action: 'ingest_provider_record'; readonly investigationId: string; readonly providerId: string; readonly recordId: string; readonly ref: string }
@@ -432,7 +441,7 @@ export function parseLabRequest(body: unknown): ImpactResult<LabRequest> {
       'record_id', 'ref', 'source_ref', 'status', 'claim', 'evidence', 'claim_ref', 'idempotency_key',
       'human_review_binding_hash', 'kind', 'submitted_evidence_refs', 'dispute_ref', 'resolution', 'query', 'artifact',
       'candidate_ref', 'decision', 'relationship', 'about_org_ref', 'personal_data', 'observed_period', 'subject_confirmed',
-      'content_hash']);
+      'content_hash', 'envelope']);
     const action = top.action;
     const allowOnly = (keys: string[]) => {
       for (const k of Object.keys(top)) if (k !== 'action' && !keys.includes(k)) throw new Bad(`field "${k}" not allowed for ${String(action)}`);
@@ -453,10 +462,22 @@ export function parseLabRequest(body: unknown): ImpactResult<LabRequest> {
         allowOnly(['investigation_id', 'lang']);
         return ok({ action, investigationId: inv(), lang: en(top, 'lang', LANGS, false) ?? 'pt' });
       case 'verify_dossier': {
-        allowOnly(['investigation_id', 'content_hash']);
+        allowOnly(['investigation_id', 'content_hash', 'envelope']);
         const h = top.content_hash;
         if (typeof h !== 'string' || !HASH_RE.test(h)) throw new Bad('content_hash must be sha-256 hex');
-        return ok({ action, investigationId: inv(), contentHash: h });
+        let envelope: PresentedEnvelope | undefined;
+        if (top.envelope !== undefined) {
+          // Only the fields the register can confirm; anything else (notice, freshness) is not evidence of issuance.
+          const e = obj(top.envelope, 'envelope', ['kind', 'snapshotRef', 'generatedAt', 'auditSeq', 'auditHead', 'notice', 'registryFreshAtGeneration']);
+          const seq = e.auditSeq;
+          if (typeof seq !== 'number' || !Number.isInteger(seq) || seq < 1 || seq > 1e9) throw new Bad('envelope.auditSeq invalid');
+          if (typeof e.auditHead !== 'string' || !HASH_RE.test(e.auditHead)) throw new Bad('envelope.auditHead invalid');
+          envelope = {
+            kind: en(e, 'kind', ['LIVE', 'SNAPSHOT'] as const)!, snapshotRef: id(e, 'snapshotRef', false), generatedAt: iso(e, 'generatedAt')!,
+            auditSeq: seq, auditHead: e.auditHead,
+          };
+        }
+        return ok({ action, investigationId: inv(), contentHash: h, ...(envelope ? { envelope } : {}) });
       }
       case 'archive_investigation':
         allowOnly(['investigation_id']);

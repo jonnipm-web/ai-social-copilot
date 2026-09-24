@@ -17,7 +17,7 @@
  * Human-readable text is rendered separately (dossier_render.ts), in PT/EN.
  */
 import { ARTIFACT_POLICY_VERSION, locatorFitsSummary } from './artifact_model.ts';
-import { minorDataRisk } from './evidence_candidates.ts';
+import { minorDataRisk, redactPii } from './evidence_candidates.ts';
 import type { InvestigationData, InvestigationRecord, StoredArtifact, StoredDispute } from './lab_store.ts';
 import { snapshotFresh } from './organization_identity.ts';
 import { LINEAGE_POLICY_VERSION } from './source_lineage.ts';
@@ -63,7 +63,8 @@ export type LimitationCode =
   | 'LINEAGE_UNCERTAIN'
   | 'HUMAN_REVIEW_REQUIRED'
   | 'LOCATOR_UNVERIFIABLE'
-  | 'EXCERPT_WITHHELD';
+  | 'EXCERPT_WITHHELD'
+  | 'PERSONAL_DATA_REDACTED';
 
 export type LimitationScope = 'IDENTITY' | 'REGISTRY' | 'SOURCE' | 'ARTIFACT' | 'CLAIM' | 'EVIDENCE';
 
@@ -124,6 +125,25 @@ export interface DossierInput {
 }
 
 const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0); // code-point order: locale-independent
+
+/**
+ * Every exported free-text value is screened by the SERVER, whatever personal-
+ * data class the caller declared (Codex I4G3-02): minor-risk text is withheld,
+ * e-mails / phones / ids / IBANs are redacted. Names and street addresses of
+ * private people cannot be detected deterministically (documented residual).
+ */
+function screen(s: string | null | undefined): { text: string | null; withheld: boolean; redacted: boolean } {
+  if (s === null || s === undefined) return { text: null, withheld: false, redacted: false };
+  if (minorDataRisk(s)) return { text: null, withheld: true, redacted: false };
+  const r = redactPii(s);
+  return { text: r.text, withheld: false, redacted: r.redacted };
+}
+
+/** JSON contract: these fields carry QUOTED source text (data), never platform statements. */
+export const QUOTED_DATA_FIELDS = Object.freeze([
+  'subject.declaredIdentity', 'registryFacts[].legalName', 'claims[].text', 'evidence[].excerpt', 'sources[].publisher',
+  'sources[].uri', 'sources[].syndicatedFrom', 'sources[].derivedFrom', 'verification.conflicts[].positions[].publisher',
+]);
 const byRef = <T extends { readonly ref: string }>(xs: readonly T[]) => [...xs].sort((a, b) => cmp(a.ref, b.ref));
 const isoMs = (s: string | null | undefined) => {
   const t = s ? Date.parse(s) : NaN;
@@ -215,12 +235,15 @@ export async function buildDossierContent(input: DossierInput) {
   const artifactOfSource = new Map(data.artifacts.map((a) => [a.sourceRef, a]));
   const sources = data.sources.map(({ source: s, snapshot }) => {
     const art = artifactOfSource.get(s.id);
+    const pub = screen(s.publisher);
+    const uri = screen(s.uri);
+    if (pub.redacted || uri.redacted) lim('PERSONAL_DATA_REDACTED', 'SOURCE', s.id);
     return {
-      ref: s.id, type: s.type, publisher: s.publisher, publisherOrgRef: s.publisherOrganizationId ?? null, uri: s.uri ?? null,
+      ref: s.id, type: s.type, publisher: pub.text ?? '—', publisherOrgRef: s.publisherOrganizationId ?? null, uri: uri.text,
       retrievedAt: s.retrievedAt, publishedAt: s.publishedAt ?? null, status: s.status, retention: s.retention,
       contentHash: s.contentHash ?? null, acquisition: s.acquisition.method, providerId: s.acquisition.method === 'PROVIDER' ? s.acquisition.providerId : null,
       userSubmitted: s.userSubmitted === true, hasRegistrySnapshot: !!snapshot, newsGenre: s.newsGenre ?? null,
-      syndicatedFrom: s.syndicatedFrom ?? null, derivedFrom: s.derivedFrom ?? null,
+      syndicatedFrom: screen(s.syndicatedFrom).text, derivedFrom: screen(s.derivedFrom).text,
       syndicationMarkers: [...((s as Source & { syndicationMarkers?: readonly string[] }).syndicationMarkers ?? [])].sort(cmp),
       artifactRef: art?.ref ?? null,
       // A cloud drive HOSTED the uploaded copy; it is not the publisher and not an authority.
@@ -232,15 +255,16 @@ export async function buildDossierContent(input: DossierInput) {
   // ── evidence (minimized: personal / minor-risk excerpts withheld) ─────────
   const evidence = data.evidence.map((e) => {
     const personal = e.personalData !== 'NONE' && e.personalData !== 'AGGREGATED';
-    const minor = !!e.excerpt && minorDataRisk(e.excerpt);
-    const withheld = e.excerpt ? (minor ? 'MINOR_DATA_RISK' : personal ? 'PERSONAL_DATA' : null) : null;
+    const sc = screen(e.excerpt);
+    const withheld = e.excerpt ? (sc.withheld ? 'MINOR_DATA_RISK' : personal ? 'PERSONAL_DATA' : null) : null;
     const src = data.sources.find((x) => x.source.id === e.sourceId)?.source;
     const state = locatorState(e, artifactsByRef, supersededBy);
     return {
       ref: e.id, claimRef: e.claimId, sourceRef: e.sourceId, aboutOrgRef: e.aboutOrganizationId, relationship: e.relationship,
       basis: e.relationshipBasis, observedPeriod: e.observedPeriod ?? null, level: e.level ?? null, reportedQuantity: e.reportedQuantity ?? null,
       legalStage: e.legalStage ?? null, personalData: e.personalData,
-      excerpt: e.excerpt && !withheld ? e.excerpt : null, excerptHash: e.excerptHash ?? null, excerptWithheld: withheld,
+      excerpt: e.excerpt && !withheld ? sc.text : null, excerptHash: e.excerptHash ?? null, excerptWithheld: withheld,
+      excerptRedacted: !withheld && sc.redacted,
       // Excerpts are QUOTES of their source (user uploads included): never a statement of the platform.
       excerptAttribution: e.excerpt ? (src?.userSubmitted ? 'QUOTED_FROM_USER_UPLOAD' as const : 'QUOTED_FROM_SOURCE' as const) : null,
       locator: e.locator ?? null, locatorState: state, addedAt: e.addedAt,
@@ -248,6 +272,7 @@ export async function buildDossierContent(input: DossierInput) {
   }).sort((a, b) => cmp(a.ref, b.ref));
   for (const e of evidence) {
     if (e.excerptWithheld) lim('EXCERPT_WITHHELD', 'EVIDENCE', e.ref);
+    if (e.excerptRedacted) lim('PERSONAL_DATA_REDACTED', 'EVIDENCE', e.ref);
     if (e.locatorState !== 'VALID' && e.locatorState !== 'NOT_ARTIFACT_BOUND') lim('LOCATOR_UNVERIFIABLE', 'EVIDENCE', e.ref);
   }
 
@@ -300,10 +325,12 @@ export async function buildDossierContent(input: DossierInput) {
     }
     if (reasons.length) scope('REVERIFICATION_PENDING');
     if (claimDisputes.some((d) => d.open)) scope('DISPUTE_OPEN');
-    const claimTextWithheld = minorDataRisk(c.text);
-    if (claimTextWithheld) lim('EXCERPT_WITHHELD', 'CLAIM', c.id);
+    const ct = screen(c.text);
+    if (ct.withheld) lim('EXCERPT_WITHHELD', 'CLAIM', c.id);
+    if (ct.redacted) lim('PERSONAL_DATA_REDACTED', 'CLAIM', c.id);
     claims.push({
-      ref: c.id, kind: c.kind, text: claimTextWithheld ? null : c.text, textWithheld: claimTextWithheld ? 'MINOR_DATA_RISK' as const : null,
+      ref: c.id, kind: c.kind, text: ct.text, textWithheld: ct.withheld ? 'MINOR_DATA_RISK' as const : null, textRedacted: ct.redacted,
+      textAttribution: 'QUOTED_FROM_SOURCE' as const,
       textLanguage: c.textLanguage ?? null, sourceRef: c.sourceId, origin: c.origin,
       period: c.period ?? null, quantity: c.quantity ?? null, level: c.level ?? null, extractedAt: c.extractedAt,
       subjectProjectRef: c.subjectProjectId ?? null, subjectCampaignRef: c.subjectCampaignId ?? null,
@@ -358,6 +385,7 @@ export async function buildDossierContent(input: DossierInput) {
     isFindingOfWrongdoing: false as const,
     absenceOfEvidenceIsNotEvidenceOfWrongdoing: true as const,
     isPublication: false as const,
+    quotedDataFields: QUOTED_DATA_FIELDS,
     policyVersions: {
       verification: IMPACT_POLICY_VERSION, lineage: LINEAGE_POLICY_VERSION, artifact: ARTIFACT_POLICY_VERSION,
       providerRegistry: input.providerRegistryVersion,
@@ -365,7 +393,8 @@ export async function buildDossierContent(input: DossierInput) {
     investigation: { ref: inv.id, projectRef: inv.projectId, status: inv.status },
     asOf,
     subject: {
-      ref: inv.subjectOrgRef, type: inv.subjectOrgType, declaredIdentity: inv.subjectIdentity,
+      ref: inv.subjectOrgRef, type: inv.subjectOrgType,
+      declaredIdentity: JSON.parse(JSON.stringify(inv.subjectIdentity), (_k, v) => (typeof v === 'string' ? screen(v).text ?? '—' : v)),
       identityStatus: input.identityStatus, identityConfirmed: input.identityStatus === 'CONFIRMED',
       identityBasis: 'PROVIDER_REGISTRY_SNAPSHOTS_ONLY' as const,
     },
@@ -412,15 +441,20 @@ export interface DossierDocument {
   readonly envelope: DossierEnvelope;
 }
 
-/** Recompute the integrity of an exported dossier (any holder can run this, offline). */
-export async function verifyDossierIntegrity(doc: unknown): Promise<{ readonly intact: boolean; readonly contentHash: string | null }> {
-  if (!doc || typeof doc !== 'object') return { intact: false, contentHash: null };
+/**
+ * Recompute the integrity of an exported dossier's CONTENT (any holder can run this, offline).
+ * The envelope is NOT covered by this hash (Codex I4G3-01): whether a document was really
+ * issued as a snapshot, when, and at which audit position, is answered only by the server
+ * register (verify_dossier with the presented envelope).
+ */
+export async function verifyDossierIntegrity(doc: unknown): Promise<{ readonly intact: boolean; readonly contentHash: string | null; readonly envelopeCovered: false }> {
+  if (!doc || typeof doc !== 'object') return { intact: false, contentHash: null, envelopeCovered: false };
   const d = doc as Partial<DossierDocument>;
   if (d.schemaVersion !== DOSSIER_SCHEMA_VERSION || !d.content || !d.integrity || d.integrity.canonicalization !== DOSSIER_CANONICALIZATION) {
-    return { intact: false, contentHash: null };
+    return { intact: false, contentHash: null, envelopeCovered: false };
   }
   const h = await dossierContentHash(d.content);
-  return { intact: h === d.integrity.contentHash && (d.content as { schemaVersion?: string }).schemaVersion === DOSSIER_SCHEMA_VERSION, contentHash: h };
+  return { intact: h === d.integrity.contentHash && (d.content as { schemaVersion?: string }).schemaVersion === DOSSIER_SCHEMA_VERSION, contentHash: h, envelopeCovered: false };
 }
 
 export function snapshotRefOf(contentHash: string): string {

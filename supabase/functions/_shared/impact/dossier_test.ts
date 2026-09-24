@@ -488,3 +488,57 @@ Deno.test('G2-01 (I4G2-01) no standalone upload source: USER_DOCUMENT / userUplo
   const m = t.db.investigations.get(inv)!;
   assertEquals([...m.sources.values()].filter((s) => s.source.acquisition.method === 'USER_UPLOAD' && !m.artifacts.has(s.source.id)).length, 0);
 });
+
+// ── Codex I4 Gate 3 regressions ────────────────────────────────────────────
+
+Deno.test('G3-01 a presented envelope is checked against the register: forged LIVE/SNAPSHOT metadata is a MISMATCH', async () => {
+  const t = setup();
+  const inv = await base(t);
+  const doc = (await t.must(UA, { action: 'export_dossier', investigation_id: inv }, '2026-09-24T10:00:00.000Z')).data.dossier as DossierDocument;
+  const h = doc.integrity.contentHash;
+  const v = async (envelope?: unknown) => (await t.must(UA, { action: 'verify_dossier', investigation_id: inv, content_hash: h, ...(envelope ? { envelope } : {}) })).data;
+  assertEquals((await v(doc.envelope)).envelopeState, 'MATCHES_REGISTRATION');
+  assertEquals((await v()).envelopeState, 'NOT_PROVIDED');
+  assertEquals((await v({ ...doc.envelope, kind: 'LIVE' })).envelopeState, 'LIVE_VIEW_NOT_A_SNAPSHOT');
+  for (const forged of [
+    { ...doc.envelope, snapshotRef: 'dossier-000000000000000000000000' },
+    { ...doc.envelope, generatedAt: '2030-01-01T00:00:00.000Z' },
+    { ...doc.envelope, auditSeq: doc.envelope.auditSeq + 1 },
+    { ...doc.envelope, auditHead: 'f'.repeat(64) },
+  ]) assertEquals((await v(forged)).envelopeState, 'MISMATCH', JSON.stringify(forged).slice(0, 80));
+  // an idempotent re-export returns the ORIGINAL registration envelope, which still matches
+  const again = (await t.must(UA, { action: 'export_dossier', investigation_id: inv }, '2026-09-24T11:00:00.000Z')).data.dossier as DossierDocument;
+  assertEquals((await v(again.envelope)).envelopeState, 'MATCHES_REGISTRATION');
+  // the offline check states plainly that it does not cover the envelope
+  assertEquals((await verifyDossierIntegrity(doc)).envelopeCovered, false);
+});
+
+Deno.test('G3-02 exported free text is screened by the SERVER whatever personal-data class was declared', async () => {
+  const t = setup();
+  const inv = await base(t);
+  await t.must(UA, { action: 'add_source', investigation_id: inv, source: { ref: 'src-mail', type: 'OTHER', publisher: 'Tips via informant@mail.example +44 20 7946 0958', retrievedAt: '2026-09-01T00:00:00Z', retention: 'REFERENCE_ONLY', uri: 'https://x.example/?contact=someone@mail.example' } });
+  await t.must(UA, { action: 'add_claim', investigation_id: inv, claim: { ref: 'c1', kind: 'OTHER', text: 'Contact the director at director@hopebridge.example or +44 20 7946 0958.', sourceRef: 'src-web', origin: 'MANUAL' } });
+  await t.must(UA, { action: 'add_evidence', investigation_id: inv, evidence: { ref: 'e1', claimRef: 'c1', sourceRef: 'src-web', aboutOrgRef: 'org-hopebridge', relationship: 'CONTEXTUALIZES', basis: 'HUMAN_ASSESSED', personalData: 'NONE', excerpt: 'Donations to IBAN GB29 NWBK 6016 1331 9268 19, CPF 123.456.789-09.' } });
+  const { dossier: d, text } = await dossier(t, inv, UA, 'en');
+  const json = JSON.stringify(d);
+  for (const leak of ['director@hopebridge.example', '7946', 'NWBK', '123.456.789', 'informant@mail.example', 'someone@mail.example']) {
+    assert(!json.includes(leak) && !text.includes(leak), leak);
+  }
+  assertEquals([claimOf(d, 'c1').textRedacted, d.content.evidence.find((e) => e.ref === 'e1')!.excerptRedacted], [true, true]);
+  assert(limits(d).includes('PERSONAL_DATA_REDACTED:c1') && limits(d).includes('PERSONAL_DATA_REDACTED:e1') && limits(d).includes('PERSONAL_DATA_REDACTED:src-mail'));
+  assert(d.content.quotedDataFields.includes('claims[].text') && d.content.quotedDataFields.includes('evidence[].excerpt'));
+  assertEquals(claimOf(d, 'c1').textAttribution, 'QUOTED_FROM_SOURCE');
+});
+
+Deno.test('G3-03 no platform label reads as an accusation (every status / class / sufficiency label, PT + EN)', async () => {
+  const { CLASS_LABEL, STATUS_LABEL, SUFFICIENCY_LABEL } = await import('./i18n.ts');
+  for (const table of [CLASS_LABEL, STATUS_LABEL, SUFFICIENCY_LABEL]) {
+    for (const [code, v] of Object.entries(table)) {
+      for (const [lang, s] of Object.entries(v as Record<string, string>)) {
+        assertEquals(findVerdictLanguage(s), [], `${code} ${lang}`);
+        assert(!/acusa|accus|unproven allegation/i.test(s), `${code} ${lang}: ${s}`);
+      }
+    }
+  }
+  assertEquals(CLASS_LABEL.ALLEGATION.en, 'Third-party assertion, not established');
+});
