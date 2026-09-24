@@ -231,6 +231,13 @@ export interface SafeFetchOptions {
   headers?: Record<string, string>;
   timeoutMs?: number;
   maxResponseBytes?: number;
+  /**
+   * IV-QUANT-REAL-DATA-READINESS-03 — optional exact-hostname allowlist,
+   * re-checked on EVERY redirect hop. Callers that attach credentials
+   * (market-data provider keys) must set it, so a redirect can never carry
+   * the key to a host outside the allowlist. Omitted = previous behaviour.
+   */
+  allowedHosts?: readonly string[];
 }
 
 /**
@@ -255,6 +262,9 @@ export async function safeFetch(rawUrl: string, options: SafeFetchOptions = {}):
 
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     assertUrlShapeIsSafe(currentUrl);
+    if (options.allowedHosts && !options.allowedHosts.includes(currentUrl.hostname.toLowerCase())) {
+      throw new UnsafeUrlError("Host fora da lista permitida.");
+    }
     await assertHostnameIsSafe(currentUrl.hostname);
 
     const controller = new AbortController();

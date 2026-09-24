@@ -21,7 +21,11 @@ export type QuantErrorCode =
   | 'DATA_QUALITY_ERROR'
   | 'INVALID_PORTFOLIO'
   | 'INVALID_PARAMETER'
-  | 'PROJECT_ACCESS_DENIED';
+  | 'PROJECT_ACCESS_DENIED'
+  | 'PROVIDER_RATE_LIMITED'
+  | 'PROVIDER_TIMEOUT'
+  | 'PROVIDER_MALFORMED'
+  | 'INSUFFICIENT_OVERLAP';
 
 export type QuantErrorDetails = Record<string, string | number | boolean | null>;
 
@@ -63,6 +67,11 @@ export type QuantWarningCode =
   | 'MISSING_SESSIONS'
   | 'NON_SESSION_BARS'
   | 'PARTIAL_SESSION_BAR'
+  | 'CACHE_STALE'
+  | 'MIXED_CURRENCY_RETURNS'
+  | 'CALENDARS_DIFFER'
+  | 'MISSING_FROM_ALIGNMENT'
+  | 'MISSING_DATASET'
   | 'INSUFFICIENT_DATA_FOR_METRIC'
   | 'ZERO_VARIANCE';
 

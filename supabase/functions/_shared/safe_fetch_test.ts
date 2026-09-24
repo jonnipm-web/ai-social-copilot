@@ -294,3 +294,32 @@ Deno.test("ALLOW: a public URL resolving to a public IP succeeds", async () => {
     restoreFetch();
   }
 });
+
+Deno.test("safeFetch allowedHosts: a redirect to a host outside the allowlist is refused before any request", async () => {
+  const calls: string[] = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = ((input: string | URL | Request) => {
+    const u = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    calls.push(u);
+    return Promise.resolve(new Response(null, { status: 302, headers: { location: "https://evil.example.org/steal" } }));
+  }) as typeof fetch;
+  try {
+    let threw = false;
+    try {
+      await safeFetch("https://93.184.216.34/data", { allowedHosts: ["93.184.216.34"], headers: { "X-Api-Key": "secret" } });
+    } catch (e) {
+      threw = e instanceof UnsafeUrlError;
+    }
+    if (!threw) throw new Error("redirect off the allowlist was followed");
+    if (calls.length !== 1) throw new Error(`expected exactly one request, got ${calls.length}`);
+    let blocked = false;
+    try {
+      await safeFetch("https://93.184.216.34/data", { allowedHosts: ["api.example.com"] });
+    } catch (e) {
+      blocked = e instanceof UnsafeUrlError;
+    }
+    if (!blocked || calls.length !== 1) throw new Error("initial host outside the allowlist was requested");
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
