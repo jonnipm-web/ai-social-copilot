@@ -95,6 +95,17 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Side-by-side DEBUG install for physical validation without
+            // touching the installed commercial app (IV-QUANT-REAL-DATA-READINESS-03):
+            // IV_DEBUG_APP_ID_SUFFIX=.quantlab flutter build apk --debug
+            // Unset (the default) → unchanged applicationId. Never applies to release.
+            val suffix = System.getenv("IV_DEBUG_APP_ID_SUFFIX")
+            if (!suffix.isNullOrBlank()) {
+                require(Regex("^\\.[a-z][a-z0-9_]{0,30}$").matches(suffix)) { "IV_DEBUG_APP_ID_SUFFIX must look like .quantlab" }
+                applicationIdSuffix = suffix
+            }
+        }
         release {
             // Uses the real upload keystore once android/key.properties
             // exists (see this file's own doc comment above); falls back

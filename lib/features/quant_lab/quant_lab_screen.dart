@@ -16,6 +16,7 @@ import '../../l10n/app_localizations.dart';
 import '../../providers/profile_provider.dart';
 import 'quant_lab_models.dart';
 import 'quant_lab_service.dart';
+import 'quant_watchlist_panel.dart';
 
 class QuantLabScreen extends ConsumerStatefulWidget {
   const QuantLabScreen({super.key});
@@ -50,7 +51,14 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
       final text = await ref.read(quantLabApiProvider).pickCsv();
       if (text != null && mounted) setState(() => _csv.text = text);
     } on QuantLabFileException catch (e) {
-      if (mounted) setState(() => _localError = e.code == 'FILE_TOO_LARGE' ? l.quantLabFileTooLarge : l.quantLabFileUnreadable);
+      if (mounted) {
+        setState(() => _localError = switch (e.code) {
+              'FILE_TOO_LARGE' => l.quantLabFileTooLarge,
+              'FILE_TYPE_NOT_SUPPORTED' => l.quantLabFileTypeNotSupported,
+              'FILE_TYPE_NOT_IMPLEMENTED' => l.quantLabFileTypeNotImplemented,
+              _ => l.quantLabFileUnreadable,
+            });
+      }
     }
   }
 
@@ -58,7 +66,10 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
     final sma = parseSmaWindows(_sma.text);
     final periodsText = _periods.text.trim();
     final periods = periodsText.isEmpty ? null : int.tryParse(periodsText);
-    if (_symbol.text.trim().isEmpty || _currency.text.trim().isEmpty || _csv.text.trim().isEmpty || sma == null ||
+    if (_symbol.text.trim().isEmpty ||
+        _currency.text.trim().isEmpty ||
+        _csv.text.trim().isEmpty ||
+        sma == null ||
         (periodsText.isNotEmpty && (periods == null || periods < 1))) {
       setState(() => _localError = l.quantLabInvalidInput);
       return;
@@ -103,31 +114,54 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
 
     final form = _buildForm(context, l);
     final result = _buildResult(context, l);
-    return Scaffold(
-      appBar: AppBar(title: Text(l.quantLabTitle)),
-      body: SafeArea(
-        child: LayoutBuilder(builder: (context, c) {
-          final wide = c.maxWidth >= 900;
-          final banner = _Banner(text: l.quantLabInternalBanner);
-          if (wide) {
-            return Column(children: [
-              banner,
-              Expanded(
-                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  SizedBox(width: 380, child: SingleChildScrollView(padding: const EdgeInsets.all(16), child: form)),
-                  const VerticalDivider(width: 1),
-                  Expanded(child: SingleChildScrollView(padding: const EdgeInsets.all(16), child: result)),
-                ]),
-              ),
-            ]);
-          }
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [banner, const SizedBox(height: 12), form, const SizedBox(height: 16), result]),
-          );
-        }),
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(l.quantLabTitle),
+          bottom: TabBar(tabs: [
+            Tab(key: const Key('quantLabTabSingle'), text: l.quantLabTabSingle),
+            Tab(key: const Key('quantLabTabWatchlist'), text: l.quantLabTabWatchlist),
+          ]),
+        ),
+        body: SafeArea(
+          child: TabBarView(children: [
+            _singleTab(l, form, result),
+            SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                _Banner(text: l.quantLabInternalBanner),
+                const SizedBox(height: 12),
+                const QuantWatchlistPanel(),
+              ]),
+            ),
+          ]),
+        ),
       ),
     );
+  }
+
+  Widget _singleTab(AppLocalizations l, Widget form, Widget result) {
+    return LayoutBuilder(builder: (context, c) {
+      final wide = c.maxWidth >= 900;
+      final banner = _Banner(text: l.quantLabInternalBanner);
+      if (wide) {
+        return Column(children: [
+          banner,
+          Expanded(
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              SizedBox(width: 380, child: SingleChildScrollView(padding: const EdgeInsets.all(16), child: form)),
+              const VerticalDivider(width: 1),
+              Expanded(child: SingleChildScrollView(padding: const EdgeInsets.all(16), child: result)),
+            ]),
+          ),
+        ]);
+      }
+      return SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [banner, const SizedBox(height: 12), form, const SizedBox(height: 16), result]),
+      );
+    });
   }
 
   Widget _buildForm(BuildContext context, AppLocalizations l) {
@@ -252,7 +286,9 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
           Expanded(child: Text(a.freshnessState, style: const TextStyle(fontWeight: FontWeight.w700))),
         ]),
         if (a.freshnessAsOf != null) kv('as of', a.freshnessAsOf!),
-        kv(l.quantLabCalendar, '${a.calendarBasis}${a.calendarId != null ? ' · ${a.calendarId}' : ''}'
+        kv(
+            l.quantLabCalendar,
+            '${a.calendarBasis}${a.calendarId != null ? ' · ${a.calendarId}' : ''}'
             '${a.marketState != null ? ' · ${a.marketState}' : ''}${a.sessionsBehind != null ? ' · sessionsBehind=${a.sessionsBehind}' : ''}'),
       ]),
       section(l.quantLabPeriod, [kv(l.quantLabPeriod, '${a.periodStart} → ${a.periodEnd} · ${a.bars} · ${a.frequency}')]),

@@ -1,6 +1,9 @@
 // IV-QUANT-DATA-PLANE-AND-API-02 — Quant Lab: request contract, response
 // parsing, error mapping, admin gate, no-execution surface, PT/EN, text
 // scaling and responsive layout.
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -78,6 +81,93 @@ class FakeQuantLabApi implements QuantLabApi {
 
   @override
   Future<String?> pickCsv() async => null;
+
+  // ---- READINESS-03 watchlists (in-memory, server-shaped)
+  final lists = <QuantWatchlistView>[];
+  final actions = <Map<String, dynamic>>[];
+  String? lastAnalyzedWatchlist;
+  List<String>? lastItemIds;
+  QuantMultiOutcome nextMulti = QuantMultiOutcome.success(QuantMultiView.fromJson(sampleMulti()));
+  int _n = 0;
+
+  @override
+  Future<QuantWatchlistsOutcome> listWatchlists() async => QuantWatchlistsOutcome.success(List.of(lists));
+
+  @override
+  Future<QuantActionOutcome> watchlistAction(Map<String, dynamic> action) async {
+    actions.add(action);
+    switch (action['action']) {
+      case 'create':
+        lists.add(QuantWatchlistView(id: 'w${++_n}', name: action['name'] as String, items: const []));
+      case 'add_item':
+        final i = lists.indexWhere((w) => w.id == action['watchlist_id']);
+        final inst = action['instrument'] as Map;
+        lists[i] = QuantWatchlistView(id: lists[i].id, name: lists[i].name, items: [
+          ...lists[i].items,
+          QuantWatchlistItemView(id: 'i${++_n}', label: '${inst['symbol']} · ${inst['exchange_mic']} · ${inst['currency']}'),
+        ]);
+      case 'delete':
+        lists.removeWhere((w) => w.id == action['watchlist_id']);
+    }
+    return const QuantActionOutcome(null);
+  }
+
+  @override
+  Future<QuantMultiOutcome> analyzeWatchlist(String watchlistId, List<String> itemIds) async {
+    lastAnalyzedWatchlist = watchlistId;
+    lastItemIds = itemIds;
+    return nextMulti;
+  }
+}
+
+/// Shape of a real `quant.analyze.watchlist.v1` 200 `multi_analysis` body.
+Map<String, dynamic> sampleMulti() {
+  Map<String, dynamic> series(String sym, String mic, double ret) => {
+        'instrumentKey': 'EQUITY:$sym:$mic:USD',
+        'instrument': {'assetClass': 'EQUITY', 'symbol': sym, 'exchangeMic': mic, 'currency': 'USD'},
+        'analysis': {
+          ...sampleAnalysis(),
+          'dataSnapshot': {
+            ...(sampleAnalysis()['dataSnapshot'] as Map),
+            'provenance': {
+              'providerId': 'synthetic-vendor-v1',
+              'providerKind': 'FIXTURE',
+              'trust': 'SYNTHETIC_FIXTURE',
+              'retrievedAt': '2026-09-23T22:00:00.000Z',
+              'frequency': 'DAILY',
+              'currency': 'USD',
+              'adjustment': 'SPLIT_AND_DIVIDEND_ADJUSTED',
+            },
+          },
+        },
+        'droppedFromAlignment': 0,
+        'alignedCumulativeReturn': ret,
+      };
+  return {
+    'schemaVersion': 1,
+    'multiAnalysisId': 'qm_0123456789abcdef0123456789abcdef',
+    'engineVersion': 'quant-foundation-0.2.0',
+    'computedBy': 'DETERMINISTIC_ENGINE',
+    'series': [series('SYNA', 'XNYS', 0.1234), series('SYNB', 'XNAS', -0.05)],
+    'alignment': {'policy': 'INTERSECTION_OF_TIMESTAMPS', 'start': '2025-09-23T00:00:00.000Z', 'end': '2026-09-23T00:00:00.000Z', 'commonBars': 250, 'seriesCount': 2},
+    'correlation': [
+      {'a': 'EQUITY:SYNA:XNYS:USD', 'b': 'EQUITY:SYNB:XNAS:USD', 'correlation': 0.8765, 'observations': 249},
+    ],
+    'portfolio': null,
+    'assumptions': [
+      {'code': 'ALIGNMENT', 'value': 'INTERSECTION_OF_TIMESTAMPS'},
+      {'code': 'RETURNS_IN_OWN_CURRENCY', 'value': null},
+    ],
+    'warnings': [
+      {'code': 'PROVENANCE_WEAK', 'message': 'provenance does not support strong evidence'},
+    ],
+    'generatedAt': '2026-09-23T22:00:00.000Z',
+    'dataSource': {
+      'kind': 'SYNTHETIC_PROVIDER',
+      'providerId': 'synthetic-vendor-v1',
+      'cache': {'hits': 1, 'misses': 1, 'staleFallbacks': 0, 'uncached': 0},
+    },
+  };
 }
 
 Profile profile(String role) => Profile(
@@ -201,6 +291,75 @@ void main() {
     });
   });
 
+  group('READINESS-03 transport + file policy', () {
+    test('dev base URL is honored only in debug and only for loopback http', () {
+      expect(quantDevBaseUrl(define: 'http://127.0.0.1:54321/', debug: true), 'http://127.0.0.1:54321');
+      expect(quantDevBaseUrl(define: 'http://localhost:54321', debug: true), 'http://localhost:54321');
+      expect(quantDevBaseUrl(define: 'http://127.0.0.1:54321', debug: false), isNull, reason: 'release/profile ignore the override');
+      expect(quantDevBaseUrl(define: 'https://evil.example.com', debug: true), isNull);
+      expect(quantDevBaseUrl(define: 'http://10.0.2.2:54321', debug: true), isNull);
+      expect(quantDevBaseUrl(define: '', debug: true), isNull);
+    });
+
+    Uint8List b(List<int> v) => Uint8List.fromList(v);
+    Uint8List t(String v) => Uint8List.fromList(utf8.encode(v));
+    String codeOf(String? name, Uint8List bytes) {
+      try {
+        decodeQuantFile(name, bytes);
+        return 'SUPPORTED';
+      } on QuantLabFileException catch (e) {
+        return e.code;
+      }
+    }
+
+    test('file-type matrix: CSV/TXT supported; spreadsheets/JSON not implemented; PDF/images/other rejected', () {
+      expect(codeOf('prices.csv', t(kQuantLabSampleCsv)), 'SUPPORTED');
+      expect(codeOf('prices.CSV', t('\uFEFF$kQuantLabSampleCsv')), 'SUPPORTED');
+      expect(codeOf('prices.txt', t(kQuantLabSampleCsv)), 'SUPPORTED');
+      expect(codeOf('prices', t(kQuantLabSampleCsv)), 'SUPPORTED', reason: 'SAF providers may omit the extension');
+      expect(codeOf('prices.xlsx', b([0x50, 0x4B, 0x03, 0x04, 1, 2])), 'FILE_TYPE_NOT_IMPLEMENTED');
+      expect(codeOf('prices.ods', b([0x50, 0x4B, 0x03, 0x04, 1, 2])), 'FILE_TYPE_NOT_IMPLEMENTED');
+      expect(codeOf('prices.xls', b([0xD0, 0xCF, 0x11, 0xE0, 1, 2])), 'FILE_TYPE_NOT_IMPLEMENTED');
+      expect(codeOf('prices.json', t('{"a":1}')), 'FILE_TYPE_NOT_IMPLEMENTED');
+      expect(codeOf('prices.csv', t('[{"date":"2026-01-05"}]')), 'FILE_TYPE_NOT_IMPLEMENTED', reason: 'JSON content under a .csv name');
+      expect(codeOf('report.pdf', t('%PDF-1.7')), 'FILE_TYPE_NOT_SUPPORTED');
+      expect(codeOf('renamed.csv', t('%PDF-1.7 ...')), 'FILE_TYPE_NOT_SUPPORTED', reason: 'a renamed PDF is still refused');
+      expect(codeOf('chart.png', b([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A])), 'FILE_TYPE_NOT_SUPPORTED');
+      expect(codeOf('photo.jpg', b([0xFF, 0xD8, 0xFF, 0xE0])), 'FILE_TYPE_NOT_SUPPORTED');
+      expect(codeOf('x.csv', b([0x50, 0x4B, 0x03, 0x04])), 'FILE_TYPE_NOT_IMPLEMENTED', reason: 'a renamed XLSX is still detected');
+      expect(codeOf('notes.docx', t('hello')), 'FILE_TYPE_NOT_SUPPORTED');
+      expect(codeOf('bin.csv', b([0x64, 0x00, 0x61])), 'FILE_TYPE_NOT_SUPPORTED');
+      expect(codeOf('latin1.csv', b([0x64, 0xE9, 0x0A])), 'FILE_UNREADABLE');
+      expect(codeOf('big.csv', Uint8List(kQuantLabMaxCsvBytes + 1)), 'FILE_TOO_LARGE');
+    });
+
+    test('watchlist analysis request carries ids only — never instruments, prices or a URL', () {
+      final body = watchlistAnalysisBody('w1', ['i1', 'i2']);
+      expect(body.keys.toSet(), {'contract_version', 'watchlist_id', 'item_ids', 'data_source', 'options'});
+      expect(body['contract_version'], 'quant.analyze.watchlist.v1');
+      expect(body['data_source'], 'SYNTHETIC_PROVIDER');
+      expect(watchlistAnalysisBody('w1', const []).containsKey('item_ids'), isFalse);
+      for (final forbidden in ['instrument', 'symbol', 'url', 'csv', 'user_id', 'role']) {
+        expect(body.toString().contains(forbidden), isFalse, reason: forbidden);
+      }
+    });
+
+    test('multi response parses; malformed shape is a FormatException, never partial numbers', () {
+      final v = QuantMultiView.fromJson(sampleMulti());
+      expect(v.series.length, 2);
+      expect(v.correlation.single.a, 'SYNA');
+      expect(quantCorr(v.correlation.single.value), '0.88');
+      expect(quantPct(v.series.first.alignedReturn), '12.34%');
+      expect(v.cacheHits, 1);
+      final bad = sampleMulti()..remove('alignment');
+      expect(() => QuantMultiView.fromJson(bad), throwsFormatException);
+      expect(multiOutcomeFromResponse(200, {'multi_analysis': bad}).errorCode, 'MALFORMED_RESPONSE');
+      expect(multiOutcomeFromResponse(429, {'error': 'RATE_LIMITED'}).errorCode, 'RATE_LIMITED');
+      expect(watchlistsOutcomeFromResponse(403, {'error': 'MODULE_NOT_AVAILABLE'}).errorCode, 'MODULE_NOT_AVAILABLE');
+      expect(actionOutcomeFromResponse(400, {'error': 'INVALID_PARAMETER', 'details': {'reason': 'DUPLICATE_INSTRUMENT'}}).reason, 'DUPLICATE_INSTRUMENT');
+    });
+  });
+
   group('screen', () {
     testWidgets('non-admin sees access denied and never the lab', (tester) async {
       await tester.pumpWidget(app(FakeQuantLabApi(), who: profile('premium')));
@@ -278,6 +437,83 @@ void main() {
         expect(find.byKey(const Key('quantLabResult')), findsOneWidget);
         // Touch target of the primary action.
         expect(tester.getSize(find.byKey(const Key('quantLabAnalyze'))).height, greaterThanOrEqualTo(48));
+      });
+    }
+
+    Future<void> openWatchlistTab(WidgetTester tester) async {
+      await tester.tap(find.byKey(const Key('quantLabTabWatchlist')));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('watchlist tab: create → add → analyze sends ids only and renders the synthetic result', (tester) async {
+      await setSize(tester, const Size(420, 900));
+      final api = FakeQuantLabApi();
+      await tester.pumpWidget(app(api, who: profile('admin')));
+      await tester.pumpAndSettle();
+      await openWatchlistTab(tester);
+      expect(find.text('Nenhuma watchlist ainda.'), findsOneWidget);
+      await tester.enterText(find.byKey(const Key('quantWatchlistName')), 'Tech');
+      await tester.tap(find.byKey(const Key('quantWatchlistCreate')));
+      await tester.pumpAndSettle();
+      for (final sym in ['SYNA', 'SYNB']) {
+        await tester.ensureVisible(find.byKey(const Key('quantWatchlistSymbol')));
+        await tester.enterText(find.byKey(const Key('quantWatchlistSymbol')), sym);
+        await tester.ensureVisible(find.byKey(const Key('quantWatchlistAdd')));
+        await tester.tap(find.byKey(const Key('quantWatchlistAdd')));
+        await tester.pumpAndSettle();
+      }
+      expect(api.actions.map((a) => a['action']), ['create', 'add_item', 'add_item']);
+      expect(api.actions.every((a) => !a.containsKey('user_id')), isTrue);
+      await tester.ensureVisible(find.byKey(const Key('quantWatchlistAnalyze')));
+      await tester.tap(find.byKey(const Key('quantWatchlistAnalyze')));
+      await tester.pumpAndSettle();
+      expect(api.lastAnalyzedWatchlist, 'w1');
+      expect(api.lastItemIds, isEmpty, reason: 'nothing checked → whole list (≤ 10) is analyzed server-side');
+      expect(find.byKey(const Key('quantMultiResult')), findsOneWidget);
+      expect(find.textContaining('SYNTHETIC_PROVIDER', findRichText: true), findsOneWidget);
+      expect(find.textContaining('0.88', findRichText: true), findsOneWidget);
+      for (final word in ['Comprar', 'Vender', 'Executar', 'Buy', 'Sell', 'Execute', 'Connect broker']) {
+        expect(find.textContaining(word, findRichText: true), findsNothing, reason: word);
+      }
+    });
+
+    testWidgets('watchlist with > 10 items requires a selection of ≤ 10 before analysis', (tester) async {
+      await setSize(tester, const Size(420, 900));
+      final api = FakeQuantLabApi()
+        ..lists.add(QuantWatchlistView(id: 'big', name: 'Big', items: [
+          for (var i = 0; i < 11; i++) QuantWatchlistItemView(id: 'i$i', label: 'S$i · XNYS · USD'),
+        ]));
+      await tester.pumpWidget(app(api, who: profile('admin')));
+      await tester.pumpAndSettle();
+      await openWatchlistTab(tester);
+      await tester.ensureVisible(find.byKey(const Key('quantWatchlistAnalyze')));
+      expect(tester.widget<FilledButton>(find.byKey(const Key('quantWatchlistAnalyze'))).onPressed, isNull);
+      await tester.ensureVisible(find.byKey(const Key('quantWatchlistItem_i0')));
+      await tester.tap(find.byKey(const Key('quantWatchlistItem_i0')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('quantWatchlistAnalyze')));
+      await tester.tap(find.byKey(const Key('quantWatchlistAnalyze')));
+      await tester.pumpAndSettle();
+      expect(api.lastItemIds, ['i0']);
+    });
+
+    for (final locale in const [Locale('pt'), Locale('en')]) {
+      testWidgets('watchlist tab at text scale 2.0 on 360px renders without overflow (${locale.languageCode})', (tester) async {
+        await setSize(tester, const Size(360, 780));
+        final api = FakeQuantLabApi()
+          ..lists.add(const QuantWatchlistView(id: 'w', name: 'Carteira de observação longa', items: [
+            QuantWatchlistItemView(id: 'a', label: 'SYNA · XNYS · USD'),
+            QuantWatchlistItemView(id: 'b', label: 'SYNB · XNAS · USD'),
+          ]));
+        await tester.pumpWidget(app(api, who: profile('admin'), locale: locale, textScale: 2.0));
+        await tester.pumpAndSettle();
+        await openWatchlistTab(tester);
+        await tester.ensureVisible(find.byKey(const Key('quantWatchlistAnalyze')));
+        await tester.tap(find.byKey(const Key('quantWatchlistAnalyze')));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        expect(find.byKey(const Key('quantMultiResult')), findsOneWidget);
+        expect(tester.getSize(find.byKey(const Key('quantWatchlistAnalyze'))).height, greaterThanOrEqualTo(48));
       });
     }
 

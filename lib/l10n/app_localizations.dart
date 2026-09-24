@@ -1483,6 +1483,138 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Arquivo CSV ilegível (use UTF-8).'**
   String get quantLabFileUnreadable;
+
+  /// No description provided for @quantLabTabSingle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Série única'**
+  String get quantLabTabSingle;
+
+  /// No description provided for @quantLabTabWatchlist.
+  ///
+  /// In pt, this message translates to:
+  /// **'Watchlist'**
+  String get quantLabTabWatchlist;
+
+  /// No description provided for @quantLabWatchlists.
+  ///
+  /// In pt, this message translates to:
+  /// **'Watchlists'**
+  String get quantLabWatchlists;
+
+  /// No description provided for @quantLabWatchlistName.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nome da nova watchlist'**
+  String get quantLabWatchlistName;
+
+  /// No description provided for @quantLabCreate.
+  ///
+  /// In pt, this message translates to:
+  /// **'Criar'**
+  String get quantLabCreate;
+
+  /// No description provided for @quantLabDeleteWatchlist.
+  ///
+  /// In pt, this message translates to:
+  /// **'Excluir watchlist'**
+  String get quantLabDeleteWatchlist;
+
+  /// No description provided for @quantLabAddItem.
+  ///
+  /// In pt, this message translates to:
+  /// **'Adicionar instrumento'**
+  String get quantLabAddItem;
+
+  /// No description provided for @quantLabRemoveItem.
+  ///
+  /// In pt, this message translates to:
+  /// **'Remover'**
+  String get quantLabRemoveItem;
+
+  /// No description provided for @quantLabNoWatchlists.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhuma watchlist ainda.'**
+  String get quantLabNoWatchlists;
+
+  /// No description provided for @quantLabNoItems.
+  ///
+  /// In pt, this message translates to:
+  /// **'Esta watchlist está vazia.'**
+  String get quantLabNoItems;
+
+  /// No description provided for @quantLabSelectUpTo.
+  ///
+  /// In pt, this message translates to:
+  /// **'Selecione até {max} instrumentos para analisar.'**
+  String quantLabSelectUpTo(int max);
+
+  /// No description provided for @quantLabAnalyzeWatchlist.
+  ///
+  /// In pt, this message translates to:
+  /// **'Analisar watchlist'**
+  String get quantLabAnalyzeWatchlist;
+
+  /// No description provided for @quantLabSyntheticNotice.
+  ///
+  /// In pt, this message translates to:
+  /// **'A análise de watchlist usa dados SINTÉTICOS gerados pelo servidor (sem dados reais de mercado, sem fornecedor). Serve apenas para testar o fluxo.'**
+  String get quantLabSyntheticNotice;
+
+  /// No description provided for @quantLabSeries.
+  ///
+  /// In pt, this message translates to:
+  /// **'Séries'**
+  String get quantLabSeries;
+
+  /// No description provided for @quantLabAlignment.
+  ///
+  /// In pt, this message translates to:
+  /// **'Alinhamento'**
+  String get quantLabAlignment;
+
+  /// No description provided for @quantLabCorrelation.
+  ///
+  /// In pt, this message translates to:
+  /// **'Correlação dos retornos'**
+  String get quantLabCorrelation;
+
+  /// No description provided for @quantLabDataSource.
+  ///
+  /// In pt, this message translates to:
+  /// **'Fonte de dados'**
+  String get quantLabDataSource;
+
+  /// No description provided for @quantLabAlignedReturn.
+  ///
+  /// In pt, this message translates to:
+  /// **'Retorno na janela comum'**
+  String get quantLabAlignedReturn;
+
+  /// No description provided for @quantLabOperationError.
+  ///
+  /// In pt, this message translates to:
+  /// **'O servidor recusou a operação: {code}'**
+  String quantLabOperationError(String code);
+
+  /// No description provided for @quantLabFileTypeNotSupported.
+  ///
+  /// In pt, this message translates to:
+  /// **'Tipo de arquivo não suportado. Use um arquivo CSV (ou TXT com conteúdo CSV).'**
+  String get quantLabFileTypeNotSupported;
+
+  /// No description provided for @quantLabFileTypeNotImplemented.
+  ///
+  /// In pt, this message translates to:
+  /// **'Planilhas (XLS, XLSX, ODS) e JSON ainda não são suportados. Exporte os dados como CSV.'**
+  String get quantLabFileTypeNotImplemented;
+
+  /// No description provided for @quantLabRetry.
+  ///
+  /// In pt, this message translates to:
+  /// **'Tentar novamente'**
+  String get quantLabRetry;
 }
 
 class _AppLocalizationsDelegate

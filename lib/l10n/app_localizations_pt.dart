@@ -771,4 +771,77 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get quantLabFileUnreadable => 'Arquivo CSV ilegível (use UTF-8).';
+
+  @override
+  String get quantLabTabSingle => 'Série única';
+
+  @override
+  String get quantLabTabWatchlist => 'Watchlist';
+
+  @override
+  String get quantLabWatchlists => 'Watchlists';
+
+  @override
+  String get quantLabWatchlistName => 'Nome da nova watchlist';
+
+  @override
+  String get quantLabCreate => 'Criar';
+
+  @override
+  String get quantLabDeleteWatchlist => 'Excluir watchlist';
+
+  @override
+  String get quantLabAddItem => 'Adicionar instrumento';
+
+  @override
+  String get quantLabRemoveItem => 'Remover';
+
+  @override
+  String get quantLabNoWatchlists => 'Nenhuma watchlist ainda.';
+
+  @override
+  String get quantLabNoItems => 'Esta watchlist está vazia.';
+
+  @override
+  String quantLabSelectUpTo(int max) {
+    return 'Selecione até $max instrumentos para analisar.';
+  }
+
+  @override
+  String get quantLabAnalyzeWatchlist => 'Analisar watchlist';
+
+  @override
+  String get quantLabSyntheticNotice =>
+      'A análise de watchlist usa dados SINTÉTICOS gerados pelo servidor (sem dados reais de mercado, sem fornecedor). Serve apenas para testar o fluxo.';
+
+  @override
+  String get quantLabSeries => 'Séries';
+
+  @override
+  String get quantLabAlignment => 'Alinhamento';
+
+  @override
+  String get quantLabCorrelation => 'Correlação dos retornos';
+
+  @override
+  String get quantLabDataSource => 'Fonte de dados';
+
+  @override
+  String get quantLabAlignedReturn => 'Retorno na janela comum';
+
+  @override
+  String quantLabOperationError(String code) {
+    return 'O servidor recusou a operação: $code';
+  }
+
+  @override
+  String get quantLabFileTypeNotSupported =>
+      'Tipo de arquivo não suportado. Use um arquivo CSV (ou TXT com conteúdo CSV).';
+
+  @override
+  String get quantLabFileTypeNotImplemented =>
+      'Planilhas (XLS, XLSX, ODS) e JSON ainda não são suportados. Exporte os dados como CSV.';
+
+  @override
+  String get quantLabRetry => 'Tentar novamente';
 }
