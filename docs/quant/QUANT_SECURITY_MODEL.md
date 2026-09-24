@@ -124,3 +124,24 @@ be logged (test AN-50).
 | Log leakage | allowlisted events | QA-50, QW-07 |
 
 Legacy commercial LLM-generated numbers: QUANT_LEGACY_LLM_NUMERIC_RISK.md.
+
+## 9. Real-data readiness threat model (IV-QUANT-REAL-DATA-READINESS-03)
+
+| Threat | Control | Evidence |
+|---|---|---|
+| Request flooding / cost amplification | per-user fixed-window limit in Postgres (SECURITY DEFINER, `auth.uid()`), checked before the body is read | RL-01..05, QB-17, R01–R05, 10-session concurrency proof |
+| Rate-limit store outage used to bypass | fail closed → 503 RATE_LIMIT_UNAVAILABLE | RL-03 |
+| Forged user id to reset/move counters | identity from JWT only; counter table unreachable (RLS, no policies, revoked) | RL-02, R03/R04 |
+| Watchlist analysis reading another user's list | instruments read with the caller JWT (RLS) + user-id filter; invisible list = NOT_FOUND | QM-03, QM-04 |
+| Watchlist analysis without watchlist entitlement | second `requireModuleAccess('quant-watchlists')` before the store is touched; fails closed | QM-05 |
+| Client-chosen data source / URL (SSRF, provider spoofing) | `data_source` enum = SYNTHETIC_PROVIDER only; unknown fields rejected; no URL accepted | MC-04, QM-04 |
+| Provider credential leak | secret only from server env, sent as header, never in URL (`key=`/`token=` refused), never logged | PC-06 |
+| Credential following a redirect | `safeFetch` `allowedHosts` re-checked per hop | safe_fetch "allowedHosts" test, PC-02 |
+| Malformed / hostile provider payload | adapter identity echo checks, size cap, normalized errors (PROVIDER_MALFORMED) — never an empty success | PC-02, PC-03, PC-04 |
+| Cache making stale data look fresh | original provenance preserved, separate cache meta; stale only on provider failure + CACHE_STALE | CA-01, CA-02, MC-06 |
+| Cache poisoning across providers / from users | provider-id check; USER_UPLOAD never cached; key built from validated identity only | CA-02, CA-03 |
+| Multi-series amplification | ≤ 10 series, ≤ 100 000 rows total, 6 MiB body, rate limit | MS-11, MC-02, MC-03 |
+| Misleading cross-currency numbers | per-currency returns + MIXED_CURRENCY_RETURNS; mixed-currency portfolio refused | MS-08 |
+| Misleading alignment (filled gaps) | intersection only, dropped bars counted, never filled | MS-06, MS-07 |
+| Dev transport shipped to users | `QUANT_API_BASE_URL` honored only in debug and only for loopback http; cleartext config only in `src/debug` | Flutter "dev base URL" test; release builds never read it |
+| Hostile file via Android SAF | type decided by name + magic bytes; spreadsheets/JSON NOT_IMPLEMENTED, PDF/images/binary rejected, 5 MiB cap, UTF-8 required; server re-parses anyway | Flutter file-matrix test; physical matrix in QUANT_REAL_DATA_READINESS.md |

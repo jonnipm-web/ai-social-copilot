@@ -1,4 +1,4 @@
-# InsightValues Quant — API Contract (IV-QUANT-DATA-PLANE-AND-API-02)
+# InsightValues Quant — API Contract (IV-QUANT-DATA-PLANE-AND-API-02, extended by REAL-DATA-READINESS-03)
 
 Two Edge Functions, both **INTERNAL (admin-only)**, both **NOT deployed**
 (Quant Lab only; not on `.github/deploy-allowlist.tsv`).
@@ -90,26 +90,77 @@ code is the contract; there is no human message to parse.
 | 405 | METHOD_NOT_ALLOWED |
 | 413 | DATASET_TOO_LARGE (body, rows, bars, watchlist limits) |
 | 415 | UNSUPPORTED_MEDIA_TYPE |
-| 422 | DATA_QUALITY_ERROR, INSUFFICIENT_DATA, CURRENCY_MISMATCH, UNSUPPORTED_ASSET_CLASS, STALE_DATA, CALCULATION_ERROR |
-| 429 | reserved (future quota / rate limit) |
+| 422 | DATA_QUALITY_ERROR, INSUFFICIENT_DATA, INSUFFICIENT_OVERLAP, CURRENCY_MISMATCH, UNSUPPORTED_ASSET_CLASS, STALE_DATA, CALCULATION_ERROR, INVALID_PORTFOLIO |
+| 429 | RATE_LIMITED (+ `Retry-After`; QUANT_RATE_LIMIT_POLICY.md) |
 | 500 | INTERNAL_ERROR (cause never echoed) |
-| 503 | ENTITLEMENT_UNAVAILABLE, OWNERSHIP_UNAVAILABLE, PROVIDER_UNAVAILABLE (fail closed) |
+| 502 | PROVIDER_MALFORMED (provider answered with an unusable payload) |
+| 503 | ENTITLEMENT_UNAVAILABLE, OWNERSHIP_UNAVAILABLE, PROVIDER_UNAVAILABLE, PROVIDER_RATE_LIMITED, RATE_LIMIT_UNAVAILABLE (fail closed) |
+| 504 | PROVIDER_TIMEOUT |
 
 ## 5. Observability
 
 `quant-analyze`: exactly the `quantLogEvent` allowlist (analysis id,
 provider id, instrument count, dataset size, period, calculation ids,
-freshness, latency, error code). `quant-watchlists`: operation, item count,
+freshness, latency, error code) plus, since READINESS-03, `contract`
+(one of the three contract versions, else null) and `cache_hits` /
+`cache_misses` (counts only). `quant-watchlists`: operation, item count,
 success, status, error code, latency, correlation id. Never logged: JWT,
 CSV, prices, symbols, watchlist names, ids, project id (tests QA-50, QW-07).
 
 ## 6. Resource protection
 
-No rate limiter exists in the repo besides the monthly AI quota, which is
-the wrong unit for deterministic work (it would bill a user's AI allowance
-for arithmetic). Protection is by bounds, all enforced before or during
+READINESS-03: a per-user request rate limit now exists (429, fixed 60 s
+window, enforced in Postgres; QUANT_RATE_LIMIT_POLICY.md). The monthly AI
+quota remains the wrong unit for deterministic work. Protection is also by bounds, all enforced before or during
 parsing: 6 MiB request body (streamed count), 5 MiB CSV, 50 000 rows/bars,
 ≤ 8 SMA windows (O(n) each), windows ≤ 50 000, calendar scans bounded,
 16 KiB watchlist body, 200 items / 50 watchlists. Measured cost: see
-QUANT_CURRENT_STATE.md §8. A per-user request rate limit (429) is a
-prerequisite for any promotion beyond INTERNAL.
+QUANT_CURRENT_STATE.md §8. Multi-series: ≤ 10 series, ≤ 100 000 rows
+in total, same 6 MiB body cap.
+
+## 7. `quant-analyze` — `quant.analyze.multi.v1` (READINESS-03)
+
+Same endpoint, dispatched by `contract_version`; `quant.analyze.v1` is
+unchanged. Module `quant-analytics` (READ_ONLY).
+
+```json
+{
+  "contract_version": "quant.analyze.multi.v1",
+  "series": [ { "instrument": { …as v1… },
+                "dataset": { "format": "csv", "frequency": "DAILY", "adjustment": "…", "csv": "…" } } ],
+  "options": { "periods_per_year": 252, "price_basis": "close|adjusted_close",
+               "weights": [ { "index": 0, "weight": 0.6 }, { "index": 1, "weight": 0.4 } ] },
+  "project_id": "uuid (optional)"
+}
+```
+
+* 1..10 series, ≤ 100 000 rows in total; each CSV goes through the one
+  Foundation parser; provenance is set by the server (USER_UPLOAD).
+* Weights refer to series by position; policies in QUANT_MULTI_SERIES.md §4.
+* 200: `{ contract_version, correlation_id, multi_analysis: MultiSeriesResult }`
+  (`multiAnalysisId`, per-series `analysis` + `alignedCumulativeReturn` +
+  `droppedFromAlignment`, `alignment`, `correlation[]`, `portfolio|null`,
+  `assumptions`, `warnings`). Errors carry `details.series` = offending index.
+
+## 8. `quant-analyze` — `quant.analyze.watchlist.v1` (READINESS-03)
+
+```json
+{ "contract_version": "quant.analyze.watchlist.v1", "watchlist_id": "uuid",
+  "item_ids": ["uuid", …], "data_source": "SYNTHETIC_PROVIDER",
+  "lookback_days": 365, "options": { "periods_per_year": 252 } }
+```
+
+* Requires BOTH `quant-analytics` and `quant-watchlists` entitlements (the
+  second gate is evaluated after the first; either failing closes the call
+  before the watchlist is read — test QM-05).
+* Instruments are read **server-side** from the caller's own watchlist with
+  the caller's JWT (RLS) plus a user-id filter; the body carries ids only.
+  A watchlist the caller cannot see is `400 INVALID_PARAMETER {reason: NOT_FOUND}`
+  (no existence oracle). Unknown `item_ids` → the same.
+* More than 10 selected items → `413 DATASET_TOO_LARGE {reason: SELECT_ITEM_IDS}`.
+* `data_source` accepts only `SYNTHETIC_PROVIDER` today (server-generated
+  synthetic data through the provenance cache — QUANT_CACHE_POLICY.md). A
+  licensed provider is a future, separately gated value; no URL, key or
+  provider name is accepted from the client.
+* 200: as §7 plus `multi_analysis.dataSource { kind, providerId, cache {hits, misses, staleFallbacks, uncached} }`.
+
