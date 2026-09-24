@@ -98,14 +98,17 @@ append; recovery never waits on windows or operations (SKIP LOCKED) and
 skips a subject whose erasure holds the lock, so they cannot deadlock
 (HG2-01, HP-12/14/16).
 
-## Owner decisions (not blocking; safe defaults in place)
+## Owner decisions — recorded 2026-09-24
 
-1. Legal retention periods for AEF operations and audit (replace the
-   provisional 365 / 730 days).
-2. Whether an unreconciled UNKNOWN_OUTCOME may block an erasure request
-   (default: yes, block; alternative: erase and keep only the pseudonymous
-   record).
-3. Who may place/release legal holds and through which audited path (today:
-   owner SQL only).
-4. Whether to enable human (operator) reconciliation of UNKNOWN_OUTCOME
-   (default: disabled; only registered verifiers reconcile).
+Decided by the Owner (Paulo) on the recommendations of IV-AEF-HARDENING-01.
+They confirm the defaults already in the migration: **no schema, code or
+data change**, and nothing applied to production.
+
+| # | Decision | Status | Effect in `aef_retention_policy` / process |
+|---|---|---|---|
+| D1 | Retention periods | KEEP 365 days (terminal operations) / 730 days (audit) | unchanged; still engineering defaults, not a legal opinion — to be revisited if legal/compliance guidance is obtained (owner-only UPDATE, no code change) |
+| D2 | Unreconciled UNKNOWN_OUTCOME blocks erasure | KEEP blocking | `erasure_blocks_on_unreconciled = true` |
+| D3 | Legal holds | Owner only, via SQL on `aef_legal_holds` | no RPC / UI; an audited hold workflow is future work, only if needed |
+| D4 | Operator (human) reconciliation | KEEP disabled | `operator_reconciliation_enabled = false`; revisit only when real tools and a defined human process exist |
+
+Changing any of these later is an explicit Owner decision, recorded here.

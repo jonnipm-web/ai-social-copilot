@@ -46,7 +46,8 @@ established afterwards, by whom, and on what evidence.
 operator_reconciliation_enabled = false`, Codex HCF-01): an operator's
 verdict is a human attestation by an accountable admin — the database can
 record who (hashed), when and on what referenced evidence (hashed), but it
-cannot prove the evidence. Enabling it is an **Owner decision**; until then
+cannot prove the evidence. Enabling it is an **Owner decision** (2026-09-24:
+kept disabled — AEF_RETENTION_ERASURE_MODEL.md, D4); until then
 an UNKNOWN_OUTCOME can only be reconciled by a server-registered verifier
 (none is registered by default, so by default nothing is reconciled —
 fail closed). The receipt's `reconciler_kind` always distinguishes a human

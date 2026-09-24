@@ -55,6 +55,13 @@ format `aef-receipt/1.1` (v1 kept verbatim), and a READ-ONLY production
 privilege preflight script (result NOT_VERIFIED). Still not runtime-available:
 `AEF_PERSISTENCE_AVAILABLE = false`, no endpoint, mock tools only.
 
+Owner decisions 2026-09-24 (AEF_RETENTION_ERASURE_MODEL.md, D1–D4): keep the
+365/730-day retention defaults, keep erasure blocked by unreconciled
+UNKNOWN_OUTCOME, legal holds by Owner SQL only, operator reconciliation
+disabled. The production privilege preflight is authorized READ-ONLY only;
+IV-IVE-AEF-RUNTIME-INTEGRATION-01 stays not started until the preflight
+result and a new gate from Agente Martins.
+
 ## What is kept
 
 The v0 kernel and its 138 tests stay unchanged: it remains the reference
