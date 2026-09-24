@@ -123,3 +123,7 @@ New error: `DOSSIER_TOO_LARGE` 413. New events (`impact.*`):
 `dossier_status`, `claims_count`, `reverification_count`, `error_code` only.
 `ingest_artifact` is unchanged for clients; it now persists in one
 transaction.
+
+`add_source` (I4 change): `userUpload` is no longer accepted and type
+`USER_DOCUMENT` is refused — uploaded documents enter only through
+`ingest_artifact` (Codex I4G2-01, I3F-03 closure).

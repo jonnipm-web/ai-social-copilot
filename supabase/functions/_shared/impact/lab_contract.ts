@@ -54,7 +54,10 @@ export const ORG_TYPES = [
   'CHARITY', 'NGO', 'NONPROFIT', 'FOUNDATION', 'SOCIAL_ENTERPRISE', 'RELIGIOUS_ORGANIZATION',
   'COMMUNITY_PROJECT', 'CROWDFUNDING_CAMPAIGN', 'INFORMAL_INITIATIVE', 'OTHER',
 ] as const;
-const CLIENT_SOURCE_TYPES = SOURCE_TYPES; // any type may be *labelled*; authority still needs provider provenance
+// Any type may be *labelled* (authority still needs provider provenance) — except USER_DOCUMENT:
+// an uploaded document enters ONLY through ingest_artifact, hashed by the server, in one transaction
+// with its artifact (I4 / Codex I4G2-01: no standalone upload source, no orphan).
+const CLIENT_SOURCE_TYPES = SOURCE_TYPES.filter((t) => t !== 'USER_DOCUMENT');
 const CLIENT_RETENTION = ['REFERENCE_ONLY', 'HASH_ONLY', 'EXCERPT_AND_HASH'] as const; // SNAPSHOT only via provider ingestion
 const CLIENT_ORIGINS = ['MANUAL', 'STRUCTURED_IMPORT'] as const; // no LLM in the Lab
 const RELATIONSHIPS = ['SUPPORTS', 'CONTRADICTS', 'CONTEXTUALIZES'] as const;
@@ -90,7 +93,6 @@ export interface SourceInput {
   readonly retention: typeof CLIENT_RETENTION[number];
   readonly contentHash?: string;
   readonly syndicatedFrom?: string;
-  readonly userUpload?: boolean;
   /** I2: merge-only lineage hint (this material cites / summarizes that publisher). */
   readonly derivedFrom?: string;
   /** I2: content text for server-side fingerprinting; only hashes are persisted. */
@@ -289,12 +291,11 @@ function subject(v: unknown): SubjectInput {
 
 function source(v: unknown): SourceInput {
   const o = obj(v, 'source', ['ref', 'type', 'publisher', 'publisherOrgRef', 'uri', 'retrievedAt', 'publishedAt',
-    'jurisdictionCountry', 'newsGenre', 'retention', 'contentHash', 'syndicatedFrom', 'userUpload', 'derivedFrom', 'contentText']);
+    'jurisdictionCountry', 'newsGenre', 'retention', 'contentHash', 'syndicatedFrom', 'derivedFrom', 'contentText']);
   const contentHash = o.contentHash;
   if (contentHash !== undefined && (typeof contentHash !== 'string' || !HASH_RE.test(contentHash))) throw new Bad('contentHash must be sha-256 hex');
   const jc = o.jurisdictionCountry;
   if (jc !== undefined && (typeof jc !== 'string' || !/^[A-Z]{2}$/.test(jc))) throw new Bad('jurisdictionCountry must be ISO alpha-2');
-  if (o.userUpload !== undefined && typeof o.userUpload !== 'boolean') throw new Bad('userUpload must be boolean');
   return {
     ref: id(o, 'ref')!,
     type: en(o, 'type', CLIENT_SOURCE_TYPES)!,
@@ -308,7 +309,6 @@ function source(v: unknown): SourceInput {
     retention: en(o, 'retention', CLIENT_RETENTION)!,
     contentHash: contentHash as string | undefined,
     syndicatedFrom: str(o, 'syndicatedFrom', LAB_LIMITS.maxShort, false),
-    userUpload: o.userUpload as boolean | undefined,
     derivedFrom: str(o, 'derivedFrom', LAB_LIMITS.maxShort, false),
     contentText: str(o, 'contentText', LAB_LIMITS.maxContentText, false),
   };

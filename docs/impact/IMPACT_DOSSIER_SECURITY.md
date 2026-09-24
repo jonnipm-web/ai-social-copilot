@@ -48,3 +48,13 @@ SERVICE_ROLE_TRUST_GATE = LAB_ONLY (register: SELECT/INSERT only; ingestion
 functions EXECUTE only; no UPDATE/DELETE). No network, registry, LLM, AEF
 runtime, storage bucket or public surface in the dossier path. Class C
 actions stay ACTION_BLOCKED / AEF_HUMAN_GATE.
+
+### I3F-03 completion (Codex I4G2-01)
+
+The API had a second way to create a `USER_UPLOAD` source without an artifact:
+`add_source` with `userUpload: true` (or type `USER_DOCUMENT`). Both are now
+refused by the contract: a user document enters **only** through
+`ingest_artifact` (server hash, one transaction with its artifact);
+client-declared sources are always `ANALYST_ENTRY`. Legacy rows written
+before I4 are still read (and still count as USER_SUBMITTED, never
+authority — LS-17). Test: G2-01.

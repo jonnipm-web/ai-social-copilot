@@ -304,7 +304,11 @@ Deno.test('LS-16 disputes: DISPUTED while open, re-verification after resolution
 Deno.test('LS-17 an organization response carries no extra authority (a user-upload source stays USER_SUBMITTED)', async () => {
   const t = setup();
   const inv = await investigationWithRegistry(t);
-  await t.must(UA, { action: 'add_source', investigation_id: inv, source: { ref: 'src-response', type: 'OFFICIAL_REGISTRY', publisher: 'HopeBridge legal team', retrievedAt: '2026-09-01T00:00:00Z', retention: 'HASH_ONLY', contentHash: 'a'.repeat(64), userUpload: true } });
+  // I4: a standalone upload source can no longer be created through the API (I4G2-01) — this is a
+  // pre-existing (legacy) row written directly to the store; the engine must still treat it as USER_SUBMITTED.
+  assertEquals(await t.code(UA, { action: 'add_source', investigation_id: inv, source: { ref: 'src-x', type: 'OFFICIAL_REGISTRY', publisher: 'P', retrievedAt: '2026-09-01T00:00:00Z', retention: 'HASH_ONLY', contentHash: 'a'.repeat(64), userUpload: true } }), 'INVALID_REQUEST');
+  const legacy = await new InMemoryImpactLabStore(t.db, UA).insertSource(inv, { source: { id: 'src-response', type: 'OFFICIAL_REGISTRY', publisher: 'HopeBridge legal team', retrievedAt: '2026-09-01T00:00:00Z', status: 'ACTIVE', retention: 'HASH_ONLY', contentHash: 'a'.repeat(64), acquisition: { method: 'USER_UPLOAD' }, userSubmitted: true }, snapshot: null }, UA);
+  assert(legacy.ok);
   await t.must(UA, { action: 'add_claim', investigation_id: inv, claim: { ref: 'c1', kind: 'GOVERNANCE', text: 'Board of 7 trustees.', sourceRef: 'src-web', origin: 'MANUAL' } });
   await t.must(UA, { action: 'add_evidence', investigation_id: inv, evidence: { ref: 'e1', claimRef: 'c1', sourceRef: 'src-response', aboutOrgRef: 'org-hopebridge', relationship: 'SUPPORTS', basis: 'HUMAN_ASSESSED', personalData: 'NONE' } });
   const v = (await t.must(UA, { action: 'run_verification', investigation_id: inv, claim_ref: 'c1' })).data.verification as Json;

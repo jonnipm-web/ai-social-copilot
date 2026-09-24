@@ -476,3 +476,15 @@ Deno.test('G1-N04 structured conflicts are rendered with every position, basis a
     assertNoPlatformVerdict(text);
   }
 });
+
+Deno.test('G2-01 (I4G2-01) no standalone upload source: USER_DOCUMENT / userUpload only through ingest_artifact', async () => {
+  const t = setup();
+  const inv = await base(t);
+  const src = { ref: 'src-up', publisher: 'User upload', retrievedAt: '2026-09-01T00:00:00Z', retention: 'HASH_ONLY', contentHash: 'a'.repeat(64) };
+  assertEquals(await t.code(UA, { action: 'add_source', investigation_id: inv, source: { ...src, type: 'USER_DOCUMENT' } }), 'INVALID_REQUEST');
+  assertEquals(await t.code(UA, { action: 'add_source', investigation_id: inv, source: { ...src, type: 'OTHER', retention: 'REFERENCE_ONLY', uri: 'https://x.example/a', userUpload: true } }), 'INVALID_REQUEST');
+  const ok = await t.must(UA, { action: 'add_source', investigation_id: inv, source: { ...src, type: 'OTHER', retention: 'REFERENCE_ONLY', uri: 'https://x.example/a' } });
+  assert(ok);
+  const m = t.db.investigations.get(inv)!;
+  assertEquals([...m.sources.values()].filter((s) => s.source.acquisition.method === 'USER_UPLOAD' && !m.artifacts.has(s.source.id)).length, 0);
+});

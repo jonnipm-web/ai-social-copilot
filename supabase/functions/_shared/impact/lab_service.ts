@@ -566,8 +566,8 @@ export async function handleLabRequest(
           }
           : {}),
         // CF-06: a client can never produce PROVIDER provenance.
-        acquisition: i.userUpload ? { method: 'USER_UPLOAD' } : { method: 'ANALYST_ENTRY' },
-        ...(i.userUpload ? { userSubmitted: true } : {}),
+        // Client-declared sources are ANALYST_ENTRY; USER_UPLOAD exists only through ingest_artifact (I4G2-01).
+        acquisition: { method: 'ANALYST_ENTRY' },
       };
       const v = validateSource(src, nowMs);
       if (!v.ok) return v;

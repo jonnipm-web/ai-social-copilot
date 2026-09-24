@@ -363,7 +363,8 @@ Deno.test('EC-26 (Codex I3G2-02) a source already cited by evidence is never ado
   const inv = await investigation(t);
   const hash = await sha256Bytes(utf8(REPORT));
   // a user-declared upload source with the same ref and hash, cited freely (I1 capability)
-  await t.must(UA, { action: 'add_source', investigation_id: inv, source: { ref: 'art-report', type: 'USER_DOCUMENT', publisher: 'User upload', retrievedAt: '2026-09-01T00:00:00Z', retention: 'HASH_ONLY', contentHash: hash, userUpload: true } });
+  // Legacy (pre-I4) row: the API can no longer create a standalone upload source (I4G2-01).
+  assert((await new InMemoryImpactLabStore(t.db, UA).insertSource(inv, { source: { id: 'art-report', type: 'USER_DOCUMENT', publisher: 'User upload', retrievedAt: '2026-09-01T00:00:00Z', status: 'ACTIVE', retention: 'HASH_ONLY', contentHash: hash, acquisition: { method: 'USER_UPLOAD' }, userSubmitted: true }, snapshot: null }, UA)).ok);
   await t.must(UA, { action: 'add_evidence', investigation_id: inv, evidence: { ref: 'e-free', claimRef: 'c-wells', sourceRef: 'art-report', aboutOrgRef: 'org-wellspring', relationship: 'CONTEXTUALIZES', basis: 'HUMAN_ASSESSED', personalData: 'NONE' } });
   const r = await t.code(UA, ingest(inv));
   assert(r !== 'OK', 'the artifact must not adopt a cited source');
