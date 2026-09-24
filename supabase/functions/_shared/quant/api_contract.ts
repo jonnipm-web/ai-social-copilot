@@ -60,7 +60,7 @@ function optString(o: Obj, k: string, max: number, where: string): QuantResult<s
   return ok(o[k] as string);
 }
 
-function parseInstrument(v: unknown): QuantResult<InstrumentIdentity> {
+export function parseInstrument(v: unknown): QuantResult<InstrumentIdentity> {
   if (!isObj(v)) return fail('INVALID_INSTRUMENT', 'instrument must be an object');
   const keys = onlyKeys(v, ['asset_class', 'symbol', 'exchange_mic', 'currency', 'exchange_timezone', 'isin', 'figi'], 'instrument');
   if (!keys.ok) return keys;

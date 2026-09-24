@@ -37,7 +37,7 @@ function code(src: string): string {
 Deno.test('QB-01 production modules exist and are all covered by this tripwire', async () => {
   const names = (await productionModules()).map((m) => m.name);
   assertEquals(names, [
-    'analysis.ts', 'api_contract.ts', 'calendar.ts', 'csv.ts', 'display.ts', 'domain_future.ts', 'errors.ts', 'instrument.ts', 'ive_boundary.ts', 'market_cache.ts', 'metrics.ts', 'numeric.ts', 'observability.ts', 'portfolio.ts', 'provenance.ts', 'provider_adapter.ts', 'provider.ts', 'rate_limit_policy.ts', 'risk.ts', 'session_freshness.ts', 'signals.ts', 'synthetic_market.ts', 'timeseries.ts', 'watchlist_contract.ts',
+    'analysis.ts', 'api_contract.ts', 'calendar.ts', 'csv.ts', 'display.ts', 'domain_future.ts', 'errors.ts', 'instrument.ts', 'ive_boundary.ts', 'market_cache.ts', 'metrics.ts', 'multi_contract.ts', 'multi_series.ts', 'numeric.ts', 'observability.ts', 'portfolio.ts', 'provenance.ts', 'provider_adapter.ts', 'provider.ts', 'rate_limit_policy.ts', 'risk.ts', 'session_freshness.ts', 'signals.ts', 'synthetic_market.ts', 'timeseries.ts', 'watchlist_contract.ts',
   ]);
 });
 

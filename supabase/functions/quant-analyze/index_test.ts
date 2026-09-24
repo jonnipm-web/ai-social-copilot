@@ -10,6 +10,8 @@ import type { AuthClient } from '../_shared/auth.ts';
 import { fakeSubjectSource } from '../_shared/entitlement_test_support.ts';
 import { type AnalyzeDeps, handler } from './index.ts';
 import { InMemoryRateLimiter } from '../_shared/quant_server.ts';
+import type { WatchlistRow, WatchlistStore } from '../_shared/quant/watchlist_contract.ts';
+import type { EntitlementSubjectSource } from '../_shared/entitlement.ts';
 
 globalThis.fetch = () => Promise.reject(new Error('network is forbidden in quant-analyze tests'));
 
@@ -353,4 +355,131 @@ Deno.test('RL-05 unauthenticated and non-entitled callers never reach the limite
   await handler(post(body(), null), auth2, undefined, admin, deps({ rateLimiter: counting }));
   await handler(post(body()), auth2, undefined, fakeSubjectSource('free'), deps({ rateLimiter: counting }));
   assertEquals(hits, 0);
+});
+
+// ---------------------------------------------------------------- READINESS-03: multi.v1 + watchlist.v1
+
+const WL_A = 'cccccccc-0000-4000-8000-00000000000a';
+const WL_B = 'cccccccc-0000-4000-8000-00000000000b';
+const itemId = (n: number) => `dddddddd-0000-4000-8000-${String(n).padStart(12, '0')}`;
+function wlRow(id: string, symbols: Array<[string, string, string]>): WatchlistRow {
+  return {
+    id, name: 'wl', project_id: null, created_at: 't', updated_at: 't',
+    items: symbols.map(([s, mic, ccy], i) => ({ id: itemId(i + 1), instrument_key: `EQUITY:${s}:${mic}:${ccy}`, asset_class: 'EQUITY', symbol: s, exchange_mic: mic, currency: ccy, isin: null, figi: null, created_at: 't' })),
+  };
+}
+/** Store as seen through RLS for USER_A: only the rows passed in are visible. */
+function storeFor(rows: WatchlistRow[], seen: { tokens: string[]; users: string[] }) {
+  return (token: string): WatchlistStore => ({
+    // deno-lint-ignore require-await
+    async list(userId: string) {
+      seen.tokens.push(token);
+      seen.users.push(userId);
+      return rows;
+    },
+    countWatchlists: () => Promise.reject(new Error('unused')),
+    create: () => Promise.reject(new Error('unused')),
+    rename: () => Promise.reject(new Error('unused')),
+    remove: () => Promise.reject(new Error('unused')),
+    itemCount: () => Promise.reject(new Error('unused')),
+    addItem: () => Promise.reject(new Error('unused')),
+    removeItem: () => Promise.reject(new Error('unused')),
+  });
+}
+const WNOW = Date.UTC(2026, 8, 23, 22);
+function wlBody(over: Record<string, unknown> = {}) {
+  return { contract_version: 'quant.analyze.watchlist.v1', watchlist_id: WL_A, data_source: 'SYNTHETIC_PROVIDER', options: { periods_per_year: 252 }, ...over };
+}
+const CSV_B = 'date,open,high,low,close,volume\n2026-01-05,50,51,49,50,1000\n2026-01-06,51,52,50,51,1000\n2026-01-07,49,50,48,49,1000\n2026-01-08,52,53,51,52,1000\n2026-01-09,50,51,49,50,1000\n';
+function multiBody(over: Record<string, unknown> = {}) {
+  const ds = (csv: string) => ({ format: 'csv', frequency: 'DAILY', adjustment: 'SPLIT_AND_DIVIDEND_ADJUSTED', csv });
+  return {
+    contract_version: 'quant.analyze.multi.v1',
+    series: [
+      { instrument: { asset_class: 'EQUITY', symbol: 'TSTA', exchange_mic: 'XNAS', currency: 'USD' }, dataset: ds(G1_CSV) },
+      { instrument: { asset_class: 'EQUITY', symbol: 'TSTB', exchange_mic: 'XNAS', currency: 'USD' }, dataset: ds(CSV_B) },
+    ],
+    options: { periods_per_year: 252 },
+    ...over,
+  };
+}
+
+Deno.test('QM-01 multi.v1 → 200 multi_analysis with correlation + USER_UPLOAD provenance; v1 still served', async () => {
+  const r = await call(post(multiBody()));
+  assertEquals(r.status, 200);
+  assertEquals(r.json.contract_version, 'quant.analyze.multi.v1');
+  assertEquals(r.json.multi_analysis.series.length, 2);
+  assertEquals(r.json.multi_analysis.correlation.length, 1);
+  for (const s of r.json.multi_analysis.series) assertEquals(s.analysis.dataSnapshot.provenance.providerKind, 'USER_UPLOAD');
+  assertEquals((await call(post(body()))).json.contract_version, 'quant.analyze.v1');
+  assertEquals((await call(post(multiBody({ contract_version: 'quant.analyze.v2' })))).status, 400);
+});
+
+Deno.test('QM-02 multi.v1: 11 series → 400; foreign project → 403; ownership outage fails closed', async () => {
+  const s = (multiBody().series as unknown[])[0];
+  assertEquals((await call(post(multiBody({ series: Array.from({ length: 11 }, () => s) })))).status, 400);
+  assertEquals((await call(post(multiBody({ project_id: PROJECT_B })))).json.error, 'PROJECT_ACCESS_DENIED');
+  const down = await call(post(multiBody({ project_id: PROJECT_A })), deps({ projectAccess: { ownsProject: () => Promise.reject(new Error('x')) } }));
+  assertEquals(down.json.error, 'OWNERSHIP_UNAVAILABLE');
+});
+
+Deno.test('QM-03 watchlist.v1 → instruments from the caller-owned watchlist (caller JWT + server user id), synthetic provenance', async () => {
+  const seen = { tokens: [] as string[], users: [] as string[] };
+  const rows = [wlRow(WL_A, [['SYNA', 'XNYS', 'USD'], ['SYNB', 'XNAS', 'USD']])];
+  logs.length = 0;
+  const r = await call(post(wlBody()), deps({ clock: () => WNOW, storeFor: storeFor(rows, seen) }));
+  assertEquals(r.status, 200);
+  assertEquals(seen.tokens, ['jwt-a']);
+  assertEquals(seen.users, [USER_A]);
+  assertEquals(r.json.multi_analysis.series.length, 2);
+  assertEquals(r.json.multi_analysis.dataSource.kind, 'SYNTHETIC_PROVIDER');
+  for (const s of r.json.multi_analysis.series) assertEquals(s.analysis.dataSnapshot.provenance.trust, 'SYNTHETIC_FIXTURE');
+  const ev = JSON.parse(logs[logs.length - 1]);
+  assertEquals(ev.contract, 'quant.analyze.watchlist.v1');
+  assertEquals(ev.instrument_count, 2);
+  assertEquals(ev.cache_hits + ev.cache_misses, 2);
+  assert(!logs.join('\n').includes('SYNA'));
+});
+
+Deno.test('QM-04 watchlist.v1: invisible watchlist → NOT_FOUND; unknown item ids refused; > 10 items need item_ids; no client URL', async () => {
+  const seen = { tokens: [] as string[], users: [] as string[] };
+  const rows = [wlRow(WL_A, Array.from({ length: 12 }, (_, i) => [`S${i}`, 'XNYS', 'USD'] as [string, string, string]))];
+  const d = deps({ clock: () => WNOW, storeFor: storeFor(rows, seen) });
+  const foreign = await call(post(wlBody({ watchlist_id: WL_B })), d);
+  assertEquals(foreign.status, 400);
+  assert(JSON.stringify(foreign.json).includes('NOT_FOUND'));
+  assertEquals((await call(post(wlBody({ item_ids: [itemId(99)] })), d)).status, 400);
+  assertEquals((await call(post(wlBody()), d)).json.error, 'DATASET_TOO_LARGE');
+  const subset = await call(post(wlBody({ item_ids: [itemId(1), itemId(2), itemId(3)] })), d);
+  assertEquals(subset.status, 200);
+  assertEquals(subset.json.multi_analysis.series.length, 3);
+  assertEquals((await call(post(wlBody({ provider_url: 'http://169.254.169.254/' })), d)).status, 400);
+  assertEquals((await call(post(wlBody({ data_source: 'LICENSED_VENDOR' })), d)).status, 400);
+});
+
+Deno.test('QM-05 watchlist.v1 also requires quant-watchlists: second gate fails closed; non-admin denied; store never read', async () => {
+  let n = 0;
+  const admin2 = fakeSubjectSource('admin');
+  const flaky: EntitlementSubjectSource = {
+    resolveUserSubject(userId: string, accessToken: string) {
+      if (++n > 1) return Promise.reject(new Error('outage on the second gate'));
+      return admin2.resolveUserSubject(userId, accessToken);
+    },
+  };
+  const seen = { tokens: [] as string[], users: [] as string[] };
+  const d = deps({ clock: () => WNOW, storeFor: storeFor([wlRow(WL_A, [['SYNA', 'XNYS', 'USD']])], seen) });
+  const r = await call(post(wlBody()), d, flaky as never);
+  assertEquals(n, 2);
+  assert(r.status === 403 || r.status === 503, `got ${r.status}`);
+  assertEquals(seen.users.length, 0);
+  const user = await call(post(wlBody()), d, fakeSubjectSource('pro') as never);
+  assertEquals(user.status, 403);
+  assertEquals(seen.users.length, 0);
+});
+
+Deno.test('QM-06 watchlist.v1: store failure → 500 structured, no partial result', async () => {
+  const d = deps({ clock: () => WNOW, storeFor: () => ({ list: () => Promise.reject(new Error('db down')) }) as unknown as WatchlistStore });
+  const r = await call(post(wlBody()), d);
+  assertEquals(r.status, 500);
+  assertEquals(r.json.multi_analysis, undefined);
 });

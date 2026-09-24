@@ -23,6 +23,11 @@ export interface QuantLogEvent {
   readonly freshness: FreshnessState | null;
   readonly latency_ms: number;
   readonly error_code: QuantErrorCode | null;
+  /** Contract used (quant.analyze.v1 / .multi.v1 / .watchlist.v1) — READINESS-03. */
+  readonly contract: string | null;
+  /** Provider cache outcome counts for this call (0/0 when no cache was involved). */
+  readonly cache_hits: number;
+  readonly cache_misses: number;
 }
 
 export interface QuantLogInput {
@@ -36,6 +41,9 @@ export interface QuantLogInput {
   freshness?: FreshnessState | null;
   latencyMs: number;
   errorCode?: QuantErrorCode | null;
+  contract?: string | null;
+  cacheHits?: number;
+  cacheMisses?: number;
 }
 
 const SAFE_TOKEN_RE = /^[A-Za-z0-9_:.\-]{1,64}$/;
@@ -46,6 +54,8 @@ const ERROR_CODES: ReadonlySet<string> = new Set([
   'INVALID_PORTFOLIO', 'INVALID_PARAMETER', 'PROJECT_ACCESS_DENIED', 'PROVIDER_RATE_LIMITED', 'PROVIDER_TIMEOUT',
   'PROVIDER_MALFORMED', 'INSUFFICIENT_OVERLAP',
 ] satisfies QuantErrorCode[]);
+
+const CONTRACTS: ReadonlySet<string> = new Set(['quant.analyze.v1', 'quant.analyze.multi.v1', 'quant.analyze.watchlist.v1']);
 
 function safe(v: string | null | undefined): string | null {
   return typeof v === 'string' && SAFE_TOKEN_RE.test(v) ? v : null;
@@ -65,5 +75,8 @@ export function quantLogEvent(i: QuantLogInput): QuantLogEvent {
     freshness: typeof i.freshness === 'string' && FRESHNESS_STATES.has(i.freshness) ? i.freshness : null,
     latency_ms: Number.isFinite(i.latencyMs) ? Math.max(0, Math.round(i.latencyMs)) : 0,
     error_code: typeof i.errorCode === 'string' && ERROR_CODES.has(i.errorCode) ? i.errorCode : null,
+    contract: typeof i.contract === 'string' && CONTRACTS.has(i.contract) ? i.contract : null,
+    cache_hits: Number.isSafeInteger(i.cacheHits) ? Math.max(0, i.cacheHits as number) : 0,
+    cache_misses: Number.isSafeInteger(i.cacheMisses) ? Math.max(0, i.cacheMisses as number) : 0,
   };
 }
