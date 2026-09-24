@@ -16,6 +16,7 @@ import type { QuantErrorCode, QuantErrorDetails } from './quant/errors.ts';
 import { httpStatusFor, type TransportErrorCode } from './quant/api_contract.ts';
 import type { InstrumentIdentity } from './quant/instrument.ts';
 import { itemColumns, type WatchlistRow, type WatchlistStore } from './quant/watchlist_contract.ts';
+import { FixedWindowCounter, type RateLimitBucket, type RateLimitDecision } from './quant/rate_limit_policy.ts';
 
 export const quantCorsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -178,4 +179,67 @@ export class SupabaseWatchlistStore implements WatchlistStore {
     if (error) throw new Error('item delete failed');
     return (data ?? []).length === 1;
   }
+}
+
+// ------------------------------------------------------------------ rate limiting
+
+export interface QuantRateLimiter {
+  /** Counts one hit for the SERVER-derived user. Throws when the counter store is unavailable. */
+  hit(userId: string, bucket: RateLimitBucket, accessToken: string): Promise<RateLimitDecision>;
+}
+
+/**
+ * Production authority: public.quant_rate_limit_hit via the caller's JWT.
+ * The SQL function derives identity from auth.uid() and holds the limits;
+ * `userId` is not sent (it could not be trusted by the database anyway).
+ */
+export class SupabaseRateLimiter implements QuantRateLimiter {
+  async hit(_userId: string, bucket: RateLimitBucket, accessToken: string): Promise<RateLimitDecision> {
+    const { data, error } = await callerClient(accessToken).rpc('quant_rate_limit_hit', { p_bucket: bucket });
+    const d = data as Record<string, unknown> | null;
+    if (error || !d || typeof d.allowed !== 'boolean' || typeof d.limit !== 'number') throw new Error('rate limit store unavailable');
+    return {
+      allowed: d.allowed,
+      limit: d.limit,
+      remaining: typeof d.remaining === 'number' ? d.remaining : 0,
+      retryAfterSeconds: typeof d.retry_after_seconds === 'number' ? Math.max(1, d.retry_after_seconds) : 60,
+    };
+  }
+}
+
+/** Tests and the local Lab dev server only (not shared across isolates). */
+export class InMemoryRateLimiter implements QuantRateLimiter {
+  private readonly counter: FixedWindowCounter;
+  constructor(clock: () => number = () => Date.now()) {
+    this.counter = new FixedWindowCounter(clock);
+  }
+  // deno-lint-ignore require-await
+  async hit(userId: string, bucket: RateLimitBucket): Promise<RateLimitDecision> {
+    return this.counter.hit(userId, bucket);
+  }
+}
+
+/**
+ * Applies the limiter. Returns a ready Response when the request must stop:
+ * 429 RATE_LIMITED (+ Retry-After) when over the limit, 503
+ * RATE_LIMIT_UNAVAILABLE when the counter store fails — FAIL CLOSED
+ * (QUANT_RATE_LIMIT_POLICY.md §4). Returns null when the request may proceed.
+ */
+export async function enforceRateLimit(
+  limiter: QuantRateLimiter,
+  userId: string,
+  bucket: RateLimitBucket,
+  accessToken: string,
+  correlationId: string,
+): Promise<Response | null> {
+  let decision: RateLimitDecision;
+  try {
+    decision = await limiter.hit(userId, bucket, accessToken);
+  } catch {
+    return quantError('RATE_LIMIT_UNAVAILABLE', correlationId);
+  }
+  if (decision.allowed) return null;
+  const res = quantError('RATE_LIMITED', correlationId, { retry_after_seconds: decision.retryAfterSeconds, limit: decision.limit });
+  res.headers.set('Retry-After', String(decision.retryAfterSeconds));
+  return res;
 }

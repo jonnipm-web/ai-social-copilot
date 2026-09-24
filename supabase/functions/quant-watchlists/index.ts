@@ -28,13 +28,16 @@ import {
 } from '../_shared/quant/watchlist_contract.ts';
 import {
   bearerToken,
+  enforceRateLimit,
   type ProjectAccessSource,
   quantCorsHeaders,
   quantError,
   type QuantHttpErrorCode,
   quantJson,
+  type QuantRateLimiter,
   readJsonBody,
   SupabaseProjectAccess,
+  SupabaseRateLimiter,
   SupabaseWatchlistStore,
 } from '../_shared/quant_server.ts';
 
@@ -43,6 +46,7 @@ export interface WatchlistDeps {
   /** Built per request from the caller's token (tests inject a fake). */
   storeFor?: (accessToken: string) => WatchlistStore;
   log?: (line: string) => void;
+  rateLimiter?: QuantRateLimiter;
 }
 
 const OPS = new Set(['list', 'create', 'rename', 'delete', 'add_item', 'remove_item']);
@@ -96,6 +100,9 @@ export async function handler(
   op = action.action;
 
   const token = bearerToken(req) ?? '';
+  const bucket = action.action === 'list' ? 'quant-watchlists-read' : 'quant-watchlists-write';
+  const limited = await enforceRateLimit(deps.rateLimiter ?? new SupabaseRateLimiter(), authUser.id, bucket, token, cid);
+  if (limited) return done(limited, null, 'RATE_LIMITED');
   const store = (deps.storeFor ?? ((t: string) => new SupabaseWatchlistStore(t)))(token);
   const uid = authUser.id;
   const ok = (payload: Record<string, unknown>, items: number | null) =>

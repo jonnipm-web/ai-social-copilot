@@ -9,6 +9,7 @@ import { assert, assertEquals } from 'https://deno.land/std@0.168.0/testing/asse
 import type { AuthClient } from '../_shared/auth.ts';
 import { fakeSubjectSource } from '../_shared/entitlement_test_support.ts';
 import { type AnalyzeDeps, handler } from './index.ts';
+import { InMemoryRateLimiter } from '../_shared/quant_server.ts';
 
 globalThis.fetch = () => Promise.reject(new Error('network is forbidden in quant-analyze tests'));
 
@@ -29,6 +30,7 @@ const ownership = { calls: 0 };
 const deps = (over: Partial<AnalyzeDeps> = {}): AnalyzeDeps => ({
   clock: () => Date.UTC(2026, 0, 12, 12), // Mon 12:00Z, before the NYSE open
   log: (l) => logs.push(l),
+  rateLimiter: { hit: () => Promise.resolve({ allowed: true, limit: 30, remaining: 29, retryAfterSeconds: 60 }) },
   projectAccess: {
     // deno-lint-ignore require-await
     async ownsProject(userId, projectId) {
@@ -290,4 +292,65 @@ Deno.test('CXN-04 oversized option arrays are rejected before iteration', async 
   assertEquals([r.status, r.json.details?.field], [400, 'options.sma_windows']);
   const f = await call(post(body({ options: { periods_per_year: 252, accepted_freshness: ['FRESH', 'FRESH', 'FRESH', 'FRESH', 'FRESH'] } })));
   assertEquals(f.status, 400);
+});
+
+// ---------------------------------------------------------------- rate limiting (IV-QUANT-REAL-DATA-READINESS-03)
+
+const USER_B = 'aaaaaaaa-0000-4000-8000-00000000000b';
+const auth2: AuthClient = {
+  auth: {
+    // deno-lint-ignore require-await
+    async getUser(token: string) {
+      const id = token === 'jwt-a' ? USER_A : token === 'jwt-b' ? USER_B : null;
+      return id ? { data: { user: { id } }, error: null } : { data: { user: null }, error: { message: 'invalid' } };
+    },
+  },
+};
+async function callRL(r: Request, limiter: InMemoryRateLimiter | { hit: () => Promise<never> }) {
+  const res = await handler(r, auth2, undefined, admin, deps({ rateLimiter: limiter as never }));
+  return { status: res.status, retryAfter: res.headers.get('Retry-After'), json: await res.json() };
+}
+
+Deno.test('RL-01 within / at / over the limit → 200 … 200, then 429 with Retry-After and structured body', async () => {
+  let now = Date.UTC(2026, 0, 12, 12, 0, 10);
+  const limiter = new InMemoryRateLimiter(() => now);
+  for (let i = 1; i <= 30; i++) assertEquals((await callRL(post(body()), limiter)).status, 200, `hit ${i}`);
+  const over = await callRL(post(body()), limiter);
+  assertEquals([over.status, over.json.error, over.json.details.limit], [429, 'RATE_LIMITED', 30]);
+  assertEquals(over.retryAfter, '50'); // window ends at 12:01:00
+  assertEquals(over.json.details.retry_after_seconds, 50);
+  assert(!JSON.stringify(over.json).match(/postgres|supabase|table|counter/i));
+  // Next window: allowed again.
+  now += 60_000;
+  assertEquals((await callRL(post(body()), limiter)).status, 200);
+});
+
+Deno.test('RL-02 users have independent counters; a forged user_id in the body cannot move the count', async () => {
+  const limiter = new InMemoryRateLimiter(() => Date.UTC(2026, 0, 12, 12));
+  for (let i = 0; i < 30; i++) await callRL(post(body()), limiter);
+  assertEquals((await callRL(post(body()), limiter)).status, 429);
+  assertEquals((await callRL(post(body(), 'jwt-b'), limiter)).status, 200); // user B unaffected
+  // A forged user_id is rejected by the schema, and in any case the limiter keys on the JWT user.
+  const forged = await callRL(post(body({ user_id: USER_B })), limiter);
+  assertEquals(forged.status, 429); // still user A's exhausted counter — checked BEFORE the body is read
+});
+
+Deno.test('RL-03 counter store failure fails CLOSED with 503 RATE_LIMIT_UNAVAILABLE', async () => {
+  const r = await callRL(post(body()), { hit: () => Promise.reject(new Error('db down')) });
+  assertEquals([r.status, r.json.error], [503, 'RATE_LIMIT_UNAVAILABLE']);
+});
+
+Deno.test('RL-04 concurrency: 45 simultaneous requests → exactly 30 allowed, 15 limited', async () => {
+  const limiter = new InMemoryRateLimiter(() => Date.UTC(2026, 0, 12, 12));
+  const results = await Promise.all(Array.from({ length: 45 }, () => callRL(post(body()), limiter)));
+  assertEquals(results.filter((r) => r.status === 200).length, 30);
+  assertEquals(results.filter((r) => r.status === 429).length, 15);
+});
+
+Deno.test('RL-05 unauthenticated and non-entitled callers never reach the limiter', async () => {
+  let hits = 0;
+  const counting = { hit: () => { hits++; return Promise.resolve({ allowed: true, limit: 30, remaining: 29, retryAfterSeconds: 60 }); } };
+  await handler(post(body(), null), auth2, undefined, admin, deps({ rateLimiter: counting }));
+  await handler(post(body()), auth2, undefined, fakeSubjectSource('free'), deps({ rateLimiter: counting }));
+  assertEquals(hits, 0);
 });

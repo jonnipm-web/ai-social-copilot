@@ -205,7 +205,13 @@ export async function runAnalyze(req: AnalyzeRequest, nowMs: number): Promise<Qu
 }
 
 /** Transport-level error codes (not calculation errors). */
-export type TransportErrorCode = 'METHOD_NOT_ALLOWED' | 'UNSUPPORTED_MEDIA_TYPE' | 'INVALID_JSON' | 'INTERNAL_ERROR';
+export type TransportErrorCode =
+  | 'METHOD_NOT_ALLOWED'
+  | 'UNSUPPORTED_MEDIA_TYPE'
+  | 'INVALID_JSON'
+  | 'INTERNAL_ERROR'
+  | 'RATE_LIMITED'
+  | 'RATE_LIMIT_UNAVAILABLE';
 
 const STATUS: Readonly<Record<QuantErrorCode | TransportErrorCode, number>> = {
   INVALID_PARAMETER: 400,
@@ -224,7 +230,9 @@ const STATUS: Readonly<Record<QuantErrorCode | TransportErrorCode, number>> = {
   STALE_DATA: 422,
   CALCULATION_ERROR: 422,
   INVALID_PORTFOLIO: 422,
+  RATE_LIMITED: 429,
   INTERNAL_ERROR: 500,
+  RATE_LIMIT_UNAVAILABLE: 503,
   PROVIDER_UNAVAILABLE: 503,
 };
 

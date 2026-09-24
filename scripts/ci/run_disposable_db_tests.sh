@@ -42,3 +42,8 @@ echo "$out" | grep -qx 'SUBJECT_ROLES_RLS: PASS'
 qout="$(run -d "$DB" -tA -f "$ROOT/supabase/tests/quant_watchlists_rls_test.sql")"
 echo "$qout" | tail -1
 echo "$qout" | grep -qx 'QUANT_WATCHLISTS_RLS: PASS'
+
+# IV-QUANT-REAL-DATA-READINESS-03 — Quant API rate-limit function (identity, limits, privacy).
+rout="$(run -d "$DB" -tA -f "$ROOT/supabase/tests/quant_rate_limits_test.sql")"
+echo "$rout" | tail -1
+echo "$rout" | grep -qx 'QUANT_RATE_LIMITS: PASS'

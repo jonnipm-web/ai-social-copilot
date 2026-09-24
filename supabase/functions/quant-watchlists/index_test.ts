@@ -92,6 +92,7 @@ const logs: string[] = [];
 const deps = (): WatchlistDeps => ({
   storeFor: () => store,
   log: (l) => logs.push(l),
+  rateLimiter: { hit: () => Promise.resolve({ allowed: true, limit: 60, remaining: 59, retryAfterSeconds: 60 }) },
   projectAccess: {
     // deno-lint-ignore require-await
     async ownsProject(u, p) {
@@ -209,4 +210,23 @@ Deno.test('QW-08 store failures surface as 500 INTERNAL_ERROR without leaking th
   const r = await call({ action: 'list' });
   assertEquals([r.status, r.json.error], [500, 'INTERNAL_ERROR']);
   assert(!JSON.stringify(r.json).includes('does not exist'));
+});
+
+Deno.test('QW-09 rate limit: list uses the read bucket, mutations the write bucket; 429 stops before the store', async () => {
+  store = new MemoryStore();
+  const seen: string[] = [];
+  const res = async (payload: Record<string, unknown>, allowed: boolean) => {
+    const r = await handler(
+      new Request('http://localhost/', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer jwt-a' }, body: JSON.stringify({ contract_version: 'quant.watchlists.v1', ...payload }) }),
+      auth, undefined, fakeSubjectSource('admin'),
+      { ...deps(), rateLimiter: { hit: (_u, b) => { seen.push(b); return Promise.resolve({ allowed, limit: 1, remaining: 0, retryAfterSeconds: 7 }); } } },
+    );
+    return { status: r.status, retry: r.headers.get('Retry-After') };
+  };
+  await res({ action: 'list' }, true);
+  await res({ action: 'create', name: 'x' }, true);
+  assertEquals(seen, ['quant-watchlists-read', 'quant-watchlists-write']);
+  const limited = await res({ action: 'create', name: 'y' }, false);
+  assertEquals([limited.status, limited.retry], [429, '7']);
+  assertEquals(store.rows.length, 1); // the limited create never reached the store
 });

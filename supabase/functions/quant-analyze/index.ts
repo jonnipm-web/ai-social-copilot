@@ -20,13 +20,16 @@ import type { QuantErrorCode } from '../_shared/quant/errors.ts';
 import { quantLogEvent } from '../_shared/quant/observability.ts';
 import {
   bearerToken,
+  enforceRateLimit,
   type ProjectAccessSource,
   quantCorsHeaders,
   quantError,
   type QuantHttpErrorCode,
   quantJson,
+  type QuantRateLimiter,
   readJsonBody,
   SupabaseProjectAccess,
+  SupabaseRateLimiter,
 } from '../_shared/quant_server.ts';
 
 export interface AnalyzeDeps {
@@ -34,6 +37,7 @@ export interface AnalyzeDeps {
   /** Server clock (injected in tests). Used for provenance.retrievedAt and freshness only. */
   clock?: () => number;
   log?: (line: string) => void;
+  rateLimiter?: QuantRateLimiter;
 }
 
 export async function handler(
@@ -81,6 +85,9 @@ export async function handler(
     done(quantError(code, cid, details), { errorCode: (code in HTTP_ONLY ? null : code) as QuantErrorCode | null });
 
   if (req.method !== 'POST') return failWith('METHOD_NOT_ALLOWED');
+  // Rate limit BEFORE reading the (up to 6 MiB) body — server identity only.
+  const limited = await enforceRateLimit(deps.rateLimiter ?? new SupabaseRateLimiter(), authUser.id, 'quant-analyze', bearerToken(req) ?? '', cid);
+  if (limited) return done(limited, { errorCode: null });
   const body = await readJsonBody(req, MAX_ANALYZE_BODY_BYTES);
   if (!body.ok) return failWith(body.code, body.code === 'DATASET_TOO_LARGE' ? { maxBytes: MAX_ANALYZE_BODY_BYTES } : undefined);
 
@@ -108,7 +115,7 @@ export async function handler(
 }
 
 /** Transport-only codes are not QuantErrorCodes; they log as error_code null + HTTP status. */
-const HTTP_ONLY: Record<string, true> = { METHOD_NOT_ALLOWED: true, UNSUPPORTED_MEDIA_TYPE: true, INVALID_JSON: true, OWNERSHIP_UNAVAILABLE: true, INTERNAL_ERROR: true };
+const HTTP_ONLY: Record<string, true> = { METHOD_NOT_ALLOWED: true, UNSUPPORTED_MEDIA_TYPE: true, INVALID_JSON: true, OWNERSHIP_UNAVAILABLE: true, INTERNAL_ERROR: true, RATE_LIMITED: true, RATE_LIMIT_UNAVAILABLE: true };
 
 if (Deno.env.get('DENO_TESTING') !== '1') {
   serve((req) => handler(req));

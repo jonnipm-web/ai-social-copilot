@@ -38,7 +38,7 @@ Deno.test('QB-01 production modules exist and are all covered by this tripwire',
   const names = (await productionModules()).map((m) => m.name);
   assertEquals(names, [
     'analysis.ts', 'api_contract.ts', 'calendar.ts', 'csv.ts', 'display.ts', 'domain_future.ts', 'errors.ts', 'instrument.ts',
-    'ive_boundary.ts', 'metrics.ts', 'numeric.ts', 'observability.ts', 'portfolio.ts', 'provenance.ts', 'provider.ts', 'risk.ts',
+    'ive_boundary.ts', 'metrics.ts', 'numeric.ts', 'observability.ts', 'portfolio.ts', 'provenance.ts', 'provider.ts', 'rate_limit_policy.ts', 'risk.ts',
     'session_freshness.ts', 'signals.ts', 'timeseries.ts', 'watchlist_contract.ts',
   ]);
 });
@@ -197,4 +197,15 @@ Deno.test('QB-16 drift: the DB entitlement predicate of quant-watchlists matches
   const policies = [...sql.matchAll(/CREATE POLICY (\w+)[\s\S]*?;/g)];
   assertEquals(policies.length, 7);
   for (const p of policies) assert(p[0].includes('quant_watchlists_access_allowed()'), `${p[1]} lacks the entitlement predicate`);
+});
+
+Deno.test('QB-17 drift: rate-limit numbers in SQL equal the TypeScript policy', async () => {
+  const { RATE_LIMITS } = await import('./rate_limit_policy.ts');
+  const sql = await Deno.readTextFile(new URL('../../../migrations/20260924000100_quant_rate_limits.sql', import.meta.url));
+  for (const [bucket, limit] of Object.entries(RATE_LIMITS)) {
+    assert(new RegExp(`WHEN '${bucket}' THEN ${limit}(?!\\d)`).test(sql), `${bucket} must be ${limit} in SQL`);
+  }
+  assertEquals([...sql.matchAll(/WHEN '([a-z-]+)' THEN \d+/g)].length, Object.keys(RATE_LIMITS).length);
+  assert(/SECURITY DEFINER/.test(sql) && /auth\.uid\(\)/.test(sql) && /SET search_path = public, pg_temp/.test(sql));
+  assert(!/p_limit|p_user/.test(sql), 'limits and identity must never be parameters');
 });
