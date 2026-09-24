@@ -58,6 +58,15 @@ out="$(bash "$ROOT/supabase/tests/impact_evidence_race_test.sh" "$PSQL" -h "$HOS
 echo "$out" | tail -1
 echo "$out" | grep -qx 'IMPACT_EVIDENCE_RACE: PASS 4 orders'
 
+# IV-IMPACT-I4-VERIFICATION-DOSSIER-01 — atomic ingestion (I3F-03), dossier
+# snapshot register, RLS (migration 20260927010000), then two-session races.
+out="$(run -d "$DB" -tA -f "$ROOT/supabase/tests/impact_dossier_rls_test.sql")"
+echo "$out" | tail -1
+echo "$out" | grep -qE '^IMPACT_DOSSIER_RLS: PASS [0-9]+ checks$'
+out="$(bash "$ROOT/supabase/tests/impact_dossier_race_test.sh" "$PSQL" -h "$HOST" -v ON_ERROR_STOP=1 -q -d "$DB" 2>&1)" || { echo "$out"; exit 1; }
+echo "$out" | tail -1
+echo "$out" | grep -qx 'IMPACT_DOSSIER_RACE: PASS 2 races'
+
 # IV-IMPACT-I1 — engine → database parity: rows produced by the REAL Lab flow
 # (engine + store row mappers) must satisfy every database invariant.
 if command -v deno >/dev/null 2>&1; then
