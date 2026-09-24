@@ -3,7 +3,7 @@
 // staleness, isolation, mass assignment, prompt injection, privacy, bounds.
 // Synthetic organizations (XA fixture registries) and synthetic files only.
 import { assert, assertEquals, assertNotEquals } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
-import { makePdf, utf8 } from './fixtures/artifacts.ts';
+import { makePdf } from './fixtures/artifacts.ts';
 import { type DossierDocument, verifyDossierIntegrity } from './dossier.ts';
 import { parseLabRequest } from './lab_contract.ts';
 import { handleLabRequest, type LabResponse } from './lab_service.ts';
