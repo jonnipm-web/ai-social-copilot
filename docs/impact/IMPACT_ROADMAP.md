@@ -75,3 +75,19 @@ Next gate candidates (decision for Agente Martins — NOT started): **I4**
 Registry Enablement gate (one real registry after Owner terms + credential),
 or an OCR / URL-snapshot boundary gate (requires egress pinning). The
 service-role A/B re-evaluation stays mandatory before any non-Lab exposure.
+
+## Status after I4
+
+The Verification Dossier is complete in the Lab: a deterministic,
+explainable, hashed projection with limitations, non-findings, disputes,
+staleness and snapshot verification; I3F-03 (orphan sources) is closed by
+atomic ingestion. Not done on purpose: UI (no Impact surface exists), PDF,
+public sharing, scheduled re-verification, monetization.
+
+Next gate candidates (decision for Agente Martins — NOT started): Impact
+product UX (a first admin screen over the dossier contract), Impact
+monitoring / scheduled re-verification (the snapshot register + evidence-set
+hashes already allow change detection), or a controlled Registry
+Enablement gate (egress pinning + Owner terms + credential). Monetization
+dimensions prepared (dossier count, exports, history, retention) without
+degrading truth quality in any tier.

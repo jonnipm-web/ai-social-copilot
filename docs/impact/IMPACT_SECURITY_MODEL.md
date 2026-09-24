@@ -121,3 +121,16 @@ SELECT on `impact_registry_conflicts` (written only by the trigger).
   INSERT/SELECT/UPDATE (review fields only, trigger-enforced) on candidates,
   no DELETE. Residual: `file_hash` trusted from the server path.
 - Observability: artifact events carry codes, sizes and counts only.
+
+## I4 notes
+
+- The dossier copies every status / class / authority / independence from
+  the engine's stored results; the client names only the investigation, a
+  language and (verify) a hash. No FACT, owner, status or hash can be sent.
+- Integrity: SHA-256 over canonical content + server register of issued
+  hashes (tamper and forgery detection); integrity is never truth.
+- Privacy: personal-role / sensitive / minor-risk text withheld; original
+  filenames not exported; dossier events carry status codes and counts only.
+- No publication, sharing, donation, accusation or external action path.
+- service_role not expanded (register SELECT/INSERT; ingestion RPC EXECUTE,
+  SECURITY INVOKER). Threat model T1–T25: IMPACT_DOSSIER_SECURITY.md.

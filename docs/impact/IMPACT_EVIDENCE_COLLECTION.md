@@ -103,7 +103,8 @@ and any future LLM output can only ever be a candidate (review required).
   USER_SUBMITTED, never counted, no excerpt allowed), so it opens no path
   around review; and once cited by free-form evidence it can never be adopted
   as an artifact source (TS + SQL). The Lab API has no delete, so such an
-  orphan stays until the investigation is removed.
+  orphan stays until the investigation is removed. **I4 closed this
+  (I3F-03): ingestion is now one transaction, so no new orphan can arise.**
 - Concurrency is resolved by database uniques: `(investigation, ref)`,
   `(investigation, file_hash)`, `(investigation, supersedes_ref)`.
 - Mobile / interrupted uploads: one request carries the whole file (≤ 6 MB);

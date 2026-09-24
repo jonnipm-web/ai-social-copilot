@@ -104,3 +104,19 @@ run_verification ─► unchanged engine (USER_SUBMITTED never counted as author
 No network, no LLM, no storage bucket, no new dependency. Cloud files are
 downloaded by the client (Drive `drive.readonly`) and uploaded as
 CLOUD_IMPORT. See IMPACT_EVIDENCE_COLLECTION.md.
+
+## I4 — Verification Dossier
+
+```
+get_dossier / export_dossier / verify_dossier
+  → AUTH → ENTITLEMENT (admin) → OWNERSHIP (investigation + project)
+  → load persisted rows (same loader as get_investigation)
+  → latest result per claim + dispute overlay (engine output, never re-decided)
+  → buildDossierContent (pure, language-neutral) → canonical JSON → SHA-256
+  → envelope LIVE | SNAPSHOT (+ audit position) → renderDossierText (PT/EN)
+export_dossier → impact_dossier_snapshots (metadata only, bound to an audit event) → DOSSIER_EXPORTED
+ingest_artifact → impact_ingest_artifact() (source + artifact + candidates, one transaction)
+```
+
+The dossier is a projection, not a store of truth: nothing it contains is
+persisted except the register of issued hashes.

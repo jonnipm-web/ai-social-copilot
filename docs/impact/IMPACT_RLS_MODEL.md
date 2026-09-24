@@ -152,4 +152,5 @@ so concurrent review / promotion / artifact / evidence writers serialize
 without deadlock (two-session CI test `impact_evidence_race_test.sh`, 4
 orders). The checks assume READ COMMITTED (PostgREST / Supabase default);
 running these writes under REPEATABLE READ or SERIALIZABLE is not supported
-(residual, documented). Orphan-source reconciliation (I3F-03) is deferred.
+(residual, documented). Orphan sources (I3F-03) are closed in I4 by atomic
+ingestion (`impact_ingest_artifact()`, one transaction).

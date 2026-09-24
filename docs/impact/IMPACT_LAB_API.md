@@ -108,3 +108,18 @@ New events (`impact.*`): `artifact_ingestion_completed` / `_failed`,
 
 Limits: 6 MB per file, 100 artifacts and 2000 candidates per investigation,
 50 candidates per artifact, 20 requested per call, excerpt ≤ 1000 chars.
+
+## I4 actions (Verification Dossier)
+
+| Action | Body | Notes |
+|---|---|---|
+| `get_dossier` | `{investigation_id, lang?: pt\|en}` | LIVE dossier + text; read-only (works on archived investigations) |
+| `export_dossier` | `{investigation_id, lang?}` | SNAPSHOT + registration (idempotent on content hash) + `DOSSIER_EXPORTED` audit |
+| `verify_dossier` | `{investigation_id, content_hash}` | NOT_ISSUED / CURRENT / STALE |
+
+New error: `DOSSIER_TOO_LARGE` 413. New events (`impact.*`):
+`dossier_generated`, `dossier_generation_failed`, `dossier_exported`,
+`dossier_stale_detected`, `dossier_reverification_pending` — fields
+`dossier_status`, `claims_count`, `reverification_count`, `error_code` only.
+`ingest_artifact` is unchanged for clients; it now persists in one
+transaction.

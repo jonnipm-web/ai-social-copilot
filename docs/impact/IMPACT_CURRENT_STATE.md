@@ -104,3 +104,20 @@ fetch via safe_fetch — not used by Impact), Flutter `drive_service.dart`
 (`drive.readonly`, client-side download). No storage bucket exists or was
 created. Docs: IMPACT_EVIDENCE_COLLECTION · IMPACT_ARTIFACT_MODEL ·
 IMPACT_FILE_SECURITY.
+
+## 8. I4 — Verification Dossier (IV-IMPACT-I4-VERIFICATION-DOSSIER-01)
+
+| Asset | Classification | Where |
+|---|---|---|
+| Dossier projection (deterministic, hashed) | EXPERIMENTAL | `_shared/impact/dossier.ts` |
+| PT/EN human-readable rendering | EXPERIMENTAL | `_shared/impact/dossier_render.ts`, `dossier_i18n.ts` |
+| Lab actions `get_dossier`, `export_dossier`, `verify_dossier` | EXPERIMENTAL (admin-only, EF not deployed) | `_shared/impact/lab_service.ts`, `impact-lab/` |
+| Atomic artifact ingestion (I3F-03 closed) | EXPERIMENTAL | `impact_ingest_artifact()` + store bundle |
+| Migration (snapshot register, ingestion RPC, DOSSIER_EXPORTED) | EXPERIMENTAL — **not applied to production** | `supabase/migrations/20260927010000_impact_verification_dossier.sql` |
+| DB tests | CI (`disposable-db-rls-ci`) | `impact_dossier_rls_test.sql`, `impact_dossier_race_test.sh` |
+
+Discovery: `report.ts` (I1 organization report) and `i18n.ts` were reused
+(taxonomy, labels, verdict guard); no Flutter Impact screen exists
+(`adminClickable=false`), so no UI was built; no PDF library exists and none
+was added. Docs: IMPACT_VERIFICATION_DOSSIER · IMPACT_DOSSIER_SCHEMA ·
+IMPACT_DOSSIER_EXPORT · IMPACT_DOSSIER_SECURITY.
