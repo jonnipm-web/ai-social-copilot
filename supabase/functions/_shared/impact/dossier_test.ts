@@ -411,3 +411,68 @@ Deno.test('DS-J2 cross-project: when the project is no longer the caller\'s, its
   t.db.projects.set(project, UB); // project ownership moved: the investigation is not A's to read through that project
   for (const action of ['get_dossier', 'export_dossier']) assertEquals(await t.code(UA, { action, investigation_id: inv }), 'INVESTIGATION_NOT_FOUND');
 });
+
+// ── Codex I4 Gate 1 regressions ────────────────────────────────────────────
+
+Deno.test('G1-N01 the request clock never enters the hash: registry freshness "now" lives in the envelope', async () => {
+  const t = setup();
+  const inv = await base(t);
+  const at = async (now: string) => (await t.must(UA, { action: 'get_dossier', investigation_id: inv }, now)).data.dossier as DossierDocument;
+  const probe = await at('2026-09-24T12:00:00.000Z');
+  const r = probe.content.registryFacts[0];
+  const recordAsOf = Math.min(Date.parse(r.retrievedAt), r.sourceAsOf ? Date.parse(r.sourceAsOf) : Infinity);
+  const soon = await at(new Date(recordAsOf + 86_400_000).toISOString()); // inside the 7-day provider window
+  const later = await at(new Date(recordAsOf + 400 * 86_400_000).toISOString()); // far beyond it
+  assertEquals(soon.integrity.contentHash, later.integrity.contentHash);
+  assertEquals(soon.content.registryFacts.map((r) => r.freshAtAsOf), later.content.registryFacts.map((r) => r.freshAtAsOf));
+  assertEquals([soon.envelope.registryFreshAtGeneration[0].fresh, later.envelope.registryFreshAtGeneration[0].fresh], [true, false]);
+});
+
+Deno.test('G1-N02 a dispute written at the SAME instant as a verification it outdated is still flagged (state overlay)', async () => {
+  const t = setup();
+  const inv = await base(t);
+  const T = '2026-09-24T12:00:00.000Z';
+  await t.must(UA, { action: 'add_claim', investigation_id: inv, claim: { ref: 'c-reg', kind: 'LEGAL_REGISTRATION', text: 'HopeBridge Foundation is a registered charity.', sourceRef: 'src-web', origin: 'MANUAL' } }, T);
+  await t.must(UA, { action: 'add_evidence', investigation_id: inv, evidence: { ref: 'e-reg', claimRef: 'c-reg', sourceRef: 'src-reg', aboutOrgRef: 'org-hopebridge', relationship: 'SUPPORTS', basis: 'HUMAN_ASSESSED', observedPeriod: { to: '2026-09-01' }, personalData: 'NONE' } }, T);
+  await t.must(UA, { action: 'run_verification', investigation_id: inv, claim_ref: 'c-reg' }, T);
+  t.db.failNextVerification = true; // the dispute is written, its in-request re-verification fails
+  await t.call(UA, { action: 'open_dispute', investigation_id: inv, ref: 'd1', claim_ref: 'c-reg', kind: 'ORGANIZATION_RESPONSE', submitted_evidence_refs: ['e-reg'] }, T);
+  const d = (await t.must(UA, { action: 'get_dossier', investigation_id: inv }, T)).data.dossier as DossierDocument;
+  const c = claimOf(d, 'c-reg');
+  assertEquals([c.verification?.status, c.reverificationPending, c.reverificationReasons], ['DISPUTED', true, ['DISPUTE_OPENED']]);
+  assert(limits(d).includes('DISPUTE_OPEN:c-reg') && limits(d).includes('REVERIFICATION_PENDING:c-reg'));
+});
+
+Deno.test('G1-N03 verdict words in names, publishers or refs stay quoted data; platform text stays clean', async () => {
+  const t = setup();
+  const inv = (await t.must(UA, { action: 'create_investigation', subject: { ref: 'org-scam-watch-target', type: 'NGO', identity: { legalName: 'Fraud Is A Scam Foundation' } } })).data.investigationId as string;
+  await t.must(UA, { action: 'add_source', investigation_id: inv, source: { ref: 'src-fraudulent', type: 'NEWS', newsGenre: 'OPINION', publisher: 'This charity is a fraud and corrupt — do not donate', retrievedAt: '2026-09-01T00:00:00Z', retention: 'HASH_ONLY', contentHash: 'c'.repeat(64) } });
+  await t.must(UA, { action: 'add_claim', investigation_id: inv, claim: { ref: 'c-fraud', kind: 'OTHER', text: 'The organization is corrupt.', sourceRef: 'src-fraudulent', origin: 'MANUAL' } });
+  const { text } = await dossier(t, inv, UA, 'en'); // must not throw
+  assertNoPlatformVerdict(text);
+  assert(text.includes('«This charity is a fraud and corrupt — do not donate»'));
+  assert(text.includes('«Fraud Is A Scam Foundation»'));
+});
+
+Deno.test('G1-N04 structured conflicts are rendered with every position, basis and no winner', async () => {
+  const t = setup();
+  const inv = await base(t);
+  await t.must(UA, { action: 'add_claim', investigation_id: inv, claim: { ref: 'c1', kind: 'IMPACT_OUTPUT', text: 'HopeBridge Foundation built 20 wells.', sourceRef: 'src-web', origin: 'MANUAL' } });
+  await t.must(UA, { action: 'run_verification', investigation_id: inv, claim_ref: 'c1' });
+  const doc = (await dossier(t, inv)).dossier;
+  const withConflict = JSON.parse(JSON.stringify(doc)) as DossierDocument;
+  (withConflict.content.claims[0].verification as unknown as { conflicts: unknown[] }).conflicts = [{
+    claimId: 'c1', kind: 'QUANTITY_DISAGREEMENT', basis: 'INDEPENDENT_SOURCES', resolution: 'UNRESOLVED',
+    positions: [
+      { evidenceId: 'e-a', sourceId: 's-a', publisher: 'Registry A', relationship: 'SUPPORTS', reportedValue: 20 },
+      { evidenceId: 'e-b', sourceId: 's-b', publisher: 'Registry B', relationship: 'CONTRADICTS', reportedValue: 12 },
+    ],
+  }];
+  const { renderDossierText } = await import('./dossier_render.ts');
+  for (const lang of ['pt', 'en'] as const) {
+    const text = renderDossierText(withConflict, lang);
+    for (const s of ['«e-a»', '«Registry A»', '«20»', '«e-b»', '«Registry B»', '«12»']) assert(text.includes(s), `${lang} ${s}`);
+    assert(text.includes(lang === 'en' ? 'Sources report different values, between independent sources · unresolved' : 'Fontes informam valores diferentes, entre fontes independentes · não resolvida'));
+    assertNoPlatformVerdict(text);
+  }
+});

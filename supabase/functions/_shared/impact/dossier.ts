@@ -19,6 +19,7 @@
 import { ARTIFACT_POLICY_VERSION, locatorFitsSummary } from './artifact_model.ts';
 import { minorDataRisk } from './evidence_candidates.ts';
 import type { InvestigationData, InvestigationRecord, StoredArtifact, StoredDispute } from './lab_store.ts';
+import { snapshotFresh } from './organization_identity.ts';
 import { LINEAGE_POLICY_VERSION } from './source_lineage.ts';
 import { sha256Hex } from './provenance.ts';
 import type { ClaimStatus, EpistemicClass, EvidenceItem, Source } from './types.ts';
@@ -106,7 +107,8 @@ export interface RegistryFactInput {
   readonly retrievedAt: string;
   readonly dataHash: string;
   readonly synthetic: boolean;
-  readonly fresh: boolean;
+  /** Provider-declared freshness window (days) — freshness is evaluated at the dossier's asOf. */
+  readonly freshnessDays: number;
   readonly authority: { readonly official: boolean; readonly authorityClass: string; readonly primaryPublisher: boolean; readonly termsStatus: string } | null;
 }
 
@@ -156,6 +158,16 @@ export async function buildDossierContent(input: DossierInput) {
   const limitations: Limitation[] = [];
   const lim = (code: LimitationCode, scope: LimitationScope, ref: string | null) => limitations.push({ code, scope, ref });
 
+  // as_of: the latest MATERIAL timestamp in the persisted state (deterministic;
+  // never the request clock — Codex I4G1-N01).
+  const stamps = [
+    ...data.claims.map((c) => c.extractedAt), ...data.evidence.map((e) => e.addedAt), ...data.sources.map((s) => s.source.retrievedAt),
+    ...[...input.results.values()].map((r) => r.evaluatedAt), ...data.disputes.flatMap((d) => [d.openedAt, d.resolvedAt]),
+    ...data.artifacts.map((a) => a.ingestedAt), ...data.candidates.map((c) => c.reviewedAt),
+  ].map(isoMs).filter((t): t is number => t !== null);
+  const asOfMs = stamps.length ? Math.max(...stamps) : null;
+  const asOf = asOfMs === null ? null : new Date(asOfMs).toISOString();
+
   // ── identity ─────────────────────────────────────────────────────────────
   if (input.identityStatus === 'UNCERTAIN') lim('IDENTITY_AMBIGUOUS', 'IDENTITY', null);
   else if (input.identityStatus !== 'CONFIRMED') lim('IDENTITY_NOT_CONFIRMED', 'IDENTITY', null);
@@ -164,11 +176,14 @@ export async function buildDossierContent(input: DossierInput) {
   const registryFacts = [...input.registryFacts].sort((a, b) => cmp(a.sourceRef, b.sourceRef)).map((r) => ({
     sourceRef: r.sourceRef, active: r.active, providerId: r.providerId, recordId: r.recordId, canonicalOrgId: r.canonicalOrgId,
     legalName: r.legalName, registryStatus: r.status, statusAsOf: r.statusAsOf, sourceAsOf: r.sourceAsOf, registeredOn: r.registeredOn,
-    dissolvedOn: r.dissolvedOn, retrievedAt: r.retrievedAt, dataHash: r.dataHash, synthetic: r.synthetic, fresh: r.fresh,
+    dissolvedOn: r.dissolvedOn, retrievedAt: r.retrievedAt, dataHash: r.dataHash, synthetic: r.synthetic,
+    freshnessDays: r.freshnessDays,
+    // Freshness AT THE DOSSIER'S asOf (deterministic); freshness "now" is in the envelope.
+    freshAtAsOf: asOfMs !== null && r.freshnessDays > 0 && snapshotFresh({ retrievedAt: r.retrievedAt, sourceAsOf: r.sourceAsOf ?? undefined }, r.freshnessDays, asOfMs),
     authority: r.authority, factClass: 'OFFICIAL_REGISTRY_RECORD' as const,
   }));
   if (registryFacts.length === 0) lim('NO_REGISTRY_RECORD', 'REGISTRY', null);
-  for (const r of registryFacts) if (r.active && !r.fresh) lim('REGISTRY_RECORD_NOT_FRESH', 'REGISTRY', r.sourceRef);
+  for (const r of registryFacts) if (r.active && !r.freshAtAsOf) lim('REGISTRY_RECORD_NOT_FRESH', 'REGISTRY', r.sourceRef);
   const registryConflicts = [...data.registryConflicts]
     .map((c) => ({ kind: c.kind, sourceRef: c.sourceRef, otherSourceRef: c.otherSourceRef, canonicalOrgId: c.canonicalOrgId }))
     .sort((a, b) => cmp(`${a.kind}|${a.sourceRef}|${a.otherSourceRef}`, `${b.kind}|${b.sourceRef}|${b.otherSourceRef}`));
@@ -335,13 +350,6 @@ export async function buildDossierContent(input: DossierInput) {
   if (artifacts.length > 0 || sources.some((s) => s.userSubmitted)) doesNotEstablish.add('USER_UPLOADS_ARE_NOT_AUTHORITY');
   if (evidence.some((e) => e.excerpt)) doesNotEstablish.add('QUOTED_TEXT_IS_NOT_A_PLATFORM_STATEMENT');
 
-  // as_of: the latest MATERIAL timestamp in the persisted state (deterministic).
-  const stamps = [
-    ...data.claims.map((c) => c.extractedAt), ...data.evidence.map((e) => e.addedAt), ...data.sources.map((s) => s.source.retrievedAt),
-    ...[...input.results.values()].map((r) => r.evaluatedAt), ...data.disputes.flatMap((d) => [d.openedAt, d.resolvedAt]),
-    ...data.artifacts.map((a) => a.ingestedAt), ...data.candidates.map((c) => c.reviewedAt),
-  ].map(isoMs).filter((t): t is number => t !== null);
-  const asOf = stamps.length ? new Date(Math.max(...stamps)).toISOString() : null;
 
   return {
     schemaVersion: DOSSIER_SCHEMA_VERSION,
@@ -393,6 +401,8 @@ export interface DossierEnvelope {
   readonly snapshotRef: string | null;
   /** LIVE reflects the state at generation; a SNAPSHOT never updates itself. */
   readonly notice: 'LIVE_VIEW_OF_CURRENT_STATE' | 'HISTORICAL_SNAPSHOT_AS_OF';
+  /** Time-relative, request-clock facts (outside the hash): registry freshness at generation. */
+  readonly registryFreshAtGeneration: readonly { readonly sourceRef: string; readonly fresh: boolean }[];
 }
 
 export interface DossierDocument {

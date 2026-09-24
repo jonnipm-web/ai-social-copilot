@@ -127,3 +127,26 @@ export const GAP_LABEL: Readonly<Record<GapCode, L>> = {
   INDEPENDENCE_NOT_ESTABLISHED: { pt: 'independência não estabelecida', en: 'independence not established' },
   POSSIBLE_LINEAGE: { pt: 'possível origem comum entre fontes', en: 'possible common origin between sources' },
 };
+
+export const CONFLICT_KIND_LABEL: Readonly<Record<'QUANTITY_DISAGREEMENT' | 'SUPPORT_VS_CONTRADICTION', L>> = {
+  QUANTITY_DISAGREEMENT: { pt: 'Fontes informam valores diferentes', en: 'Sources report different values' },
+  SUPPORT_VS_CONTRADICTION: { pt: 'Fontes sustentam e divergem da afirmação', en: 'Sources both support and diverge from the claim' },
+};
+
+export const CONFLICT_BASIS_LABEL: Readonly<Record<'INDEPENDENT_SOURCES' | 'SAME_PUBLISHER' | 'SELF_REPORTED_ONLY', L>> = {
+  INDEPENDENT_SOURCES: { pt: 'entre fontes independentes', en: 'between independent sources' },
+  SAME_PUBLISHER: { pt: 'dentro de um mesmo publicador (ex.: correção posterior)', en: 'within one publisher (e.g. a later correction)' },
+  SELF_REPORTED_ONLY: { pt: 'apenas em materiais da própria organização', en: 'only in the organization’s own materials' },
+};
+
+export const MISC_LABEL: Readonly<Record<string, L>> = {
+  CONFLICTS: { pt: 'Divergências (todas as posições, nenhuma escolhida)', en: 'Disagreements (every position, none chosen)' },
+  UNRESOLVED: { pt: 'não resolvida', en: 'unresolved' },
+  FRESH_AT_AS_OF: { pt: 'dentro da janela de atualização na data de referência', en: 'within its refresh window at the as-of date' },
+  NOT_FRESH_AT_AS_OF: { pt: 'fora da janela de atualização na data de referência', en: 'outside its refresh window at the as-of date' },
+  FRESH_NOW: { pt: 'atualizado hoje', en: 'current today' },
+  NOT_FRESH_NOW: { pt: 'pode precisar de nova consulta hoje', en: 'may need refreshing today' },
+  OFFICIAL: { pt: 'fonte oficial', en: 'official source' },
+  SYNTHETIC: { pt: 'dados de teste', en: 'test data' },
+  RULES: { pt: 'regras aplicadas', en: 'rules applied' },
+};

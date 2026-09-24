@@ -273,13 +273,20 @@ async function buildDossier(store: ImpactLabStore, inv: InvestigationRecord, pro
     data: data.value,
     results,
     latestVersions: versions,
-    registryFacts: data.value.sources.filter((s) => s.snapshot)
-      .map((s) => snapshotView(s.source.id, s.source.status === 'ACTIVE', s.snapshot!, providers, nowMs)),
+    registryFacts: data.value.sources.filter((s) => s.snapshot).map((s) => ({
+      ...snapshotView(s.source.id, s.source.status === 'ACTIVE', s.snapshot!, providers, nowMs),
+      freshnessDays: providers.get(s.snapshot!.providerId)?.descriptor.freshnessDays ?? 0,
+    })),
     providerRegistryVersion: PROVIDER_REGISTRY_VERSION,
   });
   const canon = canonical(content);
   if (canon.length > DOSSIER_LIMITS.maxContentChars) return fail('DOSSIER_TOO_LARGE', 'the dossier exceeds the export bound');
-  return ok({ content, contentHash: await sha256Hex(canon) });
+  // Request-clock freshness (Codex I4G1-N01): envelope only, never hashed content.
+  const freshNow = data.value.sources.filter((s) => s.snapshot).map((s) => ({
+    sourceRef: s.source.id,
+    fresh: snapshotFresh(s.snapshot!, providers.get(s.snapshot!.providerId)?.descriptor.freshnessDays ?? 0, nowMs),
+  })).sort((a, b) => (a.sourceRef < b.sourceRef ? -1 : a.sourceRef > b.sourceRef ? 1 : 0));
+  return ok({ content, contentHash: await sha256Hex(canon), freshNow });
 }
 
 /** Public view of an artifact: provenance + structure, never content. */
@@ -470,7 +477,7 @@ export async function handleLabRequest(
   if (req.action === 'get_dossier' || req.action === 'export_dossier' || req.action === 'verify_dossier') {
     const built = await buildDossier(store, inv.value, providers, nowMs);
     if (!built.ok) return built;
-    const { content, contentHash } = built.value;
+    const { content, contentHash, freshNow } = built.value;
     const metrics = { status: content.dossierStatus, claims: content.summary.claims, reverificationPending: content.summary.reverificationPending };
     if (req.action === 'verify_dossier') {
       // Integrity of an exported dossier: was this hash ISSUED for this investigation, and is it still CURRENT?
@@ -491,7 +498,7 @@ export async function handleLabRequest(
     }
     let envelope: DossierDocument['envelope'] = {
       kind: 'LIVE', generatedAt: now, auditSeq: inv.value.auditSeq, auditHead: inv.value.auditHead, snapshotRef: null,
-      notice: 'LIVE_VIEW_OF_CURRENT_STATE',
+      notice: 'LIVE_VIEW_OF_CURRENT_STATE', registryFreshAtGeneration: freshNow,
     };
     let snapshot: Record<string, unknown> | null = null;
     if (req.action === 'export_dossier') {
@@ -503,7 +510,7 @@ export async function handleLabRequest(
       if (!stored.ok) return stored;
       envelope = {
         kind: 'SNAPSHOT', generatedAt: stored.value.exportedAt, auditSeq: stored.value.auditSeq, auditHead: stored.value.auditHead,
-        snapshotRef: stored.value.ref, notice: 'HISTORICAL_SNAPSHOT_AS_OF',
+        snapshotRef: stored.value.ref, notice: 'HISTORICAL_SNAPSHOT_AS_OF', registryFreshAtGeneration: freshNow,
       };
       snapshot = { ref: stored.value.ref, contentHash, exportedAt: stored.value.exportedAt, replayed: stored.value.exportedAt !== now };
     }

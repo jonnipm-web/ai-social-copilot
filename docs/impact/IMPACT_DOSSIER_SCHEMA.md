@@ -5,7 +5,8 @@ DossierDocument {
   schemaVersion: "impact-dossier/1"
   content: DossierContent            ← hashed
   integrity: { algorithm: "SHA-256", canonicalization: "impact-canonical-json/1", contentHash }
-  envelope: { kind: LIVE|SNAPSHOT, generatedAt, auditSeq, auditHead, snapshotRef|null, notice }   ← NOT hashed
+  envelope: { kind: LIVE|SNAPSHOT, generatedAt, auditSeq, auditHead, snapshotRef|null, notice,
+              registryFreshAtGeneration: [{sourceRef, fresh}] }   ← NOT hashed (request-clock facts)
 }
 ```
 
@@ -24,7 +25,7 @@ order (locale-independent).
 | `investigation` | `ref`, `projectRef`, `status` (no owner id) |
 | `asOf` | latest material timestamp, or null |
 | `subject` | `ref`, `type`, `declaredIdentity` (organization fields only), `identityStatus`, `identityConfirmed`, `identityBasis: PROVIDER_REGISTRY_SNAPSHOTS_ONLY` |
-| `registryFacts[]` | provider, record, canonical id, legal name, `registryStatus`, statusAsOf, sourceAsOf, registeredOn, dissolvedOn, retrievedAt, dataHash, synthetic, fresh, provider authority, `factClass: OFFICIAL_REGISTRY_RECORD` |
+| `registryFacts[]` | provider, record, canonical id, legal name, `registryStatus`, statusAsOf, sourceAsOf, registeredOn, dissolvedOn, retrievedAt, dataHash, synthetic, `freshnessDays`, `freshAtAsOf` (freshness evaluated at the dossier asOf — the request clock never enters the hash, Codex I4G1-N01), provider authority, `factClass: OFFICIAL_REGISTRY_RECORD` |
 | `registryConflicts[]` | kind, both source refs, canonical id |
 | `claims[]` | ref, kind, `text` (or null + `textWithheld`), language, source, origin, period, quantity, level, extractedAt, project/campaign refs; `verification` (null if never verified) with version, resultId, status, underlyingStatus, displayClass, sufficiency, reviewState, reviewReasons, gaps, rulesApplied, evaluatedAt, policyVersion, evidenceSetHash, subjectIdentity, evidence buckets `{evidenceRef, sourceRef, sourceType, authority, declared/effective relationship, basis, asOf}`, excluded `{evidenceRef, reason}`, conflicts, independence; `reverificationPending`, `reverificationReasons`, `disputeRefs`, `evidenceRefs`, `isFindingOfWrongdoing: false` |
 | `evidence[]` | ref, claim, source, aboutOrg, relationship, basis, observedPeriod, level, reportedQuantity, legalStage, personalData, `excerpt` (or null + `excerptWithheld: PERSONAL_DATA / MINOR_DATA_RISK`), excerptHash, `excerptAttribution` (QUOTED_FROM_SOURCE / QUOTED_FROM_USER_UPLOAD), `locator`, `locatorState`, addedAt |
