@@ -172,6 +172,10 @@ export type LabRequest =
   | { readonly action: 'create_investigation'; readonly subject: SubjectInput; readonly projectId?: string }
   | { readonly action: 'list_investigations' }
   | { readonly action: 'get_investigation'; readonly investigationId: string; readonly lang: 'pt' | 'en' }
+  // I4 Verification Dossier — the client names the investigation and a language; nothing else.
+  | { readonly action: 'get_dossier'; readonly investigationId: string; readonly lang: 'pt' | 'en' }
+  | { readonly action: 'export_dossier'; readonly investigationId: string; readonly lang: 'pt' | 'en' }
+  | { readonly action: 'verify_dossier'; readonly investigationId: string; readonly contentHash: string }
   | { readonly action: 'archive_investigation'; readonly investigationId: string }
   | { readonly action: 'add_source'; readonly investigationId: string; readonly source: SourceInput }
   | { readonly action: 'ingest_provider_record'; readonly investigationId: string; readonly providerId: string; readonly recordId: string; readonly ref: string }
@@ -427,7 +431,8 @@ export function parseLabRequest(body: unknown): ImpactResult<LabRequest> {
     const top = obj(body, 'request', ['action', 'investigation_id', 'subject', 'project_id', 'lang', 'source', 'provider_id',
       'record_id', 'ref', 'source_ref', 'status', 'claim', 'evidence', 'claim_ref', 'idempotency_key',
       'human_review_binding_hash', 'kind', 'submitted_evidence_refs', 'dispute_ref', 'resolution', 'query', 'artifact',
-      'candidate_ref', 'decision', 'relationship', 'about_org_ref', 'personal_data', 'observed_period', 'subject_confirmed']);
+      'candidate_ref', 'decision', 'relationship', 'about_org_ref', 'personal_data', 'observed_period', 'subject_confirmed',
+      'content_hash']);
     const action = top.action;
     const allowOnly = (keys: string[]) => {
       for (const k of Object.keys(top)) if (k !== 'action' && !keys.includes(k)) throw new Bad(`field "${k}" not allowed for ${String(action)}`);
@@ -443,6 +448,16 @@ export function parseLabRequest(body: unknown): ImpactResult<LabRequest> {
       case 'get_investigation':
         allowOnly(['investigation_id', 'lang']);
         return ok({ action, investigationId: inv(), lang: en(top, 'lang', LANGS, false) ?? 'pt' });
+      case 'get_dossier':
+      case 'export_dossier':
+        allowOnly(['investigation_id', 'lang']);
+        return ok({ action, investigationId: inv(), lang: en(top, 'lang', LANGS, false) ?? 'pt' });
+      case 'verify_dossier': {
+        allowOnly(['investigation_id', 'content_hash']);
+        const h = top.content_hash;
+        if (typeof h !== 'string' || !HASH_RE.test(h)) throw new Bad('content_hash must be sha-256 hex');
+        return ok({ action, investigationId: inv(), contentHash: h });
+      }
       case 'archive_investigation':
         allowOnly(['investigation_id']);
         return ok({ action, investigationId: inv() });

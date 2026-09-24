@@ -130,6 +130,20 @@ export interface StoredAuditEvent {
   readonly hash: string;
 }
 
+/** I4: a REGISTERED dossier export — metadata only, never the dossier content. */
+export interface StoredDossierSnapshot {
+  readonly ref: string;
+  readonly schemaVersion: string;
+  readonly contentHash: string;
+  readonly asOf: string | null;
+  readonly dossierStatus: string;
+  readonly claimCount: number;
+  /** Position of the audit chain when the snapshot was issued (bound to a real event). */
+  readonly auditSeq: number;
+  readonly auditHead: string;
+  readonly exportedAt: string;
+}
+
 export interface InvestigationData {
   readonly sources: readonly StoredSource[];
   readonly claims: readonly Claim[];
@@ -185,6 +199,15 @@ export interface ImpactLabStore {
   insertCandidates(investigationId: string, cs: readonly StoredCandidate[], actorId: string): Promise<ImpactResult<true>>;
   /** I3: records a review; succeeds only if the candidate was PENDING or NEEDS_CONTEXT. */
   reviewCandidate(investigationId: string, ref: string, r: CandidateReview, actorId: string): Promise<ImpactResult<true>>;
+  /** I4 (I3F-03): source (optional) + artifact + candidates in ONE transaction — all or nothing. */
+  insertArtifactBundle(
+    investigationId: string,
+    b: { readonly source: Source | null; readonly artifact: StoredArtifact; readonly candidates: readonly StoredCandidate[] },
+    actorId: string,
+  ): Promise<ImpactResult<true>>;
+  /** I4: registers a dossier export (idempotent on content hash). */
+  insertDossierSnapshot(investigationId: string, d: StoredDossierSnapshot, actorId: string): Promise<ImpactResult<StoredDossierSnapshot>>;
+  findDossierSnapshot(investigationId: string, contentHash: string): Promise<ImpactResult<StoredDossierSnapshot | null>>;
 }
 
 // ── audit hash (parity with SQL) ───────────────────────────────────────────
@@ -225,6 +248,7 @@ interface MemInvestigation {
   registryConflicts: StoredRegistryConflict[];
   artifacts: Map<string, StoredArtifact>;
   candidates: Map<string, StoredCandidate>;
+  dossierSnapshots: Map<string, StoredDossierSnapshot>;
   audit: StoredAuditEvent[];
 }
 
@@ -326,7 +350,7 @@ export class InMemoryImpactLabStore implements ImpactLabStore {
     };
     const m: MemInvestigation = {
       rec, sources: new Map(), claims: new Map(), evidence: new Map(), verifications: [], disputes: new Map(), registryConflicts: [],
-      artifacts: new Map(), candidates: new Map(), audit: [],
+      artifacts: new Map(), candidates: new Map(), dossierSnapshots: new Map(), audit: [],
     };
     this.db.investigations.set(rec.id, m);
     await this.db.appendAudit(m, 'INVESTIGATION_CREATED', n.ownerId, [n.subjectOrgRef], []);
@@ -546,5 +570,66 @@ export class InMemoryImpactLabStore implements ImpactLabStore {
     }));
     await this.db.appendAudit(m, 'EVIDENCE_CANDIDATE_REVIEWED', actorId, [ref], [r.status]);
     return ok(true as const);
+  }
+
+  // ── I4 ──────────────────────────────────────────────────────────────────
+  /** Twin of impact_ingest_artifact(): every write or none (snapshot + restore on failure). */
+  async insertArtifactBundle(
+    investigationId: string,
+    b: { readonly source: Source | null; readonly artifact: StoredArtifact; readonly candidates: readonly StoredCandidate[] },
+    actorId: string,
+  ) {
+    const m = this.db.investigations.get(investigationId);
+    if (!m) return fail<true>('INVESTIGATION_NOT_FOUND', 'no such investigation');
+    const saved = {
+      rec: m.rec, sources: new Map(m.sources), artifacts: new Map(m.artifacts), candidates: new Map(m.candidates),
+      conflicts: [...m.registryConflicts], audit: m.audit.length,
+    };
+    const restore = () => {
+      m.rec = saved.rec;
+      m.sources = saved.sources;
+      m.artifacts = saved.artifacts;
+      m.candidates = saved.candidates;
+      m.registryConflicts = saved.conflicts;
+      m.audit.length = saved.audit;
+    };
+    if (b.source) {
+      const r = await this.insertSource(investigationId, { source: b.source, snapshot: null }, actorId);
+      if (!r.ok) { restore(); return r; }
+    }
+    const a = await this.insertArtifact(investigationId, b.artifact, actorId);
+    if (!a.ok) { restore(); return a; }
+    if (b.candidates.length) {
+      const c = await this.insertCandidates(investigationId, b.candidates, actorId);
+      if (!c.ok) { restore(); return c; }
+    }
+    return ok(true as const);
+  }
+
+  /** Twin of impact_dossier_snapshots_validate: owner actor, real audit position, idempotent on hash. */
+  async insertDossierSnapshot(investigationId: string, d: StoredDossierSnapshot, actorId: string) {
+    if (this.db.failNextWrite) {
+      this.db.failNextWrite = false;
+      return fail<StoredDossierSnapshot>('INTERNAL_ERROR', 'simulated database failure');
+    }
+    const m = this.own(investigationId);
+    if (!m || m.rec.ownerId !== actorId) return fail<StoredDossierSnapshot>('INVESTIGATION_NOT_FOUND', 'no such investigation');
+    const prior = [...m.dossierSnapshots.values()].find((x) => x.contentHash === d.contentHash);
+    if (prior) return ok(prior);
+    const at = m.audit.find((e) => e.seq === d.auditSeq);
+    if (!/^[0-9a-f]{64}$/.test(d.contentHash) || d.ref !== `dossier-${d.contentHash.slice(0, 24)}` || !at || at.hash !== d.auditHead) {
+      return fail<StoredDossierSnapshot>('INVALID_REQUEST', 'dossier snapshot is not bound to the audit chain');
+    }
+    if (m.dossierSnapshots.has(d.ref)) return fail<StoredDossierSnapshot>('ALREADY_EXISTS', 'dossier ref exists');
+    const stored = Object.freeze({ ...d });
+    m.dossierSnapshots.set(d.ref, stored);
+    await this.db.appendAudit(m, 'DOSSIER_EXPORTED', actorId, [d.ref], [d.schemaVersion, d.dossierStatus]);
+    return ok(stored);
+  }
+
+  findDossierSnapshot(investigationId: string, contentHash: string) {
+    const m = this.own(investigationId);
+    if (!m) return Promise.resolve(fail<StoredDossierSnapshot | null>('INVESTIGATION_NOT_FOUND', 'no such investigation'));
+    return Promise.resolve(ok([...m.dossierSnapshots.values()].find((x) => x.contentHash === contentHash) ?? null));
   }
 }

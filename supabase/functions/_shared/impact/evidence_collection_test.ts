@@ -307,13 +307,14 @@ Deno.test('EC-19 a candidate cannot be tied to a claim of another investigation'
 
 // ── retries / repair / idempotency ─────────────────────────────────────────
 
-Deno.test('EC-20 interrupted ingestion (source written, artifact not) is repaired by an identical retry', async () => {
+Deno.test('EC-20 (I4 / I3F-03) an ingestion failing mid-way leaves NOTHING (no orphan source); the retry writes all once', async () => {
   const t = setup();
   const inv = await investigation(t);
+  const m = t.db.investigations.get(inv)!;
+  const auditBefore = m.audit.length;
   t.db.failNextArtifact = true;
   assertEquals(await t.code(UA, ingest(inv)), 'INTERNAL_ERROR');
-  const m = t.db.investigations.get(inv)!;
-  assertEquals([m.sources.has('art-report'), m.artifacts.size], [true, 0]);
+  assertEquals([m.sources.has('art-report'), m.artifacts.size, m.candidates.size, m.audit.length], [false, 0, 0, auditBefore]);
   const r = await t.must(UA, ingest(inv));
   assertEquals([m.artifacts.size, m.sources.size, cands(r).length], [1, 2, 1]);
 });

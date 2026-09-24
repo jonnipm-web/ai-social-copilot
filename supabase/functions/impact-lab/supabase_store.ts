@@ -18,6 +18,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.116.0';
 import { fail, type ImpactErrorCode, ok, type ImpactResult } from '../_shared/impact/errors.ts';
 import type {
   CandidateReview,
+  StoredDossierSnapshot,
   ImpactLabStore,
   StoredArtifact,
   StoredCandidate,
@@ -65,7 +66,7 @@ export function mapDbError(e: PgError | null | undefined): ImpactErrorCode {
   if (/IMPACT_ACTOR_NOT_OWNER/.test(msg)) return 'INVESTIGATION_NOT_FOUND';
   if (/IMPACT_RESULT_INCONSISTENT/.test(msg)) return 'INTERNAL_ERROR';
   if (/IMPACT_LOCATOR_INVALID/.test(msg)) return 'LOCATOR_INVALID';
-  if (/IMPACT_(ARTIFACT|CANDIDATE)_/.test(msg)) return 'INVALID_REQUEST';
+  if (/IMPACT_(ARTIFACT|CANDIDATE|DOSSIER)_/.test(msg)) return 'INVALID_REQUEST';
   if (code === '23503' || code === '23514' || code === '22007' || code === '23502' || /IMPACT_(TEMPORAL|INVALID_TIMESTAMP|DISPUTE_EVIDENCE)/.test(msg)) {
     return 'INVALID_REQUEST';
   }
@@ -467,6 +468,49 @@ export class SupabaseImpactLabStore implements ImpactLabStore {
     // Codex I1F-03 pattern: success only if a row actually transitioned.
     return (data as Row[]).length === 1 ? ok(true) : fail('ALREADY_EXISTS', 'candidate already reviewed');
   }
+  // ── I4 ──────────────────────────────────────────────────────────────────
+  async insertArtifactBundle(
+    investigationId: string,
+    b: { readonly source: Source | null; readonly artifact: StoredArtifact; readonly candidates: readonly StoredCandidate[] },
+    actorId: string,
+  ): Promise<ImpactResult<true>> {
+    // ONE database transaction (I3F-03): impact_ingest_artifact() inserts every row or none.
+    const { error } = await this.service.rpc('impact_ingest_artifact', {
+      p_investigation: investigationId,
+      p_source: b.source ? sourceToRow(investigationId, { source: b.source, snapshot: null }, actorId) : null,
+      p_artifact: artifactToRow(investigationId, b.artifact, actorId),
+      p_candidates: b.candidates.map((c) => candidateToRow(investigationId, c, actorId)),
+    });
+    return error ? dbFail(error) : ok(true);
+  }
+  async insertDossierSnapshot(investigationId: string, d: StoredDossierSnapshot, actorId: string): Promise<ImpactResult<StoredDossierSnapshot>> {
+    const { data, error } = await this.service.from('impact_dossier_snapshots').insert({
+      investigation_id: investigationId, ref: d.ref, schema_version: d.schemaVersion, content_hash: d.contentHash, as_of: d.asOf,
+      dossier_status: d.dossierStatus, claim_count: d.claimCount, audit_seq: d.auditSeq, audit_head: d.auditHead, exported_at: d.exportedAt,
+      created_by: actorId,
+    }).select('*');
+    if (!error) return ok(rowToDossierSnapshot((data as Row[])[0]));
+    if (error.code !== '23505') return dbFail(error);
+    // Idempotent: the same content was already exported — return the ORIGINAL registration.
+    const prior = await this.findDossierSnapshot(investigationId, d.contentHash);
+    if (!prior.ok) return prior;
+    return prior.value ? ok(prior.value) : dbFail(error);
+  }
+  async findDossierSnapshot(investigationId: string, contentHash: string): Promise<ImpactResult<StoredDossierSnapshot | null>> {
+    const { data, error } = await this.service.from('impact_dossier_snapshots').select('*')
+      .eq('investigation_id', investigationId).eq('content_hash', contentHash).limit(1);
+    if (error) return dbFail(error);
+    const rows = data as Row[];
+    return ok(rows.length ? rowToDossierSnapshot(rows[0]) : null);
+  }
+}
+
+export function rowToDossierSnapshot(r: Row): StoredDossierSnapshot {
+  return {
+    ref: r.ref as string, schemaVersion: r.schema_version as string, contentHash: r.content_hash as string,
+    asOf: (r.as_of as string | null) ?? null, dossierStatus: r.dossier_status as string, claimCount: Number(r.claim_count),
+    auditSeq: Number(r.audit_seq), auditHead: r.audit_head as string, exportedAt: r.exported_at as string,
+  };
 }
 
 export function createSupabaseImpactLabStore(req: Request): SupabaseImpactLabStore {

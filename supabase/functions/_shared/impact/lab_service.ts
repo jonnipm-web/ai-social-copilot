@@ -43,6 +43,8 @@ import { normalizeDomain } from './entity_resolution.ts';
 import { parseIsoMs, sha256Bytes, sha256Hex, validateClaim, validateEvidence, validateSource } from './provenance.ts';
 import { ingestProviderRecord, PROVIDER_REGISTRY_VERSION, type ProviderRegistry, searchProvider, SERVER_PROVIDER_REGISTRY } from './provider_registry.ts';
 import { buildImpactReport } from './report.ts';
+import { buildDossierContent, DOSSIER_CANONICALIZATION, DOSSIER_LIMITS, DOSSIER_SCHEMA_VERSION, type DossierDocument, snapshotRefOf } from './dossier.ts';
+import { renderDossierText } from './dossier_render.ts';
 import { deriveIndicators } from './risk_indicators.ts';
 import { scanUntrustedContent } from './safety.ts';
 import type { Claim, EvidenceItem, Jurisdiction, OrganizationIdentity, Source } from './types.ts';
@@ -67,6 +69,8 @@ export interface LabResponse {
     readonly lineageLinks?: number;
     /** I3 artifact ingestion: type / extraction status / size / candidates (no content). */
     readonly artifact?: { readonly type: string; readonly status: string; readonly sizeBytes: number; readonly candidates: number };
+    /** I4 dossier: completeness status + counts + staleness (no content). */
+    readonly dossier?: { readonly status: string; readonly claims: number; readonly reverificationPending: number; readonly stale?: boolean; readonly exported?: boolean };
   };
 }
 
@@ -255,6 +259,29 @@ async function reverify(store: ImpactLabStore, actor: LabActor, inv: Investigati
   return await verifyAndStore(store, actor, inv, fresh.value, claimRef, now, null, providers);
 }
 
+/** I4: deterministic dossier content + its canonical hash, from SERVER state only. */
+async function buildDossier(store: ImpactLabStore, inv: InvestigationRecord, providers: ProviderRegistry, nowMs: number) {
+  const data = await load(store, inv.id);
+  if (!data.ok) return data;
+  const latest = latestByClaim(data.value);
+  const results = new Map([...latest].map(([k, r]) => [k, withDisputeOverlay(r, data.value.disputes)]));
+  const versions = new Map<string, number>();
+  for (const v of data.value.latestVerifications) versions.set(v.result.claimId, Math.max(versions.get(v.result.claimId) ?? 0, v.version));
+  const content = await buildDossierContent({
+    investigation: inv,
+    identityStatus: subjectIdentityFrom(inv, data.value.sources, providers),
+    data: data.value,
+    results,
+    latestVersions: versions,
+    registryFacts: data.value.sources.filter((s) => s.snapshot)
+      .map((s) => snapshotView(s.source.id, s.source.status === 'ACTIVE', s.snapshot!, providers, nowMs)),
+    providerRegistryVersion: PROVIDER_REGISTRY_VERSION,
+  });
+  const canon = canonical(content);
+  if (canon.length > DOSSIER_LIMITS.maxContentChars) return fail('DOSSIER_TOO_LARGE', 'the dossier exceeds the export bound');
+  return ok({ content, contentHash: await sha256Hex(canon) });
+}
+
 /** Public view of an artifact: provenance + structure, never content. */
 function artifactView(a: StoredArtifact) {
   return {
@@ -436,6 +463,59 @@ export async function handleLabRequest(
         providerRegistryVersion: PROVIDER_REGISTRY_VERSION,
       },
       metrics: { claims: data.value.claims.length, evidence: data.value.evidence.length, conflicts: results.reduce((n, r) => n + r.conflicts.length, 0) },
+    });
+  }
+
+  // ── I4 Verification Dossier (read-only projection; export registers metadata only) ──
+  if (req.action === 'get_dossier' || req.action === 'export_dossier' || req.action === 'verify_dossier') {
+    const built = await buildDossier(store, inv.value, providers, nowMs);
+    if (!built.ok) return built;
+    const { content, contentHash } = built.value;
+    const metrics = { status: content.dossierStatus, claims: content.summary.claims, reverificationPending: content.summary.reverificationPending };
+    if (req.action === 'verify_dossier') {
+      // Integrity of an exported dossier: was this hash ISSUED for this investigation, and is it still CURRENT?
+      const snap = await store.findDossierSnapshot(inv.value.id, req.contentHash);
+      if (!snap.ok) return snap;
+      const state = !snap.value ? 'NOT_ISSUED' : snap.value.contentHash === contentHash ? 'CURRENT' : 'STALE';
+      return ok({
+        action: req.action,
+        data: {
+          state,
+          snapshot: snap.value ? { ref: snap.value.ref, exportedAt: snap.value.exportedAt, asOf: snap.value.asOf, dossierStatus: snap.value.dossierStatus } : null,
+          currentContentHash: contentHash,
+          // Integrity is not truth: a CURRENT snapshot is unaltered, not "correct".
+          integrityIsNotTruth: true,
+        },
+        metrics: { dossier: { ...metrics, stale: state === 'STALE' } },
+      });
+    }
+    let envelope: DossierDocument['envelope'] = {
+      kind: 'LIVE', generatedAt: now, auditSeq: inv.value.auditSeq, auditHead: inv.value.auditHead, snapshotRef: null,
+      notice: 'LIVE_VIEW_OF_CURRENT_STATE',
+    };
+    let snapshot: Record<string, unknown> | null = null;
+    if (req.action === 'export_dossier') {
+      const stored = await store.insertDossierSnapshot(inv.value.id, {
+        ref: snapshotRefOf(contentHash), schemaVersion: DOSSIER_SCHEMA_VERSION, contentHash, asOf: content.asOf,
+        dossierStatus: content.dossierStatus, claimCount: content.summary.claims, auditSeq: inv.value.auditSeq, auditHead: inv.value.auditHead,
+        exportedAt: now,
+      }, actor.userId);
+      if (!stored.ok) return stored;
+      envelope = {
+        kind: 'SNAPSHOT', generatedAt: stored.value.exportedAt, auditSeq: stored.value.auditSeq, auditHead: stored.value.auditHead,
+        snapshotRef: stored.value.ref, notice: 'HISTORICAL_SNAPSHOT_AS_OF',
+      };
+      snapshot = { ref: stored.value.ref, contentHash, exportedAt: stored.value.exportedAt, replayed: stored.value.exportedAt !== now };
+    }
+    const doc: DossierDocument = {
+      schemaVersion: DOSSIER_SCHEMA_VERSION, content,
+      integrity: { algorithm: 'SHA-256', canonicalization: DOSSIER_CANONICALIZATION, contentHash },
+      envelope,
+    };
+    return ok({
+      action: req.action,
+      data: { dossier: doc, text: renderDossierText(doc, req.lang), ...(snapshot ? { snapshot } : {}) },
+      metrics: { dossier: { ...metrics, exported: req.action === 'export_dossier' } },
     });
   }
 
@@ -703,6 +783,8 @@ export async function handleLabRequest(
       }
 
       let version = existing?.version ?? 1;
+      let newSource: Source | null = null;
+      let newArtifact: StoredArtifact | null = null;
       if (!existing) {
         if (data.value.artifacts.length >= ARTIFACT_LIMITS.maxArtifactsPerInvestigation) return fail('LIMIT_EXCEEDED', 'too many artifacts');
         if (a.supersedesRef) {
@@ -714,7 +796,8 @@ export async function handleLabRequest(
         const text = extraction.segments.map((x) => x.text).join('\n');
         const priorSource = data.value.sources.find((x) => x.source.id === artifactRef);
         if (priorSource) {
-          // Repair of a half-written ingestion: the same bytes' source exists without its artifact.
+          // Legacy half-written ingestion (before the atomic write, I3F-03): the same bytes'
+          // uncited source exists without its artifact — it is adopted, never duplicated.
           if (priorSource.source.acquisition.method !== 'USER_UPLOAD' || priorSource.source.contentHash !== fileHash) {
             return fail('ALREADY_EXISTS', 'source ref already used');
           }
@@ -741,26 +824,18 @@ export async function handleLabRequest(
           };
           const v = validateSource(src, nowMs);
           if (!v.ok) return v;
-          const r = await store.insertSource(inv.value.id, { source: src, snapshot: null }, actor.userId);
-          if (!r.ok) return r;
+          newSource = src;
         }
-        const art: StoredArtifact = {
+        newArtifact = {
           ref: artifactRef, sourceRef: artifactRef, type: detected.value.type, origin: a.origin, originalFilename: detected.value.filename,
           mediaType: detected.value.mediaType, sizeBytes: bytes.length, fileHash,
           normalizedContentHash: text.trim() ? await contentFingerprint(text) : null,
           version, supersedesRef: a.supersedesRef ?? null, cloudProvider: a.cloud?.provider ?? null, cloudFileRef: a.cloud?.fileRef ?? null,
           sourceModifiedAt: a.cloud?.modifiedAt ?? null, extractionStatus: extraction.summary.status, extraction: extraction.summary, ingestedAt: now,
         };
-        const r2 = await store.insertArtifact(inv.value.id, art, actor.userId);
-        if (!r2.ok) return r2; // the source is kept: an identical retry completes the artifact
       }
-      let artifact = existing;
-      if (!artifact) {
-        const again = await load(store, inv.value.id);
-        if (!again.ok) return again;
-        artifact = again.value.artifacts.find((x) => x.ref === artifactRef);
-      }
-      if (!artifact) return fail('INTERNAL_ERROR', 'artifact not readable after write');
+      const artifact: StoredArtifact | undefined = existing ?? newArtifact ?? undefined;
+      if (!artifact) return fail('INTERNAL_ERROR', 'artifact unavailable');
 
       // Candidates: analyst-requested (+ deterministic ones on first ingestion only).
       const auto = existing ? { drafts: [], skippedMinorRisk: 0 } : autoCandidates(extraction, data.value.claims, identity);
@@ -788,7 +863,12 @@ export async function handleLabRequest(
         });
       }
       if (data.value.candidates.length + toInsert.length > ARTIFACT_LIMITS.maxCandidatesPerInvestigation) return fail('LIMIT_EXCEEDED', 'too many candidates');
-      if (toInsert.length) {
+      if (newArtifact) {
+        // ONE atomic write (I3F-03): source + artifact + candidates, or nothing —
+        // a failed or racing ingestion can no longer leave an orphan source.
+        const w = await store.insertArtifactBundle(inv.value.id, { source: newSource, artifact: newArtifact, candidates: toInsert }, actor.userId);
+        if (!w.ok) return w;
+      } else if (toInsert.length) {
         const r3 = await store.insertCandidates(inv.value.id, toInsert, actor.userId);
         if (!r3.ok) return r3;
       }

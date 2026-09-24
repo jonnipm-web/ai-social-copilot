@@ -184,3 +184,31 @@ Deno.test('EF-11 I3 file errors map to 415 / 400; artifact events carry type/sta
   assert(events.some((x) => x.event === 'impact.candidate_reviewed' && x.review_status === 'REJECTED'));
   assertEquals(fetchCalls, 0);
 });
+
+Deno.test('EF-12 I4 dossier: owner-scoped, 404 for others, events carry status/counts only — never names, text or hashes', async () => {
+  const e = env();
+  const inv = (await e.send('jwt-admin-a', { action: 'create_investigation', subject: SUBJECT })).body.data as Record<string, unknown>;
+  const id = inv.investigationId as string;
+  await e.send('jwt-admin-a', { action: 'add_source', investigation_id: id, source: { ref: 'src-web', type: 'ORGANIZATION_WEBSITE', publisher: 'HopeBridge Foundation', publisherOrgRef: 'org-hopebridge', retrievedAt: '2026-09-01T00:00:00Z', retention: 'HASH_ONLY', contentHash: 'b'.repeat(64) } });
+  await e.send('jwt-admin-a', { action: 'add_claim', investigation_id: id, claim: { ref: 'c1', kind: 'IMPACT_OUTPUT', text: 'Secret claim sentence QZX.', sourceRef: 'src-web', origin: 'MANUAL' } });
+  const live = await e.send('jwt-admin-a', { action: 'get_dossier', investigation_id: id, lang: 'en' });
+  assertEquals(live.status, 200);
+  const exp = await e.send('jwt-admin-a', { action: 'export_dossier', investigation_id: id });
+  assertEquals(exp.status, 200);
+  const hash = ((exp.body.data as Record<string, unknown>).dossier as { integrity: { contentHash: string } }).integrity.contentHash;
+  const ver = await e.send('jwt-admin-a', { action: 'verify_dossier', investigation_id: id, content_hash: hash });
+  assertEquals((ver.body.data as Record<string, unknown>).state, 'CURRENT');
+  const foreign = await e.send('jwt-admin-b', { action: 'get_dossier', investigation_id: id });
+  assertEquals([foreign.status, foreign.body.error], [404, 'INVESTIGATION_NOT_FOUND']);
+  const all = e.logs.join('\n');
+  for (const secret of ['HopeBridge', 'Secret claim sentence', hash]) assert(!all.includes(secret), secret);
+  const events = e.logs.map((l) => JSON.parse(l) as Record<string, unknown>);
+  assert(events.some((x) => x.event === 'impact.dossier_generated' && x.dossier_status === 'INCOMPLETE' && x.claims_count === 1));
+  assert(events.some((x) => x.event === 'impact.dossier_exported'));
+  assert(events.some((x) => x.event === 'impact.dossier_generation_failed' && x.error_code === 'INVESTIGATION_NOT_FOUND'));
+  for (const action of ['publish_dossier', 'share_dossier']) {
+    const r = await e.send('jwt-admin-a', { action, investigation_id: id });
+    assertEquals([r.status, r.body.error], [400, 'INVALID_REQUEST']);
+  }
+  assertEquals(fetchCalls, 0);
+});

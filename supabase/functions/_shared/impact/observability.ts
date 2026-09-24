@@ -36,6 +36,9 @@ const ALLOWED: Readonly<Record<string, 'id' | 'count' | 'code'>> = {
   extraction_status: 'code',
   size_bytes: 'count',
   review_status: 'code',
+  // I4 dossier
+  dossier_status: 'code',
+  reverification_count: 'count',
 };
 
 /** Safe registry event names (mission §76). */

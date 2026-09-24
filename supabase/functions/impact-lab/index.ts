@@ -66,6 +66,7 @@ const HTTP: Readonly<Partial<Record<ImpactErrorCode, number>>> = {
   FILE_SIGNATURE_INVALID: 400,
   LOCATOR_INVALID: 400,
   EVIDENCE_REVIEW_REQUIRED: 400,
+  DOSSIER_TOO_LARGE: 413,
   INTERNAL_ERROR: 500,
 };
 
@@ -184,6 +185,17 @@ export async function handler(
     if (m && m.candidates > 0) registryEvent('candidate_created', { candidates_count: m.candidates });
   }
   if (action === 'review_candidate' && result.ok) registryEvent('candidate_reviewed', { review_status: String(result.value.data.reviewStatus ?? 'REPLAYED') });
+  // I4: dossier events — completeness status and counts only, never content, names or hashes.
+  if (action === 'get_dossier' || action === 'export_dossier' || action === 'verify_dossier') {
+    const d = result.ok ? result.value.metrics?.dossier : undefined;
+    if (!result.ok) {
+      registryEvent('dossier_generation_failed', { error_code: result.error.code });
+    } else if (d) {
+      registryEvent(action === 'export_dossier' ? 'dossier_exported' : 'dossier_generated', { dossier_status: d.status, claims_count: d.claims });
+      if (d.stale) registryEvent('dossier_stale_detected', { dossier_status: d.status });
+      if (d.reverificationPending > 0) registryEvent('dossier_reverification_pending', { reverification_count: d.reverificationPending });
+    }
+  }
   if (result.ok && (result.value.metrics?.lineageLinks ?? 0) > 0) {
     registryEvent('lineage_detected', { lineage_links_count: result.value.metrics!.lineageLinks! });
   }
