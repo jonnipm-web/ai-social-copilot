@@ -542,3 +542,26 @@ Deno.test('G3-03 no platform label reads as an accusation (every status / class 
   }
   assertEquals(CLASS_LABEL.ALLEGATION.en, 'Third-party assertion, not established');
 });
+
+Deno.test('F-N01 registry names and conflict publishers are screened like every other exported text', async () => {
+  const t = setup();
+  const inv = await base(t);
+  await t.must(UA, { action: 'add_claim', investigation_id: inv, claim: { ref: 'c1', kind: 'OTHER', text: 'HopeBridge Foundation built wells.', sourceRef: 'src-web', origin: 'MANUAL' } });
+  await t.must(UA, { action: 'run_verification', investigation_id: inv, claim_ref: 'c1' });
+  const store = new InMemoryImpactLabStore(t.db, UA);
+  const m = t.db.investigations.get(inv)!;
+  // Poison persisted provider-derived text (as a compromised or future adapter could): snapshot name + a conflict position.
+  const reg = m.sources.get('src-reg')!;
+  m.sources.set('src-reg', { ...reg, snapshot: { ...reg.snapshot!, name: 'Registrar contact jane@registry.example +44 20 7946 0958' } });
+  const latest = m.verifications[m.verifications.length - 1];
+  m.verifications[m.verifications.length - 1] = { ...latest, result: { ...latest.result, conflicts: [{
+    claimId: 'c1', kind: 'QUANTITY_DISAGREEMENT', basis: 'INDEPENDENT_SOURCES', resolution: 'UNRESOLVED',
+    positions: [{ evidenceId: 'e-x', sourceId: 's-x', publisher: 'Mail tips to tipster@mail.example', relationship: 'SUPPORTS' }],
+  }] } };
+  void store;
+  const { dossier: d, text } = await dossier(t, inv, UA, 'en');
+  const json = JSON.stringify(d);
+  for (const leak of ['jane@registry.example', '7946', 'tipster@mail.example']) assert(!json.includes(leak) && !text.includes(leak), leak);
+  assert(d.content.registryFacts.find((r) => r.sourceRef === 'src-reg')!.legalName.includes('[redacted-email]'));
+  assert(claimOf(d, 'c1').verification!.conflicts[0].positions[0].publisher.includes('[redacted-email]'));
+});

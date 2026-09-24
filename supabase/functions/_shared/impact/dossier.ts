@@ -195,7 +195,7 @@ export async function buildDossierContent(input: DossierInput) {
   // ── registry facts (official source, attributed; never "not registered" from absence) ──
   const registryFacts = [...input.registryFacts].sort((a, b) => cmp(a.sourceRef, b.sourceRef)).map((r) => ({
     sourceRef: r.sourceRef, active: r.active, providerId: r.providerId, recordId: r.recordId, canonicalOrgId: r.canonicalOrgId,
-    legalName: r.legalName, registryStatus: r.status, statusAsOf: r.statusAsOf, sourceAsOf: r.sourceAsOf, registeredOn: r.registeredOn,
+    legalName: screen(r.legalName).text ?? '—', registryStatus: r.status, statusAsOf: r.statusAsOf, sourceAsOf: r.sourceAsOf, registeredOn: r.registeredOn,
     dissolvedOn: r.dissolvedOn, retrievedAt: r.retrievedAt, dataHash: r.dataHash, synthetic: r.synthetic,
     freshnessDays: r.freshnessDays,
     // Freshness AT THE DOSSIER'S asOf (deterministic); freshness "now" is in the envelope.
@@ -306,7 +306,7 @@ export async function buildDossierContent(input: DossierInput) {
         supporting: assessed(r.supporting), partiallySupporting: assessed(r.partiallySupporting), contradicting: assessed(r.contradicting),
         contextual: assessed(r.contextual),
         excluded: [...r.excluded].map((x) => ({ evidenceRef: x.evidenceId, reason: x.reason })).sort((a, b) => cmp(a.evidenceRef, b.evidenceRef)),
-        conflicts: r.conflicts,
+        conflicts: r.conflicts.map((k) => ({ ...k, positions: k.positions.map((p) => ({ ...p, publisher: screen(p.publisher).text ?? '—' })) })),
         independence: {
           policyVersion: r.lineage.policyVersion, independentVoices: r.lineage.voices, establishedVoices: r.lineage.establishedVoices,
           mergedByLineage: r.lineage.mergedByLineage, possibleLineage: r.lineage.possibleLineage, comparisonTruncated: r.lineage.comparisonTruncated,
