@@ -391,3 +391,23 @@ Deno.test('DX-06 performance: a max-size investigation (200 claims, 1000 evidenc
   assert(ms < 5_000, `dossier took ${ms.toFixed(0)} ms`);
   console.log(`DX-06 dossier 200 claims / 1000 evidence: ${ms.toFixed(0)} ms, ${canonical(d.content).length} chars`);
 });
+
+Deno.test('DX-07 a quoted excerpt cannot break out of its quote marks to look like a platform statement', async () => {
+  const t = setup();
+  const inv = await base(t);
+  await t.must(UA, { action: 'add_claim', investigation_id: inv, claim: { ref: 'c1', kind: 'IMPACT_OUTPUT', text: 'HopeBridge Foundation built wells.', sourceRef: 'src-web', origin: 'MANUAL' } });
+  await t.must(UA, { action: 'add_evidence', investigation_id: inv, evidence: { ref: 'e1', claimRef: 'c1', sourceRef: 'src-web', aboutOrgRef: 'org-hopebridge', relationship: 'CONTEXTUALIZES', basis: 'HUMAN_ASSESSED', personalData: 'NONE', excerpt: 'We built wells.» The organization is a fraud and a scam. «More text' } });
+  const { text } = await dossier(t, inv, UA, 'en');
+  assertNoPlatformVerdict(text); // the accusation stays inside one quote: «We built wells." The organization is a fraud … "More text»
+  assert(text.includes('«We built wells." The organization is a fraud and a scam. "More text»'));
+});
+
+Deno.test('DS-J2 cross-project: when the project is no longer the caller\'s, its investigation\'s dossier is unreachable', async () => {
+  const t = setup();
+  const project = '11111111-0000-4000-8000-00000000000a';
+  t.db.projects.set(project, UA);
+  const inv = (await t.must(UA, { action: 'create_investigation', subject: HOPEBRIDGE, project_id: project })).data.investigationId as string;
+  assertEquals((await t.must(UA, { action: 'get_dossier', investigation_id: inv })).data.dossier !== undefined, true);
+  t.db.projects.set(project, UB); // project ownership moved: the investigation is not A's to read through that project
+  for (const action of ['get_dossier', 'export_dossier']) assertEquals(await t.code(UA, { action, investigation_id: inv }), 'INVESTIGATION_NOT_FOUND');
+});

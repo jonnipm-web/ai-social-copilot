@@ -22,6 +22,11 @@ import {
 import { CLASS_LABEL, type Lang, STATUS_LABEL, SUFFICIENCY_LABEL } from './i18n.ts';
 import { findVerdictLanguage } from './safety.ts';
 
+/** Source words stay INSIDE their quote marks: « » in the quoted text are neutralized, newlines flattened. */
+function quote(s: string): string {
+  return `«${s.replace(/[«»]/g, '"').replace(/[\r\n]+/g, ' ')}»`;
+}
+
 export function renderDossierText(doc: DossierDocument, lang: Lang): string {
   const c = doc.content;
   const generated: string[] = [];
@@ -62,7 +67,7 @@ export function renderDossierText(doc: DossierDocument, lang: Lang): string {
   out(`## ${t('CLAIMS')}`);
   for (const cl of c.claims) {
     if (cl.text !== null) quoted.push(cl.text);
-    out(`### ${cl.ref} — «${cl.text ?? g(SECTION.WITHHELD[lang])}»`);
+    out(`### ${cl.ref} — ${cl.text !== null ? quote(cl.text) : `[${g(SECTION.WITHHELD[lang])}]`}`);
     const v = cl.verification;
     if (!v) {
       out(`- ${t('NOT_VERIFIED')}`);
@@ -83,7 +88,7 @@ export function renderDossierText(doc: DossierDocument, lang: Lang): string {
     if (cl.disputeRefs.length) out(`- ${t('DISPUTES')}: ${cl.disputeRefs.join(', ')}`);
     for (const e of c.evidence.filter((x) => x.claimRef === cl.ref)) {
       const where = e.locator?.artifact ? `${e.locator.artifact.ref}@${e.locator.artifact.hash.slice(0, 12)} ${JSON.stringify(e.locator.artifact.locator)}` : '';
-      const text = e.excerpt !== null ? `«${e.excerpt}»` : e.excerptWithheld ? `[${g(SECTION.WITHHELD[lang])}]` : '';
+      const text = e.excerpt !== null ? quote(e.excerpt) : e.excerptWithheld ? `[${g(SECTION.WITHHELD[lang])}]` : '';
       if (e.excerpt !== null) quoted.push(e.excerpt);
       out(`  - ${e.ref} · ${e.sourceRef} · ${e.relationship} ${text} ${where} · ${g(LOCATOR_STATE_LABEL[e.locatorState][lang])}`.trimEnd());
     }
