@@ -61,6 +61,9 @@ UNKNOWN_OUTCOME, legal holds by Owner SQL only, operator reconciliation
 disabled. The production privilege preflight is authorized READ-ONLY only;
 IV-IVE-AEF-RUNTIME-INTEGRATION-01 stays not started until the preflight
 result and a new gate from Agente Martins.
+Preflight executed read-only on 2026-09-24 (AEF_PRODUCTION_PRIVILEGE_PREFLIGHT.md):
+compatible, with two deltas before any apply — audit sequence privileges
+(P03) and missing `subject_roles` dependency (P05).
 
 ## What is kept
 

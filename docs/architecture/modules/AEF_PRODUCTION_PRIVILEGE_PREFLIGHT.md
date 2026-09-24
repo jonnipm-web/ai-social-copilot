@@ -1,37 +1,34 @@
 # AEF Production Privilege Preflight
 
-Mission `IV-AEF-HARDENING-01`. **Status: NOT_VERIFIED.**
-
-## Why not verified
-
-Reading production catalogs requires a connection to the production project.
-In this environment the production read path (Supabase MCP) was refused by
-the session permission policy in an earlier mission and must not be retried
-automatically; no other production credential exists here, and none may be
-added. Nothing about production was observed, so nothing is claimed.
-
-## How to verify (Owner, read-only, ~1 minute)
-
-1. Open the production project's SQL editor.
-2. Paste `supabase/preflight/aef_privilege_preflight.sql` and run it. It is
-   a `BEGIN TRANSACTION READ ONLY … ROLLBACK` block with catalog `SELECT`s
-   only: it cannot change grants, schema, RLS or data.
-3. Return the output; the deltas below are then filled in.
+Mission `IV-AEF-HARDENING-01`. **Status: EXECUTED READ-ONLY on 2026-09-24** (Owner authorization: read-only
+preflight only, no production change). Project `ai-social-copilot`
+(`nzngvbajrnruknpzzjbf`, PostgreSQL 17.6). One catalog-only `SELECT` inside
+`BEGIN TRANSACTION READ ONLY … ROLLBACK`; nothing was written, granted,
+applied or deployed.
 
 ## Expected vs observed
 
-| # | Check | EXPECTED (what the AEF migrations assume) | OBSERVED | DELTA | RISK if different | FUTURE REMEDIATION |
+| # | Check | EXPECTED | OBSERVED | DELTA | RISK | FUTURE REMEDIATION |
 |---|---|---|---|---|---|---|
-| P01 | roles | `service_role` BYPASSRLS, `anon`/`authenticated` not superuser, migrations run as `postgres` | NOT_VERIFIED | — | definer functions would be owned by an unexpected role | apply migrations only as `postgres`; re-check ownership after apply |
-| P02 | `public` CREATE | no CREATE for anon/authenticated/service_role | NOT_VERIFIED | — | low: every AEF function pins `search_path = pg_catalog, pg_temp` and schema-qualifies every object | revoke CREATE on public from API roles if present (separate, approved mission) |
-| P03 | default privileges | defaults may grant ALL on new tables/functions to anon/authenticated/service_role (Supabase default) | NOT_VERIFIED | — | none for AEF: both migrations explicitly REVOKE ALL from PUBLIC/anon/authenticated/service_role and re-grant the minimum | none required; keep explicit revokes in every future AEF migration |
-| P04 | existing `aef_*` objects | none | NOT_VERIFIED | — | name collision / pre-existing grants | stop and investigate before applying |
-| P05 | dependencies | `public.projects(id uuid, user_id uuid)`, `public.subject_roles`, `auth.users`, `sha256(bytea)`, `gen_random_uuid()` | NOT_VERIFIED | — | migration fails (safe: transactional) | apply `20260923000000_entitlement_subject_roles` first |
-| P06 | SECURITY DEFINER in public | known list, all with pinned search_path, none executable by anon unintentionally | NOT_VERIFIED | — | pre-existing definer exposure (outside AEF) | separate hardening mission |
-| P07 | functions executable by PUBLIC | only intended ones | NOT_VERIFIED | — | inherited EXECUTE on unrelated functions | separate hardening mission |
-| P08 | role search_path settings | none that put a writable schema first | NOT_VERIFIED | — | none for AEF (pinned per function) | — |
-| P09 | RLS on `projects`, `subject_roles` | enabled | NOT_VERIFIED | — | AEF reads them as owner (definer), unaffected; relevant to the rest of the app | — |
-| P10 | migration history | ends before `20260923000000` (Lab migrations not applied) | NOT_VERIFIED | — | drift between Lab and production | reconcile history before any apply |
+| P01 | roles | migrations run as `postgres`; `service_role` BYPASSRLS; API roles not superuser | `postgres` (not superuser, BYPASSRLS), `service_role` BYPASSRLS, `anon`/`authenticated` no login, no super | none | — | apply AEF migrations as `postgres` (definer owner) |
+| P02 | `public` CREATE | no CREATE for API roles | anon/authenticated/service_role: CREATE = false on public, auth, extensions | none | — | — |
+| P03 | default privileges | defaults grant ALL to API roles (Supabase default) | tables `arwdDxtm`, functions `X`, **sequences `rwU`** to anon/authenticated/service_role (grantors postgres and supabase_admin) | **sequences**: the disposable stubs do not reproduce sequence defaults, and the AEF migrations do not revoke on `aef_audit_events_id_seq` | an API role could call `nextval`/`setval` on the audit identity sequence: no data exposure, but `setval` backwards would make audit inserts fail (availability; AEF fails closed) | future Lab migration: `REVOKE ALL ON SEQUENCE public.aef_audit_events_id_seq FROM PUBLIC, anon, authenticated, service_role`; add sequence defaults to the test stubs and a catalog test |
+| P04 | existing `aef_*` objects | none | none (tables and functions) | none | — | — |
+| P05 | dependencies | `projects(id uuid, user_id uuid)`, `subject_roles`, `auth.users`, `sha256`, `gen_random_uuid`, `hashtextextended` | all present **except `public.subject_roles`** | **`subject_roles` missing** (Entitlement migration `20260923000000` not applied in production) | `aef_reconcile` (operator path) references it at run time | apply order must be `20260923…` → `20260924…` → `20260925…` → `20260926…`; never apply AEF alone |
+| P06 | SECURITY DEFINER in public | pinned search_path, not callable by anon unless intended | 10 pre-existing definer functions with `search_path=public`; anon EXECUTE on `get_current_user_role`, `handle_new_user`, `is_admin_user`, `validate_asset_*`; authenticated on `cleanup_old_diagnostic_sessions`, `try_reserve_ai_quota`, `refund_ai_quota` | pre-existing, outside AEF | privilege exposure depends on each function body (not reviewed here) | separate hardening mission for pre-existing definer functions (not AEF) |
+| P07 | functions executable by PUBLIC | only intended | 13 pre-existing functions (triggers/helpers incl. the definer ones above) | pre-existing, outside AEF | same as P06 | same mission as P06 |
+| P08 | role search_path | none putting a writable schema first for API roles | `postgres`: `"$user", public, extensions`; API roles: timeouts only | none for AEF (every AEF function pins `pg_catalog, pg_temp`) | — | — |
+| P09 | RLS | `projects`, `subject_roles` RLS on | `projects` RLS on (not forced); `subject_roles` absent | see P05 | — | — |
+| P10 | migration history | ends before the Lab migrations | last applied `20260917205611`; ids are apply-time timestamps, not the repo file names | ids do not map 1:1 to repo files | drift is not provable from ids alone | before any apply: reconcile production history against repo migrations (schema diff), in its own gated mission |
+
+### Conclusion
+
+Production is compatible with the AEF migrations' privilege model (no
+CREATE on public for API roles, explicit revokes override the permissive
+defaults) with **two deltas to close before any future apply**: the audit
+identity sequence privileges (P03) and the missing Entitlement dependency
+`subject_roles` (P05). Pre-existing definer functions (P06/P07) are outside
+AEF and deserve their own hardening mission. Nothing was changed.
 
 ## Disposable-database baseline (observed, for comparison)
 
