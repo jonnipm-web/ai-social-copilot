@@ -163,4 +163,3 @@ unchanged. Module `quant-analytics` (READ_ONLY).
   licensed provider is a future, separately gated value; no URL, key or
   provider name is accepted from the client.
 * 200: as §7 plus `multi_analysis.dataSource { kind, providerId, cache {hits, misses, staleFallbacks, uncached} }`.
-
