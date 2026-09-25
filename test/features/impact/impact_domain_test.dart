@@ -41,10 +41,57 @@ void main() {
       final raw = copyOf(fixture('dossier_confirmed_en'));
       final summary = (((raw['data'] as Map)['dossier'] as Map)['content'] as Map)['summary'] as Map;
       (summary['byStatus'] as Map)['SUPPORTED'] = 99; // server says 99 → UI shows 99
-      summary['openDisputes'] = 7;
       final d = DossierView.fromResponse(raw['data'] as Map<String, dynamic>);
       expect(d.byStatus['SUPPORTED'], 99);
-      expect(d.openDisputes, 7);
+      expect(d.limitationCount, summary['limitations']);
+    });
+
+    // Codex I5G1-02 — strict parsing: anything malformed, missing or
+    // inconsistent with the server's own counts rejects the whole document.
+    Map<String, dynamic> contentOf(Map<String, dynamic> raw) =>
+        ((raw['data'] as Map)['dossier'] as Map)['content'] as Map<String, dynamic>;
+    void expectContract(void Function(Map<String, dynamic> content, Map<String, dynamic> data) mutate, String why) {
+      final raw = copyOf(fixture('dossier_conflict_en'));
+      mutate(contentOf(raw), raw['data'] as Map<String, dynamic>);
+      expect(
+        () => DossierView.fromResponse(raw['data'] as Map<String, dynamic>),
+        throwsA(isA<ImpactApiException>().having((e) => e.kind, 'kind', ImpactErrorKind.contract)),
+        reason: why,
+      );
+    }
+
+    test('UI-DOM-12 truncated lists (fewer items than the server summary) fail closed', () {
+      expectContract((c, _) => (c['claims'] as List).removeLast(), 'claims truncated');
+      expectContract((c, _) => (c['evidence'] as List).removeLast(), 'evidence truncated');
+      expectContract((c, _) => (c['sources'] as List).removeLast(), 'sources truncated');
+      expectContract((c, _) => (c['limitations'] as List).removeLast(), 'limitations truncated');
+      expectContract((c, _) => (c['summary'] as Map)['openDisputes'] = 3, 'open disputes inconsistent');
+    });
+
+    test('UI-DOM-13 malformed elements / missing structures fail closed', () {
+      expectContract((c, _) => (c['claims'] as List).add('not-a-claim'), 'non-map claim');
+      expectContract((c, _) => ((c['claims'] as List).first as Map).remove('ref'), 'claim without ref');
+      expectContract((c, _) => (((c['claims'] as List).first as Map)['verification'] as Map)['status'] = 7, 'status not a string');
+      expectContract((c, _) => ((c['limitations'] as List).first as Map).remove('code'), 'limitation without code');
+      expectContract((c, _) => c.remove('summary'), 'no summary');
+      expectContract((c, _) => (c['summary'] as Map).remove('notVerified'), 'summary field missing');
+      expectContract((c, _) => c['doesNotEstablish'] = <String>[], 'no non-findings');
+      expectContract((c, _) => c.remove('subject'), 'no subject');
+      expectContract((_, d) => d.remove('labels'), 'no labels');
+      expectContract((_, d) => d['text'] = '', 'no text rendering');
+    });
+
+    test('UI-DOM-14 unknown envelope kind, or snapshot without ref, fails closed (never LIVE)', () {
+      expectContract((_, d) => ((d['dossier'] as Map)['envelope'] as Map)['kind'] = 'DRAFT', 'unknown kind');
+      final raw = copyOf(fixture('export_confirmed_en'));
+      (((raw['data'] as Map)['dossier'] as Map)['envelope'] as Map)['snapshotRef'] = null;
+      expect(() => DossierView.fromResponse(raw['data'] as Map<String, dynamic>), throwsA(isA<ImpactApiException>()));
+    });
+
+    test('UI-DOM-15 limitations for one claim: its own + its evidence\'s', () {
+      final d = view('dossier_conflict_en');
+      final codes = d.limitationsForClaim(d.claims.single).map((l) => '${l.code}:${l.ref}').toSet();
+      expect(codes, {'EXCERPT_WITHHELD:e-board', 'INSUFFICIENT_EVIDENCE:c-wells', 'PERSONAL_DATA_REDACTED:c-wells', 'PERSONAL_DATA_REDACTED:e-news'});
     });
 
     test('UI-DOM-04 unknown schema version fails closed', () {
@@ -167,6 +214,22 @@ void main() {
       final data = copyOf(fixture('verify_current'))['data'] as Map<String, dynamic>;
       data.remove('integrityIsNotTruth');
       expect(() => VerifyResult.fromData(data), throwsA(isA<ImpactApiException>()));
+    });
+
+    test('UI-API-09 unknown verify state / envelope state is refused (never "not issued")', () {
+      for (final mutate in <void Function(Map<String, dynamic>)>[
+        (d) => d['state'] = 'REVOKED',
+        (d) => d.remove('state'),
+        (d) => d['envelopeState'] = 'PARTIAL',
+        (d) => d.remove('envelopeState'),
+      ]) {
+        final data = copyOf(fixture('verify_current'))['data'] as Map<String, dynamic>;
+        mutate(data);
+        expect(() => VerifyResult.fromData(data), throwsA(isA<ImpactApiException>()));
+      }
+      for (final n in ['verify_current', 'verify_stale', 'verify_not_issued', 'verify_envelope_mismatch']) {
+        expect(VerifyResult.fromData(fixture(n)['data'] as Map<String, dynamic>).state, isNotEmpty);
+      }
     });
 
     test('UI-API-08 list parses the caller investigations', () async {

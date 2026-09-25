@@ -51,13 +51,18 @@ entitlement in `impact-lab`, ownership + RLS below it, rate limit.
    hash proves the content was not altered — not that it is true").
 7. **Export** (see below).
 
-Layout: one column below 1024 px; two columns (summary/caveats/identity |
-claims/disputes/sources/integrity/export) at ≥ 1024 px; content max width
-1280 px (840 px single column).
+Layout: one column below 1024 px. At ≥ 1024 px the header, summary and
+both caveat blocks (non-findings | limitations) span the full width
+**above** the two columns (identity/sources/disputes | claims/integrity/
+export), so no claim is ever laid out beside or before a caveat (Codex
+I5G1-01). Content max width 1280 px (840 px single column).
 
 ## Claim detail
 
-Status / class / sufficiency chips; independent voices vs documents ("several
+Opens with a caveat block **before** the quoted claim (Codex I5G1-04): every
+"does not establish" statement, the limitations that apply to this claim
+and to its evidence, and the dossier-wide limitation count. Then: status /
+class / sufficiency chips; independent voices vs sources assessed ("several
 documents do not mean several independent sources"); evidence grouped as
 the engine classified it (for / partial / against / context / excluded) with
 excerpt (or "withheld for privacy"), publisher, host, user-submitted note and
@@ -72,7 +77,9 @@ disputes.
   the dossier, every "does not establish" statement, that a snapshot is a
   historical record, that the export is private (no public link, no
   sharing) and the formats (JSON, text; **no PDF**).
-- `export_dossier` → SNAPSHOT; the UI shows snapshot ref + content hash.
+- `export_dossier` → SNAPSHOT; the UI shows snapshot ref + content hash and
+  the **snapshot's own** limitation count and non-findings, stating that the
+  confirmation described the live view at that moment (Codex I5G1-07).
 - *Copy JSON* copies the server document; *Copy text* the server rendering.
   Nothing else: no URL, no share sheet, no file upload anywhere.
 - *Verify snapshot* presents the issued hash + envelope to `verify_dossier`;
@@ -93,8 +100,9 @@ only on user action.
 Status is always **text + icon** in neutral tones (secondary container for
 "needs attention": open dispute, pending re-verification, limitations). No
 red/green verdict colours, no gauges, progress bars or score-like numbers.
-Quoted text is italic in «» with its attribution; redaction and withholding
-are stated explicitly.
+Quoted text is italic in «» with its attribution; declared identity and
+registry names are captioned as such, not as source excerpts (Codex
+I5G1-06); redaction and withholding are stated explicitly.
 
 ## Accessibility and i18n
 

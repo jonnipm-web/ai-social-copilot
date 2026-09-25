@@ -24,6 +24,7 @@ class ImpactClaimScreen extends StatelessWidget {
     final l = dossier.labels;
     final v = claim.verification;
     final disputes = dossier.disputes.where((d) => d.claimRef == claim.ref).toList();
+    final claimLimitations = dossier.limitationsForClaim(claim);
     return Scaffold(
       appBar: AppBar(title: Text(t.impactClaimDetail)),
       body: ImpactPage(
@@ -31,6 +32,22 @@ class ImpactClaimScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            // Codex I5G1-04 — the dossier's caveats come before the claim.
+            ImpactSection(
+              title: t.impactClaimCaveats,
+              icon: Icons.do_not_disturb_on_outlined,
+              emphasis: true,
+              children: [
+                Text(t.impactNotEstablished, style: Theme.of(context).textTheme.labelLarge),
+                for (final code in dossier.doesNotEstablish) ImpactLine(l.nonFinding(code), icon: Icons.remove, muted: true),
+                const SizedBox(height: 8),
+                Text(t.impactClaimLimitations, style: Theme.of(context).textTheme.labelLarge),
+                if (claimLimitations.isEmpty) ImpactLine(t.impactNoLimitations, muted: true),
+                for (final lim in claimLimitations)
+                  ImpactLine(lim.ref == null ? l.limitation(lim.code) : '${l.limitation(lim.code)} (${lim.ref})', icon: Icons.warning_amber_outlined),
+                ImpactLine(t.impactExportLimitations(dossier.limitationCount), muted: true),
+              ],
+            ),
             ImpactQuote(
               text: claim.text,
               attribution: claim.textAttribution,

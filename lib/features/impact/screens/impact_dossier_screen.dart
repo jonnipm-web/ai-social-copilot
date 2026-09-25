@@ -60,16 +60,18 @@ class ImpactDossierBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final header = _Header(d: dossier);
+    final summary = _SummarySection(d: dossier);
+    final notEstablished = _NotEstablishedSection(d: dossier);
+    final limitations = _LimitationsSection(d: dossier);
+    // Codex I5G1-01 — on desktop the caveats span the full width ABOVE the
+    // two columns, so no claim is ever laid out beside or before them.
     final left = <Widget>[
-      _SummarySection(d: dossier),
-      _NotEstablishedSection(d: dossier),
-      _LimitationsSection(d: dossier),
       _IdentitySection(d: dossier),
+      _SourcesSection(d: dossier),
+      _DisputesSection(d: dossier),
     ];
     final right = <Widget>[
       _ClaimsSection(d: dossier),
-      _DisputesSection(d: dossier),
-      _SourcesSection(d: dossier),
       _IntegritySection(d: dossier),
       ImpactExportPanel(dossierKey: dossierKey, live: dossier),
     ];
@@ -77,7 +79,10 @@ class ImpactDossierBody extends StatelessWidget {
       if (!Breakpoints.isDesktop(c.maxWidth)) {
         return ImpactPage(
           maxWidth: 840,
-          child: ListView(padding: const EdgeInsets.all(16), children: [header, ...left, ...right]),
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [header, summary, notEstablished, limitations, left.first, ...right.take(1), ...left.skip(1), ...right.skip(1)],
+          ),
         );
       }
       return ImpactPage(
@@ -87,6 +92,15 @@ class ImpactDossierBody extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               header,
+              summary,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: notEstablished),
+                  const SizedBox(width: 16),
+                  Expanded(child: limitations),
+                ],
+              ),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -168,7 +182,7 @@ class _SummarySection extends StatelessWidget {
           if (notVerified > 0) ImpactChip(label: '${t.impactNotVerifiedYet} $notVerified', icon: Icons.hourglass_empty),
           if (pending > 0) ImpactChip(label: '${t.impactReverifyPending}: $pending', icon: Icons.update, attention: true),
           if (d.openDisputes > 0) ImpactChip(label: '${t.impactOpenDisputes}: ${d.openDisputes}', icon: Icons.forum_outlined, attention: true),
-          if (d.limitations.isNotEmpty) ImpactChip(label: '${t.impactLimitations}: ${d.groupedLimitations.length}', icon: Icons.warning_amber_outlined, attention: true),
+          if (d.limitations.isNotEmpty) ImpactChip(label: '${t.impactLimitations}: ${d.limitationCount}', icon: Icons.warning_amber_outlined, attention: true),
         ]),
       ],
     );
@@ -237,7 +251,7 @@ class _IdentitySection extends StatelessWidget {
           attention: !s.identityConfirmed,
         ),
         const SizedBox(height: 8),
-        if (s.legalName != null) ImpactQuote(text: s.legalName, attribution: 'QUOTED_FROM_SOURCE'),
+        if (s.legalName != null) ImpactQuote(text: s.legalName, attribution: null, caption: t.impactDeclaredQuote),
         for (final r in s.registrations) ImpactLine(r, icon: Icons.numbers),
         for (final dm in s.domains) ImpactLine(dm, icon: Icons.language),
         const SizedBox(height: 8),
@@ -248,7 +262,7 @@ class _IdentitySection extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              if (f.legalName != null) ImpactQuote(text: f.legalName, attribution: 'QUOTED_FROM_SOURCE'),
+              if (f.legalName != null) ImpactQuote(text: f.legalName, attribution: null, caption: t.impactRegistryQuote),
               ImpactLine([
                 f.sourceRef,
                 if (f.registryStatus != null) f.registryStatus!,

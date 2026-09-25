@@ -25,6 +25,83 @@ bool _bool(Object? v) => v == true;
 
 Never _contract() => throw const ImpactApiException(ImpactErrorKind.contract);
 
+// Codex I5G1-02/03 — strict, fail-closed structure checks. "Defensive"
+// must never mean "permissive": a malformed element, an unknown enum value
+// or a list that does not match the server's own counts rejects the WHOLE
+// document, so a partial or truncated dossier can never look complete.
+const kEnvelopeKinds = {'LIVE', 'SNAPSHOT'};
+const kVerifyStates = {'CURRENT', 'STALE', 'NOT_ISSUED'};
+const kEnvelopeStates = {'MATCHES_REGISTRATION', 'MISMATCH', 'LIVE_VIEW_NOT_A_SNAPSHOT', 'NOT_PROVIDED'};
+
+List<Map<String, dynamic>> _strictMaps(Object? v, List<String> requiredStrings) {
+  if (v is! List) _contract();
+  final out = <Map<String, dynamic>>[];
+  for (final e in v) {
+    if (e is! Map<String, dynamic>) _contract();
+    for (final k in requiredStrings) {
+      if (e[k] is! String) _contract();
+    }
+    out.add(e);
+  }
+  return out;
+}
+
+List<String> _strictStrings(Object? v) {
+  if (v is! List || v.any((e) => e is! String)) _contract();
+  return v.cast<String>().toList(growable: false);
+}
+
+int _strictInt(Map<String, dynamic> m, String k) {
+  final v = m[k];
+  if (v is! int || v < 0) _contract();
+  return v;
+}
+
+/// Validates the parts of `content` the UI renders. Returns normally only
+/// when every rendered structure is well-formed and matches the server's
+/// own summary counts.
+void _validateContent(Map<String, dynamic> c) {
+  final claims = _strictMaps(c['claims'], const ['ref']);
+  for (final cl in claims) {
+    final v = cl['verification'];
+    if (v == null) continue;
+    if (v is! Map<String, dynamic>) _contract();
+    for (final k in const ['status', 'displayClass', 'sufficiency']) {
+      if (v[k] is! String) _contract();
+    }
+    for (final k in const ['supporting', 'partiallySupporting', 'contradicting', 'contextual', 'excluded']) {
+      if (v[k] != null) _strictMaps(v[k], const []);
+    }
+    if (v['conflicts'] != null) {
+      for (final k in _strictMaps(v['conflicts'], const ['kind', 'basis'])) {
+        _strictMaps(k['positions'], const ['evidenceId', 'sourceId']);
+      }
+    }
+  }
+  final evidence = _strictMaps(c['evidence'], const ['ref']);
+  final sources = _strictMaps(c['sources'], const ['ref']);
+  final disputes = _strictMaps(c['disputes'], const ['ref']);
+  final limitations = _strictMaps(c['limitations'], const ['code']);
+  _strictMaps(c['registryFacts'], const ['sourceRef']);
+  _strictMaps(c['registryConflicts'], const ['kind']);
+  if (_strictStrings(c['doesNotEstablish']).isEmpty) _contract();
+  final subject = c['subject'];
+  if (subject is! Map<String, dynamic> || subject['identityStatus'] is! String) _contract();
+  final summary = c['summary'];
+  if (summary is! Map<String, dynamic>) _contract();
+  final byStatus = summary['byStatus'];
+  if (byStatus is! Map<String, dynamic> || byStatus.values.any((x) => x is! int)) _contract();
+  if (_strictInt(summary, 'claims') != claims.length ||
+      _strictInt(summary, 'evidence') != evidence.length ||
+      _strictInt(summary, 'sources') != sources.length ||
+      _strictInt(summary, 'limitations') != limitations.length ||
+      _strictInt(summary, 'openDisputes') != disputes.where((d) => d['open'] == true).length) {
+    _contract(); // truncated or inconsistent: never shown as complete
+  }
+  _strictInt(summary, 'notVerified');
+  _strictInt(summary, 'reverificationPending');
+}
+
 class InvestigationSummary {
   const InvestigationSummary({required this.id, required this.subjectOrgRef, required this.status, this.createdAt});
 
@@ -211,6 +288,8 @@ class VerificationView {
   final List<AssessedEvidence> excluded;
   final List<ConflictView> conflicts;
   final int independentVoices;
+
+  /// Length of the server's own `independence.sources` list.
   final int documents;
 }
 
@@ -351,10 +430,13 @@ class DossierIntegrity {
 
 class DossierEnvelope {
   DossierEnvelope(this.raw)
-      : kind = _str(raw['kind']) ?? _contract(),
+      : kind = kEnvelopeKinds.contains(raw['kind']) ? raw['kind'] as String : _contract(),
         generatedAt = _str(raw['generatedAt']),
         snapshotRef = _str(raw['snapshotRef']),
-        auditSeq = _int(raw['auditSeq']);
+        auditSeq = _int(raw['auditSeq']) {
+    // A snapshot without its reference is not a snapshot (I5G1-03).
+    if (kind == 'SNAPSHOT' && snapshotRef == null) _contract();
+  }
 
   /// Exactly what the server sent — presented back verbatim on verify.
   final Map<String, dynamic> raw;
@@ -398,6 +480,8 @@ class DossierView {
     if (c is! Map<String, dynamic> || c['schemaVersion'] != kDossierSchemaVersion) _contract();
     // The contract's own non-finding flags must be present and unchanged.
     if (c['isFindingOfWrongdoing'] != false || c['isPublication'] != false) _contract();
+    _validateContent(c);
+    if (data['text'] is! String || (data['text'] as String).isEmpty || data['labels'] is! Map<String, dynamic>) _contract();
     return DossierView._(
       document: doc,
       text: _str(data['text']) ?? '',
@@ -481,6 +565,17 @@ class DossierView {
   }
 
   int get openDisputes => summary['openDisputes'] ?? 0;
+
+  /// Server count of limitation entries (I5G1-05), not the grouped lines.
+  int get limitationCount => summary['limitations'] ?? 0;
+
+  /// Limitations that apply to one claim or to its evidence.
+  List<LimitationView> limitationsForClaim(ClaimView claim) {
+    final evRefs = evidenceFor(claim.ref).map((e) => e.ref).toSet();
+    return limitations
+        .where((l) => (l.scope == 'CLAIM' && l.ref == claim.ref) || (l.scope == 'EVIDENCE' && evRefs.contains(l.ref)))
+        .toList(growable: false);
+  }
 }
 
 class VerifyResult {
@@ -492,11 +587,16 @@ class VerifyResult {
   });
 
   factory VerifyResult.fromData(Map<String, dynamic> d) {
-    final state = _str(d['state']);
-    if (state == null || d['integrityIsNotTruth'] != true) _contract();
+    final state = d['state'];
+    final envelopeState = d['envelopeState'];
+    // Only the enumerated server answers are accepted; an unknown state is
+    // never mapped to "not issued" or anything else (I5G1-03).
+    if (!kVerifyStates.contains(state) || !kEnvelopeStates.contains(envelopeState) || d['integrityIsNotTruth'] != true) {
+      _contract();
+    }
     return VerifyResult._(
-      state: state,
-      envelopeState: _str(d['envelopeState']) ?? 'NOT_PROVIDED',
+      state: state as String,
+      envelopeState: envelopeState as String,
       snapshotRef: _str(_map(d['snapshot'])['ref']),
       exportedAt: _str(_map(d['snapshot'])['exportedAt']),
     );

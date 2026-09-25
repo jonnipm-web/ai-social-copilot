@@ -1,8 +1,6 @@
 {
   "@@locale": "pt",
-
   "appName": "InsightValues",
-
   "commonCancel": "Cancelar",
   "commonClose": "Fechar",
   "commonSave": "Salvar",
@@ -12,7 +10,6 @@
   "commonError": "Algo deu errado. Tente novamente.",
   "commonRetry": "Tentar novamente",
   "commonComingSoon": "Em breve",
-
   "authWelcomeBack": "Bem-vindo de volta",
   "authCreateAccount": "Crie sua conta",
   "authEmail": "E-mail",
@@ -28,7 +25,6 @@
   "authNoAccount": "Não tem conta? Cadastre-se",
   "authHasAccount": "Já tem conta? Faça login",
   "authSignOut": "Sair",
-
   "navCommandCenter": "OS Command Center",
   "navBusinessDashboard": "Business Dashboard",
   "navKnowledgeVault": "Cofre de Conhecimento",
@@ -43,7 +39,6 @@
   "navAdminModules": "Módulos (Admin)",
   "navHelpSupport": "Ajuda e Suporte",
   "navAbout": "Sobre",
-
   "accountTitle": "Conta e Configurações",
   "accountProfile": "Perfil",
   "accountLanguage": "Idioma",
@@ -58,13 +53,16 @@
   "accountPrivacy": "Política de Privacidade",
   "accountTerms": "Termos de Uso",
   "accountSignOut": "Sair da conta",
-
   "aboutTitle": "Sobre o InsightValues",
   "aboutTagline": "Copiloto de IA para estratégia de marketing e conteúdo.",
   "aboutVersion": "Versão do aplicativo",
   "aboutCopyright": "© {year} InsightValues. Todos os direitos reservados.",
   "@aboutCopyright": {
-    "placeholders": { "year": { "type": "int" } }
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
   },
   "aboutWebsite": "Site oficial",
   "aboutSupportContact": "Suporte",
@@ -72,22 +70,28 @@
   "aboutTermsOfUse": "Termos de Uso",
   "aboutPlanInfo": "Plano e assinatura",
   "aboutOwnerConfigRequired": "Ainda não configurado pelo administrador do produto.",
-
   "supportTitle": "Ajuda e Suporte",
   "supportContact": "Contato",
   "supportReportProblem": "Relatar um problema",
   "supportSendFeedback": "Enviar feedback",
   "supportContactEmail": "Fale conosco por e-mail: {email}",
   "@supportContactEmail": {
-    "placeholders": { "email": { "type": "String" } }
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
   },
   "supportOwnerConfigRequired": "Canal de suporte ainda não configurado pelo administrador do produto.",
-
   "planFree": "Gratuito",
   "planFreePrice": "R$ 0",
   "planFreeAnalyses": "{count} análises de IA por mês",
   "@planFreeAnalyses": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "planPro": "Pro Founder",
   "planProPrice": "R$ 29/mês",
@@ -95,16 +99,18 @@
   "planProPricePeriod": "/mês",
   "planProAnalyses": "{count} análises de IA por mês",
   "@planProAnalyses": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "planFounderNote": "Preço de lançamento (fundador) -- não é um valor permanente.",
   "planCurrentPlan": "Plano atual",
   "planUpgradeCta": "Assinar Pro",
-
   "billingTestMode": "Modo de teste (nenhuma cobrança real)",
   "billingWaitingSecrets": "Aguardando configuração final do provedor de pagamento",
   "checkoutOpeningError": "Não foi possível abrir a página de pagamento.",
-
   "upgradePlansTitle": "Planos",
   "upgradeLoadError": "Não foi possível carregar seu plano agora. Tente novamente em instantes.",
   "upgradeUsageThisMonth": "Análises de IA este mês",
@@ -112,8 +118,12 @@
   "upgradeAnalysesRemaining": "{count, plural, =1{1 análise restante} other{{count} análises restantes}} no plano {plan}.",
   "@upgradeAnalysesRemaining": {
     "placeholders": {
-      "count": { "type": "int" },
-      "plan": { "type": "String" }
+      "count": {
+        "type": "int"
+      },
+      "plan": {
+        "type": "String"
+      }
     }
   },
   "upgradeFreeSubtitle": "Plano atual",
@@ -129,7 +139,6 @@
   "upgradeCurrentPlanBadge": "Seu plano",
   "upgradeMostPopular": "Mais popular",
   "upgradeSubscribeCta": "🚀  Assinar Pro — R$ 29/mês",
-
   "adminModulesTitle": "Inventário de Módulos",
   "adminModulesStatus": "Status",
   "adminModulesCommercial": "Comercial",
@@ -141,18 +150,19 @@
   "adminModulesNoRoute": "Sem rota própria",
   "adminModulesYes": "Sim",
   "adminModulesNo": "Não",
-
   "projectBriefingSectionTitle": "Briefing Executivo",
   "projectBriefingNoKnowledge": "Nenhum conhecimento cadastrado ainda",
   "projectBriefingKnowledgeCount": "{count, plural, =0{Nenhum item de conhecimento} =1{1 item de conhecimento disponível} other{{count} itens de conhecimento disponíveis}}",
   "@projectBriefingKnowledgeCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "projectBriefingRecentChanges": "O que mudou recentemente",
-
   "projectAnalyzeIdea": "Analisar Ideia",
   "projectOpenConfig": "Configurações",
-
   "projectConfigTitle": "Configurações do Projeto",
   "projectConfigNameLabel": "Nome",
   "projectConfigDescriptionLabel": "Descrição",
@@ -163,11 +173,13 @@
   "projectConfigNameRequired": "O nome do projeto não pode ficar vazio.",
   "projectConfigSaveError": "Falha ao salvar: {error}",
   "@projectConfigSaveError": {
-    "placeholders": { "error": { "type": "String" } }
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
-
   "ideaAnalysisProjectBannerText": "Esta análise será vinculada ao projeto selecionado",
-
   "ivIntroTitle": "Conheça a IVE",
   "ivIntroWhoBody": "Eu sou a IVE, sua copiloto estratégica dentro do InsightValues.",
   "ivIntroWhatBody": "Posso explicar seus resultados, apontar riscos e oportunidades, e sugerir o que fazer a seguir — sempre com base nos dados reais do seu projeto.",
@@ -177,18 +189,19 @@
   "ivIntroSkipButton": "Pular",
   "ivIntroSemanticLabel": "Introdução à IVE, sua copiloto estratégica",
   "ivIntroReplayLabel": "Conhecer a IVE",
-
   "iveSemanticsLabel": "IVE, assistente executiva",
   "iveBubbleChatCta": "Conversar com a IVE",
-
   "iveChatAskCta": "Pergunte à IVE",
   "iveChatHint": "Pergunte à IVE…",
   "iveChatClearHistory": "Limpar histórico",
   "iveChatErrorPrefix": "Erro: {error}",
   "@iveChatErrorPrefix": {
-    "placeholders": { "error": { "type": "String" } }
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
-
   "iveScreenActions": "Ações",
   "iveScreenWebsiteAnalyzer": "Website Analyzer",
   "iveScreenProjects": "Projetos",
@@ -203,7 +216,6 @@
   "iveScreenDebugHub": "Debug Hub",
   "iveScreenRoiTracker": "ROI Tracker",
   "iveScreenScores": "Scores",
-
   "iveSuggestionProjects1": "Qual projeto devo focar?",
   "iveSuggestionProjects2": "Quais projetos têm mais risco?",
   "iveSuggestionOpportunities1": "Qual oportunidade tem maior ROI?",
@@ -220,13 +232,15 @@
   "iveSuggestionPersonas2": "Qual nicho tem mais potencial?",
   "iveSuggestionDefault1": "Me explique os dados desta tela",
   "iveSuggestionDefault2": "O que devo fazer agora?",
-
   "iveActionSuggestionHint": "Sugestão da IVE: {label}. Complete os detalhes na tela que abriu.",
   "@iveActionSuggestionHint": {
-    "placeholders": { "label": { "type": "String" } }
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
   },
   "iveActionNoDestination": "Este tipo de ação ainda não tem um destino direto. Pergunte à IVE para mais detalhes.",
-
   "oppNewTitle": "Nova Oportunidade",
   "oppTypeLabel": "Tipo",
   "oppTitleLabel": "Título",
@@ -239,10 +253,13 @@
   "oppKnowledgeEmpty": "Este projeto ainda não tem itens no Cofre de Conhecimento.",
   "oppKnowledgeCountSelected": "{count, plural, =0{Nenhum item selecionado} =1{1 item selecionado} other{{count} itens selecionados}}",
   "@oppKnowledgeCountSelected": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "oppLinkedKnowledgeTitle": "Conhecimento vinculado",
-
   "oppTypeExpansao": "Expansão",
   "oppTypeNovoProduto": "Novo Produto",
   "oppTypeNovoNicho": "Novo Nicho",
@@ -251,7 +268,6 @@
   "oppTypeEbook": "Ebook",
   "oppTypeCurso": "Curso",
   "oppTypeAssinatura": "Assinatura",
-
   "impactTitle": "Impact Lab",
   "impactInvestigations": "Investigações",
   "impactInvestigationsEmpty": "Nenhuma investigação ainda.",
@@ -262,7 +278,13 @@
   "impactSnapshot": "Snapshot emitido",
   "impactSnapshotHint": "Retrato histórico: não é reescrito quando a evidência muda.",
   "impactAsOf": "Situação em {date}",
-  "@impactAsOf": {"placeholders": {"date": {"type": "String"}}},
+  "@impactAsOf": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "impactAsOfUnknown": "Sem data de referência ainda",
   "impactSummary": "Resumo",
   "impactIdentity": "Identidade",
@@ -290,10 +312,25 @@
   "impactRedactedNote": "Dados pessoais foram removidos deste texto.",
   "impactPublisher": "Publicador",
   "impactHostedOn": "Hospedado em {host} (não é o publicador)",
-  "@impactHostedOn": {"placeholders": {"host": {"type": "String"}}},
+  "@impactHostedOn": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
   "impactUserSubmitted": "Enviado por usuário — contexto, nunca autoridade",
-  "impactVoices": "Vozes independentes: {voices} · documentos: {documents}",
-  "@impactVoices": {"placeholders": {"voices": {"type": "int"}, "documents": {"type": "int"}}},
+  "impactVoices": "Vozes independentes: {voices} · fontes avaliadas: {documents}",
+  "@impactVoices": {
+    "placeholders": {
+      "voices": {
+        "type": "int"
+      },
+      "documents": {
+        "type": "int"
+      }
+    }
+  },
   "impactVoicesNote": "Vários documentos não significam várias fontes independentes.",
   "impactRules": "Regras aplicadas",
   "impactGaps": "Lacunas",
@@ -311,7 +348,13 @@
   "impactExport": "Emitir snapshot",
   "impactExportConfirmTitle": "Antes de emitir o snapshot",
   "impactExportLimitations": "Limitações que acompanham este dossiê: {count}",
-  "@impactExportLimitations": {"placeholders": {"count": {"type": "int"}}},
+  "@impactExportLimitations": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "impactExportPrivacy": "O export é privado e autenticado: não há link público nem compartilhamento.",
   "impactExportFormats": "Formatos disponíveis: JSON e texto. PDF não disponível.",
   "impactExportConfirm": "Emitir",
@@ -323,15 +366,32 @@
   "impactErrorNotAvailable": "Investigação não encontrada ou indisponível.",
   "impactErrorTooLarge": "Este dossiê excede o limite e não foi truncado. Nada parcial é exibido.",
   "impactErrorRateLimited": "Muitas solicitações. Tente novamente em {seconds} s.",
-  "@impactErrorRateLimited": {"placeholders": {"seconds": {"type": "int"}}},
+  "@impactErrorRateLimited": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "impactErrorNetwork": "Sem conexão. Verifique a rede e tente novamente.",
   "impactErrorServer": "O serviço não respondeu. Tente novamente.",
   "impactShowMore": "Mostrar mais ({count})",
-  "@impactShowMore": {"placeholders": {"count": {"type": "int"}}},
+  "@impactShowMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "impactExpand": "Expandir",
   "impactCollapse": "Recolher",
   "impactClaimDetail": "Detalhe da afirmação",
   "impactErrorContract": "Resposta do servidor em formato não suportado. Nada foi exibido para não mostrar um dossiê incompleto.",
   "impactRetry": "Tentar novamente",
-  "impactEvidenceExcluded": "Excluídas da avaliação (com o motivo nas regras)"
+  "impactEvidenceExcluded": "Excluídas da avaliação (com o motivo nas regras)",
+  "impactDeclaredQuote": "Identidade declarada para esta investigação — citada, não verificada",
+  "impactRegistryQuote": "Como consta no registro — citado",
+  "impactClaimCaveats": "Antes de ler esta afirmação",
+  "impactClaimLimitations": "Limitações que se aplicam a esta afirmação",
+  "impactSnapshotCaveats": "A confirmação descreveu a visão ao vivo naquele momento. As ressalvas do snapshot emitido são estas:"
 }

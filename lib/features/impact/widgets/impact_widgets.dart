@@ -154,7 +154,12 @@ class ImpactQuote extends StatelessWidget {
     required this.attribution,
     this.redacted = false,
     this.withheld = false,
+    this.caption,
   });
+
+  /// Overrides the attribution caption when the quoted value is not a
+  /// source excerpt (declared identity, registry record) — I5G1-06.
+  final String? caption;
 
   final String? text;
   final String? attribution;
@@ -166,7 +171,7 @@ class ImpactQuote extends StatelessWidget {
     final t = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final fromUpload = attribution == 'QUOTED_FROM_USER_UPLOAD';
-    final caption = fromUpload ? t.impactQuotedFromUpload : t.impactQuotedFromSource;
+    final caption = this.caption ?? (fromUpload ? t.impactQuotedFromUpload : t.impactQuotedFromSource);
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 8),

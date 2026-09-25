@@ -31,7 +31,23 @@ failure → network.
 - for `export_dossier`: `envelope.kind === 'SNAPSHOT'`;
 - for `verify_dossier`: `state` present and `integrityIsNotTruth === true`.
 
+- (Codex I5G1-02/03, strict) `claims[]`, `evidence[]`, `sources[]`,
+  `disputes[]`, `limitations[]`, `registryFacts[]`, `registryConflicts[]` are
+  lists of objects with their key field (`ref` / `code` / `sourceRef` /
+  `kind`); each `verification` is null or has string `status`,
+  `displayClass`, `sufficiency` and well-formed evidence/conflict lists;
+  `doesNotEstablish` is a non-empty list of strings; `subject.identityStatus`
+  is present; `summary` has non-negative ints and a `byStatus` map;
+- the lists match the server's own counts: `summary.claims`, `.evidence`,
+  `.sources`, `.limitations` equal the list lengths and `.openDisputes` the
+  open disputes — a truncated or inconsistent document is refused;
+- `envelope.kind` ∈ {LIVE, SNAPSHOT} (a SNAPSHOT must carry `snapshotRef`);
+  `data.text` non-empty and `data.labels` an object;
+- verify: `state` ∈ {CURRENT, STALE, NOT_ISSUED} and `envelopeState` ∈
+  {MATCHES_REGISTRATION, MISMATCH, LIVE_VIEW_NOT_A_SNAPSHOT, NOT_PROVIDED}.
+
 Otherwise → `contract` error; **nothing** of the document is rendered.
+An unknown value is never mapped to a known meaning.
 
 ## Fields read (all optional unless listed above; missing → empty / "—")
 
@@ -53,7 +69,8 @@ Otherwise → `contract` error; **nothing** of the document is rendered.
 
 ## Invariants the UI keeps
 
-- **Counts** come from `content.summary`; the UI never recounts.
+- **Counts** come from `content.summary` (limitations = number of entries,
+  not of grouped lines); the UI never recounts.
 - **Labels** come from `data.labels`; an unknown code is shown raw, never
   replaced with an invented word.
 - **Export** copies `data.dossier` (re-indented JSON of the same object) and

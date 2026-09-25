@@ -31,7 +31,7 @@ class ImpactExportPanel extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ImpactLine(t.impactExportLimitations(live.groupedLimitations.length), icon: Icons.warning_amber_outlined),
+              ImpactLine(t.impactExportLimitations(live.limitationCount), icon: Icons.warning_amber_outlined),
               ImpactLine(t.impactNotEstablished, icon: Icons.do_not_disturb_on_outlined),
               for (final code in live.doesNotEstablish) ImpactLine(live.labels.nonFinding(code), muted: true),
               ImpactLine(t.impactSnapshotHint, icon: Icons.photo_camera_outlined),
@@ -94,6 +94,11 @@ class ImpactExportPanel extends ConsumerWidget {
           Semantics(liveRegion: true, child: ImpactChip(label: t.impactExportDone, icon: Icons.photo_camera_outlined)),
           const SizedBox(height: 8),
           ImpactLine('${t.impactSnapshotRef}: ${snap.envelope.snapshotRef ?? '—'}'),
+          // I5G1-07 — the confirmation described the live view; the issued
+          // snapshot's OWN caveats are shown right here.
+          ImpactLine(t.impactSnapshotCaveats, icon: Icons.info_outline),
+          ImpactLine(t.impactExportLimitations(snap.limitationCount), icon: Icons.warning_amber_outlined),
+          for (final code in snap.doesNotEstablish) ImpactLine(snap.labels.nonFinding(code), muted: true),
           if (snap.envelope.generatedAt != null) ImpactLine(t.impactAsOf(snap.asOf ?? snap.envelope.generatedAt!), muted: true),
           Text(t.impactContentHash, style: Theme.of(context).textTheme.labelMedium),
           SelectableText(snap.integrity.contentHash, style: mono),

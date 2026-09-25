@@ -103,6 +103,17 @@ void main() {
       expect(find.text('Supported by independent evidence'), findsNothing);
     });
 
+    testWidgets('UI-DOS-09 limitation count is the server count (7 entries, not 5 grouped codes)', (tester) async {
+      await openDossier(tester, 'dossier_conflict_en');
+      expect(find.text('Limitations: 7'), findsOneWidget);
+    });
+
+    testWidgets('UI-DOS-10 declared / registry names are captioned as such, not as source excerpts', (tester) async {
+      await openDossier(tester, 'dossier_confirmed_en');
+      expect(find.text('Identity as declared for this investigation — quoted, not verified'), findsOneWidget);
+      expect(find.text('As recorded in the registry — quoted'), findsOneWidget);
+    });
+
     testWidgets('UI-DOS-03 B/C conflict + privacy: redaction noted, withheld hidden', (tester) async {
       await openDossier(tester, 'dossier_conflict_en');
       expect(find.textContaining('Jane Example'), findsNothing);
@@ -157,7 +168,20 @@ void main() {
       expect(find.textContaining('Quoted from an uploaded document'), findsWidgets);
       expect(find.text('Hosted on GOOGLE_DRIVE (not the publisher)'), findsOneWidget);
       expect(find.textContaining('art-report · L2 · location confirmed'), findsOneWidget);
-      expect(find.textContaining('Independent voices: 0'), findsOneWidget);
+      expect(find.textContaining('Independent voices: 0 · sources assessed: 1'), findsOneWidget);
+    });
+
+    testWidgets('UI-CLM-04 claim detail opens with the caveats, BEFORE the quoted claim', (tester) async {
+      await openDossier(tester, 'dossier_conflict_en');
+      await tester.tap(find.textContaining('[redacted-email]').first);
+      await tester.pumpAndSettle();
+      final caveats = tester.getTopLeft(find.text('Before reading this claim')).dy;
+      final nonFinding = tester.getTopLeft(find.text('It is not a finding of wrongdoing about the organization.').last).dy;
+      final quote = tester.getTopLeft(find.textContaining('[redacted-email]').last).dy;
+      expect(caveats, lessThan(quote));
+      expect(nonFinding, lessThan(quote));
+      expect(find.text('Limitations that apply to this claim'), findsOneWidget);
+      expect(find.textContaining('(e-board)'), findsWidgets);
     });
 
     testWidgets('UI-CLM-02 disagreements side by side, no winner (desktop)', (tester) async {
@@ -262,6 +286,10 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Snapshot issued'), findsOneWidget);
       expect(find.textContaining('dossier-40f99eff8990cf9b0f67a365'), findsWidgets);
+      // I5G1-07 — the issued snapshot's own caveats are shown with it.
+      expect(find.textContaining('The issued snapshot carries these caveats'), findsOneWidget);
+      await tester.ensureVisible(find.text('Verify snapshot'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Verify snapshot'));
       await tester.pumpAndSettle();
       expect(find.text('Current snapshot: the content has not changed since it was issued.'), findsOneWidget);
@@ -272,6 +300,8 @@ void main() {
       await exported(tester, verify: 'verify_stale');
       await tester.tap(find.widgetWithText(FilledButton, 'Issue'));
       await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Verify snapshot'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Verify snapshot'));
       await tester.pumpAndSettle();
       expect(find.textContaining('It remains valid as a historical record.'), findsOneWidget);
@@ -280,6 +310,8 @@ void main() {
     testWidgets('UI-EXP-04 envelope MISMATCH is shown before "current"', (tester) async {
       await exported(tester, verify: 'verify_envelope_mismatch');
       await tester.tap(find.widgetWithText(FilledButton, 'Issue'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Verify snapshot'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Verify snapshot'));
       await tester.pumpAndSettle();
@@ -298,7 +330,11 @@ void main() {
       await exported(tester, verify: 'verify_current');
       await tester.tap(find.widgetWithText(FilledButton, 'Issue'));
       await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Copy JSON'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Copy JSON'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Copy text'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Copy text'));
       await tester.pumpAndSettle();
@@ -335,6 +371,12 @@ void main() {
       final sumX = tester.getTopLeft(find.text('Summary')).dx;
       final claimsX = tester.getTopLeft(find.text('Claims and verification')).dx;
       expect(claimsX, greaterThan(sumX + 200));
+      // I5G1-01 — caveats end above the first claim on desktop too.
+      final claimsY = tester.getTopLeft(find.text('Claims and verification')).dy;
+      final notEst = tester.getBottomLeft(find.ancestor(of: find.text('What this dossier does NOT establish'), matching: find.byType(Card))).dy;
+      final limits = tester.getBottomLeft(find.ancestor(of: find.text('Limitations').first, matching: find.byType(Card))).dy;
+      expect(notEst, lessThan(claimsY));
+      expect(limits, lessThan(claimsY));
       await openDossier(tester, 'dossier_confirmed_en', size: const Size(390, 844));
       expect(tester.getTopLeft(find.text('Summary')).dx, lessThan(100));
     });
