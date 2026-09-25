@@ -24,8 +24,9 @@ import { LAB_LIMITS, parseLabRequest } from '../_shared/impact/lab_contract.ts';
 import { handleLabRequest } from '../_shared/impact/lab_service.ts';
 import type { ImpactLabStore } from '../_shared/impact/lab_store.ts';
 import { buildImpactEvent } from '../_shared/impact/observability.ts';
+import { bucketFor, decideRate, type ImpactRateLimiter, type RateBucket, type RateRule, rateLimitsFrom } from '../_shared/impact/rate_limit.ts';
 import { IMPACT_POLICY_VERSION } from '../_shared/impact/verification.ts';
-import { createSupabaseImpactLabStore } from './supabase_store.ts';
+import { createSupabaseImpactLabStore, createSupabaseRateLimiter } from './supabase_store.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -35,6 +36,9 @@ const corsHeaders = {
 export interface ImpactLabDeps {
   /** Store factory (tests inject an in-memory store bound to the caller). */
   store?: (req: Request, user: AuthenticatedUser) => ImpactLabStore;
+  /** I5 rate limiter (tests inject the in-memory twin; production: DB-backed, per caller). */
+  rateLimiter?: (req: Request) => ImpactRateLimiter;
+  rateLimits?: Readonly<Record<RateBucket, RateRule>>;
   now?: () => string;
   log?: (line: string) => void;
 }
@@ -67,6 +71,7 @@ const HTTP: Readonly<Partial<Record<ImpactErrorCode, number>>> = {
   LOCATOR_INVALID: 400,
   EVIDENCE_REVIEW_REQUIRED: 400,
   DOSSIER_TOO_LARGE: 413,
+  RATE_LIMITED: 429,
   INTERNAL_ERROR: 500,
 };
 
@@ -74,11 +79,17 @@ function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 }
 
-function errorResponse(e: ImpactError, correlationId: string): Response {
+function errorResponse(e: ImpactError, correlationId: string, retryAfterSeconds?: number): Response {
   const status = HTTP[e.code] ?? 400;
   const body: Record<string, unknown> = { ok: false, error: e.code, correlation_id: correlationId };
   if (status < 500) body.message = e.message;
   if (e.code === 'ACTION_BLOCKED') body.requires = 'AEF_HUMAN_GATE';
+  if (retryAfterSeconds !== undefined) {
+    body.retry_after = retryAfterSeconds;
+    const r = json(status, body);
+    r.headers.set('Retry-After', String(retryAfterSeconds));
+    return r;
+  }
   return json(status, body);
 }
 
@@ -131,6 +142,30 @@ export async function handler(
   }
   const parsed = parseLabRequest(raw);
   if (!parsed.ok) return errorResponse(parsed.error, correlationId);
+
+  // I5 (closes I4G3-04): server-authoritative rate limit for dossier actions, per CALLER,
+  // applied BEFORE the ownership check (a foreign / missing investigation costs the same and
+  // reveals nothing). Limiter failure fails CLOSED.
+  const bucket = bucketFor(parsed.value.action);
+  if (bucket) {
+    const rules = deps.rateLimits ?? rateLimitsFrom((k) => Deno.env.get(k));
+    const rule = rules[bucket];
+    const nowMs = Date.parse(deps.now ? deps.now() : new Date().toISOString());
+    let hit;
+    try {
+      const limiter = deps.rateLimiter ? deps.rateLimiter(req) : createSupabaseRateLimiter(req);
+      hit = await limiter.hit(user.id, bucket, rule.windowSeconds, nowMs);
+    } catch {
+      hit = { ok: false as const, error: { code: 'INTERNAL_ERROR' as const, message: 'rate limiter unavailable' } };
+    }
+    if (!hit.ok) return errorResponse({ code: 'INTERNAL_ERROR', message: 'rate limiter unavailable' }, correlationId);
+    const d = decideRate(hit.value, rule, nowMs);
+    if (!d.allowed) {
+      const ev = buildImpactEvent({ event: 'impact.dossier_rate_limited', correlation_id: correlationId, error_code: 'RATE_LIMITED', rate_bucket: bucket });
+      if (ev) log(JSON.stringify(ev));
+      return errorResponse({ code: 'RATE_LIMITED', message: 'too many dossier requests; retry later' }, correlationId, d.retryAfterSeconds);
+    }
+  }
 
   let result;
   try {

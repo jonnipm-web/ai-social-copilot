@@ -8,6 +8,7 @@ import type { AuthClient } from '../_shared/auth.ts';
 import { failingSubjectSource, fakeSubjectSource } from '../_shared/entitlement_test_support.ts';
 import { InMemoryImpactDatabase, InMemoryImpactLabStore } from '../_shared/impact/lab_store.ts';
 import { handler, type ImpactLabDeps } from './index.ts';
+import { InMemoryRateLimiter } from '../_shared/impact/rate_limit.ts';
 
 let fetchCalls = 0;
 globalThis.fetch = () => {
@@ -33,8 +34,10 @@ const auth: AuthClient = {
 function env() {
   const db = new InMemoryImpactDatabase();
   const logs: string[] = [];
+  const limiter = new InMemoryRateLimiter();
   const deps: ImpactLabDeps = {
     store: (_req, user) => new InMemoryImpactLabStore(db, user.id),
+    rateLimiter: () => limiter,
     now: () => '2026-09-23T12:00:00Z',
     log: (l) => logs.push(l),
   };
@@ -45,7 +48,7 @@ function env() {
     const res = await handler(req, auth, undefined, fakeSubjectSource(role), deps);
     return { status: res.status, body: await res.json().catch(() => ({})) as Record<string, unknown> };
   };
-  return { db, logs, send };
+  return { db, logs, send, limiter, deps };
 }
 
 const SUBJECT = { ref: 'org-hopebridge', type: 'FOUNDATION', identity: { legalName: 'HopeBridge Foundation', registrations: [{ country: 'XA', scheme: 'charity-number', value: 'XA-1234567' }] } };
@@ -211,4 +214,48 @@ Deno.test('EF-12 I4 dossier: owner-scoped, 404 for others, events carry status/c
     assertEquals([r.status, r.body.error], [400, 'INVALID_REQUEST']);
   }
   assertEquals(fetchCalls, 0);
+});
+
+// ── I5: server-authoritative dossier rate limit (closes I4G3-04) ──────────
+
+Deno.test('EF-13 rate limit: within → 200, above → 429 + Retry-After, window reset, per-caller isolation, no oracle, fail closed', async () => {
+  const e = env();
+  e.deps.rateLimits = { dossier_build: { limit: 3, windowSeconds: 60 }, dossier_export: { limit: 2, windowSeconds: 60 }, dossier_verify: { limit: 3, windowSeconds: 60 } };
+  const a = (await e.send('jwt-admin-a', { action: 'create_investigation', subject: SUBJECT })).body.data as Record<string, unknown>;
+  const b = (await e.send('jwt-admin-b', { action: 'create_investigation', subject: SUBJECT })).body.data as Record<string, unknown>;
+  const invA = a.investigationId as string;
+  const invB = b.investigationId as string;
+  for (let i = 0; i < 3; i++) assertEquals((await e.send('jwt-admin-a', { action: 'get_dossier', investigation_id: invA })).status, 200);
+  const blocked = await e.send('jwt-admin-a', { action: 'get_dossier', investigation_id: invA });
+  assertEquals([blocked.status, blocked.body.error, typeof blocked.body.retry_after], [429, 'RATE_LIMITED', 'number']);
+  // another user is isolated: B still has its own full budget
+  assertEquals((await e.send('jwt-admin-b', { action: 'get_dossier', investigation_id: invB })).status, 200);
+  // no oracle: B probing A's investigation spends B's OWN budget and gets the same 404 as a missing id
+  const probe = await e.send('jwt-admin-b', { action: 'get_dossier', investigation_id: invA });
+  const missing = await e.send('jwt-admin-b', { action: 'get_dossier', investigation_id: '99999999-0000-4000-8000-000000000999' });
+  assertEquals([probe.status, missing.status], [404, 404]);
+  const bBlocked1 = await e.send('jwt-admin-b', { action: 'get_dossier', investigation_id: invA });
+  const bBlocked2 = await e.send('jwt-admin-b', { action: 'get_dossier', investigation_id: invB });
+  assertEquals([bBlocked1.status, bBlocked1.body.error, bBlocked2.status], [429, 'RATE_LIMITED', 429]); // identical for foreign and own
+  // buckets are independent: export has its own budget
+  assertEquals((await e.send('jwt-admin-a', { action: 'export_dossier', investigation_id: invA })).status, 200);
+  // window reset
+  e.deps.now = () => '2026-09-23T12:01:00Z';
+  assertEquals((await e.send('jwt-admin-a', { action: 'get_dossier', investigation_id: invA })).status, 200);
+  // non-dossier actions are not rate limited by this mechanism
+  assertEquals((await e.send('jwt-admin-a', { action: 'get_investigation', investigation_id: invA })).status, 200);
+  // limiter failure fails CLOSED
+  e.limiter.failNext = true;
+  const down = await e.send('jwt-admin-a', { action: 'get_dossier', investigation_id: invA });
+  assertEquals([down.status, down.body.error], [500, 'INTERNAL_ERROR']);
+  // events: codes only
+  assert(e.logs.some((l) => l.includes('impact.dossier_rate_limited') && l.includes('dossier_build')));
+});
+
+Deno.test('EF-14 rate limit is atomic under parallel requests (exactly `limit` admitted)', async () => {
+  const e = env();
+  e.deps.rateLimits = { dossier_build: { limit: 5, windowSeconds: 60 }, dossier_export: { limit: 5, windowSeconds: 60 }, dossier_verify: { limit: 5, windowSeconds: 60 } };
+  const a = (await e.send('jwt-admin-a', { action: 'create_investigation', subject: SUBJECT })).body.data as Record<string, unknown>;
+  const res = await Promise.all(Array.from({ length: 12 }, () => e.send('jwt-admin-a', { action: 'get_dossier', investigation_id: a.investigationId })));
+  assertEquals([res.filter((r) => r.status === 200).length, res.filter((r) => r.status === 429).length], [5, 7]);
 });

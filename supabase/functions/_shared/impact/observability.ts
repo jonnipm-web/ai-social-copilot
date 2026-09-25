@@ -38,6 +38,7 @@ const ALLOWED: Readonly<Record<string, 'id' | 'count' | 'code'>> = {
   review_status: 'code',
   // I4 dossier
   dossier_status: 'code',
+  rate_bucket: 'code',
   reverification_count: 'count',
 };
 

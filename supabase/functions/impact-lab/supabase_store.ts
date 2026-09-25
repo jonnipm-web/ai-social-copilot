@@ -16,6 +16,7 @@
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.116.0';
 import { fail, type ImpactErrorCode, ok, type ImpactResult } from '../_shared/impact/errors.ts';
+import type { ImpactRateLimiter, RateBucket, RateHit } from '../_shared/impact/rate_limit.ts';
 import type {
   CandidateReview,
   StoredDossierSnapshot,
@@ -523,4 +524,27 @@ export function createSupabaseImpactLabStore(req: Request): SupabaseImpactLabSto
   const user = createClient(url, anon, { ...opts, global: { headers: { Authorization: `Bearer ${token}` } } });
   const service = createClient(url, serviceKey, opts);
   return new SupabaseImpactLabStore(user as unknown as DbClient, service as unknown as DbClient);
+}
+
+/**
+ * I5 rate limiter: impact_rate_limit_hit() through the CALLER'S OWN session
+ * client — identity is auth.uid() inside the database, never a parameter,
+ * and no service_role privilege is involved (SERVICE_ROLE_TRUST_GATE unchanged).
+ */
+export function createSupabaseRateLimiter(req: Request): ImpactRateLimiter {
+  const url = Deno.env.get('SUPABASE_URL');
+  const anon = Deno.env.get('SUPABASE_ANON_KEY');
+  const token = req.headers.get('Authorization')?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
+  if (!url || !anon || !token) throw new Error('impact-lab: missing Supabase configuration');
+  const client = createClient(url, anon, { auth: { autoRefreshToken: false, persistSession: false }, global: { headers: { Authorization: `Bearer ${token}` } } });
+  return {
+    async hit(_userId: string, bucket: RateBucket, windowSeconds: number): Promise<ImpactResult<RateHit>> {
+      const { data, error } = await client.rpc('impact_rate_limit_hit', { p_bucket: bucket, p_window_seconds: windowSeconds });
+      if (error) return fail('INTERNAL_ERROR', 'rate limiter unavailable');
+      const row = (Array.isArray(data) ? data[0] : data) as { hit_count?: number; window_start?: string } | null;
+      const start = row?.window_start ? Date.parse(row.window_start) : NaN;
+      if (!row || typeof row.hit_count !== 'number' || !Number.isFinite(start)) return fail('INTERNAL_ERROR', 'rate limiter unavailable');
+      return ok({ count: row.hit_count, windowStartMs: start });
+    },
+  };
 }

@@ -522,12 +522,12 @@ SELECT pg_temp.expect_eq('V01 no verdict/score/trust/fraud column exists',
      AND column_name ~* '(verdict|score|rank|trust|fraud|scam|guilt|corrupt)'), 0);
 SELECT pg_temp.expect_eq('V02 claims table has no status column (engine is the authority)',
   (SELECT count(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'impact_claims' AND column_name = 'status'), 0);
-SELECT pg_temp.expect_eq('V03 RLS enabled on EVERY impact table (8 from I1 + impact_registry_conflicts from I2 + impact_artifacts, impact_evidence_candidates from I3 + impact_dossier_snapshots from I4)',
+SELECT pg_temp.expect_eq('V03 RLS enabled on EVERY impact table (8 from I1 + impact_registry_conflicts from I2 + impact_artifacts, impact_evidence_candidates from I3 + impact_dossier_snapshots from I4 + impact_rate_limits from I5)',
   (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
    WHERE n.nspname = 'public' AND c.relname LIKE 'impact\_%' AND c.relkind = 'r' AND NOT c.relrowsecurity), 0);
 SELECT pg_temp.expect_eq('V03b impact table count (a new table must be added to this suite deliberately)',
   (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-   WHERE n.nspname = 'public' AND c.relname LIKE 'impact\_%' AND c.relkind = 'r'), 12);
+   WHERE n.nspname = 'public' AND c.relname LIKE 'impact\_%' AND c.relkind = 'r'), 13);
 SELECT pg_temp.expect_eq('V04 authenticated holds no write privilege on any impact table',
   (SELECT count(*) FROM information_schema.table_privileges
    WHERE table_schema = 'public' AND table_name LIKE 'impact\_%' AND grantee IN ('authenticated', 'anon', 'PUBLIC')

@@ -43,6 +43,7 @@ export type ImpactErrorCode =
   | 'LOCATOR_INVALID'
   | 'EVIDENCE_REVIEW_REQUIRED'
   | 'DOSSIER_TOO_LARGE'
+  | 'RATE_LIMITED'
   | 'INTERNAL_ERROR';
 
 export const IMPACT_ERROR_CODES: readonly ImpactErrorCode[] = Object.freeze([
@@ -79,6 +80,7 @@ export const IMPACT_ERROR_CODES: readonly ImpactErrorCode[] = Object.freeze([
   'LOCATOR_INVALID',
   'EVIDENCE_REVIEW_REQUIRED',
   'DOSSIER_TOO_LARGE',
+  'RATE_LIMITED',
   'INTERNAL_ERROR',
 ]);
 
