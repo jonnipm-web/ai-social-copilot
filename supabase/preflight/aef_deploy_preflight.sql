@@ -4,11 +4,13 @@
 -- database is in a state the chain can safely build on. It never applies,
 -- grants, alters or writes anything: everything runs inside a READ ONLY
 -- transaction that is rolled back, and only catalog / migration-history
--- metadata is read (no user data).
+-- metadata is read (no user data). Run it ONLY as `psql -v ON_ERROR_STOP=1 -f`
+-- (no wrapper that adds statements).
 --
--- Exit: psql returns non-zero (EXCEPTION 'AEF_DEPLOY_PREFLIGHT: FAIL …') on any
--- failed check; 'AEF_DEPLOY_PREFLIGHT: PASS …' lists what remains to apply.
--- A PASS is NOT a deploy authorization (AEF_PRODUCTION_DEPLOYMENT_PRECONDITIONS.md).
+-- Exit: psql returns non-zero with 'AEF_DEPLOY_PREFLIGHT: FAIL …' on any failed
+-- check or unexpected error; 'AEF_DEPLOY_PREFLIGHT: PASS …' lists what remains
+-- to apply. A PASS is NOT a deploy authorization
+-- (AEF_PRODUCTION_DEPLOYMENT_PRECONDITIONS.md).
 BEGIN TRANSACTION READ ONLY;
 
 DO $$
@@ -24,26 +26,56 @@ DECLARE
   -- The chain, in the order it must be applied.
   chain text[] := ARRAY['entitlement_subject_roles', 'ive_memory_governance', 'aef_persistence', 'aef_hardening',
     'aef_sequence_privileges'];
+  -- Structural markers: EVERY listed object must exist for a migration to be
+  -- "present"; some-but-not-all is partial drift (fail).
+  persist_tables text[] := ARRAY['public.aef_operations', 'public.aef_human_gates', 'public.aef_receipts',
+    'public.aef_audit_events', 'public.aef_audit_heads'];
+  persist_rpcs text[] := ARRAY['aef_register_operation', 'aef_decide_gate', 'aef_claim_execution', 'aef_complete_execution',
+    'aef_cancel_operation', 'aef_recover', 'aef_get_operation', 'aef_record_denial', 'aef_verify_receipt',
+    'aef_verify_audit_chain'];
+  hard_tables text[] := ARRAY['public.aef_retention_policy', 'public.aef_idempotency_tombstones', 'public.aef_audit_checkpoints',
+    'public.aef_audit_coalesced', 'public.aef_audit_windows', 'public.aef_audit_pending', 'public.aef_legal_holds',
+    'public.aef_erasures', 'public.aef_reconciliation_verifiers', 'public.aef_reconciliations'];
+  hard_rpcs text[] := ARRAY['aef_purge', 'aef_erase_subject', 'aef_reconcile'];
+  memory_cols text[] := ARRAY['scope', 'origin', 'status', 'dedup_key', 'superseded_by', 'updated_at', 'expires_at'];
+  api_roles text[] := ARRAY['anon', 'authenticated', 'service_role'];
+  n_rows bigint; n_named bigint; n_distinct bigint;
   hist text[];
   fails text[] := ARRAY[]::text[];
   applied boolean[] := ARRAY[]::boolean[];
-  present boolean[] := ARRAY[]::boolean[];
+  state text[] := ARRAY[]::text[];     -- absent | present | partial
+  ver text[] := ARRAY[]::text[];
   remaining text[] := ARRAY[]::text[];
-  i int;
-  n text;
-  v_seq text;
+  found int; expected int;
+  i int; n text; r text; p text; s oid; f record;
+  exposed text[] := ARRAY[]::text[];
   seq_defaults_permissive boolean;
 BEGIN
-  -- ── migration history ────────────────────────────────────────────────
+ BEGIN
+  -- ── migration history (Codex G3-01/G3-04) ────────────────────────────
   IF to_regclass('supabase_migrations.schema_migrations') IS NULL THEN
     RAISE EXCEPTION 'AEF_DEPLOY_PREFLIGHT: FAIL — no supabase_migrations.schema_migrations history table';
   END IF;
-  EXECUTE 'SELECT coalesce(array_agg(name ORDER BY version), ARRAY[]::text[]) FROM supabase_migrations.schema_migrations' INTO hist;
+  EXECUTE 'SELECT count(*), count(name), count(DISTINCT name) FROM supabase_migrations.schema_migrations'
+    INTO n_rows, n_named, n_distinct;
+  IF n_named <> n_rows THEN
+    fails := fails || format('history: %s row(s) without a name — cannot reconcile by name', n_rows - n_named);
+  END IF;
+  IF n_distinct <> n_named THEN
+    fails := fails || 'history: duplicate migration names — cannot reconcile by name'::text;
+  END IF;
+  EXECUTE 'SELECT coalesce(array_agg(name ORDER BY version), ARRAY[]::text[]) FROM supabase_migrations.schema_migrations WHERE name IS NOT NULL'
+    INTO hist;
   FOREACH n IN ARRAY predecessors LOOP
-    IF NOT (n = ANY (hist)) THEN
+    IF (n = ANY (hist)) IS NOT TRUE THEN
       fails := fails || format('predecessor migration %s missing from history', n);
     END IF;
   END LOOP;
+
+  -- ── roles the privilege checks rely on ───────────────────────────────
+  IF (SELECT count(*) FROM pg_roles WHERE rolname = ANY (api_roles)) <> 3 THEN
+    RAISE EXCEPTION 'AEF_DEPLOY_PREFLIGHT: FAIL — roles anon/authenticated/service_role missing';
+  END IF;
 
   -- ── functional presence of what the chain builds on (schema, not names) ─
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'projects'
@@ -53,73 +85,154 @@ BEGIN
     fails := fails || 'drift: public.projects(id uuid, user_id uuid NOT NULL) not as expected'::text;
   END IF;
   IF (SELECT count(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'profiles'
-       AND column_name IN ('id', 'role')) <> 2 THEN
-    fails := fails || 'drift: public.profiles(id, role) required by entitlement_subject_roles'::text;
+       AND ((column_name = 'id' AND data_type = 'uuid') OR column_name = 'role')) <> 2 THEN
+    fails := fails || 'drift: public.profiles(id uuid, role) required by entitlement_subject_roles'::text;
   END IF;
-  IF to_regclass('public.business_memory') IS NULL THEN
-    fails := fails || 'drift: public.business_memory required by ive_memory_governance'::text;
+  IF (SELECT count(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'business_memory'
+       AND column_name IN ('user_id', 'project_id', 'source', 'content')) <> 4 THEN
+    fails := fails || 'drift: public.business_memory(user_id, project_id, source, content) required by ive_memory_governance'::text;
   END IF;
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'auth' AND table_name = 'users'
                   AND column_name = 'id' AND data_type = 'uuid') THEN
     fails := fails || 'drift: auth.users.id uuid'::text;
   END IF;
-  IF to_regprocedure('pg_catalog.sha256(bytea)') IS NULL OR to_regprocedure('pg_catalog.gen_random_uuid()') IS NULL
-     OR to_regprocedure('pg_catalog.hashtextextended(text, bigint)') IS NULL THEN
-    fails := fails || 'drift: required pg_catalog functions missing'::text;
+  IF (SELECT prorettype FROM pg_proc WHERE oid = to_regprocedure('auth.uid()')) IS DISTINCT FROM 'uuid'::regtype
+     OR (SELECT prorettype FROM pg_proc WHERE oid = to_regprocedure('pg_catalog.sha256(bytea)')) IS DISTINCT FROM 'bytea'::regtype
+     OR (SELECT prorettype FROM pg_proc WHERE oid = to_regprocedure('pg_catalog.gen_random_uuid()')) IS DISTINCT FROM 'uuid'::regtype
+     OR (SELECT prorettype FROM pg_proc WHERE oid = to_regprocedure('pg_catalog.hashtextextended(text, bigint)')) IS DISTINCT FROM 'bigint'::regtype THEN
+    fails := fails || 'drift: auth.uid() / sha256 / gen_random_uuid / hashtextextended missing or with an unexpected return type'::text;
   END IF;
 
-  -- ── chain state: history and schema must agree, in order ─────────────
-  v_seq := CASE WHEN to_regclass('public.aef_audit_events') IS NULL THEN NULL
-                ELSE pg_get_serial_sequence('public.aef_audit_events', 'id') END;
+  -- ── chain state: history and full structure must agree (Codex G3-02) ─
   FOR i IN 1 .. array_length(chain, 1) LOOP
-    applied := applied || (chain[i] = ANY (hist));
-    present := present || CASE chain[i]
-      WHEN 'entitlement_subject_roles' THEN to_regclass('public.subject_roles') IS NOT NULL
-      WHEN 'ive_memory_governance' THEN EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public'
-                                                  AND table_name = 'business_memory' AND column_name = 'scope')
-      WHEN 'aef_persistence' THEN to_regclass('public.aef_operations') IS NOT NULL
-      WHEN 'aef_hardening' THEN to_regclass('public.aef_retention_policy') IS NOT NULL
-      WHEN 'aef_sequence_privileges' THEN v_seq IS NOT NULL
-        AND NOT has_sequence_privilege('anon', v_seq, 'USAGE') AND NOT has_sequence_privilege('anon', v_seq, 'UPDATE')
-        AND NOT has_sequence_privilege('authenticated', v_seq, 'UPDATE') AND NOT has_sequence_privilege('service_role', v_seq, 'UPDATE')
-    END;
-    IF applied[i] AND NOT present[i] THEN
+    applied := applied || coalesce(chain[i] = ANY (hist), false);
+    EXECUTE 'SELECT max(version)::text FROM supabase_migrations.schema_migrations WHERE name = $1' INTO n USING chain[i];
+    ver := ver || n;
+    CASE chain[i]
+      WHEN 'entitlement_subject_roles' THEN
+        expected := 3;
+        SELECT count(*) INTO found FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'subject_roles'
+           AND is_nullable = 'NO' AND ((column_name = 'subject_type' AND data_type = 'text')
+                                       OR (column_name = 'subject_id' AND data_type = 'uuid')
+                                       OR (column_name = 'role' AND data_type = 'text'));
+        IF to_regclass('public.subject_roles') IS NOT NULL AND found = 0 THEN found := 1; expected := 3; END IF;
+      WHEN 'ive_memory_governance' THEN
+        expected := array_length(memory_cols, 1) + 1;
+        SELECT count(*) INTO found FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'business_memory'
+           AND column_name = ANY (memory_cols);
+        found := found + CASE WHEN to_regprocedure('public.business_memory_derive_scope()') IS NULL THEN 0 ELSE 1 END;
+      WHEN 'aef_persistence' THEN
+        expected := array_length(persist_tables, 1) + array_length(persist_rpcs, 1);
+        SELECT (SELECT count(*) FROM unnest(persist_tables) t WHERE to_regclass(t) IS NOT NULL)
+             + (SELECT count(*) FROM unnest(persist_rpcs) q WHERE to_regprocedure('public.' || q || '(jsonb)') IS NOT NULL)
+          INTO found;
+      WHEN 'aef_hardening' THEN
+        expected := array_length(hard_tables, 1) + array_length(hard_rpcs, 1);
+        SELECT (SELECT count(*) FROM unnest(hard_tables) t WHERE to_regclass(t) IS NOT NULL)
+             + (SELECT count(*) FROM unnest(hard_rpcs) q WHERE to_regprocedure('public.' || q || '(jsonb)') IS NOT NULL)
+          INTO found;
+      WHEN 'aef_sequence_privileges' THEN
+        -- no object of its own: "present" = the audit sequence exists and no AEF sequence is exposed (checked below)
+        expected := 1;
+        found := CASE WHEN to_regclass('public.aef_audit_events') IS NOT NULL
+                       AND pg_get_serial_sequence('public.aef_audit_events', 'id') IS NOT NULL THEN 1 ELSE 0 END;
+    END CASE;
+    state := state || CASE WHEN found = 0 THEN 'absent' WHEN found >= expected THEN 'present' ELSE 'partial' END;
+    IF state[i] = 'partial' THEN
+      fails := fails || format('drift: %s is partially present (%s of %s structural markers)', chain[i], found, expected);
+    ELSIF applied[i] AND state[i] = 'absent' THEN
       fails := fails || format('drift: %s is in the history but its objects are absent', chain[i]);
-    ELSIF present[i] AND NOT applied[i] AND chain[i] <> 'aef_sequence_privileges' THEN
+    ELSIF state[i] = 'present' AND NOT applied[i] AND chain[i] <> 'aef_sequence_privileges' THEN
       fails := fails || format('drift: objects of %s exist but it is not in the history', chain[i]);
     END IF;
     IF NOT applied[i] THEN
       remaining := remaining || chain[i];
     END IF;
   END LOOP;
-  -- Order, by REAL dependencies (AEF_PRODUCTION_MIGRATION_RECONCILIATION.md),
-  -- not by file numbering: aef_hardening needs entitlement_subject_roles and
-  -- aef_persistence; aef_sequence_privileges needs aef_persistence.
+
+  -- ── order, by REAL dependencies (AEF_PRODUCTION_MIGRATION_RECONCILIATION.md) ─
+  -- aef_hardening needs entitlement_subject_roles and aef_persistence;
+  -- aef_sequence_privileges needs aef_persistence (it may precede or follow
+  -- aef_hardening: 20260925 already revokes, 20260927 re-asserts).
   -- ive_memory_governance is independent of AEF.
   IF applied[4] AND NOT (applied[1] AND applied[3]) THEN
     fails := fails || 'order: aef_hardening applied without entitlement_subject_roles and aef_persistence'::text;
+  ELSIF applied[4] AND (ver[1] > ver[4] OR ver[3] > ver[4]) THEN
+    fails := fails || 'order: aef_hardening recorded before one of its dependencies'::text;
   END IF;
   IF applied[5] AND NOT applied[3] THEN
     fails := fails || 'order: aef_sequence_privileges applied without aef_persistence'::text;
+  ELSIF applied[5] AND ver[3] > ver[5] THEN
+    fails := fails || 'order: aef_sequence_privileges recorded before aef_persistence'::text;
   END IF;
   -- Stray AEF objects not explained by the history.
-  IF NOT ('aef_persistence' = ANY (hist)) AND EXISTS (
-       SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND left(c.relname, 4) = 'aef_'
+  IF NOT applied[3] AND EXISTS (
+       SELECT 1 FROM pg_class c JOIN pg_namespace ns ON ns.oid = c.relnamespace WHERE ns.nspname = 'public' AND left(c.relname, 4) = 'aef_'
        UNION ALL
-       SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'public' AND left(p.proname, 4) = 'aef_') THEN
+       SELECT 1 FROM pg_proc q JOIN pg_namespace ns ON ns.oid = q.pronamespace WHERE ns.nspname = 'public' AND left(q.proname, 4) = 'aef_') THEN
     fails := fails || 'drift: aef_* objects exist without aef_persistence in the history'::text;
   END IF;
 
-  -- ── dangerous privilege defaults (P03) ───────────────────────────────
-  seq_defaults_permissive := EXISTS (
-    SELECT 1 FROM pg_default_acl d JOIN pg_namespace n ON n.oid = d.defaclnamespace,
-           aclexplode(d.defaclacl) a
-     WHERE n.nspname = 'public' AND d.defaclobjtype = 'S'
-       AND a.grantee IN (SELECT oid FROM pg_roles WHERE rolname IN ('anon', 'authenticated', 'service_role')));
-  IF v_seq IS NOT NULL AND (has_sequence_privilege('anon', v_seq, 'UPDATE') OR has_sequence_privilege('authenticated', v_seq, 'UPDATE')
-                            OR has_sequence_privilege('service_role', v_seq, 'UPDATE')) THEN
-    fails := fails || 'privilege: the AEF audit sequence is writable by an API role (apply aef_sequence_privileges first)'::text;
+  -- ── privilege contract of an existing AEF install (Codex G3-02) ──────
+  IF state[3] = 'present' THEN
+    FOR f IN SELECT q.oid, q.proname, q.prosecdef, q.proconfig FROM pg_proc q JOIN pg_namespace ns ON ns.oid = q.pronamespace
+              WHERE ns.nspname = 'public' AND left(q.proname, 4) = 'aef_' LOOP
+      IF f.proconfig IS NULL OR NOT ('search_path=pg_catalog, pg_temp' = ANY (f.proconfig)) THEN
+        fails := fails || format('privilege: %s has no pinned search_path', f.proname);
+      END IF;
+      IF left(f.proname, 5) <> 'aef__' AND NOT f.prosecdef THEN
+        fails := fails || format('privilege: RPC %s is not SECURITY DEFINER', f.proname);
+      END IF;
+      IF has_function_privilege('anon', f.oid, 'EXECUTE') OR has_function_privilege('authenticated', f.oid, 'EXECUTE')
+         OR EXISTS (SELECT 1 FROM pg_proc x, aclexplode(coalesce(x.proacl, acldefault('f', x.proowner))) a
+                     WHERE x.oid = f.oid AND a.grantee = 0) THEN
+        fails := fails || format('privilege: %s is executable by anon/authenticated/PUBLIC', f.proname);
+      END IF;
+      IF has_function_privilege('service_role', f.oid, 'EXECUTE') <> (f.proname = ANY (persist_rpcs || hard_rpcs)) THEN
+        fails := fails || format('privilege: service_role EXECUTE on %s differs from the contract', f.proname);
+      END IF;
+    END LOOP;
+    FOR f IN SELECT c.oid, c.relname FROM pg_class c JOIN pg_namespace ns ON ns.oid = c.relnamespace
+              WHERE ns.nspname = 'public' AND c.relkind IN ('r', 'p') AND left(c.relname, 4) = 'aef_' LOOP
+      FOREACH r IN ARRAY api_roles LOOP
+        IF has_table_privilege(r, f.oid, 'INSERT') OR has_table_privilege(r, f.oid, 'UPDATE')
+           OR has_table_privilege(r, f.oid, 'DELETE') OR has_table_privilege(r, f.oid, 'TRUNCATE') THEN
+          fails := fails || format('privilege: %s can write %s', r, f.relname);
+        END IF;
+      END LOOP;
+    END LOOP;
   END IF;
+
+  -- ── sequences (P03, Codex G3-03): every AEF sequence, every privilege, PUBLIC ─
+  FOR s IN SELECT c.oid FROM pg_class c JOIN pg_namespace ns ON ns.oid = c.relnamespace
+            WHERE ns.nspname = 'public' AND c.relkind = 'S'
+              AND (left(c.relname, 4) = 'aef_' OR EXISTS (
+                    SELECT 1 FROM pg_depend d JOIN pg_class t ON t.oid = d.refobjid
+                     WHERE d.classid = 'pg_class'::regclass AND d.objid = c.oid AND d.refclassid = 'pg_class'::regclass
+                       AND d.deptype IN ('a', 'i') AND left(t.relname, 4) = 'aef_')) LOOP
+    FOREACH r IN ARRAY api_roles LOOP
+      FOREACH p IN ARRAY ARRAY['USAGE', 'SELECT', 'UPDATE'] LOOP
+        IF has_sequence_privilege(r, s, p) THEN
+          exposed := exposed || format('%s %s %s', s::regclass, r, p);
+        END IF;
+      END LOOP;
+    END LOOP;
+    IF EXISTS (SELECT 1 FROM pg_class c, aclexplode(coalesce(c.relacl, acldefault('s', c.relowner))) a
+                WHERE c.oid = s AND a.grantee = 0) THEN
+      exposed := exposed || format('%s PUBLIC', s::regclass);
+    END IF;
+  END LOOP;
+  IF array_length(exposed, 1) > 0 THEN
+    fails := fails || format('privilege: AEF sequence exposed to an API role or PUBLIC (%s)', array_to_string(exposed, ', '));
+    IF applied[5] THEN
+      fails := fails || 'drift: aef_sequence_privileges is in the history but an AEF sequence is exposed'::text;
+    END IF;
+  END IF;
+  seq_defaults_permissive := EXISTS (
+    SELECT 1 FROM pg_default_acl d JOIN pg_namespace ns ON ns.oid = d.defaclnamespace,
+           aclexplode(d.defaclacl) a
+     WHERE ns.nspname = 'public' AND d.defaclobjtype = 'S'
+       AND (a.grantee = 0 OR a.grantee IN (SELECT oid FROM pg_roles WHERE rolname = ANY (api_roles))));
   IF seq_defaults_permissive AND 'aef_persistence' = ANY (remaining) AND NOT ('aef_sequence_privileges' = ANY (remaining)) THEN
     fails := fails || 'privilege: permissive sequence defaults but aef_sequence_privileges would not follow aef_persistence'::text;
   END IF;
@@ -129,6 +242,13 @@ BEGIN
   END IF;
   RAISE NOTICE 'AEF_DEPLOY_PREFLIGHT: PASS — sequence defaults permissive: %; remaining, in order: %',
     seq_defaults_permissive, CASE WHEN array_length(remaining, 1) IS NULL THEN '(none)' ELSE array_to_string(remaining, ' -> ') END;
+ EXCEPTION WHEN OTHERS THEN
+  -- Fail closed with the FAIL marker on ANY error, never a silent pass.
+  IF SQLERRM LIKE 'AEF_DEPLOY_PREFLIGHT: FAIL%' THEN
+    RAISE;
+  END IF;
+  RAISE EXCEPTION 'AEF_DEPLOY_PREFLIGHT: FAIL — unexpected error: % (%)', SQLERRM, SQLSTATE;
+ END;
 END $$;
 
 ROLLBACK;
