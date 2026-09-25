@@ -38,6 +38,15 @@ BEGIN
                                    OR (column_name = 'subject_id' AND data_type = 'uuid')
                                    OR (column_name = 'role' AND data_type = 'text'))) <> 3 THEN
     v_missing := v_missing || 'public.subject_roles(subject_type text, subject_id uuid, role text) NOT NULL from 20260923000000_entitlement_subject_roles'::text;
+  ELSIF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'public.subject_roles'::regclass AND contype = 'p'
+                       AND pg_get_constraintdef(oid) = 'PRIMARY KEY (subject_type, subject_id, role)')
+        OR NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'public.subject_roles'::regclass AND contype = 'c'
+                       AND pg_get_constraintdef(oid) LIKE '%role = ANY%admin%')
+        OR NOT (SELECT relrowsecurity FROM pg_class WHERE oid = 'public.subject_roles'::regclass) THEN
+    -- Codex G2V-02: the operator-authority check trusts this table, so its
+    -- identity (primary key), role domain (CHECK) and RLS must be the ones
+    -- 20260923000000 creates, not merely the column names.
+    v_missing := v_missing || 'public.subject_roles primary key / role CHECK / RLS as created by 20260923000000'::text;
   END IF;
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'auth' AND table_name = 'users'
                   AND column_name = 'id' AND data_type = 'uuid') THEN

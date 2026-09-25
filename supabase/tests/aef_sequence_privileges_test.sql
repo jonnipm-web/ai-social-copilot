@@ -18,8 +18,10 @@ BEGIN
     FOREACH p IN ARRAY ARRAY['USAGE', 'SELECT', 'UPDATE'] LOOP
       IF NOT EXISTS (SELECT 1 FROM pg_default_acl d JOIN pg_namespace n ON n.oid = d.defaclnamespace, aclexplode(d.defaclacl) a
                       WHERE n.nspname = 'public' AND d.defaclobjtype = 'S'
+                        -- defaults of the role that runs the migrations (defaults apply per creating role; Codex G1V-01)
+                        AND d.defaclrole = current_user::regrole
                         AND a.grantee = r::regrole AND a.privilege_type = p) THEN
-        RAISE EXCEPTION 'S00 fixture does not reproduce production sequence defaults (% % on new sequences)', r, p;
+        RAISE EXCEPTION 'S00 fixture does not reproduce production sequence defaults for % (% % on new sequences)', current_user, r, p;
       END IF;
     END LOOP;
   END LOOP;
