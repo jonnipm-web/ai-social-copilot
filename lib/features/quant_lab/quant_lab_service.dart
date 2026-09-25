@@ -71,9 +71,15 @@ String decodeQuantFile(String? name, Uint8List bytes) {
   final lower = (name ?? '').toLowerCase();
   final ext = lower.contains('.') ? lower.substring(lower.lastIndexOf('.') + 1) : '';
   bool startsWith(List<int> sig) => bytes.length >= sig.length && Iterable<int>.generate(sig.length).every((i) => bytes[i] == sig[i]);
-  final isZip = startsWith(const [0x50, 0x4B, 0x03, 0x04]); // xlsx / ods / docx
-  final isOle = startsWith(const [0xD0, 0xCF, 0x11, 0xE0]); // legacy .xls
-  if (const ['xls', 'xlsx', 'ods', 'json'].contains(ext) || isZip || isOle) {
+  final isZip = startsWith(const [0x50, 0x4B, 0x03, 0x04]); // xlsx / ods / docx / zip
+  final isOle = startsWith(const [0xD0, 0xCF, 0x11, 0xE0]); // legacy .xls / .doc
+  // A name we can place (csv/txt/none or a spreadsheet/JSON name) lets the
+  // container bytes suggest "spreadsheet"; any OTHER explicit extension
+  // (.docx, .pptx, .zip…) is simply unsupported — a ZIP is not a spreadsheet
+  // (physical finding S25: .docx was reported as a spreadsheet).
+  const spreadsheetOrJson = ['xls', 'xlsx', 'ods', 'json'];
+  final nameAllowsContainer = spreadsheetOrJson.contains(ext) || ext == 'csv' || ext == 'txt' || ext.isEmpty;
+  if (spreadsheetOrJson.contains(ext) || (nameAllowsContainer && (isZip || isOle))) {
     throw const QuantLabFileException('FILE_TYPE_NOT_IMPLEMENTED');
   }
   final isPdf = startsWith(const [0x25, 0x50, 0x44, 0x46]);
@@ -91,7 +97,7 @@ String decodeQuantFile(String? name, Uint8List bytes) {
   } on FormatException {
     throw const QuantLabFileException('FILE_UNREADABLE');
   }
-  final trimmed = text.trimLeft().replaceFirst('﻿', '');
+  final trimmed = text.trimLeft().replaceFirst('\uFEFF', '');
   if (trimmed.startsWith('{') || trimmed.startsWith('[')) throw const QuantLabFileException('FILE_TYPE_NOT_IMPLEMENTED');
   return text;
 }

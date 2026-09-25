@@ -49,7 +49,13 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
   Future<void> _pick(AppLocalizations l) async {
     try {
       final text = await ref.read(quantLabApiProvider).pickCsv();
-      if (text != null && mounted) setState(() => _csv.text = text);
+      // A successful import clears any previous file error (physical finding S25).
+      if (text != null && mounted) {
+        setState(() {
+          _csv.text = text;
+          _localError = null;
+        });
+      }
     } on QuantLabFileException catch (e) {
       if (mounted) {
         setState(() => _localError = switch (e.code) {
@@ -101,7 +107,13 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
     final l = AppLocalizations.of(context)!;
     // Fail closed: render nothing sensitive until the profile positively says admin.
     final profileAsync = ref.watch(currentProfileProvider);
-    if (profileAsync.isLoading) {
+    // Spinner only before the FIRST profile value. The app re-fetches the
+    // profile on every resume (profile_resume_policy) — e.g. returning from
+    // the Android file picker — and treating that refresh as "no data"
+    // unmounted the whole lab (form scroll, watchlist state) and flashed a
+    // blank screen (physical finding S25). During a refresh the previous
+    // value is kept; a refresh that says "not admin" still denies below.
+    if (!profileAsync.hasValue && !profileAsync.hasError) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     final isAdmin = profileAsync.hasValue && !profileAsync.hasError && (profileAsync.value?.isAdmin ?? false);
@@ -205,11 +217,17 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
       Wrap(spacing: 8, runSpacing: 8, children: [
         OutlinedButton.icon(
           key: const Key('quantLabSample'),
-          onPressed: _busy ? null : () => setState(() => _csv.text = kQuantLabSampleCsv),
+          onPressed: _busy
+              ? null
+              : () => setState(() {
+                    _csv.text = kQuantLabSampleCsv;
+                    _localError = null;
+                  }),
           icon: const Icon(Icons.dataset_outlined),
           label: Text(l.quantLabLoadSample),
         ),
         OutlinedButton.icon(
+          key: const Key('quantLabPick'),
           onPressed: _busy ? null : () => _pick(l),
           icon: const Icon(Icons.upload_file),
           label: Text(l.quantLabPickCsv),

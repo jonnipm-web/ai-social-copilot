@@ -120,6 +120,17 @@ class FakeQuantLabApi implements QuantLabApi {
   }
 }
 
+class _ThrowingPickApi extends FakeQuantLabApi {
+  _ThrowingPickApi(this.fail);
+  String? fail;
+  @override
+  Future<String?> pickCsv() async {
+    final f = fail;
+    if (f != null) throw QuantLabFileException(f);
+    return kQuantLabSampleCsv;
+  }
+}
+
 /// Shape of a real `quant.analyze.watchlist.v1` 200 `multi_analysis` body.
 Map<String, dynamic> sampleMulti() {
   Map<String, dynamic> series(String sym, String mic, double ret) => {
@@ -328,6 +339,11 @@ void main() {
       expect(codeOf('photo.jpg', b([0xFF, 0xD8, 0xFF, 0xE0])), 'FILE_TYPE_NOT_SUPPORTED');
       expect(codeOf('x.csv', b([0x50, 0x4B, 0x03, 0x04])), 'FILE_TYPE_NOT_IMPLEMENTED', reason: 'a renamed XLSX is still detected');
       expect(codeOf('notes.docx', t('hello')), 'FILE_TYPE_NOT_SUPPORTED');
+      // Physical finding S25: a real .docx is a ZIP — it must not be reported as a spreadsheet.
+      expect(codeOf('notes.docx', b([0x50, 0x4B, 0x03, 0x04, 1, 2])), 'FILE_TYPE_NOT_SUPPORTED');
+      expect(codeOf('archive.zip', b([0x50, 0x4B, 0x03, 0x04, 1, 2])), 'FILE_TYPE_NOT_SUPPORTED');
+      expect(codeOf('legacy.doc', b([0xD0, 0xCF, 0x11, 0xE0, 1, 2])), 'FILE_TYPE_NOT_SUPPORTED');
+      expect(codeOf('prices', b([0x50, 0x4B, 0x03, 0x04, 1, 2])), 'FILE_TYPE_NOT_IMPLEMENTED', reason: 'nameless container → likely spreadsheet');
       expect(codeOf('bin.csv', b([0x64, 0x00, 0x61])), 'FILE_TYPE_NOT_SUPPORTED');
       expect(codeOf('latin1.csv', b([0x64, 0xE9, 0x0A])), 'FILE_UNREADABLE');
       expect(codeOf('big.csv', Uint8List(kQuantLabMaxCsvBytes + 1)), 'FILE_TOO_LARGE');
@@ -516,6 +532,97 @@ void main() {
         expect(tester.getSize(find.byKey(const Key('quantWatchlistAnalyze'))).height, greaterThanOrEqualTo(48));
       });
     }
+
+    testWidgets('profile refresh on app resume keeps the lab mounted (form, result, error state)', (tester) async {
+      // Physical finding S25: returning from the Android file picker re-fetches
+      // the profile (profile_resume_policy); the lab used to unmount into a spinner.
+      await setSize(tester, const Size(420, 900));
+      final api = FakeQuantLabApi();
+      var fetches = 0;
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          // First fetch immediate; refreshes take network time, like on the device.
+          currentProfileProvider.overrideWith((ref) async {
+            if (fetches++ > 0) await Future<void>.delayed(const Duration(seconds: 1));
+            return profile('admin');
+          }),
+          quantLabApiProvider.overrideWithValue(api),
+        ],
+        child: MaterialApp(
+          locale: const Locale('pt'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const QuantLabScreen(),
+        ),
+      ));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('quantLabSample')));
+      await tester.tap(find.byKey(const Key('quantLabSample')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('quantLabAnalyze')));
+      await tester.tap(find.byKey(const Key('quantLabAnalyze')));
+      await tester.pumpAndSettle();
+      final container = ProviderScope.containerOf(tester.element(find.byType(QuantLabScreen)));
+      container.invalidate(currentProfileProvider);
+      await tester.pump(const Duration(milliseconds: 100)); // refresh in flight
+      expect(fetches, 2);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.byKey(const Key('quantLabResult')), findsOneWidget);
+      await tester.pump(const Duration(seconds: 2)); // refresh completes
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('quantLabResult')), findsOneWidget);
+      expect(tester.widget<TextField>(find.byKey(const Key('quantLabCsv'))).controller!.text, kQuantLabSampleCsv);
+    });
+
+    testWidgets('a refresh that returns a non-admin profile still denies (fail closed)', (tester) async {
+      Profile? who = profile('admin');
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          currentProfileProvider.overrideWith((ref) async => who),
+          quantLabApiProvider.overrideWithValue(FakeQuantLabApi()),
+        ],
+        child: MaterialApp(
+          locale: const Locale('pt'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const QuantLabScreen(),
+        ),
+      ));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('quantLabAnalyze')), findsOneWidget);
+      who = profile('premium');
+      ProviderScope.containerOf(tester.element(find.byType(QuantLabScreen))).invalidate(currentProfileProvider);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('quantLabAnalyze')), findsNothing);
+      expect(find.text('Você não tem permissão para acessar o Quant Lab.'), findsOneWidget);
+    });
+
+    testWidgets('loading the sample clears a previous file error', (tester) async {
+      await setSize(tester, const Size(420, 900));
+      final api = _ThrowingPickApi('FILE_TYPE_NOT_IMPLEMENTED');
+      await tester.pumpWidget(app(api, who: profile('admin')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('quantLabPick')));
+      await tester.tap(find.byKey(const Key('quantLabPick')));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Planilhas'), findsOneWidget);
+      await tester.ensureVisible(find.byKey(const Key('quantLabSample')));
+      await tester.tap(find.byKey(const Key('quantLabSample')));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Planilhas'), findsNothing);
+      api.fail = null; // next pick succeeds
+      await tester.ensureVisible(find.byKey(const Key('quantLabPick')));
+      await tester.tap(find.byKey(const Key('quantLabPick')));
+      await tester.pumpAndSettle();
+      api.fail = 'FILE_TYPE_NOT_SUPPORTED';
+      await tester.tap(find.byKey(const Key('quantLabPick')));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Tipo de arquivo não suportado'), findsOneWidget);
+      api.fail = null;
+      await tester.tap(find.byKey(const Key('quantLabPick')));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Tipo de arquivo não suportado'), findsNothing, reason: 'a successful import clears the old error');
+    });
 
     testWidgets('wide (web/desktop) layout shows form and result side by side', (tester) async {
       await setSize(tester, const Size(1280, 900));

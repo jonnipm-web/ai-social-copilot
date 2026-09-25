@@ -174,7 +174,7 @@ Deno.test('QW-05 strict schema + canonical identity: forged fields, bad instrume
   assertEquals((await call({ action: 'add_item', watchlist_id: id, instrument: { ...AAPL, isin: 'US0378331006' } })).json.error, 'INVALID_INSTRUMENT');
   assertEquals((await call({ action: 'add_item', watchlist_id: id, instrument: { asset_class: 'CRYPTO', symbol: 'BTC', currency: 'USD' } })).json.error, 'UNSUPPORTED_ASSET_CLASS');
   assertEquals((await call({ action: 'add_item', watchlist_id: id, instrument: { ...AAPL, instrument_key: 'EQUITY:X:Y:USD' } })).json.error, 'INVALID_INSTRUMENT');
-  assertEquals((await call({ action: 'create', name: 'bad​name' })).json.error, 'INVALID_PARAMETER');
+  assertEquals((await call({ action: 'create', name: 'bad\u200bname' })).json.error, 'INVALID_PARAMETER');
   assertEquals((await call({ action: 'create', name: 'x'.repeat(81) })).json.error, 'INVALID_PARAMETER');
 });
 
