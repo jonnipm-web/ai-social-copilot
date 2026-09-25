@@ -633,4 +633,21 @@ const List<ModuleDefinition> kModuleRegistry = [
     releaseClassification: ModuleReleaseClass.externalPlanned,
     notes: 'QUANT_STATUS: NOT_IMPLEMENTED. QUANT_COMMERCIAL_RECOMMENDATION: SEPARATE_PRODUCT. adminClickable=false: não há nada para abrir. Nenhuma execução financeira ao vivo existe ou foi ativada -- não há o que "ativar" (não existe código).',
   ),
+  ModuleDefinition(
+    moduleId: 'aef-runtime-lab',
+    namePt: 'AEF Runtime (LAB)',
+    nameEn: 'AEF Runtime (LAB)',
+    status: ModuleStatus.inDevelopment,
+    adminVisible: true,
+    adminClickable: false,
+    commercialEnabled: false,
+    minimumPlan: ModulePlan.free, // admin-only via lifecycle (EXPERIMENTAL), não via plano
+    route: null,
+    edgeFunctions: ['aef-runtime'],
+    aiDependency: false,
+    readinessPt: 'LAB apenas (IV-IVE-AEF-RUNTIME-INTEGRATION-01): caminho governado IVE → AEF com ferramentas MOCK, Human Gate e recibo persistido. Não implantável; só roda num stack Supabase local (AEF_RUNTIME_MODE=LAB, AEF_TOOLS=MOCK_ONLY). O cartão de aprovação no chat da IVE só aparece com --dart-define=AEF_RUNTIME_LAB=true.',
+    readinessEn: 'LAB only (IV-IVE-AEF-RUNTIME-INTEGRATION-01): governed IVE → AEF path with MOCK tools, Human Gate and a persisted receipt. Not deployable; runs only on a local Supabase stack (AEF_RUNTIME_MODE=LAB, AEF_TOOLS=MOCK_ONLY). The approval card in the IVE chat appears only with --dart-define=AEF_RUNTIME_LAB=true.',
+    releaseClassification: ModuleReleaseClass.internalTooling,
+    notes: 'adminClickable=false: não há tela própria; a superfície LAB é o cartão no chat da IVE. Nenhuma ferramenta real, nenhum deploy.',
+  ),
 ];
