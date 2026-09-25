@@ -190,6 +190,21 @@ export async function buildDossierContent(input: DossierInput) {
   };
   const sourceTypeOf = new Map(data.sources.map(({ source }) => [source.id, source.type]));
 
+  // ── declared identity: client-supplied ⇒ untrusted names (Codex I6G1R-04) ──
+  const sid = inv.subjectIdentity;
+  const declaredIdentity = JSON.parse(JSON.stringify(sid), (_k, v) => (typeof v === 'string' ? present('ORGANIZATION_NAME', v, privacy).text ?? '—' : v));
+  const declaredName = (v: string | undefined) => {
+    const p = present('DECLARED_ORG_NAME', v, privacy);
+    if (p.withheld) lim('EXCERPT_WITHHELD', 'IDENTITY', null);
+    return p.text ?? '—';
+  };
+  if (typeof sid.legalName === 'string') declaredIdentity.legalName = declaredName(sid.legalName);
+  if (typeof sid.publicName === 'string') declaredIdentity.publicName = declaredName(sid.publicName);
+  if (Array.isArray(sid.aliases)) declaredIdentity.aliases = sid.aliases.map(declaredName);
+  if (Array.isArray(sid.tradingNames)) declaredIdentity.tradingNames = sid.tradingNames.map(declaredName);
+  if (Array.isArray(sid.formerNames)) declaredIdentity.formerNames = sid.formerNames.map((f, i) => ({ ...declaredIdentity.formerNames[i], name: declaredName(f.name) }));
+  const ownDomains = (sid.domains ?? []).filter((d): d is string => typeof d === 'string');
+
   // ── identity ─────────────────────────────────────────────────────────────
   if (input.identityStatus === 'UNCERTAIN') lim('IDENTITY_AMBIGUOUS', 'IDENTITY', null);
   else if (input.identityStatus !== 'CONFIRMED') lim('IDENTITY_NOT_CONFIRMED', 'IDENTITY', null);
@@ -239,7 +254,7 @@ export async function buildDossierContent(input: DossierInput) {
     const art = artifactOfSource.get(s.id);
     const pub = present('PUBLISHER', s.publisher, privacy, s.type);
     // URLs: origin only — paths / queries can carry personal handles or tokens.
-    const uri = presentUri(s.uri, s.type);
+    const uri = presentUri(s.uri, s.type, ownDomains);
     if (pub.withheld) lim('EXCERPT_WITHHELD', 'SOURCE', s.id);
     if (pub.redacted) lim('PERSONAL_DATA_REDACTED', 'SOURCE', s.id);
     return {
@@ -407,7 +422,7 @@ export async function buildDossierContent(input: DossierInput) {
     asOf,
     subject: {
       ref: inv.subjectOrgRef, type: inv.subjectOrgType,
-      declaredIdentity: JSON.parse(JSON.stringify(inv.subjectIdentity), (_k, v) => (typeof v === 'string' ? present('ORGANIZATION_NAME', v, privacy).text ?? '—' : v)),
+      declaredIdentity,
       identityStatus: input.identityStatus, identityConfirmed: input.identityStatus === 'CONFIRMED',
       identityBasis: 'PROVIDER_REGISTRY_SNAPSHOTS_ONLY' as const,
     },

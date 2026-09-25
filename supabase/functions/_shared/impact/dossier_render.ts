@@ -42,12 +42,15 @@ export function platformText(text: string): string {
 
 export function renderDossierText(doc: DossierDocument, lang: Lang): string {
   const c = doc.content;
+  // A withheld declared name ('—') falls back to the subject ref (I6).
+  const ln = c.subject.declaredIdentity.legalName;
+  const subjectName = typeof ln === 'string' && ln !== '—' ? ln : c.subject.ref;
   const lines: string[] = [];
   const out = (s = '') => lines.push(s);
   const t = (k: keyof typeof SECTION) => SECTION[k][lang];
   const m = (k: string) => MISC_LABEL[k][lang];
 
-  out(`# ${t('TITLE')} — ${q(c.subject.declaredIdentity.legalName ?? c.subject.ref)}`);
+  out(`# ${t('TITLE')} — ${q(subjectName)}`);
   out(t('EXPERIMENTAL'));
   out(`${t('AS_OF')}: ${q(c.asOf)} · ${doc.envelope.kind === 'SNAPSHOT' ? t('SNAPSHOT') : t('LIVE')}`);
   out(DOSSIER_STATUS_LABEL[c.dossierStatus][lang]);
@@ -81,7 +84,7 @@ export function renderDossierText(doc: DossierDocument, lang: Lang): string {
   out();
 
   out(`## ${t('IDENTITY')}`);
-  out(`- ${q(c.subject.declaredIdentity.legalName ?? c.subject.ref)} (${q(c.subject.type)})`);
+  out(`- ${q(subjectName)} (${q(c.subject.type)})`);
   out(`- ${IDENTITY_LABEL[c.subject.identityStatus][lang]}`);
   out();
 

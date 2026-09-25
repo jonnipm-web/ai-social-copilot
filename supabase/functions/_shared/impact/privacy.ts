@@ -54,8 +54,12 @@ export interface Presented {
 /** What a field IS decides how it may be presented. */
 export type FieldKind =
   | 'FREE_TEXT' //          claim text, evidence excerpt: may be about people
-  | 'ORGANIZATION_NAME' //  declared identity, official registry name
+  | 'ORGANIZATION_NAME' //  official registry name, registration values (trusted / non-name)
+  | 'DECLARED_ORG_NAME' //  client-declared subject name / alias: untrusted (Codex I6G1R-04)
   | 'PUBLISHER'; //         source publisher / lineage names
+
+/** Longest value the policy scans; anything longer is withheld (fail-closed, Codex I6G1R-03). */
+export const PRIVACY_SCAN_MAX = 4_000;
 
 /** Source types whose publisher may be a private individual. */
 const PERSONAL_PUBLISHER_TYPES = new Set(['SOCIAL_MEDIA', 'OTHER']);
@@ -85,8 +89,33 @@ function luhn(digits: string): boolean {
   return sum % 10 === 0;
 }
 
-// Unicode e-mail (non-ASCII local part / domain), Codex I6G1-05.
-const EMAIL_UNICODE = /[\p{L}\p{N}._%+-]+@[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)*\.\p{L}{2,}/gu;
+// Unicode e-mail (non-ASCII local part / domain, combining marks included),
+// matched per whitespace token — linear time (Codex I6G1-05 / I6G1R-02/03).
+const EMAIL_TOKEN = /^[\p{L}\p{M}\p{N}._%+-]+@[\p{L}\p{M}\p{N}-]+(?:\.[\p{L}\p{M}\p{N}-]+)*\.[\p{L}\p{M}]{2,}$/u;
+// Social handles ("@jane.placeholder") are personal identifiers too.
+const HANDLE_TOKEN = /^@[\p{L}\p{M}\p{N}_.]{2,}$/u;
+const EDGE_PUNCT = /^([(<«"'\[]*)(.*?)([)>»"'.,;:!?\]]*)$/su;
+
+function redactEmailsAndHandles(text: string, mark: () => void): string {
+  if (!text.includes('@')) return text;
+  return text.split(/(\s+)/u).map((tok) => {
+    if (!tok.includes('@')) return tok;
+    if (tok.length > 320) {
+      mark();
+      return '[redacted-email]';
+    }
+    const [, pre, core, post] = EDGE_PUNCT.exec(tok) ?? ['', '', tok, ''];
+    if (EMAIL_TOKEN.test(core)) {
+      mark();
+      return `${pre}[redacted-email]${post}`;
+    }
+    if (HANDLE_TOKEN.test(core)) {
+      mark();
+      return `${pre}[redacted-handle]${post}`;
+    }
+    return tok;
+  }).join('');
+}
 // Labelled personal / tax / travel identifiers: redact the VALUE whatever its format.
 // Labelled personal / tax / travel identifiers: redact the VALUE whatever its
 // format. Acronyms must be upper case ("tin roofs" is not a TIN) and the value
@@ -109,11 +138,19 @@ export function asciiDigits(text: string): string {
   });
 }
 
-/** redactPii + the identifiers above. */
+/**
+ * redactPii + the identifiers above. Digits of any script are mapped to ASCII
+ * for DETECTION only: when nothing is redacted the ORIGINAL text is returned
+ * untouched (Codex I6G1R-01); when something is, the result is flagged
+ * `redacted` and the dossier carries a visible limitation.
+ */
 export function redactStructured(input: string): { text: string; redacted: boolean } {
   let redacted = false;
   const text = asciiDigits(input);
-  let out = text.replace(CARD, (m) => {
+  let out = redactEmailsAndHandles(text, () => {
+    redacted = true;
+  });
+  out = out.replace(CARD, (m) => {
     const d = m.replace(/\D/g, '');
     if (d.length >= 13 && d.length <= 19 && luhn(d)) {
       redacted = true;
@@ -121,15 +158,15 @@ export function redactStructured(input: string): { text: string; redacted: boole
     }
     return m;
   });
-  out = out.replace(EMAIL_UNICODE, () => ((redacted = true), '[redacted-email]'))
-    .replace(MRZ, () => ((redacted = true), '[redacted-id]'))
+  if (out.includes('<<')) out = out.replace(MRZ, () => ((redacted = true), '[redacted-id]'));
+  out = out
     .replace(LABELLED_ID_ACRONYM, (m) => (hasDigits(m) ? ((redacted = true), '[redacted-id]') : m))
     .replace(LABELLED_ID_WORD, (m) => (hasDigits(m) ? ((redacted = true), '[redacted-id]') : m))
     .replace(SORT_CODE_ACCOUNT, () => ((redacted = true), '[redacted-account]'))
     .replace(LABELLED_ACCOUNT, () => ((redacted = true), '[redacted-account]'))
     .replace(NINO, () => ((redacted = true), '[redacted-id]'));
   const base = redactPii(out);
-  return { text: base.text, redacted: redacted || base.redacted };
+  return redacted || base.redacted ? { text: base.text, redacted: true } : { text: input, redacted: false };
 }
 
 // ── private-address signals ────────────────────────────────────────────────
@@ -286,38 +323,53 @@ export function present(
 ): Presented {
   if (value === null || value === undefined) return { text: null, withheld: null, redacted: false };
   const clean = normalizeForPresentation(value);
-  if (minorDataRisk(clean)) return { text: null, withheld: 'MINOR_DATA_RISK', redacted: false };
+  if (clean.length > PRIVACY_SCAN_MAX) return { text: null, withheld: 'PERSONAL_DATA_RISK', redacted: false };
+  const scan = asciiDigits(clean);
+  if (minorDataRisk(scan)) return { text: null, withheld: 'MINOR_DATA_RISK', redacted: false };
   const r = redactStructured(clean);
-  if (kind === 'FREE_TEXT' && (privateAddressSignal(r.text) || privateNameSignal(r.text, ctx.orgNames))) {
+  const probe = asciiDigits(r.text);
+  if (kind === 'FREE_TEXT' && (privateAddressSignal(probe) || privateNameSignal(probe, ctx.orgNames))) {
     return { text: null, withheld: 'PERSONAL_DATA_RISK', redacted: false };
   }
-  if (kind === 'PUBLISHER') {
+  if (kind === 'PUBLISHER' || kind === 'DECLARED_ORG_NAME') {
     const onRecord = ctx.orgNames.some((n) => norm(n) === norm(r.text));
     // Any source type (client-declared): a name / address signal withholds
-    // unless the publisher is registry-confirmed (Codex I6G1-03). A
-    // social-media / "other" publisher is withheld unless registry-confirmed.
-    if (!onRecord && ((sourceType !== undefined && PERSONAL_PUBLISHER_TYPES.has(sourceType)) ||
-      privateAddressSignal(r.text) || privateNameSignal(r.text, ctx.orgNames))) {
+    // unless the name is registry-confirmed (Codex I6G1-03). A social-media /
+    // "other" publisher is withheld unless registry-confirmed. A declared
+    // subject name is untrusted in the same way (Codex I6G1R-04).
+    if (!onRecord && ((kind === 'PUBLISHER' && sourceType !== undefined && PERSONAL_PUBLISHER_TYPES.has(sourceType)) ||
+      privateAddressSignal(probe) || privateNameSignal(probe, ctx.orgNames))) {
       return { text: null, withheld: 'PERSONAL_DATA_RISK', redacted: false };
     }
   }
   return { text: r.text, withheld: null, redacted: r.redacted };
 }
 
-/** Source types whose URL host itself may be personal (a profile, a personal site, an upload). */
-const PERSONAL_URI_TYPES = new Set(['SOCIAL_MEDIA', 'OTHER', 'USER_DOCUMENT']);
+/** Institutional source types whose host is an institution, never a person. */
+const INSTITUTIONAL_URI_TYPES = new Set(['OFFICIAL_REGISTRY', 'GOVERNMENT_RECORD', 'REGULATOR', 'COURT_RECORD']);
 
 /**
  * URLs are presented as their origin only (no userinfo, port, path, query or
- * fragment); anything unparsable or non-http(s) is withheld, and so is the
- * whole URL of a source type whose host may be personal (Codex I6G1-06).
+ * fragment); anything unparsable or non-http(s) is withheld. A host can
+ * itself be personal (janedoe.example), so the origin is shown only for an
+ * institutional source type or a host within the subject's own declared
+ * domains; every other URL is withheld (Codex I6G1-06 / I6G1R-06).
  */
-export function presentUri(uri: string | null | undefined, sourceType?: string): { text: string | null; reduced: boolean } {
+export function presentUri(
+  uri: string | null | undefined,
+  sourceType?: string,
+  ownDomains: readonly string[] = [],
+): { text: string | null; reduced: boolean } {
   if (!uri) return { text: null, reduced: false };
-  if (sourceType !== undefined && PERSONAL_URI_TYPES.has(sourceType)) return { text: null, reduced: true };
   try {
     const u = new URL(uri);
     if (u.protocol !== 'https:' && u.protocol !== 'http:') return { text: null, reduced: true };
+    const host = u.hostname.toLowerCase();
+    const own = ownDomains.some((d) => {
+      const dd = d.toLowerCase().replace(/^\.+|\.+$/g, '');
+      return dd.length > 0 && (host === dd || host.endsWith(`.${dd}`));
+    });
+    if (sourceType === undefined ? !own : !(INSTITUTIONAL_URI_TYPES.has(sourceType) || own)) return { text: null, reduced: true };
     const origin = `${u.protocol}//${u.hostname}`;
     return { text: origin, reduced: origin !== uri.replace(/\/$/, '') };
   } catch {

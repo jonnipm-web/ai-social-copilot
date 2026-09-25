@@ -71,8 +71,12 @@ const LONG_ID = /(?<!\d)\d{11,}(?!\d)/g;
 export function redactPii(text: string): { text: string; redacted: boolean } {
   let redacted = false;
   const hit = (tag: string) => () => { redacted = true; return tag; };
-  const out = text.replace(EMAIL, hit('[redacted-email]'))
-    .replace(EMAIL_OBFUSCATED, hit('[redacted-email]'))
+  // I6 (Codex I6G1R-03): the e-mail patterns backtrack quadratically on long
+  // runs with no '@' / no "at": run them only when they can match.
+  let out = text;
+  if (text.includes('@')) out = out.replace(EMAIL, hit('[redacted-email]'));
+  if (/(?:at|arroba)[\s\])]*[A-Za-z0-9-]+[\s[(]*(?:dot|ponto)/i.test(out)) out = out.replace(EMAIL_OBFUSCATED, hit('[redacted-email]'));
+  out = out
     .replace(IBAN, hit('[redacted-account]'))
     .replace(FORMATTED_ID, hit('[redacted-id]'))
     .replace(PHONE, (m) => (m.replace(/\D/g, '').length >= 10 ? ((redacted = true), '[redacted-number]') : m))

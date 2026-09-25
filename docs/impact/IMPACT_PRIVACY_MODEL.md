@@ -24,12 +24,12 @@ fail-closed presentation policy implemented in
 |---|---|---|---|
 | Claim text | minor-risk rule; structured ids; private-name / private-address signals; caseless-script text | minor ⇒ withheld `MINOR_DATA_RISK`; ids ⇒ redacted; name/address signal or un-assessable script ⇒ **withheld `PERSONAL_DATA_RISK`** | a name no signal matches (e.g. a single lower-case word) |
 | Evidence excerpt | same + reviewer classification (`PUBLIC_OFFICIAL_ROLE` ⇒ withheld; PERSONAL/SENSITIVE/MINOR not representable in the Lab contract) | withheld / redacted as above | same |
-| Organization name (declared identity) | structured ids, minor rule | organizational information: shown (quoted), ids redacted — but it does **not** exempt any other text (client-supplied) | a person declared as the subject organization is shown in the identity block itself (contract misuse; subject type is an organization type) |
+| Organization name (declared identity: legal / public name, aliases) | structured ids, minor rule, **and** name / address signals (client-supplied ⇒ untrusted, Codex I6G1R-04) | shown (quoted) unless a signal fires and no registry confirms it ⇒ withheld (`—`, limitation `EXCERPT_WITHHELD` / IDENTITY; headers fall back to the subject ref); never exempts other text | an organization whose name looks like a person's is over-withheld until a registry confirms it |
 | Registry legal name | structured ids, minor rule | official organizational record: shown | none known |
 | Source publisher | structured ids; name / address signals for **every** source type (the type is client-declared) | withheld on a signal unless registry-confirmed; SOCIAL_MEDIA / OTHER withheld unless registry-confirmed | a person's name no signal matches |
 | Lineage names (syndicatedFrom / derivedFrom), conflict position publishers | as publisher, by the source's type | as publisher | same |
-| URLs | parsed | **origin only** (scheme + host; never userinfo, port, path, query, fragment); non-http(s) / unparsable ⇒ withheld; SOCIAL_MEDIA / OTHER / USER_DOCUMENT URLs withheld entirely | a personal sub-domain on an organizational source type |
-| E-mail (ASCII and Unicode), phone (any Unicode digits, normalized to ASCII first), IBAN / bank account, payment card (Luhn, spaced or compact), sort code + account, labelled account numbers, labelled ids (EIN, TIN, NIF, NIE, NINO, SSN, DNI, CPF, CNPJ, RG, CURP, RFC, PAN, passport, tax id, national id — value must contain 4+ digits; acronyms upper-case only), MRZ fragments, formatted CPF / CNPJ / SSN, UK NINO, long digit runs | deterministic patterns (`redactStructured`) | redacted `[redacted-…]` in every field | unlabelled identifiers in unusual formats |
+| URLs | parsed | **origin only** (scheme + host; never userinfo, port, path, query, fragment) and only for institutional types (OFFICIAL_REGISTRY, GOVERNMENT_RECORD, REGULATOR, COURT_RECORD) or a host within the subject's declared domains; every other URL withheld (Codex I6G1R-06) | none known |
+| E-mail (ASCII and Unicode incl. combining marks, whole token), social handles (`@name`), phone (any Unicode digits, normalized to ASCII **for detection only** — text without PII is returned byte-identical, Codex I6G1R-01), IBAN / bank account, payment card (Luhn, spaced or compact), sort code + account, labelled account numbers, labelled ids (EIN, TIN, NIF, NIE, NINO, SSN, DNI, CPF, CNPJ, RG, CURP, RFC, PAN, passport, tax id, national id — value must contain 4+ digits; acronyms upper-case only), MRZ fragments, formatted CPF / CNPJ / SSN, UK NINO, long digit runs | deterministic patterns (`redactStructured`) | redacted `[redacted-…]` in every field | unlabelled identifiers in unusual formats |
 | Addresses | street + number (EN / PT / ES), unit / apartment, UK / BR / US postcodes, PO box | free text withheld | an address written without any of these forms |
 | Private names | honorific + name; person-role + name (EN / PT / ES); initial + surname ("J. Smith"); 2+ consecutive Title-case **or** 2+ consecutive ALL-CAPS (4+ letters) non-organizational words, commas and line breaks included ("SMITH, JOHN"); any letter of a caseless script (withheld as un-assessable) | free text withheld | lower-case names; a single name without honorific / role / initial |
 | Minors | minor term AND age / birth expression (EN / PT / ES) | withheld in **every** field, precedence over every other rule | minors described without both signals (bounded by reviewer classification `MINOR` being unrepresentable) |
@@ -43,6 +43,15 @@ fail-closed presentation policy implemented in
 Invisible / bidi / format characters are removed **before** detection (a
 zero-width space inside a name cannot split the signal) and from the
 presented text.
+
+Performance (Codex I6G1R-03): values longer than 4,000 characters (the
+largest accepted text) are withheld without scanning; e-mails are matched
+per whitespace token; the quadratic-prone patterns (e-mail, obfuscated
+e-mail, MRZ) only run when their anchor (`@`, "at … dot", `<<`) is present.
+PV-20 bounds adversarial inputs at the maximum size.
+
+Owner review DTOs are scrubbed recursively for minor-data risk in every
+string field (Codex I6G1R-05).
 
 ## 3. Names and addresses: an honest limit
 
@@ -92,7 +101,7 @@ content. Consequences:
 
 ## 6. Tests
 
-`privacy_test.ts` PV-01..17 (structured ids incl. Unicode / labelled / MRZ,
+`privacy_test.ts` PV-01..23 (structured ids incl. Unicode / labelled / MRZ,
 all-caps / initials / surname-first / caseless names, client whitelist
 attempts, publishers of every type, URL userinfo / IDN / IP / personal
 types, owner review DTO; and the original: name / address signals,

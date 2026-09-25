@@ -177,7 +177,8 @@ class DossierSubject {
   DossierSubject(Map<String, dynamic> m)
       : ref = _str(m['ref']) ?? '—',
         type = _str(m['type']),
-        legalName = _str(_map(m['declaredIdentity'])['legalName']),
+        // '—' is the server's withheld marker (I6 privacy): show the subject ref instead.
+        legalName = _str(_map(m['declaredIdentity'])['legalName']) == '—' ? null : _str(_map(m['declaredIdentity'])['legalName']),
         registrations = [
           for (final r in _maps(_map(m['declaredIdentity'])['registrations']))
             [

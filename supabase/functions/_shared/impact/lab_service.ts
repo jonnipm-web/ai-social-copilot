@@ -315,6 +315,10 @@ const OWNER_REVIEW_RAW = Object.freeze({
   notice: 'Owner-only review data (what this caller entered or uploaded). Not a dossier, not exportable, not for presentation.',
 });
 const minorSafe = (t: string | null | undefined) => (typeof t === 'string' && minorDataRisk(t) ? null : t ?? null);
+/** Every string anywhere in an owner review DTO: minor-data risk withheld (Codex I6G1R-05). */
+function minorScrub<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value), (_k, v) => (typeof v === 'string' && minorDataRisk(v) ? '[withheld: MINOR_DATA_RISK]' : v)) as T;
+}
 const minorWithheld = (t: string | null | undefined) => (typeof t === 'string' && minorDataRisk(t) ? 'MINOR_DATA_RISK' as const : null);
 
 function candidateView(c: StoredCandidate) {
@@ -463,7 +467,7 @@ export async function handleLabRequest(
     });
     return ok({
       action: req.action,
-      data: {
+      data: minorScrub({
         investigation: {
           id: inv.value.id, subjectOrgRef: inv.value.subjectOrgRef, subjectOrgType: inv.value.subjectOrgType,
           subjectIdentity: inv.value.subjectIdentity, status: inv.value.status, projectId: inv.value.projectId,
@@ -491,7 +495,7 @@ export async function handleLabRequest(
         policyVersion: IMPACT_POLICY_VERSION,
         providerRegistryVersion: PROVIDER_REGISTRY_VERSION,
         privacy: OWNER_REVIEW_RAW,
-      },
+      }),
       metrics: { claims: data.value.claims.length, evidence: data.value.evidence.length, conflicts: results.reduce((n, r) => n + r.conflicts.length, 0) },
     });
   }

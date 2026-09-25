@@ -101,8 +101,8 @@ Deno.test('PV-07 publishers: organizational types shown; SOCIAL_MEDIA / OTHER on
 });
 
 Deno.test('PV-08 URLs are presented as origin only; non-http and garbage are withheld', () => {
-  assertEquals(presentUri('https://social.example/jane.placeholder/posts/1?token=abc').text, 'https://social.example');
-  assertEquals(presentUri('http://hopebridge.example/').text, 'http://hopebridge.example');
+  assertEquals(presentUri('https://register.example/jane.placeholder/posts/1?token=abc', 'OFFICIAL_REGISTRY').text, 'https://register.example');
+  assertEquals(presentUri('http://hopebridge.example/', undefined, ['hopebridge.example']).text, 'http://hopebridge.example');
   assertEquals(presentUri('javascript:alert(1)').text, null);
   assertEquals(presentUri('mailto:jane@mail.example').text, null);
   assertEquals(presentUri('not a url').text, null);
@@ -245,11 +245,11 @@ Deno.test('PV-15 (I6G1-05) Unicode e-mail / digits, labelled ids, MRZ and compac
 });
 
 Deno.test('PV-16 (I6G1-06) URLs: userinfo / port / path never shown; personal-host source types withheld entirely', () => {
-  assertEquals(presentUri('https://user:pass@host.example:8443/a?b=c#d').text, 'https://host.example');
-  assertEquals(presentUri('https://bücher.example/x').text, 'https://xn--bcher-kva.example');
-  assertEquals(presentUri('http://192.0.2.10:8080/p').text, 'http://192.0.2.10');
+  assertEquals(presentUri('https://user:pass@host.example:8443/a?b=c#d', 'REGULATOR').text, 'https://host.example');
+  assertEquals(presentUri('https://bücher.example/x', 'GOVERNMENT_RECORD').text, 'https://xn--bcher-kva.example');
+  assertEquals(presentUri('http://192.0.2.10:8080/p', 'COURT_RECORD').text, 'http://192.0.2.10');
   for (const type of ['SOCIAL_MEDIA', 'OTHER', 'USER_DOCUMENT']) assertEquals(presentUri('https://janedoe.example/', type).text, null, type);
-  assertEquals(presentUri('https://hopebridge.example/about', 'ORGANIZATION_WEBSITE').text, 'https://hopebridge.example');
+  assertEquals(presentUri('https://hopebridge.example/about', 'ORGANIZATION_WEBSITE', ['hopebridge.example']).text, 'https://hopebridge.example');
 });
 
 Deno.test('PV-17 (I6G1-04/07) owner review DTOs are explicitly classified and withhold minor data; the dossier never includes them', async () => {
@@ -263,4 +263,81 @@ Deno.test('PV-17 (I6G1-04/07) owner review DTOs are explicitly classified and wi
   const d = await t.must({ action: 'get_dossier', investigation_id: inv, lang: 'en' });
   const dj = JSON.stringify(d.data);
   assert(!dj.includes('OWNER_REVIEW_RAW') && !dj.includes('aged 9'));
+});
+
+// ── Codex I6 Gate 1 re-audit regressions (I6G1R-01..06) ─────────────────────
+Deno.test('PV-18 (I6G1R-01) text with no PII is returned byte-identical (Unicode digits untouched); redaction is always flagged', () => {
+  for (const s of ['Projeto 𞥐𞥑 wells', 'مشروع ١٢ بئر', 'Relatório nº ١٢٣', 'HopeBridge Foundation built ２０ wells.']) {
+    const r = redactStructured(s);
+    assertEquals(r, { text: s, redacted: false }, s);
+  }
+  const r = redactStructured('call ٠٢٠٧٩٤٦٠٩٥٨ now');
+  assert(r.redacted && !r.text.includes('٩٤٦'));
+});
+
+Deno.test('PV-19 (I6G1R-02) e-mails with combining marks / IDN and social handles are redacted as whole tokens', () => {
+  for (const [s, leak] of [
+    ['contato jos\u0301e@example.com', 'jos'],
+    ['write to (maria.silva@exemplo.com.br).', 'maria.silva'],
+    ['mail ānna@bücher.example today', 'ānna'],
+    ['follow @jane.placeholder for updates', 'jane.placeholder'],
+  ] as [string, string][]) {
+    const r = redactStructured(s);
+    assert(r.redacted && !r.text.includes(leak), `${s} → ${r.text}`);
+  }
+});
+
+Deno.test('PV-20 (I6G1R-03) adversarial inputs at the maximum accepted size stay within a time budget; oversize is withheld', () => {
+  const max = 4_000;
+  const inputs = [
+    'A.'.repeat(max / 2),
+    'a'.repeat(max - 1) + '@',
+    'x'.repeat(max - 10) + ' at foo dot',
+    'P<' + 'A'.repeat(max - 2),
+    '1 '.repeat(max / 2),
+    'EIN ' + '1-'.repeat((max - 4) / 2),
+    'Aa '.repeat(max / 3),
+    'J. '.repeat(max / 3),
+  ];
+  for (const s of inputs) {
+    const t0 = performance.now();
+    for (const kind of ['FREE_TEXT', 'PUBLISHER', 'DECLARED_ORG_NAME', 'ORGANIZATION_NAME'] as const) present(kind, s, ORG, 'NEWS');
+    const ms = performance.now() - t0;
+    assert(ms < 500, `${s.slice(0, 12)}… took ${ms.toFixed(0)} ms`);
+  }
+  assertEquals(free('a '.repeat(2_001)).withheld, 'PERSONAL_DATA_RISK', 'longer than the scan limit ⇒ withheld');
+});
+
+Deno.test('PV-21 (I6G1R-04) a person declared as the subject is withheld in the identity block, with a limitation', async () => {
+  const t = lab();
+  const inv = (await t.must({ action: 'create_investigation', subject: { ref: 'org-x', type: 'FOUNDATION', identity: { legalName: 'Jane Smith', aliases: ['Mr Doe'], domains: ['janesmith.example'] } } })).data.investigationId as string;
+  const d = (await t.must({ action: 'get_dossier', investigation_id: inv, lang: 'en' })).data as { dossier: { content: { subject: { declaredIdentity: { legalName: string; aliases: string[] } }; limitations: { code: string; scope: string }[] } }; text: string };
+  assertEquals(d.dossier.content.subject.declaredIdentity.legalName, '—');
+  assertEquals(d.dossier.content.subject.declaredIdentity.aliases, ['—']);
+  assert(d.dossier.content.limitations.some((l) => l.code === 'EXCERPT_WITHHELD' && l.scope === 'IDENTITY'));
+  assert(!JSON.stringify(d).includes('Jane Smith') && !d.text.includes('Jane Smith'));
+  // An organization name keeps showing.
+  const t2 = lab();
+  const inv2 = (await t2.must({ action: 'create_investigation', subject: SUBJECT })).data.investigationId as string;
+  const d2 = (await t2.must({ action: 'get_dossier', investigation_id: inv2, lang: 'en' })).data as { dossier: { content: { subject: { declaredIdentity: { legalName: string } } } } };
+  assertEquals(d2.dossier.content.subject.declaredIdentity.legalName, 'HopeBridge Foundation');
+});
+
+Deno.test('PV-22 (I6G1R-06) URL origin shown only for institutional types or the subject\'s own domains', () => {
+  assertEquals(presentUri('https://janedoe.example/x', 'NEWS').text, null);
+  assertEquals(presentUri('https://janedoe.example/x', 'ORGANIZATION_WEBSITE').text, null);
+  assertEquals(presentUri('https://www.hopebridge.example/about', 'ORGANIZATION_WEBSITE', ['hopebridge.example']).text, 'https://www.hopebridge.example');
+  assertEquals(presentUri('https://evilhopebridge.example/', 'ORGANIZATION_WEBSITE', ['hopebridge.example']).text, null, 'suffix trick');
+  assertEquals(presentUri('https://register.gov.example/entry/1', 'OFFICIAL_REGISTRY').text, 'https://register.gov.example');
+  assertEquals(presentUri('https://court.example/case/9', 'COURT_RECORD').text, 'https://court.example');
+});
+
+Deno.test('PV-23 (I6G1R-05) the owner review DTO is scrubbed for minor data in EVERY string field', async () => {
+  const t = lab();
+  const inv = (await t.must({ action: 'create_investigation', subject: SUBJECT })).data.investigationId as string;
+  await t.must({ action: 'add_source', investigation_id: inv, source: { ref: 'src-web', type: 'ORGANIZATION_WEBSITE', publisher: 'Parents of a boy aged 7', retrievedAt: '2026-09-01T00:00:00Z', retention: 'EXCERPT_AND_HASH', contentHash: 'b'.repeat(64) } });
+  await t.must({ action: 'add_claim', investigation_id: inv, claim: { ref: 'c1', kind: 'OTHER', text: 'Ana, a girl aged 9, lives near the well.', sourceRef: 'src-web', origin: 'MANUAL' } });
+  const g = await t.must({ action: 'get_investigation', investigation_id: inv });
+  const raw = JSON.stringify(g.data);
+  assert(!raw.includes('aged 7') && !raw.includes('aged 9'), raw.slice(0, 200));
 });
