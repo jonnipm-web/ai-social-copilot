@@ -114,7 +114,9 @@ jobs:
           grep -qx 'AEF_LEGACY: DOWN_OK' db.log
           grep -qx 'AEF_SEQUENCE: PASS' db.log
           grep -qx 'AEF_SEQUENCE: EXPOSED_BEFORE_FIX' db.log
+          grep -qx 'AEF_SEQUENCE_REPAIR: PASS' db.log
           grep -qx 'AEF_FAIL_FAST: PASS' db.log
+          grep -qx 'AEF_SEQUENCE_POSTCONDITION: PASS' db.log
           grep -qx 'AEF_DEPLOY_PREFLIGHT_TESTS: PASS' db.log
           grep -qx 'AEF_DEFINER_BOUNDARY: PASS' db.log
           grep -qx 'AEF_MIGRATION_PRECONDITIONS: PASS' db.log
