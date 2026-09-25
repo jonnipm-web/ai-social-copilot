@@ -3,7 +3,7 @@ import { assert, assertEquals } from 'https://deno.land/std@0.168.0/testing/asse
 import { parseLabRequest } from './lab_contract.ts';
 import { handleLabRequest, type LabResponse } from './lab_service.ts';
 import { InMemoryImpactDatabase, InMemoryImpactLabStore } from './lab_store.ts';
-import { present, presentUri, privateAddressSignal, privateNameSignal, PRIVACY_POLICY_VERSION, redactStructured } from './privacy.ts';
+import { present, presentUri, privateAddressSignal, privateNameSignal, PRIVACY_POLICY_VERSION, PRIVACY_SCAN_MAX, redactStructured } from './privacy.ts';
 
 const ORG = { orgNames: ['HopeBridge Foundation', 'HopeBridge'] };
 const free = (s: string) => present('FREE_TEXT', s, ORG);
@@ -340,4 +340,46 @@ Deno.test('PV-23 (I6G1R-05) the owner review DTO is scrubbed for minor data in E
   const g = await t.must({ action: 'get_investigation', investigation_id: inv });
   const raw = JSON.stringify(g.data);
   assert(!raw.includes('aged 7') && !raw.includes('aged 9'), raw.slice(0, 200));
+});
+
+// ── Codex I6 Gate 1 re-audit #2 regressions (I6G1R2-01/02) ──────────────────
+Deno.test('PV-24 (I6G1R2-01) e-mails / handles next to ANY punctuation are redacted', () => {
+  const around = ['—', '…', '/', '–', '»', '«', '"', '”', '“', '(', ')', '[', ']', ',', '.', ';', ':', '!', '?', '·', '|', '¿', '¡', '、', '。'];
+  for (const p of around) {
+    for (const id of ['josé@example.com', 'jane.doe@mail.example', '@jane', '@jane.placeholder']) {
+      for (const s of [`${id}${p}`, `${p}${id}`, `x${p}${id}${p}y`]) {
+        const r = redactStructured(s);
+        assert(r.redacted && !r.text.includes(id.replace(/^@/, '')), `${JSON.stringify(s)} → ${JSON.stringify(r.text)}`);
+      }
+    }
+  }
+  // Separators other than ASCII space also split tokens.
+  assert(!redactStructured('mail\u00a0josé@example.com\u3000now').text.includes('josé'));
+});
+
+Deno.test('PV-25 (I6G1R2-01) end-to-end: punctuation-wrapped identifiers never reach dossier JSON or text', async () => {
+  const t = lab();
+  const inv = (await t.must({ action: 'create_investigation', subject: SUBJECT })).data.investigationId as string;
+  await t.must({ action: 'add_source', investigation_id: inv, source: { ref: 'src-web', type: 'ORGANIZATION_WEBSITE', publisher: 'HopeBridge Foundation', retrievedAt: '2026-09-01T00:00:00Z', retention: 'EXCERPT_AND_HASH', contentHash: 'b'.repeat(64) } });
+  await t.must({ action: 'add_claim', investigation_id: inv, claim: { ref: 'c1', kind: 'OTHER', text: 'Write to josé@example.com— or @jane… for the wells.', sourceRef: 'src-web', origin: 'MANUAL' } });
+  for (const action of ['get_dossier', 'export_dossier']) {
+    const all = JSON.stringify((await t.must({ action, investigation_id: inv, lang: 'en' })).data);
+    assert(!all.includes('josé@') && !all.includes('@jane'), action);
+  }
+});
+
+Deno.test('PV-26 (contract) no presented free-text field can exceed the 4,000-char scan limit; oversize is rejected at the door', () => {
+  const inv = '00000000-0000-4000-8000-000000000001';
+  const claim = (n: number) => parseLabRequest({ action: 'add_claim', investigation_id: inv, claim: { ref: 'c', kind: 'OTHER', text: 'a'.repeat(n), sourceRef: 's', origin: 'MANUAL' } });
+  assert(claim(4_000).ok);
+  for (const n of [4_001, 10_000, 100_000]) assert(!claim(n).ok, `claim ${n}`);
+  const ev = (n: number) => parseLabRequest({ action: 'add_evidence', investigation_id: inv, evidence: { ref: 'e', claimRef: 'c', sourceRef: 's', aboutOrgRef: 'o', relationship: 'SUPPORTS', basis: 'HUMAN_ASSESSED', personalData: 'NONE', excerpt: 'a'.repeat(n) } });
+  assert(ev(2_000).ok);
+  for (const n of [2_001, 10_000, 100_000]) assert(!ev(n).ok, `excerpt ${n}`);
+  assertEquals(PRIVACY_SCAN_MAX, 4_000);
+});
+
+Deno.test('PV-27 (I6G1R2-02) the only change to safe text is the intentional removal of invisible / bidi characters', () => {
+  assertEquals(free('HopeBridge\u200b Foundation built 20 wells.').text, 'HopeBridge Foundation built 20 wells.');
+  assertEquals(free('HopeBridge Foundation built ２０ wells in ٢٠٢٥.').text, 'HopeBridge Foundation built ２０ wells in ٢٠٢٥.');
 });

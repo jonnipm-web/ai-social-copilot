@@ -89,31 +89,25 @@ function luhn(digits: string): boolean {
   return sum % 10 === 0;
 }
 
-// Unicode e-mail (non-ASCII local part / domain, combining marks included),
-// matched per whitespace token — linear time (Codex I6G1-05 / I6G1R-02/03).
-const EMAIL_TOKEN = /^[\p{L}\p{M}\p{N}._%+-]+@[\p{L}\p{M}\p{N}-]+(?:\.[\p{L}\p{M}\p{N}-]+)*\.[\p{L}\p{M}]{2,}$/u;
-// Social handles ("@jane.placeholder") are personal identifiers too.
-const HANDLE_TOKEN = /^@[\p{L}\p{M}\p{N}_.]{2,}$/u;
-const EDGE_PUNCT = /^([(<«"'\[]*)(.*?)([)>»"'.,;:!?\]]*)$/su;
+// Unicode e-mail (non-ASCII local part / domain, combining marks included)
+// and social handles, searched INSIDE each whitespace / separator token so
+// any surrounding punctuation ("—", "…", "/", quotes) cannot hide them
+// (Codex I6G1-05 / I6G1R-02 / I6G1R2-01). Tokens are ≤ 320 chars (longer
+// ones containing '@' are redacted whole), so the search is bounded.
+const EMAIL_IN_TOKEN = /[\p{L}\p{M}\p{N}._%+-]+@[\p{L}\p{M}\p{N}-]+(?:\.[\p{L}\p{M}\p{N}-]+)*\.[\p{L}\p{M}]{2,}/gu;
+const HANDLE_IN_TOKEN = /(?<![\p{L}\p{M}\p{N}_])@[\p{L}\p{M}\p{N}_][\p{L}\p{M}\p{N}_.]*[\p{L}\p{M}\p{N}_]/gu;
 
 function redactEmailsAndHandles(text: string, mark: () => void): string {
   if (!text.includes('@')) return text;
-  return text.split(/(\s+)/u).map((tok) => {
+  return text.split(/([\s\p{Z}]+)/u).map((tok) => {
     if (!tok.includes('@')) return tok;
     if (tok.length > 320) {
       mark();
       return '[redacted-email]';
     }
-    const [, pre, core, post] = EDGE_PUNCT.exec(tok) ?? ['', '', tok, ''];
-    if (EMAIL_TOKEN.test(core)) {
-      mark();
-      return `${pre}[redacted-email]${post}`;
-    }
-    if (HANDLE_TOKEN.test(core)) {
-      mark();
-      return `${pre}[redacted-handle]${post}`;
-    }
-    return tok;
+    return tok
+      .replace(EMAIL_IN_TOKEN, () => ((mark(), '[redacted-email]')))
+      .replace(HANDLE_IN_TOKEN, () => ((mark(), '[redacted-handle]')));
   }).join('');
 }
 // Labelled personal / tax / travel identifiers: redact the VALUE whatever its format.
