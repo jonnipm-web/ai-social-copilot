@@ -321,6 +321,59 @@ export const normalizeForPresentation = (s: string) => s.replace(INVISIBLE_FORMA
 /** Detection copy: also no-break spaces → spaces and every Unicode digit → ASCII. */
 const detectionCopy = (s: string) => asciiDigits(s.replace(NBSP, ' '));
 
+
+// ── identifier BACKSTOP (Codex I6G1R4, centralized canonicalization) ─────────
+// Redaction above keeps the text readable for the common forms. It can never
+// enumerate every encoding, so after redaction a CANONICAL detection copy is
+// checked once more; if any identifier signal survives, the caller withholds
+// the whole value (fail-closed). The canonical copy is used for detection only.
+const NAMED_ENTITIES: Readonly<Record<string, string>> = {
+  commat: '@', period: '.', lpar: '(', rpar: ')', lsqb: '[', rsqb: ']', sol: '/', hyphen: '-', dash: '-', amp: '&',
+  nbsp: ' ', num: '#', colon: ':', plus: '+', lowbar: '_',
+};
+function decodeEntities(t: string): string {
+  return t.replace(/&(?:#(\d{1,7})|#[xX]([0-9a-fA-F]{1,6})|([a-zA-Z]{2,8}));?/g, (m, dec, hex, name) => {
+    const cp = dec ? Number(dec) : hex ? parseInt(hex, 16) : null;
+    if (cp !== null) return cp > 0 && cp <= 0x10ffff ? String.fromCodePoint(cp) : m;
+    return NAMED_ENTITIES[String(name).toLowerCase()] ?? m;
+  });
+}
+const INVISIBLE_FORMAT_SCAN = /[\u00AD\u061C\u180E\u200B-\u200F\u202A-\u202E\u2060-\u2064\u2066-\u2069\uFEFF]/g;
+const DASHES = /[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]/g;
+const DOTS = /[\u00B7\u2022\u2219\u22C5\u30FB\uFF65\u2024]/g;
+const SLASHES = /[\u2044\u2215\uFF0F]/g;
+const ATS = /[\uFF20\uFE6B]/g;
+
+export function canonicalForDetection(t: string): string {
+  return asciiDigits(decodeEntities(decodeEntities(t)).normalize('NFKC'))
+    .replace(INVISIBLE_FORMAT_SCAN, '')
+    .replace(ATS, '@').replace(DASHES, '-').replace(DOTS, '.').replace(SLASHES, '/')
+    .replace(/[\u00A0\u2007\u202F\u3000]/g, ' ')
+    .toLowerCase();
+}
+
+const BS_AT = /@\s*[\p{L}\p{N}_]/u; //                              any '@' followed by an identifier character
+const BS_SPELLED_AT = /(?<![\p{L}])(?:at|at sign|arroba|em|chez|chez le|bei)\s*[\])>}]?\s*[\p{L}\p{N}-]+(?:\.(?=[\p{L}\p{N}])[\p{L}\p{N}-]+)*(?:\.(?=\p{L})|\s*[[(]?\s*(?:dot|ponto|punto|point|punkt)\s*[\])]?\s*)\p{L}{2,}(?![\p{L}])/u;
+// IBAN PREFIX (country + check digits + 4-char bank code) is enough: the tail may already be redacted.
+const BS_IBAN = /(?<![\p{L}\p{N}])[a-z]{2}\d{2}[\s-]?[a-z0-9]{4}(?![\p{L}])/u;
+const BS_LABEL = /(?<![\p{L}])(?:iban|account|acct|a\/c|conta|cuenta|compte|konto|kontonummer|numéro de compte|numero de conta|vat|vat id|vat no|gst|gstin|ust|ust-idnr|ustidnr|tva|iva|nif|nie|nipc|ein|tin|itin|ssn|sin|nino|dni|curp|rfc|pan|rg|cpf|cnpj|passport|passaporte|pasaporte|tax id|tax number|national id|aadhaar)\s*(?:no\.?|n[º°o]\.?|number|número|numero|#|:|-)?\s*[a-z0-9][a-z0-9 .\-/]*\d[a-z0-9 .\-/]*\d/u;
+const BS_DIGIT_RUN = /\d[\d\s().\/\-+#*]*\d/gu;
+// A grouped QUANTITY ("1,250,000", "1.250.000,50", "12 000 000") is not an identifier.
+const QUANTITY = /^\d{1,3}(?:([,. ])\d{3})(?:\1\d{3})*(?:[.,]\d{1,2})?$/;
+
+/** Does an identifier signal survive in (already redacted) text? */
+export function identifierSignal(text: string): boolean {
+  const c = canonicalForDetection(text);
+  if (BS_AT.test(c) || BS_IBAN.test(c) || BS_LABEL.test(c)) return true;
+  if (/(?:at|arroba|em|chez|bei)/.test(c) && BS_SPELLED_AT.test(c)) return true;
+  for (const m of c.matchAll(BS_DIGIT_RUN)) {
+    const run = m[0].trim();
+    const digits = run.replace(/\D/g, '').length;
+    if (digits >= 9 && !QUANTITY.test(run)) return true;
+  }
+  return false;
+}
+
 /** Present one value according to what its field IS. */
 export function present(
   kind: FieldKind,
@@ -334,6 +387,9 @@ export function present(
   const scan = detectionCopy(clean);
   if (minorDataRisk(scan)) return { text: null, withheld: 'MINOR_DATA_RISK', redacted: false };
   const r = redactStructured(clean);
+  // Fail-closed backstop: an identifier the redaction could not neutralize
+  // withholds the whole value, in every field kind.
+  if (identifierSignal(r.text)) return { text: null, withheld: 'PERSONAL_DATA_RISK', redacted: false };
   const probe = detectionCopy(r.text);
   if (kind === 'FREE_TEXT' && (privateAddressSignal(probe) || privateNameSignal(probe, ctx.orgNames))) {
     return { text: null, withheld: 'PERSONAL_DATA_RISK', redacted: false };

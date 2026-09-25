@@ -56,6 +56,32 @@ PV-20 bounds adversarial inputs at the maximum size.
 Owner review DTOs are scrubbed recursively for minor-data risk in every
 string field (Codex I6G1R-05).
 
+### 2.1 Structured-identifier backstop (Codex I6G1R4)
+
+Redaction keeps text readable for the common forms, but no list of patterns
+can enumerate every encoding. After redaction, **one canonical detection
+copy** is built (HTML entities decoded — numeric, hex and named; NFKC;
+Unicode digits → ASCII; `@` look-alikes, dash / hyphen, middle-dot and slash
+variants mapped; separators → space; lower-cased) and checked for any
+surviving identifier signal:
+
+- an `@` followed by an identifier character (e-mails of any spacing,
+  handles of any length);
+- a spelled-out e-mail (`at`, `at sign`, `arroba`, `em`, `chez`, `bei` +
+  domain + `.`/`dot`/`ponto`/`punto`/`point`/`punkt` + TLD);
+- an IBAN prefix (country + check digits + bank code), any case;
+- an account / tax / identity label (account, acct, a/c, conta, cuenta,
+  compte, konto, IBAN, VAT, GST(IN), USt-IdNr, TVA, IVA, NIF, NIE, NIPC, EIN,
+  TIN, SSN, SIN, NINO, DNI, CURP, RFC, PAN, RG, CPF, CNPJ, passport, tax id,
+  national id, aadhaar) followed by a value with 2+ digits;
+- a run of 9+ digits with any separators, unless it is a grouped quantity
+  (`1,250,000`, `1.250.000,50`, `12 000 000`).
+
+If any signal survives, the **whole value is withheld** (fail-closed) in
+every field kind. The canonical copy is never presented. PV-29..31 cover the
+exhaustive-pass encodings end-to-end; PV-30 guards ordinary PT / EN prose
+(years, dates, money, percentages, "em 2019.", "at the school.").
+
 ## 3. Names and addresses: an honest limit
 
 No deterministic rule detects every private name or address. The signals
@@ -104,7 +130,7 @@ content. Consequences:
 
 ## 6. Tests
 
-`privacy_test.ts` PV-01..23 (structured ids incl. Unicode / labelled / MRZ,
+`privacy_test.ts` PV-01..31 (structured ids incl. Unicode / labelled / MRZ,
 all-caps / initials / surname-first / caseless names, client whitelist
 attempts, publishers of every type, URL userinfo / IDN / IP / personal
 types, owner review DTO; and the original: name / address signals,

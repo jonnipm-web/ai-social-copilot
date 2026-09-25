@@ -397,3 +397,44 @@ Deno.test('PV-28 (I6G1R3-01) look-alike @ and spelled-out "at" e-mails are redac
   }
   assertEquals(free('HopeBridge Foundation\u00a0built 20 wells.').text, 'HopeBridge Foundation\u00a0built 20 wells.');
 });
+
+Deno.test('PV-29 (I6G1R4) every realistic encoding from the exhaustive pass is withheld by the backstop (whole value)', () => {
+  for (const s of [
+    'maria&#64;example.com', 'maria&#x40;example.com', 'maria&commat;example.com', 'follow &#64;jane',
+    'maria em exemplo.com', 'maria chez example.com', 'maria arroba exemplo punto com', 'maria at sign example dot com',
+    'maria @ example.com', 'm a r i a @ e x a m p l e . c o m',
+    'call 020/7946/0958', 'call 020\u20127946\u20120958', 'call 020\u20117946\u20110958', 'call 020\u00b77946\u00b70958',
+    'pay gb82 west 1234 5698 7654 32', 'acct 123456', 'account no 123456', 'a/c 123456', 'VAT 123456789', 'USt-IdNr DE123456789',
+    'GSTIN 22AAAAA0000A1Z5', 'numéro de compte 12345678', 'contact @a now',
+  ]) {
+    const r = present('FREE_TEXT', s, ORG);
+    assertEquals(r.text, null, `${s} → ${r.text}`);
+  }
+});
+
+Deno.test('PV-30 (I6G1R4) the backstop does not fire on ordinary PT / EN impact prose', () => {
+  for (const s of [
+    'HopeBridge Foundation built 20 wells in 2025.',
+    'O projeto começou em 2019. Hoje atende 3 distritos.',
+    'The charity raised £1,250,000 in 2024.',
+    'A fundação arrecadou R$ 1.250.000,50 em 2023.',
+    'Between 2019-2025 the programme reached 12 000 000 people.',
+    'The report was published on 2026-09-01.',
+    'Meet at the school. Then visit the well.',
+    'Relatório nº 12 publicado em março.',
+    'Coverage rose to 87% at 14 sites.',
+  ]) {
+    assertEquals(present('FREE_TEXT', s, ORG).text, s, s);
+  }
+});
+
+Deno.test('PV-31 (I6G1R4) end-to-end: encoded identifiers never reach dossier JSON or text', async () => {
+  const t = lab();
+  const inv = (await t.must({ action: 'create_investigation', subject: SUBJECT })).data.investigationId as string;
+  await t.must({ action: 'add_source', investigation_id: inv, source: { ref: 'src-web', type: 'ORGANIZATION_WEBSITE', publisher: 'HopeBridge Foundation', retrievedAt: '2026-09-01T00:00:00Z', retention: 'EXCERPT_AND_HASH', contentHash: 'b'.repeat(64) } });
+  await t.must({ action: 'add_claim', investigation_id: inv, claim: { ref: 'c1', kind: 'OTHER', text: 'Donations to maria&#64;example.com or 020/7946/0958 fund wells.', sourceRef: 'src-web', origin: 'MANUAL' } });
+  for (const action of ['get_dossier', 'export_dossier']) {
+    const all = JSON.stringify((await t.must({ action, investigation_id: inv, lang: 'pt' })).data);
+    assert(!all.includes('maria') && !all.includes('7946'), action);
+  }
+});
