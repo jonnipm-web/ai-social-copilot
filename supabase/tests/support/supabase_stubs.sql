@@ -26,4 +26,10 @@ GRANT USAGE ON SCHEMA auth, public, extensions TO anon, authenticated, service_r
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA auth TO anon, authenticated, service_role;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO anon, authenticated, service_role;
+-- Production parity (IV-AEF-PRE-RUNTIME-CLOSURE-01, preflight P03): the
+-- production project grants USAGE, SELECT, UPDATE on every NEW sequence in
+-- public to the API roles by default (observed: rwU for grantor postgres).
+-- Without this line tests passed only because this fixture was stricter
+-- than production.
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
 CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
