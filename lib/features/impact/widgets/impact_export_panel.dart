@@ -145,10 +145,13 @@ class _VerifyResultView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // A metadata mismatch is shown FIRST: a "current" hash with a
-        // tampered envelope must never read as a clean confirmation.
-        if (result.envelopeState == 'MISMATCH') ImpactLine(t.impactEnvelopeMismatch, icon: Icons.warning_amber_outlined),
-        ImpactLine(text, icon: icon),
+        // I6 (Codex I6G2-01): a metadata mismatch is AUTHORITATIVE — the
+        // result is inconclusive and no success wording is shown at all.
+        if (result.envelopeState == 'MISMATCH') ...[
+          ImpactLine(t.impactEnvelopeMismatch, icon: Icons.warning_amber_outlined),
+          ImpactLine(t.impactVerifyInconclusive, icon: Icons.block),
+        ] else
+          ImpactLine(text, icon: icon),
         ImpactLine(t.impactHashNotTruth, muted: true),
       ],
     );

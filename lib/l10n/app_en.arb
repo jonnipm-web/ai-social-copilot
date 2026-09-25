@@ -351,5 +351,6 @@
   "impactSnapshotCaveats": "The confirmation described the live view at that moment. The issued snapshot carries these caveats:",
   "impactClaimScopeNote": "Status of this claim only — not a verdict on the organization.",
   "impactIdentityScopeNote": "Identity only — not an assessment of the organization’s conduct.",
-  "impactPosition": "Position {index} of {total}"
+  "impactPosition": "Position {index} of {total}",
+  "impactVerifyInconclusive": "Verification inconclusive: do not rely on this snapshot’s metadata. Issue a new export before using it."
 }

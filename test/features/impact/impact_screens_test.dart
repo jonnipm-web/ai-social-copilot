@@ -317,9 +317,10 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Verify snapshot'));
       await tester.pumpAndSettle();
-      final mismatch = tester.getTopLeft(find.text('The snapshot metadata does not match the register.')).dy;
-      final current = tester.getTopLeft(find.text('Current snapshot: the content has not changed since it was issued.')).dy;
-      expect(mismatch, lessThan(current));
+      // I6G2-01: mismatch is authoritative — no success wording at all.
+      expect(find.text('The snapshot metadata does not match the register.'), findsOneWidget);
+      expect(find.textContaining('Verification inconclusive'), findsOneWidget);
+      expect(find.text('Current snapshot: the content has not changed since it was issued.'), findsNothing);
     });
 
     testWidgets('UI-EXP-05 copy JSON / text copies the server bytes privately', (tester) async {
