@@ -8,8 +8,9 @@ tools or a production runtime.
 
 ## F-01 — migration content integrity: CLOSED (repository side)
 
-`supabase/migration_manifest.tsv` holds the sha256 of the canonical content
-(CRLF → LF) of every migration, with a status:
+`supabase/migration_manifest.tsv` holds the sha256 of the canonical content of
+every migration. Only a CR at the end of a line is dropped (CRLF → LF); a
+standalone CR anywhere else is content (Codex RG3-01). Each row has a status:
 - **APPLIED_PRODUCTION**: the 16 predecessors, frozen;
 - **LAB**: the chain 23–27.
 
@@ -40,13 +41,28 @@ their bodies were not.
 Four layers, none relying on the author remembering the rule:
 1. **Database-time proof in CI** — `supabase/tests/aef_sequence_catalog_scan.sql`
    runs on the fully migrated, production-parity schema. It checks every AEF
-   sequence (named `aef_*` **or** owned by an `aef_*` table), for every API role
-   and privilege, plus PUBLIC.
-2. **Adversarial test** — a "future migration" that creates an identity column
-   and an `OWNED BY` sequence without the REVOKE **must** fail both the scan and
-   the lint. The same migration with the canonical block must pass
+   sequence, in **any schema** (Codex RG3-02). A sequence counts as an AEF
+   sequence if it:
+   - is named `aef_*` in `public`;
+   - is owned (identity / serial / `OWNED BY`) by an `aef_*` table; or
+   - is **used by a column default** of an `aef_*` table.
+
+   Each is checked for every API role and privilege, plus PUBLIC, using
+   effective privileges, so group roles and later grants count. The deploy
+   preflight uses the same predicate.
+2. **Adversarial test** — a "future migration" without the REVOKE **must** fail
+   both the scan and the lint. It creates:
+   - an identity column;
+   - an `OWNED BY` sequence;
+   - a sequence **not owned** but used by an AEF default;
+   - a sequence in **another schema** used by an AEF default, with an explicit
+     grant (PostgreSQL forbids `OWNED BY` across schemas).
+
+   The same migration with the canonical block must pass
    (`AEF_FUTURE_SEQUENCE_GUARD: PASS`).
-3. **Author-time lint** — `scripts/ci/aef_sequence_lint.sh`.
+3. **Author-time lint** — `scripts/ci/aef_sequence_lint.sh`. The lint is a hint:
+   it can be bypassed, for example by dynamic SQL. The catalog scan is the
+   proof.
 4. **Deploy-time** — the preflight scans every AEF sequence, and `20260927`'s
    postcondition does the same.
 
@@ -67,22 +83,46 @@ and the executor experiment:
   preserved.
 
 Tested: normal run, failure, SIGTERM, SIGINT, collision, foreign database/role
-with the same prefix, tampered marker, cleanup failure, and 30 parallel
-identities (`DISPOSABLE_CLEANUP_TESTS: PASS`).
+with the same prefix, tampered marker, cleanup failure, 30 parallel
+identities, **SIGKILL + sweep**, and an atomic role marker
+(`DISPOSABLE_CLEANUP_TESTS: PASS`).
+
+After Codex RG3-03:
+- A role and its ownership marker are created in **one transaction**.
+- `CREATE DATABASE` cannot run inside a transaction. A database killed between
+  CREATE and COMMENT stays **unmarked** and is never dropped automatically.
+- Traps cannot run after SIGKILL or host loss. Leftovers that carry this
+  library's marker are reclaimed by `scripts/ci/disposable_sweep.sh`, which:
+  - is a dry-run by default;
+  - is prefix-scoped;
+  - drops only resources whose marker matches their own run id, and only
+    after a minimum age;
+  - reports unmarked resources and never drops them.
 
 ## Transactional executor — `PRODUCTION_EXECUTOR_TRANSACTIONAL: NOT_VERIFIED` → deploy BLOCKED
 
 `scripts/ci/executor_transaction_experiment.sh` runs on a local/CI disposable
-database only. The canary is DDL A → DDL B → error → DDL C. A non-atomic
-control must be detected, or the experiment fails (no false PASS).
+database only. The canary is DDL A → DDL B → error → DDL C.
+
+Two controls must be detected, or the experiment fails (no false PASS):
+- plain psql on the canary;
+- plain psql on the **real** `20260926` failing late, judged by the
+  whole-schema fingerprint (Codex RG3-04).
+
+Every expected CLI result is **asserted**: any deviation exits 1 with
+`EXECUTOR_EVIDENCE_CHANGED` (Codex RG3-05). CI runs the psql parts. The CLI part
+runs **locally only**, on a pinned version, because CI must not download and
+execute it (Codex RG3-06). The recorded run is in
+`docs/aef/evidence/executor_experiment_supabase_cli_2.118.0.txt`.
 
 | Executor | Result |
 |---|---|
 | `psql -f` (plain) — control | **NOT_ATOMIC** (A and B survive) — detected |
-| `psql --single-transaction -f` | **ATOMIC** |
+| `psql --single-transaction -f` | **ATOMIC** (canary and the real `20260926` failing late) |
+| `psql -f`, real `20260926` failing late — fingerprint control | **NOT_ATOMIC** — detected |
 | Supabase CLI 2.118.0 `db push --db-url`, one file | **ATOMIC**, no history row after the failure |
 | CLI, two files (first OK, second fails) | per-file atomic: the first file stays applied and recorded |
-| CLI, the real `20260926` failing late (~1300 lines, DO blocks) | **ATOMIC** |
+| CLI, the real `20260926` failing late (~1300 lines, DO blocks) | **ATOMIC** (whole-schema fingerprint unchanged, no history row) |
 | CLI against a **production-like history** (apply-time versions ≠ file prefixes, as observed read-only in production) | **REFUSED** — `DbPushMissingLocalError`; the CLI proposes `supabase migration repair`, a history rewrite that policy forbids |
 | MCP `apply_migration` (the path that produced production's apply-time versions) | **NOT_VERIFIED** — remote-only; never exercised |
 
