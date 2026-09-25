@@ -183,16 +183,7 @@ expect_fail() {  # db file expected-text
   echo "$out" | grep -qF "$3" || { echo "unexpected failure for $(basename "$2"): $out" >&2; exit 1; }
 }
 catalog_fp() {  # the WHOLE public schema: a failed apply must leave it byte-identical (Codex G2V-04)
-  q "$1" "SET search_path = pg_catalog; SELECT md5(coalesce(string_agg(x, E'\\n' ORDER BY x COLLATE \"C\"), '')) FROM (
-    SELECT 'rel|' || c.relname || '|' || c.relkind::text || '|' || c.relowner::regrole::text || '|' || coalesce(c.relacl::text, '') || '|' || c.relrowsecurity || '|' || c.relforcerowsecurity AS x FROM pg_class c WHERE c.relnamespace = 'public'::regnamespace
-    UNION ALL SELECT 'idx|' || pg_get_indexdef(i.indexrelid) FROM pg_index i JOIN pg_class c ON c.oid = i.indrelid WHERE c.relnamespace = 'public'::regnamespace
-    UNION ALL SELECT 'col|' || c.relname || '|' || a.attname || '|' || a.attnum || '|' || format_type(a.atttypid, a.atttypmod) || '|' || a.attnotnull || '|' || coalesce(pg_get_expr(d.adbin, d.adrelid), '')
-      FROM pg_attribute a JOIN pg_class c ON c.oid = a.attrelid LEFT JOIN pg_attrdef d ON d.adrelid = a.attrelid AND d.adnum = a.attnum
-     WHERE c.relnamespace = 'public'::regnamespace AND a.attnum > 0 AND NOT a.attisdropped
-    UNION ALL SELECT 'con|' || conrelid::regclass::text || '|' || conname || '|' || pg_get_constraintdef(oid) FROM pg_constraint WHERE connamespace = 'public'::regnamespace
-    UNION ALL SELECT 'trg|' || pg_get_triggerdef(t.oid) FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid WHERE c.relnamespace = 'public'::regnamespace AND NOT t.tgisinternal
-    UNION ALL SELECT 'pol|' || polrelid::regclass::text || '|' || polname || '|' || coalesce(pg_get_expr(polqual, polrelid), '') FROM pg_policy
-    UNION ALL SELECT 'fn|' || p.oid::regprocedure::text || '|' || pg_get_function_arguments(p.oid) || '|' || format_type(p.prorettype, NULL) || '|' || p.provolatile::text || '|' || p.prosecdef || '|' || p.proowner::regrole::text || '|' || coalesce(array_to_string(p.proconfig, ','), '') || '|' || coalesce(p.proacl::text, '') || '|' || md5(p.prosrc) FROM pg_proc p WHERE p.pronamespace = 'public'::regnamespace) s;"
+  run -d "$1" -tA -f "$ROOT/scripts/ci/sql/catalog_fingerprint.sql" | tail -1
 }
 count_aef() {  # relations + functions + triggers + policies: a failed apply must leave none behind
   q "$1" "SELECT (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND left(c.relname, 4) = 'aef_') + (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'public' AND left(p.proname, 4) = 'aef_') + (SELECT count(*) FROM pg_trigger WHERE left(tgname, 4) = 'aef_') + (SELECT count(*) FROM pg_policy WHERE left(polname, 4) = 'aef_');"
@@ -350,6 +341,7 @@ fail_then "PUBLIC SELECT on the sequence" "aef_audit_events_id_seq PUBLIC" \
   "GRANT SELECT ON SEQUENCE public.aef_audit_events_id_seq TO PUBLIC;" "REVOKE SELECT ON SEQUENCE public.aef_audit_events_id_seq FROM PUBLIC;"
 fail_then "extra exposed AEF sequence" "aef_extra_seq anon USAGE" \
   "CREATE SEQUENCE public.aef_extra_seq;" "DROP SEQUENCE public.aef_extra_seq;"
+fail_then "sequence used by an AEF column default (not owned, Codex RG3-02)" "shared_counter anon USAGE"   "CREATE SEQUENCE public.shared_counter; CREATE TABLE public.aef_uses_shared (id bigint DEFAULT nextval('public.shared_counter'));"   "DROP TABLE public.aef_uses_shared; DROP SEQUENCE public.shared_counter;"
 fail_then "non-prefixed AEF-owned sequence" "probe_owned_seq service_role SELECT" \
   "CREATE SEQUENCE public.probe_owned_seq OWNED BY public.aef_legal_holds.reason_code;" "DROP SEQUENCE public.probe_owned_seq;"
 fail_then "RPC made SECURITY INVOKER" "RPC aef_get_operation is not SECURITY DEFINER" \
@@ -431,6 +423,7 @@ if scan="$(run -d "$F3" -tA -f "$ROOT/supabase/tests/aef_sequence_catalog_scan.s
   echo "F-03: the catalog scan accepted a future AEF sequence without REVOKE" >&2; exit 1
 fi
 echo "$scan" | grep -q "aef_future_items_id_seq:anon:USAGE" && echo "$scan" | grep -q "future_counter:authenticated:UPDATE" \
+  && echo "$scan" | grep -q "shared_counter:anon:USAGE" && echo "$scan" | grep -q "aef_private.other_seq:anon:UPDATE" \
   || { echo "F-03: unexpected scan output: $scan" >&2; exit 1; }
 apply "$F3" "$ROOT/supabase/tests/fixtures/f03_future_aef_sequence_safe.sql"
 check "$F3" aef_sequence_catalog_scan.sql 'AEF_SEQUENCE_CATALOG_SCAN: PASS'

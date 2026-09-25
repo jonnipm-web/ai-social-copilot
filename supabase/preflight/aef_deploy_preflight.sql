@@ -307,12 +307,15 @@ BEGIN
   END IF;
 
   -- ── sequences (P03, Codex G3-03): every AEF sequence, every privilege, PUBLIC ─
-  FOR s IN SELECT c.oid FROM pg_class c JOIN pg_namespace ns ON ns.oid = c.relnamespace
-            WHERE ns.nspname = 'public' AND c.relkind = 'S'
-              AND (left(c.relname, 4) = 'aef_' OR EXISTS (
-                    SELECT 1 FROM pg_depend d JOIN pg_class t ON t.oid = d.refobjid
-                     WHERE d.classid = 'pg_class'::regclass AND d.objid = c.oid AND d.refclassid = 'pg_class'::regclass
-                       AND d.deptype IN ('a', 'i') AND left(t.relname, 4) = 'aef_')) LOOP
+  FOR s IN SELECT c.oid FROM pg_class c
+            WHERE c.relkind = 'S'
+              AND ((c.relnamespace = 'public'::regnamespace AND left(c.relname, 4) = 'aef_')
+                   OR EXISTS (SELECT 1 FROM pg_depend d JOIN pg_class t ON t.oid = d.refobjid
+                               WHERE d.classid = 'pg_class'::regclass AND d.objid = c.oid AND d.refclassid = 'pg_class'::regclass
+                                 AND d.deptype IN ('a', 'i') AND left(t.relname, 4) = 'aef_')
+                   OR EXISTS (SELECT 1 FROM pg_depend d JOIN pg_attrdef ad ON ad.oid = d.objid JOIN pg_class t ON t.oid = ad.adrelid
+                               WHERE d.classid = 'pg_attrdef'::regclass AND d.refclassid = 'pg_class'::regclass
+                                 AND d.refobjid = c.oid AND left(t.relname, 4) = 'aef_')) LOOP
     FOREACH r IN ARRAY api_roles LOOP
       FOREACH p IN ARRAY ARRAY['USAGE', 'SELECT', 'UPDATE'] LOOP
         IF has_sequence_privilege(r, s, p) THEN
