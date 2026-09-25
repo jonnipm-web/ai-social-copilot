@@ -27,6 +27,13 @@ DB="aef_fp_$$"
 run() { PGOPTIONS="-c client_min_messages=warning" "$PSQL" -h "$HOST" -v ON_ERROR_STOP=1 -q "$@"; }
 apply() { run -d "$DB" -1 -c "SET search_path = public, extensions;" -f "$1" >/dev/null; }
 
+# Refuse a real Supabase project even when reached through a local address
+# (port forward, hosts entry): those always carry the authenticator role and
+# the storage / supabase_migrations schemas; a disposable cluster never does.
+if [[ "$(run -d postgres -tA -c "SELECT (SELECT count(*) FROM pg_roles WHERE rolname = 'authenticator') + (SELECT count(*) FROM pg_namespace WHERE nspname IN ('storage', 'supabase_migrations'));")" != "0" ]]; then
+  echo "refusing: the target looks like a real Supabase project" >&2; exit 2
+fi
+# CREATE fails (and nothing is dropped: the trap is set after it) if the name exists.
 run -d postgres -c "CREATE DATABASE $DB;"
 trap 'run -d postgres -c "DROP DATABASE IF EXISTS $DB;" >/dev/null 2>&1 || true' EXIT
 

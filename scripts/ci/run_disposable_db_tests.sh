@@ -24,6 +24,12 @@ DB="entitlement_ci_$$"
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 run() { "$PSQL" -h "$HOST" -v ON_ERROR_STOP=1 -q "$@"; }
 
+# Refuse a real Supabase project even when reached through a local address
+# (port forward, hosts entry): those always carry the authenticator role and
+# the storage / supabase_migrations schemas; a disposable cluster never does.
+if [[ "$(run -d postgres -tA -c "SELECT (SELECT count(*) FROM pg_roles WHERE rolname = 'authenticator') + (SELECT count(*) FROM pg_namespace WHERE nspname IN ('storage', 'supabase_migrations'));")" != "0" ]]; then
+  echo "refusing: the target looks like a real Supabase project" >&2; exit 2
+fi
 UPG="${DB}_upgrade"
 run -d postgres -c "CREATE DATABASE $DB;"
 run -d postgres -c "CREATE DATABASE $UPG;"
@@ -176,14 +182,15 @@ expect_fail() {  # db file expected-text
 }
 catalog_fp() {  # the WHOLE public schema: a failed apply must leave it byte-identical (Codex G2V-04)
   q "$1" "SET search_path = pg_catalog; SELECT md5(coalesce(string_agg(x, E'\\n' ORDER BY x COLLATE \"C\"), '')) FROM (
-    SELECT 'rel|' || c.relname || '|' || c.relkind::text || '|' || coalesce(c.relacl::text, '') || '|' || c.relrowsecurity AS x FROM pg_class c WHERE c.relnamespace = 'public'::regnamespace
-    UNION ALL SELECT 'col|' || c.relname || '|' || a.attname || '|' || format_type(a.atttypid, a.atttypmod) || '|' || a.attnotnull || '|' || coalesce(pg_get_expr(d.adbin, d.adrelid), '')
+    SELECT 'rel|' || c.relname || '|' || c.relkind::text || '|' || c.relowner::regrole::text || '|' || coalesce(c.relacl::text, '') || '|' || c.relrowsecurity || '|' || c.relforcerowsecurity AS x FROM pg_class c WHERE c.relnamespace = 'public'::regnamespace
+    UNION ALL SELECT 'idx|' || pg_get_indexdef(i.indexrelid) FROM pg_index i JOIN pg_class c ON c.oid = i.indrelid WHERE c.relnamespace = 'public'::regnamespace
+    UNION ALL SELECT 'col|' || c.relname || '|' || a.attname || '|' || a.attnum || '|' || format_type(a.atttypid, a.atttypmod) || '|' || a.attnotnull || '|' || coalesce(pg_get_expr(d.adbin, d.adrelid), '')
       FROM pg_attribute a JOIN pg_class c ON c.oid = a.attrelid LEFT JOIN pg_attrdef d ON d.adrelid = a.attrelid AND d.adnum = a.attnum
      WHERE c.relnamespace = 'public'::regnamespace AND a.attnum > 0 AND NOT a.attisdropped
     UNION ALL SELECT 'con|' || conrelid::regclass::text || '|' || conname || '|' || pg_get_constraintdef(oid) FROM pg_constraint WHERE connamespace = 'public'::regnamespace
     UNION ALL SELECT 'trg|' || pg_get_triggerdef(t.oid) FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid WHERE c.relnamespace = 'public'::regnamespace AND NOT t.tgisinternal
     UNION ALL SELECT 'pol|' || polrelid::regclass::text || '|' || polname || '|' || coalesce(pg_get_expr(polqual, polrelid), '') FROM pg_policy
-    UNION ALL SELECT 'fn|' || p.oid::regprocedure::text || '|' || coalesce(p.proacl::text, '') || '|' || md5(p.prosrc) FROM pg_proc p WHERE p.pronamespace = 'public'::regnamespace) s;"
+    UNION ALL SELECT 'fn|' || p.oid::regprocedure::text || '|' || pg_get_function_arguments(p.oid) || '|' || format_type(p.prorettype, NULL) || '|' || p.provolatile::text || '|' || p.prosecdef || '|' || p.proowner::regrole::text || '|' || coalesce(array_to_string(p.proconfig, ','), '') || '|' || coalesce(p.proacl::text, '') || '|' || md5(p.prosrc) FROM pg_proc p WHERE p.pronamespace = 'public'::regnamespace) s;"
 }
 count_aef() {  # relations + functions + triggers + policies: a failed apply must leave none behind
   q "$1" "SELECT (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND left(c.relname, 4) = 'aef_') + (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'public' AND left(p.proname, 4) = 'aef_') + (SELECT count(*) FROM pg_trigger WHERE left(tgname, 4) = 'aef_') + (SELECT count(*) FROM pg_policy WHERE left(polname, 4) = 'aef_');"
@@ -362,6 +369,12 @@ fail_then "full structure drift (function body)" "AEF structure differs from the
   "CREATE OR REPLACE FUNCTION public.aef__denial_codes() RETURNS text[] LANGUAGE sql IMMUTABLE SET search_path = pg_catalog, pg_temp AS \$\$ SELECT ARRAY['X'] \$\$;" \
   "SELECT 1;"
 apply "$PF" "$ROOT/supabase/migrations/$HARDENING_MIGRATION"   # idempotent re-apply restores the repository definition
+fail_then "function volatility drift" "AEF structure differs from the repository" \
+  "ALTER FUNCTION public.aef__denial_codes() STABLE;" "ALTER FUNCTION public.aef__denial_codes() IMMUTABLE;"
+run -d postgres -c "CREATE ROLE $PROBE_ROLE NOLOGIN;"
+fail_then "SECURITY DEFINER owner drift" "AEF structure differs from the repository" \
+  "ALTER FUNCTION public.aef_get_operation(jsonb) OWNER TO $PROBE_ROLE;" "ALTER FUNCTION public.aef_get_operation(jsonb) OWNER TO postgres;"
+run -d postgres -c "DROP ROLE $PROBE_ROLE;"
 expect_preflight "restored after body drift" PASS "remaining, in order: (none)"
 # 20260927 recorded before 20260926 is an accepted order (depends on 20260925 only)
 run -d "$PF" -c "UPDATE supabase_migrations.schema_migrations SET version = '20269999000004a' WHERE name = 'aef_sequence_privileges';" >/dev/null
