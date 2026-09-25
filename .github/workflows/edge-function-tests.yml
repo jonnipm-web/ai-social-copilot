@@ -62,7 +62,7 @@ jobs:
 
       - name: Lint entitlement core
         run: |
-          deno lint supabase/functions/_shared/entitlement.ts supabase/functions/_shared/entitlement_test.ts             supabase/functions/_shared/entitlement_test_support.ts supabase/functions/_shared/entitlement_vectors_test.ts             supabase/functions/_shared/module_policy.ts supabase/functions/_shared/module_policy_test.ts             supabase/functions/_shared/module_gate_handlers_test.ts supabase/functions/module-access/ supabase/functions/_shared/ive/ supabase/functions/ive-intelligence/ supabase/functions/ive-memory/
+          deno lint supabase/functions/_shared/entitlement.ts supabase/functions/_shared/entitlement_test.ts             supabase/functions/_shared/entitlement_test_support.ts supabase/functions/_shared/entitlement_vectors_test.ts             supabase/functions/_shared/module_policy.ts supabase/functions/_shared/module_policy_test.ts             supabase/functions/_shared/module_gate_handlers_test.ts supabase/functions/module-access/ supabase/functions/_shared/ive/ supabase/functions/ive-intelligence/ supabase/functions/ive-memory/ supabase/functions/_shared/aef_runtime_endpoint.ts supabase/functions/aef-runtime/
 
       - name: Entitlement authority, decision vectors, Promotion Gate invariants, executed gate on every module function, IVE Intelligence Core (isolation, injection, AEF routing, memory)
         env:
@@ -136,12 +136,12 @@ jobs:
       - name: Type-check contracts/aef and aef/
         run: |
           deno check contracts/aef/*.ts contracts/aef/schema_parity_test.ts \
-            aef/*.ts aef/adapters/*.ts aef/persistence/*.ts aef/persistence/testing/*.ts
+            aef/*.ts aef/adapters/*.ts aef/persistence/*.ts aef/persistence/testing/*.ts aef/runtime/*.ts
 
       - name: Lint contracts/aef and aef/
         run: |
           deno lint contracts/aef/*.ts contracts/aef/schema_parity_test.ts \
-            aef/*.ts aef/adapters/*.ts aef/persistence/*.ts aef/persistence/testing/*.ts
+            aef/*.ts aef/adapters/*.ts aef/persistence/*.ts aef/persistence/testing/*.ts aef/runtime/*.ts
 
       - name: Run contract validator tests (65 cases)
         run: |
@@ -161,6 +161,12 @@ jobs:
           deno test --allow-read --allow-env \
             aef/persistence/canonical_test.ts aef/persistence/ive_intent_mapping_test.ts \
             aef/persistence/governance_unit_test.ts
+
+      - name: IVE -> AEF LAB runtime unit tests (IV-IVE-AEF-RUNTIME-INTEGRATION-01; PG tests run in disposable-db-rls-ci)
+        env:
+          DENO_TESTING: "1"
+        run: |
+          deno test --allow-read --allow-env --allow-net=deno.land,esm.sh aef/runtime/runtime_unit_test.ts
 
       - name: Receipt v1 / v1.1 validator vs JSON Schema parity (IV-AEF-HARDENING-01)
         run: |

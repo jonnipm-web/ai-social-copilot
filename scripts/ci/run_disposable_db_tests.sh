@@ -92,7 +92,7 @@ for m in $(ls "$ROOT"/supabase/migrations/*.sql | sort); do apply "$AEF_PG_DB_NA
 if [[ "${AEF_PG_INTEGRATION:-run}" == "skip" ]]; then
   echo "AEF_PG_INTEGRATION: SKIPPED (explicit)"
 else
-  ( cd "$ROOT" && AEF_PG_DB="$AEF_PG_DB_NAME" PGHOST="$HOST" PSQL="$PSQL"       "${DENO:-deno}" test --allow-run --allow-env --allow-read         aef/persistence/governance_pg_test.ts aef/persistence/hardening_pg_test.ts )
+  ( cd "$ROOT" && AEF_PG_DB="$AEF_PG_DB_NAME" PGHOST="$HOST" PSQL="$PSQL"       "${DENO:-deno}" test --allow-run --allow-env --allow-read         aef/persistence/governance_pg_test.ts aef/persistence/hardening_pg_test.ts aef/runtime/runtime_pg_test.ts )
   echo "AEF_PG_INTEGRATION: PASS"
 fi
 
