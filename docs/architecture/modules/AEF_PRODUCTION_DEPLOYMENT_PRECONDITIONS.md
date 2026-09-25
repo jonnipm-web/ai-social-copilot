@@ -14,7 +14,9 @@ approved by Agente Martins **and** Paulo.
 | 4 | `20260926000000_aef_hardening.sql` | yes | fails fast without `subject_roles` or without the complete persistence layer |
 | 5 | `20260927000000_aef_sequence_privileges.sql` | yes, after 3 (before or after 4) | re-asserts P03; the postcondition fails the migration if any API role or PUBLIC keeps access |
 
-**Every file is applied in a single transaction.** Examples: `psql -1 -f`, or an
+**Every file is applied with client encoding UTF-8**
+(`PGCLIENTENCODING=UTF8`; the post-apply preflight fingerprint detects a
+double-encoded apply). **Every file is applied in a single transaction.** Examples: `psql -1 -f`, or an
 executor that wraps each file in a transaction. The Lab proves atomicity with
 `psql --single-transaction` (late-failure injection). The transactional
 behaviour of the Supabase CLI / MCP `apply_migration` is **NOT_VERIFIED** in this
