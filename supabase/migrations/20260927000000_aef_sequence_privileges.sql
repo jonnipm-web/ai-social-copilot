@@ -28,42 +28,47 @@ BEGIN
 END $$;
 
 -- ── deny by default on every AEF sequence ───────────────────────────────
--- Covers the audit identity sequence and any sequence owned by (or named
--- after) an AEF table, so a future AEF sequence is hardened on re-apply.
+-- Every sequence in public named aef_* OR owned (identity / serial) by an
+-- aef_* table — one predicate, shared by the postcondition, the rollback
+-- verifier, the tests and the deploy preflight.
 DO $$
-DECLARE s regclass;
+DECLARE s oid;
 BEGIN
-  FOR s IN
-    SELECT DISTINCT c.oid::regclass
-      FROM pg_class c
-      JOIN pg_namespace n ON n.oid = c.relnamespace
-      LEFT JOIN pg_depend d ON d.objid = c.oid AND d.classid = 'pg_class'::regclass AND d.deptype IN ('a', 'i')
-      LEFT JOIN pg_class t ON t.oid = d.refobjid
+  FOR s IN SELECT c.oid FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
      WHERE n.nspname = 'public' AND c.relkind = 'S'
-       AND (left(c.relname, 4) = 'aef_' OR left(t.relname, 4) = 'aef_')
+       AND (left(c.relname, 4) = 'aef_' OR EXISTS (
+             SELECT 1 FROM pg_depend d JOIN pg_class t ON t.oid = d.refobjid
+              WHERE d.classid = 'pg_class'::regclass AND d.objid = c.oid AND d.refclassid = 'pg_class'::regclass
+                AND d.deptype IN ('a', 'i') AND left(t.relname, 4) = 'aef_'))
   LOOP
-    EXECUTE format('REVOKE ALL ON SEQUENCE %s FROM PUBLIC, anon, authenticated, service_role', s);
+    EXECUTE format('REVOKE ALL ON SEQUENCE %s FROM PUBLIC, anon, authenticated, service_role', s::regclass);
   END LOOP;
 END $$;
 
--- ── postcondition: fail the migration if any API role still has access ─
+-- ── postcondition: fail the migration if any API role or PUBLIC keeps access ─
+-- Effective privileges (has_sequence_privilege follows role membership), so a
+-- grant from another grantor or through a group role is caught even though
+-- the owner's REVOKE cannot remove it.
 DO $$
-DECLARE r record;
+DECLARE s oid; r text; p text;
 BEGIN
-  FOR r IN
-    SELECT c.relname, g.rolname
-      FROM pg_class c
-      JOIN pg_namespace n ON n.oid = c.relnamespace
-      CROSS JOIN (VALUES ('anon'), ('authenticated'), ('service_role')) g(rolname)
-     WHERE n.nspname = 'public' AND c.relkind = 'S' AND left(c.relname, 4) = 'aef_'
-       AND (has_sequence_privilege(g.rolname, c.oid, 'USAGE') OR has_sequence_privilege(g.rolname, c.oid, 'SELECT')
-            OR has_sequence_privilege(g.rolname, c.oid, 'UPDATE'))
+  FOR s IN SELECT c.oid FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+     WHERE n.nspname = 'public' AND c.relkind = 'S'
+       AND (left(c.relname, 4) = 'aef_' OR EXISTS (
+             SELECT 1 FROM pg_depend d JOIN pg_class t ON t.oid = d.refobjid
+              WHERE d.classid = 'pg_class'::regclass AND d.objid = c.oid AND d.refclassid = 'pg_class'::regclass
+                AND d.deptype IN ('a', 'i') AND left(t.relname, 4) = 'aef_'))
   LOOP
-    RAISE EXCEPTION 'AEF_POSTCONDITION: role % still has a privilege on sequence %', r.rolname, r.relname USING ERRCODE = 'AE011';
+    FOREACH r IN ARRAY ARRAY['anon', 'authenticated', 'service_role'] LOOP
+      FOREACH p IN ARRAY ARRAY['USAGE', 'SELECT', 'UPDATE'] LOOP
+        IF has_sequence_privilege(r, s, p) THEN
+          RAISE EXCEPTION 'AEF_POSTCONDITION: role % still has % on sequence %', r, p, s::regclass USING ERRCODE = 'AE011';
+        END IF;
+      END LOOP;
+    END LOOP;
+    IF EXISTS (SELECT 1 FROM pg_class c, aclexplode(coalesce(c.relacl, acldefault('s', c.relowner))) a
+                WHERE c.oid = s AND a.grantee = 0) THEN
+      RAISE EXCEPTION 'AEF_POSTCONDITION: PUBLIC still has a privilege on sequence %', s::regclass USING ERRCODE = 'AE011';
+    END IF;
   END LOOP;
-  IF EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace,
-                    aclexplode(coalesce(c.relacl, acldefault('s', c.relowner))) a
-              WHERE n.nspname = 'public' AND c.relkind = 'S' AND left(c.relname, 4) = 'aef_' AND a.grantee = 0) THEN
-    RAISE EXCEPTION 'AEF_POSTCONDITION: PUBLIC still has a privilege on an AEF sequence' USING ERRCODE = 'AE011';
-  END IF;
 END $$;

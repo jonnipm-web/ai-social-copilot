@@ -1,23 +1,44 @@
 -- IV-AEF-PRE-RUNTIME-CLOSURE-01 — AEF sequence privileges (P03). DISPOSABLE database only.
---   -v phase=before  all migrations EXCEPT 20260927000000: reproduces the P03 exposure
---                    under production-equivalent default privileges (must be exposed)
+--   -v phase=before  a database in the pre-fix state (runner: every migration except
+--                    20260927000000, audit sequence carrying the grants it inherited
+--                    under the earlier 20260925 revision): P03 reproduced (must be exposed)
 --   -v phase=after   with 20260927000000: contract, adversarial attempts, catalog,
 --                    legitimate flows, SECURITY DEFINER boundary
 \set ON_ERROR_STOP 1
 SET search_path = public, extensions;
 SELECT (:'phase' = 'before') AS is_before, (:'phase' = 'after') AS is_after \gset
 
--- S00 the fixture reproduces production's permissive sequence defaults
--- (otherwise every check below could pass on a stricter-than-production DB).
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_default_acl d JOIN pg_namespace n ON n.oid = d.defaclnamespace, aclexplode(d.defaclacl) a
-                  WHERE n.nspname = 'public' AND d.defaclobjtype = 'S'
-                    AND a.grantee = 'anon'::regrole AND a.privilege_type = 'UPDATE') THEN
-    RAISE EXCEPTION 'S00 fixture does not reproduce production sequence defaults (anon UPDATE on new sequences)';
-  END IF;
+-- S00 the fixture reproduces production's permissive sequence defaults for
+-- every API role and every sequence privilege (rwU); otherwise every check
+-- below could pass on a stricter-than-production DB (Codex G1-04).
+DO $$
+DECLARE r text; p text;
+BEGIN
+  FOREACH r IN ARRAY ARRAY['anon', 'authenticated', 'service_role'] LOOP
+    FOREACH p IN ARRAY ARRAY['USAGE', 'SELECT', 'UPDATE'] LOOP
+      IF NOT EXISTS (SELECT 1 FROM pg_default_acl d JOIN pg_namespace n ON n.oid = d.defaclnamespace, aclexplode(d.defaclacl) a
+                      WHERE n.nspname = 'public' AND d.defaclobjtype = 'S'
+                        AND a.grantee = r::regrole AND a.privilege_type = p) THEN
+        RAISE EXCEPTION 'S00 fixture does not reproduce production sequence defaults (% % on new sequences)', r, p;
+      END IF;
+    END LOOP;
+  END LOOP;
 END $$;
 
 \if :is_before
+-- S01a root cause: any identity sequence created in public inherits rwU for the API roles.
+CREATE TABLE public.p03_probe (id bigint GENERATED ALWAYS AS IDENTITY);
+DO $$
+DECLARE r text;
+BEGIN
+  FOREACH r IN ARRAY ARRAY['anon', 'authenticated', 'service_role'] LOOP
+    IF NOT (has_sequence_privilege(r, pg_get_serial_sequence('public.p03_probe', 'id'), 'USAGE')
+            AND has_sequence_privilege(r, pg_get_serial_sequence('public.p03_probe', 'id'), 'UPDATE')) THEN
+      RAISE EXCEPTION 'S01a new identity sequences do not inherit the API-role defaults for %', r;
+    END IF;
+  END LOOP;
+END $$;
+DROP TABLE public.p03_probe;
 -- S01 root cause reproduced: without 20260927 the audit sequence inherits the defaults.
 DO $$ BEGIN
   IF NOT has_sequence_privilege('anon', 'public.aef_audit_events_id_seq', 'UPDATE') THEN
@@ -35,12 +56,25 @@ RESET ROLE;
 SET ROLE anon;
 SELECT setval('public.aef_audit_events_id_seq', 1) AS anon_rewound_sequence;
 RESET ROLE;
-SET ROLE service_role;
 DO $$ BEGIN
+  IF (SELECT last_value FROM public.aef_audit_events_id_seq) <> 1 THEN
+    RAISE EXCEPTION 'S02 the anon setval did not take effect';
+  END IF;
+END $$;
+SET ROLE service_role;
+DO $$
+DECLARE v_con text;
+BEGIN
   BEGIN
     PERFORM public.aef_record_denial('{"subject_id":"c8000000-0000-4000-8000-00000000000c","reason_code":"UNKNOWN_TOOL"}');
     RAISE EXCEPTION 'S02 expected the audit append to collide after an anon setval';
-  EXCEPTION WHEN unique_violation THEN NULL; END;
+  EXCEPTION WHEN unique_violation THEN
+    GET STACKED DIAGNOSTICS v_con = CONSTRAINT_NAME;
+    -- the collision is on the identity primary key, i.e. caused by the rewound sequence
+    IF v_con IS DISTINCT FROM 'aef_audit_events_pkey' THEN
+      RAISE EXCEPTION 'S02 collision on % instead of aef_audit_events_pkey', v_con;
+    END IF;
+  END;
 END $$;
 RESET ROLE;
 SELECT 'AEF_SEQUENCE: EXPOSED_BEFORE_FIX';
@@ -55,8 +89,14 @@ BEGIN
                   WHERE n.nspname = 'public' AND c.relkind = 'S' AND c.relname = 'aef_audit_events_id_seq') THEN
     RAISE EXCEPTION 'S10 audit sequence missing';
   END IF;
-  FOR s IN SELECT c.oid, c.relname, c.relowner, c.relacl FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-            WHERE n.nspname = 'public' AND c.relkind = 'S' AND left(c.relname, 4) = 'aef_' LOOP
+  -- every sequence named aef_* OR owned by an aef_* table (same predicate as the migration)
+  FOR s IN SELECT c.oid, c.relname, c.relowner, c.relacl FROM pg_class c WHERE c.oid IN (
+           SELECT c.oid FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+            WHERE n.nspname = 'public' AND c.relkind = 'S'
+              AND (left(c.relname, 4) = 'aef_' OR EXISTS (
+                    SELECT 1 FROM pg_depend d JOIN pg_class t ON t.oid = d.refobjid
+                     WHERE d.classid = 'pg_class'::regclass AND d.objid = c.oid AND d.refclassid = 'pg_class'::regclass
+                       AND d.deptype IN ('a', 'i') AND left(t.relname, 4) = 'aef_'))) LOOP
     FOREACH r IN ARRAY ARRAY['anon', 'authenticated', 'service_role'] LOOP
       IF has_sequence_privilege(r, s.oid, 'USAGE') OR has_sequence_privilege(r, s.oid, 'SELECT')
          OR has_sequence_privilege(r, s.oid, 'UPDATE') THEN
@@ -70,7 +110,14 @@ BEGIN
   END LOOP;
   -- information_schema agrees
   IF EXISTS (SELECT 1 FROM information_schema.usage_privileges
-              WHERE object_schema = 'public' AND object_type = 'SEQUENCE' AND left(object_name, 4) = 'aef_'
+              WHERE object_schema = 'public' AND object_type = 'SEQUENCE'
+                AND object_name IN (SELECT c.relname FROM pg_class c WHERE c.oid IN (
+           SELECT c.oid FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+            WHERE n.nspname = 'public' AND c.relkind = 'S'
+              AND (left(c.relname, 4) = 'aef_' OR EXISTS (
+                    SELECT 1 FROM pg_depend d JOIN pg_class t ON t.oid = d.refobjid
+                     WHERE d.classid = 'pg_class'::regclass AND d.objid = c.oid AND d.refclassid = 'pg_class'::regclass
+                       AND d.deptype IN ('a', 'i') AND left(t.relname, 4) = 'aef_'))))
                 AND grantee IN ('PUBLIC', 'anon', 'authenticated', 'service_role')) THEN
     RAISE EXCEPTION 'S10 information_schema reports an API grant on an AEF sequence';
   END IF;
@@ -81,23 +128,32 @@ INSERT INTO auth.users (id, email) VALUES
   ('c8000000-0000-4000-8000-00000000000c', 'seq@test.invalid'),
   ('c9000000-0000-4000-8000-00000000000c', 'seq-foreign@test.invalid') ON CONFLICT DO NOTHING;
 DO $$
-DECLARE r text; q text;
+DECLARE r text; q text; sq oid; n int := 0;
 BEGIN
-  FOREACH r IN ARRAY ARRAY['anon', 'authenticated', 'service_role'] LOOP
-    FOREACH q IN ARRAY ARRAY[
-      'SELECT nextval(''public.aef_audit_events_id_seq'')',
-      'SELECT setval(''public.aef_audit_events_id_seq'', 1)',
-      'SELECT last_value FROM public.aef_audit_events_id_seq',
-      'ALTER SEQUENCE public.aef_audit_events_id_seq RESTART WITH 1'] LOOP
-      BEGIN
-        EXECUTE format('SET LOCAL ROLE %I', r);
-        PERFORM set_config('request.jwt.claim.sub', 'c9000000-0000-4000-8000-00000000000c', true);
-        EXECUTE q;
-        RAISE EXCEPTION 'S11 % could run: %', r, q;
-      EXCEPTION WHEN insufficient_privilege THEN NULL;
-      END;
+  FOR sq IN SELECT c.oid FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+            WHERE n.nspname = 'public' AND c.relkind = 'S'
+              AND (left(c.relname, 4) = 'aef_' OR EXISTS (
+                    SELECT 1 FROM pg_depend d JOIN pg_class t ON t.oid = d.refobjid
+                     WHERE d.classid = 'pg_class'::regclass AND d.objid = c.oid AND d.refclassid = 'pg_class'::regclass
+                       AND d.deptype IN ('a', 'i') AND left(t.relname, 4) = 'aef_')) LOOP
+    n := n + 1;
+    FOREACH r IN ARRAY ARRAY['anon', 'authenticated', 'service_role'] LOOP
+      FOREACH q IN ARRAY ARRAY[
+        format('SELECT nextval(%L)', sq::regclass::text),
+        format('SELECT setval(%L, 1)', sq::regclass::text),
+        format('SELECT last_value FROM %s', sq::regclass),
+        format('ALTER SEQUENCE %s RESTART WITH 1', sq::regclass)] LOOP
+        BEGIN
+          EXECUTE format('SET LOCAL ROLE %I', r);
+          PERFORM set_config('request.jwt.claim.sub', 'c9000000-0000-4000-8000-00000000000c', true);
+          EXECUTE q;
+          RAISE EXCEPTION 'S11 % could run: %', r, q;
+        EXCEPTION WHEN insufficient_privilege THEN NULL;
+        END;
+      END LOOP;
     END LOOP;
   END LOOP;
+  IF n = 0 THEN RAISE EXCEPTION 'S11 no AEF sequence discovered'; END IF;
 END $$;
 -- currval needs the sequence in the session and USAGE/SELECT: denied as well
 SET ROLE authenticated;

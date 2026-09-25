@@ -43,11 +43,15 @@ BEGIN
   IF (SELECT count(*) FROM pg_roles WHERE rolname IN ('anon', 'authenticated', 'service_role')) <> 3 THEN
     v_missing := v_missing || 'roles anon/authenticated/service_role'::text;
   END IF;
-  IF to_regprocedure('pg_catalog.sha256(bytea)') IS NULL OR to_regprocedure('pg_catalog.gen_random_uuid()') IS NULL THEN
-    v_missing := v_missing || 'pg_catalog.sha256 / gen_random_uuid'::text;
+  IF to_regprocedure('pg_catalog.sha256(bytea)') IS NULL
+     OR (SELECT prorettype FROM pg_proc WHERE oid = to_regprocedure('pg_catalog.sha256(bytea)')) IS DISTINCT FROM 'bytea'::regtype
+     OR to_regprocedure('pg_catalog.gen_random_uuid()') IS NULL
+     OR (SELECT prorettype FROM pg_proc WHERE oid = to_regprocedure('pg_catalog.gen_random_uuid()')) IS DISTINCT FROM 'uuid'::regtype THEN
+    v_missing := v_missing || 'pg_catalog.sha256(bytea) -> bytea / pg_catalog.gen_random_uuid() -> uuid'::text;
   END IF;
-  IF to_regprocedure('auth.uid()') IS NULL THEN
-    v_missing := v_missing || 'auth.uid()'::text;
+  IF to_regprocedure('auth.uid()') IS NULL
+     OR (SELECT prorettype FROM pg_proc WHERE oid = to_regprocedure('auth.uid()')) IS DISTINCT FROM 'uuid'::regtype THEN
+    v_missing := v_missing || 'auth.uid() returning uuid'::text;
   END IF;
   IF array_length(v_missing, 1) > 0 THEN
     RAISE EXCEPTION 'AEF_PRECONDITION (20260925000000_aef_persistence): missing or incompatible: %', array_to_string(v_missing, ', ')
@@ -1099,5 +1103,26 @@ BEGIN
                   'aef_verify_receipt', 'aef_verify_audit_chain') THEN
       EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO service_role', f);
     END IF;
+  END LOOP;
+END $$;
+
+-- ── AEF sequences: deny by default (IV-AEF-PRE-RUNTIME-CLOSURE-01, P03) ──
+-- Production's default privileges grant every new sequence in public rwU to
+-- anon/authenticated/service_role; the audit identity sequence would inherit
+-- them. Revoked here, in the migration that creates it, so no exposure window
+-- exists between migrations; 20260927000000 re-asserts it with a
+-- postcondition (and repairs a database where an earlier revision of this
+-- file was applied). The SECURITY DEFINER RPCs need no grant.
+DO $$
+DECLARE s oid;
+BEGIN
+  FOR s IN SELECT c.oid FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+     WHERE n.nspname = 'public' AND c.relkind = 'S'
+       AND (left(c.relname, 4) = 'aef_' OR EXISTS (
+             SELECT 1 FROM pg_depend d JOIN pg_class t ON t.oid = d.refobjid
+              WHERE d.classid = 'pg_class'::regclass AND d.objid = c.oid AND d.refclassid = 'pg_class'::regclass
+                AND d.deptype IN ('a', 'i') AND left(t.relname, 4) = 'aef_'))
+  LOOP
+    EXECUTE format('REVOKE ALL ON SEQUENCE %s FROM PUBLIC, anon, authenticated, service_role', s::regclass);
   END LOOP;
 END $$;
