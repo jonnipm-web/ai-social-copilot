@@ -115,6 +115,23 @@ authorized reconciler. Retention and erasure deletes happen only inside
 - The audit trail grows with refused attempts of verified users (bounded
   per request; no rate limit in this layer).
 - Not deployed; production behavior NOT_VERIFIED.
+- Pre-existing SECURITY DEFINER functions outside AEF (P06/P07) are
+  DEFERRED_SECURITY_BACKLOG; AEF does not call them (catalog S13, static
+  `AEF_DEFINER_BOUNDARY`).
+
+## Sequences and migration preconditions (IV-AEF-PRE-RUNTIME-CLOSURE-01)
+
+- **P03 CLOSED** (Lab): no API role and not PUBLIC holds USAGE/SELECT/UPDATE on
+  any AEF sequence (`AEF_SEQUENCE_PRIVILEGE_MODEL.md`). The test stubs now
+  reproduce production's permissive sequence defaults, so the contract is
+  proven under production-equivalent conditions.
+- Review rule: any future AEF migration that creates a table with an identity
+  / serial column must revoke its sequence from PUBLIC, anon, authenticated and
+  service_role and carry a postcondition (as `20260927000000`).
+- **P05/P10 RECONCILED**: every AEF migration opens with an `AEF_PRECONDITION`
+  guard (fail fast, nothing created); a READ-ONLY fail-closed deploy preflight
+  encodes the reconciliation matrix (`AEF_PRODUCTION_MIGRATION_RECONCILIATION.md`,
+  `AEF_PRODUCTION_DEPLOYMENT_PRECONDITIONS.md`).
 
 ## Codex gates — findings and dispositions
 

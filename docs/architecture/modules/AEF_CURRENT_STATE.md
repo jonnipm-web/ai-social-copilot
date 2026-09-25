@@ -65,6 +65,19 @@ Preflight executed read-only on 2026-09-24 (AEF_PRODUCTION_PRIVILEGE_PREFLIGHT.m
 compatible, with two deltas before any apply — audit sequence privileges
 (P03) and missing `subject_roles` dependency (P05).
 
+## Update — IV-AEF-PRE-RUNTIME-CLOSURE-01 (2026-09-25)
+
+| Finding | Status | Where |
+|---|---|---|
+| P03 audit sequence privileges | **CLOSED** (Lab) — `20260927000000_aef_sequence_privileges.sql`; production-parity fixture; tests S00–S13 | `AEF_SEQUENCE_PRIVILEGE_MODEL.md` |
+| P05 `subject_roles` dependency | **RECONCILED** — real dependency graph, fail-fast `AEF_PRECONDITION` guards in 20260925/26/27, manifest order | `AEF_PRODUCTION_MIGRATION_RECONCILIATION.md` |
+| P10 history ids ≠ file names | **RECONCILED** — name-keyed matrix (16 MATCHED, 5 NOT_PRESENT, 0 DRIFTED/UNKNOWN), READ-ONLY fail-closed deploy preflight | `AEF_PRODUCTION_MIGRATION_RECONCILIATION.md`, `supabase/preflight/aef_deploy_preflight.sql` |
+| P06/P07 pre-existing definer functions | **DEFERRED_SECURITY_BACKLOG** — untouched; AEF verified not to depend on them | `AEF_PRODUCTION_PRIVILEGE_PREFLIGHT.md` |
+
+Deploy runbook: `AEF_PRODUCTION_DEPLOYMENT_PRECONDITIONS.md` (documented, NOT
+executed). Production unchanged. Runtime still not available; IVE → AEF
+integration not started.
+
 ## What is kept
 
 The v0 kernel and its 138 tests stay unchanged: it remains the reference

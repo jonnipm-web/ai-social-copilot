@@ -21,6 +21,15 @@ applied or deployed.
 | P09 | RLS | `projects`, `subject_roles` RLS on | `projects` RLS on (not forced); `subject_roles` absent | see P05 | — | — |
 | P10 | migration history | ends before the Lab migrations | last applied `20260917205611`; ids are apply-time timestamps, not the repo file names | ids do not map 1:1 to repo files | drift is not provable from ids alone | before any apply: reconcile production history against repo migrations (schema diff), in its own gated mission |
 
+### Follow-up — IV-AEF-PRE-RUNTIME-CLOSURE-01 (2026-09-25)
+
+| # | Status |
+|---|---|
+| P03 | **CLOSED** in the Lab: `20260927000000_aef_sequence_privileges.sql` + production-parity sequence default in the stubs (`AEF_SEQUENCE_PRIVILEGE_MODEL.md`). Not applied in production. |
+| P05 | **RECONCILED**: fail-fast preconditions in every AEF migration; manifest order `20260923 → (20260924) → 20260925 → 20260926 → 20260927` (`AEF_PRODUCTION_DEPLOYMENT_PRECONDITIONS.md`). |
+| P06 / P07 | **DEFERRED_SECURITY_BACKLOG** — not modified; AEF does not depend on them. |
+| P10 | **RECONCILED**: history keyed by name, 16/16 MATCHED, chain NOT_PRESENT, 0 drift (`AEF_PRODUCTION_MIGRATION_RECONCILIATION.md`); READ-ONLY deploy preflight `supabase/preflight/aef_deploy_preflight.sql`. |
+
 ### Conclusion
 
 Production is compatible with the AEF migrations' privilege model (no
@@ -33,7 +42,8 @@ AEF and deserve their own hardening mission. Nothing was changed.
 ## Disposable-database baseline (observed, for comparison)
 
 On the disposable PostgreSQL 17 with Supabase stubs (which reproduce the
-Supabase default privileges) the privilege catalog is asserted by tests
+Supabase default privileges — tables, functions and, since
+IV-AEF-PRE-RUNTIME-CLOSURE-01, sequences) the privilege catalog is asserted by tests
 T14p (persistence) and H01 (hardening): no write privilege for any API role
 on any AEF table, EXECUTE only for service_role on the 13 RPCs, no EXECUTE on
 any `aef__*` helper, every AEF function pinned to `pg_catalog, pg_temp`.
