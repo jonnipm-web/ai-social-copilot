@@ -259,3 +259,22 @@ Deno.test('EF-14 rate limit is atomic under parallel requests (exactly `limit` a
   const res = await Promise.all(Array.from({ length: 12 }, () => e.send('jwt-admin-a', { action: 'get_dossier', investigation_id: a.investigationId })));
   assertEquals([res.filter((r) => r.status === 200).length, res.filter((r) => r.status === 429).length], [5, 7]);
 });
+
+Deno.test('EF-15 (I6) logs / events / error bodies never carry claim, evidence or publisher text', async () => {
+  const e = env();
+  const inv = ((await e.send('jwt-admin-a', { action: 'create_investigation', subject: SUBJECT })).body.data as Record<string, unknown>).investigationId as string;
+  const secret = ['Maria Placeholder', '12 Example Road', 'Jane Placeholder', 'placeholder@mail.example'];
+  await e.send('jwt-admin-a', { action: 'add_source', investigation_id: inv, source: { ref: 'src-web', type: 'ORGANIZATION_WEBSITE', publisher: 'Jane Placeholder placeholder@mail.example', retrievedAt: '2026-09-01T00:00:00Z', retention: 'EXCERPT_AND_HASH', contentHash: 'b'.repeat(64) } });
+  await e.send('jwt-admin-a', { action: 'add_claim', investigation_id: inv, claim: { ref: 'c1', kind: 'OTHER', text: 'Volunteer Maria Placeholder lives at 12 Example Road.', sourceRef: 'src-web', origin: 'MANUAL' } });
+  await e.send('jwt-admin-a', { action: 'add_evidence', investigation_id: inv, evidence: { ref: 'e1', claimRef: 'c1', sourceRef: 'src-web', aboutOrgRef: 'org-hopebridge', relationship: 'SUPPORTS', basis: 'HUMAN_ASSESSED', personalData: 'NONE', excerpt: 'Maria Placeholder, 12 Example Road.' } });
+  await e.send('jwt-admin-a', { action: 'run_verification', investigation_id: inv, claim_ref: 'c1' });
+  for (const action of ['get_dossier', 'export_dossier']) assertEquals((await e.send('jwt-admin-a', { action, investigation_id: inv })).status, 200);
+  // error paths: invalid request carrying the text, foreign probe, rate limit
+  const bad = await e.send('jwt-admin-a', { action: 'add_claim', investigation_id: inv, claim: { ref: 'c2', kind: 'NOPE', text: 'Maria Placeholder again', sourceRef: 'src-web', origin: 'MANUAL' } });
+  assertEquals(bad.status, 400);
+  const probe = await e.send('jwt-admin-b', { action: 'get_dossier', investigation_id: inv });
+  assertEquals(probe.status, 404);
+  const all = e.logs.join('\n') + JSON.stringify(bad.body) + JSON.stringify(probe.body);
+  for (const s of secret) assert(!all.includes(s), `leaked into logs / error bodies: ${s}`);
+  assert(e.logs.length > 0);
+});

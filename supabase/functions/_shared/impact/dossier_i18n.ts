@@ -76,7 +76,7 @@ export const LIMITATION_LABEL: Readonly<Record<LimitationCode, L>> = {
   LINEAGE_UNCERTAIN: { pt: 'Não foi possível confirmar se algumas fontes são independentes entre si.', en: 'It could not be confirmed whether some sources are independent of each other.' },
   HUMAN_REVIEW_REQUIRED: { pt: 'Uma verificação exige revisão humana antes de qualquer uso.', en: 'A verification requires human review before any use.' },
   LOCATOR_UNVERIFIABLE: { pt: 'A localização de um trecho não pode ser confirmada na versão atual do documento.', en: 'The location of an excerpt cannot be confirmed in the current document version.' },
-  EXCERPT_WITHHELD: { pt: 'Um trecho foi omitido por conter dados pessoais.', en: 'An excerpt was withheld because it contains personal data.' },
+  EXCERPT_WITHHELD: { pt: 'Um texto foi omitido porque contém, ou pode conter, dados pessoais (regra conservadora: na dúvida, omite).', en: 'A text was withheld because it contains, or may contain, personal data (conservative rule: when in doubt, it is withheld).' },
   PERSONAL_DATA_REDACTED: { pt: 'Dados de contato ou identificadores pessoais foram removidos de um texto citado.', en: 'Contact details or personal identifiers were removed from a quoted text.' },
 };
 

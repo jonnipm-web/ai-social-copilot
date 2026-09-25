@@ -1,6 +1,6 @@
 {
   "ok": true,
-  "action": "get_dossier",
+  "action": "export_dossier",
   "data": {
     "dossier": {
       "schemaVersion": "impact-dossier/1",
@@ -33,7 +33,7 @@
           "projectRef": null,
           "status": "ACTIVE"
         },
-        "asOf": "2026-09-01T00:00:00.000Z",
+        "asOf": "2026-09-25T09:07:00.000Z",
         "subject": {
           "ref": "org-hopebridge",
           "type": "FOUNDATION",
@@ -57,15 +57,156 @@
               "hopebridge.example"
             ]
           },
-          "identityStatus": "UNRESOLVED",
-          "identityConfirmed": false,
+          "identityStatus": "CONFIRMED",
+          "identityConfirmed": true,
           "identityBasis": "PROVIDER_REGISTRY_SNAPSHOTS_ONLY"
         },
-        "registryFacts": [],
+        "registryFacts": [
+          {
+            "sourceRef": "src-reg",
+            "active": true,
+            "providerId": "fixture-xa-charity-registry",
+            "recordId": "xa-1234567",
+            "canonicalOrgId": "XA:charity-number:XA1234567",
+            "legalName": "HopeBridge Foundation",
+            "registryStatus": "REGISTERED",
+            "statusAsOf": "2026-08-31",
+            "sourceAsOf": "2026-08-31",
+            "registeredOn": "2012-03-01",
+            "dissolvedOn": null,
+            "retrievedAt": "2026-09-01T00:00:00Z",
+            "dataHash": "45a10e55c959ffb9d876be81d528d7efadf893eace76b4d82f8a6e4c63079ae2",
+            "synthetic": true,
+            "freshnessDays": 7,
+            "freshAtAsOf": false,
+            "authority": {
+              "official": true,
+              "authorityClass": "STATUTORY_REGISTER",
+              "primaryPublisher": true,
+              "termsStatus": "SYNTHETIC"
+            },
+            "factClass": "OFFICIAL_REGISTRY_RECORD"
+          }
+        ],
         "registryConflicts": [],
-        "claims": [],
-        "evidence": [],
+        "claims": [
+          {
+            "ref": "c-org",
+            "kind": "OTHER",
+            "text": "HopeBridge Foundation operates in two districts.",
+            "textWithheld": null,
+            "textRedacted": false,
+            "textAttribution": "QUOTED_FROM_SOURCE",
+            "textLanguage": null,
+            "sourceRef": "src-web",
+            "origin": "MANUAL",
+            "period": null,
+            "quantity": null,
+            "level": null,
+            "extractedAt": "2026-09-25T09:06:00.000Z",
+            "subjectProjectRef": null,
+            "subjectCampaignRef": null,
+            "verification": null,
+            "reverificationPending": false,
+            "reverificationReasons": [],
+            "disputeRefs": [],
+            "evidenceRefs": [
+              "e-private"
+            ],
+            "isFindingOfWrongdoing": false
+          },
+          {
+            "ref": "c-private",
+            "kind": "OTHER",
+            "text": null,
+            "textWithheld": "PERSONAL_DATA_RISK",
+            "textRedacted": false,
+            "textAttribution": "QUOTED_FROM_SOURCE",
+            "textLanguage": null,
+            "sourceRef": "src-web",
+            "origin": "MANUAL",
+            "period": null,
+            "quantity": null,
+            "level": null,
+            "extractedAt": "2026-09-25T09:05:00.000Z",
+            "subjectProjectRef": null,
+            "subjectCampaignRef": null,
+            "verification": null,
+            "reverificationPending": false,
+            "reverificationReasons": [],
+            "disputeRefs": [],
+            "evidenceRefs": [],
+            "isFindingOfWrongdoing": false
+          }
+        ],
+        "evidence": [
+          {
+            "ref": "e-private",
+            "claimRef": "c-org",
+            "sourceRef": "src-web",
+            "aboutOrgRef": "org-hopebridge",
+            "relationship": "CONTEXTUALIZES",
+            "basis": "HUMAN_ASSESSED",
+            "observedPeriod": null,
+            "level": null,
+            "reportedQuantity": null,
+            "legalStage": null,
+            "personalData": "NONE",
+            "excerpt": null,
+            "excerptHash": "81b78d68e8177a0fae8d5f01180311fdd58e81f82132d8dee551a16713bd716e",
+            "excerptWithheld": "PERSONAL_DATA_RISK",
+            "excerptRedacted": false,
+            "excerptAttribution": "QUOTED_FROM_SOURCE",
+            "locator": null,
+            "locatorState": "NOT_ARTIFACT_BOUND",
+            "addedAt": "2026-09-25T09:07:00.000Z"
+          }
+        ],
         "sources": [
+          {
+            "ref": "src-reg",
+            "type": "OFFICIAL_REGISTRY",
+            "publisher": "Exampleland Charity Registry (fixture)",
+            "publisherOrgRef": null,
+            "uri": null,
+            "retrievedAt": "2026-09-01T00:00:00Z",
+            "publishedAt": "2026-08-31",
+            "status": "ACTIVE",
+            "retention": "SNAPSHOT",
+            "contentHash": "a37ef7abf8257f6e7672c9e45b8be2f0457abd862c620b350e18d541f49fbb45",
+            "acquisition": "PROVIDER",
+            "providerId": "fixture-xa-charity-registry",
+            "userSubmitted": false,
+            "hasRegistrySnapshot": true,
+            "newsGenre": null,
+            "syndicatedFrom": null,
+            "derivedFrom": null,
+            "syndicationMarkers": [],
+            "artifactRef": null,
+            "host": null
+          },
+          {
+            "ref": "src-social",
+            "type": "SOCIAL_MEDIA",
+            "publisher": "—",
+            "publisherOrgRef": null,
+            "uri": "https://social.example",
+            "retrievedAt": "2026-09-01T00:00:00Z",
+            "publishedAt": null,
+            "status": "ACTIVE",
+            "retention": "REFERENCE_ONLY",
+            "contentHash": null,
+            "acquisition": "ANALYST_ENTRY",
+            "providerId": null,
+            "userSubmitted": false,
+            "hasRegistrySnapshot": false,
+            "newsGenre": null,
+            "syndicatedFrom": null,
+            "derivedFrom": null,
+            "syndicationMarkers": [],
+            "artifactRef": null,
+            "host": null
+          },
           {
             "ref": "src-web",
             "type": "ORGANIZATION_WEBSITE",
@@ -93,14 +234,34 @@
         "disputes": [],
         "limitations": [
           {
-            "code": "IDENTITY_NOT_CONFIRMED",
-            "scope": "IDENTITY",
-            "ref": null
+            "code": "CLAIM_NOT_VERIFIED",
+            "scope": "CLAIM",
+            "ref": "c-org"
           },
           {
-            "code": "NO_REGISTRY_RECORD",
+            "code": "CLAIM_NOT_VERIFIED",
+            "scope": "CLAIM",
+            "ref": "c-private"
+          },
+          {
+            "code": "EXCERPT_WITHHELD",
+            "scope": "CLAIM",
+            "ref": "c-private"
+          },
+          {
+            "code": "EXCERPT_WITHHELD",
+            "scope": "EVIDENCE",
+            "ref": "e-private"
+          },
+          {
+            "code": "EXCERPT_WITHHELD",
+            "scope": "SOURCE",
+            "ref": "src-social"
+          },
+          {
+            "code": "REGISTRY_RECORD_NOT_FRESH",
             "scope": "REGISTRY",
-            "ref": null
+            "ref": "src-reg"
           }
         ],
         "doesNotEstablish": [
@@ -108,10 +269,11 @@
           "NOT_A_FINDING_OF_WRONGDOING",
           "NOT_PROFESSIONAL_DUE_DILIGENCE",
           "NO_DONATION_ADVICE",
-          "NO_INTENT_OR_INNOCENCE"
+          "NO_INTENT_OR_INNOCENCE",
+          "UNVERIFIED_IS_NOT_FALSE"
         ],
         "summary": {
-          "claims": 0,
+          "claims": 2,
           "byStatus": {
             "SUPPORTED": 0,
             "PARTIALLY_SUPPORTED": 0,
@@ -131,34 +293,39 @@
             "UNKNOWN": 0,
             "ABSENCE_OF_EVIDENCE": 0
           },
-          "notVerified": 0,
+          "notVerified": 2,
           "reverificationPending": 0,
           "openDisputes": 0,
           "conflicts": 0,
           "registryConflicts": 0,
-          "evidence": 0,
-          "sources": 1,
+          "evidence": 1,
+          "sources": 3,
           "artifacts": 0,
-          "limitations": 2
+          "limitations": 6
         },
         "dossierStatus": "INCOMPLETE"
       },
       "integrity": {
         "algorithm": "SHA-256",
         "canonicalization": "impact-canonical-json/1",
-        "contentHash": "6dadd202a18859ad689c458c73104c45ef99a0cbc096bf4811c8f3023815b187"
+        "contentHash": "092c5635f8f5d2953e062d3015bec36b54f9281602ed3fde8dcc2fe911849d4c"
       },
       "envelope": {
-        "kind": "LIVE",
-        "generatedAt": "2026-09-25T09:03:00.000Z",
-        "auditSeq": 2,
-        "auditHead": "fe987a9726e04aece17e77585e50292131709130979fcb5a3f47f5965f3ac50e",
-        "snapshotRef": null,
-        "notice": "LIVE_VIEW_OF_CURRENT_STATE",
-        "registryFreshAtGeneration": []
+        "kind": "SNAPSHOT",
+        "generatedAt": "2026-09-25T09:09:00.000Z",
+        "auditSeq": 8,
+        "auditHead": "2cc772f245da2bc9c9e6c89b4f4618618d12c65b58b12b8e331320b089c60ffa",
+        "snapshotRef": "dossier-092c5635f8f5d2953e062d30",
+        "notice": "HISTORICAL_SNAPSHOT_AS_OF",
+        "registryFreshAtGeneration": [
+          {
+            "sourceRef": "src-reg",
+            "fresh": false
+          }
+        ]
       }
     },
-    "text": "# Verification dossier — «HopeBridge Foundation»\nEXPERIMENTAL — Impact Lab internal use.\nAs of: «2026-09-01T00:00:00.000Z» · Live view of the current state (changes when the evidence changes).\nIncomplete — some claims are not verified or await re-verification\n\n## What this dossier does NOT establish\n- Absence of evidence is not evidence of wrongdoing.\n- It is not a finding of wrongdoing about the organization.\n- It does not replace professional due diligence.\n- It does not recommend donating or not donating.\n- It does not establish anyone’s intent, guilt or innocence.\n\n## Limitations\n- The organization identity was not confirmed by an official registry.\n- No official registry record was consulted or attached. This does not mean the organization is unregistered.\n\n## Summary\n\n## Organization identity\n- «HopeBridge Foundation» («FOUNDATION»)\n- Unresolved — no registry record confirms it\n\n## Claims and verification\nExcerpts in « » are quotes from the sources, not statements by InsightValues.\n\n## Sources\n- «src-web» · «ORGANIZATION_WEBSITE» · «HopeBridge Foundation» · «ANALYST_ENTRY» · «ACTIVE» · «2026-09-01T00:00:00Z»\n\n## Integrity and provenance\n- «impact-dossier/1» · SHA-256 «6dadd202a18859ad689c458c73104c45ef99a0cbc096bf4811c8f3023815b187»\n- The hash proves this content was not altered; it does not prove it is true.",
+    "text": "# Verification dossier — «HopeBridge Foundation»\nEXPERIMENTAL — Impact Lab internal use.\nAs of: «2026-09-25T09:07:00.000Z» · Historical snapshot: represents the state at this date and never updates itself.\nIncomplete — some claims are not verified or await re-verification\n\n## What this dossier does NOT establish\n- Absence of evidence is not evidence of wrongdoing.\n- It is not a finding of wrongdoing about the organization.\n- It does not replace professional due diligence.\n- It does not recommend donating or not donating.\n- It does not establish anyone’s intent, guilt or innocence.\n- An unverified claim, or one with insufficient evidence, is not a false claim.\n\n## Limitations\n- A claim has not been verified yet. («c-org», «c-private»)\n- A text was withheld because it contains, or may contain, personal data (conservative rule: when in doubt, it is withheld). («c-private», «e-private», «src-social»)\n- An official registry record may be out of date and need refreshing. («src-reg»)\n\n## Summary\n- Not yet verified by the engine. 2\n\n## Organization identity\n- «HopeBridge Foundation» («FOUNDATION»)\n- Confirmed by an official registry\n\n## Official registry records\n- «HopeBridge Foundation» · «XA:charity-number:XA1234567» · «REGISTERED» «2026-08-31» · «fixture-xa-charity-registry» (official source) · «2026-09-01T00:00:00Z» · test data\n  - outside its refresh window at the as-of date · may need refreshing today\n\n## Claims and verification\n### «c-org» — «HopeBridge Foundation operates in two districts.»\n- Not yet verified by the engine.\n  - «e-private» · «src-web» · «CONTEXTUALIZES» [excerpt withheld for privacy] · no attached document\n### «c-private» — [excerpt withheld for privacy]\n- Not yet verified by the engine.\nExcerpts in « » are quotes from the sources, not statements by InsightValues.\n\n## Sources\n- «src-reg» · «OFFICIAL_REGISTRY» · «Exampleland Charity Registry (fixture)» · «PROVIDER» · «ACTIVE» · «2026-09-01T00:00:00Z»\n- «src-social» · «SOCIAL_MEDIA» · «—» · «ANALYST_ENTRY» · «ACTIVE» · «2026-09-01T00:00:00Z»\n- «src-web» · «ORGANIZATION_WEBSITE» · «HopeBridge Foundation» · «ANALYST_ENTRY» · «ACTIVE» · «2026-09-01T00:00:00Z»\n\n## Integrity and provenance\n- «impact-dossier/1» · SHA-256 «092c5635f8f5d2953e062d3015bec36b54f9281602ed3fde8dcc2fe911849d4c»\n- «dossier-092c5635f8f5d2953e062d30» · «2026-09-25T09:09:00.000Z»\n- The hash proves this content was not altered; it does not prove it is true.",
     "labels": {
       "status": {
         "UNVERIFIED": "Unverified",
@@ -316,6 +483,12 @@
         "SYNTHETIC": "test data",
         "RULES": "rules applied"
       }
+    },
+    "snapshot": {
+      "ref": "dossier-092c5635f8f5d2953e062d30",
+      "contentHash": "092c5635f8f5d2953e062d3015bec36b54f9281602ed3fde8dcc2fe911849d4c",
+      "exportedAt": "2026-09-25T09:09:00.000Z",
+      "replayed": false
     }
   },
   "correlation_id": "00000000-0000-4000-8000-00000000c0de"

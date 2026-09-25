@@ -285,7 +285,8 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Issue'));
       await tester.pumpAndSettle();
       expect(find.text('Snapshot issued'), findsOneWidget);
-      expect(find.textContaining('dossier-40f99eff8990cf9b0f67a365'), findsWidgets);
+      final ref = (((fixture('export_confirmed_en')['data'] as Map)['dossier'] as Map)['envelope'] as Map)['snapshotRef'] as String;
+      expect(find.textContaining(ref), findsWidgets);
       // I5G1-07 — the issued snapshot's own caveats are shown with it.
       expect(find.textContaining('The issued snapshot carries these caveats'), findsOneWidget);
       await tester.ensureVisible(find.text('Verify snapshot'));
@@ -403,6 +404,49 @@ void main() {
       await tester.tap(find.text('Show more (180)'));
       await tester.pumpAndSettle();
       expect(find.text('Show more (160)'), findsOneWidget);
+    });
+  });
+
+  group('UI-PRV presentation privacy (I6, closes I5F-03)', () {
+    const privateStrings = ['Maria Placeholder', '12 Example Road', 'Mr Placeholder', 'jane.placeholder', 'Jane Placeholder'];
+
+    testWidgets('UI-PRV-01 server-withheld private name / address never reaches the screen; org claim stays', (tester) async {
+      await pumpImpact(tester, dossierScreen, transport: FakeImpactTransport(dossier: fixture('dossier_private_en')), size: const Size(390, 9000));
+      final texts = tester.widgetList<Text>(find.byType(Text)).map((t) => t.data ?? '').join(' | ');
+      for (final s in privateStrings) {
+        expect(texts, isNot(contains(s)), reason: s);
+      }
+      expect(find.text('Excerpt withheld for privacy'), findsWidgets);
+      expect(find.textContaining('«HopeBridge Foundation operates in two districts.»'), findsOneWidget);
+      expect(find.textContaining('may contain, personal data'), findsWidgets);
+    });
+
+    testWidgets('UI-PRV-02 the private-scenario export (JSON + text) carries none of it', (tester) async {
+      final copied = <String>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        if (call.method == 'Clipboard.setData') copied.add((call.arguments as Map)['text'] as String);
+        return null;
+      });
+      addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
+      final tr = FakeImpactTransport(dossier: fixture('dossier_private_en'), export: fixture('export_private_en'));
+      await pumpImpact(tester, dossierScreen, transport: tr, size: const Size(1440, 5000));
+      await tester.tap(find.widgetWithText(FilledButton, 'Issue snapshot'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Issue'));
+      await tester.pumpAndSettle();
+      for (final label in ['Copy JSON', 'Copy text']) {
+        await tester.ensureVisible(find.text(label));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(label));
+        await tester.pumpAndSettle();
+      }
+      expect(copied, hasLength(2));
+      for (final c in copied) {
+        for (final s in privateStrings) {
+          expect(c, isNot(contains(s)), reason: s);
+        }
+      }
+      expect(copied[0], contains('"textWithheld": "PERSONAL_DATA_RISK"'));
     });
   });
 

@@ -25,7 +25,8 @@
           "verification": "impact-verification/9+impact-source-authority/3+impact-temporal/3+impact-lineage/2",
           "lineage": "impact-lineage/2",
           "artifact": "impact-artifact/1",
-          "providerRegistry": "impact-provider-registry/2"
+          "providerRegistry": "impact-provider-registry/2",
+          "privacy": "impact-privacy/1"
         },
         "investigation": {
           "ref": "00000000-0000-4000-8000-000000000001",
@@ -466,14 +467,14 @@
       "integrity": {
         "algorithm": "SHA-256",
         "canonicalization": "impact-canonical-json/1",
-        "contentHash": "40f99eff8990cf9b0f67a3651196a072d798ca1791b3ca26c9f01e493e84d425"
+        "contentHash": "c9c57c6234d472f25a8ea50f250af42037eb0c0bb3baaf0c8982894dcac7cef6"
       },
       "envelope": {
         "kind": "SNAPSHOT",
         "generatedAt": "2026-09-25T09:14:00.000Z",
         "auditSeq": 16,
         "auditHead": "d357cfea2ec07fae7f0be12e9750eef9f0ad00751db29c6c47fe6f035ee7eb9e",
-        "snapshotRef": "dossier-40f99eff8990cf9b0f67a365",
+        "snapshotRef": "dossier-c9c57c6234d472f25a8ea50f",
         "notice": "HISTORICAL_SNAPSHOT_AS_OF",
         "registryFreshAtGeneration": [
           {
@@ -483,7 +484,7 @@
         ]
       }
     },
-    "text": "# Verification dossier — «HopeBridge Foundation»\nEXPERIMENTAL — Impact Lab internal use.\nAs of: «2026-09-25T09:10:00.000Z» · Historical snapshot: represents the state at this date and never updates itself.\nIncomplete — some claims are not verified or await re-verification\n\n## What this dossier does NOT establish\n- Absence of evidence is not evidence of wrongdoing.\n- Several documents do not mean several independent sources.\n- It is not a finding of wrongdoing about the organization.\n- It does not replace professional due diligence.\n- It does not recommend donating or not donating.\n- It does not establish anyone’s intent, guilt or innocence.\n- Excerpts quoted from sources are not statements by InsightValues.\n- An unverified claim, or one with insufficient evidence, is not a false claim.\n- User-uploaded documents are context, never authority.\n\n## Limitations\n- A verification requires human review before any use. («c-wells»)\n- We did not find enough evidence in the sources analyzed to confirm a claim. This does not indicate it is false. («c-wells»)\n- An official registry record may be out of date and need refreshing. («src-reg»)\n- Evidence or a dispute changed after the last verification. («c-reg»)\n\n## Summary\n- Supported by independent evidence: 1\n- Unverified: 1\n- Re-verification pending: 1\n\n## Organization identity\n- «HopeBridge Foundation» («FOUNDATION»)\n- Confirmed by an official registry\n\n## Official registry records\n- «HopeBridge Foundation» · «XA:charity-number:XA1234567» · «REGISTERED» «2026-08-31» · «fixture-xa-charity-registry» (official source) · «2026-09-01T00:00:00Z» · test data\n  - outside its refresh window at the as-of date · may need refreshing today\n\n## Claims and verification\n### «c-reg» — «HopeBridge Foundation is a registered charity.»\n- Supported by independent evidence · Verified fact (official source, within its scope) · One independent source\n- Independent voices: 1\n- Supporting evidence: «e-reg» («src-reg», «AUTHORITATIVE»)\n- rules applied: «S05_AUTHORITATIVE_WITHIN_SCOPE» · «impact-verification/9+impact-source-authority/3+impact-temporal/3+impact-lineage/2» · «2026-09-25T09:06:00.000Z»\n- Re-verification pending: the evidence changed\n  - «e-reg» · «src-reg» · «SUPPORTS» · no attached document\n### «c-wells» — «HopeBridge Foundation built 20 wells.»\n- Unverified · Source claim · Not independently corroborated\n- Independent voices: 0\n- Context (not counted as corroboration): «art-report.auto1.ev» («art-report», «USER_SUBMITTED»)\n- no independent source\n- rules applied: «S03_NO_INDEPENDENT_CORROBORATION» · «impact-verification/9+impact-source-authority/3+impact-temporal/3+impact-lineage/2» · «2026-09-25T09:10:00.000Z»\n  - «art-report.auto1.ev» · «art-report» · «SUPPORTS» «HopeBridge Foundation built 20 wells in 2025.» «art-report» «7587f959a927» «{\"kind\":\"TEXT_LINES\",\"lineStart\":2,\"lineEnd\":2}» · location confirmed\nExcerpts in « » are quotes from the sources, not statements by InsightValues.\n\n## Sources\n- «art-report» · «USER_DOCUMENT» · «Cloud import (GOOGLE_DRIVE, client-declared)» · hosted on «GOOGLE_DRIVE» · «USER_UPLOAD» · «ACTIVE» · «2026-09-25T09:08:00.000Z»\n- «src-reg» · «OFFICIAL_REGISTRY» · «Exampleland Charity Registry (fixture)» · «PROVIDER» · «ACTIVE» · «2026-09-01T00:00:00Z»\n- «src-web» · «ORGANIZATION_WEBSITE» · «HopeBridge Foundation» · «ANALYST_ENTRY» · «ACTIVE» · «2026-09-01T00:00:00Z»\n\n## Integrity and provenance\n- «impact-dossier/1» · SHA-256 «40f99eff8990cf9b0f67a3651196a072d798ca1791b3ca26c9f01e493e84d425»\n- «dossier-40f99eff8990cf9b0f67a365» · «2026-09-25T09:14:00.000Z»\n- The hash proves this content was not altered; it does not prove it is true.",
+    "text": "# Verification dossier — «HopeBridge Foundation»\nEXPERIMENTAL — Impact Lab internal use.\nAs of: «2026-09-25T09:10:00.000Z» · Historical snapshot: represents the state at this date and never updates itself.\nIncomplete — some claims are not verified or await re-verification\n\n## What this dossier does NOT establish\n- Absence of evidence is not evidence of wrongdoing.\n- Several documents do not mean several independent sources.\n- It is not a finding of wrongdoing about the organization.\n- It does not replace professional due diligence.\n- It does not recommend donating or not donating.\n- It does not establish anyone’s intent, guilt or innocence.\n- Excerpts quoted from sources are not statements by InsightValues.\n- An unverified claim, or one with insufficient evidence, is not a false claim.\n- User-uploaded documents are context, never authority.\n\n## Limitations\n- A verification requires human review before any use. («c-wells»)\n- We did not find enough evidence in the sources analyzed to confirm a claim. This does not indicate it is false. («c-wells»)\n- An official registry record may be out of date and need refreshing. («src-reg»)\n- Evidence or a dispute changed after the last verification. («c-reg»)\n\n## Summary\n- Supported by independent evidence: 1\n- Unverified: 1\n- Re-verification pending: 1\n\n## Organization identity\n- «HopeBridge Foundation» («FOUNDATION»)\n- Confirmed by an official registry\n\n## Official registry records\n- «HopeBridge Foundation» · «XA:charity-number:XA1234567» · «REGISTERED» «2026-08-31» · «fixture-xa-charity-registry» (official source) · «2026-09-01T00:00:00Z» · test data\n  - outside its refresh window at the as-of date · may need refreshing today\n\n## Claims and verification\n### «c-reg» — «HopeBridge Foundation is a registered charity.»\n- Supported by independent evidence · Verified fact (official source, within its scope) · One independent source\n- Independent voices: 1\n- Supporting evidence: «e-reg» («src-reg», «AUTHORITATIVE»)\n- rules applied: «S05_AUTHORITATIVE_WITHIN_SCOPE» · «impact-verification/9+impact-source-authority/3+impact-temporal/3+impact-lineage/2» · «2026-09-25T09:06:00.000Z»\n- Re-verification pending: the evidence changed\n  - «e-reg» · «src-reg» · «SUPPORTS» · no attached document\n### «c-wells» — «HopeBridge Foundation built 20 wells.»\n- Unverified · Source claim · Not independently corroborated\n- Independent voices: 0\n- Context (not counted as corroboration): «art-report.auto1.ev» («art-report», «USER_SUBMITTED»)\n- no independent source\n- rules applied: «S03_NO_INDEPENDENT_CORROBORATION» · «impact-verification/9+impact-source-authority/3+impact-temporal/3+impact-lineage/2» · «2026-09-25T09:10:00.000Z»\n  - «art-report.auto1.ev» · «art-report» · «SUPPORTS» «HopeBridge Foundation built 20 wells in 2025.» «art-report» «7587f959a927» «{\"kind\":\"TEXT_LINES\",\"lineStart\":2,\"lineEnd\":2}» · location confirmed\nExcerpts in « » are quotes from the sources, not statements by InsightValues.\n\n## Sources\n- «art-report» · «USER_DOCUMENT» · «Cloud import (GOOGLE_DRIVE, client-declared)» · hosted on «GOOGLE_DRIVE» · «USER_UPLOAD» · «ACTIVE» · «2026-09-25T09:08:00.000Z»\n- «src-reg» · «OFFICIAL_REGISTRY» · «Exampleland Charity Registry (fixture)» · «PROVIDER» · «ACTIVE» · «2026-09-01T00:00:00Z»\n- «src-web» · «ORGANIZATION_WEBSITE» · «HopeBridge Foundation» · «ANALYST_ENTRY» · «ACTIVE» · «2026-09-01T00:00:00Z»\n\n## Integrity and provenance\n- «impact-dossier/1» · SHA-256 «c9c57c6234d472f25a8ea50f250af42037eb0c0bb3baaf0c8982894dcac7cef6»\n- «dossier-c9c57c6234d472f25a8ea50f» · «2026-09-25T09:14:00.000Z»\n- The hash proves this content was not altered; it does not prove it is true.",
     "labels": {
       "status": {
         "UNVERIFIED": "Unverified",
@@ -545,7 +546,7 @@
         "LINEAGE_UNCERTAIN": "It could not be confirmed whether some sources are independent of each other.",
         "HUMAN_REVIEW_REQUIRED": "A verification requires human review before any use.",
         "LOCATOR_UNVERIFIABLE": "The location of an excerpt cannot be confirmed in the current document version.",
-        "EXCERPT_WITHHELD": "An excerpt was withheld because it contains personal data.",
+        "EXCERPT_WITHHELD": "A text was withheld because it contains, or may contain, personal data (conservative rule: when in doubt, it is withheld).",
         "PERSONAL_DATA_REDACTED": "Contact details or personal identifiers were removed from a quoted text."
       },
       "nonFinding": {
@@ -643,8 +644,8 @@
       }
     },
     "snapshot": {
-      "ref": "dossier-40f99eff8990cf9b0f67a365",
-      "contentHash": "40f99eff8990cf9b0f67a3651196a072d798ca1791b3ca26c9f01e493e84d425",
+      "ref": "dossier-c9c57c6234d472f25a8ea50f",
+      "contentHash": "c9c57c6234d472f25a8ea50f250af42037eb0c0bb3baaf0c8982894dcac7cef6",
       "exportedAt": "2026-09-25T09:14:00.000Z",
       "replayed": false
     }

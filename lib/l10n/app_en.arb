@@ -317,7 +317,7 @@
   "impactHashNotTruth": "The hash proves the content was not altered — it does not prove it is true.",
   "impactSnapshotRef": "Snapshot reference",
   "impactVerifyCurrent": "Current snapshot: the content has not changed since it was issued.",
-  "impactVerifyStale": "Stale snapshot: the evidence changed after it was issued. It remains valid as a historical record.",
+  "impactVerifyStale": "Stale snapshot: the dossier content changed after it was issued (evidence or presentation policy). It remains valid as a historical record.",
   "impactVerifyNotIssued": "This hash was not issued for this investigation.",
   "impactEnvelopeMismatch": "The snapshot metadata does not match the register.",
   "impactVerifySnapshot": "Verify snapshot",

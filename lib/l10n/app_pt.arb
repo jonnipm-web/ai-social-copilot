@@ -341,7 +341,7 @@
   "impactHashNotTruth": "O hash prova que o conteúdo não foi alterado — não prova que ele é verdadeiro.",
   "impactSnapshotRef": "Referência do snapshot",
   "impactVerifyCurrent": "Snapshot atual: o conteúdo não mudou desde a emissão.",
-  "impactVerifyStale": "Snapshot desatualizado: a evidência mudou depois da emissão. O snapshot continua válido como registro histórico.",
+  "impactVerifyStale": "Snapshot desatualizado: o conteúdo do dossiê mudou depois da emissão (evidência ou política de apresentação). O snapshot continua válido como registro histórico.",
   "impactVerifyNotIssued": "Este hash não foi emitido para esta investigação.",
   "impactEnvelopeMismatch": "Os metadados do snapshot não conferem com o registro.",
   "impactVerifySnapshot": "Verificar snapshot",

@@ -112,6 +112,20 @@ export async function buildUiFixtures(): Promise<Record<string, unknown>> {
     out['dossier_disputed_en'] = await h.call({ action: 'get_dossier', investigation_id: inv, lang: 'en' });
   }
 
+  // G — I6 privacy (I5F-03): private name / address in free text declared
+  // NONE by the reviewer, a social-media publisher that is a person, and a
+  // URL with a personal path. All synthetic; the server must withhold them.
+  {
+    const h = harness();
+    const inv = await base(h);
+    await h.call({ action: 'add_source', investigation_id: inv, source: { ref: 'src-social', type: 'SOCIAL_MEDIA', publisher: 'Jane Placeholder (@jane.placeholder)', uri: 'https://social.example/jane.placeholder/posts/1', retrievedAt: '2026-09-01T00:00:00Z', retention: 'REFERENCE_ONLY' } });
+    await h.call({ action: 'add_claim', investigation_id: inv, claim: { ref: 'c-private', kind: 'OTHER', text: 'Volunteer Maria Placeholder lives at 12 Example Road and runs the HopeBridge Foundation well site.', sourceRef: 'src-web', origin: 'MANUAL' } });
+    await h.call({ action: 'add_claim', investigation_id: inv, claim: { ref: 'c-org', kind: 'OTHER', text: 'HopeBridge Foundation operates in two districts.', sourceRef: 'src-web', origin: 'MANUAL' } });
+    await h.call({ action: 'add_evidence', investigation_id: inv, evidence: { ref: 'e-private', claimRef: 'c-org', sourceRef: 'src-web', aboutOrgRef: 'org-hopebridge', relationship: 'CONTEXTUALIZES', basis: 'HUMAN_ASSESSED', personalData: 'NONE', excerpt: 'Our treasurer Mr Placeholder confirmed the two districts.' } });
+    out['dossier_private_en'] = await h.call({ action: 'get_dossier', investigation_id: inv, lang: 'en' });
+    out['export_private_en'] = await h.call({ action: 'export_dossier', investigation_id: inv, lang: 'en' });
+  }
+
   // Empty — no claims yet.
   {
     const h = harness();

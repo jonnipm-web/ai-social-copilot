@@ -5,14 +5,14 @@
     "state": "STALE",
     "envelopeState": "MATCHES_REGISTRATION",
     "snapshot": {
-      "ref": "dossier-40f99eff8990cf9b0f67a365",
+      "ref": "dossier-c9c57c6234d472f25a8ea50f",
       "exportedAt": "2026-09-25T09:14:00.000Z",
       "asOf": "2026-09-25T09:10:00.000Z",
       "dossierStatus": "INCOMPLETE",
       "auditSeq": 16,
       "auditHead": "d357cfea2ec07fae7f0be12e9750eef9f0ad00751db29c6c47fe6f035ee7eb9e"
     },
-    "currentContentHash": "88e943370be429af9ee64a94d19b41a4243dcf2ac69f88f6da75dc1ca3ddbe04",
+    "currentContentHash": "b9a1203241f4344025e3409b857701cf4bc6a2c4bdb0b0a7fd08da02d7cb9128",
     "integrityIsNotTruth": true
   },
   "correlation_id": "00000000-0000-4000-8000-00000000c0de"

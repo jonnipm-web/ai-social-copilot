@@ -525,7 +525,11 @@ Deno.test('G3-02 exported free text is screened by the SERVER whatever personal-
     assert(!json.includes(leak) && !text.includes(leak), leak);
   }
   assertEquals([claimOf(d, 'c1').textRedacted, d.content.evidence.find((e) => e.ref === 'e1')!.excerptRedacted], [true, true]);
-  assert(limits(d).includes('PERSONAL_DATA_REDACTED:c1') && limits(d).includes('PERSONAL_DATA_REDACTED:e1') && limits(d).includes('PERSONAL_DATA_REDACTED:src-mail'));
+  assert(limits(d).includes('PERSONAL_DATA_REDACTED:c1') && limits(d).includes('PERSONAL_DATA_REDACTED:e1'));
+  // I6 (I5F-03): an OTHER-type publisher that is not an organization on record is WITHHELD (stricter than redaction).
+  assert(limits(d).includes('EXCERPT_WITHHELD:src-mail'));
+  assertEquals(d.content.sources.find((s) => s.ref === 'src-mail')!.publisher, '—');
+  assertEquals(d.content.sources.find((s) => s.ref === 'src-mail')!.uri, 'https://x.example');
   assert(d.content.quotedDataFields.includes('claims[].text') && d.content.quotedDataFields.includes('evidence[].excerpt'));
   assertEquals(claimOf(d, 'c1').textAttribution, 'QUOTED_FROM_SOURCE');
 });

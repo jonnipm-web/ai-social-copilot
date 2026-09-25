@@ -19,6 +19,8 @@ void main() {
         'dossier_stale_en',
         'dossier_empty_en',
         'export_confirmed_en',
+        'dossier_private_en',
+        'export_private_en',
       ]) {
         final raw = fixture(n)['data'] as Map<String, dynamic>;
         final d = DossierView.fromResponse(raw);
