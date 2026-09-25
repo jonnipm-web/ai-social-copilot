@@ -121,3 +121,19 @@ Discovery: `report.ts` (I1 organization report) and `i18n.ts` were reused
 (`adminClickable=false`), so no UI was built; no PDF library exists and none
 was added. Docs: IMPACT_VERIFICATION_DOSSIER · IMPACT_DOSSIER_SCHEMA ·
 IMPACT_DOSSIER_EXPORT · IMPACT_DOSSIER_SECURITY.
+
+## 9. I5 — Product UX (IV-IMPACT-I5-PRODUCT-UX-01)
+
+| Asset | Classification | Where |
+|---|---|---|
+| Admin-only Flutter dossier UI (`/impact`, `/impact/:id`, claim detail, export/verify) | EXPERIMENTAL (admin/Lab; module stays `inDevelopment`, not commercial) | `lib/features/impact/` |
+| Server labels in get/export responses (presentation, outside the hash) | EXPERIMENTAL | `dossier_i18n.ts` `dossierLabels()`, `lab_service.ts` |
+| Dossier rate limit (closes I4G3-04) | EXPERIMENTAL — migration **not applied to production** | `rate_limit.ts`, `impact-lab/`, `20260928010000_impact_product_rate_limit.sql` |
+| Real-engine UI fixtures + drift test | CI (Impact core) | `_shared/impact/fixtures/ui_fixtures.ts`, `ui_fixtures_test.ts`, `test/fixtures/impact/` |
+| DB tests | CI (`disposable-db-rls-ci`) | `impact_rate_limit_test.sql`, `impact_rate_limit_race_test.sh` |
+| Flutter tests | CI (`flutter-validation`) | `test/features/impact/` |
+
+Module registry: `impact` now `adminClickable: true`, `route: /impact`
+(lifecycle still EXPERIMENTAL ⇒ route policy admits admins only). No
+deploy, no public link, no PDF, no score, no AEF action. Docs:
+IMPACT_PRODUCT_UX · IMPACT_DOSSIER_UI_CONTRACT · IMPACT_RATE_LIMIT.

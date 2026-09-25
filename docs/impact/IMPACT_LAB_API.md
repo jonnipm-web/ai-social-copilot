@@ -127,3 +127,19 @@ transaction.
 `add_source` (I4 change): `userUpload` is no longer accepted and type
 `USER_DOCUMENT` is refused — uploaded documents enter only through
 `ingest_artifact` (Codex I4G2-01, I3F-03 closure).
+
+## I5 changes (Product UX)
+
+- `get_dossier` / `export_dossier` responses also carry `data.labels`: the
+  server's audited PT/EN vocabulary (status, displayClass, sufficiency,
+  dossierStatus, identity, limitation, nonFinding, locatorState,
+  reverifyReason, gap, conflictKind, conflictBasis, section, misc). It is
+  presentation only — **outside** the hashed `content`, so it never changes
+  a content hash. The Flutter UI uses it instead of re-translating truth.
+- `verify_dossier` accepts an optional `envelope` (already in I4) — the UI
+  presents the issued envelope verbatim.
+- New error `RATE_LIMITED` **429** with `retry_after` (seconds, body) and a
+  `Retry-After` header — see IMPACT_RATE_LIMIT.md. Checked before any
+  ownership lookup: identical for owned, foreign and missing ids.
+- New event `impact.dossier_rate_limited` (fields `error_code`,
+  `rate_bucket` only).
