@@ -130,9 +130,18 @@ class AefRuntimeResult {
     String? receiptId;
     String? outcome;
     final r = raw['receipt'];
-    if (r is Map && r['receiptId'] is String && r['outcome'] is String) {
-      receiptId = r['receiptId'] as String;
-      outcome = r['outcome'] as String;
+    if (r is Map) {
+      // Codex RG1-01: a receipt must have the persisted shape (UUID id, a
+      // 64-hex stored hash, a known outcome) — anything else is unreadable.
+      final id = r['receiptId'];
+      final hash = r['receiptHash'];
+      final out = r['outcome'];
+      if (id is! String || !_uuid.hasMatch(id) || hash is! String || !_hex64.hasMatch(hash) ||
+          out is! String || !const {'SUCCESS', 'FAILURE', 'PARTIAL', 'NOT_EXECUTED', 'UNKNOWN_OUTCOME'}.contains(out)) {
+        return unreadable;
+      }
+      receiptId = id;
+      outcome = out;
     } else if (r != null) {
       return unreadable;
     }

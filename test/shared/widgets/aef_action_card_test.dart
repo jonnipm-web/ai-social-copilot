@@ -10,6 +10,8 @@ import 'package:ai_social_copilot/shared/widgets/aef_action_card.dart';
 const _op = '0c000000-0000-4000-8000-00000000000c';
 const _gate = '0d000000-0000-4000-8000-00000000000d';
 final _hash = 'a' * 64;
+const _rid = '0e000000-0000-4000-8000-00000000000e';
+final _rh = 'c' * 64;
 
 Map<String, dynamic> _reply(String phase, {bool completed = false, Map<String, dynamic>? receipt, bool gate = false}) => {
       'phase': phase,
@@ -46,7 +48,7 @@ class FakeApi implements AefRuntimeApi {
   Future<AefRuntimeResult> execute(Map<String, dynamic> proposal) async {
     calls.add('execute');
     proposals.add(proposal);
-    return AefRuntimeResult.fromMap(executeReply ?? _reply('SUCCEEDED', completed: true, receipt: {'receiptId': 'r-1', 'outcome': 'SUCCESS'}));
+    return AefRuntimeResult.fromMap(executeReply ?? _reply('SUCCEEDED', completed: true, receipt: {'receiptId': _rid, 'receiptHash': _rh, 'outcome': 'SUCCESS'}));
   }
 
   @override
@@ -85,12 +87,12 @@ Future<void> _fill(WidgetTester t) async {
 void main() {
   group('AefRuntimeResult (fail closed)', () {
     test('done only for SUCCEEDED + server completed + SUCCESS receipt', () {
-      expect(AefRuntimeResult.fromMap(_reply('SUCCEEDED', completed: true, receipt: {'receiptId': 'r', 'outcome': 'SUCCESS'})).isCompleted, isTrue);
-      expect(AefRuntimeResult.fromMap(_reply('SUCCEEDED', completed: false, receipt: {'receiptId': 'r', 'outcome': 'SUCCESS'})).isCompleted, isFalse);
+      expect(AefRuntimeResult.fromMap(_reply('SUCCEEDED', completed: true, receipt: {'receiptId': _rid, 'receiptHash': _rh, 'outcome': 'SUCCESS'})).isCompleted, isTrue);
+      expect(AefRuntimeResult.fromMap(_reply('SUCCEEDED', completed: false, receipt: {'receiptId': _rid, 'receiptHash': _rh, 'outcome': 'SUCCESS'})).isCompleted, isFalse);
       expect(AefRuntimeResult.fromMap(_reply('SUCCEEDED', completed: true)).isCompleted, isFalse);
-      expect(AefRuntimeResult.fromMap(_reply('SUCCEEDED', completed: true, receipt: {'receiptId': 'r', 'outcome': 'FAILURE'})).isCompleted, isFalse);
+      expect(AefRuntimeResult.fromMap(_reply('SUCCEEDED', completed: true, receipt: {'receiptId': _rid, 'receiptHash': _rh, 'outcome': 'FAILURE'})).isCompleted, isFalse);
       for (final p in ['AUTHORIZED', 'EXECUTING', 'FAILED', 'UNKNOWN_OUTCOME', 'REJECTED', 'EXPIRED', 'CANCELLED', 'INVALIDATED']) {
-        expect(AefRuntimeResult.fromMap(_reply(p, completed: true, receipt: {'receiptId': 'r', 'outcome': 'SUCCESS'})).isCompleted, isFalse, reason: p);
+        expect(AefRuntimeResult.fromMap(_reply(p, completed: true, receipt: {'receiptId': _rid, 'receiptHash': _rh, 'outcome': 'SUCCESS'})).isCompleted, isFalse, reason: p);
       }
     });
 
@@ -101,6 +103,11 @@ void main() {
         {..._reply('AWAITING_APPROVAL'), 'gate': null},
         {..._reply('AWAITING_APPROVAL', gate: true), 'gate': {'gateId': _gate, 'bindingHash': 'short', 'expiresAt': 'x'}},
         {..._reply('SUCCEEDED'), 'receipt': 'forged'},
+        // Codex RG1-01: a receipt without the persisted shape is not a receipt.
+        {..._reply('SUCCEEDED', completed: true), 'receipt': {'receiptId': 'x', 'receiptHash': 'c' * 64, 'outcome': 'SUCCESS'}},
+        {..._reply('SUCCEEDED', completed: true), 'receipt': {'receiptId': _rid, 'outcome': 'SUCCESS'}},
+        {..._reply('SUCCEEDED', completed: true), 'receipt': {'receiptId': _rid, 'receiptHash': 'short', 'outcome': 'SUCCESS'}},
+        {..._reply('SUCCEEDED', completed: true), 'receipt': {'receiptId': _rid, 'receiptHash': 'c' * 64, 'outcome': 'DONE'}},
       ]) {
         final r = AefRuntimeResult.fromMap(raw);
         expect(r.phase, AefPhase.denied, reason: '$raw');
@@ -174,8 +181,8 @@ void main() {
 
     testWidgets('UNKNOWN_OUTCOME is distinct from FAILED, never "done", and offers no retry', (t) async {
       for (final (reply, text, icon) in [
-        (_reply('UNKNOWN_OUTCOME', receipt: {'receiptId': 'r', 'outcome': 'UNKNOWN_OUTCOME'}), 'Resultado desconhecido', Icons.help),
-        (_reply('FAILED', receipt: {'receiptId': 'r', 'outcome': 'FAILURE'}), 'Falhou', Icons.error),
+        (_reply('UNKNOWN_OUTCOME', receipt: {'receiptId': _rid, 'receiptHash': _rh, 'outcome': 'UNKNOWN_OUTCOME'}), 'Resultado desconhecido', Icons.help),
+        (_reply('FAILED', receipt: {'receiptId': _rid, 'receiptHash': _rh, 'outcome': 'FAILURE'}), 'Falhou', Icons.error),
         (_reply('SUCCEEDED', completed: false), 'não confirmada', Icons.hourglass_top),
       ]) {
         final api = FakeApi(executeReply: reply);
