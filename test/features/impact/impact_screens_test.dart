@@ -527,6 +527,42 @@ void main() {
     });
   });
 
+  group('UI-ORI text scale × orientation × language (I6 §18/§19, automated — not a physical substitute)', () {
+    for (final scale in const [1.0, 1.3, 2.0]) {
+      for (final size in const [Size(390, 844), Size(844, 390)]) {
+        for (final lang in const ['en', 'pt']) {
+          testWidgets('UI-ORI-01 scale $scale ${size.width > size.height ? 'landscape' : 'portrait'} $lang: no overflow, caveats reachable', (tester) async {
+            final f = lang == 'pt' ? 'dossier_unresolved_pt' : 'dossier_conflict_en';
+            await pumpImpact(tester, dossierScreen, transport: FakeImpactTransport(dossier: fixture(f)), size: size, textScale: scale, locale: Locale(lang));
+            expect(tester.takeException(), isNull);
+            final notEst = lang == 'pt' ? 'O que este dossiê NÃO estabelece' : 'What this dossier does NOT establish';
+            await scrollTo(tester, find.text(notEst));
+            expect(find.text(notEst), findsOneWidget);
+            expect(tester.takeException(), isNull);
+          });
+        }
+      }
+    }
+
+    testWidgets('UI-ORI-02 rotation keeps the issued snapshot and does not re-request the dossier', (tester) async {
+      final tr = FakeImpactTransport(dossier: fixture('dossier_confirmed_en'), export: fixture('export_confirmed_en'));
+      await pumpImpact(tester, dossierScreen, transport: tr, size: const Size(390, 6000));
+      await tester.tap(find.widgetWithText(FilledButton, 'Issue snapshot'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Issue'));
+      await tester.pumpAndSettle();
+      expect(find.text('Snapshot issued'), findsOneWidget);
+      for (final size in const [Size(1600, 900), Size(390, 6000)]) {
+        tester.view.physicalSize = size;
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        expect(find.text('Snapshot issued'), findsOneWidget, reason: 'state survives $size');
+      }
+      expect(tr.calls.where((c) => c['action'] == 'get_dossier'), hasLength(1));
+      expect(tr.calls.where((c) => c['action'] == 'export_dossier'), hasLength(1));
+    });
+  });
+
   group('UI-IVE overlay exclusion (I6 §20)', () {
     bool excluded(WidgetTester tester, Finder f) {
       final target = tester.getRect(f);
