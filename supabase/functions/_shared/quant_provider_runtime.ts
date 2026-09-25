@@ -82,6 +82,8 @@ export class HttpAdapterProvider implements MarketDataProvider {
         timeoutMs: this.spec.timeoutMs,
         maxResponseBytes: this.spec.maxResponseBytes,
         allowedHosts: allowed,
+        // The provider credential never follows a redirect to another origin.
+        ...(this.spec.secretHeader ? { credentialHeaders: [this.spec.secretHeader] } : {}),
       });
     } catch (e) {
       if (e instanceof DOMException && e.name === 'AbortError') return fail('PROVIDER_TIMEOUT', 'provider did not answer in time');

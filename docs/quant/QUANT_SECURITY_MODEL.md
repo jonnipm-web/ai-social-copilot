@@ -136,7 +136,7 @@ Legacy commercial LLM-generated numbers: QUANT_LEGACY_LLM_NUMERIC_RISK.md.
 | Watchlist analysis without watchlist entitlement | second `requireModuleAccess('quant-watchlists')` before the store is touched; fails closed | QM-05 |
 | Client-chosen data source / URL (SSRF, provider spoofing) | `data_source` enum = SYNTHETIC_PROVIDER only; unknown fields rejected; no URL accepted | MC-04, QM-04 |
 | Provider credential leak | secret only from server env, sent as header, never in URL (`key=`/`token=` refused), never logged | PC-06 |
-| Credential following a redirect | `safeFetch` `allowedHosts` re-checked per hop | safe_fetch "allowedHosts" test, PC-02 |
+| Credential following a redirect | `safeFetch` `allowedHosts` re-checked per hop; credential headers (Authorization, Cookie, the adapter's secret header) dropped as soon as a redirect changes origin (Codex Gate 1 P1) | safe_fetch "allowedHosts" + "credentials: dropped" tests, PC-02 |
 | Malformed / hostile provider payload | adapter identity echo checks, size cap, normalized errors (PROVIDER_MALFORMED) — never an empty success | PC-02, PC-03, PC-04 |
 | Cache making stale data look fresh | original provenance preserved, separate cache meta; stale only on provider failure + CACHE_STALE | CA-01, CA-02, MC-06 |
 | Cache poisoning across providers / from users | provider-id check; USER_UPLOAD never cached; key built from validated identity only | CA-02, CA-03 |
@@ -145,3 +145,4 @@ Legacy commercial LLM-generated numbers: QUANT_LEGACY_LLM_NUMERIC_RISK.md.
 | Misleading alignment (filled gaps) | intersection only, dropped bars counted, never filled | MS-06, MS-07 |
 | Dev transport shipped to users | `QUANT_API_BASE_URL` honored only in debug and only for loopback http; cleartext config only in `src/debug` | Flutter "dev base URL" test; release builds never read it |
 | Hostile file via Android SAF | type decided by name + magic bytes; spreadsheets/JSON NOT_IMPLEMENTED, PDF/images/binary rejected, 5 MiB cap, UTF-8 required; server re-parses anyway | Flutter file-matrix test; physical matrix in QUANT_REAL_DATA_READINESS.md |
+| Dev tool opening an unintended listener | `tool/quant_lab_dev_server.ts` forces `DENO_TESTING=1` and imports the handlers dynamically afterwards; binds 127.0.0.1 only (Codex Gate 1 P1) | QB-21; manual proof: only 127.0.0.1 listening without DENO_TESTING |

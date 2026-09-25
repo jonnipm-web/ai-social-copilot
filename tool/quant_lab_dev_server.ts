@@ -18,16 +18,22 @@
  * Binds to 127.0.0.1 only. Needs SUPABASE_URL and SUPABASE_ANON_KEY in the
  * environment (public client values; never committed).
  *
- *   DENO_TESTING=1 deno run --allow-net=127.0.0.1,<project>.supabase.co --allow-env tool/quant_lab_dev_server.ts
- *   (DENO_TESTING=1 only stops the imported Edge Function modules from binding their own serve())
+ *   deno run --allow-net=127.0.0.1,<project>.supabase.co --allow-env tool/quant_lab_dev_server.ts
+ *
+ * Codex Gate 1 (P1): the Edge Function modules call serve() at import time
+ * unless DENO_TESTING=1. The handlers are therefore imported DYNAMICALLY,
+ * only after this tool has forced DENO_TESTING=1 itself — no code path can
+ * start a listener other than the loopback one below.
  */
-import { handler as analyzeHandler } from '../supabase/functions/quant-analyze/index.ts';
-import { handler as watchlistsHandler } from '../supabase/functions/quant-watchlists/index.ts';
 import { InMemoryRateLimiter } from '../supabase/functions/_shared/quant_server.ts';
 import { instrumentKey, type InstrumentIdentity } from '../supabase/functions/_shared/quant/instrument.ts';
 import { MAX_WATCHLIST_ITEMS, type WatchlistRow, type WatchlistStore } from '../supabase/functions/_shared/quant/watchlist_contract.ts';
 
 const PORT = Number(Deno.env.get('QUANT_DEV_PORT') ?? '54321');
+// Must happen BEFORE the handler modules are loaded (see header).
+Deno.env.set('DENO_TESTING', '1');
+const { handler: analyzeHandler } = await import('../supabase/functions/quant-analyze/index.ts');
+const { handler: watchlistsHandler } = await import('../supabase/functions/quant-watchlists/index.ts');
 if (!Deno.env.get('SUPABASE_URL') || !Deno.env.get('SUPABASE_ANON_KEY')) {
   console.error('SUPABASE_URL and SUPABASE_ANON_KEY must be set (runtime only; never commit them).');
   Deno.exit(2);

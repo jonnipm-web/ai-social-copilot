@@ -207,3 +207,14 @@ Deno.test('QB-17 drift: rate-limit numbers in SQL equal the TypeScript policy', 
   assert(/SECURITY DEFINER/.test(sql) && /auth\.uid\(\)/.test(sql) && /SET search_path = public, pg_temp/.test(sql));
   assert(!/p_limit|p_user/.test(sql), 'limits and identity must never be parameters');
 });
+
+Deno.test('QB-21 dev server can never start a non-loopback listener (Codex Gate 1 P1, READINESS-03)', async () => {
+  const src = await Deno.readTextFile(new URL('../../../../tool/quant_lab_dev_server.ts', import.meta.url));
+  // Edge Function modules call serve() at import time unless DENO_TESTING=1:
+  // they must only be imported dynamically, AFTER the tool forces the flag.
+  assert(!/^import[^\n]*quant-(analyze|watchlists)\/index\.ts/m.test(src), 'static import of an Edge Function module');
+  const setAt = src.indexOf("Deno.env.set('DENO_TESTING', '1')");
+  const importAt = src.search(/await import\([^)]*quant-(analyze|watchlists)\/index\.ts/);
+  assert(setAt > 0 && importAt > setAt, 'DENO_TESTING must be forced before the dynamic imports');
+  assert(/Deno\.serve\(\{\s*hostname:\s*'127\.0\.0\.1'/.test(src), 'listener must bind 127.0.0.1');
+});

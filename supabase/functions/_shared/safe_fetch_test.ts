@@ -323,3 +323,34 @@ Deno.test("safeFetch allowedHosts: a redirect to a host outside the allowlist is
     globalThis.fetch = realFetch;
   }
 });
+
+Deno.test("safeFetch credentials: dropped when a redirect changes origin (even to another allowlisted host); kept on same-origin redirects (Codex Gate 1 P1)", async () => {
+  const seen: Array<{ url: string; headers: Record<string, string> }> = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = ((input: string | URL | Request, init?: RequestInit) => {
+    const u = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    seen.push({ url: u, headers: { ...((init?.headers ?? {}) as Record<string, string>) } });
+    if (u === "https://93.184.216.34/data") {
+      return Promise.resolve(new Response(null, { status: 302, headers: { location: "/data2" } })); // same origin
+    }
+    if (u === "https://93.184.216.34/data2") {
+      return Promise.resolve(new Response(null, { status: 302, headers: { location: "https://93.184.216.35/final" } })); // other allowlisted host
+    }
+    return Promise.resolve(new Response("ok", { status: 200 }));
+  }) as typeof fetch;
+  try {
+    const res = await safeFetch("https://93.184.216.34/data", {
+      allowedHosts: ["93.184.216.34", "93.184.216.35"],
+      headers: { "X-Api-Key": "secret", Authorization: "Bearer secret", Accept: "application/json" },
+      credentialHeaders: ["X-Api-Key"],
+    });
+    if ((await res.text()) !== "ok") throw new Error("unexpected body");
+    if (seen.length !== 3) throw new Error(`expected 3 hops, got ${seen.length}`);
+    if (seen[1].headers["X-Api-Key"] !== "secret") throw new Error("same-origin redirect must keep the credential");
+    const last = seen[2].headers;
+    if ("X-Api-Key" in last || "Authorization" in last) throw new Error(`credential leaked cross-origin: ${JSON.stringify(last)}`);
+    if (last["Accept"] !== "application/json") throw new Error("non-credential headers must be kept");
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});

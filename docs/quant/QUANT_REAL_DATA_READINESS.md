@@ -31,7 +31,8 @@ UI states "SYNTHETIC data" wherever the watchlist analysis is shown.
   empty success).
 * `quant_provider_runtime.ts` — `HttpAdapterProvider`: only network path;
   `safeFetch` (SSRF-validated, bounded) with `allowedHosts` re-checked on
-  **every redirect hop**; credential only from a server secret, sent as a
+  **every redirect hop**, and credential headers dropped whenever a redirect
+  changes origin (Codex Gate 1); credential only from a server secret, sent as a
   header, never in a URL (`key=`/`token=` refused), never logged; errors
   normalized to `PROVIDER_TIMEOUT / PROVIDER_RATE_LIMITED / PROVIDER_UNAVAILABLE / PROVIDER_MALFORMED`.
 * No real vendor base URL or key exists anywhere in the repository.

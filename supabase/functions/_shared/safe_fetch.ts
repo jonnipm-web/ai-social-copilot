@@ -238,6 +238,27 @@ export interface SafeFetchOptions {
    * the key to a host outside the allowlist. Omitted = previous behaviour.
    */
   allowedHosts?: readonly string[];
+  /**
+   * Codex Gate 1 (READINESS-03, P1): header names that carry credentials.
+   * They are sent ONLY to the original origin — dropped as soon as a
+   * redirect changes origin, even to another allowlisted host. Authorization,
+   * Proxy-Authorization and Cookie are always treated as credentials.
+   */
+  credentialHeaders?: readonly string[];
+}
+
+const ALWAYS_CREDENTIAL_HEADERS = ['authorization', 'proxy-authorization', 'cookie'];
+
+/** Headers for a hop: credentials only while still on the original origin. Exported for tests. */
+export function headersForHop(
+  headers: Record<string, string> | undefined,
+  originalOrigin: string,
+  hopOrigin: string,
+  credentialHeaders: readonly string[] = [],
+): Record<string, string> | undefined {
+  if (!headers || hopOrigin === originalOrigin) return headers;
+  const drop = new Set([...ALWAYS_CREDENTIAL_HEADERS, ...credentialHeaders.map((h) => h.toLowerCase())]);
+  return Object.fromEntries(Object.entries(headers).filter(([k]) => !drop.has(k.toLowerCase())));
 }
 
 /**
@@ -260,6 +281,7 @@ export async function safeFetch(rawUrl: string, options: SafeFetchOptions = {}):
     throw new UnsafeUrlError("URL malformada.");
   }
 
+  const originalOrigin = currentUrl.origin;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     assertUrlShapeIsSafe(currentUrl);
     if (options.allowedHosts && !options.allowedHosts.includes(currentUrl.hostname.toLowerCase())) {
@@ -273,7 +295,7 @@ export async function safeFetch(rawUrl: string, options: SafeFetchOptions = {}):
     let res: Response;
     try {
       res = await fetch(currentUrl.toString(), {
-        headers: options.headers,
+        headers: headersForHop(options.headers, originalOrigin, currentUrl.origin, options.credentialHeaders),
         redirect: "manual", // we re-validate every hop ourselves
         signal: controller.signal,
       });
