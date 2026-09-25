@@ -1,0 +1,494 @@
+{
+  "ok": true,
+  "action": "get_dossier",
+  "data": {
+    "dossier": {
+      "schemaVersion": "impact-dossier/1",
+      "content": {
+        "schemaVersion": "impact-dossier/1",
+        "kind": "VERIFICATION_DOSSIER",
+        "isFindingOfWrongdoing": false,
+        "absenceOfEvidenceIsNotEvidenceOfWrongdoing": true,
+        "isPublication": false,
+        "quotedDataFields": [
+          "subject.declaredIdentity",
+          "registryFacts[].legalName",
+          "claims[].text",
+          "evidence[].excerpt",
+          "sources[].publisher",
+          "sources[].uri",
+          "sources[].syndicatedFrom",
+          "sources[].derivedFrom",
+          "verification.conflicts[].positions[].publisher"
+        ],
+        "policyVersions": {
+          "verification": "impact-verification/9+impact-source-authority/3+impact-temporal/3+impact-lineage/2",
+          "lineage": "impact-lineage/2",
+          "artifact": "impact-artifact/1",
+          "providerRegistry": "impact-provider-registry/2"
+        },
+        "investigation": {
+          "ref": "00000000-0000-4000-8000-000000000001",
+          "projectRef": null,
+          "status": "ACTIVE"
+        },
+        "asOf": "2026-09-25T09:07:00.000Z",
+        "subject": {
+          "ref": "org-hopebridge",
+          "type": "FOUNDATION",
+          "declaredIdentity": {
+            "legalName": "HopeBridge Foundation",
+            "registrations": [
+              {
+                "jurisdiction": {
+                  "country": "XA"
+                },
+                "scheme": "charity-number",
+                "value": "XA-1234567"
+              }
+            ],
+            "jurisdictions": [
+              {
+                "country": "XA"
+              }
+            ],
+            "domains": [
+              "hopebridge.example"
+            ]
+          },
+          "identityStatus": "CONFIRMED",
+          "identityConfirmed": true,
+          "identityBasis": "PROVIDER_REGISTRY_SNAPSHOTS_ONLY"
+        },
+        "registryFacts": [
+          {
+            "sourceRef": "src-reg",
+            "active": true,
+            "providerId": "fixture-xa-charity-registry",
+            "recordId": "xa-1234567",
+            "canonicalOrgId": "XA:charity-number:XA1234567",
+            "legalName": "HopeBridge Foundation",
+            "registryStatus": "REGISTERED",
+            "statusAsOf": "2026-08-31",
+            "sourceAsOf": "2026-08-31",
+            "registeredOn": "2012-03-01",
+            "dissolvedOn": null,
+            "retrievedAt": "2026-09-01T00:00:00Z",
+            "dataHash": "45a10e55c959ffb9d876be81d528d7efadf893eace76b4d82f8a6e4c63079ae2",
+            "synthetic": true,
+            "freshnessDays": 7,
+            "freshAtAsOf": false,
+            "authority": {
+              "official": true,
+              "authorityClass": "STATUTORY_REGISTER",
+              "primaryPublisher": true,
+              "termsStatus": "SYNTHETIC"
+            },
+            "factClass": "OFFICIAL_REGISTRY_RECORD"
+          }
+        ],
+        "registryConflicts": [],
+        "claims": [
+          {
+            "ref": "c-reg",
+            "kind": "LEGAL_REGISTRATION",
+            "text": "HopeBridge Foundation is a registered charity.",
+            "textWithheld": null,
+            "textRedacted": false,
+            "textAttribution": "QUOTED_FROM_SOURCE",
+            "textLanguage": null,
+            "sourceRef": "src-web",
+            "origin": "MANUAL",
+            "period": null,
+            "quantity": null,
+            "level": null,
+            "extractedAt": "2026-09-25T09:04:00.000Z",
+            "subjectProjectRef": null,
+            "subjectCampaignRef": null,
+            "verification": {
+              "version": 2,
+              "resultId": "vr_df858d00958f1886a19df7b5b4fcad22",
+              "status": "DISPUTED",
+              "underlyingStatus": "SUPPORTED",
+              "displayClass": "CONFLICT",
+              "sufficiency": "INDEPENDENT_SUPPORT",
+              "reviewState": "REVIEW_REQUIRED",
+              "reviewReasons": [
+                "OPEN_DISPUTE"
+              ],
+              "gaps": [],
+              "rulesApplied": [
+                "S05_AUTHORITATIVE_WITHIN_SCOPE",
+                "S11_OPEN_DISPUTE"
+              ],
+              "evaluatedAt": "2026-09-25T09:07:00.000Z",
+              "policyVersion": "impact-verification/9+impact-source-authority/3+impact-temporal/3+impact-lineage/2",
+              "evidenceSetHash": "e2e32d15fffbdfe0fe8b7a97d901eee3149497dc424fe92f7f359b61f80bb166",
+              "subjectIdentity": "CONFIRMED",
+              "supporting": [
+                {
+                  "evidenceRef": "e-reg",
+                  "sourceRef": "src-reg",
+                  "sourceType": "OFFICIAL_REGISTRY",
+                  "authority": "AUTHORITATIVE",
+                  "declaredRelationship": "SUPPORTS",
+                  "effectiveRelationship": "SUPPORTS",
+                  "basis": "HUMAN_ASSESSED",
+                  "asOf": "2026-08-31T00:00:00.000Z"
+                }
+              ],
+              "partiallySupporting": [],
+              "contradicting": [],
+              "contextual": [],
+              "excluded": [],
+              "conflicts": [],
+              "independence": {
+                "policyVersion": "impact-lineage/2",
+                "independentVoices": 1,
+                "establishedVoices": 1,
+                "mergedByLineage": false,
+                "possibleLineage": false,
+                "comparisonTruncated": false,
+                "sources": [
+                  {
+                    "sourceRef": "src-reg",
+                    "state": "ORIGINAL",
+                    "established": true
+                  }
+                ]
+              }
+            },
+            "reverificationPending": false,
+            "reverificationReasons": [],
+            "disputeRefs": [
+              "d1"
+            ],
+            "evidenceRefs": [
+              "e-reg"
+            ],
+            "isFindingOfWrongdoing": false
+          }
+        ],
+        "evidence": [
+          {
+            "ref": "e-reg",
+            "claimRef": "c-reg",
+            "sourceRef": "src-reg",
+            "aboutOrgRef": "org-hopebridge",
+            "relationship": "SUPPORTS",
+            "basis": "HUMAN_ASSESSED",
+            "observedPeriod": {
+              "to": "2026-09-01"
+            },
+            "level": null,
+            "reportedQuantity": null,
+            "legalStage": null,
+            "personalData": "NONE",
+            "excerpt": null,
+            "excerptHash": null,
+            "excerptWithheld": null,
+            "excerptRedacted": false,
+            "excerptAttribution": null,
+            "locator": null,
+            "locatorState": "NOT_ARTIFACT_BOUND",
+            "addedAt": "2026-09-25T09:05:00.000Z"
+          }
+        ],
+        "sources": [
+          {
+            "ref": "src-reg",
+            "type": "OFFICIAL_REGISTRY",
+            "publisher": "Exampleland Charity Registry (fixture)",
+            "publisherOrgRef": null,
+            "uri": null,
+            "retrievedAt": "2026-09-01T00:00:00Z",
+            "publishedAt": "2026-08-31",
+            "status": "ACTIVE",
+            "retention": "SNAPSHOT",
+            "contentHash": "a37ef7abf8257f6e7672c9e45b8be2f0457abd862c620b350e18d541f49fbb45",
+            "acquisition": "PROVIDER",
+            "providerId": "fixture-xa-charity-registry",
+            "userSubmitted": false,
+            "hasRegistrySnapshot": true,
+            "newsGenre": null,
+            "syndicatedFrom": null,
+            "derivedFrom": null,
+            "syndicationMarkers": [],
+            "artifactRef": null,
+            "host": null
+          },
+          {
+            "ref": "src-web",
+            "type": "ORGANIZATION_WEBSITE",
+            "publisher": "HopeBridge Foundation",
+            "publisherOrgRef": "org-hopebridge",
+            "uri": null,
+            "retrievedAt": "2026-09-01T00:00:00Z",
+            "publishedAt": null,
+            "status": "ACTIVE",
+            "retention": "EXCERPT_AND_HASH",
+            "contentHash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "acquisition": "ANALYST_ENTRY",
+            "providerId": null,
+            "userSubmitted": false,
+            "hasRegistrySnapshot": false,
+            "newsGenre": null,
+            "syndicatedFrom": null,
+            "derivedFrom": null,
+            "syndicationMarkers": [],
+            "artifactRef": null,
+            "host": null
+          }
+        ],
+        "artifacts": [],
+        "disputes": [
+          {
+            "ref": "d1",
+            "claimRef": "c-reg",
+            "kind": "ORGANIZATION_RESPONSE",
+            "openedAt": "2026-09-25T09:07:00.000Z",
+            "open": true,
+            "resolution": null,
+            "resolvedAt": null,
+            "submittedEvidenceCount": 1
+          }
+        ],
+        "limitations": [
+          {
+            "code": "DISPUTE_OPEN",
+            "scope": "CLAIM",
+            "ref": "c-reg"
+          },
+          {
+            "code": "HUMAN_REVIEW_REQUIRED",
+            "scope": "CLAIM",
+            "ref": "c-reg"
+          },
+          {
+            "code": "REGISTRY_RECORD_NOT_FRESH",
+            "scope": "REGISTRY",
+            "ref": "src-reg"
+          }
+        ],
+        "doesNotEstablish": [
+          "ABSENCE_IS_NOT_EVIDENCE",
+          "NOT_A_FINDING_OF_WRONGDOING",
+          "NOT_PROFESSIONAL_DUE_DILIGENCE",
+          "NO_DONATION_ADVICE",
+          "NO_INTENT_OR_INNOCENCE"
+        ],
+        "summary": {
+          "claims": 1,
+          "byStatus": {
+            "SUPPORTED": 0,
+            "PARTIALLY_SUPPORTED": 0,
+            "CONTRADICTED": 0,
+            "INCONCLUSIVE": 0,
+            "OUTDATED": 0,
+            "DISPUTED": 1,
+            "UNVERIFIED": 0
+          },
+          "byDisplayClass": {
+            "FACT": 0,
+            "CLAIM": 0,
+            "EVIDENCE": 0,
+            "INFERENCE": 0,
+            "ALLEGATION": 0,
+            "CONFLICT": 1,
+            "UNKNOWN": 0,
+            "ABSENCE_OF_EVIDENCE": 0
+          },
+          "notVerified": 0,
+          "reverificationPending": 0,
+          "openDisputes": 1,
+          "conflicts": 0,
+          "registryConflicts": 0,
+          "evidence": 1,
+          "sources": 2,
+          "artifacts": 0,
+          "limitations": 3
+        },
+        "dossierStatus": "REVIEW_REQUIRED"
+      },
+      "integrity": {
+        "algorithm": "SHA-256",
+        "canonicalization": "impact-canonical-json/1",
+        "contentHash": "c7490c569d1ab6dcc1da3dab8278ca6919cb3d95be7574047c54a1748a27c903"
+      },
+      "envelope": {
+        "kind": "LIVE",
+        "generatedAt": "2026-09-25T09:08:00.000Z",
+        "auditSeq": 10,
+        "auditHead": "83e1b4c0545f7f7f1f2d7c1d9294784481005fcbf7f6c7bd12c9c435c777c0c4",
+        "snapshotRef": null,
+        "notice": "LIVE_VIEW_OF_CURRENT_STATE",
+        "registryFreshAtGeneration": [
+          {
+            "sourceRef": "src-reg",
+            "fresh": false
+          }
+        ]
+      }
+    },
+    "text": "# Verification dossier — «HopeBridge Foundation»\nEXPERIMENTAL — Impact Lab internal use.\nAs of: «2026-09-25T09:07:00.000Z» · Live view of the current state (changes when the evidence changes).\nHuman review required\n\n## Summary\n- Under dispute: 1\n- Open dispute: 1\n\n## Organization identity\n- «HopeBridge Foundation» («FOUNDATION»)\n- Confirmed by an official registry\n\n## Official registry records\n- «HopeBridge Foundation» · «XA:charity-number:XA1234567» · «REGISTERED» «2026-08-31» · «fixture-xa-charity-registry» (official source) · «2026-09-01T00:00:00Z» · test data\n  - outside its refresh window at the as-of date · may need refreshing today\n\n## Claims and verification\n### «c-reg» — «HopeBridge Foundation is a registered charity.»\n- Under dispute · Conflicting sources · One independent source\n- Independent voices: 1\n- Supporting evidence: «e-reg» («src-reg», «AUTHORITATIVE»)\n- rules applied: «S05_AUTHORITATIVE_WITHIN_SCOPE», «S11_OPEN_DISPUTE» · «impact-verification/9+impact-source-authority/3+impact-temporal/3+impact-lineage/2» · «2026-09-25T09:07:00.000Z»\n- Disputes: «d1»\n  - «e-reg» · «src-reg» · «SUPPORTS» · no attached document\nExcerpts in « » are quotes from the sources, not statements by InsightValues.\n\n## Limitations\n- A claim is under dispute and awaits review. («c-reg»)\n- A verification requires human review before any use. («c-reg»)\n- An official registry record may be out of date and need refreshing. («src-reg»)\n\n## What this dossier does NOT establish\n- Absence of evidence is not evidence of wrongdoing.\n- It is not a finding of wrongdoing about the organization.\n- It does not replace professional due diligence.\n- It does not recommend donating or not donating.\n- It does not establish anyone’s intent, guilt or innocence.\n\n## Sources\n- «src-reg» · «OFFICIAL_REGISTRY» · «Exampleland Charity Registry (fixture)» · «PROVIDER» · «ACTIVE» · «2026-09-01T00:00:00Z»\n- «src-web» · «ORGANIZATION_WEBSITE» · «HopeBridge Foundation» · «ANALYST_ENTRY» · «ACTIVE» · «2026-09-01T00:00:00Z»\n\n## Disputes\n- «d1» · «c-reg» · «ORGANIZATION_RESPONSE» · «2026-09-25T09:07:00.000Z» · Open dispute\n\n## Integrity and provenance\n- «impact-dossier/1» · SHA-256 «c7490c569d1ab6dcc1da3dab8278ca6919cb3d95be7574047c54a1748a27c903»\n- The hash proves this content was not altered; it does not prove it is true.",
+    "labels": {
+      "status": {
+        "UNVERIFIED": "Unverified",
+        "SUPPORTED": "Supported by independent evidence",
+        "PARTIALLY_SUPPORTED": "Partially supported",
+        "CONTRADICTED": "Contradicted by independent evidence",
+        "INCONCLUSIVE": "Inconclusive",
+        "OUTDATED": "Evidence outdated",
+        "DISPUTED": "Under dispute"
+      },
+      "displayClass": {
+        "FACT": "Verified fact (official source, within its scope)",
+        "CLAIM": "Source claim",
+        "EVIDENCE": "Evidence",
+        "INFERENCE": "System inference",
+        "ALLEGATION": "Third-party assertion, not established",
+        "CONFLICT": "Conflicting sources",
+        "UNKNOWN": "Unknown",
+        "ABSENCE_OF_EVIDENCE": "No evidence found"
+      },
+      "sufficiency": {
+        "NO_EVIDENCE": "No usable evidence",
+        "SELF_REPORTED": "Self-reported by the organization only",
+        "SINGLE_SOURCE": "Not independently corroborated",
+        "INDEPENDENT_SUPPORT": "One independent source",
+        "MULTI_SOURCE_SUPPORT": "Multiple independent sources",
+        "CONFLICTING_EVIDENCE": "Conflicting evidence"
+      },
+      "dossierStatus": {
+        "COMPLETE": "Complete — every claim was processed",
+        "PARTIAL": "Partial — limitations are listed below",
+        "REVIEW_REQUIRED": "Human review required",
+        "INCOMPLETE": "Incomplete — some claims are not verified or await re-verification"
+      },
+      "identity": {
+        "CONFIRMED": "Confirmed by an official registry",
+        "PROBABLE": "Probable, not yet confirmed",
+        "UNCERTAIN": "Ambiguous — more than one organization possible",
+        "UNRESOLVED": "Unresolved — no registry record confirms it"
+      },
+      "limitation": {
+        "IDENTITY_NOT_CONFIRMED": "The organization identity was not confirmed by an official registry.",
+        "IDENTITY_AMBIGUOUS": "The identity is ambiguous: registry records point to more than one possibility.",
+        "NO_REGISTRY_RECORD": "No official registry record was consulted or attached. This does not mean the organization is unregistered.",
+        "REGISTRY_RECORD_NOT_FRESH": "An official registry record may be out of date and need refreshing.",
+        "REGISTRY_CONFLICT": "Official registry records disagree on some data.",
+        "SOURCE_NOT_ACTIVE": "A source was updated, retracted or became unavailable.",
+        "EXTRACTION_OCR_REQUIRED": "A document is image-only and would require OCR; its content was not read.",
+        "EXTRACTION_PARTIAL": "A document was read only in part.",
+        "EXTRACTION_FAILED": "A document could not be read.",
+        "ARTIFACT_SUPERSEDED": "A newer version of an attached document exists.",
+        "EVIDENCE_REVIEW_PENDING": "Document excerpts await human review.",
+        "CLAIM_NOT_VERIFIED": "A claim has not been verified yet.",
+        "REVERIFICATION_PENDING": "Evidence or a dispute changed after the last verification.",
+        "INSUFFICIENT_EVIDENCE": "We did not find enough evidence in the sources analyzed to confirm a claim. This does not indicate it is false.",
+        "CONFLICTING_EVIDENCE": "Evidence diverges; all positions are shown side by side, none is chosen.",
+        "DISPUTE_OPEN": "A claim is under dispute and awaits review.",
+        "EVIDENCE_OUTDATED": "Some evidence is old and may not reflect the current situation.",
+        "LINEAGE_UNCERTAIN": "It could not be confirmed whether some sources are independent of each other.",
+        "HUMAN_REVIEW_REQUIRED": "A verification requires human review before any use.",
+        "LOCATOR_UNVERIFIABLE": "The location of an excerpt cannot be confirmed in the current document version.",
+        "EXCERPT_WITHHELD": "An excerpt was withheld because it contains personal data.",
+        "PERSONAL_DATA_REDACTED": "Contact details or personal identifiers were removed from a quoted text."
+      },
+      "nonFinding": {
+        "NOT_A_FINDING_OF_WRONGDOING": "It is not a finding of wrongdoing about the organization.",
+        "NO_INTENT_OR_INNOCENCE": "It does not establish anyone’s intent, guilt or innocence.",
+        "NO_DONATION_ADVICE": "It does not recommend donating or not donating.",
+        "NOT_PROFESSIONAL_DUE_DILIGENCE": "It does not replace professional due diligence.",
+        "ABSENCE_IS_NOT_EVIDENCE": "Absence of evidence is not evidence of wrongdoing.",
+        "UNVERIFIED_IS_NOT_FALSE": "An unverified claim, or one with insufficient evidence, is not a false claim.",
+        "CONFLICT_IS_NOT_WRONGDOING": "Diverging evidence does not indicate guilt; it shows where to look more closely.",
+        "REGISTRY_STATUS_IS_NOT_WRONGDOING": "A registry status (inactive, dissolved, removed) is not, by itself, a sign of wrongdoing.",
+        "DOCUMENTS_ARE_NOT_INDEPENDENT_SOURCES": "Several documents do not mean several independent sources.",
+        "USER_UPLOADS_ARE_NOT_AUTHORITY": "User-uploaded documents are context, never authority.",
+        "QUOTED_TEXT_IS_NOT_A_PLATFORM_STATEMENT": "Excerpts quoted from sources are not statements by InsightValues."
+      },
+      "locatorState": {
+        "VALID": "location confirmed",
+        "NOT_ARTIFACT_BOUND": "no attached document",
+        "ARTIFACT_SUPERSEDED": "document superseded by a newer version",
+        "ARTIFACT_MISSING": "document unavailable",
+        "HASH_MISMATCH": "document version does not match",
+        "OUT_OF_RANGE": "location outside the document"
+      },
+      "reverifyReason": {
+        "EVIDENCE_CHANGED": "the evidence changed",
+        "DISPUTE_OPENED": "a dispute was opened",
+        "DISPUTE_RESOLVED": "a dispute was resolved"
+      },
+      "gap": {
+        "NO_EVIDENCE": "no usable evidence",
+        "NO_INDEPENDENT_SOURCE": "no independent source",
+        "ONLY_SELF_REPORTED": "self-reported only",
+        "EVIDENCE_OUTDATED": "evidence outdated",
+        "PERIOD_NOT_COVERED": "period not covered",
+        "IDENTITY_UNCONFIRMED": "identity unconfirmed",
+        "OUT_OF_AUTHORITY_SCOPE": "outside the source’s scope",
+        "UNCONFIRMED_LLM_LINKS": "unconfirmed automatic links",
+        "LEVEL_MISMATCH": "different impact level",
+        "UNITS_NOT_COMPARABLE": "units not comparable",
+        "SOURCE_RETRACTED": "source retracted",
+        "SOURCE_CHANGED": "source changed",
+        "SOURCE_UNAVAILABLE": "source unavailable",
+        "ALLEGATION_UNRESOLVED": "allegation unresolved",
+        "UNTRUSTED_INSTRUCTIONS_DETECTED": "untrusted instructions in the material (treated as data)",
+        "INDEPENDENCE_NOT_ESTABLISHED": "independence not established",
+        "POSSIBLE_LINEAGE": "possible common origin between sources"
+      },
+      "conflictKind": {
+        "QUANTITY_DISAGREEMENT": "Sources report different values",
+        "SUPPORT_VS_CONTRADICTION": "Sources both support and diverge from the claim"
+      },
+      "conflictBasis": {
+        "INDEPENDENT_SOURCES": "between independent sources",
+        "SAME_PUBLISHER": "within one publisher (e.g. a later correction)",
+        "SELF_REPORTED_ONLY": "only in the organization’s own materials"
+      },
+      "section": {
+        "TITLE": "Verification dossier",
+        "SUMMARY": "Summary",
+        "IDENTITY": "Organization identity",
+        "REGISTRY": "Official registry records",
+        "CLAIMS": "Claims and verification",
+        "LIMITATIONS": "Limitations",
+        "NOT_ESTABLISHED": "What this dossier does NOT establish",
+        "SOURCES": "Sources",
+        "DISPUTES": "Disputes",
+        "INTEGRITY": "Integrity and provenance",
+        "AS_OF": "As of",
+        "LIVE": "Live view of the current state (changes when the evidence changes).",
+        "SNAPSHOT": "Historical snapshot: represents the state at this date and never updates itself.",
+        "HASH_NOTE": "The hash proves this content was not altered; it does not prove it is true.",
+        "QUOTE_NOTE": "Excerpts in « » are quotes from the sources, not statements by InsightValues.",
+        "EVIDENCE_FOR": "Supporting evidence",
+        "EVIDENCE_PARTIAL": "Partial evidence",
+        "EVIDENCE_AGAINST": "Diverging evidence",
+        "EVIDENCE_CONTEXT": "Context (not counted as corroboration)",
+        "VOICES": "Independent voices",
+        "NOT_VERIFIED": "Not yet verified by the engine.",
+        "REVERIFY": "Re-verification pending",
+        "OPEN_DISPUTE": "Open dispute",
+        "HOST": "hosted on",
+        "WITHHELD": "excerpt withheld for privacy",
+        "EXPERIMENTAL": "EXPERIMENTAL — Impact Lab internal use."
+      },
+      "misc": {
+        "CONFLICTS": "Disagreements (every position, none chosen)",
+        "UNRESOLVED": "unresolved",
+        "FRESH_AT_AS_OF": "within its refresh window at the as-of date",
+        "NOT_FRESH_AT_AS_OF": "outside its refresh window at the as-of date",
+        "FRESH_NOW": "current today",
+        "NOT_FRESH_NOW": "may need refreshing today",
+        "OFFICIAL": "official source",
+        "SYNTHETIC": "test data",
+        "RULES": "rules applied"
+      }
+    }
+  },
+  "correlation_id": "00000000-0000-4000-8000-00000000c0de"
+}

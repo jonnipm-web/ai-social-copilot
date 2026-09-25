@@ -151,3 +151,30 @@ export const MISC_LABEL: Readonly<Record<string, L>> = {
   SYNTHETIC: { pt: 'dados de teste', en: 'test data' },
   RULES: { pt: 'regras aplicadas', en: 'rules applied' },
 };
+
+/**
+ * I5: every code → label table the product UI needs, in ONE language, from
+ * the SAME audited strings the text renderer uses (verdict-guard tested).
+ * The UI never invents truth vocabulary; it shows these labels.
+ */
+export async function dossierLabels(lang: Lang) {
+  const { CLASS_LABEL, STATUS_LABEL, SUFFICIENCY_LABEL } = await import('./i18n.ts');
+  const pick = <K extends string>(t: Readonly<Record<K, L>>) =>
+    Object.fromEntries(Object.entries(t).map(([k, v]) => [k, (v as L)[lang]])) as Record<K, string>;
+  return {
+    status: pick(STATUS_LABEL),
+    displayClass: pick(CLASS_LABEL),
+    sufficiency: pick(SUFFICIENCY_LABEL),
+    dossierStatus: pick(DOSSIER_STATUS_LABEL),
+    identity: pick(IDENTITY_LABEL),
+    limitation: pick(LIMITATION_LABEL),
+    nonFinding: pick(NON_FINDING_LABEL),
+    locatorState: pick(LOCATOR_STATE_LABEL),
+    reverifyReason: pick(REVERIFY_REASON_LABEL),
+    gap: pick(GAP_LABEL),
+    conflictKind: pick(CONFLICT_KIND_LABEL),
+    conflictBasis: pick(CONFLICT_BASIS_LABEL),
+    section: pick(SECTION),
+    misc: pick(MISC_LABEL),
+  };
+}

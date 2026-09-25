@@ -1,0 +1,19 @@
+{
+  "ok": true,
+  "action": "verify_dossier",
+  "data": {
+    "state": "CURRENT",
+    "envelopeState": "MATCHES_REGISTRATION",
+    "snapshot": {
+      "ref": "dossier-40f99eff8990cf9b0f67a365",
+      "exportedAt": "2026-09-25T09:14:00.000Z",
+      "asOf": "2026-09-25T09:10:00.000Z",
+      "dossierStatus": "INCOMPLETE",
+      "auditSeq": 16,
+      "auditHead": "d357cfea2ec07fae7f0be12e9750eef9f0ad00751db29c6c47fe6f035ee7eb9e"
+    },
+    "currentContentHash": "40f99eff8990cf9b0f67a3651196a072d798ca1791b3ca26c9f01e493e84d425",
+    "integrityIsNotTruth": true
+  },
+  "correlation_id": "00000000-0000-4000-8000-00000000c0de"
+}

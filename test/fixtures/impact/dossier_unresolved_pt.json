@@ -1,0 +1,351 @@
+{
+  "ok": true,
+  "action": "get_dossier",
+  "data": {
+    "dossier": {
+      "schemaVersion": "impact-dossier/1",
+      "content": {
+        "schemaVersion": "impact-dossier/1",
+        "kind": "VERIFICATION_DOSSIER",
+        "isFindingOfWrongdoing": false,
+        "absenceOfEvidenceIsNotEvidenceOfWrongdoing": true,
+        "isPublication": false,
+        "quotedDataFields": [
+          "subject.declaredIdentity",
+          "registryFacts[].legalName",
+          "claims[].text",
+          "evidence[].excerpt",
+          "sources[].publisher",
+          "sources[].uri",
+          "sources[].syndicatedFrom",
+          "sources[].derivedFrom",
+          "verification.conflicts[].positions[].publisher"
+        ],
+        "policyVersions": {
+          "verification": "impact-verification/9+impact-source-authority/3+impact-temporal/3+impact-lineage/2",
+          "lineage": "impact-lineage/2",
+          "artifact": "impact-artifact/1",
+          "providerRegistry": "impact-provider-registry/2"
+        },
+        "investigation": {
+          "ref": "00000000-0000-4000-8000-000000000001",
+          "projectRef": null,
+          "status": "ACTIVE"
+        },
+        "asOf": "2026-09-25T09:03:00.000Z",
+        "subject": {
+          "ref": "org-hopebridge",
+          "type": "FOUNDATION",
+          "declaredIdentity": {
+            "legalName": "HopeBridge Foundation",
+            "registrations": [
+              {
+                "jurisdiction": {
+                  "country": "XA"
+                },
+                "scheme": "charity-number",
+                "value": "XA-1234567"
+              }
+            ],
+            "jurisdictions": [
+              {
+                "country": "XA"
+              }
+            ],
+            "domains": [
+              "hopebridge.example"
+            ]
+          },
+          "identityStatus": "UNRESOLVED",
+          "identityConfirmed": false,
+          "identityBasis": "PROVIDER_REGISTRY_SNAPSHOTS_ONLY"
+        },
+        "registryFacts": [],
+        "registryConflicts": [],
+        "claims": [
+          {
+            "ref": "c1",
+            "kind": "OTHER",
+            "text": "HopeBridge Foundation operates in two districts.",
+            "textWithheld": null,
+            "textRedacted": false,
+            "textAttribution": "QUOTED_FROM_SOURCE",
+            "textLanguage": null,
+            "sourceRef": "src-web",
+            "origin": "MANUAL",
+            "period": null,
+            "quantity": null,
+            "level": null,
+            "extractedAt": "2026-09-25T09:03:00.000Z",
+            "subjectProjectRef": null,
+            "subjectCampaignRef": null,
+            "verification": null,
+            "reverificationPending": false,
+            "reverificationReasons": [],
+            "disputeRefs": [],
+            "evidenceRefs": [],
+            "isFindingOfWrongdoing": false
+          }
+        ],
+        "evidence": [],
+        "sources": [
+          {
+            "ref": "src-web",
+            "type": "ORGANIZATION_WEBSITE",
+            "publisher": "HopeBridge Foundation",
+            "publisherOrgRef": "org-hopebridge",
+            "uri": null,
+            "retrievedAt": "2026-09-01T00:00:00Z",
+            "publishedAt": null,
+            "status": "ACTIVE",
+            "retention": "EXCERPT_AND_HASH",
+            "contentHash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "acquisition": "ANALYST_ENTRY",
+            "providerId": null,
+            "userSubmitted": false,
+            "hasRegistrySnapshot": false,
+            "newsGenre": null,
+            "syndicatedFrom": null,
+            "derivedFrom": null,
+            "syndicationMarkers": [],
+            "artifactRef": null,
+            "host": null
+          }
+        ],
+        "artifacts": [],
+        "disputes": [],
+        "limitations": [
+          {
+            "code": "CLAIM_NOT_VERIFIED",
+            "scope": "CLAIM",
+            "ref": "c1"
+          },
+          {
+            "code": "IDENTITY_NOT_CONFIRMED",
+            "scope": "IDENTITY",
+            "ref": null
+          },
+          {
+            "code": "NO_REGISTRY_RECORD",
+            "scope": "REGISTRY",
+            "ref": null
+          }
+        ],
+        "doesNotEstablish": [
+          "ABSENCE_IS_NOT_EVIDENCE",
+          "NOT_A_FINDING_OF_WRONGDOING",
+          "NOT_PROFESSIONAL_DUE_DILIGENCE",
+          "NO_DONATION_ADVICE",
+          "NO_INTENT_OR_INNOCENCE",
+          "UNVERIFIED_IS_NOT_FALSE"
+        ],
+        "summary": {
+          "claims": 1,
+          "byStatus": {
+            "SUPPORTED": 0,
+            "PARTIALLY_SUPPORTED": 0,
+            "CONTRADICTED": 0,
+            "INCONCLUSIVE": 0,
+            "OUTDATED": 0,
+            "DISPUTED": 0,
+            "UNVERIFIED": 0
+          },
+          "byDisplayClass": {
+            "FACT": 0,
+            "CLAIM": 0,
+            "EVIDENCE": 0,
+            "INFERENCE": 0,
+            "ALLEGATION": 0,
+            "CONFLICT": 0,
+            "UNKNOWN": 0,
+            "ABSENCE_OF_EVIDENCE": 0
+          },
+          "notVerified": 1,
+          "reverificationPending": 0,
+          "openDisputes": 0,
+          "conflicts": 0,
+          "registryConflicts": 0,
+          "evidence": 0,
+          "sources": 1,
+          "artifacts": 0,
+          "limitations": 3
+        },
+        "dossierStatus": "INCOMPLETE"
+      },
+      "integrity": {
+        "algorithm": "SHA-256",
+        "canonicalization": "impact-canonical-json/1",
+        "contentHash": "ec552ba320cdd18ccc109e71d431c8e8cc01ec3b8979ee665efe4f4e8949bbbb"
+      },
+      "envelope": {
+        "kind": "LIVE",
+        "generatedAt": "2026-09-25T09:04:00.000Z",
+        "auditSeq": 3,
+        "auditHead": "bcf697f20b0c7801d821cbf33817312ec36fac76bf3fdf7d670ad9a9a0ee1ef2",
+        "snapshotRef": null,
+        "notice": "LIVE_VIEW_OF_CURRENT_STATE",
+        "registryFreshAtGeneration": []
+      }
+    },
+    "text": "# Dossiê de verificação — «HopeBridge Foundation»\nEXPERIMENTAL — uso interno do Impact Lab.\nSituação em: «2026-09-25T09:03:00.000Z» · Visão ao vivo do estado atual (muda quando a evidência muda).\nIncompleto — há afirmações não verificadas ou com reverificação pendente\n\n## Resumo\n- Ainda não verificada pelo motor. 1\n\n## Identidade da organização\n- «HopeBridge Foundation» («FOUNDATION»)\n- Não resolvida — sem registro que a confirme\n\n## Afirmações e verificação\n### «c1» — «HopeBridge Foundation operates in two districts.»\n- Ainda não verificada pelo motor.\nTrechos entre « » são citações das fontes, não afirmações do InsightValues.\n\n## Limitações\n- Uma afirmação ainda não foi verificada. («c1»)\n- A identidade da organização não foi confirmada por registro oficial.\n- Nenhum registro oficial foi consultado ou anexado. Isso não significa que a organização não seja registrada.\n\n## O que este dossiê NÃO estabelece\n- Ausência de evidência não é evidência de irregularidade.\n- Não é uma conclusão de irregularidade sobre a organização.\n- Não substitui uma diligência profissional.\n- Não recomenda doar nem deixar de doar.\n- Não estabelece intenção, culpa ou inocência de ninguém.\n- Uma afirmação não verificada ou com evidência insuficiente não é uma afirmação falsa.\n\n## Fontes\n- «src-web» · «ORGANIZATION_WEBSITE» · «HopeBridge Foundation» · «ANALYST_ENTRY» · «ACTIVE» · «2026-09-01T00:00:00Z»\n\n## Integridade e proveniência\n- «impact-dossier/1» · SHA-256 «ec552ba320cdd18ccc109e71d431c8e8cc01ec3b8979ee665efe4f4e8949bbbb»\n- O hash prova que este conteúdo não foi alterado; não prova que ele é verdadeiro.",
+    "labels": {
+      "status": {
+        "UNVERIFIED": "Não verificada",
+        "SUPPORTED": "Sustentada por evidência independente",
+        "PARTIALLY_SUPPORTED": "Parcialmente sustentada",
+        "CONTRADICTED": "Contrariada por evidência independente",
+        "INCONCLUSIVE": "Inconclusiva",
+        "OUTDATED": "Evidência desatualizada",
+        "DISPUTED": "Em contestação"
+      },
+      "displayClass": {
+        "FACT": "Fato verificado (fonte oficial, dentro do seu escopo)",
+        "CLAIM": "Alegação da fonte",
+        "EVIDENCE": "Evidência",
+        "INFERENCE": "Inferência do sistema",
+        "ALLEGATION": "Afirmação de terceiro, não estabelecida",
+        "CONFLICT": "Fontes em conflito",
+        "UNKNOWN": "Desconhecido",
+        "ABSENCE_OF_EVIDENCE": "Sem evidência encontrada"
+      },
+      "sufficiency": {
+        "NO_EVIDENCE": "Nenhuma evidência utilizável",
+        "SELF_REPORTED": "Apenas autodeclaração da própria organização",
+        "SINGLE_SOURCE": "Sem corroboração independente",
+        "INDEPENDENT_SUPPORT": "Uma fonte independente",
+        "MULTI_SOURCE_SUPPORT": "Várias fontes independentes",
+        "CONFLICTING_EVIDENCE": "Evidências conflitantes"
+      },
+      "dossierStatus": {
+        "COMPLETE": "Completo — todas as afirmações foram processadas",
+        "PARTIAL": "Parcial — há limitações registradas abaixo",
+        "REVIEW_REQUIRED": "Revisão humana necessária",
+        "INCOMPLETE": "Incompleto — há afirmações não verificadas ou com reverificação pendente"
+      },
+      "identity": {
+        "CONFIRMED": "Confirmada por registro oficial",
+        "PROBABLE": "Provável, ainda não confirmada",
+        "UNCERTAIN": "Ambígua — mais de uma organização possível",
+        "UNRESOLVED": "Não resolvida — sem registro que a confirme"
+      },
+      "limitation": {
+        "IDENTITY_NOT_CONFIRMED": "A identidade da organização não foi confirmada por registro oficial.",
+        "IDENTITY_AMBIGUOUS": "A identidade é ambígua: os registros apontam para mais de uma possibilidade.",
+        "NO_REGISTRY_RECORD": "Nenhum registro oficial foi consultado ou anexado. Isso não significa que a organização não seja registrada.",
+        "REGISTRY_RECORD_NOT_FRESH": "Um registro oficial pode estar desatualizado e precisar de nova consulta.",
+        "REGISTRY_CONFLICT": "Registros oficiais divergem entre si em algum dado.",
+        "SOURCE_NOT_ACTIVE": "Uma fonte foi atualizada, retirada ou ficou indisponível.",
+        "EXTRACTION_OCR_REQUIRED": "Um documento é só imagem e exigiria OCR; seu conteúdo não foi lido.",
+        "EXTRACTION_PARTIAL": "Um documento foi lido apenas em parte.",
+        "EXTRACTION_FAILED": "Um documento não pôde ser lido.",
+        "ARTIFACT_SUPERSEDED": "Existe uma versão mais recente de um documento anexado.",
+        "EVIDENCE_REVIEW_PENDING": "Há trechos de documentos aguardando revisão humana.",
+        "CLAIM_NOT_VERIFIED": "Uma afirmação ainda não foi verificada.",
+        "REVERIFICATION_PENDING": "A evidência ou uma contestação mudou depois da última verificação.",
+        "INSUFFICIENT_EVIDENCE": "Não encontramos evidência suficiente nas fontes analisadas para confirmar uma afirmação. Isso não indica que ela seja falsa.",
+        "CONFLICTING_EVIDENCE": "Há evidências divergentes; todas são mostradas lado a lado, sem escolher uma.",
+        "DISPUTE_OPEN": "Uma afirmação está em contestação e aguarda revisão.",
+        "EVIDENCE_OUTDATED": "Parte da evidência é antiga e pode não refletir a situação atual.",
+        "LINEAGE_UNCERTAIN": "Não foi possível confirmar se algumas fontes são independentes entre si.",
+        "HUMAN_REVIEW_REQUIRED": "Uma verificação exige revisão humana antes de qualquer uso.",
+        "LOCATOR_UNVERIFIABLE": "A localização de um trecho não pode ser confirmada na versão atual do documento.",
+        "EXCERPT_WITHHELD": "Um trecho foi omitido por conter dados pessoais.",
+        "PERSONAL_DATA_REDACTED": "Dados de contato ou identificadores pessoais foram removidos de um texto citado."
+      },
+      "nonFinding": {
+        "NOT_A_FINDING_OF_WRONGDOING": "Não é uma conclusão de irregularidade sobre a organização.",
+        "NO_INTENT_OR_INNOCENCE": "Não estabelece intenção, culpa ou inocência de ninguém.",
+        "NO_DONATION_ADVICE": "Não recomenda doar nem deixar de doar.",
+        "NOT_PROFESSIONAL_DUE_DILIGENCE": "Não substitui uma diligência profissional.",
+        "ABSENCE_IS_NOT_EVIDENCE": "Ausência de evidência não é evidência de irregularidade.",
+        "UNVERIFIED_IS_NOT_FALSE": "Uma afirmação não verificada ou com evidência insuficiente não é uma afirmação falsa.",
+        "CONFLICT_IS_NOT_WRONGDOING": "Evidências divergentes não indicam culpa; indicam onde olhar com mais atenção.",
+        "REGISTRY_STATUS_IS_NOT_WRONGDOING": "Um status cadastral (inativo, encerrado, removido) não é, por si, sinal de irregularidade.",
+        "DOCUMENTS_ARE_NOT_INDEPENDENT_SOURCES": "Vários documentos não significam várias fontes independentes.",
+        "USER_UPLOADS_ARE_NOT_AUTHORITY": "Documentos enviados por usuários são contexto, nunca autoridade.",
+        "QUOTED_TEXT_IS_NOT_A_PLATFORM_STATEMENT": "Trechos citados das fontes não são afirmações do InsightValues."
+      },
+      "locatorState": {
+        "VALID": "localização confirmada",
+        "NOT_ARTIFACT_BOUND": "sem documento anexado",
+        "ARTIFACT_SUPERSEDED": "documento substituído por versão mais nova",
+        "ARTIFACT_MISSING": "documento não disponível",
+        "HASH_MISMATCH": "versão do documento não confere",
+        "OUT_OF_RANGE": "localização fora do documento"
+      },
+      "reverifyReason": {
+        "EVIDENCE_CHANGED": "a evidência mudou",
+        "DISPUTE_OPENED": "uma contestação foi aberta",
+        "DISPUTE_RESOLVED": "uma contestação foi resolvida"
+      },
+      "gap": {
+        "NO_EVIDENCE": "nenhuma evidência utilizável",
+        "NO_INDEPENDENT_SOURCE": "nenhuma fonte independente",
+        "ONLY_SELF_REPORTED": "apenas autodeclaração",
+        "EVIDENCE_OUTDATED": "evidência antiga",
+        "PERIOD_NOT_COVERED": "período não coberto",
+        "IDENTITY_UNCONFIRMED": "identidade não confirmada",
+        "OUT_OF_AUTHORITY_SCOPE": "fora do escopo da fonte",
+        "UNCONFIRMED_LLM_LINKS": "ligações automáticas não confirmadas",
+        "LEVEL_MISMATCH": "nível de impacto diferente",
+        "UNITS_NOT_COMPARABLE": "unidades não comparáveis",
+        "SOURCE_RETRACTED": "fonte retirada",
+        "SOURCE_CHANGED": "fonte alterada",
+        "SOURCE_UNAVAILABLE": "fonte indisponível",
+        "ALLEGATION_UNRESOLVED": "alegação sem desfecho",
+        "UNTRUSTED_INSTRUCTIONS_DETECTED": "instruções não confiáveis no material (tratadas como dados)",
+        "INDEPENDENCE_NOT_ESTABLISHED": "independência não estabelecida",
+        "POSSIBLE_LINEAGE": "possível origem comum entre fontes"
+      },
+      "conflictKind": {
+        "QUANTITY_DISAGREEMENT": "Fontes informam valores diferentes",
+        "SUPPORT_VS_CONTRADICTION": "Fontes sustentam e divergem da afirmação"
+      },
+      "conflictBasis": {
+        "INDEPENDENT_SOURCES": "entre fontes independentes",
+        "SAME_PUBLISHER": "dentro de um mesmo publicador (ex.: correção posterior)",
+        "SELF_REPORTED_ONLY": "apenas em materiais da própria organização"
+      },
+      "section": {
+        "TITLE": "Dossiê de verificação",
+        "SUMMARY": "Resumo",
+        "IDENTITY": "Identidade da organização",
+        "REGISTRY": "Registros oficiais",
+        "CLAIMS": "Afirmações e verificação",
+        "LIMITATIONS": "Limitações",
+        "NOT_ESTABLISHED": "O que este dossiê NÃO estabelece",
+        "SOURCES": "Fontes",
+        "DISPUTES": "Contestações",
+        "INTEGRITY": "Integridade e proveniência",
+        "AS_OF": "Situação em",
+        "LIVE": "Visão ao vivo do estado atual (muda quando a evidência muda).",
+        "SNAPSHOT": "Retrato histórico: representa o estado nesta data e não se atualiza sozinho.",
+        "HASH_NOTE": "O hash prova que este conteúdo não foi alterado; não prova que ele é verdadeiro.",
+        "QUOTE_NOTE": "Trechos entre « » são citações das fontes, não afirmações do InsightValues.",
+        "EVIDENCE_FOR": "Evidência a favor",
+        "EVIDENCE_PARTIAL": "Evidência parcial",
+        "EVIDENCE_AGAINST": "Evidência divergente",
+        "EVIDENCE_CONTEXT": "Contexto (não conta como corroboração)",
+        "VOICES": "Vozes independentes",
+        "NOT_VERIFIED": "Ainda não verificada pelo motor.",
+        "REVERIFY": "Reverificação pendente",
+        "OPEN_DISPUTE": "Contestação em aberto",
+        "HOST": "hospedado em",
+        "WITHHELD": "trecho omitido por privacidade",
+        "EXPERIMENTAL": "EXPERIMENTAL — uso interno do Impact Lab."
+      },
+      "misc": {
+        "CONFLICTS": "Divergências (todas as posições, nenhuma escolhida)",
+        "UNRESOLVED": "não resolvida",
+        "FRESH_AT_AS_OF": "dentro da janela de atualização na data de referência",
+        "NOT_FRESH_AT_AS_OF": "fora da janela de atualização na data de referência",
+        "FRESH_NOW": "atualizado hoje",
+        "NOT_FRESH_NOW": "pode precisar de nova consulta hoje",
+        "OFFICIAL": "fonte oficial",
+        "SYNTHETIC": "dados de teste",
+        "RULES": "regras aplicadas"
+      }
+    }
+  },
+  "correlation_id": "00000000-0000-4000-8000-00000000c0de"
+}

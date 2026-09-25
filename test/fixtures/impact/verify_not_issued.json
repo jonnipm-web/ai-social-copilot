@@ -1,0 +1,12 @@
+{
+  "ok": true,
+  "action": "verify_dossier",
+  "data": {
+    "state": "NOT_ISSUED",
+    "envelopeState": "NOT_PROVIDED",
+    "snapshot": null,
+    "currentContentHash": "88e943370be429af9ee64a94d19b41a4243dcf2ac69f88f6da75dc1ca3ddbe04",
+    "integrityIsNotTruth": true
+  },
+  "correlation_id": "00000000-0000-4000-8000-00000000c0de"
+}

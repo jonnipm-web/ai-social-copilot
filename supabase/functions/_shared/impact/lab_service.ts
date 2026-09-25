@@ -45,6 +45,7 @@ import { ingestProviderRecord, PROVIDER_REGISTRY_VERSION, type ProviderRegistry,
 import { buildImpactReport } from './report.ts';
 import { buildDossierContent, DOSSIER_CANONICALIZATION, DOSSIER_LIMITS, DOSSIER_SCHEMA_VERSION, type DossierDocument, snapshotRefOf } from './dossier.ts';
 import { renderDossierText } from './dossier_render.ts';
+import { dossierLabels } from './dossier_i18n.ts';
 import { deriveIndicators } from './risk_indicators.ts';
 import { scanUntrustedContent } from './safety.ts';
 import type { Claim, EvidenceItem, Jurisdiction, OrganizationIdentity, Source } from './types.ts';
@@ -533,7 +534,8 @@ export async function handleLabRequest(
     };
     return ok({
       action: req.action,
-      data: { dossier: doc, text: renderDossierText(doc, req.lang), ...(snapshot ? { snapshot } : {}) },
+      // labels: the audited PT/EN vocabulary for every code in the dossier (presentation only, not hashed).
+      data: { dossier: doc, text: renderDossierText(doc, req.lang), labels: await dossierLabels(req.lang), ...(snapshot ? { snapshot } : {}) },
       metrics: { dossier: { ...metrics, exported: req.action === 'export_dossier' } },
     });
   }
