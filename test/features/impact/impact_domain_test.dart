@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:ai_social_copilot/features/impact/data/impact_lab_api.dart';
 import 'package:ai_social_copilot/features/impact/domain/dossier_models.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -232,6 +234,20 @@ void main() {
       }
       for (final n in ['verify_current', 'verify_stale', 'verify_not_issued', 'verify_envelope_mismatch']) {
         expect(VerifyResult.fromData(fixture(n)['data'] as Map<String, dynamic>).state, isNotEmpty);
+      }
+    });
+
+    test('UI-API-10 (I6G1-04) the Impact client only ever sends the four read actions (never owner review DTOs)', () {
+      final sources = Directory('lib/features/impact')
+          .listSync(recursive: true)
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.dart'))
+          .map((f) => f.readAsStringSync())
+          .join(' ');
+      final actions = RegExp(r"_call\('([a-z_]+)'").allMatches(sources).map((m) => m.group(1)).toSet();
+      expect(actions, {'list_investigations', 'get_dossier', 'export_dossier', 'verify_dossier'});
+      for (final forbidden in ['get_investigation', 'review_candidate', 'import_registry_claim', 'ingest_artifact', 'OWNER_REVIEW_RAW']) {
+        expect(sources, isNot(contains(forbidden)), reason: forbidden);
       }
     });
 

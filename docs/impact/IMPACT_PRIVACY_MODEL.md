@@ -22,16 +22,16 @@ fail-closed presentation policy implemented in
 
 | PII source | Detection | Presentation | Residual |
 |---|---|---|---|
-| Claim text | minor-risk rule; structured ids; private-name / private-address signals | minor ⇒ withheld `MINOR_DATA_RISK`; ids ⇒ redacted; name/address signal ⇒ **withheld `PERSONAL_DATA_RISK`** | a name no signal matches (e.g. a single lower-case word) |
+| Claim text | minor-risk rule; structured ids; private-name / private-address signals; caseless-script text | minor ⇒ withheld `MINOR_DATA_RISK`; ids ⇒ redacted; name/address signal or un-assessable script ⇒ **withheld `PERSONAL_DATA_RISK`** | a name no signal matches (e.g. a single lower-case word) |
 | Evidence excerpt | same + reviewer classification (`PUBLIC_OFFICIAL_ROLE` ⇒ withheld; PERSONAL/SENSITIVE/MINOR not representable in the Lab contract) | withheld / redacted as above | same |
-| Organization name (declared identity) | structured ids, minor rule | organizational information: shown (quoted), ids redacted | a person declared as the subject organization (contract misuse; subject type is an organization type) |
+| Organization name (declared identity) | structured ids, minor rule | organizational information: shown (quoted), ids redacted — but it does **not** exempt any other text (client-supplied) | a person declared as the subject organization is shown in the identity block itself (contract misuse; subject type is an organization type) |
 | Registry legal name | structured ids, minor rule | official organizational record: shown | none known |
-| Source publisher | structured ids; SOCIAL_MEDIA / OTHER may be a person | organizational types shown; SOCIAL_MEDIA / OTHER **withheld unless an organization on record** | a person publishing under an organizational source type |
+| Source publisher | structured ids; name / address signals for **every** source type (the type is client-declared) | withheld on a signal unless registry-confirmed; SOCIAL_MEDIA / OTHER withheld unless registry-confirmed | a person's name no signal matches |
 | Lineage names (syndicatedFrom / derivedFrom), conflict position publishers | as publisher, by the source's type | as publisher | same |
-| URLs | parsed | **origin only** (scheme + host); non-http(s) / unparsable ⇒ withheld | a personal host name (e.g. `janedoe.example`) |
-| E-mail, phone, IBAN / bank account, payment card (Luhn), sort code + account, labelled account numbers, CPF / CNPJ / SSN, UK NINO, long digit runs | deterministic patterns (`redactStructured`) | redacted `[redacted-…]` in every field | unusual formats |
+| URLs | parsed | **origin only** (scheme + host; never userinfo, port, path, query, fragment); non-http(s) / unparsable ⇒ withheld; SOCIAL_MEDIA / OTHER / USER_DOCUMENT URLs withheld entirely | a personal sub-domain on an organizational source type |
+| E-mail (ASCII and Unicode), phone (any Unicode digits, normalized to ASCII first), IBAN / bank account, payment card (Luhn, spaced or compact), sort code + account, labelled account numbers, labelled ids (EIN, TIN, NIF, NIE, NINO, SSN, DNI, CPF, CNPJ, RG, CURP, RFC, PAN, passport, tax id, national id — value must contain 4+ digits; acronyms upper-case only), MRZ fragments, formatted CPF / CNPJ / SSN, UK NINO, long digit runs | deterministic patterns (`redactStructured`) | redacted `[redacted-…]` in every field | unlabelled identifiers in unusual formats |
 | Addresses | street + number (EN / PT / ES), unit / apartment, UK / BR / US postcodes, PO box | free text withheld | an address written without any of these forms |
-| Private names | honorific + name; person-role + name (EN / PT / ES); 2+ consecutive capitalized non-organizational words | free text withheld | lower-case names, single names without context, names in scripts without letter case |
+| Private names | honorific + name; person-role + name (EN / PT / ES); initial + surname ("J. Smith"); 2+ consecutive Title-case **or** 2+ consecutive ALL-CAPS (4+ letters) non-organizational words, commas and line breaks included ("SMITH, JOHN"); any letter of a caseless script (withheld as un-assessable) | free text withheld | lower-case names; a single name without honorific / role / initial |
 | Minors | minor term AND age / birth expression (EN / PT / ES) | withheld in **every** field, precedence over every other rule | minors described without both signals (bounded by reviewer classification `MINOR` being unrepresentable) |
 | Filenames, cloud file ids | — | **never** in the dossier (artifacts expose type, hash, host provider, status only) | — |
 | Document locators | — | line / page / cell coordinates only | — |
@@ -52,9 +52,10 @@ too (e.g. an organization name that is not on record and looks like two
 capitalized words). This over-withholding is the chosen trade-off
 (WITHHOLD over EXPOSE) and is always visible as the limitation
 `EXCERPT_WITHHELD` ("contains, or may contain, personal data — conservative
-rule"). Only names from trusted origins exempt text: the subject's declared
-identity and official registry snapshots; client-entered publisher names
-never do (they could whitelist a person's name).
+rule"). Only names confirmed by an **official registry snapshot** exempt
+text (Codex I6G1-02). The subject's declared identity, aliases and public
+name, and every client-entered publisher, are untrusted: they could
+whitelist a person's name.
 
 The remaining residual is bounded by:
 1. the reviewer's mandatory personal-data classification on every evidence
@@ -62,12 +63,19 @@ The remaining residual is bounded by:
 2. admin-only Lab access;
 3. no public sharing, no publication path.
 
-## 4. Where raw stored text is still visible
+## 4. Owner review DTOs (`OWNER_REVIEW_RAW`)
 
-Authoring / review actions of the admin Lab (the candidate review queue,
-registry-claim import replies) return the stored text to the admin
-reviewer, who needs it to classify. They are not used by the Impact UI and
-are not part of any export.
+The Lab authoring / review actions — `get_investigation`, the candidate
+queue (`ingest_artifact`, `review_candidate`), `import_registry_claim` —
+return what **this caller** entered or uploaded, because reviewing and
+classifying require it (stored evidence ≠ presentation). They are an
+explicitly privileged, owner-only contract (Codex I6G1-04):
+- every such response is marked `privacy.class = OWNER_REVIEW_RAW` (and each
+  candidate `privacyClass`);
+- minor-data risk is withheld **even here** (I6G1-07);
+- they are never part of a dossier, export or snapshot (PV-17), and the
+  Flutter Impact client can only send `list_investigations`, `get_dossier`,
+  `export_dossier`, `verify_dossier` (UI-API-10 scans the client source).
 
 ## 5. Snapshots and policy changes
 
@@ -84,7 +92,10 @@ content. Consequences:
 
 ## 6. Tests
 
-`privacy_test.ts` PV-01..11 (structured ids, name / address signals,
+`privacy_test.ts` PV-01..17 (structured ids incl. Unicode / labelled / MRZ,
+all-caps / initials / surname-first / caseless names, client whitelist
+attempts, publishers of every type, URL userinfo / IDN / IP / personal
+types, owner review DTO; and the original: name / address signals,
 organizational text kept, minors precedence, trusted-only exemption,
 publishers, URLs, invisible characters, end-to-end live / export / text /
 snapshot, stored evidence untouched), `dossier_test.ts` G3-02 (stricter),

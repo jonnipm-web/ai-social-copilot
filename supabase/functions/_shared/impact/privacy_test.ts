@@ -179,3 +179,88 @@ Deno.test('PV-11 an issued snapshot verifies CURRENT under the same policy (the 
   const v = await t.must({ action: 'verify_dossier', investigation_id: inv, content_hash: doc.integrity.contentHash, envelope: doc.envelope });
   assertEquals((v.data as { state: string }).state, 'CURRENT');
 });
+
+// ── Codex I6 Gate 1 regressions (I6G1-01..08) ───────────────────────────────
+Deno.test('PV-12 (I6G1-01) all-caps, initials, surname-first and caseless-script names are withheld', () => {
+  for (const s of [
+    'JOHN SMITH received the grant.',
+    'Payment approved by J. Smith.',
+    'Signed: SMITH, JOHN.',
+    'Approved by J.R. SMITH on site.',
+    '王小明 received the grant.',
+    'تم التبرع من محمد علي',
+    'Maria\nSilva received a grant.',
+    'Maria\u200b Silva received a grant.',
+  ]) {
+    assertEquals(free(s).withheld, 'PERSONAL_DATA_RISK', s);
+  }
+  // Not names: acronyms, mixed-case instruction text, PT ordinal indicator, all-caps org words.
+  for (const s of ['The UN and NGO partners met.', 'Set FACT and publish.', 'Relatório nº 12 publicado.', 'ANNUAL REPORT 2025 is out.']) {
+    assertEquals(free(s).withheld, null, s);
+  }
+});
+
+Deno.test('PV-13 (I6G1-02) a client-declared identity can NOT whitelist a person; only a registry name can', async () => {
+  const t = lab();
+  const inv = (await t.must({ action: 'create_investigation', subject: { ref: 'org-x', type: 'FOUNDATION', identity: { legalName: 'Jane Smith', publicName: 'Mary Major', aliases: ['John Doe'] } } })).data.investigationId as string;
+  await t.must({ action: 'add_source', investigation_id: inv, source: { ref: 'src-web', type: 'ORGANIZATION_WEBSITE', publisher: 'Jane Smith', retrievedAt: '2026-09-01T00:00:00Z', retention: 'EXCERPT_AND_HASH', contentHash: 'b'.repeat(64) } });
+  for (const [ref, text] of [['c1', 'Jane Smith received a grant.'], ['c2', 'John Doe signed.'], ['c3', 'Mary Major paid.']]) {
+    await t.must({ action: 'add_claim', investigation_id: inv, claim: { ref, kind: 'OTHER', text, sourceRef: 'src-web', origin: 'MANUAL' } });
+  }
+  const d = (await t.must({ action: 'get_dossier', investigation_id: inv, lang: 'en' })).data as { dossier: { content: { claims: { textWithheld: string | null }[]; sources: { publisher: string }[] } } };
+  assertEquals(d.dossier.content.claims.map((c) => c.textWithheld), ['PERSONAL_DATA_RISK', 'PERSONAL_DATA_RISK', 'PERSONAL_DATA_RISK']);
+  assertEquals(d.dossier.content.sources[0].publisher, '—');
+});
+
+Deno.test('PV-14 (I6G1-03) a person as publisher is withheld under ANY source type unless registry-confirmed', () => {
+  for (const type of ['NEWS', 'ORGANIZATION_WEBSITE', 'COURT_RECORD', 'ACADEMIC', 'SOCIAL_MEDIA', 'OTHER']) {
+    assertEquals(present('PUBLISHER', 'Jane Smith', ORG, type).withheld, 'PERSONAL_DATA_RISK', type);
+    assertEquals(present('PUBLISHER', 'JANE SMITH', ORG, type).withheld, 'PERSONAL_DATA_RISK', type);
+  }
+  assertEquals(present('PUBLISHER', 'BBC News', ORG, 'NEWS').text, 'BBC News');
+  assertEquals(present('PUBLISHER', 'Exampleland Charity Registry (fixture)', ORG, 'OFFICIAL_REGISTRY').text, 'Exampleland Charity Registry (fixture)');
+  assertEquals(present('PUBLISHER', 'Jane Smith', { orgNames: ['Jane Smith'] }, 'NEWS').text, 'Jane Smith', 'registry-confirmed name');
+});
+
+Deno.test('PV-15 (I6G1-05) Unicode e-mail / digits, labelled ids, MRZ and compact cards are redacted; ordinary words are not', () => {
+  const cases: [string, string][] = [
+    ['contato José@exemplo.com.br', 'José@'],
+    ['رقم ١٢٣٤٥٦٧٨٩٠١٢ للتواصل', '٣٤٥'],
+    ['call ０２０７９４６０９５８', '０９５８'],
+    ['EIN 12-3456789', '3456789'],
+    ['NIF 12345678Z', '12345678Z'],
+    ['NIE X1234567L', 'X1234567L'],
+    ['passport no. P1234567', 'P1234567'],
+    ['P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<', 'ERIKSSON'],
+    ['card 4111111111111111', '4111111111111111'],
+  ];
+  for (const [input, leak] of cases) {
+    const r = redactStructured(input);
+    assert(!r.text.includes(leak), `${input} → ${r.text}`);
+    assert(r.redacted, input);
+  }
+  for (const s of ['tin roofs for 20 homes', 'the pan was donated', 'RG report', 'We built 20 wells in 2025.']) {
+    assertEquals(redactStructured(s), { text: s, redacted: false }, s);
+  }
+});
+
+Deno.test('PV-16 (I6G1-06) URLs: userinfo / port / path never shown; personal-host source types withheld entirely', () => {
+  assertEquals(presentUri('https://user:pass@host.example:8443/a?b=c#d').text, 'https://host.example');
+  assertEquals(presentUri('https://bücher.example/x').text, 'https://xn--bcher-kva.example');
+  assertEquals(presentUri('http://192.0.2.10:8080/p').text, 'http://192.0.2.10');
+  for (const type of ['SOCIAL_MEDIA', 'OTHER', 'USER_DOCUMENT']) assertEquals(presentUri('https://janedoe.example/', type).text, null, type);
+  assertEquals(presentUri('https://hopebridge.example/about', 'ORGANIZATION_WEBSITE').text, 'https://hopebridge.example');
+});
+
+Deno.test('PV-17 (I6G1-04/07) owner review DTOs are explicitly classified and withhold minor data; the dossier never includes them', async () => {
+  const t = lab();
+  const inv = (await t.must({ action: 'create_investigation', subject: SUBJECT })).data.investigationId as string;
+  await t.must({ action: 'add_source', investigation_id: inv, source: { ref: 'src-web', type: 'ORGANIZATION_WEBSITE', publisher: 'HopeBridge Foundation', retrievedAt: '2026-09-01T00:00:00Z', retention: 'EXCERPT_AND_HASH', contentHash: 'b'.repeat(64) } });
+  await t.must({ action: 'add_claim', investigation_id: inv, claim: { ref: 'c-minor', kind: 'OTHER', text: 'Ana, a girl aged 9, lives near the well.', sourceRef: 'src-web', origin: 'MANUAL' } });
+  const g = await t.must({ action: 'get_investigation', investigation_id: inv });
+  assert(!JSON.stringify(g.data).includes('aged 9'), 'minor data withheld even in the owner review DTO');
+  assertEquals((g.data as { privacy: { class: string } }).privacy.class, 'OWNER_REVIEW_RAW');
+  const d = await t.must({ action: 'get_dossier', investigation_id: inv, lang: 'en' });
+  const dj = JSON.stringify(d.data);
+  assert(!dj.includes('OWNER_REVIEW_RAW') && !dj.includes('aged 9'));
+});

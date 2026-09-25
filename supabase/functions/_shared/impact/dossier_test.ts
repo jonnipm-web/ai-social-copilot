@@ -529,7 +529,7 @@ Deno.test('G3-02 exported free text is screened by the SERVER whatever personal-
   // I6 (I5F-03): an OTHER-type publisher that is not an organization on record is WITHHELD (stricter than redaction).
   assert(limits(d).includes('EXCERPT_WITHHELD:src-mail'));
   assertEquals(d.content.sources.find((s) => s.ref === 'src-mail')!.publisher, '—');
-  assertEquals(d.content.sources.find((s) => s.ref === 'src-mail')!.uri, 'https://x.example');
+  assertEquals(d.content.sources.find((s) => s.ref === 'src-mail')!.uri, null); // I6G1-06: OTHER-type URL withheld entirely
   assert(d.content.quotedDataFields.includes('claims[].text') && d.content.quotedDataFields.includes('evidence[].excerpt'));
   assertEquals(claimOf(d, 'c1').textAttribution, 'QUOTED_FROM_SOURCE');
 });

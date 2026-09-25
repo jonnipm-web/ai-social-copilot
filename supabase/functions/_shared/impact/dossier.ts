@@ -183,13 +183,10 @@ export async function buildDossierContent(input: DossierInput) {
   const asOfMs = stamps.length ? Math.max(...stamps) : null;
   const asOf = asOfMs === null ? null : new Date(asOfMs).toISOString();
 
-  // ── presentation context: organization names from TRUSTED origins only ──
-  const sid = inv.subjectIdentity;
+  // ── presentation context: only REGISTRY-CONFIRMED organization names may
+  // exempt text (Codex I6G1-02: the declared identity is client-supplied).
   const privacy: PresentationContext = {
-    orgNames: [
-      sid.legalName, sid.publicName, ...(sid.aliases ?? []), ...(sid.tradingNames ?? []), ...(sid.formerNames ?? []).map((f) => f.name),
-      ...input.registryFacts.map((r) => r.legalName),
-    ].filter((n): n is string => typeof n === 'string' && n.length > 0),
+    orgNames: input.registryFacts.map((r) => r.legalName).filter((n) => typeof n === 'string' && n.length > 0),
   };
   const sourceTypeOf = new Map(data.sources.map(({ source }) => [source.id, source.type]));
 
@@ -242,7 +239,7 @@ export async function buildDossierContent(input: DossierInput) {
     const art = artifactOfSource.get(s.id);
     const pub = present('PUBLISHER', s.publisher, privacy, s.type);
     // URLs: origin only — paths / queries can carry personal handles or tokens.
-    const uri = presentUri(s.uri);
+    const uri = presentUri(s.uri, s.type);
     if (pub.withheld) lim('EXCERPT_WITHHELD', 'SOURCE', s.id);
     if (pub.redacted) lim('PERSONAL_DATA_REDACTED', 'SOURCE', s.id);
     return {

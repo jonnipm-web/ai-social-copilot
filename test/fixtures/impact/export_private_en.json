@@ -190,7 +190,7 @@
             "type": "SOCIAL_MEDIA",
             "publisher": "—",
             "publisherOrgRef": null,
-            "uri": "https://social.example",
+            "uri": null,
             "retrievedAt": "2026-09-01T00:00:00Z",
             "publishedAt": null,
             "status": "ACTIVE",
@@ -308,14 +308,14 @@
       "integrity": {
         "algorithm": "SHA-256",
         "canonicalization": "impact-canonical-json/1",
-        "contentHash": "092c5635f8f5d2953e062d3015bec36b54f9281602ed3fde8dcc2fe911849d4c"
+        "contentHash": "7a85aa0c59399efb5d9368f84c345a658ac6427e2f6caa56fd71fa474d726221"
       },
       "envelope": {
         "kind": "SNAPSHOT",
         "generatedAt": "2026-09-25T09:09:00.000Z",
         "auditSeq": 8,
         "auditHead": "2cc772f245da2bc9c9e6c89b4f4618618d12c65b58b12b8e331320b089c60ffa",
-        "snapshotRef": "dossier-092c5635f8f5d2953e062d30",
+        "snapshotRef": "dossier-7a85aa0c59399efb5d9368f8",
         "notice": "HISTORICAL_SNAPSHOT_AS_OF",
         "registryFreshAtGeneration": [
           {
@@ -325,7 +325,7 @@
         ]
       }
     },
-    "text": "# Verification dossier — «HopeBridge Foundation»\nEXPERIMENTAL — Impact Lab internal use.\nAs of: «2026-09-25T09:07:00.000Z» · Historical snapshot: represents the state at this date and never updates itself.\nIncomplete — some claims are not verified or await re-verification\n\n## What this dossier does NOT establish\n- Absence of evidence is not evidence of wrongdoing.\n- It is not a finding of wrongdoing about the organization.\n- It does not replace professional due diligence.\n- It does not recommend donating or not donating.\n- It does not establish anyone’s intent, guilt or innocence.\n- An unverified claim, or one with insufficient evidence, is not a false claim.\n\n## Limitations\n- A claim has not been verified yet. («c-org», «c-private»)\n- A text was withheld because it contains, or may contain, personal data (conservative rule: when in doubt, it is withheld). («c-private», «e-private», «src-social»)\n- An official registry record may be out of date and need refreshing. («src-reg»)\n\n## Summary\n- Not yet verified by the engine. 2\n\n## Organization identity\n- «HopeBridge Foundation» («FOUNDATION»)\n- Confirmed by an official registry\n\n## Official registry records\n- «HopeBridge Foundation» · «XA:charity-number:XA1234567» · «REGISTERED» «2026-08-31» · «fixture-xa-charity-registry» (official source) · «2026-09-01T00:00:00Z» · test data\n  - outside its refresh window at the as-of date · may need refreshing today\n\n## Claims and verification\n### «c-org» — «HopeBridge Foundation operates in two districts.»\n- Not yet verified by the engine.\n  - «e-private» · «src-web» · «CONTEXTUALIZES» [excerpt withheld for privacy] · no attached document\n### «c-private» — [excerpt withheld for privacy]\n- Not yet verified by the engine.\nExcerpts in « » are quotes from the sources, not statements by InsightValues.\n\n## Sources\n- «src-reg» · «OFFICIAL_REGISTRY» · «Exampleland Charity Registry (fixture)» · «PROVIDER» · «ACTIVE» · «2026-09-01T00:00:00Z»\n- «src-social» · «SOCIAL_MEDIA» · «—» · «ANALYST_ENTRY» · «ACTIVE» · «2026-09-01T00:00:00Z»\n- «src-web» · «ORGANIZATION_WEBSITE» · «HopeBridge Foundation» · «ANALYST_ENTRY» · «ACTIVE» · «2026-09-01T00:00:00Z»\n\n## Integrity and provenance\n- «impact-dossier/1» · SHA-256 «092c5635f8f5d2953e062d3015bec36b54f9281602ed3fde8dcc2fe911849d4c»\n- «dossier-092c5635f8f5d2953e062d30» · «2026-09-25T09:09:00.000Z»\n- The hash proves this content was not altered; it does not prove it is true.",
+    "text": "# Verification dossier — «HopeBridge Foundation»\nEXPERIMENTAL — Impact Lab internal use.\nAs of: «2026-09-25T09:07:00.000Z» · Historical snapshot: represents the state at this date and never updates itself.\nIncomplete — some claims are not verified or await re-verification\n\n## What this dossier does NOT establish\n- Absence of evidence is not evidence of wrongdoing.\n- It is not a finding of wrongdoing about the organization.\n- It does not replace professional due diligence.\n- It does not recommend donating or not donating.\n- It does not establish anyone’s intent, guilt or innocence.\n- An unverified claim, or one with insufficient evidence, is not a false claim.\n\n## Limitations\n- A claim has not been verified yet. («c-org», «c-private»)\n- A text was withheld because it contains, or may contain, personal data (conservative rule: when in doubt, it is withheld). («c-private», «e-private», «src-social»)\n- An official registry record may be out of date and need refreshing. («src-reg»)\n\n## Summary\n- Not yet verified by the engine. 2\n\n## Organization identity\n- «HopeBridge Foundation» («FOUNDATION»)\n- Confirmed by an official registry\n\n## Official registry records\n- «HopeBridge Foundation» · «XA:charity-number:XA1234567» · «REGISTERED» «2026-08-31» · «fixture-xa-charity-registry» (official source) · «2026-09-01T00:00:00Z» · test data\n  - outside its refresh window at the as-of date · may need refreshing today\n\n## Claims and verification\n### «c-org» — «HopeBridge Foundation operates in two districts.»\n- Not yet verified by the engine.\n  - «e-private» · «src-web» · «CONTEXTUALIZES» [excerpt withheld for privacy] · no attached document\n### «c-private» — [excerpt withheld for privacy]\n- Not yet verified by the engine.\nExcerpts in « » are quotes from the sources, not statements by InsightValues.\n\n## Sources\n- «src-reg» · «OFFICIAL_REGISTRY» · «Exampleland Charity Registry (fixture)» · «PROVIDER» · «ACTIVE» · «2026-09-01T00:00:00Z»\n- «src-social» · «SOCIAL_MEDIA» · «—» · «ANALYST_ENTRY» · «ACTIVE» · «2026-09-01T00:00:00Z»\n- «src-web» · «ORGANIZATION_WEBSITE» · «HopeBridge Foundation» · «ANALYST_ENTRY» · «ACTIVE» · «2026-09-01T00:00:00Z»\n\n## Integrity and provenance\n- «impact-dossier/1» · SHA-256 «7a85aa0c59399efb5d9368f84c345a658ac6427e2f6caa56fd71fa474d726221»\n- «dossier-7a85aa0c59399efb5d9368f8» · «2026-09-25T09:09:00.000Z»\n- The hash proves this content was not altered; it does not prove it is true.",
     "labels": {
       "status": {
         "UNVERIFIED": "Unverified",
@@ -485,8 +485,8 @@
       }
     },
     "snapshot": {
-      "ref": "dossier-092c5635f8f5d2953e062d30",
-      "contentHash": "092c5635f8f5d2953e062d3015bec36b54f9281602ed3fde8dcc2fe911849d4c",
+      "ref": "dossier-7a85aa0c59399efb5d9368f8",
+      "contentHash": "7a85aa0c59399efb5d9368f84c345a658ac6427e2f6caa56fd71fa474d726221",
       "exportedAt": "2026-09-25T09:09:00.000Z",
       "replayed": false
     }

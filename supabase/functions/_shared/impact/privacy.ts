@@ -15,16 +15,20 @@
  *    in every field;
  *  - free text that may be ABOUT people (claim text, evidence excerpts):
  *    any private-name or private-address signal ⇒ the whole text is
- *    WITHHELD (PERSONAL_DATA_RISK). Only names from TRUSTED origins (the
- *    subject's declared identity, official registry snapshots) are exempt —
- *    never client-entered publisher names;
+ *    WITHHELD (PERSONAL_DATA_RISK). Text in a script without letter case
+ *    (CJK, Arabic, Hebrew, Indic…) cannot be assessed ⇒ WITHHELD. Only
+ *    names confirmed by an OFFICIAL REGISTRY snapshot are exempt — never a
+ *    client-declared identity, alias, trading name or publisher (Codex
+ *    I6G1-02);
  *  - organization identity (declared identity, official registry name):
  *    organizational information, structured redaction only;
- *  - publisher names of sources that may be a private person
- *    (SOCIAL_MEDIA, OTHER) ⇒ WITHHELD unless the name is an organization
- *    on record;
- *  - URLs ⇒ origin only (scheme + host); paths and queries can carry
- *    personal handles, names or tokens and are never presented.
+ *  - publisher-like names (publisher, lineage, conflict positions): the same
+ *    name / address signals for EVERY source type (the type is
+ *    client-declared, Codex I6G1-03); SOCIAL_MEDIA / OTHER publishers are
+ *    withheld unless registry-confirmed;
+ *  - URLs ⇒ origin only (scheme + host); paths, queries, userinfo and ports
+ *    are never presented; SOCIAL_MEDIA / OTHER / USER_DOCUMENT URLs are
+ *    withheld entirely (their host can itself be personal).
  *
  * HONEST LIMIT: private names and addresses cannot be detected universally
  * by any deterministic rule. The detectors below are deliberately
@@ -81,9 +85,34 @@ function luhn(digits: string): boolean {
   return sum % 10 === 0;
 }
 
+// Unicode e-mail (non-ASCII local part / domain), Codex I6G1-05.
+const EMAIL_UNICODE = /[\p{L}\p{N}._%+-]+@[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)*\.\p{L}{2,}/gu;
+// Labelled personal / tax / travel identifiers: redact the VALUE whatever its format.
+// Labelled personal / tax / travel identifiers: redact the VALUE whatever its
+// format. Acronyms must be upper case ("tin roofs" is not a TIN) and the value
+// must contain 4+ digits.
+const LABELLED_ID_ACRONYM = /(?<![\p{L}])(?:EIN|TIN|ITIN|NIF|NIE|NIPC|NINO|SSN|SIN|DNI|CURP|RFC|PAN|RG|CPF|CNPJ)\s*(?:no\.?|n[º°]\.?|number|número|numero|#|:)?\s*[A-Za-z0-9][A-Za-z0-9 .\-/]{3,}[A-Za-z0-9]/gu;
+const LABELLED_ID_WORD = /(?<![\p{L}])(?:aadhaar|passport(?:\s+(?:no\.?|number))?|passaporte|pasaporte|tax\s+(?:id|number|code)|national\s+id)\s*(?:no\.?|n[º°]\.?|number|número|numero|#|:)?\s*[A-Za-z0-9][A-Za-z0-9 .\-/]{3,}[A-Za-z0-9]/giu;
+const hasDigits = (m: string) => (m.match(/\d/g) ?? []).length >= 4;
+// Machine-readable zone (passport / id card) fragments.
+const MRZ = /[A-Z0-9<]{2,}<<[A-Z0-9<]{2,}/g;
+// Zero code points of the common decimal-digit blocks (Arabic-Indic, extended,
+// NKo, Devanagari … Myanmar, Khmer, Mongolian, full-width).
+const DIGIT_ZEROS = [0x0660, 0x06f0, 0x07c0, 0x0966, 0x09e6, 0x0a66, 0x0ae6, 0x0b66, 0x0be6, 0x0c66, 0x0ce6, 0x0d66, 0x0de6, 0x0e50, 0x0ed0, 0x0f20, 0x1040, 0x1090, 0x17e0, 0x1810, 0xff10];
+
+/** Map every Unicode decimal digit to ASCII so digit-based identifiers cannot hide in another script. */
+export function asciiDigits(text: string): string {
+  return text.replace(/\p{Nd}/gu, (d) => {
+    const cp = d.codePointAt(0)!;
+    for (const z of DIGIT_ZEROS) if (cp >= z && cp <= z + 9) return String(cp - z);
+    return cp >= 0x30 && cp <= 0x39 ? d : '0';
+  });
+}
+
 /** redactPii + the identifiers above. */
-export function redactStructured(text: string): { text: string; redacted: boolean } {
+export function redactStructured(input: string): { text: string; redacted: boolean } {
   let redacted = false;
+  const text = asciiDigits(input);
   let out = text.replace(CARD, (m) => {
     const d = m.replace(/\D/g, '');
     if (d.length >= 13 && d.length <= 19 && luhn(d)) {
@@ -92,7 +121,11 @@ export function redactStructured(text: string): { text: string; redacted: boolea
     }
     return m;
   });
-  out = out.replace(SORT_CODE_ACCOUNT, () => ((redacted = true), '[redacted-account]'))
+  out = out.replace(EMAIL_UNICODE, () => ((redacted = true), '[redacted-email]'))
+    .replace(MRZ, () => ((redacted = true), '[redacted-id]'))
+    .replace(LABELLED_ID_ACRONYM, (m) => (hasDigits(m) ? ((redacted = true), '[redacted-id]') : m))
+    .replace(LABELLED_ID_WORD, (m) => (hasDigits(m) ? ((redacted = true), '[redacted-id]') : m))
+    .replace(SORT_CODE_ACCOUNT, () => ((redacted = true), '[redacted-account]'))
     .replace(LABELLED_ACCOUNT, () => ((redacted = true), '[redacted-account]'))
     .replace(NINO, () => ((redacted = true), '[redacted-id]'));
   const base = redactPii(out);
@@ -159,6 +192,15 @@ const NOT_A_NAME = new Set([
 ]);
 const NAME_PARTICLE = new Set(['da', 'de', 'do', 'dos', 'das', 'del', 'van', 'von', 'der', 'di', 'du', 'le', 'la', 'bin', 'ibn', 'al', 'e', 'y']);
 const CAP_WORD = /^\p{Lu}[\p{Ll}\p{M}'’-]+$/u;
+// ALL-CAPS words of 4+ letters ("JOHN", "SMITH"); 2–3 letter caps are
+// treated as acronyms (UN, NGO, BBC, USA) and break a run (Codex I6G1-01).
+const CAPS_WORD = /^\p{Lu}{2,}[\p{Lu}\p{M}'’-]*$/u;
+// An initial followed by a capitalized or all-caps surname: "J. Smith", "J.R. SMITH".
+const INITIAL_NAME = /(?<![\p{L}])\p{Lu}\.\s?(?:\p{Lu}\.\s?){0,2}\p{Lu}[\p{Ll}\p{Lu}'’-]+/u;
+// A letter from a script without case (Han, Kana, Hangul, Arabic, Hebrew,
+// Indic, Thai…): such text cannot be assessed for personal names ⇒ withheld.
+// The ordinal indicators ª / º (common in PT "nº") are excluded.
+const CASELESS_LETTER = /(?![ªº])\p{Lo}/u;
 
 const norm = (s: string) => s.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 
@@ -182,24 +224,30 @@ function stripKnownOrganizations(text: string, orgNames: readonly string[]): str
  * organization name that is not on record can be withheld too.
  */
 function capitalizedNameRun(text: string): boolean {
+  // A run is HOMOGENEOUS: all Title-case words ("Maria Silva") or all ALL-CAPS
+  // words ("JOHN SMITH"); mixing ("Set FACT") restarts it.
   let run = 0;
+  let runType: 'title' | 'caps' | null = null;
   let pendingParticles = 0;
   for (const raw of text.split(/[\s,;:()"“”«»!?/]+/u)) {
     const w = raw.replace(/[.]+$/u, '');
     const lower = w.toLowerCase().replace(/['’]s$/u, '');
-    const isName = CAP_WORD.test(w) && !NOT_A_NAME.has(lower);
-    if (isName) {
-      run += 1;
+    const type = NOT_A_NAME.has(lower) ? null : CAP_WORD.test(w) ? 'title' : CAPS_WORD.test(w) && w.length >= 4 ? 'caps' : null;
+    if (type !== null) {
+      run = type === runType ? run + 1 : 1;
+      runType = type;
       pendingParticles = 0;
       if (run >= 2) return true;
     } else if (run > 0 && NAME_PARTICLE.has(lower) && pendingParticles < 2) {
       pendingParticles += 1;
     } else {
       run = 0;
+      runType = null;
       pendingParticles = 0;
     }
     if (raw.endsWith('.')) {
       run = 0; // a sentence end closes the run
+      runType = null;
       pendingParticles = 0;
     }
   }
@@ -208,14 +256,14 @@ function capitalizedNameRun(text: string): boolean {
 
 export function privateNameSignal(text: string, orgNames: readonly string[]): boolean {
   const t = stripKnownOrganizations(text, orgNames);
-  return HONORIFIC.test(t) || PERSON_ROLE.test(t) || capitalizedNameRun(t);
+  return HONORIFIC.test(t) || PERSON_ROLE.test(t) || INITIAL_NAME.test(t) || CASELESS_LETTER.test(t) || capitalizedNameRun(t);
 }
 
 export interface PresentationContext {
   /**
-   * Organization names on record from TRUSTED origins only: the subject's
-   * declared identity and official registry snapshots. Client-entered
-   * publisher names are never added (they could whitelist a person's name).
+   * Organization names confirmed by an OFFICIAL REGISTRY snapshot — the only
+   * names that may exempt text. Client-declared identity / aliases / trading
+   * names / publishers are never added (they could whitelist a person).
    */
   readonly orgNames: readonly string[];
 }
@@ -243,18 +291,30 @@ export function present(
   if (kind === 'FREE_TEXT' && (privateAddressSignal(r.text) || privateNameSignal(r.text, ctx.orgNames))) {
     return { text: null, withheld: 'PERSONAL_DATA_RISK', redacted: false };
   }
-  // A social-media / "other" publisher may be a private person: it is shown
-  // only when it IS an organization already on record (fail-closed).
-  if (kind === 'PUBLISHER' && sourceType !== undefined && PERSONAL_PUBLISHER_TYPES.has(sourceType) &&
-    !ctx.orgNames.some((n) => norm(n) === norm(r.text))) {
-    return { text: null, withheld: 'PERSONAL_DATA_RISK', redacted: false };
+  if (kind === 'PUBLISHER') {
+    const onRecord = ctx.orgNames.some((n) => norm(n) === norm(r.text));
+    // Any source type (client-declared): a name / address signal withholds
+    // unless the publisher is registry-confirmed (Codex I6G1-03). A
+    // social-media / "other" publisher is withheld unless registry-confirmed.
+    if (!onRecord && ((sourceType !== undefined && PERSONAL_PUBLISHER_TYPES.has(sourceType)) ||
+      privateAddressSignal(r.text) || privateNameSignal(r.text, ctx.orgNames))) {
+      return { text: null, withheld: 'PERSONAL_DATA_RISK', redacted: false };
+    }
   }
   return { text: r.text, withheld: null, redacted: r.redacted };
 }
 
-/** URLs are presented as their origin only; anything unparsable is withheld. */
-export function presentUri(uri: string | null | undefined): { text: string | null; reduced: boolean } {
+/** Source types whose URL host itself may be personal (a profile, a personal site, an upload). */
+const PERSONAL_URI_TYPES = new Set(['SOCIAL_MEDIA', 'OTHER', 'USER_DOCUMENT']);
+
+/**
+ * URLs are presented as their origin only (no userinfo, port, path, query or
+ * fragment); anything unparsable or non-http(s) is withheld, and so is the
+ * whole URL of a source type whose host may be personal (Codex I6G1-06).
+ */
+export function presentUri(uri: string | null | undefined, sourceType?: string): { text: string | null; reduced: boolean } {
   if (!uri) return { text: null, reduced: false };
+  if (sourceType !== undefined && PERSONAL_URI_TYPES.has(sourceType)) return { text: null, reduced: true };
   try {
     const u = new URL(uri);
     if (u.protocol !== 'https:' && u.protocol !== 'http:') return { text: null, reduced: true };

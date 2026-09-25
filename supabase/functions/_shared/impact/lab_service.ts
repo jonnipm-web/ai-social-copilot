@@ -32,7 +32,7 @@ import { resolveEntity } from './entity_resolution.ts';
 import { ARTIFACT_LIMITS, ARTIFACT_POLICY_VERSION, locatorFitsSummary, locatorKey } from './artifact_model.ts';
 import { detectArtifact } from './artifact_detect.ts';
 import { extractArtifact } from './artifact_extract.ts';
-import { analystCandidate, autoCandidates, type CandidateDraft } from './evidence_candidates.ts';
+import { analystCandidate, autoCandidates, type CandidateDraft, minorDataRisk } from './evidence_candidates.ts';
 import { REGISTRY_CONFLICT_EXPLANATIONS, resolveOrganization, snapshotFresh } from './organization_identity.ts';
 import { registryStatement } from './registry_claims.ts';
 import { contentFingerprint, detectSyndicationMarkers, similaritySketch } from './source_lineage.ts';
@@ -301,9 +301,27 @@ function artifactView(a: StoredArtifact) {
   };
 }
 
+/**
+ * IV-IMPACT-I6 (Codex I6G1-04/07) — the Lab authoring / review responses
+ * (get_investigation, candidate queue, registry import) are an explicitly
+ * PRIVILEGED, owner-only DTO: the caller sees what they themselves entered or
+ * uploaded, because reviewing requires it (stored evidence ≠ presentation).
+ * They are never consumed by the dossier, the export or the Flutter Impact UI
+ * (which only sends list_investigations / get_dossier / export_dossier /
+ * verify_dossier — asserted by tests). Minor-data risk is withheld even here.
+ */
+const OWNER_REVIEW_RAW = Object.freeze({
+  class: 'OWNER_REVIEW_RAW' as const,
+  notice: 'Owner-only review data (what this caller entered or uploaded). Not a dossier, not exportable, not for presentation.',
+});
+const minorSafe = (t: string | null | undefined) => (typeof t === 'string' && minorDataRisk(t) ? null : t ?? null);
+const minorWithheld = (t: string | null | undefined) => (typeof t === 'string' && minorDataRisk(t) ? 'MINOR_DATA_RISK' as const : null);
+
 function candidateView(c: StoredCandidate) {
   return {
-    ref: c.ref, artifactRef: c.artifactRef, artifactHash: c.artifactHash, locator: c.locator, excerpt: c.excerpt, claimRef: c.claimRef,
+    privacyClass: OWNER_REVIEW_RAW.class,
+    ref: c.ref, artifactRef: c.artifactRef, artifactHash: c.artifactHash, locator: c.locator, excerpt: minorSafe(c.excerpt),
+    excerptWithheld: minorWithheld(c.excerpt), claimRef: c.claimRef,
     proposedRelationship: c.proposedRelationship, method: c.method, reviewReasons: c.reviewReasons, reviewStatus: c.reviewStatus,
     evidenceRef: c.evidenceRef, isEvidence: c.reviewStatus === 'ACCEPTED',
     // The excerpt is QUOTED from a user-provided document: never a statement of the platform (Codex I3G3-05).
@@ -431,10 +449,13 @@ export async function handleLabRequest(
     const latest = latestByClaim(data.value);
     const results = [...latest.values()].map((r) => withDisputeOverlay(r, data.value.disputes));
     const indicators = deriveIndicators({ results });
+    // Minor-data risk is withheld even in the owner's review DTO (I6G1-07).
+    const reviewClaims = data.value.claims.map((c) => (minorDataRisk(c.text) ? { ...c, text: '[withheld: MINOR_DATA_RISK]' } : c));
+    const reviewEvidence = data.value.evidence.map((e) => (e.excerpt && minorDataRisk(e.excerpt) ? { ...e, excerpt: undefined, excerptWithheld: 'MINOR_DATA_RISK' as const } : e));
     const report = buildImpactReport({
       organization: { id: inv.value.subjectOrgRef, type: inv.value.subjectOrgType, identity: inv.value.subjectIdentity },
       registry: data.value.sources.filter((s) => s.snapshot).map((s) => s.snapshot!),
-      claims: data.value.claims,
+      claims: reviewClaims,
       results,
       indicators,
       sources: data.value.sources.map((s) => s.source),
@@ -458,8 +479,8 @@ export async function handleLabRequest(
         },
         artifacts: data.value.artifacts.map(artifactView),
         candidates: data.value.candidates.map(candidateView),
-        claims: data.value.claims,
-        evidence: data.value.evidence,
+        claims: reviewClaims,
+        evidence: reviewEvidence,
         verifications: [...data.value.verifications].sort((a, b) => a.result.claimId.localeCompare(b.result.claimId) || a.version - b.version)
           .map((v) => summary(v.result, v.version)),
         latest: results.map((r) => summary(r, data.value.latestVerifications.find((v) => v.result.claimId === r.claimId)?.version ?? 0)),
@@ -469,6 +490,7 @@ export async function handleLabRequest(
         audit: { seq: inv.value.auditSeq, head: inv.value.auditHead, chainOk: chain.value, events: audit.value.length },
         policyVersion: IMPACT_POLICY_VERSION,
         providerRegistryVersion: PROVIDER_REGISTRY_VERSION,
+        privacy: OWNER_REVIEW_RAW,
       },
       metrics: { claims: data.value.claims.length, evidence: data.value.evidence.length, conflicts: results.reduce((n, r) => n + r.conflicts.length, 0) },
     });
@@ -750,11 +772,11 @@ export async function handleLabRequest(
           if (priorEv.relationshipBasis !== 'REGISTRY_RECORD' || priorEv.sourceId !== req.sourceRef || priorEv.claimId !== prior.id) {
             return fail('ALREADY_EXISTS', 'evidence ref already used');
           }
-          return ok({ action: req.action, data: { claimRef: prior.id, evidenceRef: priorEv.id, text: prior.text, replayed: true } });
+          return ok({ action: req.action, data: { claimRef: prior.id, evidenceRef: priorEv.id, text: prior.text, replayed: true, privacy: OWNER_REVIEW_RAW } });
         }
         const repaired = await store.insertEvidence(inv.value.id, { ...st.evidence, claimId: prior.id }, actor.userId);
         if (!repaired.ok) return repaired;
-        return ok({ action: req.action, data: { claimRef: prior.id, evidenceRef: st.evidence.id, text: prior.text, repaired: true } });
+        return ok({ action: req.action, data: { claimRef: prior.id, evidenceRef: st.evidence.id, text: prior.text, repaired: true, privacy: OWNER_REVIEW_RAW } });
       }
       // I1F2-01 pattern: the limit applies to NEW claims only, so a retry can always repair.
       if (data.value.claims.length >= LAB_LIMITS.maxClaimsPerInvestigation) return fail('LIMIT_EXCEEDED', 'too many claims');
@@ -762,7 +784,7 @@ export async function handleLabRequest(
       if (!c1.ok) return c1;
       const e1 = await store.insertEvidence(inv.value.id, st.evidence, actor.userId);
       if (!e1.ok) return e1; // the claim is persisted: an identical retry repairs the evidence
-      return ok({ action: req.action, data: { claimRef: st.claim.id, evidenceRef: st.evidence.id, text: st.claim.text, period: st.claim.period } });
+      return ok({ action: req.action, data: { claimRef: st.claim.id, evidenceRef: st.evidence.id, text: st.claim.text, period: st.claim.period, privacy: OWNER_REVIEW_RAW } });
     }
 
     case 'ingest_artifact': {
