@@ -101,6 +101,23 @@ The remaining residual is bounded by:
 2. admin-only Lab access;
 3. no public sharing, no publication path.
 
+### 3.1 Accepted, documented residuals (Codex Gate 1 re-audit #5: no open P0/P1)
+
+- Lower-case / single-token private names with no honorific, role, initial,
+  capitalization or address context (non-eliminable by deterministic rules).
+- Identifiers written entirely as words ("zero two zero …"), deliberately
+  split across several fields, or present only inside images.
+- An identifier deliberately formatted as a grouped quantity
+  ("123,456,789").
+- Over-withholding (availability, not privacy): an organization registration
+  number of 9+ digits in client-declared text is withheld; official
+  registry records keep their identifiers.
+
+All are bounded by owner-only admin access, the reviewer's mandatory
+personal-data attestation, the absence of any public sharing path, and a
+visible limitation on every withholding (lineage and conflict-position
+publishers included, I6G1R5-02).
+
 ## 4. Owner review DTOs (`OWNER_REVIEW_RAW`)
 
 The Lab authoring / review actions — `get_investigation`, the candidate
@@ -130,7 +147,7 @@ content. Consequences:
 
 ## 6. Tests
 
-`privacy_test.ts` PV-01..31 (structured ids incl. Unicode / labelled / MRZ,
+`privacy_test.ts` PV-01..32 (structured ids incl. Unicode / labelled / MRZ,
 all-caps / initials / surname-first / caseless names, client whitelist
 attempts, publishers of every type, URL userinfo / IDN / IP / personal
 types, owner review DTO; and the original: name / address signals,

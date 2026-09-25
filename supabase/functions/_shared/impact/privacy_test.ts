@@ -438,3 +438,12 @@ Deno.test('PV-31 (I6G1R4) end-to-end: encoded identifiers never reach dossier JS
     assert(!all.includes('maria') && !all.includes('7946'), action);
   }
 });
+
+Deno.test('PV-32 (I6G1R5-02) a withheld lineage name leaves a visible limitation', async () => {
+  const t = lab();
+  const inv = (await t.must({ action: 'create_investigation', subject: SUBJECT })).data.investigationId as string;
+  await t.must({ action: 'add_source', investigation_id: inv, source: { ref: 'src-news', type: 'NEWS', newsGenre: 'REPORTING', publisher: 'Daily Fixture', syndicatedFrom: 'Jane Smith', retrievedAt: '2026-09-01T00:00:00Z', retention: 'EXCERPT_AND_HASH', contentHash: 'c'.repeat(64) } });
+  const d = (await t.must({ action: 'get_dossier', investigation_id: inv, lang: 'en' })).data as { dossier: { content: { sources: { ref: string; syndicatedFrom: string | null }[]; limitations: { code: string; scope: string; ref: string | null }[] } } };
+  assertEquals(d.dossier.content.sources.find((s) => s.ref === 'src-news')!.syndicatedFrom, null);
+  assert(d.dossier.content.limitations.some((l) => l.code === 'EXCERPT_WITHHELD' && l.scope === 'SOURCE' && l.ref === 'src-news'));
+});

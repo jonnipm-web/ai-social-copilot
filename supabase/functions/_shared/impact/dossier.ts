@@ -189,6 +189,12 @@ export async function buildDossierContent(input: DossierInput) {
     orgNames: input.registryFacts.map((r) => r.legalName).filter((n) => typeof n === 'string' && n.length > 0),
   };
   const sourceTypeOf = new Map(data.sources.map(({ source }) => [source.id, source.type]));
+  // Lineage names are publisher-like; a withheld one leaves a visible limitation (Codex I6G1R5-02).
+  const lineageName = (v: string | undefined, type: string, sourceId: string) => {
+    const p = present('PUBLISHER', v, privacy, type);
+    if (p.withheld) lim('EXCERPT_WITHHELD', 'SOURCE', sourceId);
+    return p.text;
+  };
 
   // ── declared identity: client-supplied ⇒ untrusted names (Codex I6G1R-04) ──
   const sid = inv.subjectIdentity;
@@ -262,8 +268,8 @@ export async function buildDossierContent(input: DossierInput) {
       retrievedAt: s.retrievedAt, publishedAt: s.publishedAt ?? null, status: s.status, retention: s.retention,
       contentHash: s.contentHash ?? null, acquisition: s.acquisition.method, providerId: s.acquisition.method === 'PROVIDER' ? s.acquisition.providerId : null,
       userSubmitted: s.userSubmitted === true, hasRegistrySnapshot: !!snapshot, newsGenre: s.newsGenre ?? null,
-      syndicatedFrom: present('PUBLISHER', s.syndicatedFrom, privacy, s.type).text,
-      derivedFrom: present('PUBLISHER', s.derivedFrom, privacy, s.type).text,
+      syndicatedFrom: lineageName(s.syndicatedFrom, s.type, s.id),
+      derivedFrom: lineageName(s.derivedFrom, s.type, s.id),
       syndicationMarkers: [...((s as Source & { syndicationMarkers?: readonly string[] }).syndicationMarkers ?? [])].sort(cmp),
       artifactRef: art?.ref ?? null,
       // A cloud drive HOSTED the uploaded copy; it is not the publisher and not an authority.
@@ -332,7 +338,11 @@ export async function buildDossierContent(input: DossierInput) {
         excluded: [...r.excluded].map((x) => ({ evidenceRef: x.evidenceId, reason: x.reason })).sort((a, b) => cmp(a.evidenceRef, b.evidenceRef)),
         conflicts: r.conflicts.map((k) => ({
           ...k,
-          positions: k.positions.map((p) => ({ ...p, publisher: present('PUBLISHER', p.publisher, privacy, sourceTypeOf.get(p.sourceId)).text ?? '—' })),
+          positions: k.positions.map((p) => {
+            const pub = present('PUBLISHER', p.publisher, privacy, sourceTypeOf.get(p.sourceId));
+            if (pub.withheld) lim('EXCERPT_WITHHELD', 'SOURCE', p.sourceId); // I6G1R5-02: every withholding is visible
+            return { ...p, publisher: pub.text ?? '—' };
+          }),
         })),
         independence: {
           policyVersion: r.lineage.policyVersion, independentVoices: r.lineage.voices, establishedVoices: r.lineage.establishedVoices,
