@@ -75,7 +75,23 @@ compatible, with two deltas before any apply — audit sequence privileges
 | P06/P07 pre-existing definer functions | **DEFERRED_SECURITY_BACKLOG** — untouched; AEF verified not to depend on them | `AEF_PRODUCTION_PRIVILEGE_PREFLIGHT.md` |
 
 Deploy runbook: `AEF_PRODUCTION_DEPLOYMENT_PRECONDITIONS.md` (documented, NOT
-executed). Production unchanged. Runtime still not available; IVE → AEF
+executed).
+
+## Update — IV-IVE-AEF-RUNTIME-INTEGRATION-01 (2026-09-25)
+
+The IVE → AEF governed runtime exists **in the LAB only**:
+- mock tools only, local stack only;
+- `aef-runtime` is admin-only (EXPERIMENTAL) and hard-blocked from deploy;
+- flow: IveActionIntent → IveAefRuntime → AefGovernance → Human Gate → mock
+  execution → persisted receipt → audit;
+- the client LAB card is behind `AEF_RUNTIME_LAB`.
+
+See `docs/aef/IVE_AEF_RUNTIME_INTEGRATION.md`, `AEF_RUNTIME_THREAT_MODEL.md` and
+`AEF_RUNTIME_STATE_FLOW.md`.
+
+F-01, F-03 and F-04 are closed. The executor decision is pending
+(`docs/aef/AEF_PRODUCTION_READINESS.md`). `AEF_PERSISTENCE_AVAILABLE` stays
+false, and no production runtime exists. Production unchanged. Runtime still not available; IVE → AEF
 integration not started.
 
 ## What is kept

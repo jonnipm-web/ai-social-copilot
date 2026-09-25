@@ -22,6 +22,17 @@ executor that wraps each file in a transaction. The Lab proves atomicity with
 behaviour of the Supabase CLI / MCP `apply_migration` is **NOT_VERIFIED** in this
 mission and must be confirmed before a deploy, or the deploy must use `psql -1`.
 
+**Update (IV-IVE-AEF-RUNTIME-INTEGRATION-01, `docs/aef/AEF_PRODUCTION_READINESS.md`):**
+measured on disposable databases, never on production:
+- psql `-1` and Supabase CLI 2.118.0 are **atomic per file**;
+- the CLI **refuses** to push onto a production-like history (apply-time
+  versions ≠ file prefixes) unless the history is "repaired", which is
+  forbidden;
+- MCP `apply_migration` remains NOT_VERIFIED.
+
+The choice of executor and of history recording is an **architectural decision**
+pending with Agente Martins / Owner. Production deploy stays BLOCKED.
+
 Rollbacks exist in `supabase/rollbacks/`. The rollback of `20260927` is a verified
 no-op by design. The hardening rollback refuses to run once evidence exists (see
 `AEF_RETENTION_ERASURE_MODEL.md`).
