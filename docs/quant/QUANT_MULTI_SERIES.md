@@ -10,7 +10,7 @@ Code: `supabase/functions/_shared/quant/multi_series.ts` (engine),
 |---|---|---|
 | Series per analysis | 1..10 (`MAX_SERIES_PER_ANALYSIS`) | engine + parser + UI |
 | Common bars required (≥ 2 series) | 4 (`MIN_ALIGNED_BARS`) | engine → `INSUFFICIENT_OVERLAP` (422) |
-| Rows across all CSV series | 100 000 (`MAX_TOTAL_ROWS`) | `runMulti` → `DATASET_TOO_LARGE` |
+| Rows across all CSV series | 50 000 (`MAX_TOTAL_ROWS`, measured — QUANT_RESOURCE_BUDGET.md) | `runMulti` → `DATASET_TOO_LARGE` |
 | Frequencies | one frequency for all series | engine → `INVALID_PARAMETER` |
 | Same instrument twice | refused | engine → `INVALID_PARAMETER` |
 | Watchlist lookback | 30..1 100 days | `parseWatchlistAnalysisRequest` |

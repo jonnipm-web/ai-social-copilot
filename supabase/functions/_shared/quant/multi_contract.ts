@@ -23,8 +23,13 @@ import type { CachedProviderResponse } from './market_cache.ts';
 
 export const MULTI_CONTRACT_VERSION = 'quant.analyze.multi.v1' as const;
 export const WATCHLIST_ANALYSIS_CONTRACT_VERSION = 'quant.analyze.watchlist.v1' as const;
-/** Total rows across all series in one multi request (measured budget, QUANT_CURRENT_STATE §9). */
-export const MAX_TOTAL_ROWS = 100_000;
+/**
+ * Total rows across all series in one multi request. Measured bound
+ * (QUANT_RESOURCE_BUDGET.md): 100 000 rows took ~1.2 s CPU locally — too
+ * close to the Edge 2 s CPU budget — while 50 000 takes ~0.42 s with a
+ * ~55 MB heap peak. Same ceiling as one quant.analyze.v1 series.
+ */
+export const MAX_TOTAL_ROWS = 50_000;
 export const MAX_LOOKBACK_DAYS = 1_100; // ≈ 3 years of daily sessions per instrument
 
 type Obj = Record<string, unknown>;

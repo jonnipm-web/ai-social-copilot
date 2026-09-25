@@ -115,7 +115,7 @@ quota remains the wrong unit for deterministic work. Protection is also by bound
 parsing: 6 MiB request body (streamed count), 5 MiB CSV, 50 000 rows/bars,
 ≤ 8 SMA windows (O(n) each), windows ≤ 50 000, calendar scans bounded,
 16 KiB watchlist body, 200 items / 50 watchlists. Measured cost: see
-QUANT_CURRENT_STATE.md §8. Multi-series: ≤ 10 series, ≤ 100 000 rows
+QUANT_CURRENT_STATE.md §8. Multi-series: ≤ 10 series, ≤ 50 000 rows
 in total, same 6 MiB body cap.
 
 ## 7. `quant-analyze` — `quant.analyze.multi.v1` (READINESS-03)
@@ -134,7 +134,7 @@ unchanged. Module `quant-analytics` (READ_ONLY).
 }
 ```
 
-* 1..10 series, ≤ 100 000 rows in total; each CSV goes through the one
+* 1..10 series, ≤ 50 000 rows in total (measured, QUANT_RESOURCE_BUDGET.md); each CSV goes through the one
   Foundation parser; provenance is set by the server (USER_UPLOAD).
 * Weights refer to series by position; policies in QUANT_MULTI_SERIES.md §4.
 * 200: `{ contract_version, correlation_id, multi_analysis: MultiSeriesResult }`

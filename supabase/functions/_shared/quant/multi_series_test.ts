@@ -245,7 +245,27 @@ Deno.test('MC-03 multi.v1: per-series errors carry the series index; total rows 
   const r = await runMulti(val(parseMultiRequest(b)), NOW);
   assert(!r.ok);
   assertEquals(r.error.details?.series, 1);
-  assert(MAX_TOTAL_ROWS >= 50_000);
+  assertEquals(MAX_TOTAL_ROWS, 50_000);
+});
+
+Deno.test('MC-03b multi.v1: the total-row bound is enforced exactly (measured CPU budget)', async () => {
+  const rows = (n: number, startT: number) => {
+    const out = ['date,open,high,low,close'];
+    for (let i = 0, t = startT; i < n; i++, t += DAY) out.push(`${new Date(t).toISOString().slice(0, 10)},1,1,1,1`);
+    return out.join(String.fromCharCode(10));
+  };
+  const mk = (a: number, b: number) => {
+    const body = multiBody();
+    (body.series as Array<{ dataset: { csv: string } }>)[0].dataset.csv = rows(a, Date.UTC(1900, 0, 1));
+    (body.series as Array<{ dataset: { csv: string } }>)[1].dataset.csv = rows(b, Date.UTC(1900, 0, 1));
+    return val(parseMultiRequest(body));
+  };
+  const over = await runMulti(mk(25_001, 25_000), NOW);
+  assert(!over.ok);
+  assertEquals(over.error.code, 'DATASET_TOO_LARGE');
+  assertEquals(over.error.details?.max, 50_000);
+  const at = await runMulti(mk(25_000, 25_000), NOW);
+  assert(at.ok || at.error.code !== 'DATASET_TOO_LARGE', 'exactly 50 000 rows is inside the bound');
 });
 
 // ---------------------------------------------------------------- quant.analyze.watchlist.v1 contract

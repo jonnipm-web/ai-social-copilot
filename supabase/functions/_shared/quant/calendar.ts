@@ -163,11 +163,31 @@ function ukEarlyCloses(y: number): ReadonlySet<string> {
 
 // ---------------------------------------------------------------- registry
 
-const US_DEF = { timezone: 'America/New_York', open: 9 * 60 + 30, close: 16 * 60, earlyClose: 13 * 60, holidays: usHolidays, earlyCloses: usEarlyCloses };
+/**
+ * Per-year memo of a pure year → date-set rule. READINESS-03 benchmark: the
+ * holiday set (Easter, nth-weekday rules…) was rebuilt on EVERY
+ * isTradingDay() call — once per bar and per scanned day — making
+ * calendar-aware analysis ~10× slower than calendar-naive (3 000 XNYS bars:
+ * 97 ms vs 8 ms), against the Edge 2 s CPU budget. Results are identical
+ * (same rule, computed once); memory is bounded by the supported year range.
+ */
+function memoByYear(rule: (y: number) => ReadonlySet<string>): (y: number) => ReadonlySet<string> {
+  const memo = new Map<number, ReadonlySet<string>>();
+  return (y) => {
+    let v = memo.get(y);
+    if (v === undefined) {
+      v = rule(y);
+      memo.set(y, v);
+    }
+    return v;
+  };
+}
+
+const US_DEF = { timezone: 'America/New_York', open: 9 * 60 + 30, close: 16 * 60, earlyClose: 13 * 60, holidays: memoByYear(usHolidays), earlyCloses: memoByYear(usEarlyCloses) };
 const CALENDARS: Readonly<Record<CalendarId, CalendarDef>> = {
   XNYS: { id: 'XNYS', ...US_DEF },
   XNAS: { id: 'XNAS', ...US_DEF },
-  XLON: { id: 'XLON', timezone: 'Europe/London', open: 8 * 60, close: 16 * 60 + 30, earlyClose: 12 * 60 + 30, holidays: ukHolidays, earlyCloses: ukEarlyCloses },
+  XLON: { id: 'XLON', timezone: 'Europe/London', open: 8 * 60, close: 16 * 60 + 30, earlyClose: 12 * 60 + 30, holidays: memoByYear(ukHolidays), earlyCloses: memoByYear(ukEarlyCloses) },
 };
 
 export interface MarketCalendar {

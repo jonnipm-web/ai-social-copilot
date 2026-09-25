@@ -140,7 +140,7 @@ Legacy commercial LLM-generated numbers: QUANT_LEGACY_LLM_NUMERIC_RISK.md.
 | Malformed / hostile provider payload | adapter identity echo checks, size cap, normalized errors (PROVIDER_MALFORMED) — never an empty success | PC-02, PC-03, PC-04 |
 | Cache making stale data look fresh | original provenance preserved, separate cache meta; stale only on provider failure + CACHE_STALE | CA-01, CA-02, MC-06 |
 | Cache poisoning across providers / from users | provider-id check; USER_UPLOAD never cached; key built from validated identity only | CA-02, CA-03 |
-| Multi-series amplification | ≤ 10 series, ≤ 100 000 rows total, 6 MiB body, rate limit | MS-11, MC-02, MC-03 |
+| Multi-series amplification | ≤ 10 series, ≤ 50 000 rows total (measured), 6 MiB body, rate limit | MS-11, MC-02, MC-03 |
 | Misleading cross-currency numbers | per-currency returns + MIXED_CURRENCY_RETURNS; mixed-currency portfolio refused | MS-08 |
 | Misleading alignment (filled gaps) | intersection only, dropped bars counted, never filled | MS-06, MS-07 |
 | Dev transport shipped to users | `QUANT_API_BASE_URL` honored only in debug and only for loopback http; cleartext config only in `src/debug` | Flutter "dev base URL" test; release builds never read it |
