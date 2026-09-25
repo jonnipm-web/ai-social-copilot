@@ -1,4 +1,4 @@
-# InsightValues Quant — Current State (IV-QUANT-FOUNDATION-01)
+# InsightValues Quant — Current State (IV-QUANT-FOUNDATION-01 → REAL-DATA-READINESS-03)
 
 Status date: 2026-09-23. Line: **Quant Lab** — branch
 `claude/insightvalues-quant-foundation`, worktree `insightvalues-quant`,
@@ -107,3 +107,24 @@ the default branch; the lab line does not open PRs to main).
 No optimization was done without a measured need; the worst case is well
 inside Edge Function time limits. Memory headroom on the Edge runtime must
 be re-measured on the platform before any promotion.
+
+Superseded for READINESS-03 by QUANT_RESOURCE_BUDGET.md (calendar memo fix,
+multi-series bound, PLATFORM_RUNTIME_NOT_MEASURED).
+
+## 9. Real-data readiness (IV-QUANT-REAL-DATA-READINESS-03, 2026-09-25)
+
+| Area | Doc |
+|---|---|
+| Readiness summary + physical Android evidence (S25) | QUANT_REAL_DATA_READINESS.md |
+| Rate limits (429) | QUANT_RATE_LIMIT_POLICY.md |
+| Provider cache + provenance | QUANT_CACHE_POLICY.md |
+| Multi-series analytics | QUANT_MULTI_SERIES.md |
+| API contracts v1 / multi.v1 / watchlist.v1 | QUANT_API_CONTRACT.md §7–8 |
+| Resource budget (measured) | QUANT_RESOURCE_BUDGET.md |
+| Vendor licensing dossier (no winner) | QUANT_VENDOR_LICENSING_DOSSIER.md |
+| Threat model update | QUANT_SECURITY_MODEL.md §9 |
+
+Modules unchanged: `quant-analytics` READ_ONLY/INTERNAL, `quant-watchlists`
+REVERSIBLE/INTERNAL, `ive-quant` CONSEQUENTIAL/EXPERIMENTAL without Edge
+Function. Nothing deployed; no vendor; no real key.
+

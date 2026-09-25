@@ -109,3 +109,24 @@ Q1→Q2 value; Q6 can proceed in parallel once IVE Core passes.
 6. Promotion Gate review of `quant-analytics` INTERNAL → ALPHA (beta
    testers): requires a new `quant_watchlists_access_allowed()` migration
    (QB-16) and CLASS D review.
+
+## 8. After IV-QUANT-REAL-DATA-READINESS-03
+
+Delivered (items 2–5 of §7, without any vendor): provider adapter/runtime
+contract with synthetic payloads, provenance cache, per-user 429 rate
+limits, multi-series + watchlist → analysis (API + Lab), physical Android
+validation (6 findings fixed), measured resource budget. See
+QUANT_REAL_DATA_READINESS.md.
+
+Still open:
+1. **Licensing (Owner)** — send the drafted vendor e-mails, obtain written
+   answers (QUANT_VENDOR_LICENSING_DOSSIER.md). All candidates are
+   BLOCKED_PENDING_WRITTEN_RIGHTS.
+2. First licensed adapter + server secret + total request deadline.
+3. Edge runtime re-measurement (PLATFORM_RUNTIME_NOT_MEASURED).
+4. Promotion Gate `quant-analytics` / `quant-watchlists` INTERNAL → ALPHA
+   (new watchlist RLS predicate migration, CLASS D review) —
+   ALPHA_PROMOTION_AUTHORIZED: NO.
+
+Recommended next gate: **IV-QUANT-LICENSED-PROVIDER-PILOT-04**, only after
+item 1 returns written rights for at least one vendor.
