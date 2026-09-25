@@ -14,6 +14,7 @@ import 'package:ai_social_copilot/features/quant_lab/quant_lab_screen.dart';
 import 'package:ai_social_copilot/features/quant_lab/quant_lab_service.dart';
 import 'package:ai_social_copilot/l10n/app_localizations.dart';
 import 'package:ai_social_copilot/providers/profile_provider.dart';
+import 'package:ai_social_copilot/shared/widgets/ive_exclusion_region.dart';
 
 /// Shape of a real `quant-analyze` 200 body (values from the Foundation golden G1).
 Map<String, dynamic> sampleAnalysis() => {
@@ -134,7 +135,7 @@ class _ThrowingPickApi extends FakeQuantLabApi {
 /// Shape of a real `quant.analyze.watchlist.v1` 200 `multi_analysis` body.
 Map<String, dynamic> sampleMulti() {
   Map<String, dynamic> series(String sym, String mic, double ret) => {
-        'instrumentKey': 'EQUITY:$sym:$mic:USD',
+        'instrumentKey': 'EQUITY:$mic:$sym:USD', // server layout: ASSET:MIC:SYMBOL:CCY
         'instrument': {'assetClass': 'EQUITY', 'symbol': sym, 'exchangeMic': mic, 'currency': 'USD'},
         'analysis': {
           ...sampleAnalysis(),
@@ -162,7 +163,7 @@ Map<String, dynamic> sampleMulti() {
     'series': [series('SYNA', 'XNYS', 0.1234), series('SYNB', 'XNAS', -0.05)],
     'alignment': {'policy': 'INTERSECTION_OF_TIMESTAMPS', 'start': '2025-09-23T00:00:00.000Z', 'end': '2026-09-23T00:00:00.000Z', 'commonBars': 250, 'seriesCount': 2},
     'correlation': [
-      {'a': 'EQUITY:SYNA:XNYS:USD', 'b': 'EQUITY:SYNB:XNAS:USD', 'correlation': 0.8765, 'observations': 249},
+      {'a': 'EQUITY:XNYS:SYNA:USD', 'b': 'EQUITY:XNAS:SYNB:USD', 'correlation': 0.8765, 'observations': 249},
     ],
     'portfolio': null,
     'assumptions': [
@@ -364,6 +365,31 @@ void main() {
       final v = QuantMultiView.fromJson(sampleMulti());
       expect(v.series.length, 2);
       expect(v.correlation.single.a, 'SYNA');
+      expect(v.correlation.single.b, 'SYNB');
+      // Physical finding S25: two symbols on the SAME venue must not collapse to the venue name.
+      final sameVenue = sampleMulti();
+      (sameVenue['series'] as List)[1] = <String, dynamic>{
+        ...Map<String, dynamic>.from((sameVenue['series'] as List)[1] as Map),
+        'instrumentKey': 'EQUITY:XNYS:SYNB:USD',
+        'instrument': {'assetClass': 'EQUITY', 'symbol': 'SYNB', 'exchangeMic': 'XNYS', 'currency': 'USD'},
+      };
+      sameVenue['correlation'] = [
+        {'a': 'EQUITY:XNYS:SYNA:USD', 'b': 'EQUITY:XNYS:SYNB:USD', 'correlation': 0.5, 'observations': 10},
+      ];
+      final sv = QuantMultiView.fromJson(sameVenue);
+      expect([sv.correlation.single.a, sv.correlation.single.b], ['SYNA', 'SYNB']);
+      // Same symbol on two venues → disambiguated with the venue.
+      final dup = sampleMulti();
+      (dup['series'] as List)[1] = <String, dynamic>{
+        ...Map<String, dynamic>.from((dup['series'] as List)[1] as Map),
+        'instrumentKey': 'EQUITY:XLON:SYNA:GBP',
+        'instrument': {'assetClass': 'EQUITY', 'symbol': 'SYNA', 'exchangeMic': 'XLON', 'currency': 'GBP'},
+      };
+      dup['correlation'] = [
+        {'a': 'EQUITY:XNYS:SYNA:USD', 'b': 'EQUITY:XLON:SYNA:GBP', 'correlation': 0.1, 'observations': 10},
+      ];
+      final dv = QuantMultiView.fromJson(dup);
+      expect([dv.correlation.single.a, dv.correlation.single.b], ['SYNA (XNYS)', 'SYNA (XLON)']);
       expect(quantCorr(v.correlation.single.value), '0.88');
       expect(quantPct(v.series.first.alignedReturn), '12.34%');
       expect(v.cacheHits, 1);
@@ -622,6 +648,28 @@ void main() {
       await tester.tap(find.byKey(const Key('quantLabPick')));
       await tester.pumpAndSettle();
       expect(find.textContaining('Tipo de arquivo não suportado'), findsNothing, reason: 'a successful import clears the old error');
+    });
+
+    testWidgets('essential actions and key metrics are IVE exclusion regions (S25: avatar covered them)', (tester) async {
+      await setSize(tester, const Size(420, 900));
+      final api = FakeQuantLabApi()
+        ..lists.add(const QuantWatchlistView(id: 'w', name: 'W', items: [QuantWatchlistItemView(id: 'a', label: 'SYNA · XNYS · USD')]));
+      await tester.pumpWidget(app(api, who: profile('admin')));
+      await tester.pumpAndSettle();
+      Finder protectedBy(Finder f) => find.ancestor(of: f, matching: find.byType(IveExclusionRegion));
+      expect(protectedBy(find.byKey(const Key('quantLabAnalyze'))), findsOneWidget);
+      await tester.ensureVisible(find.byKey(const Key('quantLabSample')));
+      await tester.tap(find.byKey(const Key('quantLabSample')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('quantLabAnalyze')));
+      await tester.tap(find.byKey(const Key('quantLabAnalyze')));
+      await tester.pumpAndSettle();
+      expect(protectedBy(find.text('11.55%')), findsOneWidget, reason: 'metric value');
+      await tester.tap(find.byKey(const Key('quantLabTabWatchlist')));
+      await tester.pumpAndSettle();
+      expect(protectedBy(find.byTooltip('Excluir watchlist')), findsOneWidget);
+      expect(protectedBy(find.byTooltip('Remover')), findsOneWidget);
+      expect(protectedBy(find.byKey(const Key('quantWatchlistAnalyze'))), findsOneWidget);
     });
 
     testWidgets('wide (web/desktop) layout shows form and result side by side', (tester) async {

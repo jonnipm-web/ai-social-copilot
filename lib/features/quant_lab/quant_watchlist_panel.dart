@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../shared/widgets/ive_exclusion_region.dart';
 import 'quant_lab_models.dart';
 import 'quant_lab_service.dart';
 
@@ -170,33 +171,36 @@ class _QuantWatchlistPanelState extends ConsumerState<QuantWatchlistPanel> {
       if (lists == null && _busy) const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator())),
       if (lists != null && lists.isEmpty) Text(l.quantLabNoWatchlists),
       if (lists != null && lists.isNotEmpty)
-        Row(children: [
-          Expanded(
-            // Re-created when the selection is changed programmatically (create/delete).
-            child: KeyedSubtree(
-              key: ValueKey('$_selectedId/${lists.length}'),
-              child: DropdownButtonFormField<String>(
-                key: const Key('quantWatchlistSelect'),
-                initialValue: _selectedId,
-                isExpanded: true,
-                decoration: InputDecoration(labelText: l.quantLabWatchlists),
-                items: [for (final x in lists) DropdownMenuItem(value: x.id, child: Text('${x.name} (${x.items.length})', overflow: TextOverflow.ellipsis))],
-                onChanged: _busy
-                    ? null
-                    : (v) => setState(() {
-                          _selectedId = v;
-                          _checked.clear();
-                          _outcome = null;
-                        }),
+        // Selector + delete: the IVE avatar covered the delete action on the S25.
+        IveExclusionRegion(
+          child: Row(children: [
+            Expanded(
+              // Re-created when the selection is changed programmatically (create/delete).
+              child: KeyedSubtree(
+                key: ValueKey('$_selectedId/${lists.length}'),
+                child: DropdownButtonFormField<String>(
+                  key: const Key('quantWatchlistSelect'),
+                  initialValue: _selectedId,
+                  isExpanded: true,
+                  decoration: InputDecoration(labelText: l.quantLabWatchlists),
+                  items: [for (final x in lists) DropdownMenuItem(value: x.id, child: Text('${x.name} (${x.items.length})', overflow: TextOverflow.ellipsis))],
+                  onChanged: _busy
+                      ? null
+                      : (v) => setState(() {
+                            _selectedId = v;
+                            _checked.clear();
+                            _outcome = null;
+                          }),
+                ),
               ),
             ),
-          ),
-          IconButton(
-            tooltip: l.quantLabDeleteWatchlist,
-            onPressed: _busy || w == null ? null : () => _act({'action': 'delete', 'watchlist_id': w.id}),
-            icon: const Icon(Icons.delete_outline),
-          ),
-        ]),
+            IconButton(
+              tooltip: l.quantLabDeleteWatchlist,
+              onPressed: _busy || w == null ? null : () => _act({'action': 'delete', 'watchlist_id': w.id}),
+              icon: const Icon(Icons.delete_outline),
+            ),
+          ]),
+        ),
       gap,
       Row(children: [
         Expanded(
@@ -217,25 +221,27 @@ class _QuantWatchlistPanelState extends ConsumerState<QuantWatchlistPanel> {
         const SizedBox(height: 4),
         if (w.items.isEmpty) Text(l.quantLabNoItems) else Text(l.quantLabSelectUpTo(kQuantMaxSeriesPerAnalysis)),
         for (final it in w.items)
-          CheckboxListTile(
-            key: Key('quantWatchlistItem_${it.id}'),
-            contentPadding: EdgeInsets.zero,
-            controlAffinity: ListTileControlAffinity.leading,
-            value: _checked.contains(it.id),
-            onChanged: _busy
-                ? null
-                : (v) => setState(() {
-                      if (v == true) {
-                        _checked.add(it.id);
-                      } else {
-                        _checked.remove(it.id);
-                      }
-                    }),
-            title: Text(it.label),
-            secondary: IconButton(
-              tooltip: l.quantLabRemoveItem,
-              onPressed: _busy ? null : () => _act({'action': 'remove_item', 'watchlist_id': w.id, 'item_id': it.id}),
-              icon: const Icon(Icons.remove_circle_outline),
+          IveExclusionRegion(
+            child: CheckboxListTile(
+              key: Key('quantWatchlistItem_${it.id}'),
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              value: _checked.contains(it.id),
+              onChanged: _busy
+                  ? null
+                  : (v) => setState(() {
+                        if (v == true) {
+                          _checked.add(it.id);
+                        } else {
+                          _checked.remove(it.id);
+                        }
+                      }),
+              title: Text(it.label),
+              secondary: IconButton(
+                tooltip: l.quantLabRemoveItem,
+                onPressed: _busy ? null : () => _act({'action': 'remove_item', 'watchlist_id': w.id, 'item_id': it.id}),
+                icon: const Icon(Icons.remove_circle_outline),
+              ),
             ),
           ),
         gap,
@@ -271,13 +277,15 @@ class _QuantWatchlistPanelState extends ConsumerState<QuantWatchlistPanel> {
           label: Text(l.quantLabAddItem),
         ),
         const SizedBox(height: 16),
-        SizedBox(
-          height: 48,
-          child: FilledButton.icon(
-            key: const Key('quantWatchlistAnalyze'),
-            onPressed: canAnalyze ? _analyze : null,
-            icon: _busy ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.analytics_outlined),
-            label: Text(_busy ? l.quantLabAnalyzing : l.quantLabAnalyzeWatchlist),
+        IveExclusionRegion(
+          child: SizedBox(
+            height: 48,
+            child: FilledButton.icon(
+              key: const Key('quantWatchlistAnalyze'),
+              onPressed: canAnalyze ? _analyze : null,
+              icon: _busy ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.analytics_outlined),
+              label: Text(_busy ? l.quantLabAnalyzing : l.quantLabAnalyzeWatchlist),
+            ),
           ),
         ),
       ],
@@ -346,7 +354,8 @@ class _MultiResult extends StatelessWidget {
       ]),
       if (r.correlation.isNotEmpty)
         section(l.quantLabCorrelation, [
-          for (final c in r.correlation) kv('${c.a} × ${c.b}', '${quantCorr(c.value)}${c.error != null ? ' (${c.error})' : ''} · n=${c.observations}'),
+          for (final c in r.correlation)
+            IveExclusionRegion(child: kv('${c.a} × ${c.b}', '${quantCorr(c.value)}${c.error != null ? ' (${c.error})' : ''} · n=${c.observations}')),
         ]),
       section(l.quantLabAssumptions, [for (final s in r.assumptions) Text('• $s')]),
       if (r.warnings.isNotEmpty) section(l.quantLabWarnings, [for (final w in r.warnings) Text('• ${w.code} — ${w.message}')]),

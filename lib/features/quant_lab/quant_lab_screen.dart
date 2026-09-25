@@ -14,6 +14,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../providers/profile_provider.dart';
+import '../../shared/widgets/ive_exclusion_region.dart';
 import 'quant_lab_models.dart';
 import 'quant_lab_service.dart';
 import 'quant_watchlist_panel.dart';
@@ -252,13 +253,16 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
           padding: const EdgeInsets.only(bottom: 12),
           child: Text(_localError!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
         ),
-      SizedBox(
-        height: 48,
-        child: FilledButton.icon(
-          key: const Key('quantLabAnalyze'),
-          onPressed: _busy ? null : () => _analyze(l),
-          icon: _busy ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.analytics_outlined),
-          label: Text(_busy ? l.quantLabAnalyzing : l.quantLabAnalyze),
+      // The floating IVE avatar must never rest on the primary action (S25 finding).
+      IveExclusionRegion(
+        child: SizedBox(
+          height: 48,
+          child: FilledButton.icon(
+            key: const Key('quantLabAnalyze'),
+            onPressed: _busy ? null : () => _analyze(l),
+            icon: _busy ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.analytics_outlined),
+            label: Text(_busy ? l.quantLabAnalyzing : l.quantLabAnalyze),
+          ),
         ),
       ),
     ]);
@@ -320,12 +324,15 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
         kv('engine', a.engineVersion),
       ]),
       section(l.quantLabMetrics, [
+        // Key metrics: the IVE avatar covered a metric value on the S25.
         for (final m in a.metrics)
-          ExpansionTile(
-            tilePadding: EdgeInsets.zero,
-            title: Text('${m.id}${m.window != null ? ' (${m.window})' : ''}'),
-            trailing: Text(m.display(a.currency), style: const TextStyle(fontWeight: FontWeight.w700)),
-            children: [kv(l.quantLabFormula, m.formulaId), kv(l.quantLabObservations, '${m.observations}')],
+          IveExclusionRegion(
+            child: ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              title: Text('${m.id}${m.window != null ? ' (${m.window})' : ''}'),
+              trailing: Text(m.display(a.currency), style: const TextStyle(fontWeight: FontWeight.w700)),
+              children: [kv(l.quantLabFormula, m.formulaId), kv(l.quantLabObservations, '${m.observations}')],
+            ),
           ),
       ]),
       section(l.quantLabAssumptions, [for (final s in a.assumptions) Text('• $s')]),

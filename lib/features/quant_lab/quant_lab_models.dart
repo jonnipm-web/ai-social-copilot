@@ -392,10 +392,27 @@ class QuantMultiView {
     }
   }
 
-  static String _short(String key) {
-    // Canonical key ASSET:SYMBOL:MIC:CCY… → "SYMBOL" for compact display.
-    final parts = key.split(':');
-    return parts.length >= 2 ? parts[1] : key;
+  /// Correlation cells reference series by their canonical instrument key.
+  /// The label comes from the series' OWN instrument in the same response —
+  /// the key layout is a server detail and is never parsed here (physical
+  /// finding S25: guessing the layout labelled pairs by exchange, "XNAS × XNYS").
+  /// Symbols repeated across venues are disambiguated with the venue.
+  static Map<String, String> _labelsByKey(List series) {
+    final symbols = <String, int>{};
+    for (final s in series) {
+      final sym = ((s as Map)['instrument'] as Map?)?['symbol'];
+      if (sym is String) symbols[sym] = (symbols[sym] ?? 0) + 1;
+    }
+    return {
+      for (final s in series)
+        if ((s as Map)['instrumentKey'] is String && (s['instrument'] as Map?)?['symbol'] is String)
+          s['instrumentKey'] as String: () {
+            final inst = s['instrument'] as Map;
+            final sym = inst['symbol'] as String;
+            final mic = inst['exchangeMic'];
+            return symbols[sym]! > 1 && mic is String ? '$sym ($mic)' : sym;
+          }(),
+    };
   }
 
   static QuantMultiView _parse(Map<String, dynamic> json) {
@@ -410,6 +427,8 @@ class QuantMultiView {
     final cache = ds?['cache'] is Map ? ds!['cache'] as Map : null;
     final portfolio = json['portfolio'] is Map ? json['portfolio'] as Map : null;
     String? day(Object? v) => v is String && v.length >= 10 ? v.substring(0, 10) : null;
+    final labels = _labelsByKey(req<List>(json, 'series'));
+    String label(String key) => labels[key] ?? key;
     return QuantMultiView(
       id: req<String>(json, 'multiAnalysisId'),
       series: [
@@ -437,8 +456,8 @@ class QuantMultiView {
       correlation: [
         for (final c in req<List>(json, 'correlation'))
           QuantCorrelationView(
-            _short(req<String>(c as Map, 'a')),
-            _short(req<String>(c, 'b')),
+            label(req<String>(c as Map, 'a')),
+            label(req<String>(c, 'b')),
             (c['correlation'] as num?)?.toDouble(),
             req<int>(c, 'observations'),
             c['error'] as String?,
