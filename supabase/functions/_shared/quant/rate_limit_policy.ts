@@ -11,7 +11,7 @@
  * commercial quotas.
  */
 
-export type RateLimitBucket = 'quant-analyze' | 'quant-watchlists-read' | 'quant-watchlists-write';
+export type RateLimitBucket = 'quant-analyze' | 'quant-watchlists-ingress' | 'quant-watchlists-read' | 'quant-watchlists-write';
 
 export const RATE_LIMIT_WINDOW_SECONDS = 60;
 
@@ -19,6 +19,8 @@ export const RATE_LIMITS: Readonly<Record<RateLimitBucket, number>> = {
   'quant-analyze': 30,
   'quant-watchlists-read': 120,
   'quant-watchlists-write': 60,
+  /** Codex Final: every quant-watchlists request, before its body is read. */
+  'quant-watchlists-ingress': 180,
 };
 
 export interface RateLimitDecision {

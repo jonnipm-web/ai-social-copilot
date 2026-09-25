@@ -48,6 +48,9 @@ BEGIN
     WHEN 'quant-analyze' THEN 30
     WHEN 'quant-watchlists-read' THEN 120
     WHEN 'quant-watchlists-write' THEN 60
+    -- Codex Final: consumed BEFORE the body is read, so malformed / unknown-action
+    -- requests are limited too (≥ read + write, never the binding limit for valid use).
+    WHEN 'quant-watchlists-ingress' THEN 180
     ELSE NULL
   END;
   IF v_limit IS NULL THEN

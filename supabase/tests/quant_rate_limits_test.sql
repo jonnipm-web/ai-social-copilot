@@ -47,6 +47,9 @@ BEGIN
   IF NOT (r->>'allowed')::boolean OR (r->>'limit')::int <> 120 THEN RAISE EXCEPTION 'R02 read bucket wrong: %', r; END IF;
   r := public.quant_rate_limit_hit('quant-watchlists-write');
   IF (r->>'limit')::int <> 60 THEN RAISE EXCEPTION 'R02 write bucket wrong: %', r; END IF;
+  -- Codex Final: ingress bucket consumed before the watchlist body is read.
+  r := public.quant_rate_limit_hit('quant-watchlists-ingress');
+  IF NOT (r->>'allowed')::boolean OR (r->>'limit')::int <> 180 THEN RAISE EXCEPTION 'R02 ingress bucket wrong: %', r; END IF;
   BEGIN PERFORM 1 FROM public.quant_rate_limits; RAISE EXCEPTION 'R02 authenticated can read counters';
   EXCEPTION WHEN insufficient_privilege THEN NULL; END;
   BEGIN UPDATE public.quant_rate_limits SET hits = 0; RAISE EXCEPTION 'R02 authenticated can reset counters';

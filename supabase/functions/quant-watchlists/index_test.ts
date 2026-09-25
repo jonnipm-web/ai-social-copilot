@@ -225,8 +225,34 @@ Deno.test('QW-09 rate limit: list uses the read bucket, mutations the write buck
   };
   await res({ action: 'list' }, true);
   await res({ action: 'create', name: 'x' }, true);
-  assertEquals(seen, ['quant-watchlists-read', 'quant-watchlists-write']);
+  assertEquals(seen, ['quant-watchlists-ingress', 'quant-watchlists-read', 'quant-watchlists-ingress', 'quant-watchlists-write']);
   const limited = await res({ action: 'create', name: 'y' }, false);
   assertEquals([limited.status, limited.retry], [429, '7']);
   assertEquals(store.rows.length, 1); // the limited create never reached the store
+});
+
+Deno.test('QW-10 ingress limit runs BEFORE the body is read: malformed / unknown-action floods are limited; limiter outage fails closed (Codex Final P1)', async () => {
+  const call = async (body: string, limiter: { hit: (u: string, b: string) => Promise<{ allowed: boolean; limit: number; remaining: number; retryAfterSeconds: number }> }) => {
+    const r = await handler(
+      new Request('http://localhost/', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer jwt-a' }, body }),
+      auth, undefined, fakeSubjectSource('admin'),
+      { ...deps(), rateLimiter: limiter as never },
+    );
+    return { status: r.status, json: await r.json() };
+  };
+  const seen: string[] = [];
+  const deny = { hit: (_u: string, b: string) => { seen.push(b); return Promise.resolve({ allowed: false, limit: 180, remaining: 0, retryAfterSeconds: 5 }); } };
+  // Malformed JSON and an unknown action are limited before any parsing.
+  assertEquals((await call('{not json', deny)).status, 429);
+  assertEquals((await call(JSON.stringify({ contract_version: 'quant.watchlists.v1', action: 'drop_everything' }), deny)).status, 429);
+  assertEquals(seen, ['quant-watchlists-ingress', 'quant-watchlists-ingress']);
+  // Allowed ingress: the same malformed bodies now reach the parser (400) and consume ingress only.
+  seen.length = 0;
+  const allow = { hit: (_u: string, b: string) => { seen.push(b); return Promise.resolve({ allowed: true, limit: 180, remaining: 179, retryAfterSeconds: 60 }); } };
+  assertEquals((await call('{not json', allow)).status, 400);
+  assertEquals(seen, ['quant-watchlists-ingress']);
+  // Limiter store down → 503 before the body is parsed.
+  const down = { hit: () => Promise.reject(new Error('db down')) };
+  const r = await call('{not json', down as never);
+  assertEquals([r.status, r.json.error], [503, 'RATE_LIMIT_UNAVAILABLE']);
 });

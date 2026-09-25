@@ -92,6 +92,13 @@ export async function handler(
     done(quantError(code, cid, details), null, code);
 
   if (req.method !== 'POST') return failWith('METHOD_NOT_ALLOWED');
+  const token = bearerToken(req) ?? '';
+  const limiter = deps.rateLimiter ?? new SupabaseRateLimiter();
+  // Codex Final (P1): an ingress limit BEFORE the body is read/parsed, so
+  // malformed or unknown-action requests cannot bypass rate limiting. The
+  // action-specific bucket (read/write) is applied after parsing.
+  const ingress = await enforceRateLimit(limiter, authUser.id, 'quant-watchlists-ingress', token, cid);
+  if (ingress) return done(ingress, null, 'RATE_LIMITED');
   const body = await readJsonBody(req, MAX_WATCHLIST_BODY_BYTES);
   if (!body.ok) return failWith(body.code);
   const parsed = parseWatchlistAction(body.value);
@@ -99,9 +106,8 @@ export async function handler(
   const action = parsed.value;
   op = action.action;
 
-  const token = bearerToken(req) ?? '';
   const bucket = action.action === 'list' ? 'quant-watchlists-read' : 'quant-watchlists-write';
-  const limited = await enforceRateLimit(deps.rateLimiter ?? new SupabaseRateLimiter(), authUser.id, bucket, token, cid);
+  const limited = await enforceRateLimit(limiter, authUser.id, bucket, token, cid);
   if (limited) return done(limited, null, 'RATE_LIMITED');
   const store = (deps.storeFor ?? ((t: string) => new SupabaseWatchlistStore(t)))(token);
   const uid = authUser.id;

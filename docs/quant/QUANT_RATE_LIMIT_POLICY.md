@@ -9,6 +9,7 @@ Technical protection per authenticated user — **not** a commercial quota.
 | `quant-analyze` | 30 | every `quant-analyze` call (v1, multi.v1, watchlist.v1) |
 | `quant-watchlists-read` | 120 | `list` |
 | `quant-watchlists-write` | 60 | create / rename / delete / add_item / remove_item |
+| `quant-watchlists-ingress` | 180 | **every** `quant-watchlists` request, consumed before the body is read (Codex Final) |
 
 Source of truth: `quant_rate_limit_hit()` in migration
 `20260924000100_quant_rate_limits.sql`; mirrored in
@@ -19,8 +20,9 @@ compares both. An unknown bucket is **denied**.
 
 * Order: authenticate → entitlement → method → **rate limit** → body read
   (`quant-analyze`: before the up-to-6 MiB body is read) → work.
-  `quant-watchlists` limits after parsing, because the bucket depends on the
-  action.
+  `quant-watchlists` consumes the `ingress` bucket **before** reading the
+  body (malformed or unknown-action requests are limited too — QW-10), then
+  the action bucket (read/write) after parsing.
 * Identity: `auth.uid()` inside a SECURITY DEFINER function called with the
   caller's JWT. The user id is never taken from the body (RL-02).
 * Counter table `quant_rate_limits`: RLS enabled, no policies, all
