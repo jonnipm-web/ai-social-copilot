@@ -19,30 +19,36 @@
 
 -- ── preconditions (IV-AEF-PRE-RUNTIME-CLOSURE-01, P05) ─────────────────
 -- Fail fast, before creating anything, when an object this migration
--- depends on is missing: the persistence layer (20260925000000),
--- public.subject_roles (20260923000000; used by the operator-reconciliation
--- authority check), auth.users (erasure / operator account), and
--- pg_catalog.hashtextextended (subject advisory lock).
+-- depends on is missing or has an incompatible shape: the complete
+-- persistence layer (20260925000000: 5 tables, 10 RPCs), public.subject_roles
+-- (20260923000000; used by the operator-reconciliation authority check),
+-- auth.users(id uuid) (erasure / operator account) and
+-- pg_catalog.hashtextextended(text, bigint) -> bigint (subject advisory lock).
 DO $$
-DECLARE v_missing text[] := ARRAY[]::text[];
+DECLARE v_missing text[] := ARRAY[]::text[]; v text;
 BEGIN
-  IF to_regclass('public.aef_operations') IS NULL OR to_regclass('public.aef_receipts') IS NULL
-     OR to_regclass('public.aef_audit_events') IS NULL OR to_regprocedure('public.aef_register_operation(jsonb)') IS NULL THEN
-    v_missing := v_missing || '20260925000000_aef_persistence objects'::text;
-  END IF;
+  FOREACH v IN ARRAY ARRAY['public.aef_operations', 'public.aef_human_gates', 'public.aef_receipts', 'public.aef_audit_events', 'public.aef_audit_heads'] LOOP
+    IF to_regclass(v) IS NULL THEN v_missing := v_missing || (v || ' (20260925000000)'); END IF;
+  END LOOP;
+  FOREACH v IN ARRAY ARRAY['public.aef_register_operation(jsonb)', 'public.aef_decide_gate(jsonb)', 'public.aef_claim_execution(jsonb)', 'public.aef_complete_execution(jsonb)', 'public.aef_cancel_operation(jsonb)', 'public.aef_recover(jsonb)', 'public.aef_get_operation(jsonb)', 'public.aef_record_denial(jsonb)', 'public.aef_verify_receipt(jsonb)', 'public.aef_verify_audit_chain(jsonb)'] LOOP
+    IF to_regprocedure(v) IS NULL THEN v_missing := v_missing || (v || ' (20260925000000)'); END IF;
+  END LOOP;
   IF (SELECT count(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'subject_roles'
-       AND column_name IN ('subject_type', 'subject_id', 'role')) <> 3 THEN
-    v_missing := v_missing || 'public.subject_roles(subject_type, subject_id, role) from 20260923000000_entitlement_subject_roles'::text;
+       AND is_nullable = 'NO' AND ((column_name = 'subject_type' AND data_type = 'text')
+                                   OR (column_name = 'subject_id' AND data_type = 'uuid')
+                                   OR (column_name = 'role' AND data_type = 'text'))) <> 3 THEN
+    v_missing := v_missing || 'public.subject_roles(subject_type text, subject_id uuid, role text) NOT NULL from 20260923000000_entitlement_subject_roles'::text;
   END IF;
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'auth' AND table_name = 'users'
                   AND column_name = 'id' AND data_type = 'uuid') THEN
     v_missing := v_missing || 'auth.users.id uuid'::text;
   END IF;
-  IF to_regprocedure('pg_catalog.hashtextextended(text, bigint)') IS NULL THEN
-    v_missing := v_missing || 'pg_catalog.hashtextextended'::text;
+  IF to_regprocedure('pg_catalog.hashtextextended(text, bigint)') IS NULL
+     OR (SELECT prorettype FROM pg_proc WHERE oid = to_regprocedure('pg_catalog.hashtextextended(text, bigint)')) IS DISTINCT FROM 'bigint'::regtype THEN
+    v_missing := v_missing || 'pg_catalog.hashtextextended(text, bigint) -> bigint'::text;
   END IF;
   IF array_length(v_missing, 1) > 0 THEN
-    RAISE EXCEPTION 'AEF_PRECONDITION (20260926000000_aef_hardening): missing: %', array_to_string(v_missing, ', ')
+    RAISE EXCEPTION 'AEF_PRECONDITION (20260926000000_aef_hardening): missing or incompatible: %', array_to_string(v_missing, ', ')
       USING ERRCODE = 'AE010';
   END IF;
 END $$;

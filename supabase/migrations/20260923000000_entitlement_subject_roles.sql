@@ -43,6 +43,32 @@
 --
 -- Idempotent: safe to re-run.
 
+-- ── preconditions (IV-AEF-PRE-RUNTIME-CLOSURE-01, P05) ─────────────────
+-- Fail fast, before creating or altering anything, when an object this
+-- migration references is missing or has an incompatible shape: public.profiles(id uuid, role) (backfill source), auth.uid() (RLS policy),
+-- the API roles (grants).
+DO $$
+DECLARE v_missing text[] := ARRAY[]::text[];
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'id' AND data_type = 'uuid') THEN
+    v_missing := v_missing || 'public.profiles.id uuid'::text;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'role') THEN
+    v_missing := v_missing || 'public.profiles.role'::text;
+  END IF;
+  IF to_regprocedure('auth.uid()') IS NULL
+     OR (SELECT prorettype FROM pg_proc WHERE oid = to_regprocedure('auth.uid()')) IS DISTINCT FROM 'uuid'::regtype THEN
+    v_missing := v_missing || 'auth.uid() returning uuid'::text;
+  END IF;
+  IF (SELECT count(*) FROM pg_roles WHERE rolname IN ('anon', 'authenticated', 'service_role')) <> 3 THEN
+    v_missing := v_missing || 'roles anon/authenticated/service_role'::text;
+  END IF;
+  IF array_length(v_missing, 1) > 0 THEN
+    RAISE EXCEPTION 'LAB_PRECONDITION (20260923000000_entitlement_subject_roles): missing or incompatible: %', array_to_string(v_missing, ', ')
+      USING ERRCODE = 'AE010';
+  END IF;
+END $$;
+
 CREATE TABLE IF NOT EXISTS public.subject_roles (
   subject_type text        NOT NULL DEFAULT 'user',
   subject_id   uuid        NOT NULL,

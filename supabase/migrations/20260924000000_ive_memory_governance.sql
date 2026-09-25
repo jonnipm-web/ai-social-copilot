@@ -37,6 +37,45 @@
 --
 -- Idempotent: safe to re-run.
 
+-- ── preconditions (IV-AEF-PRE-RUNTIME-CLOSURE-01, P05) ─────────────────
+-- Fail fast, before creating or altering anything, when an object this
+-- migration references is missing or has an incompatible shape: public.business_memory(user_id, project_id,
+-- source, content), public.projects(id uuid, user_id uuid) (scope derivation /
+-- ownership policies), auth.uid() (RLS), the API roles.
+DO $$
+DECLARE v_missing text[] := ARRAY[]::text[];
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'business_memory' AND column_name = 'user_id') THEN
+    v_missing := v_missing || 'public.business_memory.user_id'::text;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'business_memory' AND column_name = 'project_id') THEN
+    v_missing := v_missing || 'public.business_memory.project_id'::text;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'business_memory' AND column_name = 'source') THEN
+    v_missing := v_missing || 'public.business_memory.source'::text;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'business_memory' AND column_name = 'content') THEN
+    v_missing := v_missing || 'public.business_memory.content'::text;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'projects' AND column_name = 'id' AND data_type = 'uuid') THEN
+    v_missing := v_missing || 'public.projects.id uuid'::text;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'projects' AND column_name = 'user_id' AND data_type = 'uuid') THEN
+    v_missing := v_missing || 'public.projects.user_id uuid'::text;
+  END IF;
+  IF to_regprocedure('auth.uid()') IS NULL
+     OR (SELECT prorettype FROM pg_proc WHERE oid = to_regprocedure('auth.uid()')) IS DISTINCT FROM 'uuid'::regtype THEN
+    v_missing := v_missing || 'auth.uid() returning uuid'::text;
+  END IF;
+  IF (SELECT count(*) FROM pg_roles WHERE rolname IN ('anon', 'authenticated', 'service_role')) <> 3 THEN
+    v_missing := v_missing || 'roles anon/authenticated/service_role'::text;
+  END IF;
+  IF array_length(v_missing, 1) > 0 THEN
+    RAISE EXCEPTION 'LAB_PRECONDITION (20260924000000_ive_memory_governance): missing or incompatible: %', array_to_string(v_missing, ', ')
+      USING ERRCODE = 'AE010';
+  END IF;
+END $$;
+
 ALTER TABLE public.business_memory ADD COLUMN IF NOT EXISTS scope         text;
 ALTER TABLE public.business_memory ADD COLUMN IF NOT EXISTS origin        text NOT NULL DEFAULT 'user_authored';
 ALTER TABLE public.business_memory ADD COLUMN IF NOT EXISTS status        text NOT NULL DEFAULT 'active';
