@@ -20,7 +20,6 @@ case "$HOST" in
   *) echo "refusing to run against non-local host '$HOST'" >&2; exit 2 ;;
 esac
 
-DB="entitlement_ci_$$"
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 run() { "$PSQL" -h "$HOST" -v ON_ERROR_STOP=1 -q "$@"; }
 
@@ -30,10 +29,14 @@ run() { "$PSQL" -h "$HOST" -v ON_ERROR_STOP=1 -q "$@"; }
 if [[ "$(run -d postgres -tA -c "SELECT (SELECT count(*) FROM pg_roles WHERE rolname = 'authenticator') + (SELECT count(*) FROM pg_namespace WHERE nspname IN ('storage', 'supabase_migrations'));")" != "0" ]]; then
   echo "refusing: the target looks like a real Supabase project" >&2; exit 2
 fi
-UPG="${DB}_upgrade"
-run -d postgres -c "CREATE DATABASE $DB;"
-run -d postgres -c "CREATE DATABASE $UPG;"
-trap 'run -d postgres -c "DROP DATABASE IF EXISTS $DB;" >/dev/null 2>&1 || true; run -d postgres -c "DROP DATABASE IF EXISTS $UPG;" >/dev/null 2>&1 || true' EXIT
+# F-04: every database/role of this run has a unique identity, is registered
+# only after this run created it, carries an ownership marker, and is dropped
+# on EXIT/INT/TERM only if the marker still matches (scripts/ci/lib_disposable.sh).
+# shellcheck source=lib_disposable.sh
+source "$ROOT/scripts/ci/lib_disposable.sh"
+dispo_init aefci
+dispo_db main; DB="$DISPO_LAST"
+dispo_db upgrade; UPG="$DISPO_LAST"
 
 # Migrations authored in the Module Lab (applied nowhere else yet); every one
 # of them must be idempotent.
@@ -80,13 +83,12 @@ check "$DB" aef_sequence_privileges_test.sql 'AEF_SEQUENCE: PASS' -v phase=after
 # The AEF governance service end-to-end against a real database (concurrency,
 # crash recovery, idempotency, forgery, reconciliation, retention, erasure).
 # Needs Deno; skipping must be explicit (AEF_PG_INTEGRATION=skip), never silent.
-AEF_PG_DB_NAME="${DB}_aef"
-RB="${DB}_rb"
-run -d postgres -c "CREATE DATABASE $AEF_PG_DB_NAME;"
-run -d postgres -c "CREATE DATABASE $RB;"
-SEQB="${DB}_seqb"; NF="${DB}_nf"; PF="${DB}_pf"; PROBE_ROLE="aef_probe_grp_$$"
-for d in $SEQB $NF $PF; do run -d postgres -c "CREATE DATABASE $d;"; done
-trap 'for d in $DB $UPG $AEF_PG_DB_NAME $RB $SEQB $NF $PF; do run -d postgres -c "DROP DATABASE IF EXISTS $d;" >/dev/null 2>&1 || true; done; run -d postgres -c "DROP ROLE IF EXISTS $PROBE_ROLE;" >/dev/null 2>&1 || true' EXIT
+dispo_db aef; AEF_PG_DB_NAME="$DISPO_LAST"
+dispo_db rb; RB="$DISPO_LAST"
+dispo_db seqb; SEQB="$DISPO_LAST"
+dispo_db nf; NF="$DISPO_LAST"
+dispo_db pf; PF="$DISPO_LAST"
+dispo_db f3; F3="$DISPO_LAST"
 run -d "$AEF_PG_DB_NAME" -f "$ROOT/supabase/tests/support/supabase_stubs.sql"
 for m in $(ls "$ROOT"/supabase/migrations/*.sql | sort); do apply "$AEF_PG_DB_NAME" "$m"; done
 if [[ "${AEF_PG_INTEGRATION:-run}" == "skip" ]]; then
@@ -243,7 +245,7 @@ apply "$NF" "$ROOT/supabase/migrations/$SEQUENCE_MIGRATION"
 check "$NF" aef_sequence_privileges_test.sql 'AEF_SEQUENCE: PASS' -v phase=after
 # (b) access through a group role cannot be revoked by the owner: the
 #     postcondition must fail the migration, and the rollback verifier refuse
-run -d postgres -c "CREATE ROLE $PROBE_ROLE NOLOGIN;"
+dispo_role probe1; PROBE_ROLE="$DISPO_LAST"
 run -d "$NF" -c "GRANT UPDATE ON SEQUENCE public.probe_owned_seq TO $PROBE_ROLE; GRANT $PROBE_ROLE TO anon;"
 expect_fail "$NF" "$ROOT/supabase/migrations/$SEQUENCE_MIGRATION" "AEF_POSTCONDITION: role anon still has UPDATE on sequence probe_owned_seq"
 if run -d "$NF" -f "$ROOT/supabase/rollbacks/20260927000000_aef_sequence_privileges.down.sql" >/dev/null 2>&1; then
@@ -371,7 +373,7 @@ fail_then "full structure drift (function body)" "AEF structure differs from the
 apply "$PF" "$ROOT/supabase/migrations/$HARDENING_MIGRATION"   # idempotent re-apply restores the repository definition
 fail_then "function volatility drift" "AEF structure differs from the repository" \
   "ALTER FUNCTION public.aef__denial_codes() STABLE;" "ALTER FUNCTION public.aef__denial_codes() IMMUTABLE;"
-run -d postgres -c "CREATE ROLE $PROBE_ROLE NOLOGIN;"
+dispo_role probe2; PROBE_ROLE="$DISPO_LAST"
 fail_then "SECURITY DEFINER owner drift" "AEF structure differs from the repository" \
   "ALTER FUNCTION public.aef_get_operation(jsonb) OWNER TO $PROBE_ROLE;" "ALTER FUNCTION public.aef_get_operation(jsonb) OWNER TO postgres;"
 run -d postgres -c "DROP ROLE $PROBE_ROLE;"
@@ -410,3 +412,45 @@ for m in "$ROOT"/supabase/migrations/2026092[3-9]*.sql; do
   grep -qE "(AEF|LAB)_PRECONDITION" "$m" || { echo "$(basename "$m") has no precondition guard" >&2; exit 1; }
 done
 echo "AEF_MIGRATION_PRECONDITIONS: PASS"
+
+# ── IV-IVE-AEF-RUNTIME-INTEGRATION-01: production-readiness hardening ─────
+# F-01: migration content integrity (same name + changed content, renames,
+# unexpected files, duplicates, frozen APPLIED_PRODUCTION digests).
+bash "$ROOT/scripts/ci/migration_manifest.sh" --check
+bash "$ROOT/scripts/ci/migration_manifest_test.sh"
+
+# F-03: no AEF sequence may be reachable by an API role — proven on the fully
+# migrated schema (catalog scan), against a future migration that forgets
+# the REVOKE (must FAIL), and at author time (static lint).
+check "$DB" aef_sequence_catalog_scan.sql 'AEF_SEQUENCE_CATALOG_SCAN: PASS'
+run -d "$F3" -f "$ROOT/supabase/tests/support/supabase_stubs.sql"
+for m in $(ls "$ROOT"/supabase/migrations/*.sql | sort); do apply "$F3" "$m"; done
+check "$F3" aef_sequence_catalog_scan.sql 'AEF_SEQUENCE_CATALOG_SCAN: PASS'
+apply "$F3" "$ROOT/supabase/tests/fixtures/f03_future_aef_sequence_unsafe.sql"
+if scan="$(run -d "$F3" -tA -f "$ROOT/supabase/tests/aef_sequence_catalog_scan.sql" 2>&1)"; then
+  echo "F-03: the catalog scan accepted a future AEF sequence without REVOKE" >&2; exit 1
+fi
+echo "$scan" | grep -q "aef_future_items_id_seq:anon:USAGE" && echo "$scan" | grep -q "future_counter:authenticated:UPDATE" \
+  || { echo "F-03: unexpected scan output: $scan" >&2; exit 1; }
+apply "$F3" "$ROOT/supabase/tests/fixtures/f03_future_aef_sequence_safe.sql"
+check "$F3" aef_sequence_catalog_scan.sql 'AEF_SEQUENCE_CATALOG_SCAN: PASS'
+bash "$ROOT/scripts/ci/aef_sequence_lint.sh"
+LINT_DIR="$(mktemp -d)"
+cp "$ROOT"/supabase/migrations/*.sql "$LINT_DIR/"
+cp "$ROOT/supabase/tests/fixtures/f03_future_aef_sequence_unsafe.sql" "$LINT_DIR/20260930000000_future_aef_items.sql"
+if MIGRATIONS_DIR="$LINT_DIR" bash "$ROOT/scripts/ci/aef_sequence_lint.sh" 2>/dev/null; then
+  rm -rf "$LINT_DIR"; echo "F-03: the lint accepted a future AEF sequence without REVOKE" >&2; exit 1
+fi
+cp "$ROOT/supabase/tests/fixtures/f03_future_aef_sequence_safe.sql" "$LINT_DIR/20260930000000_future_aef_items.sql"
+MIGRATIONS_DIR="$LINT_DIR" bash "$ROOT/scripts/ci/aef_sequence_lint.sh" >/dev/null
+rm -rf "$LINT_DIR"
+echo "AEF_FUTURE_SEQUENCE_GUARD: PASS"
+
+# F-04: disposable resource ownership (collision, interruption, failure,
+# foreign resources with the same prefix, tampered markers, parallel ids).
+PGHOST="$HOST" PSQL="$PSQL" bash "$ROOT/scripts/ci/disposable_cleanup_test.sh" 2>/dev/null
+
+# Transactional executor experiment (canary DDL A → B → error → C, with a
+# non-atomic control). Uses the Supabase CLI when SUPABASE_CLI is set (CI).
+PGHOST="$HOST" PSQL="$PSQL" bash "$ROOT/scripts/ci/executor_transaction_experiment.sh" 2>&1 \
+  | grep -E "^(EXECUTOR_|CONTROL FAILED)" || { echo "executor experiment failed" >&2; exit 1; }

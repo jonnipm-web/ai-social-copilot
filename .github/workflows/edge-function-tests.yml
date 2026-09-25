@@ -11,7 +11,8 @@ on:
       - 'supabase/tests/**'
       - 'supabase/preflight/**'
       - 'supabase/rollbacks/**'
-      - 'scripts/ci/run_disposable_db_tests.sh'
+      - 'scripts/ci/**'
+      - 'supabase/migration_manifest.tsv'
   workflow_dispatch:
 
 jobs:
@@ -102,6 +103,8 @@ jobs:
           PGUSER: postgres
           PGPASSWORD: ci-disposable-only
           DENO: deno
+          # Executor experiment only (local disposable DB); pinned CLI version.
+          SUPABASE_CLI: npx -y supabase@2.118.0
         run: |
           set -o pipefail
           bash scripts/ci/run_disposable_db_tests.sh | tee db.log
@@ -120,6 +123,15 @@ jobs:
           grep -qx 'AEF_DEPLOY_PREFLIGHT_TESTS: PASS' db.log
           grep -qx 'AEF_DEFINER_BOUNDARY: PASS' db.log
           grep -qx 'AEF_MIGRATION_PRECONDITIONS: PASS' db.log
+          grep -qx 'MIGRATION_MANIFEST_TESTS: PASS' db.log
+          grep -q 'MIGRATION_MANIFEST: PASS' db.log
+          grep -qx 'AEF_SEQUENCE_CATALOG_SCAN: PASS' db.log
+          grep -qx 'AEF_SEQUENCE_LINT: PASS' db.log
+          grep -qx 'AEF_FUTURE_SEQUENCE_GUARD: PASS' db.log
+          grep -qx 'DISPOSABLE_CLEANUP_TESTS: PASS' db.log
+          grep -q 'EXECUTOR_PSQL_PLAIN: NOT_ATOMIC' db.log
+          grep -q 'EXECUTOR_PSQL_SINGLE_TRANSACTION: ATOMIC' db.log
+          grep -qx 'EXECUTOR_TRANSACTION_EXPERIMENT: DONE' db.log
 
   contract-and-aef-ci:
     name: AEF contract + kernel CI (IV-AEF-FOUNDATION-01)
