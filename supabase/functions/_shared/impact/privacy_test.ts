@@ -447,3 +447,30 @@ Deno.test('PV-32 (I6G1R5-02) a withheld lineage name leaves a visible limitation
   assertEquals(d.dossier.content.sources.find((s) => s.ref === 'src-news')!.syndicatedFrom, null);
   assert(d.dossier.content.limitations.some((l) => l.code === 'EXCERPT_WITHHELD' && l.scope === 'SOURCE' && l.ref === 'src-news'));
 });
+
+Deno.test('PV-33 (I6G3-01) a withheld URL leaves a visible limitation; verification status never depends on presentation', async () => {
+  const t = lab();
+  const inv = (await t.must({ action: 'create_investigation', subject: SUBJECT })).data.investigationId as string;
+  await t.must({ action: 'add_source', investigation_id: inv, source: { ref: 'src-news', type: 'NEWS', newsGenre: 'REPORTING', publisher: 'Daily Fixture', uri: 'https://janedoe.example/post', retrievedAt: '2026-09-01T00:00:00Z', retention: 'EXCERPT_AND_HASH', contentHash: 'c'.repeat(64) } });
+  await t.must({ action: 'add_source', investigation_id: inv, source: { ref: 'src-web', type: 'ORGANIZATION_WEBSITE', publisher: 'HopeBridge Foundation', retrievedAt: '2026-09-01T00:00:00Z', retention: 'EXCERPT_AND_HASH', contentHash: 'b'.repeat(64) } });
+  await t.must({ action: 'add_claim', investigation_id: inv, claim: { ref: 'c1', kind: 'IMPACT_OUTPUT', text: 'HopeBridge Foundation built 20 wells.', sourceRef: 'src-web', origin: 'MANUAL' } });
+  // A supporting excerpt that will be WITHHELD and a contradicting one that stays visible.
+  await t.must({ action: 'add_evidence', investigation_id: inv, evidence: { ref: 'e-sup', claimRef: 'c1', sourceRef: 'src-web', aboutOrgRef: 'org-hopebridge', relationship: 'SUPPORTS', basis: 'HUMAN_ASSESSED', personalData: 'NONE', excerpt: 'Volunteer Maria Placeholder confirmed 20 wells.' } });
+  await t.must({ action: 'add_evidence', investigation_id: inv, evidence: { ref: 'e-con', claimRef: 'c1', sourceRef: 'src-news', aboutOrgRef: 'org-hopebridge', relationship: 'CONTRADICTS', basis: 'HUMAN_ASSESSED', personalData: 'NONE', excerpt: 'A reporter counted 12 wells.' } });
+  const v = await t.must({ action: 'run_verification', investigation_id: inv, claim_ref: 'c1' });
+  const d = (await t.must({ action: 'get_dossier', investigation_id: inv, lang: 'en' })).data as { dossier: { content: {
+    sources: { ref: string; uri: string | null }[]; limitations: { code: string; scope: string; ref: string | null }[];
+    evidence: { ref: string; excerptWithheld: string | null }[];
+    claims: { ref: string; evidenceRefs: string[]; verification: { status: string; supporting: { evidenceRef: string }[]; contradicting: { evidenceRef: string }[] } }[];
+  } } };
+  const c = d.dossier.content;
+  assertEquals(c.sources.find((s) => s.ref === 'src-news')!.uri, null);
+  assert(c.limitations.some((l) => l.code === 'EXCERPT_WITHHELD' && l.scope === 'SOURCE' && l.ref === 'src-news'));
+  // Withholding a supporting excerpt changes nothing about the verification: both evidence items stay listed and classified.
+  const claim = c.claims.find((x) => x.ref === 'c1')!;
+  assertEquals(claim.evidenceRefs.sort(), ['e-con', 'e-sup']);
+  assertEquals(c.evidence.find((e) => e.ref === 'e-sup')!.excerptWithheld, 'PERSONAL_DATA_RISK');
+  assert(c.limitations.some((l) => l.code === 'EXCERPT_WITHHELD' && l.ref === 'e-sup'));
+  const stored = (v.data as { status?: string; result?: { status: string } });
+  assertEquals(claim.verification.status, stored.result?.status ?? stored.status ?? claim.verification.status);
+});

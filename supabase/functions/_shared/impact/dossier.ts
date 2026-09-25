@@ -261,6 +261,8 @@ export async function buildDossierContent(input: DossierInput) {
     const pub = present('PUBLISHER', s.publisher, privacy, s.type);
     // URLs: origin only — paths / queries can carry personal handles or tokens.
     const uri = presentUri(s.uri, s.type, ownDomains);
+    // I6G3-01: a withheld URL is disclosed as a limitation, never silently dropped.
+    if (s.uri && uri.text === null) lim('EXCERPT_WITHHELD', 'SOURCE', s.id);
     if (pub.withheld) lim('EXCERPT_WITHHELD', 'SOURCE', s.id);
     if (pub.redacted) lim('PERSONAL_DATA_REDACTED', 'SOURCE', s.id);
     return {

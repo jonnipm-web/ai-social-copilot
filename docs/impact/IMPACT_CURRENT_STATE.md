@@ -137,3 +137,17 @@ Module registry: `impact` now `adminClickable: true`, `route: /impact`
 (lifecycle still EXPERIMENTAL ⇒ route policy admits admins only). No
 deploy, no public link, no PDF, no score, no AEF action. Docs:
 IMPACT_PRODUCT_UX · IMPACT_DOSSIER_UI_CONTRACT · IMPACT_RATE_LIMIT.
+
+## 10. I6 — Privacy fail-closed + validation (IV-IMPACT-I6-PRIVACY-PHYSICAL-VALIDATION-01)
+
+| Asset | Classification | Where |
+|---|---|---|
+| Field-semantic presentation privacy + identifier backstop (closes I5F-03) | EXPERIMENTAL (Lab) | `_shared/impact/privacy.ts`, used by `dossier.ts` for live view, export, snapshot and text |
+| Privacy policy version in the hashed content (`impact-privacy/1`) | contract | `dossier.ts` `policyVersions.privacy` |
+| Owner review DTOs marked `OWNER_REVIEW_RAW`, minor data scrubbed | EXPERIMENTAL | `lab_service.ts` |
+| Keyboard / focus closure, IVE exclusion regions, authoritative MISMATCH | EXPERIMENTAL (admin UI) | `lib/features/impact/` |
+| Tests | CI | `privacy_test.ts` PV-01..33, EF-15, Flutter UI-PRV / UI-KB / UI-IVE / UI-ORI |
+
+Physical Android validation: NOT_AVAILABLE (no device connected during the
+mission). No deploy, no production migration, no registry enablement.
+Docs: IMPACT_PRIVACY_MODEL (new) · IMPACT_PRODUCT_UX §I6.

@@ -113,6 +113,30 @@ only on user action.
   limitations, then summary, identity and claims), so a copied excerpt from
   the top always carries them (Deno DS-K; Flutter UI-EXP-05).
 
+## I6 — privacy, keyboard, overlay (IV-IMPACT-I6-PRIVACY-PHYSICAL-VALIDATION-01)
+
+- **Privacy**: the server withholds personal data fail-closed
+  (IMPACT_PRIVACY_MODEL.md); the UI shows only "withheld for privacy" and the
+  limitation "contains, or may contain, personal data". A withheld subject
+  name falls back to the subject reference in the header and in the text.
+- **Verification**: an envelope MISMATCH is authoritative — "verification
+  inconclusive: do not rely on this snapshot's metadata"; no success wording
+  is shown with it. STALE says "evidence or presentation policy".
+- **Keyboard / focus** (UI-KB-01..09): Tab / Shift+Tab follow reading order
+  on phone and desktop (full cycle asserted: claims → Issue snapshot);
+  Enter / Space activate claims, buttons, show more, retry; the export
+  confirmation traps focus, Esc cancels and returns focus to the button;
+  Back from a claim returns focus to that claim; keyboard use switches to the
+  visible (traditional) focus highlight.
+- **IVE overlay**: Issue snapshot, Verify, Copy JSON / text, Show more and
+  Try again are `IveExclusionRegion`s (existing contract). Claim tiles and
+  navigation are deliberately not wrapped: the placement engine has no
+  top-left candidate (back button), and on the real rendered phone layout no
+  candidate covers more than 20% of a claim tile (UI-IVE-01/02).
+- **Scale / orientation** (automated, not a physical substitute): text scale
+  1.0 / 1.3 / 2.0 × portrait / landscape × PT / EN without overflow, caveats
+  reachable; rotation keeps an issued snapshot without re-requesting.
+
 ## Visual language
 
 Status is always **text + icon** in neutral tones (secondary container for

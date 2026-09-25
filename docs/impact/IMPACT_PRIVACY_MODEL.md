@@ -28,7 +28,7 @@ fail-closed presentation policy implemented in
 | Registry legal name | structured ids, minor rule | official organizational record: shown | none known |
 | Source publisher | structured ids; name / address signals for **every** source type (the type is client-declared) | withheld on a signal unless registry-confirmed; SOCIAL_MEDIA / OTHER withheld unless registry-confirmed | a person's name no signal matches |
 | Lineage names (syndicatedFrom / derivedFrom), conflict position publishers | as publisher, by the source's type | as publisher | same |
-| URLs | parsed | **origin only** (scheme + host; never userinfo, port, path, query, fragment) and only for institutional types (OFFICIAL_REGISTRY, GOVERNMENT_RECORD, REGULATOR, COURT_RECORD) or a host within the subject's declared domains; every other URL withheld (Codex I6G1R-06) | none known |
+| URLs | parsed | **origin only** (scheme + host; never userinfo, port, path, query, fragment) and only for institutional types (OFFICIAL_REGISTRY, GOVERNMENT_RECORD, REGULATOR, COURT_RECORD) or a host within the subject's declared domains; every other URL withheld (Codex I6G1R-06), with a visible `EXCERPT_WITHHELD` / SOURCE limitation (Codex I6G3-01) | none known |
 | E-mail (ASCII and Unicode incl. combining marks; searched inside each token, so trailing / leading Unicode punctuation cannot hide it; look-alike `＠` / `﹫`; spelled-out `(at)` / `[at]` / `at` / `arroba` with literal or spelled dot — Codex I6G1R3-01), social handles (`@name`), phone (any Unicode digits, normalized to ASCII **for detection only** — text without PII keeps its original characters, Codex I6G1R-01; the only change ever made to safe text is the intentional removal of invisible / bidi / format characters, see below), IBAN / bank account, payment card (Luhn, spaced or compact), sort code + account, labelled account numbers, labelled ids (EIN, TIN, NIF, NIE, NINO, SSN, DNI, CPF, CNPJ, RG, CURP, RFC, PAN, passport, tax id, national id — value must contain 4+ digits; acronyms upper-case only), MRZ fragments, formatted CPF / CNPJ / SSN, UK NINO, long digit runs | deterministic patterns (`redactStructured`) | redacted `[redacted-…]` in every field | unlabelled identifiers in unusual formats |
 | Addresses | street + number (EN / PT / ES), unit / apartment, UK / BR / US postcodes, PO box | free text withheld | an address written without any of these forms |
 | Private names | honorific + name; person-role + name (EN / PT / ES); initial + surname ("J. Smith"); 2+ consecutive Title-case **or** 2+ consecutive ALL-CAPS (4+ letters) non-organizational words, commas and line breaks included ("SMITH, JOHN"); any letter of a caseless script (withheld as un-assessable) | free text withheld | lower-case names; a single name without honorific / role / initial |
@@ -147,7 +147,7 @@ content. Consequences:
 
 ## 6. Tests
 
-`privacy_test.ts` PV-01..32 (structured ids incl. Unicode / labelled / MRZ,
+`privacy_test.ts` PV-01..33 (structured ids incl. Unicode / labelled / MRZ,
 all-caps / initials / surname-first / caseless names, client whitelist
 attempts, publishers of every type, URL userinfo / IDN / IP / personal
 types, owner review DTO; and the original: name / address signals,

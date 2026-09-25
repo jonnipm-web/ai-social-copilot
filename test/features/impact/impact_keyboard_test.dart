@@ -1,6 +1,7 @@
 import 'package:ai_social_copilot/features/impact/data/impact_lab_api.dart';
 import 'package:ai_social_copilot/features/impact/screens/impact_claim_screen.dart';
 import 'package:ai_social_copilot/features/impact/screens/impact_dossier_screen.dart';
+import 'package:ai_social_copilot/shared/widgets/ive_exclusion_region.dart';
 import 'package:ai_social_copilot/shared/widgets/ive_placement_engine.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -125,19 +126,24 @@ void main() {
     expect(Theme.of(ctx).focusColor.a, greaterThan(0), reason: 'the focus highlight colour is not transparent');
   });
 
-  testWidgets('UI-KB-08 (I6G2-03) desktop two-column: Tab reaches claims then the export actions in reading order', (tester) async {
+  testWidgets('UI-KB-08 (I6G2-03 / I6G3-03) desktop two-column: the COMPLETE Tab cycle is claims → Issue snapshot, nothing interposed', (tester) async {
     await pumpImpact(tester, dossierScreen, transport: FakeImpactTransport(dossier: fixture('dossier_confirmed_en')), size: const Size(1440, 3000));
     final claims = find.byType(ImpactClaimTile);
     final issue = find.widgetWithText(FilledButton, 'Issue snapshot');
-    final stops = <String>[];
-    for (var i = 0; i < 3; i++) {
-      await tabThrough(tester, 1);
-      if (focusedOn(tester, claims.at(0))) stops.add('claim0');
-      if (focusedOn(tester, claims.at(1))) stops.add('claim1');
-      if (focusedOn(tester, issue)) stops.add('issue');
+    String label() {
+      if (focusedOn(tester, claims.at(0))) return 'claim0';
+      if (focusedOn(tester, claims.at(1))) return 'claim1';
+      if (focusedOn(tester, issue)) return 'issue';
+      return 'OTHER@${focusedRect()}';
     }
-    expect(stops, ['claim0', 'claim1', 'issue']);
-    // Caveats sit above the first focus stop (they are read before any claim).
+    final cycle = <String>[];
+    for (var i = 0; i < 8; i++) {
+      await tabThrough(tester, 1);
+      final l = label();
+      if (cycle.isNotEmpty && l == cycle.first) break; // wrapped around
+      cycle.add(l);
+    }
+    expect(cycle, ['claim0', 'claim1', 'issue']);
     final caveats = tester.getRect(find.text('What this dossier does NOT establish'));
     expect(caveats.top, lessThan(tester.getRect(claims.at(0)).top));
   });
@@ -155,29 +161,36 @@ void main() {
     expect(focusedRect(), origin, reason: 'focus restored to the claim that opened the detail');
   });
 
-  test('UI-IVE-02 (I6G2-02 rejected with proof) the avatar never rests top-left (back button) and a claim tile stays mostly free', () {
-    const screen = Size(390, 844);
+  testWidgets('UI-IVE-02 (I6G2-02 rejected with proof, I6G3-02 real layout) on the REAL rendered phone dossier, no avatar candidate covers the AppBar back area or more than 20% of any claim tile', (tester) async {
+    await pumpImpact(tester, dossierScreen, transport: FakeImpactTransport(dossier: fixture('dossier_confirmed_en')), size: const Size(390, 844));
+    // Bring the claims into the viewport.
+    await tester.scrollUntilVisible(find.text('Claims and verification'), 300, scrollable: find.byType(Scrollable).first);
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -300));
+    await tester.pumpAndSettle();
     const footprint = Size(56, 56);
-    const backButton = Rect.fromLTWH(0, 24, 56, 56); // AppBar leading on a 24dp status bar
-    // Every mobile candidate, with no exclusions, and forcing each by excluding the previous ones.
+    final screen = tester.view.physicalSize / tester.view.devicePixelRatio;
+    final padding = MediaQueryData.fromView(tester.view).padding;
+    const backArea = Rect.fromLTWH(0, 0, 72, 80); // AppBar leading + status bar
+    final tiles = tester.widgetList(find.byType(ImpactClaimTile)).map((w) => tester.getRect(find.byWidget(w))).toList();
+    expect(tiles, isNotEmpty);
+    var exclusions = [...iveExclusionRegionsNotifier.value];
     final seen = <Offset>{};
-    var exclusions = <Rect>[];
     for (var i = 0; i < 5; i++) {
       final pos = computeRestingPosition(IvePlacementInput(
         screenSize: screen,
-        safeArea: const IveSafeAreaInsets(top: 24, bottom: 24),
+        safeArea: IveSafeAreaInsets(top: padding.top, bottom: padding.bottom),
         avatarFootprint: footprint,
         exclusions: exclusions,
       ));
       if (!seen.add(pos)) break;
-      final rect = Rect.fromLTWH(screen.width - pos.dx - footprint.width, pos.dy, footprint.width, footprint.height);
-      expect(rect.overlaps(backButton), isFalse, reason: 'candidate $pos covers the back button');
-      // A full-width claim tile (358 x 120) keeps > 80% of its area free under the avatar.
-      final tile = Rect.fromLTWH(16, rect.top - 20, 358, 120);
-      final covered = tile.intersect(rect);
-      final coveredArea = covered.isEmpty ? 0.0 : covered.width * covered.height;
-      expect(coveredArea / (tile.width * tile.height), lessThan(0.2));
-      exclusions = [...exclusions, rect.inflate(1)];
+      final avatar = Rect.fromLTWH(screen.width - pos.dx - footprint.width, pos.dy, footprint.width, footprint.height);
+      expect(avatar.overlaps(backArea), isFalse, reason: 'candidate $pos covers the back button');
+      for (final tile in tiles) {
+        final covered = tile.intersect(avatar);
+        final area = covered.isEmpty || covered.width < 0 || covered.height < 0 ? 0.0 : covered.width * covered.height;
+        expect(area / (tile.width * tile.height), lessThan(0.2), reason: 'candidate $pos vs tile $tile');
+      }
+      exclusions = [...exclusions, avatar.inflate(1)];
     }
     expect(seen.length, greaterThanOrEqualTo(2));
   });
