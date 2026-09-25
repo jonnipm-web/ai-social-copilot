@@ -18,8 +18,23 @@ Map<String, dynamic> _map(Object? v) => v is Map<String, dynamic> ? v : const {}
 List<Map<String, dynamic>> _maps(Object? v) =>
     v is List ? v.whereType<Map<String, dynamic>>().toList(growable: false) : const [];
 List<String> _strings(Object? v) =>
-    v is List ? v.whereType<String>().toList(growable: false) : const [];
-String? _str(Object? v) => v is String ? v : null;
+    v is List ? v.whereType<String>().map(displaySafe).toList(growable: false) : const [];
+String? _str(Object? v) => v is String ? displaySafe(v) : null;
+
+/// Codex I5G3-01 — server strings are DATA, rendered inside UI chrome. Strip
+/// what could disguise or reorder them (bidi overrides/isolates, zero-width
+/// and other invisible format characters, C0/C1 controls), flatten line
+/// breaks, and bound the length so a hostile value cannot impersonate UI
+/// text or break the layout. Display only: export copies the untouched
+/// server document.
+const kMaxDisplayChars = 2000;
+final _invisible = RegExp('[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u00AD\u061C\u180E\u200B-\u200F\u202A-\u202E\u2060-\u2064\u2066-\u206F\uFEFF]');
+final _breaks = RegExp('[\r\n\t\u2028\u2029]+');
+
+String displaySafe(String s) {
+  final flat = s.replaceAll(_invisible, '').replaceAll(_breaks, ' ');
+  return flat.length <= kMaxDisplayChars ? flat : '${flat.substring(0, kMaxDisplayChars)}…';
+}
 int _int(Object? v) => v is int ? v : 0;
 bool _bool(Object? v) => v == true;
 
@@ -484,7 +499,9 @@ class DossierView {
     if (data['text'] is! String || (data['text'] as String).isEmpty || data['labels'] is! Map<String, dynamic>) _contract();
     return DossierView._(
       document: doc,
-      text: _str(data['text']) ?? '',
+      // Raw on purpose: the export must be the server's bytes (display-safe
+      // normalization applies only to values rendered inside UI chrome).
+      text: data['text'] as String,
       labels: DossierLabels(_map(data['labels'])),
       integrity: DossierIntegrity(_map(doc['integrity'])),
       envelope: DossierEnvelope(_map(doc['envelope'])),

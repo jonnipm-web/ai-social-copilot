@@ -348,5 +348,8 @@
   "impactRegistryQuote": "As recorded in the registry — quoted",
   "impactClaimCaveats": "Before reading this claim",
   "impactClaimLimitations": "Limitations that apply to this claim",
-  "impactSnapshotCaveats": "The confirmation described the live view at that moment. The issued snapshot carries these caveats:"
+  "impactSnapshotCaveats": "The confirmation described the live view at that moment. The issued snapshot carries these caveats:",
+  "impactClaimScopeNote": "Status of this claim only — not a verdict on the organization.",
+  "impactIdentityScopeNote": "Identity only — not an assessment of the organization’s conduct.",
+  "impactPosition": "Position {index} of {total}"
 }

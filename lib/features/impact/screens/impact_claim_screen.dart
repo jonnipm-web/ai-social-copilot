@@ -55,6 +55,7 @@ class ImpactClaimScreen extends StatelessWidget {
               withheld: claim.textWithheld != null,
             ),
             ImpactLine('${claim.ref} · ${claim.kind ?? '—'} · ${claim.sourceRef ?? '—'}', muted: true),
+            ImpactLine(t.impactClaimScopeNote, icon: Icons.info_outline),
             const SizedBox(height: 8),
             if (v == null)
               ImpactSection(
@@ -220,14 +221,17 @@ class _ConflictBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+    final total = conflict.positions.length;
     final cards = [
-      for (final p in conflict.positions)
+      for (final (i, p) in conflict.positions.indexed)
         Card(
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(t.impactPosition(i + 1, total), style: Theme.of(context).textTheme.labelSmall),
                 Text('«${p.publisher}»', style: Theme.of(context).textTheme.titleSmall),
                 ImpactLine('${p.evidenceId} · ${p.sourceId}', muted: true),
                 ImpactLine(p.relationship ?? '—'),
@@ -249,7 +253,9 @@ class _ConflictBlock extends StatelessWidget {
           LayoutBuilder(builder: (context, c) {
             // Side by side when there is room; stacked on phones. Order is
             // the server's — no position is promoted.
-            if (!Breakpoints.isTablet(c.maxWidth) || cards.length < 2) return Column(children: cards);
+            // I5G3-05 — more than three positions are stacked (each labelled
+            // "position i of n") instead of squeezed into narrow columns.
+            if (!Breakpoints.isTablet(c.maxWidth) || cards.length < 2 || cards.length > 3) return Column(children: cards);
             return Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [for (final card in cards) Expanded(child: card)],

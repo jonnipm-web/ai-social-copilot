@@ -95,6 +95,24 @@ nothing partial is shown", 429 "try again in N s" from `retry_after`,
 network, 5xx, unsupported contract). Retry only for network/5xx/429, and
 only on user action.
 
+## Cropped context and hostile input (Codex Gate 3)
+
+- Every claim card carries its own scope line ("status of this claim only —
+  not a verdict on the organization"); the identity card says "identity
+  only — not an assessment of conduct" and uses a neutral badge icon (no
+  "verified" badge). A screenshot of one card never reads as a verdict.
+- Server strings are DATA: before display they are normalized
+  (`displaySafe`: bidi overrides/isolates, zero-width and other invisible
+  format characters and C0/C1 controls removed, line breaks flattened,
+  length bounded at 2000 chars) and shown inside « » (organization names,
+  publishers, quotes). Export is **not** normalized — it copies the server
+  bytes.
+- Disagreements with more than three positions are stacked, each labelled
+  "position i of n", never squeezed into narrow columns.
+- The server text rendering is caveat-first (non-findings, then
+  limitations, then summary, identity and claims), so a copied excerpt from
+  the top always carries them (Deno DS-K; Flutter UI-EXP-05).
+
 ## Visual language
 
 Status is always **text + icon** in neutral tones (secondary container for
@@ -109,8 +127,10 @@ I5G1-06); redaction and withholding are stated explicitly.
 - Section titles are semantic headers (own semantics container — the card
   does not swallow the section into the heading); chips expose their label;
   each claim tile is one button labelled "Claim detail <ref>…".
-- Tested: text-contrast and Android tap-target guidelines; text scale 2.0 on
-  a 360 px phone with no overflow; sizes 320×640 → 1920×1080.
+- Tested: text-contrast (light and Material 3 dark) and Android tap-target
+  guidelines; errors announced as live regions; text scale 2.0 on a 360 px
+  phone with no overflow; sizes 320×640 → 1920×1080. RTL is not tested: the
+  app ships pt/en only. Keyboard traversal order is not yet tested (open).
 - UI chrome in ARB (`lib/l10n/app_pt.arb`, `app_en.arb`, keys `impact*`);
   dossier vocabulary from the server in the language requested
   (`lang` follows the app locale: `en` → en, anything else → pt).

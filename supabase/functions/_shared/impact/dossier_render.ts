@@ -53,6 +53,23 @@ export function renderDossierText(doc: DossierDocument, lang: Lang): string {
   out(DOSSIER_STATUS_LABEL[c.dossierStatus][lang]);
   out();
 
+  // IV-IMPACT-I5 (Codex I5G3-03): the caveats come FIRST — before the summary
+  // and before any claim or status — so a copied or cropped excerpt from the
+  // top of the text always carries what the dossier does NOT establish.
+  out(`## ${t('NOT_ESTABLISHED')}`);
+  for (const n of c.doesNotEstablish) out(`- ${NON_FINDING_LABEL[n][lang]}`);
+  out();
+
+  out(`## ${t('LIMITATIONS')}`);
+  const seen = new Set<string>();
+  for (const l of c.limitations) {
+    if (seen.has(l.code)) continue;
+    seen.add(l.code);
+    const refs = c.limitations.filter((x) => x.code === l.code && x.ref).map((x) => q(x.ref)).join(', ');
+    out(`- ${LIMITATION_LABEL[l.code][lang]}${refs ? ` (${refs})` : ''}`);
+  }
+  out();
+
   out(`## ${t('SUMMARY')}`);
   for (const [status, n] of Object.entries(c.summary.byStatus)) {
     if (n > 0) out(`- ${STATUS_LABEL[status as keyof typeof STATUS_LABEL][lang]}: ${n}`);
@@ -114,20 +131,6 @@ export function renderDossierText(doc: DossierDocument, lang: Lang): string {
     }
   }
   out(t('QUOTE_NOTE'));
-  out();
-
-  out(`## ${t('LIMITATIONS')}`);
-  const seen = new Set<string>();
-  for (const l of c.limitations) {
-    if (seen.has(l.code)) continue;
-    seen.add(l.code);
-    const refs = c.limitations.filter((x) => x.code === l.code && x.ref).map((x) => q(x.ref)).join(', ');
-    out(`- ${LIMITATION_LABEL[l.code][lang]}${refs ? ` (${refs})` : ''}`);
-  }
-  out();
-
-  out(`## ${t('NOT_ESTABLISHED')}`);
-  for (const n of c.doesNotEstablish) out(`- ${NON_FINDING_LABEL[n][lang]}`);
   out();
 
   out(`## ${t('SOURCES')}`);

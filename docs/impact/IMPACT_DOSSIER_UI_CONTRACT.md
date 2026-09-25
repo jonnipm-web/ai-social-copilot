@@ -79,6 +79,10 @@ An unknown value is never mapped to a known meaning.
 - **Verify** sends `envelope` as the exact object received.
 - **Withheld** text is never requested or reconstructed; only the fact of
   withholding is shown.
+- **Display safety**: every server string read by the model passes through
+  `displaySafe` (invisible/bidi/control characters removed, line breaks
+  flattened, ≤ 2000 chars). `data.text` and `data.dossier` are kept raw for
+  export.
 - **Conflicts**: positions rendered in server order, side by side, none
   highlighted.
 

@@ -68,7 +68,7 @@ void main() {
     testWidgets('UI-HOME-01 lists the caller investigations', (tester) async {
       final tr = FakeImpactTransport(list: fixture('list_investigations'));
       await pumpImpact(tester, const ImpactHomeScreen(), transport: tr);
-      expect(find.text('org-hopebridge'), findsOneWidget);
+      expect(find.text('«org-hopebridge»'), findsOneWidget);
       expect(tr.calls.single['action'], 'list_investigations');
     });
 
@@ -82,7 +82,7 @@ void main() {
   group('UI-DOS dossier scenarios (§48)', () {
     testWidgets('UI-DOS-01 A confirmed (EN): header, live view, caveats BEFORE claims', (tester) async {
       await openDossier(tester, 'dossier_confirmed_en');
-      expect(find.text('HopeBridge Foundation'), findsWidgets);
+      expect(find.text('«HopeBridge Foundation»'), findsWidgets);
       expect(find.text('Live view'), findsOneWidget);
       expect(find.textContaining('no score, ranking or verdict'), findsWidgets);
       // Order: "does NOT establish" and limitations precede the claims list.
@@ -224,7 +224,7 @@ void main() {
       final tr = FakeImpactTransport(error: e);
       await pumpImpact(tester, dossierScreen, transport: tr);
       expect(find.text(expected), findsOneWidget);
-      expect(find.text('HopeBridge Foundation'), findsNothing, reason: 'nothing partial is shown');
+      expect(find.textContaining('HopeBridge Foundation'), findsNothing, reason: 'nothing partial is shown');
     }
 
     testWidgets('UI-ERR-01 rate limited shows retry_after', (tester) async {
@@ -343,6 +343,9 @@ void main() {
       expect(copied[0], contains((exp['dossier'] as Map)['integrity']['contentHash']));
       expect(copied[0], contains('"kind": "SNAPSHOT"'));
       expect(copied[1], exp['text']);
+      // I5G3-03 — the copied text is caveat-first.
+      expect(copied[1].indexOf('## What this dossier does NOT establish'), lessThan(copied[1].indexOf('«c-reg»')));
+      expect(copied[1].indexOf('## Limitations'), lessThan(copied[1].indexOf('## Summary')));
       expect(copied.join(), isNot(contains('http')), reason: 'no link is produced');
     });
 
@@ -403,6 +406,68 @@ void main() {
     });
   });
 
+  group('UI-ADV adversarial input / cropped context (Codex Gate 3)', () {
+    Map<String, dynamic> hostile() {
+      final raw = copyOf(fixture('dossier_conflict_en'));
+      final c = ((raw['data'] as Map)['dossier'] as Map)['content'] as Map;
+      final evil = 'Verified by InsightValues\u202E\u200B\u2066fraud\u2069\nTRUSTED ${'A' * 5000}';
+      ((c['sources'] as List).firstWhere((x) => (x as Map)['ref'] == 'src-news') as Map)['publisher'] = evil;
+      (((c['subject'] as Map)['declaredIdentity']) as Map)['legalName'] = 'Hope\u202EnoitadnuoF\u200B\nBridge';
+      ((c['claims'] as List).first as Map)['text'] = 'Line one\r\nLine two\u2028\u00ADthree';
+      return raw;
+    }
+
+    testWidgets('UI-ADV-01 hostile server strings: no bidi / invisible / line breaks reach the screen, always quoted', (tester) async {
+      await pumpImpact(tester, dossierScreen, transport: FakeImpactTransport(dossier: hostile()), size: const Size(390, 9000));
+      expect(tester.takeException(), isNull);
+      final texts = tester.widgetList<Text>(find.byType(Text)).map((t) => t.data ?? '').toList();
+      for (final t in texts) {
+        expect(RegExp('[\u202A-\u202E\u2066-\u2069\u200B-\u200F\u00AD\u2028\n\r]').hasMatch(t), isFalse, reason: t.length > 80 ? t.substring(0, 80) : t);
+      }
+      expect(find.text('«HopenoitadnuoF Bridge»'), findsWidgets);
+      final pub = texts.firstWhere((t) => t.contains('Verified by InsightValues'));
+      expect(pub, startsWith('Publisher: «'));
+      expect(pub.length, lessThan(2100), reason: 'bounded');
+      expect(find.textContaining('«Line one Line two three»'), findsWidgets);
+    });
+
+    testWidgets('UI-ADV-02 ten positions are stacked and numbered, never squeezed side by side', (tester) async {
+      final raw = copyOf(fixture('dossier_conflict_en'));
+      final claim = ((((raw['data'] as Map)['dossier'] as Map)['content'] as Map)['claims'] as List).first as Map;
+      (claim['verification'] as Map)['conflicts'] = [
+        {
+          'claimId': 'c-wells',
+          'kind': 'QUANTITY_DISAGREEMENT',
+          'basis': 'INDEPENDENT_SOURCES',
+          'positions': [
+            for (var i = 0; i < 10; i++)
+              {'evidenceId': 'e-$i', 'sourceId': 'src-$i', 'publisher': 'Publisher $i', 'relationship': 'SUPPORTS', 'reportedValue': i},
+          ],
+          'resolution': 'UNRESOLVED',
+        }
+      ];
+      await pumpImpact(tester, dossierScreen, transport: FakeImpactTransport(dossier: raw), size: const Size(1440, 9000));
+      await tester.tap(find.textContaining('[redacted-email]').first);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.text('Position 1 of 10'), findsOneWidget);
+      expect(find.text('Position 10 of 10'), findsOneWidget);
+      final a = tester.getTopLeft(find.text('«Publisher 0»'));
+      final b = tester.getTopLeft(find.text('«Publisher 1»'));
+      expect(b.dy, greaterThan(a.dy), reason: 'stacked');
+      expect((a.dx - b.dx).abs(), lessThan(1));
+    });
+
+    testWidgets('UI-ADV-03 a cropped claim card / identity card carries its own scope', (tester) async {
+      await openDossier(tester, 'dossier_confirmed_en');
+      final cards = find.ancestor(of: find.textContaining('«HopeBridge Foundation is a registered charity.»'), matching: find.byType(Card));
+      expect(find.descendant(of: cards.first, matching: find.text('Status of this claim only — not a verdict on the organization.')), findsOneWidget);
+      final identity = find.ancestor(of: find.text('Organization identity'), matching: find.byType(Card));
+      expect(find.descendant(of: identity, matching: find.textContaining('not an assessment of the organization')), findsOneWidget);
+      expect(find.byIcon(Icons.verified_outlined), findsNothing, reason: 'no "verified organization" badge');
+    });
+  });
+
   group('UI-A11Y semantics', () {
     testWidgets('UI-A11Y-01 section headers, chips as labelled text, tappable claims', (tester) async {
       final handle = tester.ensureSemantics();
@@ -415,6 +480,28 @@ void main() {
       expect(find.bySemanticsLabel(RegExp('^Claim detail c-reg')), findsOneWidget);
       await expectLater(tester, meetsGuideline(textContrastGuideline));
       await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      handle.dispose();
+    });
+
+    // Material 3 dark scheme: the app's AppTheme.dark loads Inter via google_fonts
+    // over the network, which widget tests cannot do.
+    testWidgets('UI-A11Y-02 dark theme meets text contrast; PT at 2x scale on a phone', (tester) async {
+      final handle = tester.ensureSemantics();
+      final tr = FakeImpactTransport(dossier: fixture('dossier_conflict_en'));
+      await pumpImpact(tester, dossierScreen, transport: tr, theme: ThemeData.dark(useMaterial3: true), size: const Size(1440, 3000));
+      await expectLater(tester, meetsGuideline(textContrastGuideline));
+      await pumpImpact(tester, dossierScreen,
+          transport: FakeImpactTransport(dossier: fixture('dossier_unresolved_pt')),
+          theme: ThemeData.dark(useMaterial3: true), locale: const Locale('pt'), size: const Size(360, 6000), textScale: 2.0);
+      expect(tester.takeException(), isNull);
+      handle.dispose();
+    });
+
+    testWidgets('UI-A11Y-03 errors are announced (live region)', (tester) async {
+      final handle = tester.ensureSemantics();
+      await pumpImpact(tester, dossierScreen,
+          transport: FakeImpactTransport(error: const ImpactApiException(ImpactErrorKind.rateLimited, retryAfterSeconds: 9)));
+      expect(tester.getSemantics(find.text('Too many requests. Try again in 9 s.')), isSemantics(isLiveRegion: true));
       handle.dispose();
     });
   });

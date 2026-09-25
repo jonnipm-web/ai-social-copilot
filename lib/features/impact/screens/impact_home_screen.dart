@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import '../domain/dossier_models.dart';
 import '../providers/impact_providers.dart';
 import '../widgets/impact_widgets.dart';
 
@@ -47,7 +48,7 @@ class _Body extends ConsumerWidget {
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.folder_open_outlined),
-                  title: Text(inv.subjectOrgRef),
+                  title: Text('«${displaySafe(inv.subjectOrgRef)}»'),
                   subtitle: Text('${inv.status} · ${inv.id}', maxLines: 2, overflow: TextOverflow.ellipsis),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => context.go('/impact/${Uri.encodeComponent(inv.id)}'),

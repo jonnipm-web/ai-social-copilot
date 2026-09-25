@@ -565,3 +565,24 @@ Deno.test('F-N01 registry names and conflict publishers are screened like every 
   assert(d.content.registryFacts.find((r) => r.sourceRef === 'src-reg')!.legalName.includes('[redacted-email]'));
   assert(claimOf(d, 'c1').verification!.conflicts[0].positions[0].publisher.includes('[redacted-email]'));
 });
+
+Deno.test('DS-K (I5G3-03) the text rendering is caveat-first: non-findings and limitations precede the summary and every claim', async () => {
+  const t = setup();
+  const inv = await base(t);
+  await t.must(UA, { action: 'add_claim', investigation_id: inv, claim: { ref: 'c-reg', kind: 'LEGAL_REGISTRATION', text: 'HopeBridge Foundation is a registered charity.', sourceRef: 'src-web', origin: 'MANUAL' } });
+  await t.must(UA, { action: 'add_evidence', investigation_id: inv, evidence: { ref: 'e-reg', claimRef: 'c-reg', sourceRef: 'src-reg', aboutOrgRef: 'org-hopebridge', relationship: 'SUPPORTS', basis: 'HUMAN_ASSESSED', observedPeriod: { to: '2026-09-01' }, personalData: 'NONE' } });
+  await t.must(UA, { action: 'run_verification', investigation_id: inv, claim_ref: 'c-reg' });
+  for (const lang of ['pt', 'en']) {
+    const { text } = await dossier(t, inv, UA, lang);
+    const at = (s: string) => {
+      const i = text.indexOf(s);
+      assert(i >= 0, `${lang}: missing ${s}`);
+      return i;
+    };
+    const notEst = at(lang === 'en' ? '## What this dossier does NOT establish' : '## O que este dossiê NÃO estabelece');
+    const lim = at(lang === 'en' ? '## Limitations' : '## Limitações');
+    const summary = at(lang === 'en' ? '## Summary' : '## Resumo');
+    const firstClaim = at('«c-reg»');
+    assert(notEst < lim && lim < summary && summary < firstClaim, `${lang}: caveats must come first`);
+  }
+});

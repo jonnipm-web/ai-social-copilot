@@ -73,3 +73,11 @@ Public sharing is a future, separately governed gate.
   no rate-limit infrastructure; the current hash is visible only to the
   investigation's owner (no cross-user oracle). Throttling is a requirement
   of any product / non-admin exposure gate.
+
+## I5 — text rendering order (Codex I5G3-03)
+
+The human-readable text now starts with the caveats: header, then **What this
+dossier does NOT establish**, then **Limitations**, then summary, identity,
+registry, claims, sources, disputes, integrity. The text is presentation
+only (outside the hashed content): content hashes and snapshot registrations
+are unchanged by this ordering.

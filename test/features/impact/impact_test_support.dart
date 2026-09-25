@@ -75,6 +75,7 @@ Future<void> pumpImpact(
   AsyncValue<Profile?>? profileState,
   bool admin = true,
   bool settle = true,
+  ThemeData? theme,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
@@ -92,6 +93,7 @@ Future<void> pumpImpact(
         }),
       ],
       child: MaterialApp(
+        theme: theme,
         locale: locale,
         localizationsDelegates: const [
           AppLocalizations.delegate,

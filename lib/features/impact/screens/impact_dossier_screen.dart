@@ -135,7 +135,7 @@ class _Header extends StatelessWidget {
           Text(d.labels.section('TITLE'), style: theme.textTheme.labelLarge),
           Semantics(
             header: true,
-            child: Text(d.subject.legalName ?? d.subject.ref, style: theme.textTheme.headlineSmall),
+            child: Text('«${d.subject.legalName ?? d.subject.ref}»', style: theme.textTheme.headlineSmall),
           ),
           const SizedBox(height: 8),
           Wrap(spacing: 8, runSpacing: 8, children: [
@@ -247,9 +247,10 @@ class _IdentitySection extends StatelessWidget {
       children: [
         ImpactChip(
           label: l.identity(s.identityStatus),
-          icon: s.identityConfirmed ? Icons.verified_outlined : Icons.help_outline,
+          icon: s.identityConfirmed ? Icons.badge_outlined : Icons.help_outline,
           attention: !s.identityConfirmed,
         ),
+        ImpactLine(t.impactIdentityScopeNote, muted: true),
         const SizedBox(height: 8),
         if (s.legalName != null) ImpactQuote(text: s.legalName, attribution: null, caption: t.impactDeclaredQuote),
         for (final r in s.registrations) ImpactLine(r, icon: Icons.numbers),
@@ -354,6 +355,9 @@ class ImpactClaimTile extends StatelessWidget {
                   redacted: claim.textRedacted,
                   withheld: claim.textWithheld != null,
                 ),
+                // I5G3-02 — every claim card carries its own scope, so a cropped
+                // card never reads as a verdict on the organization.
+                ImpactLine(t.impactClaimScopeNote, muted: true),
                 Wrap(spacing: 8, runSpacing: 8, children: [
                   if (v == null)
                     ImpactChip(label: t.impactNotVerifiedYet, icon: Icons.hourglass_empty)

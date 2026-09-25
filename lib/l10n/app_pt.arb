@@ -393,5 +393,18 @@
   "impactRegistryQuote": "Como consta no registro — citado",
   "impactClaimCaveats": "Antes de ler esta afirmação",
   "impactClaimLimitations": "Limitações que se aplicam a esta afirmação",
-  "impactSnapshotCaveats": "A confirmação descreveu a visão ao vivo naquele momento. As ressalvas do snapshot emitido são estas:"
+  "impactSnapshotCaveats": "A confirmação descreveu a visão ao vivo naquele momento. As ressalvas do snapshot emitido são estas:",
+  "impactClaimScopeNote": "Situação desta afirmação apenas — não é um veredito sobre a organização.",
+  "impactIdentityScopeNote": "Identidade apenas — não avalia a conduta da organização.",
+  "impactPosition": "Posição {index} de {total}",
+  "@impactPosition": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  }
 }

@@ -155,6 +155,7 @@ void main() {
       final raw = fixture('export_confirmed_en')['data'] as Map<String, dynamic>;
       final d = DossierView.fromResponse(raw);
       expect(d.document, same(raw['dossier']));
+      expect(d.text, raw['text'], reason: 'export text is the server bytes, never display-normalized');
     });
 
     test('UI-DOM-11 large dossier (500 claims) parses without truncation', () {
