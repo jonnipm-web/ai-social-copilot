@@ -259,4 +259,3 @@ Deno.test('PC-08 provider range integrity (Codex Gate 2 P1): no bar after toT (l
   const asOfFuture = payload((p) => { (p.meta as { as_of: string }).as_of = new Date(NOW + 60_000).toISOString(); });
   assertEquals(err(await provider(serving(asOfFuture).fetchImpl).historicalBars(req)), 'PROVIDER_MALFORMED');
 });
-
