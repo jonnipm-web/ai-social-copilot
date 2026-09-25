@@ -845,4 +845,47 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get quantLabRetry => 'Retry';
+
+  @override
+  String get quantLabAsOf => 'As of';
+
+  @override
+  String get quantLabProviderLabel => 'Provider';
+
+  @override
+  String get quantLabTrustLabel => 'Trust level';
+
+  @override
+  String get quantLabRetrievedAt => 'Retrieved at';
+
+  @override
+  String get quantLabContentHash => 'Content hash';
+
+  @override
+  String get quantLabEngine => 'Engine';
+
+  @override
+  String quantLabSessionsBehind(int count) {
+    return 'sessions behind: $count';
+  }
+
+  @override
+  String get quantLabKind => 'Type';
+
+  @override
+  String get quantLabCacheLabel => 'Cache';
+
+  @override
+  String quantLabCacheValue(int hits, int misses) {
+    return 'hits $hits · misses $misses';
+  }
+
+  @override
+  String get quantLabIdLabel => 'ID';
+
+  @override
+  String get quantLabPolicy => 'Policy';
+
+  @override
+  String get quantLabBars => 'Bars';
 }

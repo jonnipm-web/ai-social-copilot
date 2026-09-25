@@ -68,6 +68,10 @@ still refused). CSV remains the canonical format.
 | Non-UTF-8 text (latin-1) | REJECTED (unreadable) | ✅ "unreadable CSV (use UTF-8)" |
 | > 5 MiB | REJECTED | unit test |
 
+The file is never read whole before the 5 MiB check: declared size is
+refused first, then the byte stream is cut as soon as it passes the cap
+(`readBoundedBytes`, Codex Gate 3).
+
 Android picker: `FileType.any` + content decision (extension filters hide
 valid CSVs on some SAF providers because of inconsistent MIME types). No
 proprietary Dropbox/OneDrive integration: any installed Document Provider
@@ -123,3 +127,13 @@ packages.
 4. Rate-limit row cleanup job; persistent/shared cache decision (tied to
    licence storage terms).
 5. Promotion Gate (ALPHA_PROMOTION_AUTHORIZED: NO).
+
+## 9. Codex gate hardening (client)
+
+* Explicit sign-out closes the Lab immediately and discards any displayed or
+  in-flight result (the server remains authoritative).
+* Watchlist results are cleared on any mutation or selection change.
+* Malformed multi responses (duplicate series keys, correlation cells that
+  reference unknown series, non-hex/short content hashes) are rejected as
+  `MALFORMED_RESPONSE` instead of rendering misleading labels or crashing.
+* All technical labels are localized (PT/EN).

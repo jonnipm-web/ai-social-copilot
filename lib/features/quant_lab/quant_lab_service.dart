@@ -9,6 +9,7 @@
 // (reached over `adb reverse`). The override is ignored in profile/release
 // builds, so a shipped app can never be redirected by a build flag.
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
@@ -102,6 +103,30 @@ String decodeQuantFile(String? name, Uint8List bytes) {
   return text;
 }
 
+/// Reads at most [cap] bytes: rejects on declared length first, then stops
+/// the stream as soon as the running total exceeds [cap]. Exposed for tests.
+Future<Uint8List> readBoundedBytes(Future<int?> Function() length, Stream<Uint8List> Function() open, int cap) async {
+  int? declared;
+  try {
+    declared = await length();
+  } catch (_) {
+    declared = null; // unknown size: the bounded stream below still enforces the cap
+  }
+  if (declared != null && declared > cap) throw const QuantLabFileException('FILE_TOO_LARGE');
+  final out = BytesBuilder(copy: false);
+  try {
+    await for (final chunk in open()) {
+      out.add(chunk);
+      if (out.length > cap) throw const QuantLabFileException('FILE_TOO_LARGE');
+    }
+  } on QuantLabFileException {
+    rethrow;
+  } catch (_) {
+    throw const QuantLabFileException('FILE_UNREADABLE');
+  }
+  return out.takeBytes();
+}
+
 class SupabaseQuantLabApi implements QuantLabApi {
   SupabaseQuantLabApi(this._client, {String? devBaseUrl, http.Client? httpClient})
       : _devBaseUrl = devBaseUrl,
@@ -184,12 +209,9 @@ class SupabaseQuantLabApi implements QuantLabApi {
     // valid files. The type decision is made on name + content instead.
     final file = await FilePicker.pickFile(type: FileType.any);
     if (file == null) return null;
-    final Uint8List bytes;
-    try {
-      bytes = await file.readAsBytes();
-    } catch (_) {
-      throw const QuantLabFileException('FILE_UNREADABLE');
-    }
+    // Codex Gate 3 (P1): never allocate a whole huge file — size is checked
+    // from metadata first and the stream is cut as soon as the cap is passed.
+    final bytes = await readBoundedBytes(file.length, file.readAsByteStream, kQuantLabMaxCsvBytes);
     return decodeQuantFile(file.name, bytes);
   }
 }

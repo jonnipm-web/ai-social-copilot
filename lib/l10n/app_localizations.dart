@@ -1621,6 +1621,84 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Tentar novamente'**
   String get quantLabRetry;
+
+  /// No description provided for @quantLabAsOf.
+  ///
+  /// In pt, this message translates to:
+  /// **'Referente a'**
+  String get quantLabAsOf;
+
+  /// No description provided for @quantLabProviderLabel.
+  ///
+  /// In pt, this message translates to:
+  /// **'Fornecedor'**
+  String get quantLabProviderLabel;
+
+  /// No description provided for @quantLabTrustLabel.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nível de confiança'**
+  String get quantLabTrustLabel;
+
+  /// No description provided for @quantLabRetrievedAt.
+  ///
+  /// In pt, this message translates to:
+  /// **'Obtido em'**
+  String get quantLabRetrievedAt;
+
+  /// No description provided for @quantLabContentHash.
+  ///
+  /// In pt, this message translates to:
+  /// **'Hash do conteúdo'**
+  String get quantLabContentHash;
+
+  /// No description provided for @quantLabEngine.
+  ///
+  /// In pt, this message translates to:
+  /// **'Motor'**
+  String get quantLabEngine;
+
+  /// No description provided for @quantLabSessionsBehind.
+  ///
+  /// In pt, this message translates to:
+  /// **'sessões de atraso: {count}'**
+  String quantLabSessionsBehind(int count);
+
+  /// No description provided for @quantLabKind.
+  ///
+  /// In pt, this message translates to:
+  /// **'Tipo'**
+  String get quantLabKind;
+
+  /// No description provided for @quantLabCacheLabel.
+  ///
+  /// In pt, this message translates to:
+  /// **'Cache'**
+  String get quantLabCacheLabel;
+
+  /// No description provided for @quantLabCacheValue.
+  ///
+  /// In pt, this message translates to:
+  /// **'acertos {hits} · falhas {misses}'**
+  String quantLabCacheValue(int hits, int misses);
+
+  /// No description provided for @quantLabIdLabel.
+  ///
+  /// In pt, this message translates to:
+  /// **'ID'**
+  String get quantLabIdLabel;
+
+  /// No description provided for @quantLabPolicy.
+  ///
+  /// In pt, this message translates to:
+  /// **'Política'**
+  String get quantLabPolicy;
+
+  /// No description provided for @quantLabBars.
+  ///
+  /// In pt, this message translates to:
+  /// **'Barras'**
+  String get quantLabBars;
 }
 
 class _AppLocalizationsDelegate

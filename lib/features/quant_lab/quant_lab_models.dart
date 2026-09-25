@@ -175,6 +175,13 @@ class QuantAnalysisView {
   }
 
   static final _isoDay = RegExp(r'^\d{4}-\d{2}-\d{2}');
+  static final _hexHash = RegExp(r'^[0-9a-f]{16,128}$');
+
+  /// The UI shows the first 16 chars; anything else is a malformed response (Codex Gate 3).
+  static String _hash(String h) {
+    if (!_hexHash.hasMatch(h)) throw const FormatException('quant-analyze: bad contentHash');
+    return h;
+  }
 
   static String _day(String iso) {
     if (!_isoDay.hasMatch(iso)) throw FormatException('quant-analyze: bad date $iso');
@@ -221,7 +228,7 @@ class QuantAnalysisView {
       calendarId: cal['calendar'] as String?,
       marketState: cal['marketState'] as String?,
       sessionsBehind: cal['sessionsBehind'] as int?,
-      contentHash: req<String>(snap, 'contentHash'),
+      contentHash: _hash(req<String>(snap, 'contentHash')),
       metrics: [
         for (final m in req<List>(json, 'metrics'))
           QuantMetricView(
@@ -397,7 +404,13 @@ class QuantMultiView {
   /// the key layout is a server detail and is never parsed here (physical
   /// finding S25: guessing the layout labelled pairs by exchange, "XNAS × XNYS").
   /// Symbols repeated across venues are disambiguated with the venue.
+  /// Throws [FormatException] on a missing/duplicate instrumentKey (Codex Gate 3).
   static Map<String, String> _labelsByKey(List series) {
+    final keys = <String>{};
+    for (final s in series) {
+      final k = (s as Map)['instrumentKey'];
+      if (k is! String || !keys.add(k)) throw const FormatException('quant-analyze: missing or duplicate instrumentKey');
+    }
     final symbols = <String, int>{};
     for (final s in series) {
       final sym = ((s as Map)['instrument'] as Map?)?['symbol'];
@@ -428,7 +441,8 @@ class QuantMultiView {
     final portfolio = json['portfolio'] is Map ? json['portfolio'] as Map : null;
     String? day(Object? v) => v is String && v.length >= 10 ? v.substring(0, 10) : null;
     final labels = _labelsByKey(req<List>(json, 'series'));
-    String label(String key) => labels[key] ?? key;
+    // A correlation cell must reference a series of this response (Codex Gate 3).
+    String label(String key) => labels[key] ?? (throw FormatException('quant-analyze: correlation references an unknown series'));
     return QuantMultiView(
       id: req<String>(json, 'multiAnalysisId'),
       series: [

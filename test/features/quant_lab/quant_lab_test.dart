@@ -1,18 +1,21 @@
 // IV-QUANT-DATA-PLANE-AND-API-02 — Quant Lab: request contract, response
 // parsing, error mapping, admin gate, no-execution surface, PT/EN, text
 // scaling and responsive layout.
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthChangeEvent, AuthState;
 
 import 'package:ai_social_copilot/data/models/profile.dart';
 import 'package:ai_social_copilot/features/quant_lab/quant_lab_models.dart';
 import 'package:ai_social_copilot/features/quant_lab/quant_lab_screen.dart';
 import 'package:ai_social_copilot/features/quant_lab/quant_lab_service.dart';
 import 'package:ai_social_copilot/l10n/app_localizations.dart';
+import 'package:ai_social_copilot/providers/auth_provider.dart';
 import 'package:ai_social_copilot/providers/profile_provider.dart';
 import 'package:ai_social_copilot/shared/widgets/ive_exclusion_region.dart';
 
@@ -57,10 +60,20 @@ Map<String, dynamic> sampleAnalysis() => {
         {'id': 'CUMULATIVE_RETURN', 'value': -0.0199, 'unit': 'RATIO', 'formulaId': 'CUMULATIVE_RETURN_V1', 'observations': 5},
         {'id': 'VOLATILITY_PER_PERIOD', 'value': 0.11547005383792515, 'unit': 'RATIO', 'formulaId': 'VOLATILITY_SAMPLE_V1', 'observations': 4},
         {'id': 'MAX_DRAWDOWN', 'value': -0.109, 'unit': 'RATIO', 'formulaId': 'MAX_DRAWDOWN_V1', 'observations': 5},
-        {'id': 'SMA_LAST', 'value': 101.97, 'unit': 'PRICE', 'formulaId': 'SMA_V1', 'observations': 3, 'parameters': {'window': 3}},
+        {
+          'id': 'SMA_LAST',
+          'value': 101.97,
+          'unit': 'PRICE',
+          'formulaId': 'SMA_V1',
+          'observations': 3,
+          'parameters': {'window': 3}
+        },
       ],
       'signals': <dynamic>[],
-      'risk': {'coverage': 'FOUNDATION_PARTIAL', 'notImplemented': ['VAR', 'CVAR', 'BETA']},
+      'risk': {
+        'coverage': 'FOUNDATION_PARTIAL',
+        'notImplemented': ['VAR', 'CVAR', 'BETA']
+      },
       'assumptions': [
         {'code': 'PRICE_BASIS', 'value': 'close'},
         {'code': 'MARKET_CALENDAR', 'value': 'XNAS'},
@@ -109,6 +122,12 @@ class FakeQuantLabApi implements QuantLabApi {
         ]);
       case 'delete':
         lists.removeWhere((w) => w.id == action['watchlist_id']);
+      case 'remove_item':
+        final i = lists.indexWhere((w) => w.id == action['watchlist_id']);
+        lists[i] = QuantWatchlistView(id: lists[i].id, name: lists[i].name, items: [
+          for (final it in lists[i].items)
+            if (it.id != action['item_id']) it,
+        ]);
     }
     return const QuantActionOutcome(null);
   }
@@ -161,7 +180,13 @@ Map<String, dynamic> sampleMulti() {
     'engineVersion': 'quant-foundation-0.2.0',
     'computedBy': 'DETERMINISTIC_ENGINE',
     'series': [series('SYNA', 'XNYS', 0.1234), series('SYNB', 'XNAS', -0.05)],
-    'alignment': {'policy': 'INTERSECTION_OF_TIMESTAMPS', 'start': '2025-09-23T00:00:00.000Z', 'end': '2026-09-23T00:00:00.000Z', 'commonBars': 250, 'seriesCount': 2},
+    'alignment': {
+      'policy': 'INTERSECTION_OF_TIMESTAMPS',
+      'start': '2025-09-23T00:00:00.000Z',
+      'end': '2026-09-23T00:00:00.000Z',
+      'commonBars': 250,
+      'seriesCount': 2
+    },
     'correlation': [
       {'a': 'EQUITY:XNYS:SYNA:USD', 'b': 'EQUITY:XNAS:SYNB:USD', 'correlation': 0.8765, 'observations': 249},
     ],
@@ -191,9 +216,10 @@ Profile profile(String role) => Profile(
       updatedAt: DateTime(2026),
     );
 
-Widget app(FakeQuantLabApi api, {Profile? who, Locale locale = const Locale('pt'), double textScale = 1.0}) => ProviderScope(
+Widget app(FakeQuantLabApi api, {Profile? who, Locale locale = const Locale('pt'), double textScale = 1.0, StreamController<AuthState>? auth}) => ProviderScope(
       overrides: [
         currentProfileProvider.overrideWith((ref) async => who),
+        authStateProvider.overrideWith((ref) => auth?.stream ?? const Stream<AuthState>.empty()),
         quantLabApiProvider.overrideWithValue(api),
       ],
       child: MaterialApp(
@@ -241,7 +267,13 @@ void main() {
 
     test('periods_per_year null is sent explicitly (no silent annualization)', () {
       final body = const QuantAnalyzeInput(
-        assetClass: 'ETF', symbol: 'X', mic: null, currency: 'GBP', adjustment: 'UNADJUSTED', csv: 'x', periodsPerYear: null,
+        assetClass: 'ETF',
+        symbol: 'X',
+        mic: null,
+        currency: 'GBP',
+        adjustment: 'UNADJUSTED',
+        csv: 'x',
+        periodsPerYear: null,
       ).toRequestBody();
       expect((body['options'] as Map).containsKey('periods_per_year'), isTrue);
       expect((body['options'] as Map)['periods_per_year'], isNull);
@@ -279,10 +311,13 @@ void main() {
         f(m);
         return m;
       }
+
       final cases = [
         mutate((m) => m['instruments'] = <dynamic>[]),
         mutate((m) => (m['period'] as Map)['start'] = '2026'),
-        mutate((m) => m['metrics'] = [<String, dynamic>{'id': 'X'}]),
+        mutate((m) => m['metrics'] = [
+              <String, dynamic>{'id': 'X'}
+            ]),
         mutate((m) => m['metrics'] = [42]),
         mutate((m) => m.remove('dataSnapshot')),
         mutate((m) => (m['dataSnapshot'] as Map)['calendar'] = 'nope'),
@@ -295,9 +330,16 @@ void main() {
 
     test('server error codes and malformed bodies map to stable outcomes', () {
       expect(outcomeFromResponse(403, {'error': 'MODULE_NOT_AVAILABLE'}).errorCode, 'MODULE_NOT_AVAILABLE');
-      final f = outcomeFromResponse(400, {'error': 'INVALID_PARAMETER', 'details': {'field': 'options.sma_windows'}});
+      final f = outcomeFromResponse(400, {
+        'error': 'INVALID_PARAMETER',
+        'details': {'field': 'options.sma_windows'}
+      });
       expect([f.errorCode, f.errorField], ['INVALID_PARAMETER', 'options.sma_windows']);
-      expect(outcomeFromResponse(200, {'analysis': {'metrics': 'nope'}}).errorCode, 'MALFORMED_RESPONSE');
+      expect(
+          outcomeFromResponse(200, {
+            'analysis': {'metrics': 'nope'}
+          }).errorCode,
+          'MALFORMED_RESPONSE');
       expect(outcomeFromResponse(502, 'gateway down').errorCode, 'HTTP_502');
       expect(outcomeFromResponse(200, {'analysis': sampleAnalysis()}).analysis, isNotNull);
     });
@@ -350,6 +392,46 @@ void main() {
       expect(codeOf('big.csv', Uint8List(kQuantLabMaxCsvBytes + 1)), 'FILE_TOO_LARGE');
     });
 
+    test('bounded file read: declared size refused before reading; unknown size cut at the cap (Codex Gate 3 P1)', () async {
+      var chunksRead = 0;
+      Stream<Uint8List> chunks(int n, int size) async* {
+        for (var i = 0; i < n; i++) {
+          chunksRead++;
+          yield Uint8List(size);
+        }
+      }
+
+      await expectLater(readBoundedBytes(() async => 10 * 1024 * 1024 * 1024, () => chunks(1, 1), kQuantLabMaxCsvBytes),
+          throwsA(isA<QuantLabFileException>().having((e) => e.code, 'code', 'FILE_TOO_LARGE')));
+      expect(chunksRead, 0, reason: 'declared size must be refused before opening the stream');
+      chunksRead = 0;
+      await expectLater(readBoundedBytes(() async => null, () => chunks(1 << 20, 1024 * 1024), kQuantLabMaxCsvBytes),
+          throwsA(isA<QuantLabFileException>().having((e) => e.code, 'code', 'FILE_TOO_LARGE')));
+      expect(chunksRead, lessThanOrEqualTo(6), reason: 'the stream must be cut right after passing the cap');
+      final ok = await readBoundedBytes(() async => kQuantLabMaxCsvBytes, () => chunks(5, 1024 * 1024), kQuantLabMaxCsvBytes);
+      expect(ok.length, kQuantLabMaxCsvBytes);
+      await expectLater(readBoundedBytes(() async => null, () => Stream<Uint8List>.error(StateError('io')), kQuantLabMaxCsvBytes),
+          throwsA(isA<QuantLabFileException>().having((e) => e.code, 'code', 'FILE_UNREADABLE')));
+    });
+
+    test('multi response integrity: short hash, duplicate series key, unknown correlation reference → FormatException (Codex Gate 3)', () {
+      final shortHash = Map<String, dynamic>.from(sampleAnalysis());
+      shortHash['dataSnapshot'] = {...(sampleAnalysis()['dataSnapshot'] as Map), 'contentHash': 'abc'};
+      expect(() => QuantAnalysisView.fromJson(shortHash), throwsFormatException);
+      final dup = sampleMulti();
+      (dup['series'] as List)[1] = <String, dynamic>{
+        ...Map<String, dynamic>.from((dup['series'] as List)[1] as Map),
+        'instrumentKey': ((dup['series'] as List)[0] as Map)['instrumentKey'],
+      };
+      expect(() => QuantMultiView.fromJson(dup), throwsFormatException);
+      final unknown = sampleMulti();
+      unknown['correlation'] = [
+        {'a': 'EQUITY:XNYS:SYNA:USD', 'b': 'EQUITY:XNYS:NOPE:USD', 'correlation': 0.1, 'observations': 3},
+      ];
+      expect(() => QuantMultiView.fromJson(unknown), throwsFormatException);
+      expect(multiOutcomeFromResponse(200, {'multi_analysis': unknown}).errorCode, 'MALFORMED_RESPONSE');
+    });
+
     test('watchlist analysis request carries ids only — never instruments, prices or a URL', () {
       final body = watchlistAnalysisBody('w1', ['i1', 'i2']);
       expect(body.keys.toSet(), {'contract_version', 'watchlist_id', 'item_ids', 'data_source', 'options'});
@@ -398,7 +480,12 @@ void main() {
       expect(multiOutcomeFromResponse(200, {'multi_analysis': bad}).errorCode, 'MALFORMED_RESPONSE');
       expect(multiOutcomeFromResponse(429, {'error': 'RATE_LIMITED'}).errorCode, 'RATE_LIMITED');
       expect(watchlistsOutcomeFromResponse(403, {'error': 'MODULE_NOT_AVAILABLE'}).errorCode, 'MODULE_NOT_AVAILABLE');
-      expect(actionOutcomeFromResponse(400, {'error': 'INVALID_PARAMETER', 'details': {'reason': 'DUPLICATE_INSTRUMENT'}}).reason, 'DUPLICATE_INSTRUMENT');
+      expect(
+          actionOutcomeFromResponse(400, {
+            'error': 'INVALID_PARAMETER',
+            'details': {'reason': 'DUPLICATE_INSTRUMENT'}
+          }).reason,
+          'DUPLICATE_INSTRUMENT');
     });
   });
 
@@ -470,7 +557,7 @@ void main() {
         await tester.pumpWidget(app(api, who: profile('admin'), locale: locale, textScale: 2.0));
         await tester.pumpAndSettle();
         await tester.ensureVisible(find.byKey(const Key('quantLabSample')));
-      await tester.tap(find.byKey(const Key('quantLabSample')));
+        await tester.tap(find.byKey(const Key('quantLabSample')));
         await tester.pumpAndSettle();
         await tester.ensureVisible(find.byKey(const Key('quantLabAnalyze')));
         await tester.tap(find.byKey(const Key('quantLabAnalyze')));
@@ -568,6 +655,7 @@ void main() {
       await tester.pumpWidget(ProviderScope(
         overrides: [
           // First fetch immediate; refreshes take network time, like on the device.
+          authStateProvider.overrideWith((ref) => const Stream<AuthState>.empty()),
           currentProfileProvider.overrideWith((ref) async {
             if (fetches++ > 0) await Future<void>.delayed(const Duration(seconds: 1));
             return profile('admin');
@@ -605,6 +693,7 @@ void main() {
       await tester.pumpWidget(ProviderScope(
         overrides: [
           currentProfileProvider.overrideWith((ref) async => who),
+          authStateProvider.overrideWith((ref) => const Stream<AuthState>.empty()),
           quantLabApiProvider.overrideWithValue(FakeQuantLabApi()),
         ],
         child: MaterialApp(
@@ -670,6 +759,77 @@ void main() {
       expect(protectedBy(find.byTooltip('Excluir watchlist')), findsOneWidget);
       expect(protectedBy(find.byTooltip('Remover')), findsOneWidget);
       expect(protectedBy(find.byKey(const Key('quantWatchlistAnalyze'))), findsOneWidget);
+    });
+
+    testWidgets('explicit sign-out closes the lab immediately and discards the shown result (Codex Gate 3 P1)', (tester) async {
+      await setSize(tester, const Size(420, 900));
+      final auth = StreamController<AuthState>();
+      addTearDown(auth.close);
+      final api = FakeQuantLabApi();
+      await tester.pumpWidget(app(api, who: profile('admin'), auth: auth));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('quantLabSample')));
+      await tester.tap(find.byKey(const Key('quantLabSample')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('quantLabAnalyze')));
+      await tester.tap(find.byKey(const Key('quantLabAnalyze')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('quantLabResult')), findsOneWidget);
+      auth.add(AuthState(AuthChangeEvent.signedOut, null));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('quantLabAnalyze')), findsNothing);
+      expect(find.byKey(const Key('quantLabResult')), findsNothing);
+      expect(find.text('Você não tem permissão para acessar o Quant Lab.'), findsOneWidget);
+    });
+
+    testWidgets('watchlist mutation or selection change clears the previous analysis (Codex Gate 3)', (tester) async {
+      await setSize(tester, const Size(420, 900));
+      final api = FakeQuantLabApi()
+        ..lists.add(const QuantWatchlistView(id: 'w', name: 'W', items: [
+          QuantWatchlistItemView(id: 'a', label: 'SYNA · XNYS · USD'),
+          QuantWatchlistItemView(id: 'b', label: 'SYNB · XNAS · USD'),
+        ]));
+      await tester.pumpWidget(app(api, who: profile('admin')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('quantLabTabWatchlist')));
+      await tester.pumpAndSettle();
+      Future<void> analyze() async {
+        await tester.ensureVisible(find.byKey(const Key('quantWatchlistAnalyze')));
+        await tester.tap(find.byKey(const Key('quantWatchlistAnalyze')));
+        await tester.pumpAndSettle();
+      }
+
+      await analyze();
+      expect(find.byKey(const Key('quantMultiResult')), findsOneWidget);
+      await tester.ensureVisible(find.byTooltip('Remover').first);
+      await tester.tap(find.byTooltip('Remover').first);
+      await tester.pumpAndSettle();
+      expect(api.actions.last['action'], 'remove_item');
+      expect(find.byKey(const Key('quantMultiResult')), findsNothing);
+      await analyze();
+      expect(find.byKey(const Key('quantMultiResult')), findsOneWidget);
+      await tester.ensureVisible(find.byKey(const Key('quantWatchlistItem_b')));
+      await tester.tap(find.byKey(const Key('quantWatchlistItem_b')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('quantMultiResult')), findsNothing);
+    });
+
+    testWidgets('PT result shows localized technical labels (Codex Gate 3)', (tester) async {
+      await setSize(tester, const Size(420, 900));
+      await tester.pumpWidget(app(FakeQuantLabApi(), who: profile('admin')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('quantLabSample')));
+      await tester.tap(find.byKey(const Key('quantLabSample')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('quantLabAnalyze')));
+      await tester.tap(find.byKey(const Key('quantLabAnalyze')));
+      await tester.pumpAndSettle();
+      for (final pt in ['Fornecedor: ', 'Nível de confiança: ', 'Hash do conteúdo: ', 'Motor: ', 'Referente a: ']) {
+        expect(find.textContaining(pt, findRichText: true), findsWidgets, reason: pt);
+      }
+      for (final en in ['provider: ', 'trust: ', 'contentHash: ', 'engine: ', 'as of: ']) {
+        expect(find.textContaining(en, findRichText: true), findsNothing, reason: en);
+      }
     });
 
     testWidgets('wide (web/desktop) layout shows form and result side by side', (tester) async {

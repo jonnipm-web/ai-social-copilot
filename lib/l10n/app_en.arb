@@ -312,5 +312,20 @@
   "@quantLabOperationError": {"placeholders": {"code": {"type": "String"}}},
   "quantLabFileTypeNotSupported": "File type not supported. Use a CSV file (or TXT with CSV content).",
   "quantLabFileTypeNotImplemented": "Spreadsheets (XLS, XLSX, ODS) and JSON are not supported yet. Export the data as CSV.",
-  "quantLabRetry": "Retry"
+  "quantLabRetry": "Retry",
+  "quantLabAsOf": "As of",
+  "quantLabProviderLabel": "Provider",
+  "quantLabTrustLabel": "Trust level",
+  "quantLabRetrievedAt": "Retrieved at",
+  "quantLabContentHash": "Content hash",
+  "quantLabEngine": "Engine",
+  "quantLabSessionsBehind": "sessions behind: {count}",
+  "@quantLabSessionsBehind": {"placeholders": {"count": {"type": "int"}}},
+  "quantLabKind": "Type",
+  "quantLabCacheLabel": "Cache",
+  "quantLabCacheValue": "hits {hits} · misses {misses}",
+  "@quantLabCacheValue": {"placeholders": {"hits": {"type": "int"}, "misses": {"type": "int"}}},
+  "quantLabIdLabel": "ID",
+  "quantLabPolicy": "Policy",
+  "quantLabBars": "Bars"
 }

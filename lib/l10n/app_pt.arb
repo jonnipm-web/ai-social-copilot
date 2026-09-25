@@ -314,5 +314,20 @@
   "@quantLabOperationError": {"placeholders": {"code": {"type": "String"}}},
   "quantLabFileTypeNotSupported": "Tipo de arquivo não suportado. Use um arquivo CSV (ou TXT com conteúdo CSV).",
   "quantLabFileTypeNotImplemented": "Planilhas (XLS, XLSX, ODS) e JSON ainda não são suportados. Exporte os dados como CSV.",
-  "quantLabRetry": "Tentar novamente"
+  "quantLabRetry": "Tentar novamente",
+  "quantLabAsOf": "Referente a",
+  "quantLabProviderLabel": "Fornecedor",
+  "quantLabTrustLabel": "Nível de confiança",
+  "quantLabRetrievedAt": "Obtido em",
+  "quantLabContentHash": "Hash do conteúdo",
+  "quantLabEngine": "Motor",
+  "quantLabSessionsBehind": "sessões de atraso: {count}",
+  "@quantLabSessionsBehind": {"placeholders": {"count": {"type": "int"}}},
+  "quantLabKind": "Tipo",
+  "quantLabCacheLabel": "Cache",
+  "quantLabCacheValue": "acertos {hits} · falhas {misses}",
+  "@quantLabCacheValue": {"placeholders": {"hits": {"type": "int"}, "misses": {"type": "int"}}},
+  "quantLabIdLabel": "ID",
+  "quantLabPolicy": "Política",
+  "quantLabBars": "Barras"
 }

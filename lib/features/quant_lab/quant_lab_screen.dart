@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../shared/widgets/ive_exclusion_region.dart';
 import 'quant_lab_models.dart';
@@ -69,6 +70,14 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
     }
   }
 
+  /// True only on an EXPLICIT signed-out state (no emission yet ≠ signed out).
+  bool _signedOut() {
+    final a = ref.read(authStateProvider);
+    return a.hasValue && a.value!.session == null;
+  }
+
+  String? _sessionUserId() => ref.read(authStateProvider).valueOrNull?.session?.user.id;
+
   Future<void> _analyze(AppLocalizations l) async {
     final sma = parseSmaWindows(_sma.text);
     final periodsText = _periods.text.trim();
@@ -85,6 +94,7 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
       _busy = true;
       _localError = null;
     });
+    final sessionBefore = _sessionUserId();
     final outcome = await ref.read(quantLabApiProvider).analyze(QuantAnalyzeInput(
           assetClass: _assetClass,
           symbol: _symbol.text,
@@ -95,10 +105,12 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
           periodsPerYear: periods,
           smaWindows: sma,
         ));
+    // A result that arrives after sign-out / a user switch is discarded (Codex Gate 3).
     if (mounted) {
+      final sameUser = _sessionUserId() == sessionBefore && !_signedOut();
       setState(() {
         _busy = false;
-        _outcome = outcome;
+        if (sameUser) _outcome = outcome;
       });
     }
   }
@@ -118,7 +130,17 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     final isAdmin = profileAsync.hasValue && !profileAsync.hasError && (profileAsync.value?.isAdmin ?? false);
-    if (!isAdmin) {
+    // Fail closed on an explicit sign-out even before the profile refresh
+    // completes (Codex Gate 3); the server stays authoritative regardless.
+    ref.listen(authStateProvider, (_, next) {
+      if (next.hasValue && next.value!.session == null && (_outcome != null || _csv.text.isNotEmpty)) {
+        setState(() {
+          _outcome = null;
+          _csv.clear();
+        });
+      }
+    });
+    if (!isAdmin || _signedOut()) {
       return Scaffold(
         appBar: AppBar(title: Text(l.quantLabTitle)),
         body: Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(l.quantLabAccessDenied, textAlign: TextAlign.center))),
@@ -307,21 +329,21 @@ class _QuantLabScreenState extends ConsumerState<QuantLabScreen> {
           const SizedBox(width: 8),
           Expanded(child: Text(a.freshnessState, style: const TextStyle(fontWeight: FontWeight.w700))),
         ]),
-        if (a.freshnessAsOf != null) kv('as of', a.freshnessAsOf!),
+        if (a.freshnessAsOf != null) kv(l.quantLabAsOf, a.freshnessAsOf!),
         kv(
             l.quantLabCalendar,
             '${a.calendarBasis}${a.calendarId != null ? ' · ${a.calendarId}' : ''}'
-            '${a.marketState != null ? ' · ${a.marketState}' : ''}${a.sessionsBehind != null ? ' · sessionsBehind=${a.sessionsBehind}' : ''}'),
+            '${a.marketState != null ? ' · ${a.marketState}' : ''}${a.sessionsBehind != null ? ' · ${l.quantLabSessionsBehind(a.sessionsBehind!)}' : ''}'),
       ]),
       section(l.quantLabPeriod, [kv(l.quantLabPeriod, '${a.periodStart} → ${a.periodEnd} · ${a.bars} · ${a.frequency}')]),
       section(l.quantLabProvenance, [
-        kv('provider', a.providerId),
-        kv('trust', a.trust),
-        kv('adjustment', a.adjustment),
-        kv('retrievedAt', a.retrievedAt),
+        kv(l.quantLabProviderLabel, a.providerId),
+        kv(l.quantLabTrustLabel, a.trust),
+        kv(l.quantLabAdjustment, a.adjustment),
+        kv(l.quantLabRetrievedAt, a.retrievedAt),
         kv(l.quantLabEvidence, a.evidenceStrength),
-        kv('contentHash', a.contentHash.substring(0, 16)),
-        kv('engine', a.engineVersion),
+        kv(l.quantLabContentHash, a.contentHash.substring(0, 16)), // parser guarantees ≥ 16 hex chars
+        kv(l.quantLabEngine, a.engineVersion),
       ]),
       section(l.quantLabMetrics, [
         // Key metrics: the IVE avatar covered a metric value on the S25.

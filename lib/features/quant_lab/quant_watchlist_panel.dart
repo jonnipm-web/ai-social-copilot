@@ -81,6 +81,8 @@ class _QuantWatchlistPanelState extends ConsumerState<QuantWatchlistPanel> {
     setState(() {
       _busy = true;
       _error = null;
+      // Any mutation invalidates the displayed analysis (Codex Gate 3).
+      _outcome = null;
     });
     final o = await ref.read(quantLabApiProvider).watchlistAction(action);
     if (!mounted) return;
@@ -230,6 +232,7 @@ class _QuantWatchlistPanelState extends ConsumerState<QuantWatchlistPanel> {
               onChanged: _busy
                   ? null
                   : (v) => setState(() {
+                        _outcome = null; // result belonged to the previous selection
                         if (v == true) {
                           _checked.add(it.id);
                         } else {
@@ -331,12 +334,12 @@ class _MultiResult extends StatelessWidget {
         );
     return Column(key: const Key('quantMultiResult'), crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       section(l.quantLabDataSource, [
-        kv('kind', r.dataSourceKind ?? 'USER_UPLOAD'),
-        if (r.cacheHits != null) kv('cache', 'hits=${r.cacheHits} · misses=${r.cacheMisses}'),
-        kv('id', r.id.length > 19 ? r.id.substring(0, 19) : r.id),
+        kv(l.quantLabKind, r.dataSourceKind ?? 'USER_UPLOAD'),
+        if (r.cacheHits != null) kv(l.quantLabCacheLabel, l.quantLabCacheValue(r.cacheHits!, r.cacheMisses ?? 0)),
+        kv(l.quantLabIdLabel, r.id.length > 19 ? r.id.substring(0, 19) : r.id),
       ]),
       section(l.quantLabAlignment, [
-        kv('policy', r.alignmentPolicy),
+        kv(l.quantLabPolicy, r.alignmentPolicy),
         kv(l.quantLabPeriod, '${r.alignmentStart ?? '—'} → ${r.alignmentEnd ?? '—'} · ${r.commonBars}'),
       ]),
       section(l.quantLabSeries, [
@@ -347,8 +350,8 @@ class _MultiResult extends StatelessWidget {
               Text(s.label, style: const TextStyle(fontWeight: FontWeight.w700)),
               kv(l.quantLabAlignedReturn, quantPct(s.alignedReturn)),
               kv(l.quantLabFreshness, s.freshnessState),
-              kv('trust', '${s.trust} · ${s.providerId}'),
-              kv('bars', '${s.bars} (−${s.dropped})'),
+              kv(l.quantLabTrustLabel, '${s.trust} · ${s.providerId}'),
+              kv(l.quantLabBars, '${s.bars} (−${s.dropped})'),
             ]),
           ),
       ]),
