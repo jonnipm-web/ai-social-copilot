@@ -18,6 +18,12 @@
 #   - every created resource is marked (COMMENT … 'aef-disposable:<run-id>');
 #     cleanup re-reads the marker and refuses to drop anything whose marker
 #     is missing or different (e.g. recreated by someone else);
+#   - roles are created together with their marker (one transaction);
+#     CREATE DATABASE cannot run in a transaction, so a database killed
+#     between CREATE and COMMENT stays unmarked and is NEVER dropped
+#     automatically (scripts/ci/disposable_sweep.sh reports it);
+#   - SIGKILL / host loss skip the traps: marked leftovers are reclaimed by
+#     scripts/ci/disposable_sweep.sh (dry-run by default, age-bounded);
 #   - cleanup failures are reported (DISPOSABLE_CLEANUP: FAILED …) and turn a
 #     successful run into a failure; the original exit code is preserved
 #     otherwise.
@@ -60,12 +66,12 @@ dispo_db() {
 dispo_role() {
   local name
   name="$(_dispo_name "$1")" || return 1
-  if ! run -d postgres -c "CREATE ROLE $name NOLOGIN;" >/dev/null 2>&1; then
+  # One statement string = one implicit transaction: the role never exists unmarked.
+  if ! run -d postgres -c "CREATE ROLE $name NOLOGIN; COMMENT ON ROLE $name IS '$DISPO_MARK';" >/dev/null 2>&1; then
     echo "DISPOSABLE: refusing — role $name could not be created by this run (collision or error); nothing registered" >&2
     return 1
   fi
   DISPO_ROLES+=("$name")
-  run -d postgres -c "COMMENT ON ROLE $name IS '$DISPO_MARK';" >/dev/null
   DISPO_LAST="$name"
 }
 
@@ -79,6 +85,7 @@ _dispo_owner() {  # catalog name
     row="$(run -d postgres -tA -c "SELECT coalesce(shobj_description(oid, 'pg_authid'), '') FROM pg_roles WHERE rolname = '$name';" 2>/dev/null)" || { echo "FOREIGN"; return; }
     [[ -z "$(run -d postgres -tA -c "SELECT 1 FROM pg_roles WHERE rolname = '$name';" 2>/dev/null)" ]] && { echo "ABSENT"; return; }
   fi
+  row="${row%[[:cntrl:]]}"  # psql on Windows ends lines with CRLF
   [[ "$row" == "$DISPO_MARK" ]] && echo "OURS" || echo "FOREIGN"
 }
 

@@ -98,4 +98,31 @@ run -d aefct_owner_host -c "DROP OWNED BY $(cat "$WORK/r7");" >/dev/null
 for i in $(seq 1 30); do (child 'echo "$DISPO_PREFIX"' > "$WORK/id_$i") & done; wait
 [[ "$(cat "$WORK"/id_* | sort -u | wc -l)" -eq 30 ]] || fail "run identities collided under parallel generation"
 
+# 9. SIGKILL (no trap can run): the marked leftover is reclaimed by the sweep,
+#    an unmarked resource with the same prefix is kept (Codex RG3-03)
+set +e; child 'dispo_db k; echo "$DISPO_LAST" > '"$WORK"'/n9; kill -9 $$'; set -e
+n9="$(cat "$WORK/n9")"; FOREIGN_DBS+=("$n9")
+exists_db "$n9" || fail "SIGKILL scenario did not leave the database behind (test setup)"
+run -d postgres -c "CREATE DATABASE aefct_unmarked_orphan_x;"; FOREIGN_DBS+=(aefct_unmarked_orphan_x)
+SWEEP="$ROOT/scripts/ci/disposable_sweep.sh"
+dry="$(PGHOST="$HOST" PSQL="$PSQL" bash "$SWEEP" --prefix aefct --older-than-minutes 0)"
+echo "$dry" | grep -q "WOULD DROP database $n9" || fail "sweep dry-run did not propose the marked orphan: $dry"
+echo "$dry" | grep -q "KEEP database aefct_unmarked_orphan_x" || fail "sweep did not keep the unmarked database: $dry"
+exists_db "$n9" || fail "sweep dry-run dropped something"
+young="$(PGHOST="$HOST" PSQL="$PSQL" bash "$SWEEP" --prefix aefct --older-than-minutes 600 --apply)"
+exists_db "$n9" || fail "sweep dropped a resource younger than the age bound"
+PGHOST="$HOST" PSQL="$PSQL" bash "$SWEEP" --prefix aefct --older-than-minutes 0 --apply >/dev/null
+exists_db "$n9" && fail "sweep --apply kept the marked orphan"
+exists_db aefct_unmarked_orphan_x || fail "sweep --apply dropped an unmarked database"
+# roles are created with their marker atomically: a created role always carries it
+child 'dispo_role m; echo "$DISPO_LAST" > '"$WORK"'/r10; run -d postgres -tA -c "SELECT shobj_description(oid, '"'"'pg_authid'"'"') FROM pg_roles WHERE rolname = '"'"'$DISPO_LAST'"'"';" > '"$WORK"'/m10; echo "$DISPO_MARK" > '"$WORK"'/k10'
+[[ "$(cat "$WORK/m10")" == "$(cat "$WORK/k10")" ]] || fail "a role was created without its ownership marker"
+
+# 11. role + marker are ONE transaction: if the marker cannot be written, the
+#     role must not exist either (never an unmarked, unreclaimable role)
+set +e; child 'DISPO_MARK="broken'"'"'mark"; echo "${DISPO_PREFIX}_z" > '"$WORK"'/r11; dispo_role z' 2>/dev/null; rc=$?; set -e
+r11="$(cat "$WORK/r11")"; FOREIGN_ROLES+=("$r11")
+[[ $rc -ne 0 ]] || fail "a role whose marker could not be written was accepted"
+exists_role "$r11" && fail "a role was created without its ownership marker (non-atomic create)"
+
 echo "DISPOSABLE_CLEANUP_TESTS: PASS"
