@@ -125,7 +125,8 @@ Deno.test('PC-05 data quality downstream: missing bars reported, duplicates coll
   const lying = val(await provider(serving(payload((p) => { p.meta.as_of = '2025-06-01T00:00:00.000Z'; })).fetchImpl).historicalBars(req));
   assertEquals(err(createPriceSeries(AAPLX, lying.provenance, lying.data)), 'DATA_QUALITY_ERROR');
   const old = syntheticVendorPayload(AAPLX, Date.UTC(2025, 10, 3, 23), { sessions: 40 });
-  const oldRes = val(await provider(serving(JSON.stringify(old)).fetchImpl).historicalBars(req));
+  // (window wide enough to contain the old series: the range check of PC-08 is not what this case tests)
+  const oldRes = val(await provider(serving(JSON.stringify(old)).fetchImpl).historicalBars(barsRequest(AAPLX, NOW, 200, 'SPLIT_AND_DIVIDEND_ADJUSTED')));
   const a3 = val(await analyzeSeries(val(createPriceSeries(AAPLX, oldRes.provenance, oldRes.data)), { periodsPerYear: 252 }, () => NOW));
   assertEquals(a3.dataSnapshot.freshness.state, 'STALE');
 });
@@ -235,3 +236,27 @@ Deno.test('PC-07 London synthetic series respects the LSE calendar (bank holiday
   const a = val(await analyzeSeries(s, { periodsPerYear: 252 }, () => Date.UTC(2025, 7, 27, 20)));
   assertEquals([a.dataSnapshot.calendar.nonSessionBars, a.dataSnapshot.calendar.missingSessions], [0, 0]);
 });
+
+Deno.test('PC-08 provider range integrity (Codex Gate 2 P1): no bar after toT (look-ahead), none before fromT beyond one day of date granularity, as_of never after retrieval', async () => {
+  const DAY = 86_400_000;
+  const inside = payload();
+  assert((await provider(serving(inside).fetchImpl).historicalBars(req)).ok);
+  // A bar dated after the request end (look-ahead) is rejected.
+  const future = payload((p) => { p.values.unshift({ ...p.values[0], datetime: '2026-01-15' }); });
+  const rf = await provider(serving(future).fetchImpl).historicalBars(req);
+  assert(!rf.ok && rf.error.code === 'PROVIDER_MALFORMED' && rf.error.message.includes('outside the requested range'));
+  // A bar well before the window start is rejected…
+  const early = payload((p) => { p.values.push({ ...p.values[p.values.length - 1], datetime: new Date(req.fromT - 3 * DAY).toISOString().slice(0, 10) }); });
+  assertEquals(err(await provider(serving(early).fetchImpl).historicalBars(req)), 'PROVIDER_MALFORMED');
+  // …but the start day itself (00:00 UTC < fromT) is date granularity, not contamination.
+  const startDay = new Date(req.fromT).toISOString().slice(0, 10);
+  const edge = payload((p) => {
+    p.values = p.values.slice(0, 5);
+    p.values.push({ ...p.values[4], datetime: startDay });
+  });
+  assert((await provider(serving(edge).fetchImpl).historicalBars(req)).ok, 'start-day bar must be accepted');
+  // as_of claiming a time after we received the data is rejected.
+  const asOfFuture = payload((p) => { (p.meta as { as_of: string }).as_of = new Date(NOW + 60_000).toISOString(); });
+  assertEquals(err(await provider(serving(asOfFuture).fetchImpl).historicalBars(req)), 'PROVIDER_MALFORMED');
+});
+

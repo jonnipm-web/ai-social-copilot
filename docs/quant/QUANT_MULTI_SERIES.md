@@ -75,6 +75,12 @@ effective holdings, max weight). Hand-derived golden: MS-09 (0.6·10 % +
 content hash, periods per year, price basis, weights, project). Same input →
 byte-identical result; different weights → different id (MS-12).
 
+The id is a **calculation-input identity** — exactly the semantics of the v1
+`analysisId` (QUANT_API_CONTRACT.md §2, test QA-02): it identifies *what was
+calculated*, not *when it was evaluated*. `generatedAt` and freshness follow
+the server clock and are reported alongside it; the same bars analyzed later
+keep the id while freshness may change (MS-14, Codex Gate 2).
+
 ## 7. Watchlist → analysis flow
 
 Only ids travel. The server resolves the instruments from the caller's own

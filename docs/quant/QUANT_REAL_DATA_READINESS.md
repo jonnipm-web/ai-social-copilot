@@ -27,8 +27,10 @@ UI states "SYNTHETIC data" wherever the watchlist analysis is shown.
 * `provider_adapter.ts` — `AdapterSpec`: id, kind, trust, **exact host
   allowlist**, secret env name + header, max response bytes, timeout,
   `buildRequest`, `parseResponse` (identity echo checks on symbol, exchange,
-  currency, interval, adjustment; malformed → `PROVIDER_MALFORMED`, never an
-  empty success).
+  currency, interval, adjustment; every bar inside the requested window — no
+  bar after `toT` (look-ahead), none before `fromT` beyond one day of date
+  granularity; `as_of` never after retrieval — else `PROVIDER_MALFORMED`,
+  never an empty success; PC-08, Codex Gate 2).
 * `quant_provider_runtime.ts` — `HttpAdapterProvider`: only network path;
   `safeFetch` (SSRF-validated, bounded) with `allowedHosts` re-checked on
   **every redirect hop**, and credential headers dropped whenever a redirect

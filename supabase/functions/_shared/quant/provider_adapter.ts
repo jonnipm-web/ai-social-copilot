@@ -22,6 +22,8 @@ import { parseIsoUtc } from './provenance.ts';
 import type { HistoricalBarsRequest, ProviderResponse } from './provider.ts';
 import type { RawBarInput } from './timeseries.ts';
 
+const DAY_MS = 86_400_000;
+
 export interface AdapterHttpRequest {
   readonly url: string;
   /** Non-secret headers only. Credentials are added by the runtime from secrets. */
@@ -131,6 +133,8 @@ export const syntheticVendorAdapter: AdapterSpec = {
     if (req.frequency !== 'DAILY') return fail('PROVIDER_MALFORMED', 'adapter supports DAILY only');
     const asOf = parseIsoUtc(m.as_of);
     if (asOf === null) return fail('PROVIDER_MALFORMED', 'provider as_of missing or not ISO UTC');
+    // Codex Gate 2 (P1): the provider cannot claim data "as of" a time after we received it.
+    if (asOf > retrievedAtMs) return fail('PROVIDER_MALFORMED', 'provider as_of is after retrieval time');
     if (j.values.length === 0) return fail('INSUFFICIENT_DATA', 'provider returned no bars');
     if (j.values.length > MAX_VENDOR_BARS) return fail('DATASET_TOO_LARGE', 'provider returned too many bars', { max: MAX_VENDOR_BARS });
     const rows: RawBarInput[] = [];
@@ -143,6 +147,13 @@ export const syntheticVendorAdapter: AdapterSpec = {
       const open = num(v.open), high = num(v.high), low = num(v.low), close = num(v.close), volume = v.volume === undefined ? undefined : num(v.volume);
       if (!Number.isFinite(t) || open === null || high === null || low === null || close === null || volume === null) {
         return fail('PROVIDER_MALFORMED', 'provider bar has invalid numbers', { row: i });
+      }
+      // Codex Gate 2 (P1): every bar must lie inside the requested window —
+      // a bar after toT is look-ahead contamination. Daily bars are dated at
+      // 00:00 UTC of the session, so the window start tolerates one day of
+      // date granularity (a vendor asked for start_date=D returns D 00:00 < fromT).
+      if (t > req.toT || t < req.fromT - DAY_MS) {
+        return fail('PROVIDER_MALFORMED', 'provider bar outside the requested range', { row: i });
       }
       rows.push({ t, open, high, low, close, ...(volume !== undefined ? { volume } : {}) });
     }

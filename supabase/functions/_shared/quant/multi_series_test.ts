@@ -321,3 +321,20 @@ Deno.test('MC-06 watchlist.v1: > 10 instruments refused; provider through cache 
   assertEquals(b.dataSource.cache, { hits: 2, misses: 0, staleFallbacks: 0, uncached: 0 });
   assertEquals(a.dataSource.kind, 'SYNTHETIC_PROVIDER');
 });
+
+Deno.test('MS-14 multiAnalysisId is a CALCULATION-INPUT identity (same semantics as v1 analysisId, QA-02): clock-independent, input-sensitive', async () => {
+  // Codex Gate 2: pinned, documented semantics — the id identifies the deterministic
+  // calculation (engine, instruments, bar content, options), NOT the evaluation instant.
+  const mk = () => [series(INSTR_A, [100, 102, 104, 106, 110]), series(INSTR_B, [50, 49, 48, 47, 45])];
+  const early = val(await analyzeMultiSeries(mk(), opts, () => NOW));
+  const late = val(await analyzeMultiSeries(mk(), opts, () => NOW + 30 * DAY));
+  assertEquals(late.multiAnalysisId, early.multiAnalysisId);
+  assertNotEquals(late.generatedAt, early.generatedAt);
+  assertNotEquals(late.series[0].analysis.dataSnapshot.freshness.state, early.series[0].analysis.dataSnapshot.freshness.state);
+  // Any change to what is calculated changes the id.
+  const otherBars = val(await analyzeMultiSeries([series(INSTR_A, [100, 102, 104, 106, 111]), series(INSTR_B, [50, 49, 48, 47, 45])], opts, () => NOW));
+  const otherPeriods = val(await analyzeMultiSeries(mk(), { periodsPerYear: 52 }, () => NOW));
+  const w = [{ instrumentKey: instrumentKey(INSTR_A), weight: 0.5 }, { instrumentKey: instrumentKey(INSTR_B), weight: 0.5 }];
+  const otherWeights = val(await analyzeMultiSeries(mk(), { ...opts, weights: w }, () => NOW)).multiAnalysisId;
+  for (const id of [otherBars.multiAnalysisId, otherPeriods.multiAnalysisId, otherWeights]) assertNotEquals(id, early.multiAnalysisId);
+});
