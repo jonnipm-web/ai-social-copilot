@@ -134,15 +134,21 @@ After the Codex verification round the preflight also:
 - rejects history rows without a version, and compares versions NULL-safely
   (Codex G3V-02);
 - checks dependencies with types, nullability and keys: `projects` PK(id) and
-  its `user_id` FK to `auth.users`; `profiles` PK(id) and `role text NOT NULL`;
+  its `user_id` FK to `auth.users`, with the exact `ON DELETE CASCADE`
+  semantics; `profiles` PK(id) and `role text NOT NULL`;
   typed `business_memory` columns (Codex G3V-01);
 - compares a **structural fingerprint** for every installed chain migration
-  against the repository (Codex G2V-01 / G3V-03). The fingerprint is an md5 over
-  the ordered catalog definition:
-  - columns with type, nullability and default;
-  - RLS flags, constraints, indexes, triggers and policies;
-  - every function's identity signature, return type, SECURITY DEFINER flag,
-    config and body hash.
+  against the repository (Codex G2V-01 / G3V-03, extended after the re-audit,
+  R-01/R-02). The fingerprint is an md5 over the ordered catalog definition:
+  - columns with **position**, type, nullability and default;
+  - relation kind, **owner** and RLS flags;
+  - constraints, indexes, triggers and policies;
+  - every function's full argument list (modes and defaults), return type/set,
+    language, kind, **volatility**, parallel safety, leakproof, strict,
+    SECURITY DEFINER flag, **owner**, config and body hash.
+
+  ACLs are not part of the fingerprint; the explicit privilege checks cover
+  them.
 
   Each part is fingerprinted separately:
   - `subject_roles`;
@@ -155,6 +161,11 @@ After the Codex verification round the preflight also:
   `scripts/ci/aef_preflight_fingerprints.sh`, which uses the preflight's own
   query. CI fails if a migration changes without regenerating them.
 
+**Target guard** (Codex R-04): the runner and the fingerprint script refuse any
+non-local host. They also refuse any server that looks like a real Supabase
+project (the `authenticator` role, or the `storage` / `supabase_migrations`
+schemas), which covers a local port-forward to a real project.
+
 **Encoding.** Function bodies carry non-ASCII comments, so the fingerprints assume
 the migrations were applied with client encoding **UTF-8**. The runner and the
 fingerprint script force `PGCLIENTENCODING=UTF8`. An apply from a console whose
@@ -162,14 +173,15 @@ code page is WIN1252 double-encodes those characters and would (correctly) be
 reported as drift.
 
 It is tested against simulated production states in the runner
-(`AEF_DEPLOY_PREFLIGHT_TESTS: PASS`), 40 scenarios (the 29 below plus 11 from the
-verification round):
+(`AEF_DEPLOY_PREFLIGHT_TESTS: PASS`), 42 scenarios (the 29 below, 11 from the
+verification round and 2 from the re-audit):
 - NULL version;
 - `projects` FK drift; `profiles` drift; `business_memory` drift;
 - entitlement structure drift; memory structure drift;
 - persistence-only → PASS;
 - persistence extra column; stray `aef_` table after persistence;
-- function-body drift on the full chain; restored → PASS.
+- function-body drift on the full chain; restored → PASS;
+- re-audit: function volatility drift; SECURITY DEFINER owner drift.
 
 The original 29:
 - **History:** no history table; malformed history table (unexpected error);
