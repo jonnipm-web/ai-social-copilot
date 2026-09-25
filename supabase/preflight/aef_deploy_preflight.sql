@@ -52,22 +52,25 @@ DECLARE
   seq_defaults_permissive boolean;
   n_versioned bigint;
   -- Structural fingerprint (Codex G2V-01 / G3V-03): md5 over the ordered
-  -- catalog definition of the given tables (columns with type, nullability and
-  -- default; RLS flags; constraints; indexes; triggers; policies) and of the
-  -- functions matching a name pattern (identity signature, return type,
-  -- SECURITY DEFINER, config, body hash). $3 restricts to the listed columns
+  -- catalog definition of the given tables (columns with position, type,
+  -- nullability and default; kind, owner and RLS flags; constraints; indexes;
+  -- triggers; policies) and of the functions matching a name pattern (full
+  -- argument list with modes and defaults, return type/set, language, kind,
+  -- volatility, parallel safety, leakproof, strict, SECURITY DEFINER, owner,
+  -- config, body hash — Codex R-01/R-02). ACLs are checked separately below. $3 restricts to the listed columns
   -- of a pre-existing table (only the part a migration owns is compared).
   -- Rendered with search_path = pg_catalog so every name is schema-qualified.
   fp_sql constant text := $fp$
     SELECT md5(coalesce(string_agg(x, E'\n' ORDER BY x COLLATE "C"), '')) FROM (
-      SELECT 'col|' || c.relname || '|' || a.attname || '|' || format_type(a.atttypid, a.atttypmod) || '|' || a.attnotnull
+      SELECT 'col|' || c.relname || '|' || a.attname || '|' || a.attnum || '|' || format_type(a.atttypid, a.atttypmod) || '|' || a.attnotnull
              || '|' || coalesce(pg_get_expr(d.adbin, d.adrelid), '') AS x
         FROM pg_attribute a JOIN pg_class c ON c.oid = a.attrelid JOIN pg_namespace n ON n.oid = c.relnamespace
         LEFT JOIN pg_attrdef d ON d.adrelid = a.attrelid AND d.adnum = a.attnum
        WHERE n.nspname = 'public' AND c.relname = ANY ($1) AND a.attnum > 0 AND NOT a.attisdropped
          AND ($3 IS NULL OR a.attname = ANY ($3))
       UNION ALL
-      SELECT 'rls|' || c.relname || '|' || c.relrowsecurity || '|' || c.relforcerowsecurity
+      SELECT 'rel|' || c.relname || '|' || c.relkind::text || '|' || c.relowner::regrole::text
+             || '|' || c.relrowsecurity || '|' || c.relforcerowsecurity
         FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
        WHERE n.nspname = 'public' AND c.relname = ANY ($1) AND $3 IS NULL
       UNION ALL
@@ -92,19 +95,21 @@ DECLARE
         FROM pg_policy p JOIN pg_class c ON c.oid = p.polrelid JOIN pg_namespace n ON n.oid = c.relnamespace
        WHERE n.nspname = 'public' AND c.relname = ANY ($1)
       UNION ALL
-      SELECT 'fn|' || p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')|' || format_type(p.prorettype, NULL)
-             || '|' || p.prosecdef || '|' || coalesce(array_to_string(p.proconfig, ','), '') || '|' || md5(p.prosrc)
-        FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+      SELECT 'fn|' || p.proname || '(' || pg_get_function_arguments(p.oid) || ')|' || p.proretset || '|' || format_type(p.prorettype, NULL)
+             || '|' || l.lanname || '|' || p.prokind::text || '|' || p.provolatile::text || '|' || p.proparallel::text
+             || '|' || p.proleakproof || '|' || p.proisstrict || '|' || p.prosecdef || '|' || p.proowner::regrole::text
+             || '|' || coalesce(array_to_string(p.proconfig, ','), '') || '|' || md5(p.prosrc)
+        FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace JOIN pg_language l ON l.oid = p.prolang
        WHERE n.nspname = 'public' AND p.proname LIKE $2
     ) s
   $fp$;
   -- Expected fingerprints of the repository migrations, per install state.
   -- Maintained with scripts/ci/aef_preflight_fingerprints.sh; CI fails when a
   -- migration changes without updating them (fully-applied chain must PASS).
-  fp_entitlement constant text := '04bf99458c7923d3398d0827c1e605e4';
-  fp_memory constant text := 'a1eed2f1f0b718ec53840ec4c3bfa528';
-  fp_aef_persistence constant text := 'eba1c7e15c151e3b69fcc6713a7cb49a';
-  fp_aef_full constant text := '531228c03507d344f47cb28464ca658d';
+  fp_entitlement constant text := '541564e6be2ec1f3ed6e68c43c6a38e7';
+  fp_memory constant text := '76828d82d05cf3f308ba67a78960a09a';
+  fp_aef_persistence constant text := '46f3696f5779d806f7cf44824ce00a19';
+  fp_aef_full constant text := 'b611c3aa5b66f41af7304588e130c06a';
   fp text;
   aef_tables text[];
 BEGIN
@@ -150,7 +155,7 @@ BEGIN
      OR NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = to_regclass('public.projects') AND contype = 'p'
                      AND pg_get_constraintdef(oid) = 'PRIMARY KEY (id)')
      OR NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = to_regclass('public.projects') AND contype = 'f'
-                     AND pg_get_constraintdef(oid) LIKE 'FOREIGN KEY (user_id) REFERENCES auth.users(id)%') THEN
+                     AND pg_get_constraintdef(oid) = 'FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE') THEN
     fails := fails || 'drift: public.projects(id uuid, user_id uuid NOT NULL) not as expected'::text;
   END IF;
   IF (SELECT count(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'profiles' AND is_nullable = 'NO'
