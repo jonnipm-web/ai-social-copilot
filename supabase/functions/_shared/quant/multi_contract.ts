@@ -145,7 +145,7 @@ export async function runMulti(req: MultiRequest, nowMs: number): Promise<QuantR
     if (!series.ok) return fail(series.error.code, series.error.message, { ...(series.error.details ?? {}), series: i });
     list.push(series.value);
   }
-  return analyzeMultiSeries(list, {
+  return await analyzeMultiSeries(list, {
     periodsPerYear: req.options.periodsPerYear,
     ...(req.options.priceBasis ? { priceBasis: req.options.priceBasis } : {}),
     ...(req.options.weightsByIndex ? { weights: resolveWeights(req.options, list) } : {}),

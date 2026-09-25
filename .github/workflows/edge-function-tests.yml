@@ -89,8 +89,8 @@ jobs:
 
       - name: Type-check and lint the Quant core and Quant Edge Functions
         run: |
-          deno check supabase/functions/_shared/quant/*.ts supabase/functions/_shared/quant/fixtures/*.ts             supabase/functions/_shared/quant_server.ts supabase/functions/quant-analyze/*.ts supabase/functions/quant-watchlists/*.ts
-          deno lint supabase/functions/_shared/quant/ supabase/functions/_shared/quant_server.ts             supabase/functions/quant-analyze/ supabase/functions/quant-watchlists/
+          deno check supabase/functions/_shared/quant/*.ts supabase/functions/_shared/quant/fixtures/*.ts             supabase/functions/_shared/quant_server.ts supabase/functions/_shared/quant_provider_runtime.ts             supabase/functions/_shared/quant_provider_contract_test.ts supabase/functions/quant-analyze/*.ts supabase/functions/quant-watchlists/*.ts             tool/quant_lab_dev_server.ts tool/quant_benchmark.ts
+          deno lint supabase/functions/_shared/quant/ supabase/functions/_shared/quant_server.ts             supabase/functions/_shared/quant_provider_runtime.ts supabase/functions/_shared/quant_provider_contract_test.ts             supabase/functions/quant-analyze/ supabase/functions/quant-watchlists/ tool/quant_lab_dev_server.ts tool/quant_benchmark.ts
 
       - name: Goldens, edge cases, seeded invariants, calendars, boundary tripwires (no network in the suite)
         run: |
@@ -101,6 +101,10 @@ jobs:
           DENO_TESTING: "1"
         run: |
           deno test --allow-env --allow-read --allow-net=deno.land,esm.sh             supabase/functions/quant-analyze/index_test.ts supabase/functions/quant-watchlists/index_test.ts
+
+      - name: Provider adapter contract + cache + safe_fetch allowlist (REAL-DATA-READINESS-03; fake fetch, no vendor, no key)
+        run: |
+          deno test --allow-env --allow-read --allow-net=deno.land,esm.sh             supabase/functions/_shared/quant_provider_contract_test.ts supabase/functions/_shared/safe_fetch_test.ts
 
   disposable-db-rls-ci:
     name: Migrations + RLS on a disposable PostgreSQL 17 (MODULE-FOUNDATION-AND-ENTITLEMENT-02)
