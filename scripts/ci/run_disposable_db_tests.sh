@@ -10,6 +10,10 @@
 set -euo pipefail
 
 PSQL="${PSQL:-psql}"
+# Migrations are UTF-8 (function bodies carry non-ASCII comments): never let the
+# client encoding default to the OS code page, or prosrc — and the preflight
+# fingerprints — would differ from a UTF-8 production apply.
+export PGCLIENTENCODING=UTF8
 HOST="${PGHOST:-127.0.0.1}"
 case "$HOST" in
   127.0.0.1|localhost) ;;
@@ -170,17 +174,29 @@ expect_fail() {  # db file expected-text
   fi
   echo "$out" | grep -qF "$3" || { echo "unexpected failure for $(basename "$2"): $out" >&2; exit 1; }
 }
+catalog_fp() {  # the WHOLE public schema: a failed apply must leave it byte-identical (Codex G2V-04)
+  q "$1" "SET search_path = pg_catalog; SELECT md5(coalesce(string_agg(x, E'\\n' ORDER BY x COLLATE \"C\"), '')) FROM (
+    SELECT 'rel|' || c.relname || '|' || c.relkind::text || '|' || coalesce(c.relacl::text, '') || '|' || c.relrowsecurity AS x FROM pg_class c WHERE c.relnamespace = 'public'::regnamespace
+    UNION ALL SELECT 'col|' || c.relname || '|' || a.attname || '|' || format_type(a.atttypid, a.atttypmod) || '|' || a.attnotnull || '|' || coalesce(pg_get_expr(d.adbin, d.adrelid), '')
+      FROM pg_attribute a JOIN pg_class c ON c.oid = a.attrelid LEFT JOIN pg_attrdef d ON d.adrelid = a.attrelid AND d.adnum = a.attnum
+     WHERE c.relnamespace = 'public'::regnamespace AND a.attnum > 0 AND NOT a.attisdropped
+    UNION ALL SELECT 'con|' || conrelid::regclass::text || '|' || conname || '|' || pg_get_constraintdef(oid) FROM pg_constraint WHERE connamespace = 'public'::regnamespace
+    UNION ALL SELECT 'trg|' || pg_get_triggerdef(t.oid) FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid WHERE c.relnamespace = 'public'::regnamespace AND NOT t.tgisinternal
+    UNION ALL SELECT 'pol|' || polrelid::regclass::text || '|' || polname || '|' || coalesce(pg_get_expr(polqual, polrelid), '') FROM pg_policy
+    UNION ALL SELECT 'fn|' || p.oid::regprocedure::text || '|' || coalesce(p.proacl::text, '') || '|' || md5(p.prosrc) FROM pg_proc p WHERE p.pronamespace = 'public'::regnamespace) s;"
+}
 count_aef() {  # relations + functions + triggers + policies: a failed apply must leave none behind
   q "$1" "SELECT (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND left(c.relname, 4) = 'aef_') + (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'public' AND left(p.proname, 4) = 'aef_') + (SELECT count(*) FROM pg_trigger WHERE left(tgname, 4) = 'aef_') + (SELECT count(*) FROM pg_policy WHERE left(polname, 4) = 'aef_');"
 }
 run -d "$NF" -f "$ROOT/supabase/tests/support/supabase_stubs.sql"
 # 20260923 / 20260924 on a database without their dependencies (no baseline)
+before_fp="$(catalog_fp "$NF")"
 expect_fail "$NF" "$ROOT/supabase/migrations/20260923000000_entitlement_subject_roles.sql" "LAB_PRECONDITION (20260923000000_entitlement_subject_roles)"
 [[ "$(q "$NF" "SELECT to_regclass('public.subject_roles') IS NULL;")" == "t" ]] || { echo "partial 20260923 state" >&2; exit 1; }
 expect_fail "$NF" "$ROOT/supabase/migrations/20260924000000_ive_memory_governance.sql" "LAB_PRECONDITION (20260924000000_ive_memory_governance)"
 [[ "$(q "$NF" "SELECT to_regprocedure('public.business_memory_derive_scope()') IS NULL;")" == "t" ]] || { echo "partial 20260924 state" >&2; exit 1; }
 expect_fail "$NF" "$ROOT/supabase/migrations/20260925000000_aef_persistence.sql" "AEF_PRECONDITION (20260925000000_aef_persistence)"
-[[ "$(count_aef "$NF")" == "0" ]] || { echo "partial AEF state after a failed precondition" >&2; exit 1; }
+[[ "$(count_aef "$NF")" == "0" && "$(catalog_fp "$NF")" == "$before_fp" ]] || { echo "partial state after a failed precondition" >&2; exit 1; }
 expect_fail "$NF" "$ROOT/supabase/migrations/$SEQUENCE_MIGRATION" "AEF_PRECONDITION"
 for m in $(ls "$ROOT"/supabase/migrations/*.sql | sort); do
   [[ "$(basename "$m")" < "20260923000000" ]] && apply "$NF" "$m"
@@ -188,16 +204,21 @@ done
 apply "$NF" "$ROOT/supabase/migrations/20260925000000_aef_persistence.sql"   # needs no subject_roles
 # no exposure window: 20260925 alone already leaves no API-role access to its sequence
 [[ "$(q "$NF" "$AEF_SEQ_EXPOSED")" == "0" ]] || { echo "20260925 alone leaves an AEF sequence exposed" >&2; exit 1; }
-before="$(count_aef "$NF")"
+before_fp="$(catalog_fp "$NF")"
 expect_fail "$NF" "$ROOT/supabase/migrations/$HARDENING_MIGRATION" "public.subject_roles"
-[[ "$(count_aef "$NF")" == "$before" ]] || { echo "partial hardening state after a failed precondition" >&2; exit 1; }
+[[ "$(catalog_fp "$NF")" == "$before_fp" ]] || { echo "partial hardening state after a failed precondition" >&2; exit 1; }
+run -d "$NF" -c "CREATE TABLE public.subject_roles (subject_type text NOT NULL, subject_id uuid NOT NULL, role text NOT NULL);"
+before_fp="$(catalog_fp "$NF")"
+expect_fail "$NF" "$ROOT/supabase/migrations/$HARDENING_MIGRATION" "public.subject_roles primary key / role CHECK / RLS"
+[[ "$(catalog_fp "$NF")" == "$before_fp" ]] || { echo "partial hardening state (look-alike subject_roles)" >&2; exit 1; }
+run -d "$NF" -c "DROP TABLE public.subject_roles;"
 apply "$NF" "$ROOT/supabase/migrations/20260923000000_entitlement_subject_roles.sql"
 # atomicity: a LATE failure (conflicting function, after the precondition
 # passed and many objects were created) leaves nothing behind either
 run -d "$NF" -c "CREATE FUNCTION public.aef_purge(p jsonb) RETURNS int LANGUAGE sql AS 'SELECT 1';"
-before="$(count_aef "$NF")"
+before_fp="$(catalog_fp "$NF")"
 expect_fail "$NF" "$ROOT/supabase/migrations/$HARDENING_MIGRATION" "cannot change return type"
-[[ "$(count_aef "$NF")" == "$before" && "$(q "$NF" "SELECT to_regclass('public.aef_retention_policy') IS NULL;")" == "t" ]] \
+[[ "$(catalog_fp "$NF")" == "$before_fp" && "$(q "$NF" "SELECT to_regclass('public.aef_retention_policy') IS NULL;")" == "t" ]] \
   || { echo "partial hardening state after a late failure" >&2; exit 1; }
 run -d "$NF" -c "DROP FUNCTION public.aef_purge(jsonb);"
 apply "$NF" "$ROOT/supabase/migrations/$HARDENING_MIGRATION"
@@ -258,7 +279,8 @@ expect_preflight "no history table" FAIL "no supabase_migrations.schema_migratio
 # a malformed history table (no name column) is an unexpected error → still FAIL, never PASS
 run -d "$PF" -c "CREATE SCHEMA supabase_migrations; CREATE TABLE supabase_migrations.schema_migrations (version text PRIMARY KEY);"
 expect_preflight "malformed history table" FAIL "unexpected error"
-run -d "$PF" -c "DROP TABLE supabase_migrations.schema_migrations; CREATE TABLE supabase_migrations.schema_migrations (version text PRIMARY KEY, name text, statements text[]);"
+# (no key: the preflight must not rely on the history table's constraints)
+run -d "$PF" -c "DROP TABLE supabase_migrations.schema_migrations; CREATE TABLE supabase_migrations.schema_migrations (version text, name text, statements text[]);"
 expect_preflight "empty history" FAIL "predecessor migration baseline_production_pre_x4r missing"
 v=20260101000000
 for m in $(ls "$ROOT"/supabase/migrations/*.sql | sort); do
@@ -281,11 +303,31 @@ fail_then "history without objects" "aef_persistence is in the history but its o
   "DELETE FROM supabase_migrations.schema_migrations WHERE version = '20269999000001';"
 fail_then "stray aef object" "aef_* objects exist without aef_persistence" \
   "CREATE TABLE public.aef_stray (id int);" "DROP TABLE public.aef_stray;"
+fail_then "NULL history version" "row(s) without a version" \
+  "INSERT INTO supabase_migrations.schema_migrations (version, name) VALUES (NULL, 'x_unversioned');" \
+  "DELETE FROM supabase_migrations.schema_migrations WHERE name = 'x_unversioned';"
+fail_then "projects FK drift" "public.projects(id uuid, user_id uuid NOT NULL) not as expected" \
+  "ALTER TABLE public.projects DROP CONSTRAINT projects_user_id_fkey;" \
+  "ALTER TABLE public.projects ADD CONSTRAINT projects_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;"
+fail_then "profiles drift" "public.profiles(id uuid PRIMARY KEY, role text NOT NULL)" \
+  "ALTER TABLE public.profiles ALTER COLUMN role DROP NOT NULL;" "ALTER TABLE public.profiles ALTER COLUMN role SET NOT NULL;"
+fail_then "business_memory drift" "public.business_memory(user_id uuid NOT NULL" \
+  "ALTER TABLE public.business_memory ALTER COLUMN user_id DROP NOT NULL;" "ALTER TABLE public.business_memory ALTER COLUMN user_id SET NOT NULL;"
 fail_then "projects drift" "public.projects(id uuid, user_id uuid NOT NULL) not as expected" \
   "ALTER TABLE public.projects ALTER COLUMN user_id DROP NOT NULL;" "ALTER TABLE public.projects ALTER COLUMN user_id SET NOT NULL;"
 apply "$PF" "$ROOT/supabase/migrations/20260923000000_entitlement_subject_roles.sql"; record 20269999000002 entitlement_subject_roles
+fail_then "entitlement structure drift" "entitlement_subject_roles structure differs from the repository" \
+  "ALTER TABLE public.subject_roles DROP CONSTRAINT subject_roles_role_check;" \
+  "ALTER TABLE public.subject_roles ADD CONSTRAINT subject_roles_role_check CHECK (role = ANY (ARRAY['admin'::text, 'beta_tester'::text]));"
 apply "$PF" "$ROOT/supabase/migrations/20260924000000_ive_memory_governance.sql"; record 20269999000003 ive_memory_governance
+fail_then "memory structure drift" "ive_memory_governance structure differs from the repository" \
+  "ALTER TABLE public.business_memory ALTER COLUMN status DROP DEFAULT;" "ALTER TABLE public.business_memory ALTER COLUMN status SET DEFAULT 'active';"
 apply "$PF" "$ROOT/supabase/migrations/20260925000000_aef_persistence.sql"; record 20269999000004 aef_persistence
+expect_preflight "persistence only (fingerprint of the persistence state)" PASS "remaining, in order: aef_hardening -> aef_sequence_privileges"
+fail_then "persistence structure drift (extra column)" "AEF structure differs from the repository for the installed state (persistence only" \
+  "ALTER TABLE public.aef_receipts ADD COLUMN x_extra int;" "ALTER TABLE public.aef_receipts DROP COLUMN x_extra;"
+fail_then "persistence structure drift (stray aef table)" "AEF structure differs from the repository" \
+  "CREATE TABLE public.aef_stray (id int);" "DROP TABLE public.aef_stray;"
 fail_then "partial persistence" "aef_persistence is partially present" \
   "ALTER TABLE public.aef_human_gates RENAME TO x_gates;" "ALTER TABLE public.x_gates RENAME TO aef_human_gates;"
 apply "$PF" "$ROOT/supabase/migrations/$HARDENING_MIGRATION"; record 20269999000005 aef_hardening
@@ -316,6 +358,11 @@ fail_then "history claims 20260927 but a sequence is exposed" "aef_sequence_priv
   "DELETE FROM supabase_migrations.schema_migrations WHERE version = '20269999000009'; REVOKE UPDATE ON SEQUENCE public.aef_audit_events_id_seq FROM authenticated;"
 apply "$PF" "$ROOT/supabase/migrations/$SEQUENCE_MIGRATION"; record 20269999000006 aef_sequence_privileges
 expect_preflight "fully applied chain" PASS "remaining, in order: (none)"
+fail_then "full structure drift (function body)" "AEF structure differs from the repository for the installed state (persistence+hardening" \
+  "CREATE OR REPLACE FUNCTION public.aef__denial_codes() RETURNS text[] LANGUAGE sql IMMUTABLE SET search_path = pg_catalog, pg_temp AS \$\$ SELECT ARRAY['X'] \$\$;" \
+  "SELECT 1;"
+apply "$PF" "$ROOT/supabase/migrations/$HARDENING_MIGRATION"   # idempotent re-apply restores the repository definition
+expect_preflight "restored after body drift" PASS "remaining, in order: (none)"
 # 20260927 recorded before 20260926 is an accepted order (depends on 20260925 only)
 run -d "$PF" -c "UPDATE supabase_migrations.schema_migrations SET version = '20269999000004a' WHERE name = 'aef_sequence_privileges';" >/dev/null
 expect_preflight "20260927 before 20260926" PASS "remaining, in order: (none)"
