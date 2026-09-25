@@ -221,6 +221,20 @@ export class AefGovernance {
     return deny(code);
   }
 
+  /**
+   * Audits a refusal that happened before submit() could run — e.g. the IVE
+   * runtime rejected a malformed or unknown intent (IV-IVE-AEF-RUNTIME-INTEGRATION-01,
+   * Codex RG2-02). The subject is re-verified from the credential; the code is
+   * mapped onto the database's closed denial list. Best-effort, like every
+   * denial audit: the refusal stands regardless.
+   */
+  async auditRefusal(actor: unknown, credential: RawCredential, code: AefErrorCode): Promise<void> {
+    const subjectId = await this.verifiedUser(actor, credential);
+    if (!subjectId) return;
+    const auditCode: AefErrorCode = code === "INTENT_ACTION_UNKNOWN" ? "UNKNOWN_TOOL" : code === "POLICY_DENIED" ? "POLICY_DENIED" : "INVALID_REQUEST";
+    await this.denyAudited(subjectId, code, auditCode);
+  }
+
   private storeFailure(err: unknown): Denied {
     return deny(err instanceof StoreProtocolError ? "STORE_PROTOCOL_ERROR" : "STORE_UNAVAILABLE");
   }

@@ -85,6 +85,36 @@ and the gate's binding hash covers the payload. So:
   for gate B;
 - the client card locks the fields once the proposal is sent.
 
+## Time bounds (Codex RG2-01)
+
+| Bound | Value | Enforced by | What it limits |
+|---|---|---|---|
+| Request envelope | 5 min (`expires_at` of each mapped request) | contract validation, per submission | the freshness of *one* message; it is re-minted on each resubmission, and it is **not** the approval window |
+| **Approval window** | **15 min** (gate TTL, from registration) | PostgreSQL `aef__expire_if_due` on decide / replay / claim | approving **and executing**: an AUTHORIZED operation whose gate has expired becomes EXPIRED and never runs (RT-15, PG-14) |
+| Operation lifetime | 1 h | PostgreSQL | the durable record; for gated tools the gate window always ends first |
+
+## Operation identity and `contextRef`
+
+The operation identity is `(subject, requestedAction, projectId, parameters,
+contextRef)`. `contextRef` is the IVE turn that produced the suggestion.
+
+The same payload suggested in two different IVE turns is therefore two
+operations, and **each needs its own explicit approval** (RT-16). Approving
+one never authorizes the other. This is intentional: a repeated effect
+requires a repeated human decision.
+
+## Audit of refusals (Codex RG2-02)
+
+Intents refused before AEF can register anything (malformed, unknown or
+forbidden action) are still recorded in the subject's audit chain, through
+`AefGovernance.auditRefusal`. The subject is re-verified from the credential,
+and the code is mapped onto the database's closed denial list (for example,
+INTENT_ACTION_UNKNOWN is recorded as UNKNOWN_TOOL). Schema denials are
+recorded as INVALID_REQUEST.
+
+Requests the HTTP boundary refuses before identity is known (401/400) are not
+AEF events.
+
 ## States shown to the user
 
 The client can show these phases:

@@ -65,7 +65,12 @@ export class IveAefRuntime {
   private async submit(intent: unknown, subjectId: string, credential: RawCredential): Promise<RuntimePresentation> {
     if (typeof subjectId !== "string" || !UUID.test(subjectId)) return denied("AUTH_FAILED");
     const mapped = await mapIveActionIntentWith(this.deps.table ?? LAB_IVE_ACTION_TABLE, intent, subjectId, { now: this.deps.now?.() });
-    if (!mapped.ok) return denied(mapped.code);
+    if (!mapped.ok) {
+      // Refused before AEF could register anything: still recorded in the
+      // subject's audit chain (Codex RG2-02).
+      if (mapped.code !== "AUTH_FAILED") await this.deps.governance.auditRefusal(this.actor(subjectId), credential, mapped.code);
+      return denied(mapped.code);
+    }
     return presentResult(await this.deps.governance.submit(mapped.request, credential));
   }
 

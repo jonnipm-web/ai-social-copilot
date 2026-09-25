@@ -211,7 +211,8 @@ Deno.test({ name: "RT-06 schema (T18) and unknown tools (T17): refused before pe
   }
   assertEquals(phase(await h.rt.propose(intent({ requestedAction: "trade_order" }), w.a, w.tokA), "DENIED").denialCode, "POLICY_DENIED");
   assertEquals(await ops(), 0);
-  assert(await denials() >= before + badParams.length, "schema denials are audited");
+  // schema denials (7) + unknown actions (6) + trade (1) are all in the audit chain (Codex RG2-02)
+  assert(await denials() >= before + badParams.length + 7, "schema and pre-governance refusals are audited");
   assertEquals(h.ledger.invocations.size, 0);
 }});
 
@@ -349,4 +350,30 @@ Deno.test({ name: "RT-14 the HTTP boundary end-to-end on the real database: subj
   assertEquals((await send({ op: "execute", intent: i, subjectId: w.b })).status, 400);
   assertEquals(h.ledger.totalEffects(), 1);
   assertEquals(h.ledger.seenRequests[0].actor.id, w.a);
+}});
+
+Deno.test({ name: "RT-15 approval window (Codex RG2-01): once the gate's TTL passes, an APPROVED operation can no longer execute — resubmitting the locked proposal (fresh request envelope) yields EXPIRED, never an invocation", ignore, fn: async () => {
+  const w = await world();
+  const h = harness(w);
+  const i = intent();
+  const p = phase(await h.rt.propose(i, w.a, w.tokA), "AWAITING_APPROVAL");
+  phase(await approveIt(h.rt, p, w.a, w.tokA), "AUTHORIZED");
+  // Time passes beyond the approval window (gate TTL); the operation TTL (1 h) has NOT elapsed.
+  await shiftClock(`UPDATE public.aef_human_gates SET expires_at = now() - interval '1 second' WHERE id = '${p.gate!.gateId}';`);
+  const late = phase(await h.rt.execute(i, w.a, w.tokA), "EXPIRED");
+  assertEquals(late.completed, false);
+  assertEquals(h.ledger.invocations.size, 0, "a refreshed request envelope does not extend the approval window");
+}});
+
+Deno.test({ name: "RT-16 contextRef is part of the operation identity: the same payload proposed from two IVE turns is two operations, each needing its own approval", ignore, fn: async () => {
+  const w = await world();
+  const h = harness(w);
+  const a = intent();
+  const b = { ...a, contextRef: crypto.randomUUID() };
+  const pa = phase(await h.rt.propose(a, w.a, w.tokA), "AWAITING_APPROVAL");
+  const pb = phase(await h.rt.propose(b, w.a, w.tokA), "AWAITING_APPROVAL");
+  assertNotEquals(pa.operationId, pb.operationId);
+  phase(await approveIt(h.rt, pa, w.a, w.tokA), "AUTHORIZED");
+  phase(await h.rt.execute(b, w.a, w.tokA), "AWAITING_APPROVAL");
+  assertEquals(h.ledger.invocations.size, 0, "approving one turn's proposal never authorizes another's");
 }});
