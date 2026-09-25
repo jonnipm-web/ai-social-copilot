@@ -409,7 +409,7 @@ class _ModulesAdminTab extends StatelessWidget {
                     context: context,
                     backgroundColor: const Color(0xFF141425),
                     isScrollControlled: true,
-                    builder: (_) => _ModuleDetailSheet(module: module, isEnglish: isEnglish),
+                    builder: (_) => AdminModuleDetailSheet(module: module, isEnglish: isEnglish),
                   )
               : null,
         );
@@ -449,16 +449,24 @@ class _StatusBadge extends StatelessWidget {
   }
 }
 
-class _ModuleDetailSheet extends StatelessWidget {
-  const _ModuleDetailSheet({required this.module, required this.isEnglish});
+/// Public for widget tests. READINESS-03 physical finding: on Android an
+/// INTERNAL lab (e.g. Quant Analytics) had no in-app entry point -- the
+/// commercial drawer hides non-commercial modules by design and this sheet
+/// only showed metadata. "Open module" navigates to the module's route; the
+/// route entitlement guard (route_policy) and the server-side entitlement on
+/// every API call remain the access authority, so this adds no privilege.
+class AdminModuleDetailSheet extends StatelessWidget {
+  const AdminModuleDetailSheet({super.key, required this.module, required this.isEnglish});
   final ModuleDefinition module;
   final bool isEnglish;
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
+    final route = module.route;
     return SafeArea(
-      child: Padding(
+      // Scrollable: long readiness/notes text overflowed at large text scales.
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -495,6 +503,24 @@ class _ModuleDetailSheet extends StatelessWidget {
               Text(t.adminModulesNotes, style: const TextStyle(color: Colors.white38, fontSize: 12, fontWeight: FontWeight.w600)),
               const SizedBox(height: 4),
               Text(module.notes, style: const TextStyle(color: Colors.amber, fontSize: 13)),
+            ],
+            if (route != null && module.adminClickable) ...[
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: FilledButton.icon(
+                  key: const Key('adminModuleOpen'),
+                  onPressed: () {
+                    // Router captured first: this sheet's context is gone after pop.
+                    final router = GoRouter.of(context);
+                    Navigator.of(context).pop();
+                    router.push(route);
+                  },
+                  icon: const Icon(Icons.open_in_new_rounded),
+                  label: Text(t.adminModulesOpen),
+                ),
+              ),
             ],
             const SizedBox(height: 8),
           ],

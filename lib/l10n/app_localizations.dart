@@ -752,6 +752,12 @@ abstract class AppLocalizations {
   /// **'Notas'**
   String get adminModulesNotes;
 
+  /// No description provided for @adminModulesOpen.
+  ///
+  /// In pt, this message translates to:
+  /// **'Abrir módulo'**
+  String get adminModulesOpen;
+
   /// No description provided for @adminModulesNoRoute.
   ///
   /// In pt, this message translates to:

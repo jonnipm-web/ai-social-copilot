@@ -138,6 +138,7 @@
   "adminModulesAi": "Uses AI",
   "adminModulesReadiness": "Readiness",
   "adminModulesNotes": "Notes",
+  "adminModulesOpen": "Open module",
   "adminModulesNoRoute": "No dedicated route",
   "adminModulesYes": "Yes",
   "adminModulesNo": "No",

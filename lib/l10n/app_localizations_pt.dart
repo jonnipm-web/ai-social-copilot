@@ -361,6 +361,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get adminModulesNotes => 'Notas';
 
   @override
+  String get adminModulesOpen => 'Abrir módulo';
+
+  @override
   String get adminModulesNoRoute => 'Sem rota própria';
 
   @override

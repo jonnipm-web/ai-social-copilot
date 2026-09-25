@@ -360,6 +360,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get adminModulesNotes => 'Notes';
 
   @override
+  String get adminModulesOpen => 'Open module';
+
+  @override
   String get adminModulesNoRoute => 'No dedicated route';
 
   @override
