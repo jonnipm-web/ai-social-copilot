@@ -383,3 +383,17 @@ Deno.test('PV-27 (I6G1R2-02) the only change to safe text is the intentional rem
   assertEquals(free('HopeBridge\u200b Foundation built 20 wells.').text, 'HopeBridge Foundation built 20 wells.');
   assertEquals(free('HopeBridge Foundation built ２０ wells in ٢٠٢٥.').text, 'HopeBridge Foundation built ２０ wells in ٢٠٢٥.');
 });
+
+Deno.test('PV-28 (I6G1R3-01) look-alike @ and spelled-out "at" e-mails are redacted; safe text keeps NBSP and digits', () => {
+  for (const s of [
+    'maria\uFF20example.com', 'maria\uFE6Bexample.com', 'maria (at) example.com', 'maria [at] example [dot] com',
+    'maria at example.com', 'maria arroba exemplo.com.br', 'maria (arroba) exemplo (ponto) com', 'write to maria (at) example.com—now',
+  ]) {
+    const r = redactStructured(s);
+    assert(r.redacted && !r.text.includes('maria'), `${s} → ${r.text}`);
+  }
+  for (const s of ['We met at 10.30 am.', 'Wells built that year.', 'HopeBridge Foundation\u00a02025']) {
+    assertEquals(redactStructured(s), { text: s, redacted: false }, s);
+  }
+  assertEquals(free('HopeBridge Foundation\u00a0built 20 wells.').text, 'HopeBridge Foundation\u00a0built 20 wells.');
+});

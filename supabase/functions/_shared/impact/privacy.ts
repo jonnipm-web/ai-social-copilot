@@ -97,7 +97,17 @@ function luhn(digits: string): boolean {
 const EMAIL_IN_TOKEN = /[\p{L}\p{M}\p{N}._%+-]+@[\p{L}\p{M}\p{N}-]+(?:\.[\p{L}\p{M}\p{N}-]+)*\.[\p{L}\p{M}]{2,}/gu;
 const HANDLE_IN_TOKEN = /(?<![\p{L}\p{M}\p{N}_])@[\p{L}\p{M}\p{N}_][\p{L}\p{M}\p{N}_.]*[\p{L}\p{M}\p{N}_]/gu;
 
-function redactEmailsAndHandles(text: string, mark: () => void): string {
+// "maria (at) example.com", "maria [at] example [dot] com", "maria at example.com",
+// "maria arroba exemplo.com.br" — bracketed or bare keyword, literal or spelled dot
+// (Codex I6G1R3-01). Only run when an "at"/"arroba" keyword exists (linear guard).
+const AT_WORD_EMAIL = /[\p{L}\p{M}\p{N}._%+-]+\s*[[(<{]?\s*(?:at|arroba)\s*[\])>}]?\s*[\p{L}\p{M}\p{N}-]+(?:\s*(?:\.|[[(]?\s*(?:dot|ponto)\s*[\])]?)\s*[\p{L}\p{M}\p{N}-]+)*\s*(?:\.|[[(]?\s*(?:dot|ponto)\s*[\])]?)\s*\p{L}{2,}(?![\p{L}\p{M}\p{N}])/giu;
+const AT_KEYWORD = /(?<![\p{L}])(?:at|arroba)(?![\p{L}])/iu;
+// Look-alike commercial-at characters are the same '@' for detection.
+const AT_VARIANTS = /[\uFF20\uFE6B\u0040]/g;
+
+function redactEmailsAndHandles(input: string, mark: () => void): string {
+  let text = input.replace(AT_VARIANTS, '@');
+  if (AT_KEYWORD.test(text)) text = text.replace(AT_WORD_EMAIL, () => ((mark(), '[redacted-email]')));
   if (!text.includes('@')) return text;
   return text.split(/([\s\p{Z}]+)/u).map((tok) => {
     if (!tok.includes('@')) return tok;
@@ -306,7 +316,10 @@ export interface PresentationContext {
 const INVISIBLE_FORMAT = new RegExp(`[${[0x00ad, 0x061c, 0x180e, 0x200b, 0x200c, 0x200d, 0x200e, 0x200f, 0x202a, 0x202b, 0x202c, 0x202d, 0x202e,
   0x2060, 0x2061, 0x2062, 0x2063, 0x2064, 0x2066, 0x2067, 0x2068, 0x2069, 0xfeff].map((c) => String.fromCharCode(c)).join('')}]`, 'g');
 const NBSP = new RegExp(`[${[0x00a0, 0x2007, 0x202f].map((c) => String.fromCharCode(c)).join('')}]`, 'g');
-export const normalizeForPresentation = (s: string) => s.replace(INVISIBLE_FORMAT, '').replace(NBSP, ' ');
+/** Presented text: invisible / bidi / format characters removed — the only change made to safe text. */
+export const normalizeForPresentation = (s: string) => s.replace(INVISIBLE_FORMAT, '');
+/** Detection copy: also no-break spaces → spaces and every Unicode digit → ASCII. */
+const detectionCopy = (s: string) => asciiDigits(s.replace(NBSP, ' '));
 
 /** Present one value according to what its field IS. */
 export function present(
@@ -318,10 +331,10 @@ export function present(
   if (value === null || value === undefined) return { text: null, withheld: null, redacted: false };
   const clean = normalizeForPresentation(value);
   if (clean.length > PRIVACY_SCAN_MAX) return { text: null, withheld: 'PERSONAL_DATA_RISK', redacted: false };
-  const scan = asciiDigits(clean);
+  const scan = detectionCopy(clean);
   if (minorDataRisk(scan)) return { text: null, withheld: 'MINOR_DATA_RISK', redacted: false };
   const r = redactStructured(clean);
-  const probe = asciiDigits(r.text);
+  const probe = detectionCopy(r.text);
   if (kind === 'FREE_TEXT' && (privateAddressSignal(probe) || privateNameSignal(probe, ctx.orgNames))) {
     return { text: null, withheld: 'PERSONAL_DATA_RISK', redacted: false };
   }
