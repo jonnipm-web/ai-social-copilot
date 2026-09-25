@@ -27,10 +27,13 @@ export interface RateRule {
   readonly windowSeconds: number;
 }
 
+/** Fixed in the database function (Codex I5G2-01) — not configurable, never a caller argument. */
+export const RATE_WINDOW_SECONDS = 60;
+
 export const DEFAULT_RATE_LIMITS: Readonly<Record<RateBucket, RateRule>> = Object.freeze({
-  dossier_build: { limit: 30, windowSeconds: 60 },
-  dossier_export: { limit: 10, windowSeconds: 60 },
-  dossier_verify: { limit: 30, windowSeconds: 60 },
+  dossier_build: { limit: 30, windowSeconds: RATE_WINDOW_SECONDS },
+  dossier_export: { limit: 10, windowSeconds: RATE_WINDOW_SECONDS },
+  dossier_verify: { limit: 30, windowSeconds: RATE_WINDOW_SECONDS },
 });
 
 const ENV_KEY: Readonly<Record<RateBucket, string>> = {
@@ -44,7 +47,7 @@ export function rateLimitsFrom(get: (key: string) => string | undefined): Readon
   const out = { ...DEFAULT_RATE_LIMITS } as Record<RateBucket, RateRule>;
   for (const b of Object.keys(ENV_KEY) as RateBucket[]) {
     const n = Number(get(ENV_KEY[b]));
-    if (Number.isInteger(n) && n >= 1 && n <= 1000) out[b] = { limit: n, windowSeconds: 60 };
+    if (Number.isInteger(n) && n >= 1 && n <= 1000) out[b] = { limit: n, windowSeconds: RATE_WINDOW_SECONDS };
   }
   return Object.freeze(out);
 }

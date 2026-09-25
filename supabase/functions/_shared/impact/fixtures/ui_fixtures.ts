@@ -5,6 +5,12 @@
  * UI is proven against the true I4 contract, not a hand-written imitation.
  * `ui_fixtures_test.ts` fails CI when the committed files drift from what
  * the engine produces. Deterministic: fixed clock, fixed ids.
+ *
+ * Every value is SYNTHETIC (Codex I5G2-02): fictional organizations in the
+ * reserved country code XA, `.example` domains (RFC 2606), the Ofcom
+ * drama-reserved number +44 20 7946 0958 and the placeholder name "Jane
+ * Example" exist only to prove redaction/withholding — none reaches the
+ * fixtures unredacted (asserted by the Flutter UI-DOM-08 / UI-DOS-03 tests).
  */
 import { parseLabRequest } from '../lab_contract.ts';
 import { handleLabRequest } from '../lab_service.ts';

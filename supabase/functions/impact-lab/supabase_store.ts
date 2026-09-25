@@ -538,8 +538,10 @@ export function createSupabaseRateLimiter(req: Request): ImpactRateLimiter {
   if (!url || !anon || !token) throw new Error('impact-lab: missing Supabase configuration');
   const client = createClient(url, anon, { auth: { autoRefreshToken: false, persistSession: false }, global: { headers: { Authorization: `Bearer ${token}` } } });
   return {
-    async hit(_userId: string, bucket: RateBucket, windowSeconds: number): Promise<ImpactResult<RateHit>> {
-      const { data, error } = await client.rpc('impact_rate_limit_hit', { p_bucket: bucket, p_window_seconds: windowSeconds });
+    // The window is fixed inside the database function (I5G2-01); identity
+    // is the caller's JWT (auth.uid()), never the userId argument.
+    async hit(_userId: string, bucket: RateBucket): Promise<ImpactResult<RateHit>> {
+      const { data, error } = await client.rpc('impact_rate_limit_hit', { p_bucket: bucket });
       if (error) return fail('INTERNAL_ERROR', 'rate limiter unavailable');
       const row = (Array.isArray(data) ? data[0] : data) as { hit_count?: number; window_start?: string } | null;
       const start = row?.window_start ? Date.parse(row.window_start) : NaN;
