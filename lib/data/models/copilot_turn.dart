@@ -1,3 +1,4 @@
+import 'aef_runtime.dart';
 import 'ive_intelligence.dart';
 
 class CopilotTurn {
@@ -21,6 +22,10 @@ class CopilotTurn {
   /// be loaded; the UI flags the answer as partial.
   final bool degradedContext;
 
+  /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 — IVE's suggestion for a consequential
+  /// action (LAB Human Gate card). Never an authorization.
+  final IveActionIntentData? actionIntent;
+
   const CopilotTurn({
     required this.role,
     required this.content,
@@ -32,6 +37,7 @@ class CopilotTurn {
     this.requiresAef = false,
     this.suggestedActions = const [],
     this.degradedContext = false,
+    this.actionIntent,
   });
 
   Map<String, dynamic> toHistoryMap() => {'role': role, 'content': content};
@@ -47,6 +53,7 @@ class CopilotTurn {
         requiresAef:      requiresAef,
         suggestedActions: suggestedActions,
         degradedContext:  degradedContext,
+        actionIntent:     actionIntent,
       );
 }
 

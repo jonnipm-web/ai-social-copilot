@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../core/modules/module_registry.dart';
+import 'aef_runtime.dart';
 
 /// IVE-INTELLIGENCE-CORE-01 — client side of the server IVE Intelligence Core
 /// contract (supabase/functions/_shared/ive/contracts.ts).
@@ -105,9 +106,14 @@ class IveIntelligenceResult {
     required this.degraded,
     required this.memoryCandidates,
     required this.correlationId,
+    this.actionIntent,
   });
 
   final bool requiresAef;
+
+  /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 — the validated IVE suggestion when
+  /// [requiresAef]; a suggestion only, never an authorization.
+  final IveActionIntentData? actionIntent;
   final String? answer;
   final List<String> sourceLabels;
   final List<IveSuggestedAction> suggestedActions;
@@ -158,6 +164,7 @@ class IveIntelligenceResult {
               (category: c['category'] as String, text: c['text'] as String),
       ],
       correlationId: map['correlationId'] is String ? map['correlationId'] as String : null,
+      actionIntent: requiresAef ? IveActionIntentData.tryParse(map['actionIntent']) : null,
     );
   }
 }

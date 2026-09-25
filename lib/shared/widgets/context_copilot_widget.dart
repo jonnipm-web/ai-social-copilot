@@ -8,7 +8,10 @@ import '../../core/modules/module_registry.dart';
 import '../../core/ui/breakpoints.dart';
 import '../../core/utils/uuid_v4.dart';
 import '../../data/models/copilot_context_data.dart';
+import '../../data/models/aef_runtime.dart';
 import '../../data/models/copilot_turn.dart';
+import '../../data/services/aef_runtime_service.dart';
+import 'aef_action_card.dart';
 import '../../data/models/ive_intelligence.dart';
 import '../../data/models/ive_interaction_request.dart';
 import '../../features/ive/visual/ive_avatar.dart';
@@ -817,6 +820,11 @@ class _TurnBubble extends StatelessWidget {
               turn.requiresAef ? AppLocalizations.of(ctx)!.iveCoreRequiresAef : turn.content,
               style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.4),
             ),
+            // IV-IVE-AEF-RUNTIME-INTEGRATION-01 — LAB only (--dart-define=AEF_RUNTIME_LAB=true):
+            // IVE's suggestion becomes a governed proposal behind an explicit Human Gate.
+            if (!isUser && turn.requiresAef && kAefRuntimeLabEnabled && turn.actionIntent != null &&
+                kAefLabActions.containsKey(turn.actionIntent!.requestedAction))
+              Consumer(builder: (c, ref, _) => AefActionCard(intent: turn.actionIntent!, api: ref.read(aefRuntimeApiProvider))),
             if (!isUser && turn.degradedContext)
               Padding(
                 padding: const EdgeInsets.only(top: 6),

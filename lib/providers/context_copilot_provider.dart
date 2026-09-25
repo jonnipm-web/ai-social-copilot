@@ -289,6 +289,7 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
         requiresAef: result.requiresAef,
         suggestedActions: result.suggestedActions,
         degradedContext: result.degraded.isNotEmpty,
+        actionIntent: result.actionIntent,
         timestamp: DateTime.now(),
       );
       state = state.copyWith(turns: [...state.turns, assistantTurn], loading: false);
