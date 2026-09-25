@@ -184,3 +184,26 @@ Deno.test('CAL-08 Codex CXF2-01 rejected with evidence: US markets were OPEN on 
   assertEquals(isTradingDay(NYSE, '2022-06-20'), false);
   assertEquals(isTradingDay(NYSE, '2027-06-18'), false); // June 19 2027 is a Saturday → Friday observed
 });
+
+Deno.test('CAL-09 London GMT→BST transition: same local open, UTC shifts by one hour (READINESS-03)', () => {
+  // BST 2026 begins Sunday 2026-03-29 01:00 UTC.
+  assertEquals(new Date(sessionTimes(LSE, '2026-03-27')!.openMs).toISOString(), '2026-03-27T08:00:00.000Z'); // GMT
+  assertEquals(new Date(sessionTimes(LSE, '2026-03-30')!.openMs).toISOString(), '2026-03-30T07:00:00.000Z'); // BST
+  // BST ends Sunday 2026-10-25: back to GMT.
+  assertEquals(new Date(sessionTimes(LSE, '2026-10-26')!.openMs).toISOString(), '2026-10-26T08:00:00.000Z');
+});
+
+Deno.test('CAL-10 memoized holiday rules: repeated and interleaved queries give identical answers (READINESS-03 perf fix)', () => {
+  const days: string[] = [];
+  for (let d = '2019-01-01'; d <= '2027-12-31'; d = addDays(d, 1)) days.push(d);
+  const pass = () => days.map((d) => `${isTradingDay(NYSE, d)}${isTradingDay(NASDAQ, d)}${isTradingDay(LSE, d)}`).join('');
+  const first = pass();
+  const second = pass();
+  assertEquals(second, first);
+  // Spot checks after heavy memo use (published schedules).
+  assertEquals(isTradingDay(NYSE, '2025-01-09'), false); // national day of mourning (special closure)
+  assertEquals(isTradingDay(LSE, '2023-05-08'), false); // coronation bank holiday
+  assertEquals(isTradingDay(NYSE, '2022-06-20'), false); // Juneteenth observed
+  assertEquals(isTradingDay(LSE, '2025-04-18'), false); // Good Friday (Easter computus)
+  assertEquals(isTradingDay(NYSE, '2021-12-31'), true); // CAL-07 pinned
+});
