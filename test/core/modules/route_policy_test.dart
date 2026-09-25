@@ -377,6 +377,8 @@ void main() {
           AppConstants.routeActionDetail,
           AppConstants.routeExecutiveDashboard,
           AppConstants.routeIntelligenceDebug,
+          AppConstants.routeImpact,
+          AppConstants.routeImpactDossier,
         ];
 
         final unresolved = allAppRoutes
