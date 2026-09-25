@@ -17,8 +17,14 @@
 #                                     "npx -y supabase@2.118.0"); single file
 #   E3 supabase db push, two files   first OK, second fails: per-file
 #                                     atomicity (the first stays applied)
+#   E4 supabase db push, real 20260926 failing late — whole-schema
+#                                     fingerprint before/after + history
+#   E5 supabase db push onto a production-like history (must be REFUSED)
 #   MCP apply_migration              cannot run against a local database:
 #                                     NOT_VERIFIED here.
+# Every expected CLI result is ASSERTED (exit 1 + EXECUTOR_EVIDENCE_CHANGED on
+# any deviation). The CLI part runs locally only (SUPABASE_CLI set by the
+# operator; pinned version) — CI does not download or execute it (Codex RG3-06).
 # Env: PGHOST (127.0.0.1|localhost), PGPORT, PGUSER, optional PGPASSWORD, PSQL, SUPABASE_CLI.
 set -euo pipefail
 
@@ -51,6 +57,12 @@ verdict() {  # label db
   local p; p="$(presence "$2")"
   if [[ "$p" == "no no no" ]]; then echo "$1: ATOMIC ($p)"; else echo "$1: NOT_ATOMIC (A B C = $p)"; fi
 }
+# Codex RG3-04: the whole public schema, not a count.
+catalog_fp() { run -d "$1" -tA -f "$ROOT/scripts/ci/sql/catalog_fingerprint.sql" | tail -1; }
+hist_rows() { run -d "$1" -tA -c "SELECT count(*) FROM supabase_migrations.schema_migrations WHERE version = '$2';" 2>/dev/null || echo 0; }
+# Codex RG3-05: every expected CLI result is asserted here; any deviation fails the experiment.
+EVIDENCE_FAIL=()
+expect() { [[ "$1" == "$2" ]] || EVIDENCE_FAIL+=("$3: expected '$2', got '$1'"); }
 url() { printf 'postgresql://%s%s@%s:%s/%s?sslmode=disable' "${PGUSER:-postgres}" "${PGPASSWORD:+:$PGPASSWORD}" "$HOST" "${PGPORT:-5432}" "$1"; }
 
 printf '%s' "$CANARY" > "$WORK/canary.sql"
@@ -67,18 +79,46 @@ run -d "$E1" -1 -f "$WORK/canary.sql" >/dev/null 2>&1 && { echo "E1: the canary 
 r1="$(verdict "EXECUTOR_PSQL_SINGLE_TRANSACTION" "$E1")"; echo "$r1"
 [[ "$r1" == *": ATOMIC"* ]] || { echo "E1: psql --single-transaction left partial DDL" >&2; exit 1; }
 
+# E0b/E1b — the REAL 20260926 migration failing late (a conflicting function,
+# after the precondition passed and after many objects were created), judged by
+# the whole-schema fingerprint. E0b (plain psql) is the CONTROL: it must leave
+# the fingerprint changed, or the fingerprint checker is blind (no false PASS).
+late_db() {  # name → a database migrated up to 20260925 plus the conflicting function
+  dispo_db "$1"; local d="$DISPO_LAST"
+  run -d "$d" -f "$ROOT/supabase/tests/support/supabase_stubs.sql" >/dev/null
+  for m in $(ls "$ROOT"/supabase/migrations/*.sql | sort); do
+    [[ "$(basename "$m")" < "20260926000000" ]] && run -d "$d" -1 -c "SET search_path = public, extensions;" -f "$m" >/dev/null
+  done
+  run -d "$d" -c "CREATE FUNCTION public.aef_purge(p jsonb) RETURNS int LANGUAGE sql AS 'SELECT 1';" >/dev/null
+  LATE_DB="$d"
+}
+late_db e0b; fpb="$(catalog_fp "$LATE_DB")"
+run -d "$LATE_DB" -c "SET search_path = public, extensions;" -f "$ROOT/supabase/migrations/20260926000000_aef_hardening.sql" >/dev/null 2>&1 && { echo "E0b: the late failure did not happen" >&2; exit 1; }
+if [[ "$(catalog_fp "$LATE_DB")" == "$fpb" ]]; then
+  echo "CONTROL FAILED: the schema fingerprint did not see the partial DDL of a non-atomic apply" >&2; exit 1
+fi
+echo "EXECUTOR_PSQL_PLAIN_REAL_MIGRATION_LATE_FAILURE: NOT_ATOMIC (fingerprint changed)"
+late_db e1b; fpb="$(catalog_fp "$LATE_DB")"
+run -d "$LATE_DB" -1 -c "SET search_path = public, extensions;" -f "$ROOT/supabase/migrations/20260926000000_aef_hardening.sql" >/dev/null 2>&1 && { echo "E1b: the late failure did not happen" >&2; exit 1; }
+[[ "$(catalog_fp "$LATE_DB")" == "$fpb" ]] || { echo "E1b: psql --single-transaction left partial DDL of the real migration" >&2; exit 1; }
+echo "EXECUTOR_PSQL_SINGLE_TRANSACTION_REAL_MIGRATION_LATE_FAILURE: ATOMIC"
+
 if [[ -n "${SUPABASE_CLI:-}" ]]; then
   ver="$($SUPABASE_CLI --version 2>/dev/null | tail -1)"
   # E2 — CLI, single failing file.
   dispo_db e2; E2="$DISPO_LAST"
+  fp2="$(catalog_fp "$E2")"
   mkdir -p "$WORK/e2/supabase/migrations"
   printf '%s' "$CANARY" > "$WORK/e2/supabase/migrations/20990101000001_canary_fail.sql"
   if (cd "$WORK/e2" && echo y | $SUPABASE_CLI db push --db-url "$(url "$E2")" --workdir . --yes >"$WORK/e2.log" 2>&1); then
     echo "E2: db push reported success for a failing migration" >&2; cat "$WORK/e2.log" >&2; exit 1
   fi
   r2="$(verdict "EXECUTOR_SUPABASE_CLI_${ver}" "$E2")"; echo "$r2"
-  hist="$(run -d "$E2" -tA -c "SELECT count(*) FROM supabase_migrations.schema_migrations WHERE version = '20990101000001';" 2>/dev/null || echo 0)"
+  hist="$(hist_rows "$E2" 20990101000001)"
   echo "EXECUTOR_SUPABASE_CLI_${ver}_HISTORY_ROW_AFTER_FAILURE: $hist"
+  expect "${r2##*: }" "ATOMIC (no no no)" "E2 canary"
+  expect "$hist" "0" "E2 history row"
+  expect "$(catalog_fp "$E2")" "$fp2" "E2 public-schema fingerprint"
   # E3 — CLI, two files: the first succeeds, the second fails.
   dispo_db e3; E3="$DISPO_LAST"
   mkdir -p "$WORK/e3/supabase/migrations"
@@ -88,7 +128,9 @@ if [[ -n "${SUPABASE_CLI:-}" ]]; then
   ok="$(run -d "$E3" -tA -c "SELECT CASE WHEN to_regclass('public.canary_ok') IS NULL THEN 'no' ELSE 'yes' END;")"
   rows="$(run -d "$E3" -tA -c "SELECT string_agg(version || ':' || name || ':' || coalesce(array_length(statements, 1), 0), ',' ORDER BY version) FROM supabase_migrations.schema_migrations;")"
   r3="$(verdict "EXECUTOR_SUPABASE_CLI_${ver}_MULTI_FILE" "$E3")"; echo "$r3; first file applied: $ok; history: $rows"
-  [[ "$r2" == *": ATOMIC"* && "$hist" == "0" ]] || echo "EXECUTOR_SUPABASE_CLI: NOT_ATOMIC — production deploy must stay BLOCKED for this executor" >&2
+  expect "${r3##*: }" "ATOMIC (no no no)" "E3 failing file"
+  expect "$ok" "yes" "E3 first file applied"
+  expect "$rows" "20990101000000:canary_ok:1" "E3 history"
 
   # E4 — CLI with a REAL migration (20260926, DO blocks, ~1300 lines) failing
   # late (a conflicting function): nothing of it may survive.
@@ -100,11 +142,13 @@ if [[ -n "${SUPABASE_CLI:-}" ]]; then
   run -d "$E4" -c "CREATE FUNCTION public.aef_purge(p jsonb) RETURNS int LANGUAGE sql AS 'SELECT 1';" >/dev/null
   mkdir -p "$WORK/e4/supabase/migrations"
   cp "$ROOT/supabase/migrations/20260926000000_aef_hardening.sql" "$WORK/e4/supabase/migrations/"
-  before="$(run -d "$E4" -tA -c "SELECT count(*) FROM pg_class WHERE relnamespace = 'public'::regnamespace;")"
+  before="$(catalog_fp "$E4")"
   (cd "$WORK/e4" && echo y | $SUPABASE_CLI db push --db-url "$(url "$E4")" --workdir . --yes --include-all >"$WORK/e4.log" 2>&1) && { echo "E4: expected failure" >&2; exit 1; }
-  after="$(run -d "$E4" -tA -c "SELECT count(*) FROM pg_class WHERE relnamespace = 'public'::regnamespace;")"
-  gone="$(run -d "$E4" -tA -c "SELECT to_regclass('public.aef_retention_policy') IS NULL;")"
-  if [[ "$before" == "$after" && "$gone" == "t" ]]; then echo "EXECUTOR_SUPABASE_CLI_${ver}_REAL_MIGRATION_LATE_FAILURE: ATOMIC"; else echo "EXECUTOR_SUPABASE_CLI_${ver}_REAL_MIGRATION_LATE_FAILURE: NOT_ATOMIC ($before -> $after)"; fi
+  after="$(catalog_fp "$E4")"
+  h4="$(hist_rows "$E4" 20260926000000)"
+  if [[ "$before" == "$after" && "$h4" == "0" ]]; then r4="ATOMIC"; else r4="NOT_ATOMIC (fingerprint ${before:0:8} -> ${after:0:8}, history rows $h4)"; fi
+  echo "EXECUTOR_SUPABASE_CLI_${ver}_REAL_MIGRATION_LATE_FAILURE: $r4"
+  expect "$r4" "ATOMIC" "E4 real migration late failure"
 
   # E5 — deploy-path rehearsal: a production-like history (apply-time
   # versions, as observed read-only in production) + CLI push of the chain.
@@ -121,13 +165,20 @@ if [[ -n "${SUPABASE_CLI:-}" ]]; then
   cp "$ROOT"/supabase/migrations/2026092[3-7]*.sql "$WORK/e5/supabase/migrations/"
   if (cd "$WORK/e5" && echo y | $SUPABASE_CLI db push --db-url "$(url "$E5")" --workdir . --yes >"$WORK/e5.log" 2>&1); then
     echo "EXECUTOR_SUPABASE_CLI_${ver}_PRODUCTION_LIKE_HISTORY: APPLIED"
+    EVIDENCE_FAIL+=("E5: the CLI applied onto a production-like history (evidence changed — re-evaluate the executor decision)")
   else
-    echo "EXECUTOR_SUPABASE_CLI_${ver}_PRODUCTION_LIKE_HISTORY: REFUSED — $(tr -d '' < "$WORK/e5.log" | grep -iE 'error|remote|version|repair' | head -2 | tr '
+    grep -q "DbPushMissingLocalError" "$WORK/e5.log" || EVIDENCE_FAIL+=("E5: refused for an unexpected reason")
+    echo "EXECUTOR_SUPABASE_CLI_${ver}_PRODUCTION_LIKE_HISTORY: REFUSED — $(tr -d '
+' < "$WORK/e5.log" | grep -iE 'error|remote|version|repair' | head -2 | tr '
 ' ' ')"
   fi
 else
   echo "EXECUTOR_SUPABASE_CLI: NOT_RUN (SUPABASE_CLI not set)"
 fi
 echo "EXECUTOR_SUPABASE_MCP_APPLY_MIGRATION: NOT_VERIFIED (remote-only executor; never exercised against production)"
+if [[ ${#EVIDENCE_FAIL[@]} -gt 0 ]]; then
+  printf 'EXECUTOR_EVIDENCE_CHANGED: %s\n' "${EVIDENCE_FAIL[@]}" >&2
+  exit 1
+fi
 rm -rf "$WORK"
 echo "EXECUTOR_TRANSACTION_EXPERIMENT: DONE"

@@ -103,8 +103,6 @@ jobs:
           PGUSER: postgres
           PGPASSWORD: ci-disposable-only
           DENO: deno
-          # Executor experiment only (local disposable DB); pinned CLI version.
-          SUPABASE_CLI: npx -y supabase@2.118.0
         run: |
           set -o pipefail
           bash scripts/ci/run_disposable_db_tests.sh | tee db.log
@@ -131,6 +129,8 @@ jobs:
           grep -qx 'DISPOSABLE_CLEANUP_TESTS: PASS' db.log
           grep -q 'EXECUTOR_PSQL_PLAIN: NOT_ATOMIC' db.log
           grep -q 'EXECUTOR_PSQL_SINGLE_TRANSACTION: ATOMIC' db.log
+          grep -qx 'EXECUTOR_PSQL_PLAIN_REAL_MIGRATION_LATE_FAILURE: NOT_ATOMIC (fingerprint changed)' db.log
+          grep -qx 'EXECUTOR_PSQL_SINGLE_TRANSACTION_REAL_MIGRATION_LATE_FAILURE: ATOMIC' db.log
           grep -qx 'EXECUTOR_TRANSACTION_EXPERIMENT: DONE' db.log
 
   contract-and-aef-ci:
