@@ -9,6 +9,8 @@ on:
       - 'aef/**'
       - 'supabase/migrations/**'
       - 'supabase/tests/**'
+      - 'supabase/preflight/**'
+      - 'supabase/rollbacks/**'
       - 'scripts/ci/run_disposable_db_tests.sh'
   workflow_dispatch:
 
@@ -110,6 +112,12 @@ jobs:
           grep -qx 'AEF_HARDENING_ROLLBACK_REFUSAL: PASS' db.log
           grep -qx 'AEF_LEGACY: PASS' db.log
           grep -qx 'AEF_LEGACY: DOWN_OK' db.log
+          grep -qx 'AEF_SEQUENCE: PASS' db.log
+          grep -qx 'AEF_SEQUENCE: EXPOSED_BEFORE_FIX' db.log
+          grep -qx 'AEF_FAIL_FAST: PASS' db.log
+          grep -qx 'AEF_DEPLOY_PREFLIGHT_TESTS: PASS' db.log
+          grep -qx 'AEF_DEFINER_BOUNDARY: PASS' db.log
+          grep -qx 'AEF_MIGRATION_PRECONDITIONS: PASS' db.log
 
   contract-and-aef-ci:
     name: AEF contract + kernel CI (IV-AEF-FOUNDATION-01)
