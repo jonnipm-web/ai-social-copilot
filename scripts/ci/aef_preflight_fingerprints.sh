@@ -23,7 +23,6 @@ case "$HOST" in
 esac
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 PREFLIGHT="$ROOT/supabase/preflight/aef_deploy_preflight.sql"
-DB="aef_fp_$$"
 run() { PGOPTIONS="-c client_min_messages=warning" "$PSQL" -h "$HOST" -v ON_ERROR_STOP=1 -q "$@"; }
 apply() { run -d "$DB" -1 -c "SET search_path = public, extensions;" -f "$1" >/dev/null; }
 
@@ -33,9 +32,11 @@ apply() { run -d "$DB" -1 -c "SET search_path = public, extensions;" -f "$1" >/d
 if [[ "$(run -d postgres -tA -c "SELECT (SELECT count(*) FROM pg_roles WHERE rolname = 'authenticator') + (SELECT count(*) FROM pg_namespace WHERE nspname IN ('storage', 'supabase_migrations'));")" != "0" ]]; then
   echo "refusing: the target looks like a real Supabase project" >&2; exit 2
 fi
-# CREATE fails (and nothing is dropped: the trap is set after it) if the name exists.
-run -d postgres -c "CREATE DATABASE $DB;"
-trap 'run -d postgres -c "DROP DATABASE IF EXISTS $DB;" >/dev/null 2>&1 || true' EXIT
+# F-04: unique, marked, ownership-checked disposable database.
+# shellcheck source=lib_disposable.sh
+source "$ROOT/scripts/ci/lib_disposable.sh"
+dispo_init aeffp
+dispo_db fp; DB="$DISPO_LAST"
 
 FP_SQL="$(awk '/fp_sql constant text := \$fp\$/{f=1; next} /^ *\$fp\$;/{f=0} f' "$PREFLIGHT")"
 [[ -n "$FP_SQL" ]] || { echo "fingerprint query not found in the preflight" >&2; exit 1; }
