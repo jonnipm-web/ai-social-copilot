@@ -29,6 +29,8 @@ fresh; expect_pass "same name + same content"
 fresh; printf '\n-- a harmless-looking edit\n' >> "$WORK/m/$LAB_FILE"; expect_fail "same name + changed content (LAB)" "content changed for LAB migration $LAB_FILE"
 fresh; sed -i 's/SECURITY DEFINER/SECURITY INVOKER/' "$WORK/m/$APPLIED_FILE"; expect_fail "same name + changed content (APPLIED)" "content changed for APPLIED_PRODUCTION migration $APPLIED_FILE"
 fresh; sed -i 's/$/\r/' "$WORK/m/$LAB_FILE"; expect_pass "CRLF-only difference is canonicalized"
+# Codex RG3-01: a standalone CR INSERTED inside content (nothing else changed) is a change.
+fresh; sed -i '0,/SECURITY DEFINER/s//SECURITY \rDEFINER/' "$WORK/m/$APPLIED_FILE"; expect_fail "standalone CR inside a frozen migration" "content changed for APPLIED_PRODUCTION migration $APPLIED_FILE"
 fresh; mv "$WORK/m/$LAB_FILE" "$WORK/m/20260925000000_aef_persistence_v2.sql"; expect_fail "renamed migration" "manifest entry without file (deleted or renamed): $LAB_FILE"
 fresh; rm "$WORK/m/$APPLIED_FILE"; expect_fail "deleted migration" "manifest entry without file"
 fresh; rm "$WORK/manifest.tsv"; expect_fail "missing manifest" "manifest missing"

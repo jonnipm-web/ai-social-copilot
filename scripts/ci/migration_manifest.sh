@@ -6,8 +6,8 @@
 #   APPLIED_PRODUCTION  recorded in the production history (read-only
 #                       preflight evidence) — its content is FROZEN;
 #   LAB                 not applied anywhere outside disposable databases.
-# Canonical content = the file's bytes with CRLF normalized to LF (so a
-# Windows checkout and CI hash the same), nothing else.
+# Canonical content = the file's bytes with CRLF line endings normalized to LF
+# (so a Windows checkout and CI hash the same), nothing else.
 #
 #   --check (default)  fail closed on: missing/unreadable manifest, malformed
 #                      or duplicate row, unknown status, a manifest row whose
@@ -31,7 +31,9 @@ MANIFEST="${MANIFEST:-$ROOT/supabase/migration_manifest.tsv}"
 MODE="${1:---check}"
 
 fail() { echo "MIGRATION_MANIFEST: FAIL — $*" >&2; exit 1; }
-digest() { tr -d '\r' < "$1" | sha256sum | cut -d' ' -f1; }
+# Only a CR immediately before the end of a line is dropped (CRLF -> LF); a
+# standalone CR anywhere else is content and changes the digest (Codex RG3-01).
+digest() { sed 's/\r$//' "$1" | sha256sum | cut -d' ' -f1; }
 
 declare -A DIGEST=() STATUS=()
 ORDER=()
