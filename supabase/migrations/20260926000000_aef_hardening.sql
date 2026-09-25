@@ -17,6 +17,36 @@
 --   * aef__view / verification: reconciliations, checkpoints, coalesced counts.
 -- Idempotent; rollback: supabase/rollbacks/20260926000000_aef_hardening.down.sql.
 
+-- ── preconditions (IV-AEF-PRE-RUNTIME-CLOSURE-01, P05) ─────────────────
+-- Fail fast, before creating anything, when an object this migration
+-- depends on is missing: the persistence layer (20260925000000),
+-- public.subject_roles (20260923000000; used by the operator-reconciliation
+-- authority check), auth.users (erasure / operator account), and
+-- pg_catalog.hashtextextended (subject advisory lock).
+DO $$
+DECLARE v_missing text[] := ARRAY[]::text[];
+BEGIN
+  IF to_regclass('public.aef_operations') IS NULL OR to_regclass('public.aef_receipts') IS NULL
+     OR to_regclass('public.aef_audit_events') IS NULL OR to_regprocedure('public.aef_register_operation(jsonb)') IS NULL THEN
+    v_missing := v_missing || '20260925000000_aef_persistence objects'::text;
+  END IF;
+  IF (SELECT count(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'subject_roles'
+       AND column_name IN ('subject_type', 'subject_id', 'role')) <> 3 THEN
+    v_missing := v_missing || 'public.subject_roles(subject_type, subject_id, role) from 20260923000000_entitlement_subject_roles'::text;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'auth' AND table_name = 'users'
+                  AND column_name = 'id' AND data_type = 'uuid') THEN
+    v_missing := v_missing || 'auth.users.id uuid'::text;
+  END IF;
+  IF to_regprocedure('pg_catalog.hashtextextended(text, bigint)') IS NULL THEN
+    v_missing := v_missing || 'pg_catalog.hashtextextended'::text;
+  END IF;
+  IF array_length(v_missing, 1) > 0 THEN
+    RAISE EXCEPTION 'AEF_PRECONDITION (20260926000000_aef_hardening): missing: %', array_to_string(v_missing, ', ')
+      USING ERRCODE = 'AE010';
+  END IF;
+END $$;
+
 -- ── new tables ──────────────────────────────────────────────────────────
 -- Retention policy: one row, owner-managed (no RPC can change it). Values are
 -- PROVISIONAL, conservative defaults pending an Owner/compliance decision

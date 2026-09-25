@@ -24,6 +24,37 @@
 --
 -- Idempotent: safe to re-apply (the CI runner re-applies it).
 
+-- ── preconditions (IV-AEF-PRE-RUNTIME-CLOSURE-01, P05) ─────────────────
+-- Fail fast, before creating anything, when an object this migration
+-- depends on is missing or has an incompatible shape. Dependencies are the
+-- objects actually referenced (not the file numbering): public.projects
+-- (resource ownership), the API roles, pg_catalog.sha256 / gen_random_uuid.
+DO $$
+DECLARE v_missing text[] := ARRAY[]::text[];
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'projects'
+                  AND column_name = 'id' AND data_type = 'uuid') THEN
+    v_missing := v_missing || 'public.projects.id uuid'::text;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'projects'
+                  AND column_name = 'user_id' AND data_type = 'uuid' AND is_nullable = 'NO') THEN
+    v_missing := v_missing || 'public.projects.user_id uuid NOT NULL'::text;
+  END IF;
+  IF (SELECT count(*) FROM pg_roles WHERE rolname IN ('anon', 'authenticated', 'service_role')) <> 3 THEN
+    v_missing := v_missing || 'roles anon/authenticated/service_role'::text;
+  END IF;
+  IF to_regprocedure('pg_catalog.sha256(bytea)') IS NULL OR to_regprocedure('pg_catalog.gen_random_uuid()') IS NULL THEN
+    v_missing := v_missing || 'pg_catalog.sha256 / gen_random_uuid'::text;
+  END IF;
+  IF to_regprocedure('auth.uid()') IS NULL THEN
+    v_missing := v_missing || 'auth.uid()'::text;
+  END IF;
+  IF array_length(v_missing, 1) > 0 THEN
+    RAISE EXCEPTION 'AEF_PRECONDITION (20260925000000_aef_persistence): missing or incompatible: %', array_to_string(v_missing, ', ')
+      USING ERRCODE = 'AE010';
+  END IF;
+END $$;
+
 -- ── helpers ─────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.aef__sha256(p text) RETURNS text
 LANGUAGE sql IMMUTABLE STRICT SET search_path = pg_catalog, pg_temp AS $$
