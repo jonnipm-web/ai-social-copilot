@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/ive_exclusion_region.dart';
 import '../domain/dossier_models.dart';
 import '../providers/impact_providers.dart';
 import 'impact_widgets.dart';
@@ -69,7 +70,9 @@ class ImpactExportPanel extends ConsumerWidget {
         ImpactLine(t.impactExportPrivacy, icon: Icons.lock_outline, muted: true),
         ImpactLine(t.impactExportFormats, muted: true),
         const SizedBox(height: 8),
-        Wrap(spacing: 8, runSpacing: 8, children: [
+        // I6 (§20): primary, approval-like actions — the floating IVE avatar
+        // must never rest on them (existing exclusion-region contract).
+        IveExclusionRegion(child: Wrap(spacing: 8, runSpacing: 8, children: [
           FilledButton.icon(
             onPressed: st.busy ? null : () => _confirmAndExport(context, ref),
             icon: const Icon(Icons.photo_camera_outlined),
@@ -81,7 +84,7 @@ class ImpactExportPanel extends ConsumerWidget {
               icon: const Icon(Icons.verified_outlined),
               label: Text(t.impactVerifySnapshot),
             ),
-        ]),
+        ])),
         if (st.busy) const Padding(padding: EdgeInsets.only(top: 12), child: LinearProgressIndicator()),
         if (st.error != null)
           Padding(
@@ -104,7 +107,7 @@ class ImpactExportPanel extends ConsumerWidget {
           SelectableText(snap.integrity.contentHash, style: mono),
           ImpactLine(t.impactHashNotTruth, icon: Icons.info_outline, muted: true),
           const SizedBox(height: 8),
-          Wrap(spacing: 8, runSpacing: 8, children: [
+          IveExclusionRegion(child: Wrap(spacing: 8, runSpacing: 8, children: [
             OutlinedButton.icon(
               onPressed: () => _copy(context, snap.documentJson),
               icon: const Icon(Icons.data_object),
@@ -115,7 +118,7 @@ class ImpactExportPanel extends ConsumerWidget {
               icon: const Icon(Icons.notes),
               label: Text(t.impactCopyText),
             ),
-          ]),
+          ])),
         ],
         if (st.verify != null) ...[
           const SizedBox(height: 12),

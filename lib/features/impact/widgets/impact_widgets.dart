@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/profile_provider.dart';
+import '../../../shared/widgets/ive_exclusion_region.dart';
 import '../data/impact_lab_api.dart';
 
 /// IV-IMPACT-I5 — shared building blocks of the Impact dossier UI.
@@ -234,7 +235,7 @@ class ImpactErrorView extends StatelessWidget {
               Text(impactErrorText(t, error), textAlign: TextAlign.center),
               if (retryable && onRetry != null) ...[
                 const SizedBox(height: 12),
-                OutlinedButton(onPressed: onRetry, child: Text(t.impactRetry)),
+                IveExclusionRegion(child: OutlinedButton(onPressed: onRetry, child: Text(t.impactRetry))),
               ],
             ],
           ),

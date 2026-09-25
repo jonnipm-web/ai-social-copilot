@@ -2,6 +2,7 @@ import 'package:ai_social_copilot/features/impact/data/impact_lab_api.dart';
 import 'package:ai_social_copilot/features/impact/screens/impact_claim_screen.dart';
 import 'package:ai_social_copilot/features/impact/screens/impact_dossier_screen.dart';
 import 'package:ai_social_copilot/features/impact/screens/impact_home_screen.dart';
+import 'package:ai_social_copilot/shared/widgets/ive_exclusion_region.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -523,6 +524,29 @@ void main() {
       final identity = find.ancestor(of: find.text('Organization identity'), matching: find.byType(Card));
       expect(find.descendant(of: identity, matching: find.textContaining('not an assessment of the organization')), findsOneWidget);
       expect(find.byIcon(Icons.verified_outlined), findsNothing, reason: 'no "verified organization" badge');
+    });
+  });
+
+  group('UI-IVE overlay exclusion (I6 §20)', () {
+    bool excluded(WidgetTester tester, Finder f) {
+      final target = tester.getRect(f);
+      return iveExclusionRegionsNotifier.value.any((r) => r.contains(target.center));
+    }
+
+    testWidgets('UI-IVE-01 export / verify / copy / show more / retry are exclusion regions for the IVE avatar', (tester) async {
+      final tr = FakeImpactTransport(dossier: largeDossier(30), export: fixture('export_confirmed_en'), verify: fixture('verify_current'));
+      await pumpImpact(tester, dossierScreen, transport: tr, size: const Size(390, 20000));
+      expect(excluded(tester, find.widgetWithText(FilledButton, 'Issue snapshot')), isTrue);
+      expect(excluded(tester, find.widgetWithText(TextButton, 'Show more (10)')), isTrue);
+      await tester.tap(find.widgetWithText(FilledButton, 'Issue snapshot'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Issue'));
+      await tester.pumpAndSettle();
+      for (final label in ['Verify snapshot', 'Copy JSON', 'Copy text']) {
+        expect(excluded(tester, find.text(label)), isTrue, reason: label);
+      }
+      await pumpImpact(tester, dossierScreen, transport: FakeImpactTransport(error: const ImpactApiException(ImpactErrorKind.network)));
+      expect(excluded(tester, find.text('Try again')), isTrue);
     });
   });
 

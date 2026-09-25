@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/ui/breakpoints.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/ive_exclusion_region.dart';
 import '../data/impact_lab_api.dart';
 import '../domain/dossier_models.dart';
 import '../providers/impact_providers.dart';
@@ -310,9 +311,11 @@ class _ClaimsSectionState extends State<_ClaimsSection> {
         if (remaining > 0)
           Align(
             alignment: Alignment.centerLeft,
-            child: TextButton(
-              onPressed: () => setState(() => _shown += pageSize),
-              child: Text(t.impactShowMore(remaining)),
+            child: IveExclusionRegion(
+              child: TextButton(
+                onPressed: () => setState(() => _shown += pageSize),
+                child: Text(t.impactShowMore(remaining)),
+              ),
             ),
           ),
         const SizedBox(height: 4),
