@@ -10,9 +10,15 @@ approved by Agente Martins **and** Paulo.
 |---|---|---|---|
 | 1 | `20260923000000_entitlement_subject_roles.sql` | yes (AEF hardening depends on it) | needs `profiles(id, role)` |
 | 2 | `20260924000000_ive_memory_governance.sql` | no (independent of AEF) | may be applied in the same window, or in its own mission |
-| 3 | `20260925000000_aef_persistence.sql` | yes | fails fast (`AEF_PRECONDITION`) if its dependencies are missing |
-| 4 | `20260926000000_aef_hardening.sql` | yes | fails fast without `subject_roles` |
-| 5 | `20260927000000_aef_sequence_privileges.sql` | yes, **immediately after 3/4** | closes P03; postcondition fails the migration if any API role keeps access |
+| 3 | `20260925000000_aef_persistence.sql` | yes | fails fast (`AEF_PRECONDITION`) if its dependencies are missing; revokes its own sequence (no exposure window) |
+| 4 | `20260926000000_aef_hardening.sql` | yes | fails fast without `subject_roles` or without the complete persistence layer |
+| 5 | `20260927000000_aef_sequence_privileges.sql` | yes, after 3 (before or after 4) | re-asserts P03; the postcondition fails the migration if any API role or PUBLIC keeps access |
+
+**Every file is applied in a single transaction.** Examples: `psql -1 -f`, or an
+executor that wraps each file in a transaction. The Lab proves atomicity with
+`psql --single-transaction` (late-failure injection). The transactional
+behaviour of the Supabase CLI / MCP `apply_migration` is **NOT_VERIFIED** in this
+mission and must be confirmed before a deploy, or the deploy must use `psql -1`.
 
 Rollbacks exist in `supabase/rollbacks/`. The rollback of `20260927` is a verified
 no-op by design. The hardening rollback refuses to run once evidence exists (see
@@ -21,8 +27,9 @@ no-op by design. The hardening rollback refuses to run once evidence exists (see
 ## Runbook (future, gated)
 
 1. **PRECHECK**: run `supabase/preflight/aef_deploy_preflight.sql` against the
-   target. It is READ-ONLY, runs inside `BEGIN TRANSACTION READ ONLY … ROLLBACK`,
-   and reads metadata only. The expected result is
+   target. Run it only as `psql -v ON_ERROR_STOP=1 -f`, with no wrapper that adds
+   statements. It is READ-ONLY, runs inside `BEGIN TRANSACTION READ ONLY …
+   ROLLBACK`, and reads metadata only. The expected result is
    `AEF_DEPLOY_PREFLIGHT: PASS — … remaining, in order: entitlement_subject_roles -> ive_memory_governance -> aef_persistence -> aef_hardening -> aef_sequence_privileges`.
    Any `FAIL` → STOP.
 2. **RECONCILIATION**: re-confirm `AEF_PRODUCTION_MIGRATION_RECONCILIATION.md`.
@@ -32,8 +39,10 @@ no-op by design. The hardening rollback refuses to run once evidence exists (see
    NOT NULL)`, `auth.users(id uuid)`, `sha256`, `gen_random_uuid` and
    `hashtextextended`. The preflight checks these, and the migrations re-check
    them (fail fast).
-4. **ORDER**: apply strictly in manifest order, as `postgres`, in one window. Never
-   apply AEF alone, and never stop between 3 and 5 (P03 exposure window).
+4. **ORDER**: apply in manifest order, as `postgres`, one transaction per file,
+   in one window. Never apply AEF alone. If a rewind of the audit sequence is
+   ever suspected, the owner runs
+   `setval('public.aef_audit_events_id_seq', max(id))` after `20260927`.
 5. **PRIVILEGE**: after applying, re-run the preflight. The expected result is
    `PASS … remaining, in order: (none)`. Then run the read-only catalog checks
    from `AEF_PRODUCTION_PRIVILEGE_PREFLIGHT.md`: no API role privilege on AEF
@@ -50,8 +59,10 @@ no-op by design. The hardening rollback refuses to run once evidence exists (see
 - A predecessor is missing, or the history and the schema disagree
   (history without objects, objects without history).
 - Stray `aef_*` objects exist without `aef_persistence` in the history.
-- The sequence defaults are permissive and the plan does not include `20260927`
-  right after `20260925`.
+- The sequence defaults are permissive and the plan does not include `20260927`.
+- Any AEF sequence is exposed, or the privilege contract of an existing AEF
+  install is violated (the preflight reports these).
+- The migration executor cannot guarantee one transaction per file.
 - Any migration raises `AEF_PRECONDITION` (AE010) or `AEF_POSTCONDITION` (AE011).
 - The migration history appears to need a manual repair. Never insert, delete or
   rename rows in `supabase_migrations.schema_migrations` to "make it match".

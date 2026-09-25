@@ -20,7 +20,10 @@ creates. The version is not used. All 16 history rows map 1:1 by name to repo
 files, in the same order.
 
 Status legend:
-- MATCHED: name in history **and** its objects present.
+- MATCHED: name in history **and** its functional markers present (key tables,
+  columns and function signatures read from the catalog). This is not a full
+  definition diff: bodies, policies and grants of the 16 predecessors were not
+  compared (Codex G3-06; recorded as a residual).
 - FUNCTIONALLY_PRESENT: objects present without a history row.
 - NOT_PRESENT: neither.
 - DRIFTED: history and schema disagree.
@@ -48,9 +51,9 @@ Status legend:
 | 20260920000001_opportunity_knowledge_links | opportunity knowledge links | baseline | 20260917205611 | yes | none | — | none |
 | **20260923000000_entitlement_subject_roles** | `subject_roles` (entitlement) | `profiles(id, role)`, `auth.uid()` | — | **NOT_PRESENT** | none (consistent absence) | AEF operator reconciliation needs it | apply **before** aef_hardening, in the owner-approved change window |
 | **20260924000000_ive_memory_governance** | business_memory scope/status/origin/dedup_key/expires_at | `business_memory` | — | **NOT_PRESENT** | none | independent of AEF | may be applied in the same window; not required by AEF |
-| **20260925000000_aef_persistence** | AEF tables, 13 RPCs, audit chain | `projects(id uuid, user_id uuid NOT NULL)`, anon/authenticated/service_role, `sha256`, `gen_random_uuid`, `auth.uid()` | — | **NOT_PRESENT** (0 `aef_*` objects) | none | exposes the audit sequence (P03) until `20260927` follows | apply only as part of the chain, **immediately followed by 20260927** |
+| **20260925000000_aef_persistence** | AEF tables, 10 RPCs, audit chain; revokes its own sequence | `projects(id uuid, user_id uuid NOT NULL)`, anon/authenticated/service_role, `sha256(bytea)->bytea`, `gen_random_uuid()->uuid`, `auth.uid()->uuid` | — | **NOT_PRESENT** (0 `aef_*` objects) | none | none after the fix (it revokes its own sequence) | apply as part of the chain |
 | **20260926000000_aef_hardening** | retention, erasure, coalescing, reconciliation, receipt 1.1 | aef_persistence, `subject_roles`, `auth.users(id uuid)`, `hashtextextended` | — | **NOT_PRESENT** | none | fails fast without `subject_roles` (P05) | apply after 20260923 and 20260925 |
-| **20260927000000_aef_sequence_privileges** | REVOKE on AEF sequences (P03) | aef_persistence | — | **NOT_PRESENT** | none | — | apply immediately after 20260925/20260926 |
+| **20260927000000_aef_sequence_privileges** | re-asserts the AEF sequence contract with a postcondition (P03) | aef_persistence | — | **NOT_PRESENT** | none | — | apply after 20260925 (before or after 20260926) |
 
 Summary: **16 MATCHED, 5 NOT_PRESENT, 0 FUNCTIONALLY_PRESENT, 0 DRIFTED,
 0 UNKNOWN.**
@@ -74,9 +77,21 @@ gen_random_uuid + auth.uid ────► 20260925 aef_persistence ─┬──
   with an `AEF_PRECONDITION` guard (`AE010`) that fails **before creating anything**
   if a real dependency is missing. This is tested in the runner as
   `AEF_FAIL_FAST: PASS`, including "no partial state after a failed precondition".
-- Guards were added to `20260925` and `20260926` (option B). These migrations are
-  Lab-only and have been applied nowhere, so editing them changes no recorded
-  history. `20260927` carries its own guard.
+- Guards were added to `20260923`, `20260924`, `20260925` and `20260926`
+  (option B; Codex G2-01/02 extended it to 23/24). These migrations are Lab-only
+  and have been applied nowhere, so editing them changes no recorded history.
+  `20260927` carries its own guard. The guards check shapes, not only existence
+  (Codex G2-03):
+  - column types and nullability;
+  - function return types (`auth.uid() -> uuid`, `sha256 -> bytea`,
+    `gen_random_uuid -> uuid`, `hashtextextended -> bigint`);
+  - for `20260926`, the **complete** persistence set (5 tables, 10 RPCs).
+- **Atomicity** (Codex G2-05): the runbook requires each file to be applied in a
+  single transaction. The runner applies every migration with
+  `psql --single-transaction`. A late failure injected into `20260926` (a
+  conflicting function, raised after the precondition passed and after many
+  objects were created) leaves zero residual objects: relations, functions,
+  triggers and policies were checked.
 
 ## Guardrail
 
@@ -89,17 +104,67 @@ encodes this matrix:
 - no stray `aef_*` objects;
 - P03 sequence exposure.
 
+After Codex Gate 3 the preflight also:
+- rejects NULL or duplicate history names;
+- uses NULL-safe membership;
+- treats a chain migration as present only when **all** its structural markers
+  exist, and FAILs on partial installs;
+- checks the full AEF privilege contract of an existing install: SECURITY
+  DEFINER RPCs, pinned `search_path`, no EXECUTE for anon, authenticated or
+  PUBLIC, service_role EXECUTE exactly on the 13 RPCs, and no table writes for
+  API roles;
+- checks every AEF sequence for USAGE, SELECT and UPDATE for each API role and
+  for PUBLIC;
+- checks recorded version order against the dependencies;
+- converts any unexpected error into `FAIL` (never a silent PASS).
+
 It is tested against simulated production states in the runner
-(`AEF_DEPLOY_PREFLIGHT_TESTS: PASS`):
-- production-like baseline → PASS with the full chain remaining;
-- missing predecessor → FAIL;
-- history row without objects → FAIL;
-- stray `aef_` object → FAIL;
-- `projects.user_id` nullable → FAIL;
-- chain stopped before `20260927` → FAIL (exposed sequence);
-- history claiming `20260927` while the sequence is exposed → FAIL;
-- full chain → PASS "(none)";
-- hardening in the history without entitlement → FAIL (order).
+(`AEF_DEPLOY_PREFLIGHT_TESTS: PASS`), 29 scenarios:
+- **History:** no history table; malformed history table (unexpected error);
+  empty history; production-like baseline → PASS with the full chain remaining;
+  missing predecessor; NULL name; duplicate name; history row without objects;
+  stray `aef_` object.
+- **Schema drift:** `projects.user_id` nullable; partial persistence; partial
+  hardening.
+- **Chain states that PASS:** chain without `20260927` → PASS (25 revokes
+  itself).
+- **Exposed sequences:** pre-fix exposed sequence; PUBLIC SELECT; extra exposed
+  `aef_` sequence; non-prefixed AEF-owned sequence.
+- **Function contract:** RPC made SECURITY INVOKER; unpinned search_path; RPC
+  executable by anon; helper executable by service_role.
+- **Table writes:** service_role able to write an AEF table.
+- **History inconsistent with state:** history claims `20260927` while a
+  sequence is exposed.
+- **Full chain:** full chain → PASS "(none)"; `20260927` recorded before
+  `20260926` → PASS (accepted order); `20260927` recorded before `20260925` →
+  FAIL.
+- **Order:** hardening recorded before entitlement; hardening without
+  entitlement in the history; restored → PASS.
+
+Every scenario except the PASS cases must FAIL.
+
+## Evidence appendix (read-only queries run on production, 2026-09-25)
+
+Each query ran inside `BEGIN TRANSACTION READ ONLY … ROLLBACK`, via the Supabase
+MCP `execute_sql`, catalog-only:
+
+1. `SELECT version, name FROM supabase_migrations.schema_migrations ORDER BY version`
+   returned 16 rows. The names are exactly the 16 predecessors above, in repo
+   order.
+2. `to_regclass` over the predecessor tables returned all present;
+   `subject_roles` → NULL; every `aef_*` relation or function → 0 rows.
+3. `information_schema.columns` for `projects`, `business_memory` (no
+   scope/status/origin/dedup_key/expires_at) and `auth.users.id` (uuid).
+4. `pg_get_function_identity_arguments` for `try_reserve_ai_quota`,
+   `refund_ai_quota`, `apply_stripe_subscription_state` and
+   `cleanup_old_diagnostic_sessions` matched the repo signatures.
+5. `pg_policies` on `projects`; `diagnostic_events.build_sha` and its 2
+   constraints; `has_function_privilege('anon', cleanup…)` = false.
+
+No user rows were read, and no values other than catalog metadata were
+returned. Residual (Codex G3-04/G3-06): name-keyed reconciliation cannot prove a
+recorded migration's **content**. The `statements` column was not compared, so
+the structural markers are the only equivalence evidence.
 
 ## What was deliberately NOT done
 
