@@ -458,6 +458,20 @@ void main() {
       expect((a.dx - b.dx).abs(), lessThan(1));
     });
 
+    testWidgets('UI-ADV-04 minor-data claim (server withheld): only the fact of withholding is shown', (tester) async {
+      final raw = copyOf(fixture('dossier_confirmed_en'));
+      final claim = ((((raw['data'] as Map)['dossier'] as Map)['content'] as Map)['claims'] as List).first as Map;
+      claim['text'] = null;
+      claim['textWithheld'] = 'MINOR_DATA_RISK';
+      await pumpImpact(tester, dossierScreen, transport: FakeImpactTransport(dossier: raw), size: const Size(390, 9000));
+      expect(find.text('Excerpt withheld for privacy'), findsWidgets);
+      expect(find.textContaining('registered charity'), findsNothing);
+      await tester.tap(find.text('Excerpt withheld for privacy').first);
+      await tester.pumpAndSettle();
+      expect(find.text('Claim detail'), findsOneWidget);
+      expect(find.textContaining('registered charity'), findsNothing);
+    });
+
     testWidgets('UI-ADV-03 a cropped claim card / identity card carries its own scope', (tester) async {
       await openDossier(tester, 'dossier_confirmed_en');
       final cards = find.ancestor(of: find.textContaining('«HopeBridge Foundation is a registered charity.»'), matching: find.byType(Card));
