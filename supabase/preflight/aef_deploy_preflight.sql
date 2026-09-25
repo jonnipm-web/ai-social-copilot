@@ -50,14 +50,77 @@ DECLARE
   i int; n text; r text; p text; s oid; f record;
   exposed text[] := ARRAY[]::text[];
   seq_defaults_permissive boolean;
+  n_versioned bigint;
+  -- Structural fingerprint (Codex G2V-01 / G3V-03): md5 over the ordered
+  -- catalog definition of the given tables (columns with type, nullability and
+  -- default; RLS flags; constraints; indexes; triggers; policies) and of the
+  -- functions matching a name pattern (identity signature, return type,
+  -- SECURITY DEFINER, config, body hash). $3 restricts to the listed columns
+  -- of a pre-existing table (only the part a migration owns is compared).
+  -- Rendered with search_path = pg_catalog so every name is schema-qualified.
+  fp_sql constant text := $fp$
+    SELECT md5(coalesce(string_agg(x, E'\n' ORDER BY x COLLATE "C"), '')) FROM (
+      SELECT 'col|' || c.relname || '|' || a.attname || '|' || format_type(a.atttypid, a.atttypmod) || '|' || a.attnotnull
+             || '|' || coalesce(pg_get_expr(d.adbin, d.adrelid), '') AS x
+        FROM pg_attribute a JOIN pg_class c ON c.oid = a.attrelid JOIN pg_namespace n ON n.oid = c.relnamespace
+        LEFT JOIN pg_attrdef d ON d.adrelid = a.attrelid AND d.adnum = a.attnum
+       WHERE n.nspname = 'public' AND c.relname = ANY ($1) AND a.attnum > 0 AND NOT a.attisdropped
+         AND ($3 IS NULL OR a.attname = ANY ($3))
+      UNION ALL
+      SELECT 'rls|' || c.relname || '|' || c.relrowsecurity || '|' || c.relforcerowsecurity
+        FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+       WHERE n.nspname = 'public' AND c.relname = ANY ($1) AND $3 IS NULL
+      UNION ALL
+      SELECT 'con|' || c.relname || '|' || co.conname || '|' || pg_get_constraintdef(co.oid)
+        FROM pg_constraint co JOIN pg_class c ON c.oid = co.conrelid JOIN pg_namespace n ON n.oid = c.relnamespace
+       WHERE n.nspname = 'public' AND c.relname = ANY ($1) AND $3 IS NULL
+      UNION ALL
+      SELECT 'idx|' || pg_get_indexdef(i.indexrelid)
+        FROM pg_index i JOIN pg_class c ON c.oid = i.indrelid JOIN pg_namespace n ON n.oid = c.relnamespace
+       WHERE n.nspname = 'public' AND c.relname = ANY ($1) AND $3 IS NULL
+      UNION ALL
+      SELECT 'trg|' || c.relname || '|' || t.tgname || '|' || pg_get_triggerdef(t.oid)
+        FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid JOIN pg_namespace n ON n.oid = c.relnamespace
+        JOIN pg_proc tf ON tf.oid = t.tgfoid
+       WHERE n.nspname = 'public' AND c.relname = ANY ($1) AND NOT t.tgisinternal
+         AND ($3 IS NULL OR tf.proname LIKE $2)
+      UNION ALL
+      SELECT 'pol|' || c.relname || '|' || p.polname || '|' || p.polcmd::text || '|' || p.polpermissive
+             || '|' || coalesce(pg_get_expr(p.polqual, p.polrelid), '') || '|' || coalesce(pg_get_expr(p.polwithcheck, p.polrelid), '')
+             || '|' || array_to_string(ARRAY(SELECT CASE WHEN r = 0 THEN 'PUBLIC' ELSE r::regrole::text END
+                                               FROM unnest(p.polroles) r ORDER BY 1), ',')
+        FROM pg_policy p JOIN pg_class c ON c.oid = p.polrelid JOIN pg_namespace n ON n.oid = c.relnamespace
+       WHERE n.nspname = 'public' AND c.relname = ANY ($1)
+      UNION ALL
+      SELECT 'fn|' || p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')|' || format_type(p.prorettype, NULL)
+             || '|' || p.prosecdef || '|' || coalesce(array_to_string(p.proconfig, ','), '') || '|' || md5(p.prosrc)
+        FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+       WHERE n.nspname = 'public' AND p.proname LIKE $2
+    ) s
+  $fp$;
+  -- Expected fingerprints of the repository migrations, per install state.
+  -- Maintained with scripts/ci/aef_preflight_fingerprints.sh; CI fails when a
+  -- migration changes without updating them (fully-applied chain must PASS).
+  fp_entitlement constant text := '04bf99458c7923d3398d0827c1e605e4';
+  fp_memory constant text := 'a1eed2f1f0b718ec53840ec4c3bfa528';
+  fp_aef_persistence constant text := 'eba1c7e15c151e3b69fcc6713a7cb49a';
+  fp_aef_full constant text := '531228c03507d344f47cb28464ca658d';
+  fp text;
+  aef_tables text[];
 BEGIN
  BEGIN
+  -- Deterministic, schema-qualified catalog rendering for the fingerprints
+  -- (a session setting, not a write; reverted with the transaction).
+  PERFORM set_config('search_path', 'pg_catalog', true);
   -- ── migration history (Codex G3-01/G3-04) ────────────────────────────
   IF to_regclass('supabase_migrations.schema_migrations') IS NULL THEN
     RAISE EXCEPTION 'AEF_DEPLOY_PREFLIGHT: FAIL — no supabase_migrations.schema_migrations history table';
   END IF;
-  EXECUTE 'SELECT count(*), count(name), count(DISTINCT name) FROM supabase_migrations.schema_migrations'
-    INTO n_rows, n_named, n_distinct;
+  EXECUTE 'SELECT count(*), count(name), count(DISTINCT name), count(version) FROM supabase_migrations.schema_migrations'
+    INTO n_rows, n_named, n_distinct, n_versioned;
+  IF n_versioned <> n_rows THEN
+    fails := fails || format('history: %s row(s) without a version — cannot check order', n_rows - n_versioned);
+  END IF;
   IF n_named <> n_rows THEN
     fails := fails || format('history: %s row(s) without a name — cannot reconcile by name', n_rows - n_named);
   END IF;
@@ -78,19 +141,29 @@ BEGIN
   END IF;
 
   -- ── functional presence of what the chain builds on (schema, not names) ─
+  -- Codex G3V-01: types, nullability and keys, not only names.
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'projects'
                   AND column_name = 'id' AND data_type = 'uuid')
      OR NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'projects'
-                  AND column_name = 'user_id' AND data_type = 'uuid' AND is_nullable = 'NO') THEN
+                  AND column_name = 'user_id' AND data_type = 'uuid' AND is_nullable = 'NO')
+     OR to_regclass('public.projects') IS NULL
+     OR NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = to_regclass('public.projects') AND contype = 'p'
+                     AND pg_get_constraintdef(oid) = 'PRIMARY KEY (id)')
+     OR NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = to_regclass('public.projects') AND contype = 'f'
+                     AND pg_get_constraintdef(oid) LIKE 'FOREIGN KEY (user_id) REFERENCES auth.users(id)%') THEN
     fails := fails || 'drift: public.projects(id uuid, user_id uuid NOT NULL) not as expected'::text;
   END IF;
-  IF (SELECT count(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'profiles'
-       AND ((column_name = 'id' AND data_type = 'uuid') OR column_name = 'role')) <> 2 THEN
-    fails := fails || 'drift: public.profiles(id uuid, role) required by entitlement_subject_roles'::text;
+  IF (SELECT count(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'profiles' AND is_nullable = 'NO'
+       AND ((column_name = 'id' AND data_type = 'uuid') OR (column_name = 'role' AND data_type = 'text'))) <> 2
+     OR to_regclass('public.profiles') IS NULL
+     OR NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = to_regclass('public.profiles') AND contype = 'p'
+                     AND pg_get_constraintdef(oid) = 'PRIMARY KEY (id)') THEN
+    fails := fails || 'drift: public.profiles(id uuid PRIMARY KEY, role text NOT NULL) required by entitlement_subject_roles'::text;
   END IF;
   IF (SELECT count(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'business_memory'
-       AND column_name IN ('user_id', 'project_id', 'source', 'content')) <> 4 THEN
-    fails := fails || 'drift: public.business_memory(user_id, project_id, source, content) required by ive_memory_governance'::text;
+       AND ((column_name = 'user_id' AND data_type = 'uuid' AND is_nullable = 'NO') OR (column_name = 'project_id' AND data_type = 'uuid')
+            OR (column_name = 'source' AND data_type = 'text') OR (column_name = 'content' AND data_type = 'text'))) <> 4 THEN
+    fails := fails || 'drift: public.business_memory(user_id uuid NOT NULL, project_id uuid, source text, content text) required by ive_memory_governance'::text;
   END IF;
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'auth' AND table_name = 'users'
                   AND column_name = 'id' AND data_type = 'uuid') THEN
@@ -157,12 +230,12 @@ BEGIN
   -- ive_memory_governance is independent of AEF.
   IF applied[4] AND NOT (applied[1] AND applied[3]) THEN
     fails := fails || 'order: aef_hardening applied without entitlement_subject_roles and aef_persistence'::text;
-  ELSIF applied[4] AND (ver[1] > ver[4] OR ver[3] > ver[4]) THEN
+  ELSIF applied[4] AND coalesce(ver[1] > ver[4] OR ver[3] > ver[4], true) THEN
     fails := fails || 'order: aef_hardening recorded before one of its dependencies'::text;
   END IF;
   IF applied[5] AND NOT applied[3] THEN
     fails := fails || 'order: aef_sequence_privileges applied without aef_persistence'::text;
-  ELSIF applied[5] AND ver[3] > ver[5] THEN
+  ELSIF applied[5] AND coalesce(ver[3] > ver[5], true) THEN
     fails := fails || 'order: aef_sequence_privileges recorded before aef_persistence'::text;
   END IF;
   -- Stray AEF objects not explained by the history.
@@ -171,6 +244,31 @@ BEGIN
        UNION ALL
        SELECT 1 FROM pg_proc q JOIN pg_namespace ns ON ns.oid = q.pronamespace WHERE ns.nspname = 'public' AND left(q.proname, 4) = 'aef_') THEN
     fails := fails || 'drift: aef_* objects exist without aef_persistence in the history'::text;
+  END IF;
+
+  -- ── structural equivalence of installed chain migrations (Codex G2V-01 / G3V-03) ─
+  IF state[1] = 'present' THEN
+    EXECUTE fp_sql INTO fp USING ARRAY['subject_roles'], 'subject\_roles%', NULL::text[];
+    IF fp IS DISTINCT FROM fp_entitlement THEN
+      fails := fails || format('drift: entitlement_subject_roles structure differs from the repository (fingerprint %s)', fp);
+    END IF;
+  END IF;
+  IF state[2] = 'present' THEN
+    EXECUTE fp_sql INTO fp USING ARRAY['business_memory'], 'business\_memory\_derive\_scope', memory_cols;
+    IF fp IS DISTINCT FROM fp_memory THEN
+      fails := fails || format('drift: ive_memory_governance structure differs from the repository (fingerprint %s)', fp);
+    END IF;
+  END IF;
+  IF state[3] = 'present' THEN
+    -- every aef_* table present (a stray or extra table changes the fingerprint)
+    SELECT coalesce(array_agg(c.relname::text), ARRAY[]::text[]) INTO aef_tables
+      FROM pg_class c JOIN pg_namespace ns ON ns.oid = c.relnamespace
+     WHERE ns.nspname = 'public' AND c.relkind IN ('r', 'p') AND left(c.relname, 4) = 'aef_';
+    EXECUTE fp_sql INTO fp USING aef_tables, 'aef%', NULL::text[];
+    IF fp IS DISTINCT FROM (CASE WHEN state[4] = 'present' THEN fp_aef_full ELSE fp_aef_persistence END) THEN
+      fails := fails || format('drift: AEF structure differs from the repository for the installed state (%s; fingerprint %s)',
+                               CASE WHEN state[4] = 'present' THEN 'persistence+hardening' ELSE 'persistence only' END, fp);
+    END IF;
   END IF;
 
   -- ── privilege contract of an existing AEF install (Codex G3-02) ──────
