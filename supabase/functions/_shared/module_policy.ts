@@ -121,7 +121,8 @@ export const MODULE_POLICY: ModulePolicyDoc =
     "intelligence-debug": { "lifecycle": "INTERNAL", "minimumPlan": "free", "actionClass": "READ_ONLY" },
     "admin-panel": { "lifecycle": "INTERNAL", "minimumPlan": "free", "actionClass": "REVERSIBLE" },
     "ive-avatar": { "lifecycle": "COMMERCIAL", "minimumPlan": "free", "actionClass": "READ_ONLY" },
-    "ive-quant": { "lifecycle": "EXPERIMENTAL", "minimumPlan": "free", "actionClass": "CONSEQUENTIAL" }
+    "ive-quant": { "lifecycle": "EXPERIMENTAL", "minimumPlan": "free", "actionClass": "CONSEQUENTIAL" },
+    "aef-runtime-lab": { "lifecycle": "EXPERIMENTAL", "minimumPlan": "free", "actionClass": "REVERSIBLE" }
   },
   "edgeFunctions": {
     "analyze-website": { "kind": "MODULE", "moduleId": "website-analyzer" },
@@ -146,7 +147,8 @@ export const MODULE_POLICY: ModulePolicyDoc =
     "create-checkout-session": { "kind": "BILLING" },
     "module-access": { "kind": "ENTITLEMENT" },
     "stripe-webhook": { "kind": "PUBLIC_WEBHOOK" },
-    "ive-agent-runner": { "kind": "RETIRED" }
+    "ive-agent-runner": { "kind": "RETIRED" },
+    "aef-runtime": { "kind": "MODULE", "moduleId": "aef-runtime-lab", "gateFile": "_shared/aef_runtime_endpoint.ts" }
   }
 }
 // END_MODULE_POLICY_JSON

@@ -94,6 +94,12 @@ export interface ToolDefinition {
   /** Declarative only -- the kernel enforces human-gate requirements itself; a tool cannot opt out of policy. */
   requiresHumanGate: boolean;
   /**
+   * Exact shape of `request.parameters` (IV-IVE-AEF-RUNTIME-INTEGRATION-01).
+   * When present, AefGovernance refuses any other input before persisting
+   * anything; the LAB runtime requires it for every tool it registers.
+   */
+  inputSchema?: ToolInputSchema;
+  /**
    * Mock execution ONLY (Section 18/32). Real side effects
    * (Supabase writes, Stripe, email, publishing, broker orders, Impact
    * actions, deploys) are structurally impossible here: this function
@@ -168,6 +174,7 @@ export type KernelOutcome =
   | "AUTH_FAILED";
 
 import type { ExecutionReceipt } from "../contracts/aef/types.ts";
+import type { ToolInputSchema } from "./persistence/tool_input_schema.ts";
 
 export interface KernelResult {
   kernelOutcome: KernelOutcome;

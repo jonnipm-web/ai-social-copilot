@@ -44,6 +44,7 @@ import {
   TOOL_TIMEOUT_MS,
 } from "./limits.ts";
 import { type PostgresAefStore, StoreProtocolError, type StoreView, TERMINAL_STATES } from "./store.ts";
+import { validateToolInput } from "./tool_input_schema.ts";
 
 export type GovernanceResult =
   | { status: "DENIED"; code: AefErrorCode }
@@ -101,6 +102,12 @@ export interface AefGovernanceDeps {
   now?: () => Date;
   toolTimeoutMs?: number;
   verifiers?: ReconciliationVerifierRegistry;
+  /**
+   * IV-IVE-AEF-RUNTIME-INTEGRATION-01: when true (the LAB runtime), a tool
+   * without a declared input schema is refused (fail closed) instead of
+   * accepting any parameters.
+   */
+  requireInputSchema?: boolean;
 }
 
 type Denied = { status: "DENIED"; code: AefErrorCode };
@@ -203,9 +210,11 @@ export class AefGovernance {
   }
 
   /** Denial of a verified subject: audited best-effort, then denied regardless. */
-  private async denyAudited(subjectId: string, code: AefErrorCode): Promise<Denied> {
+  private async denyAudited(subjectId: string, code: AefErrorCode, auditCode: AefErrorCode = code): Promise<Denied> {
     try {
-      await this.deps.store.recordDenial({ subject_id: subjectId, reason_code: code });
+      // auditCode: the database accepts only its closed list of denial codes
+      // (aef__denial_codes); a finer caller-facing code maps onto one of them.
+      await this.deps.store.recordDenial({ subject_id: subjectId, reason_code: auditCode });
     } catch {
       // Audit is best-effort for a request that was refused anyway.
     }
@@ -233,6 +242,12 @@ export class AefGovernance {
 
     const tool = this.deps.toolRegistry.describe(request);
     if (!tool) return this.denyAudited(subjectId, "UNKNOWN_TOOL");
+    // Server-side input schema, before anything is persisted (runtime integration).
+    if (tool.inputSchema) {
+      if (!validateToolInput(tool.inputSchema, request.parameters ?? {})) return this.denyAudited(subjectId, "TOOL_INPUT_INVALID", "INVALID_REQUEST");
+    } else if (this.deps.requireInputSchema) {
+      return this.denyAudited(subjectId, "TOOL_INPUT_INVALID", "INVALID_REQUEST");
+    }
     let decision;
     try {
       decision = evaluatePolicy(request, tool).decision;

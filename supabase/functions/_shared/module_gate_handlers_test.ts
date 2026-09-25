@@ -64,9 +64,10 @@ function reset() {
   quotaCalls = 0;
 }
 
-Deno.test('GH-00 every MODULE-kind function (19) exports an injectable handler', () => {
+Deno.test('GH-00 every MODULE-kind function (20) exports an injectable handler', () => {
   assertEquals(handlers.size, moduleFunctions.length);
-  assertEquals(moduleFunctions.length, 19);
+  // 19 + aef-runtime (IV-IVE-AEF-RUNTIME-INTEGRATION-01, LAB only, EXPERIMENTAL module).
+  assertEquals(moduleFunctions.length, 20);
 });
 
 for (const { fn, moduleId, lifecycle } of moduleFunctions) {

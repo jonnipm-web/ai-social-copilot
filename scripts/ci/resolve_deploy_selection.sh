@@ -53,6 +53,11 @@ esac
 if [ "$FUNCTION_NAME" = "ive-agent-runner" ]; then
   deny "ive-agent-runner is FROZEN -- not deployable through this workflow (no future mission has authorized it)"
 fi
+# IV-IVE-AEF-RUNTIME-INTEGRATION-01: the IVE -> AEF runtime is LAB ONLY (mock
+# tools, local stack). No mission has authorized deploying it anywhere.
+if [ "$FUNCTION_NAME" = "aef-runtime" ]; then
+  deny "aef-runtime is LAB ONLY -- not deployable through this workflow (production deployment is a separate, unauthorized gate)"
+fi
 
 # 4. Must exist in the repo-controlled allowlist (skip comments/blank lines).
 [ -f "$ALLOWLIST" ] || deny "allowlist file missing: $ALLOWLIST"

@@ -118,6 +118,16 @@ jobs:
           fi
           echo "PASS: ive-agent-runner denied (exit non-zero, as required)"
 
+      - name: aef-runtime (IVE -> AEF LAB runtime) is DENIED, non-zero exit (IV-IVE-AEF-RUNTIME-INTEGRATION-01)
+        run: |
+          set -euo pipefail
+          if bash scripts/ci/resolve_deploy_selection.sh aef-runtime; then
+            echo "FAIL: aef-runtime was NOT denied" >&2
+            exit 1
+          fi
+          grep -qx "aef-runtime" .github/deploy-allowlist.tsv && { echo "FAIL: aef-runtime is in the deploy allowlist" >&2; exit 1; } || true
+          echo "PASS: aef-runtime denied (LAB only)"
+
       - name: unknown function name is DENIED, non-zero exit
         run: |
           set -euo pipefail

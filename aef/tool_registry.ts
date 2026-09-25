@@ -40,12 +40,15 @@
  */
 import type { ExecutionRequest } from "../contracts/aef/types.ts";
 import type { ActionClassification, ToolDefinition, ToolExecutionContext, ToolExecutionResult } from "./types.ts";
+import type { ToolInputSchema } from "./persistence/tool_input_schema.ts";
 
 export interface ToolDescriptor {
   toolId: string;
   domain: ExecutionRequest["domain"];
   classification: ActionClassification;
   requiresHumanGate: boolean;
+  /** The tool's declared input schema (metadata; IV-IVE-AEF-RUNTIME-INTEGRATION-01). */
+  inputSchema?: ToolInputSchema;
 }
 
 /** A bound execution function returned by `claimExecutionRights()` -- looks up AND executes in one step, so the raw `execute` closure is never separately observable. Returns undefined for an unregistered domain+action. */
@@ -93,7 +96,9 @@ export class ToolRegistry {
   describe(request: ExecutionRequest): ToolDescriptor | undefined {
     const tool = this.#tools.get(registryKey(request.domain, request.action));
     if (!tool) return undefined;
-    return { toolId: tool.toolId, domain: tool.domain, classification: tool.classification, requiresHumanGate: tool.requiresHumanGate };
+    const d: ToolDescriptor = { toolId: tool.toolId, domain: tool.domain, classification: tool.classification, requiresHumanGate: tool.requiresHumanGate };
+    if (tool.inputSchema) d.inputSchema = tool.inputSchema;
+    return d;
   }
 
   /**

@@ -53,7 +53,10 @@ export type AefErrorCode =
   | "STORE_PROTOCOL_ERROR"
   | "INTENT_INVALID"
   | "INTENT_ACTION_UNKNOWN"
-  | "NO_VERIFIER";
+  | "NO_VERIFIER"
+  // IV-IVE-AEF-RUNTIME-INTEGRATION-01
+  | "TOOL_INPUT_INVALID"
+  | "RUNTIME_DISABLED";
 
 export function isStoreCode(v: unknown): v is StoreCode {
   return typeof v === "string" && (STORE_CODES as readonly string[]).includes(v);
