@@ -125,4 +125,16 @@ r11="$(cat "$WORK/r11")"; FOREIGN_ROLES+=("$r11")
 [[ $rc -ne 0 ]] || fail "a role whose marker could not be written was accepted"
 exists_role "$r11" && fail "a role was created without its ownership marker (non-atomic create)"
 
+# 12. Codex RG3V-01: a marked resource whose name carries SQL metacharacters is
+#     never interpolated into a statement (it is kept, and nothing else happens)
+evil_rid="$(date +%s)$$abcdef"
+evil='aefct_'"$evil_rid"'_x"; DROP DATABASE aefct_victim_x; --'
+run -d postgres -c "CREATE DATABASE aefct_victim_x;"; FOREIGN_DBS+=(aefct_victim_x)
+qevil="${evil//\"/\"\"}"   # identifier-escaped for the TEST's own statements
+run -d postgres -c "CREATE DATABASE \"$qevil\";"; run -d postgres -c "COMMENT ON DATABASE \"$qevil\" IS 'aef-disposable:$evil_rid';"
+out12="$(PGHOST="$HOST" PSQL="$PSQL" bash "$ROOT/scripts/ci/disposable_sweep.sh" --prefix aefct --older-than-minutes 0 --apply 2>&1)" || true
+exists_db aefct_victim_x || fail "a crafted database name injected SQL into the sweep"
+echo "$out12" | grep -q "name outside the library grammar" || fail "the crafted name was not refused: $out12"
+run -d postgres -c "DROP DATABASE IF EXISTS \"$qevil\";"
+
 echo "DISPOSABLE_CLEANUP_TESTS: PASS"

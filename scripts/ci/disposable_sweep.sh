@@ -53,14 +53,22 @@ sweep() {  # kind: database|role
       echo "SWEEP: KEEP $kind $name — no matching ownership marker (never dropped automatically)"
       continue
     fi
+    # Codex RG3V-01: the name must match the library's exact grammar
+    # (<prefix>_<run-id>_<suffix>, lowercase alnum/underscore, <= 63) before it
+    # is ever used in a statement — and it is still identifier-quoted there.
+    if [[ ! "$name" =~ ^${PREFIX}_[0-9a-f]+_[a-z0-9_]{1,40}$ || ${#name} -gt 63 ]]; then
+      echo "SWEEP: KEEP $kind (name outside the library grammar, never used in SQL)"
+      continue
+    fi
     epoch="${runid:0:10}"
     if (( now - epoch < AGE * 60 )); then
       echo "SWEEP: KEEP $kind $name — younger than $AGE min (its run may still be alive)"
       continue
     fi
     if [[ $APPLY -eq 1 ]]; then
-      if [[ "$kind" == "database" ]]; then run -d postgres -c "DROP DATABASE IF EXISTS $name WITH (FORCE);" >/dev/null
-      else run -d postgres -c "DROP ROLE IF EXISTS $name;" >/dev/null; fi
+      # $name matched the strict grammar above (no quote can occur); still quoted as an identifier.
+      if [[ "$kind" == "database" ]]; then run -d postgres -c "DROP DATABASE IF EXISTS \"$name\" WITH (FORCE);" >/dev/null
+      else run -d postgres -c "DROP ROLE IF EXISTS \"$name\";" >/dev/null; fi
       echo "SWEEP: DROPPED $kind $name"
     else
       echo "SWEEP: WOULD DROP $kind $name"
