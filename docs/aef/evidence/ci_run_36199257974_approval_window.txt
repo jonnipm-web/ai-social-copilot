@@ -1,0 +1,6 @@
+# CI evidence (IV-IVE-AEF-RUNTIME-INTEGRATION-01, Codex RG2-01): run 36199257974 on 93262d5, job 'Migrations + RLS on a disposable PostgreSQL 17'.
+# The PG tests are ignored ONLY without AEF_PG_DB; the runner sets it, so they execute in CI:
+2026-09-25T23:01:16.6667420Z PG-14 TTL: an expired approval window or  [...] ... ok (495ms)
+2026-09-25T23:02:03.1693178Z RT-15 approval window (Codex RG2-01): onc [...] ... ok (227ms)
+2026-09-25T23:02:03.4043852Z RT-16 contextRef is part of the operation [...] ... ok (234ms)
+2026-09-25T23:02:03.4075140Z ok | 60 passed | 0 failed (57s)

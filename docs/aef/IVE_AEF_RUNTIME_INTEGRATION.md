@@ -93,6 +93,11 @@ and the gate's binding hash covers the payload. So:
 | **Approval window** | **15 min** (gate TTL, from registration) | PostgreSQL `aef__expire_if_due` on decide / replay / claim | approving **and executing**: an AUTHORIZED operation whose gate has expired becomes EXPIRED and never runs (RT-15, PG-14) |
 | Operation lifetime | 1 h | PostgreSQL | the durable record; for gated tools the gate window always ends first |
 
+PG-14 and RT-15 are `ignore`d only when no disposable database is configured
+(`AEF_PG_DB`). The runner sets it, and CI executes both tests. See
+`docs/aef/evidence/ci_run_36199257974_approval_window.txt`: PG-14 ok, RT-15 ok,
+60 passed.
+
 ## Operation identity and `contextRef`
 
 The operation identity is `(subject, requestedAction, projectId, parameters,

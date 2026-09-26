@@ -97,7 +97,10 @@ After Codex RG3-03:
   - is prefix-scoped;
   - drops only resources whose marker matches their own run id, and only
     after a minimum age;
-  - reports unmarked resources and never drops them.
+  - reports unmarked resources and never drops them;
+  - only ever puts into SQL a name that matches the library's exact grammar,
+    and still identifier-quotes it (Codex RG3V-01). Tested with a crafted,
+    marked name carrying SQL.
 
 ## Transactional executor — `PRODUCTION_EXECUTOR_TRANSACTIONAL: NOT_VERIFIED` → deploy BLOCKED
 
@@ -109,11 +112,26 @@ Two controls must be detected, or the experiment fails (no false PASS):
 - plain psql on the **real** `20260926` failing late, judged by the
   whole-schema fingerprint (Codex RG3-04).
 
+A coverage self-test (Codex RG3V-02) must see each covered object class move
+the fingerprint, or the experiment fails. The classes are:
+- views and materialized views;
+- enums, domains, composite and range types;
+- rules;
+- the public schema ACL;
+- extensions;
+- columns and functions.
+
+The fingerprint still does not cover comments, statistics, storage parameters,
+event triggers, publications, or objects outside `public` other than
+extensions. This is documented, not claimed.
+
 Every expected CLI result is **asserted**: any deviation exits 1 with
 `EXECUTOR_EVIDENCE_CHANGED` (Codex RG3-05). CI runs the psql parts. The CLI part
 runs **locally only**, on a pinned version, because CI must not download and
 execute it (Codex RG3-06). The recorded run is in
-`docs/aef/evidence/executor_experiment_supabase_cli_2.118.0.txt`.
+`docs/aef/evidence/executor_experiment_supabase_cli_2.118.0.txt`. It was
+re-recorded on the final code with a clean tree (Codex RG3V-03). This is local
+evidence obtained through `npx`, so it is not hermetic supply-chain evidence.
 
 | Executor | Result |
 |---|---|
