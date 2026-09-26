@@ -7,48 +7,66 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// GOOGLE-AUTH-ANDROID-IDENTITY-GATE-17 (Section 07) — standard Flutter/
-// Android release-signing pattern: reads android/key.properties (never
-// committed -- see android/.gitignore) if it exists. The actual keystore
-// file and its passwords must be created and kept by the Owner; this
-// file is only prepared to CONSUME that config once it exists. Builds
-// stay green before then (release falls back to the debug signingConfig,
-// same placeholder Flutter itself scaffolds by default) -- creating this
-// file does not, by itself, require or assume a keystore already exists.
+// PLAY-READINESS-18 (Section 6-7) — standard Flutter/Android release-signing
+// pattern: reads android/key.properties (never committed -- see
+// android/.gitignore) if it exists. The actual keystore file and its
+// passwords are created and kept by the Owner only; this file is only
+// prepared to CONSUME that config once it exists.
+//
+// FAIL-CLOSED: a release-capable Gradle invocation (any task name containing
+// "Release", e.g. assembleRelease/bundleRelease) with no valid
+// key.properties now HARD FAILS instead of silently signing with the debug
+// keystore. A debug build (assembleDebug, this repo's CI build gate) is
+// unaffected when key.properties is absent -- release and debug signing are
+// fully independent.
 val keystorePropertiesFile = rootProject.file("key.properties")
 val keystoreProperties = Properties()
-val hasReleaseSigning = keystorePropertiesFile.exists()
-if (hasReleaseSigning) {
+val keyPropertiesFileExists = keystorePropertiesFile.exists()
+if (keyPropertiesFileExists) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
-    // Codex Gate (GOOGLE-AUTH-ANDROID-IDENTITY-GATE-17, P2 ACCEPTED) — the
-    // signingConfigs block below used to cast these 4 properties directly
-    // (`as String`), so a key.properties present but missing/misspelling
-    // one field failed with an opaque Kotlin ClassCastException instead of
-    // saying which field is missing. Validated explicitly, once, here.
-    val requiredKeys = listOf("keyAlias", "keyPassword", "storeFile", "storePassword")
-    val missingKeys = requiredKeys.filter { keystoreProperties.getProperty(it).isNullOrBlank() }
-    if (missingKeys.isNotEmpty()) {
-        throw GradleException(
-            "android/key.properties exists but is missing or has empty values for: " +
-                "${missingKeys.joinToString(", ")}. Expected all four of: " +
-                "${requiredKeys.joinToString(", ")}."
-        )
+}
+
+// Codex Gate (GOOGLE-AUTH-ANDROID-IDENTITY-GATE-17, P2 ACCEPTED) — the
+// signingConfigs block below used to cast these 4 properties directly (`as
+// String`), so a key.properties present but missing/misspelling one field
+// failed with an opaque Kotlin ClassCastException instead of saying which
+// field is missing. Validated explicitly, once, here.
+val requiredKeys = listOf("keyAlias", "keyPassword", "storeFile", "storePassword")
+val missingKeys = requiredKeys.filter { keystoreProperties.getProperty(it).isNullOrBlank() }
+val hasReleaseSigning = keyPropertiesFileExists && missingKeys.isEmpty()
+
+val requestedTaskNames = gradle.startParameter.taskNames
+val isReleaseTaskRequested = requestedTaskNames.any { it.contains("Release", ignoreCase = true) }
+
+if (isReleaseTaskRequested && !hasReleaseSigning) {
+    val reason = if (!keyPropertiesFileExists) {
+        "android/key.properties was not found at ${keystorePropertiesFile.absolutePath}."
+    } else {
+        "android/key.properties exists but is missing or has empty values for: " +
+            "${missingKeys.joinToString(", ")}. Expected all four of: " +
+            "${requiredKeys.joinToString(", ")}."
     }
-} else {
-    // Codex Gate (P2 ACCEPTED) — falling back to debug signing for a
-    // release build is Flutter's own standard scaffolded default (keeps
-    // `flutter build apk --debug` / this repo's CI build gate working
-    // before a real keystore exists) and is intentionally NOT a hard
-    // failure here. But a `--release`/`appbundle --release` build with no
-    // real signing configured should never look silent about that -- this
-    // is a build-configuration-time warning (always printed once when
-    // Gradle evaluates this file for a release-capable build), not a test
-    // a normal `flutter test` run would ever see.
+    throw GradleException(
+        "PLAY-READINESS-18: fail-closed release signing -- a release task was " +
+            "requested (${requestedTaskNames.joinToString(", ")}) but valid release " +
+            "signing is not configured. $reason Release builds are no longer allowed " +
+            "to silently fall back to the debug keystore. Create/complete " +
+            "android/key.properties (never committed -- see android/.gitignore) with " +
+            "keyAlias, keyPassword, storeFile, storePassword pointing at the real " +
+            "upload keystore, then retry."
+    )
+} else if (!hasReleaseSigning) {
+    // Not a release-capable invocation (e.g. assembleDebug in CI, or a local
+    // debug build while key.properties is still being filled in) -- release
+    // and debug signing are fully independent, so an absent or incomplete
+    // key.properties never blocks a debug build. The release buildType's
+    // signingConfig is simply left unassigned below, harmless because that
+    // variant is never assembled in this scenario.
     logger.warn(
-        "[insightvalues] android/key.properties not found -- RELEASE builds will be " +
-            "signed with the DEBUG keystore (not production-ready). This is expected " +
-            "before the Owner creates a real upload keystore; see this file's own doc " +
-            "comment for the keytool command."
+        "[insightvalues] release signing not fully configured in android/key.properties " +
+            "-- this is fine for a debug build, but any release-capable task " +
+            "(assembleRelease/bundleRelease) will now FAIL FAST instead of silently " +
+            "signing with the debug keystore."
     )
 }
 
@@ -96,16 +114,14 @@ android {
 
     buildTypes {
         release {
-            // Uses the real upload keystore once android/key.properties
-            // exists (see this file's own doc comment above); falls back
-            // to the debug keys otherwise so `flutter build --release`
-            // keeps working as a build-gate/smoke-test artifact before a
-            // release keystore is created -- exactly Flutter's own
-            // scaffolded default, not a weakening of it.
-            signingConfig = if (hasReleaseSigning) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
+            // Fail-closed (see doc comment above): if this variant is ever
+            // actually assembled, hasReleaseSigning is guaranteed true here
+            // -- otherwise the release-task check above already aborted the
+            // build. When hasReleaseSigning is false, no signingConfig is
+            // assigned; harmless, because that only happens for a
+            // non-release invocation that never touches this variant.
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
             }
         }
     }
