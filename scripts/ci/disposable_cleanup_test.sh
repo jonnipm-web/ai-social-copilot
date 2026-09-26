@@ -18,8 +18,9 @@ run() { "$PSQL" -h "$HOST" -v ON_ERROR_STOP=1 -q "$@"; }
 exists_db() { [[ -n "$(run -d postgres -tA -c "SELECT 1 FROM pg_database WHERE datname = '$1';")" ]]; }
 exists_role() { [[ -n "$(run -d postgres -tA -c "SELECT 1 FROM pg_roles WHERE rolname = '$1';")" ]]; }
 # Resources this test creates OUTSIDE the library (the "foreign" ones), removed at the end.
-FOREIGN_DBS=(); FOREIGN_ROLES=()
+FOREIGN_DBS=(); FOREIGN_ROLES=(); QUOTED_FOREIGN_DBS=()
 cleanup_test() {
+  for d in "${QUOTED_FOREIGN_DBS[@]}"; do run -d postgres -c "DROP DATABASE IF EXISTS \"$d\" WITH (FORCE);" >/dev/null 2>&1 || true; done
   for d in "${FOREIGN_DBS[@]}"; do run -d postgres -c "DROP DATABASE IF EXISTS $d WITH (FORCE);" >/dev/null 2>&1 || true; done
   for r in "${FOREIGN_ROLES[@]}"; do run -d postgres -c "DROP ROLE IF EXISTS $r;" >/dev/null 2>&1 || true; done
   rm -rf "$WORK"
@@ -131,6 +132,7 @@ evil_rid="$(date +%s)$$abcdef"
 evil='aefct_'"$evil_rid"'_x"; DROP DATABASE aefct_victim_x; --'
 run -d postgres -c "CREATE DATABASE aefct_victim_x;"; FOREIGN_DBS+=(aefct_victim_x)
 qevil="${evil//\"/\"\"}"   # identifier-escaped for the TEST's own statements
+QUOTED_FOREIGN_DBS+=("$qevil")   # dropped by the trap even if an assertion fails first
 run -d postgres -c "CREATE DATABASE \"$qevil\";"; run -d postgres -c "COMMENT ON DATABASE \"$qevil\" IS 'aef-disposable:$evil_rid';"
 out12="$(PGHOST="$HOST" PSQL="$PSQL" bash "$ROOT/scripts/ci/disposable_sweep.sh" --prefix aefct --older-than-minutes 0 --apply 2>&1)" || true
 exists_db aefct_victim_x || fail "a crafted database name injected SQL into the sweep"

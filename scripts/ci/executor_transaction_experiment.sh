@@ -79,7 +79,17 @@ for change in \
   "GRANT USAGE ON SCHEMA public TO PUBLIC; REVOKE ALL ON SCHEMA public FROM PUBLIC" \
   "CREATE EXTENSION IF NOT EXISTS pg_trgm" \
   "ALTER TABLE public.t ADD COLUMN c text" \
-  "CREATE FUNCTION public.f() RETURNS int LANGUAGE sql AS 'SELECT 1'"; do
+  "CREATE FUNCTION public.f() RETURNS int LANGUAGE sql AS 'SELECT 1'" \
+  "ALTER TABLE public.t ENABLE ROW LEVEL SECURITY; CREATE POLICY p ON public.t FOR SELECT TO anon USING (true)" \
+  "ALTER POLICY p ON public.t TO authenticated" \
+  "ALTER POLICY p ON public.t USING (id > 0)" \
+  "DROP POLICY p ON public.t; CREATE POLICY p ON public.t FOR INSERT TO authenticated WITH CHECK (true)" \
+  "ALTER POLICY p ON public.t WITH CHECK (id > 0)" \
+  "GRANT SELECT (c) ON public.t TO anon" \
+  "ALTER FUNCTION public.f() PARALLEL SAFE" \
+  "ALTER FUNCTION public.f() STRICT" \
+  "ALTER FUNCTION public.f() LEAKPROOF" \
+  "ALTER FUNCTION public.f() COST 7"; do
   before="$(catalog_fp "$FPC")"
   run -d "$FPC" -c "$change;" >/dev/null 2>&1 || { echo "fingerprint self-test setup failed: $change" >&2; exit 1; }
   [[ "$(catalog_fp "$FPC")" != "$before" ]] || { echo "CONTROL FAILED: the fingerprint is blind to: $change" >&2; exit 1; }

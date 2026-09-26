@@ -119,7 +119,10 @@ the fingerprint, or the experiment fails. The classes are:
 - rules;
 - the public schema ACL;
 - extensions;
-- columns and functions.
+- columns (including column ACLs);
+- policies (roles, command, USING, WITH CHECK);
+- function metadata (language, parallel, strict, leakproof, cost, rows) —
+  Codex RG3W-01.
 
 The fingerprint still does not cover comments, statistics, storage parameters,
 event triggers, publications, or objects outside `public` other than
