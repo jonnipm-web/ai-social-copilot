@@ -243,7 +243,10 @@ class _DrawerContent extends ConsumerWidget {
 // only makes its silent-fallback behavior testable.
 IconData drawerIconFor(String moduleId) {
   const icons = <String, IconData>{
-    'command-center': Icons.hub_rounded,
+    // INSIGHTVALUES-COMMERCIAL-MACRO-01 -- 'command-center' entry removed
+    // (Codex audit P3): that module has route: null since the dashboard
+    // consolidation, so it never reaches this map; drawer_test.dart's own
+    // fallback-icon test still covers any truly-unmapped moduleId.
     'business-dashboard': Icons.dashboard_rounded,
     'projects': Icons.rocket_launch_rounded,
     'knowledge-vault': Icons.auto_stories_rounded,
