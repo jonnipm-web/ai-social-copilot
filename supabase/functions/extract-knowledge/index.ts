@@ -272,13 +272,26 @@ export async function handler(
       );
     }
 
-    const niche = body.niche ? `\nNicho: ${body.niche}` : "";
-    const audience = body.target_audience ? `\nAudiência-alvo: ${body.target_audience}` : "";
-    const language = body.language ?? "pt-BR";
+    // PLAY-READINESS-18 (Codex Final audit, P2 ACCEPTED) — the delimiter is a
+    // plain string boundary, not a parsed tag: untrusted content containing a
+    // literal "<documento_do_usuario>" or "</documento_do_usuario>" could
+    // otherwise terminate/reopen the boundary early and have the rest read as
+    // if it were outside the user-content section. Neutralized (case- and
+    // whitespace-insensitive) before interpolation, on every field that ends
+    // up inside the prompt, not just the main document body.
+    const neutralizeDelimiter = (value: string): string =>
+      value.replace(/<\/?\s*documento_do_usuario\s*>/gi, "[tag removida]");
+
+    const niche = body.niche ? `\nNicho: ${neutralizeDelimiter(String(body.niche))}` : "";
+    const audience = body.target_audience
+      ? `\nAudiência-alvo: ${neutralizeDelimiter(String(body.target_audience))}`
+      : "";
+    const language = neutralizeDelimiter(String(body.language ?? "pt-BR"));
 
     // PLAY-READINESS-18 (Section 19) — explicit delimiter matching the
     // system prompt's own instruction (see its own comment above).
-    const userMessage = `Idioma de análise: ${language}${niche}${audience}\n\n<documento_do_usuario>\n${content.trim().slice(0, 10000)}\n</documento_do_usuario>`;
+    const safeContent = neutralizeDelimiter(content.trim().slice(0, 10000));
+    const userMessage = `Idioma de análise: ${language}${niche}${audience}\n\n<documento_do_usuario>\n${safeContent}\n</documento_do_usuario>`;
 
     // IVE-COMMERCIAL-ENTITLEMENTS-01 — reserva cota só depois de validar o
     // conteúdo (erros do usuário não custam cota).
