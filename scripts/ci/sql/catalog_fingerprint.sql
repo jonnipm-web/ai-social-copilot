@@ -11,6 +11,9 @@
 -- identity / storage options / partition bound, inheritance, index validity,
 -- trigger enabled state, extended statistics, comments on public objects,
 -- default privileges and event triggers.
+-- Also (Codex RG3Y-01/02): replica-identity and clustered index selection,
+-- column identity / generated / collation / storage / compression / statistics
+-- target, full extended-statistics definition (incl. expressions) and target.
 -- Not covered (documented): data (including sequence current values),
 -- publications/subscriptions, large objects, objects outside public other
 -- than extensions, default privileges and event triggers (which are global).
@@ -22,9 +25,12 @@ SELECT md5(coalesce(string_agg(x, E'\n' ORDER BY x COLLATE "C"), '')) FROM (
          || '|' || coalesce(array_to_string(c.reloptions, ','), '') || '|' || coalesce(pg_get_expr(c.relpartbound, c.oid), '') AS x
     FROM pg_class c WHERE c.relnamespace = 'public'::regnamespace
   UNION ALL SELECT 'idx|' || pg_get_indexdef(i.indexrelid) || '|' || i.indisvalid || '|' || i.indisready
+         || '|' || i.indisreplident || '|' || i.indisclustered
     FROM pg_index i JOIN pg_class c ON c.oid = i.indrelid WHERE c.relnamespace = 'public'::regnamespace
   UNION ALL SELECT 'col|' || c.relname || '|' || a.attname || '|' || a.attnum || '|' || format_type(a.atttypid, a.atttypmod)
          || '|' || a.attnotnull || '|' || coalesce(pg_get_expr(d.adbin, d.adrelid), '') || '|' || coalesce(a.attacl::text, '')
+         || '|' || a.attidentity::text || '|' || a.attgenerated::text || '|' || coalesce(a.attcollation::regcollation::text, '')
+         || '|' || a.attstorage::text || '|' || a.attcompression::text || '|' || coalesce(a.attstattarget::text, '')
     FROM pg_attribute a JOIN pg_class c ON c.oid = a.attrelid LEFT JOIN pg_attrdef d ON d.adrelid = a.attrelid AND d.adnum = a.attnum
    WHERE c.relnamespace = 'public'::regnamespace AND a.attnum > 0 AND NOT a.attisdropped
   UNION ALL SELECT 'con|' || conrelid::regclass::text || '|' || conname || '|' || pg_get_constraintdef(oid)
@@ -55,7 +61,7 @@ SELECT md5(coalesce(string_agg(x, E'\n' ORDER BY x COLLATE "C"), '')) FROM (
     FROM pg_sequence s JOIN pg_class c ON c.oid = s.seqrelid WHERE c.relnamespace = 'public'::regnamespace
   UNION ALL SELECT 'inh|' || i.inhrelid::regclass::text || '|' || i.inhparent::regclass::text || '|' || i.inhseqno
     FROM pg_inherits i JOIN pg_class c ON c.oid = i.inhrelid WHERE c.relnamespace = 'public'::regnamespace
-  UNION ALL SELECT 'stx|' || x.stxname || '|' || x.stxrelid::regclass::text || '|' || array_to_string(x.stxkind, ',') || '|' || x.stxkeys::text
+  UNION ALL SELECT 'stx|' || pg_get_statisticsobjdef(x.oid) || '|' || coalesce(x.stxstattarget::text, '')
     FROM pg_statistic_ext x WHERE x.stxnamespace = 'public'::regnamespace
   UNION ALL SELECT 'com|' || d.classoid::regclass::text || '|' || d.objsubid || '|' || coalesce(c.relname, p.proname, t.typname, '?') || '|' || d.description
     FROM pg_description d

@@ -126,6 +126,10 @@ the fingerprint, or the experiment fails. The classes are:
 - sequence parameters, relation options, replica identity, inheritance,
   extended statistics, comments, trigger enabled state, default privileges and
   event triggers — Codex RG3X-01.
+- replica-identity and clustered index selection, column identity / generated /
+  collation / storage / compression / statistics target, and the full
+  extended-statistics definition and target — Codex RG3Y-01/02 (self-test
+  case count 36; mutant MEX6 KILLED).
 
 The fingerprint does not cover data (including sequence current values, which
 are not transactional anyway), publications/subscriptions, large objects, or
