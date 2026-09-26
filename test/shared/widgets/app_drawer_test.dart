@@ -136,6 +136,26 @@ void main() {
       final m = premiumModule();
       expect(m.visibleFor(isAdmin: false, isPro: true, isPremium: true), isTrue);
     });
+
+    test(
+      'visibleDrawerModules() itself (not just visibleFor in isolation) correctly '
+      'hides/shows a PREMIUM-gated module (Codex Tranche 2 audit, P3)',
+      () {
+        final modules = [premiumModule()];
+
+        expect(
+          visibleDrawerModules(isAdmin: false, isPro: true, isPremium: false, modules: modules),
+          isEmpty,
+          reason: 'a PRO (non-premium) user must not see the PREMIUM-gated module in the drawer',
+        );
+        expect(
+          visibleDrawerModules(isAdmin: false, isPro: true, isPremium: true, modules: modules)
+              .map((m) => m.moduleId),
+          ['synthetic-premium'],
+          reason: 'a PREMIUM user must see the PREMIUM-gated module in the drawer',
+        );
+      },
+    );
   });
 
   // COMMERCIAL-EXPERIENCE-CLOSURE-16 (mission Section 27/35) — regression

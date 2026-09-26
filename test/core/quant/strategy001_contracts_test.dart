@@ -39,7 +39,12 @@ void main() {
     });
 
     test('an empty result has an empty map, not a missing/null one', () {
-      expect(const Strategy001Result().eventsByKind, isEmpty);
+      expect(Strategy001Result().eventsByKind, isEmpty);
+    });
+
+    test('events/snapshots are unmodifiable (Codex Tranche 2 audit, P3)', () {
+      final result = Strategy001Result(events: [_event(EventKind.trendDetected, 1)]);
+      expect(() => result.events.add(_event(EventKind.triggered, 2)), throwsUnsupportedError);
     });
   });
 
@@ -55,6 +60,17 @@ void main() {
       expect(snapshot.trendDirection, isNull);
       expect(snapshot.targetPrice, isNull);
       expect(snapshot.breakoutBarIndex, isNull);
+    });
+
+    test('events is unmodifiable (Codex Tranche 2 audit, P3)', () {
+      final snapshot = BarSnapshot(
+        barIndex: 0,
+        timestamp: DateTime(2026, 1, 1),
+        state: StrategyState.unknown,
+        events: [_event(EventKind.trendDetected, 1)],
+        confirmationCount: 0,
+      );
+      expect(() => snapshot.events.add(_event(EventKind.triggered, 2)), throwsUnsupportedError);
     });
   });
 }

@@ -101,18 +101,21 @@ class StrategyEvent {
 }
 
 /// Mirrors `insightvalues_quant.strategy001.models.BarSnapshot`
-/// (`@dataclass(frozen=True)`).
+/// (`@dataclass(frozen=True)`). `events` is defensively copied into an
+/// unmodifiable list (Codex Tranche 2 audit, P3) to match the Python
+/// model's own `tuple[StrategyEvent, ...]` immutability -- a caller cannot
+/// mutate this snapshot's event list after construction.
 class BarSnapshot {
-  const BarSnapshot({
+  BarSnapshot({
     required this.barIndex,
     required this.timestamp,
     required this.state,
-    required this.events,
+    required List<StrategyEvent> events,
     required this.confirmationCount,
     this.trendDirection,
     this.targetPrice,
     this.breakoutBarIndex,
-  });
+  }) : events = List.unmodifiable(events);
 
   final int barIndex;
   final DateTime timestamp;
@@ -126,13 +129,16 @@ class BarSnapshot {
 
 /// Mirrors `insightvalues_quant.strategy001.models.Strategy001Result` — the
 /// top-level shape a future integration would receive for one backtest/run.
+/// `snapshots`/`events` are defensively copied into unmodifiable lists
+/// (Codex Tranche 2 audit, P3), same reasoning as [BarSnapshot.events].
 class Strategy001Result {
-  const Strategy001Result({
-    this.snapshots = const [],
-    this.events = const [],
+  Strategy001Result({
+    List<BarSnapshot> snapshots = const [],
+    List<StrategyEvent> events = const [],
     this.finalState = StrategyState.unknown,
     this.configHash = '',
-  });
+  })  : snapshots = List.unmodifiable(snapshots),
+        events = List.unmodifiable(events);
 
   final List<BarSnapshot> snapshots;
   final List<StrategyEvent> events;

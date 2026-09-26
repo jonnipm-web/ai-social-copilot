@@ -33,8 +33,14 @@ List<ModuleDefinition> visibleDrawerModules({
   required bool isAdmin,
   required bool isPro,
   bool isPremium = false,
+  // Codex Tranche 2 audit, P3 — injectable so tests can exercise this real
+  // function (not just ModuleDefinition.visibleFor in isolation) against a
+  // synthetic ModulePlan.premium entry, since kModuleRegistry itself has
+  // none yet. Production code never passes this; it always defaults to the
+  // real registry.
+  List<ModuleDefinition> modules = kModuleRegistry,
 }) {
-  return kModuleRegistry.where((m) {
+  return modules.where((m) {
     if (m.route == null) return false;
     if (m.route == AppConstants.routeUpgrade) return false;
     return m.visibleFor(isAdmin: isAdmin, isPro: isPro, isPremium: isPremium) &&
