@@ -132,6 +132,7 @@ jobs:
           grep -qx 'EXECUTOR_PSQL_PLAIN_REAL_MIGRATION_LATE_FAILURE: NOT_ATOMIC (fingerprint changed)' db.log
           grep -qx 'EXECUTOR_PSQL_SINGLE_TRANSACTION_REAL_MIGRATION_LATE_FAILURE: ATOMIC' db.log
           grep -qx 'EXECUTOR_TRANSACTION_EXPERIMENT: DONE' db.log
+          grep -qx 'EXECUTOR_FINGERPRINT_COVERAGE: PASS' db.log
 
   contract-and-aef-ci:
     name: AEF contract + kernel CI (IV-AEF-FOUNDATION-01)

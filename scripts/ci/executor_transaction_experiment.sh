@@ -67,6 +67,25 @@ url() { printf 'postgresql://%s%s@%s:%s/%s?sslmode=disable' "${PGUSER:-postgres}
 
 printf '%s' "$CANARY" > "$WORK/canary.sql"
 
+# Fingerprint coverage self-test (Codex RG3V-02): every object class the
+# checker claims to cover must change the digest; otherwise it is blind.
+dispo_db fpc; FPC="$DISPO_LAST"
+run -d "$FPC" -c "CREATE TABLE public.t (id int); CREATE VIEW public.v AS SELECT 1 AS a;" >/dev/null
+for change in \
+  "CREATE OR REPLACE VIEW public.v AS SELECT 2 AS a" \
+  "CREATE TYPE public.e AS ENUM ('x')" \
+  "CREATE DOMAIN public.d AS int CHECK (VALUE > 0)" \
+  "CREATE RULE r AS ON INSERT TO public.t DO INSTEAD NOTHING" \
+  "GRANT USAGE ON SCHEMA public TO PUBLIC; REVOKE ALL ON SCHEMA public FROM PUBLIC" \
+  "CREATE EXTENSION IF NOT EXISTS pg_trgm" \
+  "ALTER TABLE public.t ADD COLUMN c text" \
+  "CREATE FUNCTION public.f() RETURNS int LANGUAGE sql AS 'SELECT 1'"; do
+  before="$(catalog_fp "$FPC")"
+  run -d "$FPC" -c "$change;" >/dev/null 2>&1 || { echo "fingerprint self-test setup failed: $change" >&2; exit 1; }
+  [[ "$(catalog_fp "$FPC")" != "$before" ]] || { echo "CONTROL FAILED: the fingerprint is blind to: $change" >&2; exit 1; }
+done
+echo "EXECUTOR_FINGERPRINT_COVERAGE: PASS"
+
 # E0 control — plain psql must NOT be atomic.
 dispo_db e0; E0="$DISPO_LAST"
 run -d "$E0" -f "$WORK/canary.sql" >/dev/null 2>&1 && { echo "E0: the canary did not fail" >&2; exit 1; }
