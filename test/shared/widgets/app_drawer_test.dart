@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:ai_social_copilot/core/constants/app_constants.dart';
 import 'package:ai_social_copilot/core/diagnostics/diagnostic_logger_service.dart';
+import 'package:ai_social_copilot/core/modules/module_definition.dart';
 import 'package:ai_social_copilot/core/modules/module_registry.dart';
 import 'package:ai_social_copilot/data/models/profile.dart';
 import 'package:ai_social_copilot/l10n/app_localizations.dart';
@@ -101,6 +102,40 @@ void main() {
         );
       },
     );
+  });
+
+  // INSIGHTVALUES-COMMERCIAL-MACRO-01 Tranche 2 — ModulePlan.premium gap
+  // closure. No real registry module uses this plan yet; a synthetic
+  // module proves the new visibleFor()/visibleDrawerModules() branch is
+  // real and load-bearing, mirroring the pre-existing ModulePlan.pro
+  // coverage above.
+  group('visibleFor/visibleDrawerModules — ModulePlan.premium gate', () {
+    ModuleDefinition premiumModule() => ModuleDefinition(
+          moduleId: 'synthetic-premium',
+          namePt: 'Sintético Premium',
+          nameEn: 'Synthetic Premium',
+          status: ModuleStatus.active,
+          adminVisible: true,
+          adminClickable: true,
+          commercialEnabled: true,
+          minimumPlan: ModulePlan.premium,
+          route: '/synthetic-premium',
+          readinessPt: 'test',
+          readinessEn: 'test',
+          releaseClassification: ModuleReleaseClass.commercialV1,
+        );
+
+    test('a PRO (non-premium) user cannot see a PREMIUM-gated module', () {
+      final m = premiumModule();
+      expect(m.visibleFor(isAdmin: false, isPro: true, isPremium: false), isFalse);
+      expect(m.visibleFor(isAdmin: false, isPro: true), isFalse,
+          reason: 'isPremium must default to false, never silently grant premium visibility');
+    });
+
+    test('a PREMIUM user sees a PREMIUM-gated module', () {
+      final m = premiumModule();
+      expect(m.visibleFor(isAdmin: false, isPro: true, isPremium: true), isTrue);
+    });
   });
 
   // COMMERCIAL-EXPERIENCE-CLOSURE-16 (mission Section 27/35) — regression

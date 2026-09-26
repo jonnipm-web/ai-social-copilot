@@ -97,6 +97,7 @@ Future<String?> _resolveEntitlementRedirect(
 
   bool isAdmin = false;
   bool isPro = false;
+  bool isPremium = false;
   bool profileResolved = false;
   // IVE-COMMERCIAL-TARGETED-REMEDIATION-06R (Codex adversarial review, P1) —
   // a bare `container.read(currentProfileProvider.future)` is not a durable
@@ -121,6 +122,7 @@ Future<String?> _resolveEntitlementRedirect(
         .timeout(const Duration(seconds: 8));
     isAdmin = profile?.isAdmin ?? false;
     isPro = profile?.isPro ?? false;
+    isPremium = profile?.isPremium ?? false;
     profileResolved = true;
   } catch (_) {
     // Profile fetch failed or timed out -- fail closed (never grant PRO/
@@ -134,6 +136,7 @@ Future<String?> _resolveEntitlementRedirect(
     isAdmin: isAdmin,
     isPro: isPro,
     profileResolved: profileResolved,
+    isPremium: isPremium,
   );
   switch (decision) {
     case RouteDecision.allow:

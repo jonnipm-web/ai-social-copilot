@@ -190,6 +190,7 @@ RouteDecision decideForModule({
   required bool isAdmin,
   required bool isPro,
   required bool profileResolved,
+  bool isPremium = false,
 }) {
   // Preserve existing admin behavior (mission section 04): admins reach
   // everything through this gate. Individual admin-only screens
@@ -214,6 +215,9 @@ RouteDecision decideForModule({
     case ModulePlan.admin:
       // Not admin (checked above) — admin-only/internal, never "upgrade".
       return RouteDecision.redirectDenied;
+    case ModulePlan.premium:
+      if (!profileResolved) return RouteDecision.redirectDenied;
+      return isPremium ? RouteDecision.allow : RouteDecision.redirectUpgrade;
     case ModulePlan.pro:
       if (!profileResolved) return RouteDecision.redirectDenied;
       return isPro ? RouteDecision.allow : RouteDecision.redirectUpgrade;
@@ -267,6 +271,7 @@ RouteDecision evaluateRouteAccess({
   required bool isAdmin,
   required bool isPro,
   required bool profileResolved,
+  bool isPremium = false,
 }) {
   return decideForModule(
     module: _moduleForRoute(path),
@@ -274,5 +279,6 @@ RouteDecision evaluateRouteAccess({
     isAdmin: isAdmin,
     isPro: isPro,
     profileResolved: profileResolved,
+    isPremium: isPremium,
   );
 }

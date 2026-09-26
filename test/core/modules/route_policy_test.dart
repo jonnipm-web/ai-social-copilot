@@ -147,6 +147,83 @@ void main() {
         RouteDecision.allow,
       );
     });
+
+    // INSIGHTVALUES-COMMERCIAL-MACRO-01 Tranche 2 -- ModulePlan.premium
+    // gap closure. No real module uses this plan yet; these mirror the
+    // ModulePlan.pro cases above exactly, proving the new branch is real
+    // and load-bearing, not decorative.
+    test('PRO (but not premium) -> PREMIUM commercial route -> redirectUpgrade, not allow', () {
+      final module = _module(commercialEnabled: true, minimumPlan: ModulePlan.premium);
+      expect(
+        decideForModule(
+          module: module,
+          isAlwaysAllowed: false,
+          isAdmin: false,
+          isPro: true,
+          isPremium: false,
+          profileResolved: true,
+        ),
+        RouteDecision.redirectUpgrade,
+        reason: 'being PRO must not unlock a PREMIUM-gated module',
+      );
+    });
+
+    test('PREMIUM -> PREMIUM commercial route -> allow', () {
+      final module = _module(commercialEnabled: true, minimumPlan: ModulePlan.premium);
+      expect(
+        decideForModule(
+          module: module,
+          isAlwaysAllowed: false,
+          isAdmin: false,
+          isPro: true,
+          isPremium: true,
+          profileResolved: true,
+        ),
+        RouteDecision.allow,
+      );
+    });
+
+    test(
+      'PREMIUM -> commercialEnabled=false route -> redirectDenied '
+      '(same trap as PRO: no plan unlocks an unreleased module)',
+      () {
+        final module = _module(commercialEnabled: false, minimumPlan: ModulePlan.premium);
+        expect(
+          decideForModule(
+            module: module,
+            isAlwaysAllowed: false,
+            isAdmin: false,
+            isPro: true,
+            isPremium: true,
+            profileResolved: true,
+          ),
+          RouteDecision.redirectDenied,
+        );
+      },
+    );
+
+    test('profile not yet resolved on a PREMIUM route -> redirectDenied, never allow, never treated as premium', () {
+      final module = _module(commercialEnabled: true, minimumPlan: ModulePlan.premium);
+      expect(
+        decideForModule(
+          module: module,
+          isAlwaysAllowed: false,
+          isAdmin: false,
+          isPro: false,
+          isPremium: false,
+          profileResolved: false,
+        ),
+        RouteDecision.redirectDenied,
+      );
+    });
+
+    test('isPremium defaults to false when the caller omits it (no silent grant)', () {
+      final module = _module(commercialEnabled: true, minimumPlan: ModulePlan.premium);
+      expect(
+        decideForModule(module: module, isAlwaysAllowed: false, isAdmin: false, isPro: true, profileResolved: true),
+        RouteDecision.redirectUpgrade,
+      );
+    });
   });
 
   group('evaluateRouteAccess — real registry wiring', () {

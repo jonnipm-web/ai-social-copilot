@@ -35,20 +35,33 @@ enum ModuleStatus {
 }
 
 /// Plano mínimo exigido para ver/usar o módulo quando `commercialEnabled`.
+///
+/// INSIGHTVALUES-COMMERCIAL-MACRO-01 Tranche 2 -- `premium` closes the gap
+/// Tranche 1 flagged: `profiles.role`/`Profile.isPremium`/`QuotaInfo.isPremium`
+/// already distinguish premium from pro at the quota layer, but this
+/// entitlement enum had no way to express a Premium-exclusive module (every
+/// non-free module could only ever be Pro-gated). No module in the registry
+/// sets `minimumPlan: premium` yet -- Financial Intelligence, the intended
+/// first user, stays out of scope this tranche (Quant provider licensing is
+/// still blocked) -- this only makes the value real and load-bearing for
+/// whenever that Owner decision is made.
 enum ModulePlan {
   free,
   pro,
+  premium,
   admin;
 
   String get labelPt => switch (this) {
         ModulePlan.free => 'Gratuito',
         ModulePlan.pro => 'Pro',
+        ModulePlan.premium => 'Premium',
         ModulePlan.admin => 'Admin',
       };
 
   String get labelEn => switch (this) {
         ModulePlan.free => 'Free',
         ModulePlan.pro => 'Pro',
+        ModulePlan.premium => 'Premium',
         ModulePlan.admin => 'Admin',
       };
 }
@@ -134,10 +147,11 @@ class ModuleDefinition {
   final ModuleReleaseClass releaseClassification;
   final String notes;
 
-  bool visibleFor({required bool isAdmin, required bool isPro}) {
+  bool visibleFor({required bool isAdmin, required bool isPro, bool isPremium = false}) {
     if (isAdmin) return adminVisible;
     if (!commercialEnabled) return false;
     if (minimumPlan == ModulePlan.admin) return false;
+    if (minimumPlan == ModulePlan.premium) return isPremium;
     if (minimumPlan == ModulePlan.pro) return isPro;
     return true;
   }
