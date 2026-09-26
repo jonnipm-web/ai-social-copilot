@@ -254,6 +254,16 @@ IconData drawerIconFor(String moduleId) {
     'market-intelligence': Icons.analytics_rounded,
     'opportunity-lab': Icons.science_rounded,
     'action-engine': Icons.bolt_rounded,
+    // INSIGHTVALUES-COMMERCIAL-MACRO-01 Tranche 2 -- Growth Intelligence
+    // commercially launched (commercialEnabled:true, ModulePlan.pro); each
+    // now needs a dedicated icon per this map's own coverage contract.
+    'improve-post': Icons.auto_fix_high_rounded,
+    'personas': Icons.groups_2_rounded,
+    'content-library': Icons.perm_media_rounded,
+    'calendar': Icons.calendar_month_rounded,
+    'campaigns': Icons.campaign_rounded,
+    'performance': Icons.insights_rounded,
+    'roi-tracker': Icons.trending_up_rounded,
   };
   return icons[moduleId] ?? Icons.circle_outlined;
 }
