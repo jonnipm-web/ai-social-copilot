@@ -129,7 +129,13 @@ the fingerprint, or the experiment fails. The classes are:
 - replica-identity and clustered index selection, column identity / generated /
   collation / storage / compression / statistics target, and the full
   extended-statistics definition and target — Codex RG3Y-01/02 (self-test
-  case count 36; mutant MEX6 KILLED).
+  case count 38 including this one; mutant MEX6 KILLED);
+- constraint validation state (rendered as NOT VALID by pg_get_constraintdef;
+  locked by a self-test case) — Codex RG3Z-02.
+
+Comments are covered on public relations, columns, functions and types only;
+comments on schemas, roles, extensions and other shared objects are a
+documented P2 residual (Codex RG3Z-03).
 
 The fingerprint does not cover data (including sequence current values, which
 are not transactional anyway), publications/subscriptions, large objects, or

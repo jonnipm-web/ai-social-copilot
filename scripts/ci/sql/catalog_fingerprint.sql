@@ -9,13 +9,17 @@
 -- owner, config, ACL, body hash) — Codex RG3V-02 / RG3W-01.
 -- Also (Codex RG3X-01): sequence parameters, relation persistence / replica
 -- identity / storage options / partition bound, inheritance, index validity,
--- trigger enabled state, extended statistics, comments on public objects,
+-- trigger enabled state, extended statistics, comments on public relations /
+-- columns / functions / types,
 -- default privileges and event triggers.
 -- Also (Codex RG3Y-01/02): replica-identity and clustered index selection,
 -- column identity / generated / collation / storage / compression / statistics
 -- target, full extended-statistics definition (incl. expressions) and target.
+-- Constraint validation state is carried by pg_get_constraintdef (it renders
+-- NOT VALID) — Codex RG3Z-02, locked by the coverage self-test.
 -- Not covered (documented): data (including sequence current values),
--- publications/subscriptions, large objects, objects outside public other
+-- comments on schemas, roles, extensions and other shared objects (RG3Z-03,
+-- documented P2 residual), publications/subscriptions, large objects, objects outside public other
 -- than extensions, default privileges and event triggers (which are global).
 -- Used to prove that a failed migration left the schema byte-identical (runner atomicity tests, executor experiment).
 SET search_path = pg_catalog;
