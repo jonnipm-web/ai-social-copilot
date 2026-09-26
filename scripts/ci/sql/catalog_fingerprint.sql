@@ -7,15 +7,21 @@
 -- extensions and function (signature, arguments, return type/set, kind,
 -- language, volatility, parallel, strict, leakproof, cost, rows, definer,
 -- owner, config, ACL, body hash) — Codex RG3V-02 / RG3W-01.
--- Not covered (documented): comments, statistics, storage parameters,
--- event triggers, publications, objects outside public other than extensions.
+-- Also (Codex RG3X-01): sequence parameters, relation persistence / replica
+-- identity / storage options / partition bound, inheritance, index validity,
+-- trigger enabled state, extended statistics, comments on public objects,
+-- default privileges and event triggers.
+-- Not covered (documented): data (including sequence current values),
+-- publications/subscriptions, large objects, objects outside public other
+-- than extensions, default privileges and event triggers (which are global).
 -- Used to prove that a failed migration left the schema byte-identical (runner atomicity tests, executor experiment).
 SET search_path = pg_catalog;
 SELECT md5(coalesce(string_agg(x, E'\n' ORDER BY x COLLATE "C"), '')) FROM (
   SELECT 'rel|' || c.relname || '|' || c.relkind::text || '|' || c.relowner::regrole::text || '|' || coalesce(c.relacl::text, '')
-         || '|' || c.relrowsecurity || '|' || c.relforcerowsecurity AS x
+         || '|' || c.relrowsecurity || '|' || c.relforcerowsecurity || '|' || c.relpersistence::text || '|' || c.relreplident::text
+         || '|' || coalesce(array_to_string(c.reloptions, ','), '') || '|' || coalesce(pg_get_expr(c.relpartbound, c.oid), '') AS x
     FROM pg_class c WHERE c.relnamespace = 'public'::regnamespace
-  UNION ALL SELECT 'idx|' || pg_get_indexdef(i.indexrelid)
+  UNION ALL SELECT 'idx|' || pg_get_indexdef(i.indexrelid) || '|' || i.indisvalid || '|' || i.indisready
     FROM pg_index i JOIN pg_class c ON c.oid = i.indrelid WHERE c.relnamespace = 'public'::regnamespace
   UNION ALL SELECT 'col|' || c.relname || '|' || a.attname || '|' || a.attnum || '|' || format_type(a.atttypid, a.atttypmod)
          || '|' || a.attnotnull || '|' || coalesce(pg_get_expr(d.adbin, d.adrelid), '') || '|' || coalesce(a.attacl::text, '')
@@ -23,7 +29,7 @@ SELECT md5(coalesce(string_agg(x, E'\n' ORDER BY x COLLATE "C"), '')) FROM (
    WHERE c.relnamespace = 'public'::regnamespace AND a.attnum > 0 AND NOT a.attisdropped
   UNION ALL SELECT 'con|' || conrelid::regclass::text || '|' || conname || '|' || pg_get_constraintdef(oid)
     FROM pg_constraint WHERE connamespace = 'public'::regnamespace
-  UNION ALL SELECT 'trg|' || pg_get_triggerdef(t.oid)
+  UNION ALL SELECT 'trg|' || pg_get_triggerdef(t.oid) || '|' || t.tgenabled::text
     FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid WHERE c.relnamespace = 'public'::regnamespace AND NOT t.tgisinternal
   UNION ALL SELECT 'pol|' || polrelid::regclass::text || '|' || polname || '|' || polcmd::text || '|' || polpermissive
          || '|' || coalesce(pg_get_expr(polqual, polrelid), '') || '|' || coalesce(pg_get_expr(polwithcheck, polrelid), '')
@@ -43,6 +49,24 @@ SELECT md5(coalesce(string_agg(x, E'\n' ORDER BY x COLLATE "C"), '')) FROM (
     FROM pg_namespace n WHERE n.nspname = 'public'
   UNION ALL SELECT 'ext|' || e.extname || '|' || e.extversion || '|' || e.extnamespace::regnamespace::text
     FROM pg_extension e
+  -- Codex RG3X-01: sequence parameters (the current value is data, not catalog).
+  UNION ALL SELECT 'seq|' || c.relname || '|' || format_type(s.seqtypid, NULL) || '|' || s.seqstart || '|' || s.seqincrement
+         || '|' || s.seqmax || '|' || s.seqmin || '|' || s.seqcache || '|' || s.seqcycle
+    FROM pg_sequence s JOIN pg_class c ON c.oid = s.seqrelid WHERE c.relnamespace = 'public'::regnamespace
+  UNION ALL SELECT 'inh|' || i.inhrelid::regclass::text || '|' || i.inhparent::regclass::text || '|' || i.inhseqno
+    FROM pg_inherits i JOIN pg_class c ON c.oid = i.inhrelid WHERE c.relnamespace = 'public'::regnamespace
+  UNION ALL SELECT 'stx|' || x.stxname || '|' || x.stxrelid::regclass::text || '|' || array_to_string(x.stxkind, ',') || '|' || x.stxkeys::text
+    FROM pg_statistic_ext x WHERE x.stxnamespace = 'public'::regnamespace
+  UNION ALL SELECT 'com|' || d.classoid::regclass::text || '|' || d.objsubid || '|' || coalesce(c.relname, p.proname, t.typname, '?') || '|' || d.description
+    FROM pg_description d
+    LEFT JOIN pg_class c ON d.classoid = 'pg_class'::regclass AND c.oid = d.objoid
+    LEFT JOIN pg_proc p ON d.classoid = 'pg_proc'::regclass AND p.oid = d.objoid
+    LEFT JOIN pg_type t ON d.classoid = 'pg_type'::regclass AND t.oid = d.objoid
+   WHERE c.relnamespace = 'public'::regnamespace OR p.pronamespace = 'public'::regnamespace OR t.typnamespace = 'public'::regnamespace
+  UNION ALL SELECT 'dacl|' || d.defaclrole::regrole::text || '|' || coalesce(d.defaclnamespace::regnamespace::text, '*') || '|' || d.defaclobjtype::text || '|' || d.defaclacl::text
+    FROM pg_default_acl d
+  UNION ALL SELECT 'evt|' || e.evtname || '|' || e.evtevent || '|' || e.evtenabled::text || '|' || e.evtfoid::regproc::text
+    FROM pg_event_trigger e
   UNION ALL SELECT 'fn|' || p.oid::regprocedure::text || '|' || pg_get_function_arguments(p.oid) || '|' || format_type(p.prorettype, NULL)
          || '|' || p.provolatile::text || '|' || p.prosecdef || '|' || p.proowner::regrole::text
          || '|' || p.prolang::regproc::text || '|' || p.proparallel::text || '|' || p.proisstrict || '|' || p.proleakproof

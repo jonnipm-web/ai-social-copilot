@@ -89,7 +89,21 @@ for change in \
   "ALTER FUNCTION public.f() PARALLEL SAFE" \
   "ALTER FUNCTION public.f() STRICT" \
   "ALTER FUNCTION public.f() LEAKPROOF" \
-  "ALTER FUNCTION public.f() COST 7"; do
+  "ALTER FUNCTION public.f() COST 7" \
+  "CREATE SEQUENCE public.s" \
+  "ALTER SEQUENCE public.s INCREMENT BY 2" \
+  "ALTER SEQUENCE public.s CACHE 5" \
+  "ALTER SEQUENCE public.s CYCLE" \
+  "ALTER TABLE public.t SET (fillfactor = 70)" \
+  "ALTER TABLE public.t REPLICA IDENTITY FULL" \
+  "CREATE TABLE public.child () INHERITS (public.t)" \
+  "CREATE STATISTICS public.st (ndistinct) ON id, c FROM public.t" \
+  "COMMENT ON TABLE public.t IS 'x'" \
+  "CREATE FUNCTION public.tg() RETURNS trigger LANGUAGE plpgsql AS 'BEGIN RETURN NEW; END'; CREATE TRIGGER tr BEFORE INSERT ON public.t FOR EACH ROW EXECUTE FUNCTION public.tg()" \
+  "ALTER TABLE public.t DISABLE TRIGGER tr" \
+  "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO anon" \
+  "CREATE FUNCTION public.evf() RETURNS event_trigger LANGUAGE plpgsql AS 'BEGIN END'; CREATE EVENT TRIGGER et ON ddl_command_start EXECUTE FUNCTION public.evf()" \
+  "ALTER EVENT TRIGGER et DISABLE"; do
   before="$(catalog_fp "$FPC")"
   run -d "$FPC" -c "$change;" >/dev/null 2>&1 || { echo "fingerprint self-test setup failed: $change" >&2; exit 1; }
   [[ "$(catalog_fp "$FPC")" != "$before" ]] || { echo "CONTROL FAILED: the fingerprint is blind to: $change" >&2; exit 1; }

@@ -122,11 +122,15 @@ the fingerprint, or the experiment fails. The classes are:
 - columns (including column ACLs);
 - policies (roles, command, USING, WITH CHECK);
 - function metadata (language, parallel, strict, leakproof, cost, rows) —
-  Codex RG3W-01.
+  Codex RG3W-01;
+- sequence parameters, relation options, replica identity, inheritance,
+  extended statistics, comments, trigger enabled state, default privileges and
+  event triggers — Codex RG3X-01.
 
-The fingerprint still does not cover comments, statistics, storage parameters,
-event triggers, publications, or objects outside `public` other than
-extensions. This is documented, not claimed.
+The fingerprint does not cover data (including sequence current values, which
+are not transactional anyway), publications/subscriptions, large objects, or
+objects outside `public` other than extensions and the global default
+privileges and event triggers. This is documented, not claimed.
 
 Every expected CLI result is **asserted**: any deviation exits 1 with
 `EXECUTOR_EVIDENCE_CHANGED` (Codex RG3-05). CI runs the psql parts. The CLI part
