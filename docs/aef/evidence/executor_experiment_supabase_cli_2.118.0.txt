@@ -1,5 +1,5 @@
 # Executor transaction experiment — local run (IV-IVE-AEF-RUNTIME-INTEGRATION-01, Codex RG3V-03)
-# 2026-09-26T00:38:51Z · code commit cc1c674 with a CLEAN tracked tree · exit code 0
+# 2026-09-26T00:54:45Z · code commit fa13c25 with a CLEAN tracked tree · exit code 0
 # PostgreSQL 17.11 (disposable, local) · Supabase CLI via 'npx -y supabase@2.118.0' (local only; not hermetic supply-chain evidence)
 # Command: SUPABASE_CLI='npx -y supabase@2.118.0' bash scripts/ci/executor_transaction_experiment.sh
 EXECUTOR_FINGERPRINT_COVERAGE: PASS
