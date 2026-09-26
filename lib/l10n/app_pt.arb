@@ -407,5 +407,6 @@
       }
     }
   },
-  "impactVerifyInconclusive": "Verificação inconclusiva: não confie nos metadados deste snapshot. Obtenha um novo export antes de usá-lo."
+  "impactVerifyInconclusive": "Verificação inconclusiva: não confie nos metadados deste snapshot. Obtenha um novo export antes de usá-lo.",
+  "adminModulesOpen": "Abrir módulo"
 }

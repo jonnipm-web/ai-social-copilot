@@ -51,7 +51,9 @@ class _Body extends ConsumerWidget {
                   title: Text('«${displaySafe(inv.subjectOrgRef)}»'),
                   subtitle: Text('${inv.status} · ${inv.id}', maxLines: 2, overflow: TextOverflow.ellipsis),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.go('/impact/${Uri.encodeComponent(inv.id)}'),
+                  // push (not go): the dossier keeps a back arrow and system Back returns
+                  // here instead of leaving the app (physical finding PF-03).
+                  onTap: () => context.push('/impact/${Uri.encodeComponent(inv.id)}'),
                 ),
               ),
           ],

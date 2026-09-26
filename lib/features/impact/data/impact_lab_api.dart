@@ -1,3 +1,8 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../domain/dossier_models.dart';
@@ -85,6 +90,59 @@ class SupabaseImpactTransport implements ImpactTransport {
     final data = response.data;
     if (data is! Map<String, dynamic>) throw const ImpactApiException(ImpactErrorKind.contract);
     return data;
+  }
+}
+
+/// Physical-device validation (IV-IMPACT-I6-PHYSICAL-CLOSURE): a DEBUG build
+/// may point Impact at the local Lab dev server (`tool/impact_lab_dev_server.ts`,
+/// reached over `adb reverse`) with `--dart-define=IMPACT_API_BASE_URL=...`.
+/// Honored ONLY in debug builds and only for loopback hosts, so a shipped app
+/// can never be redirected by a build flag (same contract as the Quant Lab).
+const _kDevBaseUrlDefine = String.fromEnvironment('IMPACT_API_BASE_URL');
+
+String? impactDevBaseUrl({String define = _kDevBaseUrlDefine, bool debug = kDebugMode}) {
+  if (!debug || define.isEmpty) return null;
+  final uri = Uri.tryParse(define);
+  if (uri == null || uri.scheme != 'http' || !(uri.host == '127.0.0.1' || uri.host == 'localhost')) return null;
+  // Origin only: no userinfo, path, query or fragment can ride along.
+  if (uri.userInfo.isNotEmpty || uri.hasQuery || uri.hasFragment || !(uri.path.isEmpty || uri.path == '/')) return null;
+  // Rebuilt from the parsed parts, so what is used is exactly what was validated.
+  return 'http://${uri.host}${uri.hasPort ? ':${uri.port}' : ''}';
+}
+
+/// Debug-only HTTP transport to the local Lab dev server. The caller's own
+/// session JWT is attached; errors map exactly like the Supabase transport.
+class HttpImpactTransport implements ImpactTransport {
+  HttpImpactTransport(this.baseUrl, this._token, {http.Client? client}) : _client = client ?? http.Client();
+
+  final String baseUrl;
+  final String? Function() _token;
+  final http.Client _client;
+
+  @override
+  Future<Map<String, dynamic>> send(Map<String, dynamic> body) async {
+    final http.Response res;
+    try {
+      final token = _token();
+      res = await _client
+          .post(
+            Uri.parse('$baseUrl/impact-lab'),
+            headers: {'Content-Type': 'application/json', if (token != null) 'Authorization': 'Bearer $token'},
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 30));
+    } catch (_) {
+      throw const ImpactApiException(ImpactErrorKind.network);
+    }
+    Object? decoded;
+    try {
+      decoded = jsonDecode(utf8.decode(res.bodyBytes));
+    } catch (_) {
+      decoded = null;
+    }
+    if (res.statusCode < 200 || res.statusCode >= 300) throw impactErrorFrom(res.statusCode, decoded);
+    if (decoded is! Map<String, dynamic>) throw const ImpactApiException(ImpactErrorKind.contract);
+    return decoded;
   }
 }
 

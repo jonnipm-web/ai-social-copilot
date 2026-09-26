@@ -5,6 +5,7 @@ import 'package:ai_social_copilot/core/modules/module_definition.dart';
 import 'package:ai_social_copilot/core/modules/module_registry.dart';
 import 'package:ai_social_copilot/core/modules/route_policy.dart';
 import 'package:ai_social_copilot/features/impact/screens/impact_dossier_screen.dart';
+import 'package:ai_social_copilot/features/impact/screens/impact_home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -82,5 +83,42 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Live view'), findsOneWidget);
     expect(tr.calls.single['investigation_id'], kInvestigationId);
+  });
+
+  testWidgets('UI-RT-06 (PF-03) list → dossier keeps history: back arrow shown, Back returns to the list (never leaves the module)', (tester) async {
+    final tr = FakeImpactTransport(dossier: fixture('dossier_confirmed_en'), list: fixture('list_investigations'));
+    final router = GoRouter(
+      initialLocation: AppConstants.routeImpact,
+      routes: [
+        GoRoute(path: AppConstants.routeImpact, builder: (_, __) => const ImpactHomeScreen()),
+        GoRoute(path: AppConstants.routeImpactDossier, builder: (_, s) => ImpactDossierScreen(investigationId: s.pathParameters['id']!)),
+      ],
+    );
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        impactTransportProvider.overrideWithValue(tr),
+        currentProfileProvider.overrideWith((ref) => Future.value(profile())),
+      ],
+      child: MaterialApp.router(
+        routerConfig: router,
+        locale: const Locale('en'),
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+      ),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('«org-hopebridge»'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ImpactDossierScreen), findsOneWidget);
+    expect(find.byType(BackButton), findsOneWidget, reason: 'the dossier offers a way back');
+    expect(router.canPop(), isTrue);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.byType(ImpactHomeScreen), findsOneWidget);
   });
 }

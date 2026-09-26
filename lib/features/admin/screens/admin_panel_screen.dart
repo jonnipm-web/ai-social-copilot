@@ -449,6 +449,16 @@ class _StatusBadge extends StatelessWidget {
   }
 }
 
+/// IV-IMPACT-I6-PHYSICAL-CLOSURE (physical finding PF-01) — the only way an
+/// admin can REACH a non-commercial module screen on a phone: the drawer lists
+/// commercial modules only (by design) and a phone has no URL bar. Returns the
+/// module's own route when it has one, is adminClickable and is NOT
+/// commercial (commercial modules are already reachable from the drawer);
+/// otherwise null. Navigation still goes through the route entitlement policy
+/// (EXPERIMENTAL ⇒ admin only), so this adds no access, only a path.
+String? moduleOpenRoute(ModuleDefinition module) =>
+    module.adminClickable && !module.commercialEnabled && module.route != null ? module.route : null;
+
 class _ModuleDetailSheet extends StatelessWidget {
   const _ModuleDetailSheet({required this.module, required this.isEnglish});
   final ModuleDefinition module;
@@ -495,6 +505,21 @@ class _ModuleDetailSheet extends StatelessWidget {
               Text(t.adminModulesNotes, style: const TextStyle(color: Colors.white38, fontSize: 12, fontWeight: FontWeight.w600)),
               const SizedBox(height: 4),
               Text(module.notes, style: const TextStyle(color: Colors.amber, fontSize: 13)),
+            ],
+            if (moduleOpenRoute(module) != null) ...[
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  icon: const Icon(Icons.open_in_new_rounded),
+                  label: Text(t.adminModulesOpen),
+                  onPressed: () {
+                    final route = moduleOpenRoute(module)!;
+                    Navigator.of(context).pop();
+                    context.push(route);
+                  },
+                ),
+              ),
             ],
             const SizedBox(height: 8),
           ],

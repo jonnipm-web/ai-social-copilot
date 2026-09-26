@@ -5,9 +5,12 @@ import '../data/impact_lab_api.dart';
 import '../domain/dossier_models.dart';
 
 /// IV-IMPACT-I5 — overridable in tests with a fixture-backed transport.
-final impactTransportProvider = Provider<ImpactTransport>(
-  (ref) => SupabaseImpactTransport(Supabase.instance.client),
-);
+final impactTransportProvider = Provider<ImpactTransport>((ref) {
+  // Debug + loopback only (see impactDevBaseUrl): physical Lab validation.
+  final dev = impactDevBaseUrl();
+  if (dev != null) return HttpImpactTransport(dev, () => Supabase.instance.client.auth.currentSession?.accessToken);
+  return SupabaseImpactTransport(Supabase.instance.client);
+});
 
 final impactLabApiProvider = Provider<ImpactLabApi>(
   (ref) => ImpactLabApi(ref.watch(impactTransportProvider)),

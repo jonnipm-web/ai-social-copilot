@@ -644,8 +644,8 @@ const List<ModuleDefinition> kModuleRegistry = [
     minimumPlan: ModulePlan.free, // admin-only via lifecycle (EXPERIMENTAL), não via plano
     route: AppConstants.routeImpact,
     edgeFunctions: ['impact-lab'],
-    readinessPt: 'IV-IMPACT-I1: núcleo de evidência/verificação + persistência Lab (migration não aplicada em produção, RLS testada em PostgreSQL descartável) + Edge Function impact-lab só para admin (não deployada). Sem rede, sem LLM, sem tela. Não emite veredito, score ou ranking; ausência de evidência nunca vira acusação. I5: tela de dossiê só para admin (/impact), consumindo o contrato I4.',
-    readinessEn: 'IV-IMPACT-I1: evidence/verification core + Lab persistence (migration not applied to production, RLS tested on a disposable PostgreSQL) + admin-only impact-lab Edge Function (not deployed). No network, no LLM, no screen. Emits no verdict, score or ranking; absence of evidence never becomes an accusation. I5: admin-only dossier screen (/impact) consuming the I4 contract.',
+    readinessPt: 'IV-IMPACT-I1: núcleo de evidência/verificação + persistência Lab (migration não aplicada em produção, RLS testada em PostgreSQL descartável) + Edge Function impact-lab só para admin (não deployada). Sem rede, sem LLM. Não emite veredito, score ou ranking; ausência de evidência nunca vira acusação. I5: tela de dossiê só para admin (/impact), consumindo o contrato I4.',
+    readinessEn: 'IV-IMPACT-I1: evidence/verification core + Lab persistence (migration not applied to production, RLS tested on a disposable PostgreSQL) + admin-only impact-lab Edge Function (not deployed). No network, no LLM. Emits no verdict, score or ranking; absence of evidence never becomes an accusation. I5: admin-only dossier screen (/impact) consuming the I4 contract.',
     releaseClassification: ModuleReleaseClass.internalTooling,
     notes: 'Impact Lab (branch claude/insightvalues-impact-foundation). Ações classe C (acusação pública, contato externo, doação) NÃO implementadas -- futuramente somente via AEF + Human Gate. I5: adminClickable=true (tela de dossiê admin-only; a autoridade real é o entitlement admin do impact-lab).',
   ),

@@ -60,8 +60,12 @@ class ImpactDossierBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final header = _Header(d: dossier);
-    final summary = _SummarySection(d: dossier);
+    // PF-02 / PF-04 (physical): every truth caveat — the "no score, ranking or
+    // verdict" header note, the summary counts, what is NOT established and
+    // the limitations — is an IVE exclusion region, so the floating avatar
+    // never rests on them (it moves to quoted content instead).
+    final header = IveExclusionRegion(child: _Header(d: dossier));
+    final summary = IveExclusionRegion(child: _SummarySection(d: dossier));
     final notEstablished = _NotEstablishedSection(d: dossier);
     final limitations = _LimitationsSection(d: dossier);
     // Codex I5G1-01 — on desktop the caveats span the full width ABOVE the
@@ -198,12 +202,14 @@ class _NotEstablishedSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-    return ImpactSection(
+    // Physical finding PF-02: the floating IVE avatar rested on this critical
+    // caveat on a real phone — caveats are exclusion regions (existing contract).
+    return IveExclusionRegion(child: ImpactSection(
       title: t.impactNotEstablished,
       icon: Icons.do_not_disturb_on_outlined,
       emphasis: true,
       children: [for (final code in d.doesNotEstablish) ImpactLine(d.labels.nonFinding(code), icon: Icons.remove)],
-    );
+    ));
   }
 }
 
@@ -216,7 +222,7 @@ class _LimitationsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
     final groups = d.groupedLimitations;
-    return ImpactSection(
+    return IveExclusionRegion(child: ImpactSection(
       title: d.labels.section('LIMITATIONS'),
       icon: Icons.warning_amber_outlined,
       emphasis: true,
@@ -228,7 +234,7 @@ class _LimitationsSection extends StatelessWidget {
             icon: Icons.remove,
           ),
       ],
-    );
+    ));
   }
 }
 

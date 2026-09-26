@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/ui/breakpoints.dart';
 import '../../../l10n/app_localizations.dart';
 import '../domain/dossier_models.dart';
+import '../../../shared/widgets/ive_exclusion_region.dart';
 import '../widgets/impact_widgets.dart';
 
 /// IV-IMPACT-I5 — one claim, as the server verified it: the evidence the
@@ -33,7 +34,8 @@ class ImpactClaimScreen extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           children: [
             // Codex I5G1-04 — the dossier's caveats come before the claim.
-            ImpactSection(
+            // PF-02: never under the floating IVE avatar.
+            IveExclusionRegion(child: ImpactSection(
               title: t.impactClaimCaveats,
               icon: Icons.do_not_disturb_on_outlined,
               emphasis: true,
@@ -47,7 +49,7 @@ class ImpactClaimScreen extends StatelessWidget {
                   ImpactLine(lim.ref == null ? l.limitation(lim.code) : '${l.limitation(lim.code)} (${lim.ref})', icon: Icons.warning_amber_outlined),
                 ImpactLine(t.impactExportLimitations(dossier.limitationCount), muted: true),
               ],
-            ),
+            )),
             ImpactQuote(
               text: claim.text,
               attribution: claim.textAttribution,

@@ -587,6 +587,25 @@ void main() {
     });
   });
 
+  group('UI-PF physical findings (I6-PHYSICAL-CLOSURE)', () {
+    bool excluded(WidgetTester tester, Finder f) {
+      final target = tester.getRect(f);
+      return iveExclusionRegionsNotifier.value.any((r) => r.overlaps(target) && r.contains(target.topLeft + const Offset(1, 1)));
+    }
+
+    testWidgets('UI-PF-02 the critical caveats (NOT established, limitations, claim caveats) are IVE exclusion regions', (tester) async {
+      await pumpImpact(tester, dossierScreen, transport: FakeImpactTransport(dossier: fixture('dossier_confirmed_en')), size: const Size(390, 9000));
+      expect(excluded(tester, find.text('What this dossier does NOT establish')), isTrue);
+      expect(excluded(tester, find.text('Limitations').first), isTrue);
+      // PF-04: the header note and the summary counts too.
+      expect(excluded(tester, find.textContaining('no score, ranking or verdict').first), isTrue);
+      expect(excluded(tester, find.text('Summary')), isTrue);
+      await tester.tap(find.textContaining('«HopeBridge Foundation is a registered charity.»'));
+      await tester.pumpAndSettle();
+      expect(excluded(tester, find.text('Before reading this claim')), isTrue);
+    });
+  });
+
   group('UI-A11Y semantics', () {
     testWidgets('UI-A11Y-01 section headers, chips as labelled text, tappable claims', (tester) async {
       final handle = tester.ensureSemantics();
