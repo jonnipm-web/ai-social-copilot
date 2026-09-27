@@ -13,19 +13,28 @@
 /// so a future Strategy Engine integration layer in this app has a real,
 /// faithful target to deserialize into, instead of an ad-hoc map.
 ///
-/// PROVENANCE STATUS (INSIGHTVALUES-INTELLIGENCE-AUTOMATION-MACRO-04 §13,
-/// re-verified): the claim that this shape was "copied from a real,
-/// validated, tested source" could NOT be substantiated this mission —
-/// the named `insightvalues-quant` GitHub repository was cloned and found
-/// to contain only a README stub, its one commit dated seven weeks before
-/// the claim was written, and no other repository/branch/local file
-/// available to this mission ever held Strategy001 source. This does not
-/// prove the real engine never existed; it means the specific claim is
-/// currently unverifiable, not verified. See
-/// docs/commercial/STRATEGY001_SOURCE_FINDING.md for the full diligence
-/// trail. Nothing in THIS file is false or unsafe on its own (it is inert
-/// types, no logic) — only its origin story needs re-confirming with the
-/// Owner before being repeated as fact again.
+/// PROVENANCE STATUS (updated INSIGHTVALUES-ROBOT-BUILDER-MACRO-05,
+/// supersedes the MACRO-04 finding below): the real source was found and
+/// directly inspected. A local worktree at
+/// `C:\Users\jpaul\Documents\Codex\2026-08-10\referenced-chatgpt-
+/// conversation-this-is-an\insightvalues-quant` (branch
+/// `codex/qt01c36-hierarchical-fibonacci-structural-fidelity` @ `4b9eb19b`,
+/// remote = the SAME `jonnipm-web/insightvalues-quant` repo MACRO-04 found
+/// empty on `main` — the work existed on an unpushed branch) contains a
+/// real `insightvalues_quant/strategy001/` package (`engine.py`,
+/// `evaluator.py`, `state_machine.py`, `events.py`, `models.py`,
+/// `config.py`, `audit.py`, `README.md`) and `insightvalues_quant/
+/// fibonacci/` package, with real, passing tests (`test_strategy001_*.py` x
+/// 7, `test_fibonacci_*.py` x 9, among 2541 total passing this worktree).
+/// `strategy001/README.md`'s own text is a WORD-FOR-WORD match for the
+/// Tranche 2 positioning doc's quote below, and its state/event vocabulary
+/// (TREND_DETECTED, PULLBACK_DETECTED, FIB_READY, CONFIRMATION_1/2, READY,
+/// TRIGGERED, TARGET_REACHED, EXPANSION_CANDIDATE, RESET_REQUIRED,
+/// STRATEGY_INVALIDATED) is an exact match for this file's `EventKind`
+/// below. The original Tranche 2 claim is CORROBORATED, not merely
+/// no-longer-disproven. See docs/commercial/STRATEGY001_SOURCE_FINDING.md
+/// for the full, updated diligence trail (including the still-accurate
+/// original MACRO-04 finding for the specific `main` branch it checked).
 ///
 /// Per the positioning doc's own quote of Strategy001's README: "This
 /// module produces state transitions and events only. It never generates

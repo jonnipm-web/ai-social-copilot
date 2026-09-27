@@ -21,10 +21,16 @@ export type AssetClass =
   | 'CRYPTO'
   | 'FIXED_INCOME'
   | 'COMMODITY'
-  | 'FUND';
+  | 'FUND'
+  /** Exchange-traded futures/mini-futures (e.g. B3's WIN1!/WDO1!). Added
+   * INSIGHTVALUES-ROBOT-BUILDER-MACRO-05 for the Strategy Builder's Market
+   * Profile -- NOT added to FOUNDATION_SUPPORTED_ASSET_CLASSES below, since
+   * the price-series Foundation's positive-price/exchange-session
+   * assumptions haven't been validated against futures rolls yet. */
+  | 'FUTURE';
 
 export const ALL_ASSET_CLASSES: readonly AssetClass[] = [
-  'EQUITY', 'ETF', 'INDEX', 'FX', 'CRYPTO', 'FIXED_INCOME', 'COMMODITY', 'FUND',
+  'EQUITY', 'ETF', 'INDEX', 'FX', 'CRYPTO', 'FIXED_INCOME', 'COMMODITY', 'FUND', 'FUTURE',
 ];
 
 /**
@@ -54,7 +60,9 @@ export interface InstrumentIdentity {
   readonly providerIds?: Readonly<Record<string, string>>;
 }
 
-const SYMBOL_RE = /^[A-Z0-9][A-Z0-9.\-=/]{0,31}$/;
+// Trailing '!' added ROBOT-BUILDER-MACRO-05 for continuous-futures notation
+// (e.g. TradingView's WIN1!/WDO1!) -- real market symbols, not a hack.
+const SYMBOL_RE = /^[A-Z0-9][A-Z0-9.\-=/]{0,30}!?$/;
 const MIC_RE = /^[A-Z0-9]{4}$/;
 const CURRENCY_RE = /^[A-Z]{3}$/;
 const ISIN_RE = /^[A-Z]{2}[A-Z0-9]{9}[0-9]$/;

@@ -48,3 +48,18 @@ Rather than gate a whole module at `minimumPlan: premium` (still not done — se
 - Actually gating a whole module at `minimumPlan: premium`: still not performed — the mechanism exists, no Owner decision has been made to use it on a real module yet. (The retention differentiation above is a different mechanism entirely — it does not use `minimumPlan`.)
 - The exact 90-day Free/Pro retention window (`RESULT_LEARNING_RETENTION_DAYS`): provisional, not an Owner-confirmed number.
 - Quant/broker/market-data licensing: unchanged, still blocked — see the Financial Intelligence section of the Tranche 2 final report, and this mission's own `docs/commercial/STRATEGY001_SOURCE_FINDING.md`.
+
+## INSIGHTVALUES-ROBOT-BUILDER-MACRO-05 §45-46: Strategy Builder tier architecture (candidate, no pricing)
+
+Owner brief §45 asked for candidate Free/Pro/Premium capability differentiation for the new Strategy Builder ("Robot Builder"), built around *capability, not promises of profit* (§45: "Do NOT promise profitability"). Nothing below is priced or activated — `strategy-builder` stays `EXPERIMENTAL`/admin-only (module_policy.ts), same posture as `ive-quant`. This is architecture-readiness, not a live tier gate.
+
+| Capability | Free (candidate) | Pro (candidate) | Premium (candidate) |
+|---|---|---|---|
+| Strategy Specifications | Limited count | More strategies | Higher limits |
+| Validation (`strategy_spec.ts`) | Full — safety controls are never paywalled (§36: risk constraints "must never be weakened because of subscription tier") | Same | Same |
+| Backtest/dataset breadth | Limited datasets/history | Broader datasets | Largest available history |
+| Strategy versioning & comparison | Basic (this macro's foundation) | Version comparison at scale | Advanced robustness/comparison tooling (§30, §22 — not yet built) |
+| Result → Learning retention for strategy backtests | Same 90-day provisional default as §20-21 above | Same | Same "never expires" pattern as §20-21 above |
+| Governed automation (future, once Owner-authorized) | — | — | "when mature" per §45 — no implementation exists yet |
+
+**Cost control (§46):** the real variable-cost surfaces this macro actually built (Strategy Specification validation, spec/version storage) are all pure, in-process, and cheap — no external compute, no LLM call, no market-data fetch in the `strategy-builder` Edge Function itself. `strategies`/`strategy_versions`/`strategy_backtest_results` are size-bounded by ordinary Postgres row limits and RLS-scoped per user; no unbounded-compute surface (a full backtest engine invocation) has been wired to any user-triggered endpoint this macro, so the "prevent obviously unbounded compute" requirement has nothing new to bound yet. This is a candidate table for future Owner tier decisions, not a commitment.

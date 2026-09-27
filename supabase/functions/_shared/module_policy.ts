@@ -154,7 +154,8 @@ export const MODULE_POLICY: ModulePolicyDoc =
     "aef-runtime-lab": { "lifecycle": "EXPERIMENTAL", "minimumPlan": "free", "actionClass": "REVERSIBLE" },
     "impact": { "lifecycle": "EXPERIMENTAL", "minimumPlan": "free", "actionClass": "REVERSIBLE" },
     "quant-analytics": { "lifecycle": "INTERNAL", "minimumPlan": "free", "actionClass": "READ_ONLY" },
-    "quant-watchlists": { "lifecycle": "INTERNAL", "minimumPlan": "free", "actionClass": "REVERSIBLE" }
+    "quant-watchlists": { "lifecycle": "INTERNAL", "minimumPlan": "free", "actionClass": "REVERSIBLE" },
+    "strategy-builder": { "lifecycle": "EXPERIMENTAL", "minimumPlan": "free", "actionClass": "REVERSIBLE" }
   },
   "edgeFunctions": {
     "analyze-website": { "kind": "MODULE", "moduleId": "website-analyzer" },
@@ -185,7 +186,8 @@ export const MODULE_POLICY: ModulePolicyDoc =
     "ive-agent-runner": { "kind": "RETIRED" },
     "aef-runtime": { "kind": "MODULE", "moduleId": "aef-runtime-lab", "gateFile": "_shared/aef_runtime_endpoint.ts", "actionClassOverride": "CONSEQUENTIAL" },
     "action-engine-runtime": { "kind": "MODULE", "moduleId": "action-engine", "gateFile": "_shared/aef_runtime_endpoint.ts", "actionClassOverride": "CONSEQUENTIAL" },
-    "quant-runtime": { "kind": "MODULE", "moduleId": "ive-quant", "gateFile": "_shared/aef_runtime_endpoint.ts" }
+    "quant-runtime": { "kind": "MODULE", "moduleId": "ive-quant", "gateFile": "_shared/aef_runtime_endpoint.ts" },
+    "strategy-builder": { "kind": "MODULE", "moduleId": "strategy-builder" }
   }
 }
 // END_MODULE_POLICY_JSON

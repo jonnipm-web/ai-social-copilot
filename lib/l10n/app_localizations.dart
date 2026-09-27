@@ -2497,6 +2497,102 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Barras'**
   String get quantLabBars;
+
+  /// No description provided for @strategyLabTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Strategy Lab (Robot Builder)'**
+  String get strategyLabTitle;
+
+  /// No description provided for @strategyLabAccessDenied.
+  ///
+  /// In pt, this message translates to:
+  /// **'Você não tem permissão para acessar o Strategy Lab.'**
+  String get strategyLabAccessDenied;
+
+  /// No description provided for @strategyLabBanner.
+  ///
+  /// In pt, this message translates to:
+  /// **'Fase de fundação. Somente leitura: exibe apenas a estratégia de referência. Sem formulário de criação, sem execução de backtest, sem conexão com corretora.'**
+  String get strategyLabBanner;
+
+  /// No description provided for @strategyLabDisclaimer.
+  ///
+  /// In pt, this message translates to:
+  /// **'Apenas referência de pesquisa. NÃO é uma estratégia com lucro comprovado. NÃO aprovada para paper trading ou negociação real. Não é recomendação de investimento.'**
+  String get strategyLabDisclaimer;
+
+  /// No description provided for @strategyLabStatusLabel.
+  ///
+  /// In pt, this message translates to:
+  /// **'Status'**
+  String get strategyLabStatusLabel;
+
+  /// No description provided for @strategyLabRulesSection.
+  ///
+  /// In pt, this message translates to:
+  /// **'Regras'**
+  String get strategyLabRulesSection;
+
+  /// No description provided for @strategyLabEntry.
+  ///
+  /// In pt, this message translates to:
+  /// **'Entrada'**
+  String get strategyLabEntry;
+
+  /// No description provided for @strategyLabStop.
+  ///
+  /// In pt, this message translates to:
+  /// **'Stop'**
+  String get strategyLabStop;
+
+  /// No description provided for @strategyLabTarget.
+  ///
+  /// In pt, this message translates to:
+  /// **'Alvo'**
+  String get strategyLabTarget;
+
+  /// No description provided for @strategyLabBreakEven.
+  ///
+  /// In pt, this message translates to:
+  /// **'Break-even'**
+  String get strategyLabBreakEven;
+
+  /// No description provided for @strategyLabSession.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sessão'**
+  String get strategyLabSession;
+
+  /// No description provided for @strategyLabForcedExit.
+  ///
+  /// In pt, this message translates to:
+  /// **'Fechamento forçado'**
+  String get strategyLabForcedExit;
+
+  /// No description provided for @strategyLabPositionSize.
+  ///
+  /// In pt, this message translates to:
+  /// **'Tamanho da posição'**
+  String get strategyLabPositionSize;
+
+  /// No description provided for @strategyLabHistoricalReference.
+  ///
+  /// In pt, this message translates to:
+  /// **'Referência histórica (dataset real WIN1!)'**
+  String get strategyLabHistoricalReference;
+
+  /// No description provided for @strategyLabZeroCost.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sem custo'**
+  String get strategyLabZeroCost;
+
+  /// No description provided for @strategyLabWithCost.
+  ///
+  /// In pt, this message translates to:
+  /// **'Com custos'**
+  String get strategyLabWithCost;
 }
 
 class _AppLocalizationsDelegate

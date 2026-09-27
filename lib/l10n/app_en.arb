@@ -478,5 +478,22 @@
   "@quantLabCacheValue": {"placeholders": {"hits": {"type": "int"}, "misses": {"type": "int"}}},
   "quantLabIdLabel": "ID",
   "quantLabPolicy": "Policy",
-  "quantLabBars": "Bars"
+  "quantLabBars": "Bars",
+
+  "strategyLabTitle": "Strategy Lab (Robot Builder)",
+  "strategyLabAccessDenied": "You do not have permission to access the Strategy Lab.",
+  "strategyLabBanner": "Foundation phase. Read-only: viewing the reference strategy only. No creation form, no backtest execution, no broker connection.",
+  "strategyLabDisclaimer": "Research reference only. NOT a proven profitable strategy. NOT approved for paper or live trading. Not investment advice.",
+  "strategyLabStatusLabel": "Status",
+  "strategyLabRulesSection": "Rules",
+  "strategyLabEntry": "Entry",
+  "strategyLabStop": "Stop",
+  "strategyLabTarget": "Target",
+  "strategyLabBreakEven": "Break-even",
+  "strategyLabSession": "Session",
+  "strategyLabForcedExit": "Forced exit",
+  "strategyLabPositionSize": "Position size",
+  "strategyLabHistoricalReference": "Historical reference (real WIN1! dataset)",
+  "strategyLabZeroCost": "Zero cost",
+  "strategyLabWithCost": "With cost assumptions"
 }

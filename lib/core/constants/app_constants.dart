@@ -88,6 +88,9 @@ class AppConstants {
   static const routeImpact               = '/impact';
   static const routeImpactDossier        = '/impact/:id';
 
+  // ROBOT-BUILDER-MACRO-05 — Strategy Lab (admin-only: module 'strategy-builder' is EXPERIMENTAL)
+  static const routeStrategyLab          = '/strategy-lab';
+
   // IV-QUANT-DATA-PLANE-AND-API-02 — Quant Lab (INTERNAL, admin-only)
   static const routeQuantLab             = '/quant-lab';
 

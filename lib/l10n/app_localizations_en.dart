@@ -1349,4 +1349,56 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get quantLabBars => 'Bars';
+
+  @override
+  String get strategyLabTitle => 'Strategy Lab (Robot Builder)';
+
+  @override
+  String get strategyLabAccessDenied =>
+      'You do not have permission to access the Strategy Lab.';
+
+  @override
+  String get strategyLabBanner =>
+      'Foundation phase. Read-only: viewing the reference strategy only. No creation form, no backtest execution, no broker connection.';
+
+  @override
+  String get strategyLabDisclaimer =>
+      'Research reference only. NOT a proven profitable strategy. NOT approved for paper or live trading. Not investment advice.';
+
+  @override
+  String get strategyLabStatusLabel => 'Status';
+
+  @override
+  String get strategyLabRulesSection => 'Rules';
+
+  @override
+  String get strategyLabEntry => 'Entry';
+
+  @override
+  String get strategyLabStop => 'Stop';
+
+  @override
+  String get strategyLabTarget => 'Target';
+
+  @override
+  String get strategyLabBreakEven => 'Break-even';
+
+  @override
+  String get strategyLabSession => 'Session';
+
+  @override
+  String get strategyLabForcedExit => 'Forced exit';
+
+  @override
+  String get strategyLabPositionSize => 'Position size';
+
+  @override
+  String get strategyLabHistoricalReference =>
+      'Historical reference (real WIN1! dataset)';
+
+  @override
+  String get strategyLabZeroCost => 'Zero cost';
+
+  @override
+  String get strategyLabWithCost => 'With cost assumptions';
 }
