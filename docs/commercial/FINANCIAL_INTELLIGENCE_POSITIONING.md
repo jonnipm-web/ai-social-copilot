@@ -2,6 +2,8 @@
 
 **Mission:** INSIGHTVALUES-COMMERCIAL-MACRO-01, Tranche 2. Scope: reconcile this app's "IVE Quant" placeholder with the real Strategy001/"Paulo Trend Fibonacci" asset, and integrate real code where safe — explicitly without real broker connection, real money, real order execution, broker credentials, an invented market-data provider, or bypassing licensing.
 
+> **AMENDMENT (INSIGHTVALUES-INTELLIGENCE-AUTOMATION-MACRO-04, §13):** the section immediately below claims this shape was "verified against its real source." A later mission independently re-checked that specific claim and could not substantiate it — the named `insightvalues-quant` GitHub repository contains only a README, no Strategy001 code of any kind, as of a commit dated seven weeks before this document was written. See `docs/commercial/STRATEGY001_SOURCE_FINDING.md` for the full diligence trail before treating anything below as confirmed fact. Nothing in the resulting Dart contracts is unsafe (they are inert types, not logic) — only the provenance claim needs re-confirming with the Owner.
+
 ## What Strategy001 actually is (verified against its real source)
 
 Strategy001 ("Paulo Trend Fibonacci") lives entirely in the separate `insightvalues-quant` Python repository, at `insightvalues_quant/strategy001/` and `insightvalues_quant/fibonacci/`. It is a validated, tested state machine (`test_strategy001_*.py`, `test_fibonacci_*.py` — engine, evaluator, state machine, golden files, audit trail, all present) that tracks structural trend/pullback/Fibonacci/confirmation conditions bar-by-bar and emits typed events (`TREND_DETECTED`, `FIB_READY`, `TRIGGERED`, `TARGET_REACHED`, etc.) plus per-bar snapshots.
