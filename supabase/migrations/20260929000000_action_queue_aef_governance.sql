@@ -39,17 +39,28 @@ ALTER TABLE public.action_queue
   ADD COLUMN IF NOT EXISTS aef_receipt_id      uuid NULL,
   ADD COLUMN IF NOT EXISTS aef_receipt_outcome text NULL;
 
-ALTER TABLE public.action_queue
-  ADD CONSTRAINT action_queue_aef_receipt_outcome_check
-  CHECK (aef_receipt_outcome IS NULL OR aef_receipt_outcome IN ('SUCCESS', 'FAILURE', 'PARTIAL', 'NOT_EXECUTED', 'UNKNOWN_OUTCOME'));
+-- ADD CONSTRAINT has no IF NOT EXISTS in Postgres; without this guard the
+-- idempotency re-apply (scripts/ci/run_disposable_db_tests.sh, every LAB
+-- migration) would fail the second time with "constraint already exists" --
+-- mirrors the pg_constraint guard already used in 20260924000000_ive_memory_governance.sql.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'action_queue_aef_receipt_outcome_check') THEN
+    ALTER TABLE public.action_queue
+      ADD CONSTRAINT action_queue_aef_receipt_outcome_check
+      CHECK (aef_receipt_outcome IS NULL OR aef_receipt_outcome IN ('SUCCESS', 'FAILURE', 'PARTIAL', 'NOT_EXECUTED', 'UNKNOWN_OUTCOME'));
+  END IF;
 
--- A governed transition never claims a receipt without recording which
--- operation it came from -- catches an application bug writing a receipt
--- id without its operation, the reverse (an operation id with no receipt
--- yet) is a normal, valid AWAITING_APPROVAL/AUTHORIZED/EXECUTING state.
-ALTER TABLE public.action_queue
-  ADD CONSTRAINT action_queue_aef_receipt_requires_operation_check
-  CHECK (aef_receipt_id IS NULL OR aef_operation_id IS NOT NULL);
+  -- A governed transition never claims a receipt without recording which
+  -- operation it came from -- catches an application bug writing a receipt
+  -- id without its operation, the reverse (an operation id with no receipt
+  -- yet) is a normal, valid AWAITING_APPROVAL/AUTHORIZED/EXECUTING state.
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'action_queue_aef_receipt_requires_operation_check') THEN
+    ALTER TABLE public.action_queue
+      ADD CONSTRAINT action_queue_aef_receipt_requires_operation_check
+      CHECK (aef_receipt_id IS NULL OR aef_operation_id IS NOT NULL);
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_action_queue_aef_operation
   ON public.action_queue USING btree (aef_operation_id)
