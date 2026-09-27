@@ -447,3 +447,70 @@ PGHOST="$HOST" PSQL="$PSQL" bash "$ROOT/scripts/ci/disposable_cleanup_test.sh" 2
 # non-atomic control). Uses the Supabase CLI when SUPABASE_CLI is set (CI).
 PGHOST="$HOST" PSQL="$PSQL" bash "$ROOT/scripts/ci/executor_transaction_experiment.sh" 2>&1 \
   | grep -E "^(EXECUTOR_|CONTROL FAILED)" || { echo "executor experiment failed" >&2; exit 1; }
+
+# ── Impact (IV-IMPACT-FOUNDATION-01 and successors) ─────────────────────
+# SUBJECT_ROLES_RLS already checked against $DB above (line ~70); reuses
+# the same disposable database rather than re-running it redundantly.
+
+# IV-IMPACT-I1-PERSISTENCE-RLS-01 — Impact Lab RLS / invariants (migration 20260924010000).
+out="$(run -d "$DB" -tA -f "$ROOT/supabase/tests/impact_lab_rls_test.sql")"
+echo "$out" | tail -1
+echo "$out" | grep -qE '^IMPACT_LAB_RLS: PASS [0-9]+ checks$'
+
+# IV-IMPACT-I2-REGISTRY-INTELLIGENCE-01 — registry snapshots, lineage columns,
+# registry conflicts, REGISTRY_RECORD evidence, RLS (migration 20260925010000).
+out="$(run -d "$DB" -tA -f "$ROOT/supabase/tests/impact_registry_rls_test.sql")"
+echo "$out" | tail -1
+echo "$out" | grep -qE '^IMPACT_REGISTRY_RLS: PASS [0-9]+ checks$'
+
+# IV-IMPACT-I3-EVIDENCE-COLLECTION-01 — artifacts, evidence candidates,
+# human review → promotion, RLS (migration 20260926010000).
+out="$(run -d "$DB" -tA -f "$ROOT/supabase/tests/impact_evidence_rls_test.sql")"
+echo "$out" | tail -1
+echo "$out" | grep -qE '^IMPACT_EVIDENCE_RLS: PASS [0-9]+ checks$'
+# Codex I3F-01 / I3V-01: concurrent writers (artifact vs evidence; review vs promotion), two sessions, both orders.
+out="$(bash "$ROOT/supabase/tests/impact_evidence_race_test.sh" "$PSQL" -h "$HOST" -v ON_ERROR_STOP=1 -q -d "$DB" 2>&1)" || { echo "$out"; exit 1; }
+echo "$out" | tail -1
+echo "$out" | grep -qx 'IMPACT_EVIDENCE_RACE: PASS 4 orders'
+
+# IV-IMPACT-I4-VERIFICATION-DOSSIER-01 — atomic ingestion (I3F-03), dossier
+# snapshot register, RLS (migration 20260927010000), then two-session races.
+out="$(run -d "$DB" -tA -f "$ROOT/supabase/tests/impact_dossier_rls_test.sql")"
+echo "$out" | tail -1
+echo "$out" | grep -qE '^IMPACT_DOSSIER_RLS: PASS [0-9]+ checks$'
+out="$(bash "$ROOT/supabase/tests/impact_dossier_race_test.sh" "$PSQL" -h "$HOST" -v ON_ERROR_STOP=1 -q -d "$DB" 2>&1)" || { echo "$out"; exit 1; }
+echo "$out" | tail -1
+echo "$out" | grep -qx 'IMPACT_DOSSIER_RACE: PASS 2 races'
+
+# IV-IMPACT-I5-PRODUCT-UX-01 — dossier rate-limit counters (migration 20260928010000)
+# + a two-session same-window race (no lost update).
+out="$(run -d "$DB" -tA -f "$ROOT/supabase/tests/impact_rate_limit_test.sql")"
+echo "$out" | tail -1
+echo "$out" | grep -qE '^IMPACT_RATE_LIMIT: PASS [0-9]+ checks$'
+out="$(bash "$ROOT/supabase/tests/impact_rate_limit_race_test.sh" "$PSQL" -h "$HOST" -v ON_ERROR_STOP=1 -q -d "$DB" 2>&1)" || { echo "$out"; exit 1; }
+echo "$out" | tail -1
+echo "$out" | grep -qx 'IMPACT_RATE_LIMIT_RACE: PASS no lost update'
+# Codex I5G2-03 — a drifted pre-existing counter table must stop the migration.
+drift="$(mktemp)"
+{ echo "BEGIN; ALTER TABLE public.impact_rate_limits ADD COLUMN drift_probe integer; SET search_path = public, extensions;"
+  cat "$ROOT/supabase/migrations/20260928010000_impact_product_rate_limit.sql"
+  echo "ROLLBACK;"; } > "$drift"
+if out="$(run -d "$DB" -f "$drift" 2>&1)"; then rm -f "$drift"; echo "IMPACT_RATE_LIMIT_DRIFT: FAIL (drifted table accepted)"; exit 1; fi
+rm -f "$drift"
+echo "$out" | grep -q 'IMPACT_RATE_LIMIT_SCHEMA_DRIFT' || { echo "$out"; echo "IMPACT_RATE_LIMIT_DRIFT: FAIL (wrong error)"; exit 1; }
+echo "IMPACT_RATE_LIMIT_DRIFT: PASS drifted table refused"
+
+# IV-IMPACT-I1 — engine → database parity: rows produced by the REAL Lab flow
+# (engine + store row mappers) must satisfy every database invariant.
+if command -v deno >/dev/null 2>&1; then
+  rows="$(mktemp)"
+  deno run --allow-read "$ROOT/supabase/tests/impact_lab_engine_rows.ts" > "$rows"
+  out="$(run -d "$DB" -tA -f "$rows")"
+  rm -f "$rows"
+  echo "$out" | tail -1
+  echo "$out" | grep -qE '^IMPACT_ENGINE_ROWS: PASS '
+elif [ "${CI:-}" = "true" ]; then
+  echo "deno is required in CI for the Impact engine-rows parity test" >&2; exit 1
+else
+  echo "IMPACT_ENGINE_ROWS: skipped locally (deno not on PATH)"
+fi

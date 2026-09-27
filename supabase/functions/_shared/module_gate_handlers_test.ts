@@ -64,10 +64,12 @@ function reset() {
   quotaCalls = 0;
 }
 
-Deno.test('GH-00 every MODULE-kind function (20) exports an injectable handler', () => {
+Deno.test('GH-00 every MODULE-kind function (21) exports an injectable handler', () => {
   assertEquals(handlers.size, moduleFunctions.length);
-  // 19 + aef-runtime (IV-IVE-AEF-RUNTIME-INTEGRATION-01, LAB only, EXPERIMENTAL module).
-  assertEquals(moduleFunctions.length, 20);
+  // AEF (aef-runtime, IV-IVE-AEF-RUNTIME-INTEGRATION-01, LAB only, EXPERIMENTAL)
+  // + Impact (impact-lab, IV-IMPACT-FOUNDATION-01, EXPERIMENTAL) both reconciled
+  // into this integration branch (INSIGHTVALUES-INTEGRATION-MACRO-02).
+  assertEquals(moduleFunctions.length, 21);
 });
 
 for (const { fn, moduleId, lifecycle } of moduleFunctions) {

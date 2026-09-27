@@ -97,6 +97,8 @@ const Map<String, String> kRouteModuleOwnership = {
   AppConstants.routeActionDetail: 'action-engine',
   AppConstants.routeExecutiveDashboard: 'executive-dashboard',
   AppConstants.routeIntelligenceDebug: 'intelligence-debug',
+  AppConstants.routeImpact: 'impact',
+  AppConstants.routeImpactDossier: 'impact',
 };
 
 /// Routes that must always remain reachable by any authenticated user,

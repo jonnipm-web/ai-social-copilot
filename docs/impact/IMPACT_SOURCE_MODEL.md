@@ -1,0 +1,135 @@
+# Impact — Source Model
+
+Code: `types.ts` (`Source`), `source_authority.ts`, `provenance.ts`, `provider.ts`.
+
+## 1. Source
+
+type · publisher · publisherOrganizationId (makes it self-reported for that
+org) · uri (reference only) · retrievedAt · publishedAt · jurisdiction ·
+newsGenre (NEWS) · status (ACTIVE / UPDATED / RETRACTED / UNAVAILABLE) ·
+retention · contentHash (SHA-256) · **acquisition** (PROVIDER+providerId | USER_UPLOAD | ANALYST_ENTRY, mandatory) · userSubmitted.
+
+Types: OFFICIAL_REGISTRY, ORGANIZATION_WEBSITE, GOVERNMENT_RECORD,
+FINANCIAL_REPORT, AUDITED_REPORT, COURT_RECORD, REGULATOR, NEWS, ACADEMIC,
+NGO_DATABASE, SOCIAL_MEDIA, USER_DOCUMENT, OTHER.
+
+## 2. Source ≠ truth
+
+A source can be authoritative for legal registration and have no authority
+over real-world impact. An organization's website proves that the
+organization **made** a claim, not that it is true. A social-media post
+proves "this account published this".
+
+## 3. Authority table (`impact-source-authority/3`)
+
+Decision order: user-submitted / USER_UPLOAD → USER_SUBMITTED; publisher is
+the claim's subject → SELF_REPORTED (whatever the type); social media →
+ATTRIBUTION_ONLY; news → only REPORTING can corroborate; else table; then the
+**provenance gate** (Codex G1-01): AUTHORITATIVE/INDEPENDENT survive only when
+the source was acquired by a provider in the server-side trusted registry
+(`VerificationContext.trustedProviders`, required) whose declared source type
+equals the source's type and whose jurisdictions include the source's
+jurisdiction. Jurisdiction-bound types (OFFICIAL_REGISTRY, REGULATOR,
+COURT_RECORD, GOVERNMENT_RECORD) must carry an explicit jurisdiction to be
+independent (Codex CF-03). Analyst-typed sources, unknown providers and
+relabelled types are capped at CONTEXTUAL — a self-published report labelled "audit" cannot
+become independent evidence.
+
+| Source | Registration / regulatory | Outputs / outcomes / beneficiaries | Financial | Other |
+|---|---|---|---|---|
+| OFFICIAL_REGISTRY | AUTHORITATIVE | NONE (excluded) | CONTEXTUAL (filed by the org) | governance/history INDEPENDENT |
+| REGULATOR | AUTHORITATIVE | NONE | CONTEXTUAL | governance INDEPENDENT |
+| COURT_RECORD | REGULATORY_STATUS AUTHORITATIVE (exact stage) | NONE | CONTEXTUAL | CONTEXTUAL |
+| GOVERNMENT_RECORD | INDEPENDENT | INDEPENDENT | INDEPENDENT | CONTEXTUAL |
+| AUDITED_REPORT | CONTEXTUAL | CONTEXTUAL | INDEPENDENT | CONTEXTUAL |
+| ACADEMIC | CONTEXTUAL | INDEPENDENT | CONTEXTUAL | CONTEXTUAL |
+| NEWS (REPORTING) | CONTEXTUAL | INDEPENDENT | CONTEXTUAL | INDEPENDENT (history, affiliation, governance) |
+| NEWS (OPINION/ALLEGATION/CORRECTION) | CONTEXTUAL | CONTEXTUAL | CONTEXTUAL | CONTEXTUAL |
+| FINANCIAL_REPORT, NGO_DATABASE, third-party website, OTHER | CONTEXTUAL | CONTEXTUAL | CONTEXTUAL | CONTEXTUAL |
+| SOCIAL_MEDIA | ATTRIBUTION_ONLY | | | |
+| USER_DOCUMENT / userSubmitted | USER_SUBMITTED | | | |
+
+Only AUTHORITATIVE and INDEPENDENT items can move a claim off UNVERIFIED.
+Changing the table is a policy change (bump the version).
+
+## 4. Retention / snapshot policy
+
+| Mode | Kept | Max for |
+|---|---|---|
+| SNAPSHOT | full copy + hash | OFFICIAL_REGISTRY, GOVERNMENT_RECORD, REGULATOR (public records whose later change matters) |
+| EXCERPT_AND_HASH | ≤ 2,000-char extract + hash of full content | news, academic, reports, websites, court records (may name individuals) |
+| HASH_ONLY | fingerprint only | SOCIAL_MEDIA, USER_DOCUMENT (Vault stores the file) |
+| REFERENCE_ONLY | URI + metadata | OTHER |
+
+Callers may choose more restrictive, never less (`validateSource`). Pages are
+never copied wholesale. Excerpts must match their SHA-256 (tamper check).
+Conceptual retention periods: `RETENTION_POLICY` in `provenance.ts`
+(enforced when persistence exists).
+
+## 5. Changing / deleted sources
+
+Status UPDATED → evidence excluded (`SOURCE_CHANGED`) until re-extracted;
+RETRACTED → excluded (`SOURCE_RETRACTED`); UNAVAILABLE → excluded
+(`SOURCE_UNAVAILABLE`, I1 Gate 2) — a source that can no longer be consulted
+cannot keep sustaining a conclusion. `Investigation.updateSourceStatus`
+lists affected claims and logs `REVERIFICATION_REQUIRED`. History keeps the
+previous results.
+
+## 6. Providers
+
+The trusted-provider registry passed to the engine must be built server-side
+from provider descriptors, never from request input — the pure core cannot
+authenticate it (Codex CF-06, DEFERRED to I1 integration).
+
+`ImpactSourceProvider { descriptor; searchOrganization?(); fetchRegistryRecord?() }`
+with `ProviderDescriptor` = id, sourceType, capabilities, jurisdictions,
+authorityScope, freshnessDays, retrievalMethod. Undeclared capability →
+`CAPABILITY_NOT_SUPPORTED`; offline registry → `REGISTRY_UNAVAILABLE` (never
+"not registered"). Only `FixtureProvider` exists. RAW records are never
+mutated; canonical records keep `rawRecordHash`; malformed/forged/
+out-of-jurisdiction records are rejected whole.
+
+Future adapters (not integrated): UK Charity Commission, Companies House,
+US IRS exempt-org data, Brazilian registries, regulators/courts, reputable
+news/search APIs — each a separate gate, via `safe_fetch.ts`, respecting
+robots/terms/authentication, no aggressive scraping.
+
+## 7. Publisher identity, syndication and corrections
+
+**Lineage never removes evidence** (Codex CF-04, FV-01, FV2-01..04).
+
+- Independent VOICES (for sufficiency only) = connected components of
+  publishers linked by `syndicatedFrom` across ALL sources in the set, counted
+  or not (union-find: order-independent,
+  transitive, cycles merge). A syndicated copy never adds a voice (no fake
+  MULTI_SOURCE). An unverified `syndicatedFrom` can only MERGE voices, i.e.
+  lower corroboration; it cannot split voices, create SUPPORTED/CONTRADICTED,
+  hide a disagreement, or change a conflict's basis (Codex FV3-01..03).
+- Conflict basis uses the RAW normalized publisher: disagreement between
+  different raw publishers is always INDEPENDENT_SOURCES (CONCERN stays
+  visible), even if one claims to syndicate the other.
+- Every counted item keeps its own position. Disagreement inside one raw
+  publisher is a conflict with `basis: SAME_PUBLISHER` →
+  INCONCLUSIVE + review, indicator INCONSISTENT_PUBLISHER_REPORTING
+  (information gap, never a concern).
+- Corrections use the audited path: `Investigation.updateSourceStatus`
+  (UPDATED / RETRACTED) on the original source. There is no free-form
+  "supersedes" pointer.
+
+Scope (Codex FV5-01, accepted as intended): lineage is investigation-wide —
+`Investigation.verify()` supplies every source of the investigation, so a
+syndication link recorded for another claim can merge two voices here. This
+is deliberately conservative: it can only understate corroboration (never
+create support, contradiction or a concern), and the links are part of
+`evidenceSetHash`.
+
+Residual (closed in I2 — IMPACT_SOURCE_LINEAGE.md): copies whose provider
+supplies no `syndicatedFrom` no longer count as separate voices — unknown
+lineage is not independence, and fingerprints / near-duplicates / markers
+merge copies. CF-04 CLOSED.
+
+## 8. News and social media
+
+NEWS genres: REPORTING (can corroborate outputs/history), OPINION,
+ALLEGATION, CORRECTION (context only). No aggregator. Social media: not
+integrated; modelled as ATTRIBUTION_ONLY.

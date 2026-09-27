@@ -1,8 +1,6 @@
 {
   "@@locale": "en",
-
   "appName": "InsightValues",
-
   "commonCancel": "Cancel",
   "commonClose": "Close",
   "commonSave": "Save",
@@ -12,7 +10,6 @@
   "commonError": "Something went wrong. Please try again.",
   "commonRetry": "Retry",
   "commonComingSoon": "Coming soon",
-
   "authWelcomeBack": "Welcome back",
   "authCreateAccount": "Create your account",
   "authEmail": "Email",
@@ -28,7 +25,6 @@
   "authNoAccount": "Don't have an account? Sign up",
   "authHasAccount": "Already have an account? Sign in",
   "authSignOut": "Sign out",
-
   "navCommandCenter": "OS Command Center",
   "navBusinessDashboard": "Business Dashboard",
   "navKnowledgeVault": "Knowledge Vault",
@@ -43,7 +39,6 @@
   "navAdminModules": "Modules (Admin)",
   "navHelpSupport": "Help & Support",
   "navAbout": "About",
-
   "accountTitle": "Account & Settings",
   "accountProfile": "Profile",
   "accountLanguage": "Language",
@@ -58,13 +53,16 @@
   "accountPrivacy": "Privacy Policy",
   "accountTerms": "Terms of Use",
   "accountSignOut": "Sign out",
-
   "aboutTitle": "About InsightValues",
   "aboutTagline": "AI copilot for marketing and content strategy.",
   "aboutVersion": "App version",
   "aboutCopyright": "© {year} InsightValues. All rights reserved.",
   "@aboutCopyright": {
-    "placeholders": { "year": { "type": "int" } }
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
   },
   "aboutWebsite": "Official website",
   "aboutSupportContact": "Support",
@@ -72,22 +70,28 @@
   "aboutTermsOfUse": "Terms of Use",
   "aboutPlanInfo": "Plan & subscription",
   "aboutOwnerConfigRequired": "Not yet configured by the product administrator.",
-
   "supportTitle": "Help & Support",
   "supportContact": "Contact",
   "supportReportProblem": "Report a problem",
   "supportSendFeedback": "Send feedback",
   "supportContactEmail": "Reach us by email: {email}",
   "@supportContactEmail": {
-    "placeholders": { "email": { "type": "String" } }
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
   },
   "supportOwnerConfigRequired": "Support channel not yet configured by the product administrator.",
-
   "planFree": "Free",
   "planFreePrice": "R$ 0",
   "planFreeAnalyses": "{count} AI analyses per month",
   "@planFreeAnalyses": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "planPro": "Pro Founder",
   "planProPrice": "R$ 29/month",
@@ -95,16 +99,18 @@
   "planProPricePeriod": "/month",
   "planProAnalyses": "{count} AI analyses per month",
   "@planProAnalyses": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "planFounderNote": "Launch (founder) pricing -- not a permanent price.",
   "planCurrentPlan": "Current plan",
   "planUpgradeCta": "Subscribe to Pro",
-
   "billingTestMode": "Test mode (no real charges)",
   "billingWaitingSecrets": "Waiting on final payment provider configuration",
   "checkoutOpeningError": "Could not open the payment page.",
-
   "upgradePlansTitle": "Plans",
   "upgradeLoadError": "Could not load your plan right now. Please try again shortly.",
   "upgradeUsageThisMonth": "AI analyses this month",
@@ -112,8 +118,12 @@
   "upgradeAnalysesRemaining": "{count, plural, =1{1 analysis remaining} other{{count} analyses remaining}} on the {plan} plan.",
   "@upgradeAnalysesRemaining": {
     "placeholders": {
-      "count": { "type": "int" },
-      "plan": { "type": "String" }
+      "count": {
+        "type": "int"
+      },
+      "plan": {
+        "type": "String"
+      }
     }
   },
   "upgradeFreeSubtitle": "Current plan",
@@ -129,7 +139,6 @@
   "upgradeCurrentPlanBadge": "Your plan",
   "upgradeMostPopular": "Most popular",
   "upgradeSubscribeCta": "🚀  Subscribe to Pro — R$ 29/month",
-
   "adminModulesTitle": "Module Inventory",
   "adminModulesStatus": "Status",
   "adminModulesCommercial": "Commercial",
@@ -141,18 +150,19 @@
   "adminModulesNoRoute": "No dedicated route",
   "adminModulesYes": "Yes",
   "adminModulesNo": "No",
-
   "projectBriefingSectionTitle": "Executive Briefing",
   "projectBriefingNoKnowledge": "No knowledge items yet",
   "projectBriefingKnowledgeCount": "{count, plural, =0{No knowledge items} =1{1 knowledge item available} other{{count} knowledge items available}}",
   "@projectBriefingKnowledgeCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "projectBriefingRecentChanges": "What changed recently",
-
   "projectAnalyzeIdea": "Analyze Idea",
   "projectOpenConfig": "Settings",
-
   "projectConfigTitle": "Project Settings",
   "projectConfigNameLabel": "Name",
   "projectConfigDescriptionLabel": "Description",
@@ -163,11 +173,13 @@
   "projectConfigNameRequired": "Project name cannot be empty.",
   "projectConfigSaveError": "Failed to save: {error}",
   "@projectConfigSaveError": {
-    "placeholders": { "error": { "type": "String" } }
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
-
   "ideaAnalysisProjectBannerText": "This analysis will be linked to the selected project",
-
   "ivIntroTitle": "Meet IVE",
   "ivIntroWhoBody": "I'm IVE, your strategic copilot inside InsightValues.",
   "ivIntroWhatBody": "I can explain your results, point out risks and opportunities, and suggest what to do next — always based on your project's real data.",
@@ -177,18 +189,19 @@
   "ivIntroSkipButton": "Skip",
   "ivIntroSemanticLabel": "Introduction to IVE, your strategic copilot",
   "ivIntroReplayLabel": "Meet IVE",
-
   "iveSemanticsLabel": "IVE, executive copilot",
   "iveBubbleChatCta": "Chat with IVE",
-
   "iveChatAskCta": "Ask IVE",
   "iveChatHint": "Ask IVE…",
   "iveChatClearHistory": "Clear history",
   "iveChatErrorPrefix": "Error: {error}",
   "@iveChatErrorPrefix": {
-    "placeholders": { "error": { "type": "String" } }
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
-
   "iveScreenActions": "Actions",
   "iveScreenWebsiteAnalyzer": "Website Analyzer",
   "iveScreenProjects": "Projects",
@@ -203,7 +216,6 @@
   "iveScreenDebugHub": "Debug Hub",
   "iveScreenRoiTracker": "ROI Tracker",
   "iveScreenScores": "Scores",
-
   "iveSuggestionProjects1": "Which project should I focus on?",
   "iveSuggestionProjects2": "Which projects carry the most risk?",
   "iveSuggestionOpportunities1": "Which opportunity has the highest ROI?",
@@ -220,13 +232,15 @@
   "iveSuggestionPersonas2": "Which niche has the most potential?",
   "iveSuggestionDefault1": "Explain this screen's data to me",
   "iveSuggestionDefault2": "What should I do now?",
-
   "iveActionSuggestionHint": "IVE's suggestion: {label}. Finish the details on the screen that just opened.",
   "@iveActionSuggestionHint": {
-    "placeholders": { "label": { "type": "String" } }
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
   },
   "iveActionNoDestination": "This action type doesn't have a direct destination yet. Ask IVE for more details.",
-
   "oppNewTitle": "New Opportunity",
   "oppTypeLabel": "Type",
   "oppTitleLabel": "Title",
@@ -239,10 +253,13 @@
   "oppKnowledgeEmpty": "This project has no Knowledge Vault items yet.",
   "oppKnowledgeCountSelected": "{count, plural, =0{No items selected} =1{1 item selected} other{{count} items selected}}",
   "@oppKnowledgeCountSelected": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "oppLinkedKnowledgeTitle": "Linked knowledge",
-
   "oppTypeExpansao": "Expansion",
   "oppTypeNovoProduto": "New Product",
   "oppTypeNovoNicho": "New Niche",
@@ -290,5 +307,91 @@
   "aefLabPhaseInvalidated": "Invalidated (the rules changed). Nothing was executed.",
   "aefLabPhaseDenied": "Action not allowed.",
   "aefLabPhaseNetwork": "No reliable server response: the state was not confirmed.",
-  "aefLabReceipt": "Receipt: {receiptId}"
+  "aefLabReceipt": "Receipt: {receiptId}",
+  "impactTitle": "Impact Lab",
+  "impactInvestigations": "Investigations",
+  "impactInvestigationsEmpty": "No investigations yet.",
+  "impactAdminOnly": "Impact Lab is restricted to administrators.",
+  "impactNoScoreNote": "This dossier organizes evidence. It gives the organization no score, ranking or verdict.",
+  "impactLiveView": "Live view",
+  "impactLiveViewHint": "Reflects the current state and changes when the evidence changes.",
+  "impactSnapshot": "Issued snapshot",
+  "impactSnapshotHint": "Historical record: it is not rewritten when the evidence changes.",
+  "impactAsOf": "As of {date}",
+  "impactAsOfUnknown": "No reference date yet",
+  "impactSummary": "Summary",
+  "impactIdentity": "Identity",
+  "impactClaims": "Claims",
+  "impactEvidence": "Evidence",
+  "impactConflicts": "Disagreements",
+  "impactLimitations": "Limitations",
+  "impactNotEstablished": "What this dossier does NOT establish",
+  "impactDisputes": "Disputes",
+  "impactSources": "Sources and provenance",
+  "impactIntegrity": "Integrity",
+  "impactOpenDisputes": "Open disputes",
+  "impactReverifyPending": "Re-verification pending",
+  "impactNotVerifiedYet": "Not verified yet.",
+  "impactNoClaims": "No claims recorded yet.",
+  "impactNoEvidence": "No evidence is linked to this claim.",
+  "impactNoConflicts": "No disagreement recorded.",
+  "impactNoDisputes": "No dispute recorded.",
+  "impactNoLimitations": "No limitation recorded.",
+  "impactNoRegistry": "No official registry record is attached. This does not mean the organization is unregistered.",
+  "impactNoSnapshot": "No snapshot issued yet.",
+  "impactQuotedFromSource": "Quoted from the source",
+  "impactQuotedFromUpload": "Quoted from an uploaded document — context, never authority",
+  "impactWithheld": "Excerpt withheld for privacy",
+  "impactRedactedNote": "Personal data was removed from this text.",
+  "impactPublisher": "Publisher",
+  "impactHostedOn": "Hosted on {host} (not the publisher)",
+  "impactUserSubmitted": "User-submitted — context, never authority",
+  "impactVoices": "Independent voices: {voices} · sources assessed: {documents}",
+  "impactVoicesNote": "Several documents do not mean several independent sources.",
+  "impactRules": "Rules applied",
+  "impactGaps": "Gaps",
+  "impactLocator": "Location in the document",
+  "impactProvenanceChain": "Source → document → location → evidence → claim",
+  "impactPositionsNoWinner": "Every position side by side — none is chosen.",
+  "impactContentHash": "Content hash",
+  "impactHashNotTruth": "The hash proves the content was not altered — it does not prove it is true.",
+  "impactSnapshotRef": "Snapshot reference",
+  "impactVerifyCurrent": "Current snapshot: the content has not changed since it was issued.",
+  "impactVerifyStale": "Stale snapshot: the dossier content changed after it was issued (evidence or presentation policy). It remains valid as a historical record.",
+  "impactVerifyNotIssued": "This hash was not issued for this investigation.",
+  "impactEnvelopeMismatch": "The snapshot metadata does not match the register.",
+  "impactVerifySnapshot": "Verify snapshot",
+  "impactExport": "Issue snapshot",
+  "impactExportConfirmTitle": "Before issuing the snapshot",
+  "impactExportLimitations": "Limitations carried by this dossier: {count}",
+  "impactExportPrivacy": "The export is private and authenticated: there is no public link and no sharing.",
+  "impactExportFormats": "Available formats: JSON and text. PDF is not available.",
+  "impactExportConfirm": "Issue",
+  "impactExportDone": "Snapshot issued",
+  "impactCopyJson": "Copy JSON",
+  "impactCopyText": "Copy text",
+  "impactCopied": "Copied",
+  "impactErrorAuth": "Your session expired. Please sign in again.",
+  "impactErrorNotAvailable": "Investigation not found or unavailable.",
+  "impactErrorTooLarge": "This dossier exceeds the limit and was not truncated. Nothing partial is shown.",
+  "impactErrorRateLimited": "Too many requests. Try again in {seconds} s.",
+  "impactErrorNetwork": "No connection. Check the network and try again.",
+  "impactErrorServer": "The service did not respond. Try again.",
+  "impactShowMore": "Show more ({count})",
+  "impactExpand": "Expand",
+  "impactCollapse": "Collapse",
+  "impactClaimDetail": "Claim detail",
+  "impactErrorContract": "Unsupported server response format. Nothing was shown, to avoid displaying an incomplete dossier.",
+  "impactRetry": "Try again",
+  "impactEvidenceExcluded": "Excluded from the assessment (reason in the rules)",
+  "impactDeclaredQuote": "Identity as declared for this investigation — quoted, not verified",
+  "impactRegistryQuote": "As recorded in the registry — quoted",
+  "impactClaimCaveats": "Before reading this claim",
+  "impactClaimLimitations": "Limitations that apply to this claim",
+  "impactSnapshotCaveats": "The confirmation described the live view at that moment. The issued snapshot carries these caveats:",
+  "impactClaimScopeNote": "Status of this claim only — not a verdict on the organization.",
+  "impactIdentityScopeNote": "Identity only — not an assessment of the organization’s conduct.",
+  "impactPosition": "Position {index} of {total}",
+  "impactVerifyInconclusive": "Verification inconclusive: do not rely on this snapshot’s metadata. Issue a new export before using it.",
+  "adminModulesOpen": "Open module"
 }

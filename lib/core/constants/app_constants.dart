@@ -84,6 +84,10 @@ class AppConstants {
   // Fase 10F — Intelligence Debug & Observability
   static const routeIntelligenceDebug    = '/intelligence-debug';
 
+  // IV-IMPACT-I5 — Impact Lab (admin-only: module 'impact' is EXPERIMENTAL)
+  static const routeImpact               = '/impact';
+  static const routeImpactDossier        = '/impact/:id';
+
   // IVE-COMMERCIAL-RELEASE-CONTROL-PLANE-01
   static const routeAccount              = '/account';
   static const routeAbout                = '/about';

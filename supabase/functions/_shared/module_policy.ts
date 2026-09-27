@@ -122,7 +122,8 @@ export const MODULE_POLICY: ModulePolicyDoc =
     "admin-panel": { "lifecycle": "INTERNAL", "minimumPlan": "free", "actionClass": "REVERSIBLE" },
     "ive-avatar": { "lifecycle": "COMMERCIAL", "minimumPlan": "free", "actionClass": "READ_ONLY" },
     "ive-quant": { "lifecycle": "EXPERIMENTAL", "minimumPlan": "free", "actionClass": "CONSEQUENTIAL" },
-    "aef-runtime-lab": { "lifecycle": "EXPERIMENTAL", "minimumPlan": "free", "actionClass": "REVERSIBLE" }
+    "aef-runtime-lab": { "lifecycle": "EXPERIMENTAL", "minimumPlan": "free", "actionClass": "REVERSIBLE" },
+    "impact": { "lifecycle": "EXPERIMENTAL", "minimumPlan": "free", "actionClass": "REVERSIBLE" }
   },
   "edgeFunctions": {
     "analyze-website": { "kind": "MODULE", "moduleId": "website-analyzer" },
@@ -145,6 +146,7 @@ export const MODULE_POLICY: ModulePolicyDoc =
     "ive-intelligence": { "kind": "MODULE", "moduleId": "context-copilot", "gateFile": "_shared/ive/intelligence.ts" },
     "ive-memory": { "kind": "MODULE", "moduleId": "context-copilot", "gateFile": "_shared/ive/memory_endpoint.ts" },
     "create-checkout-session": { "kind": "BILLING" },
+    "impact-lab": { "kind": "MODULE", "moduleId": "impact" },
     "module-access": { "kind": "ENTITLEMENT" },
     "stripe-webhook": { "kind": "PUBLIC_WEBHOOK" },
     "ive-agent-runner": { "kind": "RETIRED" },

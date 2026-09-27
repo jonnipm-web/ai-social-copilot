@@ -231,6 +231,13 @@ export interface SafeFetchOptions {
   headers?: Record<string, string>;
   timeoutMs?: number;
   maxResponseBytes?: number;
+  /**
+   * IV-IMPACT-I2: exact hostnames this request may reach, checked at EVERY
+   * hop (the first URL and each redirect target) before DNS resolution.
+   * Absent = previous behaviour (any public host). Server-owned registry
+   * adapters always pass it, so a redirect can never leave the registry.
+   */
+  allowedHosts?: ReadonlySet<string>;
 }
 
 /**
@@ -255,6 +262,9 @@ export async function safeFetch(rawUrl: string, options: SafeFetchOptions = {}):
 
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     assertUrlShapeIsSafe(currentUrl);
+    if (options.allowedHosts && !options.allowedHosts.has(currentUrl.hostname.toLowerCase())) {
+      throw new UnsafeUrlError("Destino fora da lista permitida.");
+    }
     await assertHostnameIsSafe(currentUrl.hostname);
 
     const controller = new AbortController();
