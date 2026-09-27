@@ -22,8 +22,35 @@
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.116.0';
 import { sha256Hex } from '../../../aef/persistence/canonical.ts';
 import type { LearningEntryInput } from '../../../aef/runtime/ive_aef_runtime.ts';
+import { mapLegacyProfileRole } from './entitlement.ts';
+import type { Plan } from './module_policy.ts';
 
 const KNOWN_OUTCOMES = new Set(['SUCCESS', 'FAILURE', 'PARTIAL', 'NOT_EXECUTED', 'UNKNOWN_OUTCOME']);
+
+/**
+ * INSIGHTVALUES-INTELLIGENCE-AUTOMATION-MACRO-04 §20-21 (Premium value):
+ * the concrete, non-fabricated Premium differentiator this mission adds --
+ * reusing the Result->Learning infrastructure §7-9 already built, exactly
+ * the "governed automation depth"/"larger... capacity" kind of candidate
+ * §20 names, not an arbitrary new gate. Free/Pro's AEF-governed memory
+ * ages out; Premium's does not -- a real difference in what the product
+ * remembers about a user's governed actions over time, not a quota number.
+ * Provisional: no Owner decision on the exact retention window exists yet
+ * (§20: "No final monetary pricing yet" -- the same is true of this
+ * number); easy to change in one place when one is made.
+ */
+export const RESULT_LEARNING_RETENTION_DAYS: Readonly<Record<Plan, number | null>> = {
+  free: 90,
+  pro: 90,
+  premium: null, // never expires
+};
+
+/** Pure: `now` injected so this is deterministic and testable without a clock. */
+export function expiresAtForPlan(plan: Plan | null, now: Date): string | null {
+  const days = RESULT_LEARNING_RETENTION_DAYS[plan ?? 'free'];
+  if (days === null) return null;
+  return new Date(now.getTime() + days * 24 * 60 * 60 * 1000).toISOString();
+}
 
 export interface BusinessMemoryLearningRow {
   user_id: string;
@@ -39,6 +66,7 @@ export interface BusinessMemoryLearningRow {
   source_operation_id: string;
   source_receipt_id: string;
   verification_state: 'verified' | 'unverified';
+  expires_at: string | null;
 }
 
 /**
@@ -67,7 +95,7 @@ function confidenceFor(outcome: string): number {
   return 30; // PARTIAL / UNKNOWN_OUTCOME: real but unresolved
 }
 
-export async function buildLearningRow(input: LearningEntryInput): Promise<BusinessMemoryLearningRow> {
+export async function buildLearningRow(input: LearningEntryInput, plan: Plan | null, now: Date = new Date()): Promise<BusinessMemoryLearningRow> {
   const outcome = KNOWN_OUTCOMES.has(input.outcome) ? input.outcome : 'UNKNOWN_OUTCOME';
   const dedupKey = `action_result|${await sha256Hex(`${input.operationId}|${input.receiptId}`)}`;
   return {
@@ -84,6 +112,7 @@ export async function buildLearningRow(input: LearningEntryInput): Promise<Busin
     source_operation_id: input.operationId,
     source_receipt_id: input.receiptId,
     verification_state: verificationStateFor(outcome),
+    expires_at: expiresAtForPlan(plan, now),
   };
 }
 
@@ -100,7 +129,17 @@ function log(event: string, fields: Record<string, unknown>): void {
  */
 export function writeLearningEntry(client: SupabaseClient): (input: LearningEntryInput) => Promise<void> {
   return async (input: LearningEntryInput): Promise<void> => {
-    const row = await buildLearningRow(input);
+    // Plan lookup is best-effort and fails closed to the shortest retention
+    // (free/pro, 90 days) on any error -- a lookup failure must never
+    // accidentally grant Premium's "never expires" treatment.
+    let plan: Plan | null = null;
+    try {
+      const { data } = await client.from('profiles').select('role').eq('id', input.subjectId).maybeSingle();
+      plan = mapLegacyProfileRole((data as { role?: unknown } | null)?.role).plan;
+    } catch {
+      plan = null;
+    }
+    const row = await buildLearningRow(input, plan);
     const { error } = await client.from('business_memory').insert(row);
     if (!error) {
       log('result_learning_written', { source_operation_id: row.source_operation_id, verification_state: row.verification_state });

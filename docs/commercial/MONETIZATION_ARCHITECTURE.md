@@ -35,9 +35,16 @@ Per explicit Owner authorization ("Growth Intelligence FAZ PARTE do produto come
 | Financial Intelligence (Quant) | — | — | `ModulePlan.premium` now exists to gate this; not yet used — natural home once licensing clears (`ive-quant`, currently `externalPlanned`) |
 | Evidence/Impact Intelligence | — | — | Separate product line, not tier-gated the same way (own admin-only surface today) |
 
+## INSIGHTVALUES-INTELLIGENCE-AUTOMATION-MACRO-04 §20-21: Premium differentiation beyond quota
+
+Owner-authorized: "Premium has materially larger quota but no exclusive modules. This is insufficient as long-term product differentiation... define and implement safe Premium differentiation using EXISTING or newly integrated mature capability... Do NOT fabricate Premium-only value."
+
+Rather than gate a whole module at `minimumPlan: premium` (still not done — see below, unchanged), this mission added a real, non-fabricated *attribute-level* differentiation on top of Result → Learning (§7-9, this mission): **governed-action memory retention**. Free/Pro's AEF-derived `business_memory` entries (`origin: 'system_derived'`, written only from a real terminal AEF receipt) get a provisional 90-day `expires_at`; Premium's never expire. This is a genuine difference in what the product remembers about a user's own governed actions over time — not a quota number, not an arbitrary lock on existing functionality (Free/Pro's learning is fully functional, just time-limited, the same category of tier differentiator as message/history retention in many SaaS products). Implementation: `supabase/functions/_shared/result_learning.ts`'s `expiresAtForPlan`/`RESULT_LEARNING_RETENTION_DAYS`; a plan-lookup failure fails closed to the *shortest* retention, never to Premium's "never expires" (tested, RL-10). The 90-day number is provisional — no Owner decision on the exact retention window exists yet, same as pricing itself; it is a one-constant change when one is made.
+
 ## Explicit non-decisions (Owner Gate, still standing)
 
 - Final pricing: not set.
 - Stripe live activation: not performed, HOLD per mission boundary.
-- Actually gating any module at `minimumPlan: premium`: not performed — the mechanism exists, no Owner decision has been made to use it on a real module yet.
-- Quant/broker/market-data licensing: unchanged, still blocked — see the Financial Intelligence section of the Tranche 2 final report.
+- Actually gating a whole module at `minimumPlan: premium`: still not performed — the mechanism exists, no Owner decision has been made to use it on a real module yet. (The retention differentiation above is a different mechanism entirely — it does not use `minimumPlan`.)
+- The exact 90-day Free/Pro retention window (`RESULT_LEARNING_RETENTION_DAYS`): provisional, not an Owner-confirmed number.
+- Quant/broker/market-data licensing: unchanged, still blocked — see the Financial Intelligence section of the Tranche 2 final report, and this mission's own `docs/commercial/STRATEGY001_SOURCE_FINDING.md`.
