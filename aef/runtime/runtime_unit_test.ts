@@ -15,8 +15,9 @@ import { presentResult } from "./presentation.ts";
 import { checkLabRuntime, type RuntimeEnv } from "./runtime_guard.ts";
 import { handleAefRuntime } from "../../supabase/functions/_shared/aef_runtime_endpoint.ts";
 import { fakeSubjectSource } from "../../supabase/functions/_shared/entitlement_test_support.ts";
-import type { IveAefRuntime } from "./ive_aef_runtime.ts";
+import { IveAefRuntime, type LearningEntryInput } from "./ive_aef_runtime.ts";
 import type { RuntimePresentation } from "./presentation.ts";
+import type { AefGovernance } from "../persistence/governance.ts";
 
 const env = (vars: Record<string, string>): RuntimeEnv => ({ get: (k) => vars[k] });
 const LAB = { AEF_RUNTIME_MODE: "LAB", AEF_TOOLS: "MOCK_ONLY", SUPABASE_URL: "http://127.0.0.1:54321" };
@@ -303,16 +304,28 @@ Deno.test("RU-14 endpoint body is strict: unknown op, extra keys, forged subject
 });
 
 // ── Promotion Gate coupling and deploy exclusion (T27, T28) ───────────────
-Deno.test("RU-15 'aef-runtime-lab' is EXPERIMENTAL (admin only) and non-CONSEQUENTIAL ONLY while every LAB tool is a mock", async () => {
-  const { MODULE_POLICY } = await import("../../supabase/functions/_shared/module_policy.ts");
+Deno.test("RU-15 'aef-runtime-lab' module default stays REVERSIBLE; its one real function correctly overrides to CONSEQUENTIAL and is independently fail-closed", async () => {
+  const { MODULE_POLICY, effectiveActionClass } = await import("../../supabase/functions/_shared/module_policy.ts");
   const m = MODULE_POLICY.modules["aef-runtime-lab"];
   assertEquals(m.lifecycle, "EXPERIMENTAL");
-  // A real tool would make this module CONSEQUENTIAL, which MP-03/MP-09 refuse
-  // to serve while AEF_PERSISTENCE_AVAILABLE is false: the class may stay
-  // REVERSIBLE only because nothing reachable leaves the process.
   assert(LAB_MOCK_TOOLS.every((t) => t.toolId.startsWith("internal.mock_")));
+  // INTELLIGENCE-AUTOMATION-MACRO-04 §4-6: the module's own default stays
+  // REVERSIBLE (nothing about the module itself changed), but every LAB
+  // tool this function actually serves is unconditionally CONSEQUENTIAL by
+  // construction (createLabToolRegistry) -- effectiveActionClass now says
+  // so explicitly via the function's actionClassOverride, rather than the
+  // module's own (necessarily lower) default silently understating it.
+  // MP-09 is what proves this is still safe: a CONSEQUENTIAL-effective
+  // function must be hard-blocked in the deploy allowlist (RU-16 proves
+  // that hard block directly).
   assertEquals(m.actionClass, "REVERSIBLE");
-  assertEquals(MODULE_POLICY.edgeFunctions["aef-runtime"], { kind: "MODULE", moduleId: "aef-runtime-lab", gateFile: "_shared/aef_runtime_endpoint.ts" });
+  assertEquals(effectiveActionClass("aef-runtime"), "CONSEQUENTIAL");
+  assertEquals(MODULE_POLICY.edgeFunctions["aef-runtime"], {
+    kind: "MODULE",
+    moduleId: "aef-runtime-lab",
+    gateFile: "_shared/aef_runtime_endpoint.ts",
+    actionClassOverride: "CONSEQUENTIAL",
+  });
 });
 
 Deno.test("RU-16 aef-runtime is absent from the deploy allowlist and hard-blocked by the deploy resolver", async () => {
@@ -390,4 +403,112 @@ Deno.test("RU-20 action-engine's registered tool is CONSEQUENTIAL + Human-Gate-r
   assert(descriptor !== undefined, "internal.mock_complete_action must be registered");
   assertEquals(descriptor.classification, "CONSEQUENTIAL");
   assertEquals(descriptor.requiresHumanGate, true);
+});
+
+// ── Result -> Learning (INSIGHTVALUES-INTELLIGENCE-AUTOMATION-MACRO-04 §7-9) ──
+// IveAefRuntime.submit() is the one place a learningWriter can ever be
+// called from; a fake AefGovernance (same "cast a duck-typed object to the
+// class" pattern RecordingRuntime uses for IveAefRuntime above) lets these
+// tests drive it to any GovernanceResult without a real store or Postgres.
+class FakeGovernance {
+  result: GovernanceResult = { status: "DENIED", code: "POLICY_DENIED" } as unknown as GovernanceResult;
+  submit(_request: unknown, _credential: unknown) { return Promise.resolve(this.result); }
+  decideGate(_input: unknown, _credential: unknown) { return Promise.resolve(this.result); }
+  getOperation(_input: unknown, _credential: unknown) { return Promise.resolve(this.result); }
+  cancel(_input: unknown, _credential: unknown) { return Promise.resolve(this.result); }
+  auditRefusal(..._a: unknown[]) { return Promise.resolve(); }
+}
+
+const CREDENTIAL = { kind: "bearer_jwt" as const, token: "t" };
+const PROJECT = "0d000000-0000-4000-8000-00000000000d";
+
+function runtimeWithFakeGov(result: GovernanceResult, calls: LearningEntryInput[]) {
+  const gov = new FakeGovernance();
+  gov.result = result;
+  const runtime = new IveAefRuntime({
+    governance: gov as unknown as AefGovernance,
+    table: LAB_IVE_ACTION_TABLE,
+    source: "test_source",
+    learningWriter: (e) => { calls.push(e); return Promise.resolve(); },
+  });
+  return runtime;
+}
+
+Deno.test("RU-21 Result->Learning fires only for a terminal, RECEIPTED result -- never for AWAITING_APPROVAL/AUTHORIZED/EXECUTING/an unreceipted denial", async () => {
+  const nonTerminal: GovernanceResult[] = [
+    { status: "DENIED", code: "POLICY_DENIED" } as unknown as GovernanceResult,
+    { status: "FINAL", replayed: false, operation: op("AWAITING_APPROVAL"), gate: { gateId: "g", bindingHash: "a".repeat(64), expiresAt: "2026-01-01T00:00:00Z" }, receipt: null, reconciliation: null } as unknown as GovernanceResult,
+    { status: "FINAL", replayed: false, operation: op("AUTHORIZED"), gate: null, receipt: null, reconciliation: null } as unknown as GovernanceResult,
+    { status: "FINAL", replayed: false, operation: op("EXECUTING"), gate: null, receipt: null, reconciliation: null } as unknown as GovernanceResult,
+    { status: "OUTCOME_UNCONFIRMED", code: "STORE_UNAVAILABLE", operationId: "0c000000-0000-4000-8000-00000000000c" } as unknown as GovernanceResult,
+  ];
+  for (const result of nonTerminal) {
+    const calls: LearningEntryInput[] = [];
+    const runtime = runtimeWithFakeGov(result, calls);
+    await runtime.execute(intent({ projectId: PROJECT }), SUBJECT, CREDENTIAL);
+    assertEquals(calls.length, 0, JSON.stringify(result));
+  }
+});
+
+Deno.test("RU-22 Result->Learning writes the real project/context/operation/receipt identity for a terminal, receipted result", async () => {
+  const calls: LearningEntryInput[] = [];
+  const result = { status: "FINAL", replayed: false, operation: op("SUCCEEDED"), gate: null, receipt: receipt("SUCCESS"), reconciliation: null } as unknown as GovernanceResult;
+  const runtime = runtimeWithFakeGov(result, calls);
+  const ref = "0b000000-0000-4000-8000-00000000000b";
+  const presentation = await runtime.execute(intent({ projectId: PROJECT, contextRef: ref }), SUBJECT, CREDENTIAL);
+  assertEquals(presentation.completed, true);
+  assertEquals(calls.length, 1);
+  assertEquals(calls[0], {
+    subjectId: SUBJECT,
+    projectId: PROJECT,
+    contextRef: ref,
+    source: "test_source",
+    requestedAction: "internal.mock_publish_content",
+    operationId: "0c000000-0000-4000-8000-00000000000c",
+    receiptId: "r1",
+    outcome: "SUCCESS",
+    phase: "SUCCEEDED",
+  });
+});
+
+Deno.test("RU-23 Result->Learning records a real FAILURE/UNKNOWN_OUTCOME just as faithfully as a SUCCESS -- the fact of execution is learned either way", async () => {
+  for (const [state, outcomeStr] of [["FAILED", "FAILURE"], ["UNKNOWN_OUTCOME", "UNKNOWN_OUTCOME"]] as const) {
+    const calls: LearningEntryInput[] = [];
+    const result = { status: "FINAL", replayed: false, operation: op(state), gate: null, receipt: receipt(outcomeStr), reconciliation: null } as unknown as GovernanceResult;
+    const runtime = runtimeWithFakeGov(result, calls);
+    await runtime.execute(intent({ projectId: PROJECT }), SUBJECT, CREDENTIAL);
+    assertEquals(calls.length, 1, state);
+    assertEquals(calls[0].outcome, outcomeStr);
+    assertEquals(calls[0].phase, state);
+  }
+});
+
+Deno.test("RU-24 Result->Learning uses null projectId for a user-scoped (no project) intent -- never invents one", async () => {
+  const calls: LearningEntryInput[] = [];
+  const result = { status: "FINAL", replayed: false, operation: op("SUCCEEDED"), gate: null, receipt: receipt("SUCCESS"), reconciliation: null } as unknown as GovernanceResult;
+  const runtime = runtimeWithFakeGov(result, calls);
+  await runtime.execute(intent({ projectId: null }), SUBJECT, CREDENTIAL);
+  assertEquals(calls.length, 1);
+  assertEquals(calls[0].projectId, null);
+});
+
+Deno.test("RU-25 a learningWriter that throws never changes the response the caller sees (fire-and-forget, contained)", async () => {
+  const gov = new FakeGovernance();
+  gov.result = { status: "FINAL", replayed: false, operation: op("SUCCEEDED"), gate: null, receipt: receipt("SUCCESS"), reconciliation: null } as unknown as GovernanceResult;
+  const runtime = new IveAefRuntime({
+    governance: gov as unknown as AefGovernance,
+    table: LAB_IVE_ACTION_TABLE,
+    learningWriter: () => { throw new Error("boom"); },
+  });
+  const presentation = await runtime.execute(intent({ projectId: PROJECT }), SUBJECT, CREDENTIAL);
+  assertEquals(presentation.completed, true);
+  assertEquals(presentation.receipt?.outcome, "SUCCESS");
+});
+
+Deno.test("RU-26 no learningWriter configured is a complete no-op, not an error (existing callers with no writer are unaffected)", async () => {
+  const gov = new FakeGovernance();
+  gov.result = { status: "FINAL", replayed: false, operation: op("SUCCEEDED"), gate: null, receipt: receipt("SUCCESS"), reconciliation: null } as unknown as GovernanceResult;
+  const runtime = new IveAefRuntime({ governance: gov as unknown as AefGovernance, table: LAB_IVE_ACTION_TABLE });
+  const presentation = await runtime.execute(intent({ projectId: PROJECT }), SUBJECT, CREDENTIAL);
+  assertEquals(presentation.completed, true);
 });

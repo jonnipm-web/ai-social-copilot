@@ -18,6 +18,7 @@ import type { EntitlementSubjectSource } from '../_shared/entitlement.ts';
 import type { QuotaClient } from '../_shared/quota.ts';
 import { type AefRuntimeEndpointDeps, handleAefRuntime } from '../_shared/aef_runtime_endpoint.ts';
 import { createServiceClient } from '../_shared/service_client.ts';
+import { writeLearningEntry } from '../_shared/result_learning.ts';
 import { AefIdentityResolver } from '../../../aef/identity_resolver.ts';
 import { SupabaseUserVerifier } from '../../../aef/adapters/supabase_identity_resolver.ts';
 import { AefGovernance } from '../../../aef/persistence/governance.ts';
@@ -38,7 +39,16 @@ function labRuntime(): IveAefRuntime {
     store: new PostgresAefStore(new SupabaseRpcTransport(createServiceClient())),
     requireInputSchema: true,
   });
-  runtime = new IveAefRuntime({ governance, table: ACTION_ENGINE_TABLE, source: 'action_engine' });
+  // INSIGHTVALUES-INTELLIGENCE-AUTOMATION-MACRO-04 §7-9 — a separate
+  // service-role client from the AEF store's own (same privilege, own
+  // connection; result_learning.ts writes to business_memory, a table AEF
+  // persistence does not own).
+  runtime = new IveAefRuntime({
+    governance,
+    table: ACTION_ENGINE_TABLE,
+    source: 'action_engine',
+    learningWriter: writeLearningEntry(createServiceClient()),
+  });
   return runtime;
 }
 

@@ -19,10 +19,34 @@
  * approval; an approval never carries over.
  */
 import type { RawCredential } from "../types.ts";
+import type { ExecutionRequest } from "../../contracts/aef/types.ts";
 import type { AefGovernance } from "../persistence/governance.ts";
 import { type IveActionTable, mapIveActionIntentWith } from "../persistence/ive_intent_mapping.ts";
 import { LAB_IVE_ACTION_TABLE } from "./lab_tools.ts";
 import { presentResult, type RuntimePresentation } from "./presentation.ts";
+
+/**
+ * INSIGHTVALUES-INTELLIGENCE-AUTOMATION-MACRO-04 §7-9 — Result -> Learning.
+ * Everything this runtime already has at hand once a governed result comes
+ * back: who asked, what project/context it was about, and the receipted
+ * outcome. Deliberately NOT the raw RuntimePresentation or ExecutionRequest
+ * (those carry fields a learning entry has no business repeating, like the
+ * gate's binding hash) -- this is the minimal, stable shape a writer needs.
+ */
+export interface LearningEntryInput {
+  subjectId: string;
+  projectId: string | null;
+  contextRef: string | null;
+  source: string;
+  requestedAction: string;
+  operationId: string;
+  receiptId: string;
+  outcome: string;
+  phase: string;
+}
+
+/** Never allowed to throw into the caller's response -- see submit()'s call site. */
+export type LearningWriter = (entry: LearningEntryInput) => Promise<void>;
 
 export interface IveAefRuntimeDeps {
   governance: AefGovernance;
@@ -30,6 +54,20 @@ export interface IveAefRuntimeDeps {
   now?: () => Date;
   /** Tags metadata.source/intent-prefix (INTEGRATION-MACRO-03); defaults to "ive". */
   source?: string;
+  /**
+   * Optional (INTELLIGENCE-AUTOMATION-MACRO-04 §7-9). Called once, after a
+   * terminal, RECEIPTED result -- never for AWAITING_APPROVAL/AUTHORIZED/
+   * EXECUTING, never for a denial with no receipt. This is deliberately the
+   * same "terminal + receipted" condition the Dart client's own
+   * aefReceiptOutcomeToActionStatus requires before it will ever write a
+   * status (lib/data/models/aef_runtime.dart) -- one fail-closed rule for
+   * what counts as a real, governed fact, enforced on both sides of the
+   * boundary. This runtime has no Supabase/business_memory dependency of
+   * its own; the actual write lives in
+   * supabase/functions/_shared/result_learning.ts and is injected here so
+   * aef/ stays free of any Supabase-specific code.
+   */
+  learningWriter?: LearningWriter;
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -76,7 +114,38 @@ export class IveAefRuntime {
       if (mapped.code !== "AUTH_FAILED") await this.deps.governance.auditRefusal(this.actor(subjectId), credential, mapped.code);
       return denied(mapped.code);
     }
-    return presentResult(await this.deps.governance.submit(mapped.request, credential));
+    const presentation = presentResult(await this.deps.governance.submit(mapped.request, credential));
+    await this.writeLearning(presentation, mapped.request, subjectId);
+    return presentation;
+  }
+
+  /**
+   * §7-9: fires only for a terminal, RECEIPTED result -- the same condition
+   * the Dart client itself requires before writing anything. Errors here
+   * are contained: a learning-write failure must never change what the
+   * caller sees for their own governed action, and must never retry
+   * automatically (this runtime never retries anything -- see the class
+   * doc). Swallowed, not silently: the writer itself is responsible for
+   * its own structured error logging (result_learning.ts).
+   */
+  private async writeLearning(presentation: RuntimePresentation, request: ExecutionRequest, subjectId: string): Promise<void> {
+    const writer = this.deps.learningWriter;
+    if (!writer || !presentation.receipt || !presentation.operationId) return;
+    try {
+      await writer({
+        subjectId,
+        projectId: request.resource?.type === "project" ? request.resource.id : null,
+        contextRef: request.context_ref ?? null,
+        source: this.deps.source ?? "ive",
+        requestedAction: request.action,
+        operationId: presentation.operationId,
+        receiptId: presentation.receipt.receiptId,
+        outcome: presentation.receipt.outcome,
+        phase: presentation.phase,
+      });
+    } catch {
+      // Never let a best-effort learning write fail the actual response.
+    }
   }
 
   /** `input` is exactly { gateId, decision, bindingHash } — anything else is refused. */
