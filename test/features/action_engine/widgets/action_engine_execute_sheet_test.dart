@@ -130,6 +130,26 @@ Widget _app(Widget child, {required FakeApi api, required FakeActionQueueService
 
 void main() {
   group('ActionEngineExecuteSheet (authority boundary)', () {
+    testWidgets('shows no internal jargon -- no "IVE" misattribution, no "(LAB)"/AEF acronym, no raw action id', (t) async {
+      // UX review (§18): AefActionCard's default title says "proposta pela
+      // IVE (LAB)" -- wrong here (Action Engine's own self-attestation was
+      // never proposed by IVE) and exposes internal build-status jargon to
+      // any free-tier user who taps "Executar". Codex final audit's spirit
+      // (evidence over assumption) applies to UX claims too: assert the
+      // actual rendered text, don't just trust the wiring compiled.
+      final api = FakeApi();
+      final svc = FakeActionQueueService();
+      await t.pumpWidget(_app(ActionEngineExecuteSheet(item: _item), api: api, svc: svc));
+      await t.pumpAndSettle();
+
+      expect(find.textContaining('IVE'), findsNothing);
+      expect(find.textContaining('LAB'), findsNothing);
+      expect(find.textContaining('AEF'), findsNothing);
+      expect(find.textContaining('complete_action'), findsNothing);
+      expect(find.text('Confirmar conclusão'), findsOneWidget);
+      expect(find.textContaining('Concluir ação'), findsOneWidget);
+    });
+
     testWidgets('drives the action-engine capability/tool, not IVE\'s -- and pre-fills the real item', (t) async {
       final api = FakeApi();
       final svc = FakeActionQueueService();

@@ -1424,6 +1424,36 @@ abstract class AppLocalizations {
   /// **'Mensagem'**
   String get aefLabFieldBody;
 
+  /// INSIGHTVALUES-PRODUCTIZATION-MACRO-03 UX review (§18): AefActionCard's title, when opened from Action Engine rather than IVE chat -- the default 'Ação proposta pela IVE (LAB)' is both wrong (not proposed by IVE) and exposes internal LAB jargon.
+  ///
+  /// In pt, this message translates to:
+  /// **'Confirmar conclusão'**
+  String get aefLabTitleActionEngine;
+
+  /// INSIGHTVALUES-PRODUCTIZATION-MACRO-03 UX review (§18): was a hardcoded, PT-only string naming 'AEF' directly -- neither localized nor jargon-free. Governance stays technically explicit internally; this user-facing line does not need the acronym to say the same thing.
+  ///
+  /// In pt, this message translates to:
+  /// **'Isso exige a sua aprovação explícita e gera um recibo auditável. Nada é enviado a nenhum sistema externo.'**
+  String get actionEngineExecuteSheetIntro;
+
+  /// INSIGHTVALUES-PRODUCTIZATION-MACRO-03 UX review (§18): human label for the raw internal action id, replacing a literal string like 'publish_content'.
+  ///
+  /// In pt, this message translates to:
+  /// **'Publicar conteúdo'**
+  String get aefLabActionPublishContent;
+
+  /// INSIGHTVALUES-PRODUCTIZATION-MACRO-03 UX review (§18): human label for the raw internal action id.
+  ///
+  /// In pt, this message translates to:
+  /// **'Enviar mensagem'**
+  String get aefLabActionSendMessage;
+
+  /// INSIGHTVALUES-PRODUCTIZATION-MACRO-03 UX review (§18): human label for the raw internal action id.
+  ///
+  /// In pt, this message translates to:
+  /// **'Concluir ação'**
+  String get aefLabActionCompleteAction;
+
   /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 LAB Human Gate card
   ///
   /// In pt, this message translates to:

@@ -750,6 +750,22 @@ class AppLocalizationsPt extends AppLocalizations {
   String get aefLabFieldBody => 'Mensagem';
 
   @override
+  String get aefLabTitleActionEngine => 'Confirmar conclusão';
+
+  @override
+  String get actionEngineExecuteSheetIntro =>
+      'Isso exige a sua aprovação explícita e gera um recibo auditável. Nada é enviado a nenhum sistema externo.';
+
+  @override
+  String get aefLabActionPublishContent => 'Publicar conteúdo';
+
+  @override
+  String get aefLabActionSendMessage => 'Enviar mensagem';
+
+  @override
+  String get aefLabActionCompleteAction => 'Concluir ação';
+
+  @override
   String get aefLabRequestApproval => 'Solicitar aprovação';
 
   @override

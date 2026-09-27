@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/action_queue_item.dart';
 import '../../../data/models/aef_runtime.dart';
 import '../../../data/services/aef_runtime_service.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/action_queue_provider.dart';
 import '../../../shared/widgets/aef_action_card.dart';
 
@@ -35,6 +36,7 @@ class ActionEngineExecuteSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context)!;
     final api = ref.read(actionEngineRuntimeApiProvider);
     final notifier = ref.read(actionQueueNotifierProvider.notifier);
     return SafeArea(
@@ -52,9 +54,9 @@ class ActionEngineExecuteSheet extends ConsumerWidget {
             children: [
               Text(item.title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
               const SizedBox(height: 4),
-              const Text(
-                'Isso passa pela governança do AEF: exige sua aprovação explícita e gera um recibo auditável. Nada é enviado a nenhum sistema externo.',
-                style: TextStyle(color: Colors.white54, fontSize: 12),
+              Text(
+                l.actionEngineExecuteSheetIntro,
+                style: const TextStyle(color: Colors.white54, fontSize: 12),
               ),
               AefActionCard(
                 intent: IveActionIntentData(
@@ -65,6 +67,7 @@ class ActionEngineExecuteSheet extends ConsumerWidget {
                   contextRef: item.id,
                 ),
                 api: api,
+                title: l.aefLabTitleActionEngine,
                 initialValues: {
                   'action_id': item.id,
                   'summary': item.title,

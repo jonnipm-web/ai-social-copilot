@@ -15,7 +15,7 @@ import '../../l10n/app_localizations.dart';
 /// [AefRuntimeResult.isCompleted]; UNKNOWN_OUTCOME is visually distinct from
 /// FAILED and offers no retry.
 class AefActionCard extends StatefulWidget {
-  const AefActionCard({super.key, required this.intent, required this.api, this.initialValues = const {}, this.onResult});
+  const AefActionCard({super.key, required this.intent, required this.api, this.initialValues = const {}, this.onResult, this.title});
 
   final IveActionIntentData intent;
   final AefRuntimeApi api;
@@ -26,6 +26,15 @@ class AefActionCard extends StatefulWidget {
   /// still edit before requesting approval — this is display convenience
   /// only, never trusted: the server re-validates every field regardless.
   final Map<String, String> initialValues;
+
+  /// INSIGHTVALUES-PRODUCTIZATION-MACRO-03 (UX review, §18) — overrides the
+  /// default title (`l.aefLabTitle`, "Ação proposta pela IVE (LAB)").
+  /// That default is wrong outside the IVE-chat surface this card was
+  /// originally built for: Action Engine's own self-attestation was never
+  /// "proposed by IVE", and "(LAB)" is internal build-status jargon a real
+  /// free-tier user has no reason to see. Null keeps the original IVE-chat
+  /// wording unchanged.
+  final String? title;
 
   /// INSIGHTVALUES-PRODUCTIZATION-MACRO-03 — called every time the server
   /// returns a new result (propose/decide/execute), so a caller (e.g.
@@ -155,6 +164,16 @@ class _AefActionCardState extends State<AefActionCard> {
       'complete_action' => l.aefLabConsequenceCompleteAction,
       _ => l.aefLabConsequencePublish,
     };
+    // A raw internal action id (e.g. "complete_action") means nothing to a
+    // real user; label the ones this card actually serves and fall back to
+    // the id only for a genuinely unrecognized one, so a future action is
+    // still visible for debugging rather than silently blank.
+    final actionLabel = switch (widget.intent.requestedAction) {
+      'publish_content' => l.aefLabActionPublishContent,
+      'send_message' => l.aefLabActionSendMessage,
+      'complete_action' => l.aefLabActionCompleteAction,
+      _ => widget.intent.requestedAction,
+    };
     return Container(
       margin: const EdgeInsets.only(top: 8),
       padding: const EdgeInsets.all(12),
@@ -162,9 +181,9 @@ class _AefActionCardState extends State<AefActionCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l.aefLabTitle, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+          Text(widget.title ?? l.aefLabTitle, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
           const SizedBox(height: 6),
-          Text('${l.aefLabActionLabel}: ${widget.intent.requestedAction}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          Text('${l.aefLabActionLabel}: $actionLabel', style: const TextStyle(color: Colors.white70, fontSize: 12)),
           Text(l.aefLabRisk, style: const TextStyle(color: Colors.orangeAccent, fontSize: 12)),
           Text(consequence, style: const TextStyle(color: Colors.white70, fontSize: 12)),
           const SizedBox(height: 8),
