@@ -57,6 +57,21 @@ export const RULE_CATALOG: readonly RuleDefinition[] = Object.freeze([
     summary: 'Enter on a pullback in the direction of the prevailing structural trend.',
     supportedAssetClasses: 'ANY',
     riskImplications: 'Entry timing risk only; does not itself size or bound loss.',
+    // backtestSupport is true because Strategy #001/V10's own Python
+    // engine executes it (Macro-05) -- the generic TS engine
+    // (generic_rule_engine.ts, Macro-06) does NOT implement this rule;
+    // see ENGINE_REGISTRY's supportedRuleIds for which engine a given
+    // spec must run under.
+    backtestSupport: true,
+    simulationSupport: false,
+    liveExecutionEligible: false,
+  },
+  {
+    ruleId: 'ENTRY.SESSION_OPEN',
+    category: 'ENTRY',
+    summary: 'Enter once per session, in the single allowed direction, at the first bar of the session window.',
+    supportedAssetClasses: 'ANY',
+    riskImplications: 'No signal condition at all -- entry timing risk is maximal; exists to prove the generic engine architecture (§11), not as a recommended rule.',
     backtestSupport: true,
     simulationSupport: false,
     liveExecutionEligible: false,
