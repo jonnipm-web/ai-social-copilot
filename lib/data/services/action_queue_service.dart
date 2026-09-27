@@ -54,13 +54,23 @@ class ActionQueueService {
   /// through create()) and bypassing applyAefResult -- and therefore the
   /// Human Gate/receipt -- entirely. Only applyAefResult may ever write
   /// them, because only it derives the status from a real AefRuntimeResult
-  /// rather than an arbitrary string. Normalized (trim + lowercase) so a
-  /// case or whitespace variant ('Executing', ' completed ') cannot slip
-  /// through a guard that only checked the exact literal.
+  /// rather than an arbitrary string. Normalized (trim + lowercase, then
+  /// invisible Unicode format characters stripped -- INSIGHTVALUES-
+  /// INTELLIGENCE-AUTOMATION-MACRO-04 §26, the round-3 Codex P3: a
+  /// zero-width space/joiner or BOM inside 'completed' must not survive
+  /// trim()/toLowerCase() alone) so no case, whitespace, or invisible-
+  /// character variant can slip through a guard that only checked the
+  /// exact literal.
   static const _aefGovernedOnlyStatuses = {'executing', 'completed'};
 
+  /// Unicode category Cf ("Format"): zero-width space/joiner/non-joiner,
+  /// byte-order mark, bidi control characters, soft hyphen, etc. -- visibly
+  /// nothing, but present in the string's code units.
+  static final RegExp _invisibleFormatChars = RegExp(r'\p{Cf}', unicode: true);
+
   void _refuseIfAefGovernedOnly(String status) {
-    if (_aefGovernedOnlyStatuses.contains(status.trim().toLowerCase())) {
+    final normalized = status.trim().toLowerCase().replaceAll(_invisibleFormatChars, '');
+    if (_aefGovernedOnlyStatuses.contains(normalized)) {
       throw ArgumentError('"$status" is AEF-governed-only -- use applyAefResult, which requires a real AEF receipt');
     }
   }

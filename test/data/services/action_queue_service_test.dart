@@ -40,6 +40,33 @@ void main() {
       expect(() => svc.updateStatus('a1', 'approved'), throwsA(isNot(isA<ArgumentError>())));
       expect(() => svc.updateStatus('a1', 'cancelled'), throwsA(isNot(isA<ArgumentError>())));
     });
+
+    // INSIGHTVALUES-INTELLIGENCE-AUTOMATION-MACRO-04 §26 -- the round-3
+    // Codex audit's P3: trim()+toLowerCase() alone does not remove an
+    // invisible Unicode format character, so 'completed​' (a zero-
+    // width space appended) would not match the literal 'completed' and
+    // could slip through. Fixed by stripping Unicode category Cf before
+    // comparing.
+    test('refuses invisible-Unicode-format-character variants (zero-width space/joiner, BOM)', () {
+      final svc = ActionQueueService();
+      final variants = [
+        'completed​', // zero-width space
+        '​completed',
+        'compl​eted',
+        'executing‌', // zero-width non-joiner
+        'executing‍', // zero-width joiner
+        '﻿completed', // byte-order mark / zero-width no-break space
+        'completed⁠', // word joiner
+      ];
+      for (final status in variants) {
+        expect(() => svc.updateStatus('a1', status), throwsA(isA<ArgumentError>()), reason: status.codeUnits.toString());
+      }
+    });
+
+    test('a legitimate status with no invisible characters is still not refused after the Cf-stripping change', () {
+      final svc = ActionQueueService();
+      expect(() => svc.updateStatus('a1', 'approved'), throwsA(isNot(isA<ArgumentError>())));
+    });
   });
 
   group('ActionQueueService.create (authority boundary)', () {
