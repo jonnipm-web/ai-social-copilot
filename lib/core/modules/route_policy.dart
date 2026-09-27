@@ -147,11 +147,27 @@ ModuleDefinition? _moduleForRoute(String path) {
   return null; // unreachable if kRouteModuleOwnership only ever references real ids (test-covered)
 }
 
+/// Pure, module-level predicate behind [routeMayBeRestricted] — split out so
+/// tests can exercise it directly against a constructed [ModuleDefinition]
+/// (e.g. a lifecycleOverride combination no real registry entry uses yet),
+/// independent of the real [kRouteModuleOwnership]/[kModuleRegistry] lookup.
+///
+/// Codex INTEGRATION-MACRO-02 audit (P2-01): a module can be restricted via
+/// `lifecycle` alone (e.g. a lifecycleOverride putting it at ALPHA/BETA/
+/// RELEASE_CANDIDATE, reachable only with the beta_tester role) even when
+/// commercialEnabled/minimumPlan alone would suggest unconditional access —
+/// decideForModule's own `reachable` check consults lifecycle first. No
+/// module uses this combination today, but this pre-check must not create a
+/// path that skips that check.
+bool isModuleRestricted(ModuleDefinition module) =>
+    !module.commercialEnabled ||
+    module.minimumPlan != ModulePlan.free ||
+    module.lifecycle != ModuleLifecycle.commercial;
+
 /// Cheap, profile-free pre-check for the caller (see app.dart): true only
-/// when the route's owning module could possibly restrict access (not
-/// commercially enabled, or requires more than the free plan) — i.e. only
-/// when knowing the real isAdmin/isPro actually changes the outcome. Every
-/// other route resolves to `allow` regardless of who's asking, so the
+/// when the route's owning module could possibly restrict access — i.e.
+/// only when knowing the real isAdmin/isPro actually changes the outcome.
+/// Every other route resolves to `allow` regardless of who's asking, so the
 /// caller can skip fetching the user's profile entirely for the large
 /// majority of navigation (every free, already-released V1 screen), rather
 /// than paying an async profile read on every single in-app navigation.
@@ -159,7 +175,7 @@ bool routeMayBeRestricted(String path) {
   if (kAlwaysAllowedRoutes.contains(path)) return false;
   final module = _moduleForRoute(path);
   if (module == null) return false;
-  return !module.commercialEnabled || module.minimumPlan != ModulePlan.free;
+  return isModuleRestricted(module);
 }
 
 /// Pure entitlement decision, given an EXPLICIT (possibly synthetic) owning

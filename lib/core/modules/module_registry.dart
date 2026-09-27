@@ -78,13 +78,20 @@ const List<ModuleDefinition> kModuleRegistry = [
     commercialEnabled: true,
     minimumPlan: ModulePlan.free,
     route: null,
-    edgeFunctions: ['generate-project-opportunities', 'generate-project-actions'],
+    // Codex INTEGRATION-MACRO-02 audit (P2-02): these two functions are
+    // already owned by 'opportunity-lab'/'action-engine' on the server
+    // (module_policy.ts) -- this module TRIGGERS them on project creation
+    // but does not itself own them for entitlement purposes. Listing them
+    // here too created a real registry/server ownership contradiction the
+    // drift test couldn't detect (it only checks the function name exists
+    // somewhere server-side, not which module owns it). Left out of
+    // edgeFunctions; named in readiness/notes instead, informationally.
     databaseDependencies: ['projects', 'opportunity_lab', 'action_queue', 'revenue_plans'],
     aiDependency: true,
-    readinessPt: 'Totalmente funcional -- dispara oportunidades, ações e plano de receita iniciais na criação de um projeto. Sem tela própria (sub-fluxo de Projetos, route: null por design).',
-    readinessEn: 'Fully functional -- generates initial opportunities, actions and a revenue plan on project creation. No own screen (Projects sub-flow, route: null by design).',
+    readinessPt: 'Totalmente funcional -- dispara generate-project-opportunities e generate-project-actions (funções já pertencentes a opportunity-lab/action-engine) e um plano de receita iniciais na criação de um projeto. Sem tela própria (sub-fluxo de Projetos, route: null por design).',
+    readinessEn: 'Fully functional -- triggers generate-project-opportunities and generate-project-actions (functions already owned by opportunity-lab/action-engine) plus an initial revenue plan on project creation. No own screen (Projects sub-flow, route: null by design).',
     releaseClassification: ModuleReleaseClass.commercialV1,
-    notes: 'Consome cota de IA por geração (mesma política de usage-quota).',
+    notes: 'Consome cota de IA por geração (mesma política de usage-quota). Não possui Edge Function própria -- ver comentário sobre ownership acima.',
   ),
   ModuleDefinition(
     moduleId: 'knowledge-vault',
@@ -297,6 +304,7 @@ const List<ModuleDefinition> kModuleRegistry = [
     commercialEnabled: true,
     minimumPlan: ModulePlan.free,
     route: AppConstants.routeOpportunityLab,
+    edgeFunctions: ['generate-project-opportunities'],
     databaseDependencies: ['opportunity_lab'],
     readinessPt: 'Totalmente funcional.',
     readinessEn: 'Fully functional.',
@@ -329,7 +337,7 @@ const List<ModuleDefinition> kModuleRegistry = [
     commercialEnabled: true,
     minimumPlan: ModulePlan.free,
     route: null,
-    edgeFunctions: ['context-copilot'],
+    edgeFunctions: ['context-copilot', 'ive-intelligence', 'ive-memory'],
     aiDependency: true,
     readinessPt: 'Totalmente funcional. Por design não é uma rota própria -- é um overlay global (assistente ambiente), renderizado sobre todas as telas.',
     readinessEn: 'Fully functional. By design it is not its own route -- it is a global overlay (ambient assistant), rendered over every screen.',

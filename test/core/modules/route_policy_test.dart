@@ -12,6 +12,7 @@
 // "pure policy logic... tested without requiring full Supabase integration"
 // split the mission asked for.
 
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -21,10 +22,27 @@ import 'package:ai_social_copilot/core/modules/module_registry.dart';
 import 'package:ai_social_copilot/core/modules/route_policy.dart';
 import 'package:ai_social_copilot/core/constants/app_constants.dart';
 
+/// Mirrors server_module_policy_drift_test.dart's own JSON extraction --
+/// duplicated locally (small, self-contained) rather than exported, to keep
+/// each test file's server-manifest coupling explicit and independent.
+Map<String, dynamic> _serverEdgeFunctions() {
+  final src = File('supabase/functions/_shared/module_policy.ts').readAsStringSync();
+  const begin = '// BEGIN_MODULE_POLICY_JSON';
+  const end = '// END_MODULE_POLICY_JSON';
+  final start = src.indexOf(begin);
+  final stop = src.indexOf(end);
+  if (start < 0 || stop <= start) {
+    throw StateError('module_policy.ts is missing its JSON markers');
+  }
+  final policy = jsonDecode(src.substring(src.indexOf('\n', start) + 1, stop)) as Map<String, dynamic>;
+  return (policy['edgeFunctions'] as Map).cast<String, dynamic>();
+}
+
 ModuleDefinition _module({
   required bool commercialEnabled,
   required ModulePlan minimumPlan,
   String moduleId = 'synthetic',
+  ModuleLifecycle? lifecycleOverride,
 }) =>
     ModuleDefinition(
       moduleId: moduleId,
@@ -38,6 +56,7 @@ ModuleDefinition _module({
       readinessPt: 'test',
       readinessEn: 'test',
       releaseClassification: ModuleReleaseClass.commercialV1,
+      lifecycleOverride: lifecycleOverride,
     );
 
 void main() {
@@ -592,6 +611,74 @@ void main() {
 
     test('an unclassified moduleId fails open (true) rather than silently hiding a real button', () {
       expect(isModuleActionable('this-module-does-not-exist', isAdmin: false), isTrue);
+    });
+  });
+
+  group('isModuleRestricted / routeMayBeRestricted — Codex INTEGRATION-MACRO-02 audit (P2-01)', () {
+    test('commercialEnabled:true + minimumPlan:free + a non-commercial lifecycleOverride is still restricted', () {
+      for (final lifecycle in [ModuleLifecycle.alpha, ModuleLifecycle.beta, ModuleLifecycle.releaseCandidate, ModuleLifecycle.experimental, ModuleLifecycle.internal, ModuleLifecycle.deprecated]) {
+        final module = _module(
+          commercialEnabled: true,
+          minimumPlan: ModulePlan.free,
+          lifecycleOverride: lifecycle,
+        );
+        expect(
+          isModuleRestricted(module),
+          isTrue,
+          reason: 'commercialEnabled:true + free + lifecycleOverride:$lifecycle must still be treated as possibly restricted',
+        );
+      }
+    });
+
+    test('commercialEnabled:true + minimumPlan:free + no override (lifecycle derives to commercial) is unrestricted', () {
+      final module = _module(commercialEnabled: true, minimumPlan: ModulePlan.free);
+      expect(module.lifecycle, ModuleLifecycle.commercial);
+      expect(isModuleRestricted(module), isFalse);
+    });
+
+    test('commercialEnabled:false is always restricted regardless of lifecycleOverride', () {
+      final module = _module(commercialEnabled: false, minimumPlan: ModulePlan.free);
+      expect(isModuleRestricted(module), isTrue);
+    });
+  });
+
+  group('registry/server Edge Function ownership parity — Codex INTEGRATION-MACRO-02 audit (P2-02)', () {
+    test('project-auto-bootstrap does not list an Edge Function owned by a different registry module', () {
+      // The exact regression this Codex finding named: project-auto-bootstrap
+      // (a route:null client-side orchestration entry with no Edge Function
+      // of its own) had listed generate-project-opportunities/
+      // generate-project-actions, which the server (module_policy.ts) -- and
+      // this same client registry, via opportunity-lab/action-engine's own
+      // entries -- already assign to those other modules. A hub module
+      // informationally mentioning a sub-feature's function (e.g.
+      // market-intelligence naming competitor-discovery's function) is a
+      // separate, pre-existing, accepted convention this test does not
+      // touch; this guards specifically against a module with no Edge
+      // Function of its own claiming one anyway.
+      final bootstrap = kModuleRegistry.firstWhere((m) => m.moduleId == 'project-auto-bootstrap');
+      expect(bootstrap.edgeFunctions, isEmpty);
+    });
+
+    test("every server MODULE-kind Edge Function's designated owner lists that function in its own registry entry", () {
+      // The server is the real authority on WHICH module a function
+      // belongs to; this checks that authority is self-consistent with the
+      // client registry for whichever module the server actually names --
+      // catching a future case where the server reassigns a function to a
+      // module that was never told about it, without forbidding an
+      // unrelated hub module from also mentioning it informationally.
+      final serverFunctions = _serverEdgeFunctions();
+      final byId = {for (final m in kModuleRegistry) m.moduleId: m};
+      final drift = <String>[];
+      for (final entry in serverFunctions.entries) {
+        final fn = entry.value as Map;
+        if (fn['kind'] != 'MODULE') continue;
+        final ownerId = fn['moduleId'] as String;
+        final owner = byId[ownerId];
+        if (owner == null || !owner.edgeFunctions.contains(entry.key)) {
+          drift.add('${entry.key}: server says $ownerId, but that module\'s own edgeFunctions does not list it');
+        }
+      }
+      expect(drift, isEmpty);
     });
   });
 }

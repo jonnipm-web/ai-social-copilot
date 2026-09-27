@@ -4,7 +4,7 @@
 
 ## What already exists (verified against current code, not assumed)
 
-- **Entitlement model**: `ModulePlan` enum (`free` / `pro` / `premium` / `admin`) on every `ModuleDefinition.minimumPlan`, enforced server-adjacent by `route_policy.dart`'s `decideForModule`/`evaluateRouteAccess`, wired into GoRouter's `redirect` — a route with `minimumPlan: pro` on a `free` user resolves to `redirectUpgrade`, not just a hidden nav item. This is a real gate, not a UI suggestion.
+- **Entitlement model**: `ModulePlan` enum (`free` / `pro` / `premium`) on every `ModuleDefinition.minimumPlan`, enforced server-adjacent by `route_policy.dart`'s `decideForModule`/`evaluateRouteAccess`, wired into GoRouter's `redirect` — a route with `minimumPlan: pro` on a `free` user resolves to `redirectUpgrade`, not just a hidden nav item. This is a real gate, not a UI suggestion. (`ModulePlan.admin` existed in this tranche's own history but was removed during INSIGHTVALUES-INTEGRATION-MACRO-02's reconciliation with a newer `ModuleLifecycle`-based architecture that expresses admin-only access without a fake "plan" — see module_definition.dart. Codex INTEGRATION-MACRO-02 audit, P3-01.)
 - **Quota model**: `AppConstants.planLimits` (`admin: 99999, premium: 1000, pro: 100, beta_tester: 50, free: 5`), mirrored at the profile layer by `Profile.isPremium`/`QuotaInfo.isPremium` (`role == 'premium'`), which already existed and already distinguished Premium from Pro for quota purposes before Tranche 2.
 - **Billing**: real Stripe Checkout, TEST MODE only, single `PRO` product/price, `subscriptions` + `processed_webhook_events` tables, atomic webhook application (3 migrations hardening this). No live credentials used. **Untouched by either tranche.**
 
