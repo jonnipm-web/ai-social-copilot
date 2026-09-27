@@ -1274,6 +1274,756 @@ abstract class AppLocalizations {
   /// **'Assinatura'**
   String get oppTypeAssinatura;
 
+  /// IVE-INTELLIGENCE-CORE-01 chat state
+  ///
+  /// In pt, this message translates to:
+  /// **'Esta ação tem consequências fora do app (publicar, enviar, pagar, negociar ou apagar). A IVE não executa ações desse tipo: elas exigem aprovação pelo fluxo de execução governada.'**
+  String get iveCoreRequiresAef;
+
+  /// IVE-INTELLIGENCE-CORE-01 chat state
+  ///
+  /// In pt, this message translates to:
+  /// **'Este projeto não está disponível para a sua conta.'**
+  String get iveCoreProjectForbidden;
+
+  /// IVE-INTELLIGENCE-CORE-01 chat state
+  ///
+  /// In pt, this message translates to:
+  /// **'A IVE está temporariamente indisponível. Nenhuma análise foi descontada. Tente novamente.'**
+  String get iveCoreModelUnavailable;
+
+  /// IVE-INTELLIGENCE-CORE-01 chat state
+  ///
+  /// In pt, this message translates to:
+  /// **'Não foi possível carregar o contexto do projeto agora. Tente novamente.'**
+  String get iveCoreContextUnavailable;
+
+  /// IVE-INTELLIGENCE-CORE-01 chat state
+  ///
+  /// In pt, this message translates to:
+  /// **'Não foi possível enviar esta pergunta. Revise o texto e tente novamente.'**
+  String get iveCoreInvalidRequest;
+
+  /// IVE-INTELLIGENCE-CORE-01 chat state
+  ///
+  /// In pt, this message translates to:
+  /// **'A IVE ainda não está disponível nesta plataforma.'**
+  String get iveCoreSurfaceNotSupported;
+
+  /// IVE-INTELLIGENCE-CORE-01 chat state
+  ///
+  /// In pt, this message translates to:
+  /// **'Sua sessão expirou. Faça login novamente.'**
+  String get iveCoreSessionExpired;
+
+  /// IVE-INTELLIGENCE-CORE-01 chat state
+  ///
+  /// In pt, this message translates to:
+  /// **'Este recurso não está disponível para a sua conta.'**
+  String get iveCoreAccessDenied;
+
+  /// IVE-INTELLIGENCE-CORE-01 chat state
+  ///
+  /// In pt, this message translates to:
+  /// **'Você atingiu o limite de análises de IA do seu plano.'**
+  String get iveCoreQuotaExceeded;
+
+  /// IVE-INTELLIGENCE-CORE-01 chat state
+  ///
+  /// In pt, this message translates to:
+  /// **'Algo deu errado ao falar com a IVE. Tente novamente.'**
+  String get iveCoreGenericError;
+
+  /// IVE-INTELLIGENCE-CORE-01 chat state
+  ///
+  /// In pt, this message translates to:
+  /// **'Resposta com contexto parcial: parte dos seus dados não pôde ser carregada.'**
+  String get iveCoreDegradedContext;
+
+  /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 LAB Human Gate card
+  ///
+  /// In pt, this message translates to:
+  /// **'Ação proposta pela IVE (LAB)'**
+  String get aefLabTitle;
+
+  /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 LAB Human Gate card
+  ///
+  /// In pt, this message translates to:
+  /// **'Nada foi executado. Revise os detalhes: a ação só roda depois da sua aprovação explícita.'**
+  String get aefLabIntro;
+
+  /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 LAB Human Gate card
+  ///
+  /// In pt, this message translates to:
+  /// **'Ação'**
+  String get aefLabActionLabel;
+
+  /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 LAB Human Gate card
+  ///
+  /// In pt, this message translates to:
+  /// **'Risco: consequencial — exige a sua aprovação.'**
+  String get aefLabRisk;
+
+  /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 LAB Human Gate card
+  ///
+  /// In pt, this message translates to:
+  /// **'Consequência: publica este texto no canal escolhido (simulado no LAB, nada sai do app).'**
+  String get aefLabConsequencePublish;
+
+  /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 LAB Human Gate card
+  ///
+  /// In pt, this message translates to:
+  /// **'Consequência: envia esta mensagem ao público escolhido (simulado no LAB, nada sai do app).'**
+  String get aefLabConsequenceSend;
+
+  /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 LAB Human Gate card
+  ///
+  /// In pt, this message translates to:
+  /// **'Canal'**
+  String get aefLabFieldChannel;
+
+  /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 LAB Human Gate card
+  ///
+  /// In pt, this message translates to:
+  /// **'Texto'**
+  String get aefLabFieldText;
+
+  /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 LAB Human Gate card
+  ///
+  /// In pt, this message translates to:
+  /// **'Público'**
+  String get aefLabFieldAudience;
+
+  /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 LAB Human Gate card
+  ///
+  /// In pt, this message translates to:
+  /// **'Assunto'**
+  String get aefLabFieldSubject;
+
+  /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 LAB Human Gate card
+  ///
+  /// In pt, this message translates to:
+  /// **'Mensagem'**
+  String get aefLabFieldBody;
+
+  /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 LAB Human Gate card
+  ///
+  /// In pt, this message translates to:
+  /// **'Solicitar aprovação'**
+  String get aefLabRequestApproval;
+
+  /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 LAB Human Gate card
+  ///
+  /// In pt, this message translates to:
+  /// **'Aprovar'**
+  String get aefLabApprove;
+
+  /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 LAB Human Gate card
+  ///
+  /// In pt, this message translates to:
+  /// **'Rejeitar'**
+  String get aefLabReject;
+
+  /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 LAB Human Gate card
+  ///
+  /// In pt, this message translates to:
+  /// **'Executar agora'**
+  String get aefLabExecute;
+
+  /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 LAB Human Gate card
+  ///
+  /// In pt, this message translates to:
+  /// **'Aguardando a sua aprovação. Nada foi executado.'**
+  String get aefLabPhaseAwaiting;
+
+  /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 LAB Human Gate card
+  ///
+  /// In pt, this message translates to:
+  /// **'Aprovada — ainda não executada.'**
+  String get aefLabPhaseAuthorized;
+
+  /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 LAB Human Gate card
+  ///
+  /// In pt, this message translates to:
+  /// **'Em execução…'**
+  String get aefLabPhaseExecuting;
+
+  /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 LAB Human Gate card
+  ///
+  /// In pt, this message translates to:
+  /// **'Concluída. Recibo registrado.'**
+  String get aefLabPhaseSucceeded;
+
+  /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 LAB Human Gate card
+  ///
+  /// In pt, this message translates to:
+  /// **'Conclusão não confirmada pelo servidor.'**
+  String get aefLabPhaseUnconfirmed;
+
+  /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 LAB Human Gate card
+  ///
+  /// In pt, this message translates to:
+  /// **'Falhou. Nada foi concluído.'**
+  String get aefLabPhaseFailed;
+
+  /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 LAB Human Gate card
+  ///
+  /// In pt, this message translates to:
+  /// **'Resultado desconhecido: a ação pode ter ocorrido. É necessária reconciliação — não tente de novo.'**
+  String get aefLabPhaseUnknown;
+
+  /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 LAB Human Gate card
+  ///
+  /// In pt, this message translates to:
+  /// **'Rejeitada. Nada foi executado.'**
+  String get aefLabPhaseRejected;
+
+  /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 LAB Human Gate card
+  ///
+  /// In pt, this message translates to:
+  /// **'Expirada. Nada foi executado.'**
+  String get aefLabPhaseExpired;
+
+  /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 LAB Human Gate card
+  ///
+  /// In pt, this message translates to:
+  /// **'Cancelada. Nada foi executado.'**
+  String get aefLabPhaseCancelled;
+
+  /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 LAB Human Gate card
+  ///
+  /// In pt, this message translates to:
+  /// **'Invalidada (as regras mudaram). Nada foi executado.'**
+  String get aefLabPhaseInvalidated;
+
+  /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 LAB Human Gate card
+  ///
+  /// In pt, this message translates to:
+  /// **'Ação não permitida.'**
+  String get aefLabPhaseDenied;
+
+  /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 LAB Human Gate card
+  ///
+  /// In pt, this message translates to:
+  /// **'Sem resposta confiável do servidor: o estado não foi confirmado.'**
+  String get aefLabPhaseNetwork;
+
+  /// Persisted receipt id
+  ///
+  /// In pt, this message translates to:
+  /// **'Recibo: {receiptId}'**
+  String aefLabReceipt(String receiptId);
+
+  /// No description provided for @impactTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Impact Lab'**
+  String get impactTitle;
+
+  /// No description provided for @impactInvestigations.
+  ///
+  /// In pt, this message translates to:
+  /// **'Investigações'**
+  String get impactInvestigations;
+
+  /// No description provided for @impactInvestigationsEmpty.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhuma investigação ainda.'**
+  String get impactInvestigationsEmpty;
+
+  /// No description provided for @impactAdminOnly.
+  ///
+  /// In pt, this message translates to:
+  /// **'O Impact Lab é restrito a administradores.'**
+  String get impactAdminOnly;
+
+  /// No description provided for @impactNoScoreNote.
+  ///
+  /// In pt, this message translates to:
+  /// **'Este dossiê organiza evidências. Não atribui nota, ranking nem veredito à organização.'**
+  String get impactNoScoreNote;
+
+  /// No description provided for @impactLiveView.
+  ///
+  /// In pt, this message translates to:
+  /// **'Visão ao vivo'**
+  String get impactLiveView;
+
+  /// No description provided for @impactLiveViewHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'Reflete o estado atual e muda quando a evidência muda.'**
+  String get impactLiveViewHint;
+
+  /// No description provided for @impactSnapshot.
+  ///
+  /// In pt, this message translates to:
+  /// **'Snapshot emitido'**
+  String get impactSnapshot;
+
+  /// No description provided for @impactSnapshotHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'Retrato histórico: não é reescrito quando a evidência muda.'**
+  String get impactSnapshotHint;
+
+  /// No description provided for @impactAsOf.
+  ///
+  /// In pt, this message translates to:
+  /// **'Situação em {date}'**
+  String impactAsOf(String date);
+
+  /// No description provided for @impactAsOfUnknown.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sem data de referência ainda'**
+  String get impactAsOfUnknown;
+
+  /// No description provided for @impactSummary.
+  ///
+  /// In pt, this message translates to:
+  /// **'Resumo'**
+  String get impactSummary;
+
+  /// No description provided for @impactIdentity.
+  ///
+  /// In pt, this message translates to:
+  /// **'Identidade'**
+  String get impactIdentity;
+
+  /// No description provided for @impactClaims.
+  ///
+  /// In pt, this message translates to:
+  /// **'Afirmações'**
+  String get impactClaims;
+
+  /// No description provided for @impactEvidence.
+  ///
+  /// In pt, this message translates to:
+  /// **'Evidências'**
+  String get impactEvidence;
+
+  /// No description provided for @impactConflicts.
+  ///
+  /// In pt, this message translates to:
+  /// **'Divergências'**
+  String get impactConflicts;
+
+  /// No description provided for @impactLimitations.
+  ///
+  /// In pt, this message translates to:
+  /// **'Limitações'**
+  String get impactLimitations;
+
+  /// No description provided for @impactNotEstablished.
+  ///
+  /// In pt, this message translates to:
+  /// **'O que este dossiê NÃO estabelece'**
+  String get impactNotEstablished;
+
+  /// No description provided for @impactDisputes.
+  ///
+  /// In pt, this message translates to:
+  /// **'Contestações'**
+  String get impactDisputes;
+
+  /// No description provided for @impactSources.
+  ///
+  /// In pt, this message translates to:
+  /// **'Fontes e proveniência'**
+  String get impactSources;
+
+  /// No description provided for @impactIntegrity.
+  ///
+  /// In pt, this message translates to:
+  /// **'Integridade'**
+  String get impactIntegrity;
+
+  /// No description provided for @impactOpenDisputes.
+  ///
+  /// In pt, this message translates to:
+  /// **'Contestações abertas'**
+  String get impactOpenDisputes;
+
+  /// No description provided for @impactReverifyPending.
+  ///
+  /// In pt, this message translates to:
+  /// **'Reverificação pendente'**
+  String get impactReverifyPending;
+
+  /// No description provided for @impactNotVerifiedYet.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ainda não verificada.'**
+  String get impactNotVerifiedYet;
+
+  /// No description provided for @impactNoClaims.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhuma afirmação registrada ainda.'**
+  String get impactNoClaims;
+
+  /// No description provided for @impactNoEvidence.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhuma evidência vinculada a esta afirmação.'**
+  String get impactNoEvidence;
+
+  /// No description provided for @impactNoConflicts.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhuma divergência registrada.'**
+  String get impactNoConflicts;
+
+  /// No description provided for @impactNoDisputes.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhuma contestação registrada.'**
+  String get impactNoDisputes;
+
+  /// No description provided for @impactNoLimitations.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhuma limitação registrada.'**
+  String get impactNoLimitations;
+
+  /// No description provided for @impactNoRegistry.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhum registro oficial anexado. Isso não significa que a organização não seja registrada.'**
+  String get impactNoRegistry;
+
+  /// No description provided for @impactNoSnapshot.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhum snapshot emitido ainda.'**
+  String get impactNoSnapshot;
+
+  /// No description provided for @impactQuotedFromSource.
+  ///
+  /// In pt, this message translates to:
+  /// **'Citação da fonte'**
+  String get impactQuotedFromSource;
+
+  /// No description provided for @impactQuotedFromUpload.
+  ///
+  /// In pt, this message translates to:
+  /// **'Citação de documento enviado — contexto, nunca autoridade'**
+  String get impactQuotedFromUpload;
+
+  /// No description provided for @impactWithheld.
+  ///
+  /// In pt, this message translates to:
+  /// **'Trecho omitido por privacidade'**
+  String get impactWithheld;
+
+  /// No description provided for @impactRedactedNote.
+  ///
+  /// In pt, this message translates to:
+  /// **'Dados pessoais foram removidos deste texto.'**
+  String get impactRedactedNote;
+
+  /// No description provided for @impactPublisher.
+  ///
+  /// In pt, this message translates to:
+  /// **'Publicador'**
+  String get impactPublisher;
+
+  /// No description provided for @impactHostedOn.
+  ///
+  /// In pt, this message translates to:
+  /// **'Hospedado em {host} (não é o publicador)'**
+  String impactHostedOn(String host);
+
+  /// No description provided for @impactUserSubmitted.
+  ///
+  /// In pt, this message translates to:
+  /// **'Enviado por usuário — contexto, nunca autoridade'**
+  String get impactUserSubmitted;
+
+  /// No description provided for @impactVoices.
+  ///
+  /// In pt, this message translates to:
+  /// **'Vozes independentes: {voices} · fontes avaliadas: {documents}'**
+  String impactVoices(int voices, int documents);
+
+  /// No description provided for @impactVoicesNote.
+  ///
+  /// In pt, this message translates to:
+  /// **'Vários documentos não significam várias fontes independentes.'**
+  String get impactVoicesNote;
+
+  /// No description provided for @impactRules.
+  ///
+  /// In pt, this message translates to:
+  /// **'Regras aplicadas'**
+  String get impactRules;
+
+  /// No description provided for @impactGaps.
+  ///
+  /// In pt, this message translates to:
+  /// **'Lacunas'**
+  String get impactGaps;
+
+  /// No description provided for @impactLocator.
+  ///
+  /// In pt, this message translates to:
+  /// **'Localização no documento'**
+  String get impactLocator;
+
+  /// No description provided for @impactProvenanceChain.
+  ///
+  /// In pt, this message translates to:
+  /// **'Fonte → documento → localização → evidência → afirmação'**
+  String get impactProvenanceChain;
+
+  /// No description provided for @impactPositionsNoWinner.
+  ///
+  /// In pt, this message translates to:
+  /// **'Todas as posições lado a lado — nenhuma é escolhida.'**
+  String get impactPositionsNoWinner;
+
+  /// No description provided for @impactContentHash.
+  ///
+  /// In pt, this message translates to:
+  /// **'Hash do conteúdo'**
+  String get impactContentHash;
+
+  /// No description provided for @impactHashNotTruth.
+  ///
+  /// In pt, this message translates to:
+  /// **'O hash prova que o conteúdo não foi alterado — não prova que ele é verdadeiro.'**
+  String get impactHashNotTruth;
+
+  /// No description provided for @impactSnapshotRef.
+  ///
+  /// In pt, this message translates to:
+  /// **'Referência do snapshot'**
+  String get impactSnapshotRef;
+
+  /// No description provided for @impactVerifyCurrent.
+  ///
+  /// In pt, this message translates to:
+  /// **'Snapshot atual: o conteúdo não mudou desde a emissão.'**
+  String get impactVerifyCurrent;
+
+  /// No description provided for @impactVerifyStale.
+  ///
+  /// In pt, this message translates to:
+  /// **'Snapshot desatualizado: o conteúdo do dossiê mudou depois da emissão (evidência ou política de apresentação). O snapshot continua válido como registro histórico.'**
+  String get impactVerifyStale;
+
+  /// No description provided for @impactVerifyNotIssued.
+  ///
+  /// In pt, this message translates to:
+  /// **'Este hash não foi emitido para esta investigação.'**
+  String get impactVerifyNotIssued;
+
+  /// No description provided for @impactEnvelopeMismatch.
+  ///
+  /// In pt, this message translates to:
+  /// **'Os metadados do snapshot não conferem com o registro.'**
+  String get impactEnvelopeMismatch;
+
+  /// No description provided for @impactVerifySnapshot.
+  ///
+  /// In pt, this message translates to:
+  /// **'Verificar snapshot'**
+  String get impactVerifySnapshot;
+
+  /// No description provided for @impactExport.
+  ///
+  /// In pt, this message translates to:
+  /// **'Emitir snapshot'**
+  String get impactExport;
+
+  /// No description provided for @impactExportConfirmTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Antes de emitir o snapshot'**
+  String get impactExportConfirmTitle;
+
+  /// No description provided for @impactExportLimitations.
+  ///
+  /// In pt, this message translates to:
+  /// **'Limitações que acompanham este dossiê: {count}'**
+  String impactExportLimitations(int count);
+
+  /// No description provided for @impactExportPrivacy.
+  ///
+  /// In pt, this message translates to:
+  /// **'O export é privado e autenticado: não há link público nem compartilhamento.'**
+  String get impactExportPrivacy;
+
+  /// No description provided for @impactExportFormats.
+  ///
+  /// In pt, this message translates to:
+  /// **'Formatos disponíveis: JSON e texto. PDF não disponível.'**
+  String get impactExportFormats;
+
+  /// No description provided for @impactExportConfirm.
+  ///
+  /// In pt, this message translates to:
+  /// **'Emitir'**
+  String get impactExportConfirm;
+
+  /// No description provided for @impactExportDone.
+  ///
+  /// In pt, this message translates to:
+  /// **'Snapshot emitido'**
+  String get impactExportDone;
+
+  /// No description provided for @impactCopyJson.
+  ///
+  /// In pt, this message translates to:
+  /// **'Copiar JSON'**
+  String get impactCopyJson;
+
+  /// No description provided for @impactCopyText.
+  ///
+  /// In pt, this message translates to:
+  /// **'Copiar texto'**
+  String get impactCopyText;
+
+  /// No description provided for @impactCopied.
+  ///
+  /// In pt, this message translates to:
+  /// **'Copiado'**
+  String get impactCopied;
+
+  /// No description provided for @impactErrorAuth.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sua sessão expirou. Entre novamente.'**
+  String get impactErrorAuth;
+
+  /// No description provided for @impactErrorNotAvailable.
+  ///
+  /// In pt, this message translates to:
+  /// **'Investigação não encontrada ou indisponível.'**
+  String get impactErrorNotAvailable;
+
+  /// No description provided for @impactErrorTooLarge.
+  ///
+  /// In pt, this message translates to:
+  /// **'Este dossiê excede o limite e não foi truncado. Nada parcial é exibido.'**
+  String get impactErrorTooLarge;
+
+  /// No description provided for @impactErrorRateLimited.
+  ///
+  /// In pt, this message translates to:
+  /// **'Muitas solicitações. Tente novamente em {seconds} s.'**
+  String impactErrorRateLimited(int seconds);
+
+  /// No description provided for @impactErrorNetwork.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sem conexão. Verifique a rede e tente novamente.'**
+  String get impactErrorNetwork;
+
+  /// No description provided for @impactErrorServer.
+  ///
+  /// In pt, this message translates to:
+  /// **'O serviço não respondeu. Tente novamente.'**
+  String get impactErrorServer;
+
+  /// No description provided for @impactShowMore.
+  ///
+  /// In pt, this message translates to:
+  /// **'Mostrar mais ({count})'**
+  String impactShowMore(int count);
+
+  /// No description provided for @impactExpand.
+  ///
+  /// In pt, this message translates to:
+  /// **'Expandir'**
+  String get impactExpand;
+
+  /// No description provided for @impactCollapse.
+  ///
+  /// In pt, this message translates to:
+  /// **'Recolher'**
+  String get impactCollapse;
+
+  /// No description provided for @impactClaimDetail.
+  ///
+  /// In pt, this message translates to:
+  /// **'Detalhe da afirmação'**
+  String get impactClaimDetail;
+
+  /// No description provided for @impactErrorContract.
+  ///
+  /// In pt, this message translates to:
+  /// **'Resposta do servidor em formato não suportado. Nada foi exibido para não mostrar um dossiê incompleto.'**
+  String get impactErrorContract;
+
+  /// No description provided for @impactRetry.
+  ///
+  /// In pt, this message translates to:
+  /// **'Tentar novamente'**
+  String get impactRetry;
+
+  /// No description provided for @impactEvidenceExcluded.
+  ///
+  /// In pt, this message translates to:
+  /// **'Excluídas da avaliação (com o motivo nas regras)'**
+  String get impactEvidenceExcluded;
+
+  /// No description provided for @impactDeclaredQuote.
+  ///
+  /// In pt, this message translates to:
+  /// **'Identidade declarada para esta investigação — citada, não verificada'**
+  String get impactDeclaredQuote;
+
+  /// No description provided for @impactRegistryQuote.
+  ///
+  /// In pt, this message translates to:
+  /// **'Como consta no registro — citado'**
+  String get impactRegistryQuote;
+
+  /// No description provided for @impactClaimCaveats.
+  ///
+  /// In pt, this message translates to:
+  /// **'Antes de ler esta afirmação'**
+  String get impactClaimCaveats;
+
+  /// No description provided for @impactClaimLimitations.
+  ///
+  /// In pt, this message translates to:
+  /// **'Limitações que se aplicam a esta afirmação'**
+  String get impactClaimLimitations;
+
+  /// No description provided for @impactSnapshotCaveats.
+  ///
+  /// In pt, this message translates to:
+  /// **'A confirmação descreveu a visão ao vivo naquele momento. As ressalvas do snapshot emitido são estas:'**
+  String get impactSnapshotCaveats;
+
+  /// No description provided for @impactClaimScopeNote.
+  ///
+  /// In pt, this message translates to:
+  /// **'Situação desta afirmação apenas — não é um veredito sobre a organização.'**
+  String get impactClaimScopeNote;
+
+  /// No description provided for @impactIdentityScopeNote.
+  ///
+  /// In pt, this message translates to:
+  /// **'Identidade apenas — não avalia a conduta da organização.'**
+  String get impactIdentityScopeNote;
+
+  /// No description provided for @impactPosition.
+  ///
+  /// In pt, this message translates to:
+  /// **'Posição {index} de {total}'**
+  String impactPosition(int index, int total);
+
+  /// No description provided for @impactVerifyInconclusive.
+  ///
+  /// In pt, this message translates to:
+  /// **'Verificação inconclusiva: não confie nos metadados deste snapshot. Obtenha um novo export antes de usá-lo.'**
+  String get impactVerifyInconclusive;
+
   /// No description provided for @quantLabTitle.
   ///
   /// In pt, this message translates to:

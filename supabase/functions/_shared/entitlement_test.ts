@@ -206,12 +206,16 @@ Deno.test('EN-21 forged client state: body plan=premium / role=admin and forged 
     { 'x-plan': 'premium', 'x-role': 'admin', 'x-user-role': 'admin' },
     { plan: 'premium', role: 'admin', is_admin: true, module_id: 'knowledge-vault', entitlements: ['*'] },
   );
+  // 'campaigns' is COMMERCIAL/pro (Growth Intelligence, Commercial Macro-01
+  // Tranche 2 -- INSIGHTVALUES-INTEGRATION-MACRO-02 reconciliation): a real
+  // 'free' source still denies with PLAN_REQUIRED regardless of the forged
+  // premium/admin claims in headers/body, proving those are truly ignored.
   const r = await requireModuleAccess(forged, USER, 'campaigns', CORS, fakeSource('free'));
   assertFalse(r.allowed);
   if (!r.allowed) {
     assertEquals(r.response.status, 403);
     const body = await r.response.json();
-    assertEquals(body.error, 'MODULE_NOT_AVAILABLE');
+    assertEquals(body.error, 'PLAN_REQUIRED');
     assertEquals(body.module_id, 'campaigns');
     assertEquals(body.lifecycle, undefined, 'internal lifecycle must not leak');
     assertEquals(body.reason, undefined, 'internal reason must not leak');
@@ -260,8 +264,14 @@ Deno.test('EN-25 client alters module id to an unknown one → denied, not allow
 });
 
 Deno.test('EN-26 client tries beta/admin-only real modules as free/pro/premium → denied', async () => {
+  // 'campaigns'/'improve-post' were removed from this list: they are now
+  // COMMERCIAL/pro (Growth Intelligence launch) -- a 'pro' or 'premium'
+  // source is correctly ALLOWED, which EN-31's PLAN_REQUIRED-path coverage
+  // and module_gate_handlers_test.ts's per-function tests already cover.
+  // The remaining modules here stay genuinely denied at every plan because
+  // they are lifecycle-gated (INTERNAL/EXPERIMENTAL), not plan-gated.
   for (const role of ['free', 'pro', 'premium', 'beta_tester']) {
-    for (const m of ['admin-panel', 'intelligence-debug', 'decision-simulator', 'ive-quant', 'campaigns', 'improve-post']) {
+    for (const m of ['admin-panel', 'intelligence-debug', 'decision-simulator', 'ive-quant']) {
       const r = await requireModuleAccess(reqWith(), USER, m, CORS, fakeSource(role));
       assertFalse(r.allowed, `${role}/${m}`);
     }

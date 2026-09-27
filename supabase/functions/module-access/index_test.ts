@@ -53,9 +53,12 @@ Deno.test('MA-2 free user: every module listed once; released free modules allow
   const byId = new Map((body.modules as { module_id: string; allowed: boolean; code?: string }[]).map((m) => [m.module_id, m]));
   assertEquals(byId.size, Object.keys(MODULE_POLICY.modules).length);
   assert(byId.get('knowledge-vault')!.allowed);
-  assertEquals(byId.get('campaigns')!.allowed, false);
-  assertEquals(byId.get('campaigns')!.code, 'MODULE_NOT_AVAILABLE');
-  assertEquals((byId.get('campaigns') as Record<string, unknown>).lifecycle, undefined, 'lifecycle must not leak');
+  // 'campaigns' is now COMMERCIAL/pro (Growth Intelligence launch,
+  // INSIGHTVALUES-INTEGRATION-MACRO-02) -- 'admin-panel' (INTERNAL) is the
+  // still-genuinely-unreleased example for this assertion.
+  assertEquals(byId.get('admin-panel')!.allowed, false);
+  assertEquals(byId.get('admin-panel')!.code, 'MODULE_NOT_AVAILABLE');
+  assertEquals((byId.get('admin-panel') as Record<string, unknown>).lifecycle, undefined, 'lifecycle must not leak');
 });
 
 Deno.test('MA-3 forged body (plan/role/modules) is ignored', async () => {

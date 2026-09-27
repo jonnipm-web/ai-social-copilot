@@ -40,6 +40,12 @@ enum ModuleStatus {
 /// (os mesmos de `profiles.role`: free/pro/premium). Admin e beta_tester são
 /// PAPÉIS, não planos: "só admin" é expresso pelo [ModuleLifecycle]
 /// (INTERNAL/EXPERIMENTAL), nunca por um plano. Ordem = hierarquia.
+///
+/// Reconciliação INSIGHTVALUES-INTEGRATION-MACRO-02: substitui o antigo
+/// `ModulePlan.admin` do Commercial Macro-01 (Tranche 2) -- aquele valor
+/// existia só para expressar "admin-only" como um plano, exatamente o que
+/// este enum agora resolve de forma mais limpa via [ModuleLifecycle].
+/// `premium` (fechamento do gap Tranche 1/2 do Commercial) é preservado.
 enum ModulePlan {
   free,
   pro,

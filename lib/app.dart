@@ -34,7 +34,6 @@ import 'features/dashboard/screens/dashboard_screen.dart';
 import 'features/history/screens/history_detail_screen.dart';
 import 'features/history/screens/history_screen.dart';
 import 'features/home/screens/content_generation_screen.dart';
-import 'features/home/screens/home_screen.dart';
 import 'features/personas/screens/persona_form_screen.dart';
 import 'features/personas/screens/personas_screen.dart';
 import 'features/result/screens/result_screen.dart';
@@ -69,7 +68,6 @@ import 'features/opportunity_lab/screens/opportunity_lab_screen.dart';
 import 'features/opportunity_lab/screens/opportunity_detail_screen.dart';
 import 'features/action_engine/screens/action_engine_screen.dart';
 import 'features/action_engine/screens/action_detail_screen.dart';
-import 'features/dashboard/screens/executive_dashboard_screen.dart';
 import 'features/quant_lab/quant_lab_screen.dart';
 import 'features/debug/screens/intelligence_debug_hub_screen.dart';
 import 'features/impact/screens/impact_dossier_screen.dart';
@@ -369,9 +367,15 @@ final _router = GoRouter(
       path: AppConstants.routeDashboard,
       builder: (_, __) => const DashboardScreen(),
     ),
+    // INSIGHTVALUES-COMMERCIAL-MACRO-01 — OS Command Center absorbed into
+    // Business Dashboard (see module_registry.dart 'command-center' notes).
+    // Route kept alive (not removed) because /result's own missing-`extra`
+    // fallback (below) and IveIntroGate's post-login settle target both
+    // navigate here by path; both now land on the single canonical
+    // dashboard instead of a second, divergent aggregation screen.
     GoRoute(
       path: AppConstants.routeHome,
-      builder: (_, __) => const HomeScreen(),
+      builder: (_, __) => const DashboardScreen(),
     ),
     GoRoute(
       path: AppConstants.routeGenerate,
@@ -661,9 +665,12 @@ final _router = GoRouter(
         itemId: state.pathParameters['id']!,
       ),
     ),
+    // INSIGHTVALUES-COMMERCIAL-MACRO-01 — Executive Dashboard absorbed into
+    // Business Dashboard (see module_registry.dart 'executive-dashboard'
+    // notes). Route kept alive for any existing deep link/bookmark.
     GoRoute(
       path: AppConstants.routeExecutiveDashboard,
-      builder: (_, __) => const ExecutiveDashboardScreen(),
+      builder: (_, __) => const DashboardScreen(),
     ),
 
     // ── Fase 10F — Intelligence Debug & Observability ────────────────────

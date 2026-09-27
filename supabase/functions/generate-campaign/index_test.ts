@@ -5,7 +5,7 @@
  * Execução:
  *   DENO_TESTING=1 deno test --allow-env supabase/functions/generate-campaign/index_test.ts
  */
-import { assertEquals } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
+import { assert, assertEquals } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
 import { AuthClient } from '../_shared/auth.ts';
 import { QuotaClient } from '../_shared/quota.ts';
 import { failingSubjectSource, fakeSubjectSource, withSubject } from '../_shared/entitlement_test_support.ts';
@@ -112,20 +112,35 @@ Deno.test('GC-5: Groq falha depois da cota reservada -> devolve a unidade', asyn
 
 // ── MODULE-FOUNDATION-AND-ENTITLEMENT-02 — server-side entitlement ──────
 
-Deno.test('GC-ENT-1: free user calling the INTERNAL campaigns module directly -> 403 MODULE_NOT_AVAILABLE, no quota, no Groq', async () => {
+// 'campaigns' is now COMMERCIAL/pro (Growth Intelligence launch,
+// INSIGHTVALUES-INTEGRATION-MACRO-02) -- free/beta_tester (neither carries
+// a pro plan) are denied PLAN_REQUIRED before quota/Groq; pro/premium are
+// no longer blocked by entitlement at all.
+Deno.test('GC-ENT-1: free/beta_tester user calling the pro-gated campaigns module directly -> 403 PLAN_REQUIRED, no quota, no Groq', async () => {
   groqCalled = false;
   let quotaCalls = 0;
   const countingQuota: QuotaClient = {
     // deno-lint-ignore require-await
     async rpc() { quotaCalls++; return { data: { allowed: true, used: 1, limit: 100, role: 'free' }, error: null }; },
   };
-  for (const role of ['free', 'pro', 'premium', 'beta_tester']) {
+  for (const role of ['free', 'beta_tester']) {
     const res = await moduleHandler(req({ ...BODY, plan: 'premium', role: 'admin' }), validUserClient, countingQuota, fakeSubjectSource(role));
     assertEquals(res.status, 403, role);
-    assertEquals((await res.json()).error, 'MODULE_NOT_AVAILABLE');
+    assertEquals((await res.json()).error, 'PLAN_REQUIRED');
   }
   assertEquals(quotaCalls, 0);
   assertEquals(groqCalled, false);
+});
+
+Deno.test('GC-ENT-2: pro/premium user is not blocked by entitlement on campaigns', async () => {
+  for (const role of ['pro', 'premium']) {
+    const res = await moduleHandler(req({ ...BODY }), validUserClient, fakeQuotaClient, fakeSubjectSource(role));
+    const body = await res.clone().json().catch(() => ({}));
+    assert(
+      ![401, 403, 503].includes(res.status) || !['AUTH_REQUIRED', 'MODULE_NOT_AVAILABLE', 'MODULE_DISABLED', 'PLAN_REQUIRED', 'ENTITLEMENT_UNAVAILABLE'].includes(body.error),
+      `${role} was blocked by entitlement: ${res.status} ${JSON.stringify(body)}`,
+    );
+  }
 });
 
 Deno.test('GC-ENT-2: entitlement source outage -> 503 ENTITLEMENT_UNAVAILABLE, fail closed, no Groq', async () => {

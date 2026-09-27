@@ -149,6 +149,83 @@ void main() {
         RouteDecision.allow,
       );
     });
+
+    // INSIGHTVALUES-COMMERCIAL-MACRO-01 Tranche 2 -- ModulePlan.premium
+    // gap closure. No real module uses this plan yet; these mirror the
+    // ModulePlan.pro cases above exactly, proving the new branch is real
+    // and load-bearing, not decorative.
+    test('PRO (but not premium) -> PREMIUM commercial route -> redirectUpgrade, not allow', () {
+      final module = _module(commercialEnabled: true, minimumPlan: ModulePlan.premium);
+      expect(
+        decideForModule(
+          module: module,
+          isAlwaysAllowed: false,
+          isAdmin: false,
+          isPro: true,
+          isPremium: false,
+          profileResolved: true,
+        ),
+        RouteDecision.redirectUpgrade,
+        reason: 'being PRO must not unlock a PREMIUM-gated module',
+      );
+    });
+
+    test('PREMIUM -> PREMIUM commercial route -> allow', () {
+      final module = _module(commercialEnabled: true, minimumPlan: ModulePlan.premium);
+      expect(
+        decideForModule(
+          module: module,
+          isAlwaysAllowed: false,
+          isAdmin: false,
+          isPro: true,
+          isPremium: true,
+          profileResolved: true,
+        ),
+        RouteDecision.allow,
+      );
+    });
+
+    test(
+      'PREMIUM -> commercialEnabled=false route -> redirectDenied '
+      '(same trap as PRO: no plan unlocks an unreleased module)',
+      () {
+        final module = _module(commercialEnabled: false, minimumPlan: ModulePlan.premium);
+        expect(
+          decideForModule(
+            module: module,
+            isAlwaysAllowed: false,
+            isAdmin: false,
+            isPro: true,
+            isPremium: true,
+            profileResolved: true,
+          ),
+          RouteDecision.redirectDenied,
+        );
+      },
+    );
+
+    test('profile not yet resolved on a PREMIUM route -> redirectDenied, never allow, never treated as premium', () {
+      final module = _module(commercialEnabled: true, minimumPlan: ModulePlan.premium);
+      expect(
+        decideForModule(
+          module: module,
+          isAlwaysAllowed: false,
+          isAdmin: false,
+          isPro: false,
+          isPremium: false,
+          profileResolved: false,
+        ),
+        RouteDecision.redirectDenied,
+      );
+    });
+
+    test('isPremium defaults to false when the caller omits it (no silent grant)', () {
+      final module = _module(commercialEnabled: true, minimumPlan: ModulePlan.premium);
+      expect(
+        decideForModule(module: module, isAlwaysAllowed: false, isAdmin: false, isPro: true, profileResolved: true),
+        RouteDecision.redirectUpgrade,
+      );
+    });
   });
 
   group('evaluateRouteAccess — real registry wiring', () {
@@ -176,7 +253,11 @@ void main() {
       );
     });
 
-    test('real PRO-gated-but-unreleased routes deny even a PRO user (personas/content/calendar)', () {
+    test('Growth Intelligence routes (personas/content/calendar) are Pro-gated, not disabled (Tranche 2 launch)', () {
+      // INSIGHTVALUES-COMMERCIAL-MACRO-01 Tranche 2: these routes were
+      // commercially launched at ModulePlan.pro -- a PRO user is now
+      // allowed, a FREE user is denied by minimumPlan (not by
+      // commercialEnabled, which is true).
       for (final path in [
         AppConstants.routePersonas,
         AppConstants.routeContent,
@@ -184,24 +265,45 @@ void main() {
       ]) {
         expect(
           evaluateRouteAccess(path: path, isAdmin: false, isPro: true, profileResolved: true),
-          RouteDecision.redirectDenied,
-          reason: '$path should deny even a PRO user (commercialEnabled:false)',
+          RouteDecision.allow,
+          reason: '$path is commercialEnabled:true (Tranche 2) and must allow a PRO user',
+        );
+        expect(
+          evaluateRouteAccess(path: path, isAdmin: false, isPro: false, profileResolved: true),
+          RouteDecision.redirectUpgrade,
+          reason: '$path requires ModulePlan.pro and must send a FREE user to Upgrade (released, plan-gated, not "unavailable")',
         );
       }
     });
 
-    test('real unreleased free-plan routes deny non-admin users (campaigns/performance/ecosystem/etc.)', () {
+    test('Growth Intelligence routes (improve-post/campaigns/performance/roi-tracker) are Pro-gated, not disabled (Tranche 2 launch)', () {
       for (final path in [
+        AppConstants.routeGenerate,
+        AppConstants.routeResult,
         AppConstants.routeCampaigns,
         AppConstants.routePerformance,
         AppConstants.routeRoiTracker,
+      ]) {
+        expect(
+          evaluateRouteAccess(path: path, isAdmin: false, isPro: true, profileResolved: true),
+          RouteDecision.allow,
+          reason: '$path is commercialEnabled:true (Tranche 2) and must allow a PRO user',
+        );
+        expect(
+          evaluateRouteAccess(path: path, isAdmin: false, isPro: false, profileResolved: true),
+          RouteDecision.redirectUpgrade,
+          reason: '$path requires ModulePlan.pro and must send a FREE user to Upgrade (released, plan-gated, not "unavailable")',
+        );
+      }
+    });
+
+    test('real unreleased routes deny non-admin users (decision-center/resource-allocation/weekly-briefing/executive-dashboard/etc.)', () {
+      for (final path in [
         AppConstants.routeEcosystem,
         AppConstants.routeEcosystemResources,
         AppConstants.routeEcosystemBriefing,
         AppConstants.routeExecutiveDashboard,
         AppConstants.routeAdvisorOnboarding,
-        AppConstants.routeGenerate,
-        AppConstants.routeResult,
       ]) {
         expect(
           evaluateRouteAccess(path: path, isAdmin: false, isPro: false, profileResolved: true),
@@ -450,12 +552,18 @@ void main() {
   });
 
   group('isModuleActionable — mission section 07 commercial CTA consistency (06S)', () {
+    // INSIGHTVALUES-COMMERCIAL-MACRO-01 Tranche 2 -- 'improve-post' and the
+    // rest of the Growth Intelligence family were commercially launched
+    // (Owner decision) and are no longer commercialEnabled:false; the
+    // still-disabled example below was moved to 'executive-dashboard'
+    // (absorbed into the canonical dashboard, Tranche 1, commercialEnabled
+    // remains false).
     test('a commercialEnabled:false module is not actionable for a non-admin', () {
-      expect(isModuleActionable('improve-post', isAdmin: false), isFalse);
+      expect(isModuleActionable('executive-dashboard', isAdmin: false), isFalse);
     });
 
     test('the same commercialEnabled:false module IS actionable for an admin (preserve admin behavior)', () {
-      expect(isModuleActionable('improve-post', isAdmin: true), isTrue);
+      expect(isModuleActionable('executive-dashboard', isAdmin: true), isTrue);
     });
 
     test('a commercialEnabled:true, released module remains actionable for a non-admin (no regression)', () {
@@ -468,15 +576,16 @@ void main() {
       }
     });
 
-    test('PRO-gated-but-unreleased modules (personas/content-library/calendar) are not actionable for a non-admin', () {
+    test('Growth Intelligence modules (personas/content-library/calendar/campaigns/performance) are actionable for a non-admin Pro user (Tranche 2 launch)', () {
       // Mirrors the route guard's own CRITICAL RULE: commercialEnabled
-      // gates the CTA regardless of minimumPlan -- these are "not released
-      // to anyone", not "PRO-exclusive".
+      // gates the CTA regardless of minimumPlan -- these are now "released
+      // to Pro", the same rule that already applied to every other
+      // Pro-gated module before this launch, not a new exception.
       for (final moduleId in ['personas', 'content-library', 'calendar', 'campaigns', 'performance']) {
         expect(
           isModuleActionable(moduleId, isAdmin: false),
-          isFalse,
-          reason: '$moduleId is commercialEnabled:false and must not look actionable',
+          isTrue,
+          reason: '$moduleId is commercialEnabled:true (Tranche 2) and must look actionable',
         );
       }
     });

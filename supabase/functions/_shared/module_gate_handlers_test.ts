@@ -44,7 +44,12 @@ type Handler = (req: Request, a?: AuthClient, q?: QuotaClient, s?: unknown) => P
 
 const moduleFunctions = Object.entries(MODULE_POLICY.edgeFunctions)
   .filter(([, p]) => p.kind === 'MODULE')
-  .map(([fn, p]) => ({ fn, moduleId: p.moduleId!, lifecycle: MODULE_POLICY.modules[p.moduleId!].lifecycle }));
+  .map(([fn, p]) => ({
+    fn,
+    moduleId: p.moduleId!,
+    lifecycle: MODULE_POLICY.modules[p.moduleId!].lifecycle,
+    minimumPlan: MODULE_POLICY.modules[p.moduleId!].minimumPlan,
+  }));
 
 const handlers = new Map<string, Handler>();
 for (const { fn } of moduleFunctions) {
@@ -73,7 +78,7 @@ Deno.test('GH-00 every MODULE-kind function (23) exports an injectable handler',
   assertEquals(moduleFunctions.length, 23);
 });
 
-for (const { fn, moduleId, lifecycle } of moduleFunctions) {
+for (const { fn, moduleId, lifecycle, minimumPlan } of moduleFunctions) {
   Deno.test(`GH ${fn}: no session → 401 before entitlement, nothing downstream`, async () => {
     reset();
     const src = fakeSubjectSource('premium');
@@ -122,7 +127,7 @@ for (const { fn, moduleId, lifecycle } of moduleFunctions) {
         assertEquals(fetchCalls, [], role);
       }
     });
-  } else {
+  } else if (minimumPlan === 'free') {
     Deno.test(`GH ${fn}: '${moduleId}' is COMMERCIAL/free → a free user passes the gate (legacy behavior preserved)`, async () => {
       reset();
       const src = fakeSubjectSource('free');
@@ -133,6 +138,30 @@ for (const { fn, moduleId, lifecycle } of moduleFunctions) {
       const body = await res.clone().json().catch(() => ({}));
       assert(![401, 403, 503].includes(res.status) || !['AUTH_REQUIRED', 'MODULE_NOT_AVAILABLE', 'MODULE_DISABLED', 'PLAN_REQUIRED', 'ENTITLEMENT_UNAVAILABLE'].includes(body.error),
         `${fn} was blocked by entitlement: ${res.status} ${JSON.stringify(body)}`);
+    });
+  } else {
+    // INSIGHTVALUES-INTEGRATION-MACRO-02 — COMMERCIAL but plan-gated above
+    // free (Growth Intelligence, launched at Pro in Commercial Macro-01
+    // Tranche 2): a free user must still be denied by PLAN_REQUIRED, never
+    // by MODULE_NOT_AVAILABLE (the module IS released, just not to this
+    // plan) -- and a user who actually holds the required plan passes.
+    Deno.test(`GH ${fn}: '${moduleId}' is COMMERCIAL/${minimumPlan} → a free user is denied PLAN_REQUIRED, a ${minimumPlan} user passes`, async () => {
+      reset();
+      const deniedSrc = fakeSubjectSource('free');
+      const deniedRes = await handlers.get(fn)!(req('session-jwt', {}), auth, quota, deniedSrc);
+      assertEquals(deniedSrc.calls, 1, `${fn} must consult the entitlement source exactly once`);
+      assertEquals(deniedRes.status, 403);
+      const deniedBody = await deniedRes.json();
+      assertEquals(deniedBody.error, 'PLAN_REQUIRED');
+      assertEquals(quotaCalls, 0);
+      assertEquals(fetchCalls, []);
+
+      reset();
+      const allowedSrc = fakeSubjectSource(minimumPlan);
+      const allowedRes = await handlers.get(fn)!(req('session-jwt', {}), auth, quota, allowedSrc);
+      const allowedBody = await allowedRes.clone().json().catch(() => ({}));
+      assert(![401, 403, 503].includes(allowedRes.status) || !['AUTH_REQUIRED', 'MODULE_NOT_AVAILABLE', 'MODULE_DISABLED', 'PLAN_REQUIRED', 'ENTITLEMENT_UNAVAILABLE'].includes(allowedBody.error),
+        `${fn} was blocked for a ${minimumPlan} user: ${allowedRes.status} ${JSON.stringify(allowedBody)}`);
     });
   }
 }

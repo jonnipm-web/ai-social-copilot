@@ -658,6 +658,441 @@ class AppLocalizationsEn extends AppLocalizations {
   String get oppTypeAssinatura => 'Subscription';
 
   @override
+  String get iveCoreRequiresAef =>
+      'This action has consequences outside the app (publishing, sending, paying, trading or deleting). IVE does not execute actions like this: they require approval through the governed execution flow.';
+
+  @override
+  String get iveCoreProjectForbidden =>
+      'This project is not available to your account.';
+
+  @override
+  String get iveCoreModelUnavailable =>
+      'IVE is temporarily unavailable. No analysis was charged. Please try again.';
+
+  @override
+  String get iveCoreContextUnavailable =>
+      'The project context could not be loaded right now. Please try again.';
+
+  @override
+  String get iveCoreInvalidRequest =>
+      'This question could not be sent. Please review it and try again.';
+
+  @override
+  String get iveCoreSurfaceNotSupported =>
+      'IVE is not available on this platform yet.';
+
+  @override
+  String get iveCoreSessionExpired =>
+      'Your session has expired. Please sign in again.';
+
+  @override
+  String get iveCoreAccessDenied =>
+      'This feature is not available to your account.';
+
+  @override
+  String get iveCoreQuotaExceeded =>
+      'You have reached your plan\'s AI analysis limit.';
+
+  @override
+  String get iveCoreGenericError =>
+      'Something went wrong while talking to IVE. Please try again.';
+
+  @override
+  String get iveCoreDegradedContext =>
+      'Answer with partial context: some of your data could not be loaded.';
+
+  @override
+  String get aefLabTitle => 'Action proposed by IVE (LAB)';
+
+  @override
+  String get aefLabIntro =>
+      'Nothing has been executed. Review the details: the action only runs after your explicit approval.';
+
+  @override
+  String get aefLabActionLabel => 'Action';
+
+  @override
+  String get aefLabRisk => 'Risk: consequential — requires your approval.';
+
+  @override
+  String get aefLabConsequencePublish =>
+      'Consequence: publishes this text on the chosen channel (simulated in the LAB, nothing leaves the app).';
+
+  @override
+  String get aefLabConsequenceSend =>
+      'Consequence: sends this message to the chosen audience (simulated in the LAB, nothing leaves the app).';
+
+  @override
+  String get aefLabFieldChannel => 'Channel';
+
+  @override
+  String get aefLabFieldText => 'Text';
+
+  @override
+  String get aefLabFieldAudience => 'Audience';
+
+  @override
+  String get aefLabFieldSubject => 'Subject';
+
+  @override
+  String get aefLabFieldBody => 'Message';
+
+  @override
+  String get aefLabRequestApproval => 'Request approval';
+
+  @override
+  String get aefLabApprove => 'Approve';
+
+  @override
+  String get aefLabReject => 'Reject';
+
+  @override
+  String get aefLabExecute => 'Run now';
+
+  @override
+  String get aefLabPhaseAwaiting =>
+      'Waiting for your approval. Nothing has been executed.';
+
+  @override
+  String get aefLabPhaseAuthorized => 'Approved — not executed yet.';
+
+  @override
+  String get aefLabPhaseExecuting => 'Running…';
+
+  @override
+  String get aefLabPhaseSucceeded => 'Done. Receipt recorded.';
+
+  @override
+  String get aefLabPhaseUnconfirmed =>
+      'Completion not confirmed by the server.';
+
+  @override
+  String get aefLabPhaseFailed => 'Failed. Nothing was completed.';
+
+  @override
+  String get aefLabPhaseUnknown =>
+      'Unknown outcome: the action may have happened. Reconciliation is required — do not try again.';
+
+  @override
+  String get aefLabPhaseRejected => 'Rejected. Nothing was executed.';
+
+  @override
+  String get aefLabPhaseExpired => 'Expired. Nothing was executed.';
+
+  @override
+  String get aefLabPhaseCancelled => 'Cancelled. Nothing was executed.';
+
+  @override
+  String get aefLabPhaseInvalidated =>
+      'Invalidated (the rules changed). Nothing was executed.';
+
+  @override
+  String get aefLabPhaseDenied => 'Action not allowed.';
+
+  @override
+  String get aefLabPhaseNetwork =>
+      'No reliable server response: the state was not confirmed.';
+
+  @override
+  String aefLabReceipt(String receiptId) {
+    return 'Receipt: $receiptId';
+  }
+
+  @override
+  String get impactTitle => 'Impact Lab';
+
+  @override
+  String get impactInvestigations => 'Investigations';
+
+  @override
+  String get impactInvestigationsEmpty => 'No investigations yet.';
+
+  @override
+  String get impactAdminOnly => 'Impact Lab is restricted to administrators.';
+
+  @override
+  String get impactNoScoreNote =>
+      'This dossier organizes evidence. It gives the organization no score, ranking or verdict.';
+
+  @override
+  String get impactLiveView => 'Live view';
+
+  @override
+  String get impactLiveViewHint =>
+      'Reflects the current state and changes when the evidence changes.';
+
+  @override
+  String get impactSnapshot => 'Issued snapshot';
+
+  @override
+  String get impactSnapshotHint =>
+      'Historical record: it is not rewritten when the evidence changes.';
+
+  @override
+  String impactAsOf(String date) {
+    return 'As of $date';
+  }
+
+  @override
+  String get impactAsOfUnknown => 'No reference date yet';
+
+  @override
+  String get impactSummary => 'Summary';
+
+  @override
+  String get impactIdentity => 'Identity';
+
+  @override
+  String get impactClaims => 'Claims';
+
+  @override
+  String get impactEvidence => 'Evidence';
+
+  @override
+  String get impactConflicts => 'Disagreements';
+
+  @override
+  String get impactLimitations => 'Limitations';
+
+  @override
+  String get impactNotEstablished => 'What this dossier does NOT establish';
+
+  @override
+  String get impactDisputes => 'Disputes';
+
+  @override
+  String get impactSources => 'Sources and provenance';
+
+  @override
+  String get impactIntegrity => 'Integrity';
+
+  @override
+  String get impactOpenDisputes => 'Open disputes';
+
+  @override
+  String get impactReverifyPending => 'Re-verification pending';
+
+  @override
+  String get impactNotVerifiedYet => 'Not verified yet.';
+
+  @override
+  String get impactNoClaims => 'No claims recorded yet.';
+
+  @override
+  String get impactNoEvidence => 'No evidence is linked to this claim.';
+
+  @override
+  String get impactNoConflicts => 'No disagreement recorded.';
+
+  @override
+  String get impactNoDisputes => 'No dispute recorded.';
+
+  @override
+  String get impactNoLimitations => 'No limitation recorded.';
+
+  @override
+  String get impactNoRegistry =>
+      'No official registry record is attached. This does not mean the organization is unregistered.';
+
+  @override
+  String get impactNoSnapshot => 'No snapshot issued yet.';
+
+  @override
+  String get impactQuotedFromSource => 'Quoted from the source';
+
+  @override
+  String get impactQuotedFromUpload =>
+      'Quoted from an uploaded document — context, never authority';
+
+  @override
+  String get impactWithheld => 'Excerpt withheld for privacy';
+
+  @override
+  String get impactRedactedNote => 'Personal data was removed from this text.';
+
+  @override
+  String get impactPublisher => 'Publisher';
+
+  @override
+  String impactHostedOn(String host) {
+    return 'Hosted on $host (not the publisher)';
+  }
+
+  @override
+  String get impactUserSubmitted => 'User-submitted — context, never authority';
+
+  @override
+  String impactVoices(int voices, int documents) {
+    return 'Independent voices: $voices · sources assessed: $documents';
+  }
+
+  @override
+  String get impactVoicesNote =>
+      'Several documents do not mean several independent sources.';
+
+  @override
+  String get impactRules => 'Rules applied';
+
+  @override
+  String get impactGaps => 'Gaps';
+
+  @override
+  String get impactLocator => 'Location in the document';
+
+  @override
+  String get impactProvenanceChain =>
+      'Source → document → location → evidence → claim';
+
+  @override
+  String get impactPositionsNoWinner =>
+      'Every position side by side — none is chosen.';
+
+  @override
+  String get impactContentHash => 'Content hash';
+
+  @override
+  String get impactHashNotTruth =>
+      'The hash proves the content was not altered — it does not prove it is true.';
+
+  @override
+  String get impactSnapshotRef => 'Snapshot reference';
+
+  @override
+  String get impactVerifyCurrent =>
+      'Current snapshot: the content has not changed since it was issued.';
+
+  @override
+  String get impactVerifyStale =>
+      'Stale snapshot: the dossier content changed after it was issued (evidence or presentation policy). It remains valid as a historical record.';
+
+  @override
+  String get impactVerifyNotIssued =>
+      'This hash was not issued for this investigation.';
+
+  @override
+  String get impactEnvelopeMismatch =>
+      'The snapshot metadata does not match the register.';
+
+  @override
+  String get impactVerifySnapshot => 'Verify snapshot';
+
+  @override
+  String get impactExport => 'Issue snapshot';
+
+  @override
+  String get impactExportConfirmTitle => 'Before issuing the snapshot';
+
+  @override
+  String impactExportLimitations(int count) {
+    return 'Limitations carried by this dossier: $count';
+  }
+
+  @override
+  String get impactExportPrivacy =>
+      'The export is private and authenticated: there is no public link and no sharing.';
+
+  @override
+  String get impactExportFormats =>
+      'Available formats: JSON and text. PDF is not available.';
+
+  @override
+  String get impactExportConfirm => 'Issue';
+
+  @override
+  String get impactExportDone => 'Snapshot issued';
+
+  @override
+  String get impactCopyJson => 'Copy JSON';
+
+  @override
+  String get impactCopyText => 'Copy text';
+
+  @override
+  String get impactCopied => 'Copied';
+
+  @override
+  String get impactErrorAuth => 'Your session expired. Please sign in again.';
+
+  @override
+  String get impactErrorNotAvailable =>
+      'Investigation not found or unavailable.';
+
+  @override
+  String get impactErrorTooLarge =>
+      'This dossier exceeds the limit and was not truncated. Nothing partial is shown.';
+
+  @override
+  String impactErrorRateLimited(int seconds) {
+    return 'Too many requests. Try again in $seconds s.';
+  }
+
+  @override
+  String get impactErrorNetwork =>
+      'No connection. Check the network and try again.';
+
+  @override
+  String get impactErrorServer => 'The service did not respond. Try again.';
+
+  @override
+  String impactShowMore(int count) {
+    return 'Show more ($count)';
+  }
+
+  @override
+  String get impactExpand => 'Expand';
+
+  @override
+  String get impactCollapse => 'Collapse';
+
+  @override
+  String get impactClaimDetail => 'Claim detail';
+
+  @override
+  String get impactErrorContract =>
+      'Unsupported server response format. Nothing was shown, to avoid displaying an incomplete dossier.';
+
+  @override
+  String get impactRetry => 'Try again';
+
+  @override
+  String get impactEvidenceExcluded =>
+      'Excluded from the assessment (reason in the rules)';
+
+  @override
+  String get impactDeclaredQuote =>
+      'Identity as declared for this investigation — quoted, not verified';
+
+  @override
+  String get impactRegistryQuote => 'As recorded in the registry — quoted';
+
+  @override
+  String get impactClaimCaveats => 'Before reading this claim';
+
+  @override
+  String get impactClaimLimitations => 'Limitations that apply to this claim';
+
+  @override
+  String get impactSnapshotCaveats =>
+      'The confirmation described the live view at that moment. The issued snapshot carries these caveats:';
+
+  @override
+  String get impactClaimScopeNote =>
+      'Status of this claim only — not a verdict on the organization.';
+
+  @override
+  String get impactIdentityScopeNote =>
+      'Identity only — not an assessment of the organization’s conduct.';
+
+  @override
+  String impactPosition(int index, int total) {
+    return 'Position $index of $total';
+  }
+
+  @override
+  String get impactVerifyInconclusive =>
+      'Verification inconclusive: do not rely on this snapshot’s metadata. Issue a new export before using it.';
+
+  @override
   String get quantLabTitle => 'Quant Lab (internal)';
 
   @override

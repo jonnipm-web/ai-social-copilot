@@ -266,7 +266,16 @@ Deno.test('AD-06/07/08/09 forged module/plan/role/flags/context in the body chan
   }));
   assertEquals(r.res.status, 200);
   assertFalse(r.prompt.includes('FORGED'));
-  assertEquals(r.json.suggestedActions, [], 'INTERNAL module must not be suggested to a free user');
+  // 'campaigns' is now COMMERCIAL/pro (Growth Intelligence launch,
+  // INSIGHTVALUES-INTEGRATION-MACRO-02): suggestActions() correctly offers
+  // an 'upgrade' suggestion (not 'open_module', not silence) for a free
+  // user -- decideModuleAccess still denies the real forged plan='premium'
+  // claim in the body, proving the server decision (not the client's) wins.
+  assertEquals(
+    r.json.suggestedActions,
+    [{ kind: 'upgrade', capabilityId: 'campaigns', available: false, requiredPlan: 'pro' }],
+    'a pro-gated module must offer upgrade, not open_module, to a free user',
+  );
   assertFalse(r.prompt.includes('campaigns'), 'modules_available must come from the server');
 });
 
@@ -415,11 +424,18 @@ function subject(role: string) {
 Deno.test('SU-01 suggestions follow the server decision for every role', () => {
   const opp = routeIntent('mostre oportunidades', null);
   const camp = routeIntent('mostre campanhas', null);
+  // 'campaigns' is COMMERCIAL/pro (Growth Intelligence launch,
+  // INSIGHTVALUES-INTEGRATION-MACRO-02): admin/pro/premium meet the plan
+  // and get 'open_module'; free/beta_tester (no pro plan) get an 'upgrade'
+  // suggestion, never silence and never open_module.
   for (const role of ['free', 'pro', 'premium', 'beta_tester', 'admin']) {
     assertEquals(suggestActions(subject(role), opp), [{ kind: 'open_module', capabilityId: 'opportunity-lab', available: true }], role);
     const c = suggestActions(subject(role), camp);
-    if (role === 'admin') assertEquals(c[0].available, true);
-    else assertEquals(c, [], `${role} must not be offered an INTERNAL module`);
+    if (role === 'admin' || role === 'pro' || role === 'premium') {
+      assertEquals(c, [{ kind: 'open_module', capabilityId: 'campaigns', available: true }], role);
+    } else {
+      assertEquals(c, [{ kind: 'upgrade', capabilityId: 'campaigns', available: false, requiredPlan: 'pro' }], `${role} must be offered upgrade, not silence, for a pro-gated module`);
+    }
   }
 });
 
