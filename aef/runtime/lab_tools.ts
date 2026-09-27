@@ -58,6 +58,34 @@ export const LAB_MOCK_TOOLS: readonly LabToolSpec[] = Object.freeze([
       summary: { type: "string", required: true, minLength: 1, maxLength: 500 },
     }),
   }),
+  // INSIGHTVALUES-INTELLIGENCE-AUTOMATION-MACRO-04 §15-17 — the Quant ->
+  // Action Intent -> AEF bridge's one governed action: the user explicitly
+  // acknowledges a structural condition a strategy engine detected (e.g. a
+  // Strategy001/"Paulo Trend Fibonacci"-shaped event, see quant_tools.ts).
+  // This is NOT a trade, NOT an order, NOT a signal to act on the market --
+  // it is the same category of thing internal.mock_complete_action already
+  // is for Action Engine: a self-attested, receipted, Human-Gate-approved
+  // record that a human reviewed a structural fact. trade_order stays
+  // categorically absent from QUANT_ACTION_TABLE (quant_tools.ts), exactly
+  // like LAB_IVE_ACTION_TABLE's own explicit denial below -- there is no
+  // path from this tool to anything resembling a trading action.
+  Object.freeze({
+    toolId: "internal.mock_quant_signal_acknowledgment",
+    iveAction: "acknowledge_signal",
+    inputSchema: defineToolInputSchema({
+      signal_id: { type: "string", required: true, minLength: 1, maxLength: 64 },
+      // Exact snake_case mirror of lib/core/quant/strategy001_contracts.dart's
+      // EventKind enum (itself a contract-only mirror -- see
+      // docs/commercial/STRATEGY001_SOURCE_FINDING.md for this mission's
+      // verification of that claim). Kept in lockstep deliberately: this
+      // tool acknowledges a STRUCTURAL EVENT, not an invented category.
+      event_kind: {
+        type: "string", required: true, maxLength: 32,
+        enum: ["trend_detected", "pullback_detected", "fib_ready", "confirmation_1", "confirmation_2", "ready", "triggered", "target_reached", "expansion_candidate", "reset_required", "strategy_invalidated"],
+      },
+      note: { type: "string", required: true, minLength: 1, maxLength: 500 },
+    }),
+  }),
 ]);
 
 /**

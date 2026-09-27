@@ -111,9 +111,19 @@ Deno.test('QB-11 entitlement deny: every paying plan and beta testers are denied
   assertEquals([admin.allowed, admin.reason], [true, 'ADMIN_ROLE']);
 });
 
-Deno.test('QB-12 no Edge Function serves ive-quant while AEF persistence is unavailable (MP-09 restated for Quant)', () => {
+Deno.test('QB-12 every Edge Function serving ive-quant is independently fail-closed (deploy hard-blocked) while AEF persistence is unavailable (MP-09 restated for Quant)', async () => {
+  // INSIGHTVALUES-INTELLIGENCE-AUTOMATION-MACRO-04 §15-17: ive-quant now
+  // legitimately owns one function (quant-runtime, the Quant -> Action
+  // Intent -> AEF bridge) -- "zero functions" is no longer the invariant;
+  // "every function is structurally unreachable" still is, exactly like
+  // MP-09 (module_policy_test.ts) now checks generically for every module.
+  if (AEF_PERSISTENCE_AVAILABLE) return;
   const served = Object.entries(MODULE_POLICY.edgeFunctions).filter(([, p]) => p.moduleId === 'ive-quant').map(([fn]) => fn);
-  if (!AEF_PERSISTENCE_AVAILABLE) assertEquals(served, []);
+  const denyScript = await Deno.readTextFile(new URL('../../../../scripts/ci/resolve_deploy_selection.sh', import.meta.url));
+  for (const fn of served) {
+    const hardBlock = new RegExp(`if\\s*\\[\\s*"\\$FUNCTION_NAME"\\s*=\\s*"${fn}"\\s*\\]`);
+    assert(hardBlock.test(denyScript), `${fn} serves CONSEQUENTIAL ive-quant and must be hard-blocked in resolve_deploy_selection.sh`);
+  }
 });
 
 // ------------------------------------------------------------ AEF / broker boundary
@@ -139,7 +149,7 @@ Deno.test('QB-20 AEF hard-denies real-money quant tiers even with a human gate r
 
 // ------------------------------------------------------------ IV-QUANT-DATA-PLANE-AND-API-02: module split
 
-Deno.test('QB-13 split: quant-analytics READ_ONLY owns analysis, quant-watchlists REVERSIBLE owns persistence, ive-quant CONSEQUENTIAL owns none', () => {
+Deno.test('QB-13 split: quant-analytics READ_ONLY owns analysis, quant-watchlists REVERSIBLE owns persistence, ive-quant CONSEQUENTIAL owns the (deploy-blocked) Action Intent bridge', () => {
   const qa = MODULE_POLICY.modules['quant-analytics'];
   assert(qa, 'quant-analytics must be registered server-side');
   assertEquals([qa.lifecycle, qa.actionClass], ['INTERNAL', 'READ_ONLY']);
@@ -150,7 +160,10 @@ Deno.test('QB-13 split: quant-analytics READ_ONLY owns analysis, quant-watchlist
   const qw = MODULE_POLICY.modules['quant-watchlists'];
   assertEquals([qw.lifecycle, qw.actionClass], ['INTERNAL', 'REVERSIBLE']);
   assertEquals(byModule('quant-watchlists'), ['quant-watchlists']);
-  assertEquals(byModule('ive-quant'), []);
+  // INTELLIGENCE-AUTOMATION-MACRO-04 §15-17: ive-quant now legitimately owns
+  // quant-runtime (the Quant -> Action Intent -> AEF bridge) -- QB-12 above
+  // proves it is independently fail-closed; this only proves ownership.
+  assertEquals(byModule('ive-quant'), ['quant-runtime']);
   for (const m of ['quant-analytics', 'quant-watchlists']) {
     for (const role of ['free', 'pro', 'premium', 'beta_tester']) {
       assertEquals(decideModuleAccess(subject(role), m).code, 'MODULE_NOT_AVAILABLE', `${m}/${role}`);

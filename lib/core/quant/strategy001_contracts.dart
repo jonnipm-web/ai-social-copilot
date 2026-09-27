@@ -3,23 +3,38 @@
 ///
 /// SCOPE, READ BEFORE EXTENDING THIS FILE:
 ///
-/// This file is a data-contract mirror of the REAL, validated, tested
-/// Python state machine that already exists in the separate
-/// `insightvalues-quant` repository
-/// (`insightvalues_quant/strategy001/models.py`) — field names, types, and
-/// the state/event vocabulary below were copied from that source, not
-/// invented. It contains ZERO of that engine's actual logic: no Fibonacci
-/// math, no trend detection, no confirmation counting, no state
-/// transitions. It only describes the SHAPE of what that engine already
-/// produces, so a future Strategy Engine integration layer in this app has
-/// a real, faithful target to deserialize into, instead of an ad-hoc map.
+/// This file is a data-contract mirror of a Python state machine this
+/// mission's provenance claims describe as living in the separate
+/// `insightvalues-quant` repository (`insightvalues_quant/strategy001/models.py`)
+/// — field names, types, and the state/event vocabulary below were written
+/// to match that description, not invented from nothing. It contains ZERO
+/// of that engine's actual logic: no Fibonacci math, no trend detection, no
+/// confirmation counting, no state transitions. It only describes a SHAPE,
+/// so a future Strategy Engine integration layer in this app has a real,
+/// faithful target to deserialize into, instead of an ad-hoc map.
 ///
-/// Per Strategy001's own README (`insightvalues-quant`, same path as
-/// above): "This module produces state transitions and events only. It
-/// never generates BUY, SELL, LONG, SHORT, or any trading signal. It never
-/// integrates with Backtest, Portfolio, Risk, or any broker." These Dart
-/// contracts inherit that same boundary — nothing here is a trading signal
-/// or an execution instruction.
+/// PROVENANCE STATUS (INSIGHTVALUES-INTELLIGENCE-AUTOMATION-MACRO-04 §13,
+/// re-verified): the claim that this shape was "copied from a real,
+/// validated, tested source" could NOT be substantiated this mission —
+/// the named `insightvalues-quant` GitHub repository was cloned and found
+/// to contain only a README stub, its one commit dated seven weeks before
+/// the claim was written, and no other repository/branch/local file
+/// available to this mission ever held Strategy001 source. This does not
+/// prove the real engine never existed; it means the specific claim is
+/// currently unverifiable, not verified. See
+/// docs/commercial/STRATEGY001_SOURCE_FINDING.md for the full diligence
+/// trail. Nothing in THIS file is false or unsafe on its own (it is inert
+/// types, no logic) — only its origin story needs re-confirming with the
+/// Owner before being repeated as fact again.
+///
+/// Per the positioning doc's own quote of Strategy001's README: "This
+/// module produces state transitions and events only. It never generates
+/// BUY, SELL, LONG, SHORT, or any trading signal. It never integrates with
+/// Backtest, Portfolio, Risk, or any broker." These Dart contracts inherit
+/// that same boundary regardless of the provenance question above —
+/// nothing here is a trading signal or an execution instruction, and the
+/// Action Intent mapping added below (MACRO-04 §15-17) only ever proposes
+/// a human ACKNOWLEDGMENT of a structural event through AEF, never a trade.
 ///
 /// Explicitly NOT done here (mission hard boundaries, still standing):
 /// - No port of the Fibonacci/trend/confirmation algorithm itself.
@@ -28,13 +43,9 @@
 /// - No wiring into any route, screen, provider, or Supabase function —
 ///   `ive-quant` in module_registry.dart remains `commercialEnabled: false`,
 ///   `route: null`. This file is reachable by nothing yet.
-/// - No AEF integration — a future Strategy Engine that acts on these
-///   events, if ever built, would need its own AEF governance pass; that
-///   is a separate, future, Owner-gated decision, not implied by this file
-///   existing.
 ///
-/// See docs/commercial/FINANCIAL_INTELLIGENCE_POSITIONING.md for the full
-/// reasoning behind this scope decision.
+/// See docs/commercial/FINANCIAL_INTELLIGENCE_POSITIONING.md and
+/// docs/commercial/STRATEGY001_SOURCE_FINDING.md for the full reasoning.
 library;
 
 /// Mirrors `insightvalues_quant.structure.models.TrendDirection`.
@@ -154,3 +165,38 @@ class Strategy001Result {
     return result;
   }
 }
+
+/// INSIGHTVALUES-INTELLIGENCE-AUTOMATION-MACRO-04 §15-17 — Quant -> Action
+/// Intent -> AEF. Snake_case mirror of [EventKind]'s own values, matching
+/// exactly what aef/runtime/lab_tools.ts's
+/// `internal.mock_quant_signal_acknowledgment` tool accepts as its
+/// `event_kind` field. A manual, individually-tested mapping (not a
+/// generated `.name`) so a future [EventKind] addition fails a test here
+/// instead of silently producing a value the server-side schema enum would
+/// reject.
+String eventKindToAcknowledgmentValue(EventKind kind) => switch (kind) {
+      EventKind.trendDetected => 'trend_detected',
+      EventKind.pullbackDetected => 'pullback_detected',
+      EventKind.fibReady => 'fib_ready',
+      EventKind.confirmation1 => 'confirmation_1',
+      EventKind.confirmation2 => 'confirmation_2',
+      EventKind.ready => 'ready',
+      EventKind.triggered => 'triggered',
+      EventKind.targetReached => 'target_reached',
+      EventKind.expansionCandidate => 'expansion_candidate',
+      EventKind.resetRequired => 'reset_required',
+      EventKind.strategyInvalidated => 'strategy_invalidated',
+    };
+
+/// Turns a real [StrategyEvent] into the exact parameter shape
+/// `internal.mock_quant_signal_acknowledgment` expects (the shape an
+/// `AefActionCard`/`AefRuntimeApi.propose()` caller would pass through).
+/// Pure data transformation — no algorithm logic, no market
+/// interpretation, no decision of any kind. Display convenience only,
+/// never trusted: the server re-validates every field regardless, exactly
+/// like Action Engine's own `initialValues` (aef_action_card.dart).
+Map<String, String> strategyEventToAcknowledgmentParameters(StrategyEvent event, {required String signalId}) => {
+      'signal_id': signalId,
+      'event_kind': eventKindToAcknowledgmentValue(event.kind),
+      'note': '${event.reason} (bar ${event.barIndex}: ${event.stateFrom.name} -> ${event.stateTo.name})',
+    };

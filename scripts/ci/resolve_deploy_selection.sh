@@ -65,6 +65,13 @@ fi
 if [ "$FUNCTION_NAME" = "action-engine-runtime" ]; then
   deny "action-engine-runtime is LAB ONLY -- not deployable through this workflow (production deployment is a separate, unauthorized gate)"
 fi
+# INSIGHTVALUES-INTELLIGENCE-AUTOMATION-MACRO-04: the Quant -> Action Intent
+# -> AEF bridge is the same LAB-only boundary (mock tools, local stack) as
+# aef-runtime/action-engine-runtime. No market data, no broker, no order, no
+# real money -- and no mission has authorized deploying it anywhere.
+if [ "$FUNCTION_NAME" = "quant-runtime" ]; then
+  deny "quant-runtime is LAB ONLY -- not deployable through this workflow (production deployment is a separate, unauthorized gate)"
+fi
 
 # 4. Must exist in the repo-controlled allowlist (skip comments/blank lines).
 [ -f "$ALLOWLIST" ] || deny "allowlist file missing: $ALLOWLIST"

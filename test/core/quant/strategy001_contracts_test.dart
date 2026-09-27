@@ -73,4 +73,54 @@ void main() {
       expect(() => snapshot.events.add(_event(EventKind.triggered, 2)), throwsUnsupportedError);
     });
   });
+
+  // INSIGHTVALUES-INTELLIGENCE-AUTOMATION-MACRO-04 §15-17 — Quant -> Action
+  // Intent -> AEF. These prove the mapping stays in lockstep with the
+  // server-side tool schema (aef/runtime/lab_tools.ts's
+  // internal.mock_quant_signal_acknowledgment `event_kind` enum) -- every
+  // EventKind value must produce a string that schema actually accepts.
+  group('eventKindToAcknowledgmentValue (Quant -> Action Intent -> AEF)', () {
+    test('every EventKind maps to the exact snake_case value the server tool schema accepts', () {
+      const expected = {
+        EventKind.trendDetected: 'trend_detected',
+        EventKind.pullbackDetected: 'pullback_detected',
+        EventKind.fibReady: 'fib_ready',
+        EventKind.confirmation1: 'confirmation_1',
+        EventKind.confirmation2: 'confirmation_2',
+        EventKind.ready: 'ready',
+        EventKind.triggered: 'triggered',
+        EventKind.targetReached: 'target_reached',
+        EventKind.expansionCandidate: 'expansion_candidate',
+        EventKind.resetRequired: 'reset_required',
+        EventKind.strategyInvalidated: 'strategy_invalidated',
+      };
+      // Exhaustive over the real enum -- a future EventKind value with no
+      // entry above fails HERE (compile error on the switch), not silently
+      // at the server.
+      for (final kind in EventKind.values) {
+        expect(eventKindToAcknowledgmentValue(kind), expected[kind], reason: kind.name);
+      }
+      expect(expected.length, EventKind.values.length, reason: 'every EventKind must be covered');
+    });
+  });
+
+  group('strategyEventToAcknowledgmentParameters (Quant -> Action Intent -> AEF)', () {
+    test('produces exactly the three keys internal.mock_quant_signal_acknowledgment requires, nothing else', () {
+      final event = _event(EventKind.triggered, 7);
+      final params = strategyEventToAcknowledgmentParameters(event, signalId: 'sig-1');
+      expect(params.keys.toSet(), {'signal_id', 'event_kind', 'note'});
+      expect(params['signal_id'], 'sig-1');
+      expect(params['event_kind'], 'triggered');
+      expect(params['note'], contains('bar 7'));
+      expect(params['note'], contains('test')); // the event's own reason
+    });
+
+    test('never fabricates a trading signal -- the note is a structural description, not an instruction', () {
+      final event = _event(EventKind.targetReached, 3);
+      final params = strategyEventToAcknowledgmentParameters(event, signalId: 'sig-2');
+      for (final word in ['buy', 'sell', 'long', 'short', 'order', 'trade']) {
+        expect(params['note']!.toLowerCase(), isNot(contains(word)), reason: word);
+      }
+    });
+  });
 }

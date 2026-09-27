@@ -184,7 +184,8 @@ export const MODULE_POLICY: ModulePolicyDoc =
     "stripe-webhook": { "kind": "PUBLIC_WEBHOOK" },
     "ive-agent-runner": { "kind": "RETIRED" },
     "aef-runtime": { "kind": "MODULE", "moduleId": "aef-runtime-lab", "gateFile": "_shared/aef_runtime_endpoint.ts", "actionClassOverride": "CONSEQUENTIAL" },
-    "action-engine-runtime": { "kind": "MODULE", "moduleId": "action-engine", "gateFile": "_shared/aef_runtime_endpoint.ts", "actionClassOverride": "CONSEQUENTIAL" }
+    "action-engine-runtime": { "kind": "MODULE", "moduleId": "action-engine", "gateFile": "_shared/aef_runtime_endpoint.ts", "actionClassOverride": "CONSEQUENTIAL" },
+    "quant-runtime": { "kind": "MODULE", "moduleId": "ive-quant", "gateFile": "_shared/aef_runtime_endpoint.ts" }
   }
 }
 // END_MODULE_POLICY_JSON

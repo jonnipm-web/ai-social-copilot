@@ -11,6 +11,7 @@ import type { GovernanceResult } from "../persistence/governance.ts";
 import { defineToolInputSchema, validateToolInput } from "../persistence/tool_input_schema.ts";
 import { assertMockOnly, createLabToolRegistry, LAB_IVE_ACTION_TABLE, LAB_MOCK_TOOLS } from "./lab_tools.ts";
 import { ACTION_ENGINE_TABLE } from "./action_engine_tools.ts";
+import { QUANT_ACTION_TABLE } from "./quant_tools.ts";
 import { presentResult } from "./presentation.ts";
 import { checkLabRuntime, type RuntimeEnv } from "./runtime_guard.ts";
 import { handleAefRuntime } from "../../supabase/functions/_shared/aef_runtime_endpoint.ts";
@@ -401,6 +402,43 @@ Deno.test("RU-20 action-engine's registered tool is CONSEQUENTIAL + Human-Gate-r
   const { registry } = createLabToolRegistry();
   const descriptor = registry.describe({ domain: "internal", action: "internal.mock_complete_action" } as ExecutionRequest);
   assert(descriptor !== undefined, "internal.mock_complete_action must be registered");
+  assertEquals(descriptor.classification, "CONSEQUENTIAL");
+  assertEquals(descriptor.requiresHumanGate, true);
+});
+
+// ── Quant -> Action Intent -> AEF (INSIGHTVALUES-INTELLIGENCE-AUTOMATION-MACRO-04 §15-17) ──
+Deno.test("RU-27 QUANT_ACTION_TABLE maps only acknowledge_signal; it inherits neither IVE's nor Action Engine's vocabulary", async () => {
+  const ok = await mapIveActionIntentWith(QUANT_ACTION_TABLE, intent({ requestedAction: "acknowledge_signal", parameters: { signal_id: "s1", event_kind: "triggered", note: "reviewed" } }), SUBJECT);
+  assert(ok.ok);
+  assertEquals(ok.ok && ok.request.action, "internal.mock_quant_signal_acknowledgment");
+  // TRADING_BOUNDARY (§17): trade_order and every other action -- including
+  // ones the OTHER two tables recognize -- are absent here, categorically.
+  for (const action of ["trade_order", "publish_content", "send_message", "complete_action", "payment", "transfer_funds", "delete_data", "execute_workflow"]) {
+    const r = await mapIveActionIntentWith(QUANT_ACTION_TABLE, intent({ requestedAction: action, parameters: { signal_id: "s1", event_kind: "triggered", note: "x" } }), SUBJECT);
+    assertEquals(r.ok ? "ok" : r.code, "INTENT_ACTION_UNKNOWN", action);
+  }
+});
+
+Deno.test("RU-28 quant-runtime's entitlement gate is 'ive-quant' (EXPERIMENTAL/admin-only) -- not the commercial action-engine or aef-runtime-lab modules, and not the reverse", async () => {
+  // ive-quant has no Owner decision to launch commercially (§20-21 Premium
+  // work is separate and did not change this): every non-admin role, at
+  // every plan, must still be refused.
+  for (const role of ["free", "pro", "premium", "beta_tester"]) {
+    const c = call({ op: "propose", intent: intent() }, { role, moduleId: "ive-quant" });
+    assertEquals((await c.res).status, 403, role);
+  }
+  const admin = call({ op: "propose", intent: intent() }, { role: "admin", moduleId: "ive-quant" });
+  const res = await admin.res;
+  if (res.status === 403) {
+    const body = await res.clone().json().catch(() => ({}));
+    assert(body.error !== "MODULE_NOT_AVAILABLE", `admin: ${JSON.stringify(body)}`);
+  }
+});
+
+Deno.test("RU-29 the Quant signal-acknowledgment tool is CONSEQUENTIAL + Human-Gate-required, same as every other LAB tool", () => {
+  const { registry } = createLabToolRegistry();
+  const descriptor = registry.describe({ domain: "internal", action: "internal.mock_quant_signal_acknowledgment" } as ExecutionRequest);
+  assert(descriptor !== undefined, "internal.mock_quant_signal_acknowledgment must be registered");
   assertEquals(descriptor.classification, "CONSEQUENTIAL");
   assertEquals(descriptor.requiresHumanGate, true);
 });
