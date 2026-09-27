@@ -7,7 +7,7 @@
  *   deno test --allow-read supabase/functions/_shared/module_policy_test.ts
  */
 import { assert, assertEquals } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
-import { AEF_PERSISTENCE_AVAILABLE, MODULE_POLICY } from './module_policy.ts';
+import { AEF_PERSISTENCE_AVAILABLE, effectiveActionClass, MODULE_POLICY } from './module_policy.ts';
 
 const FUNCTIONS_DIR = new URL('../', import.meta.url);
 const LIFECYCLES = new Set(['EXPERIMENTAL', 'INTERNAL', 'ALPHA', 'BETA', 'RELEASE_CANDIDATE', 'COMMERCIAL', 'DEPRECATED']);
@@ -56,6 +56,13 @@ Deno.test('MP-05 every MODULE-kind function maps to a known module', () => {
   for (const [fn, p] of Object.entries(MODULE_POLICY.edgeFunctions)) {
     if (p.kind !== 'MODULE') continue;
     assert(p.moduleId && p.moduleId in MODULE_POLICY.modules, `${fn} → ${p.moduleId}`);
+  }
+});
+
+Deno.test('MP-05b a function\'s actionClassOverride, when present, is itself a valid AEF action class', () => {
+  for (const [fn, p] of Object.entries(MODULE_POLICY.edgeFunctions)) {
+    if (p.actionClassOverride === undefined) continue;
+    assert(ACTION_CLASSES.has(p.actionClassOverride), `${fn}.actionClassOverride=${p.actionClassOverride}`);
   }
 });
 
@@ -122,15 +129,39 @@ Deno.test('MP-08 production code never imports the test-only entitlement helpers
   assertEquals(offenders, []);
 });
 
-Deno.test('MP-09 PROMOTION GATE: no Edge Function of ANY kind serves a CONSEQUENTIAL module while AEF persistence is unavailable (Codex CXF-02)', () => {
+Deno.test('MP-09 PROMOTION GATE: every function whose EFFECTIVE actionClass is CONSEQUENTIAL is independently fail-closed while AEF persistence is unavailable (Codex CXF-02, evolved INSIGHTVALUES-INTELLIGENCE-AUTOMATION-MACRO-04)', async () => {
   if (AEF_PERSISTENCE_AVAILABLE) return;
-  const consequential = new Set(
-    Object.entries(MODULE_POLICY.modules).filter(([, m]) => m.actionClass === 'CONSEQUENTIAL').map(([id]) => id),
-  );
-  const paths = Object.entries(MODULE_POLICY.edgeFunctions)
-    .filter(([, p]) => p.moduleId !== undefined && consequential.has(p.moduleId))
-    .map(([fn]) => fn);
-  assertEquals(paths, [], 'a class C capability may only execute through AEF (Human Gate + receipt)');
+  // MACRO-04 §4-6: a module's actionClass is now a default, not a ceiling
+  // (see effectiveActionClass()) -- a commercially-available module may
+  // legitimately own one narrow CONSEQUENTIAL function (action-engine ->
+  // action-engine-runtime, aef-runtime-lab -> aef-runtime) without the
+  // whole module needing to stay uncommercial. What MUST still be true,
+  // for every function whose EFFECTIVE class is CONSEQUENTIAL, is that it
+  // is independently, structurally unreachable while AEF persistence is
+  // unavailable -- proven here by requiring it be hard-blocked in the
+  // deploy allowlist script itself (scripts/ci/resolve_deploy_selection.sh),
+  // not merely documented as LAB-only.
+  const denyScript = await Deno.readTextFile(new URL('../../../scripts/ci/resolve_deploy_selection.sh', import.meta.url));
+  const notContained: string[] = [];
+  for (const fn of Object.keys(MODULE_POLICY.edgeFunctions)) {
+    if (effectiveActionClass(fn) !== 'CONSEQUENTIAL') continue;
+    const hardBlock = new RegExp(`if\\s*\\[\\s*"\\$FUNCTION_NAME"\\s*=\\s*"${fn}"\\s*\\]`);
+    if (!hardBlock.test(denyScript)) notContained.push(fn);
+  }
+  assertEquals(notContained, [], 'a CONSEQUENTIAL-effective function must be hard-blocked in resolve_deploy_selection.sh while AEF persistence is unavailable -- a class C capability may only ever execute through AEF (Human Gate + receipt)');
+});
+
+Deno.test('MP-11 an actionClassOverride may only RAISE a function\'s effective risk above its module default, never lower it', () => {
+  const order = { READ_ONLY: 0, REVERSIBLE: 1, CONSEQUENTIAL: 2 } as const;
+  for (const [fn, p] of Object.entries(MODULE_POLICY.edgeFunctions)) {
+    if (p.actionClassOverride === undefined) continue;
+    assert(p.moduleId && p.moduleId in MODULE_POLICY.modules, `${fn}: actionClassOverride requires a valid moduleId`);
+    const moduleClass = MODULE_POLICY.modules[p.moduleId!].actionClass;
+    assert(
+      order[p.actionClassOverride] >= order[moduleClass],
+      `${fn}: actionClassOverride ${p.actionClassOverride} must not be lower than module ${p.moduleId}'s own ${moduleClass} -- a function can never use this field to opt out of its module's protections`,
+    );
+  }
 });
 
 Deno.test('MP-10 non-MODULE kinds are a closed, reviewed allowlist — a new function cannot dodge the gate by picking another kind', () => {

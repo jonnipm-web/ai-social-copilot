@@ -62,6 +62,34 @@ export interface EdgeFunctionPolicy {
    * to supabase/functions/) where authentication + requireModuleAccess run.
    * MP-06 checks the gate order in that file instead of index.ts. */
   gateFile?: string;
+  /**
+   * INSIGHTVALUES-INTELLIGENCE-AUTOMATION-MACRO-04 — a module's actionClass
+   * is a default, not a ceiling: a commercially-available module (e.g.
+   * action-engine, aef-runtime-lab) can own one narrow, LAB-only function
+   * whose real risk is higher than the module's dominant capability (e.g.
+   * action-engine's own AI-generation calls are REVERSIBLE; its one
+   * execute-transition function serves a CONSEQUENTIAL, Human-Gate-required
+   * tool). This is that function's OWN effective actionClass — see
+   * effectiveActionClass(). It may only RAISE risk above the module
+   * default, never lower it (MP-11) — a function can never use this field
+   * to quietly opt out of its module's own protections.
+   */
+  actionClassOverride?: ActionClass;
+}
+
+/**
+ * A function's real, enforced risk class: its own override if it has one,
+ * otherwise its module's default. This is the value every Promotion Gate
+ * (MP-09, MP-11) and any future policy/entitlement code must use instead of
+ * reading a function's module's actionClass directly — a function-level
+ * override would otherwise silently go unenforced.
+ */
+export function effectiveActionClass(fn: string, doc: ModulePolicyDoc = MODULE_POLICY): ActionClass | undefined {
+  const p = doc.edgeFunctions[fn];
+  if (!p) return undefined;
+  if (p.actionClassOverride) return p.actionClassOverride;
+  if (!p.moduleId) return undefined;
+  return doc.modules[p.moduleId]?.actionClass;
 }
 
 export interface ModulePolicyDoc {
@@ -155,8 +183,8 @@ export const MODULE_POLICY: ModulePolicyDoc =
     "module-access": { "kind": "ENTITLEMENT" },
     "stripe-webhook": { "kind": "PUBLIC_WEBHOOK" },
     "ive-agent-runner": { "kind": "RETIRED" },
-    "aef-runtime": { "kind": "MODULE", "moduleId": "aef-runtime-lab", "gateFile": "_shared/aef_runtime_endpoint.ts" },
-    "action-engine-runtime": { "kind": "MODULE", "moduleId": "action-engine", "gateFile": "_shared/aef_runtime_endpoint.ts" }
+    "aef-runtime": { "kind": "MODULE", "moduleId": "aef-runtime-lab", "gateFile": "_shared/aef_runtime_endpoint.ts", "actionClassOverride": "CONSEQUENTIAL" },
+    "action-engine-runtime": { "kind": "MODULE", "moduleId": "action-engine", "gateFile": "_shared/aef_runtime_endpoint.ts", "actionClassOverride": "CONSEQUENTIAL" }
   }
 }
 // END_MODULE_POLICY_JSON
