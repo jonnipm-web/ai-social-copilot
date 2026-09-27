@@ -22,6 +22,17 @@ class ActionQueueService {
   }
 
   Future<ActionQueueItem> create(ActionQueueItem item) async {
+    // Codex re-verification (Macro-03) — create() inserted item.status
+    // verbatim, so a caller could construct ActionQueueItem(status:
+    // 'completed') and reach a governed-only status through a completely
+    // different method than updateStatus(), skipping this same guard.
+    // create() only ever legitimately inserts 'pending' (every real caller,
+    // action_queue_provider.dart's add()/addFromOpportunity(), hardcodes
+    // it) -- there is no reason for it to accept a governed-only status.
+    // Checked before touching _client so this is testable without a live
+    // Supabase instance, same as updateStatus's own guard.
+    _refuseIfAefGovernedOnly(item.status);
+
     final uid = _client.auth.currentUser?.id;
     if (uid == null) throw Exception('Não autenticado');
 
@@ -36,18 +47,26 @@ class ActionQueueService {
     return ActionQueueItem.fromMap(row);
   }
 
-  /// INSIGHTVALUES-PRODUCTIZATION-MACRO-03 (Codex final audit, P1) — 'executing'
-  /// and 'completed' are AEF-governed-only: before this guard, nothing stopped
-  /// a caller from reaching them through this same generic method and
-  /// bypassing applyAefResult (and therefore the Human Gate/receipt) entirely.
-  /// Only applyAefResult may ever write them, because only it derives the
-  /// status from a real AefRuntimeResult rather than an arbitrary string.
+  /// INSIGHTVALUES-PRODUCTIZATION-MACRO-03 (Codex final audit, P1, then
+  /// re-verification) — 'executing' and 'completed' are AEF-governed-only:
+  /// before this guard, nothing stopped a caller from reaching them through
+  /// this same generic method (or, before the re-verification finding,
+  /// through create()) and bypassing applyAefResult -- and therefore the
+  /// Human Gate/receipt -- entirely. Only applyAefResult may ever write
+  /// them, because only it derives the status from a real AefRuntimeResult
+  /// rather than an arbitrary string. Normalized (trim + lowercase) so a
+  /// case or whitespace variant ('Executing', ' completed ') cannot slip
+  /// through a guard that only checked the exact literal.
   static const _aefGovernedOnlyStatuses = {'executing', 'completed'};
 
-  Future<ActionQueueItem> updateStatus(String id, String status) async {
-    if (_aefGovernedOnlyStatuses.contains(status)) {
-      throw ArgumentError('updateStatus cannot write "$status" -- use applyAefResult, which requires a real AEF receipt');
+  void _refuseIfAefGovernedOnly(String status) {
+    if (_aefGovernedOnlyStatuses.contains(status.trim().toLowerCase())) {
+      throw ArgumentError('"$status" is AEF-governed-only -- use applyAefResult, which requires a real AEF receipt');
     }
+  }
+
+  Future<ActionQueueItem> updateStatus(String id, String status) async {
+    _refuseIfAefGovernedOnly(status);
     final row = await _client
         .from(AppConstants.tableActionQueue)
         .update({'status': status})

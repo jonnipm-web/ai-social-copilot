@@ -9,6 +9,7 @@
 // Supabase.instance.client), so the REAL class can be constructed and
 // exercised directly here without a fake or a live Supabase instance.
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ai_social_copilot/data/models/action_queue_item.dart';
 import 'package:ai_social_copilot/data/services/action_queue_service.dart';
 
 void main() {
@@ -17,6 +18,36 @@ void main() {
       final svc = ActionQueueService();
       for (final status in ['executing', 'completed']) {
         expect(() => svc.updateStatus('a1', status), throwsA(isA<ArgumentError>()), reason: status);
+      }
+    });
+
+    // Codex re-verification (Macro-03) — the first guard was an exact-string
+    // Set.contains, so a case or whitespace variant of a governed-only
+    // status would reach the raw Supabase update untouched.
+    test('refuses case and whitespace variants of AEF-governed-only statuses', () {
+      final svc = ActionQueueService();
+      for (final status in ['Executing', 'COMPLETED', ' completed', 'completed ', 'ExEcUtInG']) {
+        expect(() => svc.updateStatus('a1', status), throwsA(isA<ArgumentError>()), reason: status);
+      }
+    });
+
+    test('does not refuse legitimate, non-governed statuses', () {
+      final svc = ActionQueueService();
+      // approve()/cancel() -- the only real callers -- must remain unaffected.
+      // These still reach _client (a lazy getter) and would throw on the
+      // network call itself in a plain test process; the point here is only
+      // that they are NOT rejected by the guard before that.
+      expect(() => svc.updateStatus('a1', 'approved'), throwsA(isNot(isA<ArgumentError>())));
+      expect(() => svc.updateStatus('a1', 'cancelled'), throwsA(isNot(isA<ArgumentError>())));
+    });
+  });
+
+  group('ActionQueueService.create (authority boundary)', () {
+    test('refuses to insert an item already carrying an AEF-governed-only status', () {
+      final svc = ActionQueueService();
+      for (final status in ['executing', 'completed', 'Completed']) {
+        final item = ActionQueueItem(id: '', userId: 'u1', title: 'x', status: status, createdAt: DateTime(2026, 1, 1));
+        expect(() => svc.create(item), throwsA(isA<ArgumentError>()), reason: status);
       }
     });
   });

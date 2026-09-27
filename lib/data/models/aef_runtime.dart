@@ -39,6 +39,22 @@ const Map<String, AefPhase> _serverPhases = {
   'DENIED': AefPhase.denied,
 };
 
+/// Mirrors aef/persistence/receipt_v1_1.ts's OUTCOME_FOR exactly -- the
+/// server's own authoritative table of which receipt outcome a terminal
+/// phase (final_state) may carry. DENIED has no entry: it is a client-only
+/// phase (network interruption/local denial before anything reached the
+/// server), never a server final_state, so it can never legitimately carry
+/// a receipt at all.
+const Map<AefPhase, Set<String>> _validOutcomesForPhase = {
+  AefPhase.succeeded: {'SUCCESS'},
+  AefPhase.failed: {'FAILURE', 'PARTIAL'},
+  AefPhase.unknownOutcome: {'UNKNOWN_OUTCOME'},
+  AefPhase.rejected: {'NOT_EXECUTED'},
+  AefPhase.expired: {'NOT_EXECUTED'},
+  AefPhase.cancelled: {'NOT_EXECUTED'},
+  AefPhase.invalidated: {'NOT_EXECUTED'},
+};
+
 /// INSIGHTVALUES-PRODUCTIZATION-MACRO-03 — the Action Engine <-> AEF
 /// authority boundary, as a pure mapping: the ONLY status an AEF-governed
 /// action_queue write may carry is one derived from a real, terminal,
@@ -46,18 +62,23 @@ const Map<String, AefPhase> _serverPhases = {
 /// and Supabase-free so the boundary itself is directly testable, mirroring
 /// [AefRuntimeResult.isCompleted]'s own fail-closed rule.
 ///
-/// Codex final audit (P1) — the original guard only rejected
-/// `receiptOutcome == null`, so a result at a NON-terminal phase (e.g.
-/// AWAITING_APPROVAL) carrying a `receipt` map would still pass, because
-/// AefRuntimeResult.fromMap never cross-checks phase against receipt outcome.
-/// Every branch below now requires the phase to actually BE terminal, and a
-/// SUCCESS outcome additionally requires the exact same phase+completed pair
-/// [isCompleted] itself requires -- there is no longer a way to reach
-/// 'completed' except through the one condition that already means "done".
+/// Codex final audit (P1), then re-verification (P1 partially closed) — the
+/// original guard only rejected `receiptOutcome == null`, so a result at a
+/// NON-terminal phase (e.g. AWAITING_APPROVAL) carrying a `receipt` map
+/// would still pass. Requiring [isTerminalPhase] alone closed that, but not
+/// a self-contradictory pairing at a genuinely terminal phase (e.g.
+/// SUCCEEDED with outcome FAILURE) -- AefRuntimeResult.fromMap never
+/// cross-checks phase against receipt outcome, and neither did the first
+/// fix. [_validOutcomesForPhase] now enforces the server's own complete
+/// compatibility table, not just "some receipt exists".
 String aefReceiptOutcomeToActionStatus(AefRuntimeResult result) {
   final outcome = result.receiptOutcome;
-  if (!isTerminalPhase(result.phase) || outcome == null || result.receiptId == null || result.operationId == null) {
+  if (outcome == null || result.receiptId == null || result.operationId == null) {
     throw ArgumentError('aefReceiptOutcomeToActionStatus requires a terminal, receipted result');
+  }
+  final validOutcomes = _validOutcomesForPhase[result.phase];
+  if (validOutcomes == null || !validOutcomes.contains(outcome)) {
+    throw ArgumentError('phase ${result.phase} cannot carry outcome $outcome');
   }
   if (outcome == 'SUCCESS' && !result.isCompleted) {
     throw ArgumentError('a SUCCESS receipt requires phase SUCCEEDED and server-confirmed completion');
