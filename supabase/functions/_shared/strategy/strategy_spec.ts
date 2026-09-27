@@ -122,6 +122,17 @@ function timeToMinutes(t: string): number {
   return h * 60 + m;
 }
 
+/** Codex final audit (P2): a bare `x > 0` check accepts Infinity, and
+ * NaN > 0 is false but silent -- both must be explicitly excluded before
+ * any range check, everywhere a user-supplied distance/loss limit is
+ * validated. */
+function isFinitePositive(x: unknown): x is number {
+  return typeof x === 'number' && Number.isFinite(x) && x > 0;
+}
+function isFiniteNonNegative(x: unknown): x is number {
+  return typeof x === 'number' && Number.isFinite(x) && x >= 0;
+}
+
 function requireRule<T extends string>(ruleId: string, expected: RuleCategory, field: string): StrategyResult<T> {
   const def = getRule(ruleId);
   if (!def) return fail('UNSUPPORTED_RULE', `unknown rule id`, { field, ruleId });
@@ -169,11 +180,11 @@ export function createStrategySpecification(input: StrategySpecificationInput): 
   const entryRuleId = requireRule(input.entry?.ruleId, 'ENTRY', 'entry.ruleId');
   if (!entryRuleId.ok) return entryRuleId;
 
-  if (!(input.stop?.distance > 0)) return fail('INVALID_RISK_PARAMETER', 'stop distance must be > 0', { field: 'stop.distance' });
+  if (!isFinitePositive(input.stop?.distance)) return fail('INVALID_RISK_PARAMETER', 'stop distance must be a finite number > 0', { field: 'stop.distance' });
   const stopRuleId = requireRule(input.stop?.ruleId, 'STOP', 'stop.ruleId');
   if (!stopRuleId.ok) return stopRuleId;
 
-  if (!(input.target?.distance > 0)) return fail('INVALID_RISK_PARAMETER', 'target distance must be > 0', { field: 'target.distance' });
+  if (!isFinitePositive(input.target?.distance)) return fail('INVALID_RISK_PARAMETER', 'target distance must be a finite number > 0', { field: 'target.distance' });
   const targetRuleId = requireRule(input.target?.ruleId, 'TARGET', 'target.ruleId');
   if (!targetRuleId.ok) return targetRuleId;
 
@@ -188,11 +199,11 @@ export function createStrategySpecification(input: StrategySpecificationInput): 
     const beRuleId = requireRule(input.breakEven.ruleId, 'BREAK_EVEN', 'breakEven.ruleId');
     if (!beRuleId.ok) return beRuleId;
     const { triggerDistance, initialProtectedDistance, stepDistance } = input.breakEven;
-    if (!(triggerDistance > 0)) return fail('INVALID_RISK_PARAMETER', 'break-even trigger must be > 0', { field: 'breakEven.triggerDistance' });
-    if (!(initialProtectedDistance >= 0)) {
-      return fail('INVALID_RISK_PARAMETER', 'break-even initial protected distance must be >= 0', { field: 'breakEven.initialProtectedDistance' });
+    if (!isFinitePositive(triggerDistance)) return fail('INVALID_RISK_PARAMETER', 'break-even trigger must be a finite number > 0', { field: 'breakEven.triggerDistance' });
+    if (!isFiniteNonNegative(initialProtectedDistance)) {
+      return fail('INVALID_RISK_PARAMETER', 'break-even initial protected distance must be a finite number >= 0', { field: 'breakEven.initialProtectedDistance' });
     }
-    if (!(stepDistance > 0)) return fail('INVALID_RISK_PARAMETER', 'break-even step must be > 0', { field: 'breakEven.stepDistance' });
+    if (!isFinitePositive(stepDistance)) return fail('INVALID_RISK_PARAMETER', 'break-even step must be a finite number > 0', { field: 'breakEven.stepDistance' });
     if (triggerDistance >= input.target.distance) {
       return fail('CONTRADICTORY_CONFIGURATION', 'break-even trigger must be below the target distance', {
         field: 'breakEven.triggerDistance',
@@ -210,7 +221,7 @@ export function createStrategySpecification(input: StrategySpecificationInput): 
   if (input.trailing) {
     const trRuleId = requireRule(input.trailing.ruleId, 'TRAILING', 'trailing.ruleId');
     if (!trRuleId.ok) return trRuleId;
-    if (!(input.trailing.distance > 0)) return fail('INVALID_RISK_PARAMETER', 'trailing distance must be > 0', { field: 'trailing.distance' });
+    if (!isFinitePositive(input.trailing.distance)) return fail('INVALID_RISK_PARAMETER', 'trailing distance must be a finite number > 0', { field: 'trailing.distance' });
     trailing = { ...input.trailing };
   }
 
@@ -256,11 +267,11 @@ export function createStrategySpecification(input: StrategySpecificationInput): 
       const r = requireRule(rl.maxStrategyLossRuleId, 'RISK', 'riskLimits.maxStrategyLossRuleId');
       if (!r.ok) return r;
     }
-    if (rl.maxDailyLoss !== undefined && !(rl.maxDailyLoss > 0)) {
-      return fail('INVALID_RISK_PARAMETER', 'maxDailyLoss must be > 0', { field: 'riskLimits.maxDailyLoss' });
+    if (rl.maxDailyLoss !== undefined && !isFinitePositive(rl.maxDailyLoss)) {
+      return fail('INVALID_RISK_PARAMETER', 'maxDailyLoss must be a finite number > 0', { field: 'riskLimits.maxDailyLoss' });
     }
-    if (rl.maxStrategyLoss !== undefined && !(rl.maxStrategyLoss > 0)) {
-      return fail('INVALID_RISK_PARAMETER', 'maxStrategyLoss must be > 0', { field: 'riskLimits.maxStrategyLoss' });
+    if (rl.maxStrategyLoss !== undefined && !isFinitePositive(rl.maxStrategyLoss)) {
+      return fail('INVALID_RISK_PARAMETER', 'maxStrategyLoss must be a finite number > 0', { field: 'riskLimits.maxStrategyLoss' });
     }
     if (rl.maxDailyLoss !== undefined && rl.maxStrategyLoss !== undefined && rl.maxDailyLoss > rl.maxStrategyLoss) {
       return fail('CONTRADICTORY_CONFIGURATION', 'maxDailyLoss cannot exceed maxStrategyLoss', { field: 'riskLimits' });

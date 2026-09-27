@@ -14,11 +14,23 @@
 --     EXPERIMENTAL (admin-only, same posture as 'ive-quant' from Macro-04)
 --     via public.strategy_builder_access_allowed() -- direct PostgREST
 --     access cannot bypass the Edge Function's own entitlement gate.
---   * strategy_versions and strategy_backtest_results are INSERT/SELECT
---     only -- no UPDATE grant exists at all, so a version's pinned spec (and
---     a result's pinned numbers) can never be silently rewritten after the
---     fact. Only strategies.name/status/current_version are updatable, and
---     only by their owner.
+--   * strategy_versions and strategy_backtest_results grant NO UPDATE to
+--     `authenticated` -- a version's pinned spec (and a result's pinned
+--     numbers) can never be rewritten by any authenticated caller, direct
+--     PostgREST or otherwise. `service_role` (the trusted backend key, used
+--     the same way across this codebase's other Lab tables, e.g.
+--     20260924000000_quant_watchlists.sql) still receives ALL, including
+--     UPDATE -- that is a statement about what an external caller can do,
+--     never a database-enforced guarantee against the server's own trusted
+--     key (Codex final audit, P1: the prior wording overstated this).
+--   * Only strategies.name is updatable by an authenticated owner.
+--     strategies.status/current_version are intentionally NOT grantable to
+--     `authenticated` (Codex final audit, P2): no Edge Function operation
+--     this macro calls lifecycle.ts's canPromote before writing, so a raw
+--     UPDATE grant on those columns would let an owner set VALIDATED/
+--     BACKTESTED/RESEARCH with zero evidence. Both columns stay
+--     service_role-only until a future mission wires status transitions
+--     through an operation that actually enforces canPromote server-side.
 --   * A strategy's status is NEVER SIMULATION_ELIGIBLE/PAPER_ELIGIBLE/
 --     LIVE_ELIGIBLE at the database layer either -- the CHECK constraint
 --     below only allows the automatic-ceiling statuses this macro's
@@ -171,7 +183,7 @@ REVOKE ALL ON public.strategy_versions FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON public.strategy_backtest_results FROM PUBLIC, anon, authenticated;
 
 GRANT SELECT, INSERT, DELETE ON public.strategies TO authenticated;
-GRANT UPDATE (name, status, current_version) ON public.strategies TO authenticated;
+GRANT UPDATE (name) ON public.strategies TO authenticated;
 GRANT SELECT, INSERT ON public.strategy_versions TO authenticated;
 GRANT SELECT, INSERT ON public.strategy_backtest_results TO authenticated;
 GRANT ALL ON public.strategies, public.strategy_versions, public.strategy_backtest_results TO service_role;

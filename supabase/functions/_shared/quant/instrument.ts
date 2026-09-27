@@ -60,9 +60,13 @@ export interface InstrumentIdentity {
   readonly providerIds?: Readonly<Record<string, string>>;
 }
 
-// Trailing '!' added ROBOT-BUILDER-MACRO-05 for continuous-futures notation
-// (e.g. TradingView's WIN1!/WDO1!) -- real market symbols, not a hack.
-const SYMBOL_RE = /^[A-Z0-9][A-Z0-9.\-=/]{0,30}!?$/;
+const SYMBOL_RE = /^[A-Z0-9][A-Z0-9.\-=/]{0,31}$/;
+// Codex final audit (ROBOT-BUILDER-MACRO-05, P1): the base SYMBOL_RE must
+// NOT itself accept a trailing '!' -- that was a global widening that let
+// EQUITY/AAPL! etc. through createInstrument for every asset class, not
+// only futures. A continuous-futures ticker (TradingView's WIN1!/WDO1!) is
+// checked as a SEPARATE, FUTURE-only allowance below.
+const FUTURES_CONTINUOUS_SYMBOL_RE = /^[A-Z0-9][A-Z0-9.\-=/]{0,30}!$/;
 const MIC_RE = /^[A-Z0-9]{4}$/;
 const CURRENCY_RE = /^[A-Z]{3}$/;
 const ISIN_RE = /^[A-Z]{2}[A-Z0-9]{9}[0-9]$/;
@@ -114,7 +118,10 @@ export function createInstrument(input: InstrumentIdentity): QuantResult<Instrum
     return fail('INVALID_INSTRUMENT', 'unknown asset class', { field: 'assetClass' });
   }
   const symbol = typeof input.symbol === 'string' ? input.symbol.trim().toUpperCase() : '';
-  if (!SYMBOL_RE.test(symbol)) return fail('INVALID_INSTRUMENT', 'invalid symbol', { field: 'symbol' });
+  const symbolValid = input.assetClass === 'FUTURE'
+    ? SYMBOL_RE.test(symbol) || FUTURES_CONTINUOUS_SYMBOL_RE.test(symbol)
+    : SYMBOL_RE.test(symbol);
+  if (!symbolValid) return fail('INVALID_INSTRUMENT', 'invalid symbol', { field: 'symbol' });
   const currency = typeof input.currency === 'string' ? input.currency.trim().toUpperCase() : '';
   if (!CURRENCY_RE.test(currency)) return fail('INVALID_INSTRUMENT', 'currency must be ISO 4217', { field: 'currency' });
   let exchangeMic: string | undefined;

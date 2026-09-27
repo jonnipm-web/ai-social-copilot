@@ -131,6 +131,19 @@ Deno.test('SS-13 an unsupported asset instrument (bad symbol) fails through mark
   assertEquals(result.ok ? null : result.error.code, 'INVALID_MARKET_PROFILE');
 });
 
+Deno.test('SS-15 (Codex final audit, P2) Infinity/NaN are rejected everywhere a bare > 0 check used to admit them', () => {
+  for (const bad of [Infinity, -Infinity, NaN]) {
+    const stop = createStrategySpecification(withOverride({ stop: { ruleId: 'STOP.FIXED_DISTANCE', distance: bad } }));
+    assert(!stop.ok, String(bad));
+    const target = createStrategySpecification(withOverride({ target: { ruleId: 'TARGET.FIXED_DISTANCE', distance: bad } }));
+    assert(!target.ok, String(bad));
+  }
+  const infiniteRisk = createStrategySpecification(
+    withOverride({ riskLimits: { maxDailyLossRuleId: 'RISK.MAX_DAILY_LOSS', maxDailyLoss: Infinity } }),
+  );
+  assert(!infiniteRisk.ok);
+});
+
 Deno.test('SS-14 configuration alone never executes anything -- construction is pure and returns data only', () => {
   const result = createStrategySpecification(VALID_INPUT);
   assert(result.ok);

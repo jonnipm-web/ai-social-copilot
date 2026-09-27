@@ -67,6 +67,15 @@ export interface MarketProfileInput {
   readonly defaultCostAssumptions?: CostAssumptions;
 }
 
+/** Codex final audit (P2): a bare `x > 0`/`x < 0` check admits Infinity and
+ * lets NaN slip through silently (NaN satisfies neither `< 0` nor `> 0`). */
+function isFinitePositive(x: unknown): x is number {
+  return typeof x === 'number' && Number.isFinite(x) && x > 0;
+}
+function isFiniteNonNegative(x: unknown): x is number {
+  return typeof x === 'number' && Number.isFinite(x) && x >= 0;
+}
+
 /** Validates and canonicalizes. Fails closed: an instrument that itself
  * fails createInstrument's checks never reaches a MarketProfile. */
 export function createMarketProfile(input: MarketProfileInput): StrategyResult<MarketProfile> {
@@ -75,10 +84,10 @@ export function createMarketProfile(input: MarketProfileInput): StrategyResult<M
   if (!instrumentResult.ok) {
     return fail('INVALID_MARKET_PROFILE', 'invalid instrument', { field: 'instrument', reason: instrumentResult.error.code });
   }
-  if (!(input.tickSize > 0)) return fail('INVALID_MARKET_PROFILE', 'tickSize must be > 0', { field: 'tickSize' });
-  if (!(input.tickValue > 0)) return fail('INVALID_MARKET_PROFILE', 'tickValue must be > 0', { field: 'tickValue' });
-  if (!(input.contractMultiplier > 0)) {
-    return fail('INVALID_MARKET_PROFILE', 'contractMultiplier must be > 0', { field: 'contractMultiplier' });
+  if (!isFinitePositive(input.tickSize)) return fail('INVALID_MARKET_PROFILE', 'tickSize must be a finite number > 0', { field: 'tickSize' });
+  if (!isFinitePositive(input.tickValue)) return fail('INVALID_MARKET_PROFILE', 'tickValue must be a finite number > 0', { field: 'tickValue' });
+  if (!isFinitePositive(input.contractMultiplier)) {
+    return fail('INVALID_MARKET_PROFILE', 'contractMultiplier must be a finite number > 0', { field: 'contractMultiplier' });
   }
   if (typeof input.timezone !== 'string' || !TIMEZONE_RE.test(input.timezone)) {
     return fail('INVALID_MARKET_PROFILE', 'timezone must be an IANA zone name', { field: 'timezone' });
@@ -96,8 +105,8 @@ export function createMarketProfile(input: MarketProfileInput): StrategyResult<M
   }
   if (input.defaultCostAssumptions) {
     const c = input.defaultCostAssumptions;
-    if (c.brokeragePerContract < 0 || c.exchangeFeePerContract < 0 || c.slippageTicks < 0) {
-      return fail('INVALID_MARKET_PROFILE', 'cost assumptions must be >= 0', { field: 'defaultCostAssumptions' });
+    if (!isFiniteNonNegative(c.brokeragePerContract) || !isFiniteNonNegative(c.exchangeFeePerContract) || !isFiniteNonNegative(c.slippageTicks)) {
+      return fail('INVALID_MARKET_PROFILE', 'cost assumptions must be finite numbers >= 0', { field: 'defaultCostAssumptions' });
     }
     if (typeof c.source !== 'string' || c.source.trim().length === 0) {
       return fail('INVALID_MARKET_PROFILE', 'cost assumptions must state a source', { field: 'defaultCostAssumptions.source' });

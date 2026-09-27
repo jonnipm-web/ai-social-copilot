@@ -45,6 +45,18 @@ Deno.test('MP-04 cost assumptions require a stated source and non-negative figur
   assert(!negative.ok);
 });
 
+Deno.test('MP-06 (Codex final audit, P2) Infinity/NaN tickSize/tickValue/contractMultiplier/cost fields are rejected', () => {
+  for (const bad of [Infinity, -Infinity, NaN]) {
+    const tick = createMarketProfile({ ...V10_REFERENCE_MARKET_PROFILE_INPUT, tickSize: bad });
+    assert(!tick.ok, String(bad));
+    const cost = createMarketProfile({
+      ...V10_REFERENCE_MARKET_PROFILE_INPUT,
+      defaultCostAssumptions: { brokeragePerContract: bad, exchangeFeePerContract: 1, slippageTicks: 1, source: 'x' },
+    });
+    assert(!cost.ok, String(bad));
+  }
+});
+
 Deno.test('MP-05 an invalid instrument (bad currency) is rejected through the shared instrument validator, not duplicated logic', () => {
   const result = createMarketProfile({
     ...V10_REFERENCE_MARKET_PROFILE_INPUT,
