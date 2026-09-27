@@ -64,12 +64,13 @@ function reset() {
   quotaCalls = 0;
 }
 
-Deno.test('GH-00 every MODULE-kind function (21) exports an injectable handler', () => {
+Deno.test('GH-00 every MODULE-kind function (23) exports an injectable handler', () => {
   assertEquals(handlers.size, moduleFunctions.length);
   // AEF (aef-runtime, IV-IVE-AEF-RUNTIME-INTEGRATION-01, LAB only, EXPERIMENTAL)
-  // + Impact (impact-lab, IV-IMPACT-FOUNDATION-01, EXPERIMENTAL) both reconciled
-  // into this integration branch (INSIGHTVALUES-INTEGRATION-MACRO-02).
-  assertEquals(moduleFunctions.length, 21);
+  // + Impact (impact-lab, IV-IMPACT-FOUNDATION-01, EXPERIMENTAL)
+  // + Quant (quant-analyze, quant-watchlists, IV-QUANT-DATA-PLANE-AND-API-02)
+  // all reconciled into this integration branch (INSIGHTVALUES-INTEGRATION-MACRO-02).
+  assertEquals(moduleFunctions.length, 23);
 });
 
 for (const { fn, moduleId, lifecycle } of moduleFunctions) {

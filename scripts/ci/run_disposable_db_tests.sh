@@ -514,3 +514,20 @@ elif [ "${CI:-}" = "true" ]; then
 else
   echo "IMPACT_ENGINE_ROWS: skipped locally (deno not on PATH)"
 fi
+
+# ── Quant (IV-QUANT-DATA-PLANE-AND-API-02 and successors) ────────────────
+# SUBJECT_ROLES_RLS already checked against $DB above (line ~70); Quant's
+# own recheck of it (against the stale $out from the Impact block above)
+# would have been checking the wrong variable's content -- dropped rather
+# than carried forward as-is.
+
+# IV-QUANT-DATA-PLANE-AND-API-02 — Quant watchlists RLS (owner CRUD, cross-user,
+# anonymous, cross-project, immutable columns, limits, canonical identity).
+qout="$(run -d "$DB" -tA -f "$ROOT/supabase/tests/quant_watchlists_rls_test.sql")"
+echo "$qout" | tail -1
+echo "$qout" | grep -qx 'QUANT_WATCHLISTS_RLS: PASS'
+
+# IV-QUANT-REAL-DATA-READINESS-03 — Quant API rate-limit function (identity, limits, privacy).
+rout="$(run -d "$DB" -tA -f "$ROOT/supabase/tests/quant_rate_limits_test.sql")"
+echo "$rout" | tail -1
+echo "$rout" | grep -qx 'QUANT_RATE_LIMITS: PASS'

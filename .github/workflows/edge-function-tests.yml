@@ -1,6 +1,12 @@
 name: Edge Function Tests
 
 on:
+  # IV-QUANT-DATA-PLANE-AND-API-02: the Quant Lab branch never merges to main
+  # during the lab phase, and workflow_dispatch needs the file on the default
+  # branch, so pushes to the Quant line run CI directly. Scoped to that line
+  # only; deploy workflows are unaffected (none trigger on these branches).
+  push:
+    branches: ['claude/insightvalues-quant-**']
   pull_request:
     branches: [main]
     paths:
@@ -71,6 +77,37 @@ jobs:
           GROQ_API_KEY: "test-key-ci"
         run: |
           deno test --allow-env --allow-read --allow-net=deno.land,esm.sh             supabase/functions/_shared/entitlement_test.ts             supabase/functions/_shared/entitlement_vectors_test.ts             supabase/functions/_shared/module_policy_test.ts             supabase/functions/_shared/module_gate_handlers_test.ts             supabase/functions/module-access/index_test.ts supabase/functions/_shared/ive/
+
+  quant-foundation-ci:
+    name: Quant engine + quant-analytics APIs (IV-QUANT-FOUNDATION-01 / DATA-PLANE-AND-API-02)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Type-check and lint the Quant core and Quant Edge Functions
+        run: |
+          deno check supabase/functions/_shared/quant/*.ts supabase/functions/_shared/quant/fixtures/*.ts             supabase/functions/_shared/quant_server.ts supabase/functions/_shared/quant_provider_runtime.ts             supabase/functions/_shared/quant_provider_contract_test.ts supabase/functions/quant-analyze/*.ts supabase/functions/quant-watchlists/*.ts             tool/quant_lab_dev_server.ts tool/quant_benchmark.ts
+          deno lint supabase/functions/_shared/quant/ supabase/functions/_shared/quant_server.ts             supabase/functions/_shared/quant_provider_runtime.ts supabase/functions/_shared/quant_provider_contract_test.ts             supabase/functions/quant-analyze/ supabase/functions/quant-watchlists/ tool/quant_lab_dev_server.ts tool/quant_benchmark.ts
+
+      - name: Goldens, edge cases, seeded invariants, calendars, boundary tripwires (no network in the suite)
+        run: |
+          deno test --allow-read --allow-net=deno.land,esm.sh supabase/functions/_shared/quant/
+
+      - name: quant-analyze + quant-watchlists API tests (auth, entitlement, ownership, schema, limits, logging)
+        env:
+          DENO_TESTING: "1"
+        run: |
+          deno test --allow-env --allow-read --allow-net=deno.land,esm.sh             supabase/functions/quant-analyze/index_test.ts supabase/functions/quant-watchlists/index_test.ts
+
+      - name: Provider adapter contract + cache + safe_fetch allowlist (REAL-DATA-READINESS-03; fake fetch, no vendor, no key)
+        run: |
+          deno test --allow-env --allow-read --allow-net=deno.land,esm.sh             supabase/functions/_shared/quant_provider_contract_test.ts supabase/functions/_shared/safe_fetch_test.ts
 
   disposable-db-rls-ci:
     name: Migrations + RLS on a disposable PostgreSQL 17 (MODULE-FOUNDATION-AND-ENTITLEMENT-02)
@@ -143,6 +180,8 @@ jobs:
           grep -qx 'IMPACT_RATE_LIMIT_RACE: PASS no lost update' db.log
           grep -qx 'IMPACT_RATE_LIMIT_DRIFT: PASS drifted table refused' db.log
           grep -qE '^IMPACT_ENGINE_ROWS: (PASS |skipped locally)' db.log
+          grep -qx 'QUANT_WATCHLISTS_RLS: PASS' db.log
+          grep -qx 'QUANT_RATE_LIMITS: PASS' db.log
 
   contract-and-aef-ci:
     name: AEF contract + kernel CI (IV-AEF-FOUNDATION-01)

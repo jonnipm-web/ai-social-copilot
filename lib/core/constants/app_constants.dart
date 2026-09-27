@@ -88,6 +88,9 @@ class AppConstants {
   static const routeImpact               = '/impact';
   static const routeImpactDossier        = '/impact/:id';
 
+  // IV-QUANT-DATA-PLANE-AND-API-02 — Quant Lab (INTERNAL, admin-only)
+  static const routeQuantLab             = '/quant-lab';
+
   // IVE-COMMERCIAL-RELEASE-CONTROL-PLANE-01
   static const routeAccount              = '/account';
   static const routeAbout                = '/about';

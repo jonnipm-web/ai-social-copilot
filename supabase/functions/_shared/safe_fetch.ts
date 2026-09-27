@@ -232,12 +232,36 @@ export interface SafeFetchOptions {
   timeoutMs?: number;
   maxResponseBytes?: number;
   /**
-   * IV-IMPACT-I2: exact hostnames this request may reach, checked at EVERY
-   * hop (the first URL and each redirect target) before DNS resolution.
-   * Absent = previous behaviour (any public host). Server-owned registry
-   * adapters always pass it, so a redirect can never leave the registry.
+   * IV-IMPACT-I2 / IV-QUANT-REAL-DATA-READINESS-03: exact hostnames this
+   * request may reach, checked at EVERY hop (the first URL and each
+   * redirect target) before DNS resolution. Absent = previous behaviour
+   * (any public host). Server-owned registry adapters (Impact) and callers
+   * that attach credentials (Quant market-data provider keys) always pass
+   * it, so a redirect can never leave the allowlist or carry a credential
+   * to a host outside it.
    */
   allowedHosts?: ReadonlySet<string>;
+  /**
+   * Codex Gate 1 (READINESS-03, P1): header names that carry credentials.
+   * They are sent ONLY to the original origin — dropped as soon as a
+   * redirect changes origin, even to another allowlisted host. Authorization,
+   * Proxy-Authorization and Cookie are always treated as credentials.
+   */
+  credentialHeaders?: readonly string[];
+}
+
+const ALWAYS_CREDENTIAL_HEADERS = ['authorization', 'proxy-authorization', 'cookie'];
+
+/** Headers for a hop: credentials only while still on the original origin. Exported for tests. */
+export function headersForHop(
+  headers: Record<string, string> | undefined,
+  originalOrigin: string,
+  hopOrigin: string,
+  credentialHeaders: readonly string[] = [],
+): Record<string, string> | undefined {
+  if (!headers || hopOrigin === originalOrigin) return headers;
+  const drop = new Set([...ALWAYS_CREDENTIAL_HEADERS, ...credentialHeaders.map((h) => h.toLowerCase())]);
+  return Object.fromEntries(Object.entries(headers).filter(([k]) => !drop.has(k.toLowerCase())));
 }
 
 /**
@@ -260,6 +284,7 @@ export async function safeFetch(rawUrl: string, options: SafeFetchOptions = {}):
     throw new UnsafeUrlError("URL malformada.");
   }
 
+  const originalOrigin = currentUrl.origin;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     assertUrlShapeIsSafe(currentUrl);
     if (options.allowedHosts && !options.allowedHosts.has(currentUrl.hostname.toLowerCase())) {
@@ -273,7 +298,7 @@ export async function safeFetch(rawUrl: string, options: SafeFetchOptions = {}):
     let res: Response;
     try {
       res = await fetch(currentUrl.toString(), {
-        headers: options.headers,
+        headers: headersForHop(options.headers, originalOrigin, currentUrl.origin, options.credentialHeaders),
         redirect: "manual", // we re-validate every hop ourselves
         signal: controller.signal,
       });

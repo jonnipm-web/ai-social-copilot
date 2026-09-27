@@ -123,7 +123,9 @@ export const MODULE_POLICY: ModulePolicyDoc =
     "ive-avatar": { "lifecycle": "COMMERCIAL", "minimumPlan": "free", "actionClass": "READ_ONLY" },
     "ive-quant": { "lifecycle": "EXPERIMENTAL", "minimumPlan": "free", "actionClass": "CONSEQUENTIAL" },
     "aef-runtime-lab": { "lifecycle": "EXPERIMENTAL", "minimumPlan": "free", "actionClass": "REVERSIBLE" },
-    "impact": { "lifecycle": "EXPERIMENTAL", "minimumPlan": "free", "actionClass": "REVERSIBLE" }
+    "impact": { "lifecycle": "EXPERIMENTAL", "minimumPlan": "free", "actionClass": "REVERSIBLE" },
+    "quant-analytics": { "lifecycle": "INTERNAL", "minimumPlan": "free", "actionClass": "READ_ONLY" },
+    "quant-watchlists": { "lifecycle": "INTERNAL", "minimumPlan": "free", "actionClass": "REVERSIBLE" }
   },
   "edgeFunctions": {
     "analyze-website": { "kind": "MODULE", "moduleId": "website-analyzer" },
@@ -145,6 +147,8 @@ export const MODULE_POLICY: ModulePolicyDoc =
     "revenue-planner": { "kind": "MODULE", "moduleId": "revenue-planner" },
     "ive-intelligence": { "kind": "MODULE", "moduleId": "context-copilot", "gateFile": "_shared/ive/intelligence.ts" },
     "ive-memory": { "kind": "MODULE", "moduleId": "context-copilot", "gateFile": "_shared/ive/memory_endpoint.ts" },
+    "quant-analyze": { "kind": "MODULE", "moduleId": "quant-analytics" },
+    "quant-watchlists": { "kind": "MODULE", "moduleId": "quant-watchlists" },
     "create-checkout-session": { "kind": "BILLING" },
     "impact-lab": { "kind": "MODULE", "moduleId": "impact" },
     "module-access": { "kind": "ENTITLEMENT" },

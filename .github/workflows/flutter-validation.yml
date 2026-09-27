@@ -1,6 +1,12 @@
 name: Flutter Validation — Analyze + Test
 
 on:
+  # IV-QUANT-DATA-PLANE-AND-API-02: the Quant Lab branch never merges to main
+  # during the lab phase, and workflow_dispatch needs the file on the default
+  # branch, so pushes to the Quant line run CI directly. Scoped to that line
+  # only; deploy workflows are unaffected (none trigger on these branches).
+  push:
+    branches: ['claude/insightvalues-quant-**']
   pull_request:
     branches: [main]
   workflow_dispatch:

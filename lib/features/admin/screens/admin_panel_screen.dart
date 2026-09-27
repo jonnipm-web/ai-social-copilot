@@ -409,7 +409,7 @@ class _ModulesAdminTab extends StatelessWidget {
                     context: context,
                     backgroundColor: const Color(0xFF141425),
                     isScrollControlled: true,
-                    builder: (_) => _ModuleDetailSheet(module: module, isEnglish: isEnglish),
+                    builder: (_) => AdminModuleDetailSheet(module: module, isEnglish: isEnglish),
                   )
               : null,
         );
@@ -449,18 +449,20 @@ class _StatusBadge extends StatelessWidget {
   }
 }
 
-/// IV-IMPACT-I6-PHYSICAL-CLOSURE (physical finding PF-01) — the only way an
-/// admin can REACH a non-commercial module screen on a phone: the drawer lists
-/// commercial modules only (by design) and a phone has no URL bar. Returns the
-/// module's own route when it has one, is adminClickable and is NOT
-/// commercial (commercial modules are already reachable from the drawer);
-/// otherwise null. Navigation still goes through the route entitlement policy
-/// (EXPERIMENTAL ⇒ admin only), so this adds no access, only a path.
+/// IV-IMPACT-I6-PHYSICAL-CLOSURE (physical finding PF-01) / READINESS-03 —
+/// the only way an admin can REACH a non-commercial module screen on a
+/// phone: the drawer lists commercial modules only (by design) and a phone
+/// has no URL bar. Returns the module's own route when it has one, is
+/// adminClickable and is NOT commercial (commercial modules are already
+/// reachable from the drawer); otherwise null. Navigation still goes through
+/// the route entitlement policy (EXPERIMENTAL ⇒ admin only), so this adds no
+/// access, only a path.
 String? moduleOpenRoute(ModuleDefinition module) =>
     module.adminClickable && !module.commercialEnabled && module.route != null ? module.route : null;
 
-class _ModuleDetailSheet extends StatelessWidget {
-  const _ModuleDetailSheet({required this.module, required this.isEnglish});
+/// Public for widget tests (Quant READINESS-03).
+class AdminModuleDetailSheet extends StatelessWidget {
+  const AdminModuleDetailSheet({super.key, required this.module, required this.isEnglish});
   final ModuleDefinition module;
   final bool isEnglish;
 
@@ -468,7 +470,8 @@ class _ModuleDetailSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
     return SafeArea(
-      child: Padding(
+      // Scrollable: long readiness/notes text overflowed at large text scales.
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -510,14 +513,18 @@ class _ModuleDetailSheet extends StatelessWidget {
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
+                height: 48,
                 child: FilledButton.icon(
+                  key: const Key('adminModuleOpen'),
+                  onPressed: () {
+                    final openRoute = moduleOpenRoute(module)!;
+                    // Router captured first: this sheet's context is gone after pop.
+                    final router = GoRouter.of(context);
+                    Navigator.of(context).pop();
+                    router.push(openRoute);
+                  },
                   icon: const Icon(Icons.open_in_new_rounded),
                   label: Text(t.adminModulesOpen),
-                  onPressed: () {
-                    final route = moduleOpenRoute(module)!;
-                    Navigator.of(context).pop();
-                    context.push(route);
-                  },
                 ),
               ),
             ],
