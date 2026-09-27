@@ -16,25 +16,66 @@ import { AuthClient, AuthenticatedUser, AuthError, resolveAuthenticatedUser, una
 import { EntitlementSubjectSource, requireModuleAccess } from '../_shared/entitlement.ts';
 import type { QuotaClient } from '../_shared/quota.ts';
 import { bearerToken, readJsonBody, strategyCorsHeaders, SupabaseStrategyStore, type StrategyStore } from '../_shared/strategy_server.ts';
-import { createStrategySpecification, type StrategySpecificationInput } from '../_shared/strategy/strategy_spec.ts';
+import { createStrategySpecification, type StrategySpecification, type StrategySpecificationInput } from '../_shared/strategy/strategy_spec.ts';
 import { parseNaturalLanguageStrategyDraft } from '../_shared/strategy/nl_draft.ts';
 import type { StrategyErrorCode } from '../_shared/strategy/errors.ts';
+import { getDataset } from '../_shared/strategy/dataset_registry.ts';
+import { engineAcceptsRunRequest, getEngine, type EngineId } from '../_shared/strategy/engine_registry.ts';
+import { runGenericRuleEngine } from '../_shared/strategy/generic_rule_engine.ts';
+import { syntheticFixtureBars } from '../_shared/strategy/generic_engine_fixtures.ts';
+import { validateOhlcvBars } from '../_shared/strategy/ohlcv.ts';
+import { buildCanonicalBacktestResult, type CanonicalBacktestResultInput } from '../_shared/strategy/backtest_result.ts';
+import { compareBacktestResults } from '../_shared/strategy/comparison.ts';
+import { runV10ViaBridge, DEFAULT_BRIDGE_TIMEOUT_MS, type BridgeCostConfig } from '../_shared/strategy/backtest_bridge.ts';
+import { V10_REFERENCE_SPEC_INPUT } from '../_shared/strategy/v10_reference.ts';
+import { GENERIC_REFERENCE_SPEC_INPUT } from '../_shared/strategy/generic_reference_strategy.ts';
 
 export interface StrategyBuilderDeps {
   storeFor?: (accessToken: string) => StrategyStore;
   log?: (line: string) => void;
+  bridgeBaseUrl?: string;
 }
 
-const OPS = new Set(['validate', 'draft_from_text', 'create', 'list', 'get']);
+const OPS = new Set([
+  'validate', 'draft_from_text', 'create', 'list', 'get',
+  'create_version', 'list_versions', 'run_backtest', 'compare_versions', 'clone_reference',
+]);
 
 interface ValidateOp { readonly op: 'validate'; readonly spec: StrategySpecificationInput }
 interface DraftFromTextOp { readonly op: 'draft_from_text'; readonly text: string }
 interface CreateOp { readonly op: 'create'; readonly spec: StrategySpecificationInput }
 interface ListOp { readonly op: 'list' }
 interface GetOp { readonly op: 'get'; readonly strategyId: string }
-type ParsedOp = ValidateOp | DraftFromTextOp | CreateOp | ListOp | GetOp;
+interface CreateVersionOp { readonly op: 'create_version'; readonly strategyId: string; readonly spec: StrategySpecificationInput }
+interface ListVersionsOp { readonly op: 'list_versions'; readonly strategyId: string }
+interface RunBacktestOp {
+  readonly op: 'run_backtest';
+  readonly strategyVersionId: string;
+  readonly datasetId: string;
+  readonly engineId: string;
+  readonly costConfig: BridgeCostConfig | null;
+}
+interface CompareVersionsOp { readonly op: 'compare_versions'; readonly versionAId: string; readonly versionBId: string }
+interface CloneReferenceOp { readonly op: 'clone_reference'; readonly reference: 'V10' | 'GENERIC' }
+type ParsedOp =
+  | ValidateOp | DraftFromTextOp | CreateOp | ListOp | GetOp
+  | CreateVersionOp | ListVersionsOp | RunBacktestOp | CompareVersionsOp | CloneReferenceOp;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isUuid(v: unknown): v is string {
+  return typeof v === 'string' && UUID_RE.test(v);
+}
+
+function parseCostConfig(v: unknown): BridgeCostConfig | null {
+  if (v === null || v === undefined) return null;
+  if (typeof v !== 'object') return null;
+  const c = v as Record<string, unknown>;
+  if (typeof c.brokeragePerContract !== 'number' || typeof c.exchangeFeePerContract !== 'number' || typeof c.slippageTicks !== 'number') {
+    return null;
+  }
+  return { brokeragePerContract: c.brokeragePerContract, exchangeFeePerContract: c.exchangeFeePerContract, slippageTicks: c.slippageTicks };
+}
 
 function parseOp(body: unknown): { ok: true; value: ParsedOp } | { ok: false; code: string } {
   if (!body || typeof body !== 'object') return { ok: false, code: 'INVALID_BODY' };
@@ -51,8 +92,31 @@ function parseOp(body: unknown): { ok: true; value: ParsedOp } | { ok: false; co
     case 'list':
       return { ok: true, value: { op: 'list' } };
     case 'get':
-      if (typeof b.strategyId !== 'string' || !UUID_RE.test(b.strategyId)) return { ok: false, code: 'INVALID_BODY' };
+      if (!isUuid(b.strategyId)) return { ok: false, code: 'INVALID_BODY' };
       return { ok: true, value: { op: 'get', strategyId: b.strategyId } };
+    case 'create_version':
+      if (!isUuid(b.strategyId) || !b.spec || typeof b.spec !== 'object') return { ok: false, code: 'INVALID_BODY' };
+      return { ok: true, value: { op: 'create_version', strategyId: b.strategyId, spec: b.spec as StrategySpecificationInput } };
+    case 'list_versions':
+      if (!isUuid(b.strategyId)) return { ok: false, code: 'INVALID_BODY' };
+      return { ok: true, value: { op: 'list_versions', strategyId: b.strategyId } };
+    case 'run_backtest':
+      if (!isUuid(b.strategyVersionId) || typeof b.datasetId !== 'string' || typeof b.engineId !== 'string') {
+        return { ok: false, code: 'INVALID_BODY' };
+      }
+      return {
+        ok: true,
+        value: {
+          op: 'run_backtest', strategyVersionId: b.strategyVersionId, datasetId: b.datasetId, engineId: b.engineId,
+          costConfig: parseCostConfig(b.costConfig),
+        },
+      };
+    case 'compare_versions':
+      if (!isUuid(b.versionAId) || !isUuid(b.versionBId)) return { ok: false, code: 'INVALID_BODY' };
+      return { ok: true, value: { op: 'compare_versions', versionAId: b.versionAId, versionBId: b.versionBId } };
+    case 'clone_reference':
+      if (b.reference !== 'V10' && b.reference !== 'GENERIC') return { ok: false, code: 'INVALID_BODY' };
+      return { ok: true, value: { op: 'clone_reference', reference: b.reference } };
     default:
       return { ok: false, code: 'UNKNOWN_OP' };
   }
@@ -160,6 +224,215 @@ export async function handler(
         finish(found ? 200 : 404, found ? null : 'NOT_FOUND');
         if (!found) return errorResponse('NOT_FOUND', cid, 404);
         return jsonResponse({ correlation_id: cid, strategy: found.strategy, version: found.version });
+      }
+      case 'create_version': {
+        const validated = createStrategySpecification(action.spec);
+        if (!validated.ok) {
+          finish(STRATEGY_ERROR_STATUS[validated.error.code], validated.error.code);
+          return errorResponse(validated.error.code, cid, STRATEGY_ERROR_STATUS[validated.error.code]);
+        }
+        const token = bearerToken(req) ?? '';
+        const store = (deps.storeFor ?? ((t: string) => new SupabaseStrategyStore(t)))(token);
+        try {
+          // §9/§29: this always creates a NEW row -- the prior version's
+          // spec is never touched (immutable, enforced by the migration's
+          // own missing UPDATE grant, not merely by this code path).
+          const version = await store.createNewVersion(authUser.id, action.strategyId, validated.value);
+          finish(200, null);
+          return jsonResponse({ correlation_id: cid, version });
+        } catch {
+          finish(404, 'NOT_FOUND');
+          return errorResponse('NOT_FOUND', cid, 404);
+        }
+      }
+      case 'list_versions': {
+        const token = bearerToken(req) ?? '';
+        const store = (deps.storeFor ?? ((t: string) => new SupabaseStrategyStore(t)))(token);
+        const versions = await store.listVersions(authUser.id, action.strategyId);
+        finish(200, null);
+        return jsonResponse({ correlation_id: cid, versions });
+      }
+      case 'clone_reference': {
+        const specInput = action.reference === 'V10' ? V10_REFERENCE_SPEC_INPUT : GENERIC_REFERENCE_SPEC_INPUT;
+        const validated = createStrategySpecification(specInput);
+        if (!validated.ok) {
+          // Would only happen if a reference spec itself regressed -- not
+          // a caller error, but still never silently succeed.
+          finish(500, validated.error.code);
+          return errorResponse('INTERNAL_ERROR', cid, 500);
+        }
+        const token = bearerToken(req) ?? '';
+        const store = (deps.storeFor ?? ((t: string) => new SupabaseStrategyStore(t)))(token);
+        // §10: cloning creates the CALLER's own new strategy identity --
+        // the reference's own historical version is never touched (there
+        // is, in fact, no persisted "reference" row at all to touch;
+        // V10_REFERENCE_SPEC_INPUT/GENERIC_REFERENCE_SPEC_INPUT are code
+        // constants, not database rows).
+        const created = await store.create(authUser.id, validated.value);
+        finish(200, null);
+        return jsonResponse({ correlation_id: cid, strategy: created.strategy, version: created.version, clonedFrom: action.reference });
+      }
+      case 'run_backtest': {
+        const token = bearerToken(req) ?? '';
+        const store = (deps.storeFor ?? ((t: string) => new SupabaseStrategyStore(t)))(token);
+        const version = await store.getVersionById(authUser.id, action.strategyVersionId);
+        if (!version) {
+          finish(404, 'NOT_FOUND');
+          return errorResponse('NOT_FOUND', cid, 404);
+        }
+        const dataset = getDataset(action.datasetId);
+        if (!dataset) {
+          finish(400, 'UNKNOWN_DATASET');
+          return errorResponse('UNKNOWN_DATASET', cid, 400);
+        }
+        const engine = getEngine(action.engineId);
+        if (!engine) {
+          finish(400, 'UNKNOWN_ENGINE');
+          return errorResponse('UNKNOWN_ENGINE', cid, 400);
+        }
+        const spec = version.spec;
+        const ruleIds = [
+          spec.entry.ruleId, spec.stop.ruleId, spec.target.ruleId,
+          ...(spec.breakEven ? [spec.breakEven.ruleId] : []),
+          spec.session.ruleId, spec.forcedExit.ruleId, spec.positionSize.ruleId,
+        ];
+        const refusal = engineAcceptsRunRequest(action.engineId, ruleIds, action.datasetId);
+        const startedAt = new Date().toISOString();
+        if (refusal) {
+          const job = await store.insertFailedBacktestJob(authUser.id, version.id, action.datasetId, action.engineId, startedAt, refusal);
+          finish(200, 'ENGINE_REFUSED');
+          return jsonResponse({ correlation_id: cid, job, result: null });
+        }
+
+        const commonInput = {
+          strategyId: version.strategyId,
+          strategyVersion: version.versionNumber,
+          strategySpecHash: version.specHash,
+          datasetId: dataset.datasetId,
+          datasetHash: dataset.hash,
+          instrumentSymbol: dataset.instrumentSymbol,
+          periodStart: dataset.periodStart,
+          periodEnd: dataset.periodEnd,
+          timeframes: [dataset.timeframe],
+          limitations: engine.engineId === 'GENERIC_RULE_ENGINE'
+            ? ['Generic in-process engine: single-direction session-open entry only, no no-trade-reason taxonomy.']
+            : ['5-minute dataset only; no real 1-minute execution data available.'],
+        };
+
+        try {
+          if (engine.kind === 'IN_PROCESS') {
+            if (dataset.datasetId !== 'synthetic-fixture-5min-v1' || !dataset.rowsAvailableInProcess) {
+              const job = await store.insertFailedBacktestJob(authUser.id, version.id, action.datasetId, action.engineId, startedAt, 'dataset has no in-process rows');
+              finish(200, 'DATA_REQUIREMENT_UNMET');
+              return jsonResponse({ correlation_id: cid, job, result: null });
+            }
+            const bars = syntheticFixtureBars();
+            const barsError = validateOhlcvBars(bars);
+            if (barsError) throw new Error(barsError);
+            const runResult = runGenericRuleEngine(spec, bars);
+            if (!runResult.ok) {
+              const job = await store.insertFailedBacktestJob(authUser.id, version.id, action.datasetId, action.engineId, startedAt, runResult.error.message);
+              finish(200, runResult.error.code);
+              return jsonResponse({ correlation_id: cid, job, result: null });
+            }
+            const wins = runResult.value.trades.filter((t) => t.grossPnlPoints > 0).length;
+            const losses = runResult.value.trades.filter((t) => t.grossPnlPoints < 0).length;
+            const grossProfit = runResult.value.trades.filter((t) => t.grossPnlPoints > 0).reduce((s, t) => s + t.grossPnlPoints, 0);
+            const grossLoss = -runResult.value.trades.filter((t) => t.grossPnlPoints < 0).reduce((s, t) => s + t.grossPnlPoints, 0);
+            const netPnl = runResult.value.trades.reduce((s, t) => s + t.grossPnlPoints, 0);
+            const resultInput: CanonicalBacktestResultInput = {
+              ...commonInput,
+              tradeCount: runResult.value.trades.length,
+              longCount: runResult.value.trades.filter((t) => t.direction === 'LONG').length,
+              shortCount: runResult.value.trades.filter((t) => t.direction === 'SHORT').length,
+              wins, losses, grossPnl: netPnl, grossProfit, grossLoss, totalCost: 0, netPnl,
+              maxDrawdown: null,
+              targetTouches: runResult.value.trades.filter((t) => t.exitReason === 'TARGET').length,
+              stopTouches: runResult.value.trades.filter((t) => t.exitReason === 'STOP').length,
+              executionAmbiguityCount: 0,
+              methodologyStatus: 'ZERO_COST_RESEARCH',
+              costAssumptions: null,
+              provenance: 'GENERIC_RULE_ENGINE, in-process, this request.',
+            };
+            const built = await buildCanonicalBacktestResult(resultInput);
+            if (!built.ok) {
+              const job = await store.insertFailedBacktestJob(authUser.id, version.id, action.datasetId, action.engineId, startedAt, built.error.message);
+              finish(200, built.error.code);
+              return jsonResponse({ correlation_id: cid, job, result: null });
+            }
+            const savedResult = await store.insertBacktestResult(authUser.id, version.id, built.value);
+            const job = await store.insertSucceededBacktestJob(authUser.id, version.id, action.datasetId, action.engineId, startedAt, savedResult.id);
+            finish(200, null);
+            return jsonResponse({ correlation_id: cid, job, result: savedResult });
+          }
+
+          // EXTERNAL_PYTHON_SERVICE (PAULO_TREND_FIBONACCI_V10)
+          const baseUrl = deps.bridgeBaseUrl ?? Deno.env.get('BACKTEST_BRIDGE_URL') ?? 'http://127.0.0.1:8737';
+          const bridgeResult = await runV10ViaBridge({ baseUrl, timeoutMs: DEFAULT_BRIDGE_TIMEOUT_MS }, action.datasetId, spec, action.costConfig);
+          if (!bridgeResult.ok) {
+            const job = await store.insertFailedBacktestJob(authUser.id, version.id, action.datasetId, action.engineId, startedAt, bridgeResult.error.message);
+            finish(200, bridgeResult.error.code);
+            return jsonResponse({ correlation_id: cid, job, result: null });
+          }
+          const b = bridgeResult.value;
+          const resultInput: CanonicalBacktestResultInput = {
+            ...commonInput,
+            datasetHash: b.datasetHash,
+            tradeCount: b.tradeCount,
+            longCount: b.longCount,
+            shortCount: b.shortCount,
+            wins: b.wins,
+            losses: b.losses,
+            grossPnl: b.grossPnl,
+            grossProfit: b.grossProfit,
+            grossLoss: b.grossLoss,
+            totalCost: b.totalCost,
+            netPnl: b.netPnl,
+            maxDrawdown: null,
+            targetTouches: b.targetTouches,
+            stopTouches: b.stopTouches,
+            executionAmbiguityCount: b.executionAmbiguityCount,
+            methodologyStatus: action.costConfig ? 'COST_ADJUSTED' : 'ZERO_COST_RESEARCH',
+            costAssumptions: action.costConfig ? { ...action.costConfig, source: 'run_backtest request' } : null,
+            provenance: `Python V10 bridge (${b.engine}); bridge result_hash=${b.resultHash}.`,
+          };
+          const built = await buildCanonicalBacktestResult(resultInput);
+          if (!built.ok) {
+            const job = await store.insertFailedBacktestJob(authUser.id, version.id, action.datasetId, action.engineId, startedAt, built.error.message);
+            finish(200, built.error.code);
+            return jsonResponse({ correlation_id: cid, job, result: null });
+          }
+          const savedResult = await store.insertBacktestResult(authUser.id, version.id, built.value);
+          const job = await store.insertSucceededBacktestJob(authUser.id, version.id, action.datasetId, action.engineId, startedAt, savedResult.id);
+          finish(200, null);
+          return jsonResponse({ correlation_id: cid, job, result: savedResult });
+        } catch (e) {
+          const job = await store.insertFailedBacktestJob(
+            authUser.id, version.id, action.datasetId, action.engineId, startedAt,
+            e instanceof Error ? e.message : 'unknown error',
+          ).catch(() => null);
+          finish(500, 'INTERNAL_ERROR');
+          return jsonResponse({ correlation_id: cid, job, result: null });
+        }
+      }
+      case 'compare_versions': {
+        const token = bearerToken(req) ?? '';
+        const store = (deps.storeFor ?? ((t: string) => new SupabaseStrategyStore(t)))(token);
+        const [resultsA, resultsB] = await Promise.all([
+          store.listBacktestResultsForVersion(authUser.id, action.versionAId),
+          store.listBacktestResultsForVersion(authUser.id, action.versionBId),
+        ]);
+        if (resultsA.length === 0 || resultsB.length === 0) {
+          finish(404, 'NOT_FOUND');
+          return errorResponse('NO_BACKTEST_RESULT', cid, 404);
+        }
+        const comparison = compareBacktestResults(resultsA[0].canonicalResult, resultsB[0].canonicalResult);
+        if (!comparison.ok) {
+          finish(STRATEGY_ERROR_STATUS[comparison.error.code], comparison.error.code);
+          return errorResponse(comparison.error.code, cid, STRATEGY_ERROR_STATUS[comparison.error.code]);
+        }
+        finish(200, null);
+        return jsonResponse({ correlation_id: cid, comparison: comparison.value });
       }
     }
   } catch {

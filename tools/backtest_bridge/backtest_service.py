@@ -109,6 +109,12 @@ def _run_v10(dataset_id: str, params: dict) -> dict:
     gap_trades = sum(1 for t in result.trades if t.execution_price_source == "BAR_OPEN_GAP")
     target_touches = sum(1 for t in result.trades if t.execution_price_source == "TARGET_LEVEL")
     stop_touches = sum(1 for t in result.trades if t.execution_price_source == "STOP_LEVEL")
+    long_count = sum(1 for t in result.trades if t.direction == "BULLISH")
+    short_count = sum(1 for t in result.trades if t.direction == "BEARISH")
+    wins = sum(1 for t in result.trades if t.net_pnl > 0)
+    losses = sum(1 for t in result.trades if t.net_pnl < 0)
+    gross_profit = sum(t.gross_pnl for t in result.trades if t.gross_pnl > 0)
+    gross_loss = -sum(t.gross_pnl for t in result.trades if t.gross_pnl < 0)
     # total_cost is derived from gross_pnl - net_pnl (both real, trusted
     # V4BacktestResult properties) rather than summed per-trade: a fresh
     # E2E run against the real dataset caught sum(t.total_cost ...)
@@ -125,8 +131,14 @@ def _run_v10(dataset_id: str, params: dict) -> dict:
         "dataset_id": dataset_id,
         "dataset_hash": dataset.manifest.dataset_hash,
         "trade_count": len(result.trades),
+        "long_count": long_count,
+        "short_count": short_count,
+        "wins": wins,
+        "losses": losses,
         "net_pnl": result.net_pnl,
         "gross_pnl": result.gross_pnl,
+        "gross_profit": gross_profit,
+        "gross_loss": gross_loss,
         "total_cost": total_cost,
         "target_touches": target_touches,
         "stop_touches": stop_touches,

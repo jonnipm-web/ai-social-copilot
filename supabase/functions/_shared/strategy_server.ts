@@ -12,6 +12,7 @@ import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supa
 import { sha256Hex } from '../../../aef/persistence/canonical.ts';
 import type { StrategySpecification } from './strategy/strategy_spec.ts';
 import type { StrategyStatus } from './strategy/lifecycle.ts';
+import type { CanonicalBacktestResult } from './strategy/backtest_result.ts';
 
 export const strategyCorsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -93,6 +94,32 @@ export interface StrategyVersionRow {
   readonly createdAt: string;
 }
 
+export interface StrategyBacktestResultRow {
+  readonly id: string;
+  readonly strategyVersionId: string;
+  readonly datasetId: string;
+  readonly datasetHash: string;
+  readonly methodologyStatus: string;
+  readonly netPnl: number;
+  readonly tradeCount: number;
+  readonly resultHash: string;
+  readonly canonicalResult: CanonicalBacktestResult;
+  readonly createdAt: string;
+}
+
+export interface StrategyBacktestJobRow {
+  readonly id: string;
+  readonly strategyVersionId: string;
+  readonly datasetId: string;
+  readonly engineId: string;
+  readonly status: 'SUCCEEDED' | 'FAILED';
+  readonly startedAt: string;
+  readonly completedAt: string;
+  readonly failureReason: string | null;
+  readonly resultId: string | null;
+  readonly createdAt: string;
+}
+
 export interface StrategyStore {
   list(userId: string): Promise<StrategyRow[]>;
   /** Creates a strategy AND its version-1 snapshot atomically (via an RPC
@@ -102,6 +129,35 @@ export interface StrategyStore {
    * and delete themselves — never a different user's data). */
   create(userId: string, spec: StrategySpecification): Promise<{ strategy: StrategyRow; version: StrategyVersionRow }>;
   getWithLatestVersion(userId: string, strategyId: string): Promise<{ strategy: StrategyRow; version: StrategyVersionRow } | null>;
+  /** §9/§29: editing a strategy's behavior creates a NEW version -- never
+   * mutates an existing one. `strategy_versions_unique` (strategy_id,
+   * version_number) makes a race on the next version number fail
+   * (23505), surfaced here as a thrown Error so the caller can retry. */
+  createNewVersion(userId: string, strategyId: string, spec: StrategySpecification): Promise<StrategyVersionRow>;
+  listVersions(userId: string, strategyId: string): Promise<StrategyVersionRow[]>;
+  getVersionById(userId: string, versionId: string): Promise<StrategyVersionRow | null>;
+  insertBacktestResult(
+    userId: string,
+    strategyVersionId: string,
+    result: CanonicalBacktestResult,
+  ): Promise<StrategyBacktestResultRow>;
+  insertFailedBacktestJob(
+    userId: string,
+    strategyVersionId: string,
+    datasetId: string,
+    engineId: string,
+    startedAt: string,
+    failureReason: string,
+  ): Promise<StrategyBacktestJobRow>;
+  insertSucceededBacktestJob(
+    userId: string,
+    strategyVersionId: string,
+    datasetId: string,
+    engineId: string,
+    startedAt: string,
+    resultId: string,
+  ): Promise<StrategyBacktestJobRow>;
+  listBacktestResultsForVersion(userId: string, strategyVersionId: string): Promise<StrategyBacktestResultRow[]>;
 }
 
 const STRATEGY_SELECT = 'id, name, status, current_version, created_at, updated_at';
@@ -124,6 +180,36 @@ function rowToVersion(row: Record<string, unknown>): StrategyVersionRow {
     versionNumber: Number(row.version_number),
     spec: row.spec as StrategySpecification,
     specHash: String(row.spec_hash),
+    createdAt: String(row.created_at),
+  };
+}
+
+function rowToBacktestResult(row: Record<string, unknown>): StrategyBacktestResultRow {
+  return {
+    id: String(row.id),
+    strategyVersionId: String(row.strategy_version_id),
+    datasetId: String(row.dataset_id),
+    datasetHash: String(row.dataset_hash),
+    methodologyStatus: String(row.methodology_status),
+    netPnl: Number(row.net_pnl),
+    tradeCount: Number(row.trade_count),
+    resultHash: String(row.result_hash),
+    canonicalResult: row.canonical_result as CanonicalBacktestResult,
+    createdAt: String(row.created_at),
+  };
+}
+
+function rowToBacktestJob(row: Record<string, unknown>): StrategyBacktestJobRow {
+  return {
+    id: String(row.id),
+    strategyVersionId: String(row.strategy_version_id),
+    datasetId: String(row.dataset_id),
+    engineId: String(row.engine_id),
+    status: row.status as 'SUCCEEDED' | 'FAILED',
+    startedAt: String(row.started_at),
+    completedAt: String(row.completed_at),
+    failureReason: row.failure_reason === null ? null : String(row.failure_reason),
+    resultId: row.result_id === null ? null : String(row.result_id),
     createdAt: String(row.created_at),
   };
 }
@@ -169,5 +255,97 @@ export class SupabaseStrategyStore implements StrategyStore {
     if (versionError) throw new Error('strategy version get failed');
     if (!versionData) return null;
     return { strategy, version: rowToVersion(versionData) };
+  }
+
+  async createNewVersion(userId: string, strategyId: string, spec: StrategySpecification): Promise<StrategyVersionRow> {
+    const { data: existing, error: listError } = await this.db.from('strategy_versions')
+      .select('version_number').eq('strategy_id', strategyId).eq('user_id', userId)
+      .order('version_number', { ascending: false }).limit(1);
+    if (listError) throw new Error('strategy version lookup failed');
+    const nextVersion = ((existing?.[0]?.version_number as number | undefined) ?? 0) + 1;
+    const specHash = (await sha256Hex(JSON.stringify(spec))).slice(0, 32);
+    const { data, error } = await this.db.from('strategy_versions')
+      .insert({ strategy_id: strategyId, user_id: userId, version_number: nextVersion, spec, spec_hash: specHash })
+      .select('id, strategy_id, version_number, spec, spec_hash, created_at').single();
+    if (error || !data) throw new Error('strategy version create failed');
+    return rowToVersion(data);
+  }
+
+  async listVersions(userId: string, strategyId: string): Promise<StrategyVersionRow[]> {
+    const { data, error } = await this.db.from('strategy_versions')
+      .select('id, strategy_id, version_number, spec, spec_hash, created_at')
+      .eq('strategy_id', strategyId).eq('user_id', userId)
+      .order('version_number', { ascending: true }).limit(200);
+    if (error) throw new Error('strategy version list failed');
+    return (data ?? []).map(rowToVersion);
+  }
+
+  async getVersionById(userId: string, versionId: string): Promise<StrategyVersionRow | null> {
+    const { data, error } = await this.db.from('strategy_versions')
+      .select('id, strategy_id, version_number, spec, spec_hash, created_at')
+      .eq('id', versionId).eq('user_id', userId).maybeSingle();
+    if (error) throw new Error('strategy version get failed');
+    return data ? rowToVersion(data) : null;
+  }
+
+  async insertBacktestResult(
+    userId: string,
+    strategyVersionId: string,
+    result: CanonicalBacktestResult,
+  ): Promise<StrategyBacktestResultRow> {
+    const { data, error } = await this.db.from('strategy_backtest_results').insert({
+      strategy_version_id: strategyVersionId,
+      user_id: userId,
+      dataset_id: result.datasetId,
+      dataset_hash: result.datasetHash,
+      methodology_status: result.methodologyStatus,
+      net_pnl: result.netPnl,
+      trade_count: result.tradeCount,
+      result_hash: result.resultHash,
+      canonical_result: result,
+    }).select('id, strategy_version_id, dataset_id, dataset_hash, methodology_status, net_pnl, trade_count, result_hash, canonical_result, created_at').single();
+    if (error || !data) throw new Error('backtest result insert failed');
+    return rowToBacktestResult(data);
+  }
+
+  async insertFailedBacktestJob(
+    userId: string,
+    strategyVersionId: string,
+    datasetId: string,
+    engineId: string,
+    startedAt: string,
+    failureReason: string,
+  ): Promise<StrategyBacktestJobRow> {
+    const { data, error } = await this.db.from('strategy_backtest_jobs').insert({
+      user_id: userId, strategy_version_id: strategyVersionId, dataset_id: datasetId, engine_id: engineId,
+      status: 'FAILED', started_at: startedAt, completed_at: new Date().toISOString(), failure_reason: failureReason,
+    }).select('id, strategy_version_id, dataset_id, engine_id, status, started_at, completed_at, failure_reason, result_id, created_at').single();
+    if (error || !data) throw new Error('backtest job insert failed');
+    return rowToBacktestJob(data);
+  }
+
+  async insertSucceededBacktestJob(
+    userId: string,
+    strategyVersionId: string,
+    datasetId: string,
+    engineId: string,
+    startedAt: string,
+    resultId: string,
+  ): Promise<StrategyBacktestJobRow> {
+    const { data, error } = await this.db.from('strategy_backtest_jobs').insert({
+      user_id: userId, strategy_version_id: strategyVersionId, dataset_id: datasetId, engine_id: engineId,
+      status: 'SUCCEEDED', started_at: startedAt, completed_at: new Date().toISOString(), result_id: resultId,
+    }).select('id, strategy_version_id, dataset_id, engine_id, status, started_at, completed_at, failure_reason, result_id, created_at').single();
+    if (error || !data) throw new Error('backtest job insert failed');
+    return rowToBacktestJob(data);
+  }
+
+  async listBacktestResultsForVersion(userId: string, strategyVersionId: string): Promise<StrategyBacktestResultRow[]> {
+    const { data, error } = await this.db.from('strategy_backtest_results')
+      .select('id, strategy_version_id, dataset_id, dataset_hash, methodology_status, net_pnl, trade_count, result_hash, canonical_result, created_at')
+      .eq('strategy_version_id', strategyVersionId).eq('user_id', userId)
+      .order('created_at', { ascending: false }).limit(50);
+    if (error) throw new Error('backtest result list failed');
+    return (data ?? []).map(rowToBacktestResult);
   }
 }

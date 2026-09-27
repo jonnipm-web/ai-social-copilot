@@ -37,8 +37,14 @@ export interface BacktestBridgeSuccess {
   readonly datasetId: string;
   readonly datasetHash: string;
   readonly tradeCount: number;
+  readonly longCount: number;
+  readonly shortCount: number;
+  readonly wins: number;
+  readonly losses: number;
   readonly netPnl: number;
   readonly grossPnl: number;
+  readonly grossProfit: number;
+  readonly grossLoss: number;
   readonly totalCost: number;
   readonly targetTouches: number;
   readonly stopTouches: number;
@@ -110,8 +116,14 @@ export async function runV10ViaBridge(
       datasetId: String(body.dataset_id),
       datasetHash: String(body.dataset_hash),
       tradeCount: Number(body.trade_count),
+      longCount: Number(body.long_count),
+      shortCount: Number(body.short_count),
+      wins: Number(body.wins),
+      losses: Number(body.losses),
       netPnl: Number(body.net_pnl),
       grossPnl: Number(body.gross_pnl),
+      grossProfit: Number(body.gross_profit),
+      grossLoss: Number(body.gross_loss),
       totalCost: Number(body.total_cost),
       targetTouches: Number(body.target_touches),
       stopTouches: Number(body.stop_touches),

@@ -44,7 +44,8 @@ Deno.test('BB-02 a successful bridge response maps cleanly into BacktestBridgeSu
       new Response(
         JSON.stringify({
           ok: true, engine: 'PAULO_TREND_FIBONACCI_V10', dataset_id: 'win1-5min-qt01c3',
-          dataset_hash: '5220e7cc9f46987b8dcf6cb9', trade_count: 75, net_pnl: -57.0, gross_pnl: -57.0,
+          dataset_hash: '5220e7cc9f46987b8dcf6cb9', trade_count: 75, long_count: 40, short_count: 35,
+          wins: 30, losses: 45, net_pnl: -57.0, gross_pnl: -57.0, gross_profit: 500, gross_loss: 557,
           total_cost: 0, target_touches: 8, stop_touches: 47, execution_ambiguity_count: 19,
           result_hash: 'c19661f4dfc61193',
         }),

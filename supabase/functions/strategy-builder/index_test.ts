@@ -8,9 +8,13 @@
 import { assert, assertEquals } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
 import type { AuthClient } from '../_shared/auth.ts';
 import { fakeSubjectSource } from '../_shared/entitlement_test_support.ts';
-import type { StrategyRow, StrategyStore, StrategyVersionRow } from '../_shared/strategy_server.ts';
+import type {
+  StrategyBacktestJobRow, StrategyBacktestResultRow, StrategyRow, StrategyStore, StrategyVersionRow,
+} from '../_shared/strategy_server.ts';
 import type { StrategySpecification } from '../_shared/strategy/strategy_spec.ts';
+import type { CanonicalBacktestResult } from '../_shared/strategy/backtest_result.ts';
 import { V10_REFERENCE_SPEC_INPUT } from '../_shared/strategy/v10_reference.ts';
+import { GENERIC_REFERENCE_SPEC_INPUT } from '../_shared/strategy/generic_reference_strategy.ts';
 import { handler, type StrategyBuilderDeps } from './index.ts';
 
 globalThis.fetch = () => Promise.reject(new Error('network is forbidden in strategy-builder tests'));
@@ -30,6 +34,8 @@ const auth: AuthClient = {
 class MemoryStore implements StrategyStore {
   strategies: (StrategyRow & { userId: string })[] = [];
   versions: (StrategyVersionRow & { userId: string })[] = [];
+  results: (StrategyBacktestResultRow & { userId: string })[] = [];
+  jobs: (StrategyBacktestJobRow & { userId: string })[] = [];
   private n = 0;
   private id() {
     return `cccccccc-0000-4000-8000-${String(++this.n).padStart(12, '0')}`;
@@ -61,6 +67,67 @@ class MemoryStore implements StrategyStore {
     const { userId: _u1, ...strategy } = s;
     const { userId: _u2, ...version } = v;
     return { strategy, version };
+  }
+  // deno-lint-ignore require-await
+  async createNewVersion(u: string, strategyId: string, spec: StrategySpecification) {
+    const existing = this.versions.filter((v) => v.strategyId === strategyId && v.userId === u);
+    if (existing.length === 0) throw new Error('NOT_FOUND');
+    const nextVersion = Math.max(...existing.map((v) => v.versionNumber)) + 1;
+    const version: StrategyVersionRow & { userId: string } = {
+      id: this.id(), userId: u, strategyId, versionNumber: nextVersion, spec, specHash: `h${nextVersion}`, createdAt: 't',
+    };
+    this.versions.push(version);
+    const { userId: _u, ...v } = version;
+    return v;
+  }
+  // deno-lint-ignore require-await
+  async listVersions(u: string, strategyId: string) {
+    return this.versions.filter((v) => v.strategyId === strategyId && v.userId === u)
+      .sort((a, b) => a.versionNumber - b.versionNumber)
+      .map(({ userId: _u, ...v }) => v);
+  }
+  // deno-lint-ignore require-await
+  async getVersionById(u: string, versionId: string) {
+    const v = this.versions.find((x) => x.id === versionId && x.userId === u);
+    if (!v) return null;
+    const { userId: _u, ...version } = v;
+    return version;
+  }
+  // deno-lint-ignore require-await
+  async insertBacktestResult(u: string, strategyVersionId: string, result: CanonicalBacktestResult) {
+    const row: StrategyBacktestResultRow & { userId: string } = {
+      id: this.id(), userId: u, strategyVersionId, datasetId: result.datasetId, datasetHash: result.datasetHash,
+      methodologyStatus: result.methodologyStatus, netPnl: result.netPnl, tradeCount: result.tradeCount,
+      resultHash: result.resultHash, canonicalResult: result, createdAt: 't',
+    };
+    this.results.push(row);
+    const { userId: _u, ...r } = row;
+    return r;
+  }
+  // deno-lint-ignore require-await
+  async insertFailedBacktestJob(u: string, strategyVersionId: string, datasetId: string, engineId: string, startedAt: string, failureReason: string) {
+    const row: StrategyBacktestJobRow & { userId: string } = {
+      id: this.id(), userId: u, strategyVersionId, datasetId, engineId, status: 'FAILED', startedAt,
+      completedAt: 't', failureReason, resultId: null, createdAt: 't',
+    };
+    this.jobs.push(row);
+    const { userId: _u, ...j } = row;
+    return j;
+  }
+  // deno-lint-ignore require-await
+  async insertSucceededBacktestJob(u: string, strategyVersionId: string, datasetId: string, engineId: string, startedAt: string, resultId: string) {
+    const row: StrategyBacktestJobRow & { userId: string } = {
+      id: this.id(), userId: u, strategyVersionId, datasetId, engineId, status: 'SUCCEEDED', startedAt,
+      completedAt: 't', failureReason: null, resultId, createdAt: 't',
+    };
+    this.jobs.push(row);
+    const { userId: _u, ...j } = row;
+    return j;
+  }
+  // deno-lint-ignore require-await
+  async listBacktestResultsForVersion(u: string, strategyVersionId: string) {
+    return this.results.filter((r) => r.strategyVersionId === strategyVersionId && r.userId === u)
+      .map(({ userId: _u, ...r }) => r);
   }
 }
 
@@ -142,4 +209,111 @@ Deno.test('SB-08 an unknown op / malformed body is a structured 400, never a 500
   assertEquals(r1.status, 400);
   const r2 = await call({ op: 'get', strategyId: 'not-a-uuid' });
   assertEquals(r2.status, 400);
+});
+
+Deno.test('SB-09 clone_reference creates the callers OWN new strategy from V10, never touching a shared reference row', async () => {
+  store = new MemoryStore();
+  const r = await call({ op: 'clone_reference', reference: 'V10' });
+  assertEquals(r.status, 200);
+  assertEquals(r.json.strategy.status, 'DRAFT');
+  assertEquals(r.json.version.spec.name, V10_REFERENCE_SPEC_INPUT.name);
+  assert(store.strategies.every((s) => s.userId === A));
+});
+
+Deno.test('SB-10 create_version appends version 2 without touching version 1s spec (§9/§29 immutability)', async () => {
+  store = new MemoryStore();
+  const created = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT });
+  const strategyId = created.json.strategy.id;
+  const v2 = await call({ op: 'create_version', strategyId, spec: { ...GENERIC_REFERENCE_SPEC_INPUT, stop: { ruleId: 'STOP.FIXED_DISTANCE', distance: 7 } } });
+  assertEquals(v2.status, 200);
+  assertEquals(v2.json.version.versionNumber, 2);
+  const listed = await call({ op: 'list_versions', strategyId });
+  assertEquals(listed.json.versions.length, 2);
+  assertEquals(listed.json.versions[0].spec.stop.distance, 5); // v1 unchanged
+  assertEquals(listed.json.versions[1].spec.stop.distance, 7); // v2 new
+});
+
+Deno.test('SB-11 run_backtest against the GENERIC_RULE_ENGINE + synthetic fixture persists a real canonical result', async () => {
+  store = new MemoryStore();
+  const created = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT });
+  const versionId = created.json.version.id;
+  const r = await call({ op: 'run_backtest', strategyVersionId: versionId, datasetId: 'synthetic-fixture-5min-v1', engineId: 'GENERIC_RULE_ENGINE' });
+  assertEquals(r.status, 200);
+  assertEquals(r.json.job.status, 'SUCCEEDED');
+  assertEquals(r.json.result.tradeCount, 2);
+  assertEquals(r.json.result.netPnl, 5); // +10 target, -5 stop (see generic_rule_engine_test.ts GE-01)
+  assert(store.results.every((res) => res.userId === A));
+});
+
+Deno.test('SB-12 run_backtest refuses an engine/dataset mismatch before persisting a result, but still records the job', async () => {
+  store = new MemoryStore();
+  const created = await call({ op: 'create', spec: V10_REFERENCE_SPEC_INPUT });
+  const versionId = created.json.version.id;
+  // V10s own rule set is not on GENERIC_RULE_ENGINEs allowlist.
+  const r = await call({ op: 'run_backtest', strategyVersionId: versionId, datasetId: 'synthetic-fixture-5min-v1', engineId: 'GENERIC_RULE_ENGINE' });
+  assertEquals(r.status, 200);
+  assertEquals(r.json.job.status, 'FAILED');
+  assertEquals(r.json.result, null);
+  assertEquals(store.results.length, 0);
+});
+
+Deno.test('SB-13 run_backtest with an unknown dataset/engine id is a structured 400, never a 500', async () => {
+  store = new MemoryStore();
+  const created = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT });
+  const versionId = created.json.version.id;
+  const badDataset = await call({ op: 'run_backtest', strategyVersionId: versionId, datasetId: 'not-a-real-dataset', engineId: 'GENERIC_RULE_ENGINE' });
+  assertEquals(badDataset.status, 400);
+  const badEngine = await call({ op: 'run_backtest', strategyVersionId: versionId, datasetId: 'synthetic-fixture-5min-v1', engineId: 'NOT_A_REAL_ENGINE' });
+  assertEquals(badEngine.status, 400);
+});
+
+Deno.test('SB-14 compare_versions requires a real backtest result on both sides before computing any delta', async () => {
+  store = new MemoryStore();
+  const created = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT });
+  const strategyId = created.json.strategy.id;
+  const versionAId = created.json.version.id;
+  const v2 = await call({ op: 'create_version', strategyId, spec: GENERIC_REFERENCE_SPEC_INPUT });
+  const versionBId = v2.json.version.id;
+
+  const noResults = await call({ op: 'compare_versions', versionAId, versionBId });
+  assertEquals(noResults.status, 404);
+
+  await call({ op: 'run_backtest', strategyVersionId: versionAId, datasetId: 'synthetic-fixture-5min-v1', engineId: 'GENERIC_RULE_ENGINE' });
+  await call({ op: 'run_backtest', strategyVersionId: versionBId, datasetId: 'synthetic-fixture-5min-v1', engineId: 'GENERIC_RULE_ENGINE' });
+  const compared = await call({ op: 'compare_versions', versionAId, versionBId });
+  assertEquals(compared.status, 200);
+  assertEquals(compared.json.comparison.comparable, true);
+  assertEquals(compared.json.comparison.deltas.netPnlDelta, 0);
+});
+
+Deno.test('SB-15 another user cannot run a backtest against, list versions of, or compare a foreign strategy version', async () => {
+  store = new MemoryStore();
+  const created = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT });
+  const strategyId = created.json.strategy.id;
+  const versionId = created.json.version.id;
+
+  const foreignVersions = await call({ op: 'list_versions', strategyId }, 'jwt-b');
+  assertEquals(foreignVersions.json.versions, []);
+
+  const foreignCreateVersion = await call({ op: 'create_version', strategyId, spec: GENERIC_REFERENCE_SPEC_INPUT }, 'jwt-b');
+  assertEquals(foreignCreateVersion.status, 404);
+
+  const foreignBacktest = await call({ op: 'run_backtest', strategyVersionId: versionId, datasetId: 'synthetic-fixture-5min-v1', engineId: 'GENERIC_RULE_ENGINE' }, 'jwt-b');
+  assertEquals(foreignBacktest.status, 404);
+});
+
+Deno.test('SB-16 non-admin plans are denied for every new op before the store is touched', async () => {
+  store = new MemoryStore();
+  for (const payload of [
+    { op: 'clone_reference', reference: 'V10' },
+    { op: 'create_version', strategyId: 'cccccccc-0000-4000-8000-000000000001', spec: GENERIC_REFERENCE_SPEC_INPUT },
+    { op: 'list_versions', strategyId: 'cccccccc-0000-4000-8000-000000000001' },
+    { op: 'run_backtest', strategyVersionId: 'cccccccc-0000-4000-8000-000000000001', datasetId: 'synthetic-fixture-5min-v1', engineId: 'GENERIC_RULE_ENGINE' },
+    { op: 'compare_versions', versionAId: 'cccccccc-0000-4000-8000-000000000001', versionBId: 'cccccccc-0000-4000-8000-000000000002' },
+  ]) {
+    const r = await call(payload, 'jwt-a', 'free');
+    assertEquals([r.status, r.json.error], [403, 'MODULE_NOT_AVAILABLE'], JSON.stringify(payload));
+  }
+  assertEquals(store.strategies.length, 0);
+  assertEquals(store.jobs.length, 0);
 });
