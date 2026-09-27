@@ -1,10 +1,11 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/action_queue_item.dart';
+import '../models/aef_runtime.dart';
 import '../../core/constants/app_constants.dart';
 
 class ActionQueueService {
-  final _client = Supabase.instance.client;
+  SupabaseClient get _client => Supabase.instance.client;
 
   String? get currentUserId => _client.auth.currentUser?.id;
 
@@ -39,6 +40,31 @@ class ActionQueueService {
     final row = await _client
         .from(AppConstants.tableActionQueue)
         .update({'status': status})
+        .eq('id', id)
+        .select()
+        .single();
+    return ActionQueueItem.fromMap(row);
+  }
+
+  /// INSIGHTVALUES-PRODUCTIZATION-MACRO-03 — writes the item's status and
+  /// AEF provenance together, derived ONLY from a real, already-validated
+  /// AefRuntimeResult (never an invented status string). The status
+  /// written mirrors the receipt's real outcome, not a client guess:
+  ///   SUCCESS            -> 'completed'
+  ///   FAILURE/NOT_EXECUTED -> the item reverts to 'approved' (governance
+  ///                          says nothing happened; the user may retry)
+  ///   PARTIAL/UNKNOWN_OUTCOME -> 'executing' (reconciliation required,
+  ///                          never silently shown as done or failed)
+  Future<ActionQueueItem> applyAefResult(String id, AefRuntimeResult result) async {
+    final status = aefReceiptOutcomeToActionStatus(result);
+    final row = await _client
+        .from(AppConstants.tableActionQueue)
+        .update({
+          'status': status,
+          'aef_operation_id': result.operationId,
+          'aef_receipt_id': result.receiptId,
+          'aef_receipt_outcome': result.receiptOutcome,
+        })
         .eq('id', id)
         .select()
         .single();

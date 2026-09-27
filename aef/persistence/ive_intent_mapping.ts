@@ -89,6 +89,15 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
 
 export interface IveMappingOptions {
   now?: Date;
+  /**
+   * Which calling surface this intent came from (INSIGHTVALUES-
+   * PRODUCTIZATION-MACRO-03) — tags `metadata.source` and the `intent`
+   * field's prefix, so a receipt/audit entry can always tell an
+   * IVE-suggested action apart from an Action-Engine-initiated one, even
+   * though both flow through the exact same governed pipeline. Defaults to
+   * "ive" so every existing caller keeps its exact prior behaviour.
+   */
+  source?: string;
 }
 
 /** Production entry point: always the server-owned IVE_ACTION_MAP. */
@@ -107,6 +116,7 @@ export async function mapIveActionIntentWith(
   verifiedUserId: string,
   opts: IveMappingOptions = {},
 ): Promise<IveMappingResult> {
+  const source = opts.source ?? "ive";
   const fail = (code: AefErrorCode): IveMappingResult => ({ ok: false, code });
   if (typeof verifiedUserId !== "string" || !UUID.test(verifiedUserId)) return fail("AUTH_FAILED");
   if (!isPlainObject(raw)) return fail("INTENT_INVALID");
@@ -142,13 +152,13 @@ export async function mapIveActionIntentWith(
     requested_at: now.toISOString(),
     expires_at: new Date(now.getTime() + REQUEST_LIFETIME_MS).toISOString(),
     actor: { type: "user", id: verifiedUserId.toLowerCase(), auth_ref: `usr:${verifiedUserId.toLowerCase()}` },
-    intent: `ive:${requestedAction}`,
+    intent: `${source}:${requestedAction}`,
     domain: target.domain,
     action: target.action,
     parameters: structuredClone(parameters),
     context_ref: contextRef.toLowerCase(),
-    idempotency_key: `ive:${await sha256Hex(canonical.json)}`,
-    metadata: capabilityId === null ? { source: "ive" } : { source: "ive", capability_hint: capabilityId },
+    idempotency_key: `${source}:${await sha256Hex(canonical.json)}`,
+    metadata: capabilityId === null ? { source } : { source, capability_hint: capabilityId },
   };
   if (projectId !== null) request.resource = { type: "project", id: projectId.toLowerCase() };
   return { ok: true, request };

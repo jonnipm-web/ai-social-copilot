@@ -1376,6 +1376,12 @@ abstract class AppLocalizations {
   /// **'Consequência: envia esta mensagem ao público escolhido (simulado no LAB, nada sai do app).'**
   String get aefLabConsequenceSend;
 
+  /// INSIGHTVALUES-PRODUCTIZATION-MACRO-03 Action Engine governed completion
+  ///
+  /// In pt, this message translates to:
+  /// **'Consequência: marca esta ação como concluída, com recibo governado e trilha de auditoria. Você mesmo executou isso -- o app registra, não faz por você.'**
+  String get aefLabConsequenceCompleteAction;
+
   /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 LAB Human Gate card
   ///
   /// In pt, this message translates to:
@@ -1399,6 +1405,18 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Assunto'**
   String get aefLabFieldSubject;
+
+  /// INSIGHTVALUES-PRODUCTIZATION-MACRO-03 Action Engine governed completion
+  ///
+  /// In pt, this message translates to:
+  /// **'Ação'**
+  String get aefLabFieldActionId;
+
+  /// INSIGHTVALUES-PRODUCTIZATION-MACRO-03 Action Engine governed completion
+  ///
+  /// In pt, this message translates to:
+  /// **'Resumo'**
+  String get aefLabFieldSummary;
 
   /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 LAB Human Gate card
   ///

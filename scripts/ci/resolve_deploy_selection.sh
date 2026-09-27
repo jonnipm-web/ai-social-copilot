@@ -58,6 +58,13 @@ fi
 if [ "$FUNCTION_NAME" = "aef-runtime" ]; then
   deny "aef-runtime is LAB ONLY -- not deployable through this workflow (production deployment is a separate, unauthorized gate)"
 fi
+# INSIGHTVALUES-PRODUCTIZATION-MACRO-03: the Action Engine -> AEF runtime is
+# the same LAB-only boundary (mock tools, local stack) as aef-runtime, just
+# gated by a different entitlement module. No mission has authorized
+# deploying it anywhere.
+if [ "$FUNCTION_NAME" = "action-engine-runtime" ]; then
+  deny "action-engine-runtime is LAB ONLY -- not deployable through this workflow (production deployment is a separate, unauthorized gate)"
+fi
 
 # 4. Must exist in the repo-controlled allowlist (skip comments/blank lines).
 [ -f "$ALLOWLIST" ] || deny "allowlist file missing: $ALLOWLIST"

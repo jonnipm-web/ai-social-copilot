@@ -15,7 +15,14 @@ abstract class AefRuntimeApi {
 }
 
 class AefRuntimeService implements AefRuntimeApi {
-  static const functionName = 'aef-runtime';
+  /// INSIGHTVALUES-PRODUCTIZATION-MACRO-03 — configurable so the SAME client
+  /// contract serves both the IVE-chat LAB card ('aef-runtime') and Action
+  /// Engine's governed execute transition ('action-engine-runtime'); each
+  /// points at its own Edge Function, gated by its own entitlement module
+  /// server-side (see supabase/functions/_shared/aef_runtime_endpoint.ts).
+  AefRuntimeService({this.functionName = 'aef-runtime'});
+
+  final String functionName;
   SupabaseClient get _client => Supabase.instance.client;
 
   Future<AefRuntimeResult> _call(Map<String, dynamic> body) async {
@@ -52,3 +59,9 @@ class AefRuntimeService implements AefRuntimeApi {
 
 /// Overridable in tests; the LAB card reads it only when [kAefRuntimeLabEnabled].
 final aefRuntimeApiProvider = Provider<AefRuntimeApi>((ref) => AefRuntimeService());
+
+/// INSIGHTVALUES-PRODUCTIZATION-MACRO-03 — Action Engine's own governed
+/// runtime client, pointed at action-engine-runtime instead of aef-runtime.
+/// Overridable in tests.
+final actionEngineRuntimeApiProvider =
+    Provider<AefRuntimeApi>((ref) => AefRuntimeService(functionName: 'action-engine-runtime'));

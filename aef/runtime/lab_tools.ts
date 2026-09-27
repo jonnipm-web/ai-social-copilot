@@ -44,6 +44,20 @@ export const LAB_MOCK_TOOLS: readonly LabToolSpec[] = Object.freeze([
       body: { type: "string", required: true, minLength: 1, maxLength: 2000 },
     }),
   }),
+  // INSIGHTVALUES-PRODUCTIZATION-MACRO-03 — Action Engine's one governed
+  // action: the user self-attests they performed a real-world task
+  // (action_engine_tools.ts). Not a real integration with any external
+  // system -- CONSEQUENTIAL + Human Gate because marking a business task
+  // permanently done has real downstream consequences (reporting,
+  // history) even though nothing external is called.
+  Object.freeze({
+    toolId: "internal.mock_complete_action",
+    iveAction: "complete_action",
+    inputSchema: defineToolInputSchema({
+      action_id: { type: "string", required: true, minLength: 1, maxLength: 64 },
+      summary: { type: "string", required: true, minLength: 1, maxLength: 500 },
+    }),
+  }),
 ]);
 
 /**

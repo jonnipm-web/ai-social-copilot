@@ -1,4 +1,11 @@
-// aef-runtime — LAB ONLY (IV-IVE-AEF-RUNTIME-INTEGRATION-01).
+// action-engine-runtime — LAB ONLY (INSIGHTVALUES-PRODUCTIZATION-MACRO-03).
+//
+// The governed bridge for Action Engine's "execute"/"complete" transition:
+// same shared HTTP boundary as aef-runtime (_shared/aef_runtime_endpoint.ts),
+// same shared LAB tool registry (mock tools only, real tools structurally
+// unreachable), but its OWN action table (ACTION_ENGINE_TABLE — one action,
+// complete_action) and its OWN entitlement gate ('action-engine',
+// COMMERCIAL/free, not the admin-only 'aef-runtime-lab').
 //
 // NOT DEPLOYABLE: hard-blocked by scripts/ci/resolve_deploy_selection.sh and
 // absent from .github/deploy-allowlist.tsv. The handler's kill switch
@@ -17,6 +24,7 @@ import { AefGovernance } from '../../../aef/persistence/governance.ts';
 import { PostgresAefStore, SupabaseRpcTransport } from '../../../aef/persistence/store.ts';
 import { IveAefRuntime } from '../../../aef/runtime/ive_aef_runtime.ts';
 import { createLabToolRegistry } from '../../../aef/runtime/lab_tools.ts';
+import { ACTION_ENGINE_TABLE } from '../../../aef/runtime/action_engine_tools.ts';
 
 let runtime: IveAefRuntime | null = null;
 
@@ -30,7 +38,7 @@ function labRuntime(): IveAefRuntime {
     store: new PostgresAefStore(new SupabaseRpcTransport(createServiceClient())),
     requireInputSchema: true,
   });
-  runtime = new IveAefRuntime({ governance });
+  runtime = new IveAefRuntime({ governance, table: ACTION_ENGINE_TABLE, source: 'action_engine' });
   return runtime;
 }
 
@@ -43,10 +51,10 @@ export async function handler(
   subjectSource?: EntitlementSubjectSource,
   deps: Partial<Omit<AefRuntimeEndpointDeps, 'authClient' | 'subjectSource'>> = {},
 ): Promise<Response> {
-  // resolveAuthenticatedUser + requireModuleAccess(req, user, 'aef-runtime-lab', ...)
+  // resolveAuthenticatedUser + requireModuleAccess(req, user, 'action-engine', ...)
   // run inside handleAefRuntime (_shared/aef_runtime_endpoint.ts), before the
   // LAB kill switch and before the runtime is built — see MP-06.
-  return await handleAefRuntime(req, { runtime: labRuntime, moduleId: 'aef-runtime-lab', ...deps, authClient, subjectSource });
+  return await handleAefRuntime(req, { runtime: labRuntime, moduleId: 'action-engine', ...deps, authClient, subjectSource });
 }
 
 if (Deno.env.get('DENO_TESTING') !== '1') {

@@ -723,6 +723,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Consequence: sends this message to the chosen audience (simulated in the LAB, nothing leaves the app).';
 
   @override
+  String get aefLabConsequenceCompleteAction =>
+      'Consequence: marks this action as done, with a governed receipt and audit trail. You performed this yourself — the app records it, it does not do it for you.';
+
+  @override
   String get aefLabFieldChannel => 'Channel';
 
   @override
@@ -733,6 +737,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aefLabFieldSubject => 'Subject';
+
+  @override
+  String get aefLabFieldActionId => 'Action';
+
+  @override
+  String get aefLabFieldSummary => 'Summary';
 
   @override
   String get aefLabFieldBody => 'Message';

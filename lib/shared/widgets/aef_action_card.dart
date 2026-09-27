@@ -15,10 +15,23 @@ import '../../l10n/app_localizations.dart';
 /// [AefRuntimeResult.isCompleted]; UNKNOWN_OUTCOME is visually distinct from
 /// FAILED and offers no retry.
 class AefActionCard extends StatefulWidget {
-  const AefActionCard({super.key, required this.intent, required this.api});
+  const AefActionCard({super.key, required this.intent, required this.api, this.initialValues = const {}, this.onResult});
 
   final IveActionIntentData intent;
   final AefRuntimeApi api;
+
+  /// INSIGHTVALUES-PRODUCTIZATION-MACRO-03 — pre-fills a text field's
+  /// initial content (e.g. Action Engine passing the action's own id and
+  /// title so the user reviews, rather than retypes, them). The user can
+  /// still edit before requesting approval — this is display convenience
+  /// only, never trusted: the server re-validates every field regardless.
+  final Map<String, String> initialValues;
+
+  /// INSIGHTVALUES-PRODUCTIZATION-MACRO-03 — called every time the server
+  /// returns a new result (propose/decide/execute), so a caller (e.g.
+  /// Action Engine) can persist the REAL, receipted outcome once terminal,
+  /// without this card needing to know anything about action_queue.
+  final ValueChanged<AefRuntimeResult>? onResult;
 
   @override
   State<AefActionCard> createState() => _AefActionCardState();
@@ -37,7 +50,7 @@ class _AefActionCardState extends State<AefActionCard> {
   void initState() {
     super.initState();
     for (final f in _fields) {
-      if (f.options == null) _text[f.name] = TextEditingController();
+      if (f.options == null) _text[f.name] = TextEditingController(text: widget.initialValues[f.name] ?? '');
     }
   }
 
@@ -70,6 +83,7 @@ class _AefActionCardState extends State<AefActionCard> {
       _result = r;
       _busy = false;
     });
+    widget.onResult?.call(r);
   }
 
   void _requestApproval() {
@@ -96,6 +110,8 @@ class _AefActionCardState extends State<AefActionCard> {
         'text' => l.aefLabFieldText,
         'audience' => l.aefLabFieldAudience,
         'subject' => l.aefLabFieldSubject,
+        'action_id' => l.aefLabFieldActionId,
+        'summary' => l.aefLabFieldSummary,
         _ => l.aefLabFieldBody,
       };
 
@@ -134,7 +150,11 @@ class _AefActionCardState extends State<AefActionCard> {
     final l = AppLocalizations.of(context)!;
     final locked = _submitted != null;
     final (icon, color) = _phaseStyle();
-    final consequence = widget.intent.requestedAction == 'send_message' ? l.aefLabConsequenceSend : l.aefLabConsequencePublish;
+    final consequence = switch (widget.intent.requestedAction) {
+      'send_message' => l.aefLabConsequenceSend,
+      'complete_action' => l.aefLabConsequenceCompleteAction,
+      _ => l.aefLabConsequencePublish,
+    };
     return Container(
       margin: const EdgeInsets.only(top: 8),
       padding: const EdgeInsets.all(12),

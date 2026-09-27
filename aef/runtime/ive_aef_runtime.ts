@@ -28,6 +28,8 @@ export interface IveAefRuntimeDeps {
   governance: AefGovernance;
   table?: IveActionTable;
   now?: () => Date;
+  /** Tags metadata.source/intent-prefix (INTEGRATION-MACRO-03); defaults to "ive". */
+  source?: string;
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -64,7 +66,10 @@ export class IveAefRuntime {
 
   private async submit(intent: unknown, subjectId: string, credential: RawCredential): Promise<RuntimePresentation> {
     if (typeof subjectId !== "string" || !UUID.test(subjectId)) return denied("AUTH_FAILED");
-    const mapped = await mapIveActionIntentWith(this.deps.table ?? LAB_IVE_ACTION_TABLE, intent, subjectId, { now: this.deps.now?.() });
+    const mapped = await mapIveActionIntentWith(this.deps.table ?? LAB_IVE_ACTION_TABLE, intent, subjectId, {
+      now: this.deps.now?.(),
+      source: this.deps.source,
+    });
     if (!mapped.ok) {
       // Refused before AEF could register anything: still recorded in the
       // subject's audit chain (Codex RG2-02).

@@ -39,6 +39,23 @@ const Map<String, AefPhase> _serverPhases = {
   'DENIED': AefPhase.denied,
 };
 
+/// INSIGHTVALUES-PRODUCTIZATION-MACRO-03 — the Action Engine <-> AEF
+/// authority boundary, as a pure mapping: the ONLY status an AEF-governed
+/// action_queue write may carry is one derived from a real, terminal,
+/// receipted [AefRuntimeResult] (ActionQueueService.applyAefResult). Pure
+/// and Supabase-free so the boundary itself is directly testable, mirroring
+/// [AefRuntimeResult.isCompleted]'s own fail-closed rule.
+String aefReceiptOutcomeToActionStatus(AefRuntimeResult result) {
+  if (!result.isCompleted && result.receiptOutcome == null) {
+    throw ArgumentError('aefReceiptOutcomeToActionStatus requires a terminal, receipted result');
+  }
+  return switch (result.receiptOutcome) {
+    'SUCCESS' => 'completed',
+    'FAILURE' || 'NOT_EXECUTED' => 'approved',
+    _ => 'executing', // PARTIAL / UNKNOWN_OUTCOME: reconciliation required
+  };
+}
+
 bool isTerminalPhase(AefPhase p) => const {
       AefPhase.succeeded,
       AefPhase.failed,
@@ -226,5 +243,13 @@ const Map<String, List<AefLabField>> kAefLabActions = {
     AefLabField('audience', options: ['customers', 'leads', 'team'], maxLength: 16),
     AefLabField('subject', maxLength: 120),
     AefLabField('body', maxLength: 2000),
+  ],
+  // INSIGHTVALUES-PRODUCTIZATION-MACRO-03 — Action Engine's one governed
+  // action (aef/runtime/action_engine_tools.ts). 'action_id' and 'summary'
+  // are pre-filled by the caller (see AefActionCard.initialValues) from the
+  // real action_queue item; the user reviews rather than retypes them.
+  'complete_action': [
+    AefLabField('action_id', maxLength: 64),
+    AefLabField('summary', maxLength: 500),
   ],
 };

@@ -10,6 +10,7 @@ import { mapIveActionIntentWith } from "../persistence/ive_intent_mapping.ts";
 import type { GovernanceResult } from "../persistence/governance.ts";
 import { defineToolInputSchema, validateToolInput } from "../persistence/tool_input_schema.ts";
 import { assertMockOnly, createLabToolRegistry, LAB_IVE_ACTION_TABLE, LAB_MOCK_TOOLS } from "./lab_tools.ts";
+import { ACTION_ENGINE_TABLE } from "./action_engine_tools.ts";
 import { presentResult } from "./presentation.ts";
 import { checkLabRuntime, type RuntimeEnv } from "./runtime_guard.ts";
 import { handleAefRuntime } from "../../supabase/functions/_shared/aef_runtime_endpoint.ts";
@@ -243,7 +244,7 @@ class RecordingRuntime {
   cancel(...a: unknown[]) { return this.reply("cancel", a); }
 }
 
-function call(body: unknown, o: { token?: string | null; role?: string; vars?: Record<string, string> } = {}) {
+function call(body: unknown, o: { token?: string | null; role?: string; vars?: Record<string, string>; moduleId?: string } = {}) {
   const rt = new RecordingRuntime();
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   const token = o.token === undefined ? "session-jwt" : o.token;
@@ -253,6 +254,7 @@ function call(body: unknown, o: { token?: string | null; role?: string; vars?: R
     env: env(o.vars ?? LAB),
     authClient: auth as never,
     subjectSource: fakeSubjectSource(o.role ?? "admin"),
+    moduleId: o.moduleId ?? "aef-runtime-lab",
     runtime: () => {
       rt.built++;
       return rt as unknown as IveAefRuntime;
@@ -319,4 +321,52 @@ Deno.test("RU-16 aef-runtime is absent from the deploy allowlist and hard-blocke
   assert(!names.includes("aef-runtime"));
   const resolver = await Deno.readTextFile(new URL("../../scripts/ci/resolve_deploy_selection.sh", import.meta.url));
   assert(/if \[ "\$FUNCTION_NAME" = "aef-runtime" \]; then\s+deny /.test(resolver));
+});
+
+Deno.test("RU-17 (PRODUCTIZATION-MACRO-03) action-engine-runtime is absent from the deploy allowlist and hard-blocked by the deploy resolver", async () => {
+  const allow = await Deno.readTextFile(new URL("../../.github/deploy-allowlist.tsv", import.meta.url));
+  const names = allow.split(/\r?\n/).map((l) => l.split("\t")[0].trim()).filter((l) => l && !l.startsWith("#"));
+  assert(!names.includes("action-engine-runtime"));
+  const resolver = await Deno.readTextFile(new URL("../../scripts/ci/resolve_deploy_selection.sh", import.meta.url));
+  assert(/if \[ "\$FUNCTION_NAME" = "action-engine-runtime" \]; then\s+deny /.test(resolver));
+});
+
+// ── Action Engine <-> AEF reconciliation (PRODUCTIZATION-MACRO-03) ────────
+
+Deno.test("RU-18 ACTION_ENGINE_TABLE maps only complete_action; it does NOT inherit IVE's action vocabulary", async () => {
+  const ok = await mapIveActionIntentWith(ACTION_ENGINE_TABLE, intent({ requestedAction: "complete_action", parameters: { action_id: "a1", summary: "did it" } }), SUBJECT);
+  assert(ok.ok);
+  assertEquals(ok.ok && ok.request.action, "internal.mock_complete_action");
+  // Every IVE action -- including the two IVE actually has mock tools for --
+  // is UNKNOWN on this table. A calling surface confusion (Action Engine
+  // accidentally reaching IVE's publish_content, or vice versa) is exactly
+  // the class of bug two separate tables exist to prevent.
+  for (const action of ["publish_content", "send_message", "payment", "transfer_funds", "delete_data", "execute_workflow", "module_action", "trade_order"]) {
+    const r = await mapIveActionIntentWith(ACTION_ENGINE_TABLE, intent({ requestedAction: action, parameters: { action_id: "a1", summary: "x" } }), SUBJECT);
+    assertEquals(r.ok ? "ok" : r.code, "INTENT_ACTION_UNKNOWN", action);
+  }
+});
+
+Deno.test("RU-19 action-engine-runtime's entitlement gate is 'action-engine' (COMMERCIAL/free) -- not the admin-only 'aef-runtime-lab', and not the reverse", async () => {
+  // The exact authority-boundary proof this macro's own brief asks for:
+  // mixing up which module gates which calling surface would be a real
+  // authorization bug (an admin-only LAB surface becoming free-for-all, or
+  // a commercial surface becoming accidentally admin-locked).
+  for (const role of ["free", "pro", "premium", "beta_tester"]) {
+    const c = call({ op: "propose", intent: intent() }, { role, moduleId: "action-engine" });
+    const res = await c.res;
+    // Not blocked by ENTITLEMENT for a COMMERCIAL/free module -- whatever
+    // status comes back (e.g. the kill switch's own 503) is unrelated to
+    // authorization, so this only asserts entitlement itself didn't fire.
+    if (res.status === 403) {
+      const body = await res.clone().json().catch(() => ({}));
+      assert(body.error !== "MODULE_NOT_AVAILABLE" && body.error !== "PLAN_REQUIRED", `${role}: ${JSON.stringify(body)}`);
+    }
+  }
+  // The admin-only surface must still refuse every non-admin role when
+  // explicitly asked with its OWN moduleId (regression guard for RU-13).
+  for (const role of ["free", "pro", "premium", "beta_tester"]) {
+    const c = call({ op: "propose", intent: intent() }, { role, moduleId: "aef-runtime-lab" });
+    assertEquals((await c.res).status, 403, role);
+  }
 });

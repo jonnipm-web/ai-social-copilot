@@ -13,6 +13,7 @@ import '../../../providers/ive_context_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/context_copilot_widget.dart'
     show showCopilotChat, IveInlineAskPresence;
+import '../widgets/action_engine_execute_sheet.dart';
 
 // ── Colors ────────────────────────────────────────────────────────────────────
 const _kBg      = Color(0xFF0F0F1A);
@@ -108,18 +109,18 @@ class _StatusMenu extends StatelessWidget {
       color: _kCard,
       onSelected: (v) async {
         final notifier = ref.read(actionQueueNotifierProvider.notifier);
+        // INSIGHTVALUES-PRODUCTIZATION-MACRO-03 — 'execute' now opens the
+        // AEF Human Gate sheet instead of a direct status write; there is
+        // no separate 'complete' action anymore (see _StatusButtons).
+        if (v == 'execute') {
+          await ActionEngineExecuteSheet.show(context, item);
+          ref.invalidate(actionQueueItemByIdProvider(item.id));
+          return;
+        }
         try {
           if (v == 'approve')  await notifier.approve(item.id,  title: item.title);
-          if (v == 'execute')  await notifier.execute(item.id,  title: item.title);
-          if (v == 'complete') await notifier.complete(item.id, title: item.title);
           if (v == 'cancel')   await notifier.cancel(item.id,   title: item.title);
           ref.invalidate(actionQueueItemByIdProvider(item.id));
-          if (context.mounted && v == 'complete') {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Ação concluída!'),
-              backgroundColor: _kGreen,
-            ));
-          }
           if (v == 'delete') {
             final ok = await showDialog<bool>(
               context: context,
@@ -161,10 +162,10 @@ class _StatusMenu extends StatelessWidget {
               child: Text('Aprovar', style: TextStyle(color: _kPrimary))),
         if (item.status == 'approved')
           const PopupMenuItem(value: 'execute',
-              child: Text('Iniciar', style: TextStyle(color: _kCyan))),
+              child: Text('Executar (com aprovação AEF)', style: TextStyle(color: _kCyan))),
         if (item.status == 'executing') ...[
-          const PopupMenuItem(value: 'complete',
-              child: Text('Concluir', style: TextStyle(color: _kGreen))),
+          const PopupMenuItem(value: 'execute',
+              child: Text('Verificar novamente', style: TextStyle(color: _kCyan))),
           const PopupMenuItem(value: 'approve',
               child: Text('Pausar', style: TextStyle(color: _kOrange))),
         ],
@@ -812,29 +813,51 @@ class _StatusButtons extends StatelessWidget {
             onTap: () => _run(context, () => n.approve(item.id, title: item.title)),
           ),
 
+        // INSIGHTVALUES-PRODUCTIZATION-MACRO-03 — "execute"/"complete" are
+        // no longer separate manual writes: ActionEngineExecuteSheet drives
+        // a real AEF Human Gate (propose -> approve -> execute), and
+        // ActionQueueNotifier.applyGovernedResult persists exactly the
+        // receipted outcome. There is no "mark as done" button anymore —
+        // completion is something the receipt proves, not something the
+        // client asserts.
         if (item.status == 'approved') ...[
           _Btn(
-            label: 'Iniciar Execução',
+            label: 'Executar (com aprovação AEF)',
             icon: Icons.play_arrow_rounded,
             color: _kCyan,
-            onTap: () => _run(context, () => n.execute(item.id, title: item.title)),
+            onTap: () => ActionEngineExecuteSheet.show(context, item)
+                .then((_) => ref.invalidate(actionQueueItemByIdProvider(item.id))),
           ),
         ],
 
         if (item.status == 'executing') ...[
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: _kCyan.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: _kCyan.withOpacity(0.3)),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.help_outline_rounded, color: _kCyan, size: 18),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'O AEF não confirmou o resultado (reconciliação necessária). Verifique novamente — o mesmo pedido é seguro de repetir.',
+                    style: TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
           _Btn(
-            label: 'Marcar como Concluída',
-            icon: Icons.task_alt_rounded,
-            color: _kGreen,
-            onTap: () async {
-              await _run(context, () => n.complete(item.id, title: item.title));
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Ação concluída!'),
-                  backgroundColor: _kGreen,
-                ));
-              }
-            },
+            label: 'Verificar novamente',
+            icon: Icons.refresh_rounded,
+            color: _kCyan,
+            onTap: () => ActionEngineExecuteSheet.show(context, item)
+                .then((_) => ref.invalidate(actionQueueItemByIdProvider(item.id))),
           ),
           const SizedBox(height: 8),
           _Btn(
@@ -855,13 +878,15 @@ class _StatusButtons extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: _kGreen.withOpacity(0.3)),
             ),
-            child: const Row(
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.task_alt_rounded, color: _kGreen, size: 18),
-                SizedBox(width: 8),
-                Text('Concluída',
-                    style: TextStyle(color: _kGreen, fontWeight: FontWeight.bold)),
+                const Icon(Icons.task_alt_rounded, color: _kGreen, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  item.isAefVerifiedComplete ? 'Concluída (recibo AEF verificado)' : 'Concluída',
+                  style: const TextStyle(color: _kGreen, fontWeight: FontWeight.bold),
+                ),
               ],
             ),
           ),

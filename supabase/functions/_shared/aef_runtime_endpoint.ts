@@ -1,8 +1,12 @@
 /**
- * aef-runtime — LAB-only HTTP boundary for IVE → AEF (IV-IVE-AEF-RUNTIME-INTEGRATION-01).
+ * Shared LAB-only HTTP boundary for a governed AEF runtime
+ * (IV-IVE-AEF-RUNTIME-INTEGRATION-01; reused for Action Engine by
+ * INSIGHTVALUES-PRODUCTIZATION-MACRO-03 — see action-engine-runtime).
  *
  * Order (asserted by tests):
- *   AUTH → ENTITLEMENT ('aef-runtime-lab', EXPERIMENTAL: admin only)
+ *   AUTH → ENTITLEMENT (deps.moduleId — explicit per caller, e.g.
+ *     'aef-runtime-lab' EXPERIMENTAL/admin-only for IVE, 'action-engine'
+ *     COMMERCIAL/free for Action Engine)
  *     → LAB KILL SWITCH → STRICT BODY → IveAefRuntime → AefGovernance
  * The kill switch runs before the runtime (store, tools) is ever built.
  *
@@ -32,6 +36,15 @@ export interface AefRuntimeEndpointDeps {
   env?: RuntimeEnv;
   authClient?: AuthClient;
   subjectSource?: EntitlementSubjectSource;
+  /**
+   * Which registry module gates this HTTP boundary (INTEGRATION-MACRO-03).
+   * Explicit and required — never defaulted — because this IS the
+   * entitlement check: mixing it up between calling surfaces (e.g. gating
+   * Action Engine's endpoint behind the admin-only 'aef-runtime-lab'
+   * module, or vice versa) would be a real authorization bug, not a
+   * cosmetic one.
+   */
+  moduleId: string;
   /** Built lazily with the service_role store only after every check passed. */
   runtime: () => IveAefRuntime;
 }
@@ -69,8 +82,8 @@ export async function handleAefRuntime(req: Request, deps: AefRuntimeEndpointDep
     throw e;
   }
 
-  // ENTITLEMENT — server-side plan/role; EXPERIMENTAL module (admin only).
-  const access = await requireModuleAccess(req, user, 'aef-runtime-lab', corsHeaders, deps.subjectSource);
+  // ENTITLEMENT — server-side plan/role, gated by the caller-specified module.
+  const access = await requireModuleAccess(req, user, deps.moduleId, corsHeaders, deps.subjectSource);
   if (!access.allowed) return access.response;
 
   // LAB KILL SWITCH — before the runtime (store, tools) is ever built.

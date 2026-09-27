@@ -9,6 +9,7 @@ import '../../../providers/feature_flag_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/ive_exclusion_region.dart';
+import '../widgets/action_engine_execute_sheet.dart';
 import 'action_detail_screen.dart';
 
 // ── Colors ───────────────────────────────────────────────────────────────────
@@ -450,9 +451,15 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
                     () => notifier.approve(item.id, title: item.title))),
                 const SizedBox(width: 8),
               ],
+              // INSIGHTVALUES-PRODUCTIZATION-MACRO-03 — "execute"/"complete"
+              // now open the AEF Human Gate sheet instead of a direct
+              // status write; there is no separate "complete" action left
+              // (completion is proven by the receipt, not asserted by a tap).
               if (item.status == 'approved' && !_loading) ...[
-                _ActionBtn('Iniciar', _kCyan, () => _run(
-                    () => notifier.execute(item.id, title: item.title))),
+                _ActionBtn('Executar', _kCyan, () async {
+                  await ActionEngineExecuteSheet.show(context, item);
+                  ref.invalidate(actionQueueItemByIdProvider(item.id));
+                }),
                 const SizedBox(width: 8),
               ],
               if (item.status == 'executing' && !_loading) ...[
@@ -462,8 +469,10 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
                 // its geometry so the placement engine steers clear;
                 // renders unchanged otherwise (ive_exclusion_region.dart).
                 IveExclusionRegion(
-                  child: _ActionBtn('Concluir', _kGreen, () => _run(
-                      () => notifier.complete(item.id, title: item.title))),
+                  child: _ActionBtn('Verificar', _kGreen, () async {
+                    await ActionEngineExecuteSheet.show(context, item);
+                    ref.invalidate(actionQueueItemByIdProvider(item.id));
+                  }),
                 ),
                 const SizedBox(width: 8),
                 _ActionBtn('Pausar', _kOrange, () => _run(

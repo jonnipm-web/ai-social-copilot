@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/services/ive_event_bus.dart';
 import '../data/models/action_queue_item.dart';
+import '../data/models/aef_runtime.dart';
 import '../data/models/ive_event.dart';
 import '../data/models/opportunity_lab_item.dart';
 import '../data/services/action_queue_service.dart';
@@ -85,24 +86,17 @@ class ActionQueueNotifier
     }
   }
 
-  Future<void> execute(String id, {String title = 'Ação'}) async {
+  /// INSIGHTVALUES-PRODUCTIZATION-MACRO-03 — replaces the old direct
+  /// `_svc.updateStatus(id, 'executing'/'completed')` writes. The
+  /// "execute"/"complete" transition is now AEF-governed (Human Gate,
+  /// receipt, audit) via action-engine-runtime — see
+  /// ActionEngineExecuteSheet, which drives propose/decide/execute and
+  /// calls this only with the real, terminal, receipted result. This
+  /// method never invents a status: it writes exactly what the receipt
+  /// says (ActionQueueService.applyAefResult).
+  Future<void> applyGovernedResult(String id, AefRuntimeResult result, {String title = 'Ação'}) async {
     try {
-      await _svc.updateStatus(id, 'executing');
-      await load(projectId: _activeProjectId);
-    } catch (e) {
-      IveEventBus.instance.emit(
-        IveEvent.actionMutationFailed(
-          actionTitle:    title,
-          technicalError: e.toString(),
-        ),
-      );
-      rethrow;
-    }
-  }
-
-  Future<void> complete(String id, {String title = 'Ação'}) async {
-    try {
-      await _svc.updateStatus(id, 'completed');
+      await _svc.applyAefResult(id, result);
       await load(projectId: _activeProjectId);
     } catch (e) {
       IveEventBus.instance.emit(

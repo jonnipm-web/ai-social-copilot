@@ -64,20 +64,41 @@ Deno.test('MP-06 PROMOTION GATE: every MODULE-kind function enforces its own mod
     if (p.kind !== 'MODULE') continue;
     const gatePath = p.gateFile ? `../${p.gateFile}` : `../${fn}/index.ts`;
     const src = await Deno.readTextFile(new URL(gatePath, import.meta.url));
+    const index = p.gateFile ? await Deno.readTextFile(new URL(`../${fn}/index.ts`, import.meta.url)) : src;
     if (p.gateFile) {
       // The delegating index.ts must actually route through that shared handler.
-      const index = await Deno.readTextFile(new URL(`../${fn}/index.ts`, import.meta.url));
       const base = p.gateFile.split('/').pop()!;
       assert(index.includes(base.replace(/\.ts$/, '')), `${fn}/index.ts must delegate to ${p.gateFile}`);
     }
-    const call = new RegExp(`requireModuleAccess\\(\\s*req,\\s*\\w+,\\s*'${p.moduleId}'`);
-    const m = call.exec(src);
-    assert(m, `${fn} must call requireModuleAccess(req, <user>, '${p.moduleId}', ...)`);
+    const literalCall = new RegExp(`requireModuleAccess\\(\\s*req,\\s*\\w+,\\s*'${p.moduleId}'`);
+    const m = literalCall.exec(src);
+    if (m) {
+      assert(/if \(!access\.allowed\) return access\.response;/.test(src), `${fn} must return the denial response`);
+      const authAt = src.indexOf('resolveAuthenticatedUser(req');
+      const quotaAt = src.indexOf('reserveQuota(');
+      assert(authAt >= 0 && authAt < m.index, `${fn}: entitlement must run after authentication`);
+      if (quotaAt >= 0) assert(m.index < quotaAt, `${fn}: entitlement must run before quota reservation`);
+      continue;
+    }
+    // INSIGHTVALUES-PRODUCTIZATION-MACRO-03 — a shared gateFile (e.g.
+    // aef_runtime_endpoint.ts, now serving both aef-runtime and
+    // action-engine-runtime with different moduleIds) can no longer
+    // hold the moduleId as a literal in the requireModuleAccess call —
+    // it's the caller-supplied deps.moduleId. This is only as safe as
+    // proving BOTH: (a) the gateFile calls requireModuleAccess with the
+    // parameterized field, and (b) THIS function's own index.ts binds
+    // that field to exactly the module id the registry declares for it —
+    // the same guarantee, checked across two files instead of one.
+    const parameterizedCall = /requireModuleAccess\(\s*req,\s*\w+,\s*deps\.moduleId/;
+    assert(parameterizedCall.test(src), `${fn} must call requireModuleAccess(req, <user>, '${p.moduleId}', ...) directly, or via a gateFile using deps.moduleId`);
+    const boundLiteral = new RegExp(`moduleId:\\s*'${p.moduleId}'`);
+    assert(boundLiteral.test(index), `${fn}/index.ts must bind moduleId: '${p.moduleId}' when delegating to a parameterized gateFile`);
     assert(/if \(!access\.allowed\) return access\.response;/.test(src), `${fn} must return the denial response`);
     const authAt = src.indexOf('resolveAuthenticatedUser(req');
+    const entitlementAt = src.search(parameterizedCall);
     const quotaAt = src.indexOf('reserveQuota(');
-    assert(authAt >= 0 && authAt < m.index, `${fn}: entitlement must run after authentication`);
-    if (quotaAt >= 0) assert(m.index < quotaAt, `${fn}: entitlement must run before quota reservation`);
+    assert(authAt >= 0 && authAt < entitlementAt, `${fn}: entitlement must run after authentication`);
+    if (quotaAt >= 0) assert(entitlementAt < quotaAt, `${fn}: entitlement must run before quota reservation`);
   }
 });
 

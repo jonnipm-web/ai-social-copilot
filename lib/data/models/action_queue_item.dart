@@ -26,6 +26,15 @@ class ActionQueueItem {
   final int     confidence;
   final String? marketAnalysisId;
 
+  // ── AEF governance provenance (INSIGHTVALUES-PRODUCTIZATION-MACRO-03) ──
+  // Null on every item never routed through the governed execute path
+  // (the common case: a self-performed real-world task, never AEF's
+  // concern). Set only by a real action-engine-runtime response — never
+  // client-invented.
+  final String? aefOperationId;
+  final String? aefReceiptId;
+  final String? aefReceiptOutcome;
+
   const ActionQueueItem({
     required this.id,
     required this.userId,
@@ -49,6 +58,9 @@ class ActionQueueItem {
     this.marketScore     = 0,
     this.confidence      = 0,
     this.marketAnalysisId,
+    this.aefOperationId,
+    this.aefReceiptId,
+    this.aefReceiptOutcome,
   });
 
   static const List<String> statusValues = [
@@ -68,6 +80,13 @@ class ActionQueueItem {
   };
 
   String get originLabel => originLabels[origin] ?? origin;
+
+  /// The ONLY condition under which this item's completion may be shown as
+  /// AEF-verified rather than self-attested: a real, persisted
+  /// ExecutionReceipt with outcome SUCCESS. Mirrors AefRuntimeResult's own
+  /// isCompleted rule (lib/data/models/aef_runtime.dart) so the two never
+  /// silently disagree about what "done" means.
+  bool get isAefVerifiedComplete => aefReceiptOutcome == 'SUCCESS';
 
   static List<String> _parseList(dynamic v) {
     if (v == null) return [];
@@ -100,6 +119,9 @@ class ActionQueueItem {
         marketScore:      map['market_score'] as int? ?? 0,
         confidence:       map['confidence'] as int? ?? 0,
         marketAnalysisId: map['market_analysis_id'] as String?,
+        aefOperationId:    map['aef_operation_id'] as String?,
+        aefReceiptId:      map['aef_receipt_id'] as String?,
+        aefReceiptOutcome: map['aef_receipt_outcome'] as String?,
       );
 
   Map<String, dynamic> toInsertMap() => {

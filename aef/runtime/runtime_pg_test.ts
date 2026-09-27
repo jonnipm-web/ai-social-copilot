@@ -334,7 +334,7 @@ Deno.test({ name: "RT-14 the HTTP boundary end-to-end on the real database: subj
   const LAB = { AEF_RUNTIME_MODE: "LAB", AEF_TOOLS: "MOCK_ONLY", SUPABASE_URL: "http://127.0.0.1:54321" } as Record<string, string>;
   const send = async (body: unknown, vars = LAB, role = "admin") => {
     const res = await handleAefRuntime(new Request("http://localhost/", { method: "POST", headers: { Authorization: `Bearer ${w.tokA.token}`, "Content-Type": "application/json" }, body: JSON.stringify(body) }), {
-      env: { get: (k) => vars[k] }, authClient: authClient as never, subjectSource: fakeSubjectSource(role), runtime: () => h.rt,
+      env: { get: (k) => vars[k] }, authClient: authClient as never, subjectSource: fakeSubjectSource(role), moduleId: "aef-runtime-lab", runtime: () => h.rt,
     });
     return { status: res.status, body: await res.json() };
   };

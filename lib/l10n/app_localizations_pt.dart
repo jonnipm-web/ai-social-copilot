@@ -725,6 +725,10 @@ class AppLocalizationsPt extends AppLocalizations {
       'Consequência: envia esta mensagem ao público escolhido (simulado no LAB, nada sai do app).';
 
   @override
+  String get aefLabConsequenceCompleteAction =>
+      'Consequência: marca esta ação como concluída, com recibo governado e trilha de auditoria. Você mesmo executou isso -- o app registra, não faz por você.';
+
+  @override
   String get aefLabFieldChannel => 'Canal';
 
   @override
@@ -735,6 +739,12 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get aefLabFieldSubject => 'Assunto';
+
+  @override
+  String get aefLabFieldActionId => 'Ação';
+
+  @override
+  String get aefLabFieldSummary => 'Resumo';
 
   @override
   String get aefLabFieldBody => 'Mensagem';

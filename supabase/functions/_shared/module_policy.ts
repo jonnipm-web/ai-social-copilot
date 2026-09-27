@@ -155,7 +155,8 @@ export const MODULE_POLICY: ModulePolicyDoc =
     "module-access": { "kind": "ENTITLEMENT" },
     "stripe-webhook": { "kind": "PUBLIC_WEBHOOK" },
     "ive-agent-runner": { "kind": "RETIRED" },
-    "aef-runtime": { "kind": "MODULE", "moduleId": "aef-runtime-lab", "gateFile": "_shared/aef_runtime_endpoint.ts" }
+    "aef-runtime": { "kind": "MODULE", "moduleId": "aef-runtime-lab", "gateFile": "_shared/aef_runtime_endpoint.ts" },
+    "action-engine-runtime": { "kind": "MODULE", "moduleId": "action-engine", "gateFile": "_shared/aef_runtime_endpoint.ts" }
   }
 }
 // END_MODULE_POLICY_JSON
