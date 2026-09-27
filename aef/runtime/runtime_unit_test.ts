@@ -370,3 +370,24 @@ Deno.test("RU-19 action-engine-runtime's entitlement gate is 'action-engine' (CO
     assertEquals((await c.res).status, 403, role);
   }
 });
+
+Deno.test("RU-20 action-engine's registered tool is CONSEQUENTIAL + Human-Gate-required, regardless of the module policy's own (lower) actionClass label (Codex final audit)", () => {
+  // module_policy.ts declares 'action-engine' actionClass:REVERSIBLE (it
+  // predates this mission, dominated by generate-project-actions) --
+  // that label is a coarse, module-level Promotion Gate input, NOT what
+  // actually runs. createLabToolRegistry fixes classification:CONSEQUENTIAL
+  // and requiresHumanGate:true for EVERY LAB tool unconditionally
+  // (lab_tools.ts), so action-engine's one real capability is exactly as
+  // strictly gated at runtime as any IVE LAB tool, independent of that
+  // module-level label. Reclassifying the module itself would trip MP-03/
+  // MP-09 (no CONSEQUENTIAL module may be COMMERCIAL while
+  // AEF_PERSISTENCE_AVAILABLE is false) for a function that is already
+  // LAB-only, kill-switched and deploy-blocked -- a real, escalated
+  // architectural question (module-level vs function-level actionClass),
+  // not something to silently resolve here. See the final mission report.
+  const { registry } = createLabToolRegistry();
+  const descriptor = registry.describe({ domain: "internal", action: "internal.mock_complete_action" } as ExecutionRequest);
+  assert(descriptor !== undefined, "internal.mock_complete_action must be registered");
+  assertEquals(descriptor.classification, "CONSEQUENTIAL");
+  assertEquals(descriptor.requiresHumanGate, true);
+});

@@ -36,7 +36,18 @@ class ActionQueueService {
     return ActionQueueItem.fromMap(row);
   }
 
+  /// INSIGHTVALUES-PRODUCTIZATION-MACRO-03 (Codex final audit, P1) — 'executing'
+  /// and 'completed' are AEF-governed-only: before this guard, nothing stopped
+  /// a caller from reaching them through this same generic method and
+  /// bypassing applyAefResult (and therefore the Human Gate/receipt) entirely.
+  /// Only applyAefResult may ever write them, because only it derives the
+  /// status from a real AefRuntimeResult rather than an arbitrary string.
+  static const _aefGovernedOnlyStatuses = {'executing', 'completed'};
+
   Future<ActionQueueItem> updateStatus(String id, String status) async {
+    if (_aefGovernedOnlyStatuses.contains(status)) {
+      throw ArgumentError('updateStatus cannot write "$status" -- use applyAefResult, which requires a real AEF receipt');
+    }
     final row = await _client
         .from(AppConstants.tableActionQueue)
         .update({'status': status})

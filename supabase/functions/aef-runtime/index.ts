@@ -46,7 +46,12 @@ export async function handler(
   // resolveAuthenticatedUser + requireModuleAccess(req, user, 'aef-runtime-lab', ...)
   // run inside handleAefRuntime (_shared/aef_runtime_endpoint.ts), before the
   // LAB kill switch and before the runtime is built — see MP-06.
-  return await handleAefRuntime(req, { runtime: labRuntime, moduleId: 'aef-runtime-lab', ...deps, authClient, subjectSource });
+  //
+  // Codex final audit (P2, INSIGHTVALUES-PRODUCTIZATION-MACRO-03) — `deps`
+  // spreads FIRST so a caller-supplied `deps.moduleId` can never override the
+  // literal 'aef-runtime-lab' binding MP-06 verifies (same fix as
+  // action-engine-runtime/index.ts, which shares this exact call shape).
+  return await handleAefRuntime(req, { ...deps, runtime: labRuntime, moduleId: 'aef-runtime-lab', authClient, subjectSource });
 }
 
 if (Deno.env.get('DENO_TESTING') !== '1') {

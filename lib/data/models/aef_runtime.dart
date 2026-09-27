@@ -45,11 +45,24 @@ const Map<String, AefPhase> _serverPhases = {
 /// receipted [AefRuntimeResult] (ActionQueueService.applyAefResult). Pure
 /// and Supabase-free so the boundary itself is directly testable, mirroring
 /// [AefRuntimeResult.isCompleted]'s own fail-closed rule.
+///
+/// Codex final audit (P1) — the original guard only rejected
+/// `receiptOutcome == null`, so a result at a NON-terminal phase (e.g.
+/// AWAITING_APPROVAL) carrying a `receipt` map would still pass, because
+/// AefRuntimeResult.fromMap never cross-checks phase against receipt outcome.
+/// Every branch below now requires the phase to actually BE terminal, and a
+/// SUCCESS outcome additionally requires the exact same phase+completed pair
+/// [isCompleted] itself requires -- there is no longer a way to reach
+/// 'completed' except through the one condition that already means "done".
 String aefReceiptOutcomeToActionStatus(AefRuntimeResult result) {
-  if (!result.isCompleted && result.receiptOutcome == null) {
+  final outcome = result.receiptOutcome;
+  if (!isTerminalPhase(result.phase) || outcome == null || result.receiptId == null || result.operationId == null) {
     throw ArgumentError('aefReceiptOutcomeToActionStatus requires a terminal, receipted result');
   }
-  return switch (result.receiptOutcome) {
+  if (outcome == 'SUCCESS' && !result.isCompleted) {
+    throw ArgumentError('a SUCCESS receipt requires phase SUCCEEDED and server-confirmed completion');
+  }
+  return switch (outcome) {
     'SUCCESS' => 'completed',
     'FAILURE' || 'NOT_EXECUTED' => 'approved',
     _ => 'executing', // PARTIAL / UNKNOWN_OUTCOME: reconciliation required

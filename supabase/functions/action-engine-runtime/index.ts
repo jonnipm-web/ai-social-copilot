@@ -54,7 +54,14 @@ export async function handler(
   // resolveAuthenticatedUser + requireModuleAccess(req, user, 'action-engine', ...)
   // run inside handleAefRuntime (_shared/aef_runtime_endpoint.ts), before the
   // LAB kill switch and before the runtime is built — see MP-06.
-  return await handleAefRuntime(req, { runtime: labRuntime, moduleId: 'action-engine', ...deps, authClient, subjectSource });
+  //
+  // Codex final audit (P2) — `deps` is caller-supplied (the test harness'
+  // positional parity param); with `...deps` spread AFTER the literal
+  // fields, a `deps.moduleId` would have silently won over 'action-engine',
+  // which is exactly the binding MP-06 exists to prove is trustworthy.
+  // `deps` now spreads FIRST so it can only ever add fields this call site
+  // doesn't already fix, never override moduleId/runtime.
+  return await handleAefRuntime(req, { ...deps, runtime: labRuntime, moduleId: 'action-engine', authClient, subjectSource });
 }
 
 if (Deno.env.get('DENO_TESTING') !== '1') {
