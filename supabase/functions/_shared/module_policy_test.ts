@@ -14,6 +14,24 @@ const LIFECYCLES = new Set(['EXPERIMENTAL', 'INTERNAL', 'ALPHA', 'BETA', 'RELEAS
 const PLANS = new Set(['free', 'pro', 'premium']);
 const ACTION_CLASSES = new Set(['READ_ONLY', 'REVERSIBLE', 'CONSEQUENTIAL']);
 
+/**
+ * Codex final audit (round 4, INTELLIGENCE-AUTOMATION-MACRO-04) — extracted
+ * so MP-09 and MP-12's adversarial test share the exact same detection
+ * logic (never duplicated, never allowed to drift): a whole-file
+ * regex.test() would be satisfied by a COMMENTED-OUT `if` line (or one
+ * whose `deny` call was commented out while the `if` survived), since the
+ * text is still "in the file" either way. This checks per-line instead:
+ * the `if [ "$FUNCTION_NAME" = "<fn>" ]` line and an uncommented `deny`
+ * call within the next few lines must BOTH be real, executable shell.
+ */
+function isHardBlockedInDenyScript(script: string, fn: string): boolean {
+  const lines = script.split('\n');
+  const isCommented = (line: string) => line.trim().startsWith('#');
+  const hardBlock = new RegExp(`if\\s*\\[\\s*"\\$FUNCTION_NAME"\\s*=\\s*"${fn}"\\s*\\]`);
+  const ifIndex = lines.findIndex((l) => hardBlock.test(l) && !isCommented(l));
+  return ifIndex >= 0 && lines.slice(ifIndex + 1, ifIndex + 4).some((l) => /\bdeny\s+"/.test(l) && !isCommented(l));
+}
+
 async function edgeFunctionDirs(): Promise<string[]> {
   const out: string[] = [];
   for await (const e of Deno.readDir(FUNCTIONS_DIR)) {
@@ -142,13 +160,24 @@ Deno.test('MP-09 PROMOTION GATE: every function whose EFFECTIVE actionClass is C
   // deploy allowlist script itself (scripts/ci/resolve_deploy_selection.sh),
   // not merely documented as LAB-only.
   const denyScript = await Deno.readTextFile(new URL('../../../scripts/ci/resolve_deploy_selection.sh', import.meta.url));
-  const notContained: string[] = [];
-  for (const fn of Object.keys(MODULE_POLICY.edgeFunctions)) {
-    if (effectiveActionClass(fn) !== 'CONSEQUENTIAL') continue;
-    const hardBlock = new RegExp(`if\\s*\\[\\s*"\\$FUNCTION_NAME"\\s*=\\s*"${fn}"\\s*\\]`);
-    if (!hardBlock.test(denyScript)) notContained.push(fn);
-  }
-  assertEquals(notContained, [], 'a CONSEQUENTIAL-effective function must be hard-blocked in resolve_deploy_selection.sh while AEF persistence is unavailable -- a class C capability may only ever execute through AEF (Human Gate + receipt)');
+  const notContained = Object.keys(MODULE_POLICY.edgeFunctions)
+    .filter((fn) => effectiveActionClass(fn) === 'CONSEQUENTIAL')
+    .filter((fn) => !isHardBlockedInDenyScript(denyScript, fn));
+  assertEquals(notContained, [], 'a CONSEQUENTIAL-effective function must be hard-blocked in resolve_deploy_selection.sh (an UNCOMMENTED if/deny pair, not merely matching text anywhere in the file) while AEF persistence is unavailable -- a class C capability may only ever execute through AEF (Human Gate + receipt)');
+});
+
+Deno.test('MP-12 (Codex final audit, round 4) isHardBlockedInDenyScript rejects commented-out if/deny pairs and similarly-named functions -- a false positive here would silently defeat MP-09', () => {
+  // A commented-out `if` line: not executable, must not count.
+  assert(!isHardBlockedInDenyScript('# if [ "$FUNCTION_NAME" = "quant-runtime" ]; then\n  deny "x"\nfi\n', 'quant-runtime'));
+  // A real `if` whose `deny` call was itself commented out: still not a
+  // real block -- the function falls through to the allowlist check.
+  assert(!isHardBlockedInDenyScript('if [ "$FUNCTION_NAME" = "quant-runtime" ]; then\n  # deny "x"\n  :\nfi\n', 'quant-runtime'));
+  // A deny for a DIFFERENT, merely similarly-named function must never
+  // satisfy a check for the real one (exact match only, no prefix/substring).
+  assert(!isHardBlockedInDenyScript('if [ "$FUNCTION_NAME" = "quant-runtime-v2" ]; then\n  deny "x"\nfi\n', 'quant-runtime'));
+  assert(!isHardBlockedInDenyScript('if [ "$FUNCTION_NAME" = "my-quant-runtime" ]; then\n  deny "x"\nfi\n', 'quant-runtime'));
+  // The genuine, real pattern this codebase actually uses must still pass.
+  assert(isHardBlockedInDenyScript('if [ "$FUNCTION_NAME" = "quant-runtime" ]; then\n  deny "quant-runtime is LAB ONLY"\nfi\n', 'quant-runtime'));
 });
 
 Deno.test('MP-11 an actionClassOverride may only RAISE a function\'s effective risk above its module default, never lower it', () => {

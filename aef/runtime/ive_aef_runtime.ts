@@ -73,6 +73,22 @@ export interface IveAefRuntimeDeps {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const HEX64 = /^[0-9a-f]{64}$/;
 
+/**
+ * Codex final audit (round 4, P2) -- the closed set of RuntimePhase values a
+ * governed operation may be in when it is genuinely done (never
+ * AWAITING_APPROVAL/AUTHORIZED/EXECUTING/DENIED). UNKNOWN_OUTCOME belongs
+ * here too (RU-23): a FAILED-to-confirm outcome that governance still
+ * attached a receipt to (presentResult's FINAL/default branch, as opposed
+ * to the OUTCOME_UNCONFIRMED/REMAINS_UNKNOWN branches, which never carry a
+ * receipt and are already excluded by the receipt check below) is exactly
+ * the "the fact of execution happened, even if uncertain" case this
+ * learning entry exists to record -- not a phase still in flight. Kept
+ * local to this file rather than exported from presentation.ts: this
+ * runtime is the only caller that needs a "may I derive a learning entry
+ * from this" gate.
+ */
+const TERMINAL_PHASES = new Set(["SUCCEEDED", "FAILED", "REJECTED", "EXPIRED", "CANCELLED", "INVALIDATED", "UNKNOWN_OUTCOME"]);
+
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
@@ -130,7 +146,16 @@ export class IveAefRuntime {
    */
   private async writeLearning(presentation: RuntimePresentation, request: ExecutionRequest, subjectId: string): Promise<void> {
     const writer = this.deps.learningWriter;
-    if (!writer || !presentation.receipt || !presentation.operationId) return;
+    // Codex final audit (round 4, INTELLIGENCE-AUTOMATION-MACRO-04, P2): the
+    // receipt/operationId check above already implies a terminal phase given
+    // presentResult()'s current shape (EMPTY.receipt stays null for every
+    // still-in-flight/DENIED/OUTCOME_UNCONFIRMED/REMAINS_UNKNOWN branch) --
+    // but that is an UPSTREAM invariant of AefGovernance/presentResult, not
+    // something this method enforces itself. A defense-in-depth explicit
+    // allowlist means a future change to presentResult (e.g. attaching a
+    // provisional receipt to
+    // EXECUTING) cannot silently make this fire on a non-terminal phase.
+    if (!writer || !presentation.receipt || !presentation.operationId || !TERMINAL_PHASES.has(presentation.phase)) return;
     try {
       await writer({
         subjectId,
