@@ -172,7 +172,29 @@ export async function assembleContext(
   for (const o of oppFit.items) provenance.push({ sourceType: 'opportunity', sourceId: o.id, projectId: pid, label: clip(o.title, 120), updatedAt: null, reason: 'top_project_opportunity', trust: 'server_verified_user_data' });
   for (const a of actFit.items) provenance.push({ sourceType: 'action', sourceId: a.id, projectId: pid, label: clip(a.title, 120), updatedAt: null, reason: 'top_project_action', trust: 'server_verified_user_data' });
   for (const e of k.excerpts) provenance.push(e.provenance);
-  for (const m of memFit.items) provenance.push({ sourceType: 'memory', sourceId: m.id, projectId: m.project_id, label: clip(m.title ?? m.memory_type, 120), updatedAt: m.updated_at ?? m.created_at, reason: m.project_id ? 'project_memory' : 'user_memory', trust: 'untrusted_user_content' });
+  for (const m of memFit.items) {
+    // INSIGHTVALUES-INTELLIGENCE-AUTOMATION-MACRO-04 §7-9/§10-11: a Result
+    // -> Learning row (origin='system_derived') backed by a real AEF
+    // SUCCESS receipt (verification_state='verified') is server-verified,
+    // not the user's own unchecked claim -- the same trust tier an
+    // opportunity/action already gets (line ~172-173 above), never
+    // 'system' (reserved for system_policy -- an instruction, which
+    // memory must never become; see TrustClass's own doc and
+    // business_memory's "never grants a capability" comment). Every other
+    // memory (user-authored, ive_derived, external_agent_derived, or an
+    // unverified/non-receipted system_derived row) keeps the conservative
+    // default.
+    const verified = m.origin === 'system_derived' && m.verification_state === 'verified';
+    provenance.push({
+      sourceType: 'memory',
+      sourceId: m.id,
+      projectId: m.project_id,
+      label: clip(m.title ?? m.memory_type, 120),
+      updatedAt: m.updated_at ?? m.created_at,
+      reason: m.project_id ? 'project_memory' : 'user_memory',
+      trust: verified ? 'server_verified_user_data' : 'untrusted_user_content',
+    });
+  }
 
   return {
     subject: { type: subject.type, plan: subject.plan, roles: [...subject.roles].sort() },
@@ -257,7 +279,7 @@ export class SupabaseIveDataSource implements IveDataSource {
     // Requires migration 20260924000000 (deploy order: migration first;
     // if it is missing this read fails and memory degrades, never leaks).
     let q = this.client.from('business_memory')
-      .select('id, user_id, project_id, memory_type, title, content, source, created_at, scope, origin, status, expires_at, updated_at')
+      .select('id, user_id, project_id, memory_type, title, content, source, created_at, scope, origin, status, expires_at, updated_at, verification_state')
       .eq('user_id', userId).eq('status', 'active');
     // Expiry is enforced by selectMemories() (a second `or` filter in the same
     // PostgREST query would not compose predictably with the scope filter).

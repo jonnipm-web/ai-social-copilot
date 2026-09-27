@@ -8,7 +8,7 @@ import { assert, assertEquals, assertFalse } from 'https://deno.land/std@0.168.0
 import type { AuthClient } from '../auth.ts';
 import type { QuotaClient } from '../quota.ts';
 import { failingSubjectSource, fakeSubjectSource } from '../entitlement_test_support.ts';
-import type { ActionRow, IveDataSource, OpportunityRow, ProjectRow } from './context_assembler.ts';
+import { assembleContext, type ActionRow, type IveDataSource, type OpportunityRow, type ProjectRow } from './context_assembler.ts';
 import { handleIveIntelligence, IVE_CORE_MODULE_ID, suggestActions } from './intelligence.ts';
 import { routeIntent } from './intent_router.ts';
 import type { KnowledgeRow } from './knowledge_retrieval.ts';
@@ -43,6 +43,14 @@ const memories: (MemoryRow & { user_id: string })[] = [
   { id: 'm-aold', user_id: A, project_id: null, memory_type: 'preference', title: 'pref', content: 'Old superseded preference', source: 'x', created_at: '2026-09-01', status: 'superseded' },
   { id: 'm-b', user_id: B, project_id: PB, memory_type: 'goal', title: 'goal', content: 'Bravo private revenue target', source: 'x', created_at: '2026-09-20' },
   { id: 'm-bu', user_id: B, project_id: null, memory_type: 'preference', title: 'pref', content: 'BRAVO USER-LEVEL preference', source: 'x', created_at: '2026-09-23' },
+  // INSIGHTVALUES-INTELLIGENCE-AUTOMATION-MACRO-04 §7-9/§10-11 -- a real
+  // Result->Learning row (origin/verification_state as result_learning.ts
+  // actually writes them) vs. one that merely CLAIMS system_derived origin
+  // without a verified receipt (e.g. a PARTIAL/UNKNOWN_OUTCOME learning
+  // entry, or a forged row if RLS were ever misconfigured) -- both must be
+  // distinguishable in provenance trust, never conflated.
+  { id: 'm-a-verified', user_id: A, project_id: null, memory_type: 'success', title: 'learned', content: 'action_engine:internal.mock_complete_action -> SUCCESS', source: 'aef:action_engine', created_at: '2026-09-24', origin: 'system_derived', verification_state: 'verified' },
+  { id: 'm-a-unverified', user_id: A, project_id: null, memory_type: 'decision', title: 'learned', content: 'action_engine:internal.mock_complete_action -> PARTIAL', source: 'aef:action_engine', created_at: '2026-09-24', origin: 'system_derived', verification_state: 'unverified' },
 ];
 const opps: (OpportunityRow & { user_id: string })[] = [
   { id: 'o-a1', user_id: A, project_id: PA1, title: 'Coffee subscription', final_score: 80, status: 'new', opportunity_type: 'product' },
@@ -165,6 +173,27 @@ Deno.test('IC-02 free user, own project: answered with server-built context and 
   for (const t of ['project', 'knowledge_document', 'opportunity', 'action', 'memory']) assert(types.includes(t), t);
   assertEquals(r.quota.reserved, 1);
   assertEquals(r.json.locale, 'pt-BR');
+});
+
+Deno.test('IC-02b Result->Learning memory (verified AEF receipt) gets server_verified_user_data trust; an unverified/plain memory stays untrusted_user_content -- never "system" (reserved for authoritative policy)', async () => {
+  const ctx = await assembleContext(
+    subject('free'),
+    { message: 'x', surface: 'android', locale: 'pt-BR', projectId: null, conversation: [], requestedCapability: null, sourceModule: null, idempotencyKey: undefined, correlationId: null },
+    honestSource(),
+  );
+  const byId = new Map(ctx.provenance.filter((p) => p.sourceType === 'memory').map((p) => [p.sourceId, p]));
+  assertEquals(byId.get('m-a-verified')?.trust, 'server_verified_user_data');
+  // Plain user-authored memory (no origin/verification_state at all) keeps
+  // the conservative default.
+  assertEquals(byId.get('m-au')?.trust, 'untrusted_user_content');
+  // A system_derived row WITHOUT a verified receipt (PARTIAL/UNKNOWN_OUTCOME)
+  // must NOT be upgraded just because origin says system_derived -- only a
+  // real SUCCESS receipt earns the higher tier.
+  assertEquals(byId.get('m-a-unverified')?.trust, 'untrusted_user_content');
+  // Never 'system' -- that tier is reserved for system_policy (an
+  // instruction), and memory must never become one (business_memory's own
+  // migration: "never grants a capability").
+  for (const p of ctx.provenance.filter((p) => p.sourceType === 'memory')) assert(p.trust !== 'system', p.sourceId ?? undefined);
 });
 
 Deno.test('IC-03 no project: no project-scoped reads, only unassigned knowledge + user memory', async () => {

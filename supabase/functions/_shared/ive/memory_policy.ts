@@ -113,6 +113,15 @@ export interface MemoryRow {
   status?: string | null;
   expires_at?: string | null;
   updated_at?: string | null;
+  /** INSIGHTVALUES-INTELLIGENCE-AUTOMATION-MACRO-04 §7-9: set only on a
+   * Result -> Learning row (origin='system_derived', see result_learning.ts).
+   * 'verified' means a real AEF receipt said SUCCESS; 'unverified' means a
+   * real receipt exists but did not; null/undefined means this row never
+   * went through AEF at all (ordinary user/IVE-authored memory). Consumed
+   * by context_assembler.ts to decide provenance trust -- never upgrades
+   * this to an instruction (see TrustClass's own doc: only 'system' is
+   * authoritative, and that is reserved for system_policy, not this). */
+  verification_state?: string | null;
 }
 
 /** Read-side policy: only active, unexpired memories of the verified scope
