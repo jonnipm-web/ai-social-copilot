@@ -149,10 +149,11 @@ Deno.test('PC-06 credentials: only from server secrets, only as a header, never 
   const f3 = serving(payload());
   assertEquals(err(await new HttpAdapterProvider(syntheticVendorAdapter, 'https://evil.example.org', { fetchImpl: f3.fetchImpl }).historicalBars(req)), 'PROVIDER_UNAVAILABLE');
   assertEquals(f3.calls.length, 0);
-  // The runtime passes the allowlist down to safeFetch for redirect re-checks.
-  let seen: readonly string[] | undefined;
+  // The runtime passes the allowlist down to safeFetch for redirect re-checks
+  // (converted to a Set at that boundary -- IV-IMPACT-I2 / READINESS-03 reconciliation).
+  let seen: ReadonlySet<string> | undefined;
   await provider((_u, o) => { seen = o.allowedHosts; return Promise.resolve(new Response(payload(), { status: 200 })); }).historicalBars(req);
-  assertEquals(seen, ['synthetic.invalid']);
+  assertEquals(seen, new Set(['synthetic.invalid']));
 });
 
 // ---------------------------------------------------------------- cache
