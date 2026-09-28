@@ -39,13 +39,13 @@ class FakeDetailApi implements StrategyBuilderApi {
   @override
   Future<StrategyBuilderResult> draftFromText(String text) async => const StrategyBuilderResult(200, {'draft': {}});
   @override
-  Future<StrategyBuilderResult> create(Map<String, dynamic> spec) async => const StrategyBuilderResult(200, {});
+  Future<StrategyBuilderResult> create(Map<String, dynamic> spec, {String? idempotencyKey}) async => const StrategyBuilderResult(200, {});
   @override
   Future<StrategyBuilderResult> createVersion(String strategyId, Map<String, dynamic> spec) async => const StrategyBuilderResult(200, {});
   @override
   Future<StrategyBuilderResult> list() async => const StrategyBuilderResult(200, {'strategies': []});
   @override
-  Future<StrategyBuilderResult> cloneReference(String reference) async => const StrategyBuilderResult(200, {});
+  Future<StrategyBuilderResult> cloneReference(String reference, {String? idempotencyKey}) async => const StrategyBuilderResult(200, {});
   @override
   Future<StrategyBuilderResult> compareVersions(String versionAId, String versionBId, {String? objective}) async => const StrategyBuilderResult(200, {
         'comparison': {'comparable': true, 'deltas': {'netPnlDelta': 0}},

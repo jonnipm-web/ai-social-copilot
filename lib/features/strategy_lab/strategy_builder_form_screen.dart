@@ -13,6 +13,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/utils/uuid_v4.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/ive_exclusion_region.dart';
 import 'data/strategy_builder_api.dart';
@@ -51,6 +52,15 @@ class _StrategyBuilderFormScreenState extends ConsumerState<StrategyBuilderFormS
   bool _busy = false;
   String? _statusMessage;
   bool? _statusOk;
+
+  /// Codex adversarial review (2nd re-verification, Macro-08 diff vs
+  /// 15d4177): generated ONCE per screen instance (never per tap), so a
+  /// retry after a timeout/apparent failure reuses the SAME key and the
+  /// server's atomic RPC (strategies_create_with_version,
+  /// 20261008000000) returns the original strategy instead of creating a
+  /// duplicate. Only meaningful for a brand-new strategy -- create_version
+  /// (editing an existing one) is a different, unaffected op.
+  final String _createIdempotencyKey = newUuidV4();
 
   dynamic _seed(String field, dynamic fallback) => widget.initialSpec?[field] ?? fallback;
   String _seedNum(String field, String sub, num fallback) => '${(widget.initialSpec?[field]?[sub] as num?) ?? fallback}';
@@ -97,7 +107,9 @@ class _StrategyBuilderFormScreenState extends ConsumerState<StrategyBuilderFormS
     setState(() => _busy = true);
     final api = ref.read(strategyBuilderApiProvider);
     final spec = _currentSpecInput();
-    final result = widget.existingStrategyId == null ? await api.create(spec) : await api.createVersion(widget.existingStrategyId!, spec);
+    final result = widget.existingStrategyId == null
+        ? await api.create(spec, idempotencyKey: _createIdempotencyKey)
+        : await api.createVersion(widget.existingStrategyId!, spec);
     if (!mounted) return;
     final saved = result.status == 200 && result.data?['error'] == null;
     setState(() {

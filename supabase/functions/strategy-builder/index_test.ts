@@ -16,7 +16,7 @@ import type { StrategySpecification } from '../_shared/strategy/strategy_spec.ts
 import type { CanonicalBacktestResult } from '../_shared/strategy/backtest_result.ts';
 import { V10_REFERENCE_SPEC_INPUT } from '../_shared/strategy/v10_reference.ts';
 import { GENERIC_REFERENCE_SPEC_INPUT } from '../_shared/strategy/generic_reference_strategy.ts';
-import { StrategyLimitReachedError } from '../_shared/strategy_server.ts';
+import { IdempotencyKeyConflictError, StrategyLimitReachedError } from '../_shared/strategy_server.ts';
 import { handler, planAllowsOp, STRATEGY_LIMIT_BY_PLAN, type StrategyBuilderDeps } from './index.ts';
 
 globalThis.fetch = () => Promise.reject(new Error('network is forbidden in strategy-builder tests'));
@@ -53,7 +53,22 @@ class MemoryStore implements StrategyStore {
    * at insert time regardless of what the caller's own pre-check saw
    * (Codex final audit, P1 fix). */
   storeLevelLimit = 3;
-  async create(u: string, spec: StrategySpecification) {
+  // Mirrors strategies_create_with_version's own idempotency-key dedup
+  // (20261008000000, 2nd Codex re-verification): keyed by (user, key) ->
+  // (strategyId, the spec it was created with).
+  idempotencyIndex = new Map<string, { strategyId: string; specJson: string }>();
+  async create(u: string, spec: StrategySpecification, idempotencyKey?: string | null) {
+    if (idempotencyKey) {
+      const existing = this.idempotencyIndex.get(`${u}:${idempotencyKey}`);
+      if (existing) {
+        if (existing.specJson !== JSON.stringify(spec)) throw new IdempotencyKeyConflictError();
+        const strategy = this.strategies.find((s) => s.id === existing.strategyId && s.userId === u)!;
+        const version = this.versions.find((v) => v.strategyId === existing.strategyId && v.versionNumber === 1)!;
+        const { userId: _u1, ...s } = strategy;
+        const { userId: _u2, ...v } = version;
+        return { strategy: s, version: v };
+      }
+    }
     if (this.strategies.filter((s) => s.userId === u).length >= this.storeLevelLimit) {
       throw new StrategyLimitReachedError();
     }
@@ -65,6 +80,7 @@ class MemoryStore implements StrategyStore {
       id: this.id(), userId: u, strategyId: strategy.id, versionNumber: 1, spec, specHash: 'h', createdAt: 't',
     };
     this.versions.push(version);
+    if (idempotencyKey) this.idempotencyIndex.set(`${u}:${idempotencyKey}`, { strategyId: strategy.id, specJson: JSON.stringify(spec) });
     const { userId: _u1, ...s } = strategy;
     const { userId: _u2, ...v } = version;
     return { strategy: s, version: v };
@@ -839,4 +855,39 @@ Deno.test('SB-49 (Codex adversarial review re-verification) strategy creation is
   assert(/idempotency_key/.test(fn), 'must support a caller-supplied idempotency key');
   assert(/CREATE UNIQUE INDEX[^;]*strategies_user_idempotency_key_uq[^;]*\(user_id, idempotency_key\)/.test(sql), 'idempotency key must be unique per user');
   assert(/REVOKE INSERT ON public\.strategies FROM authenticated/.test(sql), 'direct INSERT bypass of the atomic RPC must be closed, mirroring 20261006000000/20261007000000');
+  assert(/IDEMPOTENCY_KEY_CONFLICT/.test(fn), 'a key reused with a different spec must be rejected, never silently return the wrong row');
+});
+
+Deno.test('SB-50 (2nd Codex re-verification) the same idempotency key + the same spec on retry returns the ORIGINAL strategy, never a duplicate', async () => {
+  store = new MemoryStore();
+  const first = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT, idempotencyKey: 'retry-key-1' }, 'jwt-a', 'free');
+  assertEquals(first.status, 200);
+  const retry = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT, idempotencyKey: 'retry-key-1' }, 'jwt-a', 'free');
+  assertEquals(retry.status, 200);
+  assertEquals(retry.json.strategy.id, first.json.strategy.id);
+  const list = await call({ op: 'list' }, 'jwt-a', 'free');
+  assertEquals((list.json.strategies as unknown[]).length, 1, 'a genuine retry must never create a second strategy');
+});
+
+Deno.test('SB-51 (2nd Codex re-verification) the same idempotency key reused with a DIFFERENT spec is rejected, never silently satisfied with the wrong strategy', async () => {
+  store = new MemoryStore();
+  const first = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT, idempotencyKey: 'reused-key' }, 'jwt-a', 'free');
+  assertEquals(first.status, 200);
+  const differentSpec = { ...GENERIC_REFERENCE_SPEC_INPUT, name: 'A totally different strategy name' };
+  const conflict = await call({ op: 'create', spec: differentSpec, idempotencyKey: 'reused-key' }, 'jwt-a', 'free');
+  assertEquals(conflict.status, 409);
+  assertEquals(conflict.json.error, 'IDEMPOTENCY_KEY_CONFLICT');
+});
+
+Deno.test('SB-52 a malformed idempotencyKey (empty or oversized) is a 400, and clone_reference honors the same key end-to-end', async () => {
+  store = new MemoryStore();
+  const empty = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT, idempotencyKey: '' }, 'jwt-a', 'free');
+  assertEquals(empty.status, 400);
+  const oversized = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT, idempotencyKey: 'x'.repeat(201) }, 'jwt-a', 'free');
+  assertEquals(oversized.status, 400);
+  const firstClone = await call({ op: 'clone_reference', reference: 'GENERIC', idempotencyKey: 'clone-retry-1' }, 'jwt-a', 'free');
+  assertEquals(firstClone.status, 200);
+  const retryClone = await call({ op: 'clone_reference', reference: 'GENERIC', idempotencyKey: 'clone-retry-1' }, 'jwt-a', 'free');
+  assertEquals(retryClone.status, 200);
+  assertEquals(retryClone.json.strategy.id, firstClone.json.strategy.id);
 });

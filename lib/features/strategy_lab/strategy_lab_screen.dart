@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/strategy/strategy_lab_reference.dart';
+import '../../core/utils/uuid_v4.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/profile_provider.dart';
 import '../../shared/widgets/ive_exclusion_region.dart';
@@ -50,7 +51,10 @@ class _StrategyLabScreenState extends ConsumerState<StrategyLabScreen> {
 
   Future<void> _clone(String reference) async {
     setState(() => _cloneBusy = true);
-    await ref.read(strategyBuilderApiProvider).cloneReference(reference);
+    // A fresh key per tap: retry-safe against a transport-level retry of
+    // THIS attempt, mirroring the create-form's own idempotency key
+    // (Codex adversarial review, 2nd re-verification).
+    await ref.read(strategyBuilderApiProvider).cloneReference(reference, idempotencyKey: newUuidV4());
     if (!mounted) return;
     setState(() => _cloneBusy = false);
     await _refresh();

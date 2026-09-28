@@ -31,6 +31,16 @@
 -- used by the unrelated, legitimate create_version op (a new version for
 -- an EXISTING strategy), which this migration does not touch.
 --
+-- ADDENDUM (2nd Codex re-verification): the first version of this RPC
+-- built the idempotency-key infrastructure but nothing in the Edge
+-- Function or Flutter client ever supplied a key, so the unique index
+-- was inert for every real request -- a timeout-then-retry still created
+-- a second strategy. Fixed by threading idempotencyKey end-to-end
+-- (strategy-builder/index.ts's `create`/`clone_reference` ops,
+-- strategy_builder_api.dart, strategy_builder_form_screen.dart) and by
+-- rejecting a key reused with a different spec (IDEMPOTENCY_KEY_CONFLICT)
+-- instead of silently returning a mismatched prior row.
+--
 -- Idempotent: safe to re-apply.
 
 ALTER TABLE public.strategies
@@ -66,12 +76,22 @@ BEGIN
     RAISE EXCEPTION 'MODULE_NOT_AVAILABLE' USING ERRCODE = '42501';
   END IF;
 
-  -- A retry with the SAME idempotency key returns the ORIGINAL row
-  -- instead of creating a duplicate or erroring on the unique index.
+  -- A retry with the SAME idempotency key AND the same payload returns
+  -- the ORIGINAL row instead of creating a duplicate or erroring on the
+  -- unique index. A key reused with a DIFFERENT spec is a distinct
+  -- request that happens to reuse a stale key -- reject it instead of
+  -- silently handing back the wrong strategy (Codex adversarial review,
+  -- 2nd re-verification: "reject reuse with a different payload/spec
+  -- hash instead of silently returning the prior row").
   IF p_idempotency_key IS NOT NULL THEN
     SELECT s.id INTO v_strategy_id FROM public.strategies s
       WHERE s.user_id = v_uid AND s.idempotency_key = p_idempotency_key;
     IF FOUND THEN
+      PERFORM 1 FROM public.strategy_versions v
+        WHERE v.strategy_id = v_strategy_id AND v.version_number = 1 AND v.spec_hash = p_spec_hash;
+      IF NOT FOUND THEN
+        RAISE EXCEPTION 'IDEMPOTENCY_KEY_CONFLICT' USING ERRCODE = '23505';
+      END IF;
       RETURN QUERY
         SELECT s.id, s.name, s.status, s.current_version, s.created_at, s.updated_at, s.holdout_first_viewed_at,
                v.id, v.strategy_id, v.version_number, v.spec, v.spec_hash, v.created_at

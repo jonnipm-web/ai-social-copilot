@@ -31,14 +31,14 @@ class StrategyBuilderResult {
 abstract class StrategyBuilderApi {
   Future<StrategyBuilderResult> validate(Map<String, dynamic> spec);
   Future<StrategyBuilderResult> draftFromText(String text);
-  Future<StrategyBuilderResult> create(Map<String, dynamic> spec);
+  Future<StrategyBuilderResult> create(Map<String, dynamic> spec, {String? idempotencyKey});
   Future<StrategyBuilderResult> list();
   Future<StrategyBuilderResult> get(String strategyId);
   Future<StrategyBuilderResult> createVersion(String strategyId, Map<String, dynamic> spec);
   Future<StrategyBuilderResult> listVersions(String strategyId);
   Future<StrategyBuilderResult> runBacktest(String strategyVersionId, String datasetId, String engineId, {Map<String, dynamic>? costConfig});
   Future<StrategyBuilderResult> compareVersions(String versionAId, String versionBId, {String? objective});
-  Future<StrategyBuilderResult> cloneReference(String reference);
+  Future<StrategyBuilderResult> cloneReference(String reference, {String? idempotencyKey});
   Future<StrategyBuilderResult> engineStatus();
   Future<StrategyBuilderResult> proposeVariants(String strategyVersionId, String datasetId);
   Future<StrategyBuilderResult> runResearchLoop(String strategyVersionId, String datasetId);
@@ -79,7 +79,8 @@ class SupabaseStrategyBuilderApi implements StrategyBuilderApi {
   @override
   Future<StrategyBuilderResult> draftFromText(String text) => _call({'op': 'draft_from_text', 'text': text});
   @override
-  Future<StrategyBuilderResult> create(Map<String, dynamic> spec) => _call({'op': 'create', 'spec': spec});
+  Future<StrategyBuilderResult> create(Map<String, dynamic> spec, {String? idempotencyKey}) =>
+      _call({'op': 'create', 'spec': spec, if (idempotencyKey != null) 'idempotencyKey': idempotencyKey});
   @override
   Future<StrategyBuilderResult> list() => _call({'op': 'list'});
   @override
@@ -98,7 +99,8 @@ class SupabaseStrategyBuilderApi implements StrategyBuilderApi {
   Future<StrategyBuilderResult> compareVersions(String versionAId, String versionBId, {String? objective}) =>
       _call({'op': 'compare_versions', 'versionAId': versionAId, 'versionBId': versionBId, if (objective != null) 'objective': objective});
   @override
-  Future<StrategyBuilderResult> cloneReference(String reference) => _call({'op': 'clone_reference', 'reference': reference});
+  Future<StrategyBuilderResult> cloneReference(String reference, {String? idempotencyKey}) =>
+      _call({'op': 'clone_reference', 'reference': reference, if (idempotencyKey != null) 'idempotencyKey': idempotencyKey});
   @override
   Future<StrategyBuilderResult> engineStatus() => _call({'op': 'engine_status'});
   @override

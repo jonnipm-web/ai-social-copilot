@@ -165,6 +165,16 @@ export class StrategyLimitReachedError extends Error {
   }
 }
 
+/** Codex adversarial review (2nd re-verification): a caller reused an
+ * idempotency key with a DIFFERENT spec than the one it already created
+ * -- a distinct request, not a genuine retry. Rejected rather than
+ * silently returning the mismatched prior row. */
+export class IdempotencyKeyConflictError extends Error {
+  constructor() {
+    super('IDEMPOTENCY_KEY_CONFLICT');
+  }
+}
+
 export interface StrategyStore {
   list(userId: string): Promise<StrategyRow[]>;
   /** Creates a strategy AND its version-1 snapshot atomically. Codex
@@ -327,6 +337,7 @@ export class SupabaseStrategyStore implements StrategyStore {
       p_name: spec.name, p_spec: spec, p_spec_hash: specHash, p_idempotency_key: idempotencyKey ?? null,
     }).single();
     if (error?.message?.includes('STRATEGY_LIMIT_REACHED')) throw new StrategyLimitReachedError();
+    if (error?.message?.includes('IDEMPOTENCY_KEY_CONFLICT')) throw new IdempotencyKeyConflictError();
     if (error || !data) throw new Error('strategy create failed');
     const row = data as Record<string, unknown>;
     return {

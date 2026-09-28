@@ -25,7 +25,7 @@ import { AuthClient, AuthenticatedUser, AuthError, resolveAuthenticatedUser, una
 import { EntitlementSubjectSource, requireModuleAccess } from '../_shared/entitlement.ts';
 import type { QuotaClient } from '../_shared/quota.ts';
 import {
-  bearerToken, readJsonBody, strategyCorsHeaders, StrategyLimitReachedError, SupabaseStrategyStore,
+  bearerToken, IdempotencyKeyConflictError, readJsonBody, strategyCorsHeaders, StrategyLimitReachedError, SupabaseStrategyStore,
   type StrategyBacktestJobRow, type StrategyStore,
 } from '../_shared/strategy_server.ts';
 import { createStrategySpecification, type StrategySpecification, type StrategySpecificationInput } from '../_shared/strategy/strategy_spec.ts';
@@ -104,7 +104,7 @@ export function planAllowsOp(op: string, plan: string, decisionReason: string): 
 
 interface ValidateOp { readonly op: 'validate'; readonly spec: StrategySpecificationInput }
 interface DraftFromTextOp { readonly op: 'draft_from_text'; readonly text: string }
-interface CreateOp { readonly op: 'create'; readonly spec: StrategySpecificationInput }
+interface CreateOp { readonly op: 'create'; readonly spec: StrategySpecificationInput; readonly idempotencyKey: string | null }
 interface ListOp { readonly op: 'list' }
 interface GetOp { readonly op: 'get'; readonly strategyId: string }
 interface CreateVersionOp { readonly op: 'create_version'; readonly strategyId: string; readonly spec: StrategySpecificationInput }
@@ -122,7 +122,7 @@ interface CompareVersionsOp {
   readonly versionBId: string;
   readonly objective: StrategyObjective | null;
 }
-interface CloneReferenceOp { readonly op: 'clone_reference'; readonly reference: 'V10' | 'GENERIC' }
+interface CloneReferenceOp { readonly op: 'clone_reference'; readonly reference: 'V10' | 'GENERIC'; readonly idempotencyKey: string | null }
 interface AnalyzeBacktestResultOp { readonly op: 'analyze_backtest_result'; readonly strategyVersionId: string }
 interface EngineStatusOp { readonly op: 'engine_status' }
 interface ProposeVariantsOp { readonly op: 'propose_variants'; readonly strategyVersionId: string; readonly datasetId: string }
@@ -162,15 +162,30 @@ function parseCostConfig(v: unknown): BridgeCostConfig | null {
   return { brokeragePerContract: c.brokeragePerContract, exchangeFeePerContract: c.exchangeFeePerContract, slippageTicks: c.slippageTicks };
 }
 
+/** Optional, caller-supplied retry key (strategies.idempotency_key's own
+ * CHECK constraint: 1-200 chars). undefined/null -> null (no dedup, the
+ * pre-existing behavior); present but malformed -> reject the request
+ * rather than silently drop it. */
+function parseIdempotencyKey(v: unknown): { ok: true; value: string | null } | { ok: false } {
+  if (v === undefined || v === null) return { ok: true, value: null };
+  if (typeof v !== 'string' || v.length < 1 || v.length > 200) return { ok: false };
+  return { ok: true, value: v };
+}
+
 function parseOp(body: unknown): { ok: true; value: ParsedOp } | { ok: false; code: string } {
   if (!body || typeof body !== 'object') return { ok: false, code: 'INVALID_BODY' };
   const b = body as Record<string, unknown>;
   if (typeof b.op !== 'string' || !OPS.has(b.op)) return { ok: false, code: 'UNKNOWN_OP' };
   switch (b.op) {
     case 'validate':
-    case 'create':
       if (!b.spec || typeof b.spec !== 'object') return { ok: false, code: 'INVALID_BODY' };
-      return { ok: true, value: { op: b.op, spec: b.spec as StrategySpecificationInput } };
+      return { ok: true, value: { op: 'validate', spec: b.spec as StrategySpecificationInput } };
+    case 'create': {
+      if (!b.spec || typeof b.spec !== 'object') return { ok: false, code: 'INVALID_BODY' };
+      const idempotencyKey = parseIdempotencyKey(b.idempotencyKey);
+      if (!idempotencyKey.ok) return { ok: false, code: 'INVALID_BODY' };
+      return { ok: true, value: { op: 'create', spec: b.spec as StrategySpecificationInput, idempotencyKey: idempotencyKey.value } };
+    }
     case 'draft_from_text':
       if (typeof b.text !== 'string' || b.text.length === 0 || b.text.length > 2000) return { ok: false, code: 'INVALID_BODY' };
       return { ok: true, value: { op: 'draft_from_text', text: b.text } };
@@ -201,9 +216,12 @@ function parseOp(body: unknown): { ok: true; value: ParsedOp } | { ok: false; co
       const objective = typeof b.objective === 'string' && STRATEGY_OBJECTIVES.includes(b.objective as StrategyObjective) ? (b.objective as StrategyObjective) : null;
       return { ok: true, value: { op: 'compare_versions', versionAId: b.versionAId, versionBId: b.versionBId, objective } };
     }
-    case 'clone_reference':
+    case 'clone_reference': {
       if (b.reference !== 'V10' && b.reference !== 'GENERIC') return { ok: false, code: 'INVALID_BODY' };
-      return { ok: true, value: { op: 'clone_reference', reference: b.reference } };
+      const idempotencyKey = parseIdempotencyKey(b.idempotencyKey);
+      if (!idempotencyKey.ok) return { ok: false, code: 'INVALID_BODY' };
+      return { ok: true, value: { op: 'clone_reference', reference: b.reference, idempotencyKey: idempotencyKey.value } };
+    }
     case 'analyze_backtest_result':
       if (!isUuid(b.strategyVersionId)) return { ok: false, code: 'INVALID_BODY' };
       return { ok: true, value: { op: 'analyze_backtest_result', strategyVersionId: b.strategyVersionId } };
@@ -448,11 +466,15 @@ export async function handler(
         // is what it raises when a caller actually wins that race.
         let created;
         try {
-          created = await store.create(authUser.id, validated.value);
+          created = await store.create(authUser.id, validated.value, action.idempotencyKey);
         } catch (e) {
           if (e instanceof StrategyLimitReachedError) {
             finish(403, 'STRATEGY_LIMIT_REACHED');
             return errorResponse('STRATEGY_LIMIT_REACHED', cid, 403);
+          }
+          if (e instanceof IdempotencyKeyConflictError) {
+            finish(409, 'IDEMPOTENCY_KEY_CONFLICT');
+            return errorResponse('IDEMPOTENCY_KEY_CONFLICT', cid, 409);
           }
           throw e;
         }
@@ -525,11 +547,15 @@ export async function handler(
         // constants, not database rows).
         let clonedCreated;
         try {
-          clonedCreated = await store.create(authUser.id, validated.value);
+          clonedCreated = await store.create(authUser.id, validated.value, action.idempotencyKey);
         } catch (e) {
           if (e instanceof StrategyLimitReachedError) {
             finish(403, 'STRATEGY_LIMIT_REACHED');
             return errorResponse('STRATEGY_LIMIT_REACHED', cid, 403);
+          }
+          if (e instanceof IdempotencyKeyConflictError) {
+            finish(409, 'IDEMPOTENCY_KEY_CONFLICT');
+            return errorResponse('IDEMPOTENCY_KEY_CONFLICT', cid, 409);
           }
           throw e;
         }

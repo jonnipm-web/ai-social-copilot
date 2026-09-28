@@ -78,6 +78,29 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('SF-08 (Codex adversarial review, 2nd re-verification) a retry after a failed save reuses the SAME idempotency key, never a fresh one', (tester) async {
+    final api = await _pump(tester);
+    api.failNextCreate = true;
+    await tester.enterText(find.byKey(const Key('strategyBuilderNameField')), 'A New Strategy');
+    // Invoke the button's callback directly rather than tester.tap(): this
+    // form is tall enough that the Save button's on-screen offset is
+    // unreliable at test viewport size (a pre-existing flake shared with
+    // SF-04's tap, which never asserts the call actually landed) -- this
+    // test's whole point IS to inspect the exact call sequence, so it
+    // cannot tolerate a silently-missed tap.
+    final saveButton = find.byKey(const Key('strategyBuilderSaveButton'));
+    tester.widget<FilledButton>(saveButton).onPressed!();
+    await tester.pumpAndSettle();
+    // The first attempt failed -- the screen must still be open (no pop).
+    expect(find.byKey(const Key('strategyBuilderSaveButton')), findsOneWidget);
+    tester.widget<FilledButton>(saveButton).onPressed!();
+    await tester.pumpAndSettle();
+    final createCalls = api.calls.where((c) => c.startsWith('create:')).toList();
+    expect(createCalls.length, 2);
+    expect(createCalls[0], equals(createCalls[1]));
+    expect(createCalls[0], isNot(equals('create:null')));
+  });
+
   testWidgets('SF-05 editing an existing strategy seeds the form from its spec and Save calls create_version', (tester) async {
     final initialSpec = {
       'name': 'Existing One', 'entry': {'ruleId': 'ENTRY.SESSION_OPEN'},

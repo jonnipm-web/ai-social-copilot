@@ -29,7 +29,7 @@ class FakeStrategyBuilderApi implements StrategyBuilderApi {
   }
 
   @override
-  Future<StrategyBuilderResult> cloneReference(String reference) async {
+  Future<StrategyBuilderResult> cloneReference(String reference, {String? idempotencyKey}) async {
     calls.add('clone_reference:$reference');
     final strategy = {'id': 'new-id-${strategies.length}', 'name': 'Cloned $reference', 'status': 'DRAFT', 'currentVersion': 1};
     strategies = [...strategies, strategy];
@@ -41,8 +41,18 @@ class FakeStrategyBuilderApi implements StrategyBuilderApi {
   @override
   Future<StrategyBuilderResult> draftFromText(String text) async => const StrategyBuilderResult(200, {'draft': {}});
   @override
-  Future<StrategyBuilderResult> create(Map<String, dynamic> spec) async =>
-      StrategyBuilderResult(200, {'strategy': {'id': 'sid', 'name': spec['name']}, 'version': {'id': 'vid', 'versionNumber': 1}});
+  /// Set by a test that wants to simulate a failed first attempt (so the
+  /// screen stays open and a second Save tap is a real retry, not a
+  /// no-op after the screen already popped).
+  bool failNextCreate = false;
+  Future<StrategyBuilderResult> create(Map<String, dynamic> spec, {String? idempotencyKey}) async {
+    calls.add('create:$idempotencyKey');
+    if (failNextCreate) {
+      failNextCreate = false;
+      return const StrategyBuilderResult(500, {'error': 'INTERNAL_ERROR'});
+    }
+    return StrategyBuilderResult(200, {'strategy': {'id': 'sid', 'name': spec['name']}, 'version': {'id': 'vid', 'versionNumber': 1}});
+  }
   @override
   Future<StrategyBuilderResult> get(String strategyId) async => const StrategyBuilderResult(404, {'error': 'NOT_FOUND'});
   @override
