@@ -320,14 +320,21 @@ async function recordSucceededJob(
 }
 
 /**
- * §43: candidate per-plan strategy count limits. Safety controls (spec
+ * §37/§43: per-plan strategy count limits. Safety controls (spec
  * validation, RLS, engine allowlisting) are NEVER paywalled -- only the
- * count of strategies a plan may hold is. `strategy-builder` itself stays
- * EXPERIMENTAL/admin-only for now (module_policy.ts) -- these limits are
- * real, enforced architecture ready for the day the module is released
- * to non-admin plans, not yet a live commercial gate.
+ * count of strategies a plan may hold is. Real, enforced, live
+ * (Macro-08: strategy-builder is now COMMERCIAL, not admin-only).
+ *
+ * Premium is a high FINITE fair-use cap, not Number.POSITIVE_INFINITY
+ * (Macro-08 §37: "'Unlimited' can create unbounded cost"). 200 is a
+ * deliberately generous ceiling no genuine research workflow should
+ * ever hit -- it exists to bound worst-case storage/compute exposure
+ * from a single account, not to constrain real usage. Mirrored in
+ * migration 20261004000000's strategies_enforce_plan_limit trigger
+ * (the race-safe, authoritative check) -- keep both in sync if this
+ * ever changes.
  */
-const STRATEGY_LIMIT_BY_PLAN: Record<string, number> = { free: 3, pro: 20, premium: Number.POSITIVE_INFINITY };
+export const STRATEGY_LIMIT_BY_PLAN: Record<string, number> = { free: 3, pro: 20, premium: 200 };
 const DEFAULT_STRATEGY_LIMIT = STRATEGY_LIMIT_BY_PLAN.free;
 
 const STRATEGY_ERROR_STATUS: Record<StrategyErrorCode, number> = {

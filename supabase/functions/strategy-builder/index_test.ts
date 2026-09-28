@@ -16,7 +16,7 @@ import type { CanonicalBacktestResult } from '../_shared/strategy/backtest_resul
 import { V10_REFERENCE_SPEC_INPUT } from '../_shared/strategy/v10_reference.ts';
 import { GENERIC_REFERENCE_SPEC_INPUT } from '../_shared/strategy/generic_reference_strategy.ts';
 import { StrategyLimitReachedError } from '../_shared/strategy_server.ts';
-import { handler, planAllowsOp, type StrategyBuilderDeps } from './index.ts';
+import { handler, planAllowsOp, STRATEGY_LIMIT_BY_PLAN, type StrategyBuilderDeps } from './index.ts';
 
 globalThis.fetch = () => Promise.reject(new Error('network is forbidden in strategy-builder tests'));
 
@@ -408,6 +408,13 @@ Deno.test('SB-18 (§43) a free-plan caller is refused STRATEGY_LIMIT_REACHED pas
   // A different user's own quota is untouched by the first user's limit.
   const otherUser = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT }, 'jwt-b');
   assertEquals(otherUser.status, 200);
+});
+
+Deno.test('SB-47 (Macro-08 §37) Premium is a high FINITE fair-use cap (200), never unlimited -- a Premium user can exceed the free/pro limits but is still a real, bounded number', () => {
+  assertEquals(Number.isFinite(STRATEGY_LIMIT_BY_PLAN.premium), true);
+  assertEquals(STRATEGY_LIMIT_BY_PLAN.premium, 200);
+  assert(STRATEGY_LIMIT_BY_PLAN.premium > STRATEGY_LIMIT_BY_PLAN.pro);
+  assert(STRATEGY_LIMIT_BY_PLAN.pro > STRATEGY_LIMIT_BY_PLAN.free);
 });
 
 Deno.test('SB-19 (Codex final audit, P1 fix) the store-level limit still blocks creation even when the app-level pre-check races and wrongly passes', async () => {

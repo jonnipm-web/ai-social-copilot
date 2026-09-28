@@ -34,10 +34,14 @@ BEGIN
   -- Mirrors entitlement.ts's mapLegacyProfileRole: only 'pro'/'premium'
   -- raise the limit; every other value (including 'admin', 'free',
   -- 'beta_tester', unknown, or no row at all) fails closed to the free
-  -- limit -- never accidentally to an unlimited one.
+  -- limit -- never accidentally to an unlimited one. Premium's own
+  -- limit (Macro-08 §37 fix) is a high FINITE fair-use cap (mirrors
+  -- strategy-builder/index.ts's STRATEGY_LIMIT_BY_PLAN.premium=200),
+  -- not 2147483647 -- "unlimited" was itself the finding: unbounded
+  -- storage/compute exposure from a single account.
   plan_limit := CASE user_role
     WHEN 'pro' THEN 20
-    WHEN 'premium' THEN 2147483647
+    WHEN 'premium' THEN 200
     ELSE 3
   END;
 
