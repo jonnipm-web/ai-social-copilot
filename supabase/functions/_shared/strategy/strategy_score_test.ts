@@ -73,12 +73,29 @@ Deno.test('SS-06 undefined profit factor scores that component at 0 with an hone
   assert(profitability.rationale.includes('undefined'));
 });
 
-Deno.test('SS-07 unmeasured maxDrawdown gets a neutral 0.5, explicitly labeled as not measured -- not fabricated as good or bad', async () => {
+Deno.test('SS-07 (Codex final audit, P2-01 fix) unmeasured maxDrawdown is EXCLUDED from the score, not assigned a neutral value that still counts toward it', async () => {
   const built = await buildCanonicalBacktestResult(baseInput({ maxDrawdown: null }));
   assert(built.ok);
   if (!built.ok) return;
   const score = computeStrategyScore(built.value, null);
   const drawdown = score.components.find((c) => c.name === 'DRAWDOWN_CONTROL')!;
-  assertEquals(drawdown.value, 0.5);
-  assert(drawdown.rationale.includes('not measured'));
+  assertEquals(drawdown.value, 0);
+  assertEquals(drawdown.weight, 0);
+  assert(drawdown.rationale.includes('excluded'));
+  // The other four components' weights are renormalized to still sum to 1.
+  const weightSum = score.components.reduce((s, c) => s + c.weight, 0);
+  assertEquals(Math.round(weightSum * 1000) / 1000, 1);
+});
+
+Deno.test('SS-08 (Codex final audit, P2-01 fix) the same measured result scores differently with vs without drawdown evidence -- the missing component genuinely stops contributing', async () => {
+  const withDrawdown = await buildCanonicalBacktestResult(baseInput({ maxDrawdown: -10 })); // small drawdown vs grossProfit=300 -> near-1.0 component
+  const withoutDrawdown = await buildCanonicalBacktestResult(baseInput({ maxDrawdown: null }));
+  assert(withDrawdown.ok && withoutDrawdown.ok);
+  if (!withDrawdown.ok || !withoutDrawdown.ok) return;
+  const scoreWith = computeStrategyScore(withDrawdown.value, null);
+  const scoreWithout = computeStrategyScore(withoutDrawdown.value, null);
+  // A strong (near-1.0) drawdown component that then gets excluded must
+  // not leave the overall score unchanged -- the renormalized weights
+  // prove the exclusion is real, not cosmetic.
+  assert(scoreWith.overall !== scoreWithout.overall);
 });

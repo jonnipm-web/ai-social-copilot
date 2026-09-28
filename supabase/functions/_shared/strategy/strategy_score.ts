@@ -84,21 +84,44 @@ export function computeStrategyScore(result: CanonicalBacktestResult, objective:
       : `${ambiguityFinding.ambiguousCount} of ${ambiguityFinding.tradeCount} trades had an ambiguous execution price source`,
   };
 
+  // Codex final audit (P2-01 fix): an unmeasured drawdown used to get a
+  // neutral value of 0.5, which still CONTRIBUTED to the weighted sum
+  // -- a strategy with no drawdown evidence at all could still reach
+  // MORE_ROBUST_UNDER_TESTED_ASSUMPTIONS partly on the strength of a
+  // component that measured nothing. Now it is excluded from the
+  // weighted sum entirely (weight 0 in the OUTPUT, value 0, rationale
+  // says so) and the other four components' weights are renormalized
+  // to still sum to 1 among themselves -- the score reflects only what
+  // was actually measured, never a placeholder standing in for missing
+  // evidence.
+  const drawdownAvailable = result.maxDrawdown !== null;
   const grossProfitMagnitude = Math.abs(result.grossProfit) || 1;
-  const drawdownControl: ScoreComponent = result.maxDrawdown !== null
+  const drawdownRawWeight = weights.drawdownControl;
+  const renormalizer = drawdownAvailable ? 1 : 1 / (1 - drawdownRawWeight);
+
+  const drawdownControl: ScoreComponent = drawdownAvailable
     ? {
-      name: 'DRAWDOWN_CONTROL', value: clamp01(1 - Math.abs(result.maxDrawdown) / grossProfitMagnitude), weight: weights.drawdownControl,
-      rationale: `max drawdown ${result.maxDrawdown.toFixed(2)} against gross profit ${result.grossProfit.toFixed(2)}`,
+      name: 'DRAWDOWN_CONTROL', value: clamp01(1 - Math.abs(result.maxDrawdown!) / grossProfitMagnitude), weight: drawdownRawWeight,
+      rationale: `max drawdown ${result.maxDrawdown!.toFixed(2)} against gross profit ${result.grossProfit.toFixed(2)}`,
     }
-    : { name: 'DRAWDOWN_CONTROL', value: 0.5, weight: weights.drawdownControl, rationale: 'maxDrawdown was not measured for this result -- neutral placeholder, not a measured value' };
+    : {
+      name: 'DRAWDOWN_CONTROL', value: 0, weight: 0,
+      rationale: 'maxDrawdown was not measured for this result -- excluded from the score entirely (the other components\' weights are renormalized), never assigned a placeholder value',
+    };
 
   const balance = directionalBalance(result);
   const directionalCoverage: ScoreComponent = {
-    name: 'DIRECTIONAL_COVERAGE', value: balance.untested !== null ? 0.5 : 1, weight: weights.directionalCoverage,
+    name: 'DIRECTIONAL_COVERAGE', value: balance.untested !== null ? 0.5 : 1, weight: weights.directionalCoverage * renormalizer,
     rationale: balance.untested !== null ? `no trades were ever taken on the ${balance.untested} side` : 'both allowed directions produced trades',
   };
 
-  const components = Object.freeze([profitability, sampleSize, ambiguity, drawdownControl, directionalCoverage]);
+  const components = Object.freeze([
+    { ...profitability, weight: profitability.weight * renormalizer },
+    { ...sampleSize, weight: sampleSize.weight * renormalizer },
+    { ...ambiguity, weight: ambiguity.weight * renormalizer },
+    drawdownControl,
+    directionalCoverage,
+  ]);
   const overall = Math.round(100 * components.reduce((s, c) => s + c.value * c.weight, 0));
 
   return Object.freeze({

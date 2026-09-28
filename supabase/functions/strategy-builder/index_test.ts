@@ -9,7 +9,7 @@ import { assert, assertEquals } from 'https://deno.land/std@0.168.0/testing/asse
 import type { AuthClient } from '../_shared/auth.ts';
 import { fakeSubjectSource } from '../_shared/entitlement_test_support.ts';
 import type {
-  StrategyBacktestJobRow, StrategyBacktestResultRow, StrategyExperimentRow, StrategyRow, StrategyStore, StrategyVersionRow,
+  ResultKind, StrategyBacktestJobRow, StrategyBacktestResultRow, StrategyExperimentRow, StrategyRow, StrategyStore, StrategyVersionRow,
 } from '../_shared/strategy_server.ts';
 import type { StrategySpecification } from '../_shared/strategy/strategy_spec.ts';
 import type { CanonicalBacktestResult } from '../_shared/strategy/backtest_result.ts';
@@ -104,11 +104,11 @@ class MemoryStore implements StrategyStore {
     return version;
   }
   // deno-lint-ignore require-await
-  async insertBacktestResult(u: string, strategyVersionId: string, result: CanonicalBacktestResult) {
+  async insertBacktestResult(u: string, strategyVersionId: string, result: CanonicalBacktestResult, resultKind: ResultKind) {
     const row: StrategyBacktestResultRow & { userId: string } = {
       id: this.id(), userId: u, strategyVersionId, datasetId: result.datasetId, datasetHash: result.datasetHash,
       methodologyStatus: result.methodologyStatus, netPnl: result.netPnl, tradeCount: result.tradeCount,
-      resultHash: result.resultHash, canonicalResult: result, createdAt: 't',
+      resultHash: result.resultHash, canonicalResult: result, resultKind, createdAt: 't',
     };
     this.results.push(row);
     const { userId: _u, ...r } = row;
@@ -337,8 +337,16 @@ Deno.test('SB-33 (§21) compare_versions surfaces independent robustness/score f
   assert(['MORE_ROBUST_UNDER_TESTED_ASSUMPTIONS', 'REQUIRES_MORE_EVIDENCE'].includes(noObjective.json.scoreA.language));
 
   const withObjective = await call({ op: 'compare_versions', versionAId, versionBId, objective: 'CAPITAL_PRESERVATION' });
-  const drawdownWeight = (s: { components: { name: string; weight: number }[] }) => s.components.find((c) => c.name === 'DRAWDOWN_CONTROL')!.weight;
-  assert(drawdownWeight(withObjective.json.scoreA) > drawdownWeight(noObjective.json.scoreA));
+  // The generic engine never measures maxDrawdown (always null), so
+  // (Codex final audit, P2-01 fix) DRAWDOWN_CONTROL is excluded --
+  // weight 0 -- under EITHER objective here; that exclusion itself is
+  // exactly the fix, so assert it holds under reweighting too, and use
+  // PROFITABILITY (never excluded) to prove the objective genuinely
+  // changed the weighting.
+  const weightOf = (s: { components: { name: string; weight: number }[] }, name: string) => s.components.find((c) => c.name === name)!.weight;
+  assertEquals(weightOf(withObjective.json.scoreA, 'DRAWDOWN_CONTROL'), 0);
+  assertEquals(weightOf(noObjective.json.scoreA, 'DRAWDOWN_CONTROL'), 0);
+  assert(weightOf(withObjective.json.scoreA, 'PROFITABILITY') < weightOf(noObjective.json.scoreA, 'PROFITABILITY'));
 });
 
 Deno.test('SB-15 another user cannot run a backtest against, list versions of, or compare a foreign strategy version', async () => {
@@ -665,6 +673,53 @@ Deno.test('SB-36 (§32) compute telemetry: run_backtest/run_simulation/run_resea
   const loopLine = JSON.parse(logs[logs.length - 1]);
   assert(typeof loopLine.telemetry.candidateCount === 'number' && loopLine.telemetry.candidateCount > 0);
   assert(typeof loopLine.telemetry.proposalCount === 'number');
+});
+
+Deno.test('SB-38 (Codex final audit, P1-02 fix) record_experiment refuses category=SIMULATION for a resultId that was actually a real backtest', async () => {
+  store = new MemoryStore();
+  const created = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT });
+  const versionId = created.json.version.id;
+  const bt = await call({ op: 'run_backtest', strategyVersionId: versionId, datasetId: 'synthetic-fixture-5min-v1', engineId: 'GENERIC_RULE_ENGINE' });
+  const r = await call({
+    op: 'record_experiment', strategyVersionId: versionId, category: 'SIMULATION', datasetId: 'synthetic-fixture-5min-v1',
+    segment: 'FULL', parametersChanged: null, reason: 'lying about the result kind', resultId: bt.json.result.id, source: 'USER',
+  });
+  assertEquals(r.status, 400);
+  assertEquals(store.experiments.length, 0);
+});
+
+Deno.test('SB-39 (Codex final audit, P1-02 fix) record_experiment refuses category=BACKTEST for a resultId that was actually a simulation', async () => {
+  store = new MemoryStore();
+  const created = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT });
+  const versionId = created.json.version.id;
+  const sim = await call({ op: 'run_simulation', strategyVersionId: versionId, datasetId: 'synthetic-fixture-5min-v1' });
+  const r = await call({
+    op: 'record_experiment', strategyVersionId: versionId, category: 'BACKTEST', datasetId: 'synthetic-fixture-5min-v1',
+    segment: 'FULL', parametersChanged: null, reason: 'disguising a simulation as a real backtest', resultId: sim.json.result.id, source: 'USER',
+  });
+  assertEquals(r.status, 400);
+});
+
+Deno.test('SB-40 (Codex final audit, P1-02 fix) compare_versions never selects a SIMULATION result -- a version with only a simulation result is NOT_FOUND, not silently analyzed', async () => {
+  store = new MemoryStore();
+  const created = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT });
+  const strategyId = created.json.strategy.id;
+  const versionAId = created.json.version.id;
+  const v2 = await call({ op: 'create_version', strategyId, spec: GENERIC_REFERENCE_SPEC_INPUT });
+  const versionBId = v2.json.version.id;
+  await call({ op: 'run_simulation', strategyVersionId: versionAId, datasetId: 'synthetic-fixture-5min-v1' });
+  await call({ op: 'run_backtest', strategyVersionId: versionBId, datasetId: 'synthetic-fixture-5min-v1', engineId: 'GENERIC_RULE_ENGINE' });
+  const r = await call({ op: 'compare_versions', versionAId, versionBId });
+  assertEquals(r.status, 404);
+});
+
+Deno.test('SB-41 (Codex final audit, P1-02 fix) analyze_backtest_result never selects a SIMULATION result', async () => {
+  store = new MemoryStore();
+  const created = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT });
+  const versionId = created.json.version.id;
+  await call({ op: 'run_simulation', strategyVersionId: versionId, datasetId: 'synthetic-fixture-5min-v1' });
+  const r = await call({ op: 'analyze_backtest_result', strategyVersionId: versionId });
+  assertEquals(r.status, 404);
 });
 
 Deno.test('SB-16 non-admin plans are denied for every new op before the store is touched', async () => {

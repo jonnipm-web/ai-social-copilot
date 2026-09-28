@@ -567,7 +567,7 @@ export async function handler(
               finish(200, built.code);
               return jsonResponse({ correlation_id: cid, job, result: null });
             }
-            const savedResult = await store.insertBacktestResult(authUser.id, version.id, built.value);
+            const savedResult = await store.insertBacktestResult(authUser.id, version.id, built.value, 'BACKTEST');
             const job = await recordSucceededJob(store, authUser.id, version.id, action.datasetId, action.engineId, startedAt, savedResult.id);
             finish(200, null, { engineId: action.engineId, datasetId: action.datasetId, barCount: bars.length, tradeCount: savedResult.tradeCount });
             return jsonResponse({ correlation_id: cid, job, result: savedResult });
@@ -609,7 +609,7 @@ export async function handler(
             finish(200, built.error.code);
             return jsonResponse({ correlation_id: cid, job, result: null });
           }
-          const savedResult = await store.insertBacktestResult(authUser.id, version.id, built.value);
+          const savedResult = await store.insertBacktestResult(authUser.id, version.id, built.value, 'BACKTEST');
           const job = await recordSucceededJob(store, authUser.id, version.id, action.datasetId, action.engineId, startedAt, savedResult.id);
           finish(200, null, { engineId: action.engineId, datasetId: action.datasetId, tradeCount: savedResult.tradeCount });
           return jsonResponse({ correlation_id: cid, job, result: savedResult });
@@ -625,10 +625,14 @@ export async function handler(
       case 'compare_versions': {
         const token = bearerToken(req) ?? '';
         const store = (deps.storeFor ?? ((t: string) => new SupabaseStrategyStore(t)))(token);
-        const [resultsA, resultsB] = await Promise.all([
+        // Codex final audit (P1-02 fix): a SIMULATION-kind result is
+        // never picked as "the" result for ordinary comparison -- it
+        // must never silently enter analysis meant for real historical
+        // backtests. list_experiments still shows it, clearly labeled.
+        const [resultsA, resultsB] = (await Promise.all([
           store.listBacktestResultsForVersion(authUser.id, action.versionAId),
           store.listBacktestResultsForVersion(authUser.id, action.versionBId),
-        ]);
+        ])).map((results) => results.filter((r) => r.resultKind === 'BACKTEST'));
         if (resultsA.length === 0 || resultsB.length === 0) {
           finish(404, 'NOT_FOUND');
           return errorResponse('NO_BACKTEST_RESULT', cid, 404);
@@ -660,7 +664,9 @@ export async function handler(
       case 'analyze_backtest_result': {
         const token = bearerToken(req) ?? '';
         const store = (deps.storeFor ?? ((t: string) => new SupabaseStrategyStore(t)))(token);
-        const results = await store.listBacktestResultsForVersion(authUser.id, action.strategyVersionId);
+        // Codex final audit (P1-02 fix): same exclusion as compare_versions.
+        const results = (await store.listBacktestResultsForVersion(authUser.id, action.strategyVersionId))
+          .filter((r) => r.resultKind === 'BACKTEST');
         if (results.length === 0) {
           finish(404, 'NOT_FOUND');
           return errorResponse('NO_BACKTEST_RESULT', cid, 404);
@@ -743,6 +749,19 @@ export async function handler(
           const results = await store.listBacktestResultsForVersion(authUser.id, version.id);
           const match = results.find((r) => r.id === action.resultId);
           if (!match || match.datasetId !== action.datasetId) {
+            finish(400, 'INVALID_BODY');
+            return errorResponse('INVALID_BODY', cid, 400);
+          }
+          // Codex final audit (P1-02 fix): the result's OWN, server-set
+          // kind -- never the caller's category text -- decides whether
+          // this may be labeled SIMULATION. Application-layer copy of
+          // the same check the strategy_experiments_insert RPC
+          // (20261006000000) enforces again in the database.
+          if (match.resultKind === 'SIMULATION' && action.category !== 'SIMULATION') {
+            finish(400, 'INVALID_BODY');
+            return errorResponse('INVALID_BODY', cid, 400);
+          }
+          if (match.resultKind === 'BACKTEST' && action.category === 'SIMULATION') {
             finish(400, 'INVALID_BODY');
             return errorResponse('INVALID_BODY', cid, 400);
           }
@@ -842,7 +861,7 @@ export async function handler(
             candidates.push({ label: proposal.label, versionId: candidateVersion.id, result: null, experimentId: null, error: built.message });
             continue;
           }
-          const savedResult = await store.insertBacktestResult(authUser.id, candidateVersion.id, built.value);
+          const savedResult = await store.insertBacktestResult(authUser.id, candidateVersion.id, built.value, 'BACKTEST');
           await recordSucceededJob(store, authUser.id, candidateVersion.id, action.datasetId, 'GENERIC_RULE_ENGINE', new Date().toISOString(), savedResult.id);
           const contaminated = computeContamination(holdoutFirstViewedAt, new Date().toISOString(), segment === 'HOLDOUT');
           const experiment = await store.insertExperiment(authUser.id, {
@@ -913,7 +932,7 @@ export async function handler(
           finish(STRATEGY_ERROR_STATUS[built.code as StrategyErrorCode] ?? 400, built.code);
           return errorResponse(built.code, cid, STRATEGY_ERROR_STATUS[built.code as StrategyErrorCode] ?? 400);
         }
-        const savedResult = await store.insertBacktestResult(authUser.id, version.id, built.value);
+        const savedResult = await store.insertBacktestResult(authUser.id, version.id, built.value, 'SIMULATION');
         const segment: ExperimentSegment = dataset.segmentKind ?? 'FULL';
         const strategyWithVersion = await store.getWithLatestVersion(authUser.id, version.strategyId);
         const holdoutFirstViewedAt = strategyWithVersion?.strategy.holdoutFirstViewedAt ?? null;

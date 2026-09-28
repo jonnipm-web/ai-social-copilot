@@ -116,6 +116,8 @@ export interface StrategyVersionRow {
   readonly createdAt: string;
 }
 
+export type ResultKind = 'BACKTEST' | 'SIMULATION';
+
 export interface StrategyBacktestResultRow {
   readonly id: string;
   readonly strategyVersionId: string;
@@ -126,6 +128,13 @@ export interface StrategyBacktestResultRow {
   readonly tradeCount: number;
   readonly resultHash: string;
   readonly canonicalResult: CanonicalBacktestResult;
+  /** Codex final audit (P1-02 fix): set authoritatively by whichever
+   * server code path produced this row (run_backtest -> 'BACKTEST',
+   * run_simulation -> 'SIMULATION') -- never client-supplied. Lets
+   * every consumer (compare_versions, analyze_backtest_result) tell a
+   * real historical backtest apart from a simulation without relying
+   * solely on a separate, client-writable experiment row. */
+  readonly resultKind: ResultKind;
   readonly createdAt: string;
 }
 
@@ -176,6 +185,7 @@ export interface StrategyStore {
     userId: string,
     strategyVersionId: string,
     result: CanonicalBacktestResult,
+    resultKind: ResultKind,
   ): Promise<StrategyBacktestResultRow>;
   insertFailedBacktestJob(
     userId: string,
@@ -269,6 +279,7 @@ function rowToBacktestResult(row: Record<string, unknown>): StrategyBacktestResu
     tradeCount: Number(row.trade_count),
     resultHash: String(row.result_hash),
     canonicalResult: row.canonical_result as CanonicalBacktestResult,
+    resultKind: (row.result_kind as ResultKind | undefined) ?? 'BACKTEST',
     createdAt: String(row.created_at),
   };
 }
@@ -367,6 +378,7 @@ export class SupabaseStrategyStore implements StrategyStore {
     userId: string,
     strategyVersionId: string,
     result: CanonicalBacktestResult,
+    resultKind: ResultKind,
   ): Promise<StrategyBacktestResultRow> {
     const { data, error } = await this.db.from('strategy_backtest_results').insert({
       strategy_version_id: strategyVersionId,
@@ -378,7 +390,8 @@ export class SupabaseStrategyStore implements StrategyStore {
       trade_count: result.tradeCount,
       result_hash: result.resultHash,
       canonical_result: result,
-    }).select('id, strategy_version_id, dataset_id, dataset_hash, methodology_status, net_pnl, trade_count, result_hash, canonical_result, created_at').single();
+      result_kind: resultKind,
+    }).select('id, strategy_version_id, dataset_id, dataset_hash, methodology_status, net_pnl, trade_count, result_hash, canonical_result, result_kind, created_at').single();
     if (error || !data) throw new Error('backtest result insert failed');
     return rowToBacktestResult(data);
   }
@@ -417,7 +430,7 @@ export class SupabaseStrategyStore implements StrategyStore {
 
   async listBacktestResultsForVersion(userId: string, strategyVersionId: string): Promise<StrategyBacktestResultRow[]> {
     const { data, error } = await this.db.from('strategy_backtest_results')
-      .select('id, strategy_version_id, dataset_id, dataset_hash, methodology_status, net_pnl, trade_count, result_hash, canonical_result, created_at')
+      .select('id, strategy_version_id, dataset_id, dataset_hash, methodology_status, net_pnl, trade_count, result_hash, canonical_result, result_kind, created_at')
       .eq('strategy_version_id', strategyVersionId).eq('user_id', userId)
       .order('created_at', { ascending: false }).limit(50);
     if (error) throw new Error('backtest result list failed');
@@ -429,17 +442,23 @@ export class SupabaseStrategyStore implements StrategyStore {
     parametersChanged: Readonly<Record<string, unknown>> | null; reason: string; resultId: string | null;
     costAssumptions: BacktestCostAssumptions | null; source: ExperimentSource; contaminated: boolean;
   }): Promise<StrategyExperimentRow> {
-    // holdout_first_viewed_at itself is updated by
-    // strategy_experiments_mark_holdout_viewed (20261005000000), a
-    // SECURITY DEFINER trigger -- this insert never writes that column
-    // directly (this role has no UPDATE grant on it at all, by design).
-    const { data, error } = await this.db.from('strategy_experiments').insert({
-      user_id: userId, strategy_id: input.strategyId, strategy_version_id: input.strategyVersionId, category: input.category,
-      dataset_id: input.datasetId, segment: input.segment, parameters_changed: input.parametersChanged, reason: input.reason,
-      result_id: input.resultId, cost_assumptions: input.costAssumptions, source: input.source, contaminated: input.contaminated,
-    }).select('id, strategy_id, strategy_version_id, category, dataset_id, segment, parameters_changed, reason, result_id, cost_assumptions, source, contaminated, created_at').single();
+    // Codex final audit (P1-01 fix): routed through the
+    // strategy_experiments_insert SECURITY DEFINER RPC
+    // (20261006000000), not a direct table insert -- `authenticated`
+    // has no INSERT grant on strategy_experiments at all anymore. The
+    // RPC re-validates ownership/result-dataset/category-vs-result-kind
+    // itself and computes `contaminated`/`created_at` server-side;
+    // `input.contaminated` (the caller's own best-effort preview,
+    // computed the same way in index.ts before this call) is NOT
+    // forwarded -- the RPC's own computation is authoritative and is
+    // what the returned row actually reflects.
+    const { data, error } = await this.db.rpc('strategy_experiments_insert', {
+      p_strategy_id: input.strategyId, p_strategy_version_id: input.strategyVersionId, p_category: input.category,
+      p_dataset_id: input.datasetId, p_segment: input.segment, p_parameters_changed: input.parametersChanged,
+      p_reason: input.reason, p_result_id: input.resultId, p_cost_assumptions: input.costAssumptions, p_source: input.source,
+    }).single();
     if (error || !data) throw new Error('experiment insert failed');
-    return rowToExperiment(data);
+    return rowToExperiment(data as Record<string, unknown>);
   }
 
   async listExperiments(userId: string, strategyId: string): Promise<StrategyExperimentRow[]> {
