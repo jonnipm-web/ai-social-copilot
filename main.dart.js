@@ -61831,7 +61831,7 @@ break}p=4
 c=c.bh("diagnostic_sessions")
 b=a0!=null?A.cdm(a0,200):null
 h=d!=null?A.iI(d,50):null
-g=A.bSE("4d687ca180945a778cd52653d27af35d1090f700",100)
+g=A.bSE("1addc8aaee557fa926d8ef6fe809c5e22ae65516",100)
 f=a1!=null?A.iI(a1,50):null
 s=7
 return A.f(c.f7(0,A.a7(["user_id",m,"label",b,"status","active","app_version",h,"build_sha",g,"platform","web","role_snapshot",f],t.N,t.T)).pm("id").eh(0),$async$Am)
@@ -61989,7 +61989,7 @@ s=q}for(;;)switch(s){case 0:q=3
 m=o.a.bh("diagnostic_events")
 l=A.bZd(b3)
 k=A.bZc(a3)
-j=A.bSE("4d687ca180945a778cd52653d27af35d1090f700",100)
+j=A.bSE("1addc8aaee557fa926d8ef6fe809c5e22ae65516",100)
 i=a9!=null?A.iI(a9,100):null
 h=b0!=null?A.iI(b0,100):null
 g=b1!=null?A.iI(b1,200):null
@@ -66897,7 +66897,8 @@ B.b.u(n,new A.D(p,new A.b0i(),p.$ti.i("D<a4.E,c>")))
 B.b.u(q,n)}n=A.e_(A.M(q,B.b6,o,B.e,B.f),o,B.v,o,B.AO,o,B.J)}return A.M(A.a([new A.alW(m.e,m.f,o),A.ac(n,1)],t.p),B.k,o,B.e,B.f)},
 $S:414}
 A.b0d.prototype={
-$1(a){return a.z==="pending"},
+$1(a){var s=a.z
+return s==="pending"||s==="approved"},
 $S:15}
 A.b0e.prototype={
 $1(a){return a.z==="executing"},
