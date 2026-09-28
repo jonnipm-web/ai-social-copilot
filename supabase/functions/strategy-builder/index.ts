@@ -1,16 +1,25 @@
 // strategy-builder — INSIGHTVALUES-ROBOT-BUILDER-MACRO-05.
 //
 // Strategy Specification CRUD for module 'strategy-builder' (REVERSIBLE
-// user config, EXPERIMENTAL/admin-only). Configuration only -- this
-// function never runs a backtest and never touches AEF (§14: "Strategy
-// configuration must not be executable merely because it exists").
+// user config; COMMERCIAL/free since Macro-08 §5-11 -- was EXPERIMENTAL/
+// admin-only, see module_registry.dart for the full commercial-readiness
+// disclosure). Configuration only -- this function never runs a backtest
+// and never touches AEF (§14: "Strategy configuration must not be
+// executable merely because it exists").
 //
 // authenticate -> entitlement -> body limits -> op dispatch -> ownership
 // (via the caller's own JWT; Postgres RLS from
 // 20261002000000_strategy_builder.sql is the isolation authority; no
 // service role).
 //
-// NOT DEPLOYED (Lab). Not on .github/deploy-allowlist.tsv.
+// NOT DEPLOYED (Lab). Not on .github/deploy-allowlist.tsv. Still true
+// after Macro-08's commercial entitlement promotion (Codex adversarial
+// review, diff vs 15d4177, confirmed this remains the case): the
+// entitlement/RLS changes describe the product's intended commercial
+// architecture WITHIN this dev branch, never live production
+// availability -- deploying this function and its migrations
+// (20261002000000 through 20261008000000) is a separate, explicit Owner
+// decision, outside autonomous scope.
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { AuthClient, AuthenticatedUser, AuthError, resolveAuthenticatedUser, unauthorizedResponse } from '../_shared/auth.ts';
 import { EntitlementSubjectSource, requireModuleAccess } from '../_shared/entitlement.ts';

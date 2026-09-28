@@ -828,3 +828,15 @@ Deno.test('SB-48 drift: the DB entitlement predicate of strategy-builder matches
   assertEquals(policies.length, 8, 'strategies(4) + strategy_versions(2) + strategy_backtest_results(2)');
   for (const p of policies) assert(p[0].includes('strategy_builder_access_allowed()'), `${p[1]} lacks the entitlement predicate`);
 });
+
+Deno.test('SB-49 (Codex adversarial review re-verification) strategy creation is atomic: one SECURITY DEFINER RPC does both inserts, direct INSERT on strategies is revoked, an idempotency unique index exists', async () => {
+  const sql = await Deno.readTextFile(new URL('../../migrations/20261008000000_strategy_create_atomic.sql', import.meta.url));
+  const fn = sql.slice(sql.indexOf('FUNCTION public.strategies_create_with_version'), sql.indexOf('REVOKE ALL ON FUNCTION public.strategies_create_with_version'));
+  assert(/SECURITY DEFINER/.test(fn), 'must be SECURITY DEFINER to insert past the revoked direct-insert grant');
+  assert(/auth\.uid\(\)/.test(fn), 'must re-derive identity server-side, never trust a parameter');
+  assert(/strategy_builder_access_allowed\(\)/.test(fn), 'must re-check the same entitlement predicate the RLS policies use');
+  assert(/INSERT INTO public\.strategies/.test(fn) && /INSERT INTO public\.strategy_versions/.test(fn), 'both inserts must happen inside this one function body (one transaction)');
+  assert(/idempotency_key/.test(fn), 'must support a caller-supplied idempotency key');
+  assert(/CREATE UNIQUE INDEX[^;]*strategies_user_idempotency_key_uq[^;]*\(user_id, idempotency_key\)/.test(sql), 'idempotency key must be unique per user');
+  assert(/REVOKE INSERT ON public\.strategies FROM authenticated/.test(sql), 'direct INSERT bypass of the atomic RPC must be closed, mirroring 20261006000000/20261007000000');
+});

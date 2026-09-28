@@ -167,12 +167,17 @@ export class StrategyLimitReachedError extends Error {
 
 export interface StrategyStore {
   list(userId: string): Promise<StrategyRow[]>;
-  /** Creates a strategy AND its version-1 snapshot atomically (via an RPC
-   * would be ideal; two sequential caller-scoped inserts are used here
-   * since both are covered by the SAME owner RLS and a failure on the
-   * second insert leaves only a harmless orphaned DRAFT the owner can see
-   * and delete themselves — never a different user's data). */
-  create(userId: string, spec: StrategySpecification): Promise<{ strategy: StrategyRow; version: StrategyVersionRow }>;
+  /** Creates a strategy AND its version-1 snapshot atomically. Codex
+   * adversarial review (Macro-08, diff vs 15d4177): the original design
+   * here assumed a partial failure was "harmless" (owner deletes the
+   * orphan themselves) -- untrue, since no delete op was ever built, and
+   * the orphan still burns a real, finite plan-limit slot. Routed through
+   * strategies_create_with_version(), a SECURITY DEFINER RPC
+   * (20261008000000) that performs both inserts in one Postgres
+   * transaction. `idempotencyKey`, when supplied, makes a genuine retry
+   * (not just a same-request timeout) return the ORIGINAL strategy/
+   * version instead of creating a duplicate. */
+  create(userId: string, spec: StrategySpecification, idempotencyKey?: string | null): Promise<{ strategy: StrategyRow; version: StrategyVersionRow }>;
   getWithLatestVersion(userId: string, strategyId: string): Promise<{ strategy: StrategyRow; version: StrategyVersionRow } | null>;
   /** §9/§29: editing a strategy's behavior creates a NEW version -- never
    * mutates an existing one. `strategy_versions_unique` (strategy_id,
@@ -312,33 +317,28 @@ export class SupabaseStrategyStore implements StrategyStore {
     return (data ?? []).map(rowToStrategy);
   }
 
-  async create(userId: string, spec: StrategySpecification): Promise<{ strategy: StrategyRow; version: StrategyVersionRow }> {
-    const { data: strategyData, error: strategyError } = await this.db.from('strategies')
-      .insert({ user_id: userId, name: spec.name, status: 'DRAFT', current_version: 1 })
-      .select(STRATEGY_SELECT).single();
-    if (strategyError?.message?.includes('STRATEGY_LIMIT_REACHED')) throw new StrategyLimitReachedError();
-    if (strategyError || !strategyData) throw new Error('strategy create failed');
-    const strategy = rowToStrategy(strategyData);
-
+  async create(userId: string, spec: StrategySpecification, idempotencyKey?: string | null): Promise<{ strategy: StrategyRow; version: StrategyVersionRow }> {
     const specHash = (await sha256Hex(JSON.stringify(spec))).slice(0, 32);
-    const { data: versionData, error: versionError } = await this.db.from('strategy_versions')
-      .insert({ strategy_id: strategy.id, user_id: userId, version_number: 1, spec, spec_hash: specHash })
-      .select('id, strategy_id, version_number, spec, spec_hash, created_at').single();
-    if (versionError || !versionData) {
-      // Codex adversarial review (Macro-08, diff vs 15d4177): these two
-      // inserts are not one transaction (PostgREST has no cross-request
-      // transaction), so a version-insert failure used to leave an orphan
-      // `strategies` row behind -- one with no usable version, but still
-      // counted by strategies_enforce_plan_limit's trigger, permanently
-      // burning a slot out of the caller's (now real, paying) plan limit on
-      // every retry. Best-effort compensating delete: if it also fails,
-      // the original version error is still what the caller sees (never
-      // silently swallowed), and the orphan is at worst a pre-existing
-      // failure mode, not a NEW one introduced by this cleanup attempt.
-      await this.db.from('strategies').delete().eq('id', strategy.id).eq('user_id', userId);
-      throw new Error('strategy version create failed');
-    }
-    return { strategy, version: rowToVersion(versionData) };
+    // Codex adversarial review (Macro-08, diff vs 15d4177): both inserts now
+    // happen inside ONE Postgres transaction (the RPC's function body), so
+    // a version-insert failure can no longer leave an orphan `strategies`
+    // row behind -- true atomicity, not a best-effort compensating delete.
+    const { data, error } = await this.db.rpc('strategies_create_with_version', {
+      p_name: spec.name, p_spec: spec, p_spec_hash: specHash, p_idempotency_key: idempotencyKey ?? null,
+    }).single();
+    if (error?.message?.includes('STRATEGY_LIMIT_REACHED')) throw new StrategyLimitReachedError();
+    if (error || !data) throw new Error('strategy create failed');
+    const row = data as Record<string, unknown>;
+    return {
+      strategy: rowToStrategy({
+        id: row.strategy_id, name: row.strategy_name, status: row.strategy_status, current_version: row.strategy_current_version,
+        created_at: row.strategy_created_at, updated_at: row.strategy_updated_at, holdout_first_viewed_at: row.strategy_holdout_first_viewed_at,
+      }),
+      version: rowToVersion({
+        id: row.version_id, strategy_id: row.version_strategy_id, version_number: row.version_number, spec: row.version_spec, spec_hash: row.version_spec_hash,
+        created_at: row.version_created_at,
+      }),
+    };
   }
 
   async getWithLatestVersion(userId: string, strategyId: string): Promise<{ strategy: StrategyRow; version: StrategyVersionRow } | null> {
