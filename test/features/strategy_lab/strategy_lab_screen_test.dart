@@ -142,8 +142,36 @@ void main() {
     expect(find.textContaining('NOT a proven profitable strategy'), findsOneWidget);
   });
 
-  testWidgets('SL-03 a non-admin sees access-denied, never the strategy content', (tester) async {
+  testWidgets('SL-03 (Macro-08 continuation §12 fix) a real non-admin user sees the real screen content -- strategy-builder is COMMERCIAL/free, this is no longer admin-only', (tester) async {
     await _pump(tester, admin: false);
+    expect(find.textContaining('do not have permission'), findsNothing);
+    expect(find.text('Strategy #001 — Paulo Trend Fibonacci V10 (Bidirectional Stepped)'), findsOneWidget);
+  });
+
+  testWidgets('SL-03b a genuine profile-fetch error still fails closed to access-denied', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final api = FakeStrategyBuilderApi();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentProfileProvider.overrideWith((ref) => Future<Profile>.error('simulated profile fetch failure')),
+          strategyBuilderApiProvider.overrideWithValue(api),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const StrategyLabScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
     expect(find.textContaining('do not have permission'), findsOneWidget);
     expect(find.text('Strategy #001 — Paulo Trend Fibonacci V10 (Bidirectional Stepped)'), findsNothing);
   });

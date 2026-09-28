@@ -1,5 +1,11 @@
-// INSIGHTVALUES-ROBOT-BUILDER-MACRO-06 — Strategy Lab hub (admin-only;
-// EXPERIMENTAL module).
+// INSIGHTVALUES-ROBOT-BUILDER-MACRO-06 — Strategy Lab hub. Was admin-only/
+// EXPERIMENTAL; Macro-08 §5-11 promoted the module to COMMERCIAL/free
+// (module_registry.dart, module_policy.ts) -- this screen's own gate is
+// updated to match (Macro-08 continuation §12, found while building the
+// activation journey: the gate here still hardcoded isAdmin and had never
+// been exercised end-to-end with a real non-admin profile in a test that
+// actually asserted access, silently defeating the whole admin-shield-
+// removal mission for any user who navigated here normally).
 //
 // MVP phase (Macro-05 was read-only-only; this macro's own mission brief
 // named that the #1 gap to close): a real "My Strategies" list, a real
@@ -7,9 +13,17 @@
 // view with backtest + comparison (strategy_detail_screen.dart). The V10
 // reference display block from Macro-05 is preserved as-is below it.
 //
-// Access: the screen re-checks admin fail-closed (same pattern as
-// QuantLabScreen); the server enforces entitlement on every strategy-
-// builder request regardless of what this screen shows.
+// Access: lib/app.dart's router-level guard (route_policy.dart's
+// evaluateRouteAccess, already generic over module_registry.dart's
+// commercialEnabled/minimumPlan/lifecycle -- no change needed there) is
+// the primary gate and already matches the real commercial policy. This
+// screen keeps a defense-in-depth re-check (same convention as
+// QuantLabScreen), now for what the module ACTUALLY requires: a resolved,
+// non-error profile -- never a hardcoded admin-only bar, since
+// commercialEnabled:true + minimumPlan:free means every real authenticated
+// user is meant to reach this screen. Individual operations (propose_
+// variants, run_research_loop, run_simulation) still gate on Pro/Premium
+// at the point of use (see PlanUpgradeBanner), not here.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -76,8 +90,11 @@ class _StrategyLabScreenState extends ConsumerState<StrategyLabScreen> {
     if (!profileAsync.hasValue && !profileAsync.hasError) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    final isAdmin = profileAsync.hasValue && !profileAsync.hasError && (profileAsync.value?.isAdmin ?? false);
-    if (!isAdmin) {
+    // Macro-08 continuation §12: strategy-builder is COMMERCIAL/free -- any
+    // resolved, non-error profile (free/pro/premium/beta_tester/admin) may
+    // enter. Fails closed only on a genuine profile-fetch error, never on
+    // "not admin" (that hardcoded bar is exactly what this fix removes).
+    if (profileAsync.hasError) {
       return Scaffold(
         appBar: AppBar(title: Text(l.strategyLabTitle)),
         body: Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(l.strategyLabAccessDenied, textAlign: TextAlign.center))),
