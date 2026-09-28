@@ -142,7 +142,16 @@ class _ActionBody extends ConsumerWidget {
             style: const TextStyle(color: Colors.white54)),
       ),
       data: (items) {
-        final pending   = items.where((i) => i.status == 'pending').toList();
+        // 'approved' sits between 'pending' (awaiting approval) and
+        // 'executing' (running) -- an item never stays 'pending' once
+        // approved, but it also isn't 'executing' yet. Grouped into this
+        // same section (not its own) because _ActionCard already renders
+        // the correct per-status badge/button (line ~313, ~458): before
+        // this fix, an 'approved' item matched none of the three lists
+        // below and simply vanished from every section, invisible but
+        // still real in the database (reproduced live, Action Engine
+        // continuation session).
+        final pending   = items.where((i) => i.status == 'pending' || i.status == 'approved').toList();
         final active    = items.where((i) => i.status == 'executing').toList();
         final completed = items.where((i) => i.status == 'completed').toList();
 
