@@ -13,6 +13,7 @@ import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/ive_exclusion_region.dart';
 import 'data/strategy_builder_api.dart';
 import 'strategy_builder_form_screen.dart';
+import 'widgets/plan_upgrade_banner.dart';
 
 class StrategyDetailScreen extends ConsumerStatefulWidget {
   const StrategyDetailScreen({super.key, required this.strategyId});
@@ -34,10 +35,13 @@ class _StrategyDetailScreenState extends ConsumerState<StrategyDetailScreen> {
   bool _fitBusy = false;
   Map<String, dynamic>? _fitEvidence;
   List<dynamic> _proposals = const [];
+  StrategyBuilderResult? _fitUpgrade;
   bool _simulationBusy = false;
   Map<String, dynamic>? _simulationResult;
+  StrategyBuilderResult? _simulationUpgrade;
   bool _researchLoopBusy = false;
   List<dynamic>? _researchCandidates;
+  StrategyBuilderResult? _researchLoopUpgrade;
 
   @override
   void initState() {
@@ -102,6 +106,7 @@ class _StrategyDetailScreenState extends ConsumerState<StrategyDetailScreen> {
       _fitBusy = false;
       _fitEvidence = result.data?['fitEvidence'] as Map<String, dynamic>?;
       _proposals = (result.data?['proposals'] as List?) ?? const [];
+      _fitUpgrade = result.isPlanUpgradeRequired ? result : null;
     });
   }
 
@@ -115,6 +120,7 @@ class _StrategyDetailScreenState extends ConsumerState<StrategyDetailScreen> {
     setState(() {
       _simulationBusy = false;
       _simulationResult = result.data?['result'] as Map<String, dynamic>?;
+      _simulationUpgrade = result.isPlanUpgradeRequired ? result : null;
     });
   }
 
@@ -127,7 +133,8 @@ class _StrategyDetailScreenState extends ConsumerState<StrategyDetailScreen> {
     if (!mounted) return;
     setState(() {
       _researchLoopBusy = false;
-      _researchCandidates = (result.data?['candidates'] as List?) ?? const [];
+      _researchLoopUpgrade = result.isPlanUpgradeRequired ? result : null;
+      _researchCandidates = result.isPlanUpgradeRequired ? null : (result.data?['candidates'] as List?) ?? const [];
     });
     // A candidate is a real, persisted new strategy version (§20) -- the
     // version list must reflect it, never left stale in this screen.
@@ -252,6 +259,7 @@ class _StrategyDetailScreenState extends ConsumerState<StrategyDetailScreen> {
                         label: Text(l.strategyDetailAnalyzeFit),
                       ),
                     ),
+                    if (_fitUpgrade != null) Padding(padding: const EdgeInsets.only(top: 8), child: PlanUpgradeBanner.fromResult(_fitUpgrade!)),
                     if (_fitEvidence != null) ...[
                       const SizedBox(height: 8),
                       Text(l.strategyDetailFitEvidenceTitle, style: const TextStyle(fontWeight: FontWeight.w600)),
@@ -278,6 +286,7 @@ class _StrategyDetailScreenState extends ConsumerState<StrategyDetailScreen> {
                           key: const Key('strategyDetailSimulationResultText'),
                         ),
                       ),
+                    if (_simulationUpgrade != null) Padding(padding: const EdgeInsets.only(top: 8), child: PlanUpgradeBanner.fromResult(_simulationUpgrade!)),
                     const SizedBox(height: 12),
                     IveExclusionRegion(
                       child: OutlinedButton.icon(
@@ -295,6 +304,7 @@ class _StrategyDetailScreenState extends ConsumerState<StrategyDetailScreen> {
                           key: const Key('strategyDetailResearchLoopResultText'),
                         ),
                       ),
+                    if (_researchLoopUpgrade != null) Padding(padding: const EdgeInsets.only(top: 8), child: PlanUpgradeBanner.fromResult(_researchLoopUpgrade!)),
                   ]),
           ),
         ],

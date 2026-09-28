@@ -2959,6 +2959,42 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'MAIS ROBUSTO SOB AS PREMISSAS TESTADAS'**
   String get strategyDetailMoreRobust;
+
+  /// No description provided for @planUpgradeBannerTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Recurso do plano {requiredPlan}'**
+  String planUpgradeBannerTitle(String requiredPlan);
+
+  /// No description provided for @planUpgradeBannerBody.
+  ///
+  /// In pt, this message translates to:
+  /// **'Você está no plano {currentPlan}. Faça upgrade para {requiredPlan} para usar este recurso.'**
+  String planUpgradeBannerBody(String currentPlan, String requiredPlan);
+
+  /// No description provided for @planUpgradeBannerCta.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ver planos'**
+  String get planUpgradeBannerCta;
+
+  /// No description provided for @planNameFree.
+  ///
+  /// In pt, this message translates to:
+  /// **'Free'**
+  String get planNameFree;
+
+  /// No description provided for @planNamePro.
+  ///
+  /// In pt, this message translates to:
+  /// **'Pro'**
+  String get planNamePro;
+
+  /// No description provided for @planNamePremium.
+  ///
+  /// In pt, this message translates to:
+  /// **'Premium'**
+  String get planNamePremium;
 }
 
 class _AppLocalizationsDelegate

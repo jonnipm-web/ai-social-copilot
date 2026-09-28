@@ -1613,4 +1613,26 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get strategyDetailMoreRobust =>
       'MAIS ROBUSTO SOB AS PREMISSAS TESTADAS';
+
+  @override
+  String planUpgradeBannerTitle(String requiredPlan) {
+    return 'Recurso do plano $requiredPlan';
+  }
+
+  @override
+  String planUpgradeBannerBody(String currentPlan, String requiredPlan) {
+    return 'Você está no plano $currentPlan. Faça upgrade para $requiredPlan para usar este recurso.';
+  }
+
+  @override
+  String get planUpgradeBannerCta => 'Ver planos';
+
+  @override
+  String get planNameFree => 'Free';
+
+  @override
+  String get planNamePro => 'Pro';
+
+  @override
+  String get planNamePremium => 'Premium';
 }

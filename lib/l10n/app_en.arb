@@ -565,5 +565,14 @@
   "@strategyDetailResearchLoopSummary": {"placeholders": {"count": {"type": "String"}}},
   "strategyDetailNoCandidates": "No candidates were generated (no evidence-based proposal).",
   "strategyDetailRequiresMoreEvidence": "REQUIRES MORE EVIDENCE",
-  "strategyDetailMoreRobust": "MORE ROBUST UNDER TESTED ASSUMPTIONS"
+  "strategyDetailMoreRobust": "MORE ROBUST UNDER TESTED ASSUMPTIONS",
+
+  "planUpgradeBannerTitle": "{requiredPlan} plan feature",
+  "@planUpgradeBannerTitle": {"placeholders": {"requiredPlan": {"type": "String"}}},
+  "planUpgradeBannerBody": "You are on the {currentPlan} plan. Upgrade to {requiredPlan} to use this feature.",
+  "@planUpgradeBannerBody": {"placeholders": {"currentPlan": {"type": "String"}, "requiredPlan": {"type": "String"}}},
+  "planUpgradeBannerCta": "View plans",
+  "planNameFree": "Free",
+  "planNamePro": "Pro",
+  "planNamePremium": "Premium"
 }

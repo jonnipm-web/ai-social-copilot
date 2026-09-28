@@ -61,10 +61,11 @@ class FakeDetailApi implements StrategyBuilderApi {
     'fitEvidence': {'items': [], 'sufficientData': false},
     'proposals': [],
   };
+  StrategyBuilderResult? proposeVariantsForcedResult;
   @override
   Future<StrategyBuilderResult> proposeVariants(String strategyVersionId, String datasetId) async {
     calls.add('propose_variants:$datasetId');
-    return StrategyBuilderResult(200, proposeVariantsResult);
+    return proposeVariantsForcedResult ?? StrategyBuilderResult(200, proposeVariantsResult);
   }
 
   Map<String, dynamic> runResearchLoopResult = {
@@ -72,10 +73,11 @@ class FakeDetailApi implements StrategyBuilderApi {
     'proposals': [],
     'candidates': [],
   };
+  StrategyBuilderResult? runResearchLoopForcedResult;
   @override
   Future<StrategyBuilderResult> runResearchLoop(String strategyVersionId, String datasetId) async {
     calls.add('run_research_loop:$datasetId');
-    return StrategyBuilderResult(200, runResearchLoopResult);
+    return runResearchLoopForcedResult ?? StrategyBuilderResult(200, runResearchLoopResult);
   }
 
   Map<String, dynamic> runSimulationResult = {
@@ -83,10 +85,11 @@ class FakeDetailApi implements StrategyBuilderApi {
     'experiment': {'category': 'SIMULATION'},
     'label': 'SIMULATION',
   };
+  StrategyBuilderResult? runSimulationForcedResult;
   @override
   Future<StrategyBuilderResult> runSimulation(String strategyVersionId, String datasetId) async {
     calls.add('run_simulation:$datasetId');
-    return StrategyBuilderResult(200, runSimulationResult);
+    return runSimulationForcedResult ?? StrategyBuilderResult(200, runSimulationResult);
   }
 
   @override
@@ -253,5 +256,117 @@ void main() {
     expect(api.calls, contains('propose_variants:synthetic-fixture-5min-v1'));
     expect(find.textContaining('Stop distance is tight vs typical range.'), findsOneWidget);
     expect(find.textContaining('Current stop is tight -- testing a wider stop.'), findsOneWidget);
+  });
+
+  testWidgets('SD-07 (§13) a PLAN_UPGRADE_REQUIRED denial on Analyze fit renders the structured upgrade banner, never a silent no-op', (tester) async {
+    final api = FakeDetailApi(_genericSpec)
+      ..proposeVariantsForcedResult = const StrategyBuilderResult(403, {
+        'error': 'PLAN_UPGRADE_REQUIRED', 'correlation_id': 'c1', 'requiredPlan': 'pro', 'currentPlan': 'free', 'op': 'propose_variants',
+      });
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [strategyBuilderApiProvider.overrideWithValue(api)],
+        child: MaterialApp(
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const StrategyDetailScreen(strategyId: 'sid-1'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Strategy Intelligence'));
+    await tester.pumpAndSettle();
+    final button = find.byKey(const Key('strategyDetailAnalyzeFit'));
+    await tester.ensureVisible(button);
+    await tester.pumpAndSettle();
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('planUpgradeBanner')), findsOneWidget);
+    expect(find.textContaining('Pro'), findsWidgets);
+    expect(find.textContaining('Free'), findsWidgets);
+    expect(find.byKey(const Key('planUpgradeBannerCta')), findsOneWidget);
+  });
+
+  testWidgets('SD-08 (§13) a PLAN_UPGRADE_REQUIRED denial on Run simulation renders the structured upgrade banner requiring Premium', (tester) async {
+    final api = FakeDetailApi(_genericSpec)
+      ..runSimulationForcedResult = const StrategyBuilderResult(403, {
+        'error': 'PLAN_UPGRADE_REQUIRED', 'correlation_id': 'c2', 'requiredPlan': 'premium', 'currentPlan': 'pro', 'op': 'run_simulation',
+      });
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [strategyBuilderApiProvider.overrideWithValue(api)],
+        child: MaterialApp(
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const StrategyDetailScreen(strategyId: 'sid-1'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Strategy Intelligence'));
+    await tester.pumpAndSettle();
+    final button = find.byKey(const Key('strategyDetailRunSimulation'));
+    await tester.ensureVisible(button);
+    await tester.pumpAndSettle();
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('planUpgradeBanner')), findsOneWidget);
+    expect(find.textContaining('Premium'), findsWidgets);
+    expect(find.byKey(const Key('strategyDetailSimulationResultText')), findsNothing);
+  });
+
+  testWidgets('SD-09 (§13) a PLAN_UPGRADE_REQUIRED denial on the research loop shows the banner instead of a misleading "no candidates" message', (tester) async {
+    final api = FakeDetailApi(_genericSpec)
+      ..runResearchLoopForcedResult = const StrategyBuilderResult(403, {
+        'error': 'PLAN_UPGRADE_REQUIRED', 'correlation_id': 'c3', 'requiredPlan': 'pro', 'currentPlan': 'free', 'op': 'run_research_loop',
+      });
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [strategyBuilderApiProvider.overrideWithValue(api)],
+        child: MaterialApp(
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const StrategyDetailScreen(strategyId: 'sid-1'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Strategy Intelligence'));
+    await tester.pumpAndSettle();
+    final button = find.byKey(const Key('strategyDetailRunResearchLoop'));
+    await tester.ensureVisible(button);
+    await tester.pumpAndSettle();
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('planUpgradeBanner')), findsOneWidget);
+    expect(find.byKey(const Key('strategyDetailResearchLoopResultText')), findsNothing);
+    // A denied loop produced no candidates, so _load() must not re-fire a
+    // second time (mirrors the "only reload on a real persisted candidate"
+    // guard right after runResearchLoop's setState).
+    expect(api.calls.where((c) => c == 'get').length, 1);
   });
 }

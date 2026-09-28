@@ -1604,4 +1604,26 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get strategyDetailMoreRobust => 'MORE ROBUST UNDER TESTED ASSUMPTIONS';
+
+  @override
+  String planUpgradeBannerTitle(String requiredPlan) {
+    return '$requiredPlan plan feature';
+  }
+
+  @override
+  String planUpgradeBannerBody(String currentPlan, String requiredPlan) {
+    return 'You are on the $currentPlan plan. Upgrade to $requiredPlan to use this feature.';
+  }
+
+  @override
+  String get planUpgradeBannerCta => 'View plans';
+
+  @override
+  String get planNameFree => 'Free';
+
+  @override
+  String get planNamePro => 'Pro';
+
+  @override
+  String get planNamePremium => 'Premium';
 }

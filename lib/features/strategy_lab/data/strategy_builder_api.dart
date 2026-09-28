@@ -19,6 +19,13 @@ class StrategyBuilderResult {
 
   bool get ok => status == 200 && data?['valid'] != false;
   String? get errorCode => data?['error'] is Map ? (data!['error']['code'] as String?) : data?['error'] as String?;
+
+  /// Only meaningful when [errorCode] is `PLAN_UPGRADE_REQUIRED` -- the
+  /// server's own structured denial (strategy-builder/index.ts's
+  /// errorResponse extra fields), never re-derived client-side (§13).
+  bool get isPlanUpgradeRequired => errorCode == 'PLAN_UPGRADE_REQUIRED';
+  String? get requiredPlan => data?['requiredPlan'] as String?;
+  String? get currentPlan => data?['currentPlan'] as String?;
 }
 
 abstract class StrategyBuilderApi {

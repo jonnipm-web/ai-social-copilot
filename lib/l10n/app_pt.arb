@@ -670,5 +670,14 @@
   "@strategyDetailResearchLoopSummary": {"placeholders": {"count": {"type": "String"}}},
   "strategyDetailNoCandidates": "Nenhum candidato foi gerado (nenhuma proposta baseada em evidência).",
   "strategyDetailRequiresMoreEvidence": "REQUER MAIS EVIDÊNCIA",
-  "strategyDetailMoreRobust": "MAIS ROBUSTO SOB AS PREMISSAS TESTADAS"
+  "strategyDetailMoreRobust": "MAIS ROBUSTO SOB AS PREMISSAS TESTADAS",
+
+  "planUpgradeBannerTitle": "Recurso do plano {requiredPlan}",
+  "@planUpgradeBannerTitle": {"placeholders": {"requiredPlan": {"type": "String"}}},
+  "planUpgradeBannerBody": "Você está no plano {currentPlan}. Faça upgrade para {requiredPlan} para usar este recurso.",
+  "@planUpgradeBannerBody": {"placeholders": {"currentPlan": {"type": "String"}, "requiredPlan": {"type": "String"}}},
+  "planUpgradeBannerCta": "Ver planos",
+  "planNameFree": "Free",
+  "planNamePro": "Pro",
+  "planNamePremium": "Premium"
 }
