@@ -32,6 +32,17 @@
 -- status/value changes; both new UUID columns and the outcome column
 -- default to NULL, so every existing row (and every write path that
 -- doesn't yet know about AEF governance) is completely unaffected.
+-- P05: every Lab migration declares its real dependencies up front
+-- (scripts/ci/run_disposable_db_tests.sh). Depends on the production
+-- baseline's public.action_queue (20260907120000).
+DO $$
+BEGIN
+  IF to_regclass('public.action_queue') IS NULL THEN
+    RAISE EXCEPTION 'LAB_PRECONDITION (20260929000000_action_queue_aef_governance): missing: public.action_queue'
+      USING ERRCODE = 'AE010';
+  END IF;
+END $$;
+
 BEGIN;
 
 ALTER TABLE public.action_queue

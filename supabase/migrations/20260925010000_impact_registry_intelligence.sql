@@ -34,6 +34,26 @@
 --
 -- Idempotent: safe to re-run.
 
+-- P05: every Lab migration declares its real dependencies up front
+-- (scripts/ci/run_disposable_db_tests.sh). Depends on
+-- 20260924010000_impact_lab_persistence's impact_investigations and
+-- impact_sources tables.
+DO $$
+DECLARE
+  v_missing text[] := '{}';
+BEGIN
+  IF to_regclass('public.impact_investigations') IS NULL THEN
+    v_missing := v_missing || 'public.impact_investigations'::text;
+  END IF;
+  IF to_regclass('public.impact_sources') IS NULL THEN
+    v_missing := v_missing || 'public.impact_sources'::text;
+  END IF;
+  IF array_length(v_missing, 1) > 0 THEN
+    RAISE EXCEPTION 'LAB_PRECONDITION (20260925010000_impact_registry_intelligence): missing: %', array_to_string(v_missing, ', ')
+      USING ERRCODE = 'AE010';
+  END IF;
+END $$;
+
 -- ── provider allowlist (supersedes 20260924010000) ─────────────────────────
 -- MUST equal trustedProviderRefs() in
 -- supabase/functions/_shared/impact/provider_registry.ts (drift-tested; the

@@ -49,6 +49,30 @@
 --
 -- Idempotent: safe to re-run.
 
+-- P05: every Lab migration declares its real dependencies up front
+-- (scripts/ci/run_disposable_db_tests.sh). Depends only on the production
+-- baseline's public.projects and auth.uid() -- every impact_* table this
+-- migration references is created by this same file.
+DO $$
+DECLARE
+  v_missing text[] := '{}';
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'projects' AND column_name = 'id' AND data_type = 'uuid') THEN
+    v_missing := v_missing || 'public.projects.id uuid'::text;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'projects' AND column_name = 'user_id' AND data_type = 'uuid') THEN
+    v_missing := v_missing || 'public.projects.user_id uuid'::text;
+  END IF;
+  IF to_regprocedure('auth.uid()') IS NULL
+     OR (SELECT prorettype FROM pg_proc WHERE oid = to_regprocedure('auth.uid()')) IS DISTINCT FROM 'uuid'::regtype THEN
+    v_missing := v_missing || 'auth.uid() returning uuid'::text;
+  END IF;
+  IF array_length(v_missing, 1) > 0 THEN
+    RAISE EXCEPTION 'LAB_PRECONDITION (20260924010000_impact_lab_persistence): missing or incompatible: %', array_to_string(v_missing, ', ')
+      USING ERRCODE = 'AE010';
+  END IF;
+END $$;
+
 -- ── helpers ─────────────────────────────────────────────────────────────────
 
 CREATE OR REPLACE FUNCTION public.impact_is_ref(v text) RETURNS boolean

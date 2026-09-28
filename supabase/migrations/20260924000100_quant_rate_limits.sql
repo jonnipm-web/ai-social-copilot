@@ -14,6 +14,24 @@
 -- must match these numbers — enforced by test QB-17.
 -- Idempotent.
 
+-- P05: every Lab migration declares its real dependencies up front
+-- (scripts/ci/run_disposable_db_tests.sh). This migration is otherwise
+-- self-contained -- its only hard dependency is the production
+-- baseline's auth.uid()/auth.users.
+DO $$
+DECLARE
+  v_missing text[] := '{}';
+BEGIN
+  IF to_regprocedure('auth.uid()') IS NULL
+     OR (SELECT prorettype FROM pg_proc WHERE oid = to_regprocedure('auth.uid()')) IS DISTINCT FROM 'uuid'::regtype THEN
+    v_missing := v_missing || 'auth.uid() returning uuid'::text;
+  END IF;
+  IF array_length(v_missing, 1) > 0 THEN
+    RAISE EXCEPTION 'LAB_PRECONDITION (20260924000100_quant_rate_limits): missing or incompatible: %', array_to_string(v_missing, ', ')
+      USING ERRCODE = 'AE010';
+  END IF;
+END $$;
+
 CREATE TABLE IF NOT EXISTS public.quant_rate_limits (
   user_id      uuid        NOT NULL REFERENCES auth.users (id) ON DELETE CASCADE,
   bucket       text        NOT NULL,

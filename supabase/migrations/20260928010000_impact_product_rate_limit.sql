@@ -25,6 +25,23 @@
 --   DROP TABLE IF EXISTS public.impact_rate_limits;
 -- Idempotent: safe to re-run.
 
+-- P05: every Lab migration declares its real dependencies up front
+-- (scripts/ci/run_disposable_db_tests.sh). Self-contained -- its only
+-- hard dependency is the production baseline's auth.uid()/auth.users.
+DO $$
+DECLARE
+  v_missing text[] := '{}';
+BEGIN
+  IF to_regprocedure('auth.uid()') IS NULL
+     OR (SELECT prorettype FROM pg_proc WHERE oid = to_regprocedure('auth.uid()')) IS DISTINCT FROM 'uuid'::regtype THEN
+    v_missing := v_missing || 'auth.uid() returning uuid'::text;
+  END IF;
+  IF array_length(v_missing, 1) > 0 THEN
+    RAISE EXCEPTION 'LAB_PRECONDITION (20260928010000_impact_product_rate_limit): missing or incompatible: %', array_to_string(v_missing, ', ')
+      USING ERRCODE = 'AE010';
+  END IF;
+END $$;
+
 CREATE TABLE IF NOT EXISTS public.impact_rate_limits (
   user_id      uuid        NOT NULL,
   bucket       text        NOT NULL,
