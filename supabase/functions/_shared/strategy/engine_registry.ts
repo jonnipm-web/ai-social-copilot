@@ -47,7 +47,15 @@ export const ENGINE_REGISTRY: readonly EngineRecord[] = Object.freeze([
       'EXIT.FORCED_TIME',
       'POSITION_SIZE.FIXED_CONTRACTS',
     ]),
-    supportedDatasetIds: Object.freeze(['synthetic-fixture-5min-v1']),
+    supportedDatasetIds: Object.freeze([
+      'synthetic-fixture-5min-v1',
+      // MACRO-07 §14: chronological research/holdout SLICES of the same
+      // fixture (dataset_registry.ts's `segmentOf`) -- allowlisted
+      // exactly like the full dataset, never resolved by client-supplied
+      // text.
+      'synthetic-fixture-5min-v1-research',
+      'synthetic-fixture-5min-v1-holdout',
+    ]),
     description: 'Deterministic, safe, in-process bracket engine for the constrained generic rule subset. No external process.',
   },
   {

@@ -25,9 +25,10 @@ import type { StrategyErrorCode } from '../_shared/strategy/errors.ts';
 import { getDataset } from '../_shared/strategy/dataset_registry.ts';
 import { ENGINE_REGISTRY, engineAcceptsRunRequest, getEngine, type EngineId } from '../_shared/strategy/engine_registry.ts';
 import { runGenericRuleEngine } from '../_shared/strategy/generic_rule_engine.ts';
-import { syntheticFixtureBars } from '../_shared/strategy/generic_engine_fixtures.ts';
+import { syntheticFixtureBars, syntheticFixtureHoldoutBars, syntheticFixtureResearchBars } from '../_shared/strategy/generic_engine_fixtures.ts';
+import type { OhlcvBar } from '../_shared/strategy/ohlcv.ts';
 import { validateOhlcvBars } from '../_shared/strategy/ohlcv.ts';
-import { buildCanonicalBacktestResult, type CanonicalBacktestResultInput } from '../_shared/strategy/backtest_result.ts';
+import { buildCanonicalBacktestResult, type CanonicalBacktestResult, type CanonicalBacktestResultInput } from '../_shared/strategy/backtest_result.ts';
 import { compareBacktestResults } from '../_shared/strategy/comparison.ts';
 import {
   checkEngineAvailability, runV10ViaBridge, DEFAULT_BRIDGE_TIMEOUT_MS, type BridgeCostConfig,
@@ -35,6 +36,12 @@ import {
 import { V10_REFERENCE_SPEC_INPUT } from '../_shared/strategy/v10_reference.ts';
 import { GENERIC_REFERENCE_SPEC_INPUT } from '../_shared/strategy/generic_reference_strategy.ts';
 import { analyzeBacktestResult } from '../_shared/strategy/ive_strategy_analyst.ts';
+import { computeMarketStatistics } from '../_shared/strategy/market_statistics.ts';
+import { analyzeStrategyMarketFit } from '../_shared/strategy/strategy_market_fit.ts';
+import { MAX_BOUNDED_VARIANTS, proposeBoundedStopVariants } from '../_shared/strategy/bounded_exploration.ts';
+import {
+  computeContamination, validateStrategyExperimentInput, type ExperimentCategory, type ExperimentSegment, type ExperimentSource,
+} from '../_shared/strategy/experiment_provenance.ts';
 
 export interface StrategyBuilderDeps {
   storeFor?: (accessToken: string) => StrategyStore;
@@ -46,7 +53,32 @@ const OPS = new Set([
   'validate', 'draft_from_text', 'create', 'list', 'get',
   'create_version', 'list_versions', 'run_backtest', 'compare_versions', 'clone_reference',
   'analyze_backtest_result', 'engine_status',
+  'propose_variants', 'record_experiment', 'list_experiments', 'run_research_loop',
 ]);
+
+/** MACRO-07 §33-35: robustness/experiment ops are the first real
+ * plan-gated Strategy Intelligence surface -- validation, security and
+ * the safety-critical ops above stay ungated (§35: "Safety is not
+ * Premium"); only the RESEARCH capability itself requires pro/premium. */
+const RESEARCH_OPS = new Set(['propose_variants', 'record_experiment', 'list_experiments', 'run_research_loop']);
+const PLAN_RANK: Record<string, number> = { free: 0, pro: 1, premium: 2 };
+
+/**
+ * Extracted as a pure function specifically so it is unit-testable
+ * without a real HTTP round-trip: the module's CURRENT lifecycle
+ * (EXPERIMENTAL) makes it impossible to reach this code at all as a
+ * non-admin caller (requireModuleAccess denies everyone else first),
+ * so an end-to-end test can only ever exercise the ADMIN_ROLE bypass
+ * branch, never the plan-tier denial branch it exists to enforce for
+ * a FUTURE non-admin caller. This function lets that denial branch be
+ * verified directly, honestly, rather than left untested because the
+ * integration path to reach it does not exist yet.
+ */
+export function planAllowsResearchOp(op: string, plan: string, decisionReason: string): boolean {
+  if (!RESEARCH_OPS.has(op)) return true;
+  if (decisionReason === 'ADMIN_ROLE') return true;
+  return (PLAN_RANK[plan] ?? 0) >= PLAN_RANK.pro;
+}
 
 interface ValidateOp { readonly op: 'validate'; readonly spec: StrategySpecificationInput }
 interface DraftFromTextOp { readonly op: 'draft_from_text'; readonly text: string }
@@ -66,10 +98,25 @@ interface CompareVersionsOp { readonly op: 'compare_versions'; readonly versionA
 interface CloneReferenceOp { readonly op: 'clone_reference'; readonly reference: 'V10' | 'GENERIC' }
 interface AnalyzeBacktestResultOp { readonly op: 'analyze_backtest_result'; readonly strategyVersionId: string }
 interface EngineStatusOp { readonly op: 'engine_status' }
+interface ProposeVariantsOp { readonly op: 'propose_variants'; readonly strategyVersionId: string; readonly datasetId: string }
+interface RecordExperimentOp {
+  readonly op: 'record_experiment';
+  readonly strategyVersionId: string;
+  readonly category: string;
+  readonly datasetId: string;
+  readonly segment: string;
+  readonly parametersChanged: Record<string, unknown> | null;
+  readonly reason: string;
+  readonly resultId: string | null;
+  readonly source: string;
+}
+interface ListExperimentsOp { readonly op: 'list_experiments'; readonly strategyId: string }
+interface RunResearchLoopOp { readonly op: 'run_research_loop'; readonly strategyVersionId: string; readonly datasetId: string }
 type ParsedOp =
   | ValidateOp | DraftFromTextOp | CreateOp | ListOp | GetOp
   | CreateVersionOp | ListVersionsOp | RunBacktestOp | CompareVersionsOp | CloneReferenceOp
-  | AnalyzeBacktestResultOp | EngineStatusOp;
+  | AnalyzeBacktestResultOp | EngineStatusOp
+  | ProposeVariantsOp | RecordExperimentOp | ListExperimentsOp | RunResearchLoopOp;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -132,6 +179,35 @@ function parseOp(body: unknown): { ok: true; value: ParsedOp } | { ok: false; co
       return { ok: true, value: { op: 'analyze_backtest_result', strategyVersionId: b.strategyVersionId } };
     case 'engine_status':
       return { ok: true, value: { op: 'engine_status' } };
+    case 'propose_variants':
+      if (!isUuid(b.strategyVersionId) || typeof b.datasetId !== 'string') return { ok: false, code: 'INVALID_BODY' };
+      return { ok: true, value: { op: 'propose_variants', strategyVersionId: b.strategyVersionId, datasetId: b.datasetId } };
+    case 'record_experiment': {
+      if (
+        !isUuid(b.strategyVersionId) || typeof b.category !== 'string' || typeof b.datasetId !== 'string'
+        || typeof b.segment !== 'string' || typeof b.reason !== 'string' || typeof b.source !== 'string'
+      ) {
+        return { ok: false, code: 'INVALID_BODY' };
+      }
+      if (b.parametersChanged !== null && b.parametersChanged !== undefined && (typeof b.parametersChanged !== 'object' || Array.isArray(b.parametersChanged))) {
+        return { ok: false, code: 'INVALID_BODY' };
+      }
+      if (b.resultId !== null && b.resultId !== undefined && !isUuid(b.resultId)) return { ok: false, code: 'INVALID_BODY' };
+      return {
+        ok: true,
+        value: {
+          op: 'record_experiment', strategyVersionId: b.strategyVersionId, category: b.category, datasetId: b.datasetId,
+          segment: b.segment, parametersChanged: (b.parametersChanged as Record<string, unknown> | null) ?? null,
+          reason: b.reason, resultId: (b.resultId as string | null) ?? null, source: b.source,
+        },
+      };
+    }
+    case 'list_experiments':
+      if (!isUuid(b.strategyId)) return { ok: false, code: 'INVALID_BODY' };
+      return { ok: true, value: { op: 'list_experiments', strategyId: b.strategyId } };
+    case 'run_research_loop':
+      if (!isUuid(b.strategyVersionId) || typeof b.datasetId !== 'string') return { ok: false, code: 'INVALID_BODY' };
+      return { ok: true, value: { op: 'run_research_loop', strategyVersionId: b.strategyVersionId, datasetId: b.datasetId } };
     default:
       return { ok: false, code: 'UNKNOWN_OP' };
   }
@@ -147,6 +223,57 @@ function errorResponse(code: string, correlationId: string, status: number): Res
 function jsonResponse(body: unknown): Response {
   return new Response(JSON.stringify(body), { status: 200, headers: { ...strategyCorsHeaders, 'Content-Type': 'application/json' } });
 }
+
+/**
+ * Runs the GENERIC_RULE_ENGINE against `bars` and folds the result into
+ * a CanonicalBacktestResult, exactly once -- shared by run_backtest's
+ * IN_PROCESS branch and run_research_loop, so a bounded-exploration
+ * candidate is built by the SAME code path as an ordinary backtest,
+ * never a second, drifting implementation.
+ */
+async function runGenericEngineAndBuildResult(
+  spec: StrategySpecification,
+  bars: readonly OhlcvBar[],
+  commonInput: Pick<CanonicalBacktestResultInput,
+    'strategyId' | 'strategyVersion' | 'strategySpecHash' | 'datasetId' | 'datasetHash' | 'instrumentSymbol' | 'periodStart' | 'periodEnd' | 'timeframes' | 'limitations'>,
+): Promise<{ ok: true; value: CanonicalBacktestResult } | { ok: false; code: string; message: string }> {
+  const barsError = validateOhlcvBars(bars);
+  if (barsError) return { ok: false, code: 'INVALID_STRATEGY_SPEC', message: barsError };
+  const runResult = runGenericRuleEngine(spec, bars);
+  if (!runResult.ok) return { ok: false, code: runResult.error.code, message: runResult.error.message };
+  const wins = runResult.value.trades.filter((t) => t.grossPnlPoints > 0).length;
+  const losses = runResult.value.trades.filter((t) => t.grossPnlPoints < 0).length;
+  const grossProfit = runResult.value.trades.filter((t) => t.grossPnlPoints > 0).reduce((s, t) => s + t.grossPnlPoints, 0);
+  const grossLoss = -runResult.value.trades.filter((t) => t.grossPnlPoints < 0).reduce((s, t) => s + t.grossPnlPoints, 0);
+  const netPnl = runResult.value.trades.reduce((s, t) => s + t.grossPnlPoints, 0);
+  const resultInput: CanonicalBacktestResultInput = {
+    ...commonInput,
+    tradeCount: runResult.value.trades.length,
+    longCount: runResult.value.trades.filter((t) => t.direction === 'LONG').length,
+    shortCount: runResult.value.trades.filter((t) => t.direction === 'SHORT').length,
+    wins, losses, grossPnl: netPnl, grossProfit, grossLoss, totalCost: 0, netPnl,
+    maxDrawdown: null,
+    targetTouches: runResult.value.trades.filter((t) => t.exitReason === 'TARGET').length,
+    stopTouches: runResult.value.trades.filter((t) => t.exitReason === 'STOP').length,
+    executionAmbiguityCount: 0,
+    methodologyStatus: 'ZERO_COST_RESEARCH',
+    costAssumptions: null,
+    provenance: 'GENERIC_RULE_ENGINE, in-process, this request.',
+  };
+  const built = await buildCanonicalBacktestResult(resultInput);
+  if (!built.ok) return { ok: false, code: built.error.code, message: built.error.message };
+  return { ok: true, value: built.value };
+}
+
+/** MACRO-07 §14: the only three in-process dataset ids ever resolve to
+ * bars this way -- an id outside this map never reaches this function
+ * (engine_registry.ts's allowlist and the rowsAvailableInProcess check
+ * both refuse it first). */
+const IN_PROCESS_BARS_BY_DATASET_ID: Readonly<Record<string, () => readonly OhlcvBar[]>> = Object.freeze({
+  'synthetic-fixture-5min-v1': syntheticFixtureBars,
+  'synthetic-fixture-5min-v1-research': syntheticFixtureResearchBars,
+  'synthetic-fixture-5min-v1-holdout': syntheticFixtureHoldoutBars,
+});
 
 /**
  * Records the SUCCEEDED job row for an already-persisted backtest result.
@@ -223,6 +350,10 @@ export async function handler(
   const parsed = parseOp(bodyResult.value);
   if (!parsed.ok) return errorResponse(parsed.code, cid, 400);
   const action = parsed.value;
+
+  if (!planAllowsResearchOp(action.op, access.subject.plan ?? 'free', access.decision.reason)) {
+    return errorResponse('PLAN_UPGRADE_REQUIRED', cid, 403);
+  }
 
   const started = performance.now();
   const finish = (status: number, errorCode: string | null) => {
@@ -404,43 +535,17 @@ export async function handler(
 
         try {
           if (engine.kind === 'IN_PROCESS') {
-            if (dataset.datasetId !== 'synthetic-fixture-5min-v1' || !dataset.rowsAvailableInProcess) {
+            const barsFn = dataset.rowsAvailableInProcess ? IN_PROCESS_BARS_BY_DATASET_ID[dataset.datasetId] : undefined;
+            if (!barsFn) {
               const job = await store.insertFailedBacktestJob(authUser.id, version.id, action.datasetId, action.engineId, startedAt, 'dataset has no in-process rows');
               finish(200, 'DATA_REQUIREMENT_UNMET');
               return jsonResponse({ correlation_id: cid, job, result: null });
             }
-            const bars = syntheticFixtureBars();
-            const barsError = validateOhlcvBars(bars);
-            if (barsError) throw new Error(barsError);
-            const runResult = runGenericRuleEngine(spec, bars);
-            if (!runResult.ok) {
-              const job = await store.insertFailedBacktestJob(authUser.id, version.id, action.datasetId, action.engineId, startedAt, runResult.error.message);
-              finish(200, runResult.error.code);
-              return jsonResponse({ correlation_id: cid, job, result: null });
-            }
-            const wins = runResult.value.trades.filter((t) => t.grossPnlPoints > 0).length;
-            const losses = runResult.value.trades.filter((t) => t.grossPnlPoints < 0).length;
-            const grossProfit = runResult.value.trades.filter((t) => t.grossPnlPoints > 0).reduce((s, t) => s + t.grossPnlPoints, 0);
-            const grossLoss = -runResult.value.trades.filter((t) => t.grossPnlPoints < 0).reduce((s, t) => s + t.grossPnlPoints, 0);
-            const netPnl = runResult.value.trades.reduce((s, t) => s + t.grossPnlPoints, 0);
-            const resultInput: CanonicalBacktestResultInput = {
-              ...commonInput,
-              tradeCount: runResult.value.trades.length,
-              longCount: runResult.value.trades.filter((t) => t.direction === 'LONG').length,
-              shortCount: runResult.value.trades.filter((t) => t.direction === 'SHORT').length,
-              wins, losses, grossPnl: netPnl, grossProfit, grossLoss, totalCost: 0, netPnl,
-              maxDrawdown: null,
-              targetTouches: runResult.value.trades.filter((t) => t.exitReason === 'TARGET').length,
-              stopTouches: runResult.value.trades.filter((t) => t.exitReason === 'STOP').length,
-              executionAmbiguityCount: 0,
-              methodologyStatus: 'ZERO_COST_RESEARCH',
-              costAssumptions: null,
-              provenance: 'GENERIC_RULE_ENGINE, in-process, this request.',
-            };
-            const built = await buildCanonicalBacktestResult(resultInput);
+            const bars = barsFn();
+            const built = await runGenericEngineAndBuildResult(spec, bars, commonInput);
             if (!built.ok) {
-              const job = await store.insertFailedBacktestJob(authUser.id, version.id, action.datasetId, action.engineId, startedAt, built.error.message);
-              finish(200, built.error.code);
+              const job = await store.insertFailedBacktestJob(authUser.id, version.id, action.datasetId, action.engineId, startedAt, built.message);
+              finish(200, built.code);
               return jsonResponse({ correlation_id: cid, job, result: null });
             }
             const savedResult = await store.insertBacktestResult(authUser.id, version.id, built.value);
@@ -546,6 +651,174 @@ export async function handler(
         }));
         finish(200, null);
         return jsonResponse({ correlation_id: cid, engines });
+      }
+      case 'propose_variants': {
+        const token = bearerToken(req) ?? '';
+        const store = (deps.storeFor ?? ((t: string) => new SupabaseStrategyStore(t)))(token);
+        const version = await store.getVersionById(authUser.id, action.strategyVersionId);
+        if (!version) {
+          finish(404, 'NOT_FOUND');
+          return errorResponse('NOT_FOUND', cid, 404);
+        }
+        const dataset = getDataset(action.datasetId);
+        if (!dataset) {
+          finish(400, 'UNKNOWN_DATASET');
+          return errorResponse('UNKNOWN_DATASET', cid, 400);
+        }
+        const barsFn = dataset.rowsAvailableInProcess ? IN_PROCESS_BARS_BY_DATASET_ID[dataset.datasetId] : undefined;
+        if (!barsFn) {
+          finish(400, 'DATA_REQUIREMENT_UNMET');
+          return errorResponse('DATA_REQUIREMENT_UNMET', cid, 400);
+        }
+        const bars = barsFn();
+        const statsResult = computeMarketStatistics(bars, dataset.timeframe);
+        if (!statsResult.ok) {
+          finish(STRATEGY_ERROR_STATUS[statsResult.error.code], statsResult.error.code);
+          return errorResponse(statsResult.error.code, cid, STRATEGY_ERROR_STATUS[statsResult.error.code]);
+        }
+        const fitEvidence = analyzeStrategyMarketFit(version.spec, statsResult.value, bars);
+        const proposals = proposeBoundedStopVariants(version.spec, fitEvidence);
+        finish(200, null);
+        return jsonResponse({ correlation_id: cid, fitEvidence, proposals });
+      }
+      case 'record_experiment': {
+        const token = bearerToken(req) ?? '';
+        const store = (deps.storeFor ?? ((t: string) => new SupabaseStrategyStore(t)))(token);
+        const version = await store.getVersionById(authUser.id, action.strategyVersionId);
+        if (!version) {
+          finish(404, 'NOT_FOUND');
+          return errorResponse('NOT_FOUND', cid, 404);
+        }
+        const dataset = getDataset(action.datasetId);
+        if (!dataset) {
+          finish(400, 'UNKNOWN_DATASET');
+          return errorResponse('UNKNOWN_DATASET', cid, 400);
+        }
+        // The dataset itself, not the caller's say-so, decides whether
+        // this experiment may be labeled RESEARCH/HOLDOUT/FULL --
+        // otherwise a caller could claim a HOLDOUT segment for a FULL
+        // dataset run and never trigger contamination tracking.
+        const expectedSegment: ExperimentSegment = dataset.segmentKind ?? 'FULL';
+        if (action.segment !== expectedSegment) {
+          finish(400, 'INVALID_BODY');
+          return errorResponse('INVALID_BODY', cid, 400);
+        }
+        let resultId: string | null = null;
+        if (action.resultId) {
+          const results = await store.listBacktestResultsForVersion(authUser.id, version.id);
+          const match = results.find((r) => r.id === action.resultId);
+          if (!match || match.datasetId !== action.datasetId) {
+            finish(400, 'INVALID_BODY');
+            return errorResponse('INVALID_BODY', cid, 400);
+          }
+          resultId = match.id;
+        }
+        const candidateInput = {
+          strategyId: version.strategyId, strategyVersionId: version.id, category: action.category as ExperimentCategory,
+          datasetId: action.datasetId, segment: action.segment as ExperimentSegment, parametersChanged: action.parametersChanged,
+          reason: action.reason, resultId, costAssumptions: null, source: action.source as ExperimentSource,
+        };
+        const validated = validateStrategyExperimentInput(candidateInput);
+        if (!validated.ok) {
+          finish(STRATEGY_ERROR_STATUS[validated.error.code] ?? 400, validated.error.code);
+          return errorResponse(validated.error.code, cid, STRATEGY_ERROR_STATUS[validated.error.code] ?? 400);
+        }
+        const strategyWithVersion = await store.getWithLatestVersion(authUser.id, version.strategyId);
+        const holdoutFirstViewedAt = strategyWithVersion?.strategy.holdoutFirstViewedAt ?? null;
+        const nowIso = new Date().toISOString();
+        const contaminated = computeContamination(holdoutFirstViewedAt, nowIso, expectedSegment === 'HOLDOUT');
+        const experiment = await store.insertExperiment(authUser.id, { ...validated.value, contaminated });
+        finish(200, null);
+        return jsonResponse({ correlation_id: cid, experiment });
+      }
+      case 'list_experiments': {
+        const token = bearerToken(req) ?? '';
+        const store = (deps.storeFor ?? ((t: string) => new SupabaseStrategyStore(t)))(token);
+        const experiments = await store.listExperiments(authUser.id, action.strategyId);
+        finish(200, null);
+        return jsonResponse({ correlation_id: cid, experiments });
+      }
+      case 'run_research_loop': {
+        const token = bearerToken(req) ?? '';
+        const store = (deps.storeFor ?? ((t: string) => new SupabaseStrategyStore(t)))(token);
+        const version = await store.getVersionById(authUser.id, action.strategyVersionId);
+        if (!version) {
+          finish(404, 'NOT_FOUND');
+          return errorResponse('NOT_FOUND', cid, 404);
+        }
+        const dataset = getDataset(action.datasetId);
+        if (!dataset) {
+          finish(400, 'UNKNOWN_DATASET');
+          return errorResponse('UNKNOWN_DATASET', cid, 400);
+        }
+        const barsFn = dataset.rowsAvailableInProcess ? IN_PROCESS_BARS_BY_DATASET_ID[dataset.datasetId] : undefined;
+        if (!barsFn) {
+          finish(400, 'DATA_REQUIREMENT_UNMET');
+          return errorResponse('DATA_REQUIREMENT_UNMET', cid, 400);
+        }
+        const spec = version.spec;
+        const ruleIds = [
+          spec.entry.ruleId, spec.stop.ruleId, spec.target.ruleId,
+          ...(spec.breakEven ? [spec.breakEven.ruleId] : []),
+          spec.session.ruleId, spec.forcedExit.ruleId, spec.positionSize.ruleId,
+        ];
+        // §31: the automated research loop is deliberately restricted to
+        // the safe, in-process engine -- it never dispatches a bounded
+        // loop iteration against the external Python bridge.
+        const refusal = engineAcceptsRunRequest('GENERIC_RULE_ENGINE', ruleIds, action.datasetId);
+        if (refusal) {
+          finish(400, 'ENGINE_REFUSED');
+          return errorResponse('ENGINE_REFUSED', cid, 400);
+        }
+        const bars = barsFn();
+        const statsResult = computeMarketStatistics(bars, dataset.timeframe);
+        if (!statsResult.ok) {
+          finish(STRATEGY_ERROR_STATUS[statsResult.error.code], statsResult.error.code);
+          return errorResponse(statsResult.error.code, cid, STRATEGY_ERROR_STATUS[statsResult.error.code]);
+        }
+        const fitEvidence = analyzeStrategyMarketFit(spec, statsResult.value, bars);
+        // §16: already capped at MAX_BOUNDED_VARIANTS inside
+        // proposeBoundedStopVariants -- this loop adds no further cap
+        // of its own because it needs none; it trusts the one bound
+        // already enforced at the source.
+        const proposals = proposeBoundedStopVariants(spec, fitEvidence);
+        const segment: ExperimentSegment = dataset.segmentKind ?? 'FULL';
+        const strategyWithVersion = await store.getWithLatestVersion(authUser.id, version.strategyId);
+        const holdoutFirstViewedAt = strategyWithVersion?.strategy.holdoutFirstViewedAt ?? null;
+        const commonInputBase = {
+          strategyId: version.strategyId, strategySpecHash: version.specHash, datasetId: dataset.datasetId, datasetHash: dataset.hash,
+          instrumentSymbol: dataset.instrumentSymbol, periodStart: dataset.periodStart, periodEnd: dataset.periodEnd, timeframes: [dataset.timeframe],
+          limitations: ['Generic in-process engine: single-direction session-open entry only, no no-trade-reason taxonomy.'],
+        };
+        const candidates: Array<{
+          label: string; versionId: string | null; result: unknown; experimentId: string | null; error: string | null;
+        }> = [];
+        for (const proposal of proposals.slice(0, MAX_BOUNDED_VARIANTS)) {
+          const stopChange = proposal.parametersChanged['stop.distance'];
+          const modifiedInput = { ...spec, stop: { ...spec.stop, distance: stopChange.to } };
+          const validatedSpec = createStrategySpecification(modifiedInput);
+          if (!validatedSpec.ok) {
+            candidates.push({ label: proposal.label, versionId: null, result: null, experimentId: null, error: validatedSpec.error.message });
+            continue;
+          }
+          const candidateVersion = await store.createNewVersion(authUser.id, version.strategyId, validatedSpec.value);
+          const built = await runGenericEngineAndBuildResult(validatedSpec.value, bars, { ...commonInputBase, strategyVersion: candidateVersion.versionNumber });
+          if (!built.ok) {
+            candidates.push({ label: proposal.label, versionId: candidateVersion.id, result: null, experimentId: null, error: built.message });
+            continue;
+          }
+          const savedResult = await store.insertBacktestResult(authUser.id, candidateVersion.id, built.value);
+          await recordSucceededJob(store, authUser.id, candidateVersion.id, action.datasetId, 'GENERIC_RULE_ENGINE', new Date().toISOString(), savedResult.id);
+          const contaminated = computeContamination(holdoutFirstViewedAt, new Date().toISOString(), segment === 'HOLDOUT');
+          const experiment = await store.insertExperiment(authUser.id, {
+            strategyId: version.strategyId, strategyVersionId: candidateVersion.id, category: 'ROBUSTNESS_EXPERIMENT',
+            datasetId: action.datasetId, segment, parametersChanged: proposal.parametersChanged, reason: proposal.reason,
+            resultId: savedResult.id, costAssumptions: null, source: 'AUTOMATED_RESEARCH_LOOP', contaminated,
+          });
+          candidates.push({ label: proposal.label, versionId: candidateVersion.id, result: savedResult, experimentId: experiment.id, error: null });
+        }
+        finish(200, null);
+        return jsonResponse({ correlation_id: cid, fitEvidence, proposals, candidates });
       }
     }
   } catch {

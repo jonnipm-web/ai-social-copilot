@@ -9,14 +9,14 @@ import { assert, assertEquals } from 'https://deno.land/std@0.168.0/testing/asse
 import type { AuthClient } from '../_shared/auth.ts';
 import { fakeSubjectSource } from '../_shared/entitlement_test_support.ts';
 import type {
-  StrategyBacktestJobRow, StrategyBacktestResultRow, StrategyRow, StrategyStore, StrategyVersionRow,
+  StrategyBacktestJobRow, StrategyBacktestResultRow, StrategyExperimentRow, StrategyRow, StrategyStore, StrategyVersionRow,
 } from '../_shared/strategy_server.ts';
 import type { StrategySpecification } from '../_shared/strategy/strategy_spec.ts';
 import type { CanonicalBacktestResult } from '../_shared/strategy/backtest_result.ts';
 import { V10_REFERENCE_SPEC_INPUT } from '../_shared/strategy/v10_reference.ts';
 import { GENERIC_REFERENCE_SPEC_INPUT } from '../_shared/strategy/generic_reference_strategy.ts';
 import { StrategyLimitReachedError } from '../_shared/strategy_server.ts';
-import { handler, type StrategyBuilderDeps } from './index.ts';
+import { handler, planAllowsResearchOp, type StrategyBuilderDeps } from './index.ts';
 
 globalThis.fetch = () => Promise.reject(new Error('network is forbidden in strategy-builder tests'));
 
@@ -37,6 +37,7 @@ class MemoryStore implements StrategyStore {
   versions: (StrategyVersionRow & { userId: string })[] = [];
   results: (StrategyBacktestResultRow & { userId: string })[] = [];
   jobs: (StrategyBacktestJobRow & { userId: string })[] = [];
+  experiments: (StrategyExperimentRow & { userId: string })[] = [];
   private n = 0;
   private id() {
     return `cccccccc-0000-4000-8000-${String(++this.n).padStart(12, '0')}`;
@@ -56,7 +57,7 @@ class MemoryStore implements StrategyStore {
       throw new StrategyLimitReachedError();
     }
     const strategy: StrategyRow & { userId: string } = {
-      id: this.id(), userId: u, name: spec.name, status: 'DRAFT', currentVersion: 1, createdAt: 't', updatedAt: 't',
+      id: this.id(), userId: u, name: spec.name, status: 'DRAFT', currentVersion: 1, createdAt: 't', updatedAt: 't', holdoutFirstViewedAt: null,
     };
     this.strategies.push(strategy);
     const version: StrategyVersionRow & { userId: string } = {
@@ -137,6 +138,31 @@ class MemoryStore implements StrategyStore {
   async listBacktestResultsForVersion(u: string, strategyVersionId: string) {
     return this.results.filter((r) => r.strategyVersionId === strategyVersionId && r.userId === u)
       .map(({ userId: _u, ...r }) => r);
+  }
+  // deno-lint-ignore require-await
+  async insertExperiment(u: string, input: Omit<StrategyExperimentRow, 'id' | 'createdAt'>) {
+    // A REAL timestamp, unlike the 't' placeholder used elsewhere in this
+    // store -- computeContamination compares createdAt values as actual
+    // dates, and Date.parse('t') is NaN, which silently broke every
+    // comparison against it.
+    const row: StrategyExperimentRow & { userId: string } = { id: this.id(), userId: u, createdAt: new Date().toISOString(), ...input };
+    this.experiments.push(row);
+    // Mirrors 20261005000000's strategy_experiments_mark_holdout_viewed
+    // trigger: first HOLDOUT experiment sets the strategy's timestamp,
+    // COALESCE-guarded (first-write-wins) -- never overwritten later.
+    if (input.segment === 'HOLDOUT') {
+      const idx = this.strategies.findIndex((x) => x.id === input.strategyId && x.userId === u);
+      if (idx >= 0 && this.strategies[idx].holdoutFirstViewedAt === null) {
+        this.strategies[idx] = { ...this.strategies[idx], holdoutFirstViewedAt: row.createdAt };
+      }
+    }
+    const { userId: _u, ...e } = row;
+    return e;
+  }
+  // deno-lint-ignore require-await
+  async listExperiments(u: string, strategyId: string) {
+    return this.experiments.filter((e) => e.strategyId === strategyId && e.userId === u)
+      .map(({ userId: _u, ...e }) => e);
   }
 }
 
@@ -401,6 +427,163 @@ Deno.test('SB-21 (§5) engine_status reports the in-process engine always availa
   assert(typeof v10.reason === 'string' && v10.reason.length > 0);
 });
 
+Deno.test('SB-22 (§14) run_backtest against the research and holdout segment datasets reproduces the documented sign-flip end to end', async () => {
+  store = new MemoryStore();
+  const created = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT });
+  const versionId = created.json.version.id;
+  const research = await call({ op: 'run_backtest', strategyVersionId: versionId, datasetId: 'synthetic-fixture-5min-v1-research', engineId: 'GENERIC_RULE_ENGINE' });
+  const holdout = await call({ op: 'run_backtest', strategyVersionId: versionId, datasetId: 'synthetic-fixture-5min-v1-holdout', engineId: 'GENERIC_RULE_ENGINE' });
+  assertEquals(research.status, 200);
+  assertEquals(holdout.status, 200);
+  assertEquals(research.json.result.tradeCount, 1);
+  assertEquals(holdout.json.result.tradeCount, 1);
+  // Documented fixture behavior (generic_engine_fixtures.ts): session 1
+  // (research) hits its +10 target; session 2 (holdout) hits its -5
+  // stop -- a real, measured sign flip out of sample, not a fabricated one.
+  assertEquals(research.json.result.netPnl, 10);
+  assertEquals(holdout.json.result.netPnl, -5);
+  assertEquals(Math.sign(research.json.result.netPnl), 1);
+  assertEquals(Math.sign(holdout.json.result.netPnl), -1);
+});
+
+Deno.test('SB-23 (§33-35) planAllowsResearchOp: pure gate logic -- admin bypasses, pro/premium pass, free is denied', () => {
+  assertEquals(planAllowsResearchOp('propose_variants', 'free', 'ADMIN_ROLE'), true);
+  assertEquals(planAllowsResearchOp('propose_variants', 'free', 'PLAN_ENTITLED'), false);
+  assertEquals(planAllowsResearchOp('propose_variants', 'pro', 'PLAN_ENTITLED'), true);
+  assertEquals(planAllowsResearchOp('propose_variants', 'premium', 'PLAN_ENTITLED'), true);
+  // Non-research ops are never gated by this function -- validation/
+  // security stay ungated (§35).
+  assertEquals(planAllowsResearchOp('validate', 'free', 'PLAN_ENTITLED'), true);
+});
+
+Deno.test('SB-24 (§10/§19) propose_variants returns fit evidence and bounded proposals when the stop is flagged tight', async () => {
+  store = new MemoryStore();
+  const tightStopSpec = { ...GENERIC_REFERENCE_SPEC_INPUT, stop: { ruleId: 'STOP.FIXED_DISTANCE', distance: 1 } };
+  const created = await call({ op: 'create', spec: tightStopSpec });
+  const versionId = created.json.version.id;
+  const r = await call({ op: 'propose_variants', strategyVersionId: versionId, datasetId: 'synthetic-fixture-5min-v1' });
+  assertEquals(r.status, 200);
+  const stopFinding = r.json.fitEvidence.items.find((i: { dimension: string }) => i.dimension === 'STOP_VS_MOVEMENT');
+  assertEquals(stopFinding.flagged, true);
+  assert(r.json.proposals.length > 0);
+  assert(r.json.proposals.length <= 5);
+});
+
+Deno.test('SB-25 propose_variants against an unknown dataset is a structured 400, never a 500', async () => {
+  store = new MemoryStore();
+  const created = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT });
+  const r = await call({ op: 'propose_variants', strategyVersionId: created.json.version.id, datasetId: 'not-a-real-dataset' });
+  assertEquals(r.status, 400);
+  assertEquals(r.json.error, 'UNKNOWN_DATASET');
+});
+
+Deno.test('SB-26 (§15) record_experiment persists a BACKTEST-category experiment linked to a real result, uncontaminated', async () => {
+  store = new MemoryStore();
+  const created = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT });
+  const versionId = created.json.version.id;
+  const bt = await call({ op: 'run_backtest', strategyVersionId: versionId, datasetId: 'synthetic-fixture-5min-v1', engineId: 'GENERIC_RULE_ENGINE' });
+  const resultId = bt.json.result.id;
+  const r = await call({
+    op: 'record_experiment', strategyVersionId: versionId, category: 'BACKTEST', datasetId: 'synthetic-fixture-5min-v1',
+    segment: 'FULL', parametersChanged: null, reason: 'baseline run', resultId, source: 'USER',
+  });
+  assertEquals(r.status, 200);
+  assertEquals(r.json.experiment.contaminated, false);
+  assertEquals(r.json.experiment.resultId, resultId);
+  assertEquals(store.experiments.length, 1);
+});
+
+Deno.test('SB-27 record_experiment refuses a segment label that does not match the datasets own segmentKind', async () => {
+  store = new MemoryStore();
+  const created = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT });
+  const versionId = created.json.version.id;
+  const r = await call({
+    op: 'record_experiment', strategyVersionId: versionId, category: 'BACKTEST', datasetId: 'synthetic-fixture-5min-v1',
+    segment: 'HOLDOUT', parametersChanged: null, reason: 'lying about the segment', resultId: null, source: 'USER',
+  });
+  assertEquals(r.status, 400);
+  assertEquals(store.experiments.length, 0);
+});
+
+Deno.test('SB-28 record_experiment refuses a resultId that belongs to a different dataset than the one claimed', async () => {
+  store = new MemoryStore();
+  const created = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT });
+  const versionId = created.json.version.id;
+  const bt = await call({ op: 'run_backtest', strategyVersionId: versionId, datasetId: 'synthetic-fixture-5min-v1-research', engineId: 'GENERIC_RULE_ENGINE' });
+  const r = await call({
+    op: 'record_experiment', strategyVersionId: versionId, category: 'BACKTEST', datasetId: 'synthetic-fixture-5min-v1',
+    segment: 'FULL', parametersChanged: null, reason: 'mismatched dataset', resultId: bt.json.result.id, source: 'USER',
+  });
+  assertEquals(r.status, 400);
+});
+
+Deno.test('SB-29 (§14) the FIRST HOLDOUT experiment is never contaminated; a later experiment after it IS', async () => {
+  store = new MemoryStore();
+  const created = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT });
+  const versionId = created.json.version.id;
+  const holdoutBt = await call({ op: 'run_backtest', strategyVersionId: versionId, datasetId: 'synthetic-fixture-5min-v1-holdout', engineId: 'GENERIC_RULE_ENGINE' });
+  const firstHoldout = await call({
+    op: 'record_experiment', strategyVersionId: versionId, category: 'ROBUSTNESS_EXPERIMENT', datasetId: 'synthetic-fixture-5min-v1-holdout',
+    segment: 'HOLDOUT', parametersChanged: null, reason: 'first holdout look', resultId: holdoutBt.json.result.id, source: 'USER',
+  });
+  assertEquals(firstHoldout.json.experiment.contaminated, false);
+
+  const fullBt = await call({ op: 'run_backtest', strategyVersionId: versionId, datasetId: 'synthetic-fixture-5min-v1', engineId: 'GENERIC_RULE_ENGINE' });
+  const later = await call({
+    op: 'record_experiment', strategyVersionId: versionId, category: 'USER_DECISION', datasetId: 'synthetic-fixture-5min-v1',
+    segment: 'FULL', parametersChanged: null, reason: 'decided after seeing holdout', resultId: fullBt.json.result.id, source: 'USER',
+  });
+  assertEquals(later.json.experiment.contaminated, true);
+});
+
+Deno.test('SB-30 list_experiments is scoped to the caller -- another users experiments never leak', async () => {
+  store = new MemoryStore();
+  const created = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT }, 'jwt-a');
+  const strategyId = created.json.strategy.id;
+  const versionId = created.json.version.id;
+  const bt = await call({ op: 'run_backtest', strategyVersionId: versionId, datasetId: 'synthetic-fixture-5min-v1', engineId: 'GENERIC_RULE_ENGINE' }, 'jwt-a');
+  await call({
+    op: 'record_experiment', strategyVersionId: versionId, category: 'BACKTEST', datasetId: 'synthetic-fixture-5min-v1',
+    segment: 'FULL', parametersChanged: null, reason: 'owner experiment', resultId: bt.json.result.id, source: 'USER',
+  }, 'jwt-a');
+  const asOwner = await call({ op: 'list_experiments', strategyId }, 'jwt-a');
+  assertEquals(asOwner.json.experiments.length, 1);
+  const asOther = await call({ op: 'list_experiments', strategyId }, 'jwt-b');
+  assertEquals(asOther.json.experiments.length, 0);
+});
+
+Deno.test('SB-31 (§16/§30) run_research_loop produces bounded candidates, each a real new version with a real persisted result', async () => {
+  store = new MemoryStore();
+  const tightStopSpec = { ...GENERIC_REFERENCE_SPEC_INPUT, stop: { ruleId: 'STOP.FIXED_DISTANCE', distance: 1 } };
+  const created = await call({ op: 'create', spec: tightStopSpec });
+  const versionId = created.json.version.id;
+  const r = await call({ op: 'run_research_loop', strategyVersionId: versionId, datasetId: 'synthetic-fixture-5min-v1' });
+  assertEquals(r.status, 200);
+  assert(r.json.candidates.length > 0);
+  assert(r.json.candidates.length <= 5);
+  for (const c of r.json.candidates) {
+    assertEquals(c.error, null);
+    assert(c.versionId !== null && c.versionId !== versionId);
+    assert(c.result !== null);
+    assert(c.experimentId !== null);
+  }
+  // Every candidate became a real, persisted new version -- listVersions
+  // must see them (never a throwaway/ephemeral version).
+  const versions = await call({ op: 'list_versions', strategyId: created.json.strategy.id });
+  assertEquals(versions.json.versions.length, 1 + r.json.candidates.length);
+  assertEquals(store.experiments.length, r.json.candidates.length);
+});
+
+Deno.test('SB-32 run_research_loop returns an empty, non-error candidate list when no evidence-based proposal exists', async () => {
+  store = new MemoryStore();
+  const wideStopSpec = { ...GENERIC_REFERENCE_SPEC_INPUT, stop: { ruleId: 'STOP.FIXED_DISTANCE', distance: 1000 } };
+  const created = await call({ op: 'create', spec: wideStopSpec });
+  const r = await call({ op: 'run_research_loop', strategyVersionId: created.json.version.id, datasetId: 'synthetic-fixture-5min-v1' });
+  assertEquals(r.status, 200);
+  assertEquals(r.json.candidates, []);
+  assertEquals(r.json.proposals, []);
+});
+
 Deno.test('SB-16 non-admin plans are denied for every new op before the store is touched', async () => {
   store = new MemoryStore();
   for (const payload of [
@@ -411,6 +594,13 @@ Deno.test('SB-16 non-admin plans are denied for every new op before the store is
     { op: 'compare_versions', versionAId: 'cccccccc-0000-4000-8000-000000000001', versionBId: 'cccccccc-0000-4000-8000-000000000002' },
     { op: 'analyze_backtest_result', strategyVersionId: 'cccccccc-0000-4000-8000-000000000001' },
     { op: 'engine_status' },
+    { op: 'propose_variants', strategyVersionId: 'cccccccc-0000-4000-8000-000000000001', datasetId: 'synthetic-fixture-5min-v1' },
+    {
+      op: 'record_experiment', strategyVersionId: 'cccccccc-0000-4000-8000-000000000001', category: 'BACKTEST',
+      datasetId: 'synthetic-fixture-5min-v1', segment: 'FULL', parametersChanged: null, reason: 'x', resultId: null, source: 'USER',
+    },
+    { op: 'list_experiments', strategyId: 'cccccccc-0000-4000-8000-000000000001' },
+    { op: 'run_research_loop', strategyVersionId: 'cccccccc-0000-4000-8000-000000000001', datasetId: 'synthetic-fixture-5min-v1' },
   ]) {
     const r = await call(payload, 'jwt-a', 'free');
     assertEquals([r.status, r.json.error], [403, 'MODULE_NOT_AVAILABLE'], JSON.stringify(payload));

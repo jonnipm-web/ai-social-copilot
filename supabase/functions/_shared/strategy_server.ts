@@ -12,7 +12,8 @@ import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supa
 import { sha256Hex } from '../../../aef/persistence/canonical.ts';
 import type { StrategySpecification } from './strategy/strategy_spec.ts';
 import type { StrategyStatus } from './strategy/lifecycle.ts';
-import type { CanonicalBacktestResult } from './strategy/backtest_result.ts';
+import type { BacktestCostAssumptions, CanonicalBacktestResult } from './strategy/backtest_result.ts';
+import type { ExperimentCategory, ExperimentSegment, ExperimentSource } from './strategy/experiment_provenance.ts';
 
 export const strategyCorsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -83,6 +84,27 @@ export interface StrategyRow {
   readonly currentVersion: number;
   readonly createdAt: string;
   readonly updatedAt: string;
+  /** MACRO-07 §14: set exactly once, by the strategy_experiments_mark_
+   * holdout_viewed trigger, at the FIRST HOLDOUT-segment experiment
+   * ever recorded for this strategy -- see experiment_provenance.ts's
+   * computeContamination. Never written by the application directly. */
+  readonly holdoutFirstViewedAt: string | null;
+}
+
+export interface StrategyExperimentRow {
+  readonly id: string;
+  readonly strategyId: string;
+  readonly strategyVersionId: string;
+  readonly category: ExperimentCategory;
+  readonly datasetId: string;
+  readonly segment: ExperimentSegment;
+  readonly parametersChanged: Readonly<Record<string, unknown>> | null;
+  readonly reason: string;
+  readonly resultId: string | null;
+  readonly costAssumptions: BacktestCostAssumptions | null;
+  readonly source: ExperimentSource;
+  readonly contaminated: boolean;
+  readonly createdAt: string;
 }
 
 export interface StrategyVersionRow {
@@ -172,9 +194,28 @@ export interface StrategyStore {
     resultId: string,
   ): Promise<StrategyBacktestJobRow>;
   listBacktestResultsForVersion(userId: string, strategyVersionId: string): Promise<StrategyBacktestResultRow[]>;
+  /** MACRO-07 §15: records one experiment. `contaminated` must be
+   * computed by the CALLER (experiment_provenance.ts's
+   * computeContamination) from the strategy's holdoutFirstViewedAt AS
+   * IT STOOD BEFORE this insert -- the store persists what it is given,
+   * it does not recompute contamination itself. */
+  insertExperiment(userId: string, input: {
+    strategyId: string;
+    strategyVersionId: string;
+    category: ExperimentCategory;
+    datasetId: string;
+    segment: ExperimentSegment;
+    parametersChanged: Readonly<Record<string, unknown>> | null;
+    reason: string;
+    resultId: string | null;
+    costAssumptions: BacktestCostAssumptions | null;
+    source: ExperimentSource;
+    contaminated: boolean;
+  }): Promise<StrategyExperimentRow>;
+  listExperiments(userId: string, strategyId: string): Promise<StrategyExperimentRow[]>;
 }
 
-const STRATEGY_SELECT = 'id, name, status, current_version, created_at, updated_at';
+const STRATEGY_SELECT = 'id, name, status, current_version, created_at, updated_at, holdout_first_viewed_at';
 
 function rowToStrategy(row: Record<string, unknown>): StrategyRow {
   return {
@@ -184,6 +225,25 @@ function rowToStrategy(row: Record<string, unknown>): StrategyRow {
     currentVersion: Number(row.current_version),
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
+    holdoutFirstViewedAt: row.holdout_first_viewed_at === null || row.holdout_first_viewed_at === undefined ? null : String(row.holdout_first_viewed_at),
+  };
+}
+
+function rowToExperiment(row: Record<string, unknown>): StrategyExperimentRow {
+  return {
+    id: String(row.id),
+    strategyId: String(row.strategy_id),
+    strategyVersionId: String(row.strategy_version_id),
+    category: row.category as ExperimentCategory,
+    datasetId: String(row.dataset_id),
+    segment: row.segment as ExperimentSegment,
+    parametersChanged: row.parameters_changed === null ? null : row.parameters_changed as Record<string, unknown>,
+    reason: String(row.reason),
+    resultId: row.result_id === null ? null : String(row.result_id),
+    costAssumptions: row.cost_assumptions === null ? null : row.cost_assumptions as BacktestCostAssumptions,
+    source: row.source as ExperimentSource,
+    contaminated: Boolean(row.contaminated),
+    createdAt: String(row.created_at),
   };
 }
 
@@ -362,5 +422,32 @@ export class SupabaseStrategyStore implements StrategyStore {
       .order('created_at', { ascending: false }).limit(50);
     if (error) throw new Error('backtest result list failed');
     return (data ?? []).map(rowToBacktestResult);
+  }
+
+  async insertExperiment(userId: string, input: {
+    strategyId: string; strategyVersionId: string; category: ExperimentCategory; datasetId: string; segment: ExperimentSegment;
+    parametersChanged: Readonly<Record<string, unknown>> | null; reason: string; resultId: string | null;
+    costAssumptions: BacktestCostAssumptions | null; source: ExperimentSource; contaminated: boolean;
+  }): Promise<StrategyExperimentRow> {
+    // holdout_first_viewed_at itself is updated by
+    // strategy_experiments_mark_holdout_viewed (20261005000000), a
+    // SECURITY DEFINER trigger -- this insert never writes that column
+    // directly (this role has no UPDATE grant on it at all, by design).
+    const { data, error } = await this.db.from('strategy_experiments').insert({
+      user_id: userId, strategy_id: input.strategyId, strategy_version_id: input.strategyVersionId, category: input.category,
+      dataset_id: input.datasetId, segment: input.segment, parameters_changed: input.parametersChanged, reason: input.reason,
+      result_id: input.resultId, cost_assumptions: input.costAssumptions, source: input.source, contaminated: input.contaminated,
+    }).select('id, strategy_id, strategy_version_id, category, dataset_id, segment, parameters_changed, reason, result_id, cost_assumptions, source, contaminated, created_at').single();
+    if (error || !data) throw new Error('experiment insert failed');
+    return rowToExperiment(data);
+  }
+
+  async listExperiments(userId: string, strategyId: string): Promise<StrategyExperimentRow[]> {
+    const { data, error } = await this.db.from('strategy_experiments')
+      .select('id, strategy_id, strategy_version_id, category, dataset_id, segment, parameters_changed, reason, result_id, cost_assumptions, source, contaminated, created_at')
+      .eq('strategy_id', strategyId).eq('user_id', userId)
+      .order('created_at', { ascending: false }).limit(200);
+    if (error) throw new Error('experiment list failed');
+    return (data ?? []).map(rowToExperiment);
   }
 }

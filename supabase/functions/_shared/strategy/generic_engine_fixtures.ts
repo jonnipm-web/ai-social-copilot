@@ -19,6 +19,7 @@
  * profitability. Do not optimize it for P&L.").
  */
 import type { OhlcvBar } from './ohlcv.ts';
+import { splitBarsForHoldout } from './holdout.ts';
 
 export const SYNTHETIC_FIXTURE_DATASET_ID = 'synthetic-fixture-5min-v1';
 
@@ -41,4 +42,28 @@ export function syntheticFixtureBars(): readonly OhlcvBar[] {
     bar('2026-01-06T13:15:00Z', 94, 96, 93, 95),
     bar('2026-01-06T13:55:00Z', 95, 96, 94, 95),
   ]);
+}
+
+/** §14: the 4/9 fraction is chosen specifically so this fixture's own
+ * chronological split lands exactly on its session boundary (5 bars of
+ * session 1 / 4 bars of session 2) -- see holdout_test.ts's HO-03. Not
+ * a generic default; a different fixture would need its own fraction. */
+const SYNTHETIC_FIXTURE_HOLDOUT_FRACTION = 4 / 9;
+
+function syntheticFixtureHoldoutSplit() {
+  const result = splitBarsForHoldout(syntheticFixtureBars(), SYNTHETIC_FIXTURE_HOLDOUT_FRACTION);
+  if (!result.ok) throw new Error('unreachable: the synthetic fixture always has enough bars for its own documented split');
+  return result.value;
+}
+
+/** The research (in-sample) slice used by dataset_registry.ts's
+ * 'synthetic-fixture-5min-v1-research'. */
+export function syntheticFixtureResearchBars(): readonly OhlcvBar[] {
+  return syntheticFixtureHoldoutSplit().research;
+}
+
+/** The holdout (out-of-sample) slice used by dataset_registry.ts's
+ * 'synthetic-fixture-5min-v1-holdout'. */
+export function syntheticFixtureHoldoutBars(): readonly OhlcvBar[] {
+  return syntheticFixtureHoldoutSplit().holdout;
 }
