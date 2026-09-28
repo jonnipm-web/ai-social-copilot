@@ -80,10 +80,13 @@ class _KnowledgeVaultScreenState extends ConsumerState<KnowledgeVaultScreen> {
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add_rounded),
         label: const Text('Novo Item'),
-        onPressed: () => context.push(
-          AppConstants.routeKnowledgeNew,
-          extra: _projectId != null ? {'projectId': _projectId} : null,
-        ),
+        onPressed: () async {
+          await context.push(
+            AppConstants.routeKnowledgeNew,
+            extra: _projectId != null ? {'projectId': _projectId} : null,
+          );
+          _invalidateItems();
+        },
       ),
       body: Column(
         children: [
@@ -105,12 +108,15 @@ class _KnowledgeVaultScreenState extends ConsumerState<KnowledgeVaultScreen> {
                   ? _EmptyState(
                       projectFiltered: _projectId != null,
                       projectName: selectedProjectName,
-                      onAdd: () => context.push(
-                        AppConstants.routeKnowledgeNew,
-                        extra: _projectId != null
-                            ? {'projectId': _projectId}
-                            : null,
-                      ),
+                      onAdd: () async {
+                        await context.push(
+                          AppConstants.routeKnowledgeNew,
+                          extra: _projectId != null
+                              ? {'projectId': _projectId}
+                              : null,
+                        );
+                        _invalidateItems();
+                      },
                     )
                   : _ItemList(
                       items: items,
