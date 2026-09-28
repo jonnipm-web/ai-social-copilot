@@ -64,7 +64,13 @@ BEGIN
   END IF;
 
   SELECT is_active INTO v_is_active FROM public.profiles WHERE id = v_user_id;
-  IF v_is_active IS FALSE THEN
+  -- IS DISTINCT FROM TRUE (not IS FALSE) -- Codex re-verification
+  -- (job a53be24f347230cbf) found IS FALSE fails OPEN when no profiles
+  -- row exists at all: SELECT INTO leaves v_is_active NULL, and
+  -- `NULL IS FALSE` evaluates to false in Postgres, so the guard would
+  -- never trigger. IS DISTINCT FROM TRUE denies both is_active=false
+  -- AND the no-row/NULL case.
+  IF v_is_active IS DISTINCT FROM TRUE THEN
     RETURN false;
   END IF;
 
