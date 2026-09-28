@@ -28,10 +28,13 @@
 
 -- P05: every Lab migration declares its real dependencies up front
 -- (scripts/ci/run_disposable_db_tests.sh). Depends on every
--- impact_lab_persistence/impact_registry_intelligence table this
--- file's own functions reference (Codex Macro-11 §29 re-audit, job
--- af50f0f512ab7909f: the first guard missed impact_conflicts/
--- impact_registry_conflicts/impact_sources/impact_verifications).
+-- impact_lab_persistence/impact_registry_intelligence/impact_evidence_
+-- collection table this file's own functions reference (Gate-12 final
+-- Codex state audit, job task-mulmibih-nedf4o: the guard still missed
+-- impact_claims/impact_evidence, read by the trigger-dispatch function
+-- at TG_TABLE_NAME branches, and impact_artifacts/
+-- impact_evidence_candidates, the dynamic INSERT targets
+-- impact_ingest_artifact/impact_insert_row write to).
 DO $$
 DECLARE
   v_missing text[] := '{}';
@@ -53,6 +56,18 @@ BEGIN
   END IF;
   IF to_regclass('public.impact_verifications') IS NULL THEN
     v_missing := v_missing || 'public.impact_verifications'::text;
+  END IF;
+  IF to_regclass('public.impact_claims') IS NULL THEN
+    v_missing := v_missing || 'public.impact_claims'::text;
+  END IF;
+  IF to_regclass('public.impact_evidence') IS NULL THEN
+    v_missing := v_missing || 'public.impact_evidence'::text;
+  END IF;
+  IF to_regclass('public.impact_artifacts') IS NULL THEN
+    v_missing := v_missing || 'public.impact_artifacts'::text;
+  END IF;
+  IF to_regclass('public.impact_evidence_candidates') IS NULL THEN
+    v_missing := v_missing || 'public.impact_evidence_candidates'::text;
   END IF;
   IF array_length(v_missing, 1) > 0 THEN
     RAISE EXCEPTION 'LAB_PRECONDITION (20260927010000_impact_verification_dossier): missing: %', array_to_string(v_missing, ', ')
