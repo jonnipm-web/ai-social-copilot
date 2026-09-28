@@ -32,7 +32,7 @@ import { createStrategySpecification, type StrategySpecification, type StrategyS
 import { parseNaturalLanguageStrategyDraft } from '../_shared/strategy/nl_draft.ts';
 import type { StrategyErrorCode } from '../_shared/strategy/errors.ts';
 import { getDataset } from '../_shared/strategy/dataset_registry.ts';
-import { ENGINE_REGISTRY, engineAcceptsRunRequest, getEngine, type EngineId } from '../_shared/strategy/engine_registry.ts';
+import { ENGINE_REGISTRY, engineAcceptsRunRequest, getEngine } from '../_shared/strategy/engine_registry.ts';
 import { runGenericRuleEngine } from '../_shared/strategy/generic_rule_engine.ts';
 import { syntheticFixtureBars, syntheticFixtureHoldoutBars, syntheticFixtureResearchBars } from '../_shared/strategy/generic_engine_fixtures.ts';
 import type { OhlcvBar } from '../_shared/strategy/ohlcv.ts';
