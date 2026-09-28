@@ -12,7 +12,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: claude/ive-avatar-v2-build-recovery
+          ref: claude/insightvalues-integration-macro-02
 
       - name: Setup Java 17 (Temurin)
         uses: actions/setup-java@v4
