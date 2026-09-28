@@ -48,12 +48,27 @@ if run --write >/dev/null; then echo "F01 write: silently dropped a vanished mig
 # --write accepts a LAB change (visible in the diff) and the result checks clean.
 fresh; printf '\n-- lab edit\n' >> "$WORK/m/$LAB_FILE"; run --write >/dev/null; expect_pass "LAB change re-recorded"
 
-# The preflight's history reconciliation matches the manifest exactly:
-# APPLIED_PRODUCTION = its predecessors, LAB = its chain (same order).
+# The preflight's history reconciliation matches the manifest.
+# APPLIED_PRODUCTION = its predecessors, exactly (that set never grows once
+# frozen, so exact equality is the right check).
+#
+# LAB is different: aef_deploy_preflight.sql is deliberately scoped to only
+# the AEF migration chain (its own header: "the AEF migration chain can
+# safely build on"), but the manifest's LAB status now also covers many
+# unrelated tracks added since this preflight was written (Quant, Impact,
+# Strategy Builder, result_learning, action_queue governance, and this
+# mission's own entitlement/billing hardening) -- exact equality against
+# the WHOLE LAB set is no longer the right invariant (Macro-11 §6-8
+# rehearsal finding: it was still asserting equality against the original
+# 5-migration AEF-only chain and failing on every unrelated LAB migration
+# added since). The real invariant that must still hold: every migration
+# the chain names is present as LAB, and the chain members appear in the
+# same relative order they have within the full LAB sequence.
 applied="$(awk -F'\t' '$3=="APPLIED_PRODUCTION"{sub(/^[0-9]+_/,"",$1); sub(/\.sql$/,"",$1); printf "%s ", $1}' "$ROOT/supabase/migration_manifest.tsv")"
 lab="$(awk -F'\t' '$3=="LAB"{sub(/^[0-9]+_/,"",$1); sub(/\.sql$/,"",$1); printf "%s ", $1}' "$ROOT/supabase/migration_manifest.tsv")"
 pre="$(tr -d '\n' < "$PREFLIGHT" | grep -o "predecessors text\[\] := ARRAY\[[^]]*\]" | grep -o "'[a-z0-9_]*'" | tr -d "'" | tr '\n' ' ')"
 chain="$(tr -d '\n' < "$PREFLIGHT" | grep -o "chain text\[\] := ARRAY\[[^]]*\]" | grep -o "'[a-z0-9_]*'" | tr -d "'" | tr '\n' ' ')"
 [[ "$applied" == "$pre" ]] || { echo "F01: manifest APPLIED_PRODUCTION ($applied) != preflight predecessors ($pre)" >&2; exit 1; }
-[[ "$lab" == "$chain" ]] || { echo "F01: manifest LAB ($lab) != preflight chain ($chain)" >&2; exit 1; }
+lab_chain_subset="$(for name in $lab; do for c in $chain; do [[ "$name" == "$c" ]] && printf "%s " "$name"; done; done)"
+[[ "$lab_chain_subset" == "$chain" ]] || { echo "F01: preflight chain ($chain) not present as LAB in the manifest, in order (found: $lab_chain_subset)" >&2; exit 1; }
 echo "MIGRATION_MANIFEST_TESTS: PASS"
