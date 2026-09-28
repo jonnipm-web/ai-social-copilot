@@ -47,8 +47,50 @@ class FakeDetailApi implements StrategyBuilderApi {
   @override
   Future<StrategyBuilderResult> cloneReference(String reference) async => const StrategyBuilderResult(200, {});
   @override
-  Future<StrategyBuilderResult> compareVersions(String versionAId, String versionBId) async =>
-      const StrategyBuilderResult(200, {'comparison': {'comparable': true, 'deltas': {'netPnlDelta': 0}}});
+  Future<StrategyBuilderResult> compareVersions(String versionAId, String versionBId, {String? objective}) async => const StrategyBuilderResult(200, {
+        'comparison': {'comparable': true, 'deltas': {'netPnlDelta': 0}},
+        'robustnessA': {'sampleSize': {'sufficient': false}},
+        'robustnessB': {'sampleSize': {'sufficient': false}},
+        'scoreA': {'overall': 0, 'language': 'REQUIRES_MORE_EVIDENCE', 'components': []},
+        'scoreB': {'overall': 0, 'language': 'REQUIRES_MORE_EVIDENCE', 'components': []},
+      });
+  @override
+  Future<StrategyBuilderResult> engineStatus() async =>
+      const StrategyBuilderResult(200, {'engines': [{'engineId': 'GENERIC_RULE_ENGINE', 'available': true, 'reason': null}]});
+  Map<String, dynamic> proposeVariantsResult = {
+    'fitEvidence': {'items': [], 'sufficientData': false},
+    'proposals': [],
+  };
+  @override
+  Future<StrategyBuilderResult> proposeVariants(String strategyVersionId, String datasetId) async {
+    calls.add('propose_variants:$datasetId');
+    return StrategyBuilderResult(200, proposeVariantsResult);
+  }
+
+  Map<String, dynamic> runResearchLoopResult = {
+    'fitEvidence': {'items': [], 'sufficientData': false},
+    'proposals': [],
+    'candidates': [],
+  };
+  @override
+  Future<StrategyBuilderResult> runResearchLoop(String strategyVersionId, String datasetId) async {
+    calls.add('run_research_loop:$datasetId');
+    return StrategyBuilderResult(200, runResearchLoopResult);
+  }
+
+  Map<String, dynamic> runSimulationResult = {
+    'result': {'tradeCount': 2, 'netPnl': 5},
+    'experiment': {'category': 'SIMULATION'},
+    'label': 'SIMULATION',
+  };
+  @override
+  Future<StrategyBuilderResult> runSimulation(String strategyVersionId, String datasetId) async {
+    calls.add('run_simulation:$datasetId');
+    return StrategyBuilderResult(200, runSimulationResult);
+  }
+
+  @override
+  Future<StrategyBuilderResult> listExperiments(String strategyId) async => const StrategyBuilderResult(200, {'experiments': []});
 }
 
 const _genericSpec = {
@@ -151,5 +193,65 @@ void main() {
     await tester.tap(button);
     await tester.pumpAndSettle();
     expect(find.textContaining('engine refused'), findsOneWidget);
+  });
+
+  testWidgets('SD-05 (§36) the Strategy Intelligence section is collapsed by default and shows the V10-unavailable message for a V10-entry strategy', (tester) async {
+    await _pump(tester, _v10Spec);
+    final tile = find.byKey(const Key('strategyDetailIntelligenceSection'));
+    await tester.ensureVisible(tile);
+    await tester.pumpAndSettle();
+    // Collapsed by default: none of the three action buttons are reachable yet.
+    expect(find.byKey(const Key('strategyDetailAnalyzeFit')), findsNothing);
+    await tester.tap(find.text('Strategy Intelligence'));
+    await tester.pumpAndSettle();
+    expect(find.text('These research tools only work with the in-process generic engine right now.'), findsOneWidget);
+    expect(find.byKey(const Key('strategyDetailAnalyzeFit')), findsNothing);
+  });
+
+  testWidgets('SD-06 (§10/§19) analyzing fit on a generic-entry strategy calls propose_variants with the real synthetic dataset id and renders the result', (tester) async {
+    final api = FakeDetailApi(_genericSpec)
+      ..proposeVariantsResult = {
+        'fitEvidence': {
+          'items': [
+            {'dimension': 'STOP_VS_MOVEMENT', 'observation': 'Stop distance is tight vs typical range.', 'flagged': true},
+          ],
+          'sufficientData': false,
+        },
+        'proposals': [
+          {'label': 'stop=6', 'reason': 'Current stop is tight -- testing a wider stop.'},
+        ],
+      };
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [strategyBuilderApiProvider.overrideWithValue(api)],
+        child: MaterialApp(
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const StrategyDetailScreen(strategyId: 'sid-1'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final tile = find.byKey(const Key('strategyDetailIntelligenceSection'));
+    await tester.ensureVisible(tile);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Strategy Intelligence'));
+    await tester.pumpAndSettle();
+    final button = find.byKey(const Key('strategyDetailAnalyzeFit'));
+    await tester.ensureVisible(button);
+    await tester.pumpAndSettle();
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+    expect(api.calls, contains('propose_variants:synthetic-fixture-5min-v1'));
+    expect(find.textContaining('Stop distance is tight vs typical range.'), findsOneWidget);
+    expect(find.textContaining('Current stop is tight -- testing a wider stop.'), findsOneWidget);
   });
 }

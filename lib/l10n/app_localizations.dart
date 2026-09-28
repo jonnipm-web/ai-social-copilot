@@ -2875,6 +2875,90 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Nova versão a partir desta'**
   String get strategyBuilderNewVersionButton;
+
+  /// No description provided for @strategyDetailIntelligenceTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Inteligência de Estratégia'**
+  String get strategyDetailIntelligenceTitle;
+
+  /// No description provided for @strategyDetailUnavailableForV10.
+  ///
+  /// In pt, this message translates to:
+  /// **'Essas ferramentas de pesquisa só funcionam com o motor genérico in-process por enquanto.'**
+  String get strategyDetailUnavailableForV10;
+
+  /// No description provided for @strategyDetailAnalyzeFit.
+  ///
+  /// In pt, this message translates to:
+  /// **'Analisar ajuste com o mercado'**
+  String get strategyDetailAnalyzeFit;
+
+  /// No description provided for @strategyDetailFitEvidenceTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Evidência de ajuste com o mercado'**
+  String get strategyDetailFitEvidenceTitle;
+
+  /// No description provided for @strategyDetailFitFlagged.
+  ///
+  /// In pt, this message translates to:
+  /// **'sinalizado'**
+  String get strategyDetailFitFlagged;
+
+  /// No description provided for @strategyDetailProposalsTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Propostas limitadas'**
+  String get strategyDetailProposalsTitle;
+
+  /// No description provided for @strategyDetailNoProposals.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhuma proposta baseada em evidência no momento.'**
+  String get strategyDetailNoProposals;
+
+  /// No description provided for @strategyDetailRunSimulation.
+  ///
+  /// In pt, this message translates to:
+  /// **'Rodar simulação'**
+  String get strategyDetailRunSimulation;
+
+  /// No description provided for @strategyDetailSimulationResult.
+  ///
+  /// In pt, this message translates to:
+  /// **'Simulação: {trades} trades, líquido {netPnl}'**
+  String strategyDetailSimulationResult(String trades, String netPnl);
+
+  /// No description provided for @strategyDetailRunResearchLoop.
+  ///
+  /// In pt, this message translates to:
+  /// **'Rodar loop de pesquisa automatizado'**
+  String get strategyDetailRunResearchLoop;
+
+  /// No description provided for @strategyDetailResearchLoopSummary.
+  ///
+  /// In pt, this message translates to:
+  /// **'{count} candidato(s) gerado(s)'**
+  String strategyDetailResearchLoopSummary(String count);
+
+  /// No description provided for @strategyDetailNoCandidates.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhum candidato foi gerado (nenhuma proposta baseada em evidência).'**
+  String get strategyDetailNoCandidates;
+
+  /// No description provided for @strategyDetailRequiresMoreEvidence.
+  ///
+  /// In pt, this message translates to:
+  /// **'REQUER MAIS EVIDÊNCIA'**
+  String get strategyDetailRequiresMoreEvidence;
+
+  /// No description provided for @strategyDetailMoreRobust.
+  ///
+  /// In pt, this message translates to:
+  /// **'MAIS ROBUSTO SOB AS PREMISSAS TESTADAS'**
+  String get strategyDetailMoreRobust;
 }
 
 class _AppLocalizationsDelegate

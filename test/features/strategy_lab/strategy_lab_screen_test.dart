@@ -54,8 +54,27 @@ class FakeStrategyBuilderApi implements StrategyBuilderApi {
   Future<StrategyBuilderResult> runBacktest(String strategyVersionId, String datasetId, String engineId, {Map<String, dynamic>? costConfig}) async =>
       const StrategyBuilderResult(200, {'job': {'status': 'SUCCEEDED'}, 'result': {}});
   @override
-  Future<StrategyBuilderResult> compareVersions(String versionAId, String versionBId) async =>
-      const StrategyBuilderResult(200, {'comparison': {'comparable': true, 'deltas': {'netPnlDelta': 0}}});
+  Future<StrategyBuilderResult> compareVersions(String versionAId, String versionBId, {String? objective}) async => const StrategyBuilderResult(200, {
+        'comparison': {'comparable': true, 'deltas': {'netPnlDelta': 0}},
+        'robustnessA': {'sampleSize': {'sufficient': false}},
+        'robustnessB': {'sampleSize': {'sufficient': false}},
+        'scoreA': {'overall': 0, 'language': 'REQUIRES_MORE_EVIDENCE', 'components': []},
+        'scoreB': {'overall': 0, 'language': 'REQUIRES_MORE_EVIDENCE', 'components': []},
+      });
+  @override
+  Future<StrategyBuilderResult> engineStatus() async =>
+      const StrategyBuilderResult(200, {'engines': [{'engineId': 'GENERIC_RULE_ENGINE', 'available': true, 'reason': null}]});
+  @override
+  Future<StrategyBuilderResult> proposeVariants(String strategyVersionId, String datasetId) async =>
+      const StrategyBuilderResult(200, {'fitEvidence': {'items': [], 'sufficientData': false}, 'proposals': []});
+  @override
+  Future<StrategyBuilderResult> runResearchLoop(String strategyVersionId, String datasetId) async =>
+      const StrategyBuilderResult(200, {'fitEvidence': {'items': [], 'sufficientData': false}, 'proposals': [], 'candidates': []});
+  @override
+  Future<StrategyBuilderResult> runSimulation(String strategyVersionId, String datasetId) async =>
+      const StrategyBuilderResult(200, {'result': {'tradeCount': 0, 'netPnl': 0}, 'experiment': {'category': 'SIMULATION'}, 'label': 'SIMULATION'});
+  @override
+  Future<StrategyBuilderResult> listExperiments(String strategyId) async => const StrategyBuilderResult(200, {'experiments': []});
 }
 
 Future<FakeStrategyBuilderApi> _pump(WidgetTester tester, {bool admin = true, Locale locale = const Locale('en'), List<Map<String, dynamic>>? strategies}) async {

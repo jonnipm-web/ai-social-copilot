@@ -548,5 +548,22 @@
   "strategyBuilderCompare": "Compare with previous version",
   "strategyBuilderNotComparable": "Not directly comparable: {reasons}",
   "@strategyBuilderNotComparable": {"placeholders": {"reasons": {"type": "String"}}},
-  "strategyBuilderNewVersionButton": "New version from this"
+  "strategyBuilderNewVersionButton": "New version from this",
+
+  "strategyDetailIntelligenceTitle": "Strategy Intelligence",
+  "strategyDetailUnavailableForV10": "These research tools only work with the in-process generic engine right now.",
+  "strategyDetailAnalyzeFit": "Analyze market fit",
+  "strategyDetailFitEvidenceTitle": "Market fit evidence",
+  "strategyDetailFitFlagged": "flagged",
+  "strategyDetailProposalsTitle": "Bounded proposals",
+  "strategyDetailNoProposals": "No evidence-based proposal right now.",
+  "strategyDetailRunSimulation": "Run simulation",
+  "strategyDetailSimulationResult": "Simulation: {trades} trades, net {netPnl}",
+  "@strategyDetailSimulationResult": {"placeholders": {"trades": {"type": "String"}, "netPnl": {"type": "String"}}},
+  "strategyDetailRunResearchLoop": "Run automated research loop",
+  "strategyDetailResearchLoopSummary": "{count} candidate(s) generated",
+  "@strategyDetailResearchLoopSummary": {"placeholders": {"count": {"type": "String"}}},
+  "strategyDetailNoCandidates": "No candidates were generated (no evidence-based proposal).",
+  "strategyDetailRequiresMoreEvidence": "REQUIRES MORE EVIDENCE",
+  "strategyDetailMoreRobust": "MORE ROBUST UNDER TESTED ASSUMPTIONS"
 }

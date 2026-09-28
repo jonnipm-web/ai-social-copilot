@@ -1555,4 +1555,53 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get strategyBuilderNewVersionButton => 'New version from this';
+
+  @override
+  String get strategyDetailIntelligenceTitle => 'Strategy Intelligence';
+
+  @override
+  String get strategyDetailUnavailableForV10 =>
+      'These research tools only work with the in-process generic engine right now.';
+
+  @override
+  String get strategyDetailAnalyzeFit => 'Analyze market fit';
+
+  @override
+  String get strategyDetailFitEvidenceTitle => 'Market fit evidence';
+
+  @override
+  String get strategyDetailFitFlagged => 'flagged';
+
+  @override
+  String get strategyDetailProposalsTitle => 'Bounded proposals';
+
+  @override
+  String get strategyDetailNoProposals =>
+      'No evidence-based proposal right now.';
+
+  @override
+  String get strategyDetailRunSimulation => 'Run simulation';
+
+  @override
+  String strategyDetailSimulationResult(String trades, String netPnl) {
+    return 'Simulation: $trades trades, net $netPnl';
+  }
+
+  @override
+  String get strategyDetailRunResearchLoop => 'Run automated research loop';
+
+  @override
+  String strategyDetailResearchLoopSummary(String count) {
+    return '$count candidate(s) generated';
+  }
+
+  @override
+  String get strategyDetailNoCandidates =>
+      'No candidates were generated (no evidence-based proposal).';
+
+  @override
+  String get strategyDetailRequiresMoreEvidence => 'REQUIRES MORE EVIDENCE';
+
+  @override
+  String get strategyDetailMoreRobust => 'MORE ROBUST UNDER TESTED ASSUMPTIONS';
 }

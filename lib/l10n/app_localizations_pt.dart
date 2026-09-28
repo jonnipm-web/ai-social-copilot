@@ -1561,4 +1561,56 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get strategyBuilderNewVersionButton => 'Nova versão a partir desta';
+
+  @override
+  String get strategyDetailIntelligenceTitle => 'Inteligência de Estratégia';
+
+  @override
+  String get strategyDetailUnavailableForV10 =>
+      'Essas ferramentas de pesquisa só funcionam com o motor genérico in-process por enquanto.';
+
+  @override
+  String get strategyDetailAnalyzeFit => 'Analisar ajuste com o mercado';
+
+  @override
+  String get strategyDetailFitEvidenceTitle =>
+      'Evidência de ajuste com o mercado';
+
+  @override
+  String get strategyDetailFitFlagged => 'sinalizado';
+
+  @override
+  String get strategyDetailProposalsTitle => 'Propostas limitadas';
+
+  @override
+  String get strategyDetailNoProposals =>
+      'Nenhuma proposta baseada em evidência no momento.';
+
+  @override
+  String get strategyDetailRunSimulation => 'Rodar simulação';
+
+  @override
+  String strategyDetailSimulationResult(String trades, String netPnl) {
+    return 'Simulação: $trades trades, líquido $netPnl';
+  }
+
+  @override
+  String get strategyDetailRunResearchLoop =>
+      'Rodar loop de pesquisa automatizado';
+
+  @override
+  String strategyDetailResearchLoopSummary(String count) {
+    return '$count candidato(s) gerado(s)';
+  }
+
+  @override
+  String get strategyDetailNoCandidates =>
+      'Nenhum candidato foi gerado (nenhuma proposta baseada em evidência).';
+
+  @override
+  String get strategyDetailRequiresMoreEvidence => 'REQUER MAIS EVIDÊNCIA';
+
+  @override
+  String get strategyDetailMoreRobust =>
+      'MAIS ROBUSTO SOB AS PREMISSAS TESTADAS';
 }

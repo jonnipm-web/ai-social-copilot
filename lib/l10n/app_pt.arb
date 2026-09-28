@@ -653,5 +653,22 @@
   "strategyBuilderCompare": "Comparar com a versão anterior",
   "strategyBuilderNotComparable": "Não diretamente comparável: {reasons}",
   "@strategyBuilderNotComparable": {"placeholders": {"reasons": {"type": "String"}}},
-  "strategyBuilderNewVersionButton": "Nova versão a partir desta"
+  "strategyBuilderNewVersionButton": "Nova versão a partir desta",
+
+  "strategyDetailIntelligenceTitle": "Inteligência de Estratégia",
+  "strategyDetailUnavailableForV10": "Essas ferramentas de pesquisa só funcionam com o motor genérico in-process por enquanto.",
+  "strategyDetailAnalyzeFit": "Analisar ajuste com o mercado",
+  "strategyDetailFitEvidenceTitle": "Evidência de ajuste com o mercado",
+  "strategyDetailFitFlagged": "sinalizado",
+  "strategyDetailProposalsTitle": "Propostas limitadas",
+  "strategyDetailNoProposals": "Nenhuma proposta baseada em evidência no momento.",
+  "strategyDetailRunSimulation": "Rodar simulação",
+  "strategyDetailSimulationResult": "Simulação: {trades} trades, líquido {netPnl}",
+  "@strategyDetailSimulationResult": {"placeholders": {"trades": {"type": "String"}, "netPnl": {"type": "String"}}},
+  "strategyDetailRunResearchLoop": "Rodar loop de pesquisa automatizado",
+  "strategyDetailResearchLoopSummary": "{count} candidato(s) gerado(s)",
+  "@strategyDetailResearchLoopSummary": {"placeholders": {"count": {"type": "String"}}},
+  "strategyDetailNoCandidates": "Nenhum candidato foi gerado (nenhuma proposta baseada em evidência).",
+  "strategyDetailRequiresMoreEvidence": "REQUER MAIS EVIDÊNCIA",
+  "strategyDetailMoreRobust": "MAIS ROBUSTO SOB AS PREMISSAS TESTADAS"
 }

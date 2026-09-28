@@ -31,6 +31,14 @@ class _StrategyDetailScreenState extends ConsumerState<StrategyDetailScreen> {
   String? _backtestStatus;
   Map<String, dynamic>? _compareResult;
 
+  bool _fitBusy = false;
+  Map<String, dynamic>? _fitEvidence;
+  List<dynamic> _proposals = const [];
+  bool _simulationBusy = false;
+  Map<String, dynamic>? _simulationResult;
+  bool _researchLoopBusy = false;
+  List<dynamic>? _researchCandidates;
+
   @override
   void initState() {
     super.initState();
@@ -68,6 +76,62 @@ class _StrategyDetailScreenState extends ConsumerState<StrategyDetailScreen> {
       _backtestBusy = false;
       _backtestStatus = succeeded ? l.strategyBuilderBacktestSucceeded : l.strategyBuilderBacktestFailed(job?['failureReason']?.toString() ?? 'UNKNOWN');
     });
+  }
+
+  /// MACRO-07 §36: these research tools are only meaningful (and only
+  /// server-accepted) for the in-process generic engine's own dataset --
+  /// the V10/WIN1! path has no in-process rows to compute market
+  /// statistics from.
+  ({String datasetId, String engineId})? _intelligenceTarget() {
+    final version = _version;
+    if (version == null) return null;
+    final spec = version['spec'] as Map<String, dynamic>;
+    final useV10 = spec['entry']?['ruleId'] == 'ENTRY.PULLBACK_IN_TREND';
+    if (useV10) return null;
+    return datasetAndEngineFor(useV10Entry: false);
+  }
+
+  Future<void> _analyzeFit() async {
+    final version = _version;
+    final target = _intelligenceTarget();
+    if (version == null || target == null) return;
+    setState(() => _fitBusy = true);
+    final result = await ref.read(strategyBuilderApiProvider).proposeVariants(version['id'] as String, target.datasetId);
+    if (!mounted) return;
+    setState(() {
+      _fitBusy = false;
+      _fitEvidence = result.data?['fitEvidence'] as Map<String, dynamic>?;
+      _proposals = (result.data?['proposals'] as List?) ?? const [];
+    });
+  }
+
+  Future<void> _runSimulation() async {
+    final version = _version;
+    final target = _intelligenceTarget();
+    if (version == null || target == null) return;
+    setState(() => _simulationBusy = true);
+    final result = await ref.read(strategyBuilderApiProvider).runSimulation(version['id'] as String, target.datasetId);
+    if (!mounted) return;
+    setState(() {
+      _simulationBusy = false;
+      _simulationResult = result.data?['result'] as Map<String, dynamic>?;
+    });
+  }
+
+  Future<void> _runResearchLoop() async {
+    final version = _version;
+    final target = _intelligenceTarget();
+    if (version == null || target == null) return;
+    setState(() => _researchLoopBusy = true);
+    final result = await ref.read(strategyBuilderApiProvider).runResearchLoop(version['id'] as String, target.datasetId);
+    if (!mounted) return;
+    setState(() {
+      _researchLoopBusy = false;
+      _researchCandidates = (result.data?['candidates'] as List?) ?? const [];
+    });
+    // A candidate is a real, persisted new strategy version (§20) -- the
+    // version list must reflect it, never left stale in this screen.
+    if ((_researchCandidates?.isNotEmpty ?? false)) await _load();
   }
 
   Future<void> _compareLastTwo() async {
@@ -156,8 +220,84 @@ class _StrategyDetailScreenState extends ConsumerState<StrategyDetailScreen> {
                   ),
                 ),
             ],
+            const SizedBox(height: 16),
+            _buildIntelligenceSection(l),
           ]),
         ),
+      ),
+    );
+  }
+
+  /// MACRO-07 §36: progressive disclosure -- collapsed by default (an
+  /// ExpansionTile, not always-visible controls), so a normal user is not
+  /// confronted with fit evidence, bounded proposals, a simulation runner
+  /// and a research-loop runner just to look at a strategy's summary.
+  Widget _buildIntelligenceSection(AppLocalizations l) {
+    final target = _intelligenceTarget();
+    return Card(
+      key: const Key('strategyDetailIntelligenceSection'),
+      child: ExpansionTile(
+        title: Text(l.strategyDetailIntelligenceTitle),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: target == null
+                ? Text(l.strategyDetailUnavailableForV10)
+                : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    IveExclusionRegion(
+                      child: OutlinedButton.icon(
+                        key: const Key('strategyDetailAnalyzeFit'),
+                        onPressed: _fitBusy ? null : _analyzeFit,
+                        icon: _fitBusy ? const SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.insights),
+                        label: Text(l.strategyDetailAnalyzeFit),
+                      ),
+                    ),
+                    if (_fitEvidence != null) ...[
+                      const SizedBox(height: 8),
+                      Text(l.strategyDetailFitEvidenceTitle, style: const TextStyle(fontWeight: FontWeight.w600)),
+                      for (final item in ((_fitEvidence!['items'] as List?) ?? const []))
+                        Text('• ${(item as Map)['observation']}${item['flagged'] == true ? ' (${l.strategyDetailFitFlagged})' : ''}'),
+                      const SizedBox(height: 8),
+                      Text(l.strategyDetailProposalsTitle, style: const TextStyle(fontWeight: FontWeight.w600)),
+                      if (_proposals.isEmpty) Text(l.strategyDetailNoProposals) else for (final p in _proposals) Text('• ${(p as Map)['reason']}'),
+                    ],
+                    const SizedBox(height: 12),
+                    IveExclusionRegion(
+                      child: OutlinedButton.icon(
+                        key: const Key('strategyDetailRunSimulation'),
+                        onPressed: _simulationBusy ? null : _runSimulation,
+                        icon: _simulationBusy ? const SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.science_outlined),
+                        label: Text(l.strategyDetailRunSimulation),
+                      ),
+                    ),
+                    if (_simulationResult != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          l.strategyDetailSimulationResult('${_simulationResult!['tradeCount']}', '${_simulationResult!['netPnl']}'),
+                          key: const Key('strategyDetailSimulationResultText'),
+                        ),
+                      ),
+                    const SizedBox(height: 12),
+                    IveExclusionRegion(
+                      child: OutlinedButton.icon(
+                        key: const Key('strategyDetailRunResearchLoop'),
+                        onPressed: _researchLoopBusy ? null : _runResearchLoop,
+                        icon: _researchLoopBusy ? const SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.auto_awesome_motion_outlined),
+                        label: Text(l.strategyDetailRunResearchLoop),
+                      ),
+                    ),
+                    if (_researchCandidates != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          _researchCandidates!.isEmpty ? l.strategyDetailNoCandidates : l.strategyDetailResearchLoopSummary('${_researchCandidates!.length}'),
+                          key: const Key('strategyDetailResearchLoopResultText'),
+                        ),
+                      ),
+                  ]),
+          ),
+        ],
       ),
     );
   }

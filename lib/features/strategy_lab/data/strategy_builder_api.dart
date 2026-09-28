@@ -30,8 +30,13 @@ abstract class StrategyBuilderApi {
   Future<StrategyBuilderResult> createVersion(String strategyId, Map<String, dynamic> spec);
   Future<StrategyBuilderResult> listVersions(String strategyId);
   Future<StrategyBuilderResult> runBacktest(String strategyVersionId, String datasetId, String engineId, {Map<String, dynamic>? costConfig});
-  Future<StrategyBuilderResult> compareVersions(String versionAId, String versionBId);
+  Future<StrategyBuilderResult> compareVersions(String versionAId, String versionBId, {String? objective});
   Future<StrategyBuilderResult> cloneReference(String reference);
+  Future<StrategyBuilderResult> engineStatus();
+  Future<StrategyBuilderResult> proposeVariants(String strategyVersionId, String datasetId);
+  Future<StrategyBuilderResult> runResearchLoop(String strategyVersionId, String datasetId);
+  Future<StrategyBuilderResult> runSimulation(String strategyVersionId, String datasetId);
+  Future<StrategyBuilderResult> listExperiments(String strategyId);
 }
 
 class SupabaseStrategyBuilderApi implements StrategyBuilderApi {
@@ -83,10 +88,23 @@ class SupabaseStrategyBuilderApi implements StrategyBuilderApi {
         'costConfig': costConfig,
       });
   @override
-  Future<StrategyBuilderResult> compareVersions(String versionAId, String versionBId) =>
-      _call({'op': 'compare_versions', 'versionAId': versionAId, 'versionBId': versionBId});
+  Future<StrategyBuilderResult> compareVersions(String versionAId, String versionBId, {String? objective}) =>
+      _call({'op': 'compare_versions', 'versionAId': versionAId, 'versionBId': versionBId, if (objective != null) 'objective': objective});
   @override
   Future<StrategyBuilderResult> cloneReference(String reference) => _call({'op': 'clone_reference', 'reference': reference});
+  @override
+  Future<StrategyBuilderResult> engineStatus() => _call({'op': 'engine_status'});
+  @override
+  Future<StrategyBuilderResult> proposeVariants(String strategyVersionId, String datasetId) =>
+      _call({'op': 'propose_variants', 'strategyVersionId': strategyVersionId, 'datasetId': datasetId});
+  @override
+  Future<StrategyBuilderResult> runResearchLoop(String strategyVersionId, String datasetId) =>
+      _call({'op': 'run_research_loop', 'strategyVersionId': strategyVersionId, 'datasetId': datasetId});
+  @override
+  Future<StrategyBuilderResult> runSimulation(String strategyVersionId, String datasetId) =>
+      _call({'op': 'run_simulation', 'strategyVersionId': strategyVersionId, 'datasetId': datasetId});
+  @override
+  Future<StrategyBuilderResult> listExperiments(String strategyId) => _call({'op': 'list_experiments', 'strategyId': strategyId});
 }
 
 final strategyBuilderApiProvider = Provider<StrategyBuilderApi>((ref) => SupabaseStrategyBuilderApi(Supabase.instance.client));
