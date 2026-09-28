@@ -286,4 +286,16 @@ const Map<String, List<AefLabField>> kAefLabActions = {
     AefLabField('action_id', maxLength: 64),
     AefLabField('summary', maxLength: 500),
   ],
+  // INSIGHTVALUES-FINANCIAL-PRODUCT-MACRO-08 continuation §5-8 — the one
+  // governed action strategy-simulation-runtime accepts
+  // (aef/runtime/strategy_simulation_tools.ts -> lab_tools.ts's
+  // internal.mock_strategy_simulation_approval). 'experiment_id' is
+  // pre-filled by the caller (StrategySimulationApprovalSection) from a
+  // real, just-recorded strategy_experiments row -- the user reviews
+  // rather than retypes it, same convention as complete_action's
+  // 'action_id'.
+  'approve_simulation_result': [
+    AefLabField('experiment_id', maxLength: 64),
+    AefLabField('note', maxLength: 500),
+  ],
 };

@@ -44,6 +44,15 @@ abstract class StrategyBuilderApi {
   Future<StrategyBuilderResult> runResearchLoop(String strategyVersionId, String datasetId);
   Future<StrategyBuilderResult> runSimulation(String strategyVersionId, String datasetId);
   Future<StrategyBuilderResult> listExperiments(String strategyId);
+  Future<StrategyBuilderResult> recordExperiment({
+    required String strategyVersionId,
+    required String category,
+    required String datasetId,
+    required String segment,
+    required String reason,
+    String? resultId,
+    required String source,
+  });
 }
 
 class SupabaseStrategyBuilderApi implements StrategyBuilderApi {
@@ -114,6 +123,20 @@ class SupabaseStrategyBuilderApi implements StrategyBuilderApi {
       _call({'op': 'run_simulation', 'strategyVersionId': strategyVersionId, 'datasetId': datasetId});
   @override
   Future<StrategyBuilderResult> listExperiments(String strategyId) => _call({'op': 'list_experiments', 'strategyId': strategyId});
+  @override
+  Future<StrategyBuilderResult> recordExperiment({
+    required String strategyVersionId,
+    required String category,
+    required String datasetId,
+    required String segment,
+    required String reason,
+    String? resultId,
+    required String source,
+  }) =>
+      _call({
+        'op': 'record_experiment', 'strategyVersionId': strategyVersionId, 'category': category, 'datasetId': datasetId,
+        'segment': segment, 'parametersChanged': null, 'reason': reason, 'resultId': resultId, 'source': source,
+      });
 }
 
 final strategyBuilderApiProvider = Provider<StrategyBuilderApi>((ref) => SupabaseStrategyBuilderApi(Supabase.instance.client));

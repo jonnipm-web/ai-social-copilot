@@ -121,6 +121,8 @@ class _AefActionCardState extends State<AefActionCard> {
         'subject' => l.aefLabFieldSubject,
         'action_id' => l.aefLabFieldActionId,
         'summary' => l.aefLabFieldSummary,
+        'experiment_id' => l.aefLabFieldExperimentId,
+        'note' => l.aefLabFieldNote,
         _ => l.aefLabFieldBody,
       };
 
@@ -162,6 +164,7 @@ class _AefActionCardState extends State<AefActionCard> {
     final consequence = switch (widget.intent.requestedAction) {
       'send_message' => l.aefLabConsequenceSend,
       'complete_action' => l.aefLabConsequenceCompleteAction,
+      'approve_simulation_result' => l.aefLabConsequenceApproveSimulation,
       _ => l.aefLabConsequencePublish,
     };
     // A raw internal action id (e.g. "complete_action") means nothing to a
@@ -172,6 +175,7 @@ class _AefActionCardState extends State<AefActionCard> {
       'publish_content' => l.aefLabActionPublishContent,
       'send_message' => l.aefLabActionSendMessage,
       'complete_action' => l.aefLabActionCompleteAction,
+      'approve_simulation_result' => l.aefLabActionApproveSimulation,
       _ => widget.intent.requestedAction,
     };
     return Container(

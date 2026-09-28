@@ -727,6 +727,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Consequence: marks this action as done, with a governed receipt and audit trail. You performed this yourself — the app records it, it does not do it for you.';
 
   @override
+  String get aefLabConsequenceApproveSimulation =>
+      'Consequence: records your formal approval of this simulation result, with a governed receipt and audit trail. The simulation itself already ran safely and deterministically -- this is only the formal human approval, never real money, never an order.';
+
+  @override
   String get aefLabFieldChannel => 'Channel';
 
   @override
@@ -748,6 +752,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aefLabFieldBody => 'Message';
 
   @override
+  String get aefLabFieldExperimentId => 'Experiment ID';
+
+  @override
+  String get aefLabFieldNote => 'Approval note';
+
+  @override
+  String get aefLabTitleStrategySimulation =>
+      'Formal simulation approval (AEF)';
+
+  @override
   String get aefLabTitleActionEngine => 'Confirm completion';
 
   @override
@@ -762,6 +776,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aefLabActionCompleteAction => 'Complete action';
+
+  @override
+  String get aefLabActionApproveSimulation => 'Approve simulation result';
 
   @override
   String get aefLabRequestApproval => 'Request approval';
@@ -1626,4 +1643,89 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get planNamePremium => 'Premium';
+
+  @override
+  String get strategyDetailRecordExperiment => 'Record as experiment';
+
+  @override
+  String strategyDetailExperimentRecorded(String id) {
+    return 'Recorded as experiment #$id.';
+  }
+
+  @override
+  String strategyDetailRecordExperimentError(String code) {
+    return 'Could not record the experiment ($code).';
+  }
+
+  @override
+  String get strategyDetailSimulationGovernanceTitle =>
+      'Formal approval (AEF governance)';
+
+  @override
+  String get strategyDetailSimulationRuntimeUnavailable =>
+      'Unavailable in this environment: the AEF governance runtime only exists on a local Supabase stack (LAB) -- never in production. Your simulation was recorded normally; the formal approval step stays pending until a compatible environment is available.';
+
+  @override
+  String get strategyDetailSimulationRuntimePlanRequired =>
+      'This formal approval step requires beta program participation (beta_tester role) plus an eligible plan. Contact support if you want to join.';
+
+  @override
+  String strategyDetailSimulationRuntimePolicyBlocked(Object code) {
+    return 'The server refused this approval request ($code).';
+  }
+
+  @override
+  String get strategyDetailExperimentHistoryTitle => 'Experiment history';
+
+  @override
+  String get strategyDetailExperimentHistoryEmpty =>
+      'No experiments recorded yet. Run a backtest or a simulation and record it to start the history.';
+
+  @override
+  String get strategyDetailExperimentCategoryBacktest => 'Backtest';
+
+  @override
+  String get strategyDetailExperimentCategoryRobustness =>
+      'Robustness experiment';
+
+  @override
+  String get strategyDetailExperimentCategorySimulation => 'Simulation';
+
+  @override
+  String get strategyDetailExperimentCategoryUserDecision => 'User decision';
+
+  @override
+  String get strategyDetailExperimentCategoryIveRecommendation =>
+      'IVE recommendation';
+
+  @override
+  String get strategyDetailExperimentContaminated =>
+      'contaminated (seen after holdout started)';
+
+  @override
+  String strategyDetailExperimentSegment(String segment) {
+    return 'segment: $segment';
+  }
+
+  @override
+  String get strategyDetailUserDecisionTitle =>
+      'What do you decide about this candidate?';
+
+  @override
+  String get strategyDetailUserDecisionKeepCurrent => 'Keep current version';
+
+  @override
+  String get strategyDetailUserDecisionPreferCandidate => 'Prefer candidate';
+
+  @override
+  String get strategyDetailUserDecisionRejectCandidate => 'Reject candidate';
+
+  @override
+  String get strategyDetailUserDecisionNeedsMoreEvidence =>
+      'Needs more evidence';
+
+  @override
+  String strategyDetailUserDecisionRecorded(String decision) {
+    return 'Decision recorded: $decision.';
+  }
 }

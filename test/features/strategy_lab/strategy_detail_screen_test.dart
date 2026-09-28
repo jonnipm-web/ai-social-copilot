@@ -22,10 +22,11 @@ class FakeDetailApi implements StrategyBuilderApi {
     });
   }
 
+  List<dynamic> versionsResult = const [];
   @override
   Future<StrategyBuilderResult> listVersions(String strategyId) async {
     calls.add('list_versions');
-    return const StrategyBuilderResult(200, {'versions': []});
+    return StrategyBuilderResult(200, {'versions': versionsResult});
   }
 
   @override
@@ -82,7 +83,7 @@ class FakeDetailApi implements StrategyBuilderApi {
 
   Map<String, dynamic> runSimulationResult = {
     'result': {'tradeCount': 2, 'netPnl': 5},
-    'experiment': {'category': 'SIMULATION'},
+    'experiment': {'id': 'sim-exp-1', 'category': 'SIMULATION'},
     'label': 'SIMULATION',
   };
   StrategyBuilderResult? runSimulationForcedResult;
@@ -93,7 +94,28 @@ class FakeDetailApi implements StrategyBuilderApi {
   }
 
   @override
-  Future<StrategyBuilderResult> listExperiments(String strategyId) async => const StrategyBuilderResult(200, {'experiments': []});
+  Future<StrategyBuilderResult> listExperiments(String strategyId) async => StrategyBuilderResult(200, {'experiments': experiments});
+
+  List<Map<String, dynamic>> experiments = [];
+  int _experimentSeq = 0;
+  @override
+  Future<StrategyBuilderResult> recordExperiment({
+    required String strategyVersionId,
+    required String category,
+    required String datasetId,
+    required String segment,
+    required String reason,
+    String? resultId,
+    required String source,
+  }) async {
+    calls.add('record_experiment:$category');
+    final experiment = {
+      'id': 'exp-${_experimentSeq++}', 'strategyVersionId': strategyVersionId, 'category': category, 'datasetId': datasetId,
+      'segment': segment, 'reason': reason, 'resultId': resultId, 'source': source, 'contaminated': false, 'createdAt': DateTime.now().toIso8601String(),
+    };
+    experiments = [...experiments, experiment];
+    return StrategyBuilderResult(200, {'experiment': experiment});
+  }
 }
 
 const _genericSpec = {
@@ -368,5 +390,106 @@ void main() {
     // second time (mirrors the "only reload on a real persisted candidate"
     // guard right after runResearchLoop's setState).
     expect(api.calls.where((c) => c == 'get').length, 1);
+  });
+
+  testWidgets('SD-10 (Macro-08 continuation §5-8, §22-26) a real simulation experiment shows the governed-approval section, honestly UNAVAILABLE_RUNTIME in a normal test build (no AEF_RUNTIME_LAB define)', (tester) async {
+    final api = await _pump(tester, _genericSpec);
+    await tester.tap(find.text('Strategy Intelligence'));
+    await tester.pumpAndSettle();
+    final button = find.byKey(const Key('strategyDetailRunSimulation'));
+    await tester.ensureVisible(button);
+    await tester.pumpAndSettle();
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+    expect(api.calls, contains('run_simulation:synthetic-fixture-5min-v1'));
+    expect(find.byKey(const Key('strategyDetailSimulationGovernanceSection')), findsOneWidget);
+    // strategy-simulation-runtime is LAB-only; kAefRuntimeLabEnabled is a
+    // compile-time flag that defaults to false, so this must show the
+    // honest "unavailable" message, never a dead approval button.
+    expect(find.byKey(const Key('strategyDetailSimulationRuntimeUnavailable')), findsOneWidget);
+    expect(find.byKey(const Key('strategyDetailSimulationGate')), findsNothing);
+  });
+
+  testWidgets('SD-11 (§9/§27) recording a successful backtest as an experiment calls record_experiment with category BACKTEST and refreshes the history', (tester) async {
+    final api = await _pump(tester, _genericSpec);
+    final backtestButton = find.byKey(const Key('strategyDetailRunBacktest'));
+    await tester.ensureVisible(backtestButton);
+    await tester.pumpAndSettle();
+    await tester.tap(backtestButton);
+    await tester.pumpAndSettle();
+    final recordButton = find.byKey(const Key('strategyDetailRecordBacktestExperiment'));
+    expect(recordButton, findsOneWidget);
+    await tester.ensureVisible(recordButton);
+    await tester.pumpAndSettle();
+    await tester.tap(recordButton);
+    await tester.pumpAndSettle();
+    expect(api.calls, contains('record_experiment:BACKTEST'));
+    expect(find.byKey(const Key('strategyDetailBacktestExperimentStatus')), findsOneWidget);
+    expect(api.experiments.length, 1);
+    expect(api.experiments.single['category'], 'BACKTEST');
+  });
+
+  testWidgets('SD-12 (§16) comparing two versions offers all four decision buttons; recording one calls record_experiment with category USER_DECISION', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final api = FakeDetailApi(_genericSpec)..versionsResult = [
+      {'id': 'v1', 'versionNumber': 1}, {'id': 'v2', 'versionNumber': 2},
+    ];
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [strategyBuilderApiProvider.overrideWithValue(api)],
+        child: MaterialApp(
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const StrategyDetailScreen(strategyId: 'sid-1'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final compareButton = find.byKey(const Key('strategyDetailCompare'));
+    await tester.ensureVisible(compareButton);
+    await tester.pumpAndSettle();
+    await tester.tap(compareButton);
+    await tester.pumpAndSettle();
+    for (final key in ['strategyDetailDecisionKeepCurrent', 'strategyDetailDecisionPreferCandidate', 'strategyDetailDecisionRejectCandidate', 'strategyDetailDecisionNeedsMoreEvidence']) {
+      expect(find.byKey(Key(key)), findsOneWidget, reason: key);
+    }
+    final preferButton = find.byKey(const Key('strategyDetailDecisionPreferCandidate'));
+    await tester.ensureVisible(preferButton);
+    await tester.pumpAndSettle();
+    await tester.tap(preferButton);
+    await tester.pumpAndSettle();
+    expect(api.calls, contains('record_experiment:USER_DECISION'));
+    expect(find.byKey(const Key('strategyDetailDecisionStatus')), findsOneWidget);
+  });
+
+  testWidgets('SD-13 (§9/§27) the Experiment History section lists a real recorded experiment with its category, and shows the empty state when there is none', (tester) async {
+    final api = await _pump(tester, _genericSpec);
+    final historySection = find.byKey(const Key('strategyDetailExperimentHistorySection'));
+    await tester.ensureVisible(historySection);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Experiment history'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('experimentHistoryEmpty')), findsOneWidget);
+
+    final backtestButton = find.byKey(const Key('strategyDetailRunBacktest'));
+    await tester.ensureVisible(backtestButton);
+    await tester.pumpAndSettle();
+    await tester.tap(backtestButton);
+    await tester.pumpAndSettle();
+    final recordButton = find.byKey(const Key('strategyDetailRecordBacktestExperiment'));
+    await tester.ensureVisible(recordButton);
+    await tester.pumpAndSettle();
+    await tester.tap(recordButton);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('experimentHistoryList')), findsOneWidget);
+    expect(find.text('Backtest'), findsWidgets);
+    expect(api.experiments.single['category'], 'BACKTEST');
   });
 }

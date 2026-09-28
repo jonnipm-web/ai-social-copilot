@@ -13,7 +13,9 @@ import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/ive_exclusion_region.dart';
 import 'data/strategy_builder_api.dart';
 import 'strategy_builder_form_screen.dart';
+import 'widgets/experiment_history_section.dart';
 import 'widgets/plan_upgrade_banner.dart';
+import 'widgets/simulation_governance_section.dart';
 
 class StrategyDetailScreen extends ConsumerStatefulWidget {
   const StrategyDetailScreen({super.key, required this.strategyId});
@@ -30,6 +32,7 @@ class _StrategyDetailScreenState extends ConsumerState<StrategyDetailScreen> {
   bool _loading = true;
   bool _backtestBusy = false;
   String? _backtestStatus;
+  bool _backtestSucceeded = false;
   Map<String, dynamic>? _compareResult;
 
   bool _fitBusy = false;
@@ -42,6 +45,15 @@ class _StrategyDetailScreenState extends ConsumerState<StrategyDetailScreen> {
   bool _researchLoopBusy = false;
   List<dynamic>? _researchCandidates;
   StrategyBuilderResult? _researchLoopUpgrade;
+
+  // Macro-08 continuation §5-8/§9/§16/§27 — governed simulation approval,
+  // experiment history and user decision capture.
+  String? _simulationExperimentId;
+  bool _recordingBacktestExperiment = false;
+  String? _backtestExperimentStatus;
+  final _historyKey = GlobalKey<ExperimentHistorySectionState>();
+  bool _decisionBusy = false;
+  String? _decisionStatus;
 
   @override
   void initState() {
@@ -78,6 +90,7 @@ class _StrategyDetailScreenState extends ConsumerState<StrategyDetailScreen> {
     final succeeded = job?['status'] == 'SUCCEEDED';
     setState(() {
       _backtestBusy = false;
+      _backtestSucceeded = succeeded;
       _backtestStatus = succeeded ? l.strategyBuilderBacktestSucceeded : l.strategyBuilderBacktestFailed(job?['failureReason']?.toString() ?? 'UNKNOWN');
     });
   }
@@ -121,7 +134,63 @@ class _StrategyDetailScreenState extends ConsumerState<StrategyDetailScreen> {
       _simulationBusy = false;
       _simulationResult = result.data?['result'] as Map<String, dynamic>?;
       _simulationUpgrade = result.isPlanUpgradeRequired ? result : null;
+      // run_simulation auto-records a SIMULATION-category experiment
+      // server-side (index.ts) -- this is the id the governed AEF
+      // approval step (§5-8) reviews, never a client-invented one.
+      _simulationExperimentId = (result.data?['experiment'] as Map<String, dynamic>?)?['id'] as String?;
     });
+    _historyKey.currentState?.refresh();
+  }
+
+  /// §9/§27: a backtest is not auto-recorded as an experiment (unlike a
+  /// simulation or a research-loop candidate) -- the owner explicitly
+  /// decides a given backtest is worth citing in the strategy's research
+  /// history.
+  Future<void> _recordBacktestExperiment(AppLocalizations l) async {
+    final version = _version;
+    final target = _intelligenceTarget();
+    if (version == null || target == null) return;
+    setState(() => _recordingBacktestExperiment = true);
+    final result = await ref.read(strategyBuilderApiProvider).recordExperiment(
+          strategyVersionId: version['id'] as String,
+          category: 'BACKTEST',
+          datasetId: target.datasetId,
+          segment: 'FULL',
+          reason: 'Owner-recorded backtest result',
+          source: 'USER',
+        );
+    if (!mounted) return;
+    final id = (result.data?['experiment'] as Map<String, dynamic>?)?['id'] as String?;
+    setState(() {
+      _recordingBacktestExperiment = false;
+      _backtestExperimentStatus = id != null ? l.strategyDetailExperimentRecorded(id) : l.strategyDetailRecordExperimentError(result.errorCode ?? 'UNKNOWN');
+    });
+    if (id != null) _historyKey.currentState?.refresh();
+  }
+
+  /// §16: KEEP_CURRENT/PREFER_CANDIDATE/REJECT_CANDIDATE/NEEDS_MORE_EVIDENCE,
+  /// recorded as a USER_DECISION experiment (research decision provenance)
+  /// -- never a lifecycle mutation: lifecycle.ts's own gates are the only
+  /// path to a status transition, this is purely a citable research fact.
+  Future<void> _recordDecision(AppLocalizations l, String decision, String label) async {
+    final version = _version;
+    final target = _intelligenceTarget();
+    if (version == null || target == null) return;
+    setState(() => _decisionBusy = true);
+    final result = await ref.read(strategyBuilderApiProvider).recordExperiment(
+          strategyVersionId: version['id'] as String,
+          category: 'USER_DECISION',
+          datasetId: target.datasetId,
+          segment: 'FULL',
+          reason: 'User decision on candidate comparison: $decision',
+          source: 'USER',
+        );
+    if (!mounted) return;
+    setState(() {
+      _decisionBusy = false;
+      _decisionStatus = result.data?['experiment'] != null ? l.strategyDetailUserDecisionRecorded(label) : l.strategyDetailRecordExperimentError(result.errorCode ?? 'UNKNOWN');
+    });
+    if (result.data?['experiment'] != null) _historyKey.currentState?.refresh();
   }
 
   Future<void> _runResearchLoop() async {
@@ -200,6 +269,16 @@ class _StrategyDetailScreenState extends ConsumerState<StrategyDetailScreen> {
               ),
             ),
             if (_backtestStatus != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_backtestStatus!, key: const Key('strategyDetailBacktestStatus'))),
+            if (_backtestSucceeded) ...[
+              const SizedBox(height: 8),
+              OutlinedButton(
+                key: const Key('strategyDetailRecordBacktestExperiment'),
+                onPressed: _recordingBacktestExperiment ? null : () => _recordBacktestExperiment(l),
+                child: Text(l.strategyDetailRecordExperiment),
+              ),
+              if (_backtestExperimentStatus != null)
+                Padding(padding: const EdgeInsets.only(top: 4), child: Text(_backtestExperimentStatus!, key: const Key('strategyDetailBacktestExperimentStatus'), style: const TextStyle(fontSize: 12))),
+            ],
             const SizedBox(height: 16),
             OutlinedButton(
               key: const Key('strategyDetailNewVersion'),
@@ -216,7 +295,7 @@ class _StrategyDetailScreenState extends ConsumerState<StrategyDetailScreen> {
             if (_versions.length >= 2) ...[
               const SizedBox(height: 8),
               OutlinedButton(key: const Key('strategyDetailCompare'), onPressed: _compareLastTwo, child: Text(l.strategyBuilderCompare)),
-              if (_compareResult != null)
+              if (_compareResult != null) ...[
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
@@ -226,9 +305,49 @@ class _StrategyDetailScreenState extends ConsumerState<StrategyDetailScreen> {
                     key: const Key('strategyDetailCompareResult'),
                   ),
                 ),
+                const SizedBox(height: 8),
+                Text(l.strategyDetailUserDecisionTitle, style: const TextStyle(fontWeight: FontWeight.w600)),
+                Wrap(spacing: 8, runSpacing: 8, children: [
+                  OutlinedButton(
+                    key: const Key('strategyDetailDecisionKeepCurrent'),
+                    onPressed: _decisionBusy ? null : () => _recordDecision(l, 'KEEP_CURRENT', l.strategyDetailUserDecisionKeepCurrent),
+                    child: Text(l.strategyDetailUserDecisionKeepCurrent),
+                  ),
+                  OutlinedButton(
+                    key: const Key('strategyDetailDecisionPreferCandidate'),
+                    onPressed: _decisionBusy ? null : () => _recordDecision(l, 'PREFER_CANDIDATE', l.strategyDetailUserDecisionPreferCandidate),
+                    child: Text(l.strategyDetailUserDecisionPreferCandidate),
+                  ),
+                  OutlinedButton(
+                    key: const Key('strategyDetailDecisionRejectCandidate'),
+                    onPressed: _decisionBusy ? null : () => _recordDecision(l, 'REJECT_CANDIDATE', l.strategyDetailUserDecisionRejectCandidate),
+                    child: Text(l.strategyDetailUserDecisionRejectCandidate),
+                  ),
+                  OutlinedButton(
+                    key: const Key('strategyDetailDecisionNeedsMoreEvidence'),
+                    onPressed: _decisionBusy ? null : () => _recordDecision(l, 'NEEDS_MORE_EVIDENCE', l.strategyDetailUserDecisionNeedsMoreEvidence),
+                    child: Text(l.strategyDetailUserDecisionNeedsMoreEvidence),
+                  ),
+                ]),
+                if (_decisionStatus != null)
+                  Padding(padding: const EdgeInsets.only(top: 4), child: Text(_decisionStatus!, key: const Key('strategyDetailDecisionStatus'), style: const TextStyle(fontSize: 12))),
+              ],
             ],
             const SizedBox(height: 16),
             _buildIntelligenceSection(l),
+            const SizedBox(height: 16),
+            Card(
+              key: const Key('strategyDetailExperimentHistorySection'),
+              child: ExpansionTile(
+                title: Text(l.strategyDetailExperimentHistoryTitle),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: ExperimentHistorySection(key: _historyKey, strategyId: strategy['id'] as String),
+                  ),
+                ],
+              ),
+            ),
           ]),
         ),
       ),
@@ -287,6 +406,12 @@ class _StrategyDetailScreenState extends ConsumerState<StrategyDetailScreen> {
                         ),
                       ),
                     if (_simulationUpgrade != null) Padding(padding: const EdgeInsets.only(top: 8), child: PlanUpgradeBanner.fromResult(_simulationUpgrade!)),
+                    if (_simulationExperimentId != null)
+                      SimulationGovernanceSection(
+                        key: const Key('strategyDetailSimulationGovernanceSection'),
+                        experimentId: _simulationExperimentId!,
+                        strategyId: (_strategy?['id'] as String?) ?? '',
+                      ),
                     const SizedBox(height: 12),
                     IveExclusionRegion(
                       child: OutlinedButton.icon(

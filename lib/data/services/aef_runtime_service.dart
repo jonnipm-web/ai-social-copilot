@@ -65,3 +65,13 @@ final aefRuntimeApiProvider = Provider<AefRuntimeApi>((ref) => AefRuntimeService
 /// Overridable in tests.
 final actionEngineRuntimeApiProvider =
     Provider<AefRuntimeApi>((ref) => AefRuntimeService(functionName: 'action-engine-runtime'));
+
+/// INSIGHTVALUES-FINANCIAL-PRODUCT-MACRO-08 continuation §5-8 — Strategy
+/// Simulation's own governed approval step, pointed at
+/// strategy-simulation-runtime (aef/runtime/strategy_simulation_tools.ts).
+/// Same LAB-only posture as the other two: only reachable when
+/// [kAefRuntimeLabEnabled] and the caller is a real beta_tester with
+/// sufficient plan (module 'ive-strategy-simulation', BETA). Overridable in
+/// tests.
+final strategySimulationRuntimeApiProvider =
+    Provider<AefRuntimeApi>((ref) => AefRuntimeService(functionName: 'strategy-simulation-runtime'));

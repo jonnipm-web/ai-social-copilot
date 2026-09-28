@@ -1382,6 +1382,12 @@ abstract class AppLocalizations {
   /// **'Consequência: marca esta ação como concluída, com recibo governado e trilha de auditoria. Você mesmo executou isso -- o app registra, não faz por você.'**
   String get aefLabConsequenceCompleteAction;
 
+  /// Macro-08 continuation §5-8 Strategy Simulation governed approval
+  ///
+  /// In pt, this message translates to:
+  /// **'Consequência: registra a sua aprovação formal deste resultado de simulação, com recibo governado e trilha de auditoria. A simulação em si já rodou de forma segura e determinística -- isto é só a aprovação humana formal, nunca dinheiro real, nunca uma ordem.'**
+  String get aefLabConsequenceApproveSimulation;
+
   /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 LAB Human Gate card
   ///
   /// In pt, this message translates to:
@@ -1424,6 +1430,24 @@ abstract class AppLocalizations {
   /// **'Mensagem'**
   String get aefLabFieldBody;
 
+  /// Macro-08 continuation §5-8 Strategy Simulation governed approval
+  ///
+  /// In pt, this message translates to:
+  /// **'ID do experimento'**
+  String get aefLabFieldExperimentId;
+
+  /// Macro-08 continuation §5-8 Strategy Simulation governed approval
+  ///
+  /// In pt, this message translates to:
+  /// **'Nota da aprovação'**
+  String get aefLabFieldNote;
+
+  /// Macro-08 continuation §5-8 Strategy Simulation governed approval
+  ///
+  /// In pt, this message translates to:
+  /// **'Aprovação formal da simulação (AEF)'**
+  String get aefLabTitleStrategySimulation;
+
   /// INSIGHTVALUES-PRODUCTIZATION-MACRO-03 UX review (§18): AefActionCard's title, when opened from Action Engine rather than IVE chat -- the default 'Ação proposta pela IVE (LAB)' is both wrong (not proposed by IVE) and exposes internal LAB jargon.
   ///
   /// In pt, this message translates to:
@@ -1453,6 +1477,12 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Concluir ação'**
   String get aefLabActionCompleteAction;
+
+  /// Macro-08 continuation §5-8: human label for the raw internal action id 'approve_simulation_result'.
+  ///
+  /// In pt, this message translates to:
+  /// **'Aprovar resultado de simulação'**
+  String get aefLabActionApproveSimulation;
 
   /// IV-IVE-AEF-RUNTIME-INTEGRATION-01 LAB Human Gate card
   ///
@@ -2995,6 +3025,138 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Premium'**
   String get planNamePremium;
+
+  /// No description provided for @strategyDetailRecordExperiment.
+  ///
+  /// In pt, this message translates to:
+  /// **'Registrar como experimento'**
+  String get strategyDetailRecordExperiment;
+
+  /// No description provided for @strategyDetailExperimentRecorded.
+  ///
+  /// In pt, this message translates to:
+  /// **'Registrado como experimento #{id}.'**
+  String strategyDetailExperimentRecorded(String id);
+
+  /// No description provided for @strategyDetailRecordExperimentError.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não foi possível registrar o experimento ({code}).'**
+  String strategyDetailRecordExperimentError(String code);
+
+  /// No description provided for @strategyDetailSimulationGovernanceTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Aprovação formal (governança AEF)'**
+  String get strategyDetailSimulationGovernanceTitle;
+
+  /// No description provided for @strategyDetailSimulationRuntimeUnavailable.
+  ///
+  /// In pt, this message translates to:
+  /// **'Indisponível neste ambiente: o runtime de governança AEF só existe em stack Supabase local (LAB) -- nunca em produção. Sua simulação foi registrada normalmente; a etapa de aprovação formal fica pendente até um ambiente compatível estar disponível.'**
+  String get strategyDetailSimulationRuntimeUnavailable;
+
+  /// No description provided for @strategyDetailSimulationRuntimePlanRequired.
+  ///
+  /// In pt, this message translates to:
+  /// **'Esta etapa de aprovação formal exige participação no programa beta (papel beta_tester) além de um plano com acesso. Fale com o suporte se quiser participar.'**
+  String get strategyDetailSimulationRuntimePlanRequired;
+
+  /// No description provided for @strategyDetailSimulationRuntimePolicyBlocked.
+  ///
+  /// In pt, this message translates to:
+  /// **'O servidor recusou esta solicitação de aprovação ({code}).'**
+  String strategyDetailSimulationRuntimePolicyBlocked(Object code);
+
+  /// No description provided for @strategyDetailExperimentHistoryTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Histórico de experimentos'**
+  String get strategyDetailExperimentHistoryTitle;
+
+  /// No description provided for @strategyDetailExperimentHistoryEmpty.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhum experimento registrado ainda. Rode um backtest ou uma simulação e registre-o para começar o histórico.'**
+  String get strategyDetailExperimentHistoryEmpty;
+
+  /// No description provided for @strategyDetailExperimentCategoryBacktest.
+  ///
+  /// In pt, this message translates to:
+  /// **'Backtest'**
+  String get strategyDetailExperimentCategoryBacktest;
+
+  /// No description provided for @strategyDetailExperimentCategoryRobustness.
+  ///
+  /// In pt, this message translates to:
+  /// **'Experimento de robustez'**
+  String get strategyDetailExperimentCategoryRobustness;
+
+  /// No description provided for @strategyDetailExperimentCategorySimulation.
+  ///
+  /// In pt, this message translates to:
+  /// **'Simulação'**
+  String get strategyDetailExperimentCategorySimulation;
+
+  /// No description provided for @strategyDetailExperimentCategoryUserDecision.
+  ///
+  /// In pt, this message translates to:
+  /// **'Decisão do usuário'**
+  String get strategyDetailExperimentCategoryUserDecision;
+
+  /// No description provided for @strategyDetailExperimentCategoryIveRecommendation.
+  ///
+  /// In pt, this message translates to:
+  /// **'Recomendação da IVE'**
+  String get strategyDetailExperimentCategoryIveRecommendation;
+
+  /// No description provided for @strategyDetailExperimentContaminated.
+  ///
+  /// In pt, this message translates to:
+  /// **'contaminado (visto após o início do holdout)'**
+  String get strategyDetailExperimentContaminated;
+
+  /// No description provided for @strategyDetailExperimentSegment.
+  ///
+  /// In pt, this message translates to:
+  /// **'segmento: {segment}'**
+  String strategyDetailExperimentSegment(String segment);
+
+  /// No description provided for @strategyDetailUserDecisionTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'O que você decide sobre este candidato?'**
+  String get strategyDetailUserDecisionTitle;
+
+  /// No description provided for @strategyDetailUserDecisionKeepCurrent.
+  ///
+  /// In pt, this message translates to:
+  /// **'Manter versão atual'**
+  String get strategyDetailUserDecisionKeepCurrent;
+
+  /// No description provided for @strategyDetailUserDecisionPreferCandidate.
+  ///
+  /// In pt, this message translates to:
+  /// **'Preferir candidato'**
+  String get strategyDetailUserDecisionPreferCandidate;
+
+  /// No description provided for @strategyDetailUserDecisionRejectCandidate.
+  ///
+  /// In pt, this message translates to:
+  /// **'Rejeitar candidato'**
+  String get strategyDetailUserDecisionRejectCandidate;
+
+  /// No description provided for @strategyDetailUserDecisionNeedsMoreEvidence.
+  ///
+  /// In pt, this message translates to:
+  /// **'Precisa de mais evidência'**
+  String get strategyDetailUserDecisionNeedsMoreEvidence;
+
+  /// No description provided for @strategyDetailUserDecisionRecorded.
+  ///
+  /// In pt, this message translates to:
+  /// **'Decisão registrada: {decision}.'**
+  String strategyDetailUserDecisionRecorded(String decision);
 }
 
 class _AppLocalizationsDelegate

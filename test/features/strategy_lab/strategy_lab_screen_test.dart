@@ -40,11 +40,11 @@ class FakeStrategyBuilderApi implements StrategyBuilderApi {
   Future<StrategyBuilderResult> validate(Map<String, dynamic> spec) async => const StrategyBuilderResult(200, {'valid': true});
   @override
   Future<StrategyBuilderResult> draftFromText(String text) async => const StrategyBuilderResult(200, {'draft': {}});
-  @override
   /// Set by a test that wants to simulate a failed first attempt (so the
   /// screen stays open and a second Save tap is a real retry, not a
   /// no-op after the screen already popped).
   bool failNextCreate = false;
+  @override
   Future<StrategyBuilderResult> create(Map<String, dynamic> spec, {String? idempotencyKey}) async {
     calls.add('create:$idempotencyKey');
     if (failNextCreate) {
@@ -85,6 +85,17 @@ class FakeStrategyBuilderApi implements StrategyBuilderApi {
       const StrategyBuilderResult(200, {'result': {'tradeCount': 0, 'netPnl': 0}, 'experiment': {'category': 'SIMULATION'}, 'label': 'SIMULATION'});
   @override
   Future<StrategyBuilderResult> listExperiments(String strategyId) async => const StrategyBuilderResult(200, {'experiments': []});
+  @override
+  Future<StrategyBuilderResult> recordExperiment({
+    required String strategyVersionId,
+    required String category,
+    required String datasetId,
+    required String segment,
+    required String reason,
+    String? resultId,
+    required String source,
+  }) async =>
+      StrategyBuilderResult(200, {'experiment': {'id': 'exp-${strategies.length}', 'category': category}});
 }
 
 Future<FakeStrategyBuilderApi> _pump(WidgetTester tester, {bool admin = true, Locale locale = const Locale('en'), List<Map<String, dynamic>>? strategies}) async {
