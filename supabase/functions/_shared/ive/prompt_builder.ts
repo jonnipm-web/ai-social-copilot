@@ -89,6 +89,10 @@ export function buildMessages(
     verified.push(untrusted('acoes', ctx.project?.id ?? null,
       ctx.actions.map((a) => `• ${clip(a.title, 200)} [status=${a.status ?? '-'}, impacto=${a.impact_score ?? '-'}, esforço=${a.effort_score ?? '-'}]`).join('\n')));
   }
+  if (ctx.strategies.length) {
+    verified.push(untrusted('estrategias', ctx.project?.id ?? null,
+      ctx.strategies.map((s) => `• ${clip(s.name, 200)} [status=${s.status ?? '-'}, versao/version=${s.current_version ?? '-'}]`).join('\n')));
+  }
   if (ctx.knowledge.length) {
     verified.push(locale === 'pt-BR' ? '## TRECHOS DE DOCUMENTOS (dados)' : '## DOCUMENT EXCERPTS (data)');
     for (const e of ctx.knowledge) verified.push(untrusted('documento', e.documentId, `título/title: ${clip(e.title, 200)}\n${e.text}`));

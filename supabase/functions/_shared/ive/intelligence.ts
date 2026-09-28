@@ -207,6 +207,7 @@ export async function handleIveIntelligence(req: Request, deps: IveCoreDeps = {}
   const capabilitiesUsed = [IVE_CORE_MODULE_ID];
   if (ctx.opportunities.length) capabilitiesUsed.push('opportunity-lab');
   if (ctx.actions.length) capabilitiesUsed.push('action-engine');
+  if (ctx.strategies.length) capabilitiesUsed.push('strategy-builder');
   if (ctx.knowledge.length) capabilitiesUsed.push('knowledge-vault');
 
   telemetry({

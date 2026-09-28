@@ -11,7 +11,7 @@
  *   3 CURRENT PROJECT        server-verified metadata of the owned project
  *   4 USER REQUEST           the message itself (validated ≤ 4000 chars upstream)
  *   5 RELEVANT KNOWLEDGE     retrieved excerpts, relevance-ranked
- *   6 PROJECT STATE          top opportunities / actions
+ *   6 PROJECT STATE          top opportunities / actions / strategies
  *   7 DURABLE MEMORY         active, non-superseded, most recent first
  *   8 OLD CONVERSATION       oldest turns dropped first
  *
@@ -25,6 +25,7 @@ export const CONTEXT_BUDGET_CHARS = {
   knowledge: 8000, // same delivery budget the client-side DocumentContextBuilder used
   opportunities: 1500,
   actions: 1500,
+  strategies: 1000,
   memory: 1500,
   conversation: 6000,
 } as const;
@@ -32,6 +33,7 @@ export const CONTEXT_BUDGET_CHARS = {
 export const CONTEXT_ITEM_LIMITS = {
   opportunities: 5,
   actions: 5,
+  strategies: 5,
   knowledgeDocuments: 20, // candidates fetched; excerpts selected by relevance within the char budget
   memories: 10,
 } as const;

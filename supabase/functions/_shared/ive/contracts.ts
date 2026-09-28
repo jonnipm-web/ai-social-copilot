@@ -57,7 +57,7 @@ export type IveErrorCode =
 /** Optional context that may be missing without failing the request.
  * Authorization-bearing context (identity, entitlement, project ownership)
  * is never "degraded": it fails closed. */
-export type DegradedSource = 'knowledge' | 'memory' | 'opportunities' | 'actions';
+export type DegradedSource = 'knowledge' | 'memory' | 'opportunities' | 'actions' | 'strategies';
 
 /** Per optional source: why it is (not) in the answer's context, so the
  * client never presents a context-poor answer as fully grounded
@@ -156,6 +156,7 @@ export type SourceType =
   | 'project'
   | 'opportunity'
   | 'action'
+  | 'strategy'
   | 'knowledge_document'
   | 'memory'
   | 'module_state'

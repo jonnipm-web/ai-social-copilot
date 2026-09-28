@@ -54,6 +54,15 @@ export interface ActionRow {
   impact_score: number | null;
   effort_score: number | null;
 }
+export interface StrategyRow {
+  id: string;
+  user_id?: string;
+  project_id: string | null;
+  name: string | null;
+  status: string | null;
+  current_version: number | null;
+  updated_at: string | null;
+}
 
 /** Everything the assembler may read. Every method receives the
  * authenticated user id and MUST filter by it (RLS is the second wall).
@@ -62,6 +71,12 @@ export interface IveDataSource {
   getOwnedProject(userId: string, projectId: string): Promise<ProjectRow | null>;
   listOpportunities(userId: string, projectId: string, limit: number): Promise<OpportunityRow[]>;
   listActions(userId: string, projectId: string, limit: number): Promise<ActionRow[]>;
+  /** Strategy Builder strategies are user-level, not project-required (the
+   * table's project_id is currently always null in practice -- no caller
+   * sets it yet). Same optional-project shape as listKnowledge/listMemories:
+   * with a verified project, that project's strategies + unassigned ones;
+   * without one, unassigned only. */
+  listStrategies(userId: string, projectId: string | null, limit: number): Promise<StrategyRow[]>;
   listKnowledge(userId: string, projectId: string | null, limit: number): Promise<KnowledgeRow[]>;
   listMemories(userId: string, projectId: string | null, limit: number): Promise<MemoryRow[]>;
 }
@@ -77,13 +92,14 @@ export interface IveIntelligenceContext {
   project: ProjectRow | null;
   opportunities: OpportunityRow[];
   actions: ActionRow[];
+  strategies: StrategyRow[];
   knowledge: KnowledgeExcerpt[];
   memories: MemoryRow[];
   provenance: ProvenanceEntry[];
   degraded: DegradedSource[];
   contextStatus: Record<DegradedSource, ContextSourceStatus>;
   counts: { knowledgeConsidered: number; knowledgeUngroundable: number; memoriesConsidered: number };
-  truncation: Partial<Record<'project' | 'knowledge' | 'opportunities' | 'actions' | 'memory', boolean>>;
+  truncation: Partial<Record<'project' | 'knowledge' | 'opportunities' | 'actions' | 'strategies' | 'memory', boolean>>;
 }
 
 function clip(s: string | null | undefined, n: number): string {
@@ -135,11 +151,13 @@ export async function assembleContext(
   const onlyThisProject = <T extends { project_id: string | null; user_id?: string }>(rows: T[]) =>
     owned(rows).filter((r) => pid !== null && r.project_id === pid);
 
-  const [oppRows, actRows, knowRows, memRows] = await Promise.all([
+  const [oppRows, actRows, stratRows, knowRows, memRows] = await Promise.all([
     optional(pid !== null && authorized.has('opportunity-lab'), 'opportunities', degraded,
       () => data.listOpportunities(subject.id, pid!, CONTEXT_ITEM_LIMITS.opportunities)),
     optional(pid !== null && authorized.has('action-engine'), 'actions', degraded,
       () => data.listActions(subject.id, pid!, CONTEXT_ITEM_LIMITS.actions)),
+    optional(authorized.has('strategy-builder'), 'strategies', degraded,
+      () => data.listStrategies(subject.id, pid, CONTEXT_ITEM_LIMITS.strategies)),
     optional(authorized.has('knowledge-vault'), 'knowledge', degraded,
       () => data.listKnowledge(subject.id, pid, CONTEXT_ITEM_LIMITS.knowledgeDocuments)),
     optional(true, 'memory', degraded,
@@ -147,15 +165,17 @@ export async function assembleContext(
   ]);
 
   // Second filter on every returned row: nothing from another project (or,
-  // for knowledge/memory, from a project other than the verified one) can
-  // enter the context even if a data source misbehaves.
+  // for knowledge/memory/strategies, from a project other than the verified
+  // one) can enter the context even if a data source misbehaves.
   const opportunities = onlyThisProject(oppRows);
   const actions = onlyThisProject(actRows);
+  const strategyRows = owned(stratRows).filter((r) => r.project_id === null || r.project_id === pid);
   const knowledgeRows = owned(knowRows).filter((r) => r.project_id === null || r.project_id === pid);
   const memoryRows = owned(memRows);
 
   const oppFit: Fitted<OpportunityRow> = fitToBudget(opportunities, (o) => clip(o.title, 200).length + 40, CONTEXT_BUDGET_CHARS.opportunities);
   const actFit: Fitted<ActionRow> = fitToBudget(actions, (a) => clip(a.title, 200).length + 40, CONTEXT_BUDGET_CHARS.actions);
+  const stratFit: Fitted<StrategyRow> = fitToBudget(strategyRows, (s) => clip(s.name, 200).length + 40, CONTEXT_BUDGET_CHARS.strategies);
   const k = selectKnowledge(knowledgeRows, `${request.message} ${project?.name ?? ''} ${project?.description ?? ''}`);
   const memSelected = selectMemories(memoryRows, pid).slice(0, CONTEXT_ITEM_LIMITS.memories);
   const memFit: Fitted<MemoryRow> = fitToBudget(memSelected, (m) => clip(m.content, 500).length + 20, CONTEXT_BUDGET_CHARS.memory);
@@ -171,6 +191,7 @@ export async function assembleContext(
   }
   for (const o of oppFit.items) provenance.push({ sourceType: 'opportunity', sourceId: o.id, projectId: pid, label: clip(o.title, 120), updatedAt: null, reason: 'top_project_opportunity', trust: 'server_verified_user_data' });
   for (const a of actFit.items) provenance.push({ sourceType: 'action', sourceId: a.id, projectId: pid, label: clip(a.title, 120), updatedAt: null, reason: 'top_project_action', trust: 'server_verified_user_data' });
+  for (const s of stratFit.items) provenance.push({ sourceType: 'strategy', sourceId: s.id, projectId: s.project_id, label: clip(s.name, 120), updatedAt: s.updated_at, reason: 'user_strategy', trust: 'server_verified_user_data' });
   for (const e of k.excerpts) provenance.push(e.provenance);
   for (const m of memFit.items) {
     // INSIGHTVALUES-INTELLIGENCE-AUTOMATION-MACRO-04 §7-9/§10-11: a Result
@@ -204,6 +225,7 @@ export async function assembleContext(
     project,
     opportunities: oppFit.items,
     actions: actFit.items,
+    strategies: stratFit.items,
     knowledge: k.excerpts,
     memories: memFit.items,
     provenance,
@@ -211,6 +233,7 @@ export async function assembleContext(
     contextStatus: {
       opportunities: status(pid !== null, authorized.has('opportunity-lab'), 'opportunities', oppFit.items.length),
       actions: status(pid !== null, authorized.has('action-engine'), 'actions', actFit.items.length),
+      strategies: status(true, authorized.has('strategy-builder'), 'strategies', stratFit.items.length),
       knowledge: status(true, authorized.has('knowledge-vault'), 'knowledge', k.excerpts.length),
       memory: status(true, true, 'memory', memFit.items.length),
     },
@@ -220,6 +243,7 @@ export async function assembleContext(
       knowledge: k.truncated,
       opportunities: oppFit.truncated,
       actions: actFit.truncated,
+      strategies: stratFit.truncated,
       memory: memFit.truncated,
     },
   };
@@ -263,6 +287,13 @@ export class SupabaseIveDataSource implements IveDataSource {
       .select('id, user_id, project_id, title, status, priority, impact_score, effort_score')
       .eq('user_id', userId).eq('project_id', projectId)
       .order('priority', { ascending: false }).limit(limit));
+  }
+  listStrategies(userId: string, projectId: string | null, limit: number): Promise<StrategyRow[]> {
+    let q = this.client.from('strategies')
+      .select('id, user_id, project_id, name, status, current_version, updated_at')
+      .eq('user_id', userId);
+    q = projectId ? q.or(`project_id.eq.${projectId},project_id.is.null`) : q.is('project_id', null);
+    return this.rows(q.order('updated_at', { ascending: false }).limit(limit));
   }
   listKnowledge(userId: string, projectId: string | null, limit: number): Promise<KnowledgeRow[]> {
     let q = this.client.from('knowledge_items')

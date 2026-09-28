@@ -78,6 +78,7 @@ const CAPABILITY_KEYWORDS: readonly { re: RegExp; capabilityId: string; intent: 
   { re: /\b(campanhas?|campaigns?)\b/, capabilityId: 'campaigns', intent: 'open_capability' },
   { re: /\b(personas?)\b/, capabilityId: 'personas', intent: 'open_capability' },
   { re: /\b(projetos?|projects?|analise meu projeto|analyze my project)\b/, capabilityId: 'projects', intent: 'analyze' },
+  { re: /\b(estrategias?|backtests?|robo de trading|robo operacional|strateg(y|ies)|trading (strategy|strategies)|backtest)\b/, capabilityId: 'strategy-builder', intent: 'analyze' },
 ];
 
 /** How many of the latest USER turns of the conversation are scanned for

@@ -8,7 +8,7 @@ import { assert, assertEquals, assertFalse } from 'https://deno.land/std@0.168.0
 import type { AuthClient } from '../auth.ts';
 import type { QuotaClient } from '../quota.ts';
 import { failingSubjectSource, fakeSubjectSource } from '../entitlement_test_support.ts';
-import { assembleContext, type ActionRow, type IveDataSource, type OpportunityRow, type ProjectRow } from './context_assembler.ts';
+import { assembleContext, type ActionRow, type IveDataSource, type OpportunityRow, type ProjectRow, type StrategyRow } from './context_assembler.ts';
 import { handleIveIntelligence, IVE_CORE_MODULE_ID, suggestActions } from './intelligence.ts';
 import { routeIntent } from './intent_router.ts';
 import type { KnowledgeRow } from './knowledge_retrieval.ts';
@@ -59,6 +59,12 @@ const opps: (OpportunityRow & { user_id: string })[] = [
 const acts: (ActionRow & { user_id: string })[] = [
   { id: 'a-a1', user_id: A, project_id: PA1, title: 'Launch loyalty card', status: 'pending', priority: 80, impact_score: 70, effort_score: 30 },
 ];
+const strategies: (StrategyRow & { user_id: string })[] = [
+  { id: 's-a1', user_id: A, project_id: PA1, name: 'Alpha Coffee EMA Cross', status: 'BACKTESTED', current_version: 2, updated_at: '2026-09-24' },
+  { id: 's-au', user_id: A, project_id: null, name: 'Unassigned Trend Strategy', status: 'DRAFT', current_version: 1, updated_at: '2026-09-19' },
+  { id: 's-b', user_id: B, project_id: PB, name: 'Bravo Secret Strategy', status: 'DRAFT', current_version: 1, updated_at: '2026-09-24' },
+  { id: 's-bu', user_id: B, project_id: null, name: 'Bravo unassigned strategy', status: 'DRAFT', current_version: 1, updated_at: '2026-09-24' },
+];
 
 interface Calls { listed: string[] }
 function honestSource(calls: Calls = { listed: [] }): IveDataSource {
@@ -69,6 +75,8 @@ function honestSource(calls: Calls = { listed: [] }): IveDataSource {
     async listOpportunities(u, p) { calls.listed.push(`opps:${p}`); return opps.filter((x) => x.user_id === u && x.project_id === p); },
     // deno-lint-ignore require-await
     async listActions(u, p) { calls.listed.push(`acts:${p}`); return acts.filter((x) => x.user_id === u && x.project_id === p); },
+    // deno-lint-ignore require-await
+    async listStrategies(u, p) { calls.listed.push(`strat:${p}`); return strategies.filter((x) => x.user_id === u && (x.project_id === null || x.project_id === p)); },
     // deno-lint-ignore require-await
     async listKnowledge(u, p) { calls.listed.push(`know:${p}`); return knowledge.filter((x) => x.user_id === u && (x.project_id === null || x.project_id === p)); },
     // deno-lint-ignore require-await
@@ -85,6 +93,8 @@ function leakySource(): IveDataSource {
     async listOpportunities() { return opps; },
     // deno-lint-ignore require-await
     async listActions() { return acts; },
+    // deno-lint-ignore require-await
+    async listStrategies() { return strategies; },
     // deno-lint-ignore require-await
     async listKnowledge() { return knowledge; },
     // deno-lint-ignore require-await
@@ -169,8 +179,10 @@ Deno.test('IC-02 free user, own project: answered with server-built context and 
   assert(r.prompt.includes('Espresso pricing'));
   assert(r.prompt.includes('Coffee subscription'));
   assert(r.prompt.includes('Alpha Coffee aims for 3 stores'));
+  assert(r.prompt.includes('Alpha Coffee EMA Cross'));
   const types = r.json.sources.map((s: { sourceType: string }) => s.sourceType);
-  for (const t of ['project', 'knowledge_document', 'opportunity', 'action', 'memory']) assert(types.includes(t), t);
+  for (const t of ['project', 'knowledge_document', 'opportunity', 'action', 'strategy', 'memory']) assert(types.includes(t), t);
+  assert(r.json.capabilitiesUsed.includes('strategy-builder'));
   assertEquals(r.quota.reserved, 1);
   assertEquals(r.json.locale, 'pt-BR');
 });
@@ -241,7 +253,7 @@ Deno.test('IC-08 degraded optional context: knowledge failure still answers, fla
   const r = await run('jwt-a', base({ project_id: PA1 }), { data: src });
   assertEquals(r.res.status, 200);
   assertEquals(r.json.degraded, ['knowledge']);
-  assertEquals(r.json.contextStatus, { opportunities: 'included', actions: 'included', knowledge: 'unavailable', memory: 'included' });
+  assertEquals(r.json.contextStatus, { opportunities: 'included', actions: 'included', strategies: 'included', knowledge: 'unavailable', memory: 'included' });
   const noProject = await run('jwt-a', base());
   assertEquals(noProject.json.contextStatus.opportunities, 'not_applicable');
 });
@@ -252,6 +264,20 @@ Deno.test('IC-09 session resumed: conversation is budgeted, newest turns kept', 
   assertEquals(r.res.status, 200);
   assert(r.prompt.includes('turn-9'));
   assertFalse(r.prompt.includes('turn-0 '));
+});
+
+Deno.test('IC-10 (Macro-08 §17-21) strategies are user-level, not project-required: unassigned ones show with no project AND with any owned project, but a sibling project never shows another project-scoped strategy', async () => {
+  const noProject = await run('jwt-a', base());
+  assert(noProject.prompt.includes('Unassigned Trend Strategy'));
+  assertFalse(noProject.prompt.includes('Alpha Coffee EMA Cross'));
+
+  const pa1 = await run('jwt-a', base({ project_id: PA1 }));
+  assert(pa1.prompt.includes('Unassigned Trend Strategy'));
+  assert(pa1.prompt.includes('Alpha Coffee EMA Cross'));
+
+  const pa2 = await run('jwt-a', base({ project_id: PA2 }));
+  assert(pa2.prompt.includes('Unassigned Trend Strategy'));
+  assertFalse(pa2.prompt.includes('Alpha Coffee EMA Cross'));
 });
 
 // ── Adversarial matrix (mission §43) ─────────────────────────────────────
@@ -278,7 +304,7 @@ Deno.test('AD-02 user A asks for project B → 403 PROJECT_FORBIDDEN, nothing of
 Deno.test('AD-03/04/05 a data source that ignores filters still cannot leak B or another project of A', async () => {
   const r = await run('jwt-a', base({ project_id: PA1 }), { data: leakySource() });
   assertEquals(r.res.status, 200);
-  for (const leak of ['BRAVO CONFIDENTIAL', 'BRAVO UNASSIGNED', 'BRAVO USER-LEVEL', 'Bravo private', 'Bravo acquisition', 'Editorial calendar for Alpha Blog', 'Alpha Blog aims']) {
+  for (const leak of ['BRAVO CONFIDENTIAL', 'BRAVO UNASSIGNED', 'BRAVO USER-LEVEL', 'Bravo private', 'Bravo acquisition', 'Editorial calendar for Alpha Blog', 'Alpha Blog aims', 'Bravo Secret Strategy', 'Bravo unassigned strategy']) {
     assertFalse(r.prompt.includes(leak), `leaked: ${leak}`);
   }
   // …and asking for B's project through the leaky source is still forbidden.
@@ -475,6 +501,9 @@ Deno.test('SU-02 router: PT/EN capability intents; nouns like "posts" are not co
   assertEquals(routeIntent('quais são meus melhores posts?', null).requiresAef, false);
   assertEquals(routeIntent('crie uma ação para isso', null).capabilityId, 'action-engine');
   assertEquals(routeIntent('crie uma ação para isso', null).requiresAef, false);
+  assertEquals(routeIntent('quero revisar minhas estratégias de trading', null).capabilityId, 'strategy-builder');
+  assertEquals(routeIntent('how are my trading strategies performing?', null).capabilityId, 'strategy-builder');
+  assertEquals(routeIntent('quero revisar minhas estratégias de trading', null).requiresAef, false);
 });
 
 // ── Codex Gate 1 remediation ──────────────────────────────────────────────
