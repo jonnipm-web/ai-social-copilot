@@ -99,6 +99,54 @@ Deno.test('BB-05 a bridge that never responds is aborted at the configured timeo
   );
 });
 
+Deno.test('BB-09 (Codex final audit, Macro-06 deferred P3, closed) a bridge response with a non-numeric field is refused, never silently coerced to NaN', async () => {
+  const specResult = buildV10ReferenceSpecification();
+  assert(specResult.ok);
+  if (!specResult.ok) return;
+  await withFakeBridge(
+    () =>
+      new Response(
+        JSON.stringify({
+          ok: true, engine: 'PAULO_TREND_FIBONACCI_V10', dataset_id: 'win1-5min-qt01c3',
+          dataset_hash: '5220e7cc9f46987b8dcf6cb9', trade_count: 'not-a-number', long_count: 40, short_count: 35,
+          wins: 30, losses: 45, net_pnl: -57.0, gross_pnl: -57.0, gross_profit: 500, gross_loss: 557,
+          total_cost: 0, target_touches: 8, stop_touches: 47, execution_ambiguity_count: 19,
+          result_hash: 'c19661f4dfc61193',
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    async (baseUrl) => {
+      const result = await runV10ViaBridge({ baseUrl, timeoutMs: 2000 }, 'win1-5min-qt01c3', specResult.value, null);
+      assert(!result.ok);
+      assertEquals(result.ok ? undefined : result.error.details?.field, 'tradeCount');
+    },
+  );
+});
+
+Deno.test('BB-10 (Codex final audit, Macro-06 deferred P3, closed) a bridge response with a missing/empty string field is refused', async () => {
+  const specResult = buildV10ReferenceSpecification();
+  assert(specResult.ok);
+  if (!specResult.ok) return;
+  await withFakeBridge(
+    () =>
+      new Response(
+        JSON.stringify({
+          ok: true, engine: 'PAULO_TREND_FIBONACCI_V10', dataset_id: 'win1-5min-qt01c3',
+          dataset_hash: '', trade_count: 75, long_count: 40, short_count: 35,
+          wins: 30, losses: 45, net_pnl: -57.0, gross_pnl: -57.0, gross_profit: 500, gross_loss: 557,
+          total_cost: 0, target_touches: 8, stop_touches: 47, execution_ambiguity_count: 19,
+          result_hash: 'c19661f4dfc61193',
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    async (baseUrl) => {
+      const result = await runV10ViaBridge({ baseUrl, timeoutMs: 2000 }, 'win1-5min-qt01c3', specResult.value, null);
+      assert(!result.ok);
+      assertEquals(result.ok ? undefined : result.error.details?.field, 'dataset_hash');
+    },
+  );
+});
+
 Deno.test('BB-06 (§5) checkEngineAvailability reports true when the bridge health check says the engine is ready', async () => {
   await withFakeBridge(
     () => new Response(JSON.stringify({ ok: true, engines: { PAULO_TREND_FIBONACCI_V10: { available: true, reason: null } } }), {

@@ -146,24 +146,48 @@ export async function runV10ViaBridge(
         detail: String(body.detail ?? ''),
       });
     }
+    // Codex final audit (Macro-06, deferred P3, closed here): validate the
+    // bridge's numeric/string fields explicitly BEFORE trusting them,
+    // instead of relying on buildCanonicalBacktestResult's own internal
+    // consistency checks to incidentally catch a malformed value via a
+    // confusing NaN-inequality failure downstream. A bridge response
+    // that fails this contract is refused here, with a clear reason,
+    // never silently propagated as a NaN into a persisted result.
+    const numericFields = {
+      tradeCount: body.trade_count, longCount: body.long_count, shortCount: body.short_count,
+      wins: body.wins, losses: body.losses, netPnl: body.net_pnl, grossPnl: body.gross_pnl,
+      grossProfit: body.gross_profit, grossLoss: body.gross_loss, totalCost: body.total_cost,
+      targetTouches: body.target_touches, stopTouches: body.stop_touches,
+      executionAmbiguityCount: body.execution_ambiguity_count,
+    };
+    for (const [field, value] of Object.entries(numericFields)) {
+      if (typeof value !== 'number' || !Number.isFinite(value)) {
+        return fail('DATA_REQUIREMENT_UNMET', `backtest bridge response field '${field}' is not a finite number`, { field });
+      }
+    }
+    for (const [field, value] of Object.entries({ engine: body.engine, dataset_id: body.dataset_id, dataset_hash: body.dataset_hash, result_hash: body.result_hash })) {
+      if (typeof value !== 'string' || value.length === 0) {
+        return fail('DATA_REQUIREMENT_UNMET', `backtest bridge response field '${field}' is not a non-empty string`, { field });
+      }
+    }
     return ok({
-      engine: String(body.engine),
-      datasetId: String(body.dataset_id),
-      datasetHash: String(body.dataset_hash),
-      tradeCount: Number(body.trade_count),
-      longCount: Number(body.long_count),
-      shortCount: Number(body.short_count),
-      wins: Number(body.wins),
-      losses: Number(body.losses),
-      netPnl: Number(body.net_pnl),
-      grossPnl: Number(body.gross_pnl),
-      grossProfit: Number(body.gross_profit),
-      grossLoss: Number(body.gross_loss),
-      totalCost: Number(body.total_cost),
-      targetTouches: Number(body.target_touches),
-      stopTouches: Number(body.stop_touches),
-      executionAmbiguityCount: Number(body.execution_ambiguity_count),
-      resultHash: String(body.result_hash),
+      engine: body.engine,
+      datasetId: body.dataset_id,
+      datasetHash: body.dataset_hash,
+      tradeCount: numericFields.tradeCount,
+      longCount: numericFields.longCount,
+      shortCount: numericFields.shortCount,
+      wins: numericFields.wins,
+      losses: numericFields.losses,
+      netPnl: numericFields.netPnl,
+      grossPnl: numericFields.grossPnl,
+      grossProfit: numericFields.grossProfit,
+      grossLoss: numericFields.grossLoss,
+      totalCost: numericFields.totalCost,
+      targetTouches: numericFields.targetTouches,
+      stopTouches: numericFields.stopTouches,
+      executionAmbiguityCount: numericFields.executionAmbiguityCount,
+      resultHash: body.result_hash,
     });
   } catch (e) {
     const timedOut = e instanceof Error && e.name === 'AbortError';

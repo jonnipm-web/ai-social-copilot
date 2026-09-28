@@ -415,6 +415,21 @@ Deno.test('SB-19 (Codex final audit, P1 fix) the store-level limit still blocks 
   assertEquals(store.strategies.length, 3);
 });
 
+Deno.test('SB-37 (Codex final audit, Macro-06 deferred P3, closed) the same race-safety property holds for clone_reference, not just create', async () => {
+  store = new MemoryStore();
+  for (let i = 0; i < 3; i++) {
+    await call({ op: 'create', spec: { ...GENERIC_REFERENCE_SPEC_INPUT, name: `Racer ${i}` } });
+  }
+  assertEquals(store.strategies.length, 3);
+  const originalList = store.list.bind(store);
+  store.list = (u: string) => Promise.resolve([]);
+  const raced = await call({ op: 'clone_reference', reference: 'GENERIC' });
+  store.list = originalList;
+  assertEquals(raced.status, 403);
+  assertEquals(raced.json.error, 'STRATEGY_LIMIT_REACHED');
+  assertEquals(store.strategies.length, 3);
+});
+
 Deno.test('SB-20 (Codex final audit, P2 fix) a job-row write failure AFTER a real result is saved never reports the backtest as failed', async () => {
   store = new MemoryStore();
   const created = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT });
