@@ -99,7 +99,7 @@ class DashboardScreen extends ConsumerWidget {
                       label: 'Melhorar Post com IA',
                       subtitle: 'Transforme seu texto agora',
                       color: const Color(0xFF6C63FF),
-                      onTap: () => context.push(AppConstants.routeHome),
+                      onTap: () => context.push(AppConstants.routeGenerate),
                     ),
                     const SizedBox(height: 12),
 
