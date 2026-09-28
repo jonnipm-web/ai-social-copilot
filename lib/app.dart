@@ -698,7 +698,7 @@ final _router = GoRouter(
       builder: (_, __) => const QuantLabScreen(),
     ),
 
-    // ── ROBOT-BUILDER-MACRO-05 — Strategy Lab (EXPERIMENTAL, admin-only) ──
+    // ── ROBOT-BUILDER-MACRO-05 — Strategy Lab (COMMERCIAL, free tier) ──
     GoRoute(
       path: AppConstants.routeStrategyLab,
       builder: (_, __) => const StrategyLabScreen(),

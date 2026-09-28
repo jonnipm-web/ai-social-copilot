@@ -197,9 +197,10 @@ export class LegacyProfileRoleSubjectSource implements EntitlementSubjectSource 
       auth: { autoRefreshToken: false, persistSession: false },
       global: { headers: { Authorization: `Bearer ${accessToken}` } },
     });
-    const { data, error } = await client.from('profiles').select('role').eq('id', userId).maybeSingle();
+    const { data, error } = await client.from('profiles').select('role, is_active').eq('id', userId).maybeSingle();
     if (error) throw new EntitlementSourceError('profile read failed');
     if (!data) throw new EntitlementSourceError('profile not found');
+    if ((data as { is_active?: unknown }).is_active === false) throw new EntitlementSourceError('profile deactivated');
     const { plan, roles } = mapLegacyProfileRole((data as { role?: unknown }).role);
     return { type: 'user', id: userId, plan, roles, source: 'legacy_profiles_role' };
   }
@@ -226,9 +227,10 @@ export class ProfilePlanAndSubjectRolesSource implements EntitlementSubjectSourc
       auth: { autoRefreshToken: false, persistSession: false },
       global: { headers: { Authorization: `Bearer ${accessToken}` } },
     });
-    const profile = await client.from('profiles').select('role').eq('id', userId).maybeSingle();
+    const profile = await client.from('profiles').select('role, is_active').eq('id', userId).maybeSingle();
     if (profile.error) throw new EntitlementSourceError('profile read failed');
     if (!profile.data) throw new EntitlementSourceError('profile not found');
+    if ((profile.data as { is_active?: unknown }).is_active === false) throw new EntitlementSourceError('profile deactivated');
     const extra = await client.from('subject_roles').select('role').eq('subject_type', 'user').eq('subject_id', userId);
     if (extra.error) throw new EntitlementSourceError('subject roles read failed');
     return subjectFromPlanAndRoleRows(userId, (profile.data as { role?: unknown }).role, extra.data ?? []);
