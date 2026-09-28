@@ -317,6 +317,27 @@ Deno.test('SB-17 analyze_backtest_result returns real epistemic claims after a r
   assert(analyzed.json.claims.some((c: { status: string; statement: string }) => c.status === 'UNKNOWN' && c.statement.includes('Future profitability')));
 });
 
+Deno.test('SB-18 (§43) a free-plan caller is refused STRATEGY_LIMIT_REACHED past 3 strategies; another users own count is unaffected', async () => {
+  store = new MemoryStore();
+  for (let i = 0; i < 3; i++) {
+    const r = await call({ op: 'create', spec: { ...GENERIC_REFERENCE_SPEC_INPUT, name: `Strategy ${i}` } });
+    assertEquals(r.status, 200, `strategy #${i}`);
+  }
+  const fourth = await call({ op: 'create', spec: { ...GENERIC_REFERENCE_SPEC_INPUT, name: 'Strategy 4' } });
+  assertEquals(fourth.status, 403);
+  assertEquals(fourth.json.error, 'STRATEGY_LIMIT_REACHED');
+  assertEquals(store.strategies.length, 3);
+
+  // clone_reference consumes the SAME quota.
+  const clone = await call({ op: 'clone_reference', reference: 'V10' });
+  assertEquals(clone.status, 403);
+  assertEquals(clone.json.error, 'STRATEGY_LIMIT_REACHED');
+
+  // A different user's own quota is untouched by the first user's limit.
+  const otherUser = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT }, 'jwt-b');
+  assertEquals(otherUser.status, 200);
+});
+
 Deno.test('SB-16 non-admin plans are denied for every new op before the store is touched', async () => {
   store = new MemoryStore();
   for (const payload of [

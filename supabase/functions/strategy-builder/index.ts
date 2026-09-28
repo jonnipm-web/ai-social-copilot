@@ -140,6 +140,17 @@ function jsonResponse(body: unknown): Response {
   return new Response(JSON.stringify(body), { status: 200, headers: { ...strategyCorsHeaders, 'Content-Type': 'application/json' } });
 }
 
+/**
+ * §43: candidate per-plan strategy count limits. Safety controls (spec
+ * validation, RLS, engine allowlisting) are NEVER paywalled -- only the
+ * count of strategies a plan may hold is. `strategy-builder` itself stays
+ * EXPERIMENTAL/admin-only for now (module_policy.ts) -- these limits are
+ * real, enforced architecture ready for the day the module is released
+ * to non-admin plans, not yet a live commercial gate.
+ */
+const STRATEGY_LIMIT_BY_PLAN: Record<string, number> = { free: 3, pro: 20, premium: Number.POSITIVE_INFINITY };
+const DEFAULT_STRATEGY_LIMIT = STRATEGY_LIMIT_BY_PLAN.free;
+
 const STRATEGY_ERROR_STATUS: Record<StrategyErrorCode, number> = {
   INVALID_STRATEGY_SPEC: 400,
   UNSUPPORTED_RULE: 400,
@@ -213,6 +224,13 @@ export async function handler(
         }
         const token = bearerToken(req) ?? '';
         const store = (deps.storeFor ?? ((t: string) => new SupabaseStrategyStore(t)))(token);
+        const plan = access.subject.plan ?? 'free';
+        const limit = STRATEGY_LIMIT_BY_PLAN[plan] ?? DEFAULT_STRATEGY_LIMIT;
+        const existing = await store.list(authUser.id);
+        if (existing.length >= limit) {
+          finish(403, 'STRATEGY_LIMIT_REACHED');
+          return errorResponse('STRATEGY_LIMIT_REACHED', cid, 403);
+        }
         const created = await store.create(authUser.id, validated.value);
         finish(200, null);
         return jsonResponse({ correlation_id: cid, strategy: created.strategy, version: created.version });
@@ -270,6 +288,12 @@ export async function handler(
         }
         const token = bearerToken(req) ?? '';
         const store = (deps.storeFor ?? ((t: string) => new SupabaseStrategyStore(t)))(token);
+        const clonePlan = access.subject.plan ?? 'free';
+        const cloneLimit = STRATEGY_LIMIT_BY_PLAN[clonePlan] ?? DEFAULT_STRATEGY_LIMIT;
+        if ((await store.list(authUser.id)).length >= cloneLimit) {
+          finish(403, 'STRATEGY_LIMIT_REACHED');
+          return errorResponse('STRATEGY_LIMIT_REACHED', cid, 403);
+        }
         // §10: cloning creates the CALLER's own new strategy identity --
         // the reference's own historical version is never touched (there
         // is, in fact, no persisted "reference" row at all to touch;
