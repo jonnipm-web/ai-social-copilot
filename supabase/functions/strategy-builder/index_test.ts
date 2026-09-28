@@ -321,6 +321,26 @@ Deno.test('SB-14 compare_versions requires a real backtest result on both sides 
   assertEquals(compared.json.comparison.deltas.netPnlDelta, 0);
 });
 
+Deno.test('SB-33 (§21) compare_versions surfaces independent robustness/score for each side, reweighted by the given objective', async () => {
+  store = new MemoryStore();
+  const created = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT });
+  const strategyId = created.json.strategy.id;
+  const versionAId = created.json.version.id;
+  const v2 = await call({ op: 'create_version', strategyId, spec: GENERIC_REFERENCE_SPEC_INPUT });
+  const versionBId = v2.json.version.id;
+  await call({ op: 'run_backtest', strategyVersionId: versionAId, datasetId: 'synthetic-fixture-5min-v1', engineId: 'GENERIC_RULE_ENGINE' });
+  await call({ op: 'run_backtest', strategyVersionId: versionBId, datasetId: 'synthetic-fixture-5min-v1', engineId: 'GENERIC_RULE_ENGINE' });
+
+  const noObjective = await call({ op: 'compare_versions', versionAId, versionBId });
+  assertEquals(noObjective.status, 200);
+  assert(noObjective.json.robustnessA.sampleSize.threshold > 0);
+  assert(['MORE_ROBUST_UNDER_TESTED_ASSUMPTIONS', 'REQUIRES_MORE_EVIDENCE'].includes(noObjective.json.scoreA.language));
+
+  const withObjective = await call({ op: 'compare_versions', versionAId, versionBId, objective: 'CAPITAL_PRESERVATION' });
+  const drawdownWeight = (s: { components: { name: string; weight: number }[] }) => s.components.find((c) => c.name === 'DRAWDOWN_CONTROL')!.weight;
+  assert(drawdownWeight(withObjective.json.scoreA) > drawdownWeight(noObjective.json.scoreA));
+});
+
 Deno.test('SB-15 another user cannot run a backtest against, list versions of, or compare a foreign strategy version', async () => {
   store = new MemoryStore();
   const created = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT });

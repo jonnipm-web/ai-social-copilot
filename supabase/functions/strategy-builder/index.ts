@@ -39,6 +39,9 @@ import { analyzeBacktestResult } from '../_shared/strategy/ive_strategy_analyst.
 import { computeMarketStatistics } from '../_shared/strategy/market_statistics.ts';
 import { analyzeStrategyMarketFit } from '../_shared/strategy/strategy_market_fit.ts';
 import { MAX_BOUNDED_VARIANTS, proposeBoundedStopVariants } from '../_shared/strategy/bounded_exploration.ts';
+import { directionalBalance, executionAmbiguityRate, sampleSizeSufficiency } from '../_shared/strategy/robustness.ts';
+import { computeStrategyScore } from '../_shared/strategy/strategy_score.ts';
+import { STRATEGY_OBJECTIVES, type StrategyObjective } from '../_shared/strategy/user_objective.ts';
 import {
   computeContamination, validateStrategyExperimentInput, type ExperimentCategory, type ExperimentSegment, type ExperimentSource,
 } from '../_shared/strategy/experiment_provenance.ts';
@@ -94,7 +97,12 @@ interface RunBacktestOp {
   readonly engineId: string;
   readonly costConfig: BridgeCostConfig | null;
 }
-interface CompareVersionsOp { readonly op: 'compare_versions'; readonly versionAId: string; readonly versionBId: string }
+interface CompareVersionsOp {
+  readonly op: 'compare_versions';
+  readonly versionAId: string;
+  readonly versionBId: string;
+  readonly objective: StrategyObjective | null;
+}
 interface CloneReferenceOp { readonly op: 'clone_reference'; readonly reference: 'V10' | 'GENERIC' }
 interface AnalyzeBacktestResultOp { readonly op: 'analyze_backtest_result'; readonly strategyVersionId: string }
 interface EngineStatusOp { readonly op: 'engine_status' }
@@ -168,9 +176,11 @@ function parseOp(body: unknown): { ok: true; value: ParsedOp } | { ok: false; co
           costConfig: parseCostConfig(b.costConfig),
         },
       };
-    case 'compare_versions':
+    case 'compare_versions': {
       if (!isUuid(b.versionAId) || !isUuid(b.versionBId)) return { ok: false, code: 'INVALID_BODY' };
-      return { ok: true, value: { op: 'compare_versions', versionAId: b.versionAId, versionBId: b.versionBId } };
+      const objective = typeof b.objective === 'string' && STRATEGY_OBJECTIVES.includes(b.objective as StrategyObjective) ? (b.objective as StrategyObjective) : null;
+      return { ok: true, value: { op: 'compare_versions', versionAId: b.versionAId, versionBId: b.versionBId, objective } };
+    }
     case 'clone_reference':
       if (b.reference !== 'V10' && b.reference !== 'GENERIC') return { ok: false, code: 'INVALID_BODY' };
       return { ok: true, value: { op: 'clone_reference', reference: b.reference } };
@@ -619,8 +629,24 @@ export async function handler(
           finish(STRATEGY_ERROR_STATUS[comparison.error.code], comparison.error.code);
           return errorResponse(comparison.error.code, cid, STRATEGY_ERROR_STATUS[comparison.error.code]);
         }
+        // §21 Comparison 2.0: alongside the raw P&L/trade-count delta,
+        // surface robustness and score for EACH side independently --
+        // never a single "winner" verdict, never language claiming a
+        // guaranteed best strategy (§18).
+        const resultA = resultsA[0].canonicalResult;
+        const resultB = resultsB[0].canonicalResult;
+        const robustnessFor = (r: typeof resultA) => ({
+          sampleSize: sampleSizeSufficiency(r), executionAmbiguity: executionAmbiguityRate(r), directionalBalance: directionalBalance(r),
+        });
         finish(200, null);
-        return jsonResponse({ correlation_id: cid, comparison: comparison.value });
+        return jsonResponse({
+          correlation_id: cid,
+          comparison: comparison.value,
+          robustnessA: robustnessFor(resultA),
+          robustnessB: robustnessFor(resultB),
+          scoreA: computeStrategyScore(resultA, action.objective),
+          scoreB: computeStrategyScore(resultB, action.objective),
+        });
       }
       case 'analyze_backtest_result': {
         const token = bearerToken(req) ?? '';
