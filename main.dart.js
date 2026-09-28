@@ -61831,7 +61831,7 @@ break}p=4
 c=c.bh("diagnostic_sessions")
 b=a0!=null?A.cdm(a0,200):null
 h=d!=null?A.iI(d,50):null
-g=A.bSE("d7ac6dea5a426505b48af3d26317193e69a68cdf",100)
+g=A.bSE("122af3720582a21c4fd52f66e5b571c011f955b0",100)
 f=a1!=null?A.iI(a1,50):null
 s=7
 return A.f(c.f7(0,A.a6(["user_id",m,"label",b,"status","active","app_version",h,"build_sha",g,"platform","web","role_snapshot",f],t.N,t.T)).pm("id").eh(0),$async$Am)
@@ -61989,7 +61989,7 @@ s=q}for(;;)switch(s){case 0:q=3
 m=o.a.bh("diagnostic_events")
 l=A.bZd(b3)
 k=A.bZc(a3)
-j=A.bSE("d7ac6dea5a426505b48af3d26317193e69a68cdf",100)
+j=A.bSE("122af3720582a21c4fd52f66e5b571c011f955b0",100)
 i=a9!=null?A.iI(a9,100):null
 h=b0!=null?A.iI(b0,100):null
 g=b1!=null?A.iI(b1,200):null
@@ -68855,7 +68855,7 @@ A.ayd.prototype={
 $1(a){return new A.Kq(a.c,a.b,null)},
 $S:745}
 A.ayj.prototype={
-$0(){return A.aD(this.a).dH("/home",null,t.X)},
+$0(){return A.aD(this.a).dH("/generate",null,t.X)},
 $S:0}
 A.ayg.prototype={
 $0(){return A.aD(this.a).dH("/history",null,t.X)},
