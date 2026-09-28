@@ -370,10 +370,15 @@ export async function handler(
   }
 
   const started = performance.now();
-  const finish = (status: number, errorCode: string | null) => {
+  // MACRO-07 §32: compute-economics TELEMETRY only (structured log
+  // fields), never billing. `telemetry` is optional and op-specific --
+  // dataset/candle count, engine id, candidate count -- exactly the
+  // dimensions §32 names, nothing invented beyond them.
+  const finish = (status: number, errorCode: string | null, telemetry?: Record<string, unknown>) => {
     log(JSON.stringify({
       event: 'strategy_builder', operation: action.op, status, error_code: errorCode,
       latency_ms: Math.round(performance.now() - started), correlation_id: cid,
+      ...(telemetry ? { telemetry } : {}),
     }));
   };
 
@@ -564,7 +569,7 @@ export async function handler(
             }
             const savedResult = await store.insertBacktestResult(authUser.id, version.id, built.value);
             const job = await recordSucceededJob(store, authUser.id, version.id, action.datasetId, action.engineId, startedAt, savedResult.id);
-            finish(200, null);
+            finish(200, null, { engineId: action.engineId, datasetId: action.datasetId, barCount: bars.length, tradeCount: savedResult.tradeCount });
             return jsonResponse({ correlation_id: cid, job, result: savedResult });
           }
 
@@ -606,7 +611,7 @@ export async function handler(
           }
           const savedResult = await store.insertBacktestResult(authUser.id, version.id, built.value);
           const job = await recordSucceededJob(store, authUser.id, version.id, action.datasetId, action.engineId, startedAt, savedResult.id);
-          finish(200, null);
+          finish(200, null, { engineId: action.engineId, datasetId: action.datasetId, tradeCount: savedResult.tradeCount });
           return jsonResponse({ correlation_id: cid, job, result: savedResult });
         } catch (e) {
           const job = await store.insertFailedBacktestJob(
@@ -664,7 +669,7 @@ export async function handler(
         // server-persisted result -- no raw object is ever handed to any
         // LLM here; analyzeBacktestResult is pure and deterministic.
         const claims = analyzeBacktestResult(results[0].canonicalResult);
-        finish(200, null);
+        finish(200, null, { iveAnalysisCalls: 1, claimCount: claims.length });
         return jsonResponse({ correlation_id: cid, claims });
       }
       case 'engine_status': {
@@ -708,7 +713,7 @@ export async function handler(
         }
         const fitEvidence = analyzeStrategyMarketFit(version.spec, statsResult.value, bars);
         const proposals = proposeBoundedStopVariants(version.spec, fitEvidence);
-        finish(200, null);
+        finish(200, null, { datasetId: action.datasetId, barCount: bars.length, proposalCount: proposals.length });
         return jsonResponse({ correlation_id: cid, fitEvidence, proposals });
       }
       case 'record_experiment': {
@@ -847,7 +852,10 @@ export async function handler(
           });
           candidates.push({ label: proposal.label, versionId: candidateVersion.id, result: savedResult, experimentId: experiment.id, error: null });
         }
-        finish(200, null);
+        finish(200, null, {
+          engineId: 'GENERIC_RULE_ENGINE', datasetId: action.datasetId, barCount: bars.length,
+          proposalCount: proposals.length, candidateCount: candidates.length,
+        });
         return jsonResponse({ correlation_id: cid, fitEvidence, proposals, candidates });
       }
       case 'run_simulation': {
@@ -915,7 +923,7 @@ export async function handler(
           segment, parametersChanged: null, reason: 'internal simulation run', resultId: savedResult.id,
           costAssumptions: null, source: 'USER', contaminated,
         });
-        finish(200, null);
+        finish(200, null, { engineId: 'GENERIC_RULE_ENGINE', datasetId: action.datasetId, barCount: bars.length, simulationRun: true });
         return jsonResponse({ correlation_id: cid, result: savedResult, experiment, label: 'SIMULATION' });
       }
     }

@@ -626,6 +626,32 @@ Deno.test('SB-35 run_simulation refuses the external V10 engine implicitly -- on
   assertEquals(r.json.error, 'DATA_REQUIREMENT_UNMET');
 });
 
+Deno.test('SB-36 (§32) compute telemetry: run_backtest/run_simulation/run_research_loop log real dataset/engine/candidate counts, never billing', async () => {
+  store = new MemoryStore();
+  const created = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT });
+  const versionId = created.json.version.id;
+
+  await call({ op: 'run_backtest', strategyVersionId: versionId, datasetId: 'synthetic-fixture-5min-v1', engineId: 'GENERIC_RULE_ENGINE' });
+  const btLine = JSON.parse(logs[logs.length - 1]);
+  assertEquals(btLine.telemetry.engineId, 'GENERIC_RULE_ENGINE');
+  assertEquals(btLine.telemetry.datasetId, 'synthetic-fixture-5min-v1');
+  assertEquals(btLine.telemetry.barCount, 9);
+  assertEquals(btLine.telemetry.tradeCount, 2);
+  assert(typeof btLine.latency_ms === 'number');
+
+  await call({ op: 'run_simulation', strategyVersionId: versionId, datasetId: 'synthetic-fixture-5min-v1' });
+  const simLine = JSON.parse(logs[logs.length - 1]);
+  assertEquals(simLine.telemetry.simulationRun, true);
+  assertEquals(simLine.telemetry.barCount, 9);
+
+  const tightStopSpec = { ...GENERIC_REFERENCE_SPEC_INPUT, stop: { ruleId: 'STOP.FIXED_DISTANCE', distance: 1 } };
+  const tightCreated = await call({ op: 'create', spec: tightStopSpec });
+  await call({ op: 'run_research_loop', strategyVersionId: tightCreated.json.version.id, datasetId: 'synthetic-fixture-5min-v1' });
+  const loopLine = JSON.parse(logs[logs.length - 1]);
+  assert(typeof loopLine.telemetry.candidateCount === 'number' && loopLine.telemetry.candidateCount > 0);
+  assert(typeof loopLine.telemetry.proposalCount === 'number');
+});
+
 Deno.test('SB-16 non-admin plans are denied for every new op before the store is touched', async () => {
   store = new MemoryStore();
   for (const payload of [
