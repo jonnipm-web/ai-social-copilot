@@ -16,8 +16,11 @@
 
 -- P05: every Lab migration declares its real dependencies up front
 -- (scripts/ci/run_disposable_db_tests.sh). This migration is otherwise
--- self-contained -- its only hard dependency is the production
--- baseline's auth.uid()/auth.users.
+-- self-contained -- its hard dependencies are the production baseline's
+-- auth.uid() and the auth.users(id) row the table's own FK targets
+-- (Codex Macro-11 §29 re-audit, job af50f0f512ab7909f: checking
+-- auth.uid() alone does not prove auth.users exists with the required
+-- id column).
 DO $$
 DECLARE
   v_missing text[] := '{}';
@@ -25,6 +28,9 @@ BEGIN
   IF to_regprocedure('auth.uid()') IS NULL
      OR (SELECT prorettype FROM pg_proc WHERE oid = to_regprocedure('auth.uid()')) IS DISTINCT FROM 'uuid'::regtype THEN
     v_missing := v_missing || 'auth.uid() returning uuid'::text;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'auth' AND table_name = 'users' AND column_name = 'id' AND data_type = 'uuid') THEN
+    v_missing := v_missing || 'auth.users.id uuid'::text;
   END IF;
   IF array_length(v_missing, 1) > 0 THEN
     RAISE EXCEPTION 'LAB_PRECONDITION (20260924000100_quant_rate_limits): missing or incompatible: %', array_to_string(v_missing, ', ')

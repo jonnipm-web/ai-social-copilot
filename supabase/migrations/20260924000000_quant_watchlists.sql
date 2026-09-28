@@ -34,9 +34,14 @@
 -- (scripts/ci/run_disposable_db_tests.sh's precondition-guard check).
 -- quant_watchlists_access_allowed() below already degrades gracefully
 -- when public.subject_roles doesn't exist yet (to_regclass check), so
--- its only hard dependency is the production baseline's public.projects
--- (the FK target) and auth.uid(). Declared explicitly so the guarantee
--- is auditable rather than merely implicit in the function body.
+-- that one is not a hard dependency. Its real hard dependencies (Codex
+-- Macro-11 §29 re-audit, job af50f0f512ab7909f -- the first guard only
+-- checked projects/auth.uid() and missed public.profiles, which
+-- quant_watchlists_access_allowed() also queries directly, and
+-- auth.users, which every row's user_id column FK-references) are the
+-- production baseline's public.projects, public.profiles and
+-- auth.users. Declared explicitly so the guarantee is auditable rather
+-- than merely implicit in the function body.
 DO $$
 DECLARE
   v_missing text[] := '{}';
@@ -46,6 +51,15 @@ BEGIN
   END IF;
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'projects' AND column_name = 'user_id' AND data_type = 'uuid') THEN
     v_missing := v_missing || 'public.projects.user_id uuid'::text;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'id' AND data_type = 'uuid') THEN
+    v_missing := v_missing || 'public.profiles.id uuid'::text;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'role') THEN
+    v_missing := v_missing || 'public.profiles.role'::text;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'auth' AND table_name = 'users' AND column_name = 'id' AND data_type = 'uuid') THEN
+    v_missing := v_missing || 'auth.users.id uuid'::text;
   END IF;
   IF to_regprocedure('auth.uid()') IS NULL
      OR (SELECT prorettype FROM pg_proc WHERE oid = to_regprocedure('auth.uid()')) IS DISTINCT FROM 'uuid'::regtype THEN

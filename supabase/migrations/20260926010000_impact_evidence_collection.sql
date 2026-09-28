@@ -34,9 +34,12 @@
 -- Idempotent: safe to re-run.
 
 -- P05: every Lab migration declares its real dependencies up front
--- (scripts/ci/run_disposable_db_tests.sh). Depends on
--- 20260924010000_impact_lab_persistence's impact_investigations,
--- impact_sources and impact_claims tables.
+-- (scripts/ci/run_disposable_db_tests.sh). Depends on every
+-- impact_lab_persistence/impact_registry_intelligence table this
+-- file's own FKs/triggers reference (Codex Macro-11 §29 re-audit, job
+-- af50f0f512ab7909f: the first guard missed impact_conflicts/
+-- impact_evidence/impact_verifications/impact_audit_events/
+-- impact_registry_conflicts).
 DO $$
 DECLARE
   v_missing text[] := '{}';
@@ -49,6 +52,21 @@ BEGIN
   END IF;
   IF to_regclass('public.impact_claims') IS NULL THEN
     v_missing := v_missing || 'public.impact_claims'::text;
+  END IF;
+  IF to_regclass('public.impact_conflicts') IS NULL THEN
+    v_missing := v_missing || 'public.impact_conflicts'::text;
+  END IF;
+  IF to_regclass('public.impact_evidence') IS NULL THEN
+    v_missing := v_missing || 'public.impact_evidence'::text;
+  END IF;
+  IF to_regclass('public.impact_verifications') IS NULL THEN
+    v_missing := v_missing || 'public.impact_verifications'::text;
+  END IF;
+  IF to_regclass('public.impact_audit_events') IS NULL THEN
+    v_missing := v_missing || 'public.impact_audit_events'::text;
+  END IF;
+  IF to_regclass('public.impact_registry_conflicts') IS NULL THEN
+    v_missing := v_missing || 'public.impact_registry_conflicts'::text;
   END IF;
   IF array_length(v_missing, 1) > 0 THEN
     RAISE EXCEPTION 'LAB_PRECONDITION (20260926010000_impact_evidence_collection): missing: %', array_to_string(v_missing, ', ')
