@@ -718,5 +718,18 @@
   "strategyDetailUserDecisionRejectCandidate": "Rejeitar candidato",
   "strategyDetailUserDecisionNeedsMoreEvidence": "Precisa de mais evidência",
   "strategyDetailUserDecisionRecorded": "Decisão registrada: {decision}.",
-  "@strategyDetailUserDecisionRecorded": {"placeholders": {"decision": {"type": "String"}}}
+  "@strategyDetailUserDecisionRecorded": {"placeholders": {"decision": {"type": "String"}}},
+
+  "strategyDetailAnalyzeRobustness": "Ver evidência e robustez",
+  "strategyDetailRobustnessEvidenceTitle": "Evidência (afirmações rastreáveis, não opinião de modelo genérico)",
+  "strategyDetailNoRobustnessClaims": "Nenhuma afirmação disponível para este resultado.",
+  "strategyDetailScoreComponentsTitle": "Componentes do score (transparente, nunca um número único opaco)",
+  "strategyDetailScoreOverall": "Score geral: {overall}/100 ({language})",
+  "@strategyDetailScoreOverall": {"placeholders": {"overall": {"type": "String"}, "language": {"type": "String"}}},
+  "strategyDetailScoreLanguageMoreRobust": "mais robusto sob as premissas testadas",
+  "strategyDetailScoreLanguageRequiresEvidence": "requer mais evidência",
+  "strategyDetailSampleSizeInsufficient": "Amostra pequena: {count} trades (abaixo do limite de {threshold}) -- resultado não deve ser tratado como conclusivo.",
+  "@strategyDetailSampleSizeInsufficient": {"placeholders": {"count": {"type": "String"}, "threshold": {"type": "String"}}},
+  "strategyDetailDirectionalUntested": "Direção {direction} nunca foi testada neste resultado -- nenhuma evidência sobre esse lado.",
+  "@strategyDetailDirectionalUntested": {"placeholders": {"direction": {"type": "String"}}}
 }

@@ -96,6 +96,8 @@ class FakeStrategyBuilderApi implements StrategyBuilderApi {
     required String source,
   }) async =>
       StrategyBuilderResult(200, {'experiment': {'id': 'exp-${strategies.length}', 'category': category}});
+  @override
+  Future<StrategyBuilderResult> analyzeBacktestResult(String strategyVersionId) async => const StrategyBuilderResult(200, {'claims': []});
 }
 
 Future<FakeStrategyBuilderApi> _pump(WidgetTester tester, {bool admin = true, Locale locale = const Locale('en'), List<Map<String, dynamic>>? strategies}) async {

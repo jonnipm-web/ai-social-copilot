@@ -15,6 +15,7 @@ import 'data/strategy_builder_api.dart';
 import 'strategy_builder_form_screen.dart';
 import 'widgets/experiment_history_section.dart';
 import 'widgets/plan_upgrade_banner.dart';
+import 'widgets/robustness_evidence_section.dart';
 import 'widgets/simulation_governance_section.dart';
 
 class StrategyDetailScreen extends ConsumerStatefulWidget {
@@ -34,6 +35,8 @@ class _StrategyDetailScreenState extends ConsumerState<StrategyDetailScreen> {
   String? _backtestStatus;
   bool _backtestSucceeded = false;
   Map<String, dynamic>? _compareResult;
+  Map<String, dynamic>? _compareScoreA;
+  Map<String, dynamic>? _compareScoreB;
 
   bool _fitBusy = false;
   Map<String, dynamic>? _fitEvidence;
@@ -216,7 +219,13 @@ class _StrategyDetailScreenState extends ConsumerState<StrategyDetailScreen> {
     final b = _versions[_versions.length - 1] as Map<String, dynamic>;
     final result = await ref.read(strategyBuilderApiProvider).compareVersions(a['id'] as String, b['id'] as String);
     if (!mounted) return;
-    setState(() => _compareResult = result.data?['comparison'] as Map<String, dynamic>?);
+    setState(() {
+      _compareResult = result.data?['comparison'] as Map<String, dynamic>?;
+      // §10/§21: independent robustness/score for EACH side -- never a
+      // single "winner" verdict (server's own comment on compare_versions).
+      _compareScoreA = result.data?['scoreA'] as Map<String, dynamic>?;
+      _compareScoreB = result.data?['scoreB'] as Map<String, dynamic>?;
+    });
   }
 
   @override
@@ -278,6 +287,8 @@ class _StrategyDetailScreenState extends ConsumerState<StrategyDetailScreen> {
               ),
               if (_backtestExperimentStatus != null)
                 Padding(padding: const EdgeInsets.only(top: 4), child: Text(_backtestExperimentStatus!, key: const Key('strategyDetailBacktestExperimentStatus'), style: const TextStyle(fontSize: 12))),
+              const SizedBox(height: 8),
+              RobustnessEvidenceSection(key: const Key('strategyDetailRobustnessSection'), strategyVersionId: version['id'] as String),
             ],
             const SizedBox(height: 16),
             OutlinedButton(
@@ -305,6 +316,8 @@ class _StrategyDetailScreenState extends ConsumerState<StrategyDetailScreen> {
                     key: const Key('strategyDetailCompareResult'),
                   ),
                 ),
+                if (_compareScoreA != null) _buildScoreCard(l, 'A', _compareScoreA!),
+                if (_compareScoreB != null) _buildScoreCard(l, 'B', _compareScoreB!),
                 const SizedBox(height: 8),
                 Text(l.strategyDetailUserDecisionTitle, style: const TextStyle(fontWeight: FontWeight.w600)),
                 Wrap(spacing: 8, runSpacing: 8, children: [
@@ -348,6 +361,35 @@ class _StrategyDetailScreenState extends ConsumerState<StrategyDetailScreen> {
                 ],
               ),
             ),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  /// §10/§21: independent, transparent score for one side of a comparison
+  /// -- every component's value/weight/rationale shown, never collapsed
+  /// into a single number a user could read as a guarantee (§18).
+  Widget _buildScoreCard(AppLocalizations l, String side, Map<String, dynamic> score) {
+    final components = (score['components'] as List?) ?? const [];
+    final language = score['language'] == 'MORE_ROBUST_UNDER_TESTED_ASSUMPTIONS' ? l.strategyDetailScoreLanguageMoreRobust : l.strategyDetailScoreLanguageRequiresEvidence;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Card(
+        key: Key('strategyDetailScoreCard$side'),
+        color: Colors.transparent,
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('$side · ${l.strategyDetailScoreOverall('${score['overall']}', language)}', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+            Text(l.strategyDetailScoreComponentsTitle, style: const TextStyle(fontSize: 11)),
+            for (final raw in components)
+              Builder(builder: (context) {
+                final c = raw as Map<String, dynamic>;
+                final value = (c['value'] as num).toStringAsFixed(2);
+                final weight = (c['weight'] as num).toStringAsFixed(2);
+                return Text('  • ${c['name']} = $value (peso $weight): ${c['rationale']}', style: const TextStyle(fontSize: 11));
+              }),
           ]),
         ),
       ),

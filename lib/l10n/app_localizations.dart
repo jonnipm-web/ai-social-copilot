@@ -3157,6 +3157,60 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Decisão registrada: {decision}.'**
   String strategyDetailUserDecisionRecorded(String decision);
+
+  /// No description provided for @strategyDetailAnalyzeRobustness.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ver evidência e robustez'**
+  String get strategyDetailAnalyzeRobustness;
+
+  /// No description provided for @strategyDetailRobustnessEvidenceTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Evidência (afirmações rastreáveis, não opinião de modelo genérico)'**
+  String get strategyDetailRobustnessEvidenceTitle;
+
+  /// No description provided for @strategyDetailNoRobustnessClaims.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhuma afirmação disponível para este resultado.'**
+  String get strategyDetailNoRobustnessClaims;
+
+  /// No description provided for @strategyDetailScoreComponentsTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Componentes do score (transparente, nunca um número único opaco)'**
+  String get strategyDetailScoreComponentsTitle;
+
+  /// No description provided for @strategyDetailScoreOverall.
+  ///
+  /// In pt, this message translates to:
+  /// **'Score geral: {overall}/100 ({language})'**
+  String strategyDetailScoreOverall(String overall, String language);
+
+  /// No description provided for @strategyDetailScoreLanguageMoreRobust.
+  ///
+  /// In pt, this message translates to:
+  /// **'mais robusto sob as premissas testadas'**
+  String get strategyDetailScoreLanguageMoreRobust;
+
+  /// No description provided for @strategyDetailScoreLanguageRequiresEvidence.
+  ///
+  /// In pt, this message translates to:
+  /// **'requer mais evidência'**
+  String get strategyDetailScoreLanguageRequiresEvidence;
+
+  /// No description provided for @strategyDetailSampleSizeInsufficient.
+  ///
+  /// In pt, this message translates to:
+  /// **'Amostra pequena: {count} trades (abaixo do limite de {threshold}) -- resultado não deve ser tratado como conclusivo.'**
+  String strategyDetailSampleSizeInsufficient(String count, String threshold);
+
+  /// No description provided for @strategyDetailDirectionalUntested.
+  ///
+  /// In pt, this message translates to:
+  /// **'Direção {direction} nunca foi testada neste resultado -- nenhuma evidência sobre esse lado.'**
+  String strategyDetailDirectionalUntested(String direction);
 }
 
 class _AppLocalizationsDelegate

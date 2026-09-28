@@ -116,6 +116,15 @@ class FakeDetailApi implements StrategyBuilderApi {
     experiments = [...experiments, experiment];
     return StrategyBuilderResult(200, {'experiment': experiment});
   }
+
+  List<Map<String, dynamic>> analyzeClaims = [
+    {'status': 'MEASURED', 'value': 5, 'statement': 'net PnL was 5 over 2 trades'},
+  ];
+  @override
+  Future<StrategyBuilderResult> analyzeBacktestResult(String strategyVersionId) async {
+    calls.add('analyze_backtest_result');
+    return StrategyBuilderResult(200, {'claims': analyzeClaims});
+  }
 }
 
 const _genericSpec = {
@@ -491,5 +500,58 @@ void main() {
     expect(find.byKey(const Key('experimentHistoryList')), findsOneWidget);
     expect(find.text('Backtest'), findsWidgets);
     expect(api.experiments.single['category'], 'BACKTEST');
+  });
+
+  testWidgets('SD-14 (§10/§28) analyzing a real backtest result shows its traceable claims, never a generic-model opinion', (tester) async {
+    final api = await _pump(tester, _genericSpec);
+    api.analyzeClaims = [
+      {'status': 'MEASURED', 'value': 5, 'statement': 'net PnL was 5 over 2 trades'},
+      {'status': 'ESTIMATE', 'value': 0.0, 'statement': 'sample size (2) is below the 30-trade caution threshold'},
+    ];
+    final backtestButton = find.byKey(const Key('strategyDetailRunBacktest'));
+    await tester.ensureVisible(backtestButton);
+    await tester.pumpAndSettle();
+    await tester.tap(backtestButton);
+    await tester.pumpAndSettle();
+    final analyzeButton = find.byKey(const Key('strategyDetailAnalyzeRobustness'));
+    await tester.ensureVisible(analyzeButton);
+    await tester.pumpAndSettle();
+    await tester.tap(analyzeButton);
+    await tester.pumpAndSettle();
+    expect(api.calls, contains('analyze_backtest_result'));
+    expect(find.textContaining('net PnL was 5 over 2 trades'), findsOneWidget);
+    expect(find.textContaining('sample size (2) is below the 30-trade caution threshold'), findsOneWidget);
+  });
+
+  testWidgets('SD-15 (§10/§21) comparing two versions shows an independent, transparent score card for EACH side -- never a single winner verdict', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final api = FakeDetailApi(_genericSpec)..versionsResult = [
+      {'id': 'v1', 'versionNumber': 1}, {'id': 'v2', 'versionNumber': 2},
+    ];
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [strategyBuilderApiProvider.overrideWithValue(api)],
+        child: MaterialApp(
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const StrategyDetailScreen(strategyId: 'sid-1'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final compareButton = find.byKey(const Key('strategyDetailCompare'));
+    await tester.ensureVisible(compareButton);
+    await tester.pumpAndSettle();
+    await tester.tap(compareButton);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('strategyDetailScoreCardA')), findsOneWidget);
+    expect(find.byKey(const Key('strategyDetailScoreCardB')), findsOneWidget);
   });
 }

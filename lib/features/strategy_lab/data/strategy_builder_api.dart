@@ -38,6 +38,7 @@ abstract class StrategyBuilderApi {
   Future<StrategyBuilderResult> listVersions(String strategyId);
   Future<StrategyBuilderResult> runBacktest(String strategyVersionId, String datasetId, String engineId, {Map<String, dynamic>? costConfig});
   Future<StrategyBuilderResult> compareVersions(String versionAId, String versionBId, {String? objective});
+  Future<StrategyBuilderResult> analyzeBacktestResult(String strategyVersionId);
   Future<StrategyBuilderResult> cloneReference(String reference, {String? idempotencyKey});
   Future<StrategyBuilderResult> engineStatus();
   Future<StrategyBuilderResult> proposeVariants(String strategyVersionId, String datasetId);
@@ -107,6 +108,9 @@ class SupabaseStrategyBuilderApi implements StrategyBuilderApi {
   @override
   Future<StrategyBuilderResult> compareVersions(String versionAId, String versionBId, {String? objective}) =>
       _call({'op': 'compare_versions', 'versionAId': versionAId, 'versionBId': versionBId, if (objective != null) 'objective': objective});
+  @override
+  Future<StrategyBuilderResult> analyzeBacktestResult(String strategyVersionId) =>
+      _call({'op': 'analyze_backtest_result', 'strategyVersionId': strategyVersionId});
   @override
   Future<StrategyBuilderResult> cloneReference(String reference, {String? idempotencyKey}) =>
       _call({'op': 'clone_reference', 'reference': reference, if (idempotencyKey != null) 'idempotencyKey': idempotencyKey});

@@ -608,5 +608,18 @@
   "strategyDetailUserDecisionRejectCandidate": "Reject candidate",
   "strategyDetailUserDecisionNeedsMoreEvidence": "Needs more evidence",
   "strategyDetailUserDecisionRecorded": "Decision recorded: {decision}.",
-  "@strategyDetailUserDecisionRecorded": {"placeholders": {"decision": {"type": "String"}}}
+  "@strategyDetailUserDecisionRecorded": {"placeholders": {"decision": {"type": "String"}}},
+
+  "strategyDetailAnalyzeRobustness": "View evidence and robustness",
+  "strategyDetailRobustnessEvidenceTitle": "Evidence (traceable claims, not generic model opinion)",
+  "strategyDetailNoRobustnessClaims": "No claims available for this result.",
+  "strategyDetailScoreComponentsTitle": "Score components (transparent, never a single opaque number)",
+  "strategyDetailScoreOverall": "Overall score: {overall}/100 ({language})",
+  "@strategyDetailScoreOverall": {"placeholders": {"overall": {"type": "String"}, "language": {"type": "String"}}},
+  "strategyDetailScoreLanguageMoreRobust": "more robust under tested assumptions",
+  "strategyDetailScoreLanguageRequiresEvidence": "requires more evidence",
+  "strategyDetailSampleSizeInsufficient": "Small sample: {count} trades (below the {threshold}-trade threshold) -- result should not be treated as conclusive.",
+  "@strategyDetailSampleSizeInsufficient": {"placeholders": {"count": {"type": "String"}, "threshold": {"type": "String"}}},
+  "strategyDetailDirectionalUntested": "The {direction} direction was never tested in this result -- no evidence about that side.",
+  "@strategyDetailDirectionalUntested": {"placeholders": {"direction": {"type": "String"}}}
 }

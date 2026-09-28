@@ -1728,4 +1728,42 @@ class AppLocalizationsEn extends AppLocalizations {
   String strategyDetailUserDecisionRecorded(String decision) {
     return 'Decision recorded: $decision.';
   }
+
+  @override
+  String get strategyDetailAnalyzeRobustness => 'View evidence and robustness';
+
+  @override
+  String get strategyDetailRobustnessEvidenceTitle =>
+      'Evidence (traceable claims, not generic model opinion)';
+
+  @override
+  String get strategyDetailNoRobustnessClaims =>
+      'No claims available for this result.';
+
+  @override
+  String get strategyDetailScoreComponentsTitle =>
+      'Score components (transparent, never a single opaque number)';
+
+  @override
+  String strategyDetailScoreOverall(String overall, String language) {
+    return 'Overall score: $overall/100 ($language)';
+  }
+
+  @override
+  String get strategyDetailScoreLanguageMoreRobust =>
+      'more robust under tested assumptions';
+
+  @override
+  String get strategyDetailScoreLanguageRequiresEvidence =>
+      'requires more evidence';
+
+  @override
+  String strategyDetailSampleSizeInsufficient(String count, String threshold) {
+    return 'Small sample: $count trades (below the $threshold-trade threshold) -- result should not be treated as conclusive.';
+  }
+
+  @override
+  String strategyDetailDirectionalUntested(String direction) {
+    return 'The $direction direction was never tested in this result -- no evidence about that side.';
+  }
 }
