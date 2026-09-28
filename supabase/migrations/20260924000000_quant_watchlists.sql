@@ -30,6 +30,33 @@
 --     watchlists per user), race-safe via row/advisory locks.
 -- Idempotent: safe to re-apply.
 
+-- P05: every Lab migration declares its real dependencies up front
+-- (scripts/ci/run_disposable_db_tests.sh's precondition-guard check).
+-- quant_watchlists_access_allowed() below already degrades gracefully
+-- when public.subject_roles doesn't exist yet (to_regclass check), so
+-- its only hard dependency is the production baseline's public.projects
+-- (the FK target) and auth.uid(). Declared explicitly so the guarantee
+-- is auditable rather than merely implicit in the function body.
+DO $$
+DECLARE
+  v_missing text[] := '{}';
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'projects' AND column_name = 'id' AND data_type = 'uuid') THEN
+    v_missing := v_missing || 'public.projects.id uuid'::text;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'projects' AND column_name = 'user_id' AND data_type = 'uuid') THEN
+    v_missing := v_missing || 'public.projects.user_id uuid'::text;
+  END IF;
+  IF to_regprocedure('auth.uid()') IS NULL
+     OR (SELECT prorettype FROM pg_proc WHERE oid = to_regprocedure('auth.uid()')) IS DISTINCT FROM 'uuid'::regtype THEN
+    v_missing := v_missing || 'auth.uid() returning uuid'::text;
+  END IF;
+  IF array_length(v_missing, 1) > 0 THEN
+    RAISE EXCEPTION 'LAB_PRECONDITION (20260924000000_quant_watchlists): missing or incompatible: %', array_to_string(v_missing, ', ')
+      USING ERRCODE = 'AE010';
+  END IF;
+END $$;
+
 CREATE TABLE IF NOT EXISTS public.quant_watchlists (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id     uuid NOT NULL DEFAULT auth.uid() REFERENCES auth.users (id) ON DELETE CASCADE,
