@@ -144,23 +144,31 @@ class _MarketIntelligenceScreenState
         idempotencyKey: idempotencyKey,
       ),
     );
-    if (result != null && mounted && verifiedProjectId != null) {
-      // Link this project to its newest analysis — mirrors what already
-      // happens when a project is first CREATED via this same 'project'
-      // input mode (see market_analysis_provider.dart's own project-
-      // creation path); without this, "Ver Análise de Mercado" on Project
-      // Command Center would keep pointing at a stale/absent analysis
-      // after a project-scoped re-analysis. Reuses the existing, already-
-      // safe updateFields() — no new update semantics introduced.
-      // Reuses the SAME verifiedProjectId gate as the analyze() call above
-      // — this update is itself RLS-protected by the projects table's own
-      // "auth.uid() = user_id" policy, but only ever reached with an id
-      // the user already legitimately owns.
-      await ref.read(projectsNotifierProvider.notifier).updateFields(
-        verifiedProjectId,
-        {'market_analysis_id': result.id},
-      );
-      if (!mounted) return;
+    if (result != null && mounted) {
+      if (verifiedProjectId != null) {
+        // Link this project to its newest analysis — mirrors what already
+        // happens when a project is first CREATED via this same 'project'
+        // input mode (see market_analysis_provider.dart's own project-
+        // creation path); without this, "Ver Análise de Mercado" on Project
+        // Command Center would keep pointing at a stale/absent analysis
+        // after a project-scoped re-analysis. Reuses the existing, already-
+        // safe updateFields() — no new update semantics introduced.
+        // Reuses the SAME verifiedProjectId gate as the analyze() call above
+        // — this update is itself RLS-protected by the projects table's own
+        // "auth.uid() = user_id" policy, but only ever reached with an id
+        // the user already legitimately owns.
+        await ref.read(projectsNotifierProvider.notifier).updateFields(
+          verifiedProjectId,
+          {'market_analysis_id': result.id},
+        );
+        if (!mounted) return;
+      }
+      // Navigation must not depend on whether a project was linked: a
+      // URL/Domínio or Nicho analysis (no project) completes and persists
+      // successfully either way (confirmed live: status 'completed' with a
+      // real opportunity_score in market_analyses) but was previously never
+      // shown to the user when verifiedProjectId was null -- the result
+      // existed only in the database, invisible in the UI.
       context.go(
         AppConstants.routeMarketIntelligenceHub.replaceFirst(':id', result.id),
       );
