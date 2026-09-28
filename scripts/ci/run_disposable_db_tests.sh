@@ -140,13 +140,28 @@ echo "AEF_ROLLBACK: PASS"
 
 # Legacy-data upgrade (Codex Gate 1 IG1-04): seed with today's schema, then
 # apply the memory migration on top of that data.
+#
+# Macro-11 §8 rehearsal finding: 20260930000000_result_learning.sql adds a
+# CHECK constraint referencing business_memory.origin -- a column that only
+# exists once MEMORY_MIGRATION has run (result_learning's own header
+# documents this: it evolves business_memory rather than creating a second
+# memory system, and was always meant to build directly on top of the
+# memory-governance migration). Skipping MEMORY_MIGRATION alone in this loop
+# while still applying result_learning left origin undefined and broke the
+# ALTER TABLE ADD CONSTRAINT with a raw "column does not exist" error --
+# not a real production ordering bug (Supabase always applies migrations in
+# strict chronological order, so 20260924 precedes 20260930 in any real
+# apply), but this test's own deliberate skip-and-defer scenario needs both
+# migrations deferred together, in their real relative order.
+LEARNING_MIGRATION="20260930000000_result_learning.sql"
 run -d "$UPG" -f "$ROOT/supabase/tests/support/supabase_stubs.sql"
 for m in $(ls "$ROOT"/supabase/migrations/*.sql | sort); do
-  [[ "$(basename "$m")" == "$MEMORY_MIGRATION" ]] && continue
+  [[ "$(basename "$m")" == "$MEMORY_MIGRATION" || "$(basename "$m")" == "$LEARNING_MIGRATION" ]] && continue
   apply "$UPG" "$m"
 done
 check "$UPG" ive_memory_legacy_upgrade_test.sql 'IVE_MEMORY_UPGRADE: SEEDED' -v phase=seed
 apply "$UPG" "$ROOT/supabase/migrations/$MEMORY_MIGRATION"
+apply "$UPG" "$ROOT/supabase/migrations/$LEARNING_MIGRATION"
 check "$UPG" ive_memory_legacy_upgrade_test.sql 'IVE_MEMORY_UPGRADE: PASS' -v phase=verify
 
 # ── IV-AEF-PRE-RUNTIME-CLOSURE-01 ───────────────────────────────────────
