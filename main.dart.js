@@ -61831,7 +61831,7 @@ break}p=4
 c=c.bh("diagnostic_sessions")
 b=a0!=null?A.cdm(a0,200):null
 h=d!=null?A.iI(d,50):null
-g=A.bSE("75bc661b39e9ac6ba2ad679a2ec0852eecf54a21",100)
+g=A.bSE("4d687ca180945a778cd52653d27af35d1090f700",100)
 f=a1!=null?A.iI(a1,50):null
 s=7
 return A.f(c.f7(0,A.a7(["user_id",m,"label",b,"status","active","app_version",h,"build_sha",g,"platform","web","role_snapshot",f],t.N,t.T)).pm("id").eh(0),$async$Am)
@@ -61989,7 +61989,7 @@ s=q}for(;;)switch(s){case 0:q=3
 m=o.a.bh("diagnostic_events")
 l=A.bZd(b3)
 k=A.bZc(a3)
-j=A.bSE("75bc661b39e9ac6ba2ad679a2ec0852eecf54a21",100)
+j=A.bSE("4d687ca180945a778cd52653d27af35d1090f700",100)
 i=a9!=null?A.iI(a9,100):null
 h=b0!=null?A.iI(b0,100):null
 g=b1!=null?A.iI(b1,200):null
@@ -74159,15 +74159,16 @@ l.toString
 s=3
 return A.f(p.Q.jv(new A.bg3(p,m,j,o),"Analisar Mercado",l,n,A.eO(null,B.cX,null,null,"market_analysis","market_intelligence"),t.Om),$async$BK)
 case 3:k=b
-s=k!=null&&p.c!=null&&o!=null?4:5
+s=k!=null&&p.c!=null?4:5
 break
-case 4:n=n.V($.j6().gbe(),t.Ak)
-l=k.a
-s=6
-return A.f(n.Fv(o,A.a7(["market_analysis_id",l],t.N,t.z)),$async$BK)
-case 6:n=p.c
-if(n==null){s=1
-break}l=B.c.dU("/market-intelligence/:id",":id",l)
+case 4:s=o!=null?6:7
+break
+case 6:s=8
+return A.f(n.V($.j6().gbe(),t.Ak).Fv(o,A.a7(["market_analysis_id",k.a],t.N,t.z)),$async$BK)
+case 8:if(p.c==null){s=1
+break}case 7:n=p.c
+n.toString
+l=B.c.dU("/market-intelligence/:id",":id",k.a)
 A.aD(n).cL(l,null)
 case 5:case 1:return A.m(q,r)}})
 return A.n($async$BK,r)},
