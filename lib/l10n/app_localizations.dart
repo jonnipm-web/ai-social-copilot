@@ -2513,7 +2513,7 @@ abstract class AppLocalizations {
   /// No description provided for @strategyLabBanner.
   ///
   /// In pt, this message translates to:
-  /// **'Fase de fundação. Somente leitura: exibe apenas a estratégia de referência. Sem formulário de criação, sem execução de backtest, sem conexão com corretora.'**
+  /// **'Fase de MVP. Crie, configure, faça backtest e compare suas próprias estratégias abaixo. Sem conexão com corretora, sem dinheiro real, sem ordem ao vivo.'**
   String get strategyLabBanner;
 
   /// No description provided for @strategyLabDisclaimer.
@@ -2593,6 +2593,288 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Com custos'**
   String get strategyLabWithCost;
+
+  /// No description provided for @strategyBuilderMyStrategies.
+  ///
+  /// In pt, this message translates to:
+  /// **'Minhas Estratégias'**
+  String get strategyBuilderMyStrategies;
+
+  /// No description provided for @strategyBuilderNewButton.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nova estratégia'**
+  String get strategyBuilderNewButton;
+
+  /// No description provided for @strategyBuilderCloneV10.
+  ///
+  /// In pt, this message translates to:
+  /// **'Clonar Estratégia #001 (V10)'**
+  String get strategyBuilderCloneV10;
+
+  /// No description provided for @strategyBuilderCloneGeneric.
+  ///
+  /// In pt, this message translates to:
+  /// **'Clonar referência genérica'**
+  String get strategyBuilderCloneGeneric;
+
+  /// No description provided for @strategyBuilderEmptyList.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhuma estratégia ainda.'**
+  String get strategyBuilderEmptyList;
+
+  /// No description provided for @strategyBuilderNewTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nova estratégia'**
+  String get strategyBuilderNewTitle;
+
+  /// No description provided for @strategyBuilderEditTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Editar estratégia (cria uma nova versão)'**
+  String get strategyBuilderEditTitle;
+
+  /// No description provided for @strategyBuilderName.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nome'**
+  String get strategyBuilderName;
+
+  /// No description provided for @strategyBuilderDescription.
+  ///
+  /// In pt, this message translates to:
+  /// **'Descrição'**
+  String get strategyBuilderDescription;
+
+  /// No description provided for @strategyBuilderEntryMode.
+  ///
+  /// In pt, this message translates to:
+  /// **'Estilo de entrada'**
+  String get strategyBuilderEntryMode;
+
+  /// No description provided for @strategyBuilderEntryModeGeneric.
+  ///
+  /// In pt, this message translates to:
+  /// **'Abertura de sessão genérica (demo seguro, dados sintéticos)'**
+  String get strategyBuilderEntryModeGeneric;
+
+  /// No description provided for @strategyBuilderEntryModeV10.
+  ///
+  /// In pt, this message translates to:
+  /// **'Pullback na tendência (estilo Estratégia #001, dados reais WIN1!)'**
+  String get strategyBuilderEntryModeV10;
+
+  /// No description provided for @strategyBuilderDirection.
+  ///
+  /// In pt, this message translates to:
+  /// **'Direção'**
+  String get strategyBuilderDirection;
+
+  /// No description provided for @strategyBuilderDirectionLong.
+  ///
+  /// In pt, this message translates to:
+  /// **'Compra (long)'**
+  String get strategyBuilderDirectionLong;
+
+  /// No description provided for @strategyBuilderDirectionShort.
+  ///
+  /// In pt, this message translates to:
+  /// **'Venda (short)'**
+  String get strategyBuilderDirectionShort;
+
+  /// No description provided for @strategyBuilderStopDistance.
+  ///
+  /// In pt, this message translates to:
+  /// **'Distância do stop'**
+  String get strategyBuilderStopDistance;
+
+  /// No description provided for @strategyBuilderTargetDistance.
+  ///
+  /// In pt, this message translates to:
+  /// **'Distância do alvo'**
+  String get strategyBuilderTargetDistance;
+
+  /// No description provided for @strategyBuilderBreakEven.
+  ///
+  /// In pt, this message translates to:
+  /// **'Break-even'**
+  String get strategyBuilderBreakEven;
+
+  /// No description provided for @strategyBuilderBreakEvenTrigger.
+  ///
+  /// In pt, this message translates to:
+  /// **'Gatilho'**
+  String get strategyBuilderBreakEvenTrigger;
+
+  /// No description provided for @strategyBuilderBreakEvenInitial.
+  ///
+  /// In pt, this message translates to:
+  /// **'Proteção inicial'**
+  String get strategyBuilderBreakEvenInitial;
+
+  /// No description provided for @strategyBuilderBreakEvenStep.
+  ///
+  /// In pt, this message translates to:
+  /// **'Passo'**
+  String get strategyBuilderBreakEvenStep;
+
+  /// No description provided for @strategyBuilderSessionStart.
+  ///
+  /// In pt, this message translates to:
+  /// **'Início da sessão (HH:MM)'**
+  String get strategyBuilderSessionStart;
+
+  /// No description provided for @strategyBuilderSessionEnd.
+  ///
+  /// In pt, this message translates to:
+  /// **'Fim da sessão (HH:MM)'**
+  String get strategyBuilderSessionEnd;
+
+  /// No description provided for @strategyBuilderForcedExit.
+  ///
+  /// In pt, this message translates to:
+  /// **'Fechamento forçado (HH:MM)'**
+  String get strategyBuilderForcedExit;
+
+  /// No description provided for @strategyBuilderQuantity.
+  ///
+  /// In pt, this message translates to:
+  /// **'Contratos'**
+  String get strategyBuilderQuantity;
+
+  /// No description provided for @strategyBuilderValidate.
+  ///
+  /// In pt, this message translates to:
+  /// **'Validar'**
+  String get strategyBuilderValidate;
+
+  /// No description provided for @strategyBuilderSave.
+  ///
+  /// In pt, this message translates to:
+  /// **'Salvar'**
+  String get strategyBuilderSave;
+
+  /// No description provided for @strategyBuilderValidationOk.
+  ///
+  /// In pt, this message translates to:
+  /// **'Configuração válida.'**
+  String get strategyBuilderValidationOk;
+
+  /// No description provided for @strategyBuilderValidationError.
+  ///
+  /// In pt, this message translates to:
+  /// **'Configuração inválida: {code}'**
+  String strategyBuilderValidationError(String code);
+
+  /// No description provided for @strategyBuilderSaved.
+  ///
+  /// In pt, this message translates to:
+  /// **'Salvo.'**
+  String get strategyBuilderSaved;
+
+  /// No description provided for @strategyBuilderSaveError.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não foi possível salvar: {code}'**
+  String strategyBuilderSaveError(String code);
+
+  /// No description provided for @strategyBuilderSummaryTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Resumo'**
+  String get strategyBuilderSummaryTitle;
+
+  /// No description provided for @strategyBuilderSummaryInstrument.
+  ///
+  /// In pt, this message translates to:
+  /// **'Instrumento'**
+  String get strategyBuilderSummaryInstrument;
+
+  /// No description provided for @strategyBuilderSummarySignal.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sinal'**
+  String get strategyBuilderSummarySignal;
+
+  /// No description provided for @strategyBuilderSummaryPosition.
+  ///
+  /// In pt, this message translates to:
+  /// **'Posição'**
+  String get strategyBuilderSummaryPosition;
+
+  /// No description provided for @strategyBuilderBack.
+  ///
+  /// In pt, this message translates to:
+  /// **'Voltar'**
+  String get strategyBuilderBack;
+
+  /// No description provided for @strategyBuilderVersion.
+  ///
+  /// In pt, this message translates to:
+  /// **'Versão {n}'**
+  String strategyBuilderVersion(int n);
+
+  /// No description provided for @strategyBuilderRunBacktest.
+  ///
+  /// In pt, this message translates to:
+  /// **'Rodar backtest'**
+  String get strategyBuilderRunBacktest;
+
+  /// No description provided for @strategyBuilderBacktestRunning.
+  ///
+  /// In pt, this message translates to:
+  /// **'Executando…'**
+  String get strategyBuilderBacktestRunning;
+
+  /// No description provided for @strategyBuilderBacktestSucceeded.
+  ///
+  /// In pt, this message translates to:
+  /// **'Backtest concluído.'**
+  String get strategyBuilderBacktestSucceeded;
+
+  /// No description provided for @strategyBuilderBacktestFailed.
+  ///
+  /// In pt, this message translates to:
+  /// **'Backtest falhou: {reason}'**
+  String strategyBuilderBacktestFailed(String reason);
+
+  /// No description provided for @strategyBuilderNetPnl.
+  ///
+  /// In pt, this message translates to:
+  /// **'Resultado líquido'**
+  String get strategyBuilderNetPnl;
+
+  /// No description provided for @strategyBuilderTradeCount.
+  ///
+  /// In pt, this message translates to:
+  /// **'Operações'**
+  String get strategyBuilderTradeCount;
+
+  /// No description provided for @strategyBuilderResultHash.
+  ///
+  /// In pt, this message translates to:
+  /// **'Hash'**
+  String get strategyBuilderResultHash;
+
+  /// No description provided for @strategyBuilderCompare.
+  ///
+  /// In pt, this message translates to:
+  /// **'Comparar com a versão anterior'**
+  String get strategyBuilderCompare;
+
+  /// No description provided for @strategyBuilderNotComparable.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não diretamente comparável: {reasons}'**
+  String strategyBuilderNotComparable(String reasons);
+
+  /// No description provided for @strategyBuilderNewVersionButton.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nova versão a partir desta'**
+  String get strategyBuilderNewVersionButton;
 }
 
 class _AppLocalizationsDelegate

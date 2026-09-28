@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ai_social_copilot/data/models/profile.dart';
+import 'package:ai_social_copilot/features/strategy_lab/data/strategy_builder_api.dart';
 import 'package:ai_social_copilot/features/strategy_lab/strategy_lab_screen.dart';
 import 'package:ai_social_copilot/l10n/app_localizations.dart';
 import 'package:ai_social_copilot/providers/profile_provider.dart';
@@ -17,13 +18,57 @@ Profile _profile({bool admin = true}) => Profile(
       updatedAt: DateTime.utc(2026, 1, 1),
     );
 
-Future<void> _pump(WidgetTester tester, {bool admin = true, Locale locale = const Locale('en')}) async {
+class FakeStrategyBuilderApi implements StrategyBuilderApi {
+  List<Map<String, dynamic>> strategies = [];
+  final calls = <String>[];
+
+  @override
+  Future<StrategyBuilderResult> list() async {
+    calls.add('list');
+    return StrategyBuilderResult(200, {'strategies': strategies});
+  }
+
+  @override
+  Future<StrategyBuilderResult> cloneReference(String reference) async {
+    calls.add('clone_reference:$reference');
+    final strategy = {'id': 'new-id-${strategies.length}', 'name': 'Cloned $reference', 'status': 'DRAFT', 'currentVersion': 1};
+    strategies = [...strategies, strategy];
+    return StrategyBuilderResult(200, {'strategy': strategy, 'version': {'id': 'v-1'}});
+  }
+
+  @override
+  Future<StrategyBuilderResult> validate(Map<String, dynamic> spec) async => const StrategyBuilderResult(200, {'valid': true});
+  @override
+  Future<StrategyBuilderResult> draftFromText(String text) async => const StrategyBuilderResult(200, {'draft': {}});
+  @override
+  Future<StrategyBuilderResult> create(Map<String, dynamic> spec) async =>
+      StrategyBuilderResult(200, {'strategy': {'id': 'sid', 'name': spec['name']}, 'version': {'id': 'vid', 'versionNumber': 1}});
+  @override
+  Future<StrategyBuilderResult> get(String strategyId) async => const StrategyBuilderResult(404, {'error': 'NOT_FOUND'});
+  @override
+  Future<StrategyBuilderResult> createVersion(String strategyId, Map<String, dynamic> spec) async =>
+      const StrategyBuilderResult(200, {'version': {'id': 'v2', 'versionNumber': 2}});
+  @override
+  Future<StrategyBuilderResult> listVersions(String strategyId) async => const StrategyBuilderResult(200, {'versions': []});
+  @override
+  Future<StrategyBuilderResult> runBacktest(String strategyVersionId, String datasetId, String engineId, {Map<String, dynamic>? costConfig}) async =>
+      const StrategyBuilderResult(200, {'job': {'status': 'SUCCEEDED'}, 'result': {}});
+  @override
+  Future<StrategyBuilderResult> compareVersions(String versionAId, String versionBId) async =>
+      const StrategyBuilderResult(200, {'comparison': {'comparable': true, 'deltas': {'netPnlDelta': 0}}});
+}
+
+Future<FakeStrategyBuilderApi> _pump(WidgetTester tester, {bool admin = true, Locale locale = const Locale('en'), List<Map<String, dynamic>>? strategies}) async {
   tester.view.physicalSize = const Size(390, 844);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
+  final api = FakeStrategyBuilderApi()..strategies = strategies ?? [];
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [currentProfileProvider.overrideWith((ref) => Future.value(_profile(admin: admin)))],
+      overrides: [
+        currentProfileProvider.overrideWith((ref) => Future.value(_profile(admin: admin))),
+        strategyBuilderApiProvider.overrideWithValue(api),
+      ],
       child: MaterialApp(
         locale: locale,
         localizationsDelegates: const [
@@ -38,6 +83,7 @@ Future<void> _pump(WidgetTester tester, {bool admin = true, Locale locale = cons
     ),
   );
   await tester.pumpAndSettle();
+  return api;
 }
 
 void main() {
@@ -70,5 +116,35 @@ void main() {
     await _pump(tester);
     expect(tester.takeException(), isNull);
     expect(find.byKey(const Key('strategyLabScroll')), findsOneWidget);
+  });
+
+  testWidgets('SL-06 the hub calls list() on load and shows an empty-state message with no strategies', (tester) async {
+    final api = await _pump(tester);
+    expect(api.calls, contains('list'));
+    expect(find.text('No strategies yet.'), findsOneWidget);
+  });
+
+  testWidgets('SL-07 a real strategy from the server renders in the My Strategies list', (tester) async {
+    await _pump(tester, strategies: [
+      {'id': 's1', 'name': 'My First Strategy', 'status': 'DRAFT', 'currentVersion': 1},
+    ]);
+    expect(find.text('My First Strategy'), findsOneWidget);
+    expect(find.textContaining('DRAFT'), findsOneWidget);
+  });
+
+  testWidgets('SL-08 tapping Clone Strategy #001 calls clone_reference(V10) and refreshes the list', (tester) async {
+    final api = await _pump(tester);
+    await tester.tap(find.byKey(const Key('strategyLabCloneV10')));
+    await tester.pumpAndSettle();
+    expect(api.calls, contains('clone_reference:V10'));
+    expect(find.text('Cloned V10'), findsOneWidget);
+  });
+
+  testWidgets('SL-09 the New strategy button opens the structured builder form, not a read-only view', (tester) async {
+    await _pump(tester);
+    await tester.tap(find.byKey(const Key('strategyLabNewButton')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('strategyBuilderSaveButton')), findsOneWidget);
+    expect(find.byKey(const Key('strategyBuilderNameField')), findsOneWidget);
   });
 }

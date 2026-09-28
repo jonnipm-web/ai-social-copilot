@@ -1,10 +1,11 @@
-// INSIGHTVALUES-ROBOT-BUILDER-MACRO-05 — Strategy Lab (admin-only; EXPERIMENTAL module).
+// INSIGHTVALUES-ROBOT-BUILDER-MACRO-06 — Strategy Lab hub (admin-only;
+// EXPERIMENTAL module).
 //
-// Foundation-phase screen: read-only view of Strategy #001 (V10), the
-// reference implementation proving the generic Strategy Specification
-// (supabase/functions/_shared/strategy/) can represent it. No creation
-// form, no backtest execution, no broker connection -- those are left for
-// a future macro (see module_registry.dart's 'strategy-builder' notes).
+// MVP phase (Macro-05 was read-only-only; this macro's own mission brief
+// named that the #1 gap to close): a real "My Strategies" list, a real
+// create/edit form (strategy_builder_form_screen.dart), and a real detail
+// view with backtest + comparison (strategy_detail_screen.dart). The V10
+// reference display block from Macro-05 is preserved as-is below it.
 //
 // Access: the screen re-checks admin fail-closed (same pattern as
 // QuantLabScreen); the server enforces entitlement on every strategy-
@@ -15,12 +16,57 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/strategy/strategy_lab_reference.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/profile_provider.dart';
+import '../../shared/widgets/ive_exclusion_region.dart';
+import 'data/strategy_builder_api.dart';
+import 'strategy_builder_form_screen.dart';
+import 'strategy_detail_screen.dart';
 
-class StrategyLabScreen extends ConsumerWidget {
+class StrategyLabScreen extends ConsumerStatefulWidget {
   const StrategyLabScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<StrategyLabScreen> createState() => _StrategyLabScreenState();
+}
+
+class _StrategyLabScreenState extends ConsumerState<StrategyLabScreen> {
+  List<dynamic> _strategies = const [];
+  bool _loading = true;
+  bool _cloneBusy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+  }
+
+  Future<void> _refresh() async {
+    final result = await ref.read(strategyBuilderApiProvider).list();
+    if (!mounted) return;
+    setState(() {
+      _strategies = (result.data?['strategies'] as List?) ?? const [];
+      _loading = false;
+    });
+  }
+
+  Future<void> _clone(String reference) async {
+    setState(() => _cloneBusy = true);
+    await ref.read(strategyBuilderApiProvider).cloneReference(reference);
+    if (!mounted) return;
+    setState(() => _cloneBusy = false);
+    await _refresh();
+  }
+
+  Future<void> _openNew() async {
+    final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const StrategyBuilderFormScreen()));
+    if (saved == true) _refresh();
+  }
+
+  void _openDetail(String strategyId) {
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => StrategyDetailScreen(strategyId: strategyId)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final profileAsync = ref.watch(currentProfileProvider);
     if (!profileAsync.hasValue && !profileAsync.hasError) {
@@ -58,7 +104,50 @@ class StrategyLabScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             _Banner(text: l.strategyLabBanner),
+            const SizedBox(height: 16),
+
+            Text(l.strategyBuilderMyStrategies, style: t.titleMedium),
+            const SizedBox(height: 8),
+            IveExclusionRegion(
+              child: Wrap(spacing: 8, runSpacing: 8, children: [
+                FilledButton.icon(
+                  key: const Key('strategyLabNewButton'),
+                  onPressed: _openNew,
+                  icon: const Icon(Icons.add),
+                  label: Text(l.strategyBuilderNewButton),
+                ),
+                OutlinedButton(
+                  key: const Key('strategyLabCloneV10'),
+                  onPressed: _cloneBusy ? null : () => _clone('V10'),
+                  child: Text(l.strategyBuilderCloneV10),
+                ),
+                OutlinedButton(
+                  key: const Key('strategyLabCloneGeneric'),
+                  onPressed: _cloneBusy ? null : () => _clone('GENERIC'),
+                  child: Text(l.strategyBuilderCloneGeneric),
+                ),
+              ]),
+            ),
             const SizedBox(height: 12),
+            if (_loading)
+              const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()))
+            else if (_strategies.isEmpty)
+              Padding(padding: const EdgeInsets.all(8), child: Text(l.strategyBuilderEmptyList))
+            else
+              Card(
+                key: const Key('strategyLabList'),
+                child: Column(children: [
+                  for (final s in _strategies)
+                    ListTile(
+                      title: Text(s['name'] as String),
+                      subtitle: Text('${s['status']} · v${s['currentVersion']}'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => _openDetail(s['id'] as String),
+                    ),
+                ]),
+              ),
+
+            const SizedBox(height: 24),
             Text(V10ReferenceStrategy.name, style: t.titleMedium),
             const SizedBox(height: 4),
             Text(l.strategyLabDisclaimer, style: TextStyle(color: Theme.of(context).colorScheme.error)),

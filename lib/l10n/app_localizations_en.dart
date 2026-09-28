@@ -1359,7 +1359,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get strategyLabBanner =>
-      'Foundation phase. Read-only: viewing the reference strategy only. No creation form, no backtest execution, no broker connection.';
+      'MVP phase. Create, configure, backtest and compare your own strategies below. No broker connection, no real money, no live order.';
 
   @override
   String get strategyLabDisclaimer =>
@@ -1401,4 +1401,158 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get strategyLabWithCost => 'With cost assumptions';
+
+  @override
+  String get strategyBuilderMyStrategies => 'My Strategies';
+
+  @override
+  String get strategyBuilderNewButton => 'New strategy';
+
+  @override
+  String get strategyBuilderCloneV10 => 'Clone Strategy #001 (V10)';
+
+  @override
+  String get strategyBuilderCloneGeneric => 'Clone generic reference';
+
+  @override
+  String get strategyBuilderEmptyList => 'No strategies yet.';
+
+  @override
+  String get strategyBuilderNewTitle => 'New strategy';
+
+  @override
+  String get strategyBuilderEditTitle =>
+      'Edit strategy (creates a new version)';
+
+  @override
+  String get strategyBuilderName => 'Name';
+
+  @override
+  String get strategyBuilderDescription => 'Description';
+
+  @override
+  String get strategyBuilderEntryMode => 'Entry style';
+
+  @override
+  String get strategyBuilderEntryModeGeneric =>
+      'Generic session-open (safe demo, synthetic data)';
+
+  @override
+  String get strategyBuilderEntryModeV10 =>
+      'Pullback in trend (Strategy #001 style, real WIN1! data)';
+
+  @override
+  String get strategyBuilderDirection => 'Direction';
+
+  @override
+  String get strategyBuilderDirectionLong => 'Long';
+
+  @override
+  String get strategyBuilderDirectionShort => 'Short';
+
+  @override
+  String get strategyBuilderStopDistance => 'Stop distance';
+
+  @override
+  String get strategyBuilderTargetDistance => 'Target distance';
+
+  @override
+  String get strategyBuilderBreakEven => 'Break-even';
+
+  @override
+  String get strategyBuilderBreakEvenTrigger => 'Trigger';
+
+  @override
+  String get strategyBuilderBreakEvenInitial => 'Initial protection';
+
+  @override
+  String get strategyBuilderBreakEvenStep => 'Step';
+
+  @override
+  String get strategyBuilderSessionStart => 'Session start (HH:MM)';
+
+  @override
+  String get strategyBuilderSessionEnd => 'Session end (HH:MM)';
+
+  @override
+  String get strategyBuilderForcedExit => 'Forced exit (HH:MM)';
+
+  @override
+  String get strategyBuilderQuantity => 'Contracts';
+
+  @override
+  String get strategyBuilderValidate => 'Validate';
+
+  @override
+  String get strategyBuilderSave => 'Save';
+
+  @override
+  String get strategyBuilderValidationOk => 'Configuration valid.';
+
+  @override
+  String strategyBuilderValidationError(String code) {
+    return 'Invalid configuration: $code';
+  }
+
+  @override
+  String get strategyBuilderSaved => 'Saved.';
+
+  @override
+  String strategyBuilderSaveError(String code) {
+    return 'Could not save: $code';
+  }
+
+  @override
+  String get strategyBuilderSummaryTitle => 'Summary';
+
+  @override
+  String get strategyBuilderSummaryInstrument => 'Instrument';
+
+  @override
+  String get strategyBuilderSummarySignal => 'Signal';
+
+  @override
+  String get strategyBuilderSummaryPosition => 'Position';
+
+  @override
+  String get strategyBuilderBack => 'Back';
+
+  @override
+  String strategyBuilderVersion(int n) {
+    return 'Version $n';
+  }
+
+  @override
+  String get strategyBuilderRunBacktest => 'Run backtest';
+
+  @override
+  String get strategyBuilderBacktestRunning => 'Running…';
+
+  @override
+  String get strategyBuilderBacktestSucceeded => 'Backtest complete.';
+
+  @override
+  String strategyBuilderBacktestFailed(String reason) {
+    return 'Backtest failed: $reason';
+  }
+
+  @override
+  String get strategyBuilderNetPnl => 'Net P&L';
+
+  @override
+  String get strategyBuilderTradeCount => 'Trades';
+
+  @override
+  String get strategyBuilderResultHash => 'Hash';
+
+  @override
+  String get strategyBuilderCompare => 'Compare with previous version';
+
+  @override
+  String strategyBuilderNotComparable(String reasons) {
+    return 'Not directly comparable: $reasons';
+  }
+
+  @override
+  String get strategyBuilderNewVersionButton => 'New version from this';
 }

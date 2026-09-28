@@ -1365,7 +1365,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get strategyLabBanner =>
-      'Fase de fundação. Somente leitura: exibe apenas a estratégia de referência. Sem formulário de criação, sem execução de backtest, sem conexão com corretora.';
+      'Fase de MVP. Crie, configure, faça backtest e compare suas próprias estratégias abaixo. Sem conexão com corretora, sem dinheiro real, sem ordem ao vivo.';
 
   @override
   String get strategyLabDisclaimer =>
@@ -1407,4 +1407,158 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get strategyLabWithCost => 'Com custos';
+
+  @override
+  String get strategyBuilderMyStrategies => 'Minhas Estratégias';
+
+  @override
+  String get strategyBuilderNewButton => 'Nova estratégia';
+
+  @override
+  String get strategyBuilderCloneV10 => 'Clonar Estratégia #001 (V10)';
+
+  @override
+  String get strategyBuilderCloneGeneric => 'Clonar referência genérica';
+
+  @override
+  String get strategyBuilderEmptyList => 'Nenhuma estratégia ainda.';
+
+  @override
+  String get strategyBuilderNewTitle => 'Nova estratégia';
+
+  @override
+  String get strategyBuilderEditTitle =>
+      'Editar estratégia (cria uma nova versão)';
+
+  @override
+  String get strategyBuilderName => 'Nome';
+
+  @override
+  String get strategyBuilderDescription => 'Descrição';
+
+  @override
+  String get strategyBuilderEntryMode => 'Estilo de entrada';
+
+  @override
+  String get strategyBuilderEntryModeGeneric =>
+      'Abertura de sessão genérica (demo seguro, dados sintéticos)';
+
+  @override
+  String get strategyBuilderEntryModeV10 =>
+      'Pullback na tendência (estilo Estratégia #001, dados reais WIN1!)';
+
+  @override
+  String get strategyBuilderDirection => 'Direção';
+
+  @override
+  String get strategyBuilderDirectionLong => 'Compra (long)';
+
+  @override
+  String get strategyBuilderDirectionShort => 'Venda (short)';
+
+  @override
+  String get strategyBuilderStopDistance => 'Distância do stop';
+
+  @override
+  String get strategyBuilderTargetDistance => 'Distância do alvo';
+
+  @override
+  String get strategyBuilderBreakEven => 'Break-even';
+
+  @override
+  String get strategyBuilderBreakEvenTrigger => 'Gatilho';
+
+  @override
+  String get strategyBuilderBreakEvenInitial => 'Proteção inicial';
+
+  @override
+  String get strategyBuilderBreakEvenStep => 'Passo';
+
+  @override
+  String get strategyBuilderSessionStart => 'Início da sessão (HH:MM)';
+
+  @override
+  String get strategyBuilderSessionEnd => 'Fim da sessão (HH:MM)';
+
+  @override
+  String get strategyBuilderForcedExit => 'Fechamento forçado (HH:MM)';
+
+  @override
+  String get strategyBuilderQuantity => 'Contratos';
+
+  @override
+  String get strategyBuilderValidate => 'Validar';
+
+  @override
+  String get strategyBuilderSave => 'Salvar';
+
+  @override
+  String get strategyBuilderValidationOk => 'Configuração válida.';
+
+  @override
+  String strategyBuilderValidationError(String code) {
+    return 'Configuração inválida: $code';
+  }
+
+  @override
+  String get strategyBuilderSaved => 'Salvo.';
+
+  @override
+  String strategyBuilderSaveError(String code) {
+    return 'Não foi possível salvar: $code';
+  }
+
+  @override
+  String get strategyBuilderSummaryTitle => 'Resumo';
+
+  @override
+  String get strategyBuilderSummaryInstrument => 'Instrumento';
+
+  @override
+  String get strategyBuilderSummarySignal => 'Sinal';
+
+  @override
+  String get strategyBuilderSummaryPosition => 'Posição';
+
+  @override
+  String get strategyBuilderBack => 'Voltar';
+
+  @override
+  String strategyBuilderVersion(int n) {
+    return 'Versão $n';
+  }
+
+  @override
+  String get strategyBuilderRunBacktest => 'Rodar backtest';
+
+  @override
+  String get strategyBuilderBacktestRunning => 'Executando…';
+
+  @override
+  String get strategyBuilderBacktestSucceeded => 'Backtest concluído.';
+
+  @override
+  String strategyBuilderBacktestFailed(String reason) {
+    return 'Backtest falhou: $reason';
+  }
+
+  @override
+  String get strategyBuilderNetPnl => 'Resultado líquido';
+
+  @override
+  String get strategyBuilderTradeCount => 'Operações';
+
+  @override
+  String get strategyBuilderResultHash => 'Hash';
+
+  @override
+  String get strategyBuilderCompare => 'Comparar com a versão anterior';
+
+  @override
+  String strategyBuilderNotComparable(String reasons) {
+    return 'Não diretamente comparável: $reasons';
+  }
+
+  @override
+  String get strategyBuilderNewVersionButton => 'Nova versão a partir desta';
 }
