@@ -5,7 +5,7 @@
  * Execução:
  *   DENO_TESTING=1 deno test --allow-env --allow-read --allow-net=deno.land,esm.sh supabase/functions/strategy-builder/index_test.ts
  */
-import { assert, assertEquals } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
+import { assert, assertEquals, assertFalse } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
 import type { AuthClient } from '../_shared/auth.ts';
 import { fakeSubjectSource } from '../_shared/entitlement_test_support.ts';
 import { MODULE_POLICY } from '../_shared/module_policy.ts';
@@ -890,4 +890,70 @@ Deno.test('SB-52 a malformed idempotencyKey (empty or oversized) is a 400, and c
   const retryClone = await call({ op: 'clone_reference', reference: 'GENERIC', idempotencyKey: 'clone-retry-1' }, 'jwt-a', 'free');
   assertEquals(retryClone.status, 200);
   assertEquals(retryClone.json.strategy.id, firstClone.json.strategy.id);
+});
+
+// ── Adversarial entitlement re-validation (Macro-08 continuation §29-30) ──
+// After removing the global admin-only shield, every one of these must
+// fail closed for a REAL non-admin persona, not just admin (the earlier
+// forgery tests SB-38/39 used the implicit admin default).
+
+Deno.test('SB-53 a real (non-admin) free user still cannot forge record_experiment category vs the actual result_kind', async () => {
+  store = new MemoryStore();
+  const created = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT }, 'jwt-a', 'pro');
+  const versionId = created.json.version.id;
+  const bt = await call({ op: 'run_backtest', strategyVersionId: versionId, datasetId: 'synthetic-fixture-5min-v1', engineId: 'GENERIC_RULE_ENGINE' }, 'jwt-a', 'pro');
+  const forged = await call({
+    op: 'record_experiment', strategyVersionId: versionId, category: 'SIMULATION', datasetId: 'synthetic-fixture-5min-v1',
+    segment: 'FULL', parametersChanged: null, reason: 'lying about the result kind as a real paying user', resultId: bt.json.result.id, source: 'USER',
+  }, 'jwt-a', 'pro');
+  assertEquals(forged.status, 400);
+  assertEquals(store.experiments.length, 0);
+});
+
+Deno.test('SB-54 a real (non-admin) user cannot run any pro/premium research op against a strategy version owned by another user', async () => {
+  store = new MemoryStore();
+  const created = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT }, 'jwt-a', 'free');
+  const versionId = created.json.version.id;
+  const asOtherPro = await call({ op: 'propose_variants', strategyVersionId: versionId, datasetId: 'synthetic-fixture-5min-v1' }, 'jwt-b', 'pro');
+  assertEquals(asOtherPro.status, 404, 'foreign ownership must be checked before/independently of the plan gate');
+  const otherResearchLoop = await call({ op: 'run_research_loop', strategyVersionId: versionId, datasetId: 'synthetic-fixture-5min-v1' }, 'jwt-b', 'pro');
+  assertEquals(otherResearchLoop.status, 404);
+  const otherSimulation = await call({ op: 'run_simulation', strategyVersionId: versionId, datasetId: 'synthetic-fixture-5min-v1' }, 'jwt-b', 'premium');
+  assertEquals(otherSimulation.status, 404);
+});
+
+Deno.test('SB-55 compare_versions and analyze_backtest_result refuse a version that belongs to another user, even for a real paying persona', async () => {
+  store = new MemoryStore();
+  const mine = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT }, 'jwt-a', 'pro');
+  const myVersionId = mine.json.version.id;
+  await call({ op: 'run_backtest', strategyVersionId: myVersionId, datasetId: 'synthetic-fixture-5min-v1', engineId: 'GENERIC_RULE_ENGINE' }, 'jwt-a', 'pro');
+  const theirs = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT }, 'jwt-b', 'pro');
+  const theirVersionId = theirs.json.version.id;
+  await call({ op: 'run_backtest', strategyVersionId: theirVersionId, datasetId: 'synthetic-fixture-5min-v1', engineId: 'GENERIC_RULE_ENGINE' }, 'jwt-b', 'pro');
+
+  const crossCompare = await call({ op: 'compare_versions', versionAId: myVersionId, versionBId: theirVersionId }, 'jwt-a', 'pro');
+  assert(crossCompare.status === 404 || crossCompare.status === 400, `expected a fail-closed status, got ${crossCompare.status}`);
+
+  const crossAnalyze = await call({ op: 'analyze_backtest_result', strategyVersionId: theirVersionId }, 'jwt-a', 'pro');
+  assertEquals(crossAnalyze.status, 404);
+});
+
+Deno.test('SB-56 two different users reusing the IDENTICAL idempotency key string get independent strategies, never a cross-user collision', async () => {
+  store = new MemoryStore();
+  const mine = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT, idempotencyKey: 'shared-string-both-users-typed' }, 'jwt-a', 'free');
+  const theirs = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT, idempotencyKey: 'shared-string-both-users-typed' }, 'jwt-b', 'free');
+  assertEquals(mine.status, 200);
+  assertEquals(theirs.status, 200);
+  assert(mine.json.strategy.id !== theirs.json.strategy.id, 'the idempotency key must be scoped per-user, never global');
+});
+
+Deno.test('SB-57 (§29: immutable version mutation, lifecycle self-promotion) the DB grants structurally forbid both, independent of any application logic bug', async () => {
+  const base = await Deno.readTextFile(new URL('../../migrations/20261002000000_strategy_builder.sql', import.meta.url));
+  assert(/GRANT UPDATE \(name\) ON public\.strategies TO authenticated/.test(base), 'strategies must only allow updating name -- never status/current_version (no self-promotion)');
+  assertFalse(/GRANT UPDATE[^;]*ON public\.strategy_versions/.test(base), 'strategy_versions must never be updatable by authenticated -- a version is immutable once created');
+  assertFalse(/GRANT[^;]*DELETE[^;]*ON public\.strategy_versions/.test(base), 'strategy_versions must never be deletable by authenticated');
+  const create = await Deno.readTextFile(new URL('../../migrations/20261008000000_strategy_create_atomic.sql', import.meta.url));
+  assert(/REVOKE INSERT ON public\.strategies FROM authenticated/.test(create), 'direct strategies INSERT must stay revoked -- creation only through the atomic RPC');
+  const hardening = await Deno.readTextFile(new URL('../../migrations/20261007000000_strategy_backtest_results_hardening.sql', import.meta.url));
+  assert(/REVOKE INSERT ON public\.strategy_backtest_results FROM authenticated/.test(hardening), 'direct strategy_backtest_results INSERT must stay revoked -- results only through the hardened RPC');
 });
