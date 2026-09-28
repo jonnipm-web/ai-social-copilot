@@ -15,6 +15,7 @@ import type { StrategySpecification } from '../_shared/strategy/strategy_spec.ts
 import type { CanonicalBacktestResult } from '../_shared/strategy/backtest_result.ts';
 import { V10_REFERENCE_SPEC_INPUT } from '../_shared/strategy/v10_reference.ts';
 import { GENERIC_REFERENCE_SPEC_INPUT } from '../_shared/strategy/generic_reference_strategy.ts';
+import { StrategyLimitReachedError } from '../_shared/strategy_server.ts';
 import { handler, type StrategyBuilderDeps } from './index.ts';
 
 globalThis.fetch = () => Promise.reject(new Error('network is forbidden in strategy-builder tests'));
@@ -45,7 +46,15 @@ class MemoryStore implements StrategyStore {
     return this.strategies.filter((s) => s.userId === u).map(({ userId: _u, ...s }) => s);
   }
   // deno-lint-ignore require-await
+  /** Mirrors migration 20261004000000's strategies_enforce_plan_limit
+   * trigger: the store itself is the race-safe authority, re-checked
+   * at insert time regardless of what the caller's own pre-check saw
+   * (Codex final audit, P1 fix). */
+  storeLevelLimit = 3;
   async create(u: string, spec: StrategySpecification) {
+    if (this.strategies.filter((s) => s.userId === u).length >= this.storeLevelLimit) {
+      throw new StrategyLimitReachedError();
+    }
     const strategy: StrategyRow & { userId: string } = {
       id: this.id(), userId: u, name: spec.name, status: 'DRAFT', currentVersion: 1, createdAt: 't', updatedAt: 't',
     };
@@ -336,6 +345,49 @@ Deno.test('SB-18 (§43) a free-plan caller is refused STRATEGY_LIMIT_REACHED pas
   // A different user's own quota is untouched by the first user's limit.
   const otherUser = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT }, 'jwt-b');
   assertEquals(otherUser.status, 200);
+});
+
+Deno.test('SB-19 (Codex final audit, P1 fix) the store-level limit still blocks creation even when the app-level pre-check races and wrongly passes', async () => {
+  store = new MemoryStore();
+  for (let i = 0; i < 3; i++) {
+    await call({ op: 'create', spec: { ...GENERIC_REFERENCE_SPEC_INPUT, name: `Racer ${i}` } });
+  }
+  assertEquals(store.strategies.length, 3);
+  // Simulate the exact race Codex found: the app's own list()-based
+  // pre-check observes a stale/incorrect (empty) count -- as it could
+  // under real concurrency -- and lets the request through anyway.
+  const originalList = store.list.bind(store);
+  store.list = (u: string) => Promise.resolve([]);
+  const raced = await call({ op: 'create', spec: { ...GENERIC_REFERENCE_SPEC_INPUT, name: 'Racer 4' } });
+  store.list = originalList;
+  // The app-level pre-check was fooled (it would have said "0 < 3, go
+  // ahead"), but the store/database-level check still refuses -- this is
+  // the race-safety property the migration's trigger provides in
+  // production.
+  assertEquals(raced.status, 403);
+  assertEquals(raced.json.error, 'STRATEGY_LIMIT_REACHED');
+  assertEquals(store.strategies.length, 3);
+});
+
+Deno.test('SB-20 (Codex final audit, P2 fix) a job-row write failure AFTER a real result is saved never reports the backtest as failed', async () => {
+  store = new MemoryStore();
+  const created = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT });
+  const versionId = created.json.version.id;
+  const originalInsertSucceeded = store.insertSucceededBacktestJob.bind(store);
+  store.insertSucceededBacktestJob = () => {
+    throw new Error('simulated job-row write failure');
+  };
+  const r = await call({ op: 'run_backtest', strategyVersionId: versionId, datasetId: 'synthetic-fixture-5min-v1', engineId: 'GENERIC_RULE_ENGINE' });
+  store.insertSucceededBacktestJob = originalInsertSucceeded;
+  // The backtest genuinely succeeded and its canonical result is durably
+  // saved -- the caller must see that real success (200, a real result),
+  // not a 500 or a fabricated FAILED job, even though the job-row
+  // bookkeeping itself failed.
+  assertEquals(r.status, 200);
+  assertEquals(r.json.result.tradeCount, 2);
+  assertEquals(r.json.job, null);
+  assertEquals(store.results.length, 1);
+  assert(store.jobs.every((j) => j.status !== 'FAILED'));
 });
 
 Deno.test('SB-16 non-admin plans are denied for every new op before the store is touched', async () => {

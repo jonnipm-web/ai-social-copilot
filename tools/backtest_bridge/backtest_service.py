@@ -40,11 +40,13 @@ auto-triggered path in this codebase.
 """
 from __future__ import annotations
 
+import dataclasses
 import json
 import os
 import sys
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
 
 MAX_BODY_BYTES = 16 * 1024
 HOST = "127.0.0.1"
@@ -80,12 +82,15 @@ def _run_v10(dataset_id: str, params: dict) -> dict:
 
     registry = make_win_registry()
     pipeline = HistoricalDataPipeline()
-    cfg = make_win1_pipeline_config(registry)
-    # The pipeline config already points at the fixture path baked into
-    # fixtures_win.py (the real worktree's own tests/ layout) -- WIN1_CSV_PATH
-    # is validated above as a defense-in-depth existence check, not itself
-    # threaded into the pipeline, since fixtures_win.py is the single
-    # source of truth for where that worktree's own CSV lives.
+    # make_win1_pipeline_config() hardcodes `source` to the small bundled
+    # test fixture CSV under the worktree's own tests/ tree (Codex final
+    # audit, P1 fix #2) -- the WIN1_CSV_PATH check above validated a real
+    # file exists, but nothing actually pointed the pipeline at it, so
+    # every request silently ran against the test fixture regardless of
+    # what WIN1_CSV_PATH was set to. Overriding `source` with the
+    # operator-configured, already-validated csv_path is what makes that
+    # gate real: this is now the only CSV this call can ever read.
+    cfg = dataclasses.replace(make_win1_pipeline_config(registry), source=Path(csv_path))
     dataset = pipeline.process(cfg)
 
     cost_cfg = None
@@ -160,7 +165,11 @@ class Handler(BaseHTTPRequestHandler):
         if self.path != "/backtest":
             self._send_json(404, {"ok": False, "error": "NOT_FOUND"})
             return
-        length = int(self.headers.get("Content-Length", "0"))
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            self._send_json(400, {"ok": False, "error": "INVALID_BODY"})
+            return
         if length <= 0 or length > MAX_BODY_BYTES:
             self._send_json(413, {"ok": False, "error": "BODY_TOO_LARGE"})
             return

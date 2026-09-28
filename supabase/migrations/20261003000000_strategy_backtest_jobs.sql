@@ -30,11 +30,16 @@ CREATE TABLE IF NOT EXISTS public.strategy_backtest_jobs (
   created_at           timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT strategy_backtest_jobs_status_chk CHECK (status IN ('QUEUED', 'RUNNING', 'SUCCEEDED', 'FAILED')),
   CONSTRAINT strategy_backtest_jobs_engine_chk CHECK (engine_id IN ('GENERIC_RULE_ENGINE', 'PAULO_TREND_FIBONACCI_V10')),
-  -- Every row this macro's code ever inserts is already terminal.
+  -- Every row this macro's code ever inserts is already terminal. A
+  -- QUEUED/RUNNING row (reserved for a future async worker, never
+  -- inserted by this macro) must be non-terminal in EVERY field, not
+  -- just completed_at -- otherwise a row could claim to still be
+  -- running while already carrying a result_id or failure_reason,
+  -- which is a self-contradictory state (Codex final audit, P2 fix).
   CONSTRAINT strategy_backtest_jobs_terminal_chk CHECK (
     (status = 'SUCCEEDED' AND result_id IS NOT NULL AND failure_reason IS NULL AND completed_at IS NOT NULL)
     OR (status = 'FAILED' AND result_id IS NULL AND failure_reason IS NOT NULL AND completed_at IS NOT NULL)
-    OR (status IN ('QUEUED', 'RUNNING') AND completed_at IS NULL)
+    OR (status IN ('QUEUED', 'RUNNING') AND completed_at IS NULL AND result_id IS NULL AND failure_reason IS NULL)
   )
 );
 

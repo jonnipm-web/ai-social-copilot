@@ -15,7 +15,10 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { AuthClient, AuthenticatedUser, AuthError, resolveAuthenticatedUser, unauthorizedResponse } from '../_shared/auth.ts';
 import { EntitlementSubjectSource, requireModuleAccess } from '../_shared/entitlement.ts';
 import type { QuotaClient } from '../_shared/quota.ts';
-import { bearerToken, readJsonBody, strategyCorsHeaders, SupabaseStrategyStore, type StrategyStore } from '../_shared/strategy_server.ts';
+import {
+  bearerToken, readJsonBody, strategyCorsHeaders, StrategyLimitReachedError, SupabaseStrategyStore,
+  type StrategyBacktestJobRow, type StrategyStore,
+} from '../_shared/strategy_server.ts';
 import { createStrategySpecification, type StrategySpecification, type StrategySpecificationInput } from '../_shared/strategy/strategy_spec.ts';
 import { parseNaturalLanguageStrategyDraft } from '../_shared/strategy/nl_draft.ts';
 import type { StrategyErrorCode } from '../_shared/strategy/errors.ts';
@@ -141,6 +144,26 @@ function jsonResponse(body: unknown): Response {
 }
 
 /**
+ * Records the SUCCEEDED job row for an already-persisted backtest result.
+ * By this point the real result is durably saved -- if the job-row write
+ * itself throws, that must NOT fall through to run_backtest's outer catch,
+ * which would otherwise insert a FAILED job for a backtest that actually
+ * succeeded, misrepresenting the audit trail and orphaning the real result
+ * (Codex final audit, P2 fix). The result is still returned to the caller
+ * either way; only the job-row bookkeeping is best-effort here.
+ */
+async function recordSucceededJob(
+  store: StrategyStore, userId: string, versionId: string, datasetId: string, engineId: string, startedAt: string, resultId: string,
+): Promise<StrategyBacktestJobRow | null> {
+  try {
+    return await store.insertSucceededBacktestJob(userId, versionId, datasetId, engineId, startedAt, resultId);
+  } catch (e) {
+    console.error('recordSucceededJob: job-row write failed after a successful backtest result was already saved', e);
+    return null;
+  }
+}
+
+/**
  * §43: candidate per-plan strategy count limits. Safety controls (spec
  * validation, RLS, engine allowlisting) are NEVER paywalled -- only the
  * count of strategies a plan may hold is. `strategy-builder` itself stays
@@ -231,7 +254,22 @@ export async function handler(
           finish(403, 'STRATEGY_LIMIT_REACHED');
           return errorResponse('STRATEGY_LIMIT_REACHED', cid, 403);
         }
-        const created = await store.create(authUser.id, validated.value);
+        // Codex final audit (P1): the check above is a fast, friendly
+        // pre-check only -- it has a time-of-check-to-time-of-use gap a
+        // concurrent request can win. The database's own
+        // strategies_enforce_plan_limit trigger (migration
+        // 20261004000000) is the race-safe authority; StrategyLimitReachedError
+        // is what it raises when a caller actually wins that race.
+        let created;
+        try {
+          created = await store.create(authUser.id, validated.value);
+        } catch (e) {
+          if (e instanceof StrategyLimitReachedError) {
+            finish(403, 'STRATEGY_LIMIT_REACHED');
+            return errorResponse('STRATEGY_LIMIT_REACHED', cid, 403);
+          }
+          throw e;
+        }
         finish(200, null);
         return jsonResponse({ correlation_id: cid, strategy: created.strategy, version: created.version });
       }
@@ -299,9 +337,18 @@ export async function handler(
         // is, in fact, no persisted "reference" row at all to touch;
         // V10_REFERENCE_SPEC_INPUT/GENERIC_REFERENCE_SPEC_INPUT are code
         // constants, not database rows).
-        const created = await store.create(authUser.id, validated.value);
+        let clonedCreated;
+        try {
+          clonedCreated = await store.create(authUser.id, validated.value);
+        } catch (e) {
+          if (e instanceof StrategyLimitReachedError) {
+            finish(403, 'STRATEGY_LIMIT_REACHED');
+            return errorResponse('STRATEGY_LIMIT_REACHED', cid, 403);
+          }
+          throw e;
+        }
         finish(200, null);
-        return jsonResponse({ correlation_id: cid, strategy: created.strategy, version: created.version, clonedFrom: action.reference });
+        return jsonResponse({ correlation_id: cid, strategy: clonedCreated.strategy, version: clonedCreated.version, clonedFrom: action.reference });
       }
       case 'run_backtest': {
         const token = bearerToken(req) ?? '';
@@ -392,7 +439,7 @@ export async function handler(
               return jsonResponse({ correlation_id: cid, job, result: null });
             }
             const savedResult = await store.insertBacktestResult(authUser.id, version.id, built.value);
-            const job = await store.insertSucceededBacktestJob(authUser.id, version.id, action.datasetId, action.engineId, startedAt, savedResult.id);
+            const job = await recordSucceededJob(store, authUser.id, version.id, action.datasetId, action.engineId, startedAt, savedResult.id);
             finish(200, null);
             return jsonResponse({ correlation_id: cid, job, result: savedResult });
           }
@@ -434,7 +481,7 @@ export async function handler(
             return jsonResponse({ correlation_id: cid, job, result: null });
           }
           const savedResult = await store.insertBacktestResult(authUser.id, version.id, built.value);
-          const job = await store.insertSucceededBacktestJob(authUser.id, version.id, action.datasetId, action.engineId, startedAt, savedResult.id);
+          const job = await recordSucceededJob(store, authUser.id, version.id, action.datasetId, action.engineId, startedAt, savedResult.id);
           finish(200, null);
           return jsonResponse({ correlation_id: cid, job, result: savedResult });
         } catch (e) {

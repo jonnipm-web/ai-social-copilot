@@ -120,6 +120,20 @@ export interface StrategyBacktestJobRow {
   readonly createdAt: string;
 }
 
+/**
+ * Thrown by `create` when the database's own strategies_enforce_plan_limit
+ * trigger (Codex final audit, P1 fix) rejects the insert -- the
+ * race-safe, authoritative check. The app-level pre-check in
+ * strategy-builder/index.ts stays as a fast, friendly early exit, but this
+ * is what actually fires when a caller wins the race the app-level check
+ * alone could not close.
+ */
+export class StrategyLimitReachedError extends Error {
+  constructor() {
+    super('STRATEGY_LIMIT_REACHED');
+  }
+}
+
 export interface StrategyStore {
   list(userId: string): Promise<StrategyRow[]>;
   /** Creates a strategy AND its version-1 snapshot atomically (via an RPC
@@ -231,6 +245,7 @@ export class SupabaseStrategyStore implements StrategyStore {
     const { data: strategyData, error: strategyError } = await this.db.from('strategies')
       .insert({ user_id: userId, name: spec.name, status: 'DRAFT', current_version: 1 })
       .select(STRATEGY_SELECT).single();
+    if (strategyError?.message?.includes('STRATEGY_LIMIT_REACHED')) throw new StrategyLimitReachedError();
     if (strategyError || !strategyData) throw new Error('strategy create failed');
     const strategy = rowToStrategy(strategyData);
 
