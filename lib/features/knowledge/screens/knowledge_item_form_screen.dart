@@ -148,6 +148,9 @@ class _KnowledgeItemFormScreenState
       }
 
       ref.invalidate(knowledgeItemsProvider);
+      if (_projectId != null) {
+        ref.invalidate(knowledgeItemsByProjectProvider(_projectId!));
+      }
 
       // Confirmação com nome do projeto
       if (mounted) {
