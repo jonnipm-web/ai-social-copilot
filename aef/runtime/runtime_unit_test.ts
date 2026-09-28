@@ -12,6 +12,7 @@ import { defineToolInputSchema, validateToolInput } from "../persistence/tool_in
 import { assertMockOnly, createLabToolRegistry, LAB_IVE_ACTION_TABLE, LAB_MOCK_TOOLS } from "./lab_tools.ts";
 import { ACTION_ENGINE_TABLE } from "./action_engine_tools.ts";
 import { QUANT_ACTION_TABLE } from "./quant_tools.ts";
+import { STRATEGY_SIMULATION_ACTION_TABLE } from "./strategy_simulation_tools.ts";
 import { presentResult } from "./presentation.ts";
 import { checkLabRuntime, type RuntimeEnv } from "./runtime_guard.ts";
 import { handleAefRuntime } from "../../supabase/functions/_shared/aef_runtime_endpoint.ts";
@@ -439,6 +440,41 @@ Deno.test("RU-29 the Quant signal-acknowledgment tool is CONSEQUENTIAL + Human-G
   const { registry } = createLabToolRegistry();
   const descriptor = registry.describe({ domain: "internal", action: "internal.mock_quant_signal_acknowledgment" } as ExecutionRequest);
   assert(descriptor !== undefined, "internal.mock_quant_signal_acknowledgment must be registered");
+  assertEquals(descriptor.classification, "CONSEQUENTIAL");
+  assertEquals(descriptor.requiresHumanGate, true);
+});
+
+// ── Strategy Simulation -> Action Intent -> AEF (INSIGHTVALUES-STRATEGY-INTELLIGENCE-MACRO-07 §24-27) ──
+Deno.test("RU-30 STRATEGY_SIMULATION_ACTION_TABLE maps only approve_simulation_result; it inherits no other table's vocabulary", async () => {
+  const ok = await mapIveActionIntentWith(STRATEGY_SIMULATION_ACTION_TABLE, intent({ requestedAction: "approve_simulation_result", parameters: { experiment_id: "e1", note: "reviewed" } }), SUBJECT);
+  assert(ok.ok);
+  assertEquals(ok.ok && ok.request.action, "internal.mock_strategy_simulation_approval");
+  // §49: trade_order and every other action -- including ones the OTHER
+  // tables recognize -- are absent here, categorically. There is no path
+  // from this table to a trade, an order, or live/paper execution.
+  for (const action of ["trade_order", "publish_content", "send_message", "complete_action", "acknowledge_signal", "payment", "transfer_funds", "delete_data", "execute_workflow"]) {
+    const r = await mapIveActionIntentWith(STRATEGY_SIMULATION_ACTION_TABLE, intent({ requestedAction: action, parameters: { experiment_id: "e1", note: "x" } }), SUBJECT);
+    assertEquals(r.ok ? "ok" : r.code, "INTENT_ACTION_UNKNOWN", action);
+  }
+});
+
+Deno.test("RU-31 strategy-simulation-runtime's entitlement gate is 'ive-strategy-simulation' (EXPERIMENTAL/admin-only), not strategy-builder or ive-quant, and not the reverse", async () => {
+  for (const role of ["free", "pro", "premium", "beta_tester"]) {
+    const c = call({ op: "propose", intent: intent() }, { role, moduleId: "ive-strategy-simulation" });
+    assertEquals((await c.res).status, 403, role);
+  }
+  const admin = call({ op: "propose", intent: intent() }, { role: "admin", moduleId: "ive-strategy-simulation" });
+  const res = await admin.res;
+  if (res.status === 403) {
+    const body = await res.clone().json().catch(() => ({}));
+    assert(body.error !== "MODULE_NOT_AVAILABLE", `admin: ${JSON.stringify(body)}`);
+  }
+});
+
+Deno.test("RU-32 the Strategy Simulation approval tool is CONSEQUENTIAL + Human-Gate-required, same as every other LAB tool", () => {
+  const { registry } = createLabToolRegistry();
+  const descriptor = registry.describe({ domain: "internal", action: "internal.mock_strategy_simulation_approval" } as ExecutionRequest);
+  assert(descriptor !== undefined, "internal.mock_strategy_simulation_approval must be registered");
   assertEquals(descriptor.classification, "CONSEQUENTIAL");
   assertEquals(descriptor.requiresHumanGate, true);
 });

@@ -72,6 +72,14 @@ fi
 if [ "$FUNCTION_NAME" = "quant-runtime" ]; then
   deny "quant-runtime is LAB ONLY -- not deployable through this workflow (production deployment is a separate, unauthorized gate)"
 fi
+# INSIGHTVALUES-STRATEGY-INTELLIGENCE-MACRO-07: the Strategy Simulation ->
+# Action Intent -> AEF bridge is the same LAB-only boundary (mock tools,
+# local stack) as aef-runtime/action-engine-runtime/quant-runtime. No
+# broker, no order, no real money -- and no mission has authorized
+# deploying it anywhere.
+if [ "$FUNCTION_NAME" = "strategy-simulation-runtime" ]; then
+  deny "strategy-simulation-runtime is LAB ONLY -- not deployable through this workflow (production deployment is a separate, unauthorized gate)"
+fi
 
 # 4. Must exist in the repo-controlled allowlist (skip comments/blank lines).
 [ -f "$ALLOWLIST" ] || deny "allowlist file missing: $ALLOWLIST"

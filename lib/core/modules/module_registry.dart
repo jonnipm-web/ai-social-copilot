@@ -751,4 +751,21 @@ const List<ModuleDefinition> kModuleRegistry = [
     releaseClassification: ModuleReleaseClass.internalTooling,
     notes: 'REVERSIBLE (servidor: module_policy.ts): configuração de estratégia nunca executa nada (§14 do macro -- "configuration is not authorization"). Separado de ive-quant/quant-runtime (que seguem CONSEQUENTIAL) porque não toca AEF. Strategy #001 permanece RESEARCH (lifecycle.ts nunca autoriza SIMULATION_ELIGIBLE/PAPER_ELIGIBLE/LIVE_ELIGIBLE nesta missão).',
   ),
+  ModuleDefinition(
+    moduleId: 'ive-strategy-simulation',
+    namePt: 'Simulação de Estratégia (AEF)',
+    nameEn: 'Strategy Simulation (AEF)',
+    status: ModuleStatus.planned,
+    adminVisible: true,
+    adminClickable: false,
+    commercialEnabled: false,
+    minimumPlan: ModulePlan.free, // admin-only via lifecycle (não liberado), não via plano
+    route: null,
+    edgeFunctions: ['strategy-simulation-runtime'],
+    aiDependency: false,
+    readinessPt: 'FOUNDATION (INSIGHTVALUES-STRATEGY-INTELLIGENCE-MACRO-07 §24-27): a computação real da simulação (determinística, in-process, sem broker, sem dado externo) roda dentro de strategy-builder (`run_simulation`), reaproveitando o mesmo motor genérico do backtest, mas gravada com categoria SIMULATION (nunca BACKTEST) em strategy_experiments. Este módulo separado é só a ponte de governança AEF (`approve_simulation_result` -> internal.mock_strategy_simulation_approval, CONSEQUENTIAL, Human Gate obrigatório) que demonstra a cadeia Simulação -> Action Intent -> AEF -> receipt -> learning ponta a ponta -- LAB-only, bloqueada de deploy (scripts/ci/resolve_deploy_selection.sh), mock-only. Nenhuma tela, nenhum wiring em rota/provider.',
+    readinessEn: 'FOUNDATION (INSIGHTVALUES-STRATEGY-INTELLIGENCE-MACRO-07 §24-27): the actual simulation computation (deterministic, in-process, no broker, no external data) runs inside strategy-builder (`run_simulation`), reusing the same generic backtest engine but recorded with category SIMULATION (never BACKTEST) in strategy_experiments. This separate module is only the AEF governance bridge (`approve_simulation_result` -> internal.mock_strategy_simulation_approval, CONSEQUENTIAL, mandatory Human Gate) that demonstrates the Simulation -> Action Intent -> AEF -> receipt -> learning chain end to end -- LAB-only, deploy-blocked (scripts/ci/resolve_deploy_selection.sh), mock-only. No screen, no route/provider wiring.',
+    releaseClassification: ModuleReleaseClass.externalPlanned,
+    notes: 'CONSEQUENTIAL (servidor: module_policy.ts), mesma classe de ive-quant. Categoricamente sem caminho para um broker, uma ordem ou execução live/paper -- ver TRADING_BOUNDARY (§49) e RU-30 (strategy_simulation_tools_test): a action table só reconhece approve_simulation_result.',
+  ),
 ];

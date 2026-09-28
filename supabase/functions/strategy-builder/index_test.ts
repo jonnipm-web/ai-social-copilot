@@ -604,6 +604,28 @@ Deno.test('SB-32 run_research_loop returns an empty, non-error candidate list wh
   assertEquals(r.json.proposals, []);
 });
 
+Deno.test('SB-34 (§24-25) run_simulation persists a real result tagged SIMULATION, never BACKTEST', async () => {
+  store = new MemoryStore();
+  const created = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT });
+  const versionId = created.json.version.id;
+  const r = await call({ op: 'run_simulation', strategyVersionId: versionId, datasetId: 'synthetic-fixture-5min-v1' });
+  assertEquals(r.status, 200);
+  assertEquals(r.json.label, 'SIMULATION');
+  assertEquals(r.json.experiment.category, 'SIMULATION');
+  assertEquals(r.json.experiment.resultId, r.json.result.id);
+  assertEquals(r.json.result.tradeCount, 2); // same deterministic fixture as SB-11
+  assertEquals(store.experiments.length, 1);
+  assertEquals(store.experiments[0].category, 'SIMULATION');
+});
+
+Deno.test('SB-35 run_simulation refuses the external V10 engine implicitly -- only GENERIC_RULE_ENGINE datasets are usable', async () => {
+  store = new MemoryStore();
+  const created = await call({ op: 'create', spec: V10_REFERENCE_SPEC_INPUT });
+  const r = await call({ op: 'run_simulation', strategyVersionId: created.json.version.id, datasetId: 'win1-5min-qt01c3' });
+  assertEquals(r.status, 400);
+  assertEquals(r.json.error, 'DATA_REQUIREMENT_UNMET');
+});
+
 Deno.test('SB-16 non-admin plans are denied for every new op before the store is touched', async () => {
   store = new MemoryStore();
   for (const payload of [
@@ -621,6 +643,7 @@ Deno.test('SB-16 non-admin plans are denied for every new op before the store is
     },
     { op: 'list_experiments', strategyId: 'cccccccc-0000-4000-8000-000000000001' },
     { op: 'run_research_loop', strategyVersionId: 'cccccccc-0000-4000-8000-000000000001', datasetId: 'synthetic-fixture-5min-v1' },
+    { op: 'run_simulation', strategyVersionId: 'cccccccc-0000-4000-8000-000000000001', datasetId: 'synthetic-fixture-5min-v1' },
   ]) {
     const r = await call(payload, 'jwt-a', 'free');
     assertEquals([r.status, r.json.error], [403, 'MODULE_NOT_AVAILABLE'], JSON.stringify(payload));

@@ -86,6 +86,24 @@ export const LAB_MOCK_TOOLS: readonly LabToolSpec[] = Object.freeze([
       note: { type: "string", required: true, minLength: 1, maxLength: 500 },
     }),
   }),
+  // INSIGHTVALUES-STRATEGY-INTELLIGENCE-MACRO-07 §24-27 — the Strategy
+  // Simulation -> Action Intent -> AEF bridge's one governed action: a
+  // human formally approves/acknowledges a simulation result that
+  // strategy-builder's own `run_simulation` op already computed safely,
+  // deterministically and in-process (see strategy_simulation_tools.ts).
+  // Exactly like internal.mock_quant_signal_acknowledgment above, this is
+  // NOT a trade, an order, or a signal to act on the market -- it is a
+  // self-attested, receipted, Human-Gate-approved record that a human
+  // reviewed a simulation result. There is no path from this tool to
+  // anything resembling live/paper execution.
+  Object.freeze({
+    toolId: "internal.mock_strategy_simulation_approval",
+    iveAction: "approve_simulation_result",
+    inputSchema: defineToolInputSchema({
+      experiment_id: { type: "string", required: true, minLength: 1, maxLength: 64 },
+      note: { type: "string", required: true, minLength: 1, maxLength: 500 },
+    }),
+  }),
 ]);
 
 /**

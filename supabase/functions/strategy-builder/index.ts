@@ -56,14 +56,14 @@ const OPS = new Set([
   'validate', 'draft_from_text', 'create', 'list', 'get',
   'create_version', 'list_versions', 'run_backtest', 'compare_versions', 'clone_reference',
   'analyze_backtest_result', 'engine_status',
-  'propose_variants', 'record_experiment', 'list_experiments', 'run_research_loop',
+  'propose_variants', 'record_experiment', 'list_experiments', 'run_research_loop', 'run_simulation',
 ]);
 
 /** MACRO-07 §33-35: robustness/experiment ops are the first real
  * plan-gated Strategy Intelligence surface -- validation, security and
  * the safety-critical ops above stay ungated (§35: "Safety is not
  * Premium"); only the RESEARCH capability itself requires pro/premium. */
-const RESEARCH_OPS = new Set(['propose_variants', 'record_experiment', 'list_experiments', 'run_research_loop']);
+const RESEARCH_OPS = new Set(['propose_variants', 'record_experiment', 'list_experiments', 'run_research_loop', 'run_simulation']);
 const PLAN_RANK: Record<string, number> = { free: 0, pro: 1, premium: 2 };
 
 /**
@@ -120,11 +120,12 @@ interface RecordExperimentOp {
 }
 interface ListExperimentsOp { readonly op: 'list_experiments'; readonly strategyId: string }
 interface RunResearchLoopOp { readonly op: 'run_research_loop'; readonly strategyVersionId: string; readonly datasetId: string }
+interface RunSimulationOp { readonly op: 'run_simulation'; readonly strategyVersionId: string; readonly datasetId: string }
 type ParsedOp =
   | ValidateOp | DraftFromTextOp | CreateOp | ListOp | GetOp
   | CreateVersionOp | ListVersionsOp | RunBacktestOp | CompareVersionsOp | CloneReferenceOp
   | AnalyzeBacktestResultOp | EngineStatusOp
-  | ProposeVariantsOp | RecordExperimentOp | ListExperimentsOp | RunResearchLoopOp;
+  | ProposeVariantsOp | RecordExperimentOp | ListExperimentsOp | RunResearchLoopOp | RunSimulationOp;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -218,6 +219,9 @@ function parseOp(body: unknown): { ok: true; value: ParsedOp } | { ok: false; co
     case 'run_research_loop':
       if (!isUuid(b.strategyVersionId) || typeof b.datasetId !== 'string') return { ok: false, code: 'INVALID_BODY' };
       return { ok: true, value: { op: 'run_research_loop', strategyVersionId: b.strategyVersionId, datasetId: b.datasetId } };
+    case 'run_simulation':
+      if (!isUuid(b.strategyVersionId) || typeof b.datasetId !== 'string') return { ok: false, code: 'INVALID_BODY' };
+      return { ok: true, value: { op: 'run_simulation', strategyVersionId: b.strategyVersionId, datasetId: b.datasetId } };
     default:
       return { ok: false, code: 'UNKNOWN_OP' };
   }
@@ -845,6 +849,74 @@ export async function handler(
         }
         finish(200, null);
         return jsonResponse({ correlation_id: cid, fitEvidence, proposals, candidates });
+      }
+      case 'run_simulation': {
+        // MACRO-07 §24-25: the first real INTERNAL simulation capability.
+        // Deliberately built as a thin, explicitly-labeled variant of the
+        // SAME deterministic in-process path run_backtest already uses --
+        // no broker, no external data, no new execution surface. What
+        // makes this a "simulation" rather than a "backtest" is entirely
+        // in how the result is RECORDED (category SIMULATION in
+        // strategy_experiments, never BACKTEST) -- the computation itself
+        // is identical and equally safe. A caller who wants this
+        // simulation formally governed through Human Gate/AEF calls the
+        // separate strategy-simulation-runtime Edge Function
+        // (aef/runtime/strategy_simulation_tools.ts) afterward with this
+        // response's experiment id -- that governance ceremony is kept
+        // OUT of this op on purpose, matching quant-runtime's own
+        // separation between "Quant computes a signal" (here) and "a
+        // human acknowledges it through AEF" (a distinct governed call).
+        const token = bearerToken(req) ?? '';
+        const store = (deps.storeFor ?? ((t: string) => new SupabaseStrategyStore(t)))(token);
+        const version = await store.getVersionById(authUser.id, action.strategyVersionId);
+        if (!version) {
+          finish(404, 'NOT_FOUND');
+          return errorResponse('NOT_FOUND', cid, 404);
+        }
+        const dataset = getDataset(action.datasetId);
+        if (!dataset) {
+          finish(400, 'UNKNOWN_DATASET');
+          return errorResponse('UNKNOWN_DATASET', cid, 400);
+        }
+        const barsFn = dataset.rowsAvailableInProcess ? IN_PROCESS_BARS_BY_DATASET_ID[dataset.datasetId] : undefined;
+        if (!barsFn) {
+          finish(400, 'DATA_REQUIREMENT_UNMET');
+          return errorResponse('DATA_REQUIREMENT_UNMET', cid, 400);
+        }
+        const spec = version.spec;
+        const ruleIds = [
+          spec.entry.ruleId, spec.stop.ruleId, spec.target.ruleId,
+          ...(spec.breakEven ? [spec.breakEven.ruleId] : []),
+          spec.session.ruleId, spec.forcedExit.ruleId, spec.positionSize.ruleId,
+        ];
+        const refusal = engineAcceptsRunRequest('GENERIC_RULE_ENGINE', ruleIds, action.datasetId);
+        if (refusal) {
+          finish(400, 'ENGINE_REFUSED');
+          return errorResponse('ENGINE_REFUSED', cid, 400);
+        }
+        const bars = barsFn();
+        const built = await runGenericEngineAndBuildResult(spec, bars, {
+          strategyId: version.strategyId, strategyVersion: version.versionNumber, strategySpecHash: version.specHash,
+          datasetId: dataset.datasetId, datasetHash: dataset.hash, instrumentSymbol: dataset.instrumentSymbol,
+          periodStart: dataset.periodStart, periodEnd: dataset.periodEnd, timeframes: [dataset.timeframe],
+          limitations: ['SIMULATION -- deterministic in-process replay, not a live or paper trading fill.'],
+        });
+        if (!built.ok) {
+          finish(STRATEGY_ERROR_STATUS[built.code as StrategyErrorCode] ?? 400, built.code);
+          return errorResponse(built.code, cid, STRATEGY_ERROR_STATUS[built.code as StrategyErrorCode] ?? 400);
+        }
+        const savedResult = await store.insertBacktestResult(authUser.id, version.id, built.value);
+        const segment: ExperimentSegment = dataset.segmentKind ?? 'FULL';
+        const strategyWithVersion = await store.getWithLatestVersion(authUser.id, version.strategyId);
+        const holdoutFirstViewedAt = strategyWithVersion?.strategy.holdoutFirstViewedAt ?? null;
+        const contaminated = computeContamination(holdoutFirstViewedAt, new Date().toISOString(), segment === 'HOLDOUT');
+        const experiment = await store.insertExperiment(authUser.id, {
+          strategyId: version.strategyId, strategyVersionId: version.id, category: 'SIMULATION', datasetId: action.datasetId,
+          segment, parametersChanged: null, reason: 'internal simulation run', resultId: savedResult.id,
+          costAssumptions: null, source: 'USER', contaminated,
+        });
+        finish(200, null);
+        return jsonResponse({ correlation_id: cid, result: savedResult, experiment, label: 'SIMULATION' });
       }
     }
   } catch {
