@@ -38,7 +38,10 @@ BEGIN
   -- limit (Macro-08 §37 fix) is a high FINITE fair-use cap (mirrors
   -- strategy-builder/index.ts's STRATEGY_LIMIT_BY_PLAN.premium=200),
   -- not 2147483647 -- "unlimited" was itself the finding: unbounded
-  -- storage/compute exposure from a single account.
+  -- storage/compute exposure from a single account. PROVISIONAL_CAP
+  -- (Macro-08 continuation §20): 200 is a judgment-based safety
+  -- ceiling, not derived from real usage telemetry (nothing is
+  -- deployed yet) -- keep in sync with the TS constant's own comment.
   plan_limit := CASE user_role
     WHEN 'pro' THEN 20
     WHEN 'premium' THEN 200

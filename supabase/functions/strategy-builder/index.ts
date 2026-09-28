@@ -360,6 +360,14 @@ async function recordSucceededJob(
  * migration 20261004000000's strategies_enforce_plan_limit trigger
  * (the race-safe, authoritative check) -- keep both in sync if this
  * ever changes.
+ *
+ * PROVISIONAL_CAP (Macro-08 continuation §20): 200 is a safety ceiling
+ * chosen by judgment, not by measured usage data -- this product has no
+ * real user telemetry yet (nothing is deployed; see strategy-builder's
+ * own "NOT DEPLOYED (Lab)" header). Do not read 200 as a commercially
+ * optimized number, and do not re-derive it from "more code now
+ * exists" -- revisiting it requires real per-account strategy-count
+ * telemetry from an actual deployed environment, not a guess.
  */
 export const STRATEGY_LIMIT_BY_PLAN: Record<string, number> = { free: 3, pro: 20, premium: 200 };
 const DEFAULT_STRATEGY_LIMIT = STRATEGY_LIMIT_BY_PLAN.free;
