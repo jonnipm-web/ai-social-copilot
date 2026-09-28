@@ -72,6 +72,41 @@ function specToV10Params(spec: StrategySpecification, costConfig: BridgeCostConf
   };
 }
 
+export interface BridgeEngineAvailability {
+  readonly available: boolean;
+  readonly reason: string | null;
+}
+
+/**
+ * MACRO-07 §5: queries the bridge's GET /health so a caller can know
+ * whether PAULO_TREND_FIBONACCI_V10 is actually usable right now
+ * (operator-configured local dataset/pythonpath present) BEFORE
+ * spending a POST /backtest round-trip. Never throws -- an unreachable
+ * or slow bridge is reported as unavailable, exactly like any other
+ * "the engine isn't ready" case, never as an exception a caller must
+ * remember to catch.
+ */
+export async function checkEngineAvailability(
+  config: BacktestBridgeConfig,
+): Promise<BridgeEngineAvailability> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), config.timeoutMs);
+  try {
+    const res = await fetch(`${config.baseUrl}/health`, { signal: controller.signal });
+    const body = await res.json().catch(() => null);
+    const entry = body?.engines?.PAULO_TREND_FIBONACCI_V10;
+    if (!res.ok || !body?.ok || !entry || typeof entry.available !== 'boolean') {
+      return { available: false, reason: 'backtest bridge health check returned an unexpected response' };
+    }
+    return { available: entry.available, reason: entry.reason ?? null };
+  } catch (e) {
+    const timedOut = e instanceof Error && e.name === 'AbortError';
+    return { available: false, reason: timedOut ? 'backtest bridge health check timed out' : 'backtest bridge unreachable' };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /**
  * Runs Strategy #001/V10 through the external Python bridge. Refuses
  * closed before any network call if the engine registry does not accept

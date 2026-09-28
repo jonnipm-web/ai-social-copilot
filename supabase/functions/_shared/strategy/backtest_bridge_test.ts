@@ -1,5 +1,5 @@
 import { assert, assertEquals } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
-import { runV10ViaBridge } from './backtest_bridge.ts';
+import { checkEngineAvailability, runV10ViaBridge } from './backtest_bridge.ts';
 import { buildV10ReferenceSpecification } from './v10_reference.ts';
 
 async function withFakeBridge(
@@ -97,4 +97,35 @@ Deno.test('BB-05 a bridge that never responds is aborted at the configured timeo
       assert(elapsed < 4000, `expected an early abort, took ${elapsed}ms`);
     },
   );
+});
+
+Deno.test('BB-06 (§5) checkEngineAvailability reports true when the bridge health check says the engine is ready', async () => {
+  await withFakeBridge(
+    () => new Response(JSON.stringify({ ok: true, engines: { PAULO_TREND_FIBONACCI_V10: { available: true, reason: null } } }), {
+      status: 200, headers: { 'Content-Type': 'application/json' },
+    }),
+    async (baseUrl) => {
+      const result = await checkEngineAvailability({ baseUrl, timeoutMs: 2000 });
+      assertEquals(result, { available: true, reason: null });
+    },
+  );
+});
+
+Deno.test('BB-07 (§5) checkEngineAvailability surfaces the bridges own unavailable reason, never fabricating one', async () => {
+  await withFakeBridge(
+    () => new Response(JSON.stringify({
+      ok: true, engines: { PAULO_TREND_FIBONACCI_V10: { available: false, reason: 'win1_csv_path does not point at a real file' } },
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    async (baseUrl) => {
+      const result = await checkEngineAvailability({ baseUrl, timeoutMs: 2000 });
+      assertEquals(result.available, false);
+      assertEquals(result.reason, 'win1_csv_path does not point at a real file');
+    },
+  );
+});
+
+Deno.test('BB-08 (§5) checkEngineAvailability against an unreachable bridge reports unavailable, never throws', async () => {
+  const result = await checkEngineAvailability({ baseUrl: 'http://127.0.0.1:1', timeoutMs: 1000 });
+  assertEquals(result.available, false);
+  assert(typeof result.reason === 'string' && result.reason.length > 0);
 });

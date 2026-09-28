@@ -1,4 +1,5 @@
-"""INSIGHTVALUES-ROBOT-BUILDER-MACRO-06 §12-13 -- Backtest bridge service.
+"""INSIGHTVALUES-ROBOT-BUILDER-MACRO-06 §12-13 / MACRO-07 §5-7 -- Backtest
+bridge service.
 
 A minimal, stdlib-only HTTP service exposing ONE fixed, pre-coded engine
 (Strategy #001/V10, PAULO_TREND_FIBONACCI_V10) through a strict JSON
@@ -30,9 +31,19 @@ Security properties, by construction:
     error, never a fabricated result.
 
 Run (from a machine that has the real WIN1! CSV available locally):
-    WIN1_CSV_PATH="C:/path/to/BMFBOVESPA_DLY_WIN1_5_1.csv" \
-    STRATEGY_FIDELITY_PYTHONPATH="C:/Users/jpaul/Documents/Codex/2026-08-10/referenced-chatgpt-conversation-this-is-an/insightvalues-quant" \
-    python tools/backtest_bridge/backtest_service.py
+    1. Copy bridge_config.example.json to bridge_config.json (gitignored)
+       next to this file and fill in the two real local paths, once.
+    2. python tools/backtest_bridge/backtest_service.py
+
+Macro-07 §5-7 collapsed what used to be two environment variables an
+operator had to export by hand before every run
+(STRATEGY_FIDELITY_PYTHONPATH, WIN1_CSV_PATH) into that one versioned
+config file, read once at process start -- see bridge_config.py. This
+was never end-user-facing plumbing (the TS/Flutter/HTTP paths only ever
+send dataset_id/engine_id, never a filesystem path); it narrows the
+remaining operator-facing surface for whoever runs this Lab-only bridge.
+GET /health reports, per engine, whether it is actually usable right
+now, so a caller can know before spending a POST /backtest round-trip.
 
 This process is started manually by an operator for local/Lab use only.
 It is never invoked automatically by AEF, a webhook, or any other
@@ -48,18 +59,21 @@ import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
+from bridge_config import BridgeConfig, describe_v10_availability, load_bridge_config
+
 MAX_BODY_BYTES = 16 * 1024
 HOST = "127.0.0.1"
 PORT = int(os.environ.get("BACKTEST_BRIDGE_PORT", "8737"))
 
-_STRATEGY_FIDELITY_PATH = os.environ.get("STRATEGY_FIDELITY_PYTHONPATH")
-if _STRATEGY_FIDELITY_PATH and _STRATEGY_FIDELITY_PATH not in sys.path:
-    sys.path.insert(0, _STRATEGY_FIDELITY_PATH)
+BRIDGE_CONFIG: BridgeConfig = load_bridge_config()
+if BRIDGE_CONFIG.strategy_fidelity_pythonpath and BRIDGE_CONFIG.strategy_fidelity_pythonpath not in sys.path:
+    sys.path.insert(0, BRIDGE_CONFIG.strategy_fidelity_pythonpath)
+
 
 # Fixed, server-owned dataset registry -- the ONLY way a dataset_id ever
 # becomes a filesystem path. The request body never supplies a path.
 def _dataset_paths() -> dict[str, str]:
-    win1 = os.environ.get("WIN1_CSV_PATH")
+    win1 = BRIDGE_CONFIG.win1_csv_path
     return {"win1-5min-qt01c3": win1} if win1 else {}
 
 
@@ -78,7 +92,7 @@ def _run_v10(dataset_id: str, params: dict) -> dict:
     if not csv_path:
         return {"ok": False, "error": "UNKNOWN_DATASET", "detail": dataset_id}
     if not os.path.isfile(csv_path):
-        return {"ok": False, "error": "DATASET_UNAVAILABLE", "detail": "WIN1_CSV_PATH does not point at a real file"}
+        return {"ok": False, "error": "DATASET_UNAVAILABLE", "detail": "win1_csv_path (bridge_config.json) does not point at a real file"}
 
     registry = make_win_registry()
     pipeline = HistoricalDataPipeline()
@@ -160,6 +174,18 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def do_GET(self) -> None:  # noqa: N802 (stdlib method name)
+        if self.path != "/health":
+            self._send_json(404, {"ok": False, "error": "NOT_FOUND"})
+            return
+        v10_available, v10_reason = describe_v10_availability(BRIDGE_CONFIG)
+        self._send_json(200, {
+            "ok": True,
+            "engines": {
+                "PAULO_TREND_FIBONACCI_V10": {"available": v10_available, "reason": v10_reason},
+            },
+        })
 
     def do_POST(self) -> None:  # noqa: N802 (stdlib method name)
         if self.path != "/backtest":

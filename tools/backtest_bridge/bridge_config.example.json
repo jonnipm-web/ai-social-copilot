@@ -1,0 +1,5 @@
+{
+  "_comment": "Copy this file to bridge_config.json (gitignored) and fill in the two real local paths for your machine. Never commit bridge_config.json -- it names a local filesystem location, not a secret, but it is machine-specific and the real WIN1! CSV must never be redistributed (Macro-05 SS17/SS39, license UNCLEAR_NOT_DISTRIBUTED).",
+  "strategy_fidelity_pythonpath": "C:/path/to/insightvalues-quant",
+  "win1_csv_path": "C:/path/to/BMFBOVESPA_DLY_WIN1_5_1.csv"
+}

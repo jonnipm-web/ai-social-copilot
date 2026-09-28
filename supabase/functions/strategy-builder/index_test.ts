@@ -390,6 +390,17 @@ Deno.test('SB-20 (Codex final audit, P2 fix) a job-row write failure AFTER a rea
   assert(store.jobs.every((j) => j.status !== 'FAILED'));
 });
 
+Deno.test('SB-21 (§5) engine_status reports the in-process engine always available and the external one unavailable when the bridge is unreachable', async () => {
+  store = new MemoryStore();
+  const r = await call({ op: 'engine_status' });
+  assertEquals(r.status, 200);
+  const byId = new Map(r.json.engines.map((e: { engineId: string }) => [e.engineId, e]));
+  assertEquals(byId.get('GENERIC_RULE_ENGINE'), { engineId: 'GENERIC_RULE_ENGINE', available: true, reason: null });
+  const v10 = byId.get('PAULO_TREND_FIBONACCI_V10') as { available: boolean; reason: string | null };
+  assertEquals(v10.available, false);
+  assert(typeof v10.reason === 'string' && v10.reason.length > 0);
+});
+
 Deno.test('SB-16 non-admin plans are denied for every new op before the store is touched', async () => {
   store = new MemoryStore();
   for (const payload of [
@@ -399,6 +410,7 @@ Deno.test('SB-16 non-admin plans are denied for every new op before the store is
     { op: 'run_backtest', strategyVersionId: 'cccccccc-0000-4000-8000-000000000001', datasetId: 'synthetic-fixture-5min-v1', engineId: 'GENERIC_RULE_ENGINE' },
     { op: 'compare_versions', versionAId: 'cccccccc-0000-4000-8000-000000000001', versionBId: 'cccccccc-0000-4000-8000-000000000002' },
     { op: 'analyze_backtest_result', strategyVersionId: 'cccccccc-0000-4000-8000-000000000001' },
+    { op: 'engine_status' },
   ]) {
     const r = await call(payload, 'jwt-a', 'free');
     assertEquals([r.status, r.json.error], [403, 'MODULE_NOT_AVAILABLE'], JSON.stringify(payload));

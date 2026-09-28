@@ -23,13 +23,15 @@ import { createStrategySpecification, type StrategySpecification, type StrategyS
 import { parseNaturalLanguageStrategyDraft } from '../_shared/strategy/nl_draft.ts';
 import type { StrategyErrorCode } from '../_shared/strategy/errors.ts';
 import { getDataset } from '../_shared/strategy/dataset_registry.ts';
-import { engineAcceptsRunRequest, getEngine, type EngineId } from '../_shared/strategy/engine_registry.ts';
+import { ENGINE_REGISTRY, engineAcceptsRunRequest, getEngine, type EngineId } from '../_shared/strategy/engine_registry.ts';
 import { runGenericRuleEngine } from '../_shared/strategy/generic_rule_engine.ts';
 import { syntheticFixtureBars } from '../_shared/strategy/generic_engine_fixtures.ts';
 import { validateOhlcvBars } from '../_shared/strategy/ohlcv.ts';
 import { buildCanonicalBacktestResult, type CanonicalBacktestResultInput } from '../_shared/strategy/backtest_result.ts';
 import { compareBacktestResults } from '../_shared/strategy/comparison.ts';
-import { runV10ViaBridge, DEFAULT_BRIDGE_TIMEOUT_MS, type BridgeCostConfig } from '../_shared/strategy/backtest_bridge.ts';
+import {
+  checkEngineAvailability, runV10ViaBridge, DEFAULT_BRIDGE_TIMEOUT_MS, type BridgeCostConfig,
+} from '../_shared/strategy/backtest_bridge.ts';
 import { V10_REFERENCE_SPEC_INPUT } from '../_shared/strategy/v10_reference.ts';
 import { GENERIC_REFERENCE_SPEC_INPUT } from '../_shared/strategy/generic_reference_strategy.ts';
 import { analyzeBacktestResult } from '../_shared/strategy/ive_strategy_analyst.ts';
@@ -43,7 +45,7 @@ export interface StrategyBuilderDeps {
 const OPS = new Set([
   'validate', 'draft_from_text', 'create', 'list', 'get',
   'create_version', 'list_versions', 'run_backtest', 'compare_versions', 'clone_reference',
-  'analyze_backtest_result',
+  'analyze_backtest_result', 'engine_status',
 ]);
 
 interface ValidateOp { readonly op: 'validate'; readonly spec: StrategySpecificationInput }
@@ -63,10 +65,11 @@ interface RunBacktestOp {
 interface CompareVersionsOp { readonly op: 'compare_versions'; readonly versionAId: string; readonly versionBId: string }
 interface CloneReferenceOp { readonly op: 'clone_reference'; readonly reference: 'V10' | 'GENERIC' }
 interface AnalyzeBacktestResultOp { readonly op: 'analyze_backtest_result'; readonly strategyVersionId: string }
+interface EngineStatusOp { readonly op: 'engine_status' }
 type ParsedOp =
   | ValidateOp | DraftFromTextOp | CreateOp | ListOp | GetOp
   | CreateVersionOp | ListVersionsOp | RunBacktestOp | CompareVersionsOp | CloneReferenceOp
-  | AnalyzeBacktestResultOp;
+  | AnalyzeBacktestResultOp | EngineStatusOp;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -127,6 +130,8 @@ function parseOp(body: unknown): { ok: true; value: ParsedOp } | { ok: false; co
     case 'analyze_backtest_result':
       if (!isUuid(b.strategyVersionId)) return { ok: false, code: 'INVALID_BODY' };
       return { ok: true, value: { op: 'analyze_backtest_result', strategyVersionId: b.strategyVersionId } };
+    case 'engine_status':
+      return { ok: true, value: { op: 'engine_status' } };
     default:
       return { ok: false, code: 'UNKNOWN_OP' };
   }
@@ -526,6 +531,21 @@ export async function handler(
         const claims = analyzeBacktestResult(results[0].canonicalResult);
         finish(200, null);
         return jsonResponse({ correlation_id: cid, claims });
+      }
+      case 'engine_status': {
+        // MACRO-07 §5: lets the UI show "V10 unavailable right now" up
+        // front instead of only after a user clicks Run and waits for a
+        // failed job. IN_PROCESS engines never leave this process, so
+        // they are always available; only EXTERNAL_PYTHON_SERVICE
+        // engines need an actual health check against the bridge.
+        const baseUrl = deps.bridgeBaseUrl ?? Deno.env.get('BACKTEST_BRIDGE_URL') ?? 'http://127.0.0.1:8737';
+        const engines = await Promise.all(ENGINE_REGISTRY.map(async (e) => {
+          if (e.kind === 'IN_PROCESS') return { engineId: e.engineId, available: true, reason: null };
+          const status = await checkEngineAvailability({ baseUrl, timeoutMs: DEFAULT_BRIDGE_TIMEOUT_MS });
+          return { engineId: e.engineId, available: status.available, reason: status.reason };
+        }));
+        finish(200, null);
+        return jsonResponse({ correlation_id: cid, engines });
       }
     }
   } catch {
