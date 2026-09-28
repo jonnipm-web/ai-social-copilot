@@ -273,6 +273,10 @@ IconData drawerIconFor(String moduleId) {
     'campaigns': Icons.campaign_rounded,
     'performance': Icons.insights_rounded,
     'roi-tracker': Icons.trending_up_rounded,
+    // INSIGHTVALUES-FINANCIAL-PRODUCT-MACRO-08 -- Strategy Lab commercially
+    // enabled (COMMERCIAL/free); dedicated icon per this map's own coverage
+    // contract (app_drawer_test.dart's drawerIconFor coverage check).
+    'strategy-builder': Icons.candlestick_chart_rounded,
   };
   return icons[moduleId] ?? Icons.circle_outlined;
 }

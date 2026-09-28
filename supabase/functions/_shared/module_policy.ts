@@ -155,8 +155,8 @@ export const MODULE_POLICY: ModulePolicyDoc =
     "impact": { "lifecycle": "EXPERIMENTAL", "minimumPlan": "free", "actionClass": "REVERSIBLE" },
     "quant-analytics": { "lifecycle": "INTERNAL", "minimumPlan": "free", "actionClass": "READ_ONLY" },
     "quant-watchlists": { "lifecycle": "INTERNAL", "minimumPlan": "free", "actionClass": "REVERSIBLE" },
-    "strategy-builder": { "lifecycle": "EXPERIMENTAL", "minimumPlan": "free", "actionClass": "REVERSIBLE" },
-    "ive-strategy-simulation": { "lifecycle": "EXPERIMENTAL", "minimumPlan": "free", "actionClass": "CONSEQUENTIAL" }
+    "strategy-builder": { "lifecycle": "COMMERCIAL", "minimumPlan": "free", "actionClass": "REVERSIBLE" },
+    "ive-strategy-simulation": { "lifecycle": "BETA", "minimumPlan": "free", "actionClass": "CONSEQUENTIAL" }
   },
   "edgeFunctions": {
     "analyze-website": { "kind": "MODULE", "moduleId": "website-analyzer" },

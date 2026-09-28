@@ -59,28 +59,38 @@ const OPS = new Set([
   'propose_variants', 'record_experiment', 'list_experiments', 'run_research_loop', 'run_simulation',
 ]);
 
-/** MACRO-07 §33-35: robustness/experiment ops are the first real
- * plan-gated Strategy Intelligence surface -- validation, security and
- * the safety-critical ops above stay ungated (§35: "Safety is not
- * Premium"); only the RESEARCH capability itself requires pro/premium. */
-const RESEARCH_OPS = new Set(['propose_variants', 'record_experiment', 'list_experiments', 'run_research_loop', 'run_simulation']);
+/** MACRO-07/08 §10, §33-35: robustness/experiment ops require Pro;
+ * simulation (§10: "internal governed simulation" is a named Premium
+ * differentiator) requires Premium. Validation, security and every
+ * other safety-critical op stay ungated (§35/§11 of Macro-08: "Safety
+ * is not Premium"). */
+const OP_MIN_PLAN: Readonly<Record<string, 'pro' | 'premium'>> = Object.freeze({
+  propose_variants: 'pro',
+  record_experiment: 'pro',
+  list_experiments: 'pro',
+  run_research_loop: 'pro',
+  run_simulation: 'premium',
+});
 const PLAN_RANK: Record<string, number> = { free: 0, pro: 1, premium: 2 };
+
+export function requiredPlanFor(op: string): 'pro' | 'premium' | null {
+  return OP_MIN_PLAN[op] ?? null;
+}
 
 /**
  * Extracted as a pure function specifically so it is unit-testable
- * without a real HTTP round-trip: the module's CURRENT lifecycle
- * (EXPERIMENTAL) makes it impossible to reach this code at all as a
- * non-admin caller (requireModuleAccess denies everyone else first),
- * so an end-to-end test can only ever exercise the ADMIN_ROLE bypass
- * branch, never the plan-tier denial branch it exists to enforce for
- * a FUTURE non-admin caller. This function lets that denial branch be
- * verified directly, honestly, rather than left untested because the
- * integration path to reach it does not exist yet.
+ * without a real HTTP round-trip. Macro-08 promoted strategy-builder
+ * from EXPERIMENTAL/admin-only to COMMERCIAL: this branch is no longer
+ * theoretical -- a real free/pro/premium user now reaches this code
+ * directly via PLAN_ENTITLED, and this is the genuine denial path for
+ * them. ADMIN_ROLE still bypasses it, for the same parity reason the
+ * outer module gate does (admins reach every module).
  */
-export function planAllowsResearchOp(op: string, plan: string, decisionReason: string): boolean {
-  if (!RESEARCH_OPS.has(op)) return true;
+export function planAllowsOp(op: string, plan: string, decisionReason: string): boolean {
+  const required = requiredPlanFor(op);
+  if (!required) return true;
   if (decisionReason === 'ADMIN_ROLE') return true;
-  return (PLAN_RANK[plan] ?? 0) >= PLAN_RANK.pro;
+  return (PLAN_RANK[plan] ?? 0) >= PLAN_RANK[required];
 }
 
 interface ValidateOp { readonly op: 'validate'; readonly spec: StrategySpecificationInput }
@@ -227,8 +237,8 @@ function parseOp(body: unknown): { ok: true; value: ParsedOp } | { ok: false; co
   }
 }
 
-function errorResponse(code: string, correlationId: string, status: number): Response {
-  return new Response(JSON.stringify({ error: code, correlation_id: correlationId }), {
+function errorResponse(code: string, correlationId: string, status: number, extra?: Record<string, unknown>): Response {
+  return new Response(JSON.stringify({ error: code, correlation_id: correlationId, ...extra }), {
     status,
     headers: { ...strategyCorsHeaders, 'Content-Type': 'application/json' },
   });
@@ -365,8 +375,13 @@ export async function handler(
   if (!parsed.ok) return errorResponse(parsed.code, cid, 400);
   const action = parsed.value;
 
-  if (!planAllowsResearchOp(action.op, access.subject.plan ?? 'free', access.decision.reason)) {
-    return errorResponse('PLAN_UPGRADE_REQUIRED', cid, 403);
+  if (!planAllowsOp(action.op, access.subject.plan ?? 'free', access.decision.reason)) {
+    // Macro-08 §13: structured upgrade state, never a bare 403 -- the
+    // client can render "this needs Pro/Premium" instead of a generic
+    // access-denied message.
+    return errorResponse('PLAN_UPGRADE_REQUIRED', cid, 403, {
+      requiredPlan: requiredPlanFor(action.op), currentPlan: access.subject.plan ?? 'free', op: action.op,
+    });
   }
 
   const started = performance.now();

@@ -458,10 +458,25 @@ Deno.test("RU-30 STRATEGY_SIMULATION_ACTION_TABLE maps only approve_simulation_r
   }
 });
 
-Deno.test("RU-31 strategy-simulation-runtime's entitlement gate is 'ive-strategy-simulation' (EXPERIMENTAL/admin-only), not strategy-builder or ive-quant, and not the reverse", async () => {
-  for (const role of ["free", "pro", "premium", "beta_tester"]) {
+Deno.test("RU-31 strategy-simulation-runtime's entitlement gate is 'ive-strategy-simulation' (BETA/beta_tester, promoted from admin-only in Macro-08), not strategy-builder or ive-quant, and not the reverse", async () => {
+  // A plain free/pro/premium role (no beta_tester) is still denied --
+  // BETA_ELIGIBILITY_REQUIRED, same posture as before this module left
+  // EXPERIMENTAL, just via a different denial reason.
+  for (const role of ["free", "pro", "premium"]) {
     const c = call({ op: "propose", intent: intent() }, { role, moduleId: "ive-strategy-simulation" });
-    assertEquals((await c.res).status, 403, role);
+    const res = await c.res;
+    assertEquals(res.status, 403, role);
+    const body = await res.clone().json().catch(() => ({}));
+    assertEquals(body.error, "MODULE_NOT_AVAILABLE", role);
+  }
+  // beta_tester (plan 'free', which meets this module's minimumPlan)
+  // now genuinely passes the module gate -- this module is no longer
+  // admin-only.
+  const beta = call({ op: "propose", intent: intent() }, { role: "beta_tester", moduleId: "ive-strategy-simulation" });
+  const betaRes = await beta.res;
+  if (betaRes.status === 403) {
+    const body = await betaRes.clone().json().catch(() => ({}));
+    assert(body.error !== "MODULE_NOT_AVAILABLE", `beta_tester: ${JSON.stringify(body)}`);
   }
   const admin = call({ op: "propose", intent: intent() }, { role: "admin", moduleId: "ive-strategy-simulation" });
   const res = await admin.res;

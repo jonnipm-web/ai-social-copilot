@@ -119,7 +119,7 @@ for (const { fn, moduleId, lifecycle, minimumPlan } of moduleFunctions) {
     assertEquals(fetchCalls, []);
   });
 
-  if (lifecycle !== 'COMMERCIAL') {
+  if (lifecycle === 'EXPERIMENTAL' || lifecycle === 'INTERNAL') {
     Deno.test(`GH ${fn}: '${moduleId}' is ${lifecycle} → every non-admin plan gets 403 MODULE_NOT_AVAILABLE (forged body ignored)`, async () => {
       for (const role of ['free', 'pro', 'premium', 'beta_tester']) {
         reset();
@@ -131,6 +131,35 @@ for (const { fn, moduleId, lifecycle, minimumPlan } of moduleFunctions) {
         assertEquals(quotaCalls, 0, role);
         assertEquals(fetchCalls, [], role);
       }
+    });
+  } else if (lifecycle === 'ALPHA' || lifecycle === 'BETA' || lifecycle === 'RELEASE_CANDIDATE') {
+    // INSIGHTVALUES-FINANCIAL-PRODUCT-MACRO-08 -- the first BETA-lifecycle
+    // MODULE-kind function this generic sweep has ever exercised
+    // (ive-strategy-simulation). A plain free/pro/premium role (no
+    // beta_tester) must still be denied -- BETA_ELIGIBILITY_REQUIRED, not
+    // the EXPERIMENTAL/INTERNAL-only MODULE_NOT_AVAILABLE-for-everyone
+    // shape the block above asserts. A beta_tester with a sufficient plan
+    // (this module's minimumPlan) must actually pass the gate.
+    Deno.test(`GH ${fn}: '${moduleId}' is ${lifecycle} → a non-beta_tester role is denied BETA_ELIGIBILITY_REQUIRED regardless of plan`, async () => {
+      for (const role of ['free', 'pro', 'premium']) {
+        reset();
+        const res = await handlers.get(fn)!(req('session-jwt'), auth, quota, fakeSubjectSource(role));
+        assertEquals(res.status, 403, role);
+        const body = await res.json();
+        assertEquals(body.error, 'MODULE_NOT_AVAILABLE');
+        assertEquals(body.module_id, moduleId);
+        assertEquals(quotaCalls, 0, role);
+        assertEquals(fetchCalls, [], role);
+      }
+    });
+    Deno.test(`GH ${fn}: '${moduleId}' is ${lifecycle} → beta_tester with a sufficient plan passes the module gate`, async () => {
+      reset();
+      const src = fakeSubjectSource('beta_tester');
+      const res = await handlers.get(fn)!(req('session-jwt', {}), auth, quota, src);
+      assertEquals(src.calls, 1, `${fn} must consult the entitlement source exactly once`);
+      const body = await res.clone().json().catch(() => ({}));
+      assert(![401, 403, 503].includes(res.status) || !['AUTH_REQUIRED', 'MODULE_NOT_AVAILABLE', 'MODULE_DISABLED', 'PLAN_REQUIRED', 'ENTITLEMENT_UNAVAILABLE'].includes(body.error),
+        `${fn} was blocked for a beta_tester: ${res.status} ${JSON.stringify(body)}`);
     });
   } else if (minimumPlan === 'free') {
     Deno.test(`GH ${fn}: '${moduleId}' is COMMERCIAL/free → a free user passes the gate (legacy behavior preserved)`, async () => {

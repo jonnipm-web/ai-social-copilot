@@ -16,7 +16,7 @@ import type { CanonicalBacktestResult } from '../_shared/strategy/backtest_resul
 import { V10_REFERENCE_SPEC_INPUT } from '../_shared/strategy/v10_reference.ts';
 import { GENERIC_REFERENCE_SPEC_INPUT } from '../_shared/strategy/generic_reference_strategy.ts';
 import { StrategyLimitReachedError } from '../_shared/strategy_server.ts';
-import { handler, planAllowsResearchOp, type StrategyBuilderDeps } from './index.ts';
+import { handler, planAllowsOp, type StrategyBuilderDeps } from './index.ts';
 
 globalThis.fetch = () => Promise.reject(new Error('network is forbidden in strategy-builder tests'));
 
@@ -228,15 +228,24 @@ Deno.test('SB-06 another user cannot list or get a foreign strategy', async () =
   assertEquals(foreignGet.status, 404);
 });
 
-Deno.test('SB-07 anonymous, forged token and non-admin plans are denied before the store is touched', async () => {
+Deno.test('SB-07 anonymous, forged token and an unrecognized plan are denied before the store is touched', async () => {
   store = new MemoryStore();
   assertEquals((await call({ op: 'list' }, null)).status, 401);
   assertEquals((await call({ op: 'list' }, 'forged')).status, 401);
-  for (const role of ['free', 'pro', 'premium', 'beta_tester']) {
-    const r = await call({ op: 'create', spec: V10_REFERENCE_SPEC_INPUT }, 'jwt-a', role);
-    assertEquals([r.status, r.json.error], [403, 'MODULE_NOT_AVAILABLE'], role);
-  }
+  // 'enterprise' is not a real legacy profiles.role value -- fails closed,
+  // never guessed at a plan (mapLegacyProfileRole -> plan: null).
+  const r = await call({ op: 'create', spec: V10_REFERENCE_SPEC_INPUT }, 'jwt-a', 'enterprise');
+  assertEquals(r.status, 503);
   assertEquals(store.strategies.length, 0);
+});
+
+Deno.test('SB-43 (Macro-08 §5-6) strategy-builder is COMMERCIAL/free -- a real free/pro/premium/beta_tester user (no admin role) can now create a strategy directly', async () => {
+  for (const role of ['free', 'pro', 'premium', 'beta_tester']) {
+    store = new MemoryStore();
+    const r = await call({ op: 'create', spec: V10_REFERENCE_SPEC_INPUT }, 'jwt-a', role);
+    assertEquals(r.status, 200, role);
+    assertEquals(store.strategies.length, 1, role);
+  }
 });
 
 Deno.test('SB-08 an unknown op / malformed body is a structured 400, never a 500', async () => {
@@ -489,14 +498,20 @@ Deno.test('SB-22 (§14) run_backtest against the research and holdout segment da
   assertEquals(Math.sign(holdout.json.result.netPnl), -1);
 });
 
-Deno.test('SB-23 (§33-35) planAllowsResearchOp: pure gate logic -- admin bypasses, pro/premium pass, free is denied', () => {
-  assertEquals(planAllowsResearchOp('propose_variants', 'free', 'ADMIN_ROLE'), true);
-  assertEquals(planAllowsResearchOp('propose_variants', 'free', 'PLAN_ENTITLED'), false);
-  assertEquals(planAllowsResearchOp('propose_variants', 'pro', 'PLAN_ENTITLED'), true);
-  assertEquals(planAllowsResearchOp('propose_variants', 'premium', 'PLAN_ENTITLED'), true);
+Deno.test('SB-23 (§33-35) planAllowsOp: pure gate logic -- admin bypasses, pro/premium pass research ops, free is denied', () => {
+  assertEquals(planAllowsOp('propose_variants', 'free', 'ADMIN_ROLE'), true);
+  assertEquals(planAllowsOp('propose_variants', 'free', 'PLAN_ENTITLED'), false);
+  assertEquals(planAllowsOp('propose_variants', 'pro', 'PLAN_ENTITLED'), true);
+  assertEquals(planAllowsOp('propose_variants', 'premium', 'PLAN_ENTITLED'), true);
   // Non-research ops are never gated by this function -- validation/
   // security stay ungated (§35).
-  assertEquals(planAllowsResearchOp('validate', 'free', 'PLAN_ENTITLED'), true);
+  assertEquals(planAllowsOp('validate', 'free', 'PLAN_ENTITLED'), true);
+});
+
+Deno.test('SB-42 (Macro-08 §10) run_simulation specifically requires Premium -- Pro alone is not enough', () => {
+  assertEquals(planAllowsOp('run_simulation', 'pro', 'PLAN_ENTITLED'), false);
+  assertEquals(planAllowsOp('run_simulation', 'premium', 'PLAN_ENTITLED'), true);
+  assertEquals(planAllowsOp('run_simulation', 'free', 'ADMIN_ROLE'), true);
 });
 
 Deno.test('SB-24 (§10/§19) propose_variants returns fit evidence and bounded proposals when the stop is flagged tight', async () => {
@@ -722,7 +737,7 @@ Deno.test('SB-41 (Codex final audit, P1-02 fix) analyze_backtest_result never se
   assertEquals(r.status, 404);
 });
 
-Deno.test('SB-16 non-admin plans are denied for every new op before the store is touched', async () => {
+Deno.test('SB-16 (Macro-08 §5-7) a real free user reaches every SAFE_USER_CAPABILITY op -- never MODULE_NOT_AVAILABLE, never PLAN_UPGRADE_REQUIRED', async () => {
   store = new MemoryStore();
   for (const payload of [
     { op: 'clone_reference', reference: 'V10' },
@@ -732,18 +747,51 @@ Deno.test('SB-16 non-admin plans are denied for every new op before the store is
     { op: 'compare_versions', versionAId: 'cccccccc-0000-4000-8000-000000000001', versionBId: 'cccccccc-0000-4000-8000-000000000002' },
     { op: 'analyze_backtest_result', strategyVersionId: 'cccccccc-0000-4000-8000-000000000001' },
     { op: 'engine_status' },
-    { op: 'propose_variants', strategyVersionId: 'cccccccc-0000-4000-8000-000000000001', datasetId: 'synthetic-fixture-5min-v1' },
-    {
-      op: 'record_experiment', strategyVersionId: 'cccccccc-0000-4000-8000-000000000001', category: 'BACKTEST',
-      datasetId: 'synthetic-fixture-5min-v1', segment: 'FULL', parametersChanged: null, reason: 'x', resultId: null, source: 'USER',
-    },
-    { op: 'list_experiments', strategyId: 'cccccccc-0000-4000-8000-000000000001' },
-    { op: 'run_research_loop', strategyVersionId: 'cccccccc-0000-4000-8000-000000000001', datasetId: 'synthetic-fixture-5min-v1' },
-    { op: 'run_simulation', strategyVersionId: 'cccccccc-0000-4000-8000-000000000001', datasetId: 'synthetic-fixture-5min-v1' },
   ]) {
     const r = await call(payload, 'jwt-a', 'free');
-    assertEquals([r.status, r.json.error], [403, 'MODULE_NOT_AVAILABLE'], JSON.stringify(payload));
+    assert(r.status !== 403 || !['MODULE_NOT_AVAILABLE', 'PLAN_UPGRADE_REQUIRED'].includes(r.json.error), JSON.stringify(payload) + ' -> ' + JSON.stringify(r.json));
+  }
+});
+
+Deno.test('SB-44 (Macro-08 §7, §10) a real free user is refused PLAN_UPGRADE_REQUIRED (not MODULE_NOT_AVAILABLE) on every research/simulation op, with the correct requiredPlan', async () => {
+  store = new MemoryStore();
+  for (const [payload, expectedPlan] of [
+    [{ op: 'propose_variants', strategyVersionId: 'cccccccc-0000-4000-8000-000000000001', datasetId: 'synthetic-fixture-5min-v1' }, 'pro'],
+    [{
+      op: 'record_experiment', strategyVersionId: 'cccccccc-0000-4000-8000-000000000001', category: 'BACKTEST',
+      datasetId: 'synthetic-fixture-5min-v1', segment: 'FULL', parametersChanged: null, reason: 'x', resultId: null, source: 'USER',
+    }, 'pro'],
+    [{ op: 'list_experiments', strategyId: 'cccccccc-0000-4000-8000-000000000001' }, 'pro'],
+    [{ op: 'run_research_loop', strategyVersionId: 'cccccccc-0000-4000-8000-000000000001', datasetId: 'synthetic-fixture-5min-v1' }, 'pro'],
+    [{ op: 'run_simulation', strategyVersionId: 'cccccccc-0000-4000-8000-000000000001', datasetId: 'synthetic-fixture-5min-v1' }, 'premium'],
+  ] as const) {
+    const r = await call(payload, 'jwt-a', 'free');
+    assertEquals(r.status, 403, JSON.stringify(payload));
+    assertEquals(r.json.error, 'PLAN_UPGRADE_REQUIRED', JSON.stringify(payload));
+    assertEquals(r.json.requiredPlan, expectedPlan, JSON.stringify(payload));
+    assertEquals(r.json.currentPlan, 'free', JSON.stringify(payload));
   }
   assertEquals(store.strategies.length, 0);
   assertEquals(store.jobs.length, 0);
+});
+
+Deno.test('SB-45 (Macro-08 §7) a real Pro user passes every research op but is still refused run_simulation (Premium-only)', async () => {
+  store = new MemoryStore();
+  const created = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT }, 'jwt-a', 'pro');
+  const versionId = created.json.version.id;
+  const proposeResult = await call({ op: 'propose_variants', strategyVersionId: versionId, datasetId: 'synthetic-fixture-5min-v1' }, 'jwt-a', 'pro');
+  assertEquals(proposeResult.status, 200);
+  const simResult = await call({ op: 'run_simulation', strategyVersionId: versionId, datasetId: 'synthetic-fixture-5min-v1' }, 'jwt-a', 'pro');
+  assertEquals(simResult.status, 403);
+  assertEquals(simResult.json.error, 'PLAN_UPGRADE_REQUIRED');
+  assertEquals(simResult.json.requiredPlan, 'premium');
+});
+
+Deno.test('SB-46 (Macro-08 §7) a real Premium user passes run_simulation', async () => {
+  store = new MemoryStore();
+  const created = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT }, 'jwt-a', 'premium');
+  const versionId = created.json.version.id;
+  const simResult = await call({ op: 'run_simulation', strategyVersionId: versionId, datasetId: 'synthetic-fixture-5min-v1' }, 'jwt-a', 'premium');
+  assertEquals(simResult.status, 200);
+  assertEquals(simResult.json.label, 'SIMULATION');
 });
