@@ -380,20 +380,26 @@ export class SupabaseStrategyStore implements StrategyStore {
     result: CanonicalBacktestResult,
     resultKind: ResultKind,
   ): Promise<StrategyBacktestResultRow> {
-    const { data, error } = await this.db.from('strategy_backtest_results').insert({
-      strategy_version_id: strategyVersionId,
-      user_id: userId,
-      dataset_id: result.datasetId,
-      dataset_hash: result.datasetHash,
-      methodology_status: result.methodologyStatus,
-      net_pnl: result.netPnl,
-      trade_count: result.tradeCount,
-      result_hash: result.resultHash,
-      canonical_result: result,
-      result_kind: resultKind,
-    }).select('id, strategy_version_id, dataset_id, dataset_hash, methodology_status, net_pnl, trade_count, result_hash, canonical_result, result_kind, created_at').single();
+    // Codex final audit re-verification (P1-02 remaining gap, fixed by
+    // 20261007000000): routed through the strategy_backtest_results_
+    // insert SECURITY DEFINER RPC, not a direct table insert --
+    // `authenticated` has no INSERT grant on strategy_backtest_results
+    // at all anymore, closing the same "bypass the app entirely via
+    // PostgREST" class of gap P1-01 already closed for
+    // strategy_experiments.
+    const { data, error } = await this.db.rpc('strategy_backtest_results_insert', {
+      p_strategy_version_id: strategyVersionId,
+      p_dataset_id: result.datasetId,
+      p_dataset_hash: result.datasetHash,
+      p_methodology_status: result.methodologyStatus,
+      p_net_pnl: result.netPnl,
+      p_trade_count: result.tradeCount,
+      p_result_hash: result.resultHash,
+      p_canonical_result: result,
+      p_result_kind: resultKind,
+    }).single();
     if (error || !data) throw new Error('backtest result insert failed');
-    return rowToBacktestResult(data);
+    return rowToBacktestResult(data as Record<string, unknown>);
   }
 
   async insertFailedBacktestJob(
