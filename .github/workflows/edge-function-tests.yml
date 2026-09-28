@@ -264,3 +264,69 @@ jobs:
           DENO_TESTING: "1"
         run: |
           deno test --allow-env --allow-read --allow-net=deno.land,esm.sh supabase/functions/impact-lab/
+
+  strategy-and-commercial-ci:
+    # Macro-10 §14/§41 (R-TEST-01 revalidation) — these Deno test files
+    # existed in the repo but were never referenced by any CI workflow;
+    # each was run locally first and confirmed green before being wired in
+    # here. project_ownership_realdb_test.ts and quota_realdb_test.ts are
+    # deliberately NOT included — they need a real Postgres instance, same
+    # as the disposable-db job below, and are tracked separately pending
+    # that rehearsal.
+    name: Strategy Builder core + commercial/billing Edge Functions (Macro-10 CI gap closure)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Type-check Strategy Builder core and commercial/billing Edge Functions
+        run: |
+          deno check supabase/functions/strategy-builder/*.ts supabase/functions/stripe-webhook/*.ts \
+            supabase/functions/_shared/stripe.ts supabase/functions/_shared/stripe_test.ts \
+            supabase/functions/create-checkout-session/*.ts supabase/functions/_shared/auth.ts \
+            supabase/functions/_shared/auth_test.ts supabase/functions/_shared/evidence_trust.ts \
+            supabase/functions/_shared/evidence_trust_test.ts supabase/functions/_shared/language.ts \
+            supabase/functions/_shared/language_test.ts supabase/functions/_shared/result_learning.ts \
+            supabase/functions/_shared/result_learning_test.ts supabase/functions/analyze-website/*.ts \
+            supabase/functions/extract-knowledge/*.ts supabase/functions/generate-campaign/*.ts \
+            supabase/functions/generate-strategy/*.ts supabase/functions/process-file/*.ts \
+            supabase/functions/_shared/strategy/*.ts
+
+      - name: Run Strategy Builder core tests (spec, engines, robustness, sensitivity, IVE analyst)
+        run: |
+          deno test --allow-env --allow-read --allow-net supabase/functions/_shared/strategy/
+
+      - name: Run Strategy Builder Edge Function tests
+        env:
+          DENO_TESTING: "1"
+        run: |
+          deno test --allow-env --allow-read --allow-net supabase/functions/strategy-builder/index_test.ts
+
+      - name: Run commercial/billing Edge Function tests (Stripe checkout + webhook)
+        env:
+          DENO_TESTING: "1"
+        run: |
+          deno test --allow-env --allow-read --allow-net \
+            supabase/functions/stripe-webhook/index_test.ts \
+            supabase/functions/_shared/stripe_test.ts \
+            supabase/functions/create-checkout-session/index_test.ts
+
+      - name: Run remaining shared-core and product Edge Function tests
+        env:
+          DENO_TESTING: "1"
+        run: |
+          deno test --allow-env --allow-read --allow-net \
+            supabase/functions/_shared/auth_test.ts \
+            supabase/functions/_shared/evidence_trust_test.ts \
+            supabase/functions/_shared/language_test.ts \
+            supabase/functions/_shared/result_learning_test.ts \
+            supabase/functions/analyze-website/index_test.ts \
+            supabase/functions/extract-knowledge/index_test.ts \
+            supabase/functions/generate-campaign/index_test.ts \
+            supabase/functions/generate-strategy/index_test.ts \
+            supabase/functions/process-file/index_test.ts
