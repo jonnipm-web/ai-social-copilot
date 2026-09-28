@@ -324,7 +324,20 @@ export class SupabaseStrategyStore implements StrategyStore {
     const { data: versionData, error: versionError } = await this.db.from('strategy_versions')
       .insert({ strategy_id: strategy.id, user_id: userId, version_number: 1, spec, spec_hash: specHash })
       .select('id, strategy_id, version_number, spec, spec_hash, created_at').single();
-    if (versionError || !versionData) throw new Error('strategy version create failed');
+    if (versionError || !versionData) {
+      // Codex adversarial review (Macro-08, diff vs 15d4177): these two
+      // inserts are not one transaction (PostgREST has no cross-request
+      // transaction), so a version-insert failure used to leave an orphan
+      // `strategies` row behind -- one with no usable version, but still
+      // counted by strategies_enforce_plan_limit's trigger, permanently
+      // burning a slot out of the caller's (now real, paying) plan limit on
+      // every retry. Best-effort compensating delete: if it also fails,
+      // the original version error is still what the caller sees (never
+      // silently swallowed), and the orphan is at worst a pre-existing
+      // failure mode, not a NEW one introduced by this cleanup attempt.
+      await this.db.from('strategies').delete().eq('id', strategy.id).eq('user_id', userId);
+      throw new Error('strategy version create failed');
+    }
     return { strategy, version: rowToVersion(versionData) };
   }
 

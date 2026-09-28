@@ -101,9 +101,26 @@ DROP TRIGGER IF EXISTS strategies_before_update ON public.strategies;
 CREATE TRIGGER strategies_before_update BEFORE UPDATE ON public.strategies
   FOR EACH ROW EXECUTE FUNCTION public.strategies_touch_updated_at();
 
--- ── module entitlement predicate (EXPERIMENTAL = admin-only) ───────────────
+-- ── module entitlement predicate (Macro-08 §5-11: strategy-builder is now
+-- COMMERCIAL/free, module_policy.ts -- no longer admin-only) ──────────────
 -- SECURITY INVOKER: reads only the caller's OWN profile / role rows under
 -- their existing RLS; grants nothing. Fails closed (NULL uid → false).
+--
+-- Codex adversarial review (Macro-08, diff vs 15d4177) found this predicate
+-- still hardcoded to role='admin' after the Edge Function's own entitlement
+-- gate (supabase/functions/_shared/module_policy.ts) was promoted to allow
+-- every resolvable plan: a real free/pro/premium user would pass
+-- requireModuleAccess in strategy-builder/index.ts and then get a bare RLS
+-- failure on every list/create/version/backtest read or write. Fixed by
+-- widening the predicate to the five profiles.role values entitlement.ts's
+-- mapLegacyProfileRole() exhaustively maps to a resolvable plan (free, pro,
+-- premium, beta_tester, admin) -- any other value stays denied here too,
+-- matching mapLegacyProfileRole's own "anything else -> plan:null -> deny".
+-- This predicate stays MODULE-level only (does this role reach the tables at
+-- all); the finer PER-OPERATION plan gate (pro for propose_variants/
+-- record_experiment/list_experiments/run_research_loop, premium for
+-- run_simulation) is enforced separately in strategy-builder/index.ts's
+-- planAllowsOp -- RLS has no visibility into which op a request is for.
 CREATE OR REPLACE FUNCTION public.strategy_builder_access_allowed()
 RETURNS boolean LANGUAGE plpgsql STABLE SECURITY INVOKER SET search_path = public, pg_temp AS $$
 DECLARE
@@ -113,7 +130,7 @@ BEGIN
   IF uid IS NULL THEN
     RETURN false;
   END IF;
-  SELECT EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = uid AND p.role = 'admin') INTO allowed;
+  SELECT EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = uid AND p.role IN ('free', 'pro', 'premium', 'beta_tester', 'admin')) INTO allowed;
   IF NOT allowed AND to_regclass('public.subject_roles') IS NOT NULL THEN
     EXECUTE 'SELECT EXISTS (SELECT 1 FROM public.subject_roles r WHERE r.subject_type = ''user'' AND r.subject_id = $1 AND r.role = ''admin'')'
       INTO allowed USING uid;

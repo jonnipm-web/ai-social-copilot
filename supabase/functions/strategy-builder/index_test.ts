@@ -8,6 +8,7 @@
 import { assert, assertEquals } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
 import type { AuthClient } from '../_shared/auth.ts';
 import { fakeSubjectSource } from '../_shared/entitlement_test_support.ts';
+import { MODULE_POLICY } from '../_shared/module_policy.ts';
 import type {
   ResultKind, StrategyBacktestJobRow, StrategyBacktestResultRow, StrategyExperimentRow, StrategyRow, StrategyStore, StrategyVersionRow,
 } from '../_shared/strategy_server.ts';
@@ -801,4 +802,29 @@ Deno.test('SB-46 (Macro-08 §7) a real Premium user passes run_simulation', asyn
   const simResult = await call({ op: 'run_simulation', strategyVersionId: versionId, datasetId: 'synthetic-fixture-5min-v1' }, 'jwt-a', 'premium');
   assertEquals(simResult.status, 200);
   assertEquals(simResult.json.label, 'SIMULATION');
+});
+
+Deno.test('SB-48 drift: the DB entitlement predicate of strategy-builder matches its server COMMERCIAL/free lifecycle (Codex adversarial review, Macro-08 diff vs 15d4177)', async () => {
+  // Codex found: module_policy.ts promotes strategy-builder to COMMERCIAL/
+  // free (real non-admin users pass the Edge Function's entitlement gate),
+  // but the migration's own DB predicate was still hardcoded to
+  // role='admin' -- every RLS policy on strategies/strategy_versions/
+  // strategy_backtest_results depends on it, so a real free/pro/premium
+  // user would pass the handler gate and then get a bare RLS failure on
+  // every read/write. This test pins BOTH sides of that contract so they
+  // cannot silently diverge again: mirrors QB-16
+  // (_shared/quant/boundary_test.ts) for quant-watchlists's own
+  // INTERNAL/EXPERIMENTAL predicate, inverted for a COMMERCIAL module.
+  const lifecycle = MODULE_POLICY.modules['strategy-builder'].lifecycle;
+  assertEquals(lifecycle, 'COMMERCIAL', `lifecycle changed to ${lifecycle} -- update this test's expected predicate before re-pinning`);
+  const sql = await Deno.readTextFile(new URL('../../migrations/20261002000000_strategy_builder.sql', import.meta.url));
+  const fn = sql.slice(sql.indexOf('FUNCTION public.strategy_builder_access_allowed()'), sql.indexOf('-- ── RLS'));
+  assert(/p\.role IN \([^)]*'free'[^)]*\)/.test(fn), 'predicate must admit free');
+  for (const role of ['free', 'pro', 'premium', 'beta_tester', 'admin']) {
+    assert(fn.includes(`'${role}'`), `predicate must admit ${role} (mapLegacyProfileRole's five resolvable-plan roles)`);
+  }
+  assert(/SECURITY INVOKER/.test(fn) && !/SECURITY DEFINER/.test(fn), 'predicate must not expand privilege');
+  const policies = [...sql.matchAll(/CREATE POLICY (\w+)[\s\S]*?;/g)];
+  assertEquals(policies.length, 8, 'strategies(4) + strategy_versions(2) + strategy_backtest_results(2)');
+  for (const p of policies) assert(p[0].includes('strategy_builder_access_allowed()'), `${p[1]} lacks the entitlement predicate`);
 });
