@@ -65,6 +65,13 @@ const strategies: (StrategyRow & { user_id: string })[] = [
   { id: 's-b', user_id: B, project_id: PB, name: 'Bravo Secret Strategy', status: 'DRAFT', current_version: 1, updated_at: '2026-09-24' },
   { id: 's-bu', user_id: B, project_id: null, name: 'Bravo unassigned strategy', status: 'DRAFT', current_version: 1, updated_at: '2026-09-24' },
 ];
+// §14 continuation: a real, negative result so a test can pose the
+// mission's own example question ("why did this strategy lose money?")
+// and assert the number IVE actually grounds it in.
+const backtestSummaries: Record<string, { netPnl: number; tradeCount: number; methodologyStatus: string }> = {
+  's-a1': { netPnl: -270.75, tradeCount: 75, methodologyStatus: 'COST_ADJUSTED' },
+  's-b': { netPnl: 9999, tradeCount: 5, methodologyStatus: 'ZERO_COST_RESEARCH' },
+};
 
 interface Calls { listed: string[] }
 function honestSource(calls: Calls = { listed: [] }): IveDataSource {
@@ -77,6 +84,12 @@ function honestSource(calls: Calls = { listed: [] }): IveDataSource {
     async listActions(u, p) { calls.listed.push(`acts:${p}`); return acts.filter((x) => x.user_id === u && x.project_id === p); },
     // deno-lint-ignore require-await
     async listStrategies(u, p) { calls.listed.push(`strat:${p}`); return strategies.filter((x) => x.user_id === u && (x.project_id === null || x.project_id === p)); },
+    // deno-lint-ignore require-await
+    async getLatestBacktestSummary(u, strategyId) {
+      calls.listed.push(`btsummary:${strategyId}`);
+      const owns = strategies.some((x) => x.id === strategyId && x.user_id === u);
+      return owns ? backtestSummaries[strategyId] ?? null : null;
+    },
     // deno-lint-ignore require-await
     async listKnowledge(u, p) { calls.listed.push(`know:${p}`); return knowledge.filter((x) => x.user_id === u && (x.project_id === null || x.project_id === p)); },
     // deno-lint-ignore require-await
@@ -95,6 +108,8 @@ function leakySource(): IveDataSource {
     async listActions() { return acts; },
     // deno-lint-ignore require-await
     async listStrategies() { return strategies; },
+    // deno-lint-ignore require-await
+    async getLatestBacktestSummary(_u, strategyId) { return backtestSummaries[strategyId] ?? null; },
     // deno-lint-ignore require-await
     async listKnowledge() { return knowledge; },
     // deno-lint-ignore require-await
@@ -280,6 +295,23 @@ Deno.test('IC-10 (Macro-08 §17-21) strategies are user-level, not project-requi
   assertFalse(pa2.prompt.includes('Alpha Coffee EMA Cross'));
 });
 
+Deno.test('IC-11 (Macro-08 continuation §14) IVE grounds a strategy question in the REAL latest backtest result -- exact netPnl/tradeCount/methodology, never a fabricated number', async () => {
+  const r = await run('jwt-a', base({ project_id: PA1, message: 'Por que essa estratégia perdeu dinheiro?' }));
+  assertEquals(r.res.status, 200);
+  assert(r.prompt.includes('netPnl=-270.75'));
+  assert(r.prompt.includes('trades=75'));
+  assert(r.prompt.includes('COST_ADJUSTED'));
+  // A strategy with no recorded result yet shows no fabricated numbers.
+  assertFalse(r.prompt.includes('Unassigned Trend Strategy]') && r.prompt.includes('ultimo_resultado'));
+});
+
+Deno.test('IC-12 (Macro-08 continuation §14) another users backtest result never leaks through the enrichment step, even though it is fetched per-strategy after the base list is already scoped', async () => {
+  const r = await run('jwt-a', base({ project_id: PA1 }));
+  assertEquals(r.res.status, 200);
+  assertFalse(r.prompt.includes('9999'), 'Bravo Secret Strategy\'s netPnl must never appear in A\'s prompt');
+  assertFalse(r.prompt.includes('ZERO_COST_RESEARCH'), 'only A\'s own COST_ADJUSTED result should appear');
+});
+
 // ── Adversarial matrix (mission §43) ─────────────────────────────────────
 
 Deno.test('AD-01 missing JWT → 401, no quota, no model, no reads', async () => {
@@ -304,7 +336,7 @@ Deno.test('AD-02 user A asks for project B → 403 PROJECT_FORBIDDEN, nothing of
 Deno.test('AD-03/04/05 a data source that ignores filters still cannot leak B or another project of A', async () => {
   const r = await run('jwt-a', base({ project_id: PA1 }), { data: leakySource() });
   assertEquals(r.res.status, 200);
-  for (const leak of ['BRAVO CONFIDENTIAL', 'BRAVO UNASSIGNED', 'BRAVO USER-LEVEL', 'Bravo private', 'Bravo acquisition', 'Editorial calendar for Alpha Blog', 'Alpha Blog aims', 'Bravo Secret Strategy', 'Bravo unassigned strategy']) {
+  for (const leak of ['BRAVO CONFIDENTIAL', 'BRAVO UNASSIGNED', 'BRAVO USER-LEVEL', 'Bravo private', 'Bravo acquisition', 'Editorial calendar for Alpha Blog', 'Alpha Blog aims', 'Bravo Secret Strategy', 'Bravo unassigned strategy', '9999', 'ZERO_COST_RESEARCH']) {
     assertFalse(r.prompt.includes(leak), `leaked: ${leak}`);
   }
   // …and asking for B's project through the leaky source is still forbidden.

@@ -90,8 +90,17 @@ export function buildMessages(
       ctx.actions.map((a) => `• ${clip(a.title, 200)} [status=${a.status ?? '-'}, impacto=${a.impact_score ?? '-'}, esforço=${a.effort_score ?? '-'}]`).join('\n')));
   }
   if (ctx.strategies.length) {
+    // §14 continuation: latest_result_* is present only when a real
+    // BACKTEST result exists for the strategy's latest version -- '-'
+    // means no result yet, never a fabricated number.
     verified.push(untrusted('estrategias', ctx.project?.id ?? null,
-      ctx.strategies.map((s) => `• ${clip(s.name, 200)} [status=${s.status ?? '-'}, versao/version=${s.current_version ?? '-'}]`).join('\n')));
+      ctx.strategies.map((s) => {
+        const hasResult = s.latest_result_net_pnl !== undefined && s.latest_result_net_pnl !== null;
+        const resultPart = hasResult
+          ? `, ultimo_resultado/last_result=[netPnl=${s.latest_result_net_pnl}, trades=${s.latest_result_trade_count}, metodologia/methodology=${s.latest_result_methodology}]`
+          : '';
+        return `• ${clip(s.name, 200)} [status=${s.status ?? '-'}, versao/version=${s.current_version ?? '-'}${resultPart}]`;
+      }).join('\n')));
   }
   if (ctx.knowledge.length) {
     verified.push(locale === 'pt-BR' ? '## TRECHOS DE DOCUMENTOS (dados)' : '## DOCUMENT EXCERPTS (data)');

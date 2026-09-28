@@ -62,6 +62,16 @@ export interface StrategyRow {
   status: string | null;
   current_version: number | null;
   updated_at: string | null;
+  /** Macro-08 continuation §14: the strategy's own identity (name/status)
+   * cannot ground a real question like "why did this lose money" or "is
+   * the sample sufficient" -- these come from its LATEST BACKTEST result,
+   * fetched separately (getLatestBacktestSummary) and merged in only for
+   * the final, already-budget-capped set of strategies actually shown
+   * (never for the full unbounded list), degrading to null per-strategy
+   * on any failure rather than failing the whole "strategies" source. */
+  latest_result_net_pnl?: number | null;
+  latest_result_trade_count?: number | null;
+  latest_result_methodology?: string | null;
 }
 
 /** Everything the assembler may read. Every method receives the
@@ -77,6 +87,13 @@ export interface IveDataSource {
    * with a verified project, that project's strategies + unassigned ones;
    * without one, unassigned only. */
   listStrategies(userId: string, projectId: string | null, limit: number): Promise<StrategyRow[]>;
+  /** §14: the latest real BACKTEST result for one strategy's latest
+   * version (never a SIMULATION-kind result -- mirrors compare_versions'
+   * own exclusion in strategy-builder/index.ts). Called only for the
+   * final, small, budget-capped set of strategies the context already
+   * decided to show; null on "no result yet", never thrown to the
+   * caller (the assembler catches and degrades per-strategy). */
+  getLatestBacktestSummary(userId: string, strategyId: string): Promise<{ netPnl: number; tradeCount: number; methodologyStatus: string } | null>;
   listKnowledge(userId: string, projectId: string | null, limit: number): Promise<KnowledgeRow[]>;
   listMemories(userId: string, projectId: string | null, limit: number): Promise<MemoryRow[]>;
 }
@@ -176,6 +193,21 @@ export async function assembleContext(
   const oppFit: Fitted<OpportunityRow> = fitToBudget(opportunities, (o) => clip(o.title, 200).length + 40, CONTEXT_BUDGET_CHARS.opportunities);
   const actFit: Fitted<ActionRow> = fitToBudget(actions, (a) => clip(a.title, 200).length + 40, CONTEXT_BUDGET_CHARS.actions);
   const stratFit: Fitted<StrategyRow> = fitToBudget(strategyRows, (s) => clip(s.name, 200).length + 40, CONTEXT_BUDGET_CHARS.strategies);
+  // §14: enrich only the FINAL, already-budget-capped set (never the
+  // unbounded strategyRows) with each strategy's latest real backtest
+  // result, so IVE can ground a question like "why did this lose money"
+  // in an actual number, not just the strategy's name/status. One
+  // strategy's lookup failure degrades that strategy alone (falls back
+  // to no result fields), never the whole "strategies" source.
+  stratFit.items = await Promise.all(stratFit.items.map(async (s) => {
+    try {
+      const summary = await data.getLatestBacktestSummary(subject.id, s.id);
+      if (!summary) return s;
+      return { ...s, latest_result_net_pnl: summary.netPnl, latest_result_trade_count: summary.tradeCount, latest_result_methodology: summary.methodologyStatus };
+    } catch {
+      return s;
+    }
+  }));
   const k = selectKnowledge(knowledgeRows, `${request.message} ${project?.name ?? ''} ${project?.description ?? ''}`);
   const memSelected = selectMemories(memoryRows, pid).slice(0, CONTEXT_ITEM_LIMITS.memories);
   const memFit: Fitted<MemoryRow> = fitToBudget(memSelected, (m) => clip(m.content, 500).length + 20, CONTEXT_BUDGET_CHARS.memory);
@@ -294,6 +326,26 @@ export class SupabaseIveDataSource implements IveDataSource {
       .eq('user_id', userId);
     q = projectId ? q.or(`project_id.eq.${projectId},project_id.is.null`) : q.is('project_id', null);
     return this.rows(q.order('updated_at', { ascending: false }).limit(limit));
+  }
+  async getLatestBacktestSummary(userId: string, strategyId: string): Promise<{ netPnl: number; tradeCount: number; methodologyStatus: string } | null> {
+    // Two single-entity queries (never a batched .in()/embedded join --
+    // this codebase's other Supabase call sites never use either, and
+    // this file has no way to verify one against a live database; see
+    // strategy_server.ts's getWithLatestVersion for the identical
+    // "latest version" shape this mirrors).
+    const { data: version, error: versionError } = await this.client.from('strategy_versions')
+      .select('id').eq('strategy_id', strategyId).eq('user_id', userId)
+      .order('version_number', { ascending: false }).limit(1).maybeSingle();
+    if (versionError || !version) return null;
+    // Never a SIMULATION-kind result -- mirrors compare_versions' own
+    // exclusion (strategy-builder/index.ts): IVE must not ground a
+    // claim about "the strategy" in what was actually a governed-
+    // approval mock run.
+    const { data: result, error: resultError } = await this.client.from('strategy_backtest_results')
+      .select('net_pnl, trade_count, methodology_status').eq('strategy_version_id', version.id).eq('user_id', userId).eq('result_kind', 'BACKTEST')
+      .order('created_at', { ascending: false }).limit(1).maybeSingle();
+    if (resultError || !result) return null;
+    return { netPnl: Number(result.net_pnl), tradeCount: Number(result.trade_count), methodologyStatus: String(result.methodology_status) };
   }
   listKnowledge(userId: string, projectId: string | null, limit: number): Promise<KnowledgeRow[]> {
     let q = this.client.from('knowledge_items')
