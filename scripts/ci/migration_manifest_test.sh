@@ -69,6 +69,6 @@ lab="$(awk -F'\t' '$3=="LAB"{sub(/^[0-9]+_/,"",$1); sub(/\.sql$/,"",$1); printf 
 pre="$(tr -d '\n' < "$PREFLIGHT" | grep -o "predecessors text\[\] := ARRAY\[[^]]*\]" | grep -o "'[a-z0-9_]*'" | tr -d "'" | tr '\n' ' ')"
 chain="$(tr -d '\n' < "$PREFLIGHT" | grep -o "chain text\[\] := ARRAY\[[^]]*\]" | grep -o "'[a-z0-9_]*'" | tr -d "'" | tr '\n' ' ')"
 [[ "$applied" == "$pre" ]] || { echo "F01: manifest APPLIED_PRODUCTION ($applied) != preflight predecessors ($pre)" >&2; exit 1; }
-lab_chain_subset="$(for name in $lab; do for c in $chain; do [[ "$name" == "$c" ]] && printf "%s " "$name"; done; done)"
+lab_chain_subset="$(for name in $lab; do for c in $chain; do [[ "$name" == "$c" ]] && printf "%s " "$name"; done; done; true)"
 [[ "$lab_chain_subset" == "$chain" ]] || { echo "F01: preflight chain ($chain) not present as LAB in the manifest, in order (found: $lab_chain_subset)" >&2; exit 1; }
 echo "MIGRATION_MANIFEST_TESTS: PASS"
