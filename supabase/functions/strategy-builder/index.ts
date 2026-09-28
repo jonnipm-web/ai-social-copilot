@@ -29,6 +29,7 @@ import { compareBacktestResults } from '../_shared/strategy/comparison.ts';
 import { runV10ViaBridge, DEFAULT_BRIDGE_TIMEOUT_MS, type BridgeCostConfig } from '../_shared/strategy/backtest_bridge.ts';
 import { V10_REFERENCE_SPEC_INPUT } from '../_shared/strategy/v10_reference.ts';
 import { GENERIC_REFERENCE_SPEC_INPUT } from '../_shared/strategy/generic_reference_strategy.ts';
+import { analyzeBacktestResult } from '../_shared/strategy/ive_strategy_analyst.ts';
 
 export interface StrategyBuilderDeps {
   storeFor?: (accessToken: string) => StrategyStore;
@@ -39,6 +40,7 @@ export interface StrategyBuilderDeps {
 const OPS = new Set([
   'validate', 'draft_from_text', 'create', 'list', 'get',
   'create_version', 'list_versions', 'run_backtest', 'compare_versions', 'clone_reference',
+  'analyze_backtest_result',
 ]);
 
 interface ValidateOp { readonly op: 'validate'; readonly spec: StrategySpecificationInput }
@@ -57,9 +59,11 @@ interface RunBacktestOp {
 }
 interface CompareVersionsOp { readonly op: 'compare_versions'; readonly versionAId: string; readonly versionBId: string }
 interface CloneReferenceOp { readonly op: 'clone_reference'; readonly reference: 'V10' | 'GENERIC' }
+interface AnalyzeBacktestResultOp { readonly op: 'analyze_backtest_result'; readonly strategyVersionId: string }
 type ParsedOp =
   | ValidateOp | DraftFromTextOp | CreateOp | ListOp | GetOp
-  | CreateVersionOp | ListVersionsOp | RunBacktestOp | CompareVersionsOp | CloneReferenceOp;
+  | CreateVersionOp | ListVersionsOp | RunBacktestOp | CompareVersionsOp | CloneReferenceOp
+  | AnalyzeBacktestResultOp;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -117,6 +121,9 @@ function parseOp(body: unknown): { ok: true; value: ParsedOp } | { ok: false; co
     case 'clone_reference':
       if (b.reference !== 'V10' && b.reference !== 'GENERIC') return { ok: false, code: 'INVALID_BODY' };
       return { ok: true, value: { op: 'clone_reference', reference: b.reference } };
+    case 'analyze_backtest_result':
+      if (!isUuid(b.strategyVersionId)) return { ok: false, code: 'INVALID_BODY' };
+      return { ok: true, value: { op: 'analyze_backtest_result', strategyVersionId: b.strategyVersionId } };
     default:
       return { ok: false, code: 'UNKNOWN_OP' };
   }
@@ -433,6 +440,21 @@ export async function handler(
         }
         finish(200, null);
         return jsonResponse({ correlation_id: cid, comparison: comparison.value });
+      }
+      case 'analyze_backtest_result': {
+        const token = bearerToken(req) ?? '';
+        const store = (deps.storeFor ?? ((t: string) => new SupabaseStrategyStore(t)))(token);
+        const results = await store.listBacktestResultsForVersion(authUser.id, action.strategyVersionId);
+        if (results.length === 0) {
+          finish(404, 'NOT_FOUND');
+          return errorResponse('NO_BACKTEST_RESULT', cid, 404);
+        }
+        // §23/§28: claims are derived ONLY from the caller's OWN, already
+        // server-persisted result -- no raw object is ever handed to any
+        // LLM here; analyzeBacktestResult is pure and deterministic.
+        const claims = analyzeBacktestResult(results[0].canonicalResult);
+        finish(200, null);
+        return jsonResponse({ correlation_id: cid, claims });
       }
     }
   } catch {

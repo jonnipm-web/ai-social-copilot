@@ -302,6 +302,21 @@ Deno.test('SB-15 another user cannot run a backtest against, list versions of, o
   assertEquals(foreignBacktest.status, 404);
 });
 
+Deno.test('SB-17 analyze_backtest_result returns real epistemic claims after a real run_backtest, never before one exists', async () => {
+  store = new MemoryStore();
+  const created = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT });
+  const versionId = created.json.version.id;
+
+  const tooEarly = await call({ op: 'analyze_backtest_result', strategyVersionId: versionId });
+  assertEquals(tooEarly.status, 404);
+
+  await call({ op: 'run_backtest', strategyVersionId: versionId, datasetId: 'synthetic-fixture-5min-v1', engineId: 'GENERIC_RULE_ENGINE' });
+  const analyzed = await call({ op: 'analyze_backtest_result', strategyVersionId: versionId });
+  assertEquals(analyzed.status, 200);
+  assert(Array.isArray(analyzed.json.claims));
+  assert(analyzed.json.claims.some((c: { status: string; statement: string }) => c.status === 'UNKNOWN' && c.statement.includes('Future profitability')));
+});
+
 Deno.test('SB-16 non-admin plans are denied for every new op before the store is touched', async () => {
   store = new MemoryStore();
   for (const payload of [
@@ -310,6 +325,7 @@ Deno.test('SB-16 non-admin plans are denied for every new op before the store is
     { op: 'list_versions', strategyId: 'cccccccc-0000-4000-8000-000000000001' },
     { op: 'run_backtest', strategyVersionId: 'cccccccc-0000-4000-8000-000000000001', datasetId: 'synthetic-fixture-5min-v1', engineId: 'GENERIC_RULE_ENGINE' },
     { op: 'compare_versions', versionAId: 'cccccccc-0000-4000-8000-000000000001', versionBId: 'cccccccc-0000-4000-8000-000000000002' },
+    { op: 'analyze_backtest_result', strategyVersionId: 'cccccccc-0000-4000-8000-000000000001' },
   ]) {
     const r = await call(payload, 'jwt-a', 'free');
     assertEquals([r.status, r.json.error], [403, 'MODULE_NOT_AVAILABLE'], JSON.stringify(payload));
