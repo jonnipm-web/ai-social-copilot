@@ -41,6 +41,7 @@ class _StrategyDetailScreenState extends ConsumerState<StrategyDetailScreen> {
   bool _fitBusy = false;
   Map<String, dynamic>? _fitEvidence;
   List<dynamic> _proposals = const [];
+  List<dynamic> _unsupportedParameters = const [];
   StrategyBuilderResult? _fitUpgrade;
   bool _simulationBusy = false;
   Map<String, dynamic>? _simulationResult;
@@ -122,6 +123,7 @@ class _StrategyDetailScreenState extends ConsumerState<StrategyDetailScreen> {
       _fitBusy = false;
       _fitEvidence = result.data?['fitEvidence'] as Map<String, dynamic>?;
       _proposals = (result.data?['proposals'] as List?) ?? const [];
+      _unsupportedParameters = (result.data?['unsupportedParameters'] as List?) ?? const [];
       _fitUpgrade = result.isPlanUpgradeRequired ? result : null;
     });
   }
@@ -429,6 +431,15 @@ class _StrategyDetailScreenState extends ConsumerState<StrategyDetailScreen> {
                       const SizedBox(height: 8),
                       Text(l.strategyDetailProposalsTitle, style: const TextStyle(fontWeight: FontWeight.w600)),
                       if (_proposals.isEmpty) Text(l.strategyDetailNoProposals) else for (final p in _proposals) Text('• ${(p as Map)['reason']}'),
+                      if (_unsupportedParameters.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        for (final u in _unsupportedParameters)
+                          Text(
+                            l.strategyDetailUnsupportedParameter('${(u as Map)['parameter']}'),
+                            key: const Key('strategyDetailUnsupportedParameter'),
+                            style: const TextStyle(fontSize: 11, color: Colors.white54),
+                          ),
+                      ],
                     ],
                     const SizedBox(height: 12),
                     IveExclusionRegion(

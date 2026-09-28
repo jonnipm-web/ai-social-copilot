@@ -551,6 +551,28 @@ Deno.test('SB-24 (§10/§19) propose_variants returns fit evidence and bounded p
   assert(r.json.proposals.length <= 5);
 });
 
+Deno.test('SB-58 (Macro-08 continuation §11) propose_variants generalizes bounded exploration to target -- proposes NARROWER target variants when TARGET_VS_MOVEMENT is flagged, and reports breakEven as UNSUPPORTED_BY_CURRENT_ENGINE when configured', async () => {
+  store = new MemoryStore();
+  const farTargetSpec = {
+    ...GENERIC_REFERENCE_SPEC_INPUT,
+    target: { ruleId: 'TARGET.FIXED_DISTANCE', distance: 100000 },
+    breakEven: { ruleId: 'BREAK_EVEN.STEPPED', triggerDistance: 50, initialProtectedDistance: 10, stepDistance: 10 },
+  };
+  const created = await call({ op: 'create', spec: farTargetSpec });
+  const versionId = created.json.version.id;
+  const r = await call({ op: 'propose_variants', strategyVersionId: versionId, datasetId: 'synthetic-fixture-5min-v1' });
+  assertEquals(r.status, 200);
+  const targetFinding = r.json.fitEvidence.items.find((i: { dimension: string }) => i.dimension === 'TARGET_VS_MOVEMENT');
+  assertEquals(targetFinding.flagged, true);
+  const targetProposals = (r.json.proposals as Array<{ parametersChanged: Record<string, { from: number; to: number }> }>)
+    .filter((p) => 'target.distance' in p.parametersChanged);
+  assert(targetProposals.length > 0, 'expected at least one narrower-target proposal');
+  for (const p of targetProposals) assert(p.parametersChanged['target.distance'].to < p.parametersChanged['target.distance'].from);
+  assertEquals(r.json.unsupportedParameters.length, 1);
+  assertEquals(r.json.unsupportedParameters[0].parameter, 'breakEven');
+  assert((r.json.unsupportedParameters[0].reason as string).startsWith('UNSUPPORTED_BY_CURRENT_ENGINE'));
+});
+
 Deno.test('SB-25 propose_variants against an unknown dataset is a structured 400, never a 500', async () => {
   store = new MemoryStore();
   const created = await call({ op: 'create', spec: GENERIC_REFERENCE_SPEC_INPUT });
@@ -654,6 +676,26 @@ Deno.test('SB-31 (§16/§30) run_research_loop produces bounded candidates, each
   const versions = await call({ op: 'list_versions', strategyId: created.json.strategy.id });
   assertEquals(versions.json.versions.length, 1 + r.json.candidates.length);
   assertEquals(store.experiments.length, r.json.candidates.length);
+});
+
+Deno.test('SB-59 (Macro-08 continuation §11) run_research_loop generalizes candidate-building to target: a far-target strategy produces real candidates with a narrower target.distance, not a crash on the old stop-only assumption', async () => {
+  store = new MemoryStore();
+  const farTargetSpec = { ...GENERIC_REFERENCE_SPEC_INPUT, target: { ruleId: 'TARGET.FIXED_DISTANCE', distance: 100000 } };
+  const created = await call({ op: 'create', spec: farTargetSpec });
+  const versionId = created.json.version.id;
+  const r = await call({ op: 'run_research_loop', strategyVersionId: versionId, datasetId: 'synthetic-fixture-5min-v1' });
+  assertEquals(r.status, 200);
+  assert(r.json.candidates.length > 0);
+  for (const c of r.json.candidates) {
+    assertEquals(c.error, null);
+    assert(c.versionId !== null && c.versionId !== versionId);
+  }
+  const versions = await call({ op: 'list_versions', strategyId: created.json.strategy.id });
+  // Every candidate version's target must be strictly narrower than the original 100000 -- proves
+  // the generalized apply-loop actually wrote target.distance, not a silently-unchanged spec.
+  const targets = (versions.json.versions as Array<{ id: string; spec: { target: { distance: number } } }>)
+    .filter((v) => v.id !== versionId).map((v) => v.spec.target.distance);
+  for (const t of targets) assert(t < 100000, `expected a narrower target, got ${t}`);
 });
 
 Deno.test('SB-32 run_research_loop returns an empty, non-error candidate list when no evidence-based proposal exists', async () => {

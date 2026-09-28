@@ -3211,6 +3211,12 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Direção {direction} nunca foi testada neste resultado -- nenhuma evidência sobre esse lado.'**
   String strategyDetailDirectionalUntested(String direction);
+
+  /// No description provided for @strategyDetailUnsupportedParameter.
+  ///
+  /// In pt, this message translates to:
+  /// **'Exploração limitada de {parameter} ainda não é suportada por este motor -- nenhuma sugestão foi inventada.'**
+  String strategyDetailUnsupportedParameter(String parameter);
 }
 
 class _AppLocalizationsDelegate

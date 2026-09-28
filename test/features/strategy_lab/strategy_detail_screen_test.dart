@@ -554,4 +554,43 @@ void main() {
     expect(find.byKey(const Key('strategyDetailScoreCardA')), findsOneWidget);
     expect(find.byKey(const Key('strategyDetailScoreCardB')), findsOneWidget);
   });
+
+  testWidgets('SD-16 (Macro-08 continuation §11) an unsupported bounded-exploration parameter (e.g. breakEven) is reported explicitly, never silently omitted', (tester) async {
+    final api = FakeDetailApi(_genericSpec)
+      ..proposeVariantsResult = {
+        'fitEvidence': {'items': [], 'sufficientData': false},
+        'proposals': [],
+        'unsupportedParameters': [
+          {'parameter': 'breakEven', 'reason': 'UNSUPPORTED_BY_CURRENT_ENGINE: no market-fit evidence dimension measures break-even distance yet.'},
+        ],
+      };
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [strategyBuilderApiProvider.overrideWithValue(api)],
+        child: MaterialApp(
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const StrategyDetailScreen(strategyId: 'sid-1'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Strategy Intelligence'));
+    await tester.pumpAndSettle();
+    final button = find.byKey(const Key('strategyDetailAnalyzeFit'));
+    await tester.ensureVisible(button);
+    await tester.pumpAndSettle();
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('strategyDetailUnsupportedParameter')), findsOneWidget);
+    expect(find.textContaining('breakEven'), findsOneWidget);
+  });
 }

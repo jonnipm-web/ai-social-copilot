@@ -47,7 +47,7 @@ import { GENERIC_REFERENCE_SPEC_INPUT } from '../_shared/strategy/generic_refere
 import { analyzeBacktestResult } from '../_shared/strategy/ive_strategy_analyst.ts';
 import { computeMarketStatistics } from '../_shared/strategy/market_statistics.ts';
 import { analyzeStrategyMarketFit } from '../_shared/strategy/strategy_market_fit.ts';
-import { MAX_BOUNDED_VARIANTS, proposeBoundedStopVariants } from '../_shared/strategy/bounded_exploration.ts';
+import { MAX_BOUNDED_VARIANTS, proposeBoundedVariants } from '../_shared/strategy/bounded_exploration.ts';
 import { directionalBalance, executionAmbiguityRate, sampleSizeSufficiency } from '../_shared/strategy/robustness.ts';
 import { computeStrategyScore } from '../_shared/strategy/strategy_score.ts';
 import { STRATEGY_OBJECTIVES, type StrategyObjective } from '../_shared/strategy/user_objective.ts';
@@ -775,9 +775,9 @@ export async function handler(
           return errorResponse(statsResult.error.code, cid, STRATEGY_ERROR_STATUS[statsResult.error.code]);
         }
         const fitEvidence = analyzeStrategyMarketFit(version.spec, statsResult.value, bars);
-        const proposals = proposeBoundedStopVariants(version.spec, fitEvidence);
+        const { proposals, unsupportedParameters } = proposeBoundedVariants(version.spec, fitEvidence);
         finish(200, null, { datasetId: action.datasetId, barCount: bars.length, proposalCount: proposals.length });
-        return jsonResponse({ correlation_id: cid, fitEvidence, proposals });
+        return jsonResponse({ correlation_id: cid, fitEvidence, proposals, unsupportedParameters });
       }
       case 'record_experiment': {
         const token = bearerToken(req) ?? '';
@@ -888,11 +888,13 @@ export async function handler(
           return errorResponse(statsResult.error.code, cid, STRATEGY_ERROR_STATUS[statsResult.error.code]);
         }
         const fitEvidence = analyzeStrategyMarketFit(spec, statsResult.value, bars);
-        // §16: already capped at MAX_BOUNDED_VARIANTS inside
-        // proposeBoundedStopVariants -- this loop adds no further cap
-        // of its own because it needs none; it trusts the one bound
-        // already enforced at the source.
-        const proposals = proposeBoundedStopVariants(spec, fitEvidence);
+        // §16: already capped at MAX_BOUNDED_VARIANTS per dimension inside
+        // proposeBoundedVariants -- the slice below is this loop's OWN
+        // additional cap on how many new versions one call may create,
+        // now potentially drawn from more than one evidence dimension
+        // (Macro-08 continuation §11: generalized from stop-only to
+        // stop+target).
+        const { proposals } = proposeBoundedVariants(spec, fitEvidence);
         const segment: ExperimentSegment = dataset.segmentKind ?? 'FULL';
         const strategyWithVersion = await store.getWithLatestVersion(authUser.id, version.strategyId);
         const holdoutFirstViewedAt = strategyWithVersion?.strategy.holdoutFirstViewedAt ?? null;
@@ -905,8 +907,17 @@ export async function handler(
           label: string; versionId: string | null; result: unknown; experimentId: string | null; error: string | null;
         }> = [];
         for (const proposal of proposals.slice(0, MAX_BOUNDED_VARIANTS)) {
+          // Macro-08 continuation §11: generalized beyond stop-only --
+          // applies whichever single bounded-exploration dimension this
+          // proposal actually changed. Every proposeBoundedVariants()
+          // proposal changes exactly one of these two keys (never both,
+          // never anything else), so this is an exhaustive, not a
+          // best-effort, mapping.
           const stopChange = proposal.parametersChanged['stop.distance'];
-          const modifiedInput = { ...spec, stop: { ...spec.stop, distance: stopChange.to } };
+          const targetChange = proposal.parametersChanged['target.distance'];
+          const modifiedInput = stopChange
+            ? { ...spec, stop: { ...spec.stop, distance: stopChange.to } }
+            : { ...spec, target: { ...spec.target, distance: targetChange.to } };
           const validatedSpec = createStrategySpecification(modifiedInput);
           if (!validatedSpec.ok) {
             candidates.push({ label: proposal.label, versionId: null, result: null, experimentId: null, error: validatedSpec.error.message });

@@ -1766,4 +1766,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String strategyDetailDirectionalUntested(String direction) {
     return 'The $direction direction was never tested in this result -- no evidence about that side.';
   }
+
+  @override
+  String strategyDetailUnsupportedParameter(String parameter) {
+    return 'Bounded exploration of $parameter is not yet supported by this engine -- no suggestion was invented.';
+  }
 }

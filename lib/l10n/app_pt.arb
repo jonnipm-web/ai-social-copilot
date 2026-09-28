@@ -731,5 +731,7 @@
   "strategyDetailSampleSizeInsufficient": "Amostra pequena: {count} trades (abaixo do limite de {threshold}) -- resultado não deve ser tratado como conclusivo.",
   "@strategyDetailSampleSizeInsufficient": {"placeholders": {"count": {"type": "String"}, "threshold": {"type": "String"}}},
   "strategyDetailDirectionalUntested": "Direção {direction} nunca foi testada neste resultado -- nenhuma evidência sobre esse lado.",
-  "@strategyDetailDirectionalUntested": {"placeholders": {"direction": {"type": "String"}}}
+  "@strategyDetailDirectionalUntested": {"placeholders": {"direction": {"type": "String"}}},
+  "strategyDetailUnsupportedParameter": "Exploração limitada de {parameter} ainda não é suportada por este motor -- nenhuma sugestão foi inventada.",
+  "@strategyDetailUnsupportedParameter": {"placeholders": {"parameter": {"type": "String"}}}
 }
