@@ -314,6 +314,43 @@ function rowToBacktestJob(row: Record<string, unknown>): StrategyBacktestJobRow 
   };
 }
 
+/**
+ * Macro-08 continuation §27 (testability assessment, documented per its
+ * own instruction: "assess risk... if the refactor would be
+ * disproportionate, preserve indirect integration coverage and document
+ * the residual" rather than performing an automatic large refactor):
+ *
+ * This class has no dedicated unit test of its own -- index_test.ts
+ * exercises the Edge Function handler against MemoryStore (a fake), so
+ * SupabaseStrategyStore's actual Supabase calls are never invoked in
+ * CI. Making it directly testable would mean accepting an injectable
+ * SupabaseClient (or a query-builder seam) through the constructor and
+ * threading that through every one of its ~15 methods -- a real
+ * surface-wide change, not a small seam.
+ *
+ * Decision: DEFERRED, not attempted this pass. Reasons:
+ *   1. Local Postgres remains ENVIRONMENT_BLOCKED (standing project
+ *      decision) -- even WITH an injectable client, nothing here could
+ *      be verified against a real database in this environment; only a
+ *      fake query builder could be exercised, which duplicates
+ *      MemoryStore's own coverage without testing anything genuinely
+ *      new (RLS, grants and RPC behavior cannot be faked meaningfully).
+ *   2. The actual defect class Codex found in this exact area (the RLS
+ *      predicate drift, the non-atomic create, the inert idempotency
+ *      key) was caught and is now pinned by SQL-content assertions
+ *      against the migration files themselves (SB-48/49/57 in
+ *      strategy-builder/index_test.ts) -- a technique that has already
+ *      proven effective for this class of risk without requiring a
+ *      live database or a client-injection refactor.
+ *   3. A surface-wide constructor change here is exactly the kind of
+ *      broad, speculative refactor this session's own conventions
+ *      avoid absent a concrete need ("don't design for hypothetical
+ *      future requirements").
+ * Residual risk, disclosed: a bug specific to how THIS class shapes a
+ * PostgREST query (as opposed to what the RLS/RPC layer permits) would
+ * not be caught by either MemoryStore or the SQL-content tests. Revisit
+ * if/when a disposable or CI Postgres instance becomes available (§28).
+ */
 export class SupabaseStrategyStore implements StrategyStore {
   private readonly db: SupabaseClient;
   constructor(accessToken: string) {
