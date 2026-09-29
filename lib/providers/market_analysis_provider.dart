@@ -206,7 +206,7 @@ class MarketAnalysisNotifier extends StateNotifier<AsyncValue<MarketAnalysis?>> 
 final marketAnalysisNotifierProvider =
     StateNotifierProvider.autoDispose<MarketAnalysisNotifier, AsyncValue<MarketAnalysis?>>(
   (ref) => MarketAnalysisNotifier(
-    ref.read(marketAnalysisServiceProvider),
+    ref.watch(marketAnalysisServiceProvider),
     l10n: () => ref.read(appL10nProvider),
   ),
 );

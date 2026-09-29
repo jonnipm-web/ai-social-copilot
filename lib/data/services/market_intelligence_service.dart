@@ -6,10 +6,17 @@ import '../models/opportunity_lab_item.dart';
 import '../models/project.dart';
 import '../models/revenue_intelligence.dart';
 import '../models/revenue_plan.dart';
+import '../../l10n/app_localizations.dart';
 import 'ecosystem_intelligence_service.dart';
 
 class MarketIntelligenceService {
-  final _ecoSvc = EcosystemIntelligenceService();
+  /// R16 — [l10n] is the presentation language; it is forwarded to the
+  /// ecosystem engine so user-facing text it produces (e.g. execution-score
+  /// signals) follows the selected UI language. Omitting it keeps legacy PT.
+  MarketIntelligenceService({AppLocalizations? l10n})
+      : _ecoSvc = EcosystemIntelligenceService(l10n: l10n);
+
+  final EcosystemIntelligenceService _ecoSvc;
 
   List<MarketProfile> computeMarketProfiles({
     required List<Project> projects,

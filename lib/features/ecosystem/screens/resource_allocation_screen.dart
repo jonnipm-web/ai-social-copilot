@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/ecosystem_labels.dart';
+import '../../../core/utils/snackbar_utils.dart';
 import '../../../data/models/resource_allocation.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/ecosystem_intelligence_provider.dart';
@@ -80,7 +81,7 @@ class _ResourceAllocationScreenState extends ConsumerState<ResourceAllocationScr
           // Results
           provider.when(
             loading: () => const Center(child: CircularProgressIndicator(color: _kPrimary)),
-            error: (e, _) => Text(l10n.ecoErrorGeneric('$e'), style: const TextStyle(color: _kRed)),
+            error: (e, _) => Text(l10n.ecoErrorGeneric(extractErrorMessage(e, l10n)), style: const TextStyle(color: _kRed)),
             data: (alloc) => _AllocationResult(alloc: alloc),
           ),
         ],
@@ -298,7 +299,7 @@ class _AllocationItem extends StatelessWidget {
           const SizedBox(height: 6),
           Text(item.reason, style: const TextStyle(color: Colors.white54, fontSize: 11)),
           const SizedBox(height: 2),
-          Text('Ecosystem Score: ${item.score.ecosystemScore}/100  •  ${item.score.recommendationEmoji} ${ecosystemVerdictLabel(item.score.recommendation, l10n)}',
+          Text(l10n.uxfEcoAllocationScoreLine('${item.score.ecosystemScore}', item.score.recommendationEmoji, ecosystemVerdictLabel(item.score.recommendation, l10n)),
             style: const TextStyle(color: Colors.white38, fontSize: 10)),
         ],
       ),

@@ -12,9 +12,8 @@ import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 
 // COMMERCIAL-V1-UX-RECONCILIATION (PT/EN commercial matrix) -- metric type
 // display text now comes from l10n, keyed off the same stable 'value'
-// string this list already uses for lookups/state. The map's own 'label'
-// field is left as internal PT-only documentation (never rendered
-// directly anymore).
+// string this list already uses for lookups/state. (R16: the dead PT-only
+// 'label' fields were removed from _metricTypes.)
 String _roiTypeLabel(AppLocalizations l10n, String type) {
   switch (type) {
     case 'revenue':               return l10n.roiTrackerTypeRevenue;
@@ -52,22 +51,22 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
 
   static const _metricTypes = [
     // ── Originais ──────────────────────────────────────────────
-    {'value': 'revenue',                'label': 'Receita',              'icon': Icons.attach_money_rounded,   'color': Color(0xFF6BCB77)},
-    {'value': 'investment',             'label': 'Investimento',         'icon': Icons.savings_rounded,         'color': Color(0xFFFF6B6B)},
-    {'value': 'traffic',                'label': 'Tráfego',              'icon': Icons.trending_up_rounded,     'color': Color(0xFF4D96FF)},
-    {'value': 'leads',                  'label': 'Leads',                'icon': Icons.people_alt_rounded,      'color': Color(0xFFAB83FF)},
-    {'value': 'conversions',            'label': 'Conversões',           'icon': Icons.check_circle_rounded,    'color': Color(0xFFFFD93D)},
-    {'value': 'other',                  'label': 'Outro',                'icon': Icons.category_rounded,        'color': Color(0xFF00BCD4)},
+    {'value': 'revenue',                'icon': Icons.attach_money_rounded,   'color': Color(0xFF6BCB77)},
+    {'value': 'investment',             'icon': Icons.savings_rounded,         'color': Color(0xFFFF6B6B)},
+    {'value': 'traffic',                'icon': Icons.trending_up_rounded,     'color': Color(0xFF4D96FF)},
+    {'value': 'leads',                  'icon': Icons.people_alt_rounded,      'color': Color(0xFFAB83FF)},
+    {'value': 'conversions',            'icon': Icons.check_circle_rounded,    'color': Color(0xFFFFD93D)},
+    {'value': 'other',                  'icon': Icons.category_rounded,        'color': Color(0xFF00BCD4)},
     // ── Fase 10A (Business OS) ─────────────────────────────────
-    {'value': 'opportunities',          'label': 'Oportunidades',        'icon': Icons.lightbulb_rounded,       'color': Color(0xFFFFD700)},
-    {'value': 'revenue_potential',      'label': 'Receita Potencial',    'icon': Icons.bar_chart_rounded,       'color': Color(0xFF00BCD4)},
-    {'value': 'revenue_estimated',      'label': 'Receita Estimada',     'icon': Icons.calculate_rounded,       'color': Color(0xFF4CAF50)},
-    {'value': 'hours_saved',            'label': 'Horas Economizadas',   'icon': Icons.schedule_rounded,        'color': Color(0xFF9C27B0)},
-    {'value': 'strategies_executed',    'label': 'Estratégias',          'icon': Icons.flag_rounded,            'color': Color(0xFF6C63FF)},
-    {'value': 'campaigns_executed',     'label': 'Campanhas',            'icon': Icons.campaign_rounded,        'color': Color(0xFFE91E63)},
-    {'value': 'decisions_made',         'label': 'Decisões',             'icon': Icons.psychology_rounded,      'color': Color(0xFFFF9800)},
-    {'value': 'opportunity_score',      'label': 'Score MI',             'icon': Icons.analytics_rounded,       'color': Color(0xFF4D96FF)},
-    {'value': 'avg_opportunity_score',  'label': 'Score Médio',          'icon': Icons.star_rounded,            'color': Color(0xFFFFD93D)},
+    {'value': 'opportunities',          'icon': Icons.lightbulb_rounded,       'color': Color(0xFFFFD700)},
+    {'value': 'revenue_potential',      'icon': Icons.bar_chart_rounded,       'color': Color(0xFF00BCD4)},
+    {'value': 'revenue_estimated',      'icon': Icons.calculate_rounded,       'color': Color(0xFF4CAF50)},
+    {'value': 'hours_saved',            'icon': Icons.schedule_rounded,        'color': Color(0xFF9C27B0)},
+    {'value': 'strategies_executed',    'icon': Icons.flag_rounded,            'color': Color(0xFF6C63FF)},
+    {'value': 'campaigns_executed',     'icon': Icons.campaign_rounded,        'color': Color(0xFFE91E63)},
+    {'value': 'decisions_made',         'icon': Icons.psychology_rounded,      'color': Color(0xFFFF9800)},
+    {'value': 'opportunity_score',      'icon': Icons.analytics_rounded,       'color': Color(0xFF4D96FF)},
+    {'value': 'avg_opportunity_score',  'icon': Icons.star_rounded,            'color': Color(0xFFFFD93D)},
   ];
 
   @override

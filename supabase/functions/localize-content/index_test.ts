@@ -36,7 +36,7 @@ interface Fake extends LocalizationDeps {
   ownedQueries: { userId: string; ids: string[] }[];
 }
 
-function fakeDeps(rows: Record<string, unknown>[], opts: { cache?: unknown[]; fresh?: number } = {}): Fake {
+function fakeDeps(rows: Record<string, unknown>[], opts: { cache?: unknown[]; fresh?: number; active?: boolean } = {}): Fake {
   const f: Fake = {
     saved: [],
     translateCalls: 0,
@@ -48,6 +48,7 @@ function fakeDeps(rows: Record<string, unknown>[], opts: { cache?: unknown[]; fr
     },
     fetchCache: () => Promise.resolve((opts.cache ?? []) as never),
     countFreshToday: () => Promise.resolve(opts.fresh ?? 0),
+    isActive: () => Promise.resolve(opts.active ?? true),
     saveCache(row) { f.saved.push(row); return Promise.resolve(); },
     translate(_s, user) {
       f.translateCalls++;
@@ -123,12 +124,50 @@ Deno.test('R16-LC-6: daily cap stops fresh translations gracefully (no error, no
   assertEquals((await res.json()).items, {});
 });
 
-Deno.test('R16-LC-7: malformed model output is never cached', async () => {
+Deno.test('R16-LC-7: malformed model output is never served; the attempt is recorded (counts toward the cap)', async () => {
   const deps = fakeDeps([{ id: ROW_A, user_id: USER_A, title: 'Título', description: 'Texto' }]);
   deps.translate = () => Promise.resolve('{"translations":["only one"]}');
   const res = await handler(req({ table: 'opportunity_lab', ids: [ROW_A], language: 'en-US' }), deps, authOk);
   assertEquals((await res.json()).items, {});
-  assertEquals(deps.saved.length, 0);
+  assertEquals(deps.saved.length, 1);
+  const saved = deps.saved[0] as { model: string; payload: unknown };
+  assertEquals(saved.model, 'failed');
+  assertEquals(saved.payload, {});
+});
+
+Deno.test('R16-LC-7b: a recent failure with the same source is not retried (no retry storm)', async () => {
+  const row = { id: ROW_A, user_id: USER_A, title: 'Título', description: 'Texto' };
+  const first = fakeDeps([row]);
+  first.translate = () => Promise.resolve('garbage');
+  await handler(req({ table: 'opportunity_lab', ids: [ROW_A], language: 'en-US' }), first, authOk);
+  const failed = first.saved[0] as { source_hash: string };
+  const second = fakeDeps([row], {
+    cache: [{ source_id: ROW_A, source_hash: failed.source_hash, source_language: null, payload: {}, model: 'failed', updated_at: new Date().toISOString() }],
+  });
+  await handler(req({ table: 'opportunity_lab', ids: [ROW_A], language: 'en-US' }), second, authOk);
+  assertEquals(second.translateCalls, 0);
+});
+
+Deno.test('R16-LC-10: deactivated accounts get no AI capacity', async () => {
+  const deps = fakeDeps([{ id: ROW_A, user_id: USER_A, title: 'Título', description: 'Texto' }], { active: false });
+  const res = await handler(req({ table: 'opportunity_lab', ids: [ROW_A], language: 'en-US' }), deps, authOk);
+  assertEquals(res.status, 403);
+  assertEquals(deps.translateCalls, 0);
+});
+
+Deno.test('R16-LC-11: text already clearly in the target language is served without an AI call', async () => {
+  const en = 'This project is focused on the introduction and expansion of the use of RCBO devices in the market, with a clear plan for the distribution of the products and the training of the installers that will work with our partners.';
+  const deps = fakeDeps([{ id: ROW_A, user_id: USER_A, title: 'Market expansion plan for the partners', description: en, rationale: en }]);
+  const res = await handler(req({ table: 'opportunity_lab', ids: [ROW_A], language: 'en-US' }), deps, authOk);
+  assertEquals(res.status, 200);
+  assertEquals(deps.translateCalls, 0);
+  assertEquals((deps.saved[0] as { model: string }).model, 'none:same-language');
+});
+
+Deno.test('R16-LC-12: oversized rows are capped (bounded model calls)', () => {
+  const steps = Array.from({ length: 5000 }, (_, i) => `Passo número ${i} do plano`);
+  const segs = extractSegments('action_queue', { action_steps: steps });
+  assert(segs.length <= 250);
 });
 
 Deno.test('R16-LC-8: extraction skips SEO keywords, entities, ids and bare URLs', () => {

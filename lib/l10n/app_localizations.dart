@@ -12119,6 +12119,30 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Ver tradução'**
   String get r16ViewTranslation;
+
+  /// No description provided for @uxfAdminSetRole.
+  ///
+  /// In pt, this message translates to:
+  /// **'→ {role}'**
+  String uxfAdminSetRole(String role);
+
+  /// No description provided for @uxfAdminRoleBetaTester.
+  ///
+  /// In pt, this message translates to:
+  /// **'Beta Tester'**
+  String get uxfAdminRoleBetaTester;
+
+  /// No description provided for @uxfAdminRoleAdmin.
+  ///
+  /// In pt, this message translates to:
+  /// **'Admin'**
+  String get uxfAdminRoleAdmin;
+
+  /// No description provided for @uxfEcoAllocationScoreLine.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ecosystem Score: {score}/100  •  {emoji} {verdict}'**
+  String uxfEcoAllocationScoreLine(String score, String emoji, String verdict);
 }
 
 class _AppLocalizationsDelegate

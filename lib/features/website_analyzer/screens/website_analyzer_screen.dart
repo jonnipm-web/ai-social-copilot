@@ -273,7 +273,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  l10n.websiteAnalyzerLoadError('$error'),
+                  l10n.websiteAnalyzerLoadError(extractErrorMessage(error, l10n)),
                   style: const TextStyle(color: Colors.red),
                 ),
               ),

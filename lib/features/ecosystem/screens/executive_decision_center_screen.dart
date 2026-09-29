@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/ecosystem_labels.dart';
+import '../../../core/utils/snackbar_utils.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../data/models/copilot_context_data.dart';
 import '../../../data/models/decision_validation.dart';
@@ -318,7 +319,7 @@ class _Top5Tab extends ConsumerWidget {
 
     return scoresAsync.when(
       loading: () => const Center(child: CircularProgressIndicator(color: _kPrimary)),
-      error: (e, _) => Center(child: Text(l10n.ecoErrorGeneric('$e'), style: const TextStyle(color: _kRed))),
+      error: (e, _) => Center(child: Text(l10n.ecoErrorGeneric(extractErrorMessage(e, l10n)), style: const TextStyle(color: _kRed))),
       data: (scores) {
         if (scores.isEmpty) {
           return Center(
@@ -762,7 +763,7 @@ class _EcosystemTab extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     return scoresAsync.when(
       loading: () => const Center(child: CircularProgressIndicator(color: _kPrimary)),
-      error: (e, _) => Center(child: Text(l10n.ecoErrorGeneric('$e'), style: const TextStyle(color: _kRed))),
+      error: (e, _) => Center(child: Text(l10n.ecoErrorGeneric(extractErrorMessage(e, l10n)), style: const TextStyle(color: _kRed))),
       data: (scores) {
         if (scores.isEmpty) {
           return Center(
@@ -958,7 +959,7 @@ class _RecsTab extends ConsumerWidget {
 
     return recsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator(color: _kPrimary)),
-      error: (e, _) => Center(child: Text(l10n.ecoErrorGeneric('$e'), style: const TextStyle(color: _kRed))),
+      error: (e, _) => Center(child: Text(l10n.ecoErrorGeneric(extractErrorMessage(e, l10n)), style: const TextStyle(color: _kRed))),
       data: (recs) {
         if (recs.isEmpty) {
           return Center(

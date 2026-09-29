@@ -92,7 +92,7 @@ class _ContentGenerationScreenState
 
     final state = ref.read(postNotifierProvider);
     if (state.hasError) {
-      showErrorSnack(context, extractErrorMessage(state.error));
+      showErrorSnack(context, extractErrorMessage(state.error, AppLocalizations.of(context)));
       return;
     }
 

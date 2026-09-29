@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/snackbar_utils.dart';
 import '../../../data/models/copilot_context_data.dart';
 import '../../../data/models/ive_interaction_request.dart';
 import '../../../data/models/website_analysis.dart';
@@ -174,7 +175,7 @@ class WebsiteAnalysisResultScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '$error',
+                  extractErrorMessage(error, l10n),
                   style: TextStyle(color: Colors.white.withOpacity(0.6)),
                   textAlign: TextAlign.center,
                 ),

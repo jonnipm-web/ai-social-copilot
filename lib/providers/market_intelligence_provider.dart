@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/utils/language_utils.dart';
 import '../data/models/execution_score.dart';
 import '../data/models/market_profile.dart';
 import '../data/models/revenue_intelligence.dart';
@@ -9,7 +10,9 @@ import 'market_analysis_provider.dart';
 import 'opportunity_lab_provider.dart';
 import 'project_provider.dart';
 
-final _miService = MarketIntelligenceService();
+// R16 — rebuilt when the UI language changes, so computed text follows it.
+final _miServiceProvider = Provider<MarketIntelligenceService>(
+    (ref) => MarketIntelligenceService(l10n: ref.watch(appL10nProvider)));
 
 // ── Market Profiles ───────────────────────────────────────────────────────
 final marketProfilesProvider =
@@ -18,7 +21,7 @@ final marketProfilesProvider =
   final analyses  = await ref.watch(marketAnalysesProvider.future);
   final labItems  = await ref.watch(opportunityLabProvider.future);
 
-  return _miService.computeMarketProfiles(
+  return ref.watch(_miServiceProvider).computeMarketProfiles(
     projects: projects,
     analyses: analyses,
     labItems: labItems,
@@ -32,7 +35,7 @@ final revenueIntelligenceProvider =
   final analyses     = await ref.watch(marketAnalysesProvider.future);
   final revenuePlans = await ref.watch(allRevenuePlansProvider.future);
 
-  return _miService.computeRevenueIntelligence(
+  return ref.watch(_miServiceProvider).computeRevenueIntelligence(
     projects:     projects,
     analyses:     analyses,
     revenuePlans: revenuePlans,
@@ -46,7 +49,7 @@ final executionScoresProvider =
   final actions  = await ref.watch(actionQueueProvider.future);
   final labItems = await ref.watch(opportunityLabProvider.future);
 
-  return _miService.computeExecutionScores(
+  return ref.watch(_miServiceProvider).computeExecutionScores(
     projects: projects,
     actions:  actions,
     labItems: labItems,

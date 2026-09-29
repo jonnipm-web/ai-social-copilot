@@ -9,6 +9,9 @@ class MarketAnalysis {
   final String  input;
   final String inputType;
   final String? niche;
+  /// R16: niche in its ORIGINAL (stored) language, for language-independent
+  /// logic (niche overlap, market inference). Equals [niche] when not translated.
+  final String? nicheOriginal;
   final String? subNiche;
   final String? targetAudience;
   final String? businessType;
@@ -40,6 +43,7 @@ class MarketAnalysis {
     required this.createdAt,
     required this.updatedAt,
     this.localizedFrom,
+    this.nicheOriginal,
   });
 
   // ── Getters básicos ──────────────────────────────────────────────────────
@@ -113,6 +117,7 @@ class MarketAnalysis {
       input:              map['input'] as String,
       inputType:          map['input_type'] as String? ?? 'url',
       niche:              map['niche'] as String?,
+      nicheOriginal:      (map.containsKey('r16_original_niche') ? map['r16_original_niche'] : map['niche']) as String?,
       subNiche:           map['sub_niche'] as String?,
       targetAudience:     map['target_audience'] as String?,
       businessType:       map['business_type'] as String?,

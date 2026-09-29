@@ -12,9 +12,6 @@ class StrategyService {
   // stored row; see content_localization_service.dart).
   final RowLocalizer _localizer;
 
-  Future<List<Map<String, dynamic>>> _loc(String table, dynamic rows) =>
-      _localizer(table, (rows as List).map((r) => Map<String, dynamic>.from(r as Map)).toList());
-
   Future<Map<String, dynamic>> _locOne(String table, Map<String, dynamic> row) async =>
       (await _localizer(table, [row])).first;
 

@@ -32,12 +32,12 @@ export type TargetLanguage = 'pt-BR' | 'en-US';
  * project names, the knowledge document itself.
  */
 export const LOCALIZABLE_FIELDS: Record<string, readonly string[]> = {
-  projects: ['description'],
+  projects: ['description', 'details_json'],
   knowledge_analysis: [
     'summary', 'topics', 'content_pillars', 'audience_pain_points', 'audience_desires',
     'commercial_angles', 'ctas', 'campaign_ideas', 'post_ideas', 'article_ideas',
     'seo_opportunities', 'adsense_opportunities', 'amazon_kdp_opportunities',
-    'score_details', 'hotmart_data', 'shopify_data',
+    'score_details', 'hotmart_data', 'shopify_data', 'persona_training',
   ],
   knowledge_strategies: ['strategy_json'],
   campaigns: ['title', 'campaign_json'],
@@ -62,7 +62,7 @@ export const LOCALIZABLE_FIELDS: Record<string, readonly string[]> = {
  * codes the client compares against (e.g. "Alto", "SIM", "expansão") survive.
  */
 const NON_TRANSLATABLE_KEY =
-  /^(id|.*_id|ids|type|types|level|effort|impact|priority|potential|search_intent|intent|investment_recommendation|action_type|opportunity_type|status|state|channel|channels|objective|url|urls|link|links|href|website|domain|email|slug|code|codes|detected_language|detected_type|language|locale|currency|unit|format|kind|category_code|keyword|keywords|main_keyword|.*keywords.*|hashtag|hashtags|entities|entity|sku|isbn|asin|platform|platforms|source|sources|icon|emoji|color|risk_level|confidence|score|.*_score)$/i;
+  /^(id|.*_id|ids|type|types|level|effort|impact|priority|potential|search_intent|intent|investment_recommendation|action_type|opportunity_type|status|state|channel|channels|objective|url|urls|link|links|href|website|domain|email|slug|code|codes|detected_language|detected_type|language|locale|currency|unit|kind|category_code|keyword|keywords|main_keyword|.*keywords.*|hashtag|hashtags|entities|entity|sku|isbn|asin|platform|platforms|source|sources|icon|emoji|color|risk_level|confidence|score|.*_score)$/i;
 
 const MAX_SEGMENT_CHARS = 4000;
 
@@ -100,11 +100,52 @@ function walk(value: unknown, path: (string | number)[], field: string, out: Seg
 }
 
 /** Extracts translatable string leaves from the allow-listed columns of a row. */
+export const MAX_SEGMENTS_PER_ROW = 250;
+export const MAX_CHARS_PER_ROW = 30_000;
+
 export function extractSegments(table: string, row: Record<string, unknown>): Segment[] {
   const fields = LOCALIZABLE_FIELDS[table] ?? [];
   const out: Segment[] = [];
   for (const f of fields) walk(row[f], [], f, out);
-  return out;
+  // Cost bound (R16 §21/§22): oversized rows are translated up to the cap;
+  // the remainder keeps its original text.
+  const capped: Segment[] = [];
+  let chars = 0;
+  for (const s of out) {
+    if (capped.length >= MAX_SEGMENTS_PER_ROW || chars + s.text.length > MAX_CHARS_PER_ROW) break;
+    capped.push(s);
+    chars += s.text.length;
+  }
+  return capped;
+}
+
+// Function words that are frequent in one language and rare in the other.
+// Ambiguous words that exist in both languages (a, as, do, no, ...) are excluded.
+const PT_MARKERS = new Set(['de', 'da', 'das', 'dos', 'para', 'com', 'não', 'uma', 'um', 'que', 'em', 'na', 'nas', 'nos', 'ao', 'aos', 'pela', 'pelo', 'mais', 'seu', 'sua', 'são', 'está', 'como', 'também', 'por', 'e', 'é', 'ou', 'os']);
+const EN_MARKERS = new Set(['the', 'of', 'and', 'to', 'for', 'with', 'is', 'are', 'in', 'on', 'your', 'you', 'this', 'that', 'by', 'from', 'an', 'or', 'be', 'it', 'at', 'more', 'their', 'our', 'can', 'will']);
+
+/**
+ * COST OPTIMIZATION ONLY (not the localization architecture): returns true
+ * when the text is overwhelmingly in [target] by function-word evidence, so
+ * the row can be served as-is without an LLM call. Ambiguous or short text
+ * returns false and goes to the model, which remains the arbiter.
+ */
+export function confidentlyInLanguage(segments: Segment[], target: TargetLanguage): boolean {
+  let pt = 0, en = 0, words = 0;
+  for (const s of segments) {
+    for (const w of s.text.toLowerCase().split(/[^\p{L}]+/u)) {
+      if (!w) continue;
+      words++;
+      if (PT_MARKERS.has(w)) pt++;
+      if (EN_MARKERS.has(w)) en++;
+    }
+  }
+  if (words < 40) return false;
+  const hits = pt + en;
+  if (hits < 12) return false;
+  const share = (target === 'en-US' ? en : pt) / hits;
+  const other = target === 'en-US' ? pt : en;
+  return share >= 0.9 && other <= Math.max(2, hits * 0.05);
 }
 
 /**

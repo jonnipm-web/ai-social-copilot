@@ -102,7 +102,7 @@ class _PerformanceScreenState extends ConsumerState<PerformanceScreen> {
               const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
               const SizedBox(height: 12),
               Text(
-                l10n.performanceLoadError('$error'),
+                l10n.performanceLoadError(extractErrorMessage(error, l10n)),
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.white70),
               ),

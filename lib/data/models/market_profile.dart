@@ -89,7 +89,7 @@ class MarketProfile {
 
     if (analysis != null) {
       // Rich data from market analysis
-      market         = _inferMarket(analysis.niche ?? project.name);
+      market         = _inferMarket(analysis.nicheOriginal ?? analysis.niche ?? project.name);
       niche          = analysis.niche ?? project.name;
       subNiche       = analysis.subNiche ?? '';
       targetAudience = analysis.targetAudience ?? '';

@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/ecosystem_labels.dart';
 import '../../../core/utils/language_utils.dart';
+import '../../../core/utils/snackbar_utils.dart';
 import '../../../data/models/copilot_context_data.dart';
 import '../../../data/models/ive_interaction_request.dart';
 import '../../../data/models/ecosystem_score.dart';
@@ -104,7 +105,7 @@ class _ProjectCommandCenterScreenState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+          SnackBar(content: Text(extractErrorMessage(e, AppLocalizations.of(context))), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -179,7 +180,7 @@ class _ProjectCommandCenterScreenState
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(t.projectCommandDeleteError('$e')), backgroundColor: Colors.red),
+            SnackBar(content: Text(t.projectCommandDeleteError(extractErrorMessage(e, t))), backgroundColor: Colors.red),
           );
         }
       }
@@ -322,7 +323,7 @@ class _ProjectCommandCenterScreenState
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(t.projectCommandAnalyzeError('$e')),
+          content: Text(t.projectCommandAnalyzeError(extractErrorMessage(e, t))),
           backgroundColor: const Color(0xFFF44336),
         ),
       );
@@ -466,7 +467,7 @@ class _ProjectCommandCenterScreenState
               loading: () => const Center(
                   child: CircularProgressIndicator(color: Color(0xFF6BCB77))),
               error: (e, _) => Center(
-                  child: Text(t.projectCommandLoadError('$e'),
+                  child: Text(t.projectCommandLoadError(extractErrorMessage(e, t)),
                       style: const TextStyle(color: Colors.redAccent))),
               data: (projects) => projects.isEmpty
                   ? _buildEmpty(t)
@@ -1845,7 +1846,7 @@ class _ResourceAllocationSectionState
             ),
             if (editState.status == AllocationEditStatus.error && editState.error != null) ...[
               const SizedBox(height: 6),
-              Text(t.projectCommandSaveAllocationError('${editState.error}'),
+              Text(t.projectCommandSaveAllocationError(extractErrorMessage(editState.error, t)),
                   style: const TextStyle(color: Color(0xFFFF6B6B), fontSize: 11)),
             ],
             const SizedBox(height: 10),
@@ -2010,7 +2011,8 @@ class _ProjectConfigSheetState extends ConsumerState<_ProjectConfigSheet> {
       if (!mounted) return;
       setState(() {
         _saving = false;
-        _error = AppLocalizations.of(context)!.projectConfigSaveError(e.toString());
+        final t = AppLocalizations.of(context)!;
+        _error = t.projectConfigSaveError(extractErrorMessage(e, t));
       });
     }
   }

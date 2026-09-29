@@ -2371,5 +2371,11 @@
   "@r16TranslatedFrom": {"placeholders": {"language": {"type": "String"}}},
   "r16ShowingOriginalContent": "Showing content in its original language",
   "r16ViewOriginal": "View original",
-  "r16ViewTranslation": "View translation"
+  "r16ViewTranslation": "View translation",
+  "uxfAdminSetRole": "→ {role}",
+  "@uxfAdminSetRole": {"placeholders": {"role": {"type": "String"}}},
+  "uxfAdminRoleBetaTester": "Beta Tester",
+  "uxfAdminRoleAdmin": "Admin",
+  "uxfEcoAllocationScoreLine": "Ecosystem Score: {score}/100  •  {emoji} {verdict}",
+  "@uxfEcoAllocationScoreLine": {"placeholders": {"score": {"type": "String"}, "emoji": {"type": "String"}, "verdict": {"type": "String"}}}
 }

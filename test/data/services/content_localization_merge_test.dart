@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:ai_social_copilot/data/models/market_analysis.dart';
 import 'package:ai_social_copilot/data/models/opportunity_lab_item.dart';
 import 'package:ai_social_copilot/data/models/project.dart';
 import 'package:ai_social_copilot/data/services/content_localization_service.dart';
@@ -32,6 +33,7 @@ void main() {
     expect(merged['opportunity_type'], 'expansão'); // canonical code untouched
     expect(merged['final_score'], 82); // score untouched
     expect(oppRow['title'], 'Expandir para o Brasil'); // original not mutated
+    expect(merged['${kOriginalPrefix}title'], 'Expandir para o Brasil'); // original kept for logic
 
     final item = OpportunityLabItem.fromMap(merged);
     expect(item.title, 'Expand into Brazil');
@@ -44,6 +46,26 @@ void main() {
     final merged = mergeLocalized('opportunity_lab', oppRow, entry, 'en-US');
     expect(identical(merged, oppRow), isTrue);
     expect(OpportunityLabItem.fromMap(merged).localizedFrom, isNull);
+  });
+
+  test('unknown detected source language still marks the row as translated (R16 §9)', () {
+    final entry = debugLocalizedEntry(null, {'title': 'Expand into Brazil'});
+    final merged = mergeLocalized('opportunity_lab', oppRow, entry, 'en-US');
+    expect(merged[kLocalizedFromKey], 'und');
+    expect(OpportunityLabItem.fromMap(merged).localizedFrom, 'und');
+  });
+
+  test('market analysis keeps the original niche for language-independent logic (R16 §20)', () {
+    final row = <String, dynamic>{
+      'id': 'm1', 'user_id': 'u1', 'input': 'rcbo', 'niche': 'Dispositivos elétricos',
+      'created_at': '2026-09-01T00:00:00Z', 'updated_at': '2026-09-01T00:00:00Z',
+    };
+    final merged = mergeLocalized('market_analyses', row,
+        debugLocalizedEntry('pt-BR', {'niche': 'Electrical devices'}), 'en-US');
+    final a = MarketAnalysis.fromMap(merged);
+    expect(a.niche, 'Electrical devices');
+    expect(a.nicheOriginal, 'Dispositivos elétricos');
+    expect(MarketAnalysis.fromMap(row).nicheOriginal, 'Dispositivos elétricos');
   });
 
   test('missing/failed localization falls back to the original row', () {

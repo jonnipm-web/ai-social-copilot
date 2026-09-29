@@ -66,7 +66,7 @@ void main() {
   });
 
   testWidgets('SF-04 tapping Save on a new strategy calls create(), not create_version()', (tester) async {
-    final api = await _pump(tester);
+    await _pump(tester);
     await tester.enterText(find.byKey(const Key('strategyBuilderNameField')), 'A New Strategy');
     final saveButton = find.byKey(const Key('strategyBuilderSaveButton'));
     await tester.ensureVisible(saveButton);

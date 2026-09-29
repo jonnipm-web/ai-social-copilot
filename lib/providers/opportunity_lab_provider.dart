@@ -80,5 +80,5 @@ class OpportunityLabNotifier
 
 final opportunityLabNotifierProvider = StateNotifierProvider.autoDispose<
     OpportunityLabNotifier, AsyncValue<List<OpportunityLabItem>>>(
-  (ref) => OpportunityLabNotifier(ref.read(opportunityLabServiceProvider)),
+  (ref) => OpportunityLabNotifier(ref.watch(opportunityLabServiceProvider)),
 );

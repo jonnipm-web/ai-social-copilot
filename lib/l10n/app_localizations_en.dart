@@ -6825,4 +6825,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get r16ViewTranslation => 'View translation';
+
+  @override
+  String uxfAdminSetRole(String role) {
+    return '→ $role';
+  }
+
+  @override
+  String get uxfAdminRoleBetaTester => 'Beta Tester';
+
+  @override
+  String get uxfAdminRoleAdmin => 'Admin';
+
+  @override
+  String uxfEcoAllocationScoreLine(String score, String emoji, String verdict) {
+    return 'Ecosystem Score: $score/100  •  $emoji $verdict';
+  }
 }

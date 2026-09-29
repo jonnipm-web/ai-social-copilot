@@ -175,11 +175,11 @@ class _UserTile extends StatelessWidget {
           }
         },
         itemBuilder: (_) => [
-          const PopupMenuItem(value: 'free',        child: Text('→ Free',         style: TextStyle(color: Colors.white70))),
-          const PopupMenuItem(value: 'pro',         child: Text('→ Pro',          style: TextStyle(color: Colors.white70))),
-          const PopupMenuItem(value: 'premium',     child: Text('→ Premium',      style: TextStyle(color: Colors.white70))),
-          const PopupMenuItem(value: 'beta_tester', child: Text('→ Beta Tester',  style: TextStyle(color: Colors.white70))),
-          const PopupMenuItem(value: 'admin',       child: Text('→ Admin',        style: TextStyle(color: Color(0xFFFFD700)))),
+          PopupMenuItem(value: 'free',        child: Text(l10n.uxfAdminSetRole(l10n.planNameFree),          style: const TextStyle(color: Colors.white70))),
+          PopupMenuItem(value: 'pro',         child: Text(l10n.uxfAdminSetRole(l10n.planNamePro),           style: const TextStyle(color: Colors.white70))),
+          PopupMenuItem(value: 'premium',     child: Text(l10n.uxfAdminSetRole(l10n.planNamePremium),       style: const TextStyle(color: Colors.white70))),
+          PopupMenuItem(value: 'beta_tester', child: Text(l10n.uxfAdminSetRole(l10n.uxfAdminRoleBetaTester), style: const TextStyle(color: Colors.white70))),
+          PopupMenuItem(value: 'admin',       child: Text(l10n.uxfAdminSetRole(l10n.uxfAdminRoleAdmin),      style: const TextStyle(color: Color(0xFFFFD700)))),
           const PopupMenuDivider(),
           PopupMenuItem(
             value: 'toggle',

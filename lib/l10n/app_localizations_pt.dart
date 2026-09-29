@@ -4629,13 +4629,13 @@ class AppLocalizationsPt extends AppLocalizations {
   String get miRootProjectSelectorNone => 'Nenhum';
 
   @override
-  String get r16LanguageNamePortuguese => 'Português';
+  String get r16LanguageNamePortuguese => 'português';
 
   @override
-  String get r16LanguageNameEnglish => 'Inglês';
+  String get r16LanguageNameEnglish => 'inglês';
 
   @override
-  String get r16LanguageNameSpanish => 'Espanhol';
+  String get r16LanguageNameSpanish => 'espanhol';
 
   @override
   String get r16LanguageNameOther => 'outro idioma';
@@ -6845,4 +6845,20 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get r16ViewTranslation => 'Ver tradução';
+
+  @override
+  String uxfAdminSetRole(String role) {
+    return '→ $role';
+  }
+
+  @override
+  String get uxfAdminRoleBetaTester => 'Beta Tester';
+
+  @override
+  String get uxfAdminRoleAdmin => 'Admin';
+
+  @override
+  String uxfEcoAllocationScoreLine(String score, String emoji, String verdict) {
+    return 'Ecosystem Score: $score/100  •  $emoji $verdict';
+  }
 }

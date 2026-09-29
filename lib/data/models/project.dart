@@ -46,11 +46,17 @@ class Project {
     required this.updatedAt,
     this.localizedFrom,
     this.descriptionLocalized,
+    this.detailsJsonLocalized,
   });
 
-  List<String> get nextActions => _list(detailsJson['next_actions']);
-  List<String> get risks => _list(detailsJson['risks']);
-  String get summary => detailsJson['summary'] as String? ?? '';
+  /// R16: details_json translated for DISPLAY only; [detailsJson] stays the
+  /// original and is the only map used for logic and writes.
+  final Map<String, dynamic>? detailsJsonLocalized;
+  Map<String, dynamic> get _presentedDetails => detailsJsonLocalized ?? detailsJson;
+
+  List<String> get nextActions => _list(_presentedDetails['next_actions']);
+  List<String> get risks => _list(_presentedDetails['risks']);
+  String get summary => _presentedDetails['summary'] as String? ?? '';
 
   static List<String> _list(dynamic v) {
     if (v is List) return v.map((e) => e.toString()).toList();
@@ -68,6 +74,9 @@ class Project {
       id:                  map['id'] as String,
       localizedFrom: map['r16_localized_from'] as String?,
       descriptionLocalized: map['description_localized'] as String?,
+      detailsJsonLocalized: map['details_json_localized'] is Map
+          ? Map<String, dynamic>.from(map['details_json_localized'] as Map)
+          : null,
       userId:              map['user_id'] as String,
       name:                map['name'] as String,
       description:         map['description'] as String? ?? '',
@@ -109,6 +118,7 @@ class Project {
       id:                  id,
       localizedFrom: localizedFrom,
       descriptionLocalized: descriptionLocalized,
+      detailsJsonLocalized: detailsJsonLocalized,
       userId:              userId,
       name:                name,
       description:         description,

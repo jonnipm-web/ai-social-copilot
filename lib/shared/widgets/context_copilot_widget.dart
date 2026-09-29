@@ -6,6 +6,7 @@ import '../../core/constants/app_constants.dart';
 import '../../core/diagnostics/diagnostic_models.dart';
 import '../../core/modules/module_registry.dart';
 import '../../core/ui/breakpoints.dart';
+import '../../core/utils/snackbar_utils.dart';
 import '../../core/utils/uuid_v4.dart';
 import '../../data/models/copilot_context_data.dart';
 import '../../data/models/aef_runtime.dart';
@@ -510,7 +511,8 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: Text(
-              AppLocalizations.of(context)!.iveChatErrorPrefix(state.error ?? ''),
+              AppLocalizations.of(context)!.iveChatErrorPrefix(
+                  extractErrorMessage(state.error ?? '', AppLocalizations.of(context))),
               style: const TextStyle(color: Colors.redAccent, fontSize: 12),
             ),
           ),

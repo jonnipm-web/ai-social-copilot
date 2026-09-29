@@ -1701,9 +1701,9 @@
 
   "miRootProjectSelectorLabel": "Vincular a um projeto (opcional)",
   "miRootProjectSelectorNone": "Nenhum",
-  "r16LanguageNamePortuguese": "Português",
-  "r16LanguageNameEnglish": "Inglês",
-  "r16LanguageNameSpanish": "Espanhol",
+  "r16LanguageNamePortuguese": "português",
+  "r16LanguageNameEnglish": "inglês",
+  "r16LanguageNameSpanish": "espanhol",
   "r16LanguageNameOther": "outro idioma",
   "ecoVerdictScale": "ESCALAR",
   "ecoVerdictAccelerate": "ACELERAR",
@@ -2481,5 +2481,11 @@
   "@r16TranslatedFrom": {"placeholders": {"language": {"type": "String"}}},
   "r16ShowingOriginalContent": "Exibindo o conteúdo no idioma original",
   "r16ViewOriginal": "Ver original",
-  "r16ViewTranslation": "Ver tradução"
+  "r16ViewTranslation": "Ver tradução",
+  "uxfAdminSetRole": "→ {role}",
+  "@uxfAdminSetRole": {"placeholders": {"role": {"type": "String"}}},
+  "uxfAdminRoleBetaTester": "Beta Tester",
+  "uxfAdminRoleAdmin": "Admin",
+  "uxfEcoAllocationScoreLine": "Ecosystem Score: {score}/100  •  {emoji} {verdict}",
+  "@uxfEcoAllocationScoreLine": {"placeholders": {"score": {"type": "String"}, "emoji": {"type": "String"}, "verdict": {"type": "String"}}}
 }

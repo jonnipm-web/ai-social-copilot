@@ -11,6 +11,7 @@ import '../data/models/opportunity_lab_item.dart';
 import '../data/services/action_queue_service.dart';
 import '../l10n/app_localizations.dart';
 import '../data/services/content_localization_service.dart';
+import '../data/services/opportunity_lab_service.dart';
 
 final actionQueueServiceProvider =
     Provider<ActionQueueService>((ref) => ActionQueueService(localizer: ref.watch(rowLocalizerProvider)));
@@ -206,7 +207,20 @@ class ActionQueueNotifier
     }
   }
 
-  Future<ActionQueueItem> addFromOpportunityItem(OpportunityLabItem opp) {
+  Future<ActionQueueItem> addFromOpportunityItem(OpportunityLabItem shown) async {
+    // R16 §8 — the opportunity on screen may be a translated PRESENTATION.
+    // A new action must be derived from the ORIGINAL stored text (the
+    // action is then presented through the same localization layer), so
+    // re-read the row without localization; fall back to what is on screen
+    // only if that read is impossible (e.g. tests without Supabase).
+    OpportunityLabItem opp = shown;
+    if (shown.localizedFrom != null) {
+      try {
+        opp = await OpportunityLabService().fetchById(shown.id) ?? shown;
+      } catch (_) {
+        opp = shown;
+      }
+    }
     return addFromOpportunity(
       title:            opp.title,
       description:      opp.description,
@@ -246,7 +260,7 @@ class ActionQueueNotifier
 final actionQueueNotifierProvider = StateNotifierProvider.autoDispose<
     ActionQueueNotifier, AsyncValue<List<ActionQueueItem>>>(
   (ref) => ActionQueueNotifier(
-    ref.read(actionQueueServiceProvider),
+    ref.watch(actionQueueServiceProvider),
     l10n: () => ref.read(appL10nProvider),
   ),
 );

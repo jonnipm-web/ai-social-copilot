@@ -330,3 +330,43 @@ jobs:
             supabase/functions/generate-campaign/index_test.ts \
             supabase/functions/generate-strategy/index_test.ts \
             supabase/functions/process-file/index_test.ts
+
+  r16-language-consistency:
+    # R16 — global language consistency: output-language policy for every AI
+    # function + localize-content (presentation localization of persisted
+    # content: ownership, cache, cost cap, fail-closed, no source overwrite).
+    # Separate job so a failure elsewhere never hides these results.
+    name: R16 language consistency (output-language policy + localize-content)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Type-check R16 surfaces and every AI Edge Function
+        run: |
+          deno check supabase/functions/_shared/language.ts supabase/functions/_shared/language_test.ts \
+            supabase/functions/_shared/content_localization.ts supabase/functions/localize-content/*.ts \
+            supabase/functions/competitor-discovery/index.ts supabase/functions/niche-discovery/index.ts \
+            supabase/functions/gap-analysis/index.ts supabase/functions/opportunity-discovery/index.ts \
+            supabase/functions/market-analysis/index.ts supabase/functions/content-cluster/index.ts \
+            supabase/functions/revenue-planner/index.ts supabase/functions/generate-strategy/index.ts \
+            supabase/functions/generate-campaign/index.ts supabase/functions/extract-knowledge/index.ts \
+            supabase/functions/improve-post/index.ts supabase/functions/analyze-website/index.ts \
+            supabase/functions/generate-project-actions/index.ts supabase/functions/generate-project-opportunities/index.ts \
+            supabase/functions/decision-simulator/index.ts supabase/functions/context-copilot/index.ts
+
+      - name: Run R16 tests
+        env:
+          DENO_TESTING: "1"
+          GROQ_API_KEY: "test-key-ci"
+        run: |
+          deno test --allow-env --allow-read --allow-net \
+            supabase/functions/_shared/language_test.ts \
+            supabase/functions/localize-content/index_test.ts \
+            supabase/functions/context-copilot/index_test.ts \
+            supabase/functions/extract-knowledge/index_test.ts

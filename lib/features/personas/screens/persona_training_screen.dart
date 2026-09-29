@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/utils/snackbar_utils.dart';
 import '../../../data/models/persona_training.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/persona_training_provider.dart';
@@ -55,7 +56,7 @@ class PersonaTrainingScreen extends ConsumerWidget {
                 const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
                 const SizedBox(height: 16),
                 Text(
-                  l10n.personaTrainingLoadError('$error'),
+                  l10n.personaTrainingLoadError(extractErrorMessage(error, l10n)),
                   style: const TextStyle(color: Colors.white70),
                   textAlign: TextAlign.center,
                 ),

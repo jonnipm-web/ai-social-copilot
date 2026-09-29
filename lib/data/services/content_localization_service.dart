@@ -26,6 +26,9 @@ typedef RowLocalizer = Future<List<Map<String, dynamic>>> Function(
 /// ('pt-BR', 'en-US', ...). Models may read it to show a "translated" notice.
 const String kLocalizedFromKey = 'r16_localized_from';
 
+/// Prefix under which the original value of a localized column is kept.
+const String kOriginalPrefix = 'r16_original_';
+
 /// Suffix used for tables whose ORIGINAL user text must stay editable
 /// (projects): the translation goes to `<column>_localized` instead of
 /// replacing the column, so edit forms keep the original.
@@ -54,6 +57,10 @@ class ContentLocalizationService {
   RowLocalizer localizerFor(String language) =>
       (table, rows) => localizeRows(table, rows, language);
 
+  /// In-flight requests keyed like [_memo], so concurrent providers asking
+  /// for the same rows share ONE server call (no duplicate translations).
+  final Map<String, Future<void>> _inflight = {};
+
   Future<List<Map<String, dynamic>>> localizeRows(
     String table,
     List<Map<String, dynamic>> rows,
@@ -61,33 +68,40 @@ class ContentLocalizationService {
   ) async {
     if (rows.isEmpty) return rows;
     try {
-      final missing = <String>[];
+      final byKey = <String, Map<String, dynamic>>{};
       for (final r in rows) {
-        final id = r['id']?.toString();
-        if (id == null) continue;
-        if (!_memo.containsKey(_key(table, id, language, r))) missing.add(id);
+        if (r['id'] == null) continue;
+        byKey[_key(table, language, r)] = r;
       }
-      for (var i = 0; i < missing.length; i += _maxIdsPerCall) {
-        final chunk = missing.sublist(i, (i + _maxIdsPerCall).clamp(0, missing.length));
-        final response = await _client.functions.invoke(
-          'localize-content',
-          body: {'table': table, 'ids': chunk, 'language': language},
-        );
-        final data = response.data;
-        final items = (data is Map ? data['items'] : null);
-        for (final id in chunk) {
-          final item = items is Map ? items[id] : null;
-          final row = rows.firstWhere((r) => r['id']?.toString() == id);
-          _memo[_key(table, id, language, row)] = item is Map
-              ? _Localized(
-                  sourceLanguage: item['source_language']?.toString(),
-                  payload: Map<String, dynamic>.from(item['payload'] as Map? ?? const {}),
-                )
-              : const _Localized(sourceLanguage: null, payload: {});
+      final waits = <Future<void>>[];
+      final missing = <String, Map<String, dynamic>>{};
+      byKey.forEach((k, r) {
+        if (_memo.containsKey(k)) return;
+        final pending = _inflight[k];
+        if (pending != null) {
+          waits.add(pending);
+        } else {
+          missing[k] = r;
         }
+      });
+
+      final keys = missing.keys.toList();
+      for (var i = 0; i < keys.length; i += _maxIdsPerCall) {
+        final chunkKeys = keys.sublist(i, (i + _maxIdsPerCall).clamp(0, keys.length));
+        final call = _fetchChunk(table, language, {for (final k in chunkKeys) k: missing[k]!});
+        for (final k in chunkKeys) {
+          _inflight[k] = call;
+        }
+        waits.add(call.whenComplete(() {
+          for (final k in chunkKeys) {
+            _inflight.remove(k);
+          }
+        }));
       }
+      await Future.wait(waits);
+
       return rows
-          .map((r) => mergeLocalized(table, r, _memo[_key(table, r['id']?.toString() ?? '', language, r)], language))
+          .map((r) => r['id'] == null ? r : mergeLocalized(table, r, _memo[_key(table, language, r)], language))
           .toList();
     } catch (e) {
       debugPrint('R16 localize-content failed for $table: $e');
@@ -95,9 +109,43 @@ class ContentLocalizationService {
     }
   }
 
-  /// `updated_at` (when the table has it) invalidates the memo after an edit.
-  static String _key(String table, String id, String language, Map<String, dynamic> row) =>
-      '$table|$id|$language|${row['updated_at'] ?? ''}';
+  Future<void> _fetchChunk(String table, String language, Map<String, Map<String, dynamic>> chunk) async {
+    final ids = chunk.values.map((r) => r['id'].toString()).toSet().toList();
+    Map? items;
+    try {
+      final response = await _client.functions.invoke(
+        'localize-content',
+        body: {'table': table, 'ids': ids, 'language': language},
+      );
+      final data = response.data;
+      items = data is Map && data['items'] is Map ? data['items'] as Map : null;
+    } catch (e) {
+      // Not memoised: a transient failure is retried on the next read.
+      debugPrint('R16 localize-content call failed for $table: $e');
+      return;
+    }
+    chunk.forEach((k, row) {
+      final item = items?[row['id'].toString()];
+      _memo[k] = item is Map
+          ? _Localized(
+              sourceLanguage: item['source_language']?.toString(),
+              payload: Map<String, dynamic>.from(item['payload'] as Map? ?? const {}),
+            )
+          : const _Localized(sourceLanguage: null, payload: {});
+    });
+  }
+
+  /// Memo key includes a fingerprint of the row content, so a re-run that
+  /// keeps the same id (upserted analyses) or an edit never shows a stale
+  /// translation of the previous content.
+  static String _key(String table, String language, Map<String, dynamic> row) =>
+      '$table|${row['id']}|$language|${_fingerprint(row)}';
+
+  static int _fingerprint(Map<String, dynamic> row) {
+    final keys = row.keys.where((k) => !k.startsWith('r16_')).toList()..sort();
+    return Object.hashAll(keys.map((k) => '$k=${row[k]}'));
+  }
+
 }
 
 class _Localized {
@@ -124,10 +172,16 @@ Map<String, dynamic> mergeLocalized(
     if (kSideBySideTables.contains(table)) {
       out['${column}_localized'] = value;
     } else {
+      // Keep the ORIGINAL value next to the presentation value: logic that
+      // must not depend on the presentation language (e.g. niche overlap
+      // between projects, R16 §20) reads `r16_original_<column>`.
+      out['$kOriginalPrefix$column'] = row[column];
       out[column] = value;
     }
   });
-  out[kLocalizedFromKey] = src.isEmpty ? null : src;
+  // Unknown detected language still marks the row as translated, so the
+  // "translated" notice is always shown (R16 §9).
+  out[kLocalizedFromKey] = src.isEmpty ? 'und' : src;
   return out;
 }
 

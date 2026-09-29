@@ -90,8 +90,8 @@ class ProjectIntelligenceService {
         final aB = _findAnalysis(pB, analyses);
         if (aA == null || aB == null) continue;
 
-        final nicheA = (aA.niche ?? '').toLowerCase();
-        final nicheB = (aB.niche ?? '').toLowerCase();
+        final nicheA = (aA.nicheOriginal ?? aA.niche ?? '').toLowerCase();
+        final nicheB = (aB.nicheOriginal ?? aB.niche ?? '').toLowerCase();
         if (nicheA.isEmpty || nicheB.isEmpty) continue;
 
         final overlap = _nicheOverlap(nicheA, nicheB);
@@ -133,7 +133,7 @@ class ProjectIntelligenceService {
       for (final p in projects) {
         final a = _findAnalysis(p, analyses);
         if (a == null) continue;
-        final overlap = _nicheOverlap(personaNiche, (a.niche ?? '').toLowerCase());
+        final overlap = _nicheOverlap(personaNiche, (a.nicheOriginal ?? a.niche ?? '').toLowerCase());
         if (overlap > 0.3) {
           edges.add(GraphEdge(
             sourceType:   'persona',
@@ -230,7 +230,7 @@ class ProjectIntelligenceService {
     List<MarketAnalysis> allAnalyses,
   ) {
     if (currentAnalysis == null) return [];
-    final cNiche = (currentAnalysis.niche ?? '').toLowerCase();
+    final cNiche = (currentAnalysis.nicheOriginal ?? currentAnalysis.niche ?? '').toLowerCase();
     if (cNiche.isEmpty) return [];
 
     return allProjects
@@ -238,7 +238,7 @@ class ProjectIntelligenceService {
         .where((p) {
           final a = _findAnalysis(p, allAnalyses);
           if (a == null) return false;
-          return _nicheOverlap(cNiche, (a.niche ?? '').toLowerCase()) > 0;
+          return _nicheOverlap(cNiche, (a.nicheOriginal ?? a.niche ?? '').toLowerCase()) > 0;
         })
         .map((p) => p.name)
         .toList();

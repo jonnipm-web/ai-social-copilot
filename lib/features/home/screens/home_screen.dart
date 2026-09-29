@@ -280,7 +280,7 @@ class _PriorityProjectsCard extends ConsumerWidget {
       onSeeAll: () => context.push(AppConstants.routeProjects),
       child: profilesAsync.when(
         loading: () => const _CardLoader(),
-        error:   (e, _) => _CardError('$e'),
+        error:   (e, _) => _CardError(extractErrorMessage(e, l10n)),
         data: (profiles) {
           if (profiles.isEmpty) {
             return _EmptyHint(
@@ -328,7 +328,7 @@ class _NextBestActionCard extends ConsumerWidget {
       onSeeAll: () => context.push(AppConstants.routeActionEngine),
       child: recsAsync.when(
         loading: () => const _CardLoader(),
-        error:   (e, _) => _CardError('$e'),
+        error:   (e, _) => _CardError(extractErrorMessage(e, l10n)),
         data: (recs) {
           if (recs.isEmpty) {
             return _EmptyHint(
@@ -410,7 +410,7 @@ class _PersonasCard extends ConsumerWidget {
       ),
       child: profilesAsync.when(
         loading: () => const _CardLoader(),
-        error:   (e, _) => _CardError('$e'),
+        error:   (e, _) => _CardError(extractErrorMessage(e, l10n)),
         data: (profiles) {
           if (profiles.isEmpty) {
             return _EmptyHint(
@@ -455,7 +455,7 @@ class _EcosystemIntelligenceCard extends ConsumerWidget {
       iconColor: _kGreen,
       child: graphAsync.when(
         loading: () => const _CardLoader(),
-        error:   (e, _) => _CardError('$e'),
+        error:   (e, _) => _CardError(extractErrorMessage(e, l10n)),
         data: (graph) {
           final profileCount = profilesAsync.valueOrNull?.length ?? 0;
           return Column(

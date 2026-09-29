@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/snackbar_utils.dart';
 import '../../../data/models/weekly_briefing.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/action_queue_provider.dart';
@@ -65,7 +66,7 @@ class WeeklyBriefingScreen extends ConsumerWidget {
         child: briefingAsync.when(
           loading: () => const Center(child: CircularProgressIndicator(color: _kPrimary)),
           error: (e, _) => Center(
-            child: Text(l10n.ecoBriefingError('$e'),
+            child: Text(l10n.ecoBriefingError(extractErrorMessage(e, l10n)),
               style: const TextStyle(color: _kRed), textAlign: TextAlign.center)),
           data: (b) => _BriefingBody(briefing: b),
         ),
