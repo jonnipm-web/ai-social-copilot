@@ -3217,6 +3217,162 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Exploração limitada de {parameter} ainda não é suportada por este motor -- nenhuma sugestão foi inventada.'**
   String strategyDetailUnsupportedParameter(String parameter);
+
+  /// No description provided for @dashWelcome.
+  ///
+  /// In pt, this message translates to:
+  /// **'Olá! Bem-vindo de volta 👋'**
+  String get dashWelcome;
+
+  /// No description provided for @dashPlanLabel.
+  ///
+  /// In pt, this message translates to:
+  /// **'Plano: {plan}'**
+  String dashPlanLabel(String plan);
+
+  /// No description provided for @dashUsageRemaining.
+  ///
+  /// In pt, this message translates to:
+  /// **'{remaining} de {limit} gerações restantes'**
+  String dashUsageRemaining(String remaining, String limit);
+
+  /// No description provided for @dashUsageLimitReached.
+  ///
+  /// In pt, this message translates to:
+  /// **'Limite atingido'**
+  String get dashUsageLimitReached;
+
+  /// No description provided for @dashUsageThisMonth.
+  ///
+  /// In pt, this message translates to:
+  /// **'este mês'**
+  String get dashUsageThisMonth;
+
+  /// No description provided for @dashImproveWithAi.
+  ///
+  /// In pt, this message translates to:
+  /// **'Melhorar Post com IA'**
+  String get dashImproveWithAi;
+
+  /// No description provided for @dashImproveWithAiSubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Transforme seu texto agora'**
+  String get dashImproveWithAiSubtitle;
+
+  /// No description provided for @dashShortcutPersonas.
+  ///
+  /// In pt, this message translates to:
+  /// **'Personas'**
+  String get dashShortcutPersonas;
+
+  /// No description provided for @dashShortcutLibrary.
+  ///
+  /// In pt, this message translates to:
+  /// **'Biblioteca'**
+  String get dashShortcutLibrary;
+
+  /// No description provided for @dashShortcutCalendar.
+  ///
+  /// In pt, this message translates to:
+  /// **'Calendário'**
+  String get dashShortcutCalendar;
+
+  /// No description provided for @dashShortcutHistory.
+  ///
+  /// In pt, this message translates to:
+  /// **'Histórico'**
+  String get dashShortcutHistory;
+
+  /// No description provided for @dashShortcutVault.
+  ///
+  /// In pt, this message translates to:
+  /// **'Cofre'**
+  String get dashShortcutVault;
+
+  /// No description provided for @dashShortcutCampaigns.
+  ///
+  /// In pt, this message translates to:
+  /// **'Campanhas'**
+  String get dashShortcutCampaigns;
+
+  /// No description provided for @dashShortcutWebsiteAnalyzer.
+  ///
+  /// In pt, this message translates to:
+  /// **'Website\nAnalyzer'**
+  String get dashShortcutWebsiteAnalyzer;
+
+  /// No description provided for @dashShortcutPerformance.
+  ///
+  /// In pt, this message translates to:
+  /// **'Performance'**
+  String get dashShortcutPerformance;
+
+  /// No description provided for @dashFeatureUnavailable.
+  ///
+  /// In pt, this message translates to:
+  /// **'Este recurso ainda não está disponível.'**
+  String get dashFeatureUnavailable;
+
+  /// No description provided for @dashAdminSectionTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Admin'**
+  String get dashAdminSectionTitle;
+
+  /// No description provided for @dashAdminStatUsers.
+  ///
+  /// In pt, this message translates to:
+  /// **'Usuários'**
+  String get dashAdminStatUsers;
+
+  /// No description provided for @dashAdminStatPersonas.
+  ///
+  /// In pt, this message translates to:
+  /// **'Personas'**
+  String get dashAdminStatPersonas;
+
+  /// No description provided for @dashAdminStatContent.
+  ///
+  /// In pt, this message translates to:
+  /// **'Conteúdos'**
+  String get dashAdminStatContent;
+
+  /// No description provided for @dashAdminStatSites.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sites'**
+  String get dashAdminStatSites;
+
+  /// No description provided for @dashAdminStatVault.
+  ///
+  /// In pt, this message translates to:
+  /// **'Cofre'**
+  String get dashAdminStatVault;
+
+  /// No description provided for @dashAdminStatCampaigns.
+  ///
+  /// In pt, this message translates to:
+  /// **'Campanhas'**
+  String get dashAdminStatCampaigns;
+
+  /// No description provided for @dashAdminStatAnalyzed.
+  ///
+  /// In pt, this message translates to:
+  /// **'Analisados'**
+  String get dashAdminStatAnalyzed;
+
+  /// No description provided for @dashAdminPanelButton.
+  ///
+  /// In pt, this message translates to:
+  /// **'Painel Administrativo'**
+  String get dashAdminPanelButton;
+
+  /// No description provided for @dashAdminPanelSubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Usuários, personas e planos'**
+  String get dashAdminPanelSubtitle;
 }
 
 class _AppLocalizationsDelegate

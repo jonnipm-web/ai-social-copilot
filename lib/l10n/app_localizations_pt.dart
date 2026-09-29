@@ -1782,4 +1782,87 @@ class AppLocalizationsPt extends AppLocalizations {
   String strategyDetailUnsupportedParameter(String parameter) {
     return 'Exploração limitada de $parameter ainda não é suportada por este motor -- nenhuma sugestão foi inventada.';
   }
+
+  @override
+  String get dashWelcome => 'Olá! Bem-vindo de volta 👋';
+
+  @override
+  String dashPlanLabel(String plan) {
+    return 'Plano: $plan';
+  }
+
+  @override
+  String dashUsageRemaining(String remaining, String limit) {
+    return '$remaining de $limit gerações restantes';
+  }
+
+  @override
+  String get dashUsageLimitReached => 'Limite atingido';
+
+  @override
+  String get dashUsageThisMonth => 'este mês';
+
+  @override
+  String get dashImproveWithAi => 'Melhorar Post com IA';
+
+  @override
+  String get dashImproveWithAiSubtitle => 'Transforme seu texto agora';
+
+  @override
+  String get dashShortcutPersonas => 'Personas';
+
+  @override
+  String get dashShortcutLibrary => 'Biblioteca';
+
+  @override
+  String get dashShortcutCalendar => 'Calendário';
+
+  @override
+  String get dashShortcutHistory => 'Histórico';
+
+  @override
+  String get dashShortcutVault => 'Cofre';
+
+  @override
+  String get dashShortcutCampaigns => 'Campanhas';
+
+  @override
+  String get dashShortcutWebsiteAnalyzer => 'Website\nAnalyzer';
+
+  @override
+  String get dashShortcutPerformance => 'Performance';
+
+  @override
+  String get dashFeatureUnavailable =>
+      'Este recurso ainda não está disponível.';
+
+  @override
+  String get dashAdminSectionTitle => 'Admin';
+
+  @override
+  String get dashAdminStatUsers => 'Usuários';
+
+  @override
+  String get dashAdminStatPersonas => 'Personas';
+
+  @override
+  String get dashAdminStatContent => 'Conteúdos';
+
+  @override
+  String get dashAdminStatSites => 'Sites';
+
+  @override
+  String get dashAdminStatVault => 'Cofre';
+
+  @override
+  String get dashAdminStatCampaigns => 'Campanhas';
+
+  @override
+  String get dashAdminStatAnalyzed => 'Analisados';
+
+  @override
+  String get dashAdminPanelButton => 'Painel Administrativo';
+
+  @override
+  String get dashAdminPanelSubtitle => 'Usuários, personas e planos';
 }

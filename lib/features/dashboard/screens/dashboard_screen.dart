@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/modules/route_policy.dart';
 import '../../../core/utils/snackbar_utils.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/campaign_provider.dart';
 import '../../../providers/content_provider.dart';
 import '../../../providers/knowledge_provider.dart';
@@ -19,6 +20,7 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final profileAsync = ref.watch(currentProfileProvider);
     // IVE-COMMERCIAL-OBSERVABILITY-07A — this used to read monthlyUsageProvider
     // (a count of the legacy post_generations table, entirely unrelated to
@@ -37,7 +39,7 @@ class DashboardScreen extends ConsumerWidget {
       drawer: const AppDrawer(),
       body: profileAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error:   (e, _) => Center(child: Text('Erro: $e')),
+        error:   (e, _) => Center(child: Text(l10n.commonError)),
         data:    (profile) {
           final isAdmin = profile?.isAdmin ?? false;
 
@@ -58,7 +60,7 @@ class DashboardScreen extends ConsumerWidget {
             }
             return () => showInfoSnack(
                   context,
-                  'Este recurso ainda não está disponível.',
+                  l10n.dashFeatureUnavailable,
                 );
           }
 
@@ -72,7 +74,7 @@ class DashboardScreen extends ConsumerWidget {
                   children: [
                     // Boas-vindas
                     Text(
-                      'Olá! Bem-vindo de volta 👋',
+                      l10n.dashWelcome,
                       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -80,7 +82,7 @@ class DashboardScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Plano: ${profile?.roleLabel ?? "Free"}',
+                      l10n.dashPlanLabel(profile?.roleLabel ?? 'Free'),
                       style: const TextStyle(color: Colors.white54, fontSize: 14),
                     ),
                     const SizedBox(height: 24),
@@ -89,15 +91,15 @@ class DashboardScreen extends ConsumerWidget {
                     usageAsync.when(
                       loading: () => const SizedBox.shrink(),
                       error:   (_, __) => const SizedBox.shrink(),
-                      data:    (quota) => _UsageCard(used: quota.used, limit: quota.limit),
+                      data:    (quota) => _UsageCard(used: quota.used, limit: quota.limit, l10n: l10n),
                     ),
                     const SizedBox(height: 16),
 
                     // Ação principal
                     _ActionButton(
                       icon: Icons.auto_fix_high_rounded,
-                      label: 'Melhorar Post com IA',
-                      subtitle: 'Transforme seu texto agora',
+                      label: l10n.dashImproveWithAi,
+                      subtitle: l10n.dashImproveWithAiSubtitle,
                       color: const Color(0xFF6C63FF),
                       onTap: () => context.go(AppConstants.routeGenerate),
                     ),
@@ -109,7 +111,7 @@ class DashboardScreen extends ConsumerWidget {
                         Expanded(
                           child: _ShortcutCard(
                             icon: Icons.person_pin_rounded,
-                            label: 'Personas',
+                            label: l10n.dashShortcutPersonas,
                             locked: !isModuleActionable('personas', isAdmin: isAdmin),
                             onTap: shortcutTap('personas', AppConstants.routePersonas),
                           ),
@@ -118,7 +120,7 @@ class DashboardScreen extends ConsumerWidget {
                         Expanded(
                           child: _ShortcutCard(
                             icon: Icons.library_books_rounded,
-                            label: 'Biblioteca',
+                            label: l10n.dashShortcutLibrary,
                             locked: !isModuleActionable('content-library', isAdmin: isAdmin),
                             onTap: shortcutTap('content-library', AppConstants.routeContent),
                           ),
@@ -131,7 +133,7 @@ class DashboardScreen extends ConsumerWidget {
                         Expanded(
                           child: _ShortcutCard(
                             icon: Icons.calendar_month_rounded,
-                            label: 'Calendário',
+                            label: l10n.dashShortcutCalendar,
                             locked: !isModuleActionable('calendar', isAdmin: isAdmin),
                             onTap: shortcutTap('calendar', AppConstants.routeCalendar),
                           ),
@@ -140,7 +142,7 @@ class DashboardScreen extends ConsumerWidget {
                         Expanded(
                           child: _ShortcutCard(
                             icon: Icons.history_rounded,
-                            label: 'Histórico',
+                            label: l10n.dashShortcutHistory,
                             onTap: () => context.push(AppConstants.routeHistory),
                           ),
                         ),
@@ -152,7 +154,7 @@ class DashboardScreen extends ConsumerWidget {
                         Expanded(
                           child: _ShortcutCard(
                             icon: Icons.auto_stories_rounded,
-                            label: 'Cofre',
+                            label: l10n.dashShortcutVault,
                             onTap: () => context.go(AppConstants.routeKnowledge),
                           ),
                         ),
@@ -167,7 +169,7 @@ class DashboardScreen extends ConsumerWidget {
                           child: IveExclusionRegion(
                             child: _ShortcutCard(
                               icon: Icons.campaign_rounded,
-                              label: 'Campanhas',
+                              label: l10n.dashShortcutCampaigns,
                               locked: !isModuleActionable('campaigns', isAdmin: isAdmin),
                               onTap: shortcutTap('campaigns', AppConstants.routeCampaigns),
                             ),
@@ -181,7 +183,7 @@ class DashboardScreen extends ConsumerWidget {
                         Expanded(
                           child: _ShortcutCard(
                             icon: Icons.language_rounded,
-                            label: 'Website\nAnalyzer',
+                            label: l10n.dashShortcutWebsiteAnalyzer,
                             onTap: () => context.go(AppConstants.routeWebsiteAnalyzer),
                           ),
                         ),
@@ -189,7 +191,7 @@ class DashboardScreen extends ConsumerWidget {
                         Expanded(
                           child: _ShortcutCard(
                             icon: Icons.bar_chart_rounded,
-                            label: 'Performance',
+                            label: l10n.dashShortcutPerformance,
                             locked: !isModuleActionable('performance', isAdmin: isAdmin),
                             onTap: shortcutTap('performance', AppConstants.routePerformance),
                           ),
@@ -202,9 +204,9 @@ class DashboardScreen extends ConsumerWidget {
                       const SizedBox(height: 24),
                       const Divider(color: Colors.white12),
                       const SizedBox(height: 12),
-                      const Text(
-                        'Admin',
-                        style: TextStyle(
+                      Text(
+                        l10n.dashAdminSectionTitle,
+                        style: const TextStyle(
                           color: Color(0xFFFFD700),
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
@@ -212,12 +214,12 @@ class DashboardScreen extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      _AdminStats(ref: ref),
+                      _AdminStats(ref: ref, l10n: l10n),
                       const SizedBox(height: 12),
                       _ActionButton(
                         icon: Icons.admin_panel_settings_rounded,
-                        label: 'Painel Administrativo',
-                        subtitle: 'Usuários, personas e planos',
+                        label: l10n.dashAdminPanelButton,
+                        subtitle: l10n.dashAdminPanelSubtitle,
                         color: const Color(0xFFFFD700),
                         onTap: () => context.go(AppConstants.routeAdmin),
                       ),
@@ -236,9 +238,10 @@ class DashboardScreen extends ConsumerWidget {
 }
 
 class _UsageCard extends StatelessWidget {
-  const _UsageCard({required this.used, required this.limit});
+  const _UsageCard({required this.used, required this.limit, required this.l10n});
   final int used;
   final int limit;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -275,8 +278,8 @@ class _UsageCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   isFull
-                      ? 'Limite atingido'
-                      : '$remaining de $limit gerações restantes',
+                      ? l10n.dashUsageLimitReached
+                      : l10n.dashUsageRemaining(remaining.toString(), limit.toString()),
                   style: TextStyle(
                     color: isFull ? Colors.red : Colors.white,
                     fontWeight: FontWeight.w600,
@@ -286,7 +289,7 @@ class _UsageCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                'este mês',
+                l10n.dashUsageThisMonth,
                 style: const TextStyle(color: Colors.white38, fontSize: 12),
               ),
             ],
@@ -434,8 +437,9 @@ class _ShortcutCard extends StatelessWidget {
 }
 
 class _AdminStats extends ConsumerWidget {
-  const _AdminStats({required this.ref});
+  const _AdminStats({required this.ref, required this.l10n});
   final WidgetRef ref;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -451,7 +455,7 @@ class _AdminStats extends ConsumerWidget {
           children: [
             Expanded(
               child: _StatTile(
-                label: 'Usuários',
+                label: l10n.dashAdminStatUsers,
                 value: usersAsync.valueOrNull?.length.toString() ?? '—',
                 icon: Icons.people_rounded,
               ),
@@ -459,7 +463,7 @@ class _AdminStats extends ConsumerWidget {
             const SizedBox(width: 8),
             Expanded(
               child: _StatTile(
-                label: 'Personas',
+                label: l10n.dashAdminStatPersonas,
                 value: personasAsync.valueOrNull?.length.toString() ?? '—',
                 icon: Icons.person_pin_rounded,
               ),
@@ -467,7 +471,7 @@ class _AdminStats extends ConsumerWidget {
             const SizedBox(width: 8),
             Expanded(
               child: _StatTile(
-                label: 'Conteúdos',
+                label: l10n.dashAdminStatContent,
                 value: contentAsync.valueOrNull?.length.toString() ?? '—',
                 icon: Icons.library_books_rounded,
               ),
@@ -479,7 +483,7 @@ class _AdminStats extends ConsumerWidget {
           children: [
             Expanded(
               child: _StatTile(
-                label: 'Sites',
+                label: l10n.dashAdminStatSites,
                 value: '—',
                 icon: Icons.language_rounded,
               ),
@@ -495,7 +499,7 @@ class _AdminStats extends ConsumerWidget {
           children: [
             Expanded(
               child: _StatTile(
-                label: 'Cofre',
+                label: l10n.dashAdminStatVault,
                 value: knowledgeAsync.valueOrNull?.length.toString() ?? '—',
                 icon: Icons.auto_stories_rounded,
               ),
@@ -503,7 +507,7 @@ class _AdminStats extends ConsumerWidget {
             const SizedBox(width: 8),
             Expanded(
               child: _StatTile(
-                label: 'Campanhas',
+                label: l10n.dashAdminStatCampaigns,
                 value: campaignsAsync.valueOrNull?.length.toString() ?? '—',
                 icon: Icons.campaign_rounded,
               ),
@@ -511,7 +515,7 @@ class _AdminStats extends ConsumerWidget {
             const SizedBox(width: 8),
             Expanded(
               child: _StatTile(
-                label: 'Analisados',
+                label: l10n.dashAdminStatAnalyzed,
                 value: knowledgeAsync.valueOrNull
                         ?.where((i) => i.status == 'analyzed')
                         .length

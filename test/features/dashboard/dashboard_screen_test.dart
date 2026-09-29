@@ -50,6 +50,7 @@ Future<void> _pump(WidgetTester tester) async {
       ],
       child: MaterialApp.router(
         routerConfig: router,
+        locale: const Locale('pt'),
         localizationsDelegates: const [
           AppLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,
