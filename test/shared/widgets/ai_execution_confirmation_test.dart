@@ -6,6 +6,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:ai_social_copilot/core/diagnostics/diagnostic_logger_service.dart';
 import 'package:ai_social_copilot/data/models/ive_interaction_request.dart';
 import 'package:ai_social_copilot/data/models/quota_info.dart';
+import 'package:ai_social_copilot/l10n/app_localizations.dart';
 import 'package:ai_social_copilot/providers/diagnostic_session_provider.dart';
 import 'package:ai_social_copilot/providers/quota_provider.dart';
 import 'package:ai_social_copilot/shared/widgets/ai_execution_confirmation.dart';
@@ -43,6 +44,9 @@ void main() {
         diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
       ],
       child: MaterialApp(
+        locale: const Locale('pt'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: Consumer(
             builder: (context, ref, _) {

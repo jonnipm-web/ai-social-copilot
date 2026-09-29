@@ -7444,6 +7444,84 @@ abstract class AppLocalizations {
   /// **'Perguntar à IVE sobre esta oportunidade'**
   String get opportunityDetailAskIveButton;
 
+  /// No description provided for @oppLabFeatureGatedBody.
+  ///
+  /// In pt, this message translates to:
+  /// **'O Opportunity Lab está sendo preparado para lançamento.\nEm breve você poderá gerar e avaliar oportunidades de negócio de forma massiva e inteligente.'**
+  String get oppLabFeatureGatedBody;
+
+  /// No description provided for @oppLabFeatureGatedProBadge.
+  ///
+  /// In pt, this message translates to:
+  /// **'Disponível em breve — Plano Pro'**
+  String get oppLabFeatureGatedProBadge;
+
+  /// No description provided for @oppLabApprove.
+  ///
+  /// In pt, this message translates to:
+  /// **'Aprovar'**
+  String get oppLabApprove;
+
+  /// No description provided for @oppLabConvertToAction.
+  ///
+  /// In pt, this message translates to:
+  /// **'→ Ação'**
+  String get oppLabConvertToAction;
+
+  /// No description provided for @oppLabViewActionShort.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ver'**
+  String get oppLabViewActionShort;
+
+  /// No description provided for @oppLabEmptyTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Opportunity Lab vazio'**
+  String get oppLabEmptyTitle;
+
+  /// No description provided for @oppLabEmptyBody.
+  ///
+  /// In pt, this message translates to:
+  /// **'Adicione oportunidades para analisar, priorizar e executar.'**
+  String get oppLabEmptyBody;
+
+  /// No description provided for @oppLabAddButton.
+  ///
+  /// In pt, this message translates to:
+  /// **'Adicionar Oportunidade'**
+  String get oppLabAddButton;
+
+  /// No description provided for @oppStatusPending.
+  ///
+  /// In pt, this message translates to:
+  /// **'Pendente'**
+  String get oppStatusPending;
+
+  /// No description provided for @oppStatusAnalyzing.
+  ///
+  /// In pt, this message translates to:
+  /// **'Analisando'**
+  String get oppStatusAnalyzing;
+
+  /// No description provided for @oppStatusApproved.
+  ///
+  /// In pt, this message translates to:
+  /// **'Aprovada'**
+  String get oppStatusApproved;
+
+  /// No description provided for @oppStatusRejected.
+  ///
+  /// In pt, this message translates to:
+  /// **'Rejeitada'**
+  String get oppStatusRejected;
+
+  /// No description provided for @oppStatusExecuting.
+  ///
+  /// In pt, this message translates to:
+  /// **'Em execução'**
+  String get oppStatusExecuting;
+
   /// No description provided for @upgradeFaqTitle.
   ///
   /// In pt, this message translates to:

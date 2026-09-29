@@ -27,3 +27,20 @@ String opportunityTypeLabel(String canonical, AppLocalizations l10n) {
 // Sanity check this stays exhaustive over OpportunityLabItem.types --
 // exercised by test/features/opportunity_lab/opportunity_type_labels_test.dart.
 const List<String> kOpportunityTypesCoveredByLabels = OpportunityLabItem.types;
+
+// COMMERCIAL-V1-UX-RECONCILIATION -- opportunity_lab_screen.dart showed the
+// raw persisted `status` value (OpportunityLabItem.statusValues) verbatim
+// in the list card badge, same class of defect as R2/R8 fixed elsewhere
+// this mission (explainable UI, no raw enum values facing the user).
+String opportunityStatusLabel(String canonical, AppLocalizations l10n) {
+  switch (canonical) {
+    case 'pending':    return l10n.oppStatusPending;
+    case 'analyzing':  return l10n.oppStatusAnalyzing;
+    case 'approved':   return l10n.oppStatusApproved;
+    case 'rejected':   return l10n.oppStatusRejected;
+    case 'executing':  return l10n.oppStatusExecuting;
+    default:           return canonical; // unmapped/legacy value -- show as-is, never crash
+  }
+}
+
+const List<String> kOpportunityStatusesCoveredByLabels = OpportunityLabItem.statusValues;

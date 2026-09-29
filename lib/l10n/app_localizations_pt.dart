@@ -4168,6 +4168,47 @@ class AppLocalizationsPt extends AppLocalizations {
       'Perguntar à IVE sobre esta oportunidade';
 
   @override
+  String get oppLabFeatureGatedBody =>
+      'O Opportunity Lab está sendo preparado para lançamento.\nEm breve você poderá gerar e avaliar oportunidades de negócio de forma massiva e inteligente.';
+
+  @override
+  String get oppLabFeatureGatedProBadge => 'Disponível em breve — Plano Pro';
+
+  @override
+  String get oppLabApprove => 'Aprovar';
+
+  @override
+  String get oppLabConvertToAction => '→ Ação';
+
+  @override
+  String get oppLabViewActionShort => 'Ver';
+
+  @override
+  String get oppLabEmptyTitle => 'Opportunity Lab vazio';
+
+  @override
+  String get oppLabEmptyBody =>
+      'Adicione oportunidades para analisar, priorizar e executar.';
+
+  @override
+  String get oppLabAddButton => 'Adicionar Oportunidade';
+
+  @override
+  String get oppStatusPending => 'Pendente';
+
+  @override
+  String get oppStatusAnalyzing => 'Analisando';
+
+  @override
+  String get oppStatusApproved => 'Aprovada';
+
+  @override
+  String get oppStatusRejected => 'Rejeitada';
+
+  @override
+  String get oppStatusExecuting => 'Em execução';
+
+  @override
   String get upgradeFaqTitle => 'Perguntas frequentes';
 
   @override
