@@ -4,7 +4,7 @@ Data: 2026-09-29 · Executor: Claude (primary executor) · Branch: `claude/r16-g
 
 ## 24. Veredito final
 
-**BLOCKED — DEPLOY_DISPATCH_REQUIRED**
+**BLOCKED — WEB_DEPLOY_DISPATCH_REQUIRED** (backend 100% publicado; falta 1 clique no Deploy Web)
 
 A implementação, os testes, a auditoria e o CI estão completos e verdes. A migration já foi aplicada em produção. O deploy das Edge Functions e do app web está bloqueado por um motivo técnico, não por um gate P0/P1: o token do GitHub desta sessão não tem permissão `actions:write` (erro `403 Resource not accessible by integration`). As rotas canônicas (`deploy-edge-functions.yml` e `deploy-web.yml`) são por `workflow_dispatch`. Depois que o Owner disparar os workflows (seção 20), a missão passa a **CONDITIONAL_PASS — OWNER_PHYSICAL_R16_GATE_PENDING** assim que a verificação do app publicado (seção 21) confirmar.
 
@@ -204,13 +204,37 @@ As 16 funções de IA e mais `localize-content` (nova). A tabela por função es
 
 | Etapa | Estado |
 |---|---|
-| Migration `20261015000000_r16_content_localizations` | **APLICADA em produção** (Supabase `nzngvbajrnruknpzzjbf`); verificado: RLS on, 0 policies, sem SELECT para anon/authenticated. No manifest ela permanece `LAB`, seguindo a convenção vigente: `APPLIED_PRODUCTION` é congelado no conjunto de predecessores do preflight AEF, e outras migrations já aplicadas em produção, como `stripe_webhook_role_protection`, também constam como `LAB` |
-| Edge Functions (16 + `localize-content`) | **PENDENTE**: `workflow_dispatch` negado ao token da sessão (403) |
-| App web (GitHub Pages) | **PENDENTE**: mesmo motivo |
+| Migration `20261015000000_r16_content_localizations` | **APLICADA em produção** (Supabase `nzngvbajrnruknpzzjbf`); verificado: RLS on, 0 policies, sem SELECT para anon/authenticated. No manifest permanece `LAB` (convenção do preflight AEF) |
+| Edge Functions (16 de IA + `localize-content`) | **PUBLICADAS em 2026-09-29 ~21:17 UTC**, todas com `verify_jwt=true` (mesma política do `deploy-allowlist.tsv`) |
+| App web (GitHub Pages) | **PENDENTE: 1 clique do Owner** em *Actions → Deploy Web → Run workflow*, na branch `claude/r16-global-language-consistency` |
 
-Por que não publiquei as funções pela API do Supabase: o pacote soma cerca de 1,1 MB de código-fonte. Reenviá-lo manualmente arriscaria corromper funções em produção, e a rota canônica é o workflow.
+**Rota de deploy das funções (exceção autorizada pelo Owner em 2026-09-29 22:1x BST):**
+- **Por que não a rota canônica:** o token da sessão recebe 403 em `workflow_dispatch`.
+- **Rota usada:** o Owner escolheu que eu publicasse pelo conector Supabase.
+- **Como cada função foi publicada:** como um *shim* de uma linha que importa o `index.ts` commitado, fixado no commit imutável `aafe28441bda64e55ae006fdee243ddb36f65d2f` via `raw.githubusercontent.com`. O bundler do Supabase empacota o grafo remoto no deploy, então nada é buscado em runtime. O código em produção é exatamente o código auditado do commit, sem transcrição manual.
+- **Verificação local antes do deploy:** o mesmo shim sobe em Deno e responde `401` sem sessão para localize-content, context-copilot, decision-simulator, market-analysis, extract-knowledge e analyze-website.
+- **Retorno à rota canônica:** o próximo `deploy-edge-functions.yml` de qualquer função a substitui pelo bundle normal do CLI.
 
-**Ordem segura e retrocompatível:** o app publicado hoje continua funcionando com as funções novas, porque o idioma ausente cai no default pt-BR.
+**Versões publicadas:**
+- `localize-content` v1 (nova)
+- `decision-simulator` v11
+- `generate-project-actions` v11
+- `generate-project-opportunities` v12
+- `improve-post` v19
+- `analyze-website` v13
+- `competitor-discovery` v12
+- `niche-discovery` v12
+- `gap-analysis` v12
+- `opportunity-discovery` v12
+- `content-cluster` v12
+- `revenue-planner` v12
+- `generate-strategy` v14
+- `generate-campaign` v14
+- `extract-knowledge` v20
+- `market-analysis` v12
+- `context-copilot` v16
+
+**Compatibilidade:** o app publicado hoje funciona com as funções novas, porque o idioma ausente cai no default pt-BR. Por isso a publicação do app pode acontecer depois.
 
 ## 21. Verificação do app publicado
 
