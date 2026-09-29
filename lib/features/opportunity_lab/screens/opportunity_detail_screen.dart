@@ -855,7 +855,7 @@ class _StatusBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
-        status,
+        opportunityStatusLabel(status, AppLocalizations.of(context)!),
         style: TextStyle(
             color: c, fontSize: 9, fontWeight: FontWeight.bold),
       ),

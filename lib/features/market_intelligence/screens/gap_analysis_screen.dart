@@ -45,10 +45,12 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
     setState(() => _error = null);
     try {
       final analysis = await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
       await _exec.run<void>(
         context: context,
         ref: ref,
-        analysisLabel: 'Gap Analysis',
+        analysisLabel: l10n.miGapTitle,
         request: IveInteractionRequest(
           projectId:        analysis.projectId,
           sourceModule:     'market_intelligence',
@@ -146,6 +148,13 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
                           const SizedBox(height: 16),
                           Text(l10n.miGapEmptyTitle, style: const TextStyle(color: Colors.white38)),
                           const SizedBox(height: 8),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Text(l10n.miGapEmptyBody,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(color: Colors.white24, fontSize: 12, height: 1.4)),
+                          ),
+                          const SizedBox(height: 16),
                           ElevatedButton(
                             onPressed: _running ? null : _run,
                             style: ElevatedButton.styleFrom(

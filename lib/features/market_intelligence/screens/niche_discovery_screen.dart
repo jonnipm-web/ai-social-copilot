@@ -36,10 +36,11 @@ class _NicheDiscoveryScreenState extends ConsumerState<NicheDiscoveryScreen> {
     setState(() => _error = null);
     try {
       final analysis = await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
+      if (!mounted) return;
       await _exec.run<List<NicheRanking>>(
         context: context,
         ref: ref,
-        analysisLabel: 'Descobrir Nichos',
+        analysisLabel: AppLocalizations.of(context)!.miNicheTitle,
         request: IveInteractionRequest(
           projectId:        analysis.projectId,
           sourceModule:     'market_intelligence',
@@ -133,6 +134,13 @@ class _NicheDiscoveryScreenState extends ConsumerState<NicheDiscoveryScreen> {
                           const SizedBox(height: 16),
                           Text(l10n.miNicheEmptyTitle, style: const TextStyle(color: Colors.white38)),
                           const SizedBox(height: 8),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Text(l10n.miNicheEmptyBody,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(color: Colors.white24, fontSize: 12, height: 1.4)),
+                          ),
+                          const SizedBox(height: 16),
                           ElevatedButton(
                             onPressed: _running ? null : _discover,
                             style: ElevatedButton.styleFrom(

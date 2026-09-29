@@ -962,6 +962,12 @@ abstract class AppLocalizations {
   /// **'Erro: {error}'**
   String iveChatErrorPrefix(String error);
 
+  /// No description provided for @iveChatAskLabel.
+  ///
+  /// In pt, this message translates to:
+  /// **'Perguntar à IVE'**
+  String get iveChatAskLabel;
+
   /// No description provided for @iveScreenActions.
   ///
   /// In pt, this message translates to:
@@ -3704,6 +3710,18 @@ abstract class AppLocalizations {
   /// **'Cancelada'**
   String get actionEngineStatusCancelled;
 
+  /// No description provided for @actionEngineTypeTask.
+  ///
+  /// In pt, this message translates to:
+  /// **'Tarefa'**
+  String get actionEngineTypeTask;
+
+  /// No description provided for @actionEngineTypeOpportunity.
+  ///
+  /// In pt, this message translates to:
+  /// **'Oportunidade'**
+  String get actionEngineTypeOpportunity;
+
   /// No description provided for @actionDetailTitle.
   ///
   /// In pt, this message translates to:
@@ -4022,6 +4040,12 @@ abstract class AppLocalizations {
   /// **'Nenhum concorrente ainda'**
   String get miCompetitorEmptyTitle;
 
+  /// No description provided for @miCompetitorEmptyBody.
+  ///
+  /// In pt, this message translates to:
+  /// **'Descubra concorrentes diretos, indiretos e aspiracionais e compare posicionamento, autoridade e relevância.'**
+  String get miCompetitorEmptyBody;
+
   /// No description provided for @miCompetitorEmptyButton.
   ///
   /// In pt, this message translates to:
@@ -4064,10 +4088,28 @@ abstract class AppLocalizations {
   /// **'Geral'**
   String get miCompetitorScoreOverall;
 
+  /// No description provided for @miCompetitorTypeDirect.
+  ///
+  /// In pt, this message translates to:
+  /// **'Direto'**
+  String get miCompetitorTypeDirect;
+
+  /// No description provided for @miCompetitorTypeIndirect.
+  ///
+  /// In pt, this message translates to:
+  /// **'Indireto'**
+  String get miCompetitorTypeIndirect;
+
+  /// No description provided for @miCompetitorTypeAspirational.
+  ///
+  /// In pt, this message translates to:
+  /// **'Aspiracional'**
+  String get miCompetitorTypeAspirational;
+
   /// No description provided for @miGapTitle.
   ///
   /// In pt, this message translates to:
-  /// **'Gap Analysis'**
+  /// **'Análise de Lacunas'**
   String get miGapTitle;
 
   /// No description provided for @miGapAnalyzing.
@@ -4087,6 +4129,12 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Nenhuma análise de gaps ainda'**
   String get miGapEmptyTitle;
+
+  /// No description provided for @miGapEmptyBody.
+  ///
+  /// In pt, this message translates to:
+  /// **'Identifique lacunas de conteúdo, SEO, autoridade, monetização e produto que seus concorrentes já exploram e você ainda não.'**
+  String get miGapEmptyBody;
 
   /// No description provided for @miGapEmptyButton.
   ///
@@ -4153,6 +4201,12 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Nenhum nicho ainda'**
   String get miNicheEmptyTitle;
+
+  /// No description provided for @miNicheEmptyBody.
+  ///
+  /// In pt, this message translates to:
+  /// **'Descubra e ranqueie nichos e sub-nichos com maior potencial dentro do seu mercado.'**
+  String get miNicheEmptyBody;
 
   /// No description provided for @miNicheEmptyButton.
   ///
@@ -4232,6 +4286,12 @@ abstract class AppLocalizations {
   /// **'Nenhuma oportunidade ainda'**
   String get miOpportunityEmptyTitle;
 
+  /// No description provided for @miOpportunityEmptyBody.
+  ///
+  /// In pt, this message translates to:
+  /// **'Encontre oportunidades de negócio priorizadas por score e potencial dentro do seu mercado.'**
+  String get miOpportunityEmptyBody;
+
   /// No description provided for @miOpportunityEmptyButton.
   ///
   /// In pt, this message translates to:
@@ -4265,7 +4325,7 @@ abstract class AppLocalizations {
   /// No description provided for @miClusterTitle.
   ///
   /// In pt, this message translates to:
-  /// **'Content Cluster Engine'**
+  /// **'Cluster de Conteúdo'**
   String get miClusterTitle;
 
   /// No description provided for @miClusterKeywordRequired.
@@ -4279,6 +4339,12 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Nenhum cluster ainda'**
   String get miClusterEmptyTitle;
+
+  /// No description provided for @miClusterEmptyBody.
+  ///
+  /// In pt, this message translates to:
+  /// **'Gere um cluster de conteúdo com silos, artigos e um roteiro editorial a partir de uma palavra-chave principal.'**
+  String get miClusterEmptyBody;
 
   /// No description provided for @miClusterKeywordFieldLabel.
   ///
@@ -4343,7 +4409,7 @@ abstract class AppLocalizations {
   /// No description provided for @miRevenueTitle.
   ///
   /// In pt, this message translates to:
-  /// **'Revenue Planner'**
+  /// **'Planejador de Receita'**
   String get miRevenueTitle;
 
   /// No description provided for @miRevenueProjectNameRequired.
@@ -4357,6 +4423,12 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Nenhum plano de receita ainda'**
   String get miRevenueEmptyTitle;
+
+  /// No description provided for @miRevenueEmptyBody.
+  ///
+  /// In pt, this message translates to:
+  /// **'Projete cenários de receita conservador, moderado e agressivo com base em dados reais do seu projeto.'**
+  String get miRevenueEmptyBody;
 
   /// No description provided for @miRevenueProjectFieldLabel.
   ///
@@ -4903,6 +4975,126 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Baixo'**
   String get miHubScoreLevelLow;
+
+  /// No description provided for @miHubNichesSummaryTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nichos'**
+  String get miHubNichesSummaryTitle;
+
+  /// No description provided for @miHubNichesViewAll.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ver todos'**
+  String get miHubNichesViewAll;
+
+  /// No description provided for @miHubNichesEmptyMessage.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhum nicho avaliado ainda. Descubra e avalie nichos para encontrar o melhor candidato para este projeto.'**
+  String get miHubNichesEmptyMessage;
+
+  /// No description provided for @miHubNichesEmptyCta.
+  ///
+  /// In pt, this message translates to:
+  /// **'Descobrir Nichos'**
+  String get miHubNichesEmptyCta;
+
+  /// No description provided for @miHubNichesBestCandidateLabel.
+  ///
+  /// In pt, this message translates to:
+  /// **'Melhor candidato'**
+  String get miHubNichesBestCandidateLabel;
+
+  /// No description provided for @miHubNichesCount.
+  ///
+  /// In pt, this message translates to:
+  /// **'{count, plural, =0{Nenhum nicho avaliado} =1{1 nicho avaliado} other{{count} nichos avaliados}}'**
+  String miHubNichesCount(int count);
+
+  /// No description provided for @miHubClusterSummaryTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Cluster de Conteúdo'**
+  String get miHubClusterSummaryTitle;
+
+  /// No description provided for @miHubClusterViewAll.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ver todos'**
+  String get miHubClusterViewAll;
+
+  /// No description provided for @miHubClusterEmptyMessage.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhum cluster de conteúdo gerado ainda. Gere um cluster para planejar sua estratégia de conteúdo em torno da palavra-chave principal.'**
+  String get miHubClusterEmptyMessage;
+
+  /// No description provided for @miHubClusterEmptyCta.
+  ///
+  /// In pt, this message translates to:
+  /// **'Gerar Cluster'**
+  String get miHubClusterEmptyCta;
+
+  /// No description provided for @miHubClusterCountBadge.
+  ///
+  /// In pt, this message translates to:
+  /// **'{count, plural, =0{0 clusters} =1{1 cluster} other{{count} clusters}}'**
+  String miHubClusterCountBadge(int count);
+
+  /// No description provided for @miHubClusterArticlesBadge.
+  ///
+  /// In pt, this message translates to:
+  /// **'{count, plural, =0{0 artigos} =1{1 artigo} other{{count} artigos}}'**
+  String miHubClusterArticlesBadge(int count);
+
+  /// No description provided for @miHubRevenuePlannerSummaryTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Planejamento de Receita'**
+  String get miHubRevenuePlannerSummaryTitle;
+
+  /// No description provided for @miHubRevenuePlannerViewAll.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ver todos'**
+  String get miHubRevenuePlannerViewAll;
+
+  /// No description provided for @miHubRevenuePlannerEmptyMessage.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhum plano de receita criado ainda. Crie um plano para projetar cenários de receita com base em dados reais.'**
+  String get miHubRevenuePlannerEmptyMessage;
+
+  /// No description provided for @miHubRevenuePlannerEmptyCta.
+  ///
+  /// In pt, this message translates to:
+  /// **'Criar Plano'**
+  String get miHubRevenuePlannerEmptyCta;
+
+  /// No description provided for @miHubRevenuePlannerMonthly.
+  ///
+  /// In pt, this message translates to:
+  /// **'{value}/mês (moderado)'**
+  String miHubRevenuePlannerMonthly(String value);
+
+  /// No description provided for @miHubRevenueMilestonesBadge.
+  ///
+  /// In pt, this message translates to:
+  /// **'{count, plural, =0{0 marcos} =1{1 marco} other{{count} marcos}}'**
+  String miHubRevenueMilestonesBadge(int count);
+
+  /// No description provided for @miHubRevenueSourcesBadge.
+  ///
+  /// In pt, this message translates to:
+  /// **'{count, plural, =0{0 fontes de receita} =1{1 fonte de receita} other{{count} fontes de receita}}'**
+  String miHubRevenueSourcesBadge(int count);
+
+  /// No description provided for @miHubRevenueNextMilestoneLabel.
+  ///
+  /// In pt, this message translates to:
+  /// **'Próximo marco'**
+  String get miHubRevenueNextMilestoneLabel;
 
   /// No description provided for @miHubModulesGridTitle.
   ///
@@ -6079,6 +6271,360 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Analisar com IA'**
   String get knowledgeVaultAnalyzeWithAi;
+
+  /// No description provided for @knowledgeStrategyTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Estratégia'**
+  String get knowledgeStrategyTitle;
+
+  /// No description provided for @knowledgeStrategyGenericError.
+  ///
+  /// In pt, this message translates to:
+  /// **'Erro: {error}'**
+  String knowledgeStrategyGenericError(String error);
+
+  /// No description provided for @knowledgeStrategyItemNotFound.
+  ///
+  /// In pt, this message translates to:
+  /// **'Item não encontrado.'**
+  String get knowledgeStrategyItemNotFound;
+
+  /// No description provided for @knowledgeStrategyAnalysisRequiredTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Análise necessária'**
+  String get knowledgeStrategyAnalysisRequiredTitle;
+
+  /// No description provided for @knowledgeStrategyAnalysisRequiredBody.
+  ///
+  /// In pt, this message translates to:
+  /// **'Primeiro analise este item com IA para depois gerar a estratégia.'**
+  String get knowledgeStrategyAnalysisRequiredBody;
+
+  /// No description provided for @knowledgeStrategyBackAndAnalyze.
+  ///
+  /// In pt, this message translates to:
+  /// **'Voltar e Analisar'**
+  String get knowledgeStrategyBackAndAnalyze;
+
+  /// No description provided for @knowledgeStrategyGenerateTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Gerar Estratégia Completa'**
+  String get knowledgeStrategyGenerateTitle;
+
+  /// No description provided for @knowledgeStrategyGenerateBody.
+  ///
+  /// In pt, this message translates to:
+  /// **'A IA vai criar um plano estratégico completo com público-alvo, posicionamento, canais, funil, oportunidades comerciais e plano de crescimento.'**
+  String get knowledgeStrategyGenerateBody;
+
+  /// No description provided for @knowledgeStrategyGenerating.
+  ///
+  /// In pt, this message translates to:
+  /// **'Gerando estratégia…'**
+  String get knowledgeStrategyGenerating;
+
+  /// No description provided for @knowledgeStrategyGenerateButton.
+  ///
+  /// In pt, this message translates to:
+  /// **'Gerar Estratégia'**
+  String get knowledgeStrategyGenerateButton;
+
+  /// No description provided for @knowledgeStrategyRegenerateButton.
+  ///
+  /// In pt, this message translates to:
+  /// **'Regenerar Estratégia'**
+  String get knowledgeStrategyRegenerateButton;
+
+  /// No description provided for @knowledgeStrategyCopied.
+  ///
+  /// In pt, this message translates to:
+  /// **'Copiado!'**
+  String get knowledgeStrategyCopied;
+
+  /// No description provided for @knowledgeStrategyCopiedKeyword.
+  ///
+  /// In pt, this message translates to:
+  /// **'Copiado: {keyword}'**
+  String knowledgeStrategyCopiedKeyword(String keyword);
+
+  /// No description provided for @knowledgeStrategySectionSummary.
+  ///
+  /// In pt, this message translates to:
+  /// **'Resumo Estratégico'**
+  String get knowledgeStrategySectionSummary;
+
+  /// No description provided for @knowledgeStrategySectionValueProp.
+  ///
+  /// In pt, this message translates to:
+  /// **'Proposta de Valor'**
+  String get knowledgeStrategySectionValueProp;
+
+  /// No description provided for @knowledgeStrategySectionPositioning.
+  ///
+  /// In pt, this message translates to:
+  /// **'Posicionamento'**
+  String get knowledgeStrategySectionPositioning;
+
+  /// No description provided for @knowledgeStrategySectionAudience.
+  ///
+  /// In pt, this message translates to:
+  /// **'Público-alvo'**
+  String get knowledgeStrategySectionAudience;
+
+  /// No description provided for @knowledgeStrategySectionChannels.
+  ///
+  /// In pt, this message translates to:
+  /// **'Canais Recomendados'**
+  String get knowledgeStrategySectionChannels;
+
+  /// No description provided for @knowledgeStrategySectionFunnel.
+  ///
+  /// In pt, this message translates to:
+  /// **'Funil de Marketing'**
+  String get knowledgeStrategySectionFunnel;
+
+  /// No description provided for @knowledgeStrategySectionOpportunities.
+  ///
+  /// In pt, this message translates to:
+  /// **'Oportunidades Comerciais'**
+  String get knowledgeStrategySectionOpportunities;
+
+  /// No description provided for @knowledgeStrategySectionKeywords.
+  ///
+  /// In pt, this message translates to:
+  /// **'Keywords Prioritárias'**
+  String get knowledgeStrategySectionKeywords;
+
+  /// No description provided for @knowledgeStrategySectionQuickWins.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ações Rápidas'**
+  String get knowledgeStrategySectionQuickWins;
+
+  /// No description provided for @knowledgeStrategySectionGrowthPlan.
+  ///
+  /// In pt, this message translates to:
+  /// **'Plano de Crescimento'**
+  String get knowledgeStrategySectionGrowthPlan;
+
+  /// No description provided for @knowledgeStrategyFunnelAwareness.
+  ///
+  /// In pt, this message translates to:
+  /// **'Awareness'**
+  String get knowledgeStrategyFunnelAwareness;
+
+  /// No description provided for @knowledgeStrategyFunnelConsideration.
+  ///
+  /// In pt, this message translates to:
+  /// **'Consideração'**
+  String get knowledgeStrategyFunnelConsideration;
+
+  /// No description provided for @knowledgeStrategyFunnelConversion.
+  ///
+  /// In pt, this message translates to:
+  /// **'Conversão'**
+  String get knowledgeStrategyFunnelConversion;
+
+  /// No description provided for @knowledgeStrategyFunnelRetention.
+  ///
+  /// In pt, this message translates to:
+  /// **'Retenção'**
+  String get knowledgeStrategyFunnelRetention;
+
+  /// No description provided for @knowledgeStrategyMonth.
+  ///
+  /// In pt, this message translates to:
+  /// **'Mês {n}'**
+  String knowledgeStrategyMonth(int n);
+
+  /// No description provided for @knowledgeStrategyKpisLabel.
+  ///
+  /// In pt, this message translates to:
+  /// **'KPIs'**
+  String get knowledgeStrategyKpisLabel;
+
+  /// No description provided for @knowledgeStrategyAudiencePrimary.
+  ///
+  /// In pt, this message translates to:
+  /// **'Primário'**
+  String get knowledgeStrategyAudiencePrimary;
+
+  /// No description provided for @knowledgeStrategyAudienceSecondary.
+  ///
+  /// In pt, this message translates to:
+  /// **'Secundário'**
+  String get knowledgeStrategyAudienceSecondary;
+
+  /// No description provided for @knowledgeStrategyAudienceAgeRange.
+  ///
+  /// In pt, this message translates to:
+  /// **'Faixa etária'**
+  String get knowledgeStrategyAudienceAgeRange;
+
+  /// No description provided for @knowledgeAnalysisTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Análise de Conhecimento'**
+  String get knowledgeAnalysisTitle;
+
+  /// No description provided for @knowledgeAnalysisReanalyzeTooltip.
+  ///
+  /// In pt, this message translates to:
+  /// **'Re-analisar'**
+  String get knowledgeAnalysisReanalyzeTooltip;
+
+  /// No description provided for @knowledgeAnalysisLoadingLabel.
+  ///
+  /// In pt, this message translates to:
+  /// **'Analisando com IA…'**
+  String get knowledgeAnalysisLoadingLabel;
+
+  /// No description provided for @knowledgeAnalysisNotYetLabel.
+  ///
+  /// In pt, this message translates to:
+  /// **'Este item ainda não foi analisado.'**
+  String get knowledgeAnalysisNotYetLabel;
+
+  /// No description provided for @knowledgeAnalysisCopied.
+  ///
+  /// In pt, this message translates to:
+  /// **'Copiado!'**
+  String get knowledgeAnalysisCopied;
+
+  /// No description provided for @knowledgeAnalysisCopiedKeyword.
+  ///
+  /// In pt, this message translates to:
+  /// **'Copiado: {keyword}'**
+  String knowledgeAnalysisCopiedKeyword(String keyword);
+
+  /// No description provided for @knowledgeAnalysisSectionSummary.
+  ///
+  /// In pt, this message translates to:
+  /// **'Resumo'**
+  String get knowledgeAnalysisSectionSummary;
+
+  /// No description provided for @knowledgeAnalysisSectionChannelScores.
+  ///
+  /// In pt, this message translates to:
+  /// **'Pontuações por Canal'**
+  String get knowledgeAnalysisSectionChannelScores;
+
+  /// No description provided for @knowledgeAnalysisSectionKeywords.
+  ///
+  /// In pt, this message translates to:
+  /// **'Palavras-chave'**
+  String get knowledgeAnalysisSectionKeywords;
+
+  /// No description provided for @knowledgeAnalysisKeywordsPrimary.
+  ///
+  /// In pt, this message translates to:
+  /// **'Primárias'**
+  String get knowledgeAnalysisKeywordsPrimary;
+
+  /// No description provided for @knowledgeAnalysisKeywordsSecondary.
+  ///
+  /// In pt, this message translates to:
+  /// **'Secundárias'**
+  String get knowledgeAnalysisKeywordsSecondary;
+
+  /// No description provided for @knowledgeAnalysisKeywordsLongtail.
+  ///
+  /// In pt, this message translates to:
+  /// **'Long-tail'**
+  String get knowledgeAnalysisKeywordsLongtail;
+
+  /// No description provided for @knowledgeAnalysisSectionAudiencePainPoints.
+  ///
+  /// In pt, this message translates to:
+  /// **'Dores da Audiência'**
+  String get knowledgeAnalysisSectionAudiencePainPoints;
+
+  /// No description provided for @knowledgeAnalysisSectionAudienceDesires.
+  ///
+  /// In pt, this message translates to:
+  /// **'Desejos da Audiência'**
+  String get knowledgeAnalysisSectionAudienceDesires;
+
+  /// No description provided for @knowledgeAnalysisSectionContentPillars.
+  ///
+  /// In pt, this message translates to:
+  /// **'Pilares de Conteúdo'**
+  String get knowledgeAnalysisSectionContentPillars;
+
+  /// No description provided for @knowledgeAnalysisSectionTopics.
+  ///
+  /// In pt, this message translates to:
+  /// **'Tópicos Principais'**
+  String get knowledgeAnalysisSectionTopics;
+
+  /// No description provided for @knowledgeAnalysisSectionPostIdeas.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ideias de Posts para Redes Sociais'**
+  String get knowledgeAnalysisSectionPostIdeas;
+
+  /// No description provided for @knowledgeAnalysisSectionCampaignIdeas.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ideias de Campanhas'**
+  String get knowledgeAnalysisSectionCampaignIdeas;
+
+  /// No description provided for @knowledgeAnalysisSectionArticleIdeas.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ideias de Artigos / Blog'**
+  String get knowledgeAnalysisSectionArticleIdeas;
+
+  /// No description provided for @knowledgeAnalysisSectionCommercialAngles.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ângulos Comerciais'**
+  String get knowledgeAnalysisSectionCommercialAngles;
+
+  /// No description provided for @knowledgeAnalysisSectionCtas.
+  ///
+  /// In pt, this message translates to:
+  /// **'CTAs Sugeridas'**
+  String get knowledgeAnalysisSectionCtas;
+
+  /// No description provided for @knowledgeAnalysisSectionSeoOpportunities.
+  ///
+  /// In pt, this message translates to:
+  /// **'Oportunidades SEO'**
+  String get knowledgeAnalysisSectionSeoOpportunities;
+
+  /// No description provided for @knowledgeAnalysisSectionAdsenseOpportunities.
+  ///
+  /// In pt, this message translates to:
+  /// **'Oportunidades AdSense'**
+  String get knowledgeAnalysisSectionAdsenseOpportunities;
+
+  /// No description provided for @knowledgeAnalysisSectionAmazonKdpOpportunities.
+  ///
+  /// In pt, this message translates to:
+  /// **'Oportunidades Amazon KDP'**
+  String get knowledgeAnalysisSectionAmazonKdpOpportunities;
+
+  /// No description provided for @knowledgeAnalysisSectionHotmartEngine.
+  ///
+  /// In pt, this message translates to:
+  /// **'Hotmart Engine'**
+  String get knowledgeAnalysisSectionHotmartEngine;
+
+  /// No description provided for @knowledgeAnalysisSectionShopifyEngine.
+  ///
+  /// In pt, this message translates to:
+  /// **'Shopify Engine'**
+  String get knowledgeAnalysisSectionShopifyEngine;
+
+  /// No description provided for @knowledgeAnalysisSectionChannelDetails.
+  ///
+  /// In pt, this message translates to:
+  /// **'Detalhes por Canal'**
+  String get knowledgeAnalysisSectionChannelDetails;
 
   /// No description provided for @knowledgeVaultAnalyzeError.
   ///

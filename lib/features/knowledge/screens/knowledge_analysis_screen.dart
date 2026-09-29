@@ -8,6 +8,7 @@ import '../../../core/utils/snackbar_utils.dart';
 import '../../../data/models/ive_interaction_request.dart';
 import '../../../data/models/knowledge_analysis.dart';
 import '../../../data/models/knowledge_item.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/knowledge_provider.dart';
 import '../../../providers/persona_provider.dart';
 import '../../../providers/persona_training_provider.dart';
@@ -37,7 +38,7 @@ Future<KnowledgeAnalysis?> _confirmAndAnalyze(
   return exec.run<KnowledgeAnalysis?>(
     context: context,
     ref: ref,
-    analysisLabel: 'Analisar com IA',
+    analysisLabel: AppLocalizations.of(context)!.knowledgeVaultAnalyzeWithAi,
     request: IveInteractionRequest(
       projectId:        item.projectId,
       sourceModule:     'knowledge_vault',
@@ -73,6 +74,7 @@ class _KnowledgeAnalysisScreenState
 
   @override
   Widget build(BuildContext context) {
+    final l10n           = AppLocalizations.of(context)!;
     final itemId        = widget.itemId;
     final itemAsync     = ref.watch(knowledgeItemByIdProvider(itemId));
     final analysisAsync = ref.watch(knowledgeAnalysisProvider(itemId));
@@ -82,9 +84,9 @@ class _KnowledgeAnalysisScreenState
       appBar: AppBar(
         backgroundColor: const Color(0xFF0F0F1A),
         foregroundColor: Colors.white,
-        title: const Text(
-          'Análise de Conhecimento',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        title: Text(
+          l10n.knowledgeAnalysisTitle,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         actions: [
           itemAsync.maybeWhen(
@@ -95,7 +97,7 @@ class _KnowledgeAnalysisScreenState
                     children: [
                       IconButton(
                         icon: const Icon(Icons.rocket_launch_rounded),
-                        tooltip: 'Gerar Estratégia',
+                        tooltip: l10n.knowledgeStrategyGenerateButton,
                         onPressed: () => context.push(
                           AppConstants.routeKnowledgeStrategy
                               .replaceFirst(':id', item.id),
@@ -103,7 +105,7 @@ class _KnowledgeAnalysisScreenState
                       ),
                       IconButton(
                         icon: const Icon(Icons.auto_awesome_rounded),
-                        tooltip: 'Re-analisar',
+                        tooltip: l10n.knowledgeAnalysisReanalyzeTooltip,
                         onPressed: () async {
                           await _confirmAndAnalyze(context, ref, item, _exec);
                           ref.invalidate(knowledgeAnalysisProvider(itemId));
@@ -119,13 +121,13 @@ class _KnowledgeAnalysisScreenState
       body: itemAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
-          child: Text('Erro: $e', style: const TextStyle(color: Colors.white70)),
+          child: Text(l10n.knowledgeStrategyGenericError('$e'), style: const TextStyle(color: Colors.white70)),
         ),
         data: (item) {
           if (item == null) {
-            return const Center(
-              child: Text('Item não encontrado.',
-                  style: TextStyle(color: Colors.white70)),
+            return Center(
+              child: Text(l10n.knowledgeStrategyItemNotFound,
+                  style: const TextStyle(color: Colors.white70)),
             );
           }
           return analysisAsync.when(
@@ -152,6 +154,7 @@ class _NoAnalysis extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final isLoading = ref.watch(knowledgeAnalysisNotifierProvider) is AsyncLoading || exec.isBusy;
 
     return Center(
@@ -165,7 +168,7 @@ class _NoAnalysis extends ConsumerWidget {
             const SizedBox(height: 16),
             if (error != null) ...[
               Text(
-                'Erro: $error',
+                l10n.knowledgeStrategyGenericError(error!),
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Color(0xFFF44336), fontSize: 13),
               ),
@@ -173,8 +176,8 @@ class _NoAnalysis extends ConsumerWidget {
             ],
             Text(
               isLoading
-                  ? 'Analisando com IA…'
-                  : 'Este item ainda não foi analisado.',
+                  ? l10n.knowledgeAnalysisLoadingLabel
+                  : l10n.knowledgeAnalysisNotYetLabel,
               style: const TextStyle(color: Colors.white70, fontSize: 15),
             ),
             const SizedBox(height: 24),
@@ -187,7 +190,7 @@ class _NoAnalysis extends ConsumerWidget {
                       const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
                 icon: const Icon(Icons.auto_awesome_rounded),
-                label: const Text('Analisar com IA'),
+                label: Text(l10n.knowledgeVaultAnalyzeWithAi),
                 onPressed: () async {
                   await _confirmAndAnalyze(context, ref, item, exec);
                   ref.invalidate(knowledgeAnalysisProvider(item.id));
@@ -213,6 +216,7 @@ class _AnalysisContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
       children: [
@@ -230,98 +234,98 @@ class _AnalysisContent extends StatelessWidget {
         ],
 
         if (analysis.summary != null) ...[
-          _SectionTitle('Resumo'),
+          _SectionTitle(l10n.knowledgeAnalysisSectionSummary),
           _SummaryCard(analysis.summary!),
           const SizedBox(height: 16),
         ],
 
-        _SectionTitle('Pontuações por Canal'),
+        _SectionTitle(l10n.knowledgeAnalysisSectionChannelScores),
         const SizedBox(height: 8),
         _ScoreGrid(analysis: analysis),
         const SizedBox(height: 16),
 
-        _SectionTitle('Palavras-chave'),
+        _SectionTitle(l10n.knowledgeAnalysisSectionKeywords),
         const SizedBox(height: 8),
         if (analysis.keywordsPrimary.isNotEmpty)
-          _ChipSection('Primárias', analysis.keywordsPrimary,
+          _ChipSection(l10n.knowledgeAnalysisKeywordsPrimary, analysis.keywordsPrimary,
               const Color(0xFF6C63FF)),
         if (analysis.keywordsSecondary.isNotEmpty)
-          _ChipSection('Secundárias', analysis.keywordsSecondary,
+          _ChipSection(l10n.knowledgeAnalysisKeywordsSecondary, analysis.keywordsSecondary,
               const Color(0xFF00BCD4)),
         if (analysis.keywordsLongtail.isNotEmpty)
-          _ChipSection('Long-tail', analysis.keywordsLongtail,
+          _ChipSection(l10n.knowledgeAnalysisKeywordsLongtail, analysis.keywordsLongtail,
               const Color(0xFF4CAF50)),
         const SizedBox(height: 8),
 
         if (analysis.audiencePainPoints.isNotEmpty) ...[
-          _SectionTitle('Dores da Audiência'),
+          _SectionTitle(l10n.knowledgeAnalysisSectionAudiencePainPoints),
           _ListCards(analysis.audiencePainPoints,
               Icons.sentiment_dissatisfied_rounded, const Color(0xFFF44336)),
           const SizedBox(height: 12),
         ],
         if (analysis.audienceDesires.isNotEmpty) ...[
-          _SectionTitle('Desejos da Audiência'),
+          _SectionTitle(l10n.knowledgeAnalysisSectionAudienceDesires),
           _ListCards(analysis.audienceDesires, Icons.favorite_rounded,
               const Color(0xFFE91E63)),
           const SizedBox(height: 12),
         ],
 
         if (analysis.contentPillars.isNotEmpty) ...[
-          _SectionTitle('Pilares de Conteúdo'),
+          _SectionTitle(l10n.knowledgeAnalysisSectionContentPillars),
           _ChipSection('', analysis.contentPillars, const Color(0xFFFF9800)),
           const SizedBox(height: 8),
         ],
         if (analysis.topics.isNotEmpty) ...[
-          _SectionTitle('Tópicos Principais'),
+          _SectionTitle(l10n.knowledgeAnalysisSectionTopics),
           _ChipSection('', analysis.topics, const Color(0xFF9C27B0)),
           const SizedBox(height: 8),
         ],
 
         if (analysis.postIdeas.isNotEmpty) ...[
-          _SectionTitle('Ideias de Posts para Redes Sociais'),
+          _SectionTitle(l10n.knowledgeAnalysisSectionPostIdeas),
           _ListCards(analysis.postIdeas, Icons.chat_bubble_outline_rounded,
               const Color(0xFF00BCD4)),
           const SizedBox(height: 12),
         ],
         if (analysis.campaignIdeas.isNotEmpty) ...[
-          _SectionTitle('Ideias de Campanhas'),
+          _SectionTitle(l10n.knowledgeAnalysisSectionCampaignIdeas),
           _ListCards(analysis.campaignIdeas, Icons.campaign_rounded,
               const Color(0xFFFF9800)),
           const SizedBox(height: 12),
         ],
         if (analysis.articleIdeas.isNotEmpty) ...[
-          _SectionTitle('Ideias de Artigos / Blog'),
+          _SectionTitle(l10n.knowledgeAnalysisSectionArticleIdeas),
           _ListCards(analysis.articleIdeas, Icons.article_rounded,
               const Color(0xFF4CAF50)),
           const SizedBox(height: 12),
         ],
 
         if (analysis.commercialAngles.isNotEmpty) ...[
-          _SectionTitle('Ângulos Comerciais'),
+          _SectionTitle(l10n.knowledgeAnalysisSectionCommercialAngles),
           _ListCards(analysis.commercialAngles, Icons.monetization_on_rounded,
               const Color(0xFFFFD700)),
           const SizedBox(height: 12),
         ],
         if (analysis.ctas.isNotEmpty) ...[
-          _SectionTitle('CTAs Sugeridas'),
+          _SectionTitle(l10n.knowledgeAnalysisSectionCtas),
           _ChipSection('', analysis.ctas, const Color(0xFFFFD700)),
           const SizedBox(height: 8),
         ],
 
         if (analysis.seoOpportunities.isNotEmpty) ...[
-          _SectionTitle('Oportunidades SEO'),
+          _SectionTitle(l10n.knowledgeAnalysisSectionSeoOpportunities),
           _ListCards(analysis.seoOpportunities, Icons.search_rounded,
               const Color(0xFF4CAF50)),
           const SizedBox(height: 12),
         ],
         if (analysis.adsenseOpportunities.isNotEmpty) ...[
-          _SectionTitle('Oportunidades AdSense'),
+          _SectionTitle(l10n.knowledgeAnalysisSectionAdsenseOpportunities),
           _ListCards(analysis.adsenseOpportunities, Icons.attach_money_rounded,
               const Color(0xFF8BC34A)),
           const SizedBox(height: 12),
         ],
         if (analysis.amazonKdpOpportunities.isNotEmpty) ...[
-          _SectionTitle('Oportunidades Amazon KDP'),
+          _SectionTitle(l10n.knowledgeAnalysisSectionAmazonKdpOpportunities),
           _ListCards(analysis.amazonKdpOpportunities, Icons.book_rounded,
               const Color(0xFFFF5722)),
           const SizedBox(height: 12),
@@ -329,7 +333,7 @@ class _AnalysisContent extends StatelessWidget {
 
         // Hotmart
         if (analysis.scoreHotmart > 0 || analysis.hotmartData.isNotEmpty) ...[
-          _SectionTitle('Hotmart Engine'),
+          _SectionTitle(l10n.knowledgeAnalysisSectionHotmartEngine),
           _HotmartCard(
               score: analysis.scoreHotmart, data: analysis.hotmartData),
           const SizedBox(height: 12),
@@ -337,14 +341,14 @@ class _AnalysisContent extends StatelessWidget {
 
         // Shopify
         if (analysis.scoreShopify > 0 || analysis.shopifyData.isNotEmpty) ...[
-          _SectionTitle('Shopify Engine'),
+          _SectionTitle(l10n.knowledgeAnalysisSectionShopifyEngine),
           _ShopifyCard(
               score: analysis.scoreShopify, data: analysis.shopifyData),
           const SizedBox(height: 12),
         ],
 
         if (analysis.scoreDetails.isNotEmpty) ...[
-          _SectionTitle('Detalhes por Canal'),
+          _SectionTitle(l10n.knowledgeAnalysisSectionChannelDetails),
           _ScoreDetailsSection(analysis.scoreDetails),
         ],
       ],
@@ -974,7 +978,7 @@ class _ChipSection extends StatelessWidget {
                     Clipboard.setData(ClipboardData(text: kw));
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Copiado: $kw'),
+                        content: Text(AppLocalizations.of(context)!.knowledgeAnalysisCopiedKeyword(kw)),
                         duration: const Duration(seconds: 1),
                         backgroundColor: const Color(0xFF1A1A2E),
                       ),
@@ -1037,10 +1041,10 @@ class _ListCards extends StatelessWidget {
                     onTap: () {
                       Clipboard.setData(ClipboardData(text: item));
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Copiado!'),
-                          duration: Duration(seconds: 1),
-                          backgroundColor: Color(0xFF1A1A2E),
+                        SnackBar(
+                          content: Text(AppLocalizations.of(context)!.knowledgeAnalysisCopied),
+                          duration: const Duration(seconds: 1),
+                          backgroundColor: const Color(0xFF1A1A2E),
                         ),
                       );
                     },

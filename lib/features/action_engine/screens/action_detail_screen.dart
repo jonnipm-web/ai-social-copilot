@@ -15,7 +15,7 @@ import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/context_copilot_widget.dart'
     show showCopilotChat, IveInlineAskPresence;
 import '../widgets/action_engine_execute_sheet.dart';
-import 'action_engine_screen.dart' show actionEngineStatusLabel;
+import 'action_engine_screen.dart' show actionEngineStatusLabel, actionEngineTypeLabel;
 
 // ── Colors ────────────────────────────────────────────────────────────────────
 const _kBg      = Color(0xFF0F0F1A);
@@ -751,6 +751,7 @@ class _TypeBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
@@ -758,7 +759,7 @@ class _TypeBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
-        type.toUpperCase(),
+        actionEngineTypeLabel(l10n, type).toUpperCase(),
         style: const TextStyle(
             color: _kPrimary, fontSize: 9, fontWeight: FontWeight.bold),
       ),

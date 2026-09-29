@@ -294,7 +294,7 @@ class _CopilotSheetState extends ConsumerState<_CopilotSheet> {
     final confirmed = await _exec.confirm(
       context:       context,
       ref:           ref,
-      analysisLabel: 'Perguntar à IVE',
+      analysisLabel: AppLocalizations.of(context)!.iveChatAskLabel,
       request:       request,
     );
     if (confirmed) _confirmedThisSession = true;

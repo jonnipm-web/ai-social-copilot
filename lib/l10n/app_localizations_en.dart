@@ -484,6 +484,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get iveChatAskLabel => 'Ask IVE';
+
+  @override
   String get iveScreenActions => 'Actions';
 
   @override
@@ -2042,6 +2045,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get actionEngineStatusCancelled => 'Cancelled';
 
   @override
+  String get actionEngineTypeTask => 'Task';
+
+  @override
+  String get actionEngineTypeOpportunity => 'Opportunity';
+
+  @override
   String get actionDetailTitle => 'Action Detail';
 
   @override
@@ -2225,6 +2234,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get miCompetitorEmptyTitle => 'No competitors yet';
 
   @override
+  String get miCompetitorEmptyBody =>
+      'Discover direct, indirect, and aspirational competitors and compare positioning, authority, and relevance.';
+
+  @override
   String get miCompetitorEmptyButton => 'Discover Competitors';
 
   @override
@@ -2246,6 +2259,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get miCompetitorScoreOverall => 'Overall';
 
   @override
+  String get miCompetitorTypeDirect => 'Direct';
+
+  @override
+  String get miCompetitorTypeIndirect => 'Indirect';
+
+  @override
+  String get miCompetitorTypeAspirational => 'Aspirational';
+
+  @override
   String get miGapTitle => 'Gap Analysis';
 
   @override
@@ -2256,6 +2278,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get miGapEmptyTitle => 'No gap analysis yet';
+
+  @override
+  String get miGapEmptyBody =>
+      'Identify content, SEO, authority, monetization, and product gaps your competitors already exploit and you don\'t yet.';
 
   @override
   String get miGapEmptyButton => 'Analyze Gaps';
@@ -2291,6 +2317,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get miNicheEmptyTitle => 'No niches yet';
+
+  @override
+  String get miNicheEmptyBody =>
+      'Discover and rank niches and sub-niches with the highest potential within your market.';
 
   @override
   String get miNicheEmptyButton => 'Discover Niches';
@@ -2332,6 +2362,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get miOpportunityEmptyTitle => 'No opportunities yet';
 
   @override
+  String get miOpportunityEmptyBody =>
+      'Find business opportunities prioritized by score and potential within your market.';
+
+  @override
   String get miOpportunityEmptyButton => 'Discover Opportunities';
 
   @override
@@ -2347,13 +2381,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get miOpportunityScoreDifficulty => 'Difficulty';
 
   @override
-  String get miClusterTitle => 'Content Cluster Engine';
+  String get miClusterTitle => 'Content Cluster';
 
   @override
   String get miClusterKeywordRequired => 'Enter the main keyword';
 
   @override
   String get miClusterEmptyTitle => 'No cluster yet';
+
+  @override
+  String get miClusterEmptyBody =>
+      'Generate a content cluster with silos, articles, and an editorial roadmap from a main keyword.';
 
   @override
   String get miClusterKeywordFieldLabel => 'Main keyword';
@@ -2399,6 +2437,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get miRevenueEmptyTitle => 'No revenue plan yet';
+
+  @override
+  String get miRevenueEmptyBody =>
+      'Project conservative, moderate, and aggressive revenue scenarios based on real data from your project.';
 
   @override
   String get miRevenueProjectFieldLabel => 'Project name';
@@ -2728,6 +2770,116 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get miHubScoreLevelLow => 'Low';
+
+  @override
+  String get miHubNichesSummaryTitle => 'Niches';
+
+  @override
+  String get miHubNichesViewAll => 'View all';
+
+  @override
+  String get miHubNichesEmptyMessage =>
+      'No niches evaluated yet. Discover and evaluate niches to find the best candidate for this project.';
+
+  @override
+  String get miHubNichesEmptyCta => 'Discover Niches';
+
+  @override
+  String get miHubNichesBestCandidateLabel => 'Best candidate';
+
+  @override
+  String miHubNichesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count niches evaluated',
+      one: '1 niche evaluated',
+      zero: 'No niches evaluated',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get miHubClusterSummaryTitle => 'Content Cluster';
+
+  @override
+  String get miHubClusterViewAll => 'View all';
+
+  @override
+  String get miHubClusterEmptyMessage =>
+      'No content cluster generated yet. Generate a cluster to plan your content strategy around the main keyword.';
+
+  @override
+  String get miHubClusterEmptyCta => 'Generate Cluster';
+
+  @override
+  String miHubClusterCountBadge(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count clusters',
+      one: '1 cluster',
+      zero: '0 clusters',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String miHubClusterArticlesBadge(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count articles',
+      one: '1 article',
+      zero: '0 articles',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get miHubRevenuePlannerSummaryTitle => 'Revenue Planning';
+
+  @override
+  String get miHubRevenuePlannerViewAll => 'View all';
+
+  @override
+  String get miHubRevenuePlannerEmptyMessage =>
+      'No revenue plan created yet. Create a plan to project revenue scenarios based on real data.';
+
+  @override
+  String get miHubRevenuePlannerEmptyCta => 'Create Plan';
+
+  @override
+  String miHubRevenuePlannerMonthly(String value) {
+    return '$value/mo (moderate)';
+  }
+
+  @override
+  String miHubRevenueMilestonesBadge(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count milestones',
+      one: '1 milestone',
+      zero: '0 milestones',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String miHubRevenueSourcesBadge(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count revenue sources',
+      one: '1 revenue source',
+      zero: '0 revenue sources',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get miHubRevenueNextMilestoneLabel => 'Next milestone';
 
   @override
   String get miHubModulesGridTitle => 'ANALYSIS MODULES';
@@ -3385,6 +3537,198 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get knowledgeVaultAnalyzeWithAi => 'Analyze with AI';
+
+  @override
+  String get knowledgeStrategyTitle => 'Strategy';
+
+  @override
+  String knowledgeStrategyGenericError(String error) {
+    return 'Error: $error';
+  }
+
+  @override
+  String get knowledgeStrategyItemNotFound => 'Item not found.';
+
+  @override
+  String get knowledgeStrategyAnalysisRequiredTitle => 'Analysis required';
+
+  @override
+  String get knowledgeStrategyAnalysisRequiredBody =>
+      'First analyze this item with AI, then generate the strategy.';
+
+  @override
+  String get knowledgeStrategyBackAndAnalyze => 'Back and Analyze';
+
+  @override
+  String get knowledgeStrategyGenerateTitle => 'Generate Full Strategy';
+
+  @override
+  String get knowledgeStrategyGenerateBody =>
+      'AI will create a complete strategic plan with target audience, positioning, channels, funnel, commercial opportunities, and growth plan.';
+
+  @override
+  String get knowledgeStrategyGenerating => 'Generating strategy…';
+
+  @override
+  String get knowledgeStrategyGenerateButton => 'Generate Strategy';
+
+  @override
+  String get knowledgeStrategyRegenerateButton => 'Regenerate Strategy';
+
+  @override
+  String get knowledgeStrategyCopied => 'Copied!';
+
+  @override
+  String knowledgeStrategyCopiedKeyword(String keyword) {
+    return 'Copied: $keyword';
+  }
+
+  @override
+  String get knowledgeStrategySectionSummary => 'Strategic Summary';
+
+  @override
+  String get knowledgeStrategySectionValueProp => 'Value Proposition';
+
+  @override
+  String get knowledgeStrategySectionPositioning => 'Positioning';
+
+  @override
+  String get knowledgeStrategySectionAudience => 'Target Audience';
+
+  @override
+  String get knowledgeStrategySectionChannels => 'Recommended Channels';
+
+  @override
+  String get knowledgeStrategySectionFunnel => 'Marketing Funnel';
+
+  @override
+  String get knowledgeStrategySectionOpportunities =>
+      'Commercial Opportunities';
+
+  @override
+  String get knowledgeStrategySectionKeywords => 'Priority Keywords';
+
+  @override
+  String get knowledgeStrategySectionQuickWins => 'Quick Wins';
+
+  @override
+  String get knowledgeStrategySectionGrowthPlan => 'Growth Plan';
+
+  @override
+  String get knowledgeStrategyFunnelAwareness => 'Awareness';
+
+  @override
+  String get knowledgeStrategyFunnelConsideration => 'Consideration';
+
+  @override
+  String get knowledgeStrategyFunnelConversion => 'Conversion';
+
+  @override
+  String get knowledgeStrategyFunnelRetention => 'Retention';
+
+  @override
+  String knowledgeStrategyMonth(int n) {
+    return 'Month $n';
+  }
+
+  @override
+  String get knowledgeStrategyKpisLabel => 'KPIs';
+
+  @override
+  String get knowledgeStrategyAudiencePrimary => 'Primary';
+
+  @override
+  String get knowledgeStrategyAudienceSecondary => 'Secondary';
+
+  @override
+  String get knowledgeStrategyAudienceAgeRange => 'Age range';
+
+  @override
+  String get knowledgeAnalysisTitle => 'Knowledge Analysis';
+
+  @override
+  String get knowledgeAnalysisReanalyzeTooltip => 'Re-analyze';
+
+  @override
+  String get knowledgeAnalysisLoadingLabel => 'Analyzing with AI…';
+
+  @override
+  String get knowledgeAnalysisNotYetLabel =>
+      'This item hasn\'t been analyzed yet.';
+
+  @override
+  String get knowledgeAnalysisCopied => 'Copied!';
+
+  @override
+  String knowledgeAnalysisCopiedKeyword(String keyword) {
+    return 'Copied: $keyword';
+  }
+
+  @override
+  String get knowledgeAnalysisSectionSummary => 'Summary';
+
+  @override
+  String get knowledgeAnalysisSectionChannelScores => 'Scores by Channel';
+
+  @override
+  String get knowledgeAnalysisSectionKeywords => 'Keywords';
+
+  @override
+  String get knowledgeAnalysisKeywordsPrimary => 'Primary';
+
+  @override
+  String get knowledgeAnalysisKeywordsSecondary => 'Secondary';
+
+  @override
+  String get knowledgeAnalysisKeywordsLongtail => 'Long-tail';
+
+  @override
+  String get knowledgeAnalysisSectionAudiencePainPoints =>
+      'Audience Pain Points';
+
+  @override
+  String get knowledgeAnalysisSectionAudienceDesires => 'Audience Desires';
+
+  @override
+  String get knowledgeAnalysisSectionContentPillars => 'Content Pillars';
+
+  @override
+  String get knowledgeAnalysisSectionTopics => 'Main Topics';
+
+  @override
+  String get knowledgeAnalysisSectionPostIdeas => 'Social Media Post Ideas';
+
+  @override
+  String get knowledgeAnalysisSectionCampaignIdeas => 'Campaign Ideas';
+
+  @override
+  String get knowledgeAnalysisSectionArticleIdeas => 'Article / Blog Ideas';
+
+  @override
+  String get knowledgeAnalysisSectionCommercialAngles => 'Commercial Angles';
+
+  @override
+  String get knowledgeAnalysisSectionCtas => 'Suggested CTAs';
+
+  @override
+  String get knowledgeAnalysisSectionSeoOpportunities => 'SEO Opportunities';
+
+  @override
+  String get knowledgeAnalysisSectionAdsenseOpportunities =>
+      'AdSense Opportunities';
+
+  @override
+  String get knowledgeAnalysisSectionAmazonKdpOpportunities =>
+      'Amazon KDP Opportunities';
+
+  @override
+  String get knowledgeAnalysisSectionHotmartEngine => 'Hotmart Engine';
+
+  @override
+  String get knowledgeAnalysisSectionShopifyEngine => 'Shopify Engine';
+
+  @override
+  String get knowledgeAnalysisSectionChannelDetails => 'Channel Details';
 
   @override
   String knowledgeVaultAnalyzeError(String error) {

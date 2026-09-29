@@ -9,6 +9,7 @@ import '../../../data/models/ive_interaction_request.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/market_analysis_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
+import '../competitor_type_labels.dart';
 
 class CompetitorDiscoveryScreen extends ConsumerStatefulWidget {
   const CompetitorDiscoveryScreen({super.key, required this.analysisId});
@@ -40,10 +41,11 @@ class _CompetitorDiscoveryScreenState
     setState(() => _error = null);
     try {
       final analysis = await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
+      if (!mounted) return;
       await _exec.run<List<Competitor>>(
         context: context,
         ref: ref,
-        analysisLabel: 'Descobrir Concorrentes',
+        analysisLabel: AppLocalizations.of(context)!.miCompetitorTitle,
         request: IveInteractionRequest(
           projectId:        analysis.projectId,
           sourceModule:     'market_intelligence',
@@ -139,6 +141,13 @@ class _CompetitorDiscoveryScreenState
                           Text(l10n.miCompetitorEmptyTitle,
                               style: const TextStyle(color: Colors.white38)),
                           const SizedBox(height: 8),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Text(l10n.miCompetitorEmptyBody,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(color: Colors.white24, fontSize: 12, height: 1.4)),
+                          ),
+                          const SizedBox(height: 16),
                           ElevatedButton(
                             onPressed: _running ? null : _discover,
                             style: ElevatedButton.styleFrom(
@@ -213,7 +222,7 @@ class _CompetitorCard extends StatelessWidget {
                   border: Border.all(color: _typeColor.withOpacity(0.4)),
                 ),
                 child: Text(
-                  competitor.type.toUpperCase(),
+                  competitorTypeLabel(competitor.type, l10n).toUpperCase(),
                   style: TextStyle(color: _typeColor, fontSize: 10, fontWeight: FontWeight.bold),
                 ),
               ),

@@ -1,5 +1,21 @@
 # COMMERCIAL V1 — PT/EN COVERAGE MATRIX
 
+**AVISO (2026-09-29, missão COMMERCIAL V1 PHYSICAL QA RECOVERY):** a
+reauditoria abaixo mediu paridade de chaves `.arb` + presença estática de
+`AppLocalizations.of(context)`. O Owner testou produção fisicamente
+(PQ-01/PQ-05) e encontrou "ASPIRATIONAL"/"DIRECT"/"INDIRECT" e "Gap
+Analysis"/"Content Cluster"/"Revenue Planner" em inglês na UI PT-BR — um
+defeito que NENHUM grep estático deste documento conseguia pegar, porque
+a causa era um valor canônico de modelo renderizado cru (`competitor.type
+.toUpperCase()`) e literais hardcoded passados para o diálogo de
+confirmação de IA (`analysisLabel: 'Gap Analysis'`), não ausência de
+`AppLocalizations`. Ver `docs/COMMERCIAL-V1-LOCALIZATION-LEDGER.md` para
+a causa raiz completa, todas as correções desta missão, e as 4 métricas
+de cobertura separadas (ARB/estático/PT renderizado/EN renderizado) que
+esse documento novo introduz. As linhas "SIM" abaixo continuam válidas
+para paridade ARB + presença estática, mas **não são mais suficientes
+sozinhas** para declarar uma tela "100% localizada" — use o ledger.
+
 Data: 2026-09-29 (RE-AUDITORIA — a versão original deste documento, também
 datada 2026-09-29, refletia o estado ANTES do trabalho de localização em
 massa desta sessão: 7 forks paralelos + edições diretas que adicionaram
