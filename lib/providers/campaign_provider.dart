@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/utils/language_utils.dart';
 import '../data/models/campaign.dart';
 import '../data/models/knowledge_analysis.dart';
 import '../data/models/knowledge_item.dart';
@@ -25,9 +26,10 @@ final campaignByIdProvider =
 });
 
 class CampaignNotifier extends StateNotifier<AsyncValue<Campaign?>> {
-  CampaignNotifier(this._service) : super(const AsyncValue.data(null));
+  CampaignNotifier(this._service, this._ref) : super(const AsyncValue.data(null));
 
   final CampaignService _service;
+  final Ref _ref;
 
   Future<Campaign?> generate({
     required KnowledgeItem item,
@@ -47,6 +49,8 @@ class CampaignNotifier extends StateNotifier<AsyncValue<Campaign?>> {
         objective:     objective,
         durationDays:  durationDays,
         channels:      channels,
+        // R16 — output language = presentation language, not item.language.
+        outputLanguage: _ref.read(outputLanguageCodeProvider),
         idempotencyKey: idempotencyKey,
       );
       state = AsyncValue.data(result);
@@ -70,5 +74,5 @@ class CampaignNotifier extends StateNotifier<AsyncValue<Campaign?>> {
 
 final campaignNotifierProvider = StateNotifierProvider.autoDispose<
     CampaignNotifier, AsyncValue<Campaign?>>(
-  (ref) => CampaignNotifier(ref.watch(campaignServiceProvider)),
+  (ref) => CampaignNotifier(ref.watch(campaignServiceProvider), ref),
 );

@@ -5,12 +5,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/diagnostics/diagnostic_container.dart';
 import '../../../core/diagnostics/diagnostic_models.dart';
+import '../../../core/utils/language_utils.dart';
 import '../../../data/models/knowledge_item.dart';
 import '../../../data/services/file_import_service.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/knowledge_provider.dart';
 import '../../../providers/project_provider.dart';
 import 'drive_picker_screen.dart';
+import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 
 class KnowledgeItemFormScreen extends ConsumerStatefulWidget {
   const KnowledgeItemFormScreen({super.key, this.itemId});
@@ -32,7 +34,11 @@ class _KnowledgeItemFormScreenState
   final _audienceCtrl       = TextEditingController();
 
   String  _sourceType = 'manual';
-  String  _language   = 'pt-BR';
+  // R16 — SOURCE language of the document (describes the data only; AI
+  // output language always follows the UI). Defaults to the current UI
+  // locale on first build; the user's explicit choice is kept thereafter.
+  String? _language;
+  bool    _languageTouched = false;
   String? _projectId;
   bool    _loading    = false;
   bool    _init       = false;
@@ -51,6 +57,28 @@ class _KnowledgeItemFormScreenState
     _nicheCtrl.dispose();
     _audienceCtrl.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_language == null && !_languageTouched) {
+      _language = backendLanguageCode(context);
+    }
+  }
+
+  /// Supported source-language codes offered by the selector.
+  static const _kSourceLanguages = ['pt-BR', 'en-US', 'es'];
+
+  String get _sourceLanguage {
+    final v = (_language ?? '').toLowerCase();
+    if (_kSourceLanguages.contains(_language)) return _language!;
+    // Normalise legacy/loose stored codes ('pt', 'en', 'es-ES', ...) so the
+    // dropdown always has a matching item.
+    if (v.startsWith('pt')) return 'pt-BR';
+    if (v.startsWith('en')) return 'en-US';
+    if (v.startsWith('es')) return 'es';
+    return backendLanguageCode(context);
   }
 
   Future<void> _loadExisting() async {
@@ -80,6 +108,7 @@ class _KnowledgeItemFormScreenState
     setState(() {
       _sourceType = item.sourceType;
       _language   = item.language;
+      _languageTouched = true;
       _projectId  = item.projectId;
     });
   }
@@ -125,7 +154,7 @@ class _KnowledgeItemFormScreenState
           'target_audience': _audienceCtrl.text.trim().isEmpty
               ? null
               : _audienceCtrl.text.trim(),
-          'language':        _language,
+          'language':        _sourceLanguage,
           'status':          'pending',
         });
       } else {
@@ -143,7 +172,7 @@ class _KnowledgeItemFormScreenState
           targetAudience: _audienceCtrl.text.trim().isEmpty
               ? null
               : _audienceCtrl.text.trim(),
-          language:       _language,
+          language:       _sourceLanguage,
           createdAt:      DateTime.now(),
           updatedAt:      DateTime.now(),
         ));
@@ -181,7 +210,7 @@ class _KnowledgeItemFormScreenState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(l10n.iveChatErrorPrefix('$e')),
+            content: Text(l10n.iveChatErrorPrefix(extractErrorMessage(e, l10n))),
             backgroundColor: const Color(0xFFF44336),
           ),
         );
@@ -375,10 +404,10 @@ class _KnowledgeItemFormScreenState
               const SizedBox(height: 20),
 
               // ── Idioma ───────────────────────────────────────
-              _Label(l10n.knowledgeFormLanguageLabel),
+              _Label(l10n.uxKnowledgeFormSourceLanguageLabel),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                value: _language,
+                value: _sourceLanguage,
                 dropdownColor: const Color(0xFF1A1A2E),
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
@@ -394,7 +423,10 @@ class _KnowledgeItemFormScreenState
                   DropdownMenuItem(value: 'en-US', child: Text(l10n.knowledgeFormLanguageEnUs)),
                   DropdownMenuItem(value: 'es',    child: Text(l10n.knowledgeFormLanguageEs)),
                 ],
-                onChanged: (v) => setState(() => _language = v ?? 'pt-BR'),
+                onChanged: (v) => setState(() {
+                  _language = v ?? _sourceLanguage;
+                  _languageTouched = true;
+                }),
               ),
 
               const SizedBox(height: 32),
@@ -682,7 +714,7 @@ class _FileImportSection extends StatelessWidget {
         final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(l10n.knowledgeFormImportError('$e')),
+            content: Text(l10n.knowledgeFormImportError(extractErrorMessage(e, l10n))),
             backgroundColor: const Color(0xFFF44336),
           ),
         );

@@ -7,6 +7,7 @@ import '../models/niche_ranking.dart';
 import '../models/content_cluster.dart';
 import '../models/revenue_plan.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/utils/app_exceptions.dart';
 
 class MarketAnalysisService {
   // Lazy getter, not an eager field initializer: MarketAnalysisNotifier's
@@ -50,7 +51,7 @@ class MarketAnalysisService {
     String? idempotencyKey,
   }) async {
     final uid = _client.auth.currentUser?.id;
-    if (uid == null) throw Exception('Usuário não autenticado.');
+    if (uid == null) throw const NotAuthenticatedException();
 
     final response = await _client.functions.invoke(
       AppConstants.edgeFunctionMarket,
@@ -62,7 +63,7 @@ class MarketAnalysisService {
       },
     );
 
-    if (response.data == null) throw Exception('Resposta vazia da análise de mercado.');
+    if (response.data == null) throw const AppException(AppErrorCode.emptyResponse);
     final data = response.data as Map<String, dynamic>;
     if (data.containsKey('error')) throw Exception(data['error']);
 
@@ -107,7 +108,7 @@ class MarketAnalysisService {
     String? idempotencyKey,
   }) async {
     final uid = _client.auth.currentUser?.id;
-    if (uid == null) throw Exception('Usuário não autenticado.');
+    if (uid == null) throw const NotAuthenticatedException();
 
     final response = await _client.functions.invoke(
       AppConstants.edgeFunctionCompetitor,
@@ -119,7 +120,7 @@ class MarketAnalysisService {
       },
     );
 
-    if (response.data == null) throw Exception('Resposta vazia da descoberta de concorrentes.');
+    if (response.data == null) throw const AppException(AppErrorCode.emptyResponse);
     final data = response.data as Map<String, dynamic>;
     if (data.containsKey('error')) throw Exception(data['error']);
 
@@ -180,7 +181,7 @@ class MarketAnalysisService {
     String? idempotencyKey,
   }) async {
     final uid = _client.auth.currentUser?.id;
-    if (uid == null) throw Exception('Usuário não autenticado.');
+    if (uid == null) throw const NotAuthenticatedException();
 
     final response = await _client.functions.invoke(
       AppConstants.edgeFunctionGap,
@@ -192,7 +193,7 @@ class MarketAnalysisService {
       },
     );
 
-    if (response.data == null) throw Exception('Resposta vazia da análise de gaps.');
+    if (response.data == null) throw const AppException(AppErrorCode.emptyResponse);
     final data = response.data as Map<String, dynamic>;
     if (data.containsKey('error')) throw Exception(data['error']);
 
@@ -241,7 +242,7 @@ class MarketAnalysisService {
     String? idempotencyKey,
   }) async {
     final uid = _client.auth.currentUser?.id;
-    if (uid == null) throw Exception('Usuário não autenticado.');
+    if (uid == null) throw const NotAuthenticatedException();
 
     final response = await _client.functions.invoke(
       AppConstants.edgeFunctionOpportunity,
@@ -253,7 +254,7 @@ class MarketAnalysisService {
       },
     );
 
-    if (response.data == null) throw Exception('Resposta vazia da descoberta de oportunidades.');
+    if (response.data == null) throw const AppException(AppErrorCode.emptyResponse);
     final data = response.data as Map<String, dynamic>;
     if (data.containsKey('error')) throw Exception(data['error']);
 
@@ -301,7 +302,7 @@ class MarketAnalysisService {
     String? idempotencyKey,
   }) async {
     final uid = _client.auth.currentUser?.id;
-    if (uid == null) throw Exception('Usuário não autenticado.');
+    if (uid == null) throw const NotAuthenticatedException();
 
     final response = await _client.functions.invoke(
       AppConstants.edgeFunctionNiche,
@@ -313,7 +314,7 @@ class MarketAnalysisService {
       },
     );
 
-    if (response.data == null) throw Exception('Resposta vazia da descoberta de nichos.');
+    if (response.data == null) throw const AppException(AppErrorCode.emptyResponse);
     final data = response.data as Map<String, dynamic>;
     if (data.containsKey('error')) throw Exception(data['error']);
 
@@ -365,7 +366,7 @@ class MarketAnalysisService {
     String? idempotencyKey,
   }) async {
     final uid = _client.auth.currentUser?.id;
-    if (uid == null) throw Exception('Usuário não autenticado.');
+    if (uid == null) throw const NotAuthenticatedException();
 
     final response = await _client.functions.invoke(
       AppConstants.edgeFunctionCluster,
@@ -378,7 +379,7 @@ class MarketAnalysisService {
       },
     );
 
-    if (response.data == null) throw Exception('Resposta vazia do Content Cluster.');
+    if (response.data == null) throw const AppException(AppErrorCode.emptyResponse);
     final data = response.data as Map<String, dynamic>;
     if (data.containsKey('error')) throw Exception(data['error']);
 
@@ -432,7 +433,7 @@ class MarketAnalysisService {
     String? idempotencyKey,
   }) async {
     final uid = _client.auth.currentUser?.id;
-    if (uid == null) throw Exception('Usuário não autenticado.');
+    if (uid == null) throw const NotAuthenticatedException();
 
     final response = await _client.functions.invoke(
       AppConstants.edgeFunctionRevenue,
@@ -445,7 +446,7 @@ class MarketAnalysisService {
       },
     );
 
-    if (response.data == null) throw Exception('Resposta vazia do Revenue Planner.');
+    if (response.data == null) throw const AppException(AppErrorCode.emptyResponse);
     final data = response.data as Map<String, dynamic>;
     if (data.containsKey('error')) throw Exception(data['error']);
 

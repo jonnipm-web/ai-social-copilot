@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/utils/language_utils.dart';
 import '../data/models/website_analysis.dart';
 import '../data/services/website_analyzer_service.dart';
 
@@ -12,14 +13,20 @@ final websiteAnalysesProvider =
 
 class WebsiteAnalyzerNotifier
     extends StateNotifier<AsyncValue<WebsiteAnalysis?>> {
-  WebsiteAnalyzerNotifier(this._service) : super(const AsyncValue.data(null));
+  WebsiteAnalyzerNotifier(this._service, this._ref) : super(const AsyncValue.data(null));
 
   final WebsiteAnalyzerService _service;
+  final Ref _ref;
 
   Future<WebsiteAnalysis?> analyze(String url, {String? idempotencyKey}) async {
     state = const AsyncValue.loading();
     try {
-      final result = await _service.analyzeUrl(url, idempotencyKey: idempotencyKey);
+      // R16 — output language = presentation language.
+      final result = await _service.analyzeUrl(
+        url,
+        outputLanguage: _ref.read(outputLanguageCodeProvider),
+        idempotencyKey: idempotencyKey,
+      );
       state = AsyncValue.data(result);
       return result;
     } catch (e, st) {
@@ -31,7 +38,7 @@ class WebsiteAnalyzerNotifier
 
 final websiteAnalyzerNotifierProvider = StateNotifierProvider.autoDispose<
     WebsiteAnalyzerNotifier, AsyncValue<WebsiteAnalysis?>>(
-  (ref) => WebsiteAnalyzerNotifier(ref.watch(websiteAnalyzerServiceProvider)),
+  (ref) => WebsiteAnalyzerNotifier(ref.watch(websiteAnalyzerServiceProvider), ref),
 );
 
 final websiteAnalysisByIdProvider =

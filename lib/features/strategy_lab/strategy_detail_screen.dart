@@ -390,7 +390,7 @@ class _StrategyDetailScreenState extends ConsumerState<StrategyDetailScreen> {
                 final c = raw as Map<String, dynamic>;
                 final value = (c['value'] as num).toStringAsFixed(2);
                 final weight = (c['weight'] as num).toStringAsFixed(2);
-                return Text('  • ${c['name']} = $value (peso $weight): ${c['rationale']}', style: const TextStyle(fontSize: 11));
+                return Text('  • ${c['name']} = $value (${l.uxStrategyScoreWeight(weight)}): ${c['rationale']}', style: const TextStyle(fontSize: 11));
               }),
           ]),
         ),

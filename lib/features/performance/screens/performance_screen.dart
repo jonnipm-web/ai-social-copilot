@@ -6,6 +6,7 @@ import '../../../data/models/performance_metrics.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/performance_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 
 const _bgColor = Color(0xFF0F0F1A);
 const _cardColor = Color(0xFF1A1A2E);
@@ -193,7 +194,7 @@ class _PerformanceScreenState extends ConsumerState<PerformanceScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(l10n.performanceDeleteError('$e')),
+              content: Text(l10n.performanceDeleteError(extractErrorMessage(e, l10n))),
               backgroundColor: Colors.red,
             ),
           );
@@ -550,7 +551,7 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.performanceSaveError('$e')),
+            content: Text(AppLocalizations.of(context)!.performanceSaveError(extractErrorMessage(e, AppLocalizations.of(context)!))),
             backgroundColor: Colors.red,
           ),
         );

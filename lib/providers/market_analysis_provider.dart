@@ -1,4 +1,9 @@
+import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/utils/ai_enum_labels.dart';
+import '../core/utils/app_exceptions.dart';
+import '../core/utils/language_utils.dart';
+import '../l10n/app_localizations.dart';
 import '../data/models/market_analysis.dart';
 import '../data/models/competitor.dart';
 import '../data/models/gap_analysis.dart';
@@ -30,7 +35,7 @@ final marketAnalysesByProjectProvider =
 final marketAnalysisByIdProvider =
     FutureProvider.autoDispose.family<MarketAnalysis, String>((ref, id) async {
   final result = await ref.read(marketAnalysisServiceProvider).fetchById(id);
-  if (result == null) throw Exception('Análise não encontrada');
+  if (result == null) throw const AppException(AppErrorCode.notFound);
   return result;
 });
 
@@ -83,9 +88,16 @@ final revenuePlansByProjectProvider =
 
 // Notifier for running market analysis
 class MarketAnalysisNotifier extends StateNotifier<AsyncValue<MarketAnalysis?>> {
-  MarketAnalysisNotifier(this._service) : super(const AsyncValue.data(null));
+  MarketAnalysisNotifier(this._service, {AppLocalizations Function()? l10n})
+      : _l10n = l10n,
+        super(const AsyncValue.data(null));
 
   final MarketAnalysisService _service;
+
+  /// R16 — resolves the CURRENT UI-language localizations at seed time, so
+  /// the Opportunity Lab rows persisted below are written in the language
+  /// the user is actually using (never hard-coded Portuguese).
+  final AppLocalizations Function()? _l10n;
 
   Future<MarketAnalysis?> analyze(
     String input, {
@@ -94,6 +106,9 @@ class MarketAnalysisNotifier extends StateNotifier<AsyncValue<MarketAnalysis?>> 
     String language = 'pt-BR',
     String? idempotencyKey,
   }) async {
+    // R16 — resolve the UI-language localizations BEFORE any await (the
+    // autoDispose provider's ref may be gone afterwards).
+    final l10n = _resolveL10n();
     state = const AsyncValue.loading();
     try {
       final result = await _service.analyze(
@@ -106,7 +121,7 @@ class MarketAnalysisNotifier extends StateNotifier<AsyncValue<MarketAnalysis?>> 
       state = AsyncValue.data(result);
 
       // Auto-seed Opportunity Lab com as top ações da análise
-      await _seedOpportunityLab(result, projectId: projectId);
+      await _seedOpportunityLab(result, projectId: projectId, l10n: l10n);
 
       return result;
     } catch (e, st) {
@@ -117,9 +132,20 @@ class MarketAnalysisNotifier extends StateNotifier<AsyncValue<MarketAnalysis?>> 
 
   void reset() => state = const AsyncValue.data(null);
 
+  AppLocalizations _resolveL10n() {
+    try {
+      final v = _l10n?.call();
+      if (v != null) return v;
+    } catch (_) {
+      // fall through to the deterministic PT fallback
+    }
+    return lookupAppLocalizations(const Locale('pt'));
+  }
+
   Future<void> _seedOpportunityLab(
     MarketAnalysis analysis, {
     String? projectId,
+    required AppLocalizations l10n,
   }) async {
     final uid = Supabase.instance.client.auth.currentUser?.id;
     if (uid == null) return;
@@ -135,6 +161,7 @@ class MarketAnalysisNotifier extends StateNotifier<AsyncValue<MarketAnalysis?>> 
       final title = a['action'] as String? ?? '';
       if (title.isEmpty) continue;
       final score = _parseScore(a['roi_expected'] as String?);
+      final texts = buildOpportunitySeedTexts(a, analysis.input, l10n);
 
       final item = OpportunityLabItem(
         id:               '',
@@ -143,18 +170,17 @@ class MarketAnalysisNotifier extends StateNotifier<AsyncValue<MarketAnalysis?>> 
         marketAnalysisId: analysis.id,
         opportunityType:  'content',
         title:            title,
-        description:      'Impacto: ${a['impact'] ?? 'N/A'} · Esforço: ${a['effort'] ?? 'N/A'}',
+        description:      texts.description,
         marketScore:      analysis.opportunityScore,
         revenueScore:     score,
         finalScore:       analysis.opportunityScore,
         createdAt:        DateTime.now(),
         origin:           'market_analysis',
         sources:          [analysis.id],
-        rationale:        a['rationale'] as String? ??
-            'Identificado pelo Market Intelligence com base na análise de ${analysis.input}.',
+        rationale:        texts.rationale,
         confidence:       (score * 0.8).round().clamp(0, 100),
-        risks:            a['effort'] != null ? ['Esforço: ${a['effort']}'] : [],
-        actionSteps:      a['timeframe'] != null ? ['Prazo estimado: ${a['timeframe']}'] : [],
+        risks:            texts.risks,
+        actionSteps:      texts.actionSteps,
       );
       try {
         await svc.create(item);
@@ -178,5 +204,60 @@ class MarketAnalysisNotifier extends StateNotifier<AsyncValue<MarketAnalysis?>> 
 
 final marketAnalysisNotifierProvider =
     StateNotifierProvider.autoDispose<MarketAnalysisNotifier, AsyncValue<MarketAnalysis?>>(
-  (ref) => MarketAnalysisNotifier(ref.read(marketAnalysisServiceProvider)),
+  (ref) => MarketAnalysisNotifier(
+    ref.read(marketAnalysisServiceProvider),
+    l10n: () => ref.read(appL10nProvider),
+  ),
 );
+
+/// R16 — client-built text persisted on an auto-seeded Opportunity Lab row.
+class OpportunitySeedTexts {
+  const OpportunitySeedTexts({
+    required this.description,
+    required this.rationale,
+    required this.risks,
+    required this.actionSteps,
+  });
+  final String       description;
+  final String       rationale;
+  final List<String> risks;
+  final List<String> actionSteps;
+}
+
+/// R16 — builds the persisted Opportunity Lab seed texts for one
+/// market-analysis `priority_actions[]` entry in the language of [l10n]
+/// (the user's CURRENT UI language). The AI's fixed-value codes
+/// ("Alto"/"Médio"/"Baixo") are mapped to localized labels; the AI's own
+/// free-text `rationale` is kept as returned.
+OpportunitySeedTexts buildOpportunitySeedTexts(
+  Map<dynamic, dynamic> action,
+  String input,
+  AppLocalizations l10n,
+) {
+  String level(dynamic v) {
+    final raw = v?.toString().trim() ?? '';
+    return raw.isEmpty ? l10n.uxNotAvailableShort : aiLevelLabel(raw, l10n);
+  }
+
+  final effortRaw    = action['effort']?.toString().trim() ?? '';
+  final timeframeRaw = action['timeframe']?.toString().trim() ?? '';
+  final rationaleRaw = action['rationale'] is String
+      ? (action['rationale'] as String).trim()
+      : '';
+
+  return OpportunitySeedTexts(
+    description: l10n.uxOppSeedDescription(
+      level(action['impact']),
+      level(action['effort']),
+    ),
+    rationale: rationaleRaw.isNotEmpty
+        ? rationaleRaw
+        : l10n.uxOppSeedRationaleFallback(input),
+    risks: effortRaw.isNotEmpty
+        ? [l10n.uxOppSeedRiskEffort(aiLevelLabel(effortRaw, l10n))]
+        : const [],
+    actionSteps: timeframeRaw.isNotEmpty
+        ? [l10n.uxOppSeedEstimatedTimeframe(aiTimeframeLabel(timeframeRaw, l10n))]
+        : const [],
+  );
+}

@@ -1,3 +1,6 @@
+import '../../core/utils/ecosystem_labels.dart';
+import '../../l10n/app_localizations.dart';
+
 enum RecommendationType {
   investProject,
   executeOpportunity,
@@ -29,15 +32,7 @@ class PriorityRecommendation {
     this.entityName,
   });
 
-  String get typeLabel {
-    switch (type) {
-      case RecommendationType.investProject:    return 'Investir';
-      case RecommendationType.executeOpportunity: return 'Executar';
-      case RecommendationType.runAction:        return 'Ação';
-      case RecommendationType.pauseProject:     return 'Pausar';
-      case RecommendationType.mitigateRisk:     return 'Risco';
-      case RecommendationType.quickWin:         return 'Ganho Rápido';
-      case RecommendationType.waste:            return 'Desperdício';
-    }
-  }
+  /// R16 — localized display label; single source is
+  /// [recommendationTypeLabel] in core/utils/ecosystem_labels.dart.
+  String typeLabel(AppLocalizations l10n) => recommendationTypeLabel(type, l10n);
 }

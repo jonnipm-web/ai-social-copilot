@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/diagnostics/diagnostic_container.dart';
 import '../../../core/diagnostics/diagnostic_models.dart';
 import '../../../data/services/drive_service.dart';
+import '../../../l10n/app_localizations.dart';
 
 // IVE-COMMERCIAL-OBSERVABILITY-07A — DRIVE category (mission section 04):
 // "session resolution, OAuth stage category, picker stage, list/download/
@@ -103,7 +104,8 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
       final account = await _drive.signIn();
       if (account == null) {
         _logDrive('drive_sign_in', status: 'cancelled');
-        setState(() { _signing = false; _error = 'Login cancelado.'; });
+        if (!mounted) return;
+        setState(() { _signing = false; _error = AppLocalizations.of(context)!.uxDriveLoginCancelled; });
         return;
       }
       _logDrive('drive_sign_in', status: 'success');
@@ -116,16 +118,16 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
     } catch (e) {
       _logDrive('drive_sign_in', status: 'failure', error: e);
       final msg = e.toString();
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
       String errorMsg;
       if (msg.contains('error 10') || msg.contains('sign_in_failed')) {
-        errorMsg =
-            'Não foi possível conectar ao Google (erro de configuração).\n'
-            'Use o tipo "URL" e cole o link de compartilhamento do Google Docs, '
-            'ou use o tipo "Arquivo" para importar PDFs locais.';
+        errorMsg = l10n.uxDriveConfigError;
       } else if (msg.contains('network') || msg.contains('Network')) {
-        errorMsg = 'Sem conexão com a internet. Verifique sua rede e tente novamente.';
+        errorMsg = l10n.uxDriveNoInternet;
       } else {
-        errorMsg = 'Erro ao conectar: $msg';
+        // R16 — raw Google/plugin text stays in the diagnostic log only.
+        errorMsg = l10n.uxDriveConnectError;
       }
       setState(() { _signing = false; _error = errorMsg; });
     }
@@ -144,7 +146,8 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
       setState(() { _files = files; _loading = false; });
     } catch (e) {
       _logDrive('drive_list_files', status: 'failure', error: e);
-      setState(() { _loading = false; _error = 'Erro ao carregar: $e'; });
+      if (!mounted) return;
+      setState(() { _loading = false; _error = AppLocalizations.of(context)!.uxDriveLoadError; });
     }
   }
 
@@ -172,7 +175,7 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
         setState(() => _downloading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erro ao baixar: $e'),
+            content: Text(AppLocalizations.of(context)!.uxDriveDownloadError),
             backgroundColor: _kRed,
           ),
         );
@@ -182,6 +185,7 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Stack(
       children: [
         Scaffold(
@@ -189,16 +193,16 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
           appBar: AppBar(
             backgroundColor: _kBg,
             foregroundColor: Colors.white,
-            title: const Text(
-              'Importar do Google Drive',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            title: Text(
+              l10n.uxDriveImportTitle,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             actions: [
               if (_signedIn)
                 TextButton.icon(
                   onPressed: _signOut,
                   icon: const Icon(Icons.logout_rounded, size: 16, color: Colors.white54),
-                  label: const Text('Sair', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                  label: Text(l10n.uxDriveSignOut, style: const TextStyle(color: Colors.white54, fontSize: 12)),
                 ),
             ],
           ),
@@ -207,18 +211,18 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
         if (_downloading)
           Container(
             color: Colors.black54,
-            child: const Center(
+            child: Center(
               child: Card(
-                color: Color(0xFF1A1A2E),
+                color: const Color(0xFF1A1A2E),
                 child: Padding(
-                  padding: EdgeInsets.all(28),
+                  padding: const EdgeInsets.all(28),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      CircularProgressIndicator(color: _kPrimary),
-                      SizedBox(height: 16),
-                      Text('Baixando arquivo…',
-                          style: TextStyle(color: Colors.white70)),
+                      const CircularProgressIndicator(color: _kPrimary),
+                      const SizedBox(height: 16),
+                      Text(l10n.uxDriveDownloading,
+                          style: const TextStyle(color: Colors.white70)),
                     ],
                   ),
                 ),
@@ -230,6 +234,7 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
   }
 
   Widget _loginView() {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -248,17 +253,17 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
                   const Icon(Icons.add_to_drive_rounded,
                       color: _kPrimary, size: 56),
                   const SizedBox(height: 16),
-                  const Text(
-                    'Conectar Google Drive',
-                    style: TextStyle(
+                  Text(
+                    l10n.uxDriveConnectTitle,
+                    style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
                         fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Importe PDFs, Google Docs e documentos de texto diretamente para o Cofre de Conhecimento.',
-                    style: TextStyle(color: Colors.white54, fontSize: 13, height: 1.5),
+                  Text(
+                    l10n.uxDriveConnectBody,
+                    style: const TextStyle(color: Colors.white54, fontSize: 13, height: 1.5),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 24),
@@ -280,7 +285,7 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
                                   strokeWidth: 2, color: Colors.white),
                             )
                           : const Icon(Icons.login_rounded),
-                      label: Text(_signing ? 'Conectando…' : 'Entrar com Google'),
+                      label: Text(_signing ? l10n.uxDriveConnecting : l10n.uxDriveSignInGoogle),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _kPrimary,
                         foregroundColor: Colors.white,
@@ -300,6 +305,7 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
   }
 
   Widget _fileList() {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         // User info + search
@@ -314,7 +320,7 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
                         color: _kGreen, size: 14),
                     const SizedBox(width: 6),
                     Text(
-                      'Conectado como $_userName',
+                      l10n.uxDriveConnectedAs(_userName!),
                       style: const TextStyle(color: Colors.white54, fontSize: 12),
                     ),
                   ],
@@ -324,7 +330,7 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
                 controller: _searchCtrl,
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
-                  hintText: 'Buscar arquivo no Drive…',
+                  hintText: l10n.uxDriveSearchHint,
                   hintStyle: const TextStyle(color: Colors.white38),
                   prefixIcon: const Icon(Icons.search_rounded, color: Colors.white38),
                   suffixIcon: _searchCtrl.text.isNotEmpty
@@ -369,16 +375,16 @@ class _DrivePickerScreenState extends State<DrivePickerScreen> {
                           const SizedBox(height: 16),
                           TextButton(
                             onPressed: _loadFiles,
-                            child: const Text('Tentar novamente'),
+                            child: Text(l10n.commonRetry),
                           ),
                         ],
                       ),
                     )
                   : _files.isEmpty
-                      ? const Center(
+                      ? Center(
                           child: Text(
-                            'Nenhum arquivo encontrado.\nSão suportados: Google Docs, PDF, DOCX, TXT e CSV.',
-                            style: TextStyle(color: Colors.white38, height: 1.6),
+                            l10n.uxDriveNoFiles,
+                            style: const TextStyle(color: Colors.white38, height: 1.6),
                             textAlign: TextAlign.center,
                           ),
                         )
@@ -433,7 +439,9 @@ class _FileTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    file.typeLabel,
+                    file.typeLabel == 'Texto'
+                        ? AppLocalizations.of(context)!.uxDriveTypeText
+                        : file.typeLabel,
                     style: const TextStyle(color: Colors.white38, fontSize: 11),
                   ),
                 ],

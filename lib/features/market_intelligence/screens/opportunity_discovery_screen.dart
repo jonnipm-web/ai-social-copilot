@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/ai_enum_labels.dart';
 import '../../../core/utils/language_utils.dart';
 import '../../../data/models/ive_interaction_request.dart';
 import '../../../data/models/opportunity.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/market_analysis_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
+import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 
 class OpportunityDiscoveryScreen extends ConsumerStatefulWidget {
   const OpportunityDiscoveryScreen({super.key, required this.analysisId});
@@ -62,7 +64,8 @@ class _OpportunityDiscoveryScreenState
       if (_exec.state != AiExecutionState.success) return;
       ref.invalidate(opportunitiesByAnalysisProvider(widget.analysisId));
     } catch (e) {
-      setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+      if (!mounted) return;
+      setState(() => _error = extractErrorMessage(e, AppLocalizations.of(context)!));
     } finally {
       if (mounted) setState(() {});
     }
@@ -125,7 +128,7 @@ class _OpportunityDiscoveryScreenState
             child: asyncList.when(
               loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFF6BCB77))),
               error: (e, _) => Center(
-                  child: Text(l10n.miSubErrorPrefix('$e'),
+                  child: Text(l10n.miSubErrorPrefix(extractErrorMessage(e, l10n)),
                       style: const TextStyle(color: Colors.redAccent))),
               data: (opportunities) => opportunities.isEmpty
                   ? Center(
@@ -238,12 +241,12 @@ class _OpportunityCard extends StatelessWidget {
               children: [
                 const Icon(Icons.schedule_rounded, color: Colors.white38, size: 14),
                 const SizedBox(width: 4),
-                Text(opportunity.timeframe, style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                Text(aiTimeframeLabel(opportunity.timeframe, l10n), style: const TextStyle(color: Colors.white38, fontSize: 12)),
                 if (opportunity.effort.isNotEmpty) ...[
                   const SizedBox(width: 12),
                   const Icon(Icons.fitness_center_rounded, color: Colors.white38, size: 14),
                   const SizedBox(width: 4),
-                  Text(opportunity.effort, style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                  Text(aiLevelLabel(opportunity.effort, l10n), style: const TextStyle(color: Colors.white38, fontSize: 12)),
                 ],
               ],
             ),

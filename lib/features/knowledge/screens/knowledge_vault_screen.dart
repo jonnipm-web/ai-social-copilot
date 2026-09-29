@@ -15,6 +15,7 @@ import '../../../shared/widgets/ai_execution_confirmation.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/context_copilot_widget.dart';
 import '../../../shared/widgets/ive_exclusion_region.dart';
+import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 
 class KnowledgeVaultScreen extends ConsumerStatefulWidget {
   const KnowledgeVaultScreen({super.key});
@@ -104,7 +105,7 @@ class _KnowledgeVaultScreenState extends ConsumerState<KnowledgeVaultScreen> {
               loading: () =>
                   const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(
-                child: Text(l10n.iveChatErrorPrefix('$e'),
+                child: Text(l10n.iveChatErrorPrefix(extractErrorMessage(e, l10n)),
                     style: const TextStyle(color: Colors.white70)),
               ),
               data: (items) => items.isEmpty
@@ -677,7 +678,7 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(l10n.knowledgeVaultAnalyzeError('$e')),
+                              content: Text(l10n.knowledgeVaultAnalyzeError(extractErrorMessage(e, l10n))),
                               backgroundColor: const Color(0xFFF44336),
                             ),
                           );
@@ -794,7 +795,7 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(l10n.knowledgeVaultDeleteError('$e')),
+            content: Text(l10n.knowledgeVaultDeleteError(extractErrorMessage(e, l10n))),
             backgroundColor: const Color(0xFFF44336),
           ),
         );

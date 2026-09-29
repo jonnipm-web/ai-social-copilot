@@ -19,6 +19,11 @@ import '../../../providers/roi_metric_provider.dart';
 import '../../../data/models/ive_interaction_request.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../data/models/knowledge_coverage.dart';
+
+// R16: internal debug hub stays in Portuguese (not a commercial surface).
+final AppLocalizations _dbgL10n = lookupAppLocalizations(const Locale('pt'));
 
 // ─── Palette ───────────────────────────────────────────────────────────────
 const _kBg       = Color(0xFF080810);
@@ -213,7 +218,7 @@ class _ProjectsTab extends ConsumerWidget {
                 _debugRow('Ações planejadas',         '${profile.first.coverage.actionPoints}/20pts'),
                 _debugRow('Oportunidades mapeadas',   '${profile.first.coverage.opportunityPoints}/15pts'),
                 _debugRow('Plano de receita',         '${profile.first.coverage.revenuePoints}/10pts'),
-                _debugRow('Estágio de maturidade',    '${profile.first.maturityEmoji} ${profile.first.maturityLabel}'),
+                _debugRow('Estágio de maturidade',    '${profile.first.maturityEmoji} ${profile.first.maturityLabel(_dbgL10n)}'),
               ] else
                 _debugRow('Perfil de inteligência', 'Não computado'),
               const _Divider(),
@@ -226,7 +231,7 @@ class _ProjectsTab extends ConsumerWidget {
                 _debugRow('Projetos relacionados', profile.first.relatedProjectNames.join(', ')),
               if (profile.isNotEmpty && profile.first.coverage.gaps.isNotEmpty)
                 _debugRow('Gaps detectados',
-                    profile.first.coverage.gaps.map((g) => '⚠ $g').join('\n')),
+                    profile.first.coverage.gaps.map((g) => '⚠ ${KnowledgeCoverage.gapLabel(g, _dbgL10n)}').join('\n')),
             ],
           );
         }),
@@ -266,7 +271,7 @@ class _PersonasTab extends ConsumerWidget {
           return _DebugCard(
             leading:  p.learningEmoji,
             title:    p.persona.name,
-            subtitle: '${p.learningLabel} · Score: ${p.learningScore}%',
+            subtitle: '${p.learningLabel(_dbgL10n)} · Score: ${p.learningScore}%',
             children: [
               _debugRow('Persona ID',      p.persona.id),
               _debugRow('Função',          p.persona.description ?? '—'),
@@ -289,7 +294,7 @@ class _PersonasTab extends ConsumerWidget {
               _sectionLabel('ESTATÍSTICAS'),
               _debugRow('Learning Score',    '${p.learningScore}/100'),
               _debugRow('Nível de confiança', '${(p.confidenceLevel * 100).round()}%'),
-              _debugRow('Nível',              p.learningLabel),
+              _debugRow('Nível',              p.learningLabel(_dbgL10n)),
               if (p.knownTopics.isNotEmpty)
                 _debugRow('Tópicos conhecidos', p.knownTopics.take(5).join(', ')),
               if (p.knownNiches.isNotEmpty)
@@ -455,9 +460,9 @@ class _DecisionsTab extends ConsumerWidget {
           ...recs.map((r) => _DebugCard(
             leading:  '🎯',
             title:    r.title,
-            subtitle: '${r.typeLabel} · ${r.confidence}% confiança',
+            subtitle: '${r.typeLabel(_dbgL10n)} · ${r.confidence}% confiança',
             children: [
-              _debugRow('Tipo',            r.typeLabel),
+              _debugRow('Tipo',            r.typeLabel(_dbgL10n)),
               _debugRow('Entidade',        r.entityName ?? '—'),
               _debugRow('Entidade ID',     r.entityId ?? '—'),
               const _Divider(),
@@ -644,7 +649,7 @@ class _GraphTab extends ConsumerWidget {
                       ? '✅ ${profile.first.analysis!.input.substring(0, 30)}...'
                       : '❌ Não vinculada'),
               _debugRow('  ↓ Estágio',
-                  profile.isNotEmpty ? '${profile.first.maturityEmoji} ${profile.first.maturityLabel}' : 'Não computado'),
+                  profile.isNotEmpty ? '${profile.first.maturityEmoji} ${profile.first.maturityLabel(_dbgL10n)}' : 'Não computado'),
               if (pLab.isNotEmpty) ...[
                 _debugRow('  ↓ Oportunidades (${pLab.length})',
                     pLab.map((l) => l.title).take(3).join(', ')),

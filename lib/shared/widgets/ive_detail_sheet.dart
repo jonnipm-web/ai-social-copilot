@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'context_copilot_widget.dart' show showCopilotChat;
 import '../../data/models/copilot_context_data.dart';
 import '../../data/models/ive_interaction_request.dart';
+import '../../l10n/app_localizations.dart';
 import '../../providers/ive_context_provider.dart';
 
 /// Generic drill-down sheet IVE opens when user taps any data item.
@@ -76,6 +77,7 @@ class IveDetailSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     return DraggableScrollableSheet(
       initialChildSize: 0.60,
       minChildSize:     0.40,
@@ -96,21 +98,21 @@ class IveDetailSheet extends ConsumerWidget {
                 children: [
                   _header(context),
                   const SizedBox(height: 16),
-                  _explanation(),
+                  _explanation(l10n),
                   if (evidence.isNotEmpty) ...[
                     const SizedBox(height: 20),
-                    _evidenceSection(),
+                    _evidenceSection(l10n),
                   ],
                   if (expandedData != null && expandedData!.isNotEmpty) ...[
                     const SizedBox(height: 20),
-                    _expandedSection(),
+                    _expandedSection(l10n),
                   ],
                   if (suggestedActions.isNotEmpty) ...[
                     const SizedBox(height: 20),
-                    _actionsSection(context),
+                    _actionsSection(context, l10n),
                   ],
                   const SizedBox(height: 16),
-                  _askIveButton(context, ref),
+                  _askIveButton(context, ref, l10n),
                 ],
               ),
             ),
@@ -152,7 +154,7 @@ class IveDetailSheet extends ConsumerWidget {
         ],
       );
 
-  Widget _explanation() => Container(
+  Widget _explanation(AppLocalizations l10n) => Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: const Color(0xFF2A2450),
@@ -165,9 +167,9 @@ class IveDetailSheet extends ConsumerWidget {
             Row(children: [
               const Text('💬', style: TextStyle(fontSize: 16)),
               const SizedBox(width: 6),
-              const Text(
-                'Explicação IVE',
-                style: TextStyle(color: Color(0xFF6C63FF), fontWeight: FontWeight.bold, fontSize: 13),
+              Text(
+                l10n.ctxIveDetailExplanation,
+                style: const TextStyle(color: Color(0xFF6C63FF), fontWeight: FontWeight.bold, fontSize: 13),
               ),
             ]),
             const SizedBox(height: 8),
@@ -179,12 +181,12 @@ class IveDetailSheet extends ConsumerWidget {
         ),
       );
 
-  Widget _evidenceSection() => Column(
+  Widget _evidenceSection(AppLocalizations l10n) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Evidências',
-            style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold),
+          Text(
+            l10n.impactEvidence,
+            style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           ...evidence.map((e) => _evidenceCard(e)),
@@ -219,10 +221,10 @@ class IveDetailSheet extends ConsumerWidget {
         ),
       );
 
-  Widget _expandedSection() => ExpansionTile(
-        title: const Text(
-          'Números e fórmulas',
-          style: TextStyle(color: Colors.white54, fontSize: 13),
+  Widget _expandedSection(AppLocalizations l10n) => ExpansionTile(
+        title: Text(
+          l10n.ctxIveDetailNumbers,
+          style: const TextStyle(color: Colors.white54, fontSize: 13),
         ),
         iconColor: Colors.white38,
         collapsedIconColor: Colors.white24,
@@ -238,12 +240,12 @@ class IveDetailSheet extends ConsumerWidget {
         )).toList(),
       );
 
-  Widget _actionsSection(BuildContext context) => Column(
+  Widget _actionsSection(BuildContext context, AppLocalizations l10n) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Ações sugeridas',
-            style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold),
+          Text(
+            l10n.ctxIveDetailSuggestedActions,
+            style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           ...suggestedActions.map((a) => _actionTile(context, a)),
@@ -277,7 +279,7 @@ class IveDetailSheet extends ConsumerWidget {
   // mesmo grounding rico disponível (e já usado) pelo avatar global.
   // Mesma fonte (iveContextDataProvider) e mesma conversão
   // (CopilotContextData.fromIveContext) usadas em ive_overlay.dart.
-  Widget _askIveButton(BuildContext context, WidgetRef ref) => SizedBox(
+  Widget _askIveButton(BuildContext context, WidgetRef ref, AppLocalizations l10n) => SizedBox(
         width: double.infinity,
         child: OutlinedButton.icon(
           style: OutlinedButton.styleFrom(
@@ -287,7 +289,7 @@ class IveDetailSheet extends ConsumerWidget {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
           icon: const Text('💬', style: TextStyle(fontSize: 16)),
-          label: const Text('Perguntar à IVE'),
+          label: Text(l10n.iveChatAskLabel),
           onPressed: () {
             Navigator.of(context).pop();
             final ctx = ref.read(iveContextDataProvider(projectId)).valueOrNull;

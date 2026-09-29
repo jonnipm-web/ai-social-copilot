@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/opportunity_lab_item.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/utils/app_exceptions.dart';
 
 class OpportunityLabService {
   // Lazy getter, not an eager field initializer -- same fix as
@@ -27,7 +28,7 @@ class OpportunityLabService {
 
   Future<OpportunityLabItem> create(OpportunityLabItem item) async {
     final uid = _client.auth.currentUser?.id;
-    if (uid == null) throw Exception('Não autenticado');
+    if (uid == null) throw const NotAuthenticatedException();
 
     final map = item.toInsertMap();
     map['user_id'] = uid;

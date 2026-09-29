@@ -8,6 +8,7 @@ import '../../../data/models/ive_interaction_request.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/market_analysis_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
+import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 
 class RevenuePlannerScreen extends ConsumerStatefulWidget {
   const RevenuePlannerScreen({super.key, required this.analysisId});
@@ -71,7 +72,8 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
       if (_exec.state != AiExecutionState.success) return;
       ref.invalidate(revenuePlanByAnalysisProvider(widget.analysisId));
     } catch (e) {
-      setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+      if (!mounted) return;
+      setState(() => _error = extractErrorMessage(e, AppLocalizations.of(context)!));
     } finally {
       if (mounted) setState(() {});
     }
@@ -111,7 +113,7 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
       body: asyncPlan.when(
         loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFF00BCD4))),
         error: (e, _) => Center(
-            child: Text(l10n.miSubErrorPrefix('$e'),
+            child: Text(l10n.miSubErrorPrefix(extractErrorMessage(e, l10n)),
                 style: const TextStyle(color: Colors.redAccent))),
         data: (plan) => plan == null
             ? SingleChildScrollView(

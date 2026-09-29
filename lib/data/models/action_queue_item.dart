@@ -1,3 +1,5 @@
+import '../../l10n/app_localizations.dart';
+
 class ActionQueueItem {
   final String id;
   final String userId;
@@ -79,7 +81,25 @@ class ActionQueueItem {
     'knowledge_engine': 'Knowledge Engine',
   };
 
+  /// Legacy PT-only label. R16: UI must use [localizedOriginLabel]; this
+  /// getter remains only for callers not yet migrated.
   String get originLabel => originLabels[origin] ?? origin;
+
+  /// R16 — origin label in the presentation language of [l10n]; unknown
+  /// origins are shown verbatim.
+  String localizedOriginLabel(AppLocalizations l10n) =>
+      originLabelFor(origin, l10n);
+
+  static String originLabelFor(String origin, AppLocalizations l10n) {
+    switch (origin) {
+      case 'manual':           return l10n.uxOriginManual;
+      case 'opportunity_lab':  return 'Opportunity Lab';
+      case 'market_analysis':  return l10n.uxOriginMarketAnalysis;
+      case 'auto_bootstrap':   return l10n.uxOriginAutoBootstrap;
+      case 'knowledge_engine': return 'Knowledge Engine';
+      default:                 return origin;
+    }
+  }
 
   /// The ONLY condition under which this item's completion may be shown as
   /// AEF-verified rather than self-attested: a real, persisted

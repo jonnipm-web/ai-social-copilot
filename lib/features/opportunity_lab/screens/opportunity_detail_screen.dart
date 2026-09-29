@@ -19,6 +19,7 @@ import '../../../shared/widgets/context_copilot_widget.dart'
     show showCopilotChat, IveInlineAskPresence;
 import '../../action_engine/screens/action_detail_screen.dart';
 import '../opportunity_type_labels.dart';
+import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 
 // ── Colors ────────────────────────────────────────────────────────────────────
 const _kBg      = Color(0xFF0F0F1A);
@@ -77,7 +78,7 @@ class OpportunityDetailScreen extends ConsumerWidget {
         loading: () =>
             const Center(child: CircularProgressIndicator(color: _kPrimary)),
         error: (e, _) => Center(
-          child: Text(l10n.opportunityDetailLoadError('$e'),
+          child: Text(l10n.opportunityDetailLoadError(extractErrorMessage(e, l10n)),
               style: const TextStyle(color: Colors.white54)),
         ),
         data: (item) => item == null
@@ -507,7 +508,7 @@ class _OriginSection extends StatelessWidget {
         _InfoRow(
           icon: Icons.input_rounded,
           label: l10n.opportunityDetailOriginGeneratedBy,
-          value: item.originLabel,
+          value: item.localizedOriginLabel(l10n),
         ),
         if (projectName != null)
           _InfoRow(
@@ -915,7 +916,7 @@ class _ActionButtons extends StatelessWidget {
                 } catch (e) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text(l10n.opportunityDetailApprovedCreateActionError('$e')),
+                      content: Text(l10n.opportunityDetailApprovedCreateActionError(extractErrorMessage(e, l10n))),
                       backgroundColor: _kOrange,
                     ));
                   }
@@ -959,7 +960,7 @@ class _ActionButtons extends StatelessWidget {
                 } catch (e) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text(l10n.opportunityDetailGenericError('$e')),
+                      content: Text(l10n.opportunityDetailGenericError(extractErrorMessage(e, l10n))),
                       backgroundColor: _kRed,
                     ));
                   }
@@ -1006,10 +1007,10 @@ class _ActionButtons extends StatelessWidget {
                     ctx != null ? CopilotContextData.fromIveContext(ctx) : const CopilotContextData();
                 showCopilotChat(
                   context,
-                  screenName: 'Oportunidades',
+                  screenName: 'Oportunidades', // canonical key (localized by the copilot widget)
                   contextData: contextData,
                   initialMessage:
-                      'Analise a oportunidade "${item.title}" (score ${item.finalScore}) e diga como aproveitá-la.',
+                      l10n.uxOppAskIveMessage(item.title, '${item.finalScore}'),
                   request: IveInteractionRequest(
                     projectId:        item.projectId,
                     sourceModule:     'opportunity_lab',

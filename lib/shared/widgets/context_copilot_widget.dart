@@ -834,7 +834,7 @@ class _TurnBubble extends StatelessWidget {
                 ),
               ),
             if (!isUser && (turn.sources.isNotEmpty || turn.confidence > 0))
-              _meta(turn),
+              _meta(ctx, turn),
             if (!isUser && turn.actionSuggestion != null)
               _actionChip(turn.actionSuggestion!, onActionTap),
             if (!isUser)
@@ -845,13 +845,13 @@ class _TurnBubble extends StatelessWidget {
     );
   }
 
-  Widget _meta(CopilotTurn turn) => Padding(
+  Widget _meta(BuildContext ctx, CopilotTurn turn) => Padding(
         padding: const EdgeInsets.only(top: 8),
         child: Wrap(
           spacing: 6,
           runSpacing: 4,
           children: [
-            if (turn.confidence > 0) _badge('${turn.confidence}% conf.', Colors.white24),
+            if (turn.confidence > 0) _badge(AppLocalizations.of(ctx)!.ctxCopilotConfidenceBadge(turn.confidence), Colors.white24),
             ...turn.sources.take(3).map((s) => _badge(s, const Color(0xFF3D3A5C))),
           ],
         ),

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/utils/language_utils.dart';
 import '../data/models/knowledge_analysis.dart';
 import '../data/models/knowledge_item.dart';
 import '../data/models/knowledge_strategy.dart';
@@ -16,9 +17,10 @@ final knowledgeStrategyProvider =
 
 class StrategyNotifier
     extends StateNotifier<AsyncValue<KnowledgeStrategy?>> {
-  StrategyNotifier(this._service) : super(const AsyncValue.data(null));
+  StrategyNotifier(this._service, this._ref) : super(const AsyncValue.data(null));
 
   final StrategyService _service;
+  final Ref _ref;
 
   Future<KnowledgeStrategy?> generate(
     KnowledgeItem item,
@@ -27,7 +29,13 @@ class StrategyNotifier
   }) async {
     state = const AsyncValue.loading();
     try {
-      final result = await _service.generate(item, analysis, idempotencyKey: idempotencyKey);
+      // R16 — output language = presentation language, not item.language.
+      final result = await _service.generate(
+        item,
+        analysis,
+        outputLanguage: _ref.read(outputLanguageCodeProvider),
+        idempotencyKey: idempotencyKey,
+      );
       state = AsyncValue.data(result);
       return result;
     } catch (e, st) {
@@ -39,5 +47,5 @@ class StrategyNotifier
 
 final strategyNotifierProvider = StateNotifierProvider.autoDispose<
     StrategyNotifier, AsyncValue<KnowledgeStrategy?>>(
-  (ref) => StrategyNotifier(ref.watch(strategyServiceProvider)),
+  (ref) => StrategyNotifier(ref.watch(strategyServiceProvider), ref),
 );

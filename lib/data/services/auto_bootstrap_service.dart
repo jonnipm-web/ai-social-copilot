@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/uuid_v4.dart';
+import '../../l10n/app_localizations.dart';
 import '../models/action_queue_item.dart';
 import '../models/bootstrap_result.dart';
 import '../models/knowledge_analysis.dart';
@@ -48,6 +49,12 @@ class AutoBootstrapService {
     required List<Persona> personas,
     required List<PersonaTraining> existingTrainings,
     required MarketAnalysis? linkedAnalysis,
+    // R16 — [outputLanguage] is the PRESENTATION language ('pt-BR'/'en-US')
+    // sent to every AI call below; [l10n] localizes the user-facing step
+    // labels reported through [onStep]. Canonical codes persisted as logic
+    // keys ('expansão', 'tarefa') are unchanged.
+    required String outputLanguage,
+    required AppLocalizations l10n,
     void Function(String step)? onStep,
   }) async {
     int oppsCreated = 0;
@@ -61,7 +68,7 @@ class AutoBootstrapService {
       if (uid == null) throw Exception('Não autenticado');
 
       // ── Step 1: Generate opportunities + roadmap ──────────────────────
-      onStep?.call('Gerando oportunidades');
+      onStep?.call(l10n.bootstrapStepGeneratingOpportunities);
       final docSummaries = knowledgeItems.take(6).map((k) => {
         'title':   k.title,
         'content': k.content.substring(0, math.min(400, k.content.length)),
@@ -82,6 +89,7 @@ class AutoBootstrapService {
           'project_type':        project.type,
           'documents':           docSummaries,
           'market_context':      linkedAnalysis?.niche ?? '',
+          'language':            outputLanguage,
           'idempotency_key':     newUuidV4(),
         },
       );
@@ -152,7 +160,7 @@ class AutoBootstrapService {
 
         // ── Step 2: Generate actions ────────────────────────────────────
         if (savedOpps.isNotEmpty) {
-          onStep?.call('Gerando ações');
+          onStep?.call(l10n.bootstrapStepGeneratingActions);
           final oppList = savedOpps.take(3).map((o) => {
             'title':       o.title,
             'description': o.description,
@@ -163,6 +171,7 @@ class AutoBootstrapService {
             body: {
               'project_name':    project.name,
               'opportunities':   oppList,
+              'language':        outputLanguage,
               'idempotency_key': newUuidV4(),
             },
           );
@@ -197,7 +206,7 @@ class AutoBootstrapService {
       }
 
       // ── Step 3: Revenue plan ──────────────────────────────────────────
-      onStep?.call('Gerando plano de receita');
+      onStep?.call(l10n.bootstrapStepGeneratingRevenuePlan);
       try {
         final docContext = knowledgeItems.take(3).map((k) => k.title).join(', ');
         final revenueInput =
@@ -208,6 +217,7 @@ class AutoBootstrapService {
           body: {
             'input':           revenueInput,
             'project_name':    project.name,
+            'language':        outputLanguage,
             'idempotency_key': newUuidV4(),
           },
         );
@@ -233,7 +243,7 @@ class AutoBootstrapService {
       }
 
       // ── Step 4: Train untrained personas ─────────────────────────────
-      onStep?.call('Treinando personas');
+      onStep?.call(l10n.bootstrapStepTrainingPersonas);
       final trainedIds   = existingTrainings.map((t) => t.personaId).toSet();
       final untrained    = personas.where((p) => !trainedIds.contains(p.id)).toList();
       final withAnalysis = analyses.isNotEmpty;
@@ -254,6 +264,7 @@ class AutoBootstrapService {
               personaId: persona.id,
               item:      item,
               analysis:  bestAnalysis,
+              l10n:      l10n,
             );
             personasTrained++;
           } catch (_) {

@@ -51,9 +51,11 @@ class ProjectIntelligenceService {
         relatedProjectNames: _relatedProjects(p, analysis, projects, analyses),
         identifiedTopics:    _identifiedTopics(analysis, pLab),
         missingKnowledge:    coverage.gaps,
-        niche:               analysis?.niche ?? 'Não definido',
-        targetAudience:      analysis?.targetAudience ?? 'Não definido',
-        monetizationModel:   analysis?.monetizationModel ?? 'Não definido',
+        // R16 — empty string = "not defined" (language-neutral); the UI
+        // renders a localized label via ProjectIntelligenceProfile helpers.
+        niche:               analysis?.niche ?? '',
+        targetAudience:      analysis?.targetAudience ?? '',
+        monetizationModel:   analysis?.monetizationModel ?? '',
         valueProposition:    analysis?.valueProposition ?? p.description,
         computedAt:          DateTime.now(),
       );

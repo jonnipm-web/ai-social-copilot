@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/constants/app_constants.dart';
+import '../core/utils/language_utils.dart';
 import '../core/diagnostics/diagnostic_logger_service.dart';
 import '../core/diagnostics/diagnostic_models.dart';
 import '../data/models/copilot_context_data.dart';
@@ -171,6 +172,9 @@ class ContextCopilotNotifier extends StateNotifier<CopilotState> {
           // reserve path on every message despite showing a confirmation
           // dialog.
           if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
+          // R16 — presentation language (languageProvider) decides the AI
+          // output language; never the language of documents or history.
+          'language': _ref.read(outputLanguageCodeProvider),
         },
       );
 

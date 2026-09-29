@@ -4,10 +4,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/modules/route_policy.dart';
+import '../../../core/utils/ecosystem_labels.dart';
 import '../../../core/utils/snackbar_utils.dart';
 import '../../../data/models/knowledge_graph.dart';
 import '../../../data/models/persona_learning_profile.dart';
 import '../../../data/models/project_intelligence_profile.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/action_queue_provider.dart';
 import '../../../providers/ecosystem_intelligence_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
@@ -41,7 +43,8 @@ VoidCallback _commercialCtaTap(
       }
     };
   }
-  return () => showInfoSnack(context, 'Este recurso ainda não está disponível.');
+  return () => showInfoSnack(
+      context, AppLocalizations.of(context)!.ctxHomeFeatureUnavailable);
 }
 
 const _kBg      = Color(0xFF0A0A14);
@@ -63,6 +66,7 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isAdmin = ref.watch(currentProfileProvider).valueOrNull?.isAdmin ?? false;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -72,14 +76,14 @@ class HomeScreen extends ConsumerWidget {
         elevation: 0,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
-            Text('InsightValues',
+          children: [
+            const Text('InsightValues',
                 style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 16)),
-            Text('Command Center',
-                style: TextStyle(color: Colors.white38, fontSize: 11)),
+            Text(l10n.ctxHomeCommandCenter,
+                style: const TextStyle(color: Colors.white38, fontSize: 11)),
           ],
         ),
         actions: [
@@ -90,7 +94,7 @@ class HomeScreen extends ConsumerWidget {
                   ? _kPrimary
                   : _kPrimary.withOpacity(0.3),
             ),
-            tooltip: 'Melhorar Post',
+            tooltip: l10n.ctxHomeImprovePostTooltip,
             onPressed: _commercialCtaTap(
               context,
               moduleId: 'improve-post',
@@ -100,7 +104,7 @@ class HomeScreen extends ConsumerWidget {
           ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: Colors.white38),
-            tooltip: 'Atualizar',
+            tooltip: l10n.ctxHomeRefreshTooltip,
             onPressed: () {
               ref.invalidate(projectIntelligenceProfilesProvider);
               ref.invalidate(personaLearningProfilesProvider);
@@ -153,6 +157,7 @@ class _ExecutiveCommandCard extends ConsumerWidget {
     final opportunities = (labAsync.valueOrNull ?? []).length;
     final coverage      = coverageAsync.valueOrNull ?? 0;
     final learning      = learningAsync.valueOrNull ?? 0;
+    final l10n          = AppLocalizations.of(context)!;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -171,8 +176,8 @@ class _ExecutiveCommandCard extends ConsumerWidget {
           Row(children: [
             const Icon(Icons.hub_rounded, color: _kPrimary, size: 18),
             const SizedBox(width: 8),
-            const Text('Executive Command Center',
-                style: TextStyle(
+            Text(l10n.ctxHomeExecCommandCenter,
+                style: const TextStyle(
                     color: _kPrimary,
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
@@ -186,27 +191,27 @@ class _ExecutiveCommandCard extends ConsumerWidget {
             runSpacing: 10,
             children: [
               _MetricChip(
-                  label: 'Projetos',
+                  label: l10n.ctxHomeMetricProjects,
                   value: '$projectCount',
                   icon: Icons.rocket_launch_rounded,
                   color: _kPrimary),
               _MetricChip(
-                  label: 'Oportunidades',
+                  label: l10n.ctxHomeMetricOpportunities,
                   value: '$opportunities',
                   icon: Icons.science_rounded,
                   color: _kCyan),
               _MetricChip(
-                  label: 'Ações Pendentes',
+                  label: l10n.ctxHomeMetricPendingActions,
                   value: '$pendingActions',
                   icon: Icons.bolt_rounded,
                   color: pendingActions > 0 ? _kOrange : _kGreen),
               _MetricChip(
-                  label: 'Knowledge',
+                  label: l10n.ctxHomeMetricKnowledge,
                   value: '$coverage%',
                   icon: Icons.auto_stories_rounded,
                   color: _coverageColor(coverage)),
               _MetricChip(
-                  label: 'Learning Score',
+                  label: l10n.ctxHomeMetricLearning,
                   value: '$learning%',
                   icon: Icons.psychology_rounded,
                   color: _learningColor(learning)),
@@ -216,7 +221,7 @@ class _ExecutiveCommandCard extends ConsumerWidget {
           // Quick navigation row
           Row(children: [
             _QuickAction(
-                label: 'Decision Center',
+                label: l10n.ctxHomeQuickDecisionCenter,
                 icon: Icons.speed_rounded,
                 onTap: _commercialCtaTap(
                   context,
@@ -226,7 +231,7 @@ class _ExecutiveCommandCard extends ConsumerWidget {
                 )),
             const SizedBox(width: 8),
             _QuickAction(
-                label: 'Briefing',
+                label: l10n.ctxHomeQuickBriefing,
                 icon: Icons.summarize_rounded,
                 onTap: _commercialCtaTap(
                   context,
@@ -236,7 +241,7 @@ class _ExecutiveCommandCard extends ConsumerWidget {
                 )),
             const SizedBox(width: 8),
             _QuickAction(
-                label: 'Oportunidades',
+                label: l10n.ctxHomeMetricOpportunities,
                 icon: Icons.science_rounded,
                 onTap: () => context.push(AppConstants.routeOpportunityLab)),
           ]),
@@ -266,9 +271,10 @@ class _PriorityProjectsCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profilesAsync = ref.watch(projectIntelligenceProfilesProvider);
     final scoresAsync   = ref.watch(ecosystemScoresProvider);
+    final l10n          = AppLocalizations.of(context)!;
 
     return _OsCard(
-      title: 'Projetos Prioritários',
+      title: l10n.ctxHomePriorityProjects,
       icon: Icons.rocket_launch_rounded,
       iconColor: _kCyan,
       onSeeAll: () => context.push(AppConstants.routeProjects),
@@ -278,8 +284,8 @@ class _PriorityProjectsCard extends ConsumerWidget {
         data: (profiles) {
           if (profiles.isEmpty) {
             return _EmptyHint(
-              'Nenhum projeto cadastrado.',
-              action: 'Adicionar projeto',
+              l10n.ctxHomeNoProjects,
+              action: l10n.ctxHomeAddProject,
               onTap: () => context.push(AppConstants.routeProjects),
             );
           }
@@ -290,7 +296,9 @@ class _PriorityProjectsCard extends ConsumerWidget {
                   .where((s) => s.project.id == profile.project.id)
                   .toList();
               final ecoscore = score.isNotEmpty ? score.first.ecosystemScore : 0;
-              final rec = score.isNotEmpty ? score.first.recommendation : '—';
+              final rec = score.isNotEmpty
+                  ? ecosystemVerdictLabel(score.first.recommendation, l10n)
+                  : '—';
               return _ProjectRow(
                   profile: profile,
                   ecosystemScore: ecoscore,
@@ -311,9 +319,10 @@ class _NextBestActionCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final recsAsync = ref.watch(priorityRecommendationsProvider);
+    final l10n      = AppLocalizations.of(context)!;
 
     return _OsCard(
-      title: 'Próxima Melhor Ação',
+      title: l10n.ctxHomeNextBestAction,
       icon: Icons.bolt_rounded,
       iconColor: _kGold,
       onSeeAll: () => context.push(AppConstants.routeActionEngine),
@@ -323,8 +332,8 @@ class _NextBestActionCard extends ConsumerWidget {
         data: (recs) {
           if (recs.isEmpty) {
             return _EmptyHint(
-              'Sem recomendações disponíveis.',
-              action: 'Ver Opportunity Lab',
+              l10n.ctxHomeNoRecommendations,
+              action: l10n.ctxHomeViewOpportunityLab,
               onTap: () => context.push(AppConstants.routeOpportunityLab),
             );
           }
@@ -347,12 +356,12 @@ class _NextBestActionCard extends ConsumerWidget {
                       color: _kGold.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: Text(top.typeLabel,
+                    child: Text(recommendationTypeLabel(top.type, l10n),
                         style: const TextStyle(
                             color: _kGold, fontSize: 10)),
                   ),
                   const Spacer(),
-                  Text('${top.confidence}% confiança',
+                  Text(l10n.ctxHomeConfidence(top.confidence),
                       style: const TextStyle(
                           color: Colors.white38, fontSize: 10)),
                 ]),
@@ -367,7 +376,7 @@ class _NextBestActionCard extends ConsumerWidget {
                     style: const TextStyle(
                         color: Colors.white54, fontSize: 12, height: 1.4)),
                 const SizedBox(height: 8),
-                Text('Impacto esperado: ${top.expectedImpact}',
+                Text(l10n.ctxHomeExpectedImpact(top.expectedImpact),
                     style: const TextStyle(
                         color: _kGold, fontSize: 11)),
               ],
@@ -387,9 +396,10 @@ class _PersonasCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isAdmin = ref.watch(currentProfileProvider).valueOrNull?.isAdmin ?? false;
     final profilesAsync = ref.watch(personaLearningProfilesProvider);
+    final l10n          = AppLocalizations.of(context)!;
 
     return _OsCard(
-      title: 'Personas',
+      title: l10n.ctxHomePersonas,
       icon: Icons.psychology_rounded,
       iconColor: _kPrimary,
       onSeeAll: _commercialCtaTap(
@@ -404,8 +414,8 @@ class _PersonasCard extends ConsumerWidget {
         data: (profiles) {
           if (profiles.isEmpty) {
             return _EmptyHint(
-              'Nenhuma persona criada.',
-              action: 'Criar persona',
+              l10n.ctxHomeNoPersonas,
+              action: l10n.ctxHomeCreatePersona,
               onTap: _commercialCtaTap(
                 context,
                 moduleId: 'personas',
@@ -437,9 +447,10 @@ class _EcosystemIntelligenceCard extends ConsumerWidget {
 
     final labCount    = (labAsync.valueOrNull ?? []).length;
     final actionCount = (actionsAsync.valueOrNull ?? []).length;
+    final l10n        = AppLocalizations.of(context)!;
 
     return _OsCard(
-      title: 'Inteligência do Ecossistema',
+      title: l10n.ctxHomeEcosystemIntelligence,
       icon: Icons.hub_rounded,
       iconColor: _kGreen,
       child: graphAsync.when(
@@ -452,19 +463,19 @@ class _EcosystemIntelligenceCard extends ConsumerWidget {
             children: [
               // Stats row
               Wrap(spacing: 8, runSpacing: 8, children: [
-                _StatPill('$profileCount projetos',
+                _StatPill(l10n.ctxHomeStatProjects(profileCount),
                     Icons.rocket_launch_rounded, _kPrimary),
-                _StatPill('$labCount oportunidades',
+                _StatPill(l10n.ctxHomeStatOpportunities(labCount),
                     Icons.science_rounded, _kCyan),
-                _StatPill('$actionCount ações',
+                _StatPill(l10n.ctxHomeStatActions(actionCount),
                     Icons.bolt_rounded, _kOrange),
-                _StatPill('${graph.edges.length} conexões',
+                _StatPill(l10n.ctxHomeStatConnections(graph.edges.length),
                     Icons.share_rounded, _kGreen),
               ]),
               if (graph.edges.isNotEmpty) ...[
                 const SizedBox(height: 12),
-                const Text('Conexões identificadas:',
-                    style: TextStyle(
+                Text(l10n.ctxHomeConnectionsFound,
+                    style: const TextStyle(
                         color: Colors.white54,
                         fontSize: 11,
                         fontWeight: FontWeight.w600)),
@@ -476,9 +487,9 @@ class _EcosystemIntelligenceCard extends ConsumerWidget {
                       _ConnectionRow(edge: e)),
               ] else ...[
                 const SizedBox(height: 12),
-                const Text(
-                  'Execute análises de mercado para descobrir conexões entre seus projetos.',
-                  style: TextStyle(
+                Text(
+                  l10n.ctxHomeNoConnections,
+                  style: const TextStyle(
                       color: Colors.white38, fontSize: 12, height: 1.4),
                 ),
               ],
@@ -532,8 +543,8 @@ class _OsCard extends StatelessWidget {
             if (onSeeAll != null)
               GestureDetector(
                 onTap: onSeeAll,
-                child: const Text('ver todos',
-                    style: TextStyle(
+                child: Text(AppLocalizations.of(context)!.ctxHomeSeeAll,
+                    style: const TextStyle(
                         color: Colors.white38,
                         fontSize: 11)),
               ),
@@ -565,7 +576,7 @@ class _HealthBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(6),
         border: Border.all(color: _color.withOpacity(0.4)),
       ),
-      child: Text('Saúde $health/100',
+      child: Text(AppLocalizations.of(context)!.ctxHomeHealth(health),
           style: TextStyle(
               color: _color, fontSize: 10, fontWeight: FontWeight.bold)),
     );
@@ -663,6 +674,7 @@ class _ProjectRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -687,14 +699,15 @@ class _ProjectRow extends StatelessWidget {
                           fontSize: 13)),
                   const SizedBox(height: 2),
                   Row(children: [
-                    Text(profile.maturityLabel,
+                    Text(profile.maturityLabel(l10n),
                         style: const TextStyle(
                             color: Colors.white38, fontSize: 10)),
                     const Text(' · ',
                         style: TextStyle(
                             color: Colors.white24, fontSize: 10)),
                     Text(
-                      '${profile.coverage.coverageEmoji} ${profile.coverage.score}% coverage',
+                      l10n.ctxHomeCoverage(
+                          profile.coverage.coverageEmoji, profile.coverage.score),
                       style: const TextStyle(
                           color: Colors.white38, fontSize: 10),
                     ),
@@ -731,6 +744,7 @@ class _PersonaRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -754,7 +768,8 @@ class _PersonaRow extends StatelessWidget {
                         fontSize: 13)),
                 const SizedBox(height: 2),
                 Text(
-                  '${profile.trainingCount} treinamentos · ${profile.vocabularySize} palavras',
+                  l10n.ctxHomePersonaStats(
+                      profile.trainingCount, profile.vocabularySize),
                   style: const TextStyle(
                       color: Colors.white38, fontSize: 10),
                 ),
@@ -768,7 +783,7 @@ class _PersonaRow extends StatelessWidget {
                       : Colors.white38,
                   fontWeight: FontWeight.bold,
                   fontSize: 14)),
-          Text(profile.learningLabel,
+          Text(profile.learningLabel(l10n),
               style: const TextStyle(
                   color: Colors.white38, fontSize: 9)),
         ]),
@@ -793,7 +808,7 @@ class _ConnectionRow extends StatelessWidget {
             left: BorderSide(color: _kGreen.withOpacity(0.4), width: 2)),
       ),
       child: Text(
-        edge.fullDescription,
+        _edgeDescription(edge, AppLocalizations.of(context)!),
         style: const TextStyle(color: Colors.white54, fontSize: 11),
       ),
     );
@@ -841,7 +856,7 @@ class _CardError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) =>
-      Text('Erro: $message',
+      Text(AppLocalizations.of(context)!.ctxHomeError(message),
           style: const TextStyle(color: _kRed, fontSize: 11));
 }
 
@@ -873,4 +888,18 @@ class _EmptyHint extends StatelessWidget {
       ],
     );
   }
+}
+
+// R16 — localized knowledge-graph edge description. `edge.relationship` is a
+// canonical code; GraphEdge.fullDescription is PT-only, so it is not used here.
+String _edgeDescription(GraphEdge edge, AppLocalizations l10n) {
+  final String relation;
+  switch (edge.relationship) {
+    case 'compartilha_nicho': relation = l10n.ctxGraphSharesNiche; break;
+    case 'usa_conhecimento':  relation = l10n.ctxGraphUsesKnowledge; break;
+    case 'oportunidade_de':   relation = l10n.ctxGraphOpportunityOf; break;
+    case 'persona_conhece':   relation = l10n.ctxGraphPersonaKnows; break;
+    default:                  relation = edge.relationship;
+  }
+  return l10n.ctxGraphEdge(edge.sourceName, relation, edge.targetName);
 }

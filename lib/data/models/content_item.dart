@@ -1,3 +1,5 @@
+import '../../l10n/app_localizations.dart';
+
 class ContentItem {
   final String id;
   final String userId;
@@ -36,6 +38,24 @@ class ContentItem {
     'marca':    'Marca',
     'projeto':  'Projeto',
   };
+
+  /// R16 — localized display label for a stored content `type` code
+  /// (the canonical PT codes above are persisted and never change).
+  static String localizedTypeLabel(String type, AppLocalizations l10n) {
+    switch (type) {
+      case 'livro':    return l10n.uxContentTypeBook;
+      case 'ebook':    return l10n.uxContentTypeEbook;
+      case 'artigo':   return l10n.uxContentTypeArticle;
+      case 'post':     return l10n.uxContentTypePost;
+      case 'ideia':    return l10n.uxContentTypeIdea;
+      case 'texto':    return l10n.uxContentTypeRawText;
+      case 'campanha': return l10n.uxContentTypeCampaign;
+      case 'produto':  return l10n.uxContentTypeDigitalProduct;
+      case 'marca':    return l10n.uxContentTypeBrand;
+      case 'projeto':  return l10n.uxContentTypeProject;
+      default:         return type;
+    }
+  }
 
   const ContentItem({
     required this.id,

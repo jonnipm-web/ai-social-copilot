@@ -3,8 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/models/campaign.dart';
+import '../../../core/utils/ai_enum_labels.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/campaign_provider.dart';
+import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 
 class CampaignDetailScreen extends ConsumerWidget {
   const CampaignDetailScreen({super.key, required this.campaignId});
@@ -29,7 +31,7 @@ class CampaignDetailScreen extends ConsumerWidget {
       body: campaignAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
-            child: Text(l10n.iveChatErrorPrefix('$e'),
+            child: Text(l10n.iveChatErrorPrefix(extractErrorMessage(e, l10n)),
                 style: const TextStyle(color: Colors.white70))),
         data: (campaign) {
           if (campaign == null) {
@@ -200,7 +202,7 @@ class _Header extends StatelessWidget {
           Wrap(
             spacing: 8,
             children: [
-              _Tag(campaign.objective, const Color(0xFF6C63FF)),
+              _Tag(campaignObjectiveLabel(campaign.objective, l10n), const Color(0xFF6C63FF)),
               _Tag(l10n.campaignsDurationDays(campaign.durationDays),
                   const Color(0xFFFF9800)),
               ...campaign.channels.take(3).map(

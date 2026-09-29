@@ -3,8 +3,46 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 import '../../../data/models/advisor_profile.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/advisor_provider.dart';
+
+// R16 — the persisted advisor role/style values (AdvisorProfile.roleOptions
+// / styleOptions) are canonical PT codes; only their DISPLAY is localized.
+String advisorRoleLabel(String role, AppLocalizations l10n) {
+  switch (role) {
+    case 'Estratégia':  return l10n.uxAdvisorRoleStrategy;
+    case 'Marketing':   return l10n.uxAdvisorRoleMarketing;
+    case 'SEO':         return 'SEO';
+    case 'Monetização': return l10n.uxAdvisorRoleMonetization;
+    case 'Negócios':    return l10n.uxAdvisorRoleBusiness;
+    case 'Geral':       return l10n.uxAdvisorRoleGeneral;
+    default:            return role;
+  }
+}
+
+String advisorStyleLabel(String style, AppLocalizations l10n) {
+  switch (style) {
+    case 'Executivo':  return l10n.uxAdvisorStyleExecutive;
+    case 'Analítico':  return l10n.uxAdvisorStyleAnalytical;
+    case 'Professor':  return l10n.uxAdvisorStyleTeacher;
+    case 'Mentor':     return l10n.uxAdvisorStyleMentor;
+    case 'Direto':     return l10n.uxAdvisorStyleDirect;
+    default:           return style;
+  }
+}
+
+String advisorStyleDescription(String style, AppLocalizations l10n) {
+  switch (style) {
+    case 'Executivo':  return l10n.uxAdvisorStyleExecutiveDesc;
+    case 'Analítico':  return l10n.uxAdvisorStyleAnalyticalDesc;
+    case 'Professor':  return l10n.uxAdvisorStyleTeacherDesc;
+    case 'Mentor':     return l10n.uxAdvisorStyleMentorDesc;
+    case 'Direto':     return l10n.uxAdvisorStyleDirectDesc;
+    default:           return '';
+  }
+}
 
 // ── Colors ───────────────────────────────────────────────────────────────────
 const _kBg      = Color(0xFF0F0F1A);
@@ -48,7 +86,7 @@ class _AdvisorOnboardingState extends ConsumerState<AdvisorOnboardingScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text(AppLocalizations.of(context)!.iveChatErrorPrefix(extractErrorMessage(e, AppLocalizations.of(context)!))), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -121,6 +159,7 @@ class _AdvisorOnboardingState extends ConsumerState<AdvisorOnboardingScreen> {
   }
 
   Widget _buildNavButtons() {
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       children: [
         if (_step > 0)
@@ -134,7 +173,7 @@ class _AdvisorOnboardingState extends ConsumerState<AdvisorOnboardingScreen> {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text('Voltar'),
+              child: Text(l10n.commonBack),
             ),
           ),
         if (_step > 0) const SizedBox(width: 12),
@@ -165,7 +204,7 @@ class _AdvisorOnboardingState extends ConsumerState<AdvisorOnboardingScreen> {
                     child: CircularProgressIndicator(
                         strokeWidth: 2, color: Colors.white),
                   )
-                : Text(_step < 2 ? 'Próximo' : 'Ativar Advisor',
+                : Text(_step < 2 ? l10n.uxAdvisorNext : l10n.uxAdvisorActivate,
                     style: const TextStyle(
                         fontSize: 15, fontWeight: FontWeight.bold)),
           ),
@@ -199,18 +238,19 @@ class _StepName extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Escolha o nome do seu\nPersonal AI Advisor',
-          style: TextStyle(
+        Text(
+          l10n.uxAdvisorNameTitle,
+          style: const TextStyle(
               color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, height: 1.3),
         ),
         const SizedBox(height: 8),
-        const Text(
-          'Este será seu parceiro estratégico de negócios.',
-          style: TextStyle(color: Colors.white54, fontSize: 14),
+        Text(
+          l10n.uxAdvisorNameSubtitle,
+          style: const TextStyle(color: Colors.white54, fontSize: 14),
         ),
         const SizedBox(height: 32),
         GridView.count(
@@ -269,7 +309,7 @@ class _StepName extends StatelessWidget {
             onChanged: onCustom,
             style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
-              hintText: 'Ou digite um nome personalizado...',
+              hintText: l10n.uxAdvisorCustomNameHint,
               hintStyle: const TextStyle(color: Colors.white38),
               prefixIcon:
                   const Icon(Icons.edit_rounded, color: Colors.white38, size: 18),
@@ -300,18 +340,19 @@ class _StepRole extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Qual será a especialidade\ndo seu Advisor?',
-          style: TextStyle(
+        Text(
+          l10n.uxAdvisorRoleTitle,
+          style: const TextStyle(
               color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, height: 1.3),
         ),
         const SizedBox(height: 8),
-        const Text(
-          'Define o foco das análises e recomendações.',
-          style: TextStyle(color: Colors.white54, fontSize: 14),
+        Text(
+          l10n.uxAdvisorRoleSubtitle,
+          style: const TextStyle(color: Colors.white54, fontSize: 14),
         ),
         const SizedBox(height: 32),
         Expanded(
@@ -343,7 +384,7 @@ class _StepRole extends StatelessWidget {
                         ),
                         const SizedBox(width: 14),
                         Text(
-                          role,
+                          advisorRoleLabel(role, l10n),
                           style: TextStyle(
                             color: isSelected ? _kPrimary : Colors.white70,
                             fontSize: 15,
@@ -381,28 +422,21 @@ class _StepStyle extends StatelessWidget {
   final ValueChanged<String> onSelect;
   final String name;
 
-  static const _descriptions = {
-    'Executivo':  'Direto ao ponto, orientado a resultados e ROI.',
-    'Analítico':  'Dados primeiro, análise profunda antes de recomendar.',
-    'Professor':  'Explica cada conceito, ideal para aprendizado.',
-    'Mentor':     'Guia com experiência, questionamentos estratégicos.',
-    'Direto':     'Sem rodeios, vai direto para a solução.',
-  };
-
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Como $name deve\nse comunicar?',
+          l10n.uxAdvisorStyleTitle(name),
           style: const TextStyle(
               color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, height: 1.3),
         ),
         const SizedBox(height: 8),
-        const Text(
-          'Define o estilo das respostas e interações.',
-          style: TextStyle(color: Colors.white54, fontSize: 14),
+        Text(
+          l10n.uxAdvisorStyleSubtitle,
+          style: const TextStyle(color: Colors.white54, fontSize: 14),
         ),
         const SizedBox(height: 32),
         Expanded(
@@ -431,7 +465,7 @@ class _StepStyle extends StatelessWidget {
                         Row(
                           children: [
                             Text(
-                              style,
+                              advisorStyleLabel(style, l10n),
                               style: TextStyle(
                                 color: isSelected ? _kGold : Colors.white,
                                 fontSize: 15,
@@ -447,7 +481,7 @@ class _StepStyle extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          _descriptions[style] ?? '',
+                          advisorStyleDescription(style, l10n),
                           style: const TextStyle(
                               color: Colors.white54, fontSize: 12, height: 1.4),
                         ),

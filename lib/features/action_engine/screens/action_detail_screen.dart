@@ -318,7 +318,7 @@ class _HeroHeader extends StatelessWidget {
                           fontSize: 18,
                           fontWeight: FontWeight.bold),
                     ),
-                    Text('prio',
+                    Text(AppLocalizations.of(context)!.uxActionPriorityShort,
                         style: TextStyle(
                             color: sc.withOpacity(0.7), fontSize: 8)),
                   ],
@@ -490,7 +490,7 @@ class _OriginSection extends StatelessWidget {
         _InfoRow(
           icon: Icons.input_rounded,
           label: l10n.actionDetailOriginGeneratedBy,
-          value: item.originLabel,
+          value: item.localizedOriginLabel(l10n),
         ),
         if (projectName != null)
           _InfoRow(
@@ -928,7 +928,7 @@ class _StatusButtons extends StatelessWidget {
                   ctx != null ? CopilotContextData.fromIveContext(ctx) : const CopilotContextData();
               showCopilotChat(
                 context,
-                screenName: 'Ações',
+                screenName: 'Ações', // canonical key (localized by the copilot widget)
                 contextData: contextData,
                 initialMessage: l10n.actionDetailAskIveMessage(item.title),
                 request: IveInteractionRequest(

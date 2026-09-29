@@ -28,7 +28,13 @@ class WebsiteAnalyzerService {
     await _client.from(_table).delete().eq('id', id);
   }
 
-  Future<WebsiteAnalysis> analyzeUrl(String url, {String? idempotencyKey}) async {
+  /// R16 — [outputLanguage] is the PRESENTATION language ('pt-BR'/'en-US');
+  /// the language the analyzed site is written in never decides the output.
+  Future<WebsiteAnalysis> analyzeUrl(
+    String url, {
+    required String outputLanguage,
+    String? idempotencyKey,
+  }) async {
     final uid = _client.auth.currentUser?.id;
     if (uid == null) throw Exception('Usuário não autenticado.');
 
@@ -36,6 +42,7 @@ class WebsiteAnalyzerService {
       _edgeFunction,
       body: {
         'url': url,
+        'language': outputLanguage,
         if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
       },
     );

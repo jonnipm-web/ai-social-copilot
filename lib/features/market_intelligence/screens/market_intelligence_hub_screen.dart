@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/ai_enum_labels.dart';
 import '../../../data/models/competitor.dart';
 import '../../../data/models/copilot_context_data.dart';
 import '../../../data/models/content_cluster.dart';
@@ -17,6 +18,7 @@ import '../../../providers/ive_context_provider.dart';
 import '../../../providers/market_analysis_provider.dart';
 import '../../../providers/roi_metric_provider.dart';
 import '../../../shared/widgets/context_copilot_widget.dart';
+import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 
 // ── Colors ───────────────────────────────────────────────────────────────────
 const _kBg      = Color(0xFF0F0F1A);
@@ -73,6 +75,8 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
     RevenuePlan? plan,
   ) async {
     setState(() => _roiSaving = true);
+    // R16 — notes are persisted: build them in the CURRENT UI language.
+    final noteL10n = AppLocalizations.of(context)!;
     try {
       final svc = ref.read(roiMetricServiceProvider);
 
@@ -92,7 +96,8 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
         await svc.create(
           metricType:  'avg_opportunity_score',
           metricValue: avg,
-          notes:       '${opportunities.length} oportunidades — ${analysis.input}',
+          notes:       noteL10n.uxMiRoiNoteOpportunities(
+              '${opportunities.length}', analysis.input),
         );
       }
 
@@ -112,7 +117,7 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
         setState(() => _roiSaving = false);
         final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.miHubRoiSaveError('$e')), backgroundColor: _kRed),
+          SnackBar(content: Text(l10n.miHubRoiSaveError(extractErrorMessage(e, l10n))), backgroundColor: _kRed),
         );
       }
     }
@@ -168,7 +173,7 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
                     ctx != null ? CopilotContextData.fromIveContext(ctx) : const CopilotContextData();
                 showCopilotChat(
                   context,
-                  screenName: 'Market Intelligence',
+                  screenName: 'Market Intelligence', // canonical key
                   contextData: contextData,
                   initialMessage: l10n.miHubCompareInitialMessage(analysis.niche ?? analysis.input),
                   request: IveInteractionRequest(
@@ -209,7 +214,7 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
                 const Icon(Icons.error_outline_rounded, color: _kRed, size: 48),
                 const SizedBox(height: 16),
                 Text(
-                  l10n.miHubLoadError('$e'),
+                  l10n.miHubLoadError(extractErrorMessage(e, l10n)),
                   style: const TextStyle(color: Colors.white54),
                   textAlign: TextAlign.center,
                 ),
@@ -646,10 +651,13 @@ class _InvestmentCard extends StatelessWidget {
     final rec   = analysis.investmentRecommendation;
     final score = analysis.investmentScore;
     final just  = analysis.investmentJustification;
-    final color = rec == 'SIM' ? _kGreen : rec == 'NÃO' ? _kRed : _kOrange;
-    final icon  = rec == 'SIM'
+    final verdict = aiInvestmentVerdict(rec);
+    final color = verdict == AiInvestmentVerdict.yes
+        ? _kGreen
+        : verdict == AiInvestmentVerdict.no ? _kRed : _kOrange;
+    final icon  = verdict == AiInvestmentVerdict.yes
         ? Icons.thumb_up_alt_rounded
-        : rec == 'NÃO'
+        : verdict == AiInvestmentVerdict.no
             ? Icons.thumb_down_alt_rounded
             : Icons.thumbs_up_down_rounded;
 
@@ -674,7 +682,7 @@ class _InvestmentCard extends StatelessWidget {
               Icon(icon, color: color, size: 26),
               const SizedBox(width: 8),
               Text(
-                rec,
+                aiInvestmentRecommendationLabel(rec, l10n),
                 style: TextStyle(
                     color: color, fontSize: 22, fontWeight: FontWeight.w900),
               ),
@@ -707,9 +715,9 @@ class _PriorityActionsCard extends StatelessWidget {
   final MarketAnalysis analysis;
 
   Color _impactColor(String v) {
-    final lower = v.toLowerCase();
-    if (lower == 'alto') return _kGreen;
-    if (lower == 'médio' || lower == 'medio') return _kOrange;
+    final level = aiLevel(v);
+    if (level == AiLevel.high || level == AiLevel.critical) return _kGreen;
+    if (level == AiLevel.medium) return _kOrange;
     return _kRed;
   }
 
@@ -788,8 +796,8 @@ class _PriorityActionsCard extends StatelessWidget {
                           spacing: 6,
                           runSpacing: 4,
                           children: [
-                            _Badge(l10n.miHubBadgeImpact(impact), _impactColor(impact)),
-                            _Badge(l10n.miHubBadgeEffort(effort),  Colors.white38),
+                            _Badge(l10n.miHubBadgeImpact(aiLevelLabel(impact, l10n)), _impactColor(impact)),
+                            _Badge(l10n.miHubBadgeEffort(aiLevelLabel(effort, l10n)),  Colors.white38),
                             if (roi.isNotEmpty) _Badge(l10n.miHubBadgeRoi(roi), _kCyan),
                           ],
                         ),
@@ -1238,9 +1246,9 @@ class _OpportunitiesCard extends StatelessWidget {
                         spacing: 6,
                         runSpacing: 4,
                         children: [
-                          if (o.timeframe.isNotEmpty) _Badge(o.timeframe, _kCyan),
+                          if (o.timeframe.isNotEmpty) _Badge(aiTimeframeLabel(o.timeframe, l10n), _kCyan),
                           if (o.effort.isNotEmpty)
-                            _Badge(l10n.miHubOppEffortBadge(o.effort), Colors.white38),
+                            _Badge(l10n.miHubOppEffortBadge(aiLevelLabel(o.effort, l10n)), Colors.white38),
                           _Badge(
                             l10n.miHubOppRevenueBadge(_scoreLabel(l10n, o.monetizationScore)),
                             _kGreen,

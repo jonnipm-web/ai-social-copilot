@@ -60,7 +60,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                   onTap: () => setState(() => _filterStatus = null),
                 ),
                 ...CalendarItem.statuses.map((s) => _StatusChip(
-                      label: CalendarItem.statusLabels[s] ?? s,
+                      label: CalendarItem.localizedStatusLabel(s, AppLocalizations.of(context)!),
                       selected: _filterStatus == s,
                       color: _statusColor(s),
                       onTap: () => setState(() => _filterStatus = s),
@@ -154,7 +154,7 @@ class _CalendarCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final statusColor = _statusColor(item.status);
-    final statusLabel = CalendarItem.statusLabels[item.status] ?? item.status;
+    final statusLabel = CalendarItem.localizedStatusLabel(item.status, l10n);
 
     return Card(
       color: Colors.white.withOpacity(0.05),
@@ -227,7 +227,7 @@ class _CalendarCard extends StatelessWidget {
                         .map((s) => PopupMenuItem(
                               value: s,
                               child: Text(
-                                '→ ${CalendarItem.statusLabels[s] ?? s}',
+                                '→ ${CalendarItem.localizedStatusLabel(s, AppLocalizations.of(context)!)}',
                                 style: const TextStyle(
                                     color: Colors.white70, fontSize: 13),
                               ),
@@ -268,7 +268,7 @@ class _CalendarCard extends StatelessWidget {
                       color: Colors.white24, size: 13),
                   const SizedBox(width: 4),
                   Text(
-                    CalendarItem.formatLabels[item.format] ?? item.format!,
+                    CalendarItem.localizedFormatLabel(item.format!, AppLocalizations.of(context)!),
                     style: const TextStyle(
                         color: Colors.white38, fontSize: 11),
                   ),
@@ -430,7 +430,7 @@ class _CreateCalendarItemSheetState
             items: CalendarItem.formats
                 .map((f) => DropdownMenuItem(
                       value: f,
-                      child: Text(CalendarItem.formatLabels[f] ?? f),
+                      child: Text(CalendarItem.localizedFormatLabel(f, AppLocalizations.of(context)!)),
                     ))
                 .toList(),
             onChanged: (v) => setState(() => _format = v),

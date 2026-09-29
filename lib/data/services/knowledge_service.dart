@@ -6,6 +6,26 @@ import '../../core/services/ive_event_bus.dart';
 import '../../data/models/ive_event.dart';
 import 'content_service.dart';
 
+/// R16 — request body for `extract-knowledge`, extracted so it is
+/// unit-testable without a Supabase client. `language` is always the
+/// presentation/output language, never the source item's language.
+Map<String, dynamic> buildExtractKnowledgeBody({
+  required String content,
+  required String outputLanguage,
+  String? sourceUrl,
+  String? niche,
+  String? targetAudience,
+  String? idempotencyKey,
+}) =>
+    {
+      'content':         content,
+      'source_url':      sourceUrl,
+      'niche':           niche,
+      'target_audience': targetAudience,
+      'language':        outputLanguage,
+      if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
+    };
+
 class KnowledgeService {
   final _client = Supabase.instance.client;
 
@@ -88,24 +108,28 @@ class KnowledgeService {
 
   // ── AI Extraction ────────────────────────────────────────────
 
+  /// R16 — [outputLanguage] is the PRESENTATION language ('pt-BR'/'en-US',
+  /// from `outputLanguageCodeProvider`). It is required on purpose: the
+  /// source item's own `language` field describes the document and must
+  /// never decide the language of the generated analysis.
   Future<Map<String, dynamic>> extractWithAI({
     required String content,
+    required String outputLanguage,
     String? sourceUrl,
     String? niche,
     String? targetAudience,
-    String language = 'pt-BR',
     String? idempotencyKey,
   }) async {
     final response = await _client.functions.invoke(
       _edgeFunction,
-      body: {
-        'content':         content,
-        'source_url':      sourceUrl,
-        'niche':           niche,
-        'target_audience': targetAudience,
-        'language':        language,
-        if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
-      },
+      body: buildExtractKnowledgeBody(
+        content:        content,
+        outputLanguage: outputLanguage,
+        sourceUrl:      sourceUrl,
+        niche:          niche,
+        targetAudience: targetAudience,
+        idempotencyKey: idempotencyKey,
+      ),
     );
 
     if (response.data == null) {
@@ -122,7 +146,13 @@ class KnowledgeService {
 
   // ── Full analyze flow ─────────────────────────────────────────
 
-  Future<KnowledgeAnalysis> analyzeItem(KnowledgeItem item, {String? idempotencyKey}) async {
+  /// R16 — [outputLanguage] is the presentation language; `item.language`
+  /// stays source metadata only (it is still persisted to the Library below).
+  Future<KnowledgeAnalysis> analyzeItem(
+    KnowledgeItem item, {
+    required String outputLanguage,
+    String? idempotencyKey,
+  }) async {
     final uid = _client.auth.currentUser?.id;
     if (uid == null) throw Exception('Usuário não autenticado.');
 
@@ -138,7 +168,7 @@ class KnowledgeService {
         sourceUrl:      item.sourceType == 'url' ? item.sourceUrl : null,
         niche:          item.niche,
         targetAudience: item.targetAudience,
-        language:       item.language,
+        outputLanguage: outputLanguage,
         idempotencyKey: idempotencyKey,
       );
 

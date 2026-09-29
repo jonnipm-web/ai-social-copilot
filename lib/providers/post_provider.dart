@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/models/post_generation.dart';
+import '../core/utils/language_utils.dart';
 import '../data/services/post_service.dart';
 
 final postServiceProvider = Provider<PostService>((_) => PostService());
@@ -25,16 +26,22 @@ final generationDetailProvider =
 
 // Notifier para melhoria de post + salvamento
 class PostNotifier extends StateNotifier<AsyncValue<PostGeneration?>> {
-  PostNotifier(this._service) : super(const AsyncValue.data(null));
+  PostNotifier(this._service, this._ref) : super(const AsyncValue.data(null));
 
   final PostService _service;
+  final Ref _ref;
 
   Future<PostGeneration?> improvePost(String text, {String? idempotencyKey}) async {
     state = const AsyncValue.loading();
 
     final result = await AsyncValue.guard<PostGeneration?>(() async {
       final userId = Supabase.instance.client.auth.currentUser!.id;
-      final apiResponse = await _service.improvePost(text, idempotencyKey: idempotencyKey);
+      // R16 — output language = presentation language (languageProvider).
+      final apiResponse = await _service.improvePost(
+        text,
+        language: _ref.read(outputLanguageCodeProvider),
+        idempotencyKey: idempotencyKey,
+      );
       return PostGeneration.fromApiResponse(
         userId: userId,
         originalText: text,
@@ -57,5 +64,5 @@ class PostNotifier extends StateNotifier<AsyncValue<PostGeneration?>> {
 final postNotifierProvider =
     StateNotifierProvider.autoDispose<PostNotifier, AsyncValue<PostGeneration?>>(
         (ref) {
-  return PostNotifier(ref.watch(postServiceProvider));
+  return PostNotifier(ref.watch(postServiceProvider), ref);
 });

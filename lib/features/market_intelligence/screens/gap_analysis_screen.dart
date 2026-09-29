@@ -9,6 +9,7 @@ import '../../../data/models/gap_analysis.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/market_analysis_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
+import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 
 // IVE-COMMERCIAL-FOUNDATION-11 — this screen is the representative
 // quota-consuming call site migrated in Phase A (mission Section 11).
@@ -74,7 +75,8 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
       if (_exec.state != AiExecutionState.success) return;
       ref.invalidate(gapAnalysisByAnalysisProvider(widget.analysisId));
     } catch (e) {
-      setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+      if (!mounted) return;
+      setState(() => _error = extractErrorMessage(e, AppLocalizations.of(context)!));
     } finally {
       if (mounted) setState(() {});
     }
@@ -137,7 +139,7 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
             child: asyncGap.when(
               loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFFFFD93D))),
               error: (e, _) => Center(
-                  child: Text(l10n.miSubErrorPrefix('$e'),
+                  child: Text(l10n.miSubErrorPrefix(extractErrorMessage(e, l10n)),
                       style: const TextStyle(color: Colors.redAccent))),
               data: (gap) => gap == null
                   ? Center(

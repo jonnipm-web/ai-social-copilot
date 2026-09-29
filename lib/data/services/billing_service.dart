@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../core/utils/app_exceptions.dart';
 
 /// IVE-COMMERCIAL-BILLING-01 — cliente para a função create-checkout-session.
 /// Nunca envia price_id/role/user_id no corpo: o servidor resolve tudo
@@ -18,7 +19,7 @@ class BillingService {
 
     final url = data is Map ? data['url'] as String? : null;
     if (url == null || url.isEmpty) {
-      throw Exception('Não foi possível iniciar o checkout. Tente novamente.');
+      throw const AppException(AppErrorCode.checkoutFailed);
     }
     return url;
   }

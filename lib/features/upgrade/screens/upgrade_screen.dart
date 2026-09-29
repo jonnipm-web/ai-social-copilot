@@ -142,7 +142,7 @@ class _UpgradeContentState extends ConsumerState<_UpgradeContent> {
         showErrorSnack(context, t.checkoutOpeningError);
       }
     } catch (e) {
-      if (mounted) showErrorSnack(context, extractErrorMessage(e));
+      if (mounted) showErrorSnack(context, extractErrorMessage(e, t, t.checkoutOpeningError));
     } finally {
       if (mounted) setState(() => _isRedirecting = false);
     }

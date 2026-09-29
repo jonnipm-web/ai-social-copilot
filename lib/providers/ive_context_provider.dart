@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/utils/language_utils.dart';
+import '../l10n/app_localizations.dart';
+
 import '../data/models/action_queue_item.dart';
 import '../data/models/ecosystem_score.dart';
 import '../data/models/knowledge_item.dart';
@@ -224,6 +227,9 @@ EcosystemAlert selectEcosystemAlert({
   required List<EcosystemScore> scores,
   required int health,
   required List<ActionQueueItem> pending,
+  // R16 — alertMessage is shown in the IVE bubble AND sent to the AI as
+  // grounding, so it is built in the presentation language.
+  required AppLocalizations l10n,
 }) {
   final criticals = scores.where((s) => s.ecosystemScore < 30).toList();
 
@@ -231,8 +237,7 @@ EcosystemAlert selectEcosystemAlert({
     return EcosystemAlert(
       hasAlert: true,
       alertId:  'health_low_$health',
-      alertMessage: 'Saúde do ecossistema em $health/100. '
-                    'Ação imediata recomendada.',
+      alertMessage: l10n.ctxAlertHealthLow(health),
     );
   }
   if (criticals.isNotEmpty) {
@@ -240,16 +245,14 @@ EcosystemAlert selectEcosystemAlert({
     return EcosystemAlert(
       hasAlert: true,
       alertId:  'score_critical_${c.project.id}',
-      alertMessage: '${c.project.name} com score crítico (${c.ecosystemScore}/100). '
-                    'Posso identificar o que está limitando.',
+      alertMessage: l10n.ctxAlertProjectCritical(c.project.name, c.ecosystemScore),
     );
   }
   if (pending.length > 5) {
     return EcosystemAlert(
       hasAlert: true,
       alertId:  'actions_overdue_${pending.length}',
-      alertMessage: '${pending.length} ações pendentes acumuladas. '
-                    'Isso está impactando seu score de execução.',
+      alertMessage: l10n.ctxAlertActionsOverdue(pending.length),
     );
   }
   return const EcosystemAlert();
@@ -287,6 +290,9 @@ EcosystemAlert selectEcosystemAlert({
 //     vendo" quando na verdade é um projeto diferente).
 final iveContextDataProvider =
     FutureProvider.autoDispose.family<IveContextData, String?>((ref, projectId) async {
+  // R16 — presentation-language strings; watching recomputes on a language
+  // switch so no stale-language alert/warning survives a PT↔EN change.
+  final l10n       = ref.watch(appL10nProvider);
   // Lê dados existentes — não cria nova lógica, apenas agrega
   final health     = await ref.watch(ecosystemHealthProvider.future);
   final scores     = await ref.watch(ecosystemScoresProvider.future);
@@ -331,6 +337,7 @@ final iveContextDataProvider =
   final grounding = DocumentContextBuilder.buildGrounding(
     topItems.cast<KnowledgeItem>(),
     projectContext: projectContext,
+    l10n:           l10n,
   );
 
   // Mapa documentId → texto concatenado de todos os excerpts (Pass 2 pode gerar
@@ -381,8 +388,7 @@ final iveContextDataProvider =
   if (totalLinkedCount > topItems.length) {
     mutableWarnings.insert(
       0,
-      '$totalLinkedCount fontes vinculadas · ${topItems.length} utilizadas nesta análise'
-      ' · $notUsedCount não utilizadas nesta execução.',
+      l10n.ctxDocCoverageWarning(totalLinkedCount, topItems.length, notUsedCount),
     );
   }
   final documentWarnings = mutableWarnings;
@@ -407,7 +413,7 @@ final iveContextDataProvider =
     'description':  o.description,
     'score':        o.finalScore,
     'type':         o.opportunityType,
-    'origin':       o.originLabel,
+    'origin':       o.localizedOriginLabel(l10n),
     'confidence':   o.confidence,
     if (o.rationale != null && o.rationale!.isNotEmpty)
       'rationale': o.rationale,
@@ -426,7 +432,7 @@ final iveContextDataProvider =
     'title':    a.title,
     'priority': a.priority,
     'impact':   a.impactScore,
-    'origin':   a.originLabel,
+    'origin':   a.localizedOriginLabel(l10n),
     if (a.rationale != null && a.rationale!.isNotEmpty)
       'rationale': a.rationale,
     if (a.plan.isNotEmpty)   'plan':  a.plan.take(2).toList(),
@@ -444,7 +450,8 @@ final iveContextDataProvider =
   );
 
   // ── Detecção de alertas (ver selectEcosystemAlert) ────────────────────────────
-  final alert = selectEcosystemAlert(scores: scores, health: health, pending: pending);
+  final alert = selectEcosystemAlert(
+      scores: scores, health: health, pending: pending, l10n: l10n);
 
   final topThree = ecosystemWideFields.topProjectsSnapshot;
 

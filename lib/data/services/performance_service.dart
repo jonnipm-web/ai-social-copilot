@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/performance_metrics.dart';
+import '../../core/utils/app_exceptions.dart';
 
 class PerformanceService {
   final _client = Supabase.instance.client;
@@ -25,7 +26,7 @@ class PerformanceService {
 
   Future<PerformanceMetrics> create(PerformanceMetrics metrics) async {
     final uid = _client.auth.currentUser?.id;
-    if (uid == null) throw Exception('Usuário não autenticado.');
+    if (uid == null) throw const NotAuthenticatedException();
 
     final data = metrics.toInsertMap();
     data['user_id'] = uid;

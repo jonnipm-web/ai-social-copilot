@@ -33,9 +33,12 @@ class StrategyService {
     return KnowledgeStrategy.fromMap(row);
   }
 
+  /// R16 — [outputLanguage] is the PRESENTATION language ('pt-BR'/'en-US');
+  /// `item.language` is source metadata and never decides the output.
   Future<KnowledgeStrategy> generate(
     KnowledgeItem item,
     KnowledgeAnalysis analysis, {
+    required String outputLanguage,
     String? idempotencyKey,
   }) async {
     final uid = _client.auth.currentUser?.id;
@@ -51,7 +54,7 @@ class StrategyService {
         'summary':           analysis.summary ?? '',
         'niche':             item.niche ?? '',
         'target_audience':   item.targetAudience ?? '',
-        'language':          item.language,
+        'language':          outputLanguage,
         'keywords_primary':  analysis.keywordsPrimary,
         'pain_points':       analysis.audiencePainPoints,
         'desires':           analysis.audienceDesires,

@@ -7,6 +7,7 @@ import '../data/services/project_service.dart';
 import 'action_queue_provider.dart';
 import 'market_analysis_provider.dart';
 import 'opportunity_lab_provider.dart';
+import '../core/utils/app_exceptions.dart';
 
 // ── Service provider — injetável em testes via override ───────────────────────
 final projectServiceProvider =
@@ -147,6 +148,6 @@ final projectByIdProvider =
     if (found.isNotEmpty) return found.first;
   }
   final result = await ref.read(projectServiceProvider).fetchById(id);
-  if (result == null) throw Exception('Projeto não encontrado');
+  if (result == null) throw const AppException(AppErrorCode.notFound);
   return result;
 });

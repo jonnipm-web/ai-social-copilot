@@ -7,6 +7,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../providers/website_analyzer_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 
 class WebsiteAnalyzerScreen extends ConsumerStatefulWidget {
   const WebsiteAnalyzerScreen({super.key});
@@ -68,7 +69,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(l10n.websiteAnalyzerAnalyzeError('$e')),
+            content: Text(l10n.websiteAnalyzerAnalyzeError(extractErrorMessage(e, l10n))),
             backgroundColor: Colors.red,
           ),
         );

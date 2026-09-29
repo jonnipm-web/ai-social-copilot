@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../data/models/persona.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/persona_provider.dart';
+import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 
 class PersonaFormScreen extends ConsumerStatefulWidget {
   const PersonaFormScreen({super.key, this.personaId});
@@ -98,7 +99,7 @@ class _PersonaFormScreenState extends ConsumerState<PersonaFormScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.iveChatErrorPrefix('$e')), backgroundColor: Colors.red),
+          SnackBar(content: Text(AppLocalizations.of(context)!.iveChatErrorPrefix(extractErrorMessage(e, AppLocalizations.of(context)!))), backgroundColor: Colors.red),
         );
       }
     } finally {

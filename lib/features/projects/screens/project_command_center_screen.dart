@@ -4,9 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/ecosystem_labels.dart';
+import '../../../core/utils/language_utils.dart';
 import '../../../data/models/copilot_context_data.dart';
 import '../../../data/models/ive_interaction_request.dart';
 import '../../../data/models/ecosystem_score.dart';
+import '../../../data/models/knowledge_coverage.dart';
 import '../../../data/models/opportunity_lab_item.dart';
 import '../../../data/models/project.dart';
 import '../../../data/models/project_intelligence_profile.dart';
@@ -184,6 +187,9 @@ class _ProjectCommandCenterScreenState
 
   Future<void> _analyzeWithKnowledge(Project project) async {
     final t = AppLocalizations.of(context)!;
+    // R16 — AI output language = presentation language (captured before
+    // any await so BuildContext is not used across async gaps).
+    final language = backendLanguageCode(context);
     Navigator.of(context).pop();
 
     // Busca knowledge items do projeto
@@ -264,10 +270,11 @@ class _ProjectCommandCenterScreenState
           'project_type':        project.type,
           'documents':           docs,
           'idempotency_key':     request.idempotencyKey,
+          'language':            language,
         },
       );
 
-      if (response.data == null) throw Exception('Resposta vazia.');
+      if (response.data == null) throw Exception(t.ctxEmptyServerResponse);
       final data = response.data as Map<String, dynamic>;
       if (data.containsKey('error')) throw Exception(data['error']);
 
@@ -541,17 +548,17 @@ class _ProjectCommandCenterScreenState
             spacing: 8,
             children:
                 ['website', 'app', 'product', 'service', 'content'].map(
-              (t) => ChoiceChip(
-                label: Text(t),
-                selected: _type == t,
-                onSelected: (_) => setState(() => _type = t),
+              (type) => ChoiceChip(
+                label: Text(_projectTypeLabel(type, t)),
+                selected: _type == type,
+                onSelected: (_) => setState(() => _type = type),
                 selectedColor: const Color(0xFF6BCB77),
                 labelStyle: TextStyle(
-                    color: _type == t ? Colors.black : Colors.white60,
+                    color: _type == type ? Colors.black : Colors.white60,
                     fontSize: 12),
                 backgroundColor: const Color(0xFF0F0F1A),
                 side: BorderSide(
-                    color: _type == t
+                    color: _type == type
                         ? const Color(0xFF6BCB77)
                         : const Color(0xFF333355)),
               ),
@@ -714,11 +721,11 @@ class _ProjectCard extends StatelessWidget {
     return 'R\$ ${v.toStringAsFixed(0)}';
   }
 
-  String _fmtPrazo(int days) {
+  String _fmtPrazo(int days, AppLocalizations t) {
     if (days <= 0) return '—';
-    if (days >= 365) return '${(days / 365).round()}a';
-    if (days >= 30)  return '${(days / 30).round()}m';
-    return '${days}d';
+    if (days >= 365) return t.ctxDurationYears((days / 365).round());
+    if (days >= 30)  return t.ctxDurationMonths((days / 30).round());
+    return t.ctxDurationDays(days);
   }
 
   @override
@@ -826,7 +833,7 @@ class _ProjectCard extends StatelessWidget {
                           Text(s.recommendationEmoji,
                               style: const TextStyle(fontSize: 12)),
                           const SizedBox(width: 4),
-                          Text(s.recommendation,
+                          Text(ecosystemVerdictLabel(s.recommendation, t),
                               style: const TextStyle(
                                   color: Color(0xFFAB83FF),
                                   fontSize: 11,
@@ -850,7 +857,7 @@ class _ProjectCard extends StatelessWidget {
                       const SizedBox(width: 8),
                       _StatChip(
                           label: t.projectCommandStatDeadline,
-                          value: _fmtPrazo(project.timeToRevenueDays),
+                          value: _fmtPrazo(project.timeToRevenueDays, t),
                           color: const Color(0xFFAB83FF)),
                     ],
                   ),
@@ -1051,7 +1058,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                         style: const TextStyle(fontSize: 22)),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: Text(s.recommendation,
+                      child: Text(ecosystemVerdictLabel(s.recommendation, t),
                           style: const TextStyle(
                               color: Color(0xFFAB83FF),
                               fontWeight: FontWeight.bold,
@@ -1306,18 +1313,18 @@ class _ProjectDetailSheet extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      t.projectCommandMaturityLabel(p.maturityLabel),
+                      t.projectCommandMaturityLabel(p.maturityLabel(t)),
                       style: const TextStyle(
                         color: Color(0xFF6C63FF),
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
                       ),
                     ),
-                    if (p.dataWarning != null)
+                    if (p.dataWarning(t) != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
                         child: Text(
-                          p.dataWarning!,
+                          p.dataWarning(t)!,
                           style: const TextStyle(color: Colors.orange, fontSize: 11),
                         ),
                       ),
@@ -1330,13 +1337,13 @@ class _ProjectDetailSheet extends ConsumerWidget {
         const SizedBox(height: 10),
 
         // Identity: niche, audience, monetization
-        if (p.niche != 'Não definido') ...[
+        if (p.hasNiche) ...[
           _infoRow('🎯 ${t.projectCommandNiche}', p.niche),
         ],
-        if (p.targetAudience != 'Não definido') ...[
+        if (p.hasTargetAudience) ...[
           _infoRow('👥 ${t.projectCommandAudience}', p.targetAudience),
         ],
-        if (p.monetizationModel != 'Não definido') ...[
+        if (p.hasMonetizationModel) ...[
           _infoRow('💰 ${t.projectCommandMonetization}', p.monetizationModel),
         ],
         if (p.valueProposition.isNotEmpty) ...[
@@ -1376,7 +1383,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text('⚠ ', style: TextStyle(color: Colors.orange, fontSize: 11)),
-                Expanded(child: Text(gap, style: const TextStyle(color: Colors.white54, fontSize: 11))),
+                Expanded(child: Text(KnowledgeCoverage.gapLabel(gap, t), style: const TextStyle(color: Colors.white54, fontSize: 11))),
               ],
             ),
           )),
@@ -1418,11 +1425,12 @@ class _ProjectDetailSheet extends ConsumerWidget {
                 contextData:    contextData,
                 initialMessage: t.projectCommandAskProfilePrompt(
                   p.project.name,
-                  p.niche,
-                  p.targetAudience,
-                  p.maturityLabel,
+                  ProjectIntelligenceProfile.displayOrNotDefined(p.niche, t),
+                  ProjectIntelligenceProfile.displayOrNotDefined(p.targetAudience, t),
+                  p.maturityLabel(t),
                   p.missingKnowledge.isNotEmpty
-                      ? t.projectCommandAskProfileGaps(p.missingKnowledge.join(", "))
+                      ? t.projectCommandAskProfileGaps(
+                          p.missingKnowledge.map((g) => KnowledgeCoverage.gapLabel(g, t)).join(', '))
                       : '',
                 ),
                 request: IveInteractionRequest(
@@ -1634,8 +1642,13 @@ class _ResourceAllocationSectionState
     notifier.updateBudgetPreviewCents(cents);
   }
 
-  String _fmtCents(int cents) =>
-      'R\$ ${(cents / 100).toStringAsFixed(2).replaceAll('.', ',')}';
+  // Stored amounts are BRL (R\$ kept); only the decimal separator follows
+  // the presentation language (R16).
+  String _fmtCents(int cents) {
+    final isPt = Localizations.localeOf(context).languageCode != 'en';
+    final v = (cents / 100).toStringAsFixed(2);
+    return 'R\$ ${isPt ? v.replaceAll('.', ',') : v}';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1667,9 +1680,9 @@ class _ResourceAllocationSectionState
           _controllersInitialized = true;
         }
 
-        final hoursError = validateHoursAllocated(editState.preview.hoursAllocated);
+        final hoursError = validateHoursAllocated(editState.preview.hoursAllocated, t);
         final budgetError = _budgetParseError ??
-            validateBudgetAllocatedCents(editState.preview.budgetAllocatedCents);
+            validateBudgetAllocatedCents(editState.preview.budgetAllocatedCents, t);
         final canSave = editState.isDirty &&
             hoursError == null &&
             budgetError == null &&
@@ -2062,7 +2075,7 @@ class _ProjectConfigSheetState extends ConsumerState<_ProjectConfigSheet> {
               runSpacing: 8,
               children: _types.map((type) {
                 return ChoiceChip(
-                  label: Text(type),
+                  label: Text(_projectTypeLabel(type, t)),
                   selected: _type == type,
                   onSelected:
                       _editing ? (_) => setState(() => _type = type) : null,
@@ -2084,7 +2097,7 @@ class _ProjectConfigSheetState extends ConsumerState<_ProjectConfigSheet> {
               runSpacing: 8,
               children: _statuses.map((status) {
                 return ChoiceChip(
-                  label: Text(status),
+                  label: Text(_projectStatusLabel(status, t)),
                   selected: _status == status,
                   onSelected: _editing
                       ? (_) => setState(() => _status = status)
@@ -2372,5 +2385,28 @@ class _ActionBtn extends StatelessWidget {
         style: TextButton.styleFrom(padding: EdgeInsets.zero),
       ),
     );
+  }
+}
+
+// R16 — display labels for canonical project type/status codes (the codes
+// themselves are stored in the DB and must not change).
+String _projectTypeLabel(String type, AppLocalizations t) {
+  switch (type) {
+    case 'website': return t.ctxProjectTypeWebsite;
+    case 'app':     return t.ctxProjectTypeApp;
+    case 'product': return t.ctxProjectTypeProduct;
+    case 'service': return t.ctxProjectTypeService;
+    case 'content': return t.ctxProjectTypeContent;
+    default:        return type;
+  }
+}
+
+String _projectStatusLabel(String status, AppLocalizations t) {
+  switch (status) {
+    case 'active':    return t.projectCommandStatusActive;
+    case 'paused':    return t.projectCommandStatusPaused;
+    case 'completed': return t.projectCommandStatusCompleted;
+    case 'idea':      return t.projectCommandStatusIdea;
+    default:          return status;
   }
 }

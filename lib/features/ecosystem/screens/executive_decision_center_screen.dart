@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/ecosystem_labels.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../data/models/copilot_context_data.dart';
 import '../../../data/models/decision_validation.dart';
 import '../../../data/models/ecosystem_score.dart';
@@ -66,7 +68,7 @@ class _ExecutiveDecisionCenterScreenState
         final risky = scores.where((s) => s.ecosystemScore < 40).toList();
         if (risky.isNotEmpty) {
           ref.read(iveProvider.notifier).showMessage(
-            'Atenção: ${risky.length} projeto(s) com score crítico. Posso ajudar a resolver.',
+            AppLocalizations.of(context)!.ecoIveCriticalProjects(risky.length),
             expression: IveExpression.thinking,
           );
         }
@@ -86,6 +88,7 @@ class _ExecutiveDecisionCenterScreenState
     final healthAsync        = ref.watch(ecosystemHealthProvider);
     final needsBootstrapAsync = ref.watch(projectsNeedingBootstrapProvider);
     final bootstrapState     = ref.watch(autoBootstrapNotifierProvider);
+    final l10n               = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -98,28 +101,28 @@ class _ExecutiveDecisionCenterScreenState
           onPressed: () =>
               context.canPop() ? context.pop() : context.go(AppConstants.routeDashboard),
         ),
-        title: const Text('Decision Center', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: Text(l10n.ecoDecisionCenterTitle, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         iconTheme: const IconThemeData(color: Colors.white),
         bottom: TabBar(
           controller: _tab,
           indicatorColor: _kPrimary,
           labelColor: _kPrimary,
           unselectedLabelColor: Colors.white38,
-          tabs: const [
-            Tab(text: 'TOP 5'),
-            Tab(text: 'ECOSSISTEMA'),
-            Tab(text: 'RECOMENDAÇÕES'),
+          tabs: [
+            Tab(text: l10n.ecoTabTop5),
+            Tab(text: l10n.ecoTabEcosystem),
+            Tab(text: l10n.ecoTabRecommendations),
           ],
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.schedule_rounded, color: Colors.white54),
-            tooltip: 'Alocação de Recursos',
+            tooltip: l10n.ecoResourceAllocationTitle,
             onPressed: () => context.push(AppConstants.routeEcosystemResources),
           ),
           IconButton(
             icon: const Icon(Icons.summarize_rounded, color: Colors.white54),
-            tooltip: 'Briefing Semanal',
+            tooltip: l10n.ecoWeeklyBriefingTooltip,
             onPressed: () => context.push(AppConstants.routeEcosystemBriefing),
           ),
         ],
@@ -179,10 +182,11 @@ class _BootstrapBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isRunning = bootstrapState.isRunning;
     final label = isRunning
         ? bootstrapState.progressLabel
-        : '$pendingCount projeto${pendingCount != 1 ? "s" : ""} sem inteligência operacional';
+        : l10n.ecoBootstrapPending(pendingCount);
 
     return GestureDetector(
       onTap: onTap,
@@ -226,6 +230,7 @@ class _HealthBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final color = _scoreColor(health);
     return Container(
       width: double.infinity,
@@ -253,13 +258,13 @@ class _HealthBanner extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Saúde do Ecossistema',
+                Text(l10n.ecoHealthTitle,
                   style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
-                Text(_healthNarrative(health),
+                Text(_healthNarrative(health, l10n),
                   style: const TextStyle(color: Colors.white70, fontSize: 12, height: 1.35)),
                 const SizedBox(height: 4),
                 IveExplainButton(
-                  question:   'Por que minha saúde do ecossistema está em $health? O que está limitando e como posso melhorar?',
+                  question:   l10n.ecoIveAskHealth(health),
                   screenName: 'Decisões',
                   compact:    true,
                 ),
@@ -272,12 +277,12 @@ class _HealthBanner extends StatelessWidget {
     );
   }
 
-  String _healthNarrative(int h) {
-    if (h >= 80) return 'Seu ecossistema está operando no máximo potencial. Os projetos estão sincronizados e escalando.';
-    if (h >= 60) return 'Seu ecossistema está saudável e crescendo. Existem alavancas prontas para acelerar.';
-    if (h >= 40) return 'Seu ecossistema está estável. Algumas áreas precisam de atenção para desbloquear crescimento.';
-    if (h >= 20) return 'Seu ecossistema está em fase de validação. Adicione mais análises para elevar a inteligência.';
-    return 'Seu ecossistema precisa de revisão estratégica. A IVE pode ajudar a identificar os bloqueios.';
+  String _healthNarrative(int h, AppLocalizations l10n) {
+    if (h >= 80) return l10n.ecoHealthNarrativeExcellent;
+    if (h >= 60) return l10n.ecoHealthNarrativeHealthy;
+    if (h >= 40) return l10n.ecoHealthNarrativeStable;
+    if (h >= 20) return l10n.ecoHealthNarrativeValidating;
+    return l10n.ecoHealthNarrativeReview;
   }
 }
 
@@ -309,23 +314,24 @@ class _Top5Tab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final labAsync     = ref.watch(opportunityLabProvider);
     final actionsAsync = ref.watch(actionQueueProvider);
+    final l10n         = AppLocalizations.of(context)!;
 
     return scoresAsync.when(
       loading: () => const Center(child: CircularProgressIndicator(color: _kPrimary)),
-      error: (e, _) => Center(child: Text('Erro: $e', style: const TextStyle(color: _kRed))),
+      error: (e, _) => Center(child: Text(l10n.ecoErrorGeneric('$e'), style: const TextStyle(color: _kRed))),
       data: (scores) {
         if (scores.isEmpty) {
-          return const Center(
-            child: Text('Nenhum projeto encontrado.\nAdicionetextos no Cofre e crie projetos.',
+          return Center(
+            child: Text(l10n.ecoTop5Empty,
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white54)));
+              style: const TextStyle(color: Colors.white54)));
         }
         return ListView(
           padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
           children: [
             _Top5Section(
-              title: '🚀 TOP 5 PROJETOS',
-              subtitle: 'Ranqueados por Ecosystem Score',
+              title: l10n.ecoTop5ProjectsTitle,
+              subtitle: l10n.ecoTop5ProjectsSubtitle,
               children: scores.take(5).map((s) => _ProjectCard(score: s)).toList(),
             ),
             const SizedBox(height: 20),
@@ -336,8 +342,8 @@ class _Top5Tab extends ConsumerWidget {
                 final top = List.of(lab)
                   ..sort((a, b) => b.finalScore.compareTo(a.finalScore));
                 return _Top5Section(
-                  title: '💡 TOP 5 OPORTUNIDADES',
-                  subtitle: 'Maior potencial do Opportunity Lab',
+                  title: l10n.ecoTop5OpportunitiesTitle,
+                  subtitle: l10n.ecoTop5OpportunitiesSubtitle,
                   children: top.take(5).map((l) => _SimpleCard(
                     title: l.title,
                     subtitle: l.opportunityType,
@@ -348,17 +354,16 @@ class _Top5Tab extends ConsumerWidget {
                       title: l.title,
                       emoji: '💡',
                       humanExplanation:
-                          'Oportunidade do tipo "${l.opportunityType}" com score ${l.finalScore}/100. '
-                          'Status atual: ${l.status}.',
+                          l10n.ecoOppExplanation(l.opportunityType, l.finalScore, l.status),
                       evidence: [
-                        IveEvidence(emoji: '📊', label: 'Tipo',        value: l.opportunityType),
-                        IveEvidence(emoji: '🎯', label: 'Score Final', value: '${l.finalScore}/100'),
-                        IveEvidence(emoji: '📋', label: 'Status',      value: l.status),
+                        IveEvidence(emoji: '📊', label: l10n.ecoLabelType,       value: l.opportunityType),
+                        IveEvidence(emoji: '🎯', label: l10n.ecoLabelFinalScore, value: '${l.finalScore}/100'),
+                        IveEvidence(emoji: '📋', label: l10n.ecoLabelStatus,     value: l.status),
                       ],
                       suggestedActions: [
                         IveAction(
                           emoji: '💬',
-                          label: 'Perguntar à IVE sobre esta oportunidade',
+                          label: l10n.ecoAskIveOpportunity,
                           // IVE-COMMERCIAL-TARGETED-REMEDIATION-04: mesmo
                           // padrão dos demais pontos de entrada -- sem isto,
                           // caía no CopilotContextData() vazio padrão.
@@ -375,7 +380,7 @@ class _Top5Tab extends ConsumerWidget {
                               context,
                               screenName:     'Decisões',
                               contextData:    contextData,
-                              initialMessage: 'Analise a oportunidade "${l.title}" (score ${l.finalScore}) e diga como aproveitá-la.',
+                              initialMessage: l10n.ecoIveAskOpportunity(l.title, l.finalScore),
                               request: IveInteractionRequest(
                                 projectId:        l.projectId,
                                 sourceModule:     'ecosystem_decision_center',
@@ -425,11 +430,11 @@ class _Top5Tab extends ConsumerWidget {
                 return Column(
                   children: [
                     _Top5Section(
-                      title: '⚡ TOP 5 GANHOS RÁPIDOS',
-                      subtitle: 'Alto impacto, baixo esforço',
+                      title: l10n.ecoTop5QuickWinsTitle,
+                      subtitle: l10n.ecoTop5QuickWinsSubtitle,
                       children: qw.take(5).map((a) => _SimpleCard(
                         title: a.title,
-                        subtitle: 'Impacto ${a.impactScore} / Esforço ${a.effortScore}',
+                        subtitle: l10n.ecoImpactEffort(a.impactScore, a.effortScore),
                         score: a.impactScore - a.effortScore + 50,
                         badge: a.actionType,
                         onTap: () => IveDetailSheet.show(
@@ -437,12 +442,11 @@ class _Top5Tab extends ConsumerWidget {
                           title: a.title,
                           emoji: '⚡',
                           humanExplanation:
-                              'Ganho rápido: alto impacto (${a.impactScore}/100) e baixo esforço (${a.effortScore}/100). '
-                              'Priorize esta ação para resultados imediatos.',
+                              l10n.ecoQuickWinExplanation(a.impactScore, a.effortScore),
                           evidence: [
-                            IveEvidence(emoji: '🎯', label: 'Impacto', value: '${a.impactScore}/100'),
-                            IveEvidence(emoji: '⚙️', label: 'Esforço', value: '${a.effortScore}/100'),
-                            IveEvidence(emoji: '📋', label: 'Tipo',    value: a.actionType),
+                            IveEvidence(emoji: '🎯', label: l10n.ecoLabelImpact, value: '${a.impactScore}/100'),
+                            IveEvidence(emoji: '⚙️', label: l10n.ecoLabelEffort, value: '${a.effortScore}/100'),
+                            IveEvidence(emoji: '📋', label: l10n.ecoLabelType,   value: a.actionType),
                           ],
                           screenName: 'Decisões',
                         ),
@@ -450,25 +454,24 @@ class _Top5Tab extends ConsumerWidget {
                     ),
                     const SizedBox(height: 20),
                     _Top5Section(
-                      title: '⚠️ TOP 5 RISCOS',
-                      subtitle: 'Ações em projetos de baixo score',
+                      title: l10n.ecoTop5RisksTitle,
+                      subtitle: l10n.ecoTop5RisksSubtitle,
                       children: risks.take(5).map((a) => _SimpleCard(
                         title: a.title,
                         subtitle: a.status,
                         score: 100 - a.impactScore,
-                        badge: 'risco',
+                        badge: l10n.ecoBadgeRisk,
                         scoreColor: _kRed,
                         onTap: () => IveDetailSheet.show(
                           context,
                           title: a.title,
                           emoji: '⚠️',
                           humanExplanation:
-                              'Esta ação está em um projeto com Ecosystem Score crítico (abaixo de 30). '
-                              'Requer atenção urgente para evitar perda de oportunidade.',
+                              l10n.ecoRiskActionExplanation,
                           evidence: [
-                            IveEvidence(emoji: '🎯', label: 'Impacto', value: '${a.impactScore}/100'),
-                            IveEvidence(emoji: '📋', label: 'Status',  value: a.status),
-                            IveEvidence(emoji: '⚙️', label: 'Tipo',    value: a.actionType),
+                            IveEvidence(emoji: '🎯', label: l10n.ecoLabelImpact, value: '${a.impactScore}/100'),
+                            IveEvidence(emoji: '📋', label: l10n.ecoLabelStatus, value: a.status),
+                            IveEvidence(emoji: '⚙️', label: l10n.ecoLabelType,   value: a.actionType),
                           ],
                           screenName: 'Decisões',
                         ),
@@ -476,25 +479,24 @@ class _Top5Tab extends ConsumerWidget {
                     ),
                     const SizedBox(height: 20),
                     _Top5Section(
-                      title: '🗑️ TOP 5 DESPERDÍCIOS',
-                      subtitle: 'Baixo impacto, alto esforço',
+                      title: l10n.ecoTop5WastesTitle,
+                      subtitle: l10n.ecoTop5WastesSubtitle,
                       children: wastes.take(5).map((a) => _SimpleCard(
                         title: a.title,
-                        subtitle: 'Impacto ${a.impactScore} / Esforço ${a.effortScore}',
+                        subtitle: l10n.ecoImpactEffort(a.impactScore, a.effortScore),
                         score: a.impactScore,
-                        badge: 'rever',
+                        badge: l10n.ecoBadgeReview,
                         scoreColor: _kOrange,
                         onTap: () => IveDetailSheet.show(
                           context,
                           title: a.title,
                           emoji: '🗑️',
                           humanExplanation:
-                              'Desperdício: baixo impacto (${a.impactScore}/100) e alto esforço (${a.effortScore}/100). '
-                              'Considere remover ou reformular esta ação para liberar capacidade.',
+                              l10n.ecoWasteExplanation(a.impactScore, a.effortScore),
                           evidence: [
-                            IveEvidence(emoji: '🎯', label: 'Impacto', value: '${a.impactScore}/100'),
-                            IveEvidence(emoji: '⚙️', label: 'Esforço', value: '${a.effortScore}/100'),
-                            IveEvidence(emoji: '📋', label: 'Tipo',    value: a.actionType),
+                            IveEvidence(emoji: '🎯', label: l10n.ecoLabelImpact, value: '${a.impactScore}/100'),
+                            IveEvidence(emoji: '⚙️', label: l10n.ecoLabelEffort, value: '${a.effortScore}/100'),
+                            IveEvidence(emoji: '📋', label: l10n.ecoLabelType,   value: a.actionType),
                           ],
                           screenName: 'Decisões',
                         ),
@@ -527,9 +529,10 @@ class _Top5Section extends StatelessWidget {
         Text(subtitle, style: const TextStyle(color: Colors.white38, fontSize: 11)),
         const SizedBox(height: 10),
         if (children.isEmpty)
-          const Padding(
-            padding: EdgeInsets.only(left: 8),
-            child: Text('Nenhum item ainda', style: TextStyle(color: Colors.white38, fontSize: 12)),
+          Padding(
+            padding: const EdgeInsets.only(left: 8),
+            child: Text(AppLocalizations.of(context)!.ecoNoItemsYet,
+                style: const TextStyle(color: Colors.white38, fontSize: 12)),
           )
         else
           ...children,
@@ -543,32 +546,34 @@ class _ProjectCard extends ConsumerWidget {
   const _ProjectCard({required this.score});
 
   void _showDetail(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     IveDetailSheet.show(
       context,
       title:            score.project.name,
       emoji:            score.recommendationEmoji,
-      humanExplanation:
-          '${score.project.name} tem um Ecosystem Score de ${score.ecosystemScore}/100. '
-          'Isso significa que o projeto está classificado como "${score.recommendation}". '
-          'O score combina oportunidades de mercado, fit estratégico, ROI potencial e capacidade de execução.',
+      humanExplanation: l10n.ecoProjectExplanation(
+        score.project.name,
+        score.ecosystemScore,
+        ecosystemVerdictLabel(score.recommendation, l10n),
+      ),
       evidence: [
-        IveEvidence(emoji: '🎯', label: 'Oportunidade',   value: '${score.opportunityScore}/100'),
-        IveEvidence(emoji: '🔗', label: 'Strategic Fit',  value: '${score.strategicFit}/100'),
-        IveEvidence(emoji: '💰', label: 'ROI Score',      value: '${score.roiScore}/100'),
-        IveEvidence(emoji: '⚡', label: 'Mercado',        value: '${score.marketScore}/100'),
-        IveEvidence(emoji: '🏃', label: 'Execução',       value: '${score.executionScore}/100'),
+        IveEvidence(emoji: '🎯', label: l10n.ecoLabelOpportunity,  value: '${score.opportunityScore}/100'),
+        IveEvidence(emoji: '🔗', label: l10n.ecoLabelStrategicFit, value: '${score.strategicFit}/100'),
+        IveEvidence(emoji: '💰', label: l10n.ecoLabelRoiScore,     value: '${score.roiScore}/100'),
+        IveEvidence(emoji: '⚡', label: l10n.ecoLabelMarket,       value: '${score.marketScore}/100'),
+        IveEvidence(emoji: '🏃', label: l10n.ecoLabelExecution,    value: '${score.executionScore}/100'),
       ],
       expandedData: {
-        'Momentum':    '${score.momentumScore}/100',
-        'Sinergia':    '${score.synergyScore}/100',
-        'ROI Total':   'R\$${score.totalRoi.toStringAsFixed(0)}',
-        'Ecosystem':   '${score.ecosystemScore}/100',
+        l10n.ecoLabelMomentum:  '${score.momentumScore}/100',
+        l10n.ecoLabelSynergy:   '${score.synergyScore}/100',
+        l10n.ecoLabelTotalRoi:  'R\$${score.totalRoi.toStringAsFixed(0)}',
+        l10n.ecoLabelEcosystem: '${score.ecosystemScore}/100',
       },
       suggestedActions: [
         IveAction(
           emoji:       '💬',
-          label:       'Perguntar à IVE como melhorar este score',
-          description: 'Abrir chat com contexto deste projeto',
+          label:       l10n.ecoAskIveImproveScore,
+          description: l10n.ecoAskIveImproveScoreDesc,
           // IVE-COMMERCIAL-TARGETED-REMEDIATION-04: mesmo padrão dos demais
           // pontos de entrada -- sem isto, caía no CopilotContextData()
           // vazio padrão.
@@ -583,7 +588,7 @@ class _ProjectCard extends ConsumerWidget {
               context,
               screenName:     'Decisões',
               contextData:    contextData,
-              initialMessage: 'Como posso melhorar o Ecosystem Score do projeto "${score.project.name}" que está em ${score.ecosystemScore}/100? Explique cada componente e quais ações têm maior impacto.',
+              initialMessage: l10n.ecoIveAskImproveProject(score.project.name, score.ecosystemScore),
               request: IveInteractionRequest(
                 projectId:        score.project.id,
                 sourceModule:     'ecosystem_decision_center',
@@ -604,6 +609,7 @@ class _ProjectCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n  = AppLocalizations.of(context)!;
     final color = _scoreColor(score.ecosystemScore);
     return GestureDetector(
       onTap: () => _showDetail(context, ref),
@@ -639,7 +645,7 @@ class _ProjectCard extends ConsumerWidget {
                     Text(score.project.name,
                       style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
                     const SizedBox(height: 2),
-                    Text('${score.recommendationEmoji} ${score.recommendation}  •  ROI R\$${score.totalRoi.toStringAsFixed(0)}',
+                    Text('${score.recommendationEmoji} ${ecosystemVerdictLabel(score.recommendation, l10n)}  •  ROI R\$${score.totalRoi.toStringAsFixed(0)}',
                       style: const TextStyle(color: Colors.white54, fontSize: 11)),
                   ],
                 ),
@@ -647,11 +653,11 @@ class _ProjectCard extends ConsumerWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text('Mkt ${score.marketScore}',
+                  Text(l10n.ecoShortMarket(score.marketScore),
                     style: const TextStyle(color: Colors.white38, fontSize: 10)),
-                  Text('Fit ${score.strategicFit}',
+                  Text(l10n.ecoShortFit(score.strategicFit),
                     style: const TextStyle(color: Colors.white38, fontSize: 10)),
-                  Text('Exec ${score.executionScore}',
+                  Text(l10n.ecoShortExec(score.executionScore),
                     style: const TextStyle(color: Colors.white38, fontSize: 10)),
                 ],
               ),
@@ -659,7 +665,7 @@ class _ProjectCard extends ConsumerWidget {
           ),
           const SizedBox(height: 6),
           IveExplainButton(
-            question:         'Por que o projeto ${score.project.name} tem score ${score.ecosystemScore}? Explique cada componente e como melhorar.',
+            question:         l10n.ecoIveAskProjectScore(score.project.name, score.ecosystemScore),
             screenName:       'Decisões',
             compact:          true,
             // IVE-COMMERCIAL-FOUNDATION-11 — antes, este botão perguntava
@@ -753,15 +759,16 @@ class _EcosystemTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return scoresAsync.when(
       loading: () => const Center(child: CircularProgressIndicator(color: _kPrimary)),
-      error: (e, _) => Center(child: Text('Erro: $e', style: const TextStyle(color: _kRed))),
+      error: (e, _) => Center(child: Text(l10n.ecoErrorGeneric('$e'), style: const TextStyle(color: _kRed))),
       data: (scores) {
         if (scores.isEmpty) {
-          return const Center(
-            child: Text('Adicione projetos para ver o Ecosystem Score.',
+          return Center(
+            child: Text(l10n.ecoEcosystemEmpty,
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white54)));
+              style: const TextStyle(color: Colors.white54)));
         }
         return ListView.separated(
           padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
@@ -789,6 +796,7 @@ class _EcosystemCardState extends State<_EcosystemCard> {
   Widget build(BuildContext context) {
     final s = widget.score;
     final color = _scoreColor(s.ecosystemScore);
+    final l10n = AppLocalizations.of(context)!;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
@@ -827,24 +835,24 @@ class _EcosystemCardState extends State<_EcosystemCard> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  Text('${s.recommendationEmoji} ${s.recommendation}',
+                  Text('${s.recommendationEmoji} ${ecosystemVerdictLabel(s.recommendation, l10n)}',
                     style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 10),
-                  _ScoreRow(label: 'Mercado', value: s.marketScore),
+                  _ScoreRow(label: l10n.ecoLabelMarket, value: s.marketScore),
                   const SizedBox(height: 4),
-                  _ScoreRow(label: 'Oportunidade', value: s.opportunityScore),
+                  _ScoreRow(label: l10n.ecoLabelOpportunity, value: s.opportunityScore),
                   const SizedBox(height: 4),
-                  _ScoreRow(label: 'Strategic Fit', value: s.strategicFit),
+                  _ScoreRow(label: l10n.ecoLabelStrategicFit, value: s.strategicFit),
                   const SizedBox(height: 4),
-                  _ScoreRow(label: 'Execução', value: s.executionScore),
+                  _ScoreRow(label: l10n.ecoLabelExecution, value: s.executionScore),
                   const SizedBox(height: 4),
                   _ScoreRow(label: 'ROI', value: s.roiScore),
                   const SizedBox(height: 4),
-                  _ScoreRow(label: 'Momentum', value: s.momentumScore),
+                  _ScoreRow(label: l10n.ecoLabelMomentum, value: s.momentumScore),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Text('${s.actionCount} ações  •  ${s.completionRate}% concluídas  •  R\$${s.totalRoi.toStringAsFixed(0)} ROI',
+                      Text(l10n.ecoCardFooter(s.actionCount, s.completionRate, s.totalRoi.toStringAsFixed(0)),
                         style: const TextStyle(color: Colors.white38, fontSize: 10)),
                       const Spacer(),
                       Icon(_expanded ? Icons.expand_less : Icons.expand_more,
@@ -863,7 +871,7 @@ class _EcosystemCardState extends State<_EcosystemCard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (s.strengths.isNotEmpty) ...[
-                    const Text('Pontos Fortes', style: TextStyle(color: _kGreen,
+                    Text(l10n.ecoStrengthsTitle, style: const TextStyle(color: _kGreen,
                         fontWeight: FontWeight.w600, fontSize: 12)),
                     const SizedBox(height: 4),
                     ...s.strengths.map((st) => Padding(
@@ -873,7 +881,7 @@ class _EcosystemCardState extends State<_EcosystemCard> {
                     const SizedBox(height: 10),
                   ],
                   if (s.risks.isNotEmpty) ...[
-                    const Text('Riscos', style: TextStyle(color: _kOrange,
+                    Text(l10n.ecoRisksTitle, style: const TextStyle(color: _kOrange,
                         fontWeight: FontWeight.w600, fontSize: 12)),
                     const SizedBox(height: 4),
                     ...s.risks.map((r) => Padding(
@@ -883,7 +891,7 @@ class _EcosystemCardState extends State<_EcosystemCard> {
                     const SizedBox(height: 10),
                   ],
                   if (s.quickWins.isNotEmpty) ...[
-                    const Text('Ganhos Rápidos', style: TextStyle(color: _kCyan,
+                    Text(l10n.ecoQuickWinsTitle, style: const TextStyle(color: _kCyan,
                         fontWeight: FontWeight.w600, fontSize: 12)),
                     const SizedBox(height: 4),
                     ...s.quickWins.map((q) => Padding(
@@ -946,16 +954,17 @@ class _RecsTab extends ConsumerWidget {
     final recsAsync       = ref.watch(priorityRecommendationsProvider);
     final validationAsync = ref.watch(decisionValidationMapProvider);
     final labAsync        = ref.watch(opportunityLabProvider);
+    final l10n            = AppLocalizations.of(context)!;
 
     return recsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator(color: _kPrimary)),
-      error: (e, _) => Center(child: Text('Erro: $e', style: const TextStyle(color: _kRed))),
+      error: (e, _) => Center(child: Text(l10n.ecoErrorGeneric('$e'), style: const TextStyle(color: _kRed))),
       data: (recs) {
         if (recs.isEmpty) {
-          return const Center(
-            child: Text('Adicione projetos e análises para gerar recomendações.',
+          return Center(
+            child: Text(l10n.ecoRecsEmpty,
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white54)));
+              style: const TextStyle(color: Colors.white54)));
         }
 
         final validationMap = validationAsync.value ?? {};
@@ -1000,6 +1009,7 @@ class _ValidationGateCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -1018,12 +1028,12 @@ class _ValidationGateCard extends StatelessWidget {
                   color: _kOrange.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: const Text('🔒 BLOQUEADO',
-                    style: TextStyle(color: _kOrange, fontSize: 10, fontWeight: FontWeight.bold)),
+                child: Text(l10n.ecoBlockedBadge,
+                    style: const TextStyle(color: _kOrange, fontSize: 10, fontWeight: FontWeight.bold)),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(rec.typeLabel,
+                child: Text(recommendationTypeLabel(rec.type, l10n),
                     style: const TextStyle(color: Colors.white38, fontSize: 10)),
               ),
             ],
@@ -1046,22 +1056,22 @@ class _ValidationGateCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('⚠️ ${validation.blockMessage}',
+                Text('⚠️ ${validation.blockMessage(l10n)}',
                     style: const TextStyle(
                         color: _kOrange, fontSize: 12, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 10),
-                _GateMetricRow(label: 'Knowledge Coverage', value: validation.coverageLabel),
-                _GateMetricRow(label: 'Learning Score', value: validation.learningLabel),
-                _GateMetricRow(label: 'Intelligence Profile', value: validation.profileLabel),
+                _GateMetricRow(label: l10n.ecoGateKnowledgeCoverage, value: validation.coverageLabel(l10n)),
+                _GateMetricRow(label: l10n.ecoGateLearningScore, value: validation.learningLabel(l10n)),
+                _GateMetricRow(label: l10n.ecoGateIntelligenceProfile, value: validation.profileLabel(l10n)),
                 const Divider(color: Colors.white12, height: 16),
-                _GateMetricRow(label: 'Documentos', value: '${validation.documentCount}'),
-                _GateMetricRow(label: 'Indexação', value: validation.indexingStatus),
-                _GateMetricRow(label: 'Ativos', value: '${validation.assetCount}'),
-                _GateMetricRow(label: 'Oportunidades', value: '${validation.opportunityCount}'),
+                _GateMetricRow(label: l10n.ecoGateDocuments, value: '${validation.documentCount}'),
+                _GateMetricRow(label: l10n.ecoGateIndexing, value: validation.indexingStatus(l10n)),
+                _GateMetricRow(label: l10n.ecoGateAssets, value: '${validation.assetCount}'),
+                _GateMetricRow(label: l10n.ecoGateOpportunities, value: '${validation.opportunityCount}'),
                 if (validation.blockReasons.isNotEmpty) ...[
                   const Divider(color: Colors.white12, height: 16),
-                  const Text('Motivos do bloqueio:',
-                      style: TextStyle(color: Colors.white38, fontSize: 10)),
+                  Text(l10n.ecoGateBlockReasons,
+                      style: const TextStyle(color: Colors.white38, fontSize: 10)),
                   const SizedBox(height: 4),
                   ...validation.blockReasons.map((r) => Padding(
                         padding: const EdgeInsets.only(bottom: 2),
@@ -1134,20 +1144,21 @@ class _RecCard extends ConsumerWidget {
   }
 
   void _showDetail(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     IveDetailSheet.show(
       context,
       title:            rec.title,
       emoji:            _typeEmoji,
-      humanExplanation: '${rec.reason}\n\nImpacto esperado: ${rec.expectedImpact}',
+      humanExplanation: '${rec.reason}\n\n${l10n.ecoExpectedImpact(rec.expectedImpact)}',
       evidence: [
-        IveEvidence(emoji: '📊', label: 'Tipo',        value: rec.typeLabel),
-        IveEvidence(emoji: '🎯', label: 'Confiança',   value: '${rec.confidence}%'),
-        IveEvidence(emoji: '💡', label: 'Dados usados', value: rec.dataUsed),
+        IveEvidence(emoji: '📊', label: l10n.ecoLabelType,       value: recommendationTypeLabel(rec.type, l10n)),
+        IveEvidence(emoji: '🎯', label: l10n.ecoLabelConfidence, value: '${rec.confidence}%'),
+        IveEvidence(emoji: '💡', label: l10n.ecoLabelDataUsed,   value: rec.dataUsed),
       ],
       suggestedActions: [
         IveAction(
           emoji: '💬',
-          label: 'Perguntar à IVE sobre esta recomendação',
+          label: l10n.ecoAskIveRecommendation,
           // IVE-COMMERCIAL-TARGETED-REMEDIATION-04: mesmo padrão dos demais
           // pontos de entrada -- sem isto, caía no CopilotContextData()
           // vazio padrão.
@@ -1168,7 +1179,7 @@ class _RecCard extends ConsumerWidget {
               context,
               screenName:     'Decisões',
               contextData:    contextData,
-              initialMessage: 'Explique a recomendação "${rec.title}" e me dê um plano de ação concreto.',
+              initialMessage: l10n.ecoIveAskRecommendation(rec.title),
               request: IveInteractionRequest(
                 sourceModule:     'ecosystem_decision_center',
                 sourceEntityType: 'recommendation',
@@ -1185,6 +1196,7 @@ class _RecCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     return GestureDetector(
       onTap: () => _showDetail(context, ref),
       child: Container(
@@ -1205,11 +1217,11 @@ class _RecCard extends ConsumerWidget {
                   color: _typeColor.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: Text(rec.typeLabel,
+                child: Text(recommendationTypeLabel(rec.type, l10n),
                   style: TextStyle(color: _typeColor, fontSize: 10, fontWeight: FontWeight.bold)),
               ),
               const Spacer(),
-              Text('${rec.confidence}% confiança',
+              Text(l10n.ecoConfidencePct(rec.confidence),
                 style: const TextStyle(color: Colors.white38, fontSize: 10)),
               const SizedBox(width: 4),
               const Icon(Icons.chevron_right_rounded, color: Colors.white24, size: 14),
@@ -1224,9 +1236,9 @@ class _RecCard extends ConsumerWidget {
           const SizedBox(height: 6),
           const Divider(color: Colors.white12, height: 1),
           const SizedBox(height: 6),
-          Text('Impacto esperado: ${rec.expectedImpact}',
+          Text(l10n.ecoExpectedImpact(rec.expectedImpact),
             style: const TextStyle(color: Colors.white38, fontSize: 10)),
-          Text('Dados: ${rec.dataUsed}',
+          Text(l10n.ecoDataPrefix(rec.dataUsed),
             style: const TextStyle(color: Colors.white24, fontSize: 10)),
         ],
       ),

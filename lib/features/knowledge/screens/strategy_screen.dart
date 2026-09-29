@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/utils/ai_enum_labels.dart';
 import '../../../data/models/ive_interaction_request.dart';
 import '../../../data/models/knowledge_analysis.dart';
 import '../../../data/models/knowledge_item.dart';
@@ -10,6 +11,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../providers/knowledge_provider.dart';
 import '../../../providers/strategy_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
+import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 
 // IVE-COMMERCIAL-QUOTA-HARDENING-13 (Codex Gate 2 round-2 finding) — both
 // call sites below (the initial "Gerar Estratégia" button and "Regenerar
@@ -87,7 +89,7 @@ class _StrategyScreenState extends ConsumerState<StrategyScreen> {
       body: itemAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
-            child: Text(l10n.knowledgeStrategyGenericError('$e'),
+            child: Text(l10n.knowledgeStrategyGenericError(extractErrorMessage(e, l10n)),
                 style: const TextStyle(color: Colors.white70))),
         data: (item) {
           if (item == null) {
@@ -98,7 +100,7 @@ class _StrategyScreenState extends ConsumerState<StrategyScreen> {
           return analysisAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(
-                child: Text(l10n.knowledgeStrategyGenericError('$e'),
+                child: Text(l10n.knowledgeStrategyGenericError(extractErrorMessage(e, l10n)),
                     style: const TextStyle(color: Colors.white70))),
             data: (analysis) {
               if (analysis == null) {
@@ -106,7 +108,7 @@ class _StrategyScreenState extends ConsumerState<StrategyScreen> {
               }
               return strategyAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error:   (e, _) => _GeneratePrompt(item: item, analysis: analysis, exec: _exec, error: e.toString()),
+                error:   (e, _) => _GeneratePrompt(item: item, analysis: analysis, exec: _exec, error: extractErrorMessage(e, l10n)),
                 data:    (strategy) => strategy == null
                     ? _GeneratePrompt(item: item, analysis: analysis, exec: _exec)
                     : _StrategyContent(item: item, strategy: strategy, analysis: analysis, exec: _exec),
@@ -510,10 +512,11 @@ class _ChannelTile extends StatelessWidget {
   final Map<String, dynamic> data;
 
   Color _priorityColor(String p) {
-    switch (p.toLowerCase()) {
-      case 'alta':  return const Color(0xFF4CAF50);
-      case 'média': return const Color(0xFFFF9800);
-      default:      return Colors.white38;
+    switch (aiLevel(p)) {
+      case AiLevel.high:
+      case AiLevel.critical: return const Color(0xFF4CAF50);
+      case AiLevel.medium:   return const Color(0xFFFF9800);
+      default:               return Colors.white38;
     }
   }
 
@@ -540,7 +543,7 @@ class _ChannelTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: color.withOpacity(0.4)),
             ),
-            child: Text(priority,
+            child: Text(aiPriorityLabel(priority, AppLocalizations.of(context)!),
                 style: TextStyle(
                     color: color, fontSize: 10, fontWeight: FontWeight.w600)),
           ),
@@ -620,10 +623,11 @@ class _OpportunityTile extends StatelessWidget {
   final Map<String, dynamic> data;
 
   Color _potentialColor(String p) {
-    switch (p.toLowerCase()) {
-      case 'alto':  return const Color(0xFF4CAF50);
-      case 'médio': return const Color(0xFFFF9800);
-      default:      return Colors.white38;
+    switch (aiLevel(p)) {
+      case AiLevel.high:
+      case AiLevel.critical: return const Color(0xFF4CAF50);
+      case AiLevel.medium:   return const Color(0xFFFF9800);
+      default:               return Colors.white38;
     }
   }
 
@@ -669,7 +673,7 @@ class _OpportunityTile extends StatelessWidget {
                 color: color.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Text(potential,
+              child: Text(aiLevelLabel(potential, AppLocalizations.of(context)!),
                   style: TextStyle(
                       color: color, fontSize: 10, fontWeight: FontWeight.w600)),
             ),

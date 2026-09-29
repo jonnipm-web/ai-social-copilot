@@ -7,6 +7,7 @@ import '../../../data/models/action_queue_item.dart';
 import '../../../data/models/market_analysis.dart';
 import '../../../data/models/opportunity_lab_item.dart';
 import '../../../data/models/project.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/action_queue_provider.dart';
 import '../../../providers/feature_flag_provider.dart';
 import '../../../providers/market_analysis_provider.dart';
@@ -43,8 +44,9 @@ Color _scoreColor(int s) {
   return _kRed;
 }
 
-String _fmtBRL(double v) {
-  if (v <= 0) return 'Ainda não estimado';
+// Values are stored in BRL; only the "not estimated" label is localized.
+String _fmtBRL(double v, AppLocalizations l10n) {
+  if (v <= 0) return l10n.ctxExecNotEstimated;
   if (v >= 1000000) return 'R\$ ${(v / 1000000).toStringAsFixed(1)}M';
   if (v >= 1000) return 'R\$ ${(v / 1000).toStringAsFixed(0)}k';
   return 'R\$ ${v.toStringAsFixed(0)}';
@@ -71,6 +73,7 @@ class ExecutiveDashboardScreen extends ConsumerWidget {
     final labItems  = labAsync.value       ?? [];
     final roiMap    = roiAsync.value       ?? {};
     final flags     = flagsAsync.value     ?? {};
+    final l10n      = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -83,19 +86,19 @@ class ExecutiveDashboardScreen extends ConsumerWidget {
             onPressed: () => Scaffold.of(ctx).openDrawer(),
           ),
         ),
-        title: const Column(
+        title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Business OS',
+            const Text('Business OS',
                 style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-            Text('InsightValues · Painel Executivo',
-                style: TextStyle(color: Colors.white38, fontSize: 11)),
+            Text(l10n.ctxExecSubtitle,
+                style: const TextStyle(color: Colors.white38, fontSize: 11)),
           ],
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white54),
-            tooltip: 'Perguntar à IVE',
+            tooltip: l10n.ctxExecAskIve,
             // IVE-COMMERCIAL-TARGETED-REMEDIATION-04 (achado do Codex Gate,
             // 2ª rodada) -- outro ponto de entrada do chat sem contextData
             // nenhum, encontrado pela mesma auditoria.
@@ -116,7 +119,7 @@ class ExecutiveDashboardScreen extends ConsumerWidget {
           ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: Colors.white54),
-            tooltip: 'Recarregar',
+            tooltip: l10n.ctxExecReload,
             onPressed: () {
               ref.invalidate(projectsProvider);
               ref.invalidate(marketAnalysesProvider);
@@ -250,28 +253,29 @@ class _DashboardBody extends StatelessWidget {
     final revPot = roiMap['revenue_potential'] ?? 0;
     final roi    = roiMap['revenue'] ?? 0;
     final avgScore = _avgScore(analyses);
+    final l10n     = AppLocalizations.of(context)!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // Health KPIs
         _SidebarKpiCard(
-          title: 'PORTFOLIO EXECUTIVO',
+          title: l10n.ctxExecPortfolioTitle,
           items: [
-            _KpiItem('Projetos Ativos',   '$activeProjects',         _kGreen),
-            _KpiItem('Total de Projetos', '${projects.length}',      _kPrimary),
-            _KpiItem('Análises MI',       '${analyses.length}',      _kCyan),
-            _KpiItem('Score Médio',       avgScore > 0 ? '$avgScore' : '—', _scoreColor(avgScore)),
+            _KpiItem(l10n.ctxExecActiveProjects, '$activeProjects',         _kGreen),
+            _KpiItem(l10n.ctxExecTotalProjects,  '${projects.length}',      _kPrimary),
+            _KpiItem(l10n.ctxExecMiAnalyses,     '${analyses.length}',      _kCyan),
+            _KpiItem(l10n.ctxExecAvgScore,       avgScore > 0 ? '$avgScore' : '—', _scoreColor(avgScore)),
           ],
         ),
         const SizedBox(height: 12),
 
         // Revenue
         _SidebarKpiCard(
-          title: 'FINANCEIRO',
+          title: l10n.ctxExecFinancialTitle,
           items: [
-            _KpiItem('Receita Registrada', _fmtBRL(roi),    _kGold),
-            _KpiItem('Potencial Mensal',   _fmtBRL(revPot), _kGreen),
+            _KpiItem(l10n.ctxExecRecordedRevenue, _fmtBRL(roi, l10n),    _kGold),
+            _KpiItem(l10n.ctxExecMonthlyPotential, _fmtBRL(revPot, l10n), _kGreen),
           ],
         ),
         const SizedBox(height: 12),
@@ -321,67 +325,68 @@ class _ExecModuleGrid extends StatelessWidget {
     final pending          = actions.where((a) => a.status == 'pending').length;
     final executing        = actions.where((a) => a.status == 'executing').length;
     final blocked          = actions.where((a) => a.status == 'blocked').length;
+    final l10n             = AppLocalizations.of(context)!;
 
     final cards = [
       _ExecModule(
         icon:  Icons.rocket_launch_rounded,
         color: _kPrimary,
-        title: 'Projetos',
+        title: l10n.ctxExecModProjects,
         items: [
-          ('Total',          '${projects.length}'),
-          ('Ativos',         '$activeProjects'),
-          ('Em ideia',       '$ideaProjects'),
-          ('Sem análise',    projects.isEmpty ? '–' : '$noAnalysis'),
+          (l10n.ctxExecTotal,      '${projects.length}'),
+          (l10n.ctxExecActive,     '$activeProjects'),
+          (l10n.ctxExecInIdea,     '$ideaProjects'),
+          (l10n.ctxExecNoAnalysis, projects.isEmpty ? '–' : '$noAnalysis'),
         ],
-        emptyMessage: 'Cadastre seu primeiro projeto para começar.',
+        emptyMessage: l10n.ctxExecEmptyProjects,
         isEmpty: projects.isEmpty,
         route: AppConstants.routeProjects,
-        cta: 'Ver Projetos',
+        cta: l10n.ctxExecViewProjects,
       ),
       _ExecModule(
         icon:  Icons.analytics_rounded,
         color: _kCyan,
         title: 'Market Intelligence',
         items: [
-          ('Análises',       '${analyses.length}'),
-          ('Score médio',    analyses.isEmpty ? '–' : '${analyses.map((a) => a.opportunityScore).fold<int>(0, (s, v) => s + v) ~/ (analyses.isEmpty ? 1 : analyses.length)}/100'),
-          ('Alta qualidade', '${analyses.where((a) => a.opportunityScore >= 75).length}'),
-          ('Sem projeto',    analyses.isEmpty ? '–' : '–'),
+          (l10n.ctxExecAnalyses,     '${analyses.length}'),
+          (l10n.ctxExecAvgScoreShort, analyses.isEmpty ? '–' : '${analyses.map((a) => a.opportunityScore).fold<int>(0, (s, v) => s + v) ~/ (analyses.isEmpty ? 1 : analyses.length)}/100'),
+          (l10n.ctxExecHighQuality, '${analyses.where((a) => a.opportunityScore >= 75).length}'),
+          (l10n.ctxExecNoProject,   analyses.isEmpty ? '–' : '–'),
         ],
-        emptyMessage: 'Execute uma análise de mercado no Market Intelligence.',
+        emptyMessage: l10n.ctxExecEmptyMi,
         isEmpty: analyses.isEmpty,
         route: AppConstants.routeMarketIntelligence,
-        cta: 'Analisar Mercado',
+        cta: l10n.ctxExecAnalyzeMarket,
       ),
       _ExecModule(
         icon:  Icons.science_rounded,
         color: _kGreen,
-        title: 'Oportunidades',
+        title: l10n.ctxExecModOpportunities,
         items: [
-          ('Total',           '${labItems.length}'),
-          ('Alta prioridade', '$highPriOpp'),
-          ('Aprovadas',       '$sentToEngine'),
-          ('Pendentes',       '${labItems.where((l) => l.status == 'pending').length}'),
+          (l10n.ctxExecTotal,        '${labItems.length}'),
+          (l10n.ctxExecHighPriority, '$highPriOpp'),
+          (l10n.ctxExecApproved,     '$sentToEngine'),
+          (l10n.ctxExecPending,      '${labItems.where((l) => l.status == 'pending').length}'),
         ],
-        emptyMessage: 'Gere oportunidades a partir das análises de mercado.',
+        emptyMessage: l10n.ctxExecEmptyOpportunities,
         isEmpty: labItems.isEmpty,
         route: AppConstants.routeOpportunityLab,
-        cta: 'Ver Oportunidades',
+        cta: l10n.ctxExecViewOpportunities,
       ),
       _ExecModule(
         icon:  Icons.bolt_rounded,
         color: _kOrange,
         title: 'Action Engine',
         items: [
-          ('Pendentes',  '$pending'),
-          ('Em execução','$executing'),
-          ('Bloqueadas', '$blocked'),
-          ('Concluídas', '${actions.where((a) => a.status == 'done').length}'),
+          (l10n.ctxExecPending,    '$pending'),
+          (l10n.ctxExecInProgress, '$executing'),
+          (l10n.ctxExecBlocked,    '$blocked'),
+          (l10n.ctxExecCompleted,  '${actions.where((a) => a.status == 'done').length}'),
         ],
-        emptyMessage: 'Aprove oportunidades para gerar ações executáveis.',
+        emptyMessage: l10n.ctxExecEmptyActions,
         isEmpty: actions.isEmpty,
         route: AppConstants.routeActionEngine,
-        cta: 'Abrir Decisions',
+        cta: l10n.ctxExecOpenDecisions,
       ),
     ];
 
@@ -560,10 +565,11 @@ class _SidebarKpiCard extends StatelessWidget {
 class _QuickNavCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final navItems = [
-      (Icons.hub_rounded,       'Decision Center',   AppConstants.routeEcosystem,         _kPrimary),
-      (Icons.summarize_rounded, 'Briefing Semanal',  AppConstants.routeEcosystemBriefing,  _kCyan),
-      (Icons.schedule_rounded,  'Alocação',          AppConstants.routeEcosystemResources,  _kOrange),
+      (Icons.hub_rounded,       'Decision Center',          AppConstants.routeEcosystem,         _kPrimary),
+      (Icons.summarize_rounded, l10n.ctxExecWeeklyBriefing, AppConstants.routeEcosystemBriefing,  _kCyan),
+      (Icons.schedule_rounded,  l10n.ctxExecAllocation,     AppConstants.routeEcosystemResources,  _kOrange),
       (Icons.insights_rounded,  'ROI Tracker',       AppConstants.routeRoiTracker,          _kGold),
     ];
     return Container(
@@ -576,8 +582,8 @@ class _QuickNavCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('ACESSO RÁPIDO',
-              style: TextStyle(color: Colors.white38, fontSize: 10,
+          Text(l10n.ctxExecQuickAccess,
+              style: const TextStyle(color: Colors.white38, fontSize: 10,
                   letterSpacing: 1.2, fontWeight: FontWeight.w600)),
           const SizedBox(height: 10),
           ...navItems.map((n) {
@@ -613,6 +619,7 @@ class _PendingActionsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pending = actions.where((a) => a.status == 'pending').toList();
+    final l10n    = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -627,25 +634,25 @@ class _PendingActionsCard extends StatelessWidget {
             children: [
               const Icon(Icons.bolt_rounded, color: _kOrange, size: 18),
               const SizedBox(width: 8),
-              const Expanded(
-                child: Text('Prioridades da Semana',
-                    style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+              Expanded(
+                child: Text(l10n.dashPendingActionsTitle,
+                    style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
               ),
               TextButton(
                 onPressed: () => context.push(AppConstants.routeActionEngine),
                 style: TextButton.styleFrom(
                     minimumSize: Size.zero, padding: const EdgeInsets.symmetric(horizontal: 8)),
-                child: const Text('Ver todas', style: TextStyle(color: _kPrimary, fontSize: 12)),
+                child: Text(l10n.dashPendingActionsViewAll, style: const TextStyle(color: _kPrimary, fontSize: 12)),
               ),
             ],
           ),
           const SizedBox(height: 12),
           if (pending.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
               child: Text(
-                'Nenhuma ação pendente. O Action Engine preencherá automaticamente.',
-                style: TextStyle(color: Colors.white38, fontSize: 12, height: 1.5),
+                l10n.ctxExecPendingEmpty,
+                style: const TextStyle(color: Colors.white38, fontSize: 12, height: 1.5),
               ),
             )
           else
@@ -683,20 +690,21 @@ class _ModuleGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final mods = [
       (Icons.hub_rounded,          'Ecosystem',     AppConstants.routeEcosystem,         _kPrimary, true),
       (Icons.analytics_rounded,    'Market Intel.', AppConstants.routeMarketIntelligence, _kCyan,    true),
       (Icons.science_rounded,      'Opp. Lab',      AppConstants.routeOpportunityLab,     _kGreen,   flags[FeatureFlag.opportunityLabEnabled] ?? false),
-      (Icons.bolt_rounded,         'Actions',       AppConstants.routeActionEngine,       _kOrange,  flags[FeatureFlag.actionEngineEnabled] ?? false),
+      (Icons.bolt_rounded,         l10n.iveScreenActions, AppConstants.routeActionEngine,       _kOrange,  flags[FeatureFlag.actionEngineEnabled] ?? false),
       (Icons.insights_rounded,     'ROI Tracker',   AppConstants.routeRoiTracker,         _kGold,    true),
-      (Icons.rocket_launch_rounded,'Projetos',      AppConstants.routeProjects,           _kPink,    true),
+      (Icons.rocket_launch_rounded,l10n.iveScreenProjects, AppConstants.routeProjects,           _kPink,    true),
     ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('MÓDULOS DO BUSINESS OS',
-            style: TextStyle(color: Colors.white38, fontSize: 11, letterSpacing: 1.4, fontWeight: FontWeight.w600)),
+        Text(l10n.ctxExecModulesTitle,
+            style: const TextStyle(color: Colors.white38, fontSize: 11, letterSpacing: 1.4, fontWeight: FontWeight.w600)),
         const SizedBox(height: 10),
         GridView.count(
           crossAxisCount: 3,
@@ -712,7 +720,7 @@ class _ModuleGrid extends StatelessWidget {
               child: MouseRegion(
                 cursor: active ? SystemMouseCursors.click : SystemMouseCursors.basic,
                 child: Tooltip(
-                  message: active ? 'Abrir $label' : 'Módulo não disponível',
+                  message: active ? l10n.ctxExecOpenModule(label) : l10n.ctxExecModuleUnavailable,
                   child: Container(
                     decoration: BoxDecoration(
                       color:        active ? color.withOpacity(0.08) : Colors.white.withOpacity(0.02),
@@ -784,14 +792,14 @@ class _ExecutiveRecommendations extends StatelessWidget {
   final List<ActionQueueItem> actions;
   final Map<String, double>   roiMap;
 
-  List<_Recommendation> _build() {
+  List<_Recommendation> _build(AppLocalizations l10n) {
     final recs = <_Recommendation>[];
 
     if (projects.isEmpty) {
-      recs.add(const _Recommendation(
+      recs.add(_Recommendation(
         icon: Icons.add_business_rounded, color: _kPrimary, confidence: 100,
-        title: 'Cadastre seu primeiro projeto',
-        body: 'Acesse o Project Command Center e cadastre pelo menos um projeto para desbloquear análises e oportunidades.',
+        title: l10n.dashRecEmptyProjectTitle,
+        body: l10n.dashRecEmptyProjectBody,
       ));
       return recs;
     }
@@ -799,8 +807,8 @@ class _ExecutiveRecommendations extends StatelessWidget {
     if (analyses.isEmpty) {
       recs.add(_Recommendation(
         icon: Icons.analytics_rounded, color: _kCyan, confidence: 95,
-        title: 'Execute sua primeira análise de mercado',
-        body: 'Vá ao Market Intelligence e analise o nicho do projeto "${projects.first.name}".',
+        title: l10n.dashRecEmptyAnalysisTitle,
+        body: l10n.dashRecEmptyAnalysisBody(projects.first.name),
       ));
     }
 
@@ -808,8 +816,8 @@ class _ExecutiveRecommendations extends StatelessWidget {
     if (pending > 0) {
       recs.add(_Recommendation(
         icon: Icons.bolt_rounded, color: _kGold, confidence: 90,
-        title: '$pending ação${pending > 1 ? "ões" : ""} aguardando aprovação',
-        body: 'Revise e aprove as ações pendentes no Action Engine para começar a execução.',
+        title: l10n.dashRecPendingActionsTitle(pending),
+        body: l10n.dashRecPendingActionsBody,
       ));
     }
 
@@ -819,16 +827,16 @@ class _ExecutiveRecommendations extends StatelessWidget {
       final top = topAnalyses.first;
       recs.add(_Recommendation(
         icon: Icons.star_rounded, color: _kGreen, confidence: top.opportunityScore,
-        title: 'Oportunidade de alta pontuação: ${top.niche ?? top.input}',
-        body: 'Score ${top.opportunityScore}/100. Acione o Opportunity Lab para converter em tarefas.',
+        title: l10n.dashRecTopOpportunityTitle(top.niche ?? top.input),
+        body: l10n.dashRecTopOpportunityBody(top.opportunityScore),
       ));
     }
 
     if ((roiMap['revenue'] ?? 0) == 0 && projects.isNotEmpty) {
-      recs.add(const _Recommendation(
+      recs.add(_Recommendation(
         icon: Icons.payments_rounded, color: _kOrange, confidence: 75,
-        title: 'Nenhuma receita registrada ainda',
-        body: 'Adicione entradas no ROI Tracker para acompanhar o retorno real dos seus projetos.',
+        title: l10n.dashRecNoRevenueTitle,
+        body: l10n.dashRecNoRevenueBody,
       ));
     }
 
@@ -837,7 +845,8 @@ class _ExecutiveRecommendations extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final recs = _build();
+    final l10n = AppLocalizations.of(context)!;
+    final recs = _build(l10n);
     if (recs.isEmpty) return const SizedBox.shrink();
 
     return Container(
@@ -850,12 +859,12 @@ class _ExecutiveRecommendations extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.lightbulb_rounded, color: _kGold, size: 18),
-              SizedBox(width: 8),
-              Text('Recomendações Executivas',
-                  style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+              const Icon(Icons.lightbulb_rounded, color: _kGold, size: 18),
+              const SizedBox(width: 8),
+              Text(l10n.dashRecommendationsTitle,
+                  style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
             ],
           ),
           const SizedBox(height: 12),

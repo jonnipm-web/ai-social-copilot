@@ -1,3 +1,5 @@
+import '../../l10n/app_localizations.dart';
+
 class CalendarItem {
   final String id;
   final String userId;
@@ -53,6 +55,36 @@ class CalendarItem {
     'cta':        'CTA de Venda',
     'thread':     'Thread/X',
   };
+
+  /// R16 — localized display label for a stored `status` code.
+  static String localizedStatusLabel(String status, AppLocalizations l10n) {
+    switch (status) {
+      case 'ideia':            return l10n.uxCalStatusIdea;
+      case 'planejado':        return l10n.uxCalStatusPlanned;
+      case 'gerado':           return l10n.uxCalStatusGenerated;
+      case 'aprovado':         return l10n.uxCalStatusApproved;
+      case 'pronto_publicar':  return l10n.uxCalStatusReadyToPublish;
+      case 'publicado':        return l10n.uxCalStatusPublished;
+      case 'falha_publicacao': return l10n.uxCalStatusPublishFailed;
+      case 'arquivado':        return l10n.uxCalStatusArchived;
+      default:                 return status;
+    }
+  }
+
+  /// R16 — localized display label for a stored `format` code.
+  static String localizedFormatLabel(String format, AppLocalizations l10n) {
+    switch (format) {
+      case 'post_curto': return l10n.uxCalFormatShortPost;
+      case 'post_longo': return l10n.uxCalFormatLongPost;
+      case 'carrossel':  return l10n.uxCalFormatCarousel;
+      case 'reels':      return l10n.uxCalFormatReels;
+      case 'email':      return l10n.uxCalFormatEmail;
+      case 'artigo':     return l10n.uxCalFormatSeoArticle;
+      case 'cta':        return l10n.uxCalFormatSalesCta;
+      case 'thread':     return l10n.uxCalFormatThread;
+      default:           return format;
+    }
+  }
 
   const CalendarItem({
     required this.id,

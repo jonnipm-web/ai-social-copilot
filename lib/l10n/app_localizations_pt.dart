@@ -4639,4 +4639,2196 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get r16LanguageNameOther => 'outro idioma';
+
+  @override
+  String get ecoVerdictScale => 'ESCALAR';
+
+  @override
+  String get ecoVerdictAccelerate => 'ACELERAR';
+
+  @override
+  String get ecoVerdictMaintain => 'MANTER';
+
+  @override
+  String get ecoVerdictValidate => 'VALIDAR';
+
+  @override
+  String get ecoVerdictPause => 'PAUSAR';
+
+  @override
+  String get ecoVerdictIncomplete => 'ANÁLISE INCOMPLETA';
+
+  @override
+  String get ecoRecTypeInvest => 'Investir';
+
+  @override
+  String get ecoRecTypeExecute => 'Executar';
+
+  @override
+  String get ecoRecTypeAction => 'Ação';
+
+  @override
+  String get ecoRecTypePause => 'Pausar';
+
+  @override
+  String get ecoRecTypeRisk => 'Risco';
+
+  @override
+  String get ecoRecTypeQuickWin => 'Ganho Rápido';
+
+  @override
+  String get ecoRecTypeWaste => 'Desperdício';
+
+  @override
+  String ecoRecScaleTitle(String name) {
+    return 'Escale "$name"';
+  }
+
+  @override
+  String ecoRecInvestTitle(String name) {
+    return 'Invista mais em "$name"';
+  }
+
+  @override
+  String ecoRecTopReason(int score) {
+    return 'Ecosystem Score $score/100 — maior potencial do seu portfólio';
+  }
+
+  @override
+  String ecoRecTopData(int opportunity, int fit, int market) {
+    return 'Score: oportunidade $opportunity, fit $fit, mercado $market';
+  }
+
+  @override
+  String ecoRecTopImpact(int count) {
+    return 'Aceleração de receita e execução de $count oportunidades mapeadas';
+  }
+
+  @override
+  String ecoRecValidateTitle(String name) {
+    return 'Valide as premissas de "$name"';
+  }
+
+  @override
+  String ecoRecValidateReason(int score) {
+    return 'Score $score/100 — potencial presente mas dados ainda insuficientes para decisão';
+  }
+
+  @override
+  String ecoRecValidateData(int market, int roi, int execution) {
+    return 'Market score $market, ROI $roi, execução $execution';
+  }
+
+  @override
+  String get ecoRecValidateImpact => 'Clareza estratégica para escalar ou pivotar';
+
+  @override
+  String ecoRecOppTitle(String title) {
+    return 'Execute a oportunidade "$title"';
+  }
+
+  @override
+  String ecoRecOppReason(int score) {
+    return 'Score final $score/100 — maior ROI esperado do Lab';
+  }
+
+  @override
+  String ecoRecOppData(int market, int revenue) {
+    return 'Market score $market, revenue score $revenue';
+  }
+
+  @override
+  String get ecoRecOppImpactFallback => 'Alta alavancagem do portfólio';
+
+  @override
+  String ecoRecQuickWinTitle(String title) {
+    return 'Ganho rápido: "$title"';
+  }
+
+  @override
+  String ecoRecQuickWinReason(int impact, int effort) {
+    return 'Impacto $impact com esforço apenas $effort — melhor relação do portfólio';
+  }
+
+  @override
+  String ecoRecQuickWinData(int impact, int effort) {
+    return 'Impact score $impact, effort score $effort';
+  }
+
+  @override
+  String get ecoRecQuickWinImpact => 'Execução rápida com alto retorno proporcional';
+
+  @override
+  String ecoRecPauseTitle(String name) {
+    return 'Pause ou revise "$name"';
+  }
+
+  @override
+  String ecoRecPauseReason(int score) {
+    return 'Ecosystem Score $score/100 — recursos consumidos sem retorno visível';
+  }
+
+  @override
+  String ecoRecPauseData(int roi, int momentum, int count) {
+    return 'ROI score $roi, momentum $momentum, $count ações sem conclusão';
+  }
+
+  @override
+  String get ecoRecPauseImpact => 'Liberação de tempo e foco para projetos de maior potencial';
+
+  @override
+  String ecoRecRiskTitle(String name, String risk) {
+    return 'Risco em "$name": $risk';
+  }
+
+  @override
+  String get ecoRecRiskReason => 'Identificado pelo Ecosystem Intelligence com base nos dados do projeto';
+
+  @override
+  String ecoRecRiskData(int score, int momentum) {
+    return 'Ecosystem Score $score, momentum $momentum';
+  }
+
+  @override
+  String get ecoRecRiskImpact => 'Mitigação preventiva antes do impacto no portfólio';
+
+  @override
+  String get ecoAllocEmptySummary => 'Nenhum projeto com score suficiente para alocação. Execute o Knowledge → Action Engine para gerar inteligência operacional.';
+
+  @override
+  String get ecoAllocUnitHours => 'horas';
+
+  @override
+  String get ecoAllocResourceBudget => 'budget';
+
+  @override
+  String ecoAllocSummary(String name, String amount, String unit, int percent, int score) {
+    return 'Priorize "$name" com $amount $unit ($percent% do orçamento). Score: $score/100.';
+  }
+
+  @override
+  String ecoAllocReasonScale(String resource) {
+    return 'Maior potencial — escale o investimento em $resource';
+  }
+
+  @override
+  String ecoAllocReasonAccelerate(String resource) {
+    return 'Alto potencial — maximize o $resource aqui';
+  }
+
+  @override
+  String get ecoAllocReasonMaintain => 'Projeto saudável — mantenha investimento consistente';
+
+  @override
+  String get ecoAllocReasonValidate => 'Alocação reduzida até validar premissas';
+
+  @override
+  String get ecoAllocReasonPause => 'Não recomendado — considere pausar este projeto';
+
+  @override
+  String get ecoResourceAllocationTitle => 'Alocação de Recursos';
+
+  @override
+  String get ecoAllocModeHours => '⏱ Tempo (Horas)';
+
+  @override
+  String get ecoAllocModeMoney => '💰 Dinheiro (R\$)';
+
+  @override
+  String get ecoAllocBudgetQuestion => 'Quanto tenho disponível?';
+
+  @override
+  String get ecoAllocExecutiveRecommendation => 'Recomendação Executiva';
+
+  @override
+  String get ecoAllocEmpty => 'Adicione projetos com análises para ver a alocação.';
+
+  @override
+  String ecoAllocDistribution(int total, String unit) {
+    return 'Distribuição das $total $unit';
+  }
+
+  @override
+  String ecoBriefNewAnalysesTitle(int count) {
+    return '$count nova(s) análise(s) de mercado';
+  }
+
+  @override
+  String get ecoBriefNewAnalysesDetail => 'Novas oportunidades mapeadas pelo Market Intelligence';
+
+  @override
+  String ecoBriefNewActionsTitle(int count) {
+    return '$count nova(s) ação(ões) criada(s)';
+  }
+
+  @override
+  String get ecoBriefNewActionsDetail => 'Action Engine em movimento';
+
+  @override
+  String ecoBriefNewLabTitle(int count) {
+    return '$count novo(s) item(ns) no Opportunity Lab';
+  }
+
+  @override
+  String get ecoBriefNewLabDetail => 'Oportunidades sendo avaliadas';
+
+  @override
+  String ecoBriefNewRoiTitle(int count) {
+    return '$count novo(s) registro(s) de ROI';
+  }
+
+  @override
+  String get ecoBriefNewRoiDetail => 'Resultados financeiros atualizados';
+
+  @override
+  String get ecoBriefNoActivityTitle => 'Nenhuma atividade nova esta semana';
+
+  @override
+  String get ecoBriefNoActivityDetail => 'Adicione análises ou ações para gerar insights';
+
+  @override
+  String ecoBriefProjectScoreTitle(String name, int score) {
+    return '$name — Ecosystem Score $score';
+  }
+
+  @override
+  String ecoBriefRecommendationDetail(String verdict, String note) {
+    return 'Recomendação: $verdict. $note';
+  }
+
+  @override
+  String get ecoBriefGrewFallback => 'Alto potencial identificado.';
+
+  @override
+  String get ecoBriefDeclinedFallback => 'Baixo retorno identificado.';
+
+  @override
+  String ecoBriefToPauseDetail(int score) {
+    return 'Score $score/100 — libere recursos para projetos de maior potencial';
+  }
+
+  @override
+  String ecoBriefRiskProjectDetail(String name) {
+    return 'Projeto: $name';
+  }
+
+  @override
+  String get ecoBriefSummaryEmpty => 'Nenhum projeto registrado. Comece adicionando projetos e executando análises.';
+
+  @override
+  String ecoBriefSummary(int count, int health, int growing, int pausing) {
+    return 'Seu ecossistema tem $count projeto(s) com saúde geral de $health/100. $growing projeto(s) em crescimento, $pausing requerem revisão.';
+  }
+
+  @override
+  String get ecoExecNoActions => 'Sem ações cadastradas';
+
+  @override
+  String get ecoExecRoadmapPresent => 'Roadmap presente → +20pts';
+
+  @override
+  String get ecoExecNoRoadmap => 'Sem roadmap → +0pts';
+
+  @override
+  String ecoExecCompleted(int completed, int total, int points) {
+    return '$completed/$total ações concluídas → ${points}pts';
+  }
+
+  @override
+  String ecoExecApproved(int approved, int points) {
+    return '$approved oportunidades aprovadas × 10 = ${points}pts (max 30)';
+  }
+
+  @override
+  String get ecoStrengthMarket => 'Mercado com alto potencial identificado';
+
+  @override
+  String get ecoStrengthOpportunity => 'Alta pontuação de oportunidade de mercado';
+
+  @override
+  String get ecoStrengthRoi => 'ROI positivo registrado';
+
+  @override
+  String get ecoStrengthSynergy => 'Alta sinergia com o ecossistema';
+
+  @override
+  String get ecoStrengthMomentum => 'Atividade recente elevada';
+
+  @override
+  String get ecoStrengthPriority => 'Alta prioridade estratégica';
+
+  @override
+  String get ecoStrengthDefault => 'Projeto com potencial a desenvolver';
+
+  @override
+  String get ecoRiskInsufficientData => 'Dados insuficientes para análise de valor';
+
+  @override
+  String ecoRiskPendingActions(int count) {
+    return '$count ações pendentes acumuladas sem execução';
+  }
+
+  @override
+  String get ecoRiskNoRoi => 'Sem ROI registrado apesar das ações em andamento';
+
+  @override
+  String get ecoRiskLowActivity => 'Baixa atividade nos últimos 30 dias';
+
+  @override
+  String get ecoRiskIdeaStage => 'Projeto ainda em fase de ideia — sem execução iniciada';
+
+  @override
+  String ecoIveCriticalProjects(int count) {
+    return 'Atenção: $count projeto(s) com score crítico. Posso ajudar a resolver.';
+  }
+
+  @override
+  String get ecoDecisionCenterTitle => 'Central de Decisões';
+
+  @override
+  String get ecoTabTop5 => 'TOP 5';
+
+  @override
+  String get ecoTabEcosystem => 'ECOSSISTEMA';
+
+  @override
+  String get ecoTabRecommendations => 'RECOMENDAÇÕES';
+
+  @override
+  String get ecoWeeklyBriefingTooltip => 'Briefing Semanal';
+
+  @override
+  String ecoBootstrapPending(int count) {
+    return 'Projetos sem inteligência operacional: $count';
+  }
+
+  @override
+  String get ecoHealthTitle => 'Saúde do Ecossistema';
+
+  @override
+  String ecoIveAskHealth(int health) {
+    return 'Por que minha saúde do ecossistema está em $health? O que está limitando e como posso melhorar?';
+  }
+
+  @override
+  String get ecoHealthNarrativeExcellent => 'Seu ecossistema está operando no máximo potencial. Os projetos estão sincronizados e escalando.';
+
+  @override
+  String get ecoHealthNarrativeHealthy => 'Seu ecossistema está saudável e crescendo. Existem alavancas prontas para acelerar.';
+
+  @override
+  String get ecoHealthNarrativeStable => 'Seu ecossistema está estável. Algumas áreas precisam de atenção para desbloquear crescimento.';
+
+  @override
+  String get ecoHealthNarrativeValidating => 'Seu ecossistema está em fase de validação. Adicione mais análises para elevar a inteligência.';
+
+  @override
+  String get ecoHealthNarrativeReview => 'Seu ecossistema precisa de revisão estratégica. A IVE pode ajudar a identificar os bloqueios.';
+
+  @override
+  String ecoErrorGeneric(String error) {
+    return 'Erro: $error';
+  }
+
+  @override
+  String get ecoTop5Empty => 'Nenhum projeto encontrado.\nAdicione textos no Cofre e crie projetos.';
+
+  @override
+  String get ecoTop5ProjectsTitle => '🚀 TOP 5 PROJETOS';
+
+  @override
+  String get ecoTop5ProjectsSubtitle => 'Ranqueados por Ecosystem Score';
+
+  @override
+  String get ecoTop5OpportunitiesTitle => '💡 TOP 5 OPORTUNIDADES';
+
+  @override
+  String get ecoTop5OpportunitiesSubtitle => 'Maior potencial do Opportunity Lab';
+
+  @override
+  String ecoOppExplanation(String type, int score, String status) {
+    return 'Oportunidade do tipo "$type" com score $score/100. Status atual: $status.';
+  }
+
+  @override
+  String get ecoLabelType => 'Tipo';
+
+  @override
+  String get ecoLabelFinalScore => 'Score Final';
+
+  @override
+  String get ecoLabelStatus => 'Status';
+
+  @override
+  String get ecoAskIveOpportunity => 'Perguntar à IVE sobre esta oportunidade';
+
+  @override
+  String ecoIveAskOpportunity(String title, int score) {
+    return 'Analise a oportunidade "$title" (score $score) e diga como aproveitá-la.';
+  }
+
+  @override
+  String get ecoTop5QuickWinsTitle => '⚡ TOP 5 GANHOS RÁPIDOS';
+
+  @override
+  String get ecoTop5QuickWinsSubtitle => 'Alto impacto, baixo esforço';
+
+  @override
+  String ecoImpactEffort(int impact, int effort) {
+    return 'Impacto $impact / Esforço $effort';
+  }
+
+  @override
+  String ecoQuickWinExplanation(int impact, int effort) {
+    return 'Ganho rápido: alto impacto ($impact/100) e baixo esforço ($effort/100). Priorize esta ação para resultados imediatos.';
+  }
+
+  @override
+  String get ecoLabelImpact => 'Impacto';
+
+  @override
+  String get ecoLabelEffort => 'Esforço';
+
+  @override
+  String get ecoTop5RisksTitle => '⚠️ TOP 5 RISCOS';
+
+  @override
+  String get ecoTop5RisksSubtitle => 'Ações em projetos de baixo score';
+
+  @override
+  String get ecoBadgeRisk => 'risco';
+
+  @override
+  String get ecoRiskActionExplanation => 'Esta ação está em um projeto com Ecosystem Score crítico (abaixo de 30). Requer atenção urgente para evitar perda de oportunidade.';
+
+  @override
+  String get ecoTop5WastesTitle => '🗑️ TOP 5 DESPERDÍCIOS';
+
+  @override
+  String get ecoTop5WastesSubtitle => 'Baixo impacto, alto esforço';
+
+  @override
+  String get ecoBadgeReview => 'rever';
+
+  @override
+  String ecoWasteExplanation(int impact, int effort) {
+    return 'Desperdício: baixo impacto ($impact/100) e alto esforço ($effort/100). Considere remover ou reformular esta ação para liberar capacidade.';
+  }
+
+  @override
+  String get ecoNoItemsYet => 'Nenhum item ainda';
+
+  @override
+  String ecoProjectExplanation(String name, int score, String verdict) {
+    return '$name tem um Ecosystem Score de $score/100. Isso significa que o projeto está classificado como "$verdict". O score combina oportunidades de mercado, fit estratégico, ROI potencial e capacidade de execução.';
+  }
+
+  @override
+  String get ecoLabelOpportunity => 'Oportunidade';
+
+  @override
+  String get ecoLabelStrategicFit => 'Strategic Fit';
+
+  @override
+  String get ecoLabelRoiScore => 'ROI Score';
+
+  @override
+  String get ecoLabelMarket => 'Mercado';
+
+  @override
+  String get ecoLabelExecution => 'Execução';
+
+  @override
+  String get ecoLabelMomentum => 'Momentum';
+
+  @override
+  String get ecoLabelSynergy => 'Sinergia';
+
+  @override
+  String get ecoLabelTotalRoi => 'ROI Total';
+
+  @override
+  String get ecoLabelEcosystem => 'Ecosystem';
+
+  @override
+  String get ecoAskIveImproveScore => 'Perguntar à IVE como melhorar este score';
+
+  @override
+  String get ecoAskIveImproveScoreDesc => 'Abrir chat com contexto deste projeto';
+
+  @override
+  String ecoIveAskImproveProject(String name, int score) {
+    return 'Como posso melhorar o Ecosystem Score do projeto "$name" que está em $score/100? Explique cada componente e quais ações têm maior impacto.';
+  }
+
+  @override
+  String ecoShortMarket(int score) {
+    return 'Mkt $score';
+  }
+
+  @override
+  String ecoShortFit(int score) {
+    return 'Fit $score';
+  }
+
+  @override
+  String ecoShortExec(int score) {
+    return 'Exec $score';
+  }
+
+  @override
+  String ecoIveAskProjectScore(String name, int score) {
+    return 'Por que o projeto $name tem score $score? Explique cada componente e como melhorar.';
+  }
+
+  @override
+  String get ecoEcosystemEmpty => 'Adicione projetos para ver o Ecosystem Score.';
+
+  @override
+  String ecoCardFooter(int count, int percent, String roi) {
+    return '$count ações  •  $percent% concluídas  •  R\$$roi ROI';
+  }
+
+  @override
+  String get ecoStrengthsTitle => 'Pontos Fortes';
+
+  @override
+  String get ecoRisksTitle => 'Riscos';
+
+  @override
+  String get ecoQuickWinsTitle => 'Ganhos Rápidos';
+
+  @override
+  String get ecoRecsEmpty => 'Adicione projetos e análises para gerar recomendações.';
+
+  @override
+  String get ecoBlockedBadge => '🔒 BLOQUEADO';
+
+  @override
+  String get ecoGateDocuments => 'Documentos';
+
+  @override
+  String get ecoGateIndexing => 'Indexação';
+
+  @override
+  String get ecoGateAssets => 'Ativos';
+
+  @override
+  String get ecoGateOpportunities => 'Oportunidades';
+
+  @override
+  String get ecoGateBlockReasons => 'Motivos do bloqueio:';
+
+  @override
+  String ecoExpectedImpact(String impact) {
+    return 'Impacto esperado: $impact';
+  }
+
+  @override
+  String get ecoLabelConfidence => 'Confiança';
+
+  @override
+  String get ecoLabelDataUsed => 'Dados usados';
+
+  @override
+  String get ecoAskIveRecommendation => 'Perguntar à IVE sobre esta recomendação';
+
+  @override
+  String ecoIveAskRecommendation(String title) {
+    return 'Explique a recomendação "$title" e me dê um plano de ação concreto.';
+  }
+
+  @override
+  String ecoConfidencePct(int percent) {
+    return '$percent% confiança';
+  }
+
+  @override
+  String ecoDataPrefix(String data) {
+    return 'Dados: $data';
+  }
+
+  @override
+  String get ecoWeeklyBriefingTitle => 'Briefing Executivo Semanal';
+
+  @override
+  String ecoBriefingError(String error) {
+    return 'Erro ao gerar briefing: $error';
+  }
+
+  @override
+  String get ecoBriefSectionChanged => '🔄 O que mudou';
+
+  @override
+  String get ecoBriefSectionGrew => '📈 O que cresceu';
+
+  @override
+  String get ecoBriefSectionDeclined => '📉 O que piorou';
+
+  @override
+  String get ecoBriefSectionPriorities => '🎯 O que priorizar';
+
+  @override
+  String get ecoBriefSectionPause => '⏸️ O que pausar';
+
+  @override
+  String get ecoBriefSectionNewOpps => '💡 Oportunidades novas';
+
+  @override
+  String get ecoBriefSectionRisks => '⚠️ Riscos';
+
+  @override
+  String get ecoBriefSectionRisksIdentified => '⚠️ Riscos identificados';
+
+  @override
+  String get ecoBriefOverallHealth => 'Saúde Geral';
+
+  @override
+  String ecoBriefOverallHealthValue(int score) {
+    return 'Saúde Geral: $score/100';
+  }
+
+  @override
+  String get ecoBriefLowScoreHint => '⚠ Score baixo. Veja os riscos identificados e as prioridades abaixo para melhorar.';
+
+  @override
+  String get ecoBriefHeaderLabel => 'BRIEFING EXECUTIVO';
+
+  @override
+  String ecoBriefWeekOf(String date) {
+    return 'Semana de $date';
+  }
+
+  @override
+  String get ecoBriefExecutiveSummary => 'Resumo Executivo';
+
+  @override
+  String get ecoBriefNoItemsThisWeek => 'Nenhum item nesta semana';
+
+  @override
+  String get ecoBriefDataAnalyzed => 'DADOS ANALISADOS';
+
+  @override
+  String ecoBriefGeneratedAt(String date, String time) {
+    return 'Gerado em $date às $time';
+  }
+
+  @override
+  String get ecoCountProjects => 'Projetos';
+
+  @override
+  String get ecoCountAnalyses => 'Análises';
+
+  @override
+  String get ecoCountActions => 'Ações';
+
+  @override
+  String get ecoBriefIncludedProjects => 'Projetos incluídos';
+
+  @override
+  String get ctxIveProjectsMsg1 => 'Olá! Sou a IVE, sua consultora executiva. Posso analisar seu portfólio agora.';
+
+  @override
+  String get ctxIveProjectsMsg2 => 'Quer saber qual projeto tem mais potencial de escala neste momento?';
+
+  @override
+  String get ctxIveProjectsMsg3 => 'Identifico padrões entre seus projetos. Alguma dúvida estratégica?';
+
+  @override
+  String get ctxIveOppLabMsg1 => 'Identifiquei oportunidades com alto ROI nesta lista. Posso priorizar para você.';
+
+  @override
+  String get ctxIveOppLabMsg2 => 'Cada oportunidade aqui tem critérios mensuráveis. Posso explicar qualquer uma.';
+
+  @override
+  String get ctxIveOppLabMsg3 => 'Quer que eu indique quais oportunidades executar primeiro esta semana?';
+
+  @override
+  String get ctxIveEcosystemMsg1 => 'Este é seu centro de decisão. Posso explicar qualquer score em linguagem simples.';
+
+  @override
+  String get ctxIveEcosystemMsg2 => 'Vejo projetos com potencial não explorado. Quer uma análise detalhada?';
+
+  @override
+  String get ctxIveEcosystemMsg3 => 'Posso simular o impacto de aprovar oportunidades ou concluir ações.';
+
+  @override
+  String get ctxIveBriefingMsg1 => 'Seu briefing executivo está pronto. Posso destacar o que é mais urgente.';
+
+  @override
+  String get ctxIveBriefingMsg2 => 'Quer que eu traduza este relatório em próximos passos concretos?';
+
+  @override
+  String get ctxIveBriefingMsg3 => 'Posso identificar o que mudou esta semana e por quê.';
+
+  @override
+  String get ctxIvePersonasMsg1 => 'Suas personas são sua presença no mercado. Posso comparar o desempenho de cada uma.';
+
+  @override
+  String get ctxIvePersonasMsg2 => 'Quer saber qual persona tem maior potencial de crescimento agora?';
+
+  @override
+  String get ctxIvePersonasMsg3 => 'Posso recomendar estratégias específicas para cada nicho.';
+
+  @override
+  String get ctxIveKnowledgeMsg1 => 'Seu cofre de conhecimento alimenta toda a inteligência do sistema.';
+
+  @override
+  String get ctxIveKnowledgeMsg2 => 'Qual documento quer que eu analise ou conecte com seus projetos?';
+
+  @override
+  String get ctxIveKnowledgeMsg3 => 'Posso mostrar quais conhecimentos estão gerando mais insights.';
+
+  @override
+  String get ctxIveActionsMsg1 => 'Sua fila de ações determina sua velocidade de execução.';
+
+  @override
+  String get ctxIveActionsMsg2 => 'Posso ajudar a priorizar: quais ações têm maior impacto no score?';
+
+  @override
+  String get ctxIveActionsMsg3 => 'Quer que eu identifique o que está bloqueando seu progresso?';
+
+  @override
+  String get ctxIveDebugMsg1 => 'Centro de observabilidade completo. Posso auditar qualquer cálculo.';
+
+  @override
+  String get ctxIveDebugMsg2 => 'Quer entender como um score foi gerado? Basta perguntar.';
+
+  @override
+  String get ctxIveDebugMsg3 => 'Posso rastrear a origem de qualquer dado ou recomendação.';
+
+  @override
+  String ctxIveAnalysisCompleted(String name) {
+    return 'Análise de "$name" concluída!';
+  }
+
+  @override
+  String ctxIveAnalyzing(String name) {
+    return 'Analisando "$name"...';
+  }
+
+  @override
+  String ctxIveProjectCreated(String name) {
+    return 'Projeto "$name" criado!';
+  }
+
+  @override
+  String ctxIveProjectRemoved(String name) {
+    return 'Projeto "$name" removido.';
+  }
+
+  @override
+  String ctxIveProjectStatusChanged(String name, String status) {
+    return '"$name" $status.';
+  }
+
+  @override
+  String get ctxIveStatusActivated => 'ativado';
+
+  @override
+  String get ctxIveStatusPaused => 'pausado';
+
+  @override
+  String get ctxIveStatusCompleted => 'concluído';
+
+  @override
+  String ctxIveCtxEcosystem(int score, String bottleneck) {
+    return 'Ecossistema em $score/100. Principal gargalo: $bottleneck. Posso detalhar como melhorar.';
+  }
+
+  @override
+  String get ctxIveCtxBottleneckFallback => 'execução';
+
+  @override
+  String ctxIveCtxProjectLeads(String name, int score) {
+    return '$name lidera com score $score.';
+  }
+
+  @override
+  String ctxIveCtxPendingDetected(int count) {
+    return 'Ações pendentes detectadas: $count.';
+  }
+
+  @override
+  String get ctxIveCtxAnalyzeOpportunities => 'Quer analisar oportunidades?';
+
+  @override
+  String ctxIveCtxOppLab(int count) {
+    return 'Oportunidades aguardando sua avaliação: $count. Posso priorizar as de maior ROI.';
+  }
+
+  @override
+  String ctxIveCtxBriefing(int score) {
+    return 'Briefing gerado com saúde geral em $score/100. Posso traduzir os dados em ações concretas.';
+  }
+
+  @override
+  String ctxIveCtxActions(int count) {
+    return 'Ações pendentes: $count. Posso identificar as de maior impacto no score de execução.';
+  }
+
+  @override
+  String ctxIssueAnalysisFailed(String name) {
+    return 'Não consegui analisar "$name".\nA falha ocorreu durante o processamento pela IA.\nVocê pode tentar novamente.';
+  }
+
+  @override
+  String ctxIssueDownloadFailed(String name) {
+    return 'Não consegui importar "$name".\nA falha ocorreu durante o download do arquivo.\nO conteúdo ainda não foi analisado.';
+  }
+
+  @override
+  String ctxIssueActionMutationFailed(String name) {
+    return 'Não consegui atualizar "$name".\nVerifique sua conexão e tente novamente.';
+  }
+
+  @override
+  String get ctxIssueActionViewDetails => 'Ver detalhes';
+
+  @override
+  String get ctxIssueActionUpdateLink => 'Atualizar link';
+
+  @override
+  String get ctxIssueActionSendFile => 'Enviar arquivo';
+
+  @override
+  String get ctxIssueActionDismiss => 'Dispensar';
+
+  @override
+  String ctxAlertHealthLow(int health) {
+    return 'Saúde do ecossistema em $health/100. Ação imediata recomendada.';
+  }
+
+  @override
+  String ctxAlertProjectCritical(String name, int score) {
+    return '$name com score crítico ($score/100). Posso identificar o que está limitando.';
+  }
+
+  @override
+  String ctxAlertActionsOverdue(int count) {
+    return 'Ações pendentes acumuladas: $count. Isso está impactando seu score de execução.';
+  }
+
+  @override
+  String ctxDocCoverageWarning(int total, int used, int unused) {
+    return '$total fontes vinculadas · $used utilizadas nesta análise · $unused não utilizadas nesta execução.';
+  }
+
+  @override
+  String ctxGroundingEmptyContent(String title) {
+    return '"$title": registrado mas sem conteúdo processável.';
+  }
+
+  @override
+  String ctxGroundingBudgetExceeded(int maxChars) {
+    return 'Limite de $maxChars caracteres atingido. Documentos posteriores omitidos.';
+  }
+
+  @override
+  String ctxDvReasonCoverage(int score, int min) {
+    return 'Knowledge Coverage insuficiente ($score% < $min%)';
+  }
+
+  @override
+  String ctxDvReasonLearning(int score, int min) {
+    return 'Learning Score médio insuficiente ($score% < $min%)';
+  }
+
+  @override
+  String get ctxDvReasonProfile => 'Perfil de inteligência incompleto — vincule uma análise de mercado';
+
+  @override
+  String get ctxDvReasonStructuring => 'Nenhuma oportunidade ou ação gerada ainda — execute o Knowledge → Action Engine';
+
+  @override
+  String get ctxDvBlockStructuring => 'Projeto ainda em fase de estruturação. Conhecimento disponível, mas inteligência operacional insuficiente para recomendação estratégica.';
+
+  @override
+  String get ctxDvBlockInsufficient => 'Dados insuficientes para decisão estratégica.';
+
+  @override
+  String get ctxDvNoDocuments => 'Sem documentos';
+
+  @override
+  String ctxDvIndexedCount(int indexed, int total) {
+    return '$indexed/$total indexados';
+  }
+
+  @override
+  String ctxDvThresholdLabel(String mark, int score, int min) {
+    return '$mark $score% (mínimo $min%)';
+  }
+
+  @override
+  String get ctxDvProfileComplete => '✅ Completo';
+
+  @override
+  String get ctxDvProfileIncomplete => '❌ Incompleto — vincule uma análise de mercado';
+
+  @override
+  String get ctxCoverageExcellent => 'Excelente';
+
+  @override
+  String get ctxCoverageGood => 'Bom';
+
+  @override
+  String get ctxCoverageModerate => 'Moderado';
+
+  @override
+  String get ctxCoverageBasic => 'Básico';
+
+  @override
+  String get ctxCoverageMinimal => 'Mínimo';
+
+  @override
+  String get ctxGapNoDocuments => 'Adicione documentos ao Cofre de Conhecimento';
+
+  @override
+  String get ctxGapNoOpportunities => 'Sem oportunidades — execute o Knowledge → Action Engine';
+
+  @override
+  String get ctxGapNoActions => 'Sem ações definidas para o projeto';
+
+  @override
+  String get ctxGapNoRoadmap => 'Roadmap não gerado — execute o Bootstrap';
+
+  @override
+  String get ctxGapNoRevenuePlan => 'Plano de receita não criado';
+
+  @override
+  String get ctxGapUntrainedPersonas => 'Personas sem treinamento de conhecimento';
+
+  @override
+  String get ctxStrengthKnowledgeBase => 'Base de conhecimento estabelecida';
+
+  @override
+  String get ctxStrengthOpportunities => 'Oportunidades mapeadas';
+
+  @override
+  String get ctxStrengthActions => 'Ações planejadas';
+
+  @override
+  String get ctxStrengthRoadmap => 'Roadmap estruturado';
+
+  @override
+  String get ctxStrengthRevenuePlan => 'Plano de receita projetado';
+
+  @override
+  String get ctxStrengthTrainedPersonas => 'Personas com conhecimento treinado';
+
+  @override
+  String get ctxLearningExpert => 'Especialista';
+
+  @override
+  String get ctxLearningAdvanced => 'Avançado';
+
+  @override
+  String get ctxLearningIntermediate => 'Intermediário';
+
+  @override
+  String get ctxLearningBeginner => 'Iniciante';
+
+  @override
+  String get ctxLearningUntrained => 'Sem Treinamento';
+
+  @override
+  String get ctxMaturityMature => 'Maduro';
+
+  @override
+  String get ctxMaturityGrowing => 'Crescendo';
+
+  @override
+  String get ctxMaturityValidating => 'Validando';
+
+  @override
+  String get ctxMaturityIdea => 'Ideia';
+
+  @override
+  String get ctxProfileWarningNoAnalysis => 'Execute uma análise de mercado para obter inteligência.';
+
+  @override
+  String get ctxProfileWarningLowData => 'Dados insuficientes. Adicione ações e oportunidades.';
+
+  @override
+  String get ctxProfileNotDefined => 'Não definido';
+
+  @override
+  String get ctxEmptyServerResponse => 'Resposta vazia do servidor.';
+
+  @override
+  String ctxDurationYears(int count) {
+    return '${count}a';
+  }
+
+  @override
+  String ctxDurationMonths(int count) {
+    return '${count}m';
+  }
+
+  @override
+  String ctxDurationDays(int count) {
+    return '${count}d';
+  }
+
+  @override
+  String get ctxProjectTypeWebsite => 'Site';
+
+  @override
+  String get ctxProjectTypeApp => 'App';
+
+  @override
+  String get ctxProjectTypeProduct => 'Produto';
+
+  @override
+  String get ctxProjectTypeService => 'Serviço';
+
+  @override
+  String get ctxProjectTypeContent => 'Conteúdo';
+
+  @override
+  String get ctxHomeFeatureUnavailable => 'Este recurso ainda não está disponível.';
+
+  @override
+  String get ctxHomeCommandCenter => 'Command Center';
+
+  @override
+  String get ctxHomeImprovePostTooltip => 'Melhorar Post';
+
+  @override
+  String get ctxHomeRefreshTooltip => 'Atualizar';
+
+  @override
+  String get ctxHomeExecCommandCenter => 'Executive Command Center';
+
+  @override
+  String get ctxHomeMetricProjects => 'Projetos';
+
+  @override
+  String get ctxHomeMetricOpportunities => 'Oportunidades';
+
+  @override
+  String get ctxHomeMetricPendingActions => 'Ações Pendentes';
+
+  @override
+  String get ctxHomeMetricKnowledge => 'Conhecimento';
+
+  @override
+  String get ctxHomeMetricLearning => 'Learning Score';
+
+  @override
+  String get ctxHomeQuickDecisionCenter => 'Decision Center';
+
+  @override
+  String get ctxHomeQuickBriefing => 'Briefing';
+
+  @override
+  String get ctxHomePriorityProjects => 'Projetos Prioritários';
+
+  @override
+  String get ctxHomeNoProjects => 'Nenhum projeto cadastrado.';
+
+  @override
+  String get ctxHomeAddProject => 'Adicionar projeto';
+
+  @override
+  String get ctxHomeNextBestAction => 'Próxima Melhor Ação';
+
+  @override
+  String get ctxHomeNoRecommendations => 'Sem recomendações disponíveis.';
+
+  @override
+  String get ctxHomeViewOpportunityLab => 'Ver Opportunity Lab';
+
+  @override
+  String ctxHomeConfidence(int value) {
+    return '$value% confiança';
+  }
+
+  @override
+  String ctxHomeExpectedImpact(String impact) {
+    return 'Impacto esperado: $impact';
+  }
+
+  @override
+  String get ctxHomePersonas => 'Personas';
+
+  @override
+  String get ctxHomeNoPersonas => 'Nenhuma persona criada.';
+
+  @override
+  String get ctxHomeCreatePersona => 'Criar persona';
+
+  @override
+  String get ctxHomeEcosystemIntelligence => 'Inteligência do Ecossistema';
+
+  @override
+  String ctxHomeStatProjects(int count) {
+    return 'Projetos: $count';
+  }
+
+  @override
+  String ctxHomeStatOpportunities(int count) {
+    return 'Oportunidades: $count';
+  }
+
+  @override
+  String ctxHomeStatActions(int count) {
+    return 'Ações: $count';
+  }
+
+  @override
+  String ctxHomeStatConnections(int count) {
+    return 'Conexões: $count';
+  }
+
+  @override
+  String get ctxHomeConnectionsFound => 'Conexões identificadas:';
+
+  @override
+  String get ctxHomeNoConnections => 'Execute análises de mercado para descobrir conexões entre seus projetos.';
+
+  @override
+  String get ctxHomeSeeAll => 'ver todos';
+
+  @override
+  String ctxHomeHealth(int score) {
+    return 'Saúde $score/100';
+  }
+
+  @override
+  String ctxHomeCoverage(String emoji, int score) {
+    return '$emoji $score% de cobertura';
+  }
+
+  @override
+  String ctxHomePersonaStats(int trainings, int words) {
+    return 'Treinamentos: $trainings · Palavras: $words';
+  }
+
+  @override
+  String ctxHomeError(String message) {
+    return 'Erro: $message';
+  }
+
+  @override
+  String get ctxGraphSharesNiche => 'compartilha nicho';
+
+  @override
+  String get ctxGraphUsesKnowledge => 'usa conhecimento';
+
+  @override
+  String get ctxGraphOpportunityOf => 'oportunidade de';
+
+  @override
+  String get ctxGraphPersonaKnows => 'persona conhece';
+
+  @override
+  String ctxGraphEdge(String source, String relation, String target) {
+    return '$source → $relation → $target';
+  }
+
+  @override
+  String get ctxExecNotEstimated => 'Ainda não estimado';
+
+  @override
+  String get ctxExecSubtitle => 'InsightValues · Painel Executivo';
+
+  @override
+  String get ctxExecAskIve => 'Perguntar à IVE';
+
+  @override
+  String get ctxExecReload => 'Recarregar';
+
+  @override
+  String get ctxExecPortfolioTitle => 'PORTFÓLIO EXECUTIVO';
+
+  @override
+  String get ctxExecActiveProjects => 'Projetos Ativos';
+
+  @override
+  String get ctxExecTotalProjects => 'Total de Projetos';
+
+  @override
+  String get ctxExecMiAnalyses => 'Análises MI';
+
+  @override
+  String get ctxExecAvgScore => 'Score Médio';
+
+  @override
+  String get ctxExecFinancialTitle => 'FINANCEIRO';
+
+  @override
+  String get ctxExecRecordedRevenue => 'Receita Registrada';
+
+  @override
+  String get ctxExecMonthlyPotential => 'Potencial Mensal';
+
+  @override
+  String get ctxExecModProjects => 'Projetos';
+
+  @override
+  String get ctxExecTotal => 'Total';
+
+  @override
+  String get ctxExecActive => 'Ativos';
+
+  @override
+  String get ctxExecInIdea => 'Em ideia';
+
+  @override
+  String get ctxExecNoAnalysis => 'Sem análise';
+
+  @override
+  String get ctxExecEmptyProjects => 'Cadastre seu primeiro projeto para começar.';
+
+  @override
+  String get ctxExecViewProjects => 'Ver Projetos';
+
+  @override
+  String get ctxExecAnalyses => 'Análises';
+
+  @override
+  String get ctxExecAvgScoreShort => 'Score médio';
+
+  @override
+  String get ctxExecHighQuality => 'Alta qualidade';
+
+  @override
+  String get ctxExecNoProject => 'Sem projeto';
+
+  @override
+  String get ctxExecEmptyMi => 'Execute uma análise de mercado no Market Intelligence.';
+
+  @override
+  String get ctxExecAnalyzeMarket => 'Analisar Mercado';
+
+  @override
+  String get ctxExecModOpportunities => 'Oportunidades';
+
+  @override
+  String get ctxExecHighPriority => 'Alta prioridade';
+
+  @override
+  String get ctxExecApproved => 'Aprovadas';
+
+  @override
+  String get ctxExecPending => 'Pendentes';
+
+  @override
+  String get ctxExecEmptyOpportunities => 'Gere oportunidades a partir das análises de mercado.';
+
+  @override
+  String get ctxExecViewOpportunities => 'Ver Oportunidades';
+
+  @override
+  String get ctxExecInProgress => 'Em execução';
+
+  @override
+  String get ctxExecBlocked => 'Bloqueadas';
+
+  @override
+  String get ctxExecCompleted => 'Concluídas';
+
+  @override
+  String get ctxExecEmptyActions => 'Aprove oportunidades para gerar ações executáveis.';
+
+  @override
+  String get ctxExecOpenDecisions => 'Abrir Decisions';
+
+  @override
+  String get ctxExecWeeklyBriefing => 'Briefing Semanal';
+
+  @override
+  String get ctxExecAllocation => 'Alocação';
+
+  @override
+  String get ctxExecQuickAccess => 'ACESSO RÁPIDO';
+
+  @override
+  String get ctxExecPendingEmpty => 'Nenhuma ação pendente. O Action Engine preencherá automaticamente.';
+
+  @override
+  String get ctxExecModulesTitle => 'MÓDULOS DO BUSINESS OS';
+
+  @override
+  String ctxExecOpenModule(String label) {
+    return 'Abrir $label';
+  }
+
+  @override
+  String get ctxExecModuleUnavailable => 'Módulo não disponível';
+
+  @override
+  String get ctxIveDetailExplanation => 'Explicação IVE';
+
+  @override
+  String get ctxIveDetailNumbers => 'Números e fórmulas';
+
+  @override
+  String get ctxIveDetailSuggestedActions => 'Ações sugeridas';
+
+  @override
+  String get ctxIveExplainCompact => 'Entender';
+
+  @override
+  String get ctxIveExplainFull => 'Explicar com IVE';
+
+  @override
+  String ctxResultCopied(String title) {
+    return '"$title" copiado!';
+  }
+
+  @override
+  String get ctxResultCopyTooltip => 'Copiar';
+
+  @override
+  String ctxCopilotConfidenceBadge(int value) {
+    return '$value% conf.';
+  }
+
+  @override
+  String get uxAiInvestmentYes => 'SIM';
+
+  @override
+  String get uxAiInvestmentConditional => 'CONDICIONAL';
+
+  @override
+  String get uxAiInvestmentNo => 'NÃO';
+
+  @override
+  String get uxAiLevelLow => 'Baixo';
+
+  @override
+  String get uxAiLevelMedium => 'Médio';
+
+  @override
+  String get uxAiLevelHigh => 'Alto';
+
+  @override
+  String get uxAiLevelCritical => 'Crítico';
+
+  @override
+  String get uxAiPriorityLow => 'Baixa';
+
+  @override
+  String get uxAiPriorityMedium => 'Média';
+
+  @override
+  String get uxAiPriorityHigh => 'Alta';
+
+  @override
+  String get uxAiPriorityCritical => 'Crítica';
+
+  @override
+  String get uxAiSearchIntentInformational => 'Informacional';
+
+  @override
+  String get uxAiSearchIntentNavigational => 'Navegacional';
+
+  @override
+  String get uxAiSearchIntentTransactional => 'Transacional';
+
+  @override
+  String get uxAiSearchIntentCommercial => 'Comercial';
+
+  @override
+  String get uxAiArticleTypePillar => 'Página pilar';
+
+  @override
+  String get uxAiArticleTypeSupporting => 'Conteúdo de apoio';
+
+  @override
+  String get uxAiArticleTypeLandingPage => 'Landing page';
+
+  @override
+  String get uxAiArticleTypeComparison => 'Comparativo';
+
+  @override
+  String get uxAiOpportunityTypeContent => 'Conteúdo';
+
+  @override
+  String get uxAiOpportunityTypeSeo => 'SEO';
+
+  @override
+  String get uxAiOpportunityTypeProduct => 'Produto';
+
+  @override
+  String get uxAiOpportunityTypeMonetization => 'Monetização';
+
+  @override
+  String get uxAiOpportunityTypePartnership => 'Parceria';
+
+  @override
+  String get uxAiOpportunityTypePlatform => 'Plataforma';
+
+  @override
+  String get uxAiOpportunityTypeAudience => 'Audiência';
+
+  @override
+  String uxAiTimeframeMonths(String range) {
+    return '$range meses';
+  }
+
+  @override
+  String uxAiTimeframeWeeks(String range) {
+    return '$range semanas';
+  }
+
+  @override
+  String uxAiTimeframeDays(String range) {
+    return '$range dias';
+  }
+
+  @override
+  String get uxCampaignObjectiveSales => 'Venda';
+
+  @override
+  String get uxCampaignObjectiveAuthority => 'Autoridade';
+
+  @override
+  String get uxCampaignObjectiveLeads => 'Leads';
+
+  @override
+  String get uxCampaignObjectiveEngagement => 'Engajamento';
+
+  @override
+  String get uxCampaignObjectiveLaunch => 'Lançamento';
+
+  @override
+  String get uxCampaignObjectiveTraffic => 'Tráfego';
+
+  @override
+  String uxCampaignObjectiveSalesOn(String platform) {
+    return 'Venda $platform';
+  }
+
+  @override
+  String get uxCampaignObjectiveSubscription => 'Assinatura';
+
+  @override
+  String get uxAiTimeframeOneMonth => '1 mês';
+
+  @override
+  String get uxAiTimeframeOneWeek => '1 semana';
+
+  @override
+  String get uxAiTimeframeOneDay => '1 dia';
+
+  @override
+  String uxMiRoiNoteOpportunities(String count, String input) {
+    return '$count oportunidades — $input';
+  }
+
+  @override
+  String get uxNotAvailableShort => 'N/D';
+
+  @override
+  String uxOppSeedDescription(String impact, String effort) {
+    return 'Impacto: $impact · Esforço: $effort';
+  }
+
+  @override
+  String uxOppSeedRationaleFallback(String input) {
+    return 'Identificado pelo Market Intelligence com base na análise de $input.';
+  }
+
+  @override
+  String uxOppSeedRiskEffort(String effort) {
+    return 'Esforço: $effort';
+  }
+
+  @override
+  String uxOppSeedEstimatedTimeframe(String timeframe) {
+    return 'Prazo estimado: $timeframe';
+  }
+
+  @override
+  String get uxActionDefaultTitle => 'Ação';
+
+  @override
+  String get uxErrorNotAuthenticated => 'Sessão expirada. Entre novamente para continuar.';
+
+  @override
+  String get uxMemoryCampaignSucceeded => 'Campanha bem-sucedida';
+
+  @override
+  String get uxMemoryCampaignFailed => 'Campanha mal-sucedida';
+
+  @override
+  String uxMemoryRoiTitle(String value) {
+    return 'ROI: R\$ $value';
+  }
+
+  @override
+  String get uxAuthErrorInvalidCredentials => 'E-mail ou senha incorretos.';
+
+  @override
+  String get uxAuthErrorEmailNotConfirmed => 'Confirme seu e-mail antes de entrar.';
+
+  @override
+  String get uxAuthErrorAlreadyRegistered => 'Este e-mail já está cadastrado.';
+
+  @override
+  String get uxAuthErrorRateLimited => 'Muitas tentativas. Aguarde alguns segundos.';
+
+  @override
+  String get uxAuthErrorWeakPassword => 'Senha muito fraca. Use pelo menos 6 caracteres.';
+
+  @override
+  String get uxAuthErrorGeneric => 'Não foi possível concluir a autenticação. Tente novamente.';
+
+  @override
+  String get uxErrorQuotaExceeded => 'Você atingiu o limite mensal de análises de IA do seu plano. Faça upgrade para o Pro para continuar.';
+
+  @override
+  String get uxErrorPlanRequired => 'Este recurso faz parte de um plano superior. Faça upgrade para continuar.';
+
+  @override
+  String get uxErrorModuleNotAvailable => 'Este recurso ainda não está disponível para a sua conta.';
+
+  @override
+  String get uxErrorModuleDisabled => 'Este recurso foi desativado.';
+
+  @override
+  String get uxErrorEntitlementUnavailable => 'Não foi possível verificar o seu acesso agora. Tente novamente.';
+
+  @override
+  String get uxErrorSessionExpired => 'Sua sessão expirou. Faça login novamente.';
+
+  @override
+  String get uxErrorNoConnection => 'Não foi possível conectar. Verifique sua internet.';
+
+  @override
+  String get uxErrorTimeout => 'A conexão demorou muito. Tente novamente.';
+
+  @override
+  String get uxErrorServiceUnavailable => 'Serviço temporariamente indisponível. Tente novamente.';
+
+  @override
+  String get uxOriginManual => 'Adicionado manualmente';
+
+  @override
+  String get uxOriginMarketAnalysis => 'Análise de Mercado';
+
+  @override
+  String get uxOriginAutoBootstrap => 'Bootstrap Automático';
+
+  @override
+  String get uxKnowledgeFormSourceLanguageLabel => 'Idioma do documento';
+
+  @override
+  String get uxAdminAccessDeniedTitle => 'Acesso negado';
+
+  @override
+  String get uxAdminAccessDeniedBody => 'Você não tem permissão para acessar esta área.';
+
+  @override
+  String get uxAdminPanelTitle => 'Painel Admin';
+
+  @override
+  String get uxAdminTabUsers => 'Usuários';
+
+  @override
+  String get uxAdminTabPersonas => 'Personas';
+
+  @override
+  String get uxAdminTabOverview => 'Visão Geral';
+
+  @override
+  String get uxAdminTabModules => 'Módulos';
+
+  @override
+  String get uxAdminTabDiagnostics => 'Diagnóstico';
+
+  @override
+  String get uxAdminNoUsers => 'Nenhum usuário encontrado.';
+
+  @override
+  String get uxAdminNoEmail => 'Sem e-mail';
+
+  @override
+  String uxAdminUserPlanLine(String role, String limit) {
+    return '$role · $limit gerações/mês';
+  }
+
+  @override
+  String get uxAdminDeactivate => 'Desativar';
+
+  @override
+  String get uxAdminActivate => 'Ativar';
+
+  @override
+  String get uxAdminManagePersonas => 'Gerenciar todas as personas';
+
+  @override
+  String get uxAdminNewPersona => 'Nova Persona';
+
+  @override
+  String get uxAdminOpenPersonas => 'Abrir gestão de Personas';
+
+  @override
+  String get uxAdminUserDistribution => 'Distribuição de Usuários';
+
+  @override
+  String get uxAdminTotalUsers => 'Total de Usuários';
+
+  @override
+  String get uxAdminModuleNotCommercial => 'Não comercial';
+
+  @override
+  String get uxAdminModuleTables => 'Tabelas';
+
+  @override
+  String get uxDiagActive => 'DIAGNÓSTICO ATIVO';
+
+  @override
+  String get uxDiagInactive => 'Diagnóstico inativo';
+
+  @override
+  String get uxDiagCopySessionId => 'Copiar ID da sessão';
+
+  @override
+  String get uxDiagIdCopied => 'ID copiado.';
+
+  @override
+  String uxDiagLabelValue(String label) {
+    return 'Rótulo: $label';
+  }
+
+  @override
+  String get uxDiagStopSession => 'ENCERRAR SESSÃO';
+
+  @override
+  String get uxDiagLabelHint => 'Rótulo (opcional) — ex: COMMERCIAL-E2E-001';
+
+  @override
+  String get uxDiagStartSession => 'INICIAR SESSÃO DE DIAGNÓSTICO';
+
+  @override
+  String get uxDiagStartFailed => 'Não foi possível iniciar a sessão.';
+
+  @override
+  String get uxDiagSessionsTitle => 'Sessões de Diagnóstico';
+
+  @override
+  String uxDiagSessionsLoadError(String error) {
+    return 'Erro ao carregar sessões: $error';
+  }
+
+  @override
+  String get uxDiagNoSessions => 'Nenhuma sessão registrada.';
+
+  @override
+  String uxDiagSessionShort(String id) {
+    return 'Sessão $id…';
+  }
+
+  @override
+  String get uxDiagCopyReport => 'Copiar relatório de diagnóstico';
+
+  @override
+  String get uxDiagSearchHint => 'Buscar por evento, rota ou erro…';
+
+  @override
+  String get uxDiagNoEventsMatch => 'Nenhum evento corresponde aos filtros.';
+
+  @override
+  String get uxDiagSeverity => 'Severidade';
+
+  @override
+  String get uxDiagCategory => 'Categoria';
+
+  @override
+  String get uxDiagFilterAll => 'Todas';
+
+  @override
+  String get uxDiagReportCopied => 'Relatório copiado para a área de transferência.';
+
+  @override
+  String uxDiagRouteValue(String route) {
+    return 'rota: $route';
+  }
+
+  @override
+  String get uxDriveLoginCancelled => 'Login cancelado.';
+
+  @override
+  String get uxDriveConfigError => 'Não foi possível conectar ao Google (erro de configuração).\nUse o tipo "URL" e cole o link de compartilhamento do Google Docs, ou use o tipo "Arquivo" para importar PDFs locais.';
+
+  @override
+  String get uxDriveNoInternet => 'Sem conexão com a internet. Verifique sua rede e tente novamente.';
+
+  @override
+  String get uxDriveConnectError => 'Não foi possível conectar ao Google Drive. Tente novamente.';
+
+  @override
+  String get uxDriveLoadError => 'Não foi possível carregar seus arquivos do Drive. Tente novamente.';
+
+  @override
+  String get uxDriveDownloadError => 'Não foi possível baixar o arquivo. Tente novamente.';
+
+  @override
+  String get uxDriveImportTitle => 'Importar do Google Drive';
+
+  @override
+  String get uxDriveSignOut => 'Sair';
+
+  @override
+  String get uxDriveDownloading => 'Baixando arquivo…';
+
+  @override
+  String get uxDriveConnectTitle => 'Conectar Google Drive';
+
+  @override
+  String get uxDriveConnectBody => 'Importe PDFs, Google Docs e documentos de texto diretamente para o Cofre de Conhecimento.';
+
+  @override
+  String get uxDriveConnecting => 'Conectando…';
+
+  @override
+  String get uxDriveSignInGoogle => 'Entrar com Google';
+
+  @override
+  String uxDriveConnectedAs(String name) {
+    return 'Conectado como $name';
+  }
+
+  @override
+  String get uxDriveSearchHint => 'Buscar arquivo no Drive…';
+
+  @override
+  String get uxDriveNoFiles => 'Nenhum arquivo encontrado.\nSão suportados: Google Docs, PDF, DOCX, TXT e CSV.';
+
+  @override
+  String get uxDriveTypeText => 'Texto';
+
+  @override
+  String get uxKnowledgeActionGenerateStrategy => 'Gerar Estratégia';
+
+  @override
+  String get uxKnowledgeActionCreateCampaign => 'Criar Campanha';
+
+  @override
+  String get uxKnowledgeActionTrainPersona => 'Treinar Persona';
+
+  @override
+  String get uxKnowledgeNoPersonas => 'Nenhuma persona encontrada. Crie uma persona primeiro.';
+
+  @override
+  String get uxKnowledgePersonaTrained => 'Persona treinada com sucesso!';
+
+  @override
+  String get uxKnowledgeTrain => 'Treinar';
+
+  @override
+  String get uxKnowledgeOppHigh => 'Alta Oportunidade';
+
+  @override
+  String get uxKnowledgeOppGood => 'Boa Oportunidade';
+
+  @override
+  String get uxKnowledgeOppModerate => 'Oportunidade Moderada';
+
+  @override
+  String get uxKnowledgeOppLow => 'Baixa Oportunidade';
+
+  @override
+  String get uxKnowledgeFieldProduct => 'Produto';
+
+  @override
+  String get uxKnowledgeFieldPromise => 'Promessa';
+
+  @override
+  String get uxKnowledgeFieldFormat => 'Formato';
+
+  @override
+  String get uxKnowledgeFieldPrice => 'Preço';
+
+  @override
+  String get uxKnowledgeFieldDescription => 'Descrição';
+
+  @override
+  String get uxKnowledgeStrengths => 'Pontos Fortes';
+
+  @override
+  String get uxKnowledgeWeaknesses => 'Pontos Fracos';
+
+  @override
+  String get uxKnowledgeImprovements => 'Melhorias';
+
+  @override
+  String get uxResultSavedToHistory => 'Salvo no histórico!';
+
+  @override
+  String get uxResultSaveError => 'Erro ao salvar. Tente novamente.';
+
+  @override
+  String get uxPostImproved => 'Post Melhorado';
+
+  @override
+  String get uxPostProfessional => 'Versão Profissional';
+
+  @override
+  String get uxPostCasual => 'Versão Descontraída';
+
+  @override
+  String get uxPostPersuasive => 'Versão Persuasiva';
+
+  @override
+  String get uxPostCommentReply => 'Sugestão de Resposta a Comentários';
+
+  @override
+  String get uxContentCopied => 'Conteúdo copiado com sucesso!';
+
+  @override
+  String get uxResultTitle => 'Resultado';
+
+  @override
+  String get uxCopyAll => 'Copiar Tudo';
+
+  @override
+  String uxResultGeneratedIn(String seconds) {
+    return 'Gerado em $seconds segundos';
+  }
+
+  @override
+  String get uxScoreClarity => 'Clareza';
+
+  @override
+  String get uxScoreEngagement => 'Engajamento';
+
+  @override
+  String get uxScoreClarityShort => 'C';
+
+  @override
+  String get uxScoreImpactShort => 'I';
+
+  @override
+  String get uxScoreEngagementShort => 'E';
+
+  @override
+  String uxDateAtTime(String date, String time) {
+    return '$date às $time';
+  }
+
+  @override
+  String get uxHistoryItemLoadError => 'Não foi possível carregar este item.';
+
+  @override
+  String get uxHistoryOriginalText => 'Texto original';
+
+  @override
+  String get uxHistoryLoadError => 'Não foi possível carregar o histórico.';
+
+  @override
+  String get uxHistoryEmptyTitle => 'Nenhum conteúdo salvo ainda';
+
+  @override
+  String get uxHistoryEmptyBody => 'Volte à tela principal, escreva um post\ne toque em "Salvar" após gerar o resultado.';
+
+  @override
+  String get uxContentTypeBook => 'Livro';
+
+  @override
+  String get uxContentTypeEbook => 'E-book';
+
+  @override
+  String get uxContentTypeArticle => 'Artigo';
+
+  @override
+  String get uxContentTypePost => 'Post';
+
+  @override
+  String get uxContentTypeIdea => 'Ideia';
+
+  @override
+  String get uxContentTypeRawText => 'Texto Bruto';
+
+  @override
+  String get uxContentTypeCampaign => 'Campanha';
+
+  @override
+  String get uxContentTypeDigitalProduct => 'Produto Digital';
+
+  @override
+  String get uxContentTypeBrand => 'Marca';
+
+  @override
+  String get uxContentTypeProject => 'Projeto';
+
+  @override
+  String get uxContentFormEditTitle => 'Editar Item';
+
+  @override
+  String get uxContentFormNewTitle => 'Novo Item';
+
+  @override
+  String get uxContentFormTypeLabel => 'Tipo de conteúdo';
+
+  @override
+  String get uxContentFormTitleLabel => 'Título *';
+
+  @override
+  String get uxContentFormTitleHint => 'Nome do conteúdo';
+
+  @override
+  String get uxFieldRequired => 'Obrigatório';
+
+  @override
+  String get uxContentFormDescLabel => 'Descrição / Resumo';
+
+  @override
+  String get uxContentFormDescHint => 'Breve descrição...';
+
+  @override
+  String get uxContentFormBodyLabel => 'Texto Base / Conteúdo';
+
+  @override
+  String get uxContentFormBodyHint => 'Cole o texto, trecho ou anotações...';
+
+  @override
+  String get uxContentFormNicheLabel => 'Nicho';
+
+  @override
+  String get uxContentFormNicheHint => 'Ex: Marketing Digital, Fitness';
+
+  @override
+  String get uxContentFormAudienceLabel => 'Público-alvo';
+
+  @override
+  String get uxContentFormAudienceHint => 'Ex: Empreendedores iniciantes';
+
+  @override
+  String get uxContentFormSaveChanges => 'Salvar Alterações';
+
+  @override
+  String get uxContentFormAddToLibrary => 'Adicionar à Biblioteca';
+
+  @override
+  String get uxAdvisorRoleStrategy => 'Estratégia';
+
+  @override
+  String get uxAdvisorRoleMarketing => 'Marketing';
+
+  @override
+  String get uxAdvisorRoleMonetization => 'Monetização';
+
+  @override
+  String get uxAdvisorRoleBusiness => 'Negócios';
+
+  @override
+  String get uxAdvisorRoleGeneral => 'Geral';
+
+  @override
+  String get uxAdvisorStyleExecutive => 'Executivo';
+
+  @override
+  String get uxAdvisorStyleAnalytical => 'Analítico';
+
+  @override
+  String get uxAdvisorStyleTeacher => 'Professor';
+
+  @override
+  String get uxAdvisorStyleMentor => 'Mentor';
+
+  @override
+  String get uxAdvisorStyleDirect => 'Direto';
+
+  @override
+  String get uxAdvisorStyleExecutiveDesc => 'Direto ao ponto, orientado a resultados e ROI.';
+
+  @override
+  String get uxAdvisorStyleAnalyticalDesc => 'Dados primeiro, análise profunda antes de recomendar.';
+
+  @override
+  String get uxAdvisorStyleTeacherDesc => 'Explica cada conceito, ideal para aprendizado.';
+
+  @override
+  String get uxAdvisorStyleMentorDesc => 'Guia com experiência, questionamentos estratégicos.';
+
+  @override
+  String get uxAdvisorStyleDirectDesc => 'Sem rodeios, vai direto para a solução.';
+
+  @override
+  String get uxAdvisorNext => 'Próximo';
+
+  @override
+  String get uxAdvisorActivate => 'Ativar Advisor';
+
+  @override
+  String get uxAdvisorNameTitle => 'Escolha o nome do seu\nPersonal AI Advisor';
+
+  @override
+  String get uxAdvisorNameSubtitle => 'Este será seu parceiro estratégico de negócios.';
+
+  @override
+  String get uxAdvisorCustomNameHint => 'Ou digite um nome personalizado...';
+
+  @override
+  String get uxAdvisorRoleTitle => 'Qual será a especialidade\ndo seu Advisor?';
+
+  @override
+  String get uxAdvisorRoleSubtitle => 'Define o foco das análises e recomendações.';
+
+  @override
+  String uxAdvisorStyleTitle(String name) {
+    return 'Como $name deve\nse comunicar?';
+  }
+
+  @override
+  String get uxAdvisorStyleSubtitle => 'Define o estilo das respostas e interações.';
+
+  @override
+  String get uxImpactInvestigationActive => 'Ativa';
+
+  @override
+  String get uxImpactInvestigationArchived => 'Arquivada';
+
+  @override
+  String get uxSupportSubjectProblemReport => 'Relato de problema';
+
+  @override
+  String get uxSupportSubjectFeedback => 'Feedback';
+
+  @override
+  String uxStrategyScoreWeight(String weight) {
+    return 'peso $weight';
+  }
+
+  @override
+  String get uxActionPriorityShort => 'prio';
+
+  @override
+  String get uxErrorEmptyResponse => 'O serviço não retornou dados. Tente novamente.';
+
+  @override
+  String get uxErrorNotFound => 'Item não encontrado.';
+
+  @override
+  String get uxErrorFileTooLarge => 'Arquivo muito grande para importar. O limite é de aproximadamente 6 MB.';
+
+  @override
+  String get uxErrorFileUnreadable => 'Não foi possível ler o arquivo.';
+
+  @override
+  String get uxErrorFileTimeout => 'Tempo esgotado ao processar o arquivo. Tente novamente.';
+
+  @override
+  String get uxErrorExtractionTimeout => 'O servidor demorou demais para extrair o texto. Tente novamente.';
+
+  @override
+  String get uxErrorExtractedTextTooShort => 'Conteúdo extraído muito curto. O arquivo pode estar protegido ou corrompido — tente copiar e colar o texto manualmente.';
+
+  @override
+  String get uxErrorGoogleNotConfigured => 'Login com Google não está configurado neste ambiente.';
+
+  @override
+  String get uxErrorGoogleCredentials => 'Não foi possível obter as credenciais do Google.';
+
+  @override
+  String get uxErrorSignUpFailed => 'Cadastro falhou. Tente novamente.';
+
+  @override
+  String get uxAllocHoursNegative => 'Horas não podem ser negativas.';
+
+  @override
+  String get uxAllocHoursTooHigh => 'Valor de horas excede o limite permitido.';
+
+  @override
+  String get uxAllocBudgetNegative => 'Orçamento não pode ser negativo.';
+
+  @override
+  String get uxAllocBudgetTooHigh => 'Valor de orçamento excede o limite permitido.';
+
+  @override
+  String uxOppAskIveMessage(String title, String score) {
+    return 'Analise a oportunidade "$title" (score $score) e diga como aproveitá-la.';
+  }
+
+  @override
+  String uxPersonaTrainingSummary(String title, String tone, String style) {
+    return 'Treinamento com: $title. Tom: $tone. Estilo: $style.';
+  }
+
+  @override
+  String get uxCalStatusIdea => 'Ideia';
+
+  @override
+  String get uxCalStatusPlanned => 'Planejado';
+
+  @override
+  String get uxCalStatusGenerated => 'Gerado';
+
+  @override
+  String get uxCalStatusApproved => 'Aprovado';
+
+  @override
+  String get uxCalStatusReadyToPublish => 'Pronto p/ Publicar';
+
+  @override
+  String get uxCalStatusPublished => 'Publicado';
+
+  @override
+  String get uxCalStatusPublishFailed => 'Falha na Publicação';
+
+  @override
+  String get uxCalStatusArchived => 'Arquivado';
+
+  @override
+  String get uxCalFormatShortPost => 'Post Curto';
+
+  @override
+  String get uxCalFormatLongPost => 'Post Longo';
+
+  @override
+  String get uxCalFormatCarousel => 'Carrossel';
+
+  @override
+  String get uxCalFormatReels => 'Reels/Vídeo';
+
+  @override
+  String get uxCalFormatEmail => 'E-mail';
+
+  @override
+  String get uxCalFormatSeoArticle => 'Artigo SEO';
+
+  @override
+  String get uxCalFormatSalesCta => 'CTA de Venda';
+
+  @override
+  String get uxCalFormatThread => 'Thread/X';
+
+  @override
+  String get bootstrapStepStarting => 'Iniciando';
+
+  @override
+  String get bootstrapStepGeneratingOpportunities => 'Gerando oportunidades';
+
+  @override
+  String get bootstrapStepGeneratingActions => 'Gerando ações';
+
+  @override
+  String get bootstrapStepGeneratingRevenuePlan => 'Gerando plano de receita';
+
+  @override
+  String get bootstrapStepTrainingPersonas => 'Treinando personas';
+
+  @override
+  String bootstrapProgressProject(int current, int total) {
+    return 'Projeto $current/$total';
+  }
+
+  @override
+  String bootstrapProgressProjectStep(int current, int total, String step) {
+    return 'Projeto $current/$total — $step';
+  }
+
+  @override
+  String get ecoGateKnowledgeCoverage => 'Cobertura de conhecimento';
+
+  @override
+  String get ecoGateLearningScore => 'Score de aprendizado';
+
+  @override
+  String get ecoGateIntelligenceProfile => 'Perfil de inteligência';
 }

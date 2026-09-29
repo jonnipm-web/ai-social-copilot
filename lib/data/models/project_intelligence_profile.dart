@@ -1,3 +1,4 @@
+import '../../l10n/app_localizations.dart';
 import 'knowledge_coverage.dart';
 import 'market_analysis.dart';
 import 'project.dart';
@@ -31,12 +32,13 @@ class ProjectIntelligenceProfile {
     required this.computedAt,
   });
 
-  String get maturityLabel {
+  // R16 — [maturityStage] stays a canonical code; this is display only.
+  String maturityLabel(AppLocalizations l10n) {
     switch (maturityStage) {
-      case 'maduro':    return 'Maduro';
-      case 'crescendo': return 'Crescendo';
-      case 'validando': return 'Validando';
-      default:          return 'Ideia';
+      case 'maduro':    return l10n.ctxMaturityMature;
+      case 'crescendo': return l10n.ctxMaturityGrowing;
+      case 'validando': return l10n.ctxMaturityValidating;
+      default:          return l10n.ctxMaturityIdea;
     }
   }
 
@@ -51,9 +53,20 @@ class ProjectIntelligenceProfile {
 
   bool get hasEnoughData => coverage.score >= 30 && analysis != null;
 
-  String? get dataWarning {
-    if (analysis == null) return 'Execute uma análise de mercado para obter inteligência.';
-    if (coverage.score < 20) return 'Dados insuficientes. Adicione ações e oportunidades.';
+  String? dataWarning(AppLocalizations l10n) {
+    if (analysis == null) return l10n.ctxProfileWarningNoAnalysis;
+    if (coverage.score < 20) return l10n.ctxProfileWarningLowData;
     return null;
   }
+
+  // R16 — niche/targetAudience/monetizationModel are EMPTY when unknown
+  // (language-neutral; previously the PT sentinel 'Não definido').
+  bool get hasNiche             => niche.trim().isNotEmpty;
+  bool get hasTargetAudience    => targetAudience.trim().isNotEmpty;
+  bool get hasMonetizationModel => monetizationModel.trim().isNotEmpty;
+
+  /// Display value for an optional identity field: the value itself, or the
+  /// localized "not defined" label when empty.
+  static String displayOrNotDefined(String value, AppLocalizations l10n) =>
+      value.trim().isEmpty ? l10n.ctxProfileNotDefined : value;
 }

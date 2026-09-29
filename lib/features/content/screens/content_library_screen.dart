@@ -8,6 +8,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../providers/content_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 
 class ContentLibraryScreen extends ConsumerStatefulWidget {
   const ContentLibraryScreen({super.key});
@@ -91,7 +92,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
                   onTap: () => setState(() => _selectedType = null),
                 ),
                 ...ContentItem.types.map((t) => _TypeChip(
-                      label: ContentItem.typeLabels[t] ?? t,
+                      label: ContentItem.localizedTypeLabel(t, l10n),
                       selected: _selectedType == t,
                       onTap: () => setState(() => _selectedType = t),
                     )),
@@ -273,7 +274,7 @@ class _ContentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final typeLabel = ContentItem.typeLabels[item.type] ?? item.type;
+    final typeLabel = ContentItem.localizedTypeLabel(item.type, l10n);
     final typeColor = _typeColor(item.type);
 
     return Card(
@@ -381,7 +382,7 @@ class _ContentCard extends StatelessWidget {
                             if (context.mounted) {
                               ScaffoldMessenger.of(context)
                                   .showSnackBar(SnackBar(
-                                content: Text(l10n.contentLibraryDeleteError('$e')),
+                                content: Text(l10n.contentLibraryDeleteError(extractErrorMessage(e, l10n))),
                                 backgroundColor:
                                     const Color(0xFFF44336),
                               ));

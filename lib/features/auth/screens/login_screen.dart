@@ -52,7 +52,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     final authState = ref.read(authNotifierProvider);
     authState.whenOrNull(
-      error: (e, _) => showErrorSnack(context, extractErrorMessage(e)),
+      error: (e, _) => showErrorSnack(context, extractErrorMessage(e, AppLocalizations.of(context)!, AppLocalizations.of(context)!.uxAuthErrorGeneric)),
       data: (_) => context.go(AppConstants.routeHome),
     );
   }
@@ -65,7 +65,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     final authState = ref.read(authNotifierProvider);
     if (authState.hasError) {
-      showErrorSnack(context, extractErrorMessage(authState.error));
+      showErrorSnack(context, extractErrorMessage(authState.error, AppLocalizations.of(context)!, AppLocalizations.of(context)!.uxAuthErrorGeneric));
       return;
     }
 

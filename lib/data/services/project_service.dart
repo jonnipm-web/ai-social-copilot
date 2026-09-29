@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/project.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/utils/app_exceptions.dart';
 
 /// Interface abstrata — permite mock em testes sem depender do Supabase.
 abstract class ProjectServiceInterface {
@@ -36,7 +37,7 @@ class ProjectService implements ProjectServiceInterface {
   @override
   Future<Project> create(Map<String, dynamic> data) async {
     final uid = _client.auth.currentUser?.id;
-    if (uid == null) throw Exception('Usuário não autenticado.');
+    if (uid == null) throw const NotAuthenticatedException();
     final row = await _client
         .from(AppConstants.tableProjects)
         .insert({...data, 'user_id': uid})

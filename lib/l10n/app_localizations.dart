@@ -8207,6 +8207,3894 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'outro idioma'**
   String get r16LanguageNameOther;
+
+  /// No description provided for @ecoVerdictScale.
+  ///
+  /// In pt, this message translates to:
+  /// **'ESCALAR'**
+  String get ecoVerdictScale;
+
+  /// No description provided for @ecoVerdictAccelerate.
+  ///
+  /// In pt, this message translates to:
+  /// **'ACELERAR'**
+  String get ecoVerdictAccelerate;
+
+  /// No description provided for @ecoVerdictMaintain.
+  ///
+  /// In pt, this message translates to:
+  /// **'MANTER'**
+  String get ecoVerdictMaintain;
+
+  /// No description provided for @ecoVerdictValidate.
+  ///
+  /// In pt, this message translates to:
+  /// **'VALIDAR'**
+  String get ecoVerdictValidate;
+
+  /// No description provided for @ecoVerdictPause.
+  ///
+  /// In pt, this message translates to:
+  /// **'PAUSAR'**
+  String get ecoVerdictPause;
+
+  /// No description provided for @ecoVerdictIncomplete.
+  ///
+  /// In pt, this message translates to:
+  /// **'ANÁLISE INCOMPLETA'**
+  String get ecoVerdictIncomplete;
+
+  /// No description provided for @ecoRecTypeInvest.
+  ///
+  /// In pt, this message translates to:
+  /// **'Investir'**
+  String get ecoRecTypeInvest;
+
+  /// No description provided for @ecoRecTypeExecute.
+  ///
+  /// In pt, this message translates to:
+  /// **'Executar'**
+  String get ecoRecTypeExecute;
+
+  /// No description provided for @ecoRecTypeAction.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ação'**
+  String get ecoRecTypeAction;
+
+  /// No description provided for @ecoRecTypePause.
+  ///
+  /// In pt, this message translates to:
+  /// **'Pausar'**
+  String get ecoRecTypePause;
+
+  /// No description provided for @ecoRecTypeRisk.
+  ///
+  /// In pt, this message translates to:
+  /// **'Risco'**
+  String get ecoRecTypeRisk;
+
+  /// No description provided for @ecoRecTypeQuickWin.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ganho Rápido'**
+  String get ecoRecTypeQuickWin;
+
+  /// No description provided for @ecoRecTypeWaste.
+  ///
+  /// In pt, this message translates to:
+  /// **'Desperdício'**
+  String get ecoRecTypeWaste;
+
+  /// No description provided for @ecoRecScaleTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Escale "{name}"'**
+  String ecoRecScaleTitle(String name);
+
+  /// No description provided for @ecoRecInvestTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Invista mais em "{name}"'**
+  String ecoRecInvestTitle(String name);
+
+  /// No description provided for @ecoRecTopReason.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ecosystem Score {score}/100 — maior potencial do seu portfólio'**
+  String ecoRecTopReason(int score);
+
+  /// No description provided for @ecoRecTopData.
+  ///
+  /// In pt, this message translates to:
+  /// **'Score: oportunidade {opportunity}, fit {fit}, mercado {market}'**
+  String ecoRecTopData(int opportunity, int fit, int market);
+
+  /// No description provided for @ecoRecTopImpact.
+  ///
+  /// In pt, this message translates to:
+  /// **'Aceleração de receita e execução de {count} oportunidades mapeadas'**
+  String ecoRecTopImpact(int count);
+
+  /// No description provided for @ecoRecValidateTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Valide as premissas de "{name}"'**
+  String ecoRecValidateTitle(String name);
+
+  /// No description provided for @ecoRecValidateReason.
+  ///
+  /// In pt, this message translates to:
+  /// **'Score {score}/100 — potencial presente mas dados ainda insuficientes para decisão'**
+  String ecoRecValidateReason(int score);
+
+  /// No description provided for @ecoRecValidateData.
+  ///
+  /// In pt, this message translates to:
+  /// **'Market score {market}, ROI {roi}, execução {execution}'**
+  String ecoRecValidateData(int market, int roi, int execution);
+
+  /// No description provided for @ecoRecValidateImpact.
+  ///
+  /// In pt, this message translates to:
+  /// **'Clareza estratégica para escalar ou pivotar'**
+  String get ecoRecValidateImpact;
+
+  /// No description provided for @ecoRecOppTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Execute a oportunidade "{title}"'**
+  String ecoRecOppTitle(String title);
+
+  /// No description provided for @ecoRecOppReason.
+  ///
+  /// In pt, this message translates to:
+  /// **'Score final {score}/100 — maior ROI esperado do Lab'**
+  String ecoRecOppReason(int score);
+
+  /// No description provided for @ecoRecOppData.
+  ///
+  /// In pt, this message translates to:
+  /// **'Market score {market}, revenue score {revenue}'**
+  String ecoRecOppData(int market, int revenue);
+
+  /// No description provided for @ecoRecOppImpactFallback.
+  ///
+  /// In pt, this message translates to:
+  /// **'Alta alavancagem do portfólio'**
+  String get ecoRecOppImpactFallback;
+
+  /// No description provided for @ecoRecQuickWinTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ganho rápido: "{title}"'**
+  String ecoRecQuickWinTitle(String title);
+
+  /// No description provided for @ecoRecQuickWinReason.
+  ///
+  /// In pt, this message translates to:
+  /// **'Impacto {impact} com esforço apenas {effort} — melhor relação do portfólio'**
+  String ecoRecQuickWinReason(int impact, int effort);
+
+  /// No description provided for @ecoRecQuickWinData.
+  ///
+  /// In pt, this message translates to:
+  /// **'Impact score {impact}, effort score {effort}'**
+  String ecoRecQuickWinData(int impact, int effort);
+
+  /// No description provided for @ecoRecQuickWinImpact.
+  ///
+  /// In pt, this message translates to:
+  /// **'Execução rápida com alto retorno proporcional'**
+  String get ecoRecQuickWinImpact;
+
+  /// No description provided for @ecoRecPauseTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Pause ou revise "{name}"'**
+  String ecoRecPauseTitle(String name);
+
+  /// No description provided for @ecoRecPauseReason.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ecosystem Score {score}/100 — recursos consumidos sem retorno visível'**
+  String ecoRecPauseReason(int score);
+
+  /// No description provided for @ecoRecPauseData.
+  ///
+  /// In pt, this message translates to:
+  /// **'ROI score {roi}, momentum {momentum}, {count} ações sem conclusão'**
+  String ecoRecPauseData(int roi, int momentum, int count);
+
+  /// No description provided for @ecoRecPauseImpact.
+  ///
+  /// In pt, this message translates to:
+  /// **'Liberação de tempo e foco para projetos de maior potencial'**
+  String get ecoRecPauseImpact;
+
+  /// No description provided for @ecoRecRiskTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Risco em "{name}": {risk}'**
+  String ecoRecRiskTitle(String name, String risk);
+
+  /// No description provided for @ecoRecRiskReason.
+  ///
+  /// In pt, this message translates to:
+  /// **'Identificado pelo Ecosystem Intelligence com base nos dados do projeto'**
+  String get ecoRecRiskReason;
+
+  /// No description provided for @ecoRecRiskData.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ecosystem Score {score}, momentum {momentum}'**
+  String ecoRecRiskData(int score, int momentum);
+
+  /// No description provided for @ecoRecRiskImpact.
+  ///
+  /// In pt, this message translates to:
+  /// **'Mitigação preventiva antes do impacto no portfólio'**
+  String get ecoRecRiskImpact;
+
+  /// No description provided for @ecoAllocEmptySummary.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhum projeto com score suficiente para alocação. Execute o Knowledge → Action Engine para gerar inteligência operacional.'**
+  String get ecoAllocEmptySummary;
+
+  /// No description provided for @ecoAllocUnitHours.
+  ///
+  /// In pt, this message translates to:
+  /// **'horas'**
+  String get ecoAllocUnitHours;
+
+  /// No description provided for @ecoAllocResourceBudget.
+  ///
+  /// In pt, this message translates to:
+  /// **'budget'**
+  String get ecoAllocResourceBudget;
+
+  /// No description provided for @ecoAllocSummary.
+  ///
+  /// In pt, this message translates to:
+  /// **'Priorize "{name}" com {amount} {unit} ({percent}% do orçamento). Score: {score}/100.'**
+  String ecoAllocSummary(String name, String amount, String unit, int percent, int score);
+
+  /// No description provided for @ecoAllocReasonScale.
+  ///
+  /// In pt, this message translates to:
+  /// **'Maior potencial — escale o investimento em {resource}'**
+  String ecoAllocReasonScale(String resource);
+
+  /// No description provided for @ecoAllocReasonAccelerate.
+  ///
+  /// In pt, this message translates to:
+  /// **'Alto potencial — maximize o {resource} aqui'**
+  String ecoAllocReasonAccelerate(String resource);
+
+  /// No description provided for @ecoAllocReasonMaintain.
+  ///
+  /// In pt, this message translates to:
+  /// **'Projeto saudável — mantenha investimento consistente'**
+  String get ecoAllocReasonMaintain;
+
+  /// No description provided for @ecoAllocReasonValidate.
+  ///
+  /// In pt, this message translates to:
+  /// **'Alocação reduzida até validar premissas'**
+  String get ecoAllocReasonValidate;
+
+  /// No description provided for @ecoAllocReasonPause.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não recomendado — considere pausar este projeto'**
+  String get ecoAllocReasonPause;
+
+  /// No description provided for @ecoResourceAllocationTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Alocação de Recursos'**
+  String get ecoResourceAllocationTitle;
+
+  /// No description provided for @ecoAllocModeHours.
+  ///
+  /// In pt, this message translates to:
+  /// **'⏱ Tempo (Horas)'**
+  String get ecoAllocModeHours;
+
+  /// No description provided for @ecoAllocModeMoney.
+  ///
+  /// In pt, this message translates to:
+  /// **'💰 Dinheiro (R$)'**
+  String get ecoAllocModeMoney;
+
+  /// No description provided for @ecoAllocBudgetQuestion.
+  ///
+  /// In pt, this message translates to:
+  /// **'Quanto tenho disponível?'**
+  String get ecoAllocBudgetQuestion;
+
+  /// No description provided for @ecoAllocExecutiveRecommendation.
+  ///
+  /// In pt, this message translates to:
+  /// **'Recomendação Executiva'**
+  String get ecoAllocExecutiveRecommendation;
+
+  /// No description provided for @ecoAllocEmpty.
+  ///
+  /// In pt, this message translates to:
+  /// **'Adicione projetos com análises para ver a alocação.'**
+  String get ecoAllocEmpty;
+
+  /// No description provided for @ecoAllocDistribution.
+  ///
+  /// In pt, this message translates to:
+  /// **'Distribuição das {total} {unit}'**
+  String ecoAllocDistribution(int total, String unit);
+
+  /// No description provided for @ecoBriefNewAnalysesTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'{count} nova(s) análise(s) de mercado'**
+  String ecoBriefNewAnalysesTitle(int count);
+
+  /// No description provided for @ecoBriefNewAnalysesDetail.
+  ///
+  /// In pt, this message translates to:
+  /// **'Novas oportunidades mapeadas pelo Market Intelligence'**
+  String get ecoBriefNewAnalysesDetail;
+
+  /// No description provided for @ecoBriefNewActionsTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'{count} nova(s) ação(ões) criada(s)'**
+  String ecoBriefNewActionsTitle(int count);
+
+  /// No description provided for @ecoBriefNewActionsDetail.
+  ///
+  /// In pt, this message translates to:
+  /// **'Action Engine em movimento'**
+  String get ecoBriefNewActionsDetail;
+
+  /// No description provided for @ecoBriefNewLabTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'{count} novo(s) item(ns) no Opportunity Lab'**
+  String ecoBriefNewLabTitle(int count);
+
+  /// No description provided for @ecoBriefNewLabDetail.
+  ///
+  /// In pt, this message translates to:
+  /// **'Oportunidades sendo avaliadas'**
+  String get ecoBriefNewLabDetail;
+
+  /// No description provided for @ecoBriefNewRoiTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'{count} novo(s) registro(s) de ROI'**
+  String ecoBriefNewRoiTitle(int count);
+
+  /// No description provided for @ecoBriefNewRoiDetail.
+  ///
+  /// In pt, this message translates to:
+  /// **'Resultados financeiros atualizados'**
+  String get ecoBriefNewRoiDetail;
+
+  /// No description provided for @ecoBriefNoActivityTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhuma atividade nova esta semana'**
+  String get ecoBriefNoActivityTitle;
+
+  /// No description provided for @ecoBriefNoActivityDetail.
+  ///
+  /// In pt, this message translates to:
+  /// **'Adicione análises ou ações para gerar insights'**
+  String get ecoBriefNoActivityDetail;
+
+  /// No description provided for @ecoBriefProjectScoreTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'{name} — Ecosystem Score {score}'**
+  String ecoBriefProjectScoreTitle(String name, int score);
+
+  /// No description provided for @ecoBriefRecommendationDetail.
+  ///
+  /// In pt, this message translates to:
+  /// **'Recomendação: {verdict}. {note}'**
+  String ecoBriefRecommendationDetail(String verdict, String note);
+
+  /// No description provided for @ecoBriefGrewFallback.
+  ///
+  /// In pt, this message translates to:
+  /// **'Alto potencial identificado.'**
+  String get ecoBriefGrewFallback;
+
+  /// No description provided for @ecoBriefDeclinedFallback.
+  ///
+  /// In pt, this message translates to:
+  /// **'Baixo retorno identificado.'**
+  String get ecoBriefDeclinedFallback;
+
+  /// No description provided for @ecoBriefToPauseDetail.
+  ///
+  /// In pt, this message translates to:
+  /// **'Score {score}/100 — libere recursos para projetos de maior potencial'**
+  String ecoBriefToPauseDetail(int score);
+
+  /// No description provided for @ecoBriefRiskProjectDetail.
+  ///
+  /// In pt, this message translates to:
+  /// **'Projeto: {name}'**
+  String ecoBriefRiskProjectDetail(String name);
+
+  /// No description provided for @ecoBriefSummaryEmpty.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhum projeto registrado. Comece adicionando projetos e executando análises.'**
+  String get ecoBriefSummaryEmpty;
+
+  /// No description provided for @ecoBriefSummary.
+  ///
+  /// In pt, this message translates to:
+  /// **'Seu ecossistema tem {count} projeto(s) com saúde geral de {health}/100. {growing} projeto(s) em crescimento, {pausing} requerem revisão.'**
+  String ecoBriefSummary(int count, int health, int growing, int pausing);
+
+  /// No description provided for @ecoExecNoActions.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sem ações cadastradas'**
+  String get ecoExecNoActions;
+
+  /// No description provided for @ecoExecRoadmapPresent.
+  ///
+  /// In pt, this message translates to:
+  /// **'Roadmap presente → +20pts'**
+  String get ecoExecRoadmapPresent;
+
+  /// No description provided for @ecoExecNoRoadmap.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sem roadmap → +0pts'**
+  String get ecoExecNoRoadmap;
+
+  /// No description provided for @ecoExecCompleted.
+  ///
+  /// In pt, this message translates to:
+  /// **'{completed}/{total} ações concluídas → {points}pts'**
+  String ecoExecCompleted(int completed, int total, int points);
+
+  /// No description provided for @ecoExecApproved.
+  ///
+  /// In pt, this message translates to:
+  /// **'{approved} oportunidades aprovadas × 10 = {points}pts (max 30)'**
+  String ecoExecApproved(int approved, int points);
+
+  /// No description provided for @ecoStrengthMarket.
+  ///
+  /// In pt, this message translates to:
+  /// **'Mercado com alto potencial identificado'**
+  String get ecoStrengthMarket;
+
+  /// No description provided for @ecoStrengthOpportunity.
+  ///
+  /// In pt, this message translates to:
+  /// **'Alta pontuação de oportunidade de mercado'**
+  String get ecoStrengthOpportunity;
+
+  /// No description provided for @ecoStrengthRoi.
+  ///
+  /// In pt, this message translates to:
+  /// **'ROI positivo registrado'**
+  String get ecoStrengthRoi;
+
+  /// No description provided for @ecoStrengthSynergy.
+  ///
+  /// In pt, this message translates to:
+  /// **'Alta sinergia com o ecossistema'**
+  String get ecoStrengthSynergy;
+
+  /// No description provided for @ecoStrengthMomentum.
+  ///
+  /// In pt, this message translates to:
+  /// **'Atividade recente elevada'**
+  String get ecoStrengthMomentum;
+
+  /// No description provided for @ecoStrengthPriority.
+  ///
+  /// In pt, this message translates to:
+  /// **'Alta prioridade estratégica'**
+  String get ecoStrengthPriority;
+
+  /// No description provided for @ecoStrengthDefault.
+  ///
+  /// In pt, this message translates to:
+  /// **'Projeto com potencial a desenvolver'**
+  String get ecoStrengthDefault;
+
+  /// No description provided for @ecoRiskInsufficientData.
+  ///
+  /// In pt, this message translates to:
+  /// **'Dados insuficientes para análise de valor'**
+  String get ecoRiskInsufficientData;
+
+  /// No description provided for @ecoRiskPendingActions.
+  ///
+  /// In pt, this message translates to:
+  /// **'{count} ações pendentes acumuladas sem execução'**
+  String ecoRiskPendingActions(int count);
+
+  /// No description provided for @ecoRiskNoRoi.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sem ROI registrado apesar das ações em andamento'**
+  String get ecoRiskNoRoi;
+
+  /// No description provided for @ecoRiskLowActivity.
+  ///
+  /// In pt, this message translates to:
+  /// **'Baixa atividade nos últimos 30 dias'**
+  String get ecoRiskLowActivity;
+
+  /// No description provided for @ecoRiskIdeaStage.
+  ///
+  /// In pt, this message translates to:
+  /// **'Projeto ainda em fase de ideia — sem execução iniciada'**
+  String get ecoRiskIdeaStage;
+
+  /// No description provided for @ecoIveCriticalProjects.
+  ///
+  /// In pt, this message translates to:
+  /// **'Atenção: {count} projeto(s) com score crítico. Posso ajudar a resolver.'**
+  String ecoIveCriticalProjects(int count);
+
+  /// No description provided for @ecoDecisionCenterTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Central de Decisões'**
+  String get ecoDecisionCenterTitle;
+
+  /// No description provided for @ecoTabTop5.
+  ///
+  /// In pt, this message translates to:
+  /// **'TOP 5'**
+  String get ecoTabTop5;
+
+  /// No description provided for @ecoTabEcosystem.
+  ///
+  /// In pt, this message translates to:
+  /// **'ECOSSISTEMA'**
+  String get ecoTabEcosystem;
+
+  /// No description provided for @ecoTabRecommendations.
+  ///
+  /// In pt, this message translates to:
+  /// **'RECOMENDAÇÕES'**
+  String get ecoTabRecommendations;
+
+  /// No description provided for @ecoWeeklyBriefingTooltip.
+  ///
+  /// In pt, this message translates to:
+  /// **'Briefing Semanal'**
+  String get ecoWeeklyBriefingTooltip;
+
+  /// No description provided for @ecoBootstrapPending.
+  ///
+  /// In pt, this message translates to:
+  /// **'Projetos sem inteligência operacional: {count}'**
+  String ecoBootstrapPending(int count);
+
+  /// No description provided for @ecoHealthTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Saúde do Ecossistema'**
+  String get ecoHealthTitle;
+
+  /// No description provided for @ecoIveAskHealth.
+  ///
+  /// In pt, this message translates to:
+  /// **'Por que minha saúde do ecossistema está em {health}? O que está limitando e como posso melhorar?'**
+  String ecoIveAskHealth(int health);
+
+  /// No description provided for @ecoHealthNarrativeExcellent.
+  ///
+  /// In pt, this message translates to:
+  /// **'Seu ecossistema está operando no máximo potencial. Os projetos estão sincronizados e escalando.'**
+  String get ecoHealthNarrativeExcellent;
+
+  /// No description provided for @ecoHealthNarrativeHealthy.
+  ///
+  /// In pt, this message translates to:
+  /// **'Seu ecossistema está saudável e crescendo. Existem alavancas prontas para acelerar.'**
+  String get ecoHealthNarrativeHealthy;
+
+  /// No description provided for @ecoHealthNarrativeStable.
+  ///
+  /// In pt, this message translates to:
+  /// **'Seu ecossistema está estável. Algumas áreas precisam de atenção para desbloquear crescimento.'**
+  String get ecoHealthNarrativeStable;
+
+  /// No description provided for @ecoHealthNarrativeValidating.
+  ///
+  /// In pt, this message translates to:
+  /// **'Seu ecossistema está em fase de validação. Adicione mais análises para elevar a inteligência.'**
+  String get ecoHealthNarrativeValidating;
+
+  /// No description provided for @ecoHealthNarrativeReview.
+  ///
+  /// In pt, this message translates to:
+  /// **'Seu ecossistema precisa de revisão estratégica. A IVE pode ajudar a identificar os bloqueios.'**
+  String get ecoHealthNarrativeReview;
+
+  /// No description provided for @ecoErrorGeneric.
+  ///
+  /// In pt, this message translates to:
+  /// **'Erro: {error}'**
+  String ecoErrorGeneric(String error);
+
+  /// No description provided for @ecoTop5Empty.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhum projeto encontrado. Adicione textos no Cofre e crie projetos.'**
+  String get ecoTop5Empty;
+
+  /// No description provided for @ecoTop5ProjectsTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'🚀 TOP 5 PROJETOS'**
+  String get ecoTop5ProjectsTitle;
+
+  /// No description provided for @ecoTop5ProjectsSubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ranqueados por Ecosystem Score'**
+  String get ecoTop5ProjectsSubtitle;
+
+  /// No description provided for @ecoTop5OpportunitiesTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'💡 TOP 5 OPORTUNIDADES'**
+  String get ecoTop5OpportunitiesTitle;
+
+  /// No description provided for @ecoTop5OpportunitiesSubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Maior potencial do Opportunity Lab'**
+  String get ecoTop5OpportunitiesSubtitle;
+
+  /// No description provided for @ecoOppExplanation.
+  ///
+  /// In pt, this message translates to:
+  /// **'Oportunidade do tipo "{type}" com score {score}/100. Status atual: {status}.'**
+  String ecoOppExplanation(String type, int score, String status);
+
+  /// No description provided for @ecoLabelType.
+  ///
+  /// In pt, this message translates to:
+  /// **'Tipo'**
+  String get ecoLabelType;
+
+  /// No description provided for @ecoLabelFinalScore.
+  ///
+  /// In pt, this message translates to:
+  /// **'Score Final'**
+  String get ecoLabelFinalScore;
+
+  /// No description provided for @ecoLabelStatus.
+  ///
+  /// In pt, this message translates to:
+  /// **'Status'**
+  String get ecoLabelStatus;
+
+  /// No description provided for @ecoAskIveOpportunity.
+  ///
+  /// In pt, this message translates to:
+  /// **'Perguntar à IVE sobre esta oportunidade'**
+  String get ecoAskIveOpportunity;
+
+  /// No description provided for @ecoIveAskOpportunity.
+  ///
+  /// In pt, this message translates to:
+  /// **'Analise a oportunidade "{title}" (score {score}) e diga como aproveitá-la.'**
+  String ecoIveAskOpportunity(String title, int score);
+
+  /// No description provided for @ecoTop5QuickWinsTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'⚡ TOP 5 GANHOS RÁPIDOS'**
+  String get ecoTop5QuickWinsTitle;
+
+  /// No description provided for @ecoTop5QuickWinsSubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Alto impacto, baixo esforço'**
+  String get ecoTop5QuickWinsSubtitle;
+
+  /// No description provided for @ecoImpactEffort.
+  ///
+  /// In pt, this message translates to:
+  /// **'Impacto {impact} / Esforço {effort}'**
+  String ecoImpactEffort(int impact, int effort);
+
+  /// No description provided for @ecoQuickWinExplanation.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ganho rápido: alto impacto ({impact}/100) e baixo esforço ({effort}/100). Priorize esta ação para resultados imediatos.'**
+  String ecoQuickWinExplanation(int impact, int effort);
+
+  /// No description provided for @ecoLabelImpact.
+  ///
+  /// In pt, this message translates to:
+  /// **'Impacto'**
+  String get ecoLabelImpact;
+
+  /// No description provided for @ecoLabelEffort.
+  ///
+  /// In pt, this message translates to:
+  /// **'Esforço'**
+  String get ecoLabelEffort;
+
+  /// No description provided for @ecoTop5RisksTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'⚠️ TOP 5 RISCOS'**
+  String get ecoTop5RisksTitle;
+
+  /// No description provided for @ecoTop5RisksSubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ações em projetos de baixo score'**
+  String get ecoTop5RisksSubtitle;
+
+  /// No description provided for @ecoBadgeRisk.
+  ///
+  /// In pt, this message translates to:
+  /// **'risco'**
+  String get ecoBadgeRisk;
+
+  /// No description provided for @ecoRiskActionExplanation.
+  ///
+  /// In pt, this message translates to:
+  /// **'Esta ação está em um projeto com Ecosystem Score crítico (abaixo de 30). Requer atenção urgente para evitar perda de oportunidade.'**
+  String get ecoRiskActionExplanation;
+
+  /// No description provided for @ecoTop5WastesTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'🗑️ TOP 5 DESPERDÍCIOS'**
+  String get ecoTop5WastesTitle;
+
+  /// No description provided for @ecoTop5WastesSubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Baixo impacto, alto esforço'**
+  String get ecoTop5WastesSubtitle;
+
+  /// No description provided for @ecoBadgeReview.
+  ///
+  /// In pt, this message translates to:
+  /// **'rever'**
+  String get ecoBadgeReview;
+
+  /// No description provided for @ecoWasteExplanation.
+  ///
+  /// In pt, this message translates to:
+  /// **'Desperdício: baixo impacto ({impact}/100) e alto esforço ({effort}/100). Considere remover ou reformular esta ação para liberar capacidade.'**
+  String ecoWasteExplanation(int impact, int effort);
+
+  /// No description provided for @ecoNoItemsYet.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhum item ainda'**
+  String get ecoNoItemsYet;
+
+  /// No description provided for @ecoProjectExplanation.
+  ///
+  /// In pt, this message translates to:
+  /// **'{name} tem um Ecosystem Score de {score}/100. Isso significa que o projeto está classificado como "{verdict}". O score combina oportunidades de mercado, fit estratégico, ROI potencial e capacidade de execução.'**
+  String ecoProjectExplanation(String name, int score, String verdict);
+
+  /// No description provided for @ecoLabelOpportunity.
+  ///
+  /// In pt, this message translates to:
+  /// **'Oportunidade'**
+  String get ecoLabelOpportunity;
+
+  /// No description provided for @ecoLabelStrategicFit.
+  ///
+  /// In pt, this message translates to:
+  /// **'Strategic Fit'**
+  String get ecoLabelStrategicFit;
+
+  /// No description provided for @ecoLabelRoiScore.
+  ///
+  /// In pt, this message translates to:
+  /// **'ROI Score'**
+  String get ecoLabelRoiScore;
+
+  /// No description provided for @ecoLabelMarket.
+  ///
+  /// In pt, this message translates to:
+  /// **'Mercado'**
+  String get ecoLabelMarket;
+
+  /// No description provided for @ecoLabelExecution.
+  ///
+  /// In pt, this message translates to:
+  /// **'Execução'**
+  String get ecoLabelExecution;
+
+  /// No description provided for @ecoLabelMomentum.
+  ///
+  /// In pt, this message translates to:
+  /// **'Momentum'**
+  String get ecoLabelMomentum;
+
+  /// No description provided for @ecoLabelSynergy.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sinergia'**
+  String get ecoLabelSynergy;
+
+  /// No description provided for @ecoLabelTotalRoi.
+  ///
+  /// In pt, this message translates to:
+  /// **'ROI Total'**
+  String get ecoLabelTotalRoi;
+
+  /// No description provided for @ecoLabelEcosystem.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ecosystem'**
+  String get ecoLabelEcosystem;
+
+  /// No description provided for @ecoAskIveImproveScore.
+  ///
+  /// In pt, this message translates to:
+  /// **'Perguntar à IVE como melhorar este score'**
+  String get ecoAskIveImproveScore;
+
+  /// No description provided for @ecoAskIveImproveScoreDesc.
+  ///
+  /// In pt, this message translates to:
+  /// **'Abrir chat com contexto deste projeto'**
+  String get ecoAskIveImproveScoreDesc;
+
+  /// No description provided for @ecoIveAskImproveProject.
+  ///
+  /// In pt, this message translates to:
+  /// **'Como posso melhorar o Ecosystem Score do projeto "{name}" que está em {score}/100? Explique cada componente e quais ações têm maior impacto.'**
+  String ecoIveAskImproveProject(String name, int score);
+
+  /// No description provided for @ecoShortMarket.
+  ///
+  /// In pt, this message translates to:
+  /// **'Mkt {score}'**
+  String ecoShortMarket(int score);
+
+  /// No description provided for @ecoShortFit.
+  ///
+  /// In pt, this message translates to:
+  /// **'Fit {score}'**
+  String ecoShortFit(int score);
+
+  /// No description provided for @ecoShortExec.
+  ///
+  /// In pt, this message translates to:
+  /// **'Exec {score}'**
+  String ecoShortExec(int score);
+
+  /// No description provided for @ecoIveAskProjectScore.
+  ///
+  /// In pt, this message translates to:
+  /// **'Por que o projeto {name} tem score {score}? Explique cada componente e como melhorar.'**
+  String ecoIveAskProjectScore(String name, int score);
+
+  /// No description provided for @ecoEcosystemEmpty.
+  ///
+  /// In pt, this message translates to:
+  /// **'Adicione projetos para ver o Ecosystem Score.'**
+  String get ecoEcosystemEmpty;
+
+  /// No description provided for @ecoCardFooter.
+  ///
+  /// In pt, this message translates to:
+  /// **'{count} ações  •  {percent}% concluídas  •  R${roi} ROI'**
+  String ecoCardFooter(int count, int percent, String roi);
+
+  /// No description provided for @ecoStrengthsTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Pontos Fortes'**
+  String get ecoStrengthsTitle;
+
+  /// No description provided for @ecoRisksTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Riscos'**
+  String get ecoRisksTitle;
+
+  /// No description provided for @ecoQuickWinsTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ganhos Rápidos'**
+  String get ecoQuickWinsTitle;
+
+  /// No description provided for @ecoRecsEmpty.
+  ///
+  /// In pt, this message translates to:
+  /// **'Adicione projetos e análises para gerar recomendações.'**
+  String get ecoRecsEmpty;
+
+  /// No description provided for @ecoBlockedBadge.
+  ///
+  /// In pt, this message translates to:
+  /// **'🔒 BLOQUEADO'**
+  String get ecoBlockedBadge;
+
+  /// No description provided for @ecoGateDocuments.
+  ///
+  /// In pt, this message translates to:
+  /// **'Documentos'**
+  String get ecoGateDocuments;
+
+  /// No description provided for @ecoGateIndexing.
+  ///
+  /// In pt, this message translates to:
+  /// **'Indexação'**
+  String get ecoGateIndexing;
+
+  /// No description provided for @ecoGateAssets.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ativos'**
+  String get ecoGateAssets;
+
+  /// No description provided for @ecoGateOpportunities.
+  ///
+  /// In pt, this message translates to:
+  /// **'Oportunidades'**
+  String get ecoGateOpportunities;
+
+  /// No description provided for @ecoGateBlockReasons.
+  ///
+  /// In pt, this message translates to:
+  /// **'Motivos do bloqueio:'**
+  String get ecoGateBlockReasons;
+
+  /// No description provided for @ecoExpectedImpact.
+  ///
+  /// In pt, this message translates to:
+  /// **'Impacto esperado: {impact}'**
+  String ecoExpectedImpact(String impact);
+
+  /// No description provided for @ecoLabelConfidence.
+  ///
+  /// In pt, this message translates to:
+  /// **'Confiança'**
+  String get ecoLabelConfidence;
+
+  /// No description provided for @ecoLabelDataUsed.
+  ///
+  /// In pt, this message translates to:
+  /// **'Dados usados'**
+  String get ecoLabelDataUsed;
+
+  /// No description provided for @ecoAskIveRecommendation.
+  ///
+  /// In pt, this message translates to:
+  /// **'Perguntar à IVE sobre esta recomendação'**
+  String get ecoAskIveRecommendation;
+
+  /// No description provided for @ecoIveAskRecommendation.
+  ///
+  /// In pt, this message translates to:
+  /// **'Explique a recomendação "{title}" e me dê um plano de ação concreto.'**
+  String ecoIveAskRecommendation(String title);
+
+  /// No description provided for @ecoConfidencePct.
+  ///
+  /// In pt, this message translates to:
+  /// **'{percent}% confiança'**
+  String ecoConfidencePct(int percent);
+
+  /// No description provided for @ecoDataPrefix.
+  ///
+  /// In pt, this message translates to:
+  /// **'Dados: {data}'**
+  String ecoDataPrefix(String data);
+
+  /// No description provided for @ecoWeeklyBriefingTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Briefing Executivo Semanal'**
+  String get ecoWeeklyBriefingTitle;
+
+  /// No description provided for @ecoBriefingError.
+  ///
+  /// In pt, this message translates to:
+  /// **'Erro ao gerar briefing: {error}'**
+  String ecoBriefingError(String error);
+
+  /// No description provided for @ecoBriefSectionChanged.
+  ///
+  /// In pt, this message translates to:
+  /// **'🔄 O que mudou'**
+  String get ecoBriefSectionChanged;
+
+  /// No description provided for @ecoBriefSectionGrew.
+  ///
+  /// In pt, this message translates to:
+  /// **'📈 O que cresceu'**
+  String get ecoBriefSectionGrew;
+
+  /// No description provided for @ecoBriefSectionDeclined.
+  ///
+  /// In pt, this message translates to:
+  /// **'📉 O que piorou'**
+  String get ecoBriefSectionDeclined;
+
+  /// No description provided for @ecoBriefSectionPriorities.
+  ///
+  /// In pt, this message translates to:
+  /// **'🎯 O que priorizar'**
+  String get ecoBriefSectionPriorities;
+
+  /// No description provided for @ecoBriefSectionPause.
+  ///
+  /// In pt, this message translates to:
+  /// **'⏸️ O que pausar'**
+  String get ecoBriefSectionPause;
+
+  /// No description provided for @ecoBriefSectionNewOpps.
+  ///
+  /// In pt, this message translates to:
+  /// **'💡 Oportunidades novas'**
+  String get ecoBriefSectionNewOpps;
+
+  /// No description provided for @ecoBriefSectionRisks.
+  ///
+  /// In pt, this message translates to:
+  /// **'⚠️ Riscos'**
+  String get ecoBriefSectionRisks;
+
+  /// No description provided for @ecoBriefSectionRisksIdentified.
+  ///
+  /// In pt, this message translates to:
+  /// **'⚠️ Riscos identificados'**
+  String get ecoBriefSectionRisksIdentified;
+
+  /// No description provided for @ecoBriefOverallHealth.
+  ///
+  /// In pt, this message translates to:
+  /// **'Saúde Geral'**
+  String get ecoBriefOverallHealth;
+
+  /// No description provided for @ecoBriefOverallHealthValue.
+  ///
+  /// In pt, this message translates to:
+  /// **'Saúde Geral: {score}/100'**
+  String ecoBriefOverallHealthValue(int score);
+
+  /// No description provided for @ecoBriefLowScoreHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'⚠ Score baixo. Veja os riscos identificados e as prioridades abaixo para melhorar.'**
+  String get ecoBriefLowScoreHint;
+
+  /// No description provided for @ecoBriefHeaderLabel.
+  ///
+  /// In pt, this message translates to:
+  /// **'BRIEFING EXECUTIVO'**
+  String get ecoBriefHeaderLabel;
+
+  /// No description provided for @ecoBriefWeekOf.
+  ///
+  /// In pt, this message translates to:
+  /// **'Semana de {date}'**
+  String ecoBriefWeekOf(String date);
+
+  /// No description provided for @ecoBriefExecutiveSummary.
+  ///
+  /// In pt, this message translates to:
+  /// **'Resumo Executivo'**
+  String get ecoBriefExecutiveSummary;
+
+  /// No description provided for @ecoBriefNoItemsThisWeek.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhum item nesta semana'**
+  String get ecoBriefNoItemsThisWeek;
+
+  /// No description provided for @ecoBriefDataAnalyzed.
+  ///
+  /// In pt, this message translates to:
+  /// **'DADOS ANALISADOS'**
+  String get ecoBriefDataAnalyzed;
+
+  /// No description provided for @ecoBriefGeneratedAt.
+  ///
+  /// In pt, this message translates to:
+  /// **'Gerado em {date} às {time}'**
+  String ecoBriefGeneratedAt(String date, String time);
+
+  /// No description provided for @ecoCountProjects.
+  ///
+  /// In pt, this message translates to:
+  /// **'Projetos'**
+  String get ecoCountProjects;
+
+  /// No description provided for @ecoCountAnalyses.
+  ///
+  /// In pt, this message translates to:
+  /// **'Análises'**
+  String get ecoCountAnalyses;
+
+  /// No description provided for @ecoCountActions.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ações'**
+  String get ecoCountActions;
+
+  /// No description provided for @ecoBriefIncludedProjects.
+  ///
+  /// In pt, this message translates to:
+  /// **'Projetos incluídos'**
+  String get ecoBriefIncludedProjects;
+
+  /// No description provided for @ctxIveProjectsMsg1.
+  ///
+  /// In pt, this message translates to:
+  /// **'Olá! Sou a IVE, sua consultora executiva. Posso analisar seu portfólio agora.'**
+  String get ctxIveProjectsMsg1;
+
+  /// No description provided for @ctxIveProjectsMsg2.
+  ///
+  /// In pt, this message translates to:
+  /// **'Quer saber qual projeto tem mais potencial de escala neste momento?'**
+  String get ctxIveProjectsMsg2;
+
+  /// No description provided for @ctxIveProjectsMsg3.
+  ///
+  /// In pt, this message translates to:
+  /// **'Identifico padrões entre seus projetos. Alguma dúvida estratégica?'**
+  String get ctxIveProjectsMsg3;
+
+  /// No description provided for @ctxIveOppLabMsg1.
+  ///
+  /// In pt, this message translates to:
+  /// **'Identifiquei oportunidades com alto ROI nesta lista. Posso priorizar para você.'**
+  String get ctxIveOppLabMsg1;
+
+  /// No description provided for @ctxIveOppLabMsg2.
+  ///
+  /// In pt, this message translates to:
+  /// **'Cada oportunidade aqui tem critérios mensuráveis. Posso explicar qualquer uma.'**
+  String get ctxIveOppLabMsg2;
+
+  /// No description provided for @ctxIveOppLabMsg3.
+  ///
+  /// In pt, this message translates to:
+  /// **'Quer que eu indique quais oportunidades executar primeiro esta semana?'**
+  String get ctxIveOppLabMsg3;
+
+  /// No description provided for @ctxIveEcosystemMsg1.
+  ///
+  /// In pt, this message translates to:
+  /// **'Este é seu centro de decisão. Posso explicar qualquer score em linguagem simples.'**
+  String get ctxIveEcosystemMsg1;
+
+  /// No description provided for @ctxIveEcosystemMsg2.
+  ///
+  /// In pt, this message translates to:
+  /// **'Vejo projetos com potencial não explorado. Quer uma análise detalhada?'**
+  String get ctxIveEcosystemMsg2;
+
+  /// No description provided for @ctxIveEcosystemMsg3.
+  ///
+  /// In pt, this message translates to:
+  /// **'Posso simular o impacto de aprovar oportunidades ou concluir ações.'**
+  String get ctxIveEcosystemMsg3;
+
+  /// No description provided for @ctxIveBriefingMsg1.
+  ///
+  /// In pt, this message translates to:
+  /// **'Seu briefing executivo está pronto. Posso destacar o que é mais urgente.'**
+  String get ctxIveBriefingMsg1;
+
+  /// No description provided for @ctxIveBriefingMsg2.
+  ///
+  /// In pt, this message translates to:
+  /// **'Quer que eu traduza este relatório em próximos passos concretos?'**
+  String get ctxIveBriefingMsg2;
+
+  /// No description provided for @ctxIveBriefingMsg3.
+  ///
+  /// In pt, this message translates to:
+  /// **'Posso identificar o que mudou esta semana e por quê.'**
+  String get ctxIveBriefingMsg3;
+
+  /// No description provided for @ctxIvePersonasMsg1.
+  ///
+  /// In pt, this message translates to:
+  /// **'Suas personas são sua presença no mercado. Posso comparar o desempenho de cada uma.'**
+  String get ctxIvePersonasMsg1;
+
+  /// No description provided for @ctxIvePersonasMsg2.
+  ///
+  /// In pt, this message translates to:
+  /// **'Quer saber qual persona tem maior potencial de crescimento agora?'**
+  String get ctxIvePersonasMsg2;
+
+  /// No description provided for @ctxIvePersonasMsg3.
+  ///
+  /// In pt, this message translates to:
+  /// **'Posso recomendar estratégias específicas para cada nicho.'**
+  String get ctxIvePersonasMsg3;
+
+  /// No description provided for @ctxIveKnowledgeMsg1.
+  ///
+  /// In pt, this message translates to:
+  /// **'Seu cofre de conhecimento alimenta toda a inteligência do sistema.'**
+  String get ctxIveKnowledgeMsg1;
+
+  /// No description provided for @ctxIveKnowledgeMsg2.
+  ///
+  /// In pt, this message translates to:
+  /// **'Qual documento quer que eu analise ou conecte com seus projetos?'**
+  String get ctxIveKnowledgeMsg2;
+
+  /// No description provided for @ctxIveKnowledgeMsg3.
+  ///
+  /// In pt, this message translates to:
+  /// **'Posso mostrar quais conhecimentos estão gerando mais insights.'**
+  String get ctxIveKnowledgeMsg3;
+
+  /// No description provided for @ctxIveActionsMsg1.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sua fila de ações determina sua velocidade de execução.'**
+  String get ctxIveActionsMsg1;
+
+  /// No description provided for @ctxIveActionsMsg2.
+  ///
+  /// In pt, this message translates to:
+  /// **'Posso ajudar a priorizar: quais ações têm maior impacto no score?'**
+  String get ctxIveActionsMsg2;
+
+  /// No description provided for @ctxIveActionsMsg3.
+  ///
+  /// In pt, this message translates to:
+  /// **'Quer que eu identifique o que está bloqueando seu progresso?'**
+  String get ctxIveActionsMsg3;
+
+  /// No description provided for @ctxIveDebugMsg1.
+  ///
+  /// In pt, this message translates to:
+  /// **'Centro de observabilidade completo. Posso auditar qualquer cálculo.'**
+  String get ctxIveDebugMsg1;
+
+  /// No description provided for @ctxIveDebugMsg2.
+  ///
+  /// In pt, this message translates to:
+  /// **'Quer entender como um score foi gerado? Basta perguntar.'**
+  String get ctxIveDebugMsg2;
+
+  /// No description provided for @ctxIveDebugMsg3.
+  ///
+  /// In pt, this message translates to:
+  /// **'Posso rastrear a origem de qualquer dado ou recomendação.'**
+  String get ctxIveDebugMsg3;
+
+  /// No description provided for @ctxIveAnalysisCompleted.
+  ///
+  /// In pt, this message translates to:
+  /// **'Análise de "{name}" concluída!'**
+  String ctxIveAnalysisCompleted(String name);
+
+  /// No description provided for @ctxIveAnalyzing.
+  ///
+  /// In pt, this message translates to:
+  /// **'Analisando "{name}"...'**
+  String ctxIveAnalyzing(String name);
+
+  /// No description provided for @ctxIveProjectCreated.
+  ///
+  /// In pt, this message translates to:
+  /// **'Projeto "{name}" criado!'**
+  String ctxIveProjectCreated(String name);
+
+  /// No description provided for @ctxIveProjectRemoved.
+  ///
+  /// In pt, this message translates to:
+  /// **'Projeto "{name}" removido.'**
+  String ctxIveProjectRemoved(String name);
+
+  /// No description provided for @ctxIveProjectStatusChanged.
+  ///
+  /// In pt, this message translates to:
+  /// **'"{name}" {status}.'**
+  String ctxIveProjectStatusChanged(String name, String status);
+
+  /// No description provided for @ctxIveStatusActivated.
+  ///
+  /// In pt, this message translates to:
+  /// **'ativado'**
+  String get ctxIveStatusActivated;
+
+  /// No description provided for @ctxIveStatusPaused.
+  ///
+  /// In pt, this message translates to:
+  /// **'pausado'**
+  String get ctxIveStatusPaused;
+
+  /// No description provided for @ctxIveStatusCompleted.
+  ///
+  /// In pt, this message translates to:
+  /// **'concluído'**
+  String get ctxIveStatusCompleted;
+
+  /// No description provided for @ctxIveCtxEcosystem.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ecossistema em {score}/100. Principal gargalo: {bottleneck}. Posso detalhar como melhorar.'**
+  String ctxIveCtxEcosystem(int score, String bottleneck);
+
+  /// No description provided for @ctxIveCtxBottleneckFallback.
+  ///
+  /// In pt, this message translates to:
+  /// **'execução'**
+  String get ctxIveCtxBottleneckFallback;
+
+  /// No description provided for @ctxIveCtxProjectLeads.
+  ///
+  /// In pt, this message translates to:
+  /// **'{name} lidera com score {score}.'**
+  String ctxIveCtxProjectLeads(String name, int score);
+
+  /// No description provided for @ctxIveCtxPendingDetected.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ações pendentes detectadas: {count}.'**
+  String ctxIveCtxPendingDetected(int count);
+
+  /// No description provided for @ctxIveCtxAnalyzeOpportunities.
+  ///
+  /// In pt, this message translates to:
+  /// **'Quer analisar oportunidades?'**
+  String get ctxIveCtxAnalyzeOpportunities;
+
+  /// No description provided for @ctxIveCtxOppLab.
+  ///
+  /// In pt, this message translates to:
+  /// **'Oportunidades aguardando sua avaliação: {count}. Posso priorizar as de maior ROI.'**
+  String ctxIveCtxOppLab(int count);
+
+  /// No description provided for @ctxIveCtxBriefing.
+  ///
+  /// In pt, this message translates to:
+  /// **'Briefing gerado com saúde geral em {score}/100. Posso traduzir os dados em ações concretas.'**
+  String ctxIveCtxBriefing(int score);
+
+  /// No description provided for @ctxIveCtxActions.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ações pendentes: {count}. Posso identificar as de maior impacto no score de execução.'**
+  String ctxIveCtxActions(int count);
+
+  /// No description provided for @ctxIssueAnalysisFailed.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não consegui analisar "{name}". A falha ocorreu durante o processamento pela IA. Você pode tentar novamente.'**
+  String ctxIssueAnalysisFailed(String name);
+
+  /// No description provided for @ctxIssueDownloadFailed.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não consegui importar "{name}". A falha ocorreu durante o download do arquivo. O conteúdo ainda não foi analisado.'**
+  String ctxIssueDownloadFailed(String name);
+
+  /// No description provided for @ctxIssueActionMutationFailed.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não consegui atualizar "{name}". Verifique sua conexão e tente novamente.'**
+  String ctxIssueActionMutationFailed(String name);
+
+  /// No description provided for @ctxIssueActionViewDetails.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ver detalhes'**
+  String get ctxIssueActionViewDetails;
+
+  /// No description provided for @ctxIssueActionUpdateLink.
+  ///
+  /// In pt, this message translates to:
+  /// **'Atualizar link'**
+  String get ctxIssueActionUpdateLink;
+
+  /// No description provided for @ctxIssueActionSendFile.
+  ///
+  /// In pt, this message translates to:
+  /// **'Enviar arquivo'**
+  String get ctxIssueActionSendFile;
+
+  /// No description provided for @ctxIssueActionDismiss.
+  ///
+  /// In pt, this message translates to:
+  /// **'Dispensar'**
+  String get ctxIssueActionDismiss;
+
+  /// No description provided for @ctxAlertHealthLow.
+  ///
+  /// In pt, this message translates to:
+  /// **'Saúde do ecossistema em {health}/100. Ação imediata recomendada.'**
+  String ctxAlertHealthLow(int health);
+
+  /// No description provided for @ctxAlertProjectCritical.
+  ///
+  /// In pt, this message translates to:
+  /// **'{name} com score crítico ({score}/100). Posso identificar o que está limitando.'**
+  String ctxAlertProjectCritical(String name, int score);
+
+  /// No description provided for @ctxAlertActionsOverdue.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ações pendentes acumuladas: {count}. Isso está impactando seu score de execução.'**
+  String ctxAlertActionsOverdue(int count);
+
+  /// No description provided for @ctxDocCoverageWarning.
+  ///
+  /// In pt, this message translates to:
+  /// **'{total} fontes vinculadas · {used} utilizadas nesta análise · {unused} não utilizadas nesta execução.'**
+  String ctxDocCoverageWarning(int total, int used, int unused);
+
+  /// No description provided for @ctxGroundingEmptyContent.
+  ///
+  /// In pt, this message translates to:
+  /// **'"{title}": registrado mas sem conteúdo processável.'**
+  String ctxGroundingEmptyContent(String title);
+
+  /// No description provided for @ctxGroundingBudgetExceeded.
+  ///
+  /// In pt, this message translates to:
+  /// **'Limite de {maxChars} caracteres atingido. Documentos posteriores omitidos.'**
+  String ctxGroundingBudgetExceeded(int maxChars);
+
+  /// No description provided for @ctxDvReasonCoverage.
+  ///
+  /// In pt, this message translates to:
+  /// **'Knowledge Coverage insuficiente ({score}% < {min}%)'**
+  String ctxDvReasonCoverage(int score, int min);
+
+  /// No description provided for @ctxDvReasonLearning.
+  ///
+  /// In pt, this message translates to:
+  /// **'Learning Score médio insuficiente ({score}% < {min}%)'**
+  String ctxDvReasonLearning(int score, int min);
+
+  /// No description provided for @ctxDvReasonProfile.
+  ///
+  /// In pt, this message translates to:
+  /// **'Perfil de inteligência incompleto — vincule uma análise de mercado'**
+  String get ctxDvReasonProfile;
+
+  /// No description provided for @ctxDvReasonStructuring.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhuma oportunidade ou ação gerada ainda — execute o Knowledge → Action Engine'**
+  String get ctxDvReasonStructuring;
+
+  /// No description provided for @ctxDvBlockStructuring.
+  ///
+  /// In pt, this message translates to:
+  /// **'Projeto ainda em fase de estruturação. Conhecimento disponível, mas inteligência operacional insuficiente para recomendação estratégica.'**
+  String get ctxDvBlockStructuring;
+
+  /// No description provided for @ctxDvBlockInsufficient.
+  ///
+  /// In pt, this message translates to:
+  /// **'Dados insuficientes para decisão estratégica.'**
+  String get ctxDvBlockInsufficient;
+
+  /// No description provided for @ctxDvNoDocuments.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sem documentos'**
+  String get ctxDvNoDocuments;
+
+  /// No description provided for @ctxDvIndexedCount.
+  ///
+  /// In pt, this message translates to:
+  /// **'{indexed}/{total} indexados'**
+  String ctxDvIndexedCount(int indexed, int total);
+
+  /// No description provided for @ctxDvThresholdLabel.
+  ///
+  /// In pt, this message translates to:
+  /// **'{mark} {score}% (mínimo {min}%)'**
+  String ctxDvThresholdLabel(String mark, int score, int min);
+
+  /// No description provided for @ctxDvProfileComplete.
+  ///
+  /// In pt, this message translates to:
+  /// **'✅ Completo'**
+  String get ctxDvProfileComplete;
+
+  /// No description provided for @ctxDvProfileIncomplete.
+  ///
+  /// In pt, this message translates to:
+  /// **'❌ Incompleto — vincule uma análise de mercado'**
+  String get ctxDvProfileIncomplete;
+
+  /// No description provided for @ctxCoverageExcellent.
+  ///
+  /// In pt, this message translates to:
+  /// **'Excelente'**
+  String get ctxCoverageExcellent;
+
+  /// No description provided for @ctxCoverageGood.
+  ///
+  /// In pt, this message translates to:
+  /// **'Bom'**
+  String get ctxCoverageGood;
+
+  /// No description provided for @ctxCoverageModerate.
+  ///
+  /// In pt, this message translates to:
+  /// **'Moderado'**
+  String get ctxCoverageModerate;
+
+  /// No description provided for @ctxCoverageBasic.
+  ///
+  /// In pt, this message translates to:
+  /// **'Básico'**
+  String get ctxCoverageBasic;
+
+  /// No description provided for @ctxCoverageMinimal.
+  ///
+  /// In pt, this message translates to:
+  /// **'Mínimo'**
+  String get ctxCoverageMinimal;
+
+  /// No description provided for @ctxGapNoDocuments.
+  ///
+  /// In pt, this message translates to:
+  /// **'Adicione documentos ao Cofre de Conhecimento'**
+  String get ctxGapNoDocuments;
+
+  /// No description provided for @ctxGapNoOpportunities.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sem oportunidades — execute o Knowledge → Action Engine'**
+  String get ctxGapNoOpportunities;
+
+  /// No description provided for @ctxGapNoActions.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sem ações definidas para o projeto'**
+  String get ctxGapNoActions;
+
+  /// No description provided for @ctxGapNoRoadmap.
+  ///
+  /// In pt, this message translates to:
+  /// **'Roadmap não gerado — execute o Bootstrap'**
+  String get ctxGapNoRoadmap;
+
+  /// No description provided for @ctxGapNoRevenuePlan.
+  ///
+  /// In pt, this message translates to:
+  /// **'Plano de receita não criado'**
+  String get ctxGapNoRevenuePlan;
+
+  /// No description provided for @ctxGapUntrainedPersonas.
+  ///
+  /// In pt, this message translates to:
+  /// **'Personas sem treinamento de conhecimento'**
+  String get ctxGapUntrainedPersonas;
+
+  /// No description provided for @ctxStrengthKnowledgeBase.
+  ///
+  /// In pt, this message translates to:
+  /// **'Base de conhecimento estabelecida'**
+  String get ctxStrengthKnowledgeBase;
+
+  /// No description provided for @ctxStrengthOpportunities.
+  ///
+  /// In pt, this message translates to:
+  /// **'Oportunidades mapeadas'**
+  String get ctxStrengthOpportunities;
+
+  /// No description provided for @ctxStrengthActions.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ações planejadas'**
+  String get ctxStrengthActions;
+
+  /// No description provided for @ctxStrengthRoadmap.
+  ///
+  /// In pt, this message translates to:
+  /// **'Roadmap estruturado'**
+  String get ctxStrengthRoadmap;
+
+  /// No description provided for @ctxStrengthRevenuePlan.
+  ///
+  /// In pt, this message translates to:
+  /// **'Plano de receita projetado'**
+  String get ctxStrengthRevenuePlan;
+
+  /// No description provided for @ctxStrengthTrainedPersonas.
+  ///
+  /// In pt, this message translates to:
+  /// **'Personas com conhecimento treinado'**
+  String get ctxStrengthTrainedPersonas;
+
+  /// No description provided for @ctxLearningExpert.
+  ///
+  /// In pt, this message translates to:
+  /// **'Especialista'**
+  String get ctxLearningExpert;
+
+  /// No description provided for @ctxLearningAdvanced.
+  ///
+  /// In pt, this message translates to:
+  /// **'Avançado'**
+  String get ctxLearningAdvanced;
+
+  /// No description provided for @ctxLearningIntermediate.
+  ///
+  /// In pt, this message translates to:
+  /// **'Intermediário'**
+  String get ctxLearningIntermediate;
+
+  /// No description provided for @ctxLearningBeginner.
+  ///
+  /// In pt, this message translates to:
+  /// **'Iniciante'**
+  String get ctxLearningBeginner;
+
+  /// No description provided for @ctxLearningUntrained.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sem Treinamento'**
+  String get ctxLearningUntrained;
+
+  /// No description provided for @ctxMaturityMature.
+  ///
+  /// In pt, this message translates to:
+  /// **'Maduro'**
+  String get ctxMaturityMature;
+
+  /// No description provided for @ctxMaturityGrowing.
+  ///
+  /// In pt, this message translates to:
+  /// **'Crescendo'**
+  String get ctxMaturityGrowing;
+
+  /// No description provided for @ctxMaturityValidating.
+  ///
+  /// In pt, this message translates to:
+  /// **'Validando'**
+  String get ctxMaturityValidating;
+
+  /// No description provided for @ctxMaturityIdea.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ideia'**
+  String get ctxMaturityIdea;
+
+  /// No description provided for @ctxProfileWarningNoAnalysis.
+  ///
+  /// In pt, this message translates to:
+  /// **'Execute uma análise de mercado para obter inteligência.'**
+  String get ctxProfileWarningNoAnalysis;
+
+  /// No description provided for @ctxProfileWarningLowData.
+  ///
+  /// In pt, this message translates to:
+  /// **'Dados insuficientes. Adicione ações e oportunidades.'**
+  String get ctxProfileWarningLowData;
+
+  /// No description provided for @ctxProfileNotDefined.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não definido'**
+  String get ctxProfileNotDefined;
+
+  /// No description provided for @ctxEmptyServerResponse.
+  ///
+  /// In pt, this message translates to:
+  /// **'Resposta vazia do servidor.'**
+  String get ctxEmptyServerResponse;
+
+  /// No description provided for @ctxDurationYears.
+  ///
+  /// In pt, this message translates to:
+  /// **'{count}a'**
+  String ctxDurationYears(int count);
+
+  /// No description provided for @ctxDurationMonths.
+  ///
+  /// In pt, this message translates to:
+  /// **'{count}m'**
+  String ctxDurationMonths(int count);
+
+  /// No description provided for @ctxDurationDays.
+  ///
+  /// In pt, this message translates to:
+  /// **'{count}d'**
+  String ctxDurationDays(int count);
+
+  /// No description provided for @ctxProjectTypeWebsite.
+  ///
+  /// In pt, this message translates to:
+  /// **'Site'**
+  String get ctxProjectTypeWebsite;
+
+  /// No description provided for @ctxProjectTypeApp.
+  ///
+  /// In pt, this message translates to:
+  /// **'App'**
+  String get ctxProjectTypeApp;
+
+  /// No description provided for @ctxProjectTypeProduct.
+  ///
+  /// In pt, this message translates to:
+  /// **'Produto'**
+  String get ctxProjectTypeProduct;
+
+  /// No description provided for @ctxProjectTypeService.
+  ///
+  /// In pt, this message translates to:
+  /// **'Serviço'**
+  String get ctxProjectTypeService;
+
+  /// No description provided for @ctxProjectTypeContent.
+  ///
+  /// In pt, this message translates to:
+  /// **'Conteúdo'**
+  String get ctxProjectTypeContent;
+
+  /// No description provided for @ctxHomeFeatureUnavailable.
+  ///
+  /// In pt, this message translates to:
+  /// **'Este recurso ainda não está disponível.'**
+  String get ctxHomeFeatureUnavailable;
+
+  /// No description provided for @ctxHomeCommandCenter.
+  ///
+  /// In pt, this message translates to:
+  /// **'Command Center'**
+  String get ctxHomeCommandCenter;
+
+  /// No description provided for @ctxHomeImprovePostTooltip.
+  ///
+  /// In pt, this message translates to:
+  /// **'Melhorar Post'**
+  String get ctxHomeImprovePostTooltip;
+
+  /// No description provided for @ctxHomeRefreshTooltip.
+  ///
+  /// In pt, this message translates to:
+  /// **'Atualizar'**
+  String get ctxHomeRefreshTooltip;
+
+  /// No description provided for @ctxHomeExecCommandCenter.
+  ///
+  /// In pt, this message translates to:
+  /// **'Executive Command Center'**
+  String get ctxHomeExecCommandCenter;
+
+  /// No description provided for @ctxHomeMetricProjects.
+  ///
+  /// In pt, this message translates to:
+  /// **'Projetos'**
+  String get ctxHomeMetricProjects;
+
+  /// No description provided for @ctxHomeMetricOpportunities.
+  ///
+  /// In pt, this message translates to:
+  /// **'Oportunidades'**
+  String get ctxHomeMetricOpportunities;
+
+  /// No description provided for @ctxHomeMetricPendingActions.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ações Pendentes'**
+  String get ctxHomeMetricPendingActions;
+
+  /// No description provided for @ctxHomeMetricKnowledge.
+  ///
+  /// In pt, this message translates to:
+  /// **'Conhecimento'**
+  String get ctxHomeMetricKnowledge;
+
+  /// No description provided for @ctxHomeMetricLearning.
+  ///
+  /// In pt, this message translates to:
+  /// **'Learning Score'**
+  String get ctxHomeMetricLearning;
+
+  /// No description provided for @ctxHomeQuickDecisionCenter.
+  ///
+  /// In pt, this message translates to:
+  /// **'Decision Center'**
+  String get ctxHomeQuickDecisionCenter;
+
+  /// No description provided for @ctxHomeQuickBriefing.
+  ///
+  /// In pt, this message translates to:
+  /// **'Briefing'**
+  String get ctxHomeQuickBriefing;
+
+  /// No description provided for @ctxHomePriorityProjects.
+  ///
+  /// In pt, this message translates to:
+  /// **'Projetos Prioritários'**
+  String get ctxHomePriorityProjects;
+
+  /// No description provided for @ctxHomeNoProjects.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhum projeto cadastrado.'**
+  String get ctxHomeNoProjects;
+
+  /// No description provided for @ctxHomeAddProject.
+  ///
+  /// In pt, this message translates to:
+  /// **'Adicionar projeto'**
+  String get ctxHomeAddProject;
+
+  /// No description provided for @ctxHomeNextBestAction.
+  ///
+  /// In pt, this message translates to:
+  /// **'Próxima Melhor Ação'**
+  String get ctxHomeNextBestAction;
+
+  /// No description provided for @ctxHomeNoRecommendations.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sem recomendações disponíveis.'**
+  String get ctxHomeNoRecommendations;
+
+  /// No description provided for @ctxHomeViewOpportunityLab.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ver Opportunity Lab'**
+  String get ctxHomeViewOpportunityLab;
+
+  /// No description provided for @ctxHomeConfidence.
+  ///
+  /// In pt, this message translates to:
+  /// **'{value}% confiança'**
+  String ctxHomeConfidence(int value);
+
+  /// No description provided for @ctxHomeExpectedImpact.
+  ///
+  /// In pt, this message translates to:
+  /// **'Impacto esperado: {impact}'**
+  String ctxHomeExpectedImpact(String impact);
+
+  /// No description provided for @ctxHomePersonas.
+  ///
+  /// In pt, this message translates to:
+  /// **'Personas'**
+  String get ctxHomePersonas;
+
+  /// No description provided for @ctxHomeNoPersonas.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhuma persona criada.'**
+  String get ctxHomeNoPersonas;
+
+  /// No description provided for @ctxHomeCreatePersona.
+  ///
+  /// In pt, this message translates to:
+  /// **'Criar persona'**
+  String get ctxHomeCreatePersona;
+
+  /// No description provided for @ctxHomeEcosystemIntelligence.
+  ///
+  /// In pt, this message translates to:
+  /// **'Inteligência do Ecossistema'**
+  String get ctxHomeEcosystemIntelligence;
+
+  /// No description provided for @ctxHomeStatProjects.
+  ///
+  /// In pt, this message translates to:
+  /// **'Projetos: {count}'**
+  String ctxHomeStatProjects(int count);
+
+  /// No description provided for @ctxHomeStatOpportunities.
+  ///
+  /// In pt, this message translates to:
+  /// **'Oportunidades: {count}'**
+  String ctxHomeStatOpportunities(int count);
+
+  /// No description provided for @ctxHomeStatActions.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ações: {count}'**
+  String ctxHomeStatActions(int count);
+
+  /// No description provided for @ctxHomeStatConnections.
+  ///
+  /// In pt, this message translates to:
+  /// **'Conexões: {count}'**
+  String ctxHomeStatConnections(int count);
+
+  /// No description provided for @ctxHomeConnectionsFound.
+  ///
+  /// In pt, this message translates to:
+  /// **'Conexões identificadas:'**
+  String get ctxHomeConnectionsFound;
+
+  /// No description provided for @ctxHomeNoConnections.
+  ///
+  /// In pt, this message translates to:
+  /// **'Execute análises de mercado para descobrir conexões entre seus projetos.'**
+  String get ctxHomeNoConnections;
+
+  /// No description provided for @ctxHomeSeeAll.
+  ///
+  /// In pt, this message translates to:
+  /// **'ver todos'**
+  String get ctxHomeSeeAll;
+
+  /// No description provided for @ctxHomeHealth.
+  ///
+  /// In pt, this message translates to:
+  /// **'Saúde {score}/100'**
+  String ctxHomeHealth(int score);
+
+  /// No description provided for @ctxHomeCoverage.
+  ///
+  /// In pt, this message translates to:
+  /// **'{emoji} {score}% de cobertura'**
+  String ctxHomeCoverage(String emoji, int score);
+
+  /// No description provided for @ctxHomePersonaStats.
+  ///
+  /// In pt, this message translates to:
+  /// **'Treinamentos: {trainings} · Palavras: {words}'**
+  String ctxHomePersonaStats(int trainings, int words);
+
+  /// No description provided for @ctxHomeError.
+  ///
+  /// In pt, this message translates to:
+  /// **'Erro: {message}'**
+  String ctxHomeError(String message);
+
+  /// No description provided for @ctxGraphSharesNiche.
+  ///
+  /// In pt, this message translates to:
+  /// **'compartilha nicho'**
+  String get ctxGraphSharesNiche;
+
+  /// No description provided for @ctxGraphUsesKnowledge.
+  ///
+  /// In pt, this message translates to:
+  /// **'usa conhecimento'**
+  String get ctxGraphUsesKnowledge;
+
+  /// No description provided for @ctxGraphOpportunityOf.
+  ///
+  /// In pt, this message translates to:
+  /// **'oportunidade de'**
+  String get ctxGraphOpportunityOf;
+
+  /// No description provided for @ctxGraphPersonaKnows.
+  ///
+  /// In pt, this message translates to:
+  /// **'persona conhece'**
+  String get ctxGraphPersonaKnows;
+
+  /// No description provided for @ctxGraphEdge.
+  ///
+  /// In pt, this message translates to:
+  /// **'{source} → {relation} → {target}'**
+  String ctxGraphEdge(String source, String relation, String target);
+
+  /// No description provided for @ctxExecNotEstimated.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ainda não estimado'**
+  String get ctxExecNotEstimated;
+
+  /// No description provided for @ctxExecSubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'InsightValues · Painel Executivo'**
+  String get ctxExecSubtitle;
+
+  /// No description provided for @ctxExecAskIve.
+  ///
+  /// In pt, this message translates to:
+  /// **'Perguntar à IVE'**
+  String get ctxExecAskIve;
+
+  /// No description provided for @ctxExecReload.
+  ///
+  /// In pt, this message translates to:
+  /// **'Recarregar'**
+  String get ctxExecReload;
+
+  /// No description provided for @ctxExecPortfolioTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'PORTFÓLIO EXECUTIVO'**
+  String get ctxExecPortfolioTitle;
+
+  /// No description provided for @ctxExecActiveProjects.
+  ///
+  /// In pt, this message translates to:
+  /// **'Projetos Ativos'**
+  String get ctxExecActiveProjects;
+
+  /// No description provided for @ctxExecTotalProjects.
+  ///
+  /// In pt, this message translates to:
+  /// **'Total de Projetos'**
+  String get ctxExecTotalProjects;
+
+  /// No description provided for @ctxExecMiAnalyses.
+  ///
+  /// In pt, this message translates to:
+  /// **'Análises MI'**
+  String get ctxExecMiAnalyses;
+
+  /// No description provided for @ctxExecAvgScore.
+  ///
+  /// In pt, this message translates to:
+  /// **'Score Médio'**
+  String get ctxExecAvgScore;
+
+  /// No description provided for @ctxExecFinancialTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'FINANCEIRO'**
+  String get ctxExecFinancialTitle;
+
+  /// No description provided for @ctxExecRecordedRevenue.
+  ///
+  /// In pt, this message translates to:
+  /// **'Receita Registrada'**
+  String get ctxExecRecordedRevenue;
+
+  /// No description provided for @ctxExecMonthlyPotential.
+  ///
+  /// In pt, this message translates to:
+  /// **'Potencial Mensal'**
+  String get ctxExecMonthlyPotential;
+
+  /// No description provided for @ctxExecModProjects.
+  ///
+  /// In pt, this message translates to:
+  /// **'Projetos'**
+  String get ctxExecModProjects;
+
+  /// No description provided for @ctxExecTotal.
+  ///
+  /// In pt, this message translates to:
+  /// **'Total'**
+  String get ctxExecTotal;
+
+  /// No description provided for @ctxExecActive.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ativos'**
+  String get ctxExecActive;
+
+  /// No description provided for @ctxExecInIdea.
+  ///
+  /// In pt, this message translates to:
+  /// **'Em ideia'**
+  String get ctxExecInIdea;
+
+  /// No description provided for @ctxExecNoAnalysis.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sem análise'**
+  String get ctxExecNoAnalysis;
+
+  /// No description provided for @ctxExecEmptyProjects.
+  ///
+  /// In pt, this message translates to:
+  /// **'Cadastre seu primeiro projeto para começar.'**
+  String get ctxExecEmptyProjects;
+
+  /// No description provided for @ctxExecViewProjects.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ver Projetos'**
+  String get ctxExecViewProjects;
+
+  /// No description provided for @ctxExecAnalyses.
+  ///
+  /// In pt, this message translates to:
+  /// **'Análises'**
+  String get ctxExecAnalyses;
+
+  /// No description provided for @ctxExecAvgScoreShort.
+  ///
+  /// In pt, this message translates to:
+  /// **'Score médio'**
+  String get ctxExecAvgScoreShort;
+
+  /// No description provided for @ctxExecHighQuality.
+  ///
+  /// In pt, this message translates to:
+  /// **'Alta qualidade'**
+  String get ctxExecHighQuality;
+
+  /// No description provided for @ctxExecNoProject.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sem projeto'**
+  String get ctxExecNoProject;
+
+  /// No description provided for @ctxExecEmptyMi.
+  ///
+  /// In pt, this message translates to:
+  /// **'Execute uma análise de mercado no Market Intelligence.'**
+  String get ctxExecEmptyMi;
+
+  /// No description provided for @ctxExecAnalyzeMarket.
+  ///
+  /// In pt, this message translates to:
+  /// **'Analisar Mercado'**
+  String get ctxExecAnalyzeMarket;
+
+  /// No description provided for @ctxExecModOpportunities.
+  ///
+  /// In pt, this message translates to:
+  /// **'Oportunidades'**
+  String get ctxExecModOpportunities;
+
+  /// No description provided for @ctxExecHighPriority.
+  ///
+  /// In pt, this message translates to:
+  /// **'Alta prioridade'**
+  String get ctxExecHighPriority;
+
+  /// No description provided for @ctxExecApproved.
+  ///
+  /// In pt, this message translates to:
+  /// **'Aprovadas'**
+  String get ctxExecApproved;
+
+  /// No description provided for @ctxExecPending.
+  ///
+  /// In pt, this message translates to:
+  /// **'Pendentes'**
+  String get ctxExecPending;
+
+  /// No description provided for @ctxExecEmptyOpportunities.
+  ///
+  /// In pt, this message translates to:
+  /// **'Gere oportunidades a partir das análises de mercado.'**
+  String get ctxExecEmptyOpportunities;
+
+  /// No description provided for @ctxExecViewOpportunities.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ver Oportunidades'**
+  String get ctxExecViewOpportunities;
+
+  /// No description provided for @ctxExecInProgress.
+  ///
+  /// In pt, this message translates to:
+  /// **'Em execução'**
+  String get ctxExecInProgress;
+
+  /// No description provided for @ctxExecBlocked.
+  ///
+  /// In pt, this message translates to:
+  /// **'Bloqueadas'**
+  String get ctxExecBlocked;
+
+  /// No description provided for @ctxExecCompleted.
+  ///
+  /// In pt, this message translates to:
+  /// **'Concluídas'**
+  String get ctxExecCompleted;
+
+  /// No description provided for @ctxExecEmptyActions.
+  ///
+  /// In pt, this message translates to:
+  /// **'Aprove oportunidades para gerar ações executáveis.'**
+  String get ctxExecEmptyActions;
+
+  /// No description provided for @ctxExecOpenDecisions.
+  ///
+  /// In pt, this message translates to:
+  /// **'Abrir Decisions'**
+  String get ctxExecOpenDecisions;
+
+  /// No description provided for @ctxExecWeeklyBriefing.
+  ///
+  /// In pt, this message translates to:
+  /// **'Briefing Semanal'**
+  String get ctxExecWeeklyBriefing;
+
+  /// No description provided for @ctxExecAllocation.
+  ///
+  /// In pt, this message translates to:
+  /// **'Alocação'**
+  String get ctxExecAllocation;
+
+  /// No description provided for @ctxExecQuickAccess.
+  ///
+  /// In pt, this message translates to:
+  /// **'ACESSO RÁPIDO'**
+  String get ctxExecQuickAccess;
+
+  /// No description provided for @ctxExecPendingEmpty.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhuma ação pendente. O Action Engine preencherá automaticamente.'**
+  String get ctxExecPendingEmpty;
+
+  /// No description provided for @ctxExecModulesTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'MÓDULOS DO BUSINESS OS'**
+  String get ctxExecModulesTitle;
+
+  /// No description provided for @ctxExecOpenModule.
+  ///
+  /// In pt, this message translates to:
+  /// **'Abrir {label}'**
+  String ctxExecOpenModule(String label);
+
+  /// No description provided for @ctxExecModuleUnavailable.
+  ///
+  /// In pt, this message translates to:
+  /// **'Módulo não disponível'**
+  String get ctxExecModuleUnavailable;
+
+  /// No description provided for @ctxIveDetailExplanation.
+  ///
+  /// In pt, this message translates to:
+  /// **'Explicação IVE'**
+  String get ctxIveDetailExplanation;
+
+  /// No description provided for @ctxIveDetailNumbers.
+  ///
+  /// In pt, this message translates to:
+  /// **'Números e fórmulas'**
+  String get ctxIveDetailNumbers;
+
+  /// No description provided for @ctxIveDetailSuggestedActions.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ações sugeridas'**
+  String get ctxIveDetailSuggestedActions;
+
+  /// No description provided for @ctxIveExplainCompact.
+  ///
+  /// In pt, this message translates to:
+  /// **'Entender'**
+  String get ctxIveExplainCompact;
+
+  /// No description provided for @ctxIveExplainFull.
+  ///
+  /// In pt, this message translates to:
+  /// **'Explicar com IVE'**
+  String get ctxIveExplainFull;
+
+  /// No description provided for @ctxResultCopied.
+  ///
+  /// In pt, this message translates to:
+  /// **'"{title}" copiado!'**
+  String ctxResultCopied(String title);
+
+  /// No description provided for @ctxResultCopyTooltip.
+  ///
+  /// In pt, this message translates to:
+  /// **'Copiar'**
+  String get ctxResultCopyTooltip;
+
+  /// No description provided for @ctxCopilotConfidenceBadge.
+  ///
+  /// In pt, this message translates to:
+  /// **'{value}% conf.'**
+  String ctxCopilotConfidenceBadge(int value);
+
+  /// No description provided for @uxAiInvestmentYes.
+  ///
+  /// In pt, this message translates to:
+  /// **'SIM'**
+  String get uxAiInvestmentYes;
+
+  /// No description provided for @uxAiInvestmentConditional.
+  ///
+  /// In pt, this message translates to:
+  /// **'CONDICIONAL'**
+  String get uxAiInvestmentConditional;
+
+  /// No description provided for @uxAiInvestmentNo.
+  ///
+  /// In pt, this message translates to:
+  /// **'NÃO'**
+  String get uxAiInvestmentNo;
+
+  /// No description provided for @uxAiLevelLow.
+  ///
+  /// In pt, this message translates to:
+  /// **'Baixo'**
+  String get uxAiLevelLow;
+
+  /// No description provided for @uxAiLevelMedium.
+  ///
+  /// In pt, this message translates to:
+  /// **'Médio'**
+  String get uxAiLevelMedium;
+
+  /// No description provided for @uxAiLevelHigh.
+  ///
+  /// In pt, this message translates to:
+  /// **'Alto'**
+  String get uxAiLevelHigh;
+
+  /// No description provided for @uxAiLevelCritical.
+  ///
+  /// In pt, this message translates to:
+  /// **'Crítico'**
+  String get uxAiLevelCritical;
+
+  /// No description provided for @uxAiPriorityLow.
+  ///
+  /// In pt, this message translates to:
+  /// **'Baixa'**
+  String get uxAiPriorityLow;
+
+  /// No description provided for @uxAiPriorityMedium.
+  ///
+  /// In pt, this message translates to:
+  /// **'Média'**
+  String get uxAiPriorityMedium;
+
+  /// No description provided for @uxAiPriorityHigh.
+  ///
+  /// In pt, this message translates to:
+  /// **'Alta'**
+  String get uxAiPriorityHigh;
+
+  /// No description provided for @uxAiPriorityCritical.
+  ///
+  /// In pt, this message translates to:
+  /// **'Crítica'**
+  String get uxAiPriorityCritical;
+
+  /// No description provided for @uxAiSearchIntentInformational.
+  ///
+  /// In pt, this message translates to:
+  /// **'Informacional'**
+  String get uxAiSearchIntentInformational;
+
+  /// No description provided for @uxAiSearchIntentNavigational.
+  ///
+  /// In pt, this message translates to:
+  /// **'Navegacional'**
+  String get uxAiSearchIntentNavigational;
+
+  /// No description provided for @uxAiSearchIntentTransactional.
+  ///
+  /// In pt, this message translates to:
+  /// **'Transacional'**
+  String get uxAiSearchIntentTransactional;
+
+  /// No description provided for @uxAiSearchIntentCommercial.
+  ///
+  /// In pt, this message translates to:
+  /// **'Comercial'**
+  String get uxAiSearchIntentCommercial;
+
+  /// No description provided for @uxAiArticleTypePillar.
+  ///
+  /// In pt, this message translates to:
+  /// **'Página pilar'**
+  String get uxAiArticleTypePillar;
+
+  /// No description provided for @uxAiArticleTypeSupporting.
+  ///
+  /// In pt, this message translates to:
+  /// **'Conteúdo de apoio'**
+  String get uxAiArticleTypeSupporting;
+
+  /// No description provided for @uxAiArticleTypeLandingPage.
+  ///
+  /// In pt, this message translates to:
+  /// **'Landing page'**
+  String get uxAiArticleTypeLandingPage;
+
+  /// No description provided for @uxAiArticleTypeComparison.
+  ///
+  /// In pt, this message translates to:
+  /// **'Comparativo'**
+  String get uxAiArticleTypeComparison;
+
+  /// No description provided for @uxAiOpportunityTypeContent.
+  ///
+  /// In pt, this message translates to:
+  /// **'Conteúdo'**
+  String get uxAiOpportunityTypeContent;
+
+  /// No description provided for @uxAiOpportunityTypeSeo.
+  ///
+  /// In pt, this message translates to:
+  /// **'SEO'**
+  String get uxAiOpportunityTypeSeo;
+
+  /// No description provided for @uxAiOpportunityTypeProduct.
+  ///
+  /// In pt, this message translates to:
+  /// **'Produto'**
+  String get uxAiOpportunityTypeProduct;
+
+  /// No description provided for @uxAiOpportunityTypeMonetization.
+  ///
+  /// In pt, this message translates to:
+  /// **'Monetização'**
+  String get uxAiOpportunityTypeMonetization;
+
+  /// No description provided for @uxAiOpportunityTypePartnership.
+  ///
+  /// In pt, this message translates to:
+  /// **'Parceria'**
+  String get uxAiOpportunityTypePartnership;
+
+  /// No description provided for @uxAiOpportunityTypePlatform.
+  ///
+  /// In pt, this message translates to:
+  /// **'Plataforma'**
+  String get uxAiOpportunityTypePlatform;
+
+  /// No description provided for @uxAiOpportunityTypeAudience.
+  ///
+  /// In pt, this message translates to:
+  /// **'Audiência'**
+  String get uxAiOpportunityTypeAudience;
+
+  /// No description provided for @uxAiTimeframeMonths.
+  ///
+  /// In pt, this message translates to:
+  /// **'{range} meses'**
+  String uxAiTimeframeMonths(String range);
+
+  /// No description provided for @uxAiTimeframeWeeks.
+  ///
+  /// In pt, this message translates to:
+  /// **'{range} semanas'**
+  String uxAiTimeframeWeeks(String range);
+
+  /// No description provided for @uxAiTimeframeDays.
+  ///
+  /// In pt, this message translates to:
+  /// **'{range} dias'**
+  String uxAiTimeframeDays(String range);
+
+  /// No description provided for @uxCampaignObjectiveSales.
+  ///
+  /// In pt, this message translates to:
+  /// **'Venda'**
+  String get uxCampaignObjectiveSales;
+
+  /// No description provided for @uxCampaignObjectiveAuthority.
+  ///
+  /// In pt, this message translates to:
+  /// **'Autoridade'**
+  String get uxCampaignObjectiveAuthority;
+
+  /// No description provided for @uxCampaignObjectiveLeads.
+  ///
+  /// In pt, this message translates to:
+  /// **'Leads'**
+  String get uxCampaignObjectiveLeads;
+
+  /// No description provided for @uxCampaignObjectiveEngagement.
+  ///
+  /// In pt, this message translates to:
+  /// **'Engajamento'**
+  String get uxCampaignObjectiveEngagement;
+
+  /// No description provided for @uxCampaignObjectiveLaunch.
+  ///
+  /// In pt, this message translates to:
+  /// **'Lançamento'**
+  String get uxCampaignObjectiveLaunch;
+
+  /// No description provided for @uxCampaignObjectiveTraffic.
+  ///
+  /// In pt, this message translates to:
+  /// **'Tráfego'**
+  String get uxCampaignObjectiveTraffic;
+
+  /// No description provided for @uxCampaignObjectiveSalesOn.
+  ///
+  /// In pt, this message translates to:
+  /// **'Venda {platform}'**
+  String uxCampaignObjectiveSalesOn(String platform);
+
+  /// No description provided for @uxCampaignObjectiveSubscription.
+  ///
+  /// In pt, this message translates to:
+  /// **'Assinatura'**
+  String get uxCampaignObjectiveSubscription;
+
+  /// No description provided for @uxAiTimeframeOneMonth.
+  ///
+  /// In pt, this message translates to:
+  /// **'1 mês'**
+  String get uxAiTimeframeOneMonth;
+
+  /// No description provided for @uxAiTimeframeOneWeek.
+  ///
+  /// In pt, this message translates to:
+  /// **'1 semana'**
+  String get uxAiTimeframeOneWeek;
+
+  /// No description provided for @uxAiTimeframeOneDay.
+  ///
+  /// In pt, this message translates to:
+  /// **'1 dia'**
+  String get uxAiTimeframeOneDay;
+
+  /// No description provided for @uxMiRoiNoteOpportunities.
+  ///
+  /// In pt, this message translates to:
+  /// **'{count} oportunidades — {input}'**
+  String uxMiRoiNoteOpportunities(String count, String input);
+
+  /// No description provided for @uxNotAvailableShort.
+  ///
+  /// In pt, this message translates to:
+  /// **'N/D'**
+  String get uxNotAvailableShort;
+
+  /// No description provided for @uxOppSeedDescription.
+  ///
+  /// In pt, this message translates to:
+  /// **'Impacto: {impact} · Esforço: {effort}'**
+  String uxOppSeedDescription(String impact, String effort);
+
+  /// No description provided for @uxOppSeedRationaleFallback.
+  ///
+  /// In pt, this message translates to:
+  /// **'Identificado pelo Market Intelligence com base na análise de {input}.'**
+  String uxOppSeedRationaleFallback(String input);
+
+  /// No description provided for @uxOppSeedRiskEffort.
+  ///
+  /// In pt, this message translates to:
+  /// **'Esforço: {effort}'**
+  String uxOppSeedRiskEffort(String effort);
+
+  /// No description provided for @uxOppSeedEstimatedTimeframe.
+  ///
+  /// In pt, this message translates to:
+  /// **'Prazo estimado: {timeframe}'**
+  String uxOppSeedEstimatedTimeframe(String timeframe);
+
+  /// No description provided for @uxActionDefaultTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ação'**
+  String get uxActionDefaultTitle;
+
+  /// No description provided for @uxErrorNotAuthenticated.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sessão expirada. Entre novamente para continuar.'**
+  String get uxErrorNotAuthenticated;
+
+  /// No description provided for @uxMemoryCampaignSucceeded.
+  ///
+  /// In pt, this message translates to:
+  /// **'Campanha bem-sucedida'**
+  String get uxMemoryCampaignSucceeded;
+
+  /// No description provided for @uxMemoryCampaignFailed.
+  ///
+  /// In pt, this message translates to:
+  /// **'Campanha mal-sucedida'**
+  String get uxMemoryCampaignFailed;
+
+  /// No description provided for @uxMemoryRoiTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'ROI: R$ {value}'**
+  String uxMemoryRoiTitle(String value);
+
+  /// No description provided for @uxAuthErrorInvalidCredentials.
+  ///
+  /// In pt, this message translates to:
+  /// **'E-mail ou senha incorretos.'**
+  String get uxAuthErrorInvalidCredentials;
+
+  /// No description provided for @uxAuthErrorEmailNotConfirmed.
+  ///
+  /// In pt, this message translates to:
+  /// **'Confirme seu e-mail antes de entrar.'**
+  String get uxAuthErrorEmailNotConfirmed;
+
+  /// No description provided for @uxAuthErrorAlreadyRegistered.
+  ///
+  /// In pt, this message translates to:
+  /// **'Este e-mail já está cadastrado.'**
+  String get uxAuthErrorAlreadyRegistered;
+
+  /// No description provided for @uxAuthErrorRateLimited.
+  ///
+  /// In pt, this message translates to:
+  /// **'Muitas tentativas. Aguarde alguns segundos.'**
+  String get uxAuthErrorRateLimited;
+
+  /// No description provided for @uxAuthErrorWeakPassword.
+  ///
+  /// In pt, this message translates to:
+  /// **'Senha muito fraca. Use pelo menos 6 caracteres.'**
+  String get uxAuthErrorWeakPassword;
+
+  /// No description provided for @uxAuthErrorGeneric.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não foi possível concluir a autenticação. Tente novamente.'**
+  String get uxAuthErrorGeneric;
+
+  /// No description provided for @uxErrorQuotaExceeded.
+  ///
+  /// In pt, this message translates to:
+  /// **'Você atingiu o limite mensal de análises de IA do seu plano. Faça upgrade para o Pro para continuar.'**
+  String get uxErrorQuotaExceeded;
+
+  /// No description provided for @uxErrorPlanRequired.
+  ///
+  /// In pt, this message translates to:
+  /// **'Este recurso faz parte de um plano superior. Faça upgrade para continuar.'**
+  String get uxErrorPlanRequired;
+
+  /// No description provided for @uxErrorModuleNotAvailable.
+  ///
+  /// In pt, this message translates to:
+  /// **'Este recurso ainda não está disponível para a sua conta.'**
+  String get uxErrorModuleNotAvailable;
+
+  /// No description provided for @uxErrorModuleDisabled.
+  ///
+  /// In pt, this message translates to:
+  /// **'Este recurso foi desativado.'**
+  String get uxErrorModuleDisabled;
+
+  /// No description provided for @uxErrorEntitlementUnavailable.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não foi possível verificar o seu acesso agora. Tente novamente.'**
+  String get uxErrorEntitlementUnavailable;
+
+  /// No description provided for @uxErrorSessionExpired.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sua sessão expirou. Faça login novamente.'**
+  String get uxErrorSessionExpired;
+
+  /// No description provided for @uxErrorNoConnection.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não foi possível conectar. Verifique sua internet.'**
+  String get uxErrorNoConnection;
+
+  /// No description provided for @uxErrorTimeout.
+  ///
+  /// In pt, this message translates to:
+  /// **'A conexão demorou muito. Tente novamente.'**
+  String get uxErrorTimeout;
+
+  /// No description provided for @uxErrorServiceUnavailable.
+  ///
+  /// In pt, this message translates to:
+  /// **'Serviço temporariamente indisponível. Tente novamente.'**
+  String get uxErrorServiceUnavailable;
+
+  /// No description provided for @uxOriginManual.
+  ///
+  /// In pt, this message translates to:
+  /// **'Adicionado manualmente'**
+  String get uxOriginManual;
+
+  /// No description provided for @uxOriginMarketAnalysis.
+  ///
+  /// In pt, this message translates to:
+  /// **'Análise de Mercado'**
+  String get uxOriginMarketAnalysis;
+
+  /// No description provided for @uxOriginAutoBootstrap.
+  ///
+  /// In pt, this message translates to:
+  /// **'Bootstrap Automático'**
+  String get uxOriginAutoBootstrap;
+
+  /// No description provided for @uxKnowledgeFormSourceLanguageLabel.
+  ///
+  /// In pt, this message translates to:
+  /// **'Idioma do documento'**
+  String get uxKnowledgeFormSourceLanguageLabel;
+
+  /// No description provided for @uxAdminAccessDeniedTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Acesso negado'**
+  String get uxAdminAccessDeniedTitle;
+
+  /// No description provided for @uxAdminAccessDeniedBody.
+  ///
+  /// In pt, this message translates to:
+  /// **'Você não tem permissão para acessar esta área.'**
+  String get uxAdminAccessDeniedBody;
+
+  /// No description provided for @uxAdminPanelTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Painel Admin'**
+  String get uxAdminPanelTitle;
+
+  /// No description provided for @uxAdminTabUsers.
+  ///
+  /// In pt, this message translates to:
+  /// **'Usuários'**
+  String get uxAdminTabUsers;
+
+  /// No description provided for @uxAdminTabPersonas.
+  ///
+  /// In pt, this message translates to:
+  /// **'Personas'**
+  String get uxAdminTabPersonas;
+
+  /// No description provided for @uxAdminTabOverview.
+  ///
+  /// In pt, this message translates to:
+  /// **'Visão Geral'**
+  String get uxAdminTabOverview;
+
+  /// No description provided for @uxAdminTabModules.
+  ///
+  /// In pt, this message translates to:
+  /// **'Módulos'**
+  String get uxAdminTabModules;
+
+  /// No description provided for @uxAdminTabDiagnostics.
+  ///
+  /// In pt, this message translates to:
+  /// **'Diagnóstico'**
+  String get uxAdminTabDiagnostics;
+
+  /// No description provided for @uxAdminNoUsers.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhum usuário encontrado.'**
+  String get uxAdminNoUsers;
+
+  /// No description provided for @uxAdminNoEmail.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sem e-mail'**
+  String get uxAdminNoEmail;
+
+  /// No description provided for @uxAdminUserPlanLine.
+  ///
+  /// In pt, this message translates to:
+  /// **'{role} · {limit} gerações/mês'**
+  String uxAdminUserPlanLine(String role, String limit);
+
+  /// No description provided for @uxAdminDeactivate.
+  ///
+  /// In pt, this message translates to:
+  /// **'Desativar'**
+  String get uxAdminDeactivate;
+
+  /// No description provided for @uxAdminActivate.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ativar'**
+  String get uxAdminActivate;
+
+  /// No description provided for @uxAdminManagePersonas.
+  ///
+  /// In pt, this message translates to:
+  /// **'Gerenciar todas as personas'**
+  String get uxAdminManagePersonas;
+
+  /// No description provided for @uxAdminNewPersona.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nova Persona'**
+  String get uxAdminNewPersona;
+
+  /// No description provided for @uxAdminOpenPersonas.
+  ///
+  /// In pt, this message translates to:
+  /// **'Abrir gestão de Personas'**
+  String get uxAdminOpenPersonas;
+
+  /// No description provided for @uxAdminUserDistribution.
+  ///
+  /// In pt, this message translates to:
+  /// **'Distribuição de Usuários'**
+  String get uxAdminUserDistribution;
+
+  /// No description provided for @uxAdminTotalUsers.
+  ///
+  /// In pt, this message translates to:
+  /// **'Total de Usuários'**
+  String get uxAdminTotalUsers;
+
+  /// No description provided for @uxAdminModuleNotCommercial.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não comercial'**
+  String get uxAdminModuleNotCommercial;
+
+  /// No description provided for @uxAdminModuleTables.
+  ///
+  /// In pt, this message translates to:
+  /// **'Tabelas'**
+  String get uxAdminModuleTables;
+
+  /// No description provided for @uxDiagActive.
+  ///
+  /// In pt, this message translates to:
+  /// **'DIAGNÓSTICO ATIVO'**
+  String get uxDiagActive;
+
+  /// No description provided for @uxDiagInactive.
+  ///
+  /// In pt, this message translates to:
+  /// **'Diagnóstico inativo'**
+  String get uxDiagInactive;
+
+  /// No description provided for @uxDiagCopySessionId.
+  ///
+  /// In pt, this message translates to:
+  /// **'Copiar ID da sessão'**
+  String get uxDiagCopySessionId;
+
+  /// No description provided for @uxDiagIdCopied.
+  ///
+  /// In pt, this message translates to:
+  /// **'ID copiado.'**
+  String get uxDiagIdCopied;
+
+  /// No description provided for @uxDiagLabelValue.
+  ///
+  /// In pt, this message translates to:
+  /// **'Rótulo: {label}'**
+  String uxDiagLabelValue(String label);
+
+  /// No description provided for @uxDiagStopSession.
+  ///
+  /// In pt, this message translates to:
+  /// **'ENCERRAR SESSÃO'**
+  String get uxDiagStopSession;
+
+  /// No description provided for @uxDiagLabelHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'Rótulo (opcional) — ex: COMMERCIAL-E2E-001'**
+  String get uxDiagLabelHint;
+
+  /// No description provided for @uxDiagStartSession.
+  ///
+  /// In pt, this message translates to:
+  /// **'INICIAR SESSÃO DE DIAGNÓSTICO'**
+  String get uxDiagStartSession;
+
+  /// No description provided for @uxDiagStartFailed.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não foi possível iniciar a sessão.'**
+  String get uxDiagStartFailed;
+
+  /// No description provided for @uxDiagSessionsTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sessões de Diagnóstico'**
+  String get uxDiagSessionsTitle;
+
+  /// No description provided for @uxDiagSessionsLoadError.
+  ///
+  /// In pt, this message translates to:
+  /// **'Erro ao carregar sessões: {error}'**
+  String uxDiagSessionsLoadError(String error);
+
+  /// No description provided for @uxDiagNoSessions.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhuma sessão registrada.'**
+  String get uxDiagNoSessions;
+
+  /// No description provided for @uxDiagSessionShort.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sessão {id}…'**
+  String uxDiagSessionShort(String id);
+
+  /// No description provided for @uxDiagCopyReport.
+  ///
+  /// In pt, this message translates to:
+  /// **'Copiar relatório de diagnóstico'**
+  String get uxDiagCopyReport;
+
+  /// No description provided for @uxDiagSearchHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'Buscar por evento, rota ou erro…'**
+  String get uxDiagSearchHint;
+
+  /// No description provided for @uxDiagNoEventsMatch.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhum evento corresponde aos filtros.'**
+  String get uxDiagNoEventsMatch;
+
+  /// No description provided for @uxDiagSeverity.
+  ///
+  /// In pt, this message translates to:
+  /// **'Severidade'**
+  String get uxDiagSeverity;
+
+  /// No description provided for @uxDiagCategory.
+  ///
+  /// In pt, this message translates to:
+  /// **'Categoria'**
+  String get uxDiagCategory;
+
+  /// No description provided for @uxDiagFilterAll.
+  ///
+  /// In pt, this message translates to:
+  /// **'Todas'**
+  String get uxDiagFilterAll;
+
+  /// No description provided for @uxDiagReportCopied.
+  ///
+  /// In pt, this message translates to:
+  /// **'Relatório copiado para a área de transferência.'**
+  String get uxDiagReportCopied;
+
+  /// No description provided for @uxDiagRouteValue.
+  ///
+  /// In pt, this message translates to:
+  /// **'rota: {route}'**
+  String uxDiagRouteValue(String route);
+
+  /// No description provided for @uxDriveLoginCancelled.
+  ///
+  /// In pt, this message translates to:
+  /// **'Login cancelado.'**
+  String get uxDriveLoginCancelled;
+
+  /// No description provided for @uxDriveConfigError.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não foi possível conectar ao Google (erro de configuração). Use o tipo "URL" e cole o link de compartilhamento do Google Docs, ou use o tipo "Arquivo" para importar PDFs locais.'**
+  String get uxDriveConfigError;
+
+  /// No description provided for @uxDriveNoInternet.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sem conexão com a internet. Verifique sua rede e tente novamente.'**
+  String get uxDriveNoInternet;
+
+  /// No description provided for @uxDriveConnectError.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não foi possível conectar ao Google Drive. Tente novamente.'**
+  String get uxDriveConnectError;
+
+  /// No description provided for @uxDriveLoadError.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não foi possível carregar seus arquivos do Drive. Tente novamente.'**
+  String get uxDriveLoadError;
+
+  /// No description provided for @uxDriveDownloadError.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não foi possível baixar o arquivo. Tente novamente.'**
+  String get uxDriveDownloadError;
+
+  /// No description provided for @uxDriveImportTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Importar do Google Drive'**
+  String get uxDriveImportTitle;
+
+  /// No description provided for @uxDriveSignOut.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sair'**
+  String get uxDriveSignOut;
+
+  /// No description provided for @uxDriveDownloading.
+  ///
+  /// In pt, this message translates to:
+  /// **'Baixando arquivo…'**
+  String get uxDriveDownloading;
+
+  /// No description provided for @uxDriveConnectTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Conectar Google Drive'**
+  String get uxDriveConnectTitle;
+
+  /// No description provided for @uxDriveConnectBody.
+  ///
+  /// In pt, this message translates to:
+  /// **'Importe PDFs, Google Docs e documentos de texto diretamente para o Cofre de Conhecimento.'**
+  String get uxDriveConnectBody;
+
+  /// No description provided for @uxDriveConnecting.
+  ///
+  /// In pt, this message translates to:
+  /// **'Conectando…'**
+  String get uxDriveConnecting;
+
+  /// No description provided for @uxDriveSignInGoogle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Entrar com Google'**
+  String get uxDriveSignInGoogle;
+
+  /// No description provided for @uxDriveConnectedAs.
+  ///
+  /// In pt, this message translates to:
+  /// **'Conectado como {name}'**
+  String uxDriveConnectedAs(String name);
+
+  /// No description provided for @uxDriveSearchHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'Buscar arquivo no Drive…'**
+  String get uxDriveSearchHint;
+
+  /// No description provided for @uxDriveNoFiles.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhum arquivo encontrado. São suportados: Google Docs, PDF, DOCX, TXT e CSV.'**
+  String get uxDriveNoFiles;
+
+  /// No description provided for @uxDriveTypeText.
+  ///
+  /// In pt, this message translates to:
+  /// **'Texto'**
+  String get uxDriveTypeText;
+
+  /// No description provided for @uxKnowledgeActionGenerateStrategy.
+  ///
+  /// In pt, this message translates to:
+  /// **'Gerar Estratégia'**
+  String get uxKnowledgeActionGenerateStrategy;
+
+  /// No description provided for @uxKnowledgeActionCreateCampaign.
+  ///
+  /// In pt, this message translates to:
+  /// **'Criar Campanha'**
+  String get uxKnowledgeActionCreateCampaign;
+
+  /// No description provided for @uxKnowledgeActionTrainPersona.
+  ///
+  /// In pt, this message translates to:
+  /// **'Treinar Persona'**
+  String get uxKnowledgeActionTrainPersona;
+
+  /// No description provided for @uxKnowledgeNoPersonas.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhuma persona encontrada. Crie uma persona primeiro.'**
+  String get uxKnowledgeNoPersonas;
+
+  /// No description provided for @uxKnowledgePersonaTrained.
+  ///
+  /// In pt, this message translates to:
+  /// **'Persona treinada com sucesso!'**
+  String get uxKnowledgePersonaTrained;
+
+  /// No description provided for @uxKnowledgeTrain.
+  ///
+  /// In pt, this message translates to:
+  /// **'Treinar'**
+  String get uxKnowledgeTrain;
+
+  /// No description provided for @uxKnowledgeOppHigh.
+  ///
+  /// In pt, this message translates to:
+  /// **'Alta Oportunidade'**
+  String get uxKnowledgeOppHigh;
+
+  /// No description provided for @uxKnowledgeOppGood.
+  ///
+  /// In pt, this message translates to:
+  /// **'Boa Oportunidade'**
+  String get uxKnowledgeOppGood;
+
+  /// No description provided for @uxKnowledgeOppModerate.
+  ///
+  /// In pt, this message translates to:
+  /// **'Oportunidade Moderada'**
+  String get uxKnowledgeOppModerate;
+
+  /// No description provided for @uxKnowledgeOppLow.
+  ///
+  /// In pt, this message translates to:
+  /// **'Baixa Oportunidade'**
+  String get uxKnowledgeOppLow;
+
+  /// No description provided for @uxKnowledgeFieldProduct.
+  ///
+  /// In pt, this message translates to:
+  /// **'Produto'**
+  String get uxKnowledgeFieldProduct;
+
+  /// No description provided for @uxKnowledgeFieldPromise.
+  ///
+  /// In pt, this message translates to:
+  /// **'Promessa'**
+  String get uxKnowledgeFieldPromise;
+
+  /// No description provided for @uxKnowledgeFieldFormat.
+  ///
+  /// In pt, this message translates to:
+  /// **'Formato'**
+  String get uxKnowledgeFieldFormat;
+
+  /// No description provided for @uxKnowledgeFieldPrice.
+  ///
+  /// In pt, this message translates to:
+  /// **'Preço'**
+  String get uxKnowledgeFieldPrice;
+
+  /// No description provided for @uxKnowledgeFieldDescription.
+  ///
+  /// In pt, this message translates to:
+  /// **'Descrição'**
+  String get uxKnowledgeFieldDescription;
+
+  /// No description provided for @uxKnowledgeStrengths.
+  ///
+  /// In pt, this message translates to:
+  /// **'Pontos Fortes'**
+  String get uxKnowledgeStrengths;
+
+  /// No description provided for @uxKnowledgeWeaknesses.
+  ///
+  /// In pt, this message translates to:
+  /// **'Pontos Fracos'**
+  String get uxKnowledgeWeaknesses;
+
+  /// No description provided for @uxKnowledgeImprovements.
+  ///
+  /// In pt, this message translates to:
+  /// **'Melhorias'**
+  String get uxKnowledgeImprovements;
+
+  /// No description provided for @uxResultSavedToHistory.
+  ///
+  /// In pt, this message translates to:
+  /// **'Salvo no histórico!'**
+  String get uxResultSavedToHistory;
+
+  /// No description provided for @uxResultSaveError.
+  ///
+  /// In pt, this message translates to:
+  /// **'Erro ao salvar. Tente novamente.'**
+  String get uxResultSaveError;
+
+  /// No description provided for @uxPostImproved.
+  ///
+  /// In pt, this message translates to:
+  /// **'Post Melhorado'**
+  String get uxPostImproved;
+
+  /// No description provided for @uxPostProfessional.
+  ///
+  /// In pt, this message translates to:
+  /// **'Versão Profissional'**
+  String get uxPostProfessional;
+
+  /// No description provided for @uxPostCasual.
+  ///
+  /// In pt, this message translates to:
+  /// **'Versão Descontraída'**
+  String get uxPostCasual;
+
+  /// No description provided for @uxPostPersuasive.
+  ///
+  /// In pt, this message translates to:
+  /// **'Versão Persuasiva'**
+  String get uxPostPersuasive;
+
+  /// No description provided for @uxPostCommentReply.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sugestão de Resposta a Comentários'**
+  String get uxPostCommentReply;
+
+  /// No description provided for @uxContentCopied.
+  ///
+  /// In pt, this message translates to:
+  /// **'Conteúdo copiado com sucesso!'**
+  String get uxContentCopied;
+
+  /// No description provided for @uxResultTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Resultado'**
+  String get uxResultTitle;
+
+  /// No description provided for @uxCopyAll.
+  ///
+  /// In pt, this message translates to:
+  /// **'Copiar Tudo'**
+  String get uxCopyAll;
+
+  /// No description provided for @uxResultGeneratedIn.
+  ///
+  /// In pt, this message translates to:
+  /// **'Gerado em {seconds} segundos'**
+  String uxResultGeneratedIn(String seconds);
+
+  /// No description provided for @uxScoreClarity.
+  ///
+  /// In pt, this message translates to:
+  /// **'Clareza'**
+  String get uxScoreClarity;
+
+  /// No description provided for @uxScoreEngagement.
+  ///
+  /// In pt, this message translates to:
+  /// **'Engajamento'**
+  String get uxScoreEngagement;
+
+  /// No description provided for @uxScoreClarityShort.
+  ///
+  /// In pt, this message translates to:
+  /// **'C'**
+  String get uxScoreClarityShort;
+
+  /// No description provided for @uxScoreImpactShort.
+  ///
+  /// In pt, this message translates to:
+  /// **'I'**
+  String get uxScoreImpactShort;
+
+  /// No description provided for @uxScoreEngagementShort.
+  ///
+  /// In pt, this message translates to:
+  /// **'E'**
+  String get uxScoreEngagementShort;
+
+  /// No description provided for @uxDateAtTime.
+  ///
+  /// In pt, this message translates to:
+  /// **'{date} às {time}'**
+  String uxDateAtTime(String date, String time);
+
+  /// No description provided for @uxHistoryItemLoadError.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não foi possível carregar este item.'**
+  String get uxHistoryItemLoadError;
+
+  /// No description provided for @uxHistoryOriginalText.
+  ///
+  /// In pt, this message translates to:
+  /// **'Texto original'**
+  String get uxHistoryOriginalText;
+
+  /// No description provided for @uxHistoryLoadError.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não foi possível carregar o histórico.'**
+  String get uxHistoryLoadError;
+
+  /// No description provided for @uxHistoryEmptyTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhum conteúdo salvo ainda'**
+  String get uxHistoryEmptyTitle;
+
+  /// No description provided for @uxHistoryEmptyBody.
+  ///
+  /// In pt, this message translates to:
+  /// **'Volte à tela principal, escreva um post e toque em "Salvar" após gerar o resultado.'**
+  String get uxHistoryEmptyBody;
+
+  /// No description provided for @uxContentTypeBook.
+  ///
+  /// In pt, this message translates to:
+  /// **'Livro'**
+  String get uxContentTypeBook;
+
+  /// No description provided for @uxContentTypeEbook.
+  ///
+  /// In pt, this message translates to:
+  /// **'E-book'**
+  String get uxContentTypeEbook;
+
+  /// No description provided for @uxContentTypeArticle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Artigo'**
+  String get uxContentTypeArticle;
+
+  /// No description provided for @uxContentTypePost.
+  ///
+  /// In pt, this message translates to:
+  /// **'Post'**
+  String get uxContentTypePost;
+
+  /// No description provided for @uxContentTypeIdea.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ideia'**
+  String get uxContentTypeIdea;
+
+  /// No description provided for @uxContentTypeRawText.
+  ///
+  /// In pt, this message translates to:
+  /// **'Texto Bruto'**
+  String get uxContentTypeRawText;
+
+  /// No description provided for @uxContentTypeCampaign.
+  ///
+  /// In pt, this message translates to:
+  /// **'Campanha'**
+  String get uxContentTypeCampaign;
+
+  /// No description provided for @uxContentTypeDigitalProduct.
+  ///
+  /// In pt, this message translates to:
+  /// **'Produto Digital'**
+  String get uxContentTypeDigitalProduct;
+
+  /// No description provided for @uxContentTypeBrand.
+  ///
+  /// In pt, this message translates to:
+  /// **'Marca'**
+  String get uxContentTypeBrand;
+
+  /// No description provided for @uxContentTypeProject.
+  ///
+  /// In pt, this message translates to:
+  /// **'Projeto'**
+  String get uxContentTypeProject;
+
+  /// No description provided for @uxContentFormEditTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Editar Item'**
+  String get uxContentFormEditTitle;
+
+  /// No description provided for @uxContentFormNewTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Novo Item'**
+  String get uxContentFormNewTitle;
+
+  /// No description provided for @uxContentFormTypeLabel.
+  ///
+  /// In pt, this message translates to:
+  /// **'Tipo de conteúdo'**
+  String get uxContentFormTypeLabel;
+
+  /// No description provided for @uxContentFormTitleLabel.
+  ///
+  /// In pt, this message translates to:
+  /// **'Título *'**
+  String get uxContentFormTitleLabel;
+
+  /// No description provided for @uxContentFormTitleHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nome do conteúdo'**
+  String get uxContentFormTitleHint;
+
+  /// No description provided for @uxFieldRequired.
+  ///
+  /// In pt, this message translates to:
+  /// **'Obrigatório'**
+  String get uxFieldRequired;
+
+  /// No description provided for @uxContentFormDescLabel.
+  ///
+  /// In pt, this message translates to:
+  /// **'Descrição / Resumo'**
+  String get uxContentFormDescLabel;
+
+  /// No description provided for @uxContentFormDescHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'Breve descrição...'**
+  String get uxContentFormDescHint;
+
+  /// No description provided for @uxContentFormBodyLabel.
+  ///
+  /// In pt, this message translates to:
+  /// **'Texto Base / Conteúdo'**
+  String get uxContentFormBodyLabel;
+
+  /// No description provided for @uxContentFormBodyHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'Cole o texto, trecho ou anotações...'**
+  String get uxContentFormBodyHint;
+
+  /// No description provided for @uxContentFormNicheLabel.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nicho'**
+  String get uxContentFormNicheLabel;
+
+  /// No description provided for @uxContentFormNicheHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ex: Marketing Digital, Fitness'**
+  String get uxContentFormNicheHint;
+
+  /// No description provided for @uxContentFormAudienceLabel.
+  ///
+  /// In pt, this message translates to:
+  /// **'Público-alvo'**
+  String get uxContentFormAudienceLabel;
+
+  /// No description provided for @uxContentFormAudienceHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ex: Empreendedores iniciantes'**
+  String get uxContentFormAudienceHint;
+
+  /// No description provided for @uxContentFormSaveChanges.
+  ///
+  /// In pt, this message translates to:
+  /// **'Salvar Alterações'**
+  String get uxContentFormSaveChanges;
+
+  /// No description provided for @uxContentFormAddToLibrary.
+  ///
+  /// In pt, this message translates to:
+  /// **'Adicionar à Biblioteca'**
+  String get uxContentFormAddToLibrary;
+
+  /// No description provided for @uxAdvisorRoleStrategy.
+  ///
+  /// In pt, this message translates to:
+  /// **'Estratégia'**
+  String get uxAdvisorRoleStrategy;
+
+  /// No description provided for @uxAdvisorRoleMarketing.
+  ///
+  /// In pt, this message translates to:
+  /// **'Marketing'**
+  String get uxAdvisorRoleMarketing;
+
+  /// No description provided for @uxAdvisorRoleMonetization.
+  ///
+  /// In pt, this message translates to:
+  /// **'Monetização'**
+  String get uxAdvisorRoleMonetization;
+
+  /// No description provided for @uxAdvisorRoleBusiness.
+  ///
+  /// In pt, this message translates to:
+  /// **'Negócios'**
+  String get uxAdvisorRoleBusiness;
+
+  /// No description provided for @uxAdvisorRoleGeneral.
+  ///
+  /// In pt, this message translates to:
+  /// **'Geral'**
+  String get uxAdvisorRoleGeneral;
+
+  /// No description provided for @uxAdvisorStyleExecutive.
+  ///
+  /// In pt, this message translates to:
+  /// **'Executivo'**
+  String get uxAdvisorStyleExecutive;
+
+  /// No description provided for @uxAdvisorStyleAnalytical.
+  ///
+  /// In pt, this message translates to:
+  /// **'Analítico'**
+  String get uxAdvisorStyleAnalytical;
+
+  /// No description provided for @uxAdvisorStyleTeacher.
+  ///
+  /// In pt, this message translates to:
+  /// **'Professor'**
+  String get uxAdvisorStyleTeacher;
+
+  /// No description provided for @uxAdvisorStyleMentor.
+  ///
+  /// In pt, this message translates to:
+  /// **'Mentor'**
+  String get uxAdvisorStyleMentor;
+
+  /// No description provided for @uxAdvisorStyleDirect.
+  ///
+  /// In pt, this message translates to:
+  /// **'Direto'**
+  String get uxAdvisorStyleDirect;
+
+  /// No description provided for @uxAdvisorStyleExecutiveDesc.
+  ///
+  /// In pt, this message translates to:
+  /// **'Direto ao ponto, orientado a resultados e ROI.'**
+  String get uxAdvisorStyleExecutiveDesc;
+
+  /// No description provided for @uxAdvisorStyleAnalyticalDesc.
+  ///
+  /// In pt, this message translates to:
+  /// **'Dados primeiro, análise profunda antes de recomendar.'**
+  String get uxAdvisorStyleAnalyticalDesc;
+
+  /// No description provided for @uxAdvisorStyleTeacherDesc.
+  ///
+  /// In pt, this message translates to:
+  /// **'Explica cada conceito, ideal para aprendizado.'**
+  String get uxAdvisorStyleTeacherDesc;
+
+  /// No description provided for @uxAdvisorStyleMentorDesc.
+  ///
+  /// In pt, this message translates to:
+  /// **'Guia com experiência, questionamentos estratégicos.'**
+  String get uxAdvisorStyleMentorDesc;
+
+  /// No description provided for @uxAdvisorStyleDirectDesc.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sem rodeios, vai direto para a solução.'**
+  String get uxAdvisorStyleDirectDesc;
+
+  /// No description provided for @uxAdvisorNext.
+  ///
+  /// In pt, this message translates to:
+  /// **'Próximo'**
+  String get uxAdvisorNext;
+
+  /// No description provided for @uxAdvisorActivate.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ativar Advisor'**
+  String get uxAdvisorActivate;
+
+  /// No description provided for @uxAdvisorNameTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Escolha o nome do seu Personal AI Advisor'**
+  String get uxAdvisorNameTitle;
+
+  /// No description provided for @uxAdvisorNameSubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Este será seu parceiro estratégico de negócios.'**
+  String get uxAdvisorNameSubtitle;
+
+  /// No description provided for @uxAdvisorCustomNameHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ou digite um nome personalizado...'**
+  String get uxAdvisorCustomNameHint;
+
+  /// No description provided for @uxAdvisorRoleTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Qual será a especialidade do seu Advisor?'**
+  String get uxAdvisorRoleTitle;
+
+  /// No description provided for @uxAdvisorRoleSubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Define o foco das análises e recomendações.'**
+  String get uxAdvisorRoleSubtitle;
+
+  /// No description provided for @uxAdvisorStyleTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Como {name} deve se comunicar?'**
+  String uxAdvisorStyleTitle(String name);
+
+  /// No description provided for @uxAdvisorStyleSubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Define o estilo das respostas e interações.'**
+  String get uxAdvisorStyleSubtitle;
+
+  /// No description provided for @uxImpactInvestigationActive.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ativa'**
+  String get uxImpactInvestigationActive;
+
+  /// No description provided for @uxImpactInvestigationArchived.
+  ///
+  /// In pt, this message translates to:
+  /// **'Arquivada'**
+  String get uxImpactInvestigationArchived;
+
+  /// No description provided for @uxSupportSubjectProblemReport.
+  ///
+  /// In pt, this message translates to:
+  /// **'Relato de problema'**
+  String get uxSupportSubjectProblemReport;
+
+  /// No description provided for @uxSupportSubjectFeedback.
+  ///
+  /// In pt, this message translates to:
+  /// **'Feedback'**
+  String get uxSupportSubjectFeedback;
+
+  /// No description provided for @uxStrategyScoreWeight.
+  ///
+  /// In pt, this message translates to:
+  /// **'peso {weight}'**
+  String uxStrategyScoreWeight(String weight);
+
+  /// No description provided for @uxActionPriorityShort.
+  ///
+  /// In pt, this message translates to:
+  /// **'prio'**
+  String get uxActionPriorityShort;
+
+  /// No description provided for @uxErrorEmptyResponse.
+  ///
+  /// In pt, this message translates to:
+  /// **'O serviço não retornou dados. Tente novamente.'**
+  String get uxErrorEmptyResponse;
+
+  /// No description provided for @uxErrorNotFound.
+  ///
+  /// In pt, this message translates to:
+  /// **'Item não encontrado.'**
+  String get uxErrorNotFound;
+
+  /// No description provided for @uxErrorFileTooLarge.
+  ///
+  /// In pt, this message translates to:
+  /// **'Arquivo muito grande para importar. O limite é de aproximadamente 6 MB.'**
+  String get uxErrorFileTooLarge;
+
+  /// No description provided for @uxErrorFileUnreadable.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não foi possível ler o arquivo.'**
+  String get uxErrorFileUnreadable;
+
+  /// No description provided for @uxErrorFileTimeout.
+  ///
+  /// In pt, this message translates to:
+  /// **'Tempo esgotado ao processar o arquivo. Tente novamente.'**
+  String get uxErrorFileTimeout;
+
+  /// No description provided for @uxErrorExtractionTimeout.
+  ///
+  /// In pt, this message translates to:
+  /// **'O servidor demorou demais para extrair o texto. Tente novamente.'**
+  String get uxErrorExtractionTimeout;
+
+  /// No description provided for @uxErrorExtractedTextTooShort.
+  ///
+  /// In pt, this message translates to:
+  /// **'Conteúdo extraído muito curto. O arquivo pode estar protegido ou corrompido — tente copiar e colar o texto manualmente.'**
+  String get uxErrorExtractedTextTooShort;
+
+  /// No description provided for @uxErrorGoogleNotConfigured.
+  ///
+  /// In pt, this message translates to:
+  /// **'Login com Google não está configurado neste ambiente.'**
+  String get uxErrorGoogleNotConfigured;
+
+  /// No description provided for @uxErrorGoogleCredentials.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não foi possível obter as credenciais do Google.'**
+  String get uxErrorGoogleCredentials;
+
+  /// No description provided for @uxErrorSignUpFailed.
+  ///
+  /// In pt, this message translates to:
+  /// **'Cadastro falhou. Tente novamente.'**
+  String get uxErrorSignUpFailed;
+
+  /// No description provided for @uxAllocHoursNegative.
+  ///
+  /// In pt, this message translates to:
+  /// **'Horas não podem ser negativas.'**
+  String get uxAllocHoursNegative;
+
+  /// No description provided for @uxAllocHoursTooHigh.
+  ///
+  /// In pt, this message translates to:
+  /// **'Valor de horas excede o limite permitido.'**
+  String get uxAllocHoursTooHigh;
+
+  /// No description provided for @uxAllocBudgetNegative.
+  ///
+  /// In pt, this message translates to:
+  /// **'Orçamento não pode ser negativo.'**
+  String get uxAllocBudgetNegative;
+
+  /// No description provided for @uxAllocBudgetTooHigh.
+  ///
+  /// In pt, this message translates to:
+  /// **'Valor de orçamento excede o limite permitido.'**
+  String get uxAllocBudgetTooHigh;
+
+  /// No description provided for @uxOppAskIveMessage.
+  ///
+  /// In pt, this message translates to:
+  /// **'Analise a oportunidade "{title}" (score {score}) e diga como aproveitá-la.'**
+  String uxOppAskIveMessage(String title, String score);
+
+  /// No description provided for @uxPersonaTrainingSummary.
+  ///
+  /// In pt, this message translates to:
+  /// **'Treinamento com: {title}. Tom: {tone}. Estilo: {style}.'**
+  String uxPersonaTrainingSummary(String title, String tone, String style);
+
+  /// No description provided for @uxCalStatusIdea.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ideia'**
+  String get uxCalStatusIdea;
+
+  /// No description provided for @uxCalStatusPlanned.
+  ///
+  /// In pt, this message translates to:
+  /// **'Planejado'**
+  String get uxCalStatusPlanned;
+
+  /// No description provided for @uxCalStatusGenerated.
+  ///
+  /// In pt, this message translates to:
+  /// **'Gerado'**
+  String get uxCalStatusGenerated;
+
+  /// No description provided for @uxCalStatusApproved.
+  ///
+  /// In pt, this message translates to:
+  /// **'Aprovado'**
+  String get uxCalStatusApproved;
+
+  /// No description provided for @uxCalStatusReadyToPublish.
+  ///
+  /// In pt, this message translates to:
+  /// **'Pronto p/ Publicar'**
+  String get uxCalStatusReadyToPublish;
+
+  /// No description provided for @uxCalStatusPublished.
+  ///
+  /// In pt, this message translates to:
+  /// **'Publicado'**
+  String get uxCalStatusPublished;
+
+  /// No description provided for @uxCalStatusPublishFailed.
+  ///
+  /// In pt, this message translates to:
+  /// **'Falha na Publicação'**
+  String get uxCalStatusPublishFailed;
+
+  /// No description provided for @uxCalStatusArchived.
+  ///
+  /// In pt, this message translates to:
+  /// **'Arquivado'**
+  String get uxCalStatusArchived;
+
+  /// No description provided for @uxCalFormatShortPost.
+  ///
+  /// In pt, this message translates to:
+  /// **'Post Curto'**
+  String get uxCalFormatShortPost;
+
+  /// No description provided for @uxCalFormatLongPost.
+  ///
+  /// In pt, this message translates to:
+  /// **'Post Longo'**
+  String get uxCalFormatLongPost;
+
+  /// No description provided for @uxCalFormatCarousel.
+  ///
+  /// In pt, this message translates to:
+  /// **'Carrossel'**
+  String get uxCalFormatCarousel;
+
+  /// No description provided for @uxCalFormatReels.
+  ///
+  /// In pt, this message translates to:
+  /// **'Reels/Vídeo'**
+  String get uxCalFormatReels;
+
+  /// No description provided for @uxCalFormatEmail.
+  ///
+  /// In pt, this message translates to:
+  /// **'E-mail'**
+  String get uxCalFormatEmail;
+
+  /// No description provided for @uxCalFormatSeoArticle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Artigo SEO'**
+  String get uxCalFormatSeoArticle;
+
+  /// No description provided for @uxCalFormatSalesCta.
+  ///
+  /// In pt, this message translates to:
+  /// **'CTA de Venda'**
+  String get uxCalFormatSalesCta;
+
+  /// No description provided for @uxCalFormatThread.
+  ///
+  /// In pt, this message translates to:
+  /// **'Thread/X'**
+  String get uxCalFormatThread;
+
+  /// No description provided for @bootstrapStepStarting.
+  ///
+  /// In pt, this message translates to:
+  /// **'Iniciando'**
+  String get bootstrapStepStarting;
+
+  /// No description provided for @bootstrapStepGeneratingOpportunities.
+  ///
+  /// In pt, this message translates to:
+  /// **'Gerando oportunidades'**
+  String get bootstrapStepGeneratingOpportunities;
+
+  /// No description provided for @bootstrapStepGeneratingActions.
+  ///
+  /// In pt, this message translates to:
+  /// **'Gerando ações'**
+  String get bootstrapStepGeneratingActions;
+
+  /// No description provided for @bootstrapStepGeneratingRevenuePlan.
+  ///
+  /// In pt, this message translates to:
+  /// **'Gerando plano de receita'**
+  String get bootstrapStepGeneratingRevenuePlan;
+
+  /// No description provided for @bootstrapStepTrainingPersonas.
+  ///
+  /// In pt, this message translates to:
+  /// **'Treinando personas'**
+  String get bootstrapStepTrainingPersonas;
+
+  /// No description provided for @bootstrapProgressProject.
+  ///
+  /// In pt, this message translates to:
+  /// **'Projeto {current}/{total}'**
+  String bootstrapProgressProject(int current, int total);
+
+  /// No description provided for @bootstrapProgressProjectStep.
+  ///
+  /// In pt, this message translates to:
+  /// **'Projeto {current}/{total} — {step}'**
+  String bootstrapProgressProjectStep(int current, int total, String step);
+
+  /// No description provided for @ecoGateKnowledgeCoverage.
+  ///
+  /// In pt, this message translates to:
+  /// **'Cobertura de conhecimento'**
+  String get ecoGateKnowledgeCoverage;
+
+  /// No description provided for @ecoGateLearningScore.
+  ///
+  /// In pt, this message translates to:
+  /// **'Score de aprendizado'**
+  String get ecoGateLearningScore;
+
+  /// No description provided for @ecoGateIntelligenceProfile.
+  ///
+  /// In pt, this message translates to:
+  /// **'Perfil de inteligência'**
+  String get ecoGateIntelligenceProfile;
 }
 
 class _AppLocalizationsDelegate

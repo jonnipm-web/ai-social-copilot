@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../data/models/weekly_briefing.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/action_queue_provider.dart';
 import '../../../providers/ecosystem_intelligence_provider.dart';
 import '../../../providers/market_analysis_provider.dart';
@@ -30,6 +31,7 @@ class WeeklyBriefingScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final briefingAsync = ref.watch(weeklyBriefingProvider);
+    final l10n          = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -42,8 +44,8 @@ class WeeklyBriefingScreen extends ConsumerWidget {
           onPressed: () =>
               context.canPop() ? context.pop() : context.go(AppConstants.routeEcosystem),
         ),
-        title: const Text('Briefing Executivo Semanal',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: Text(l10n.ecoWeeklyBriefingTitle,
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: Colors.white54),
@@ -63,7 +65,7 @@ class WeeklyBriefingScreen extends ConsumerWidget {
         child: briefingAsync.when(
           loading: () => const Center(child: CircularProgressIndicator(color: _kPrimary)),
           error: (e, _) => Center(
-            child: Text('Erro ao gerar briefing: $e',
+            child: Text(l10n.ecoBriefingError('$e'),
               style: const TextStyle(color: _kRed), textAlign: TextAlign.center)),
           data: (b) => _BriefingBody(briefing: b),
         ),
@@ -82,6 +84,7 @@ class _BriefingBody extends StatelessWidget {
     final month = briefing.generatedAt.month.toString().padLeft(2, '0');
     final year  = briefing.generatedAt.year;
     final bottomPad = MediaQuery.of(context).padding.bottom;
+    final l10n      = AppLocalizations.of(context)!;
 
     return LayoutBuilder(
       builder: (ctx, constraints) {
@@ -95,17 +98,17 @@ class _BriefingBody extends StatelessWidget {
         final mainSections = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _Section(title: '🔄 O que mudou',        color: _kCyan,   items: briefing.whatChanged),
+            _Section(title: l10n.ecoBriefSectionChanged,  color: _kCyan,   items: briefing.whatChanged),
             const SizedBox(height: 12),
-            _Section(title: '📈 O que cresceu',       color: _kGreen,  items: briefing.whatGrew),
+            _Section(title: l10n.ecoBriefSectionGrew,     color: _kGreen,  items: briefing.whatGrew),
             const SizedBox(height: 12),
-            _Section(title: '📉 O que piorou',        color: _kRed,    items: briefing.whatDeclined),
+            _Section(title: l10n.ecoBriefSectionDeclined, color: _kRed,    items: briefing.whatDeclined),
             const SizedBox(height: 12),
-            _Section(title: '🎯 O que priorizar',     color: _kGold,   items: briefing.topPriorities),
+            _Section(title: l10n.ecoBriefSectionPriorities, color: _kGold, items: briefing.topPriorities),
             const SizedBox(height: 12),
-            _Section(title: '⏸️ O que pausar',        color: _kOrange, items: briefing.toPause),
+            _Section(title: l10n.ecoBriefSectionPause,    color: _kOrange, items: briefing.toPause),
             const SizedBox(height: 12),
-            _Section(title: '💡 Oportunidades novas', color: _kCyan,   items: briefing.newOpportunities),
+            _Section(title: l10n.ecoBriefSectionNewOpps,  color: _kCyan,   items: briefing.newOpportunities),
           ],
         );
 
@@ -114,7 +117,7 @@ class _BriefingBody extends StatelessWidget {
           children: [
             _HealthSideCard(briefing: briefing),
             const SizedBox(height: 12),
-            _Section(title: '⚠️ Riscos',              color: _kRed,    items: briefing.risks),
+            _Section(title: l10n.ecoBriefSectionRisks,    color: _kRed,    items: briefing.risks),
           ],
         );
 
@@ -133,7 +136,7 @@ class _BriefingBody extends StatelessWidget {
             children: [
               mainSections,
               const SizedBox(height: 12),
-              _Section(title: '⚠️ Riscos identificados', color: _kRed, items: briefing.risks),
+              _Section(title: l10n.ecoBriefSectionRisksIdentified, color: _kRed, items: briefing.risks),
             ],
           );
         }
@@ -177,6 +180,7 @@ class _HealthSideCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hc = _healthColor(briefing.overallHealthScore);
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -191,7 +195,7 @@ class _HealthSideCard extends StatelessWidget {
             children: [
               Text(briefing.healthEmoji, style: const TextStyle(fontSize: 20)),
               const SizedBox(width: 8),
-              Text('Saúde Geral',
+              Text(l10n.ecoBriefOverallHealth,
                   style: TextStyle(color: hc, fontSize: 13, fontWeight: FontWeight.bold)),
               const Spacer(),
               Text('${briefing.overallHealthScore}/100',
@@ -208,9 +212,9 @@ class _HealthSideCard extends StatelessWidget {
           ),
           if (briefing.overallHealthScore < 50) ...[
             const SizedBox(height: 8),
-            const Text(
-              '⚠ Score baixo. Veja os riscos identificados e as prioridades abaixo para melhorar.',
-              style: TextStyle(color: Colors.orange, fontSize: 11, height: 1.4),
+            Text(
+              l10n.ecoBriefLowScoreHint,
+              style: const TextStyle(color: Colors.orange, fontSize: 11, height: 1.4),
             ),
           ],
         ],
@@ -226,6 +230,7 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -243,14 +248,14 @@ class _Header extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('BRIEFING EXECUTIVO',
-                  style: TextStyle(color: _kPrimary, fontWeight: FontWeight.bold,
+                Text(l10n.ecoBriefHeaderLabel,
+                  style: const TextStyle(color: _kPrimary, fontWeight: FontWeight.bold,
                       fontSize: 11, letterSpacing: 1.5)),
                 const SizedBox(height: 4),
-                Text('Semana de $dateStr',
+                Text(l10n.ecoBriefWeekOf(dateStr),
                   style: const TextStyle(color: Colors.white54, fontSize: 12)),
                 const SizedBox(height: 8),
-                Text(briefing.healthEmoji + '  Saúde Geral: ${briefing.overallHealthScore}/100',
+                Text('${briefing.healthEmoji}  ${l10n.ecoBriefOverallHealthValue(briefing.overallHealthScore)}',
                   style: const TextStyle(color: Colors.white, fontSize: 15,
                       fontWeight: FontWeight.bold)),
               ],
@@ -305,8 +310,8 @@ class _SummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Resumo Executivo',
-            style: TextStyle(color: Colors.white54, fontSize: 11,
+          Text(AppLocalizations.of(context)!.ecoBriefExecutiveSummary,
+            style: const TextStyle(color: Colors.white54, fontSize: 11,
                 fontWeight: FontWeight.w600, letterSpacing: 0.5)),
           const SizedBox(height: 6),
           Text(text, style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.5)),
@@ -333,7 +338,7 @@ class _Section extends StatelessWidget {
         if (items.isEmpty)
           Padding(
             padding: const EdgeInsets.only(left: 8),
-            child: Text('Nenhum item nesta semana',
+            child: Text(AppLocalizations.of(context)!.ecoBriefNoItemsThisWeek,
               style: TextStyle(color: color.withOpacity(0.4), fontSize: 12)),
           )
         else
@@ -386,6 +391,7 @@ class _DataOriginCard extends StatelessWidget {
     final d  = briefing.generatedAt.day.toString().padLeft(2, '0');
     final mo = briefing.generatedAt.month.toString().padLeft(2, '0');
     final y  = briefing.generatedAt.year;
+    final l10n = AppLocalizations.of(context)!;
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -401,9 +407,9 @@ class _DataOriginCard extends StatelessWidget {
             children: [
               const Icon(Icons.analytics_rounded, color: _kPrimary, size: 14),
               const SizedBox(width: 6),
-              const Text(
-                'DADOS ANALISADOS',
-                style: TextStyle(
+              Text(
+                l10n.ecoBriefDataAnalyzed,
+                style: const TextStyle(
                   color: _kPrimary,
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
@@ -412,7 +418,7 @@ class _DataOriginCard extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                'Gerado em $d/$mo/$y às $h:$m',
+                l10n.ecoBriefGeneratedAt('$d/$mo/$y', '$h:$m'),
                 style: const TextStyle(color: Colors.white38, fontSize: 10),
               ),
             ],
@@ -423,25 +429,25 @@ class _DataOriginCard extends StatelessWidget {
           Row(
             children: [
               _CountChip(
-                label: 'Projetos',
+                label: l10n.ecoCountProjects,
                 value: briefing.projectCount,
                 color: _kCyan,
               ),
               const SizedBox(width: 8),
               _CountChip(
-                label: 'Análises',
+                label: l10n.ecoCountAnalyses,
                 value: briefing.analysisCount,
                 color: _kGold,
               ),
               const SizedBox(width: 8),
               _CountChip(
-                label: 'Ações',
+                label: l10n.ecoCountActions,
                 value: briefing.actionsCount,
                 color: _kOrange,
               ),
               const SizedBox(width: 8),
               _CountChip(
-                label: 'Oportunidades',
+                label: l10n.ecoGateOpportunities,
                 value: briefing.opportunitiesCount,
                 color: _kGreen,
               ),
@@ -451,9 +457,9 @@ class _DataOriginCard extends StatelessWidget {
           // Projetos analisados
           if (briefing.analyzedProjectNames.isNotEmpty) ...[
             const SizedBox(height: 10),
-            const Text(
-              'Projetos incluídos',
-              style: TextStyle(color: Colors.white38, fontSize: 10),
+            Text(
+              l10n.ecoBriefIncludedProjects,
+              style: const TextStyle(color: Colors.white38, fontSize: 10),
             ),
             const SizedBox(height: 6),
             Wrap(

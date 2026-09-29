@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/ecosystem_labels.dart';
 import '../../../data/models/resource_allocation.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/ecosystem_intelligence_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 
@@ -38,6 +40,7 @@ class _ResourceAllocationScreenState extends ConsumerState<ResourceAllocationScr
     final provider = _mode == 'hours'
         ? ref.watch(resourceAllocationHoursProvider(_budget))
         : ref.watch(resourceAllocationMoneyProvider(_budget));
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -50,8 +53,8 @@ class _ResourceAllocationScreenState extends ConsumerState<ResourceAllocationScr
           onPressed: () =>
               context.canPop() ? context.pop() : context.go(AppConstants.routeEcosystem),
         ),
-        title: const Text('Alocação de Recursos',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: Text(l10n.ecoResourceAllocationTitle,
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
       body: SafeArea(
         top: false,
@@ -77,7 +80,7 @@ class _ResourceAllocationScreenState extends ConsumerState<ResourceAllocationScr
           // Results
           provider.when(
             loading: () => const Center(child: CircularProgressIndicator(color: _kPrimary)),
-            error: (e, _) => Text('Erro: $e', style: const TextStyle(color: _kRed)),
+            error: (e, _) => Text(l10n.ecoErrorGeneric('$e'), style: const TextStyle(color: _kRed)),
             data: (alloc) => _AllocationResult(alloc: alloc),
           ),
         ],
@@ -94,11 +97,12 @@ class _ModeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       children: [
-        Expanded(child: _ModeChip(label: '⏱ Tempo (Horas)', value: 'hours', selected: selected, onTap: () => onChanged('hours'))),
+        Expanded(child: _ModeChip(label: l10n.ecoAllocModeHours, value: 'hours', selected: selected, onTap: () => onChanged('hours'))),
         const SizedBox(width: 8),
-        Expanded(child: _ModeChip(label: '💰 Dinheiro (R\$)', value: 'money', selected: selected, onTap: () => onChanged('money'))),
+        Expanded(child: _ModeChip(label: l10n.ecoAllocModeMoney, value: 'money', selected: selected, onTap: () => onChanged('money'))),
       ],
     );
   }
@@ -147,7 +151,7 @@ class _BudgetSelector extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Quanto tenho disponível?',
+        Text(AppLocalizations.of(context)!.ecoAllocBudgetQuestion,
           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
         const SizedBox(height: 10),
         Wrap(
@@ -186,7 +190,8 @@ class _AllocationResult extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = alloc.budgetType == 'hours' ? 'horas' : 'R\$';
+    final l10n  = AppLocalizations.of(context)!;
+    final label = alloc.budgetType == 'hours' ? l10n.ecoAllocUnitHours : 'R\$';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -210,8 +215,8 @@ class _AllocationResult extends StatelessWidget {
                 children: [
                   const Icon(Icons.lightbulb_outline_rounded, color: _kGold, size: 18),
                   const SizedBox(width: 8),
-                  const Text('Recomendação Executiva',
-                    style: TextStyle(color: _kGold, fontWeight: FontWeight.bold, fontSize: 13)),
+                  Text(l10n.ecoAllocExecutiveRecommendation,
+                    style: const TextStyle(color: _kGold, fontWeight: FontWeight.bold, fontSize: 13)),
                 ],
               ),
               const SizedBox(height: 8),
@@ -223,10 +228,10 @@ class _AllocationResult extends StatelessWidget {
         const SizedBox(height: 16),
 
         if (alloc.items.isEmpty)
-          const Text('Adicione projetos com análises para ver a alocação.',
-            style: TextStyle(color: Colors.white54))
+          Text(l10n.ecoAllocEmpty,
+            style: const TextStyle(color: Colors.white54))
         else ...[
-          Text('Distribuição das ${alloc.totalBudget.round()} $label',
+          Text(l10n.ecoAllocDistribution(alloc.totalBudget.round(), label),
             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
           const SizedBox(height: 12),
           ...alloc.items.map((item) => _AllocationItem(item: item, budgetType: alloc.budgetType)),
@@ -254,6 +259,7 @@ class _AllocationItem extends StatelessWidget {
         ? '${item.allocation.toStringAsFixed(1)}$label'
         : '$label${item.allocation.toStringAsFixed(0)}';
     final color = _color(item.score.ecosystemScore);
+    final l10n  = AppLocalizations.of(context)!;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -292,7 +298,7 @@ class _AllocationItem extends StatelessWidget {
           const SizedBox(height: 6),
           Text(item.reason, style: const TextStyle(color: Colors.white54, fontSize: 11)),
           const SizedBox(height: 2),
-          Text('Ecosystem Score: ${item.score.ecosystemScore}/100  •  ${item.score.recommendationEmoji} ${item.score.recommendation}',
+          Text('Ecosystem Score: ${item.score.ecosystemScore}/100  •  ${item.score.recommendationEmoji} ${ecosystemVerdictLabel(item.score.recommendation, l10n)}',
             style: const TextStyle(color: Colors.white38, fontSize: 10)),
         ],
       ),

@@ -8,6 +8,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../providers/project_provider.dart';
 import '../../../providers/roi_metric_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 
 // COMMERCIAL-V1-UX-RECONCILIATION (PT/EN commercial matrix) -- metric type
 // display text now comes from l10n, keyed off the same stable 'value'
@@ -109,7 +110,7 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
       setState(() { _showForm = false; _selectedProjectId = null; _metricType = 'revenue'; });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        SnackBar(content: Text(extractErrorMessage(e, l10n)), backgroundColor: Colors.red),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -186,7 +187,7 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
               loading: () => const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator(color: Color(0xFFFFD93D)))),
               error: (e, _) => Padding(
                 padding: const EdgeInsets.all(16),
-                child: Text(l10n.iveChatErrorPrefix('$e'), style: const TextStyle(color: Colors.redAccent)),
+                child: Text(l10n.iveChatErrorPrefix(extractErrorMessage(e, l10n)), style: const TextStyle(color: Colors.redAccent)),
               ),
               data: (metrics) => metrics.isEmpty
                   ? Padding(

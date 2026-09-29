@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/modules/module_definition.dart';
 import '../../../core/modules/module_registry.dart';
+import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 import '../../../data/models/profile.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/profile_provider.dart';
@@ -35,12 +36,13 @@ class AdminPanelScreen extends ConsumerWidget {
     // valueOrNull. Nenhum caminho deste repositório hoje faz refresh deste
     // provider a ponto de produzir esse estado, mas o check custa nada.
     final isAdmin = profileAsync.hasValue && !profileAsync.hasError && (profileAsync.value?.isAdmin ?? false);
+    final l10n = AppLocalizations.of(context)!;
     if (!isAdmin) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Acesso Negado')),
-        body: const Center(
-          child: Text('Você não tem permissão para acessar esta área.',
-              style: TextStyle(color: Colors.white54)),
+        appBar: AppBar(title: Text(l10n.uxAdminAccessDeniedTitle)),
+        body: Center(
+          child: Text(l10n.uxAdminAccessDeniedBody,
+              style: const TextStyle(color: Colors.white54)),
         ),
       );
     }
@@ -59,16 +61,16 @@ class AdminPanelScreen extends ConsumerWidget {
               }
             },
           ),
-          title: const Text('Painel Admin'),
-          bottom: const TabBar(
+          title: Text(l10n.uxAdminPanelTitle),
+          bottom: TabBar(
             isScrollable: true,
             tabAlignment: TabAlignment.start,
             tabs: [
-              Tab(text: 'Usuários'),
-              Tab(text: 'Personas'),
-              Tab(text: 'Visão Geral'),
-              Tab(text: 'Módulos'),
-              Tab(text: 'Diagnóstico'),
+              Tab(text: l10n.uxAdminTabUsers),
+              Tab(text: l10n.uxAdminTabPersonas),
+              Tab(text: l10n.uxAdminTabOverview),
+              Tab(text: l10n.uxAdminTabModules),
+              Tab(text: l10n.uxAdminTabDiagnostics),
             ],
           ),
         ),
@@ -94,15 +96,16 @@ class _UsersTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final usersAsync = ref.watch(allProfilesProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return usersAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error:   (e, _) => Center(child: Text('Erro: $e', style: const TextStyle(color: Colors.white54))),
+      error:   (e, _) => Center(child: Text(extractErrorMessage(e, l10n), style: const TextStyle(color: Colors.white54))),
       data:    (users) {
         if (users.isEmpty) {
-          return const Center(
-            child: Text('Nenhum usuário encontrado.',
-                style: TextStyle(color: Colors.white54)),
+          return Center(
+            child: Text(l10n.uxAdminNoUsers,
+                style: const TextStyle(color: Colors.white54)),
           );
         }
         return ListView.separated(
@@ -124,6 +127,7 @@ class _UserTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final roleColor = _roleColor(user.role);
+    final l10n = AppLocalizations.of(context)!;
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
@@ -132,12 +136,12 @@ class _UserTile extends StatelessWidget {
         child: Icon(Icons.person_rounded, color: roleColor, size: 20),
       ),
       title: Text(
-        user.email ?? 'Sem e-mail',
+        user.email ?? l10n.uxAdminNoEmail,
         style: const TextStyle(color: Colors.white, fontSize: 14),
         overflow: TextOverflow.ellipsis,
       ),
       subtitle: Text(
-        '${user.roleLabel} · ${user.monthlyLimit} gerações/mês',
+        l10n.uxAdminUserPlanLine(user.roleLabel, '${user.monthlyLimit}'),
         style: const TextStyle(color: Colors.white54, fontSize: 12),
       ),
       trailing: PopupMenuButton<String>(
@@ -180,7 +184,7 @@ class _UserTile extends StatelessWidget {
           PopupMenuItem(
             value: 'toggle',
             child: Text(
-              user.isActive ? 'Desativar' : 'Ativar',
+              user.isActive ? l10n.uxAdminDeactivate : l10n.uxAdminActivate,
               style: TextStyle(color: user.isActive ? Colors.red : Colors.green),
             ),
           ),
@@ -206,22 +210,23 @@ class _PersonasAdminTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Gerenciar todas as personas',
-                  style: TextStyle(color: Colors.white54, fontSize: 13),
+                  l10n.uxAdminManagePersonas,
+                  style: const TextStyle(color: Colors.white54, fontSize: 13),
                 ),
               ),
               ElevatedButton.icon(
                 onPressed: () => context.push(AppConstants.routePersonaNew),
                 icon: const Icon(Icons.add_rounded, size: 16),
-                label: const Text('Nova Persona'),
+                label: Text(l10n.uxAdminNewPersona),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFFFD700),
                   foregroundColor: Colors.black,
@@ -236,7 +241,7 @@ class _PersonasAdminTab extends ConsumerWidget {
           child: Center(
             child: OutlinedButton(
               onPressed: () => context.go(AppConstants.routePersonas),
-              child: const Text('Abrir gestão de Personas'),
+              child: Text(l10n.uxAdminOpenPersonas),
             ),
           ),
         ),
@@ -253,6 +258,7 @@ class _OverviewTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final usersAsync = ref.watch(allProfilesProvider);
     final users = usersAsync.valueOrNull ?? [];
+    final l10n = AppLocalizations.of(context)!;
 
     final byRole = <String, int>{};
     for (final u in users) {
@@ -264,9 +270,9 @@ class _OverviewTab extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Distribuição de Usuários',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+          Text(
+            l10n.uxAdminUserDistribution,
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
           ),
           const SizedBox(height: 16),
           ...['admin', 'premium', 'pro', 'beta_tester', 'free'].map((role) {
@@ -277,9 +283,9 @@ class _OverviewTab extends ConsumerWidget {
             );
           }),
           const SizedBox(height: 24),
-          const Text(
-            'Total de Usuários',
-            style: TextStyle(color: Colors.white54, fontSize: 13),
+          Text(
+            l10n.uxAdminTotalUsers,
+            style: const TextStyle(color: Colors.white54, fontSize: 13),
           ),
           Text(
             '${users.length}',
@@ -352,6 +358,7 @@ class _ModulesAdminTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isEnglish = Localizations.localeOf(context).languageCode == 'en';
+    final l10n = AppLocalizations.of(context)!;
     // Codex Gate (P3): antes filtrava por índice bruto sem checar
     // adminVisible -- hoje todo módulo tem adminVisible=true (então isto
     // era latente, não uma exposição ativa), mas o campo existe
@@ -389,8 +396,8 @@ class _ModulesAdminTab extends StatelessWidget {
                 const SizedBox(width: 4),
                 Text(
                   module.commercialEnabled
-                      ? (isEnglish ? 'Commercial' : 'Comercial')
-                      : (isEnglish ? 'Not commercial' : 'Não comercial'),
+                      ? l10n.adminModulesCommercial
+                      : l10n.uxAdminModuleNotCommercial,
                   style: const TextStyle(color: Colors.white38, fontSize: 11),
                 ),
                 const SizedBox(width: 10),
@@ -498,7 +505,7 @@ class AdminModuleDetailSheet extends StatelessWidget {
             if (module.edgeFunctions.isNotEmpty)
               _DetailRow(label: 'Edge Functions', value: module.edgeFunctions.join(', ')),
             if (module.databaseDependencies.isNotEmpty)
-              _DetailRow(label: isEnglish ? 'Tables' : 'Tabelas', value: module.databaseDependencies.join(', ')),
+              _DetailRow(label: t.uxAdminModuleTables, value: module.databaseDependencies.join(', ')),
             const SizedBox(height: 12),
             Text(t.adminModulesReadiness, style: const TextStyle(color: Colors.white38, fontSize: 12, fontWeight: FontWeight.w600)),
             const SizedBox(height: 4),

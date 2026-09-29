@@ -8,6 +8,7 @@ import '../../../data/models/ive_interaction_request.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/market_analysis_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
+import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 
 class ContentClusterScreen extends ConsumerStatefulWidget {
   const ContentClusterScreen({super.key, required this.analysisId});
@@ -71,7 +72,8 @@ class _ContentClusterScreenState extends ConsumerState<ContentClusterScreen> {
       if (_exec.state != AiExecutionState.success) return;
       ref.invalidate(contentClusterByAnalysisProvider(widget.analysisId));
     } catch (e) {
-      setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+      if (!mounted) return;
+      setState(() => _error = extractErrorMessage(e, AppLocalizations.of(context)!));
     } finally {
       if (mounted) setState(() {});
     }
@@ -105,7 +107,7 @@ class _ContentClusterScreenState extends ConsumerState<ContentClusterScreen> {
       body: asyncCluster.when(
         loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFFAB83FF))),
         error: (e, _) => Center(
-            child: Text(l10n.miSubErrorPrefix('$e'),
+            child: Text(l10n.miSubErrorPrefix(extractErrorMessage(e, l10n)),
                 style: const TextStyle(color: Colors.redAccent))),
         data: (cluster) => cluster == null
             ? SingleChildScrollView(

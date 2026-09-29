@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/ai_enum_labels.dart';
 import '../../../data/models/campaign.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/campaign_provider.dart';
@@ -185,7 +186,7 @@ class _CampaignCard extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: color.withOpacity(0.4)),
                     ),
-                    child: Text(campaign.objective,
+                    child: Text(campaignObjectiveLabel(campaign.objective, l10n),
                         style: TextStyle(
                             color: color,
                             fontSize: 10,

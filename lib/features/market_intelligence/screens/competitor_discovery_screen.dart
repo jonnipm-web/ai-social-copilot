@@ -10,6 +10,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../providers/market_analysis_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
 import '../competitor_type_labels.dart';
+import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 
 class CompetitorDiscoveryScreen extends ConsumerStatefulWidget {
   const CompetitorDiscoveryScreen({super.key, required this.analysisId});
@@ -65,7 +66,8 @@ class _CompetitorDiscoveryScreenState
       if (_exec.state != AiExecutionState.success) return;
       ref.invalidate(competitorsByAnalysisProvider(widget.analysisId));
     } catch (e) {
-      setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+      if (!mounted) return;
+      setState(() => _error = extractErrorMessage(e, AppLocalizations.of(context)!));
     } finally {
       if (mounted) setState(() {});
     }
@@ -129,7 +131,7 @@ class _CompetitorDiscoveryScreenState
             child: asyncList.when(
               loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFFFF6B6B))),
               error: (e, _) => Center(
-                  child: Text(l10n.miSubErrorPrefix('$e'),
+                  child: Text(l10n.miSubErrorPrefix(extractErrorMessage(e, l10n)),
                       style: const TextStyle(color: Colors.redAccent))),
               data: (competitors) => competitors.isEmpty
                   ? Center(

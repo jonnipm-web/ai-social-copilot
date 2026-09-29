@@ -1,3 +1,7 @@
+import 'dart:ui' show Locale;
+
+import '../../l10n/app_localizations.dart';
+
 // IVE-COMMERCIAL-EXPERIENCE-12 (Phase B) — the persisted, per-project
 // counterpart to lib/data/models/resource_allocation.dart's
 // `ResourceAllocation`/`AllocationItem` (that pair remains the unrelated
@@ -77,18 +81,23 @@ class ProjectResourceAllocation {
 /// Pure validation — mission Section 11: "No NaN/infinity/negative
 /// allocation", bounded upper range. Extracted as a free function so it
 /// is directly unit-testable without constructing a widget/provider.
-String? validateHoursAllocated(int hours) {
-  if (hours < 0) return 'Horas não podem ser negativas.';
+///
+/// R16 — pass [l10n] (the presentation language) to get a localized
+/// message; without it the message falls back to PT.
+String? validateHoursAllocated(int hours, [AppLocalizations? l10n]) {
+  final t = l10n ?? lookupAppLocalizations(const Locale('pt'));
+  if (hours < 0) return t.uxAllocHoursNegative;
   if (hours > ProjectResourceAllocation.maxHours) {
-    return 'Valor de horas excede o limite permitido.';
+    return t.uxAllocHoursTooHigh;
   }
   return null;
 }
 
-String? validateBudgetAllocatedCents(int cents) {
-  if (cents < 0) return 'Orçamento não pode ser negativo.';
+String? validateBudgetAllocatedCents(int cents, [AppLocalizations? l10n]) {
+  final t = l10n ?? lookupAppLocalizations(const Locale('pt'));
+  if (cents < 0) return t.uxAllocBudgetNegative;
   if (cents > ProjectResourceAllocation.maxBudgetAllocatedCents) {
-    return 'Valor de orçamento excede o limite permitido.';
+    return t.uxAllocBudgetTooHigh;
   }
   return null;
 }

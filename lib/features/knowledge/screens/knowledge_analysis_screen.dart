@@ -121,7 +121,7 @@ class _KnowledgeAnalysisScreenState
       body: itemAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
-          child: Text(l10n.knowledgeStrategyGenericError('$e'), style: const TextStyle(color: Colors.white70)),
+          child: Text(l10n.knowledgeStrategyGenericError(extractErrorMessage(e, l10n)), style: const TextStyle(color: Colors.white70)),
         ),
         data: (item) {
           if (item == null) {
@@ -132,7 +132,7 @@ class _KnowledgeAnalysisScreenState
           }
           return analysisAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => _NoAnalysis(item: item, exec: _exec, error: e.toString()),
+            error: (e, _) => _NoAnalysis(item: item, exec: _exec, error: extractErrorMessage(e, l10n)),
             data: (analysis) => analysis == null
                 ? _NoAnalysis(item: item, exec: _exec)
                 : _AnalysisContent(item: item, analysis: analysis),
@@ -369,6 +369,7 @@ class _ActionButtons extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final personas = ref.watch(personasProvider).valueOrNull ?? [];
+    final l10n = AppLocalizations.of(context)!;
 
     return Wrap(
       spacing: 8,
@@ -376,7 +377,7 @@ class _ActionButtons extends ConsumerWidget {
       children: [
         _ActionChip(
           icon:  Icons.rocket_launch_rounded,
-          label: 'Gerar Estratégia',
+          label: l10n.uxKnowledgeActionGenerateStrategy,
           color: const Color(0xFF6C63FF),
           onTap: () => context.push(
             AppConstants.routeKnowledgeStrategy.replaceFirst(':id', item.id),
@@ -384,7 +385,7 @@ class _ActionButtons extends ConsumerWidget {
         ),
         _ActionChip(
           icon:  Icons.campaign_rounded,
-          label: 'Criar Campanha',
+          label: l10n.uxKnowledgeActionCreateCampaign,
           color: const Color(0xFF00BCD4),
           onTap: () => context.push(
             AppConstants.routeCampaignNew,
@@ -393,7 +394,7 @@ class _ActionButtons extends ConsumerWidget {
         ),
         _ActionChip(
           icon:  Icons.person_pin_rounded,
-          label: 'Treinar Persona',
+          label: l10n.uxKnowledgeActionTrainPersona,
           color: const Color(0xFFFF9800),
           onTap: () => _trainPersona(context, ref, personas),
         ),
@@ -402,8 +403,9 @@ class _ActionButtons extends ConsumerWidget {
   }
 
   Future<void> _trainPersona(BuildContext context, WidgetRef ref, List personas) async {
+    final l10n = AppLocalizations.of(context)!;
     if (personas.isEmpty) {
-      showErrorSnack(context, 'Nenhuma persona encontrada. Crie uma persona primeiro.');
+      showErrorSnack(context, l10n.uxKnowledgeNoPersonas);
       return;
     }
     String? selectedPersonaId;
@@ -412,7 +414,7 @@ class _ActionButtons extends ConsumerWidget {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx2, setState) => AlertDialog(
           backgroundColor: const Color(0xFF1A1A2E),
-          title: const Text('Treinar Persona', style: TextStyle(color: Colors.white)),
+          title: Text(l10n.uxKnowledgeActionTrainPersona, style: const TextStyle(color: Colors.white)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: personas.map((p) => RadioListTile<String>(
@@ -426,7 +428,7 @@ class _ActionButtons extends ConsumerWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancelar'),
+              child: Text(l10n.commonCancel),
             ),
             ElevatedButton(
               onPressed: selectedPersonaId == null
@@ -442,17 +444,17 @@ class _ActionButtons extends ConsumerWidget {
                               analysis: analysis,
                             );
                         if (context.mounted) {
-                          showSuccessSnack(context, 'Persona treinada com sucesso!');
+                          showSuccessSnack(context, l10n.uxKnowledgePersonaTrained);
                         }
                       } catch (e) {
                         if (context.mounted) {
-                          showErrorSnack(context, e.toString());
+                          showErrorSnack(context, extractErrorMessage(e, l10n));
                         }
                       }
                     },
               style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF6C63FF)),
-              child: const Text('Treinar'),
+              child: Text(l10n.uxKnowledgeTrain),
             ),
           ],
         ),
@@ -514,11 +516,11 @@ class _OpportunityScoreCard extends StatelessWidget {
     return const Color(0xFFF44336);
   }
 
-  String get _label {
-    if (score >= 80) return 'Alta Oportunidade';
-    if (score >= 60) return 'Boa Oportunidade';
-    if (score >= 40) return 'Oportunidade Moderada';
-    return 'Baixa Oportunidade';
+  String _label(AppLocalizations l10n) {
+    if (score >= 80) return l10n.uxKnowledgeOppHigh;
+    if (score >= 60) return l10n.uxKnowledgeOppGood;
+    if (score >= 40) return l10n.uxKnowledgeOppModerate;
+    return l10n.uxKnowledgeOppLow;
   }
 
   @override
@@ -567,7 +569,7 @@ class _OpportunityScoreCard extends StatelessWidget {
                       fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
-                Text(_label,
+                Text(_label(AppLocalizations.of(context)!),
                     style: TextStyle(color: _color, fontSize: 12,
                         fontWeight: FontWeight.w600)),
                 const SizedBox(height: 6),
@@ -625,10 +627,10 @@ class _HotmartCard extends StatelessWidget {
             const Divider(color: Colors.white12, height: 1),
             const SizedBox(height: 10),
             ...{
-              'Produto':    data['product_name'],
-              'Promessa':   data['promise'],
-              'Formato':    data['format'],
-              'Preço':      data['price_range'],
+              AppLocalizations.of(context)!.uxKnowledgeFieldProduct:  data['product_name'],
+              AppLocalizations.of(context)!.uxKnowledgeFieldPromise:  data['promise'],
+              AppLocalizations.of(context)!.uxKnowledgeFieldFormat:   data['format'],
+              AppLocalizations.of(context)!.uxKnowledgeFieldPrice:    data['price_range'],
               'Upsell':     data['upsell'],
             }.entries
                 .where((e) => e.value != null && e.value.toString().isNotEmpty)
@@ -678,9 +680,9 @@ class _ShopifyCard extends StatelessWidget {
             const Divider(color: Colors.white12, height: 1),
             const SizedBox(height: 10),
             ...{
-              'Produto':   data['product_name'],
-              'Descrição': data['short_description'],
-              'Preço':     data['price_range'],
+              AppLocalizations.of(context)!.uxKnowledgeFieldProduct:     data['product_name'],
+              AppLocalizations.of(context)!.uxKnowledgeFieldDescription: data['short_description'],
+              AppLocalizations.of(context)!.uxKnowledgeFieldPrice:       data['price_range'],
             }.entries
                 .where((e) => e.value != null && e.value.toString().isNotEmpty)
                 .map((e) => _DataRow(e.key, e.value.toString())),
@@ -1136,17 +1138,17 @@ class _ChannelDetailState extends State<_ChannelDetail> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (strengths.isNotEmpty) ...[
-                    _SubLabel('Pontos Fortes', const Color(0xFF4CAF50)),
+                    _SubLabel(AppLocalizations.of(context)!.uxKnowledgeStrengths, const Color(0xFF4CAF50)),
                     ...strengths.map((s) => _DetailItem(s, const Color(0xFF4CAF50))),
                     const SizedBox(height: 6),
                   ],
                   if (weaknesses.isNotEmpty) ...[
-                    _SubLabel('Pontos Fracos', const Color(0xFFF44336)),
+                    _SubLabel(AppLocalizations.of(context)!.uxKnowledgeWeaknesses, const Color(0xFFF44336)),
                     ...weaknesses.map((s) => _DetailItem(s, const Color(0xFFF44336))),
                     const SizedBox(height: 6),
                   ],
                   if (improvements.isNotEmpty) ...[
-                    _SubLabel('Melhorias', const Color(0xFF6C63FF)),
+                    _SubLabel(AppLocalizations.of(context)!.uxKnowledgeImprovements, const Color(0xFF6C63FF)),
                     ...improvements.map((s) => _DetailItem(s, const Color(0xFF6C63FF))),
                   ],
                 ],

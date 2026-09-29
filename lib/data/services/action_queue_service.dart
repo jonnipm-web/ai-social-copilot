@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/action_queue_item.dart';
 import '../models/aef_runtime.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/utils/app_exceptions.dart';
 
 class ActionQueueService {
   SupabaseClient get _client => Supabase.instance.client;
@@ -34,7 +35,7 @@ class ActionQueueService {
     _refuseIfAefGovernedOnly(item.status);
 
     final uid = _client.auth.currentUser?.id;
-    if (uid == null) throw Exception('Não autenticado');
+    if (uid == null) throw const NotAuthenticatedException();
 
     final map = item.toInsertMap();
     map['user_id'] = uid;

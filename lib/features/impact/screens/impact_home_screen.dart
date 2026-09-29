@@ -49,7 +49,7 @@ class _Body extends ConsumerWidget {
                 child: ListTile(
                   leading: const Icon(Icons.folder_open_outlined),
                   title: Text('«${displaySafe(inv.subjectOrgRef)}»'),
-                  subtitle: Text('${inv.status} · ${inv.id}', maxLines: 2, overflow: TextOverflow.ellipsis),
+                  subtitle: Text('${inv.status == 'ACTIVE' ? t.uxImpactInvestigationActive : inv.status == 'ARCHIVED' ? t.uxImpactInvestigationArchived : inv.status} · ${inv.id}', maxLines: 2, overflow: TextOverflow.ellipsis),
                   trailing: const Icon(Icons.chevron_right),
                   // push (not go): the dossier keeps a back arrow and system Back returns
                   // here instead of leaving the app (physical finding PF-03).

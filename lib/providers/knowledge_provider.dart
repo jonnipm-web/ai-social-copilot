@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/utils/language_utils.dart';
 import '../data/models/knowledge_analysis.dart';
 import '../data/models/knowledge_item.dart';
 import '../data/services/knowledge_service.dart';
@@ -86,15 +87,21 @@ final knowledgeItemNotifierProvider = StateNotifierProvider.autoDispose<
 
 class KnowledgeAnalysisNotifier
     extends StateNotifier<AsyncValue<KnowledgeAnalysis?>> {
-  KnowledgeAnalysisNotifier(this._service)
+  KnowledgeAnalysisNotifier(this._service, this._ref)
       : super(const AsyncValue.data(null));
 
   final KnowledgeService _service;
+  final Ref _ref;
 
   Future<KnowledgeAnalysis?> analyze(KnowledgeItem item, {String? idempotencyKey}) async {
     state = const AsyncValue.loading();
     try {
-      final result = await _service.analyzeItem(item, idempotencyKey: idempotencyKey);
+      // R16 — output language = presentation language, not item.language.
+      final result = await _service.analyzeItem(
+        item,
+        outputLanguage: _ref.read(outputLanguageCodeProvider),
+        idempotencyKey: idempotencyKey,
+      );
       state = AsyncValue.data(result);
       return result;
     } catch (e, st) {
@@ -106,5 +113,5 @@ class KnowledgeAnalysisNotifier
 
 final knowledgeAnalysisNotifierProvider = StateNotifierProvider.autoDispose<
     KnowledgeAnalysisNotifier, AsyncValue<KnowledgeAnalysis?>>(
-  (ref) => KnowledgeAnalysisNotifier(ref.watch(knowledgeServiceProvider)),
+  (ref) => KnowledgeAnalysisNotifier(ref.watch(knowledgeServiceProvider), ref),
 );

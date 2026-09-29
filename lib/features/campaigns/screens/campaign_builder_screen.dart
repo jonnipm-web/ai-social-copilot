@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/ai_enum_labels.dart';
 import '../../../data/models/ive_interaction_request.dart';
 import '../../../data/models/knowledge_analysis.dart';
 import '../../../data/models/knowledge_item.dart';
@@ -11,6 +12,7 @@ import '../../../providers/campaign_provider.dart';
 import '../../../providers/knowledge_provider.dart';
 import '../../../providers/strategy_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
+import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 
 class CampaignBuilderScreen extends ConsumerStatefulWidget {
   const CampaignBuilderScreen({super.key, required this.itemId});
@@ -41,11 +43,9 @@ class _CampaignBuilderScreenState
     super.dispose();
   }
 
-  static const _objectives = [
-    'Venda', 'Autoridade', 'Leads', 'Engajamento',
-    'Lançamento', 'Tráfego', 'Venda Hotmart',
-    'Venda Shopify', 'Venda Amazon', 'Assinatura',
-  ];
+  // R16 — canonical (stored + sent to generate-campaign) values; the chips
+  // show campaignObjectiveLabel() in the UI language.
+  static const _objectives = kCampaignObjectives;
 
   static const _durations = [7, 15, 30, 60, 90];
 
@@ -74,7 +74,7 @@ class _CampaignBuilderScreenState
       body: itemAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
-            child: Text(l10n.iveChatErrorPrefix('$e'),
+            child: Text(l10n.iveChatErrorPrefix(extractErrorMessage(e, l10n)),
                 style: const TextStyle(color: Colors.white70))),
         data: (item) {
           if (item == null) {
@@ -85,7 +85,7 @@ class _CampaignBuilderScreenState
           return analysisAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(
-                child: Text(l10n.iveChatErrorPrefix('$e'),
+                child: Text(l10n.iveChatErrorPrefix(extractErrorMessage(e, l10n)),
                     style: const TextStyle(color: Colors.white70))),
             data: (analysis) {
               if (analysis == null) {
@@ -190,7 +190,7 @@ class _CampaignBuilderScreenState
                     ),
                   ),
                   child: Text(
-                    obj,
+                    campaignObjectiveLabel(obj, l10n),
                     style: TextStyle(
                       color: sel
                           ? const Color(0xFF6C63FF)

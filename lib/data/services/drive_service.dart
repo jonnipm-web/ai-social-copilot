@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/constants/app_constants.dart';
 import 'drive_stage.dart';
+import '../../core/utils/app_exceptions.dart';
 
 class DriveFile {
   const DriveFile({
@@ -294,7 +295,7 @@ class DriveService {
   // mantido inteiro em memória sem nenhum limite.
   void _assertWithinImportLimit(int byteLength) {
     if (byteLength > AppConstants.maxLocalImportBytes) {
-      throw Exception('Arquivo muito grande para importar. O limite é de aproximadamente 6 MB.');
+      throw const AppException(AppErrorCode.fileTooLarge);
     }
   }
 
@@ -311,7 +312,7 @@ class DriveService {
     );
 
     if (response.data == null || response.data is! Map<String, dynamic>) {
-      throw Exception('Resposta vazia do serviço de extração de texto.');
+      throw const AppException(AppErrorCode.emptyResponse);
     }
 
     final data = response.data as Map<String, dynamic>;
@@ -319,9 +320,7 @@ class DriveService {
 
     final text = _stripNulls(data['text'] as String? ?? '');
     if (text.trim().length < 20) {
-      throw Exception(
-        'Conteúdo extraído muito curto. O arquivo pode estar protegido ou corrompido.',
-      );
+      throw const AppException(AppErrorCode.extractedTextTooShort);
     }
     return text;
   }

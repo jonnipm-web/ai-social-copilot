@@ -9,6 +9,7 @@ import '../../../data/models/niche_ranking.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/market_analysis_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
+import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 
 class NicheDiscoveryScreen extends ConsumerStatefulWidget {
   const NicheDiscoveryScreen({super.key, required this.analysisId});
@@ -60,7 +61,8 @@ class _NicheDiscoveryScreenState extends ConsumerState<NicheDiscoveryScreen> {
       if (_exec.state != AiExecutionState.success) return;
       ref.invalidate(nichesByAnalysisProvider(widget.analysisId));
     } catch (e) {
-      setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+      if (!mounted) return;
+      setState(() => _error = extractErrorMessage(e, AppLocalizations.of(context)!));
     } finally {
       if (mounted) setState(() {});
     }
@@ -123,7 +125,7 @@ class _NicheDiscoveryScreenState extends ConsumerState<NicheDiscoveryScreen> {
             child: asyncList.when(
               loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFF4D96FF))),
               error: (e, _) => Center(
-                  child: Text(l10n.miSubErrorPrefix('$e'),
+                  child: Text(l10n.miSubErrorPrefix(extractErrorMessage(e, l10n)),
                       style: const TextStyle(color: Colors.redAccent))),
               data: (niches) => niches.isEmpty
                   ? Center(

@@ -799,7 +799,9 @@ class _IveOverlayState extends ConsumerState<IveOverlay> {
       '/knowledge': 'Conhecimento',
       '/action-engine': 'Ações',
       '/intelligence-debug': 'Debug Hub',
-      '/market-intelligence': 'Inteligência de Mercado',
+      // R16 — must be a key known to context_copilot_widget's
+      // _localizedScreenName, otherwise the raw PT id is displayed.
+      '/market-intelligence': 'Market Intelligence',
       '/roi-tracker': 'ROI Tracker',
     };
     return map[route] ?? route;
@@ -1005,7 +1007,7 @@ class _IssueActionChip extends StatelessWidget {
           border: Border.all(color: _color.withOpacity(0.4)),
         ),
         child: Text(
-          action.label,
+          action.localizedLabel(AppLocalizations.of(context)!),
           style: const TextStyle(
             color: _color,
             fontSize: 10,

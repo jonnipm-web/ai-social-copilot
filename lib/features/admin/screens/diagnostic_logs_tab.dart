@@ -3,7 +3,9 @@ import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/diagnostics/diagnostic_report_formatter.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/diagnostic_session_provider.dart';
+import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 
 const _kBg    = Color(0xFF0F0F1A);
 const _kCard  = Color(0xFF1A1A2E);
@@ -75,6 +77,7 @@ class _DiagnosticControlsCardState extends ConsumerState<_DiagnosticControlsCard
   @override
   Widget build(BuildContext context) {
     final session = ref.watch(diagnosticSessionProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -97,7 +100,7 @@ class _DiagnosticControlsCardState extends ConsumerState<_DiagnosticControlsCard
               ),
               const SizedBox(width: 8),
               Text(
-                session.isActive ? 'DIAGNÓSTICO ATIVO' : 'Diagnóstico inativo',
+                session.isActive ? l10n.uxDiagActive : l10n.uxDiagInactive,
                 style: TextStyle(
                   color: session.isActive ? _kGreen : Colors.white54,
                   fontWeight: FontWeight.bold,
@@ -119,18 +122,18 @@ class _DiagnosticControlsCardState extends ConsumerState<_DiagnosticControlsCard
                 ),
                 IconButton(
                   icon: const Icon(Icons.copy_rounded, color: Colors.white38, size: 16),
-                  tooltip: 'Copiar ID da sessão',
+                  tooltip: l10n.uxDiagCopySessionId,
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: session.sessionId ?? ''));
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('ID copiado.')),
+                      SnackBar(content: Text(l10n.uxDiagIdCopied)),
                     );
                   },
                 ),
               ],
             ),
             if (session.label != null && session.label!.isNotEmpty)
-              Text('Rótulo: ${session.label}',
+              Text(l10n.uxDiagLabelValue(session.label!),
                   style: const TextStyle(color: Colors.white38, fontSize: 12)),
             const SizedBox(height: 12),
             SizedBox(
@@ -138,7 +141,7 @@ class _DiagnosticControlsCardState extends ConsumerState<_DiagnosticControlsCard
               child: ElevatedButton.icon(
                 onPressed: _busy ? null : _stop,
                 icon: const Icon(Icons.stop_circle_rounded, size: 18),
-                label: const Text('ENCERRAR SESSÃO'),
+                label: Text(l10n.uxDiagStopSession),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _kRed,
                   foregroundColor: Colors.white,
@@ -150,12 +153,12 @@ class _DiagnosticControlsCardState extends ConsumerState<_DiagnosticControlsCard
             TextField(
               controller: _labelCtrl,
               style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
-                hintText: 'Rótulo (opcional) — ex: COMMERCIAL-E2E-001',
-                hintStyle: TextStyle(color: Colors.white38),
+              decoration: InputDecoration(
+                hintText: l10n.uxDiagLabelHint,
+                hintStyle: const TextStyle(color: Colors.white38),
                 filled: true,
-                fillColor: Color(0xFF0F0F1A),
-                border: OutlineInputBorder(borderSide: BorderSide.none),
+                fillColor: const Color(0xFF0F0F1A),
+                border: const OutlineInputBorder(borderSide: BorderSide.none),
               ),
             ),
             const SizedBox(height: 12),
@@ -164,7 +167,7 @@ class _DiagnosticControlsCardState extends ConsumerState<_DiagnosticControlsCard
               child: ElevatedButton.icon(
                 onPressed: _busy ? null : _start,
                 icon: const Icon(Icons.fiber_manual_record, size: 16),
-                label: const Text('INICIAR SESSÃO DE DIAGNÓSTICO'),
+                label: Text(l10n.uxDiagStartSession),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _kGreen,
                   foregroundColor: Colors.white,
@@ -186,7 +189,7 @@ class _DiagnosticControlsCardState extends ConsumerState<_DiagnosticControlsCard
       setState(() => _busy = false);
       if (!ok) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Não foi possível iniciar a sessão.')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.uxDiagStartFailed)),
         );
       }
     }
@@ -210,6 +213,7 @@ class _SessionListSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sessionsAsync = ref.watch(diagnosticSessionsListProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -217,8 +221,8 @@ class _SessionListSection extends ConsumerWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('Sessões de Diagnóstico',
-                style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 13)),
+            Text(l10n.uxDiagSessionsTitle,
+                style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 13)),
             IconButton(
               icon: const Icon(Icons.refresh_rounded, color: Colors.white38, size: 18),
               onPressed: () => ref.invalidate(diagnosticSessionsListProvider),
@@ -232,15 +236,15 @@ class _SessionListSection extends ConsumerWidget {
           ),
           error: (e, _) => Padding(
             padding: const EdgeInsets.all(16),
-            child: Text('Erro ao carregar sessões: $e',
+            child: Text(l10n.uxDiagSessionsLoadError(extractErrorMessage(e, l10n)),
                 style: const TextStyle(color: _kRed, fontSize: 12)),
           ),
           data: (sessions) {
             if (sessions.isEmpty) {
-              return const Padding(
-                padding: EdgeInsets.all(24),
-                child: Text('Nenhuma sessão registrada.',
-                    style: TextStyle(color: Colors.white38)),
+              return Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(l10n.uxDiagNoSessions,
+                    style: const TextStyle(color: Colors.white38)),
               );
             }
             return Column(
@@ -264,6 +268,7 @@ class _SessionTile extends StatelessWidget {
     final duration = (startedAt != null && endedAt != null) ? endedAt.difference(startedAt) : null;
     final status = session['status'] as String? ?? 'unknown';
     final userId = (session['user_id'] as String? ?? '').substring(0, 8);
+    final l10n = AppLocalizations.of(context)!;
 
     return Card(
       color: _kCard,
@@ -277,7 +282,7 @@ class _SessionTile extends StatelessWidget {
         title: Text(
           (session['label'] as String?)?.isNotEmpty == true
               ? session['label'] as String
-              : 'Sessão $userId…',
+              : l10n.uxDiagSessionShort(userId),
           style: const TextStyle(color: Colors.white, fontSize: 13),
         ),
         subtitle: Text(
@@ -320,16 +325,17 @@ class _SessionDetailScreenState extends ConsumerState<_SessionDetailScreen> {
   Widget build(BuildContext context) {
     final sessionId = widget.session['id'] as String;
     final eventsAsync = ref.watch(diagnosticEventsForSessionProvider(sessionId));
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: _kBg,
       appBar: AppBar(
-        title: Text('Sessão ${sessionId.substring(0, 8)}…', style: const TextStyle(fontSize: 14)),
+        title: Text(l10n.uxDiagSessionShort(sessionId.substring(0, 8)), style: const TextStyle(fontSize: 14)),
         actions: [
           eventsAsync.maybeWhen(
             data: (events) => IconButton(
               icon: const Icon(Icons.copy_all_rounded),
-              tooltip: 'Copiar relatório de diagnóstico',
+              tooltip: l10n.uxDiagCopyReport,
               onPressed: () => _copyReport(context, events),
             ),
             orElse: () => const SizedBox.shrink(),
@@ -345,13 +351,13 @@ class _SessionDetailScreenState extends ConsumerState<_SessionDetailScreen> {
                 TextField(
                   controller: _searchCtrl,
                   style: const TextStyle(color: Colors.white, fontSize: 13),
-                  decoration: const InputDecoration(
-                    hintText: 'Buscar por evento, rota ou erro…',
-                    hintStyle: TextStyle(color: Colors.white38),
-                    prefixIcon: Icon(Icons.search_rounded, color: Colors.white38, size: 18),
+                  decoration: InputDecoration(
+                    hintText: l10n.uxDiagSearchHint,
+                    hintStyle: const TextStyle(color: Colors.white38),
+                    prefixIcon: const Icon(Icons.search_rounded, color: Colors.white38, size: 18),
                     filled: true,
                     fillColor: _kCard,
-                    border: OutlineInputBorder(borderSide: BorderSide.none),
+                    border: const OutlineInputBorder(borderSide: BorderSide.none),
                   ),
                   onChanged: (_) => setState(() {}),
                 ),
@@ -370,14 +376,14 @@ class _SessionDetailScreenState extends ConsumerState<_SessionDetailScreen> {
             child: eventsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(
-                child: Text('Erro: $e', style: const TextStyle(color: _kRed)),
+                child: Text(l10n.miSubErrorPrefix(extractErrorMessage(e, l10n)), style: const TextStyle(color: _kRed)),
               ),
               data: (events) {
                 final filtered = _applyFilters(events);
                 if (filtered.isEmpty) {
-                  return const Center(
-                    child: Text('Nenhum evento corresponde aos filtros.',
-                        style: TextStyle(color: Colors.white38)),
+                  return Center(
+                    child: Text(l10n.uxDiagNoEventsMatch,
+                        style: const TextStyle(color: Colors.white38)),
                   );
                 }
                 return ListView.builder(
@@ -395,19 +401,20 @@ class _SessionDetailScreenState extends ConsumerState<_SessionDetailScreen> {
 
   Widget _buildSeverityDropdown() {
     const options = ['DEBUG', 'INFO', 'WARN', 'ERROR', 'CRITICAL'];
+    final l10n = AppLocalizations.of(context)!;
     return DropdownButtonFormField<String?>(
       value: _severityFilter,
       dropdownColor: _kCard,
       style: const TextStyle(color: Colors.white, fontSize: 12),
-      decoration: const InputDecoration(
-        labelText: 'Severidade',
-        labelStyle: TextStyle(color: Colors.white38, fontSize: 11),
+      decoration: InputDecoration(
+        labelText: l10n.uxDiagSeverity,
+        labelStyle: const TextStyle(color: Colors.white38, fontSize: 11),
         filled: true,
         fillColor: _kCard,
-        border: OutlineInputBorder(borderSide: BorderSide.none),
+        border: const OutlineInputBorder(borderSide: BorderSide.none),
       ),
       items: [
-        const DropdownMenuItem(value: null, child: Text('Todas')),
+        DropdownMenuItem(value: null, child: Text(l10n.uxDiagFilterAll)),
         ...options.map((o) => DropdownMenuItem(value: o, child: Text(o))),
       ],
       onChanged: (v) => setState(() => _severityFilter = v),
@@ -416,19 +423,20 @@ class _SessionDetailScreenState extends ConsumerState<_SessionDetailScreen> {
 
   Widget _buildCategoryDropdown(List<Map<String, dynamic>> events) {
     final categories = events.map((e) => e['category'] as String? ?? '').toSet().toList()..sort();
+    final l10n = AppLocalizations.of(context)!;
     return DropdownButtonFormField<String?>(
       value: _categoryFilter,
       dropdownColor: _kCard,
       style: const TextStyle(color: Colors.white, fontSize: 12),
-      decoration: const InputDecoration(
-        labelText: 'Categoria',
-        labelStyle: TextStyle(color: Colors.white38, fontSize: 11),
+      decoration: InputDecoration(
+        labelText: l10n.uxDiagCategory,
+        labelStyle: const TextStyle(color: Colors.white38, fontSize: 11),
         filled: true,
         fillColor: _kCard,
-        border: OutlineInputBorder(borderSide: BorderSide.none),
+        border: const OutlineInputBorder(borderSide: BorderSide.none),
       ),
       items: [
-        const DropdownMenuItem(value: null, child: Text('Todas')),
+        DropdownMenuItem(value: null, child: Text(l10n.uxDiagFilterAll)),
         ...categories.map((c) => DropdownMenuItem(value: c, child: Text(c))),
       ],
       onChanged: (v) => setState(() => _categoryFilter = v),
@@ -461,7 +469,7 @@ class _SessionDetailScreenState extends ConsumerState<_SessionDetailScreen> {
     final report = formatDiagnosticReport(session: widget.session, events: events);
     Clipboard.setData(ClipboardData(text: report));
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Relatório copiado para a área de transferência.')),
+      SnackBar(content: Text(AppLocalizations.of(context)!.uxDiagReportCopied)),
     );
   }
 }
@@ -485,6 +493,7 @@ class _EventTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.all(10),
@@ -514,7 +523,7 @@ class _EventTile extends StatelessWidget {
           if (event['route'] != null || event['status'] != null || event['build_sha'] != null)
             Text(
               [
-                if (event['route'] != null) 'rota: ${event['route']}',
+                if (event['route'] != null) l10n.uxDiagRouteValue('${event['route']}'),
                 if (event['status'] != null) 'status: ${event['status']}',
                 if (event['duration_ms'] != null) '${event['duration_ms']}ms',
                 // IVE-COMMERCIAL-STABILITY-09O-SHA (mission section 08) —
@@ -530,7 +539,7 @@ class _EventTile extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Text(
-                '${event['error_type'] ?? 'Erro'}: ${event['error_message']}',
+                '${event['error_type'] ?? l10n.knowledgeVaultStatusError}: ${event['error_message']}',
                 style: const TextStyle(color: _kRed, fontSize: 11),
               ),
             ),

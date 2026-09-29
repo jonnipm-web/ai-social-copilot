@@ -1,5 +1,9 @@
 import 'dart:math' as math;
 
+import 'package:flutter/widgets.dart' show Locale;
+
+import '../../core/utils/ecosystem_labels.dart';
+import '../../l10n/app_localizations.dart';
 import '../models/action_queue_item.dart';
 import '../models/ecosystem_score.dart';
 import '../models/execution_score.dart';
@@ -15,6 +19,18 @@ import '../models/roi_metric.dart';
 import '../models/weekly_briefing.dart';
 
 class EcosystemIntelligenceService {
+  /// R16 — every deterministic sentence this service produces (strengths,
+  /// risks, recommendations, allocation reasons, briefing text, execution
+  /// explanations) is rendered in the PRESENTATION language via [l10n].
+  /// Providers pass `ref.watch(appL10nProvider)` so a language switch
+  /// recomputes the text. Verdict codes ('ESCALAR', 'PAUSAR', ...) stay
+  /// canonical logic keys — only their display goes through
+  /// [ecosystemVerdictLabel]. Omitting [l10n] keeps the legacy PT output.
+  EcosystemIntelligenceService({AppLocalizations? l10n})
+      : _l10n = l10n ?? lookupAppLocalizations(const Locale('pt'));
+
+  final AppLocalizations _l10n;
+
   // ── Public API ────────────────────────────────────────────────────────────
 
   List<EcosystemScore> computeProjectScores({
@@ -121,6 +137,7 @@ class EcosystemIntelligenceService {
     required List<OpportunityLabItem> labItems,
     required List<ActionQueueItem> actions,
   }) {
+    final l10n = _l10n;
     final recs = <PriorityRecommendation>[];
 
     // TOP projects to scale or accelerate
@@ -129,14 +146,15 @@ class EcosystemIntelligenceService {
         .take(2);
     for (final s in topProjects) {
       recs.add(PriorityRecommendation(
-        title:
-            '${s.recommendation == "ESCALAR" ? "Escale" : "Invista mais em"} "${s.project.name}"',
+        title: s.recommendation == 'ESCALAR'
+            ? l10n.ecoRecScaleTitle(s.project.name)
+            : l10n.ecoRecInvestTitle(s.project.name),
         reason:
-            'Ecosystem Score ${s.ecosystemScore}/100 — maior potencial do seu portfólio',
+            l10n.ecoRecTopReason(s.ecosystemScore),
         dataUsed:
-            'Score: oportunidade ${s.opportunityScore}, fit ${s.strategicFit}, mercado ${s.marketScore}',
+            l10n.ecoRecTopData(s.opportunityScore, s.strategicFit, s.marketScore),
         expectedImpact:
-            'Aceleração de receita e execução de ${s.labItemCount} oportunidades mapeadas',
+            l10n.ecoRecTopImpact(s.labItemCount),
         confidence: _confidence(s.ecosystemScore),
         type:       RecommendationType.investProject,
         entityId:   s.project.id,
@@ -147,10 +165,10 @@ class EcosystemIntelligenceService {
     // Projects needing validation
     for (final s in scores.where((s) => s.recommendation == 'VALIDAR').take(1)) {
       recs.add(PriorityRecommendation(
-        title:          'Valide as premissas de "${s.project.name}"',
-        reason:         'Score ${s.ecosystemScore}/100 — potencial presente mas dados ainda insuficientes para decisão',
-        dataUsed:       'Market score ${s.marketScore}, ROI ${s.roiScore}, execução ${s.executionScore}',
-        expectedImpact: 'Clareza estratégica para escalar ou pivotar',
+        title:          l10n.ecoRecValidateTitle(s.project.name),
+        reason:         l10n.ecoRecValidateReason(s.ecosystemScore),
+        dataUsed:       l10n.ecoRecValidateData(s.marketScore, s.roiScore, s.executionScore),
+        expectedImpact: l10n.ecoRecValidateImpact,
         confidence:     _confidence(s.ecosystemScore),
         type:           RecommendationType.investProject,
         entityId:       s.project.id,
@@ -163,12 +181,12 @@ class EcosystemIntelligenceService {
       ..sort((a, b) => b.finalScore.compareTo(a.finalScore));
     for (final item in topLab.take(3)) {
       recs.add(PriorityRecommendation(
-        title:          'Execute a oportunidade "${item.title}"',
-        reason:         'Score final ${item.finalScore}/100 — maior ROI esperado do Lab',
-        dataUsed:       'Market score ${item.marketScore}, revenue score ${item.revenueScore}',
+        title:          l10n.ecoRecOppTitle(item.title),
+        reason:         l10n.ecoRecOppReason(item.finalScore),
+        dataUsed:       l10n.ecoRecOppData(item.marketScore, item.revenueScore),
         expectedImpact: item.description.isNotEmpty
             ? item.description
-            : 'Alta alavancagem do portfólio',
+            : l10n.ecoRecOppImpactFallback,
         confidence: _confidence(item.finalScore),
         type:       RecommendationType.executeOpportunity,
         entityId:   item.id,
@@ -185,11 +203,11 @@ class EcosystemIntelligenceService {
     for (final a in quickActions.take(2)) {
       recs.add(PriorityRecommendation(
         title:
-            'Ganho rápido: "${a.title}"',
+            l10n.ecoRecQuickWinTitle(a.title),
         reason:
-            'Impacto ${a.impactScore} com esforço apenas ${a.effortScore} — melhor relação do portfólio',
-        dataUsed:       'Impact score ${a.impactScore}, effort score ${a.effortScore}',
-        expectedImpact: 'Execução rápida com alto retorno proporcional',
+            l10n.ecoRecQuickWinReason(a.impactScore, a.effortScore),
+        dataUsed:       l10n.ecoRecQuickWinData(a.impactScore, a.effortScore),
+        expectedImpact: l10n.ecoRecQuickWinImpact,
         confidence:     85,
         type:           RecommendationType.quickWin,
         entityId:       a.id,
@@ -203,13 +221,13 @@ class EcosystemIntelligenceService {
         .take(2)) {
       recs.add(PriorityRecommendation(
         title:
-            'Pause ou revise "${s.project.name}"',
+            l10n.ecoRecPauseTitle(s.project.name),
         reason:
-            'Ecosystem Score ${s.ecosystemScore}/100 — recursos consumidos sem retorno visível',
+            l10n.ecoRecPauseReason(s.ecosystemScore),
         dataUsed:
-            'ROI score ${s.roiScore}, momentum ${s.momentumScore}, ${s.actionCount} ações sem conclusão',
+            l10n.ecoRecPauseData(s.roiScore, s.momentumScore, s.actionCount),
         expectedImpact:
-            'Liberação de tempo e foco para projetos de maior potencial',
+            l10n.ecoRecPauseImpact,
         confidence: _confidence(100 - s.ecosystemScore),
         type:       RecommendationType.pauseProject,
         entityId:   s.project.id,
@@ -221,11 +239,11 @@ class EcosystemIntelligenceService {
     for (final s in scores.take(3)) {
       for (final risk in s.risks.take(1)) {
         recs.add(PriorityRecommendation(
-          title:          'Risco em "${s.project.name}": $risk',
-          reason:         'Identificado pelo Ecosystem Intelligence com base nos dados do projeto',
+          title:          l10n.ecoRecRiskTitle(s.project.name, risk),
+          reason:         l10n.ecoRecRiskReason,
           dataUsed:
-              'Ecosystem Score ${s.ecosystemScore}, momentum ${s.momentumScore}',
-          expectedImpact: 'Mitigação preventiva antes do impacto no portfólio',
+              l10n.ecoRecRiskData(s.ecosystemScore, s.momentumScore),
+          expectedImpact: l10n.ecoRecRiskImpact,
           confidence:     70,
           type:           RecommendationType.mitigateRisk,
           entityId:       s.project.id,
@@ -250,9 +268,7 @@ class EcosystemIntelligenceService {
         totalBudget: budget,
         budgetType:  budgetType,
         items:       [],
-        summary:
-            'Nenhum projeto com score suficiente para alocação. '
-            'Execute o Knowledge → Action Engine para gerar inteligência operacional.',
+        summary:     _l10n.ecoAllocEmptySummary,
       );
     }
 
@@ -272,15 +288,18 @@ class EcosystemIntelligenceService {
       ..sort((a, b) => b.percentage.compareTo(a.percentage));
 
     final top   = items.first;
-    final label = budgetType == 'hours' ? 'horas' : 'R\$';
+    final label = budgetType == 'hours' ? _l10n.ecoAllocUnitHours : 'R\$';
     return ResourceAllocation(
       totalBudget: budget,
       budgetType:  budgetType,
       items:       items,
-      summary:
-          'Priorize "${top.score.project.name}" com '
-          '${top.allocation.toStringAsFixed(budgetType == 'hours' ? 1 : 0)} $label '
-          '(${top.percentage.round()}% do orçamento). Score: ${top.score.ecosystemScore}/100.',
+      summary:     _l10n.ecoAllocSummary(
+        top.score.project.name,
+        top.allocation.toStringAsFixed(budgetType == 'hours' ? 1 : 0),
+        label,
+        top.percentage.round(),
+        top.score.ecosystemScore,
+      ),
     );
   }
 
@@ -307,39 +326,44 @@ class EcosystemIntelligenceService {
         ? 0
         : scores.fold(0, (s, e) => s + e.ecosystemScore) ~/ scores.length;
 
+    final l10n = _l10n;
     final changed = <BriefingItem>[];
     if (newAnalyses > 0) changed.add(BriefingItem(
-        title: '$newAnalyses nova(s) análise(s) de mercado',
-        detail: 'Novas oportunidades mapeadas pelo Market Intelligence',
+        title: l10n.ecoBriefNewAnalysesTitle(newAnalyses),
+        detail: l10n.ecoBriefNewAnalysesDetail,
         impact: 70));
     if (newActions > 0) changed.add(BriefingItem(
-        title: '$newActions nova(s) ação(ões) criada(s)',
-        detail: 'Action Engine em movimento',
+        title: l10n.ecoBriefNewActionsTitle(newActions),
+        detail: l10n.ecoBriefNewActionsDetail,
         impact: 60));
     if (newLab > 0) changed.add(BriefingItem(
-        title: '$newLab novo(s) item(ns) no Opportunity Lab',
-        detail: 'Oportunidades sendo avaliadas',
+        title: l10n.ecoBriefNewLabTitle(newLab),
+        detail: l10n.ecoBriefNewLabDetail,
         impact: 65));
     if (newRoi > 0) changed.add(BriefingItem(
-        title: '$newRoi novo(s) registro(s) de ROI',
-        detail: 'Resultados financeiros atualizados',
+        title: l10n.ecoBriefNewRoiTitle(newRoi),
+        detail: l10n.ecoBriefNewRoiDetail,
         impact: 80));
     if (changed.isEmpty) changed.add(BriefingItem(
-        title: 'Nenhuma atividade nova esta semana',
-        detail: 'Adicione análises ou ações para gerar insights',
+        title: l10n.ecoBriefNoActivityTitle,
+        detail: l10n.ecoBriefNoActivityDetail,
         impact: 0));
 
     final grew = growing.map((s) => BriefingItem(
-      title:  '${s.project.name} — Ecosystem Score ${s.ecosystemScore}',
-      detail: 'Recomendação: ${s.recommendation}. '
-              '${s.strengths.isNotEmpty ? s.strengths.first : "Alto potencial identificado."}',
+      title:  l10n.ecoBriefProjectScoreTitle(s.project.name, s.ecosystemScore),
+      detail: l10n.ecoBriefRecommendationDetail(
+        ecosystemVerdictLabel(s.recommendation, l10n),
+        s.strengths.isNotEmpty ? s.strengths.first : l10n.ecoBriefGrewFallback,
+      ),
       impact: s.ecosystemScore,
     )).toList();
 
     final declined = pausing.map((s) => BriefingItem(
-      title:  '${s.project.name} — Ecosystem Score ${s.ecosystemScore}',
-      detail: 'Recomendação: PAUSAR. '
-              '${s.risks.isNotEmpty ? s.risks.first : "Baixo retorno identificado."}',
+      title:  l10n.ecoBriefProjectScoreTitle(s.project.name, s.ecosystemScore),
+      detail: l10n.ecoBriefRecommendationDetail(
+        ecosystemVerdictLabel('PAUSAR', l10n),
+        s.risks.isNotEmpty ? s.risks.first : l10n.ecoBriefDeclinedFallback,
+      ),
       impact: s.ecosystemScore,
     )).toList();
 
@@ -352,14 +376,15 @@ class EcosystemIntelligenceService {
             : scores.take(3).toList())
         .map((s) => BriefingItem(
               title:  s.project.name,
-              detail: '${s.recommendationEmoji} ${s.recommendation} — Score ${s.ecosystemScore}/100',
+              detail: '${s.recommendationEmoji} '
+                  '${ecosystemVerdictLabel(s.recommendation, l10n)} — Score ${s.ecosystemScore}/100',
               impact: s.ecosystemScore,
             ))
         .toList();
 
     final toPause = pausing.map((s) => BriefingItem(
       title:  s.project.name,
-      detail: 'Score ${s.ecosystemScore}/100 — libere recursos para projetos de maior potencial',
+      detail: l10n.ecoBriefToPauseDetail(s.ecosystemScore),
       impact: s.ecosystemScore,
     )).toList();
 
@@ -373,16 +398,15 @@ class EcosystemIntelligenceService {
     final allRisks = scores
         .expand((s) => s.risks.map((r) => BriefingItem(
               title:  r,
-              detail: 'Projeto: ${s.project.name}',
+              detail: l10n.ecoBriefRiskProjectDetail(s.project.name),
               impact: 100 - s.ecosystemScore,
             )))
         .take(5)
         .toList();
 
     final summary = scores.isEmpty
-        ? 'Nenhum projeto registrado. Comece adicionando projetos e executando análises.'
-        : 'Seu ecossistema tem ${scores.length} projeto(s) com saúde geral de $health/100. '
-          '${growing.length} projeto(s) em crescimento, ${pausing.length} requerem revisão.';
+        ? l10n.ecoBriefSummaryEmpty
+        : l10n.ecoBriefSummary(scores.length, health, growing.length, pausing.length);
 
     return WeeklyBriefing(
       generatedAt:          now,
@@ -448,8 +472,8 @@ class EcosystemIntelligenceService {
         totalOpportunities:    0,
         hasRoadmap:            hasRoadmap,
         explanation:           [
-          'Sem ações cadastradas',
-          if (hasRoadmap) 'Roadmap presente → +20pts',
+          _l10n.ecoExecNoActions,
+          if (hasRoadmap) _l10n.ecoExecRoadmapPresent,
         ],
       );
     }
@@ -470,9 +494,9 @@ class EcosystemIntelligenceService {
       totalOpportunities:    lab.length,
       hasRoadmap:            hasRoadmap,
       explanation:           [
-        '$completed/${actions.length} ações concluídas → ${compPts}pts',
-        '$approved oportunidades aprovadas × 10 = ${appPts}pts (max 30)',
-        hasRoadmap ? 'Roadmap presente → +20pts' : 'Sem roadmap → +0pts',
+        _l10n.ecoExecCompleted(completed, actions.length, compPts),
+        _l10n.ecoExecApproved(approved, appPts),
+        hasRoadmap ? _l10n.ecoExecRoadmapPresent : _l10n.ecoExecNoRoadmap,
       ],
     );
   }
@@ -636,29 +660,31 @@ class EcosystemIntelligenceService {
 
   List<String> _strengths(Project p, MarketAnalysis? a, int roi, int synergy,
       int momentum, int market) {
+    final l10n = _l10n;
     final s = <String>[];
-    if (market >= 60)   s.add('Mercado com alto potencial identificado');
+    if (market >= 60)   s.add(l10n.ecoStrengthMarket);
     if ((a?.opportunityScore ?? p.opportunityScore) >= 70)
-      s.add('Alta pontuação de oportunidade de mercado');
-    if (roi >= 50)      s.add('ROI positivo registrado');
-    if (synergy >= 50)  s.add('Alta sinergia com o ecossistema');
-    if (momentum >= 40) s.add('Atividade recente elevada');
-    if (p.priorityScore >= 70) s.add('Alta prioridade estratégica');
-    if (s.isEmpty) s.add('Projeto com potencial a desenvolver');
+      s.add(l10n.ecoStrengthOpportunity);
+    if (roi >= 50)      s.add(l10n.ecoStrengthRoi);
+    if (synergy >= 50)  s.add(l10n.ecoStrengthSynergy);
+    if (momentum >= 40) s.add(l10n.ecoStrengthMomentum);
+    if (p.priorityScore >= 70) s.add(l10n.ecoStrengthPriority);
+    if (s.isEmpty) s.add(l10n.ecoStrengthDefault);
     return s;
   }
 
   List<String> _risks(Project p, List<ActionQueueItem> actions, int roi,
       int momentum, bool hasEnoughData) {
+    final l10n = _l10n;
     final r = <String>[];
-    if (!hasEnoughData) r.add('Dados insuficientes para análise de valor');
+    if (!hasEnoughData) r.add(l10n.ecoRiskInsufficientData);
     final pending = actions.where((a) => a.status == 'pending').length;
-    if (pending > 5) r.add('$pending ações pendentes acumuladas sem execução');
+    if (pending > 5) r.add(l10n.ecoRiskPendingActions(pending));
     if (roi == 0 && actions.isNotEmpty)
-      r.add('Sem ROI registrado apesar das ações em andamento');
+      r.add(l10n.ecoRiskNoRoi);
     if (momentum < 10 && actions.isNotEmpty)
-      r.add('Baixa atividade nos últimos 30 dias');
-    if (p.status == 'idea') r.add('Projeto ainda em fase de ideia — sem execução iniciada');
+      r.add(l10n.ecoRiskLowActivity);
+    if (p.status == 'idea') r.add(l10n.ecoRiskIdeaStage);
     return r;
   }
 
@@ -670,11 +696,11 @@ class EcosystemIntelligenceService {
           .toList();
 
   String _allocationReason(EcosystemScore s, String type) {
-    final label = type == 'hours' ? 'horas' : 'budget';
-    if (s.recommendation == 'ESCALAR')   return 'Maior potencial — escale o investimento em $label';
-    if (s.recommendation == 'ACELERAR')  return 'Alto potencial — maximize o $label aqui';
-    if (s.recommendation == 'MANTER')    return 'Projeto saudável — mantenha investimento consistente';
-    if (s.recommendation == 'VALIDAR')   return 'Alocação reduzida até validar premissas';
-    return 'Não recomendado — considere pausar este projeto';
+    final label = type == 'hours' ? _l10n.ecoAllocUnitHours : _l10n.ecoAllocResourceBudget;
+    if (s.recommendation == 'ESCALAR')   return _l10n.ecoAllocReasonScale(label);
+    if (s.recommendation == 'ACELERAR')  return _l10n.ecoAllocReasonAccelerate(label);
+    if (s.recommendation == 'MANTER')    return _l10n.ecoAllocReasonMaintain;
+    if (s.recommendation == 'VALIDAR')   return _l10n.ecoAllocReasonValidate;
+    return _l10n.ecoAllocReasonPause;
   }
 }

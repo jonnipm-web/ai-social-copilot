@@ -14,12 +14,8 @@ class SupportScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-    final subjectReport = Uri.encodeComponent(
-      Localizations.localeOf(context).languageCode == 'en' ? 'Problem report' : 'Relato de problema',
-    );
-    final subjectFeedback = Uri.encodeComponent(
-      Localizations.localeOf(context).languageCode == 'en' ? 'Feedback' : 'Feedback',
-    );
+    final subjectReport = Uri.encodeComponent(t.uxSupportSubjectProblemReport);
+    final subjectFeedback = Uri.encodeComponent(t.uxSupportSubjectFeedback);
 
     return Scaffold(
       appBar: AppBar(title: Text(t.supportTitle)),

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/snackbar_utils.dart';
 import '../../../data/models/post_generation.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/post_provider.dart';
 import '../../../shared/widgets/result_block.dart';
 import '../../../shared/widgets/score_chip.dart';
@@ -44,39 +45,41 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
         _saved = true;
         _isSaving = false;
       });
-      showSuccessSnack(context, 'Salvo no histórico!');
+      showSuccessSnack(context, AppLocalizations.of(context)!.uxResultSavedToHistory);
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSaving = false);
-      showErrorSnack(context, 'Erro ao salvar. Tente novamente.');
+      showErrorSnack(context, AppLocalizations.of(context)!.uxResultSaveError);
     }
   }
 
   void _copyAll() {
     final r = widget.result;
+    final l10n = AppLocalizations.of(context)!;
     final text = [
-      '✨ Post Melhorado\n${r['improved_text']}',
-      '💼 Versão Profissional\n${r['professional_version']}',
-      '😊 Versão Descontraída\n${r['casual_version']}',
-      '📈 Versão Persuasiva\n${r['persuasive_version']}',
-      '💬 Sugestão de Resposta a Comentários\n${r['comment_reply']}',
+      '✨ ${l10n.uxPostImproved}\n${r['improved_text']}',
+      '💼 ${l10n.uxPostProfessional}\n${r['professional_version']}',
+      '😊 ${l10n.uxPostCasual}\n${r['casual_version']}',
+      '📈 ${l10n.uxPostPersuasive}\n${r['persuasive_version']}',
+      '💬 ${l10n.uxPostCommentReply}\n${r['comment_reply']}',
     ].join('\n\n');
     Clipboard.setData(ClipboardData(text: text));
-    showSuccessSnack(context, 'Conteúdo copiado com sucesso!');
+    showSuccessSnack(context, l10n.uxContentCopied);
   }
 
   @override
   Widget build(BuildContext context) {
     final scores = _scores;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Resultado'),
+        title: Text(l10n.uxResultTitle),
         actions: [
           TextButton.icon(
             onPressed: _copyAll,
             icon: const Icon(Icons.copy_all_rounded, size: 16),
-            label: const Text('Copiar Tudo'),
+            label: Text(l10n.uxCopyAll),
             style: TextButton.styleFrom(foregroundColor: Colors.white70),
           ),
           if (!_saved)
@@ -89,7 +92,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.bookmark_add_outlined, size: 18),
-              label: const Text('Salvar'),
+              label: Text(l10n.commonSave),
             ),
           if (_saved)
             const Padding(
@@ -117,7 +120,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        'Gerado em ${widget.processingSeconds!.toStringAsFixed(1)} segundos',
+                        l10n.uxResultGeneratedIn(widget.processingSeconds!.toStringAsFixed(1)),
                         style: const TextStyle(
                           fontSize: 12,
                           color: Colors.white38,
@@ -130,46 +133,46 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   ScoreChip(
-                    label: 'Clareza',
+                    label: l10n.uxScoreClarity,
                     score: (scores['clarity'] as num).toDouble(),
                   ),
                   ScoreChip(
-                    label: 'Impacto',
+                    label: l10n.actionEngineScoreImpact,
                     score: (scores['impact'] as num).toDouble(),
                   ),
                   ScoreChip(
-                    label: 'Engajamento',
+                    label: l10n.uxScoreEngagement,
                     score: (scores['engagement'] as num).toDouble(),
                   ),
                 ],
               ),
               const SizedBox(height: 20),
               ResultBlock(
-                title: 'Post Melhorado',
+                title: l10n.uxPostImproved,
                 content: widget.result['improved_text'] as String,
                 icon: Icons.auto_awesome,
               ),
               const SizedBox(height: 12),
               ResultBlock(
-                title: 'Versão Profissional',
+                title: l10n.uxPostProfessional,
                 content: widget.result['professional_version'] as String,
                 icon: Icons.work_outline,
               ),
               const SizedBox(height: 12),
               ResultBlock(
-                title: 'Versão Descontraída',
+                title: l10n.uxPostCasual,
                 content: widget.result['casual_version'] as String,
                 icon: Icons.emoji_emotions_outlined,
               ),
               const SizedBox(height: 12),
               ResultBlock(
-                title: 'Versão Persuasiva',
+                title: l10n.uxPostPersuasive,
                 content: widget.result['persuasive_version'] as String,
                 icon: Icons.trending_up,
               ),
               const SizedBox(height: 12),
               ResultBlock(
-                title: 'Sugestão de Resposta a Comentários',
+                title: l10n.uxPostCommentReply,
                 content: widget.result['comment_reply'] as String,
                 icon: Icons.chat_bubble_outline,
               ),

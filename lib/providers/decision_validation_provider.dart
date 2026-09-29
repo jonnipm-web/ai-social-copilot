@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/utils/language_utils.dart';
 import '../data/models/decision_validation.dart';
 import 'project_intelligence_provider.dart';
 import 'knowledge_provider.dart';
@@ -8,6 +9,8 @@ import 'opportunity_lab_provider.dart';
 
 final decisionValidationMapProvider =
     FutureProvider.autoDispose<Map<String, DecisionValidation>>((ref) async {
+  // R16 — block reasons are user-facing; built in the presentation language.
+  final l10n             = ref.watch(appL10nProvider);
   final profiles         = await ref.watch(projectIntelligenceProfilesProvider.future);
   final learningProfiles = await ref.watch(personaLearningProfilesProvider.future);
   final knowledgeItems   = await ref.watch(knowledgeItemsProvider.future);
@@ -38,14 +41,14 @@ final decisionValidationMapProvider =
     final blockReasons = <String>[];
     if (coverageScore < DecisionValidation.minCoverage) {
       blockReasons.add(
-          'Knowledge Coverage insuficiente ($coverageScore% < ${DecisionValidation.minCoverage}%)');
+          l10n.ctxDvReasonCoverage(coverageScore, DecisionValidation.minCoverage));
     }
     if (avgLearning < DecisionValidation.minLearning) {
       blockReasons.add(
-          'Learning Score médio insuficiente ($avgLearning% < ${DecisionValidation.minLearning}%)');
+          l10n.ctxDvReasonLearning(avgLearning, DecisionValidation.minLearning));
     }
     if (!profileComplete) {
-      blockReasons.add('Perfil de inteligência incompleto — vincule uma análise de mercado');
+      blockReasons.add(l10n.ctxDvReasonProfile);
     }
 
     final DecisionValidationStatus status;
@@ -61,7 +64,7 @@ final decisionValidationMapProvider =
     // For structuring projects, add a descriptive reason
     final reasons = List<String>.from(blockReasons);
     if (hasNoOperationalIntelligence) {
-      reasons.add('Nenhuma oportunidade ou ação gerada ainda — execute o Knowledge → Action Engine');
+      reasons.add(l10n.ctxDvReasonStructuring);
     }
 
     map[projectId] = DecisionValidation(

@@ -41,6 +41,8 @@ class CampaignService {
     await _client.from(_tableCampaigns).delete().eq('id', id);
   }
 
+  /// R16 — [outputLanguage] is the PRESENTATION language ('pt-BR'/'en-US');
+  /// `item.language` is source metadata and never decides the output.
   Future<Campaign> generate({
     required KnowledgeItem item,
     required KnowledgeAnalysis analysis,
@@ -48,6 +50,7 @@ class CampaignService {
     required String objective,
     required int durationDays,
     required List<String> channels,
+    required String outputLanguage,
     String? idempotencyKey,
   }) async {
     final uid = _client.auth.currentUser?.id;
@@ -62,7 +65,7 @@ class CampaignService {
         'channels':          channels,
         'niche':             item.niche ?? '',
         'target_audience':   item.targetAudience ?? '',
-        'language':          item.language,
+        'language':          outputLanguage,
         'summary':           analysis.summary ?? '',
         'value_proposition': strategy?.valueProposition ?? '',
         'keywords':          analysis.keywordsPrimary,

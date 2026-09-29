@@ -15,6 +15,7 @@ import '../../../shared/widgets/app_drawer.dart';
 import '../../action_engine/screens/action_detail_screen.dart';
 import '../opportunity_type_labels.dart';
 import 'opportunity_detail_screen.dart';
+import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 
 // ── Colors ───────────────────────────────────────────────────────────────────
 const _kBg      = Color(0xFF0F0F1A);
@@ -174,7 +175,7 @@ class _LabBody extends ConsumerWidget {
       loading: () =>
           const Center(child: CircularProgressIndicator(color: _kPrimary)),
       error: (e, _) => Center(
-        child: Text(l10n.opportunityDetailGenericError(e.toString()),
+        child: Text(l10n.opportunityDetailGenericError(extractErrorMessage(e, l10n)),
             style: const TextStyle(color: Colors.white54)),
       ),
       data: (items) {
@@ -250,7 +251,7 @@ class _LabBody extends ConsumerWidget {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text(l10n.opportunityDetailApprovedCreateActionError(e.toString())),
+                                content: Text(l10n.opportunityDetailApprovedCreateActionError(extractErrorMessage(e, l10n))),
                                 backgroundColor: Colors.orange,
                               ),
                             );
@@ -289,7 +290,7 @@ class _LabBody extends ConsumerWidget {
                             } catch (e) {
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(l10n.opportunityDetailGenericError(e.toString())), backgroundColor: Colors.red),
+                                  SnackBar(content: Text(l10n.opportunityDetailGenericError(extractErrorMessage(e, l10n))), backgroundColor: Colors.red),
                                 );
                               }
                             }
