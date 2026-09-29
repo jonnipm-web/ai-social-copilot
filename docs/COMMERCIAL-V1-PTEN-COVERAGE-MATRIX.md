@@ -36,40 +36,46 @@ de produto deliberadamente idênticos em PT/EN (ex.: "Opportunity Lab"), ou
   `persona_form_screen.dart`, `ive_overlay.dart` e
   `context_copilot_widget.dart`, que já apareciam citados nas notas mas
   agora têm linha própria).
-- **26** telas 100% localizadas (nenhuma string hardcoded genuína
+- **27** telas 100% localizadas (nenhuma string hardcoded genuína
   encontrada nas duas passagens de regex + inspeção manual).
-- **1** tela com um gap real e pontual: **Project Command Center**
-  (`project_command_center_screen.dart`) — 2 mensagens `initialMessage`
-  enviadas ao chat da IVE (Perguntar à IVE) continuam hardcoded em PT-BR,
-  mesmo com 13 outros usos de `AppLocalizations` no arquivo. Ver detalhe
-  abaixo.
+- **CORRIGIDO após esta rodada**: **Project Command Center**
+  (`project_command_center_screen.dart`) tinha 2 mensagens
+  `initialMessage` enviadas ao chat da IVE (Perguntar à IVE) hardcoded em
+  PT-BR, mesmo com 13 outros usos de `AppLocalizations` no arquivo. Ambas
+  agora usam `l10n.projectCommandAskProfilePrompt(...)` e
+  `l10n.projectCommandAskAllocationPrompt(...)`, mesmo padrão já usado nas
+  outras 4 telas com prompt de IVE. 733/733 testes passando após a
+  correção.
 - **2** resíduos cosméticos triviais, não bloqueantes (não violam
   NO_MIXED_LANGUAGE na prática — mesma grafia em PT e EN): `'ROI: '` em
   `dashboard_screen.dart:992` e `'prio'` em
   `action_engine/screens/action_detail_screen.dart:321`.
 - **0** telas 0% localizadas (antes eram 18).
 
-**Achado real (não presumir 100% só pelo commit):** em
+**Achado real, já corrigido nesta mesma rodada:** em
 `project_command_center_screen.dart`, os botões "Perguntar à IVE sobre..."
-em duas seções distintas (linhas ~1415-1422 e ~1874-1882) constroem a
-pergunta inicial do chat com strings PT-BR fixas (`'O que devo priorizar
-agora?'`, `'essa alocação está adequada... O que ajustar?'`) passadas
-direto para `showCopilotChat(initialMessage: ...)`. Essa mensagem é
-exibida verbatim como a PRÓPRIA mensagem do usuário na conversa da IVE —
-web-native e não passa pela troca de idioma do app, então um usuário em
-EN veria seu próprio "pedido" aparecer em português. O padrão correto já
-existe e está aplicado em 4 outras telas (`website_analysis_result_screen
+em duas seções distintas construíam a pergunta inicial do chat com
+strings PT-BR fixas (`'O que devo priorizar agora?'`, `'essa alocação
+está adequada... O que ajustar?'`) passadas direto para
+`showCopilotChat(initialMessage: ...)`. Essa mensagem é exibida verbatim
+como a PRÓPRIA mensagem do usuário na conversa da IVE — web-native e não
+passa pela troca de idioma do app, então um usuário em EN veria seu
+próprio "pedido" aparecer em português. O padrão correto já existia e
+estava aplicado em 4 outras telas (`website_analysis_result_screen
 .dart:109`, `action_detail_screen.dart:932`, `knowledge_vault_screen.dart
 :737`, `market_intelligence_hub_screen.dart:174`, todos usando
-`initialMessage: l10n.xxxPrompt(...)`) — só não foi replicado aqui. É a
-única violação de NO_MIXED_LANGUAGE genuína restante nesta auditoria.
+`initialMessage: l10n.xxxPrompt(...)`) — agora replicado aqui também, com
+`projectCommandAskProfilePrompt`/`projectCommandAskProfileGaps`/
+`projectCommandAskAllocationPrompt`/`projectCommandAskAllocationDirtyNote`.
+Era a única violação de NO_MIXED_LANGUAGE genuína desta auditoria; não há
+mais nenhuma pendente.
 
 ## Matriz completa
 
 | Módulo | Rota | Arquivo(s) | Infra i18n | NO_MIXED_LANGUAGE | Notas |
 |---|---|---|---|---|---|
 | business-dashboard | /dashboard | dashboard_screen.dart | **SIM** | OK (resíduo cosmético) | 1 resíduo: `'ROI: '` hardcoded como prefixo de string interpolada (linha 992) — "ROI" é igual em PT/EN, não gera mistura perceptível. Fora isso, 100% localizado, incluindo os componentes de R6 (Portfolio Summary, Recomendações Executivas, Pendências) adicionados nesta sessão. |
-| projects | /projects | project_command_center_screen.dart | PARCIAL | **VIOLADO (achado real)** | 13 usos de `AppLocalizations`, mas 2 `initialMessage` de chat da IVE continuam hardcoded em PT-BR (ver seção "Achado real" acima). Ação recomendada: aplicar o mesmo padrão `l10n.xxxPrompt(...)` já usado em 4 outras telas. |
+| projects | /projects | project_command_center_screen.dart | **SIM** | OK (corrigido) | Os 2 `initialMessage` de chat da IVE que estavam hardcoded em PT-BR agora usam `l10n.projectCommandAskProfilePrompt(...)` / `l10n.projectCommandAskAllocationPrompt(...)`, mesmo padrão das outras 4 telas. |
 | market-intelligence (hub raiz) | /market-intelligence | market_intelligence_screen.dart | **SIM** | OK | Inclui o seletor de projeto (R14, adicionado nesta sessão) já localizado (`miRootProjectSelectorLabel/None`). |
 | market-intelligence (análise :id) | /market-intelligence/:id | market_intelligence_hub_screen.dart | **SIM** | OK | Tela mais rica de inteligência do produto — 87 chaves `miHubXxx`/`miRootXxx` aplicadas nesta sessão, incluindo o fix de overflow mobile em `_ExecScoreCard`/`_InfoRow2`, preservado intacto. |
 | competitor-discovery | (sub) | competitor_discovery_screen.dart | **SIM** | OK | — |
@@ -115,20 +121,19 @@ chave a chave e falhe o build se divergirem, hoje inexistente.
 
 ## Conclusão
 
-O requisito comercial PT/EN está **SUBSTANCIALMENTE satisfeito**: das 28
-superfícies comerciais auditadas nesta rodada, 26 estão 100% localizadas
-(0 strings hardcoded genuínas encontradas), e as 2 restantes têm apenas
-resíduos cosméticos irrelevantes (`'ROI: '`, `'prio'` — mesma grafia em
-ambos os idiomas, nunca produzem uma tela visivelmente mista). O único
-achado real de NO_MIXED_LANGUAGE é pontual: as 2 mensagens `initialMessage`
-hardcoded em `project_command_center_screen.dart`, que fazem uma pergunta
-em português aparecer como se fosse escrita pelo próprio usuário EN no
-chat da IVE. O padrão de correção já existe e está comprovadamente
-aplicado em 4 outras telas do mesmo tipo de fluxo — é uma correção
-pequena e bem definida, não um gap estrutural.
+O requisito comercial PT/EN está **SATISFEITO**: das 28 superfícies
+comerciais auditadas nesta rodada, 27 estão 100% localizadas (0 strings
+hardcoded genuínas encontradas), e a única restante (`dashboard_screen
+.dart`/`action_detail_screen.dart`, 2 resíduos: `'ROI: '`, `'prio'`) tem
+apenas resíduos cosméticos irrelevantes — mesma grafia em PT e EN, nunca
+produzem uma tela visivelmente mista. O único achado real de
+NO_MIXED_LANGUAGE encontrado nesta reauditoria (as 2 mensagens
+`initialMessage` hardcoded em `project_command_center_screen.dart`) foi
+corrigido na mesma sessão, usando o mesmo padrão `l10n.xxxPrompt(...)` já
+aplicado em 4 outras telas — 733/733 testes passando após a correção.
 
-Não é possível declarar **COMMERCIAL V1 100% bilíngue sem exceção**
-enquanto esse achado não for corrigido, mas a afirmação da sessão anterior
-de que "18 telas estão 0% localizadas" e "o requisito NÃO está satisfeito"
-não reflete mais o estado atual do código — essa era a situação ANTES do
-trabalho de localização em massa, não depois.
+A afirmação da versão anterior deste documento de que "18 telas estão 0%
+localizadas" e "o requisito NÃO está satisfeito" não reflete mais o
+estado atual do código — essa era a situação ANTES do trabalho de
+localização em massa desta sessão (7 forks + edições diretas, ~650+
+chaves PT/EN), não depois.

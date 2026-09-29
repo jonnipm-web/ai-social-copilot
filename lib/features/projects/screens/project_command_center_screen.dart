@@ -1416,10 +1416,15 @@ class _ProjectDetailSheet extends ConsumerWidget {
                 context,
                 screenName:     'Projetos',
                 contextData:    contextData,
-                initialMessage: 'Analise o perfil de inteligência do projeto "${p.project.name}": '
-                    'nicho ${p.niche}, público ${p.targetAudience}, maturidade ${p.maturityLabel}. '
-                    '${p.missingKnowledge.isNotEmpty ? "Lacunas: ${p.missingKnowledge.join(", ")}." : ""} '
-                    'O que devo priorizar agora?',
+                initialMessage: t.projectCommandAskProfilePrompt(
+                  p.project.name,
+                  p.niche,
+                  p.targetAudience,
+                  p.maturityLabel,
+                  p.missingKnowledge.isNotEmpty
+                      ? t.projectCommandAskProfileGaps(p.missingKnowledge.join(", "))
+                      : '',
+                ),
                 request: IveInteractionRequest(
                   projectId:        p.project.id,
                   sourceModule:     'project_command_center',
@@ -1868,18 +1873,19 @@ class _ResourceAllocationSectionState
                       ? CopilotContextData.fromIveContext(ctx)
                       : const CopilotContextData();
                   final dirtyNote = editState.isDirty
-                      ? ' Nota: há edições de alocação ainda não salvas que não estão refletidas nesta análise.'
+                      ? t.projectCommandAskAllocationDirtyNote
                       : '';
                   Navigator.of(context).pop();
                   showCopilotChat(
                     context,
                     screenName: 'Projetos',
                     contextData: contextData,
-                    initialMessage:
-                        'Com base na alocação de recursos SALVA do projeto "${widget.projectName}" '
-                        '(${saved.hoursAllocated}h, ${_fmtCents(saved.budgetAllocatedCents)} ${saved.currency}), '
-                        'essa alocação está adequada para as prioridades atuais do projeto? '
-                        'O que ajustar?$dirtyNote',
+                    initialMessage: t.projectCommandAskAllocationPrompt(
+                      widget.projectName,
+                      saved.hoursAllocated,
+                      '${_fmtCents(saved.budgetAllocatedCents)} ${saved.currency}',
+                      dirtyNote,
+                    ),
                     request: request,
                   );
                 },

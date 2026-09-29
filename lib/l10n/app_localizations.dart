@@ -7234,6 +7234,32 @@ abstract class AppLocalizations {
   /// **'Analisar recursos com a IVE'**
   String get projectCommandAnalyzeResourcesWithIve;
 
+  /// No description provided for @projectCommandAskProfilePrompt.
+  ///
+  /// In pt, this message translates to:
+  /// **'Analise o perfil de inteligência do projeto \"{name}\": nicho {niche}, público {audience}, maturidade {maturity}. {gaps}O que devo priorizar agora?'**
+  String projectCommandAskProfilePrompt(
+      String name, String niche, String audience, String maturity, String gaps);
+
+  /// No description provided for @projectCommandAskProfileGaps.
+  ///
+  /// In pt, this message translates to:
+  /// **'Lacunas: {list}. '**
+  String projectCommandAskProfileGaps(String list);
+
+  /// No description provided for @projectCommandAskAllocationPrompt.
+  ///
+  /// In pt, this message translates to:
+  /// **'Com base na alocação de recursos SALVA do projeto \"{name}\" ({hours}h, {budget}), essa alocação está adequada para as prioridades atuais do projeto? O que ajustar?{dirtyNote}'**
+  String projectCommandAskAllocationPrompt(
+      String name, int hours, String budget, String dirtyNote);
+
+  /// No description provided for @projectCommandAskAllocationDirtyNote.
+  ///
+  /// In pt, this message translates to:
+  /// **' Nota: há edições de alocação ainda não salvas que não estão refletidas nesta análise.'**
+  String get projectCommandAskAllocationDirtyNote;
+
   /// No description provided for @opportunityDetailTitle.
   ///
   /// In pt, this message translates to:

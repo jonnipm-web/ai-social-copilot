@@ -1517,6 +1517,13 @@
   "projectCommandSaveAllocationError": "Erro ao salvar: {error}",
   "@projectCommandSaveAllocationError": {"placeholders": {"error": {"type": "String"}}},
   "projectCommandAnalyzeResourcesWithIve": "Analisar recursos com a IVE",
+  "projectCommandAskProfilePrompt": "Analise o perfil de inteligência do projeto \"{name}\": nicho {niche}, público {audience}, maturidade {maturity}. {gaps}O que devo priorizar agora?",
+  "@projectCommandAskProfilePrompt": {"placeholders": {"name": {"type": "String"}, "niche": {"type": "String"}, "audience": {"type": "String"}, "maturity": {"type": "String"}, "gaps": {"type": "String"}}},
+  "projectCommandAskProfileGaps": "Lacunas: {list}. ",
+  "@projectCommandAskProfileGaps": {"placeholders": {"list": {"type": "String"}}},
+  "projectCommandAskAllocationPrompt": "Com base na alocação de recursos SALVA do projeto \"{name}\" ({hours}h, {budget}), essa alocação está adequada para as prioridades atuais do projeto? O que ajustar?{dirtyNote}",
+  "@projectCommandAskAllocationPrompt": {"placeholders": {"name": {"type": "String"}, "hours": {"type": "int"}, "budget": {"type": "String"}, "dirtyNote": {"type": "String"}}},
+  "projectCommandAskAllocationDirtyNote": " Nota: há edições de alocação ainda não salvas que não estão refletidas nesta análise.",
 
   "opportunityDetailTitle": "Detalhe da Oportunidade",
   "opportunityDetailLoadError": "Erro: {error}",

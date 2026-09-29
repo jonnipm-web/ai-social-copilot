@@ -4051,6 +4051,27 @@ class AppLocalizationsPt extends AppLocalizations {
       'Analisar recursos com a IVE';
 
   @override
+  String projectCommandAskProfilePrompt(String name, String niche,
+      String audience, String maturity, String gaps) {
+    return 'Analise o perfil de inteligência do projeto \"$name\": nicho $niche, público $audience, maturidade $maturity. ${gaps}O que devo priorizar agora?';
+  }
+
+  @override
+  String projectCommandAskProfileGaps(String list) {
+    return 'Lacunas: $list. ';
+  }
+
+  @override
+  String projectCommandAskAllocationPrompt(
+      String name, int hours, String budget, String dirtyNote) {
+    return 'Com base na alocação de recursos SALVA do projeto \"$name\" (${hours}h, $budget), essa alocação está adequada para as prioridades atuais do projeto? O que ajustar?$dirtyNote';
+  }
+
+  @override
+  String get projectCommandAskAllocationDirtyNote =>
+      ' Nota: há edições de alocação ainda não salvas que não estão refletidas nesta análise.';
+
+  @override
   String get opportunityDetailTitle => 'Detalhe da Oportunidade';
 
   @override
