@@ -4,7 +4,14 @@ import '../models/opportunity_lab_item.dart';
 import '../../core/constants/app_constants.dart';
 
 class OpportunityLabService {
-  final _client = Supabase.instance.client;
+  // Lazy getter, not an eager field initializer -- same fix as
+  // MarketAnalysisService/context_copilot_provider.dart: any widget test
+  // that mounts a screen watching opportunityLabNotifierProvider (without
+  // calling a query method) previously threw "You must initialize the
+  // supabase instance" in a plain test process. Deferring the access to
+  // first real query matches the app's own normal flow, where Supabase is
+  // always initialized long before any query.
+  SupabaseClient get _client => Supabase.instance.client;
 
   Future<List<OpportunityLabItem>> fetchAll({String? projectId, String? status}) async {
     var filter = _client

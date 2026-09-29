@@ -161,6 +161,14 @@ class _LabBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final itemsAsync = ref.watch(opportunityLabNotifierProvider);
     final l10n = AppLocalizations.of(context)!;
+    // COMMERCIAL-V1-UX-RECONCILIATION (R14) -- the "Todos" filter (see
+    // _ProjectFilter above) mixes opportunities from every project in one
+    // list, so each card needs its own project name to stay legible; only
+    // resolved from the user's own RLS-scoped list, same as
+    // opportunity_detail_screen.dart's _OriginSection.
+    final projects = ref.watch(projectsProvider).valueOrNull ?? const [];
+    String? projectNameFor(String? id) =>
+        id == null ? null : projects.where((p) => p.id == id).map((p) => p.name).firstOrNull;
 
     return itemsAsync.when(
       loading: () =>
@@ -198,6 +206,7 @@ class _LabBody extends ConsumerWidget {
                   padding: const EdgeInsets.only(bottom: 12),
                   child: _LabItemCard(
                     item: items[i],
+                    projectName: projectNameFor(items[i].projectId),
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => OpportunityDetailScreen(itemId: items[i].id),
@@ -304,12 +313,14 @@ class _LabItemCard extends StatelessWidget {
     required this.onApprove,
     required this.onDelete,
     this.onConvertToAction,
+    this.projectName,
   });
   final OpportunityLabItem item;
   final VoidCallback        onTap;
   final VoidCallback        onApprove;
   final VoidCallback        onDelete;
   final VoidCallback?       onConvertToAction;
+  final String?             projectName;
 
   static Color _statusColor(String s) {
     const m = {
@@ -384,6 +395,21 @@ class _LabItemCard extends StatelessWidget {
                 style: const TextStyle(color: Colors.white54, fontSize: 12),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis),
+          ],
+          if (projectName != null) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Icon(Icons.folder_outlined, size: 12, color: Colors.white38),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(projectName!,
+                      style: const TextStyle(color: Colors.white38, fontSize: 11),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                ),
+              ],
+            ),
           ],
           const SizedBox(height: 12),
           Row(
