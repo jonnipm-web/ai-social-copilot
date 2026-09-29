@@ -7521,6 +7521,18 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'CONFIRMAR'**
   String get aiConfirmConfirm;
+
+  /// No description provided for @miRootProjectSelectorLabel.
+  ///
+  /// In pt, this message translates to:
+  /// **'Vincular a um projeto (opcional)'**
+  String get miRootProjectSelectorLabel;
+
+  /// No description provided for @miRootProjectSelectorNone.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhum'**
+  String get miRootProjectSelectorNone;
 }
 
 class _AppLocalizationsDelegate

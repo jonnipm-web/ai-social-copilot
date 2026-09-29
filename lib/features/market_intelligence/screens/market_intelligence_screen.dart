@@ -271,6 +271,67 @@ class _MarketIntelligenceScreenState
                   ],
                 ),
               ),
+              // COMMERCIAL-V1-UX-RECONCILIATION (R14) — before this, the
+              // ONLY way to bind an analysis to a project was arriving via
+              // Project Command Center's `extra` (didChangeDependencies
+              // above); a user starting directly from this screen had no
+              // way to link the analysis to a real project at all, so
+              // every analysis they created stayed project-less even when
+              // they meant it for a specific project. This dropdown is a
+              // second, user-driven way to set the SAME `_projectId` state
+              // field — it goes through the exact same `_verifiedProjectId`
+              // ownership check and the same analyze()/updateFields() path
+              // below, no new authorization surface. Hidden once a project
+              // was already supplied via `extra` (that binding takes
+              // precedence and is shown by the banner below instead).
+              if (_projectId == null) ...[
+                const SizedBox(height: 16),
+                Text(t.miRootProjectSelectorLabel,
+                    style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                const SizedBox(height: 8),
+                Consumer(
+                  builder: (context, ref, _) {
+                    final projectsAsync = ref.watch(projectsNotifierProvider);
+                    final projects = projectsAsync.valueOrNull ?? const [];
+                    return DropdownButtonFormField<String?>(
+                      initialValue: null,
+                      isExpanded: true,
+                      dropdownColor: const Color(0xFF1A1A2E),
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: const Color(0xFF1A1A2E),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFF333355)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFF333355)),
+                        ),
+                        prefixIcon: const Icon(Icons.folder_outlined, color: Colors.white38),
+                      ),
+                      hint: Text(t.miRootProjectSelectorNone,
+                          style: const TextStyle(color: Colors.white38)),
+                      items: [
+                        DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text(t.miRootProjectSelectorNone,
+                              style: const TextStyle(color: Colors.white54)),
+                        ),
+                        ...projects.map((p) => DropdownMenuItem<String?>(
+                              value: p.id,
+                              child: Text(p.name, overflow: TextOverflow.ellipsis),
+                            )),
+                      ],
+                      onChanged: (value) => setState(() {
+                        _projectId = value;
+                        if (value != null) _inputType = 'project';
+                      }),
+                    );
+                  },
+                ),
+              ],
               // Same ownership check as _verifiedProjectId (Codex Gate P0
               // mitigation) — keeps the banner honest: never claims a link
               // will be made if the write path would actually reject it.
@@ -306,12 +367,16 @@ class _MarketIntelligenceScreenState
               // Input type selector
               Text(t.miRootInputTypeLabel, style: const TextStyle(color: Colors.white70, fontSize: 13)),
               const SizedBox(height: 8),
-              Row(
+              // Wrap, not Row: the "Projeto" chip goes bold when selected,
+              // which widens it enough to overflow a Row at narrow (~390px)
+              // widths -- Wrap lets chips flow to a second line instead of
+              // clipping or shrinking the label text.
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
                 children: [
                   _TypeChip(label: t.miRootInputTypeUrl, value: 'url', selected: _inputType, onTap: (v) => setState(() => _inputType = v)),
-                  const SizedBox(width: 8),
                   _TypeChip(label: t.miRootInputTypeNiche, value: 'niche', selected: _inputType, onTap: (v) => setState(() => _inputType = v)),
-                  const SizedBox(width: 8),
                   _TypeChip(label: t.miRootInputTypeProject, value: 'project', selected: _inputType, onTap: (v) => setState(() => _inputType = v)),
                 ],
               ),

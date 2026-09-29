@@ -4215,4 +4215,10 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get aiConfirmConfirm => 'CONFIRMAR';
+
+  @override
+  String get miRootProjectSelectorLabel => 'Vincular a um projeto (opcional)';
+
+  @override
+  String get miRootProjectSelectorNone => 'Nenhum';
 }

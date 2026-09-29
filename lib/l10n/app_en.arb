@@ -1465,5 +1465,8 @@
   "aiConfirmRemaining": "{remaining} of {limit} analyses remaining this month.",
   "@aiConfirmRemaining": {"placeholders": {"remaining": {"type": "int"}, "limit": {"type": "int"}}},
   "aiConfirmCancel": "CANCEL",
-  "aiConfirmConfirm": "CONFIRM"
+  "aiConfirmConfirm": "CONFIRM",
+
+  "miRootProjectSelectorLabel": "Link to a project (optional)",
+  "miRootProjectSelectorNone": "None"
 }

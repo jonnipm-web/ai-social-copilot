@@ -9,7 +9,16 @@ import '../models/revenue_plan.dart';
 import '../../core/constants/app_constants.dart';
 
 class MarketAnalysisService {
-  final _client = Supabase.instance.client;
+  // Lazy getter, not an eager field initializer: MarketAnalysisNotifier's
+  // constructor requires a real MarketAnalysisService instance, so any
+  // widget test that mounts a screen watching marketAnalysisNotifierProvider
+  // (without ever calling analyze()/fetchAll()) constructs this service --
+  // an eager `final _client = Supabase.instance.client` throws immediately
+  // in a plain test process that never called Supabase.initialize(). Same
+  // fix already applied in context_copilot_provider.dart for the identical
+  // problem; defers the access to first real query, matching the app's own
+  // normal flow where Supabase is always initialized long before any query.
+  SupabaseClient get _client => Supabase.instance.client;
 
   Future<List<MarketAnalysis>> fetchAll({String? projectId}) async {
     var query = _client

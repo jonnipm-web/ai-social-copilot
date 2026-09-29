@@ -4195,4 +4195,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiConfirmConfirm => 'CONFIRM';
+
+  @override
+  String get miRootProjectSelectorLabel => 'Link to a project (optional)';
+
+  @override
+  String get miRootProjectSelectorNone => 'None';
 }
