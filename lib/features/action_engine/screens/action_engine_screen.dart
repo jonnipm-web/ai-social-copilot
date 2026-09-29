@@ -30,6 +30,21 @@ String actionEngineStatusLabel(AppLocalizations l10n, String status) {
   }
 }
 
+// COMMERCIAL-V1-PHYSICAL-QA-RECOVERY (section 6 spot-check) -- same bug
+// class as item.status above: action_detail_screen.dart's _TypeBadge
+// rendered item.actionType.toUpperCase() raw. actionType is free text
+// (no DB CHECK constraint); only 'task' (model default) and 'opportunity'
+// (action_queue_provider.dart's addFromOpportunityItem) are known
+// call sites today -- any other/future value falls back to itself,
+// same as every other xxxLabel() helper in this codebase.
+String actionEngineTypeLabel(AppLocalizations l10n, String type) {
+  switch (type) {
+    case 'task':        return l10n.actionEngineTypeTask;
+    case 'opportunity': return l10n.actionEngineTypeOpportunity;
+    default:            return type;
+  }
+}
+
 // ── Colors ───────────────────────────────────────────────────────────────────
 const _kBg      = Color(0xFF0F0F1A);
 const _kCard    = Color(0xFF1A1A2E);
@@ -407,6 +422,18 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
     final l10n     = AppLocalizations.of(context)!;
     final notifier = ref.read(actionQueueNotifierProvider.notifier);
     final item     = widget.item;
+    // COMMERCIAL-V1-PHYSICAL-QA-RECOVERY (§11) -- Opportunity Lab cards
+    // already show the linked project's name; Action Engine kept the same
+    // traceability gap this mission's brief called out (PROJECT -> OPPORTUNITY
+    // -> ACTION must preserve project identity/context end to end). Resolved
+    // the same way: filter the user's own RLS-scoped project list by
+    // item.projectId, never trust/display an unverified id.
+    final projectName = item.projectId == null
+        ? null
+        : ref.watch(projectsProvider).valueOrNull
+            ?.where((p) => p.id == item.projectId)
+            .map((p) => p.name)
+            .firstOrNull;
 
     return GestureDetector(
       onTap: () => Navigator.of(context).push(
@@ -465,6 +492,21 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
                   color: Colors.white24, size: 16),
             ],
           ),
+          if (projectName != null) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Icon(Icons.folder_outlined, size: 12, color: Colors.white38),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(projectName,
+                      style: const TextStyle(color: Colors.white38, fontSize: 11),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 10),
           Wrap(
             spacing: 8,
