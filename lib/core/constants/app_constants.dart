@@ -14,16 +14,23 @@ class AppConstants {
   static const freeTierLimit = 9999;
   static const maxBodyWidth = 700.0;
 
-  // Limites por papel
+  // Limites por papel -- deve espelhar exatamente os valores usados pelo
+  // servidor (supabase/functions/stripe-webhook/index.ts's PRO_ROLE_LIMIT/
+  // FREE_ROLE_LIMIT e a coluna profiles.monthly_limit). Usado por
+  // ProfileService.updateRole() no admin, que grava monthly_limit
+  // diretamente a partir deste mapa -- um valor desatualizado aqui dá à
+  // conta o limite errado quando um admin troca o papel manualmente
+  // (achado durante COMMERCIAL-V1-PHYSICAL-QA-RECOVERY PQ-03: 'pro' já
+  // estava desatualizado em 100 em vez dos 300 reais).
   static const Map<String, int> planLimits = {
     'admin':       99999,
     'premium':     1000,
-    'pro':         100,
+    'pro':         300,
     'beta_tester': 50,
-    'free':        5,
+    'free':        15,
   };
 
-  static int limitForRole(String role) => planLimits[role] ?? 5;
+  static int limitForRole(String role) => planLimits[role] ?? 15;
 
   // Rotas
   static const routeSplash         = '/';

@@ -159,7 +159,7 @@ function newState(customerId: string, userId: string): DbState {
   return {
     subscriptions: { [userId]: { stripe_customer_id: customerId, status: 'none', last_event_created: null } },
     customerToUser: { [customerId]: userId },
-    profiles: { [userId]: { role: 'free', monthly_limit: 5 } },
+    profiles: { [userId]: { role: 'free', monthly_limit: 15 } },
     processedEvents: {},
   };
 }
@@ -244,12 +244,12 @@ Deno.test('WEBHOOK-8: customer.subscription.deleted -> rebaixa usuário a free',
   const res = await handler(await signedReq(body), stripe, db as never);
   assertEquals(res.status, 200);
   assertEquals(db.state.profiles['user_3'].role, 'free');
-  assertEquals(db.state.profiles['user_3'].monthly_limit, 5);
+  assertEquals(db.state.profiles['user_3'].monthly_limit, 15);
 });
 
 Deno.test('WEBHOOK-9: evento "mais antigo" chegando depois (fora de ordem) não ressuscita entitlement -- GET sempre reflete o estado atual', async () => {
   const db = fakeDb(newState('cus_4', 'user_4'));
-  db.state.profiles['user_4'] = { role: 'free', monthly_limit: 5 };
+  db.state.profiles['user_4'] = { role: 'free', monthly_limit: 15 };
   // O assinante JÁ está cancelado no Stripe agora (verdade atual), mesmo
   // que este evento em particular seja um "subscription.updated" antigo
   // que originalmente teria dito status=active.
@@ -272,7 +272,7 @@ Deno.test('WEBHOOK-10: customer desconhecido (sem linha em subscriptions) -> ace
 Deno.test('WEBHOOK-11: isolamento entre usuários -- evento de um customer nunca altera o profile de outro', async () => {
   const db = fakeDb(newState('cus_a', 'user_a'));
   db.state.customerToUser['cus_b'] = 'user_b';
-  db.state.profiles['user_b'] = { role: 'free', monthly_limit: 5 };
+  db.state.profiles['user_b'] = { role: 'free', monthly_limit: 15 };
   const stripe = fakeStripe({ sub_a: makeSub({ id: 'sub_a', status: 'active' }) });
   const body = evt({ id: 'evt_iso_1', type: 'checkout.session.completed', data: { object: { customer: 'cus_a', subscription: 'sub_a' } } });
   await handler(await signedReq(body), stripe, db as never);
@@ -333,7 +333,7 @@ Deno.test('WEBHOOK-16: evento cronologicamente mais antigo (event.created menor)
   // atualização quando esse GET em particular rodou), não pode reverter
   // o estado já aplicado pelo evento mais novo.
   const db = fakeDb(newState('cus_8', 'user_8'));
-  db.state.profiles['user_8'] = { role: 'free', monthly_limit: 5 };
+  db.state.profiles['user_8'] = { role: 'free', monthly_limit: 15 };
 
   const newerEventTs = NOW;
   const olderEventTs = NOW - 120;
