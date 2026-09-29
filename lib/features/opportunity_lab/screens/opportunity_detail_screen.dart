@@ -12,6 +12,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../providers/action_queue_provider.dart';
 import '../../../providers/ive_context_provider.dart';
 import '../../../providers/knowledge_provider.dart';
+import '../../../providers/market_analysis_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/context_copilot_widget.dart'
@@ -111,6 +112,12 @@ class _StatusMenu extends StatelessWidget {
             final action = await ref
                 .read(actionQueueNotifierProvider.notifier)
                 .addFromOpportunityItem(item);
+            // COMMERCIAL-V1-UX-RECONCILIATION (R10) — see
+            // opportunity_lab_provider.dart's markExecuting doc comment.
+            await ref
+                .read(opportunityLabNotifierProvider.notifier)
+                .markExecuting(item.id);
+            ref.invalidate(opportunityLabItemByIdProvider(item.id));
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                 content: const Text('Aprovada e enviada ao Action Engine!'),
@@ -195,6 +202,21 @@ class _DetailBody extends StatelessWidget {
         ? null
         : projects.where((p) => p.id == item.projectId).map((p) => p.name).firstOrNull;
 
+    // COMMERCIAL-V1-UX-RECONCILIATION (R2/R5/R8) — physical baseline
+    // (COMMERCIAL_UI_STANDARD.md) flagged raw truncated UUIDs as a
+    // readability violation; this was still showing
+    // "marketAnalysisId.substring(0,8)…" instead of the analysis's own
+    // human-readable niche/input, even though that lookup was already one
+    // provider watch away (same pattern as projectName above).
+    final marketAnalysisLabel = item.marketAnalysisId == null
+        ? null
+        : ref
+            .watch(marketAnalysisByIdProvider(item.marketAnalysisId!))
+            .maybeWhen(
+              data: (a) => a.niche ?? a.input,
+              orElse: () => null,
+            );
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
       children: [
@@ -216,7 +238,11 @@ class _DetailBody extends StatelessWidget {
         _Section(
           icon: Icons.track_changes_rounded,
           title: 'Origem',
-          child: _OriginSection(item: item, projectName: projectName),
+          child: _OriginSection(
+            item: item,
+            projectName: projectName,
+            marketAnalysisLabel: marketAnalysisLabel,
+          ),
         ),
 
         if (item.sources.isNotEmpty) ...[
@@ -461,10 +487,11 @@ class _ScoreRow extends StatelessWidget {
 
 // ── Origin section ────────────────────────────────────────────────────────────
 class _OriginSection extends StatelessWidget {
-  const _OriginSection({required this.item, this.projectName});
+  const _OriginSection({required this.item, this.projectName, this.marketAnalysisLabel});
 
   final OpportunityLabItem item;
   final String?            projectName;
+  final String?            marketAnalysisLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -486,7 +513,11 @@ class _OriginSection extends StatelessWidget {
           _InfoRow(
             icon: Icons.analytics_rounded,
             label: 'Análise de mercado',
-            value: item.marketAnalysisId!.substring(0, 8) + '…',
+            // Falls back to the truncated id only while the lookup is
+            // still loading or the analysis is unreachable (e.g. RLS) --
+            // never the steady-state UX.
+            value: marketAnalysisLabel ??
+                '${item.marketAnalysisId!.substring(0, 8)}…',
           ),
         _InfoRow(
           icon: Icons.calendar_today_rounded,
@@ -859,6 +890,13 @@ class _ActionButtons extends StatelessWidget {
                   final action = await ref
                       .read(actionQueueNotifierProvider.notifier)
                       .addFromOpportunityItem(item);
+                  // COMMERCIAL-V1-UX-RECONCILIATION (R10) — see
+                  // opportunity_lab_provider.dart's markExecuting doc
+                  // comment.
+                  await ref
+                      .read(opportunityLabNotifierProvider.notifier)
+                      .markExecuting(item.id);
+                  ref.invalidate(opportunityLabItemByIdProvider(item.id));
                   if (context.mounted) {
                     await Navigator.of(context).push(
                       MaterialPageRoute(
@@ -896,6 +934,13 @@ class _ActionButtons extends StatelessWidget {
                   await ref
                       .read(actionQueueNotifierProvider.notifier)
                       .addFromOpportunityItem(item);
+                  // COMMERCIAL-V1-UX-RECONCILIATION (R10) — see
+                  // opportunity_lab_provider.dart's markExecuting doc
+                  // comment.
+                  await ref
+                      .read(opportunityLabNotifierProvider.notifier)
+                      .markExecuting(item.id);
+                  ref.invalidate(opportunityLabItemByIdProvider(item.id));
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                       content: Text('Ação criada no Action Engine!'),

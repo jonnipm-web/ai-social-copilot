@@ -56,6 +56,21 @@ class OpportunityLabNotifier
     await load(projectId: _activeProjectId);
   }
 
+  // COMMERCIAL-V1-UX-RECONCILIATION (R10) — every "-> Ação" button in the
+  // UI is already conditioned on `status == 'approved'`
+  // (opportunity_lab_screen.dart's onConvertToAction, opportunity_detail_
+  // screen.dart's equivalent), but nothing ever moved a converted item OUT
+  // of 'approved' after addFromOpportunityItem succeeded. That left the
+  // button clickable indefinitely, so repeated taps (or a slow network
+  // response tapped twice) created duplicate Action Engine rows for the
+  // SAME opportunity with no server-side guard. 'executing' already exists
+  // in OpportunityLabItem.statusValues (added for this exact transition,
+  // never wired up) -- this call site is the only piece that was missing.
+  Future<void> markExecuting(String id) async {
+    await _svc.updateStatus(id, 'executing');
+    await load(projectId: _activeProjectId);
+  }
+
   Future<void> delete(String id) async {
     await _svc.delete(id);
     await load(projectId: _activeProjectId);

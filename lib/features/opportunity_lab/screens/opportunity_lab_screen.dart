@@ -213,6 +213,14 @@ class _LabBody extends ConsumerWidget {
                           final action = await ref
                               .read(actionQueueNotifierProvider.notifier)
                               .addFromOpportunityItem(opp);
+                          // COMMERCIAL-V1-UX-RECONCILIATION (R10) — moves the
+                          // item out of 'approved' so onConvertToAction below
+                          // (and this same onApprove path on a future
+                          // rebuild) can no longer create a second Action
+                          // for it.
+                          await ref
+                              .read(opportunityLabNotifierProvider.notifier)
+                              .markExecuting(opp.id);
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                               content: const Text('Aprovada e enviada ao Action Engine!'),
@@ -248,6 +256,11 @@ class _LabBody extends ConsumerWidget {
                               final action = await ref
                                   .read(actionQueueNotifierProvider.notifier)
                                   .addFromOpportunityItem(items[i]);
+                              // COMMERCIAL-V1-UX-RECONCILIATION (R10) — see
+                              // onApprove's identical call above.
+                              await ref
+                                  .read(opportunityLabNotifierProvider.notifier)
+                                  .markExecuting(items[i].id);
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                                   content: const Text('Ação criada no Action Engine!'),

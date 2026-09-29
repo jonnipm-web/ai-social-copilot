@@ -249,6 +249,29 @@ class _CompetitorCard extends StatelessWidget {
               ),
             ),
           ],
+          // COMMERCIAL-V1-UX-RECONCILIATION (R2/R5) — Competitor.weaknesses
+          // already existed on the model (populated by the same AI response
+          // as strengths, see market_analysis_service.dart's insert) but was
+          // never rendered — a Free/Pro user only ever saw half of what the
+          // analysis actually found. Rendered symmetrically to "Pontos
+          // fortes" above.
+          if (competitor.weaknesses.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            const Text('Pontos fracos:', style: TextStyle(color: Colors.white54, fontSize: 11)),
+            const SizedBox(height: 4),
+            ...competitor.weaknesses.take(3).map(
+              (w) => Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: Row(
+                  children: [
+                    const Icon(Icons.cancel_rounded, color: Color(0xFFFF6B6B), size: 12),
+                    const SizedBox(width: 6),
+                    Expanded(child: Text(w, style: const TextStyle(color: Colors.white70, fontSize: 12))),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
