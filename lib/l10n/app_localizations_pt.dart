@@ -4627,4 +4627,16 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get miRootProjectSelectorNone => 'Nenhum';
+
+  @override
+  String get r16LanguageNamePortuguese => 'Português';
+
+  @override
+  String get r16LanguageNameEnglish => 'Inglês';
+
+  @override
+  String get r16LanguageNameSpanish => 'Espanhol';
+
+  @override
+  String get r16LanguageNameOther => 'outro idioma';
 }

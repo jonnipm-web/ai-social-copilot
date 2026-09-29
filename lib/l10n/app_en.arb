@@ -1590,5 +1590,9 @@
   "aiConfirmConfirm": "CONFIRM",
 
   "miRootProjectSelectorLabel": "Link to a project (optional)",
-  "miRootProjectSelectorNone": "None"
+  "miRootProjectSelectorNone": "None",
+  "r16LanguageNamePortuguese": "Portuguese",
+  "r16LanguageNameEnglish": "English",
+  "r16LanguageNameSpanish": "Spanish",
+  "r16LanguageNameOther": "another language"
 }

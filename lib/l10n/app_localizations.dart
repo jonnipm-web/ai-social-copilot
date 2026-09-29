@@ -8183,6 +8183,30 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Nenhum'**
   String get miRootProjectSelectorNone;
+
+  /// No description provided for @r16LanguageNamePortuguese.
+  ///
+  /// In pt, this message translates to:
+  /// **'Português'**
+  String get r16LanguageNamePortuguese;
+
+  /// No description provided for @r16LanguageNameEnglish.
+  ///
+  /// In pt, this message translates to:
+  /// **'Inglês'**
+  String get r16LanguageNameEnglish;
+
+  /// No description provided for @r16LanguageNameSpanish.
+  ///
+  /// In pt, this message translates to:
+  /// **'Espanhol'**
+  String get r16LanguageNameSpanish;
+
+  /// No description provided for @r16LanguageNameOther.
+  ///
+  /// In pt, this message translates to:
+  /// **'outro idioma'**
+  String get r16LanguageNameOther;
 }
 
 class _AppLocalizationsDelegate

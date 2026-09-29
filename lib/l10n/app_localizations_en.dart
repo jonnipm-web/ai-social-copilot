@@ -4607,4 +4607,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get miRootProjectSelectorNone => 'None';
+
+  @override
+  String get r16LanguageNamePortuguese => 'Portuguese';
+
+  @override
+  String get r16LanguageNameEnglish => 'English';
+
+  @override
+  String get r16LanguageNameSpanish => 'Spanish';
+
+  @override
+  String get r16LanguageNameOther => 'another language';
 }
