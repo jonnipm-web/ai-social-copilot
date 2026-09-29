@@ -6,6 +6,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../data/models/ive_interaction_request.dart';
 import '../../../data/models/knowledge_analysis.dart';
 import '../../../data/models/knowledge_item.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/campaign_provider.dart';
 import '../../../providers/knowledge_provider.dart';
 import '../../../providers/strategy_provider.dart';
@@ -56,6 +57,7 @@ class _CampaignBuilderScreenState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final itemAsync     = ref.watch(knowledgeItemByIdProvider(widget.itemId));
     final analysisAsync = ref.watch(knowledgeAnalysisProvider(widget.itemId));
 
@@ -64,32 +66,32 @@ class _CampaignBuilderScreenState
       appBar: AppBar(
         backgroundColor: const Color(0xFF0F0F1A),
         foregroundColor: Colors.white,
-        title: const Text(
-          'Criar Campanha',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        title: Text(
+          l10n.campaignBuilderTitle,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
       ),
       body: itemAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
-            child: Text('Erro: $e',
+            child: Text(l10n.iveChatErrorPrefix('$e'),
                 style: const TextStyle(color: Colors.white70))),
         data: (item) {
           if (item == null) {
-            return const Center(
-                child: Text('Item não encontrado.',
-                    style: TextStyle(color: Colors.white70)));
+            return Center(
+                child: Text(l10n.campaignBuilderItemNotFound,
+                    style: const TextStyle(color: Colors.white70)));
           }
           return analysisAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(
-                child: Text('Erro: $e',
+                child: Text(l10n.iveChatErrorPrefix('$e'),
                     style: const TextStyle(color: Colors.white70))),
             data: (analysis) {
               if (analysis == null) {
-                return _noAnalysis(context);
+                return _noAnalysis(context, l10n);
               }
-              return _buildForm(context, item, analysis);
+              return _buildForm(context, item, analysis, l10n);
             },
           );
         },
@@ -97,7 +99,7 @@ class _CampaignBuilderScreenState
     );
   }
 
-  Widget _noAnalysis(BuildContext context) {
+  Widget _noAnalysis(BuildContext context, AppLocalizations l10n) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -107,10 +109,10 @@ class _CampaignBuilderScreenState
             const Icon(Icons.analytics_outlined,
                 size: 64, color: Color(0xFF6C63FF)),
             const SizedBox(height: 16),
-            const Text(
-              'Analise o item primeiro para criar uma campanha.',
+            Text(
+              l10n.campaignBuilderNoAnalysisBody,
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white54, fontSize: 14),
+              style: const TextStyle(color: Colors.white54, fontSize: 14),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
@@ -119,7 +121,7 @@ class _CampaignBuilderScreenState
                 foregroundColor: Colors.white,
               ),
               onPressed: () => Navigator.pop(context),
-              child: const Text('Voltar'),
+              child: Text(l10n.commonBack),
             ),
           ],
         ),
@@ -127,8 +129,8 @@ class _CampaignBuilderScreenState
     );
   }
 
-  Widget _buildForm(
-      BuildContext context, KnowledgeItem item, KnowledgeAnalysis analysis) {
+  Widget _buildForm(BuildContext context, KnowledgeItem item,
+      KnowledgeAnalysis analysis, AppLocalizations l10n) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -164,7 +166,7 @@ class _CampaignBuilderScreenState
           const SizedBox(height: 24),
 
           // Objetivo
-          _Label('Objetivo da Campanha'),
+          _Label(l10n.campaignBuilderObjectiveLabel),
           const SizedBox(height: 10),
           Wrap(
             spacing: 8,
@@ -207,7 +209,7 @@ class _CampaignBuilderScreenState
           const SizedBox(height: 24),
 
           // Duração
-          _Label('Duração'),
+          _Label(l10n.campaignBuilderDurationLabel),
           const SizedBox(height: 10),
           Row(
             children: _durations.map((d) {
@@ -251,7 +253,7 @@ class _CampaignBuilderScreenState
           const SizedBox(height: 24),
 
           // Canais
-          _Label('Canais (selecione pelo menos 1)'),
+          _Label(l10n.campaignBuilderChannelsLabel),
           const SizedBox(height: 10),
           Wrap(
             spacing: 8,
@@ -330,22 +332,24 @@ class _CampaignBuilderScreenState
                     )
                   : const Icon(Icons.campaign_rounded),
               label: Text(
-                _generating ? 'Gerando campanha…' : 'Gerar Campanha com IA',
+                _generating
+                    ? l10n.campaignBuilderGenerating
+                    : l10n.campaignBuilderGenerateCta,
                 style: const TextStyle(fontSize: 15),
               ),
               onPressed: _channels.isEmpty || _generating
                   ? null
-                  : () => _generate(context, item, analysis),
+                  : () => _generate(context, item, analysis, l10n),
             ),
           ),
 
           if (_channels.isEmpty)
-            const Padding(
-              padding: EdgeInsets.only(top: 8),
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
               child: Text(
-                'Selecione pelo menos um canal.',
+                l10n.campaignBuilderSelectChannelWarning,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Color(0xFFF44336), fontSize: 12),
+                style: const TextStyle(color: Color(0xFFF44336), fontSize: 12),
               ),
             ),
         ],
@@ -357,6 +361,7 @@ class _CampaignBuilderScreenState
     BuildContext context,
     KnowledgeItem item,
     KnowledgeAnalysis analysis,
+    AppLocalizations l10n,
   ) async {
     setState(() => _generating = true);
 
@@ -367,7 +372,7 @@ class _CampaignBuilderScreenState
       final campaign = await _exec.run(
         context: context,
         ref: ref,
-        analysisLabel: 'Gerar Campanha',
+        analysisLabel: l10n.campaignBuilderGenerateLabel,
         request: IveInteractionRequest(
           projectId:        item.projectId,
           sourceModule:     'campaigns',
@@ -398,9 +403,9 @@ class _CampaignBuilderScreenState
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Erro ao gerar campanha. Tente novamente.'),
-            backgroundColor: Color(0xFFF44336),
+          SnackBar(
+            content: Text(l10n.campaignBuilderGenerateError),
+            backgroundColor: const Color(0xFFF44336),
           ),
         );
       }

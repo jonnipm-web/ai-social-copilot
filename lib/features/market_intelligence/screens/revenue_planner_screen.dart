@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/language_utils.dart';
 import '../../../data/models/ive_interaction_request.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/market_analysis_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
 
@@ -36,7 +37,9 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
     final name = _projectCtrl.text.trim();
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Digite o nome do projeto'), backgroundColor: Colors.orange),
+        SnackBar(
+            content: Text(AppLocalizations.of(context)!.miRevenueProjectNameRequired),
+            backgroundColor: Colors.orange),
       );
       return;
     }
@@ -88,13 +91,14 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
   }
 
   Widget _buildScaffold(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final asyncPlan = ref.watch(revenuePlanByAnalysisProvider(widget.analysisId));
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F1A),
       appBar: AppBar(
         backgroundColor: const Color(0xFF0F0F1A),
-        title: const Text('Revenue Planner', style: TextStyle(color: Colors.white)),
+        title: Text(l10n.miRevenueTitle, style: const TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -105,7 +109,9 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
       ),
       body: asyncPlan.when(
         loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFF00BCD4))),
-        error: (e, _) => Center(child: Text('Erro: $e', style: const TextStyle(color: Colors.redAccent))),
+        error: (e, _) => Center(
+            child: Text(l10n.miSubErrorPrefix('$e'),
+                style: const TextStyle(color: Colors.redAccent))),
         data: (plan) => plan == null
             ? SingleChildScrollView(
                 padding: const EdgeInsets.all(20),
@@ -113,13 +119,13 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                   children: [
                     const Icon(Icons.attach_money_outlined, color: Colors.white24, size: 64),
                     const SizedBox(height: 16),
-                    const Text('Nenhum plano de receita ainda', style: TextStyle(color: Colors.white38)),
+                    Text(l10n.miRevenueEmptyTitle, style: const TextStyle(color: Colors.white38)),
                     const SizedBox(height: 24),
                     TextField(
                       controller: _projectCtrl,
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
-                        labelText: 'Nome do projeto',
+                        labelText: l10n.miRevenueProjectFieldLabel,
                         labelStyle: const TextStyle(color: Colors.white54),
                         filled: true,
                         fillColor: const Color(0xFF1A1A2E),
@@ -148,7 +154,7 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                         icon: _running
                             ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                             : const Icon(Icons.calculate_rounded),
-                        label: Text(_running ? 'Calculando...' : 'Gerar Revenue Plan'),
+                        label: Text(_running ? l10n.miRevenueCalculating : l10n.miRevenueGenerateButton),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF00BCD4),
                           foregroundColor: Colors.black,
@@ -173,37 +179,40 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
 
                     // Scenario cards
                     _ScenarioCard(
-                      label: 'Conservador',
+                      label: l10n.miRevenueScenarioConservative,
                       monthly: plan.monthlyConservative,
                       annual: plan.annualConservative,
                       color: const Color(0xFF6BCB77),
                       icon: Icons.trending_flat_rounded,
                       fmt: _fmt,
+                      l10n: l10n,
                     ),
                     const SizedBox(height: 10),
                     _ScenarioCard(
-                      label: 'Moderado',
+                      label: l10n.miRevenueScenarioModerate,
                       monthly: plan.monthlyModerate,
                       annual: plan.annualModerate,
                       color: const Color(0xFF00BCD4),
                       icon: Icons.trending_up_rounded,
                       fmt: _fmt,
+                      l10n: l10n,
                     ),
                     const SizedBox(height: 10),
                     _ScenarioCard(
-                      label: 'Agressivo',
+                      label: l10n.miRevenueScenarioAggressive,
                       monthly: plan.monthlyAggressive,
                       annual: plan.annualAggressive,
                       color: const Color(0xFFFF6B6B),
                       icon: Icons.rocket_launch_rounded,
                       fmt: _fmt,
+                      l10n: l10n,
                     ),
 
                     // Revenue sources
                     if (plan.revenueSources.isNotEmpty) ...[
                       const SizedBox(height: 24),
-                      const Text('Fontes de Receita',
-                          style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+                      Text(l10n.miRevenueSectionSources,
+                          style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 10),
                       ...plan.revenueSources.map(
                         (s) => Container(
@@ -244,8 +253,8 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                     // Milestones
                     if (plan.milestones.isNotEmpty) ...[
                       const SizedBox(height: 24),
-                      const Text('Marcos de Receita',
-                          style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+                      Text(l10n.miRevenueSectionMilestones,
+                          style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 10),
                       ...plan.milestones.asMap().entries.map(
                         (e) => Container(
@@ -278,7 +287,7 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                                     Text(e.value['title']?.toString() ?? '',
                                         style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
                                     if (e.value['target'] != null)
-                                      Text('Meta: ${_fmt((e.value['target'] as num).toDouble())}',
+                                      Text(l10n.miRevenueMilestoneTarget(_fmt((e.value['target'] as num).toDouble())),
                                           style: const TextStyle(color: Color(0xFF00BCD4), fontSize: 12)),
                                   ],
                                 ),
@@ -292,8 +301,8 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                     // Assumptions
                     if (plan.assumptions.isNotEmpty) ...[
                       const SizedBox(height: 24),
-                      const Text('Premissas',
-                          style: TextStyle(color: Colors.white54, fontSize: 13, fontWeight: FontWeight.bold)),
+                      Text(l10n.miRevenueSectionAssumptions,
+                          style: const TextStyle(color: Colors.white54, fontSize: 13, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
                       ...plan.assumptions.map(
                         (a) => Padding(
@@ -324,6 +333,7 @@ class _ScenarioCard extends StatelessWidget {
     required this.color,
     required this.icon,
     required this.fmt,
+    required this.l10n,
   });
 
   final String label;
@@ -332,6 +342,7 @@ class _ScenarioCard extends StatelessWidget {
   final Color color;
   final IconData icon;
   final String Function(double) fmt;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -359,14 +370,14 @@ class _ScenarioCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 14)),
-                Text('Mensal: ${fmt(monthly)}', style: const TextStyle(color: Colors.white, fontSize: 13)),
+                Text(l10n.miRevenueMonthlyLabel(fmt(monthly)), style: const TextStyle(color: Colors.white, fontSize: 13)),
               ],
             ),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text('Anual', style: TextStyle(color: color.withOpacity(0.7), fontSize: 11)),
+              Text(l10n.miRevenueAnnualLabel, style: TextStyle(color: color.withOpacity(0.7), fontSize: 11)),
               Text(fmt(annual), style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 16)),
             ],
           ),

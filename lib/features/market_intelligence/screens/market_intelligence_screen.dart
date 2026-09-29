@@ -125,12 +125,13 @@ class _MarketIntelligenceScreenState
   Future<void> _analyze() async {
     final input = _inputCtrl.text.trim();
     if (input.isEmpty) return;
+    final l10n = AppLocalizations.of(context)!;
     final verifiedProjectId = _verifiedProjectId;
     final notifier = ref.read(marketAnalysisNotifierProvider.notifier);
     final result = await _exec.run<MarketAnalysis?>(
       context: context,
       ref: ref,
-      analysisLabel: 'Analisar Mercado',
+      analysisLabel: l10n.miRootAnalyzeCta,
       request: IveInteractionRequest(
         sourceModule:     'market_intelligence',
         sourceEntityType: 'market_analysis',
@@ -175,24 +176,24 @@ class _MarketIntelligenceScreenState
     }
   }
 
-  static String _friendlyError(String raw) {
+  static String _friendlyError(AppLocalizations t, String raw) {
     final lower = raw.toLowerCase();
     if (lower.contains('404') || lower.contains('not_found') || lower.contains('not found')) {
-      return 'A função de análise não foi encontrada no servidor. Verifique se as Edge Functions estão implantadas no Supabase Dashboard.';
+      return t.miRootErrorNotFound;
     }
     if (lower.contains('401') || lower.contains('unauthorized') || lower.contains('jwt')) {
-      return 'Sessão expirada. Saia e entre novamente no aplicativo.';
+      return t.miRootErrorSession;
     }
     if (lower.contains('timeout') || lower.contains('timed out')) {
-      return 'A análise demorou demais. Tente novamente em alguns instantes.';
+      return t.miRootErrorTimeout;
     }
     if (lower.contains('network') || lower.contains('socket') || lower.contains('connection')) {
-      return 'Sem conexão com a internet. Verifique sua rede e tente novamente.';
+      return t.miRootErrorNetwork;
     }
     if (lower.contains('groq') || lower.contains('api key') || lower.contains('apikey')) {
-      return 'Chave de API não configurada no servidor. Configure GROQ_API_KEY nos secrets do Supabase.';
+      return t.miRootErrorApiKey;
     }
-    return 'Tente novamente em alguns instantes. Se o erro persistir, verifique o Supabase Dashboard.';
+    return t.miRootErrorGeneric;
   }
 
   @override
@@ -223,7 +224,7 @@ class _MarketIntelligenceScreenState
         // (routeHome) this inline version already used.
         leading: const CanonicalBackButton(fallbackRoute: AppConstants.routeHome),
         backgroundColor: const Color(0xFF0F0F1A),
-        title: const Text('Market Intelligence', style: TextStyle(color: Colors.white)),
+        title: Text(t.navMarketIntelligence, style: const TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       drawer: const AppDrawer(),
@@ -247,23 +248,25 @@ class _MarketIntelligenceScreenState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      children: const [
-                        Icon(Icons.analytics_rounded, color: Color(0xFF00BCD4), size: 28),
-                        SizedBox(width: 12),
-                        Text(
-                          'Market Intelligence Engine',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                      children: [
+                        const Icon(Icons.analytics_rounded, color: Color(0xFF00BCD4), size: 28),
+                        const SizedBox(width: 12),
+                        Flexible(
+                          child: Text(
+                            t.miRootEngineTitle,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Analise qualquer URL, domínio ou projeto para descobrir oportunidades de mercado, concorrentes e potencial de receita.',
-                      style: TextStyle(color: Colors.white60, fontSize: 13),
+                      t.miRootEngineSubtitle,
+                      style: const TextStyle(color: Colors.white60, fontSize: 13),
                     ),
                   ],
                 ),
@@ -301,15 +304,15 @@ class _MarketIntelligenceScreenState
               const SizedBox(height: 24),
 
               // Input type selector
-              const Text('Tipo de entrada', style: TextStyle(color: Colors.white70, fontSize: 13)),
+              Text(t.miRootInputTypeLabel, style: const TextStyle(color: Colors.white70, fontSize: 13)),
               const SizedBox(height: 8),
               Row(
                 children: [
-                  _TypeChip(label: 'URL / Domínio', value: 'url', selected: _inputType, onTap: (v) => setState(() => _inputType = v)),
+                  _TypeChip(label: t.miRootInputTypeUrl, value: 'url', selected: _inputType, onTap: (v) => setState(() => _inputType = v)),
                   const SizedBox(width: 8),
-                  _TypeChip(label: 'Nicho', value: 'niche', selected: _inputType, onTap: (v) => setState(() => _inputType = v)),
+                  _TypeChip(label: t.miRootInputTypeNiche, value: 'niche', selected: _inputType, onTap: (v) => setState(() => _inputType = v)),
                   const SizedBox(width: 8),
-                  _TypeChip(label: 'Projeto', value: 'project', selected: _inputType, onTap: (v) => setState(() => _inputType = v)),
+                  _TypeChip(label: t.miRootInputTypeProject, value: 'project', selected: _inputType, onTap: (v) => setState(() => _inputType = v)),
                 ],
               ),
               const SizedBox(height: 16),
@@ -320,10 +323,10 @@ class _MarketIntelligenceScreenState
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
                   hintText: _inputType == 'url'
-                      ? 'https://exemplo.com ou exemplo.com'
+                      ? t.miRootHintUrl
                       : _inputType == 'niche'
-                          ? 'Ex: marketing digital para pequenas empresas'
-                          : 'Descreva seu projeto ou ideia',
+                          ? t.miRootHintNiche
+                          : t.miRootHintProject,
                   hintStyle: const TextStyle(color: Colors.white38),
                   filled: true,
                   fillColor: const Color(0xFF1A1A2E),
@@ -358,7 +361,7 @@ class _MarketIntelligenceScreenState
                         )
                       : const Icon(Icons.rocket_launch_rounded),
                   label: Text(
-                    busy ? 'Analisando...' : 'Analisar Mercado',
+                    busy ? t.miRootAnalyzing : t.miRootAnalyzeCta,
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                   ),
                   style: ElevatedButton.styleFrom(
@@ -381,17 +384,19 @@ class _MarketIntelligenceScreenState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Row(
+                      Row(
                         children: [
-                          Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 16),
-                          SizedBox(width: 6),
-                          Text('Não foi possível conectar ao mecanismo de análise',
-                              style: TextStyle(color: Colors.redAccent, fontSize: 13, fontWeight: FontWeight.w600)),
+                          const Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 16),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(t.miRootConnectionErrorTitle,
+                                style: const TextStyle(color: Colors.redAccent, fontSize: 13, fontWeight: FontWeight.w600)),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        _friendlyError(state.error.toString()),
+                        _friendlyError(t, state.error.toString()),
                         style: const TextStyle(color: Colors.white54, fontSize: 12),
                       ),
                     ],
@@ -402,13 +407,13 @@ class _MarketIntelligenceScreenState
               const SizedBox(height: 32),
 
               // History
-              const Text('Análises anteriores', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+              Text(t.miRootPreviousAnalysesTitle, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
               analyses.when(
                 loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFF00BCD4))),
-                error: (e, _) => Text('Erro: $e', style: const TextStyle(color: Colors.redAccent)),
+                error: (e, _) => Text(t.commonError, style: const TextStyle(color: Colors.redAccent)),
                 data: (list) => list.isEmpty
-                    ? const Text('Nenhuma análise ainda.', style: TextStyle(color: Colors.white38))
+                    ? Text(t.miRootNoAnalysesYet, style: const TextStyle(color: Colors.white38))
                     : Column(
                         children: list.map((a) => _AnalysisCard(analysis: a)).toList(),
                       ),

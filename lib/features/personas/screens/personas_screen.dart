@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../data/models/persona.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/persona_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
@@ -13,6 +14,7 @@ class PersonasScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final personasAsync = ref.watch(personasProvider);
     final profile       = ref.watch(currentProfileProvider).valueOrNull;
     final isAdmin       = profile?.isAdmin ?? false;
@@ -29,31 +31,31 @@ class PersonasScreen extends ConsumerWidget {
             }
           },
         ),
-        title: const Text('Personas / Marcas'),
+        title: Text(l10n.personasTitle),
       ),
       drawer: const AppDrawer(),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push(AppConstants.routePersonaNew),
         icon: const Icon(Icons.add_rounded),
-        label: const Text('Nova Persona'),
+        label: Text(l10n.personasNewPersona),
         backgroundColor: const Color(0xFF6C63FF),
       ),
       body: personasAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error:   (e, _) => Center(child: Text('Erro: $e', style: const TextStyle(color: Colors.white54))),
+        error:   (e, _) => Center(child: Text(l10n.commonError, style: const TextStyle(color: Colors.white54))),
         data:    (personas) {
           if (personas.isEmpty) {
-            return const Center(
+            return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.person_pin_rounded, size: 64, color: Colors.white24),
-                  SizedBox(height: 12),
-                  Text('Nenhuma persona ainda.',
-                      style: TextStyle(color: Colors.white54)),
-                  SizedBox(height: 4),
-                  Text('Crie a primeira usando o botão abaixo.',
-                      style: TextStyle(color: Colors.white38, fontSize: 12)),
+                  const Icon(Icons.person_pin_rounded, size: 64, color: Colors.white24),
+                  const SizedBox(height: 12),
+                  Text(l10n.personasEmpty,
+                      style: const TextStyle(color: Colors.white54)),
+                  const SizedBox(height: 4),
+                  Text(l10n.personasEmptyHint,
+                      style: const TextStyle(color: Colors.white38, fontSize: 12)),
                 ],
               ),
             );
@@ -67,7 +69,7 @@ class PersonasScreen extends ConsumerWidget {
             children: [
               if (globals.isNotEmpty) ...[
                 _SectionHeader(
-                  label: 'Personas Globais',
+                  label: l10n.personasGlobalSection,
                   icon: Icons.public_rounded,
                   color: const Color(0xFFFFD700),
                 ),
@@ -77,7 +79,7 @@ class PersonasScreen extends ConsumerWidget {
               ],
               if (mine.isNotEmpty) ...[
                 _SectionHeader(
-                  label: 'Minhas Personas',
+                  label: l10n.personasMineSection,
                   icon: Icons.person_rounded,
                   color: const Color(0xFF6C63FF),
                 ),
@@ -163,7 +165,7 @@ class _PersonaCard extends ConsumerWidget {
             if (persona.niche != null)
               Text(persona.niche!, style: const TextStyle(color: Colors.white54, fontSize: 12)),
             if (persona.voiceTone != null)
-              Text('Tom: ${persona.voiceTone}',
+              Text(AppLocalizations.of(context)!.personasToneLabel(persona.voiceTone!),
                   style: const TextStyle(color: Colors.white38, fontSize: 11)),
           ],
         ),
@@ -172,17 +174,18 @@ class _PersonaCard extends ConsumerWidget {
                 icon: const Icon(Icons.more_vert, color: Colors.white38, size: 20),
                 color: const Color(0xFF1A1A2E),
                 onSelected: (value) async {
+                  final l10n = AppLocalizations.of(context)!;
                   if (value == 'delete') {
                     final ok = await showDialog<bool>(
                       context: context,
                       builder: (ctx) => AlertDialog(
-                        title: const Text('Excluir persona'),
-                        content: Text('Deseja excluir "${persona.name}"?'),
+                        title: Text(l10n.personasDeleteTitle),
+                        content: Text(l10n.personasDeleteConfirm(persona.name)),
                         actions: [
-                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.commonCancel)),
                           TextButton(
                             onPressed: () => Navigator.pop(ctx, true),
-                            child: const Text('Excluir', style: TextStyle(color: Colors.red)),
+                            child: Text(l10n.commonDelete, style: const TextStyle(color: Colors.red)),
                           ),
                         ],
                       ),
@@ -194,8 +197,8 @@ class _PersonaCard extends ConsumerWidget {
                   }
                 },
                 itemBuilder: (_) => [
-                  const PopupMenuItem(value: 'delete',
-                      child: Text('Excluir', style: TextStyle(color: Colors.red))),
+                  PopupMenuItem(value: 'delete',
+                      child: Text(AppLocalizations.of(context)!.commonDelete, style: const TextStyle(color: Colors.red))),
                 ],
               )
             : null,

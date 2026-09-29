@@ -6,6 +6,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/language_utils.dart';
 import '../../../data/models/ive_interaction_request.dart';
 import '../../../data/models/opportunity.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/market_analysis_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
 
@@ -75,13 +76,14 @@ class _OpportunityDiscoveryScreenState
   }
 
   Widget _buildScaffold(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final asyncList = ref.watch(opportunitiesByAnalysisProvider(widget.analysisId));
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F1A),
       appBar: AppBar(
         backgroundColor: const Color(0xFF0F0F1A),
-        title: const Text('Oportunidades', style: TextStyle(color: Colors.white)),
+        title: Text(l10n.miOpportunityTitle, style: const TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -99,7 +101,7 @@ class _OpportunityDiscoveryScreenState
                   )
                 : const Icon(Icons.star_rounded, color: Color(0xFF6BCB77)),
             label: Text(
-              _running ? 'Buscando...' : 'Descobrir',
+              _running ? l10n.miOpportunitySearching : l10n.miOpportunityDiscoverButton,
               style: const TextStyle(color: Color(0xFF6BCB77)),
             ),
           ),
@@ -121,7 +123,9 @@ class _OpportunityDiscoveryScreenState
           Expanded(
             child: asyncList.when(
               loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFF6BCB77))),
-              error: (e, _) => Center(child: Text('Erro: $e', style: const TextStyle(color: Colors.redAccent))),
+              error: (e, _) => Center(
+                  child: Text(l10n.miSubErrorPrefix('$e'),
+                      style: const TextStyle(color: Colors.redAccent))),
               data: (opportunities) => opportunities.isEmpty
                   ? Center(
                       child: Column(
@@ -129,7 +133,7 @@ class _OpportunityDiscoveryScreenState
                         children: [
                           const Icon(Icons.star_outline_rounded, color: Colors.white24, size: 64),
                           const SizedBox(height: 16),
-                          const Text('Nenhuma oportunidade ainda', style: TextStyle(color: Colors.white38)),
+                          Text(l10n.miOpportunityEmptyTitle, style: const TextStyle(color: Colors.white38)),
                           const SizedBox(height: 8),
                           ElevatedButton(
                             onPressed: _running ? null : _discover,
@@ -137,7 +141,7 @@ class _OpportunityDiscoveryScreenState
                               backgroundColor: const Color(0xFF6BCB77),
                               foregroundColor: Colors.black,
                             ),
-                            child: const Text('Descobrir Oportunidades'),
+                            child: Text(l10n.miOpportunityEmptyButton),
                           ),
                         ],
                       ),
@@ -169,6 +173,7 @@ class _OpportunityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -213,10 +218,10 @@ class _OpportunityCard extends StatelessWidget {
             spacing: 8,
             runSpacing: 6,
             children: [
-              _MiniScore(label: 'Mercado', value: opportunity.marketScore, color: const Color(0xFF4D96FF)),
-              _MiniScore(label: 'Crescimento', value: opportunity.growthScore, color: const Color(0xFF6BCB77)),
-              _MiniScore(label: 'Monetização', value: opportunity.monetizationScore, color: const Color(0xFFFFD93D)),
-              _MiniScore(label: 'Dificuldade', value: opportunity.difficultyScore, color: const Color(0xFFFF6B6B)),
+              _MiniScore(label: l10n.miOpportunityScoreMarket, value: opportunity.marketScore, color: const Color(0xFF4D96FF)),
+              _MiniScore(label: l10n.miOpportunityScoreGrowth, value: opportunity.growthScore, color: const Color(0xFF6BCB77)),
+              _MiniScore(label: l10n.miOpportunityScoreMonetization, value: opportunity.monetizationScore, color: const Color(0xFFFFD93D)),
+              _MiniScore(label: l10n.miOpportunityScoreDifficulty, value: opportunity.difficultyScore, color: const Color(0xFFFF6B6B)),
             ],
           ),
           if (opportunity.timeframe.isNotEmpty) ...[

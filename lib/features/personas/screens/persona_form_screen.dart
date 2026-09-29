@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../data/models/persona.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/persona_provider.dart';
 
 class PersonaFormScreen extends ConsumerStatefulWidget {
@@ -97,7 +98,7 @@ class _PersonaFormScreenState extends ConsumerState<PersonaFormScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text(AppLocalizations.of(context)!.iveChatErrorPrefix('$e')), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -107,6 +108,7 @@ class _PersonaFormScreenState extends ConsumerState<PersonaFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (isEdit) {
       final personaAsync = ref.watch(personaByIdProvider(widget.personaId!));
       personaAsync.whenData((p) {
@@ -120,7 +122,7 @@ class _PersonaFormScreenState extends ConsumerState<PersonaFormScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEdit ? 'Editar Persona' : 'Nova Persona'),
+        title: Text(isEdit ? l10n.personaFormEditTitle : l10n.personaFormNewTitle),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -131,57 +133,57 @@ class _PersonaFormScreenState extends ConsumerState<PersonaFormScreen> {
             children: [
               _Field(
                 controller: _nameCtrl,
-                label: 'Nome da Persona / Marca *',
-                hint: 'Ex: Marca Pessoal do João',
+                label: l10n.personaFormNameLabel,
+                hint: l10n.personaFormNameHint,
                 validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'Obrigatório' : null,
+                    v == null || v.trim().isEmpty ? l10n.personaFormRequired : null,
               ),
               const SizedBox(height: 16),
               _Field(
                 controller: _nicheCtrl,
-                label: 'Nicho / Segmento',
-                hint: 'Ex: Marketing Digital, Fitness, Gastronomia',
+                label: l10n.personaFormNicheLabel,
+                hint: l10n.personaFormNicheHint,
               ),
               const SizedBox(height: 16),
               _Field(
                 controller: _voiceToneCtrl,
-                label: 'Tom de Voz',
-                hint: 'Ex: Descontraído e inspirador, Profissional e direto',
+                label: l10n.personaFormToneLabel,
+                hint: l10n.personaFormToneHint,
               ),
               const SizedBox(height: 16),
               _Field(
                 controller: _audienceCtrl,
-                label: 'Público-alvo',
-                hint: 'Ex: Empreendedores iniciantes de 25–40 anos',
+                label: l10n.personaFormAudienceLabel,
+                hint: l10n.personaFormAudienceHint,
               ),
               const SizedBox(height: 16),
               _Field(
                 controller: _descCtrl,
-                label: 'Descrição / Posicionamento',
-                hint: 'Descreva a essência desta persona ou marca...',
+                label: l10n.personaFormDescLabel,
+                hint: l10n.personaFormDescHint,
                 maxLines: 4,
               ),
               const SizedBox(height: 16),
               _Field(
                 controller: _wordsUseCtrl,
-                label: 'Palavras que DEVE usar (separadas por vírgula)',
-                hint: 'Ex: inovação, transformação, resultado',
+                label: l10n.personaFormWordsUseLabel,
+                hint: l10n.personaFormWordsUseHint,
               ),
               const SizedBox(height: 16),
               _Field(
                 controller: _wordsAvoidCtrl,
-                label: 'Palavras que DEVE EVITAR (separadas por vírgula)',
-                hint: 'Ex: barato, simples, fácil',
+                label: l10n.personaFormWordsAvoidLabel,
+                hint: l10n.personaFormWordsAvoidHint,
               ),
               const SizedBox(height: 16),
               SwitchListTile(
-                title: const Text(
-                  'Persona Global',
-                  style: TextStyle(color: Colors.white, fontSize: 14),
+                title: Text(
+                  l10n.personaFormGlobalTitle,
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
                 ),
-                subtitle: const Text(
-                  'Visível para todos os usuários (apenas admin)',
-                  style: TextStyle(color: Colors.white54, fontSize: 12),
+                subtitle: Text(
+                  l10n.personaFormGlobalSubtitle,
+                  style: const TextStyle(color: Colors.white54, fontSize: 12),
                 ),
                 value: _isGlobal,
                 onChanged: (v) => setState(() => _isGlobal = v),
@@ -215,7 +217,7 @@ class _PersonaFormScreenState extends ConsumerState<PersonaFormScreen> {
                         ),
                       )
                     : Text(
-                        isEdit ? 'Salvar Alterações' : 'Criar Persona',
+                        isEdit ? l10n.personaFormSaveChanges : l10n.personaFormCreate,
                         style: const TextStyle(
                             fontSize: 15, fontWeight: FontWeight.bold),
                       ),

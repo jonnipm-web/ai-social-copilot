@@ -10,6 +10,7 @@ import '../../../data/models/ive_interaction_request.dart';
 import '../../../data/models/market_analysis.dart';
 import '../../../data/models/opportunity.dart';
 import '../../../data/models/revenue_plan.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/ive_context_provider.dart';
 import '../../../providers/market_analysis_provider.dart';
 import '../../../providers/roi_metric_provider.dart';
@@ -33,10 +34,10 @@ Color _scoreColor(int score) {
   return _kRed;
 }
 
-String _scoreLabel(int score) {
-  if (score >= 80) return 'Alto';
-  if (score >= 60) return 'Médio';
-  return 'Baixo';
+String _scoreLabel(AppLocalizations l10n, int score) {
+  if (score >= 80) return l10n.miHubScoreLevelHigh;
+  if (score >= 60) return l10n.miHubScoreLevelMedium;
+  return l10n.miHubScoreLevelLow;
 }
 
 String _formatBRL(double value) {
@@ -116,8 +117,9 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _roiSaving = false);
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao registrar: $e'), backgroundColor: _kRed),
+          SnackBar(content: Text(l10n.miHubRoiSaveError('$e')), backgroundColor: _kRed),
         );
       }
     }
@@ -125,6 +127,7 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final analysisAsync      = ref.watch(marketAnalysisByIdProvider(widget.analysisId));
     final competitorsAsync   = ref.watch(competitorsByAnalysisProvider(widget.analysisId));
     final gapAsync           = ref.watch(gapAnalysisByAnalysisProvider(widget.analysisId));
@@ -142,9 +145,9 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
               ? context.pop()
               : context.go(AppConstants.routeMarketIntelligence),
         ),
-        title: const Text(
-          'Inteligência de Mercado',
-          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+        title: Text(
+          l10n.miHubAppBarTitle,
+          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
         ),
         actions: [
           // IVE-EXPERIENCE-V1-06 (Section 20) — first (and only, per mission
@@ -158,7 +161,7 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
           if (analysisAsync.valueOrNull != null)
             IconButton(
               icon: const Icon(Icons.auto_awesome_rounded, color: Colors.white54),
-              tooltip: 'Comparar com IVE',
+              tooltip: l10n.miHubCompareWithIveTooltip,
               onPressed: () {
                 final analysis = analysisAsync.value!;
                 final ctx = ref.read(iveContextDataProvider(analysis.projectId)).valueOrNull;
@@ -168,9 +171,7 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
                   context,
                   screenName: 'Market Intelligence',
                   contextData: contextData,
-                  initialMessage:
-                      'Compare os resultados desta análise de mercado (${analysis.niche ?? analysis.input}) '
-                      'e identifique a maior oportunidade.',
+                  initialMessage: l10n.miHubCompareInitialMessage(analysis.niche ?? analysis.input),
                   request: IveInteractionRequest(
                     projectId:        analysis.projectId,
                     sourceModule:     'market_intelligence',
@@ -183,7 +184,7 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
             ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: Colors.white54),
-            tooltip: 'Recarregar dados',
+            tooltip: l10n.miHubReloadTooltip,
             onPressed: () {
               setState(() => _roiSaved = false);
               ref.invalidate(marketAnalysisByIdProvider(widget.analysisId));
@@ -207,7 +208,7 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
                 const Icon(Icons.error_outline_rounded, color: _kRed, size: 48),
                 const SizedBox(height: 16),
                 Text(
-                  'Erro ao carregar análise:\n$e',
+                  l10n.miHubLoadError('$e'),
                   style: const TextStyle(color: Colors.white54),
                   textAlign: TextAlign.center,
                 ),
@@ -304,26 +305,23 @@ class _ExecScoreCard extends StatelessWidget {
   const _ExecScoreCard({required this.analysis});
   final MarketAnalysis analysis;
 
-  String _desc() {
+  String _desc(AppLocalizations l10n) {
     final s = analysis.opportunityScore;
-    if (s >= 80) {
-      return 'Alto potencial de crescimento. Monetização forte. Concorrência administrável.';
-    }
-    if (s >= 60) {
-      return 'Potencial moderado. Mercado em crescimento. Avalie seus diferenciais.';
-    }
-    return 'Potencial limitado. Mercado saturado ou monetização fraca. Considere pivotar.';
+    if (s >= 80) return l10n.miHubDescHigh;
+    if (s >= 60) return l10n.miHubDescMedium;
+    return l10n.miHubDescLow;
   }
 
-  String _rec() {
+  String _rec(AppLocalizations l10n) {
     final s = analysis.opportunityScore;
-    if (s >= 80) return '🚀  Prioridade Alta';
-    if (s >= 60) return '⚡  Prioridade Média';
-    return '⚠️  Baixa Prioridade';
+    if (s >= 80) return l10n.miHubPriorityHigh;
+    if (s >= 60) return l10n.miHubPriorityMedium;
+    return l10n.miHubPriorityLow;
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final score = analysis.opportunityScore;
     final color = _scoreColor(score);
 
@@ -345,11 +343,11 @@ class _ExecScoreCard extends StatelessWidget {
             children: [
               Icon(Icons.analytics_rounded, color: color, size: 18),
               const SizedBox(width: 6),
-              const Flexible(
+              Flexible(
                 child: Text(
-                  'OPPORTUNITY SCORE',
+                  l10n.miHubOpportunityScoreLabel,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.white54,
                     fontSize: 11,
                     letterSpacing: 1.4,
@@ -442,7 +440,7 @@ class _ExecScoreCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      _rec(),
+                      _rec(l10n),
                       style: TextStyle(
                           color: color, fontSize: 11, fontWeight: FontWeight.w700),
                     ),
@@ -473,13 +471,13 @@ class _ExecScoreCard extends StatelessWidget {
           const SizedBox(height: 18),
           Row(
             children: [
-              _ScoreBar(label: 'SEO',          score: analysis.scoreSeo),
+              _ScoreBar(label: l10n.miHubScoreSeo,          score: analysis.scoreSeo),
               const SizedBox(width: 8),
-              _ScoreBar(label: 'Monetização',  score: analysis.scoreMonetization),
+              _ScoreBar(label: l10n.miHubScoreMonetization, score: analysis.scoreMonetization),
               const SizedBox(width: 8),
-              _ScoreBar(label: 'Concorrência', score: analysis.scoreCompetition),
+              _ScoreBar(label: l10n.miHubScoreCompetition,  score: analysis.scoreCompetition),
               const SizedBox(width: 8),
-              _ScoreBar(label: 'Crescimento',  score: analysis.scoreGrowth),
+              _ScoreBar(label: l10n.miHubScoreGrowth,       score: analysis.scoreGrowth),
             ],
           ),
           const SizedBox(height: 14),
@@ -490,7 +488,7 @@ class _ExecScoreCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
-              _desc(),
+              _desc(l10n),
               style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
             ),
           ),
@@ -543,6 +541,7 @@ class _RevenuePotentialCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final minVal  = plan?.monthlyConservative ?? analysis.revenueMonthlyMin;
     final maxVal  = plan?.monthlyAggressive   ?? analysis.revenueMonthlyMax;
     final months  = analysis.monthsToRevenue;
@@ -563,10 +562,10 @@ class _RevenuePotentialCard extends StatelessWidget {
             children: [
               const Icon(Icons.attach_money_rounded, color: _kCyan, size: 18),
               const SizedBox(width: 6),
-              const Flexible(
+              Flexible(
                 child: Text(
-                  'Revenue Potential',
-                  style: TextStyle(
+                  l10n.miHubRevenuePotentialTitle,
+                  style: const TextStyle(
                       color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
                 ),
               ),
@@ -576,29 +575,29 @@ class _RevenuePotentialCard extends StatelessWidget {
           if (!hasData) ...[
             const Icon(Icons.bar_chart_rounded, color: Colors.white24, size: 28),
             const SizedBox(height: 6),
-            const Text(
-              'Execute o Revenue Planner para estimativas detalhadas.',
-              style: TextStyle(color: Colors.white38, fontSize: 11, height: 1.4),
+            Text(
+              l10n.miHubRevenueNoDataHint,
+              style: const TextStyle(color: Colors.white38, fontSize: 11, height: 1.4),
             ),
           ] else ...[
             Text(
               minVal > 0
-                  ? '${_formatBRL(minVal)} – ${_formatBRL(maxVal)}/mês'
-                  : '${_formatBRL(maxVal)}/mês',
+                  ? l10n.miHubRevenueRangeMonthly(_formatBRL(minVal), _formatBRL(maxVal))
+                  : l10n.miHubRevenueSingleMonthly(_formatBRL(maxVal)),
               style: const TextStyle(
                   color: _kCyan, fontSize: 14, fontWeight: FontWeight.bold, height: 1.2),
             ),
             if (plan != null) ...[
               const SizedBox(height: 4),
               Text(
-                'Anual: ${_formatBRL(plan!.annualModerate)}',
+                l10n.miHubRevenueAnnual(_formatBRL(plan!.annualModerate)),
                 style: TextStyle(color: _kCyan.withOpacity(0.6), fontSize: 11),
               ),
             ],
             const SizedBox(height: 12),
-            _InfoRow2(icon: Icons.timer_rounded,   label: 'Prazo',     value: '$months meses'),
+            _InfoRow2(icon: Icons.timer_rounded,   label: l10n.miHubLabelDeadline,   value: l10n.miHubMonthsValue(months)),
             const SizedBox(height: 6),
-            _InfoRow2(icon: Icons.verified_rounded, label: 'Confiança', value: '$conf%'),
+            _InfoRow2(icon: Icons.verified_rounded, label: l10n.miHubLabelConfidence, value: '$conf%'),
           ],
         ],
       ),
@@ -615,6 +614,7 @@ class _InvestmentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n  = AppLocalizations.of(context)!;
     final rec   = analysis.investmentRecommendation;
     final score = analysis.investmentScore;
     final just  = analysis.investmentJustification;
@@ -635,9 +635,9 @@ class _InvestmentCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Vale a Pena Investir?',
-            style: TextStyle(
+          Text(
+            l10n.miHubInvestmentTitle,
+            style: const TextStyle(
                 color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 14),
@@ -653,7 +653,7 @@ class _InvestmentCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 4),
-          Text('Score: $score/100',
+          Text(l10n.miHubInvestmentScoreLabel(score),
               style: TextStyle(color: color.withOpacity(0.7), fontSize: 11)),
           if (just.isNotEmpty) ...[
             const SizedBox(height: 10),
@@ -687,6 +687,7 @@ class _PriorityActionsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final actions = analysis.priorityActions;
     if (actions.isEmpty) return const SizedBox.shrink();
 
@@ -704,10 +705,10 @@ class _PriorityActionsCard extends StatelessWidget {
             children: [
               const Icon(Icons.rocket_launch_rounded, color: _kPrimary, size: 18),
               const SizedBox(width: 8),
-              const Flexible(
+              Flexible(
                 child: Text(
-                  'Próximas Ações Recomendadas',
-                  style: TextStyle(
+                  l10n.miHubNextActionsTitle,
+                  style: const TextStyle(
                       color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -759,9 +760,9 @@ class _PriorityActionsCard extends StatelessWidget {
                           spacing: 6,
                           runSpacing: 4,
                           children: [
-                            _Badge('Impacto: $impact', _impactColor(impact)),
-                            _Badge('Esforço: $effort',  Colors.white38),
-                            if (roi.isNotEmpty) _Badge('ROI: $roi', _kCyan),
+                            _Badge(l10n.miHubBadgeImpact(impact), _impactColor(impact)),
+                            _Badge(l10n.miHubBadgeEffort(effort),  Colors.white38),
+                            if (roi.isNotEmpty) _Badge(l10n.miHubBadgeRoi(roi), _kCyan),
                           ],
                         ),
                       ],
@@ -792,6 +793,7 @@ class _CompetitorRankingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n  = AppLocalizations.of(context)!;
     final top   = competitors.take(5).toList();
     final route = _routeFor(
         AppConstants.routeMarketIntelligenceCompetitors, analysisId);
@@ -810,10 +812,10 @@ class _CompetitorRankingCard extends StatelessWidget {
             children: [
               const Icon(Icons.people_alt_rounded, color: _kOrange, size: 18),
               const SizedBox(width: 8),
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Principais Concorrentes',
-                  style: TextStyle(
+                  l10n.miHubCompetitorsTitle,
+                  style: const TextStyle(
                       color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -822,8 +824,8 @@ class _CompetitorRankingCard extends StatelessWidget {
                 style: TextButton.styleFrom(
                     minimumSize: Size.zero,
                     padding: const EdgeInsets.symmetric(horizontal: 8)),
-                child: const Text('Ver todos',
-                    style: TextStyle(color: _kPrimary, fontSize: 12)),
+                child: Text(l10n.miHubCompetitorsViewAll,
+                    style: const TextStyle(color: _kPrimary, fontSize: 12)),
               ),
             ],
           ),
@@ -838,17 +840,17 @@ class _CompetitorRankingCard extends StatelessWidget {
           else if (top.isEmpty)
             _EmptyState(
               icon:        Icons.manage_search_rounded,
-              message:     'Concorrentes ainda não descobertos.',
-              buttonLabel: 'Descobrir Concorrentes',
+              message:     l10n.miHubCompetitorsEmptyMessage,
+              buttonLabel: l10n.miHubCompetitorsEmptyCta,
               onTap:       () => context.push(route),
             )
           else ...[
-            const Row(
+            Row(
               children: [
-                Expanded(flex: 4, child: _TH('Concorrente')),
-                Expanded(flex: 2, child: _TH('Similar.')),
-                Expanded(flex: 2, child: _TH('Autoridade')),
-                Expanded(flex: 2, child: _TH('Score')),
+                Expanded(flex: 4, child: _TH(l10n.miHubThCompetitor)),
+                Expanded(flex: 2, child: _TH(l10n.miHubThSimilarity)),
+                Expanded(flex: 2, child: _TH(l10n.miHubThAuthority)),
+                Expanded(flex: 2, child: _TH(l10n.miHubThScore)),
               ],
             ),
             const Divider(color: Colors.white12, height: 14),
@@ -919,7 +921,7 @@ class _CompetitorRankingCard extends StatelessWidget {
             OutlinedButton.icon(
               onPressed: () => context.push(route),
               icon:  const Icon(Icons.search_rounded, size: 14),
-              label: const Text('Analisar Concorrente', style: TextStyle(fontSize: 12)),
+              label: Text(l10n.miHubAnalyzeCompetitorCta, style: const TextStyle(fontSize: 12)),
               style: OutlinedButton.styleFrom(
                 foregroundColor: _kOrange,
                 side: const BorderSide(color: _kOrange, width: 0.8),
@@ -949,6 +951,7 @@ class _GapSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n  = AppLocalizations.of(context)!;
     final route =
         _routeFor(AppConstants.routeMarketIntelligenceGaps, analysisId);
 
@@ -966,10 +969,10 @@ class _GapSummaryCard extends StatelessWidget {
             children: [
               const Icon(Icons.find_in_page_rounded, color: _kGold, size: 18),
               const SizedBox(width: 8),
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Resumo dos Gaps',
-                  style: TextStyle(
+                  l10n.miHubGapSummaryTitle,
+                  style: const TextStyle(
                       color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -978,8 +981,8 @@ class _GapSummaryCard extends StatelessWidget {
                 style: TextButton.styleFrom(
                     minimumSize: Size.zero,
                     padding: const EdgeInsets.symmetric(horizontal: 8)),
-                child: const Text('Detalhar',
-                    style: TextStyle(color: _kPrimary, fontSize: 12)),
+                child: Text(l10n.miHubGapDetailCta,
+                    style: const TextStyle(color: _kPrimary, fontSize: 12)),
               ),
             ],
           ),
@@ -994,16 +997,16 @@ class _GapSummaryCard extends StatelessWidget {
           else if (gap == null)
             _EmptyState(
               icon:        Icons.analytics_outlined,
-              message:     'Gap Analysis ainda não executada.',
-              buttonLabel: 'Executar Gap Analysis',
+              message:     l10n.miHubGapEmptyMessage,
+              buttonLabel: l10n.miHubGapEmptyCta,
               onTap:       () => context.push(route),
             )
           else ...[
-            _GapRow(Icons.search_rounded,         'SEO Gap',           gap!.seoGaps,          _kCyan),
-            _GapRow(Icons.article_rounded,        'Content Gap',       gap!.contentGaps,      _kOrange),
-            _GapRow(Icons.verified_user_rounded,  'Authority Gap',     gap!.authorityGaps,    _kPrimary),
-            _GapRow(Icons.attach_money_rounded,   'Monetization Gap',  gap!.monetizationGaps, _kGreen),
-            _GapRow(Icons.inventory_2_rounded,    'Product Gap',       gap!.productGaps,      _kGold),
+            _GapRow(Icons.search_rounded,         l10n.miHubGapSeo,          gap!.seoGaps,          _kCyan),
+            _GapRow(Icons.article_rounded,        l10n.miHubGapContent,      gap!.contentGaps,      _kOrange),
+            _GapRow(Icons.verified_user_rounded,  l10n.miHubGapAuthority,    gap!.authorityGaps,    _kPrimary),
+            _GapRow(Icons.attach_money_rounded,   l10n.miHubGapMonetization, gap!.monetizationGaps, _kGreen),
+            _GapRow(Icons.inventory_2_rounded,    l10n.miHubGapProduct,      gap!.productGaps,      _kGold),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -1012,7 +1015,7 @@ class _GapSummaryCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                'Total: ${gap!.totalGaps} gaps identificados',
+                l10n.miHubGapTotal(gap!.totalGaps),
                 style: const TextStyle(
                     color: _kGold, fontSize: 12, fontWeight: FontWeight.w600),
               ),
@@ -1100,6 +1103,7 @@ class _OpportunitiesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n  = AppLocalizations.of(context)!;
     final top   = opportunities.take(3).toList();
     final route = _routeFor(
         AppConstants.routeMarketIntelligenceOpportunities, analysisId);
@@ -1118,10 +1122,10 @@ class _OpportunitiesCard extends StatelessWidget {
             children: [
               const Icon(Icons.lightbulb_rounded, color: _kGold, size: 18),
               const SizedBox(width: 8),
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Oportunidades Detectadas',
-                  style: TextStyle(
+                  l10n.miHubOpportunitiesTitle,
+                  style: const TextStyle(
                       color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -1130,8 +1134,8 @@ class _OpportunitiesCard extends StatelessWidget {
                 style: TextButton.styleFrom(
                     minimumSize: Size.zero,
                     padding: const EdgeInsets.symmetric(horizontal: 8)),
-                child: const Text('Ver todas',
-                    style: TextStyle(color: _kPrimary, fontSize: 12)),
+                child: Text(l10n.miHubOpportunitiesViewAll,
+                    style: const TextStyle(color: _kPrimary, fontSize: 12)),
               ),
             ],
           ),
@@ -1146,8 +1150,8 @@ class _OpportunitiesCard extends StatelessWidget {
           else if (top.isEmpty)
             _EmptyState(
               icon:        Icons.lightbulb_outline_rounded,
-              message:     'Oportunidades ainda não mapeadas.',
-              buttonLabel: 'Descobrir Oportunidades',
+              message:     l10n.miHubOpportunitiesEmptyMessage,
+              buttonLabel: l10n.miHubOpportunitiesEmptyCta,
               onTap:       () => context.push(route),
             )
           else
@@ -1208,13 +1212,13 @@ class _OpportunitiesCard extends StatelessWidget {
                         children: [
                           if (o.timeframe.isNotEmpty) _Badge(o.timeframe, _kCyan),
                           if (o.effort.isNotEmpty)
-                            _Badge('Esforço: ${o.effort}', Colors.white38),
+                            _Badge(l10n.miHubOppEffortBadge(o.effort), Colors.white38),
                           _Badge(
-                            'Receita: ${_scoreLabel(o.monetizationScore)}',
+                            l10n.miHubOppRevenueBadge(_scoreLabel(l10n, o.monetizationScore)),
                             _kGreen,
                           ),
                           _Badge(
-                            'Dificuldade: ${_scoreLabel(100 - o.difficultyScore)}',
+                            l10n.miHubOppDifficultyBadge(_scoreLabel(l10n, 100 - o.difficultyScore)),
                             _kOrange,
                           ),
                         ],
@@ -1239,22 +1243,23 @@ class _ModuleNavGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final id   = analysisId;
     final mods = [
-      _Mod(Icons.people_alt_rounded,   'Concorrentes',    _routeFor(AppConstants.routeMarketIntelligenceCompetitors,  id), _kOrange),
-      _Mod(Icons.find_in_page_rounded, 'Gap Analysis',    _routeFor(AppConstants.routeMarketIntelligenceGaps,         id), _kGold),
-      _Mod(Icons.lightbulb_rounded,    'Oportunidades',   _routeFor(AppConstants.routeMarketIntelligenceOpportunities,id), _kGreen),
-      _Mod(Icons.trending_up_rounded,  'Nichos',          _routeFor(AppConstants.routeMarketIntelligenceNiches,       id), _kCyan),
-      _Mod(Icons.account_tree_rounded, 'Content Cluster', _routeFor(AppConstants.routeMarketIntelligenceCluster,      id), _kPrimary),
-      _Mod(Icons.bar_chart_rounded,    'Revenue Planner', _routeFor(AppConstants.routeMarketIntelligenceRevenue,      id), _kPink),
+      _Mod(Icons.people_alt_rounded,   l10n.miHubModCompetitors,    _routeFor(AppConstants.routeMarketIntelligenceCompetitors,  id), _kOrange),
+      _Mod(Icons.find_in_page_rounded, l10n.miHubModGapAnalysis,    _routeFor(AppConstants.routeMarketIntelligenceGaps,         id), _kGold),
+      _Mod(Icons.lightbulb_rounded,    l10n.miHubModOpportunities,  _routeFor(AppConstants.routeMarketIntelligenceOpportunities,id), _kGreen),
+      _Mod(Icons.trending_up_rounded,  l10n.miHubModNiches,         _routeFor(AppConstants.routeMarketIntelligenceNiches,       id), _kCyan),
+      _Mod(Icons.account_tree_rounded, l10n.miHubModContentCluster, _routeFor(AppConstants.routeMarketIntelligenceCluster,      id), _kPrimary),
+      _Mod(Icons.bar_chart_rounded,    l10n.miHubModRevenuePlanner, _routeFor(AppConstants.routeMarketIntelligenceRevenue,      id), _kPink),
     ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'MÓDULOS DE ANÁLISE',
-          style: TextStyle(
+        Text(
+          l10n.miHubModulesGridTitle,
+          style: const TextStyle(
               color: Colors.white38,
               fontSize: 11,
               letterSpacing: 1.4,
@@ -1346,6 +1351,7 @@ class _RoiIntegrationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final avgScore = opportunities.isEmpty
         ? 0.0
         : opportunities
@@ -1368,9 +1374,9 @@ class _RoiIntegrationCard extends StatelessWidget {
             children: [
               const Icon(Icons.insights_rounded, color: _kGreen, size: 18),
               const SizedBox(width: 8),
-              const Text(
-                'ROI Tracker',
-                style: TextStyle(
+              Text(
+                l10n.miHubRoiTrackerTitle,
+                style: const TextStyle(
                     color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
               ),
             ],
@@ -1381,15 +1387,15 @@ class _RoiIntegrationCard extends StatelessWidget {
             runSpacing: 10,
             children: [
               _RoiStat(
-                'Opportunity Score',
+                l10n.miHubRoiOpportunityScoreLabel,
                 '${analysis.opportunityScore}/100',
                 _scoreColor(analysis.opportunityScore),
               ),
-              _RoiStat('Oportunidades', '${opportunities.length}', _kGold),
+              _RoiStat(l10n.miHubRoiOpportunitiesLabel, '${opportunities.length}', _kGold),
               if (avgScore > 0)
-                _RoiStat('Score Médio', '${avgScore.round()}', _kCyan),
+                _RoiStat(l10n.miHubRoiAvgScoreLabel, '${avgScore.round()}', _kCyan),
               if (revenue > 0)
-                _RoiStat('Revenue/mês', _formatBRL(revenue), _kGreen),
+                _RoiStat(l10n.miHubRoiRevenueLabel, _formatBRL(revenue), _kGreen),
             ],
           ),
           const SizedBox(height: 16),
@@ -1401,13 +1407,13 @@ class _RoiIntegrationCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: _kGreen.withOpacity(0.3)),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.check_circle_rounded, color: _kGreen, size: 18),
-                  SizedBox(width: 8),
+                  const Icon(Icons.check_circle_rounded, color: _kGreen, size: 18),
+                  const SizedBox(width: 8),
                   Text(
-                    'Dados registrados no ROI Tracker!',
-                    style: TextStyle(
+                    l10n.miHubRoiSavedMessage,
+                    style: const TextStyle(
                         color: _kGreen, fontSize: 13, fontWeight: FontWeight.w600),
                   ),
                 ],
@@ -1427,7 +1433,7 @@ class _RoiIntegrationCard extends StatelessWidget {
                       )
                     : const Icon(Icons.add_chart_rounded, size: 18),
                 label: Text(
-                  isSaving ? 'Registrando...' : 'Registrar no ROI Tracker',
+                  isSaving ? l10n.miHubRoiSavingCta : l10n.miHubRoiSaveCta,
                   style: const TextStyle(
                       fontSize: 13, fontWeight: FontWeight.w600),
                 ),

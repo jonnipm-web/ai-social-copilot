@@ -131,7 +131,7 @@ class _ProjectCommandCenterScreenState
     final confirmed = await _bootstrapExec.confirm(
       context: context,
       ref: ref,
-      analysisLabel: 'Gerar oportunidades, ações e plano de receita automaticamente',
+      analysisLabel: AppLocalizations.of(context)!.projectCommandAutoBootstrapLabel,
       request: IveInteractionRequest(
         projectId:        justCreated.id,
         sourceModule:     'project_command_center',
@@ -146,24 +146,25 @@ class _ProjectCommandCenterScreenState
   }
 
   Future<void> _confirmDelete(Project project) async {
+    final t = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A2E),
-        title: const Text('Confirmar exclusão', style: TextStyle(color: Colors.white)),
+        title: Text(t.projectCommandDeleteConfirmTitle, style: const TextStyle(color: Colors.white)),
         content: Text(
-          'Excluir "${project.name}"?\nEsta ação não pode ser desfeita.',
+          t.projectCommandDeleteConfirmBody(project.name),
           style: const TextStyle(color: Colors.white70),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancelar', style: TextStyle(color: Colors.white54)),
+            child: Text(t.commonCancel, style: const TextStyle(color: Colors.white54)),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             style: TextButton.styleFrom(foregroundColor: const Color(0xFFFF6B6B)),
-            child: const Text('Excluir'),
+            child: Text(t.projectCommandDelete),
           ),
         ],
       ),
@@ -174,7 +175,7 @@ class _ProjectCommandCenterScreenState
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Erro ao excluir: $e'), backgroundColor: Colors.red),
+            SnackBar(content: Text(t.projectCommandDeleteError('$e')), backgroundColor: Colors.red),
           );
         }
       }
@@ -182,6 +183,7 @@ class _ProjectCommandCenterScreenState
   }
 
   Future<void> _analyzeWithKnowledge(Project project) async {
+    final t = AppLocalizations.of(context)!;
     Navigator.of(context).pop();
 
     // Busca knowledge items do projeto
@@ -193,12 +195,12 @@ class _ProjectCommandCenterScreenState
     if (items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text(
-            'Adicione conhecimentos ao projeto antes de analisar.',
+          content: Text(
+            t.projectCommandNoKnowledgeWarning,
           ),
           backgroundColor: const Color(0xFFFF9800),
           action: SnackBarAction(
-            label: 'Adicionar',
+            label: t.oppAdd,
             textColor: Colors.white,
             onPressed: () => context.push(
               AppConstants.routeKnowledgeNew,
@@ -230,7 +232,7 @@ class _ProjectCommandCenterScreenState
     final confirmed = await _knowledgeAnalysisExec.confirm(
       context: context,
       ref: ref,
-      analysisLabel: 'Analisar com Conhecimento',
+      analysisLabel: t.projectCommandAnalyzeWithKnowledgeLabel,
       request: request,
     );
     if (!confirmed || !mounted) return;
@@ -238,7 +240,7 @@ class _ProjectCommandCenterScreenState
     // Mostra progresso
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Analisando projeto "${project.name}" com ${items.length} conhecimento(s)…'),
+        content: Text(t.projectCommandAnalyzingSnackbar(project.name, items.length)),
         backgroundColor: const Color(0xFF6C63FF),
         duration: const Duration(seconds: 30),
       ),
@@ -297,10 +299,10 @@ class _ProjectCommandCenterScreenState
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${opportunities.length} oportunidade(s) gerada(s) para "${project.name}"!'),
+          content: Text(t.projectCommandOpportunitiesGenerated(opportunities.length, project.name)),
           backgroundColor: const Color(0xFF4CAF50),
           action: SnackBarAction(
-            label: 'Ver',
+            label: t.projectCommandView,
             textColor: Colors.white,
             onPressed: () => context.go(AppConstants.routeOpportunityLab),
           ),
@@ -312,7 +314,7 @@ class _ProjectCommandCenterScreenState
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro ao analisar: $e'),
+          content: Text(t.projectCommandAnalyzeError('$e')),
           backgroundColor: const Color(0xFFF44336),
         ),
       );
@@ -395,6 +397,7 @@ class _ProjectCommandCenterScreenState
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     final asyncProjects = ref.watch(projectsNotifierProvider);
     final asyncScores   = ref.watch(ecosystemScoresProvider);
 
@@ -417,8 +420,8 @@ class _ProjectCommandCenterScreenState
           },
         ),
         backgroundColor: const Color(0xFF0F0F1A),
-        title: const Text('Project Command Center',
-            style: TextStyle(color: Colors.white)),
+        title: Text(t.projectCommandTitle,
+            style: const TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           // Refresh
@@ -433,7 +436,7 @@ class _ProjectCommandCenterScreenState
                     ),
                   )
                 : const Icon(Icons.refresh_rounded, color: Color(0xFF6BCB77)),
-            tooltip: 'Atualizar',
+            tooltip: t.projectCommandRefreshTooltip,
             onPressed: _refreshing ? null : _refresh,
           ),
           // Novo projeto
@@ -455,10 +458,10 @@ class _ProjectCommandCenterScreenState
               loading: () => const Center(
                   child: CircularProgressIndicator(color: Color(0xFF6BCB77))),
               error: (e, _) => Center(
-                  child: Text('Erro: $e',
+                  child: Text(t.projectCommandLoadError('$e'),
                       style: const TextStyle(color: Colors.redAccent))),
               data: (projects) => projects.isEmpty
-                  ? _buildEmpty()
+                  ? _buildEmpty(t)
                   : RefreshIndicator(
                       color: const Color(0xFF6BCB77),
                       backgroundColor: const Color(0xFF1A1A2E),
@@ -472,23 +475,23 @@ class _ProjectCommandCenterScreenState
     );
   }
 
-  Widget _buildEmpty() => Center(
+  Widget _buildEmpty(AppLocalizations t) => Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(Icons.rocket_launch_outlined,
                 color: Colors.white24, size: 64),
             const SizedBox(height: 16),
-            const Text('Nenhum projeto ainda',
-                style: TextStyle(color: Colors.white38, fontSize: 16)),
+            Text(t.projectCommandEmptyTitle,
+                style: const TextStyle(color: Colors.white38, fontSize: 16)),
             const SizedBox(height: 8),
-            const Text('Adicione seu primeiro projeto',
-                style: TextStyle(color: Colors.white24, fontSize: 13)),
+            Text(t.projectCommandEmptySubtitle,
+                style: const TextStyle(color: Colors.white24, fontSize: 13)),
             const SizedBox(height: 20),
             ElevatedButton.icon(
               onPressed: () => setState(() => _showForm = true),
               icon: const Icon(Icons.add_rounded),
-              label: const Text('Novo Projeto'),
+              label: Text(t.projectCommandNewProject),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF6BCB77),
                 foregroundColor: Colors.black,
@@ -499,6 +502,7 @@ class _ProjectCommandCenterScreenState
       );
 
   Widget _buildForm() {
+    final t = AppLocalizations.of(context)!;
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
@@ -511,27 +515,27 @@ class _ProjectCommandCenterScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Novo Projeto',
-              style: TextStyle(
+          Text(t.projectCommandNewProject,
+              style: const TextStyle(
                   color: Color(0xFF6BCB77), fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
           _Field(
               controller: _nameCtrl,
-              label: 'Nome do projeto *',
-              hint: 'Ex: Blog de Finanças Pessoais'),
+              label: t.projectCommandFieldNameLabel,
+              hint: t.projectCommandFieldNameHint),
           const SizedBox(height: 10),
           _Field(
               controller: _descCtrl,
-              label: 'Descrição',
-              hint: 'Descreva o projeto brevemente'),
+              label: t.projectCommandFieldDescLabel,
+              hint: t.projectCommandFieldDescHint),
           const SizedBox(height: 10),
           _Field(
               controller: _urlCtrl,
-              label: 'URL (opcional)',
-              hint: 'https://...'),
+              label: t.projectCommandFieldUrlLabel,
+              hint: t.projectCommandFieldUrlHint),
           const SizedBox(height: 10),
-          const Text('Tipo',
-              style: TextStyle(color: Colors.white54, fontSize: 12)),
+          Text(t.projectCommandFieldTypeLabel,
+              style: const TextStyle(color: Colors.white54, fontSize: 12)),
           const SizedBox(height: 6),
           Wrap(
             spacing: 8,
@@ -563,7 +567,7 @@ class _ProjectCommandCenterScreenState
                     foregroundColor: Colors.white54,
                     side: const BorderSide(color: Color(0xFF333355)),
                   ),
-                  child: const Text('Cancelar'),
+                  child: Text(t.commonCancel),
                 ),
               ),
               const SizedBox(width: 10),
@@ -580,8 +584,8 @@ class _ProjectCommandCenterScreenState
                           height: 16,
                           child: CircularProgressIndicator(
                               color: Colors.black, strokeWidth: 2))
-                      : const Text('Salvar',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      : Text(t.commonSave,
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
@@ -694,17 +698,17 @@ class _ProjectCard extends StatelessWidget {
     }
   }
 
-  String get _statusLabel {
+  String _statusLabel(AppLocalizations t) {
     switch (project.status) {
-      case 'active':    return 'Ativo';
-      case 'completed': return 'Concluído';
-      case 'paused':    return 'Pausado';
-      default:          return 'Ideia';
+      case 'active':    return t.projectCommandStatusActive;
+      case 'completed': return t.projectCommandStatusCompleted;
+      case 'paused':    return t.projectCommandStatusPaused;
+      default:          return t.projectCommandStatusIdea;
     }
   }
 
-  String _fmtRevenue(double v) {
-    if (v <= 0)        return 'Não estimado';
+  String _fmtRevenue(double v, AppLocalizations t) {
+    if (v <= 0)        return t.projectCommandRevenueNotEstimated;
     if (v >= 1000000)  return 'R\$ ${(v / 1000000).toStringAsFixed(1)}M';
     if (v >= 1000)     return 'R\$ ${(v / 1000).toStringAsFixed(0)}K';
     return 'R\$ ${v.toStringAsFixed(0)}';
@@ -719,11 +723,12 @@ class _ProjectCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t        = AppLocalizations.of(context)!;
     final s        = ecosystemScore;
     final oppScore = s?.opportunityScore ?? project.opportunityScore;
     final revenue  = s?.totalRoi != null && s!.totalRoi > 0
-        ? _fmtRevenue(s.totalRoi)
-        : _fmtRevenue(project.revenuePotential);
+        ? _fmtRevenue(s.totalRoi, t)
+        : _fmtRevenue(project.revenuePotential, t);
     final ecoScore = s?.ecosystemScore;
 
     return GestureDetector(
@@ -792,7 +797,7 @@ class _ProjectCard extends StatelessWidget {
                           border:
                               Border.all(color: _statusColor.withOpacity(0.5)),
                         ),
-                        child: Text(_statusLabel,
+                        child: Text(_statusLabel(t),
                             style: TextStyle(
                                 color: _statusColor,
                                 fontSize: 11,
@@ -834,17 +839,17 @@ class _ProjectCard extends StatelessWidget {
                   Row(
                     children: [
                       _StatChip(
-                          label: 'Oportunidade',
+                          label: t.projectCommandStatOpportunity,
                           value: '$oppScore',
                           color: const Color(0xFF00BCD4)),
                       const SizedBox(width: 8),
                       _StatChip(
-                          label: 'Potencial',
+                          label: t.projectCommandStatPotential,
                           value: revenue,
                           color: const Color(0xFFFFD93D)),
                       const SizedBox(width: 8),
                       _StatChip(
-                          label: 'Prazo',
+                          label: t.projectCommandStatDeadline,
                           value: _fmtPrazo(project.timeToRevenueDays),
                           color: const Color(0xFFAB83FF)),
                     ],
@@ -860,25 +865,25 @@ class _ProjectCard extends StatelessWidget {
                 children: [
                   _ActionBtn(
                     icon: Icons.info_outline_rounded,
-                    label: 'Detalhe',
+                    label: t.projectCommandActionDetail,
                     color: const Color(0xFF6C63FF),
                     onTap: onTap,
                   ),
                   if (onAnalyze != null)
                     _ActionBtn(
                         icon: Icons.analytics_rounded,
-                        label: 'Análise',
+                        label: t.projectCommandActionAnalysis,
                         color: const Color(0xFF00BCD4),
                         onTap: onAnalyze!),
                   _ActionBtn(
                     icon: Icons.play_arrow_rounded,
-                    label: 'Ativar',
+                    label: t.projectCommandActionActivate,
                     color: const Color(0xFF6BCB77),
                     onTap: () => onStatusChange('active'),
                   ),
                   _ActionBtn(
                     icon: Icons.delete_rounded,
-                    label: 'Excluir',
+                    label: t.projectCommandDelete,
                     color: const Color(0xFFFF6B6B),
                     onTap: onDelete,
                   ),
@@ -937,8 +942,8 @@ class _ProjectDetailSheet extends ConsumerWidget {
     return const Color(0xFFFF6B6B);
   }
 
-  String _fmtRevenue(double v) {
-    if (v <= 0)        return 'Ainda não estimado';
+  String _fmtRevenue(double v, AppLocalizations t) {
+    if (v <= 0)        return t.projectCommandRevenueNotEstimatedYet;
     if (v >= 1000000)  return 'R\$ ${(v / 1000000).toStringAsFixed(1)}M';
     if (v >= 1000)     return 'R\$ ${(v / 1000).toStringAsFixed(0)}K';
     return 'R\$ ${v.toStringAsFixed(0)}';
@@ -993,8 +998,8 @@ class _ProjectDetailSheet extends ConsumerWidget {
                               color: _ecoScoreColor(s.ecosystemScore),
                               fontSize: 28,
                               fontWeight: FontWeight.bold)),
-                      const Text('eco score',
-                          style: TextStyle(
+                      Text(t.projectCommandEcoScoreLabel,
+                          style: const TextStyle(
                               color: Colors.white38, fontSize: 10)),
                     ],
                   ),
@@ -1031,7 +1036,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
 
             // Recomendação
             if (s != null) ...[
-              _sectionTitle('Recomendação IA'),
+              _sectionTitle(t.projectCommandSectionRecommendation),
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -1058,25 +1063,26 @@ class _ProjectDetailSheet extends ConsumerWidget {
               const SizedBox(height: 16),
 
               // Score breakdown
-              _sectionTitle('Scores do Ecossistema'),
-              _ScoreRow('Oportunidade',  s.opportunityScore),
-              _ScoreRow('Fit Estratégico', s.strategicFit),
-              _ScoreRow('Sinergia',       s.synergyScore),
-              _ScoreRow('ROI',            s.roiScore),
-              _ScoreRow('Momentum',       s.momentumScore),
-              _ScoreRow('Mercado',        s.marketScore),
-              _ScoreRow('Execução',       s.executionScore),
+              _sectionTitle(t.projectCommandSectionEcosystemScores),
+              _ScoreRow(t.projectCommandStatOpportunity, s.opportunityScore),
+              _ScoreRow(t.projectCommandScoreStrategicFit, s.strategicFit),
+              _ScoreRow(t.projectCommandScoreSynergy, s.synergyScore),
+              _ScoreRow(t.projectCommandScoreRoi, s.roiScore),
+              _ScoreRow(t.projectCommandScoreMomentum, s.momentumScore),
+              _ScoreRow(t.opportunityDetailScoreMarket, s.marketScore),
+              _ScoreRow(t.projectCommandScoreExecution, s.executionScore),
               const SizedBox(height: 8),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Ações: ${s.completedActions}/${s.actionCount} (${s.completionRate}%)',
+                    t.projectCommandActionsStats(
+                        s.completedActions, s.actionCount, s.completionRate),
                     style:
                         const TextStyle(color: Colors.white54, fontSize: 12),
                   ),
                   Text(
-                    'ROI total: ${_fmtRevenue(s.totalRoi)}',
+                    t.projectCommandTotalRoi(_fmtRevenue(s.totalRoi, t)),
                     style:
                         const TextStyle(color: Colors.white54, fontSize: 12),
                   ),
@@ -1087,27 +1093,27 @@ class _ProjectDetailSheet extends ConsumerWidget {
 
             // Scores do projeto (quando sem ecosystemScore ainda)
             if (s == null) ...[
-              _sectionTitle('Métricas do Projeto'),
+              _sectionTitle(t.projectCommandSectionProjectMetrics),
               Row(
                 children: [
                   Expanded(
                     child: _MetricTile(
-                        label: 'Oportunidade',
+                        label: t.projectCommandStatOpportunity,
                         value: '${project.opportunityScore}',
                         color: const Color(0xFF00BCD4)),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: _MetricTile(
-                        label: 'Complexidade',
+                        label: t.projectCommandMetricComplexity,
                         value: '${project.complexityScore}',
                         color: const Color(0xFFFFD93D)),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: _MetricTile(
-                        label: 'Potencial',
-                        value: _fmtRevenue(project.revenuePotential),
+                        label: t.projectCommandStatPotential,
+                        value: _fmtRevenue(project.revenuePotential, t),
                         color: const Color(0xFF6BCB77)),
                   ),
                 ],
@@ -1117,28 +1123,28 @@ class _ProjectDetailSheet extends ConsumerWidget {
 
             // Pontos fortes
             if (s != null && s.strengths.isNotEmpty) ...[
-              _sectionTitle('Pontos Fortes'),
+              _sectionTitle(t.projectCommandSectionStrengths),
               ..._bullets(s.strengths, const Color(0xFF6BCB77), '✓ '),
               const SizedBox(height: 12),
             ],
 
             // Riscos
             if (s != null && s.risks.isNotEmpty) ...[
-              _sectionTitle('Riscos'),
+              _sectionTitle(t.opportunityDetailRisksTitle),
               ..._bullets(s.risks, const Color(0xFFFF6B6B), '⚠ '),
               const SizedBox(height: 12),
             ],
 
             // Quick wins
             if (s != null && s.quickWins.isNotEmpty) ...[
-              _sectionTitle('Quick Wins'),
+              _sectionTitle(t.projectCommandSectionQuickWins),
               ..._bullets(s.quickWins, const Color(0xFFFFD93D), '⚡ '),
               const SizedBox(height: 12),
             ],
 
             // Next actions (from detailsJson)
             if (project.nextActions.isNotEmpty) ...[
-              _sectionTitle('Próximas Ações'),
+              _sectionTitle(t.projectCommandSectionNextActions),
               ..._bullets(project.nextActions, const Color(0xFFAB83FF), '→ '),
               const SizedBox(height: 12),
             ],
@@ -1149,7 +1155,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
             if (intelligenceProfile != null) ...[
               const Divider(color: Color(0xFF333355)),
               const SizedBox(height: 12),
-              _sectionTitle('Perfil de Inteligência'),
+              _sectionTitle(t.projectCommandSectionIntelligenceProfile),
               _intelligenceSection(context, ref, intelligenceProfile!),
               const SizedBox(height: 8),
             ],
@@ -1160,7 +1166,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
             // resource_allocation_screen.dart.
             const Divider(color: Color(0xFF333355)),
             const SizedBox(height: 12),
-            _sectionTitle('Alocação de Recursos'),
+            _sectionTitle(t.projectCommandSectionResourceAllocation),
             _ResourceAllocationSection(
               projectId: project.id,
               projectName: project.name,
@@ -1186,7 +1192,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                   Expanded(
                     child: _SheetButton(
                       icon: Icons.analytics_rounded,
-                      label: 'Ver Análise de Mercado',
+                      label: t.projectCommandViewMarketAnalysis,
                       color: const Color(0xFF00BCD4),
                       onTap: onAnalyze!,
                     ),
@@ -1201,7 +1207,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                   Expanded(
                     child: _SheetButton(
                       icon: Icons.menu_book_rounded,
-                      label: 'Ver Conhecimentos',
+                      label: t.projectCommandViewKnowledge,
                       color: const Color(0xFF00BCD4),
                       onTap: onViewKnowledge!,
                     ),
@@ -1212,7 +1218,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                   Expanded(
                     child: _SheetButton(
                       icon: Icons.psychology_rounded,
-                      label: 'Analisar com IA',
+                      label: t.projectCommandAnalyzeWithAi,
                       color: const Color(0xFF6C63FF),
                       onTap: onAnalyzeKnowledge!,
                     ),
@@ -1225,7 +1231,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                 Expanded(
                   child: _SheetButton(
                     icon: Icons.play_arrow_rounded,
-                    label: 'Ativar',
+                    label: t.projectCommandActionActivate,
                     color: const Color(0xFF6BCB77),
                     onTap: () => onStatusChange('active'),
                   ),
@@ -1234,7 +1240,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                 Expanded(
                   child: _SheetButton(
                     icon: Icons.pause_rounded,
-                    label: 'Pausar',
+                    label: t.projectCommandActionPause,
                     color: const Color(0xFFFFD93D),
                     onTap: () => onStatusChange('paused'),
                   ),
@@ -1243,7 +1249,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                 Expanded(
                   child: _SheetButton(
                     icon: Icons.check_circle_outline_rounded,
-                    label: 'Concluir',
+                    label: t.projectCommandActionComplete,
                     color: const Color(0xFF4D96FF),
                     onTap: () => onStatusChange('completed'),
                   ),
@@ -1265,7 +1271,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                 Expanded(
                   child: _SheetButton(
                     icon: Icons.delete_outline_rounded,
-                    label: 'Excluir Projeto',
+                    label: t.projectCommandDeleteProject,
                     color: const Color(0xFFFF6B6B),
                     onTap: onDelete,
                   ),
@@ -1279,6 +1285,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
   }
 
   Widget _intelligenceSection(BuildContext context, WidgetRef ref, ProjectIntelligenceProfile p) {
+    final t = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1299,7 +1306,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Maturidade: ${p.maturityLabel}',
+                      t.projectCommandMaturityLabel(p.maturityLabel),
                       style: const TextStyle(
                         color: Color(0xFF6C63FF),
                         fontWeight: FontWeight.bold,
@@ -1324,23 +1331,23 @@ class _ProjectDetailSheet extends ConsumerWidget {
 
         // Identity: niche, audience, monetization
         if (p.niche != 'Não definido') ...[
-          _infoRow('🎯 Nicho', p.niche),
+          _infoRow('🎯 ${t.projectCommandNiche}', p.niche),
         ],
         if (p.targetAudience != 'Não definido') ...[
-          _infoRow('👥 Público', p.targetAudience),
+          _infoRow('👥 ${t.projectCommandAudience}', p.targetAudience),
         ],
         if (p.monetizationModel != 'Não definido') ...[
-          _infoRow('💰 Monetização', p.monetizationModel),
+          _infoRow('💰 ${t.projectCommandMonetization}', p.monetizationModel),
         ],
         if (p.valueProposition.isNotEmpty) ...[
-          _infoRow('✨ Proposta', p.valueProposition),
+          _infoRow('✨ ${t.projectCommandValueProposition}', p.valueProposition),
         ],
 
         // Identified topics
         if (p.identifiedTopics.isNotEmpty) ...[
           const SizedBox(height: 8),
-          const Text('Tópicos identificados',
-              style: TextStyle(color: Colors.white38, fontSize: 10, fontWeight: FontWeight.w600)),
+          Text(t.projectCommandIdentifiedTopics,
+              style: const TextStyle(color: Colors.white38, fontSize: 10, fontWeight: FontWeight.w600)),
           const SizedBox(height: 4),
           Wrap(
             spacing: 6,
@@ -1360,8 +1367,8 @@ class _ProjectDetailSheet extends ConsumerWidget {
         // Missing knowledge gaps
         if (p.missingKnowledge.isNotEmpty) ...[
           const SizedBox(height: 8),
-          const Text('Lacunas de conhecimento',
-              style: TextStyle(color: Colors.white38, fontSize: 10, fontWeight: FontWeight.w600)),
+          Text(t.projectCommandKnowledgeGaps,
+              style: const TextStyle(color: Colors.white38, fontSize: 10, fontWeight: FontWeight.w600)),
           const SizedBox(height: 4),
           ...p.missingKnowledge.take(3).map((gap) => Padding(
             padding: const EdgeInsets.only(bottom: 2),
@@ -1378,7 +1385,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
         // Related projects
         if (p.relatedProjectNames.isNotEmpty) ...[
           const SizedBox(height: 8),
-          _infoRow('🔗 Relacionados', p.relatedProjectNames.take(3).join(', ')),
+          _infoRow('🔗 ${t.projectCommandRelatedProjects}', p.relatedProjectNames.take(3).join(', ')),
         ],
 
         const SizedBox(height: 10),
@@ -1392,7 +1399,7 @@ class _ProjectDetailSheet extends ConsumerWidget {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             icon: const Text('🧠', style: TextStyle(fontSize: 14)),
-            label: const Text('Perguntar à IVE sobre este perfil', style: TextStyle(fontSize: 13)),
+            label: Text(t.projectCommandAskIveAboutProfile, style: const TextStyle(fontSize: 13)),
             onPressed: () {
               Navigator.of(context).pop();
               // IVE-COMMERCIAL-FOUNDATION-11: este é o Project Command
@@ -1612,10 +1619,10 @@ class _ResourceAllocationSectionState
     _budgetParseError = null;
   }
 
-  void _onBudgetChanged(String text, ProjectResourceAllocationNotifier notifier) {
+  void _onBudgetChanged(String text, ProjectResourceAllocationNotifier notifier, AppLocalizations t) {
     final cents = parseMoneyInputToCents(text);
     if (cents == null) {
-      setState(() => _budgetParseError = 'Valor inválido. Use apenas números, ex: 1500.00');
+      setState(() => _budgetParseError = t.projectCommandInvalidBudgetValue);
       return;
     }
     if (_budgetParseError != null) setState(() => _budgetParseError = null);
@@ -1627,6 +1634,7 @@ class _ResourceAllocationSectionState
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     final provider = projectResourceAllocationProvider(widget.projectId);
     final asyncState = ref.watch(provider);
     final notifier = ref.read(provider.notifier);
@@ -1644,9 +1652,9 @@ class _ResourceAllocationSectionState
         padding: EdgeInsets.symmetric(vertical: 16),
         child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
       ),
-      error: (e, _) => const Text(
-        'Não foi possível carregar a alocação de recursos deste projeto.',
-        style: TextStyle(color: Colors.white38, fontSize: 12),
+      error: (e, _) => Text(
+        t.projectCommandResourceLoadError,
+        style: const TextStyle(color: Colors.white38, fontSize: 12),
       ),
       data: (editState) {
         if (!_controllersInitialized) {
@@ -1682,15 +1690,17 @@ class _ResourceAllocationSectionState
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      'Salvo: ${editState.saved.hoursAllocated}h · '
-                      '${_fmtCents(editState.saved.budgetAllocatedCents)} '
-                      '(${editState.saved.currency})',
+                      t.projectCommandSavedAllocation(
+                        editState.saved.hoursAllocated,
+                        _fmtCents(editState.saved.budgetAllocatedCents),
+                        editState.saved.currency,
+                      ),
                       style: const TextStyle(color: Color(0xFF00BCD4), fontSize: 12),
                     ),
                   ),
                   if (editState.isDirty)
-                    const Text('EDITANDO',
-                        style: TextStyle(
+                    Text(t.projectCommandEditingBadge,
+                        style: const TextStyle(
                             color: Color(0xFFFFD93D),
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
@@ -1710,7 +1720,7 @@ class _ResourceAllocationSectionState
                     keyboardType: TextInputType.number,
                     style: const TextStyle(color: Colors.white, fontSize: 13),
                     decoration: InputDecoration(
-                      labelText: 'Horas',
+                      labelText: t.projectCommandHoursLabel,
                       labelStyle: const TextStyle(color: Colors.white38, fontSize: 12),
                       errorText: hoursError,
                       isDense: true,
@@ -1736,7 +1746,7 @@ class _ResourceAllocationSectionState
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     style: const TextStyle(color: Colors.white, fontSize: 13),
                     decoration: InputDecoration(
-                      labelText: 'Orçamento (${editState.preview.currency})',
+                      labelText: t.projectCommandBudgetLabel(editState.preview.currency),
                       labelStyle: const TextStyle(color: Colors.white38, fontSize: 12),
                       errorText: budgetError,
                       isDense: true,
@@ -1749,7 +1759,7 @@ class _ResourceAllocationSectionState
                         borderSide: const BorderSide(color: Color(0xFF6C63FF)),
                       ),
                     ),
-                    onChanged: (text) => _onBudgetChanged(text, notifier),
+                    onChanged: (text) => _onBudgetChanged(text, notifier, t),
                   ),
                 ),
               ],
@@ -1790,7 +1800,7 @@ class _ResourceAllocationSectionState
                       side: const BorderSide(color: Colors.white24),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                     ),
-                    child: const Text('Cancelar', style: TextStyle(fontSize: 13)),
+                    child: Text(t.commonCancel, style: const TextStyle(fontSize: 13)),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -1808,14 +1818,14 @@ class _ResourceAllocationSectionState
                             height: 16,
                             child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                           )
-                        : const Text('Salvar', style: TextStyle(fontSize: 13, color: Colors.white)),
+                        : Text(t.commonSave, style: const TextStyle(fontSize: 13, color: Colors.white)),
                   ),
                 ),
               ],
             ),
             if (editState.status == AllocationEditStatus.error && editState.error != null) ...[
               const SizedBox(height: 6),
-              Text('Erro ao salvar: ${editState.error}',
+              Text(t.projectCommandSaveAllocationError('${editState.error}'),
                   style: const TextStyle(color: Color(0xFFFF6B6B), fontSize: 11)),
             ],
             const SizedBox(height: 10),
@@ -1842,7 +1852,7 @@ class _ResourceAllocationSectionState
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
                 icon: const Text('🧠', style: TextStyle(fontSize: 14)),
-                label: const Text('Analisar recursos com a IVE', style: TextStyle(fontSize: 13)),
+                label: Text(t.projectCommandAnalyzeResourcesWithIve, style: const TextStyle(fontSize: 13)),
                 onPressed: () {
                   final request = IveInteractionRequest(
                     projectId: widget.projectId,

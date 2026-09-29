@@ -7,6 +7,7 @@ import '../../../data/models/copilot_context_data.dart';
 import '../../../data/models/ive_interaction_request.dart';
 import '../../../data/models/knowledge_item.dart';
 import '../../../data/models/project.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/ive_context_provider.dart';
 import '../../../providers/knowledge_provider.dart';
 import '../../../providers/project_provider.dart';
@@ -36,6 +37,7 @@ class _KnowledgeVaultScreenState extends ConsumerState<KnowledgeVaultScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final itemsAsync = _projectId != null
         ? ref.watch(knowledgeItemsByProjectProvider(_projectId!))
         : ref.watch(knowledgeItemsProvider);
@@ -63,15 +65,15 @@ class _KnowledgeVaultScreenState extends ConsumerState<KnowledgeVaultScreen> {
         ),
         backgroundColor: const Color(0xFF0F0F1A),
         foregroundColor: Colors.white,
-        title: const Text(
-          'Cofre de Conhecimento',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        title: Text(
+          l10n.knowledgeVaultTitle,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
             onPressed: _invalidateItems,
-            tooltip: 'Atualizar',
+            tooltip: l10n.knowledgeVaultRefreshTooltip,
           ),
         ],
       ),
@@ -79,7 +81,7 @@ class _KnowledgeVaultScreenState extends ConsumerState<KnowledgeVaultScreen> {
         backgroundColor: const Color(0xFF6C63FF),
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add_rounded),
-        label: const Text('Novo Item'),
+        label: Text(l10n.knowledgeVaultNewItem),
         onPressed: () async {
           await context.push(
             AppConstants.routeKnowledgeNew,
@@ -95,19 +97,21 @@ class _KnowledgeVaultScreenState extends ConsumerState<KnowledgeVaultScreen> {
               projects: projects,
               selectedId: _projectId,
               onSelect: (id) => setState(() => _projectId = id),
+              l10n: l10n,
             ),
           Expanded(
             child: itemsAsync.when(
               loading: () =>
                   const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(
-                child: Text('Erro: $e',
+                child: Text(l10n.iveChatErrorPrefix('$e'),
                     style: const TextStyle(color: Colors.white70)),
               ),
               data: (items) => items.isEmpty
                   ? _EmptyState(
                       projectFiltered: _projectId != null,
                       projectName: selectedProjectName,
+                      l10n: l10n,
                       onAdd: () async {
                         await context.push(
                           AppConstants.routeKnowledgeNew,
@@ -139,11 +143,13 @@ class _ProjectFilter extends StatelessWidget {
     required this.projects,
     required this.selectedId,
     required this.onSelect,
+    required this.l10n,
   });
 
   final List<dynamic> projects;
   final String?       selectedId;
   final void Function(String?) onSelect;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -154,7 +160,7 @@ class _ProjectFilter extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         children: [
           _Chip(
-            label: 'Todos',
+            label: l10n.knowledgeVaultFilterAll,
             selected: selectedId == null,
             onTap: () => onSelect(null),
           ),
@@ -210,11 +216,13 @@ class _Chip extends StatelessWidget {
 class _EmptyState extends StatelessWidget {
   const _EmptyState({
     required this.onAdd,
+    required this.l10n,
     this.projectFiltered = false,
     this.projectName,
   });
 
   final VoidCallback onAdd;
+  final AppLocalizations l10n;
   final bool         projectFiltered;
   final String?      projectName;
 
@@ -231,8 +239,8 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               projectFiltered
-                  ? 'Nenhum item em ${projectName ?? 'este projeto'}'
-                  : 'Cofre vazio',
+                  ? l10n.knowledgeVaultEmptyProjectTitle(projectName ?? l10n.knowledgeVaultThisProject)
+                  : l10n.knowledgeVaultEmptyTitle,
               style: const TextStyle(
                   color: Colors.white,
                   fontSize: 20,
@@ -241,8 +249,8 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               projectFiltered
-                  ? 'Adicione conhecimento a este projeto para que a IA extraia insights personalizados.'
-                  : 'Adicione textos, URLs ou arquivos para que a IA extraia insights de marketing, SEO e monetização.',
+                  ? l10n.knowledgeVaultEmptyProjectBody
+                  : l10n.knowledgeVaultEmptyBody,
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.white54, fontSize: 14),
             ),
@@ -255,7 +263,7 @@ class _EmptyState extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
               icon: const Icon(Icons.add_rounded),
-              label: const Text('Adicionar Conhecimento'),
+              label: Text(l10n.knowledgeVaultAddKnowledge),
               onPressed: onAdd,
             ),
           ],
@@ -331,6 +339,7 @@ class _ProjectPickerSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       decoration: const BoxDecoration(
         color: Color(0xFF1A1A2E),
@@ -352,7 +361,7 @@ class _ProjectPickerSheet extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Vincular "${item.title}" a projeto',
+            l10n.knowledgeVaultLinkToProject(item.title),
             style: const TextStyle(
               color: Colors.white,
               fontSize: 15,
@@ -365,14 +374,14 @@ class _ProjectPickerSheet extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Text(
-                'Projeto atual: ${projects.where((p) => p.id == item.projectId).map((p) => p.name).firstOrNull ?? item.projectId}',
+                l10n.knowledgeVaultCurrentProject(projects.where((p) => p.id == item.projectId).map((p) => p.name).firstOrNull ?? item.projectId!),
                 style: const TextStyle(color: Color(0xFF6C63FF), fontSize: 12),
               ),
             ),
           const SizedBox(height: 16),
           // Opção "Sem projeto"
           _ProjectTile(
-            name:     'Sem projeto',
+            name:     l10n.knowledgeVaultNoProject,
             icon:     Icons.folder_off_rounded,
             selected: item.projectId == null,
             onTap: () async {
@@ -382,9 +391,9 @@ class _ProjectPickerSheet extends ConsumerWidget {
               onInvalidate();
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Vínculo com projeto removido.'),
-                    backgroundColor: Color(0xFF6C63FF),
+                  SnackBar(
+                    content: Text(l10n.knowledgeVaultUnlinkedSnack),
+                    backgroundColor: const Color(0xFF6C63FF),
                   ),
                 );
               }
@@ -405,7 +414,7 @@ class _ProjectPickerSheet extends ConsumerWidget {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Vinculado ao projeto "${p.name}"'),
+                      content: Text(l10n.knowledgeVaultLinkedSnack(p.name)),
                       backgroundColor: const Color(0xFF4CAF50),
                     ),
                   );
@@ -537,6 +546,7 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Card(
       color: const Color(0xFF1A1A2E),
       margin: const EdgeInsets.only(bottom: 12),
@@ -595,7 +605,7 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
               ],
               if (item.niche != null) ...[
                 const SizedBox(height: 4),
-                Text('Nicho: ${item.niche}',
+                Text(l10n.knowledgeVaultNicheLabel(item.niche!),
                     style: const TextStyle(color: Colors.white54, fontSize: 12)),
               ],
               const SizedBox(height: 12),
@@ -620,10 +630,10 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
                 children: [
                   _ActionButton(
                     label: item.status == 'analyzed'
-                        ? 'Ver Análise'
+                        ? l10n.knowledgeVaultViewAnalysis
                         : item.status == 'processing'
-                            ? 'Processando…'
-                            : 'Analisar com IA',
+                            ? l10n.knowledgeVaultProcessing
+                            : l10n.knowledgeVaultAnalyzeWithAi,
                     icon: item.status == 'analyzed'
                         ? Icons.insights_rounded
                         : Icons.auto_awesome_rounded,
@@ -643,7 +653,7 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
                         await _exec.run<void>(
                           context: context,
                           ref: ref,
-                          analysisLabel: 'Analisar com IA',
+                          analysisLabel: l10n.knowledgeVaultAnalyzeWithAi,
                           request: IveInteractionRequest(
                             projectId:        item.projectId,
                             sourceModule:     'knowledge_vault',
@@ -667,7 +677,7 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('Erro ao analisar: $e'),
+                              content: Text(l10n.knowledgeVaultAnalyzeError('$e')),
                               backgroundColor: const Color(0xFFF44336),
                             ),
                           );
@@ -676,7 +686,7 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
                     },
                   ),
                   _ActionButton(
-                    label: 'Editar',
+                    label: l10n.knowledgeVaultEdit,
                     icon: Icons.edit_rounded,
                     color: Colors.white24,
                     onTap: () => context.push(
@@ -694,8 +704,8 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
                   IveExclusionRegion(
                     child: _ActionButton(
                       label: item.projectId == null
-                          ? 'Adicionar a Projeto'
-                          : 'Trocar Projeto',
+                          ? l10n.knowledgeVaultAddToProject
+                          : l10n.knowledgeVaultChangeProject,
                       icon: Icons.folder_special_rounded,
                       color: const Color(0xFF00BCD4),
                       onTap: () => _showProjectPicker(
@@ -715,16 +725,16 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
                       icon: const Icon(Icons.auto_awesome_rounded,
                           color: Color(0xFF6C63FF)),
                       iconSize: 20,
-                      tooltip: 'Explicar com IVE',
+                      tooltip: l10n.knowledgeVaultExplainWithIve,
                       onPressed: () {
                         final ctx = ref.read(iveContextDataProvider(item.projectId)).valueOrNull;
                         final contextData =
                             ctx != null ? CopilotContextData.fromIveContext(ctx) : const CopilotContextData();
                         showCopilotChat(
                           context,
-                          screenName: 'Conhecimento',
+                          screenName: l10n.iveScreenKnowledge,
                           contextData: contextData,
-                          initialMessage: 'Resuma e explique o documento "${item.title}".',
+                          initialMessage: l10n.knowledgeVaultExplainPrompt(item.title),
                           request: IveInteractionRequest(
                             projectId:        item.projectId,
                             sourceModule:     'knowledge_vault',
@@ -739,8 +749,8 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
                     icon: const Icon(Icons.delete_rounded,
                         color: Colors.white24),
                     iconSize: 20,
-                    onPressed: () => _confirmDelete(context, ref),
-                    tooltip: 'Excluir',
+                    onPressed: () => _confirmDelete(context, ref, l10n),
+                    tooltip: l10n.knowledgeVaultDelete,
                   ),
                 ],
               ),
@@ -751,27 +761,27 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
     );
   }
 
-  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref, AppLocalizations l10n) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A2E),
-        title: const Text('Excluir item?',
-            style: TextStyle(color: Colors.white)),
+        title: Text(l10n.knowledgeVaultDeleteItemTitle,
+            style: const TextStyle(color: Colors.white)),
         content: Text(
-          'O item "${item.title}" e sua análise serão removidos.',
+          l10n.knowledgeVaultDeleteItemBody(item.title),
           style: const TextStyle(color: Colors.white70),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar',
-                style: TextStyle(color: Colors.white54)),
+            child: Text(l10n.commonCancel,
+                style: const TextStyle(color: Colors.white54)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Excluir',
-                style: TextStyle(color: Color(0xFFF44336))),
+            child: Text(l10n.knowledgeVaultDelete,
+                style: const TextStyle(color: Color(0xFFF44336))),
           ),
         ],
       ),
@@ -784,7 +794,7 @@ class _KnowledgeCardState extends ConsumerState<_KnowledgeCard> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erro ao excluir: $e'),
+            content: Text(l10n.knowledgeVaultDeleteError('$e')),
             backgroundColor: const Color(0xFFF44336),
           ),
         );
@@ -801,17 +811,18 @@ class _StatusChip extends StatelessWidget {
   final String status;
   final Color  color;
 
-  String get _label {
+  String _label(AppLocalizations l10n) {
     switch (status) {
-      case 'analyzed':   return 'Analisado';
-      case 'processing': return 'Processando';
-      case 'error':      return 'Erro';
-      default:           return 'Pendente';
+      case 'analyzed':   return l10n.knowledgeVaultStatusAnalyzed;
+      case 'processing': return l10n.knowledgeVaultStatusProcessing;
+      case 'error':      return l10n.knowledgeVaultStatusError;
+      default:           return l10n.knowledgeVaultStatusPending;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
@@ -820,7 +831,7 @@ class _StatusChip extends StatelessWidget {
         border: Border.all(color: color.withOpacity(0.4)),
       ),
       child: Text(
-        _label,
+        _label(l10n),
         style: TextStyle(
             color: color, fontSize: 11, fontWeight: FontWeight.w600),
       ),

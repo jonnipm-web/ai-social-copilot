@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../data/models/content_item.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/content_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
@@ -22,6 +23,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final itemsAsync = _projectId != null
         ? ref.watch(contentItemsByProjectProvider(_projectId!))
         : ref.watch(contentItemsProvider);
@@ -41,13 +43,13 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
             }
           },
         ),
-        title: const Text('Biblioteca de Conteúdo'),
+        title: Text(l10n.contentLibraryTitle),
       ),
       drawer: const AppDrawer(),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push(AppConstants.routeContentNew),
         icon: const Icon(Icons.add_rounded),
-        label: const Text('Novo Item'),
+        label: Text(l10n.contentLibraryNewItem),
         backgroundColor: const Color(0xFF6C63FF),
       ),
       body: Column(
@@ -62,7 +64,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                 children: [
                   _FilterChip(
-                    label: 'Todos',
+                    label: l10n.commonAll,
                     selected: _projectId == null,
                     onTap: () => setState(() => _projectId = null),
                   ),
@@ -84,7 +86,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               children: [
                 _TypeChip(
-                  label: 'Todos',
+                  label: l10n.commonAll,
                   selected: _selectedType == null,
                   onTap: () => setState(() => _selectedType = null),
                 ),
@@ -102,7 +104,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
               loading: () =>
                   const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(
-                child: Text('Erro: $e',
+                child: Text(l10n.commonError,
                     style: const TextStyle(color: Colors.white54)),
               ),
               data: (items) {
@@ -120,17 +122,17 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
                         const SizedBox(height: 12),
                         Text(
                           _selectedType != null
-                              ? 'Nenhum item deste tipo.'
+                              ? l10n.contentLibraryEmptyType
                               : _projectId != null
-                                  ? 'Nenhum item neste projeto.'
-                                  : 'Biblioteca vazia.',
+                                  ? l10n.contentLibraryEmptyProject
+                                  : l10n.contentLibraryEmpty,
                           style:
                               const TextStyle(color: Colors.white54),
                         ),
                         const SizedBox(height: 4),
-                        const Text(
-                          'Adicione itens usando o botão abaixo.',
-                          style: TextStyle(
+                        Text(
+                          l10n.contentLibraryEmptyHint,
+                          style: const TextStyle(
                               color: Colors.white38, fontSize: 12),
                         ),
                       ],
@@ -270,6 +272,7 @@ class _ContentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final typeLabel = ContentItem.typeLabels[item.type] ?? item.type;
     final typeColor = _typeColor(item.type);
 
@@ -349,21 +352,21 @@ class _ContentCard extends StatelessWidget {
                         final ok = await showDialog<bool>(
                           context: context,
                           builder: (ctx) => AlertDialog(
-                            title: const Text('Excluir item'),
+                            title: Text(l10n.contentLibraryDeleteTitle),
                             content: Text(
-                                'Deseja excluir "${item.title}"?'),
+                                l10n.contentLibraryDeleteConfirm(item.title)),
                             actions: [
                               TextButton(
                                 onPressed: () =>
                                     Navigator.pop(ctx, false),
-                                child: const Text('Cancelar'),
+                                child: Text(l10n.commonCancel),
                               ),
                               TextButton(
                                 onPressed: () =>
                                     Navigator.pop(ctx, true),
-                                child: const Text('Excluir',
+                                child: Text(l10n.commonDelete,
                                     style:
-                                        TextStyle(color: Colors.red)),
+                                        const TextStyle(color: Colors.red)),
                               ),
                             ],
                           ),
@@ -378,7 +381,7 @@ class _ContentCard extends StatelessWidget {
                             if (context.mounted) {
                               ScaffoldMessenger.of(context)
                                   .showSnackBar(SnackBar(
-                                content: Text('Erro ao excluir: $e'),
+                                content: Text(l10n.contentLibraryDeleteError('$e')),
                                 backgroundColor:
                                     const Color(0xFFF44336),
                               ));
@@ -388,10 +391,10 @@ class _ContentCard extends StatelessWidget {
                       }
                     },
                     itemBuilder: (_) => [
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'delete',
-                        child: Text('Excluir',
-                            style: TextStyle(color: Colors.red)),
+                        child: Text(l10n.commonDelete,
+                            style: const TextStyle(color: Colors.red)),
                       ),
                     ],
                   ),

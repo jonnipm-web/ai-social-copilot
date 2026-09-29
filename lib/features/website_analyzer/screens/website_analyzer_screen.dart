@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../data/models/ive_interaction_request.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/website_analyzer_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
 import '../../../shared/widgets/app_drawer.dart';
@@ -43,13 +44,14 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
 
   Future<void> _analyze() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
+    final l10n = AppLocalizations.of(context)!;
 
     final url = _urlController.text.trim();
     try {
       final analysis = await _exec.run(
         context: context,
         ref: ref,
-        analysisLabel: 'Analisar Site',
+        analysisLabel: l10n.websiteAnalyzerAnalyzeButton,
         request: IveInteractionRequest(
           sourceModule:     'website_analyzer',
           sourceEntityType: 'website_analysis',
@@ -66,7 +68,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erro ao analisar o site: $e'),
+            content: Text(l10n.websiteAnalyzerAnalyzeError('$e')),
             backgroundColor: Colors.red,
           ),
         );
@@ -83,6 +85,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
   }
 
   Widget _buildScaffold(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final analyzerState = ref.watch(websiteAnalyzerNotifierProvider);
     final analysesAsync = ref.watch(websiteAnalysesProvider);
     final busy = analyzerState.isLoading || _exec.isBusy;
@@ -102,9 +105,9 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
           },
         ),
         backgroundColor: _cardColor,
-        title: const Text(
-          'Website Analyzer',
-          style: TextStyle(color: Colors.white),
+        title: Text(
+          l10n.navWebsiteAnalyzer,
+          style: const TextStyle(color: Colors.white),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
@@ -129,9 +132,9 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                     children: [
                       Icon(Icons.language, color: _accent, size: 28),
                       const SizedBox(width: 12),
-                      const Text(
-                        'Analisar Website',
-                        style: TextStyle(
+                      Text(
+                        l10n.websiteAnalyzerHeaderTitle,
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -141,7 +144,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Analise seu site e receba um diagnóstico completo com SEO, AdSense e oportunidades de monetização.',
+                    l10n.websiteAnalyzerHeaderBody,
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.7),
                       fontSize: 14,
@@ -164,9 +167,9 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                     style: const TextStyle(color: Colors.white),
                     keyboardType: TextInputType.url,
                     decoration: InputDecoration(
-                      labelText: 'URL do site (ex: https://meusite.com)',
+                      labelText: l10n.websiteAnalyzerUrlLabel,
                       labelStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
-                      hintText: 'https://meusite.com',
+                      hintText: l10n.websiteAnalyzerUrlHint,
                       hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
                       prefixIcon: Icon(Icons.link, color: _accent),
                       filled: true,
@@ -190,11 +193,11 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        return 'Por favor, insira a URL do site';
+                        return l10n.websiteAnalyzerUrlRequired;
                       }
                       final uri = Uri.tryParse(value.trim());
                       if (uri == null || !uri.hasScheme) {
-                        return 'URL inválida. Use o formato https://meusite.com';
+                        return l10n.websiteAnalyzerUrlInvalid;
                       }
                       return null;
                     },
@@ -215,7 +218,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                             )
                           : const Icon(Icons.search),
                       label: Text(
-                        busy ? 'Analisando...' : 'Analisar Site',
+                        busy ? l10n.websiteAnalyzerAnalyzing : l10n.websiteAnalyzerAnalyzeButton,
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -242,9 +245,9 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
               children: [
                 Icon(Icons.history, color: _primary, size: 20),
                 const SizedBox(width: 8),
-                const Text(
-                  'Análises Anteriores',
-                  style: TextStyle(
+                Text(
+                  l10n.websiteAnalyzerPreviousTitle,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -269,7 +272,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  'Erro ao carregar análises: $error',
+                  l10n.websiteAnalyzerLoadError('$error'),
                   style: const TextStyle(color: Colors.red),
                 ),
               ),
@@ -291,7 +294,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          'Nenhuma análise ainda',
+                          l10n.websiteAnalyzerEmptyTitle,
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.5),
                             fontSize: 16,
@@ -299,7 +302,7 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Insira uma URL acima para começar',
+                          l10n.websiteAnalyzerEmptyBody,
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.3),
                             fontSize: 13,
@@ -374,13 +377,13 @@ class _WebsiteAnalyzerScreenState extends ConsumerState<WebsiteAnalyzerScreen> {
                             Row(
                               children: [
                                 _ScoreChip(
-                                  label: 'Site',
+                                  label: l10n.websiteAnalyzerScoreSite,
                                   score: websiteScore,
                                   color: _scoreColor(websiteScore),
                                 ),
                                 const SizedBox(width: 8),
                                 _ScoreChip(
-                                  label: 'AdSense',
+                                  label: l10n.websiteAnalyzerScoreAdsense,
                                   score: adsenseScore,
                                   color: _scoreColor(adsenseScore),
                                 ),

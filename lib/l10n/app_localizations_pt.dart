@@ -1962,4 +1962,2257 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get dashPendingActionsEmpty =>
       'Nenhuma ação pendente. O Action Engine preencherá automaticamente com base nas suas análises.';
+
+  @override
+  String get commonAll => 'Todos';
+
+  @override
+  String get commonDelete => 'Excluir';
+
+  @override
+  String get actionEngineComingSoonBody =>
+      'O motor de ações está sendo calibrado.\nEm breve você terá um sistema inteligente que transforma análises em tarefas executáveis com priorização automática.';
+
+  @override
+  String get actionEngineComingSoonPro => 'Disponível em breve — Plano Pro';
+
+  @override
+  String get actionEngineSectionPending => 'Pendentes';
+
+  @override
+  String get actionEngineSectionActive => 'Em Execução';
+
+  @override
+  String get actionEngineSectionCompleted => 'Concluídas';
+
+  @override
+  String get actionEngineSummaryPending => 'Pendentes';
+
+  @override
+  String get actionEngineSummaryActive => 'Ativas';
+
+  @override
+  String get actionEngineSummaryCompleted => 'Concluídas';
+
+  @override
+  String get actionEngineDeleteTitle => 'Excluir ação?';
+
+  @override
+  String actionEngineDeleteBody(String title) {
+    return 'A ação \"$title\" será removida permanentemente.';
+  }
+
+  @override
+  String get actionEngineDelete => 'Excluir';
+
+  @override
+  String get actionEngineApprove => 'Aprovar';
+
+  @override
+  String get actionEngineExecute => 'Executar';
+
+  @override
+  String get actionEngineVerify => 'Verificar';
+
+  @override
+  String get actionEnginePause => 'Pausar';
+
+  @override
+  String get actionEngineScoreRoi => 'ROI';
+
+  @override
+  String get actionEngineScoreImpact => 'Impacto';
+
+  @override
+  String get actionEngineScoreEffort => 'Esforço';
+
+  @override
+  String get actionEngineScorePriority => 'Prio.';
+
+  @override
+  String get actionEngineFilterAll => 'Todos';
+
+  @override
+  String get actionEngineEmptyTitle => 'Fila de ações vazia';
+
+  @override
+  String get actionEngineEmptyBody =>
+      'Ações serão geradas automaticamente a partir de análises de mercado e oportunidades.';
+
+  @override
+  String get actionEngineStatusPending => 'Pendente';
+
+  @override
+  String get actionEngineStatusApproved => 'Aprovada';
+
+  @override
+  String get actionEngineStatusExecuting => 'Em execução';
+
+  @override
+  String get actionEngineStatusCompleted => 'Concluída';
+
+  @override
+  String get actionEngineStatusCancelled => 'Cancelada';
+
+  @override
+  String get actionDetailTitle => 'Detalhe da Ação';
+
+  @override
+  String get actionDetailNotFound => 'Ação não encontrada.';
+
+  @override
+  String get actionDetailExecuteWithApproval => 'Executar (com aprovação AEF)';
+
+  @override
+  String get actionDetailRecheck => 'Verificar novamente';
+
+  @override
+  String actionDetailDeleteBody(String title) {
+    return '\"$title\" será removida.';
+  }
+
+  @override
+  String get actionDetailSectionScoreBreakdown => 'Score Breakdown';
+
+  @override
+  String get actionDetailSectionOrigin => 'Origem';
+
+  @override
+  String get actionDetailSectionSources => 'Fontes';
+
+  @override
+  String get actionDetailSectionDescription => 'Descrição';
+
+  @override
+  String get actionDetailSectionRationale => 'Justificativa da IA';
+
+  @override
+  String get actionDetailSectionPlan => 'Plano de Execução';
+
+  @override
+  String get actionDetailSectionRisks => 'Riscos';
+
+  @override
+  String get actionDetailScoreMarket => 'Mercado';
+
+  @override
+  String get actionDetailScoreRevenue => 'Receita';
+
+  @override
+  String get actionDetailScoreRoiFinal => 'ROI / Final';
+
+  @override
+  String get actionDetailScorePriority => 'Prioridade';
+
+  @override
+  String get actionDetailScoreConfidence => 'Confiança';
+
+  @override
+  String get actionDetailOriginGeneratedBy => 'Gerada por';
+
+  @override
+  String get actionDetailOriginProject => 'Projeto';
+
+  @override
+  String get actionDetailOriginOpportunity => 'Oportunidade';
+
+  @override
+  String actionDetailOriginOpportunityValue(String id) {
+    return 'Lab #$id…';
+  }
+
+  @override
+  String get actionDetailOriginMarketAnalysis => 'Análise de mercado';
+
+  @override
+  String actionDetailOriginMarketAnalysisValue(String id) {
+    return 'Market #$id…';
+  }
+
+  @override
+  String get actionDetailOriginCreatedAt => 'Criada em';
+
+  @override
+  String get actionDetailOriginUpdatedAt => 'Atualizada em';
+
+  @override
+  String get actionDetailApproveAction => 'Aprovar Ação';
+
+  @override
+  String get actionDetailReconciliationNeeded =>
+      'O AEF não confirmou o resultado (reconciliação necessária). Verifique novamente — o mesmo pedido é seguro de repetir.';
+
+  @override
+  String get actionDetailCompletedVerified =>
+      'Concluída (recibo AEF verificado)';
+
+  @override
+  String get actionDetailCompleted => 'Concluída';
+
+  @override
+  String get actionDetailAskIve => 'Perguntar à IVE sobre esta ação';
+
+  @override
+  String actionDetailAskIveMessage(String title) {
+    return 'Analise a ação \"$title\" e me dê orientação sobre como conduzi-la.';
+  }
+
+  @override
+  String get improvePostTitle => 'Melhorar Post';
+
+  @override
+  String improvePostMinLength(int min) {
+    return 'Escreva pelo menos $min caracteres.';
+  }
+
+  @override
+  String improvePostLimitReached(int limit) {
+    return 'Você atingiu o limite de $limit gerações este mês.';
+  }
+
+  @override
+  String get improvePostAnalysisLabel => 'Melhorar Conteúdo';
+
+  @override
+  String get improvePostSuccess => 'Resultado gerado com sucesso!';
+
+  @override
+  String get improvePostClearTitle => 'Limpar texto';
+
+  @override
+  String get improvePostClearBody => 'Deseja apagar todo o conteúdo digitado?';
+
+  @override
+  String get improvePostClearConfirm => 'Limpar';
+
+  @override
+  String improvePostLimitBanner(int limit) {
+    return 'Limite atingido ($limit/$limit gerações este mês).';
+  }
+
+  @override
+  String improvePostRemainingBanner(int remaining, int limit) {
+    return '$remaining de $limit gerações restantes este mês.';
+  }
+
+  @override
+  String get improvePostUpgradeCta => 'Upgrade';
+
+  @override
+  String get improvePostSeePlans => 'Ver planos';
+
+  @override
+  String get improvePostHeading => 'Cole ou escreva seu post';
+
+  @override
+  String get improvePostHint =>
+      'Ex: Hoje aprendi algo incrível sobre produtividade...';
+
+  @override
+  String improvePostCharCount(int count, int max) {
+    return '$count / $max caracteres';
+  }
+
+  @override
+  String get improvePostButtonLabel => '✨  Melhorar post';
+
+  @override
+  String get improvePostButtonLoading => 'Analisando seu conteúdo...';
+
+  @override
+  String miSubErrorPrefix(String error) {
+    return 'Erro: $error';
+  }
+
+  @override
+  String get miCompetitorTitle => 'Concorrentes';
+
+  @override
+  String get miCompetitorSearching => 'Buscando...';
+
+  @override
+  String get miCompetitorDiscoverButton => 'Descobrir';
+
+  @override
+  String get miCompetitorEmptyTitle => 'Nenhum concorrente ainda';
+
+  @override
+  String get miCompetitorEmptyButton => 'Descobrir Concorrentes';
+
+  @override
+  String get miCompetitorStrengthsLabel => 'Pontos fortes:';
+
+  @override
+  String get miCompetitorWeaknessesLabel => 'Pontos fracos:';
+
+  @override
+  String get miCompetitorScoreSimilarity => 'Simil.';
+
+  @override
+  String get miCompetitorScoreAuthority => 'Autor.';
+
+  @override
+  String get miCompetitorScoreRelevance => 'Relev.';
+
+  @override
+  String get miCompetitorScoreOverall => 'Geral';
+
+  @override
+  String get miGapTitle => 'Gap Analysis';
+
+  @override
+  String get miGapAnalyzing => 'Analisando...';
+
+  @override
+  String get miGapAnalyzeButton => 'Analisar';
+
+  @override
+  String get miGapEmptyTitle => 'Nenhuma análise de gaps ainda';
+
+  @override
+  String get miGapEmptyButton => 'Analisar Gaps';
+
+  @override
+  String get miGapSectionContent => 'Gaps de Conteúdo';
+
+  @override
+  String get miGapSectionSeo => 'Gaps de SEO';
+
+  @override
+  String get miGapSectionAuthority => 'Gaps de Autoridade';
+
+  @override
+  String get miGapSectionMonetization => 'Gaps de Monetização';
+
+  @override
+  String get miGapSectionProduct => 'Gaps de Produto';
+
+  @override
+  String miGapTotalIdentified(int count) {
+    return 'Total: $count gaps identificados';
+  }
+
+  @override
+  String get miNicheTitle => 'Nichos & Sub-nichos';
+
+  @override
+  String get miNicheDiscovering => 'Descobrindo...';
+
+  @override
+  String get miNicheDiscoverButton => 'Descobrir';
+
+  @override
+  String get miNicheEmptyTitle => 'Nenhum nicho ainda';
+
+  @override
+  String get miNicheEmptyButton => 'Descobrir Nichos';
+
+  @override
+  String get miNicheLevelNiche => 'Nicho';
+
+  @override
+  String get miNicheLevelSubNiche => 'Sub-nicho';
+
+  @override
+  String get miNicheLevelMicroNiche => 'Micro-nicho';
+
+  @override
+  String get miNicheScoreLabel => 'score';
+
+  @override
+  String get miNicheScorePotential => 'Potencial';
+
+  @override
+  String get miNicheScoreGrowth => 'Crescimento';
+
+  @override
+  String get miNicheScoreMonetization => 'Monetização';
+
+  @override
+  String get miNicheScoreTrend => 'Tendência';
+
+  @override
+  String get miOpportunityTitle => 'Oportunidades';
+
+  @override
+  String get miOpportunitySearching => 'Buscando...';
+
+  @override
+  String get miOpportunityDiscoverButton => 'Descobrir';
+
+  @override
+  String get miOpportunityEmptyTitle => 'Nenhuma oportunidade ainda';
+
+  @override
+  String get miOpportunityEmptyButton => 'Descobrir Oportunidades';
+
+  @override
+  String get miOpportunityScoreMarket => 'Mercado';
+
+  @override
+  String get miOpportunityScoreGrowth => 'Crescimento';
+
+  @override
+  String get miOpportunityScoreMonetization => 'Monetização';
+
+  @override
+  String get miOpportunityScoreDifficulty => 'Dificuldade';
+
+  @override
+  String get miClusterTitle => 'Content Cluster Engine';
+
+  @override
+  String get miClusterKeywordRequired => 'Digite a palavra-chave principal';
+
+  @override
+  String get miClusterEmptyTitle => 'Nenhum cluster ainda';
+
+  @override
+  String get miClusterKeywordFieldLabel => 'Palavra-chave principal';
+
+  @override
+  String get miClusterGenerating => 'Gerando...';
+
+  @override
+  String get miClusterGenerateButton => 'Gerar Content Cluster';
+
+  @override
+  String miClusterKeywordDisplay(String keyword) {
+    return 'Palavra-chave: $keyword';
+  }
+
+  @override
+  String get miClusterSectionClusters => 'Clusters de Conteúdo';
+
+  @override
+  String get miClusterSectionSilos => 'Silos de SEO';
+
+  @override
+  String get miClusterSectionArticles => 'Artigos Sugeridos';
+
+  @override
+  String miClusterArticleKeyword(String keyword) {
+    return 'Keyword: $keyword';
+  }
+
+  @override
+  String get miClusterSectionRoadmap => 'Roadmap Editorial';
+
+  @override
+  String miClusterRoadmapMonth(String month) {
+    return 'Mês $month';
+  }
+
+  @override
+  String get miRevenueTitle => 'Revenue Planner';
+
+  @override
+  String get miRevenueProjectNameRequired => 'Digite o nome do projeto';
+
+  @override
+  String get miRevenueEmptyTitle => 'Nenhum plano de receita ainda';
+
+  @override
+  String get miRevenueProjectFieldLabel => 'Nome do projeto';
+
+  @override
+  String get miRevenueCalculating => 'Calculando...';
+
+  @override
+  String get miRevenueGenerateButton => 'Gerar Revenue Plan';
+
+  @override
+  String get miRevenueScenarioConservative => 'Conservador';
+
+  @override
+  String get miRevenueScenarioModerate => 'Moderado';
+
+  @override
+  String get miRevenueScenarioAggressive => 'Agressivo';
+
+  @override
+  String miRevenueMonthlyLabel(String amount) {
+    return 'Mensal: $amount';
+  }
+
+  @override
+  String get miRevenueAnnualLabel => 'Anual';
+
+  @override
+  String get miRevenueSectionSources => 'Fontes de Receita';
+
+  @override
+  String get miRevenueSectionMilestones => 'Marcos de Receita';
+
+  @override
+  String miRevenueMilestoneTarget(String amount) {
+    return 'Meta: $amount';
+  }
+
+  @override
+  String get miRevenueSectionAssumptions => 'Premissas';
+
+  @override
+  String get miRootErrorNotFound =>
+      'A função de análise não foi encontrada no servidor. Verifique se as Edge Functions estão implantadas no Supabase Dashboard.';
+
+  @override
+  String get miRootErrorSession =>
+      'Sessão expirada. Saia e entre novamente no aplicativo.';
+
+  @override
+  String get miRootErrorTimeout =>
+      'A análise demorou demais. Tente novamente em alguns instantes.';
+
+  @override
+  String get miRootErrorNetwork =>
+      'Sem conexão com a internet. Verifique sua rede e tente novamente.';
+
+  @override
+  String get miRootErrorApiKey =>
+      'Chave de API não configurada no servidor. Configure GROQ_API_KEY nos secrets do Supabase.';
+
+  @override
+  String get miRootErrorGeneric =>
+      'Tente novamente em alguns instantes. Se o erro persistir, verifique o Supabase Dashboard.';
+
+  @override
+  String get miRootEngineTitle => 'Market Intelligence Engine';
+
+  @override
+  String get miRootEngineSubtitle =>
+      'Analise qualquer URL, domínio ou projeto para descobrir oportunidades de mercado, concorrentes e potencial de receita.';
+
+  @override
+  String get miRootInputTypeLabel => 'Tipo de entrada';
+
+  @override
+  String get miRootInputTypeUrl => 'URL / Domínio';
+
+  @override
+  String get miRootInputTypeNiche => 'Nicho';
+
+  @override
+  String get miRootInputTypeProject => 'Projeto';
+
+  @override
+  String get miRootHintUrl => 'https://exemplo.com ou exemplo.com';
+
+  @override
+  String get miRootHintNiche => 'Ex: marketing digital para pequenas empresas';
+
+  @override
+  String get miRootHintProject => 'Descreva seu projeto ou ideia';
+
+  @override
+  String get miRootAnalyzing => 'Analisando...';
+
+  @override
+  String get miRootAnalyzeCta => 'Analisar Mercado';
+
+  @override
+  String get miRootConnectionErrorTitle =>
+      'Não foi possível conectar ao mecanismo de análise';
+
+  @override
+  String get miRootPreviousAnalysesTitle => 'Análises anteriores';
+
+  @override
+  String get miRootNoAnalysesYet => 'Nenhuma análise ainda.';
+
+  @override
+  String get miHubAppBarTitle => 'Inteligência de Mercado';
+
+  @override
+  String get miHubCompareWithIveTooltip => 'Comparar com IVE';
+
+  @override
+  String miHubCompareInitialMessage(String subject) {
+    return 'Compare os resultados desta análise de mercado ($subject) e identifique a maior oportunidade.';
+  }
+
+  @override
+  String get miHubReloadTooltip => 'Recarregar dados';
+
+  @override
+  String miHubLoadError(String error) {
+    return 'Erro ao carregar análise:\n$error';
+  }
+
+  @override
+  String get miHubDescHigh =>
+      'Alto potencial de crescimento. Monetização forte. Concorrência administrável.';
+
+  @override
+  String get miHubDescMedium =>
+      'Potencial moderado. Mercado em crescimento. Avalie seus diferenciais.';
+
+  @override
+  String get miHubDescLow =>
+      'Potencial limitado. Mercado saturado ou monetização fraca. Considere pivotar.';
+
+  @override
+  String get miHubPriorityHigh => '🚀  Prioridade Alta';
+
+  @override
+  String get miHubPriorityMedium => '⚡  Prioridade Média';
+
+  @override
+  String get miHubPriorityLow => '⚠️  Baixa Prioridade';
+
+  @override
+  String get miHubOpportunityScoreLabel => 'OPPORTUNITY SCORE';
+
+  @override
+  String get miHubScoreSeo => 'SEO';
+
+  @override
+  String get miHubScoreMonetization => 'Monetização';
+
+  @override
+  String get miHubScoreCompetition => 'Concorrência';
+
+  @override
+  String get miHubScoreGrowth => 'Crescimento';
+
+  @override
+  String get miHubRevenuePotentialTitle => 'Revenue Potential';
+
+  @override
+  String get miHubRevenueNoDataHint =>
+      'Execute o Revenue Planner para estimativas detalhadas.';
+
+  @override
+  String miHubRevenueRangeMonthly(String min, String max) {
+    return '$min – $max/mês';
+  }
+
+  @override
+  String miHubRevenueSingleMonthly(String max) {
+    return '$max/mês';
+  }
+
+  @override
+  String miHubRevenueAnnual(String value) {
+    return 'Anual: $value';
+  }
+
+  @override
+  String get miHubLabelDeadline => 'Prazo';
+
+  @override
+  String get miHubLabelConfidence => 'Confiança';
+
+  @override
+  String miHubMonthsValue(int months) {
+    String _temp0 = intl.Intl.pluralLogic(
+      months,
+      locale: localeName,
+      other: '$months meses',
+      one: '1 mês',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get miHubInvestmentTitle => 'Vale a Pena Investir?';
+
+  @override
+  String miHubInvestmentScoreLabel(int score) {
+    return 'Score: $score/100';
+  }
+
+  @override
+  String get miHubNextActionsTitle => 'Próximas Ações Recomendadas';
+
+  @override
+  String miHubBadgeImpact(String value) {
+    return 'Impacto: $value';
+  }
+
+  @override
+  String miHubBadgeEffort(String value) {
+    return 'Esforço: $value';
+  }
+
+  @override
+  String miHubBadgeRoi(String value) {
+    return 'ROI: $value';
+  }
+
+  @override
+  String get miHubCompetitorsTitle => 'Principais Concorrentes';
+
+  @override
+  String get miHubCompetitorsViewAll => 'Ver todos';
+
+  @override
+  String get miHubCompetitorsEmptyMessage =>
+      'Concorrentes ainda não descobertos.';
+
+  @override
+  String get miHubCompetitorsEmptyCta => 'Descobrir Concorrentes';
+
+  @override
+  String get miHubThCompetitor => 'Concorrente';
+
+  @override
+  String get miHubThSimilarity => 'Similar.';
+
+  @override
+  String get miHubThAuthority => 'Autoridade';
+
+  @override
+  String get miHubThScore => 'Score';
+
+  @override
+  String get miHubAnalyzeCompetitorCta => 'Analisar Concorrente';
+
+  @override
+  String get miHubGapSummaryTitle => 'Resumo dos Gaps';
+
+  @override
+  String get miHubGapDetailCta => 'Detalhar';
+
+  @override
+  String get miHubGapEmptyMessage => 'Gap Analysis ainda não executada.';
+
+  @override
+  String get miHubGapEmptyCta => 'Executar Gap Analysis';
+
+  @override
+  String get miHubGapSeo => 'SEO Gap';
+
+  @override
+  String get miHubGapContent => 'Content Gap';
+
+  @override
+  String get miHubGapAuthority => 'Authority Gap';
+
+  @override
+  String get miHubGapMonetization => 'Monetization Gap';
+
+  @override
+  String get miHubGapProduct => 'Product Gap';
+
+  @override
+  String miHubGapTotal(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count gaps identificados',
+      one: '1 gap identificado',
+    );
+    return 'Total: $_temp0';
+  }
+
+  @override
+  String get miHubOpportunitiesTitle => 'Oportunidades Detectadas';
+
+  @override
+  String get miHubOpportunitiesViewAll => 'Ver todas';
+
+  @override
+  String get miHubOpportunitiesEmptyMessage =>
+      'Oportunidades ainda não mapeadas.';
+
+  @override
+  String get miHubOpportunitiesEmptyCta => 'Descobrir Oportunidades';
+
+  @override
+  String miHubOppEffortBadge(String value) {
+    return 'Esforço: $value';
+  }
+
+  @override
+  String miHubOppRevenueBadge(String value) {
+    return 'Receita: $value';
+  }
+
+  @override
+  String miHubOppDifficultyBadge(String value) {
+    return 'Dificuldade: $value';
+  }
+
+  @override
+  String get miHubScoreLevelHigh => 'Alto';
+
+  @override
+  String get miHubScoreLevelMedium => 'Médio';
+
+  @override
+  String get miHubScoreLevelLow => 'Baixo';
+
+  @override
+  String get miHubModulesGridTitle => 'MÓDULOS DE ANÁLISE';
+
+  @override
+  String get miHubModCompetitors => 'Concorrentes';
+
+  @override
+  String get miHubModGapAnalysis => 'Gap Analysis';
+
+  @override
+  String get miHubModOpportunities => 'Oportunidades';
+
+  @override
+  String get miHubModNiches => 'Nichos';
+
+  @override
+  String get miHubModContentCluster => 'Content Cluster';
+
+  @override
+  String get miHubModRevenuePlanner => 'Revenue Planner';
+
+  @override
+  String get miHubRoiTrackerTitle => 'ROI Tracker';
+
+  @override
+  String get miHubRoiOpportunityScoreLabel => 'Opportunity Score';
+
+  @override
+  String get miHubRoiOpportunitiesLabel => 'Oportunidades';
+
+  @override
+  String get miHubRoiAvgScoreLabel => 'Score Médio';
+
+  @override
+  String get miHubRoiRevenueLabel => 'Revenue/mês';
+
+  @override
+  String get miHubRoiSavedMessage => 'Dados registrados no ROI Tracker!';
+
+  @override
+  String get miHubRoiSavingCta => 'Registrando...';
+
+  @override
+  String get miHubRoiSaveCta => 'Registrar no ROI Tracker';
+
+  @override
+  String miHubRoiSaveError(String error) {
+    return 'Erro ao registrar: $error';
+  }
+
+  @override
+  String get calendarTitle => 'Calendário Editorial';
+
+  @override
+  String get calendarNewPost => 'Novo Post';
+
+  @override
+  String get calendarEmpty => 'Nenhum post agendado.';
+
+  @override
+  String get calendarEmptyHint =>
+      'Crie seu primeiro post usando o botão abaixo.';
+
+  @override
+  String get calendarNoTheme => '(sem tema)';
+
+  @override
+  String get calendarNewPostSheetTitle => 'Novo Post no Calendário';
+
+  @override
+  String get calendarThemeLabel => 'Tema / Assunto do post *';
+
+  @override
+  String get calendarThemeHint => 'Ex: Dica de segunda sobre produtividade';
+
+  @override
+  String get calendarObjectiveLabel => 'Objetivo (opcional)';
+
+  @override
+  String get calendarObjectiveHint => 'Ex: Gerar engajamento, Vender produto X';
+
+  @override
+  String get calendarPlatformLabel => 'Plataforma';
+
+  @override
+  String get calendarFormatLabel => 'Formato';
+
+  @override
+  String get calendarSetSuggestedDate => 'Definir data sugerida';
+
+  @override
+  String calendarSuggestedDateValue(int day, int month, int year) {
+    return 'Data: $day/$month/$year';
+  }
+
+  @override
+  String get calendarAddButton => 'Adicionar ao Calendário';
+
+  @override
+  String get performanceTitle => 'Performance';
+
+  @override
+  String performanceLoadError(String error) {
+    return 'Erro ao carregar métricas:\n$error';
+  }
+
+  @override
+  String get performanceEmpty => 'Nenhuma métrica registrada ainda.';
+
+  @override
+  String get performanceEmptyHint => 'Toque no + para adicionar uma entrada.';
+
+  @override
+  String get performanceDeleteTitle => 'Excluir métrica';
+
+  @override
+  String performanceDeleteConfirm(String platform) {
+    return 'Deseja excluir a métrica de $platform?';
+  }
+
+  @override
+  String get performanceDeleteSuccess => 'Métrica excluída com sucesso.';
+
+  @override
+  String performanceDeleteError(String error) {
+    return 'Erro ao excluir: $error';
+  }
+
+  @override
+  String get performanceAddSuccess => 'Métrica adicionada com sucesso!';
+
+  @override
+  String get performanceMetricImpressions => 'Impressões';
+
+  @override
+  String get performanceMetricClicks => 'Cliques';
+
+  @override
+  String get performanceMetricEngagement => 'Eng%';
+
+  @override
+  String get performanceMetricConversion => 'Conv%';
+
+  @override
+  String get performanceScoreLabel => 'Score';
+
+  @override
+  String get performanceSelectPlatform => 'Selecione uma plataforma.';
+
+  @override
+  String performanceSaveError(String error) {
+    return 'Erro ao salvar: $error';
+  }
+
+  @override
+  String get performanceNewMetricTitle => 'Nova Métrica';
+
+  @override
+  String get performanceFieldPlatform => 'Plataforma';
+
+  @override
+  String get performanceFieldLikes => 'Curtidas';
+
+  @override
+  String get performanceFieldComments => 'Comentários';
+
+  @override
+  String get performanceFieldShares => 'Compartilhamentos';
+
+  @override
+  String get performanceFieldSaves => 'Salvamentos';
+
+  @override
+  String get performanceFieldLeads => 'Leads';
+
+  @override
+  String get performanceFieldSales => 'Vendas';
+
+  @override
+  String get performanceFieldRevenue => 'Receita (R\$)';
+
+  @override
+  String get performanceFieldNotes => 'Notas (opcional)';
+
+  @override
+  String get contentLibraryTitle => 'Biblioteca de Conteúdo';
+
+  @override
+  String get contentLibraryNewItem => 'Novo Item';
+
+  @override
+  String get contentLibraryEmptyType => 'Nenhum item deste tipo.';
+
+  @override
+  String get contentLibraryEmptyProject => 'Nenhum item neste projeto.';
+
+  @override
+  String get contentLibraryEmpty => 'Biblioteca vazia.';
+
+  @override
+  String get contentLibraryEmptyHint => 'Adicione itens usando o botão abaixo.';
+
+  @override
+  String get contentLibraryDeleteTitle => 'Excluir item';
+
+  @override
+  String contentLibraryDeleteConfirm(String title) {
+    return 'Deseja excluir \"$title\"?';
+  }
+
+  @override
+  String contentLibraryDeleteError(String error) {
+    return 'Erro ao excluir: $error';
+  }
+
+  @override
+  String get personasTitle => 'Personas / Marcas';
+
+  @override
+  String get personasNewPersona => 'Nova Persona';
+
+  @override
+  String get personasEmpty => 'Nenhuma persona ainda.';
+
+  @override
+  String get personasEmptyHint => 'Crie a primeira usando o botão abaixo.';
+
+  @override
+  String get personasGlobalSection => 'Personas Globais';
+
+  @override
+  String get personasMineSection => 'Minhas Personas';
+
+  @override
+  String personasToneLabel(String tone) {
+    return 'Tom: $tone';
+  }
+
+  @override
+  String get personasDeleteTitle => 'Excluir persona';
+
+  @override
+  String personasDeleteConfirm(String name) {
+    return 'Deseja excluir \"$name\"?';
+  }
+
+  @override
+  String personaTrainingTitle(String name) {
+    return 'Treinamento: $name';
+  }
+
+  @override
+  String personaTrainingLoadError(String error) {
+    return 'Erro ao carregar treinamentos: $error';
+  }
+
+  @override
+  String get personaTrainingHistoryTitle => 'Histórico de Treinamentos';
+
+  @override
+  String get personaTrainingSummaryTitle => 'Resumo do Treinamento';
+
+  @override
+  String get personaTrainingItemsLabel => 'Itens treinados';
+
+  @override
+  String personaTrainingItemsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count itens',
+      one: '1 item',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get personaTrainingToneProfileLabel => 'Perfil de Tom (mais recente)';
+
+  @override
+  String get personaTrainingVocabularyLabel => 'Vocabulário Combinado';
+
+  @override
+  String get personaTrainingValuesLabel => 'Valores Combinados';
+
+  @override
+  String get personaTrainingDeleteTitle => 'Remover treinamento?';
+
+  @override
+  String get personaTrainingDeleteBody =>
+      'Este item de treinamento será removido permanentemente da persona.';
+
+  @override
+  String get personaTrainingRemove => 'Remover';
+
+  @override
+  String get personaTrainingNoTitle => 'Item sem título';
+
+  @override
+  String get personaTrainingToneLabel => 'Tom: ';
+
+  @override
+  String get personaTrainingItemVocabularyLabel => 'Vocabulário:';
+
+  @override
+  String personaTrainingMoreWords(int count) {
+    return '+$count palavras';
+  }
+
+  @override
+  String get personaTrainingEmptyTitle => 'Nenhum treinamento ainda.';
+
+  @override
+  String get personaTrainingEmptyBody =>
+      'Analise um item no Cofre de Conhecimento e clique em Treinar Persona.';
+
+  @override
+  String get personaFormEditTitle => 'Editar Persona';
+
+  @override
+  String get personaFormNewTitle => 'Nova Persona';
+
+  @override
+  String get personaFormNameLabel => 'Nome da Persona / Marca *';
+
+  @override
+  String get personaFormNameHint => 'Ex: Marca Pessoal do João';
+
+  @override
+  String get personaFormRequired => 'Obrigatório';
+
+  @override
+  String get personaFormNicheLabel => 'Nicho / Segmento';
+
+  @override
+  String get personaFormNicheHint =>
+      'Ex: Marketing Digital, Fitness, Gastronomia';
+
+  @override
+  String get personaFormToneLabel => 'Tom de Voz';
+
+  @override
+  String get personaFormToneHint =>
+      'Ex: Descontraído e inspirador, Profissional e direto';
+
+  @override
+  String get personaFormAudienceLabel => 'Público-alvo';
+
+  @override
+  String get personaFormAudienceHint =>
+      'Ex: Empreendedores iniciantes de 25–40 anos';
+
+  @override
+  String get personaFormDescLabel => 'Descrição / Posicionamento';
+
+  @override
+  String get personaFormDescHint =>
+      'Descreva a essência desta persona ou marca...';
+
+  @override
+  String get personaFormWordsUseLabel =>
+      'Palavras que DEVE usar (separadas por vírgula)';
+
+  @override
+  String get personaFormWordsUseHint =>
+      'Ex: inovação, transformação, resultado';
+
+  @override
+  String get personaFormWordsAvoidLabel =>
+      'Palavras que DEVE EVITAR (separadas por vírgula)';
+
+  @override
+  String get personaFormWordsAvoidHint => 'Ex: barato, simples, fácil';
+
+  @override
+  String get personaFormGlobalTitle => 'Persona Global';
+
+  @override
+  String get personaFormGlobalSubtitle =>
+      'Visível para todos os usuários (apenas admin)';
+
+  @override
+  String get personaFormSaveChanges => 'Salvar Alterações';
+
+  @override
+  String get personaFormCreate => 'Criar Persona';
+
+  @override
+  String get campaignsTitle => 'Campanhas';
+
+  @override
+  String get campaignsRefreshTooltip => 'Atualizar';
+
+  @override
+  String get campaignsEmpty => 'Nenhuma campanha';
+
+  @override
+  String get campaignsEmptyHint =>
+      'Acesse o Cofre de Conhecimento, analise um item e crie sua primeira campanha com IA.';
+
+  @override
+  String get campaignsGoToVault => 'Ir ao Cofre';
+
+  @override
+  String campaignsDurationDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count dias',
+      one: '1 dia',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get campaignsDeleteTitle => 'Excluir campanha?';
+
+  @override
+  String campaignsDeleteConfirm(String title) {
+    return 'A campanha \"$title\" será removida.';
+  }
+
+  @override
+  String get campaignBuilderTitle => 'Criar Campanha';
+
+  @override
+  String get campaignBuilderItemNotFound => 'Item não encontrado.';
+
+  @override
+  String get campaignBuilderNoAnalysisBody =>
+      'Analise o item primeiro para criar uma campanha.';
+
+  @override
+  String get campaignBuilderObjectiveLabel => 'Objetivo da Campanha';
+
+  @override
+  String get campaignBuilderDurationLabel => 'Duração';
+
+  @override
+  String get campaignBuilderChannelsLabel => 'Canais (selecione pelo menos 1)';
+
+  @override
+  String get campaignBuilderGenerating => 'Gerando campanha…';
+
+  @override
+  String get campaignBuilderGenerateCta => 'Gerar Campanha com IA';
+
+  @override
+  String get campaignBuilderGenerateLabel => 'Gerar Campanha';
+
+  @override
+  String get campaignBuilderSelectChannelWarning =>
+      'Selecione pelo menos um canal.';
+
+  @override
+  String get campaignBuilderGenerateError =>
+      'Erro ao gerar campanha. Tente novamente.';
+
+  @override
+  String get campaignDetailTitle => 'Campanha';
+
+  @override
+  String get campaignDetailNotFound => 'Campanha não encontrada.';
+
+  @override
+  String get campaignDetailOverviewTitle => 'Visão Geral';
+
+  @override
+  String get campaignDetailKeyMessagesTitle => 'Mensagens-chave';
+
+  @override
+  String get campaignDetailExpectedResultsTitle => 'Resultados Esperados';
+
+  @override
+  String get campaignDetailCalendarTitle => 'Calendário de Conteúdo';
+
+  @override
+  String get campaignDetailEmailSequenceTitle => 'Sequência de Emails';
+
+  @override
+  String get campaignDetailMetricsTitle => 'Métricas de Sucesso';
+
+  @override
+  String get campaignDetailCopied => 'Copiado!';
+
+  @override
+  String get campaignDetailHookLabel => 'Hook';
+
+  @override
+  String get campaignDetailCtaLabel => 'CTA';
+
+  @override
+  String get campaignDetailBriefLabel => 'Brief';
+
+  @override
+  String get campaignDetailTopicLabel => 'Tópico';
+
+  @override
+  String get roiTrackerTitle => 'ROI Tracker';
+
+  @override
+  String get roiTrackerTypeRevenue => 'Receita';
+
+  @override
+  String get roiTrackerTypeInvestment => 'Investimento';
+
+  @override
+  String get roiTrackerTypeTraffic => 'Tráfego';
+
+  @override
+  String get roiTrackerTypeLeads => 'Leads';
+
+  @override
+  String get roiTrackerTypeConversions => 'Conversões';
+
+  @override
+  String get roiTrackerTypeOpportunities => 'Oportunidades';
+
+  @override
+  String get roiTrackerTypeRevenuePotential => 'Receita Potencial';
+
+  @override
+  String get roiTrackerTypeRevenueEstimated => 'Receita Estimada';
+
+  @override
+  String get roiTrackerTypeHoursSaved => 'Horas Economizadas';
+
+  @override
+  String get roiTrackerTypeStrategiesExecuted => 'Estratégias Executadas';
+
+  @override
+  String get roiTrackerTypeCampaignsExecuted => 'Campanhas Executadas';
+
+  @override
+  String get roiTrackerTypeDecisionsMade => 'Decisões Tomadas';
+
+  @override
+  String get roiTrackerTypeOpportunityScore => 'Score de Oportunidade';
+
+  @override
+  String get roiTrackerTypeAvgOpportunityScore => 'Score Médio de Oportunidade';
+
+  @override
+  String get roiTrackerTypeOther => 'Outro';
+
+  @override
+  String get roiTrackerInvalidValue => 'Valor inválido';
+
+  @override
+  String get roiTrackerRecordsTitle => 'Registros';
+
+  @override
+  String get roiTrackerEmptyRecords => 'Nenhum registro ainda';
+
+  @override
+  String get roiTrackerSummaryTitle => 'Resumo ROI';
+
+  @override
+  String roiTrackerRoiPercent(String value) {
+    return 'ROI: $value%';
+  }
+
+  @override
+  String get roiTrackerExecutiveDashboardTitle => 'Dashboard Executivo';
+
+  @override
+  String get roiTrackerRevenueSectionTitle => 'RECEITA';
+
+  @override
+  String get roiTrackerRevenueRegistered => 'Registrada';
+
+  @override
+  String get roiTrackerRevenuePotentialLabel => 'Potencial';
+
+  @override
+  String get roiTrackerRevenueEstimatedLabel => 'Estimada';
+
+  @override
+  String get roiTrackerActivitySectionTitle => 'ATIVIDADE';
+
+  @override
+  String get roiTrackerHoursSavedShort => 'Horas Econ.';
+
+  @override
+  String get roiTrackerNewRecordTitle => 'Novo Registro';
+
+  @override
+  String get roiTrackerTypeLabel => 'Tipo';
+
+  @override
+  String get roiTrackerProjectOptionalLabel => 'Projeto (opcional)';
+
+  @override
+  String get roiTrackerNoneOption => 'Nenhum';
+
+  @override
+  String get roiTrackerValueLabel => 'Valor *';
+
+  @override
+  String get roiTrackerNotesOptionalLabel => 'Observações (opcional)';
+
+  @override
+  String get roiTrackerNewRecord => 'Novo Registro';
+
+  @override
+  String get roiTrackerProjectOptional => 'Projeto (opcional)';
+
+  @override
+  String get roiTrackerProjectNone => 'Nenhum';
+
+  @override
+  String get roiTrackerNotesLabel => 'Observações (opcional)';
+
+  @override
+  String get knowledgeVaultTitle => 'Cofre de Conhecimento';
+
+  @override
+  String get knowledgeVaultFilterAll => 'Todos';
+
+  @override
+  String get knowledgeVaultEmptyTitle => 'Nenhum item ainda';
+
+  @override
+  String knowledgeVaultEmptyProjectTitle(String project) {
+    return 'Nenhum item em $project';
+  }
+
+  @override
+  String get knowledgeVaultThisProject => 'este projeto';
+
+  @override
+  String knowledgeVaultLinkToProject(String title) {
+    return 'Vincular \"$title\" a projeto';
+  }
+
+  @override
+  String knowledgeVaultCurrentProject(String name) {
+    return 'Projeto atual: $name';
+  }
+
+  @override
+  String get knowledgeVaultNoProject => 'Sem projeto';
+
+  @override
+  String get knowledgeVaultUnlinkedSnack => 'Item desvinculado do projeto';
+
+  @override
+  String knowledgeVaultLinkedSnack(String name) {
+    return 'Item vinculado a $name';
+  }
+
+  @override
+  String knowledgeVaultNicheLabel(String niche) {
+    return 'Nicho: $niche';
+  }
+
+  @override
+  String get knowledgeVaultAnalyzeWithAi => 'Analisar com IA';
+
+  @override
+  String knowledgeVaultAnalyzeError(String error) {
+    return 'Erro ao analisar: $error';
+  }
+
+  @override
+  String get knowledgeVaultEdit => 'Editar';
+
+  @override
+  String get knowledgeVaultExplainWithIve => 'Explicar com IVE';
+
+  @override
+  String knowledgeVaultExplainPrompt(String title) {
+    return 'Resuma e explique o documento \"$title\".';
+  }
+
+  @override
+  String get knowledgeVaultDelete => 'Excluir';
+
+  @override
+  String knowledgeVaultDeleteError(String error) {
+    return 'Erro ao excluir: $error';
+  }
+
+  @override
+  String get knowledgeVaultStatusAnalyzed => 'Analisado';
+
+  @override
+  String get knowledgeVaultStatusProcessing => 'Processando';
+
+  @override
+  String get knowledgeVaultStatusError => 'Erro';
+
+  @override
+  String get knowledgeVaultStatusPending => 'Pendente';
+
+  @override
+  String get knowledgeFormContentEmptyError => 'Conteúdo não pode estar vazio';
+
+  @override
+  String knowledgeFormSavedWithProject(String project) {
+    return 'Item salvo em $project';
+  }
+
+  @override
+  String get knowledgeFormSavedNoProject => 'Item salvo';
+
+  @override
+  String get knowledgeFormExtracting => 'Extraindo texto...';
+
+  @override
+  String knowledgeFormCharsExtracted(int count) {
+    return '$count caracteres extraídos';
+  }
+
+  @override
+  String get knowledgeFormChangeFile => 'Trocar';
+
+  @override
+  String get knowledgeFormSelectFilePrompt => 'Clique para selecionar arquivo';
+
+  @override
+  String get knowledgeFormFileTypesHint => 'PDF, DOCX, TXT ou CSV';
+
+  @override
+  String knowledgeFormImportError(String error) {
+    return 'Erro ao importar: $error';
+  }
+
+  @override
+  String get knowledgeFormDriveDefaultName => 'arquivo do Drive';
+
+  @override
+  String get knowledgeFormSelectDriveFile => 'Selecionar arquivo do Drive';
+
+  @override
+  String get knowledgeFormDriveFileTypesHint =>
+      'Google Docs, PDF, DOCX, TXT ou CSV';
+
+  @override
+  String get knowledgeFormProjectLabel => 'Projeto (opcional)';
+
+  @override
+  String get knowledgeFormNoProject => 'Sem projeto';
+
+  @override
+  String get knowledgeFormEditTitle => 'Editar Conhecimento';
+
+  @override
+  String get knowledgeFormNewTitle => 'Novo Conhecimento';
+
+  @override
+  String get knowledgeFormSourceTypeLabel => 'Tipo de fonte';
+
+  @override
+  String get knowledgeFormSourceManual => 'Texto Manual';
+
+  @override
+  String get knowledgeFormSourceUrl => 'URL';
+
+  @override
+  String get knowledgeFormSourceFile => 'Arquivo';
+
+  @override
+  String get knowledgeFormSourceDrive => 'Google Drive';
+
+  @override
+  String get knowledgeFormTitleLabel => 'Título *';
+
+  @override
+  String get knowledgeFormTitleHint => 'Ex.: Livro sobre Marketing Digital';
+
+  @override
+  String get knowledgeFormTitleRequired => 'Informe o título.';
+
+  @override
+  String get knowledgeFormImportFromDrive => 'Importar do Google Drive';
+
+  @override
+  String get knowledgeFormImportFile =>
+      'Importar Arquivo (PDF, DOCX, TXT, CSV)';
+
+  @override
+  String get knowledgeFormUrlLabel => 'URL do conteúdo *';
+
+  @override
+  String get knowledgeFormUrlHint => 'https://docs.google.com/document/d/...';
+
+  @override
+  String get knowledgeFormUrlRequired => 'Informe a URL.';
+
+  @override
+  String get knowledgeFormUrlInvalid => 'URL deve começar com http ou https.';
+
+  @override
+  String get knowledgeFormGoogleDocsHintTitle =>
+      '📄 Para Google Docs / Livros:';
+
+  @override
+  String get knowledgeFormGoogleDocsHintBody =>
+      '1. Abra o documento no Google Docs\n2. Clique em Compartilhar\n3. Mude para \"Qualquer pessoa com o link pode visualizar\"\n4. Copie o link e cole aqui';
+
+  @override
+  String get knowledgeFormContentLabel => 'Conteúdo *';
+
+  @override
+  String get knowledgeFormContentHint =>
+      'Cole aqui o texto do livro, artigo, post, roteiro ou qualquer conteúdo que deseja analisar…';
+
+  @override
+  String get knowledgeFormContentTooShort =>
+      'Conteúdo muito curto (mínimo 20 caracteres).';
+
+  @override
+  String get knowledgeFormNicheLabel => 'Nicho (opcional)';
+
+  @override
+  String get knowledgeFormNicheHint =>
+      'Ex.: Marketing Digital, Saúde, Finanças';
+
+  @override
+  String get knowledgeFormAudienceLabel => 'Audiência-alvo (opcional)';
+
+  @override
+  String get knowledgeFormAudienceHint =>
+      'Ex.: Empreendedores iniciantes, Mães de primeira viagem';
+
+  @override
+  String get knowledgeFormLanguageLabel => 'Idioma';
+
+  @override
+  String get knowledgeFormLanguagePtBr => 'Português (BR)';
+
+  @override
+  String get knowledgeFormLanguageEnUs => 'English (US)';
+
+  @override
+  String get knowledgeFormLanguageEs => 'Español';
+
+  @override
+  String get knowledgeFormSaving => 'Salvando…';
+
+  @override
+  String get knowledgeFormAddToVault => 'Adicionar ao Cofre';
+
+  @override
+  String get knowledgeFormClickToSelectFile => 'Clique para selecionar arquivo';
+
+  @override
+  String get knowledgeFormFileTypes => 'PDF, DOCX, TXT ou CSV';
+
+  @override
+  String get knowledgeFormPdfWarning =>
+      'PDF deve ter texto selecionável (não imagem escaneada). Para melhores resultados, use TXT ou DOCX.';
+
+  @override
+  String get knowledgeFormDriveFileTypes =>
+      'Google Docs, PDF, DOCX, TXT ou CSV';
+
+  @override
+  String get knowledgeVaultRefreshTooltip => 'Atualizar';
+
+  @override
+  String get knowledgeVaultNewItem => 'Novo Item';
+
+  @override
+  String get knowledgeVaultEmptyProjectBody =>
+      'Adicione conhecimento a este projeto para que a IA extraia insights personalizados.';
+
+  @override
+  String get knowledgeVaultEmptyBody =>
+      'Adicione textos, URLs ou arquivos para que a IA extraia insights de marketing, SEO e monetização.';
+
+  @override
+  String get knowledgeVaultAddKnowledge => 'Adicionar Conhecimento';
+
+  @override
+  String get knowledgeVaultViewAnalysis => 'Ver Análise';
+
+  @override
+  String get knowledgeVaultProcessing => 'Processando…';
+
+  @override
+  String get knowledgeVaultAddToProject => 'Adicionar a Projeto';
+
+  @override
+  String get knowledgeVaultChangeProject => 'Trocar Projeto';
+
+  @override
+  String get knowledgeVaultDeleteItemTitle => 'Excluir item?';
+
+  @override
+  String knowledgeVaultDeleteItemBody(String title) {
+    return 'O item \"$title\" e sua análise serão removidos.';
+  }
+
+  @override
+  String get websiteAnalyzerAnalyzeButton => 'Analisar Site';
+
+  @override
+  String websiteAnalyzerAnalyzeError(String error) {
+    return 'Erro ao analisar: $error';
+  }
+
+  @override
+  String websiteAnalyzerLoadError(String error) {
+    return 'Erro ao carregar: $error';
+  }
+
+  @override
+  String get websiteAnalyzerScoreSite => 'Site';
+
+  @override
+  String get websiteAnalyzerScoreAdsense => 'AdSense';
+
+  @override
+  String get websiteAnalyzerHeaderTitle => 'Analisar Website';
+
+  @override
+  String get websiteAnalyzerHeaderBody =>
+      'Analise seu site e receba um diagnóstico completo com SEO, AdSense e oportunidades de monetização.';
+
+  @override
+  String get websiteAnalyzerUrlLabel => 'URL do site (ex: https://meusite.com)';
+
+  @override
+  String get websiteAnalyzerUrlHint => 'https://meusite.com';
+
+  @override
+  String get websiteAnalyzerUrlRequired => 'Por favor, insira a URL do site';
+
+  @override
+  String get websiteAnalyzerUrlInvalid =>
+      'URL inválida. Use o formato https://meusite.com';
+
+  @override
+  String get websiteAnalyzerAnalyzing => 'Analisando...';
+
+  @override
+  String get websiteAnalyzerPreviousTitle => 'Análises Anteriores';
+
+  @override
+  String get websiteAnalyzerEmptyTitle => 'Nenhuma análise ainda';
+
+  @override
+  String get websiteAnalyzerEmptyBody => 'Insira uma URL acima para começar';
+
+  @override
+  String get websiteResultTitle => 'Análise do Site';
+
+  @override
+  String get websiteResultSavedSnack => 'Análise já salva no banco de dados!';
+
+  @override
+  String get websiteResultSaveToVault => 'Salvar no Cofre';
+
+  @override
+  String get websiteResultCreateStrategy => 'Criar Estratégia';
+
+  @override
+  String websiteResultExplainPrompt(String url, String scoreWebsite,
+      String scoreSeo, String scoreAdsense, String scoreMonetization) {
+    return 'Explique os resultados da análise do site $url (score geral $scoreWebsite, SEO $scoreSeo, AdSense $scoreAdsense, monetização $scoreMonetization).';
+  }
+
+  @override
+  String get websiteResultLoadingAnalysis => 'Carregando análise...';
+
+  @override
+  String get websiteResultLoadError => 'Erro ao carregar análise';
+
+  @override
+  String get websiteResultScoreWebsite => 'Website';
+
+  @override
+  String get websiteResultScoreSeo => 'SEO';
+
+  @override
+  String get websiteResultScoreMonetization => 'Monetização';
+
+  @override
+  String get websiteResultSectionDiagnostic => 'Diagnóstico';
+
+  @override
+  String get websiteResultSectionStrengths => 'Pontos Fortes';
+
+  @override
+  String get websiteResultSectionWeaknesses => 'Pontos Fracos';
+
+  @override
+  String get websiteResultSectionCriticalIssues => 'Problemas Críticos';
+
+  @override
+  String get websiteResultSectionSeoAnalysis => 'Análise SEO';
+
+  @override
+  String get websiteResultSectionAdsenseAnalysis => 'Análise AdSense';
+
+  @override
+  String get websiteResultSectionQuickWins => 'Vitórias Rápidas';
+
+  @override
+  String get websiteResultSectionPlan7Days => 'Plano 7 Dias';
+
+  @override
+  String get websiteResultSectionPlan30Days => 'Plano 30 Dias';
+
+  @override
+  String get websiteResultSectionArticleIdeas => 'Ideias de Artigos';
+
+  @override
+  String get websiteResultSectionMonetizationOpportunities =>
+      'Oportunidades de Monetização';
+
+  @override
+  String get websiteResultSectionCommercialOpportunities =>
+      'Oportunidades Comerciais';
+
+  @override
+  String get websiteResultMainTopicsLabel => 'Tópicos Principais:';
+
+  @override
+  String get websiteResultPolicyPrivacy => 'Política de Privacidade';
+
+  @override
+  String get websiteResultPolicyAbout => 'Sobre';
+
+  @override
+  String get websiteResultPolicyContact => 'Contato';
+
+  @override
+  String get websiteResultCreateCampaign => 'Criar Campanha';
+
+  @override
+  String get websiteResultSeoPlan => 'Plano SEO';
+
+  @override
+  String get websiteResultAdsensePlan => 'Plano AdSense';
+
+  @override
+  String get websiteResultSeoPlanComingSoon =>
+      'Plano SEO — disponível na Fase 9';
+
+  @override
+  String get websiteResultAdsensePlanComingSoon =>
+      'Plano AdSense — disponível na Fase 9';
+
+  @override
+  String get projectCommandTitle => 'Project Command Center';
+
+  @override
+  String get projectCommandRefreshTooltip => 'Atualizar';
+
+  @override
+  String projectCommandLoadError(String error) {
+    return 'Erro: $error';
+  }
+
+  @override
+  String get projectCommandEmptyTitle => 'Nenhum projeto ainda';
+
+  @override
+  String get projectCommandEmptySubtitle => 'Adicione seu primeiro projeto';
+
+  @override
+  String get projectCommandNewProject => 'Novo Projeto';
+
+  @override
+  String get projectCommandFieldNameLabel => 'Nome do projeto *';
+
+  @override
+  String get projectCommandFieldNameHint => 'Ex: Blog de Finanças Pessoais';
+
+  @override
+  String get projectCommandFieldDescLabel => 'Descrição';
+
+  @override
+  String get projectCommandFieldDescHint => 'Descreva o projeto brevemente';
+
+  @override
+  String get projectCommandFieldUrlLabel => 'URL (opcional)';
+
+  @override
+  String get projectCommandFieldUrlHint => 'https://...';
+
+  @override
+  String get projectCommandFieldTypeLabel => 'Tipo';
+
+  @override
+  String get projectCommandDeleteConfirmTitle => 'Confirmar exclusão';
+
+  @override
+  String projectCommandDeleteConfirmBody(String name) {
+    return 'Excluir \"$name\"?\nEsta ação não pode ser desfeita.';
+  }
+
+  @override
+  String get projectCommandDelete => 'Excluir';
+
+  @override
+  String projectCommandDeleteError(String error) {
+    return 'Erro ao excluir: $error';
+  }
+
+  @override
+  String get projectCommandNoKnowledgeWarning =>
+      'Adicione conhecimentos ao projeto antes de analisar.';
+
+  @override
+  String get projectCommandAnalyzeWithKnowledgeLabel =>
+      'Analisar com Conhecimento';
+
+  @override
+  String projectCommandAnalyzingSnackbar(String name, int count) {
+    return 'Analisando projeto \"$name\" com $count conhecimento(s)…';
+  }
+
+  @override
+  String projectCommandOpportunitiesGenerated(int count, String name) {
+    return '$count oportunidade(s) gerada(s) para \"$name\"!';
+  }
+
+  @override
+  String get projectCommandView => 'Ver';
+
+  @override
+  String projectCommandAnalyzeError(String error) {
+    return 'Erro ao analisar: $error';
+  }
+
+  @override
+  String get projectCommandAutoBootstrapLabel =>
+      'Gerar oportunidades, ações e plano de receita automaticamente';
+
+  @override
+  String get projectCommandStatusActive => 'Ativo';
+
+  @override
+  String get projectCommandStatusCompleted => 'Concluído';
+
+  @override
+  String get projectCommandStatusPaused => 'Pausado';
+
+  @override
+  String get projectCommandStatusIdea => 'Ideia';
+
+  @override
+  String get projectCommandRevenueNotEstimated => 'Não estimado';
+
+  @override
+  String get projectCommandRevenueNotEstimatedYet => 'Ainda não estimado';
+
+  @override
+  String get projectCommandStatOpportunity => 'Oportunidade';
+
+  @override
+  String get projectCommandStatPotential => 'Potencial';
+
+  @override
+  String get projectCommandStatDeadline => 'Prazo';
+
+  @override
+  String get projectCommandActionDetail => 'Detalhe';
+
+  @override
+  String get projectCommandActionAnalysis => 'Análise';
+
+  @override
+  String get projectCommandActionActivate => 'Ativar';
+
+  @override
+  String get projectCommandEcoScoreLabel => 'eco score';
+
+  @override
+  String get projectCommandSectionRecommendation => 'Recomendação IA';
+
+  @override
+  String get projectCommandSectionEcosystemScores => 'Scores do Ecossistema';
+
+  @override
+  String get projectCommandScoreStrategicFit => 'Fit Estratégico';
+
+  @override
+  String get projectCommandScoreSynergy => 'Sinergia';
+
+  @override
+  String get projectCommandScoreRoi => 'ROI';
+
+  @override
+  String get projectCommandScoreMomentum => 'Momentum';
+
+  @override
+  String get projectCommandScoreExecution => 'Execução';
+
+  @override
+  String projectCommandActionsStats(int completed, int total, int rate) {
+    return 'Ações: $completed/$total ($rate%)';
+  }
+
+  @override
+  String projectCommandTotalRoi(String value) {
+    return 'ROI total: $value';
+  }
+
+  @override
+  String get projectCommandSectionProjectMetrics => 'Métricas do Projeto';
+
+  @override
+  String get projectCommandMetricComplexity => 'Complexidade';
+
+  @override
+  String get projectCommandSectionStrengths => 'Pontos Fortes';
+
+  @override
+  String get projectCommandSectionQuickWins => 'Quick Wins';
+
+  @override
+  String get projectCommandSectionNextActions => 'Próximas Ações';
+
+  @override
+  String get projectCommandSectionIntelligenceProfile =>
+      'Perfil de Inteligência';
+
+  @override
+  String get projectCommandSectionResourceAllocation => 'Alocação de Recursos';
+
+  @override
+  String get projectCommandViewMarketAnalysis => 'Ver Análise de Mercado';
+
+  @override
+  String get projectCommandViewKnowledge => 'Ver Conhecimentos';
+
+  @override
+  String get projectCommandAnalyzeWithAi => 'Analisar com IA';
+
+  @override
+  String get projectCommandActionPause => 'Pausar';
+
+  @override
+  String get projectCommandActionComplete => 'Concluir';
+
+  @override
+  String get projectCommandDeleteProject => 'Excluir Projeto';
+
+  @override
+  String projectCommandMaturityLabel(String label) {
+    return 'Maturidade: $label';
+  }
+
+  @override
+  String get projectCommandNiche => 'Nicho';
+
+  @override
+  String get projectCommandAudience => 'Público';
+
+  @override
+  String get projectCommandMonetization => 'Monetização';
+
+  @override
+  String get projectCommandValueProposition => 'Proposta';
+
+  @override
+  String get projectCommandIdentifiedTopics => 'Tópicos identificados';
+
+  @override
+  String get projectCommandKnowledgeGaps => 'Lacunas de conhecimento';
+
+  @override
+  String get projectCommandRelatedProjects => 'Relacionados';
+
+  @override
+  String get projectCommandAskIveAboutProfile =>
+      'Perguntar à IVE sobre este perfil';
+
+  @override
+  String get projectCommandResourceLoadError =>
+      'Não foi possível carregar a alocação de recursos deste projeto.';
+
+  @override
+  String get projectCommandInvalidBudgetValue =>
+      'Valor inválido. Use apenas números, ex: 1500.00';
+
+  @override
+  String projectCommandSavedAllocation(
+      int hours, String amount, String currency) {
+    return 'Salvo: ${hours}h · $amount ($currency)';
+  }
+
+  @override
+  String get projectCommandEditingBadge => 'EDITANDO';
+
+  @override
+  String get projectCommandHoursLabel => 'Horas';
+
+  @override
+  String projectCommandBudgetLabel(String currency) {
+    return 'Orçamento ($currency)';
+  }
+
+  @override
+  String projectCommandSaveAllocationError(String error) {
+    return 'Erro ao salvar: $error';
+  }
+
+  @override
+  String get projectCommandAnalyzeResourcesWithIve =>
+      'Analisar recursos com a IVE';
+
+  @override
+  String get opportunityDetailTitle => 'Detalhe da Oportunidade';
+
+  @override
+  String opportunityDetailLoadError(String error) {
+    return 'Erro: $error';
+  }
+
+  @override
+  String get opportunityDetailNotFound => 'Oportunidade não encontrada.';
+
+  @override
+  String get opportunityDetailApprovedSentTitle =>
+      'Aprovada e enviada ao Action Engine!';
+
+  @override
+  String get opportunityDetailViewAction => 'Ver Ação';
+
+  @override
+  String get opportunityDetailApprovedTitle => 'Oportunidade aprovada!';
+
+  @override
+  String get opportunityDetailDeleteConfirmTitle => 'Excluir oportunidade?';
+
+  @override
+  String opportunityDetailDeleteConfirmBody(String title) {
+    return '\"$title\" será removida permanentemente.';
+  }
+
+  @override
+  String get opportunityDetailDelete => 'Excluir';
+
+  @override
+  String get opportunityDetailApproveAndCreateMenu => 'Aprovar e criar ação';
+
+  @override
+  String get opportunityDetailScoreBreakdownTitle => 'Score Breakdown';
+
+  @override
+  String get opportunityDetailOriginTitle => 'Origem';
+
+  @override
+  String get opportunityDetailSourcesTitle => 'Fontes';
+
+  @override
+  String get opportunityDetailAiRationaleTitle => 'Justificativa da IA';
+
+  @override
+  String get opportunityDetailConfidenceTitle => 'Confiança';
+
+  @override
+  String get opportunityDetailRisksTitle => 'Riscos';
+
+  @override
+  String get opportunityDetailNextStepsTitle => 'Próximos Passos';
+
+  @override
+  String get opportunityDetailScoreMarket => 'Mercado';
+
+  @override
+  String get opportunityDetailScoreRevenue => 'Receita';
+
+  @override
+  String get opportunityDetailScoreCompetition => 'Competição';
+
+  @override
+  String get opportunityDetailScoreSynergy => 'Sinergia';
+
+  @override
+  String get opportunityDetailScoreStrategicFit => 'Fit Estratégico';
+
+  @override
+  String get opportunityDetailOriginGeneratedBy => 'Gerada por';
+
+  @override
+  String get opportunityDetailOriginProject => 'Projeto';
+
+  @override
+  String get opportunityDetailOriginMarketAnalysis => 'Análise de mercado';
+
+  @override
+  String get opportunityDetailOriginCreatedAt => 'Criada em';
+
+  @override
+  String get opportunityDetailConfidenceHigh => 'Alta';
+
+  @override
+  String get opportunityDetailConfidenceMedium => 'Média';
+
+  @override
+  String get opportunityDetailConfidenceLow => 'Baixa';
+
+  @override
+  String get opportunityDetailApproveCreateActionButton =>
+      'Aprovar e Criar Ação';
+
+  @override
+  String opportunityDetailApprovedCreateActionError(String error) {
+    return 'Aprovada! Erro ao criar ação: $error';
+  }
+
+  @override
+  String get opportunityDetailSendToActionEngine => 'Enviar para Action Engine';
+
+  @override
+  String get opportunityDetailActionCreatedTitle =>
+      'Ação criada no Action Engine!';
+
+  @override
+  String opportunityDetailGenericError(String error) {
+    return 'Erro: $error';
+  }
+
+  @override
+  String get opportunityDetailAskIveButton =>
+      'Perguntar à IVE sobre esta oportunidade';
+
+  @override
+  String get upgradeFaqTitle => 'Perguntas frequentes';
+
+  @override
+  String get upgradeFaqFreeLimitQ => 'Como funciona o limite gratuito?';
+
+  @override
+  String upgradeFaqFreeLimitA(int limit) {
+    return 'Você pode fazer até $limit análises de IA por mês no plano gratuito (análise de site, estratégia, mercado, etc). O contador reinicia todo dia 1º.';
+  }
+
+  @override
+  String get upgradeFaqCancelQ => 'Posso cancelar a qualquer momento?';
+
+  @override
+  String get upgradeFaqCancelA =>
+      'Sim. O plano Pro é mensal e você pode cancelar a qualquer momento sem taxa.';
+
+  @override
+  String get upgradeFaqDataQ => 'Meus dados ficam salvos se eu cancelar?';
+
+  @override
+  String get upgradeFaqDataA =>
+      'Sim. Seu histórico e projetos ficam salvos, mas o limite de análises volta para o do plano gratuito.';
+
+  @override
+  String get aiConfirmTitle => 'Confirmar análise';
+
+  @override
+  String aiConfirmCostSingle(String label) {
+    return '\"$label\" vai consumir 1 das suas análises mensais.';
+  }
+
+  @override
+  String aiConfirmCostMultiple(String label, int units) {
+    return '\"$label\" pode consumir até $units das suas análises mensais.';
+  }
+
+  @override
+  String aiConfirmRemaining(int remaining, int limit) {
+    return 'Restam $remaining de $limit análises este mês.';
+  }
+
+  @override
+  String get aiConfirmCancel => 'CANCELAR';
+
+  @override
+  String get aiConfirmConfirm => 'CONFIRMAR';
 }

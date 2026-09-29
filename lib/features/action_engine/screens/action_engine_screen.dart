@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../data/models/action_queue_item.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/action_queue_provider.dart';
 import '../../../providers/feature_flag_provider.dart';
 import '../../../providers/project_provider.dart';
@@ -11,6 +12,23 @@ import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/ive_exclusion_region.dart';
 import '../widgets/action_engine_execute_sheet.dart';
 import 'action_detail_screen.dart';
+
+// COMMERCIAL-V1-UX-RECONCILIATION (PT/EN commercial matrix) -- item.status
+// raw enum values ('pending'/'approved'/'executing'/'completed'/
+// 'cancelled') were rendered directly as UI badge text; this maps them to
+// a human, localized label instead. Shared by both the queue card badge
+// (this file) and action_detail_screen.dart's own _StatusBadge, which
+// intentionally reuses the same actionEngineStatusXxx keys.
+String actionEngineStatusLabel(AppLocalizations l10n, String status) {
+  switch (status) {
+    case 'pending':   return l10n.actionEngineStatusPending;
+    case 'approved':  return l10n.actionEngineStatusApproved;
+    case 'executing': return l10n.actionEngineStatusExecuting;
+    case 'completed': return l10n.actionEngineStatusCompleted;
+    case 'cancelled': return l10n.actionEngineStatusCancelled;
+    default:          return status;
+  }
+}
 
 // ── Colors ───────────────────────────────────────────────────────────────────
 const _kBg      = Color(0xFF0F0F1A);
@@ -42,6 +60,7 @@ class _ActionEngineScreenState extends ConsumerState<ActionEngineScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final flagAsync =
         ref.watch(featureFlagProvider(FeatureFlag.actionEngineEnabled));
 
@@ -55,9 +74,9 @@ class _ActionEngineScreenState extends ConsumerState<ActionEngineScreen> {
           onPressed: () =>
               context.canPop() ? context.pop() : context.go(AppConstants.routeDashboard),
         ),
-        title: const Text(
-          'Action Engine',
-          style: TextStyle(
+        title: Text(
+          l10n.navActionEngine,
+          style: const TextStyle(
               color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
         ),
       ),
@@ -79,6 +98,7 @@ class _FeatureGated extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -87,15 +107,15 @@ class _FeatureGated extends StatelessWidget {
           children: [
             const Icon(Icons.bolt_rounded, color: Colors.white24, size: 64),
             const SizedBox(height: 20),
-            const Text('Action Engine',
-                style: TextStyle(
+            Text(l10n.navActionEngine,
+                style: const TextStyle(
                     color: Colors.white,
                     fontSize: 22,
                     fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
-            const Text(
-              'O motor de ações está sendo calibrado.\nEm breve você terá um sistema inteligente que transforma análises em tarefas executáveis com priorização automática.',
-              style: TextStyle(color: Colors.white54, fontSize: 13, height: 1.5),
+            Text(
+              l10n.actionEngineComingSoonBody,
+              style: const TextStyle(color: Colors.white54, fontSize: 13, height: 1.5),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
@@ -106,12 +126,12 @@ class _FeatureGated extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: _kGold.withOpacity(0.25)),
               ),
-              child: const Column(
+              child: Column(
                 children: [
-                  Icon(Icons.lock_rounded, color: _kGold, size: 28),
-                  SizedBox(height: 8),
-                  Text('Disponível em breve — Plano Pro',
-                      style: TextStyle(
+                  const Icon(Icons.lock_rounded, color: _kGold, size: 28),
+                  const SizedBox(height: 8),
+                  Text(l10n.actionEngineComingSoonPro,
+                      style: const TextStyle(
                           color: _kGold,
                           fontSize: 13,
                           fontWeight: FontWeight.w600)),
@@ -132,13 +152,14 @@ class _ActionBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final itemsAsync = ref.watch(actionQueueNotifierProvider);
 
     return itemsAsync.when(
       loading: () =>
           const Center(child: CircularProgressIndicator(color: _kPrimary)),
       error: (e, _) => Center(
-        child: Text('Erro: $e',
+        child: Text(l10n.commonError,
             style: const TextStyle(color: Colors.white54)),
       ),
       data: (items) {
@@ -174,7 +195,7 @@ class _ActionBody extends ConsumerWidget {
                           const SizedBox(height: 20),
 
                           if (pending.isNotEmpty) ...[
-                            _SectionHeader('Pendentes', pending.length, _kOrange),
+                            _SectionHeader(l10n.actionEngineSectionPending, pending.length, _kOrange),
                             ...pending.map((item) => Padding(
                                   padding: const EdgeInsets.only(bottom: 10),
                                   child: _ActionCard(item: item),
@@ -183,7 +204,7 @@ class _ActionBody extends ConsumerWidget {
                           ],
 
                           if (active.isNotEmpty) ...[
-                            _SectionHeader('Em Execução', active.length, _kCyan),
+                            _SectionHeader(l10n.actionEngineSectionActive, active.length, _kCyan),
                             ...active.map((item) => Padding(
                                   padding: const EdgeInsets.only(bottom: 10),
                                   child: _ActionCard(item: item),
@@ -192,7 +213,7 @@ class _ActionBody extends ConsumerWidget {
                           ],
 
                           if (completed.isNotEmpty) ...[
-                            _SectionHeader('Concluídas', completed.length, _kGreen),
+                            _SectionHeader(l10n.actionEngineSectionCompleted, completed.length, _kGreen),
                             ...completed.take(5).map((item) => Padding(
                                   padding: const EdgeInsets.only(bottom: 10),
                                   child: _ActionCard(item: item),
@@ -221,13 +242,14 @@ class _ActionSummaryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       children: [
-        _SummaryChip('Pendentes',  '$pending', _kOrange),
+        _SummaryChip(l10n.actionEngineSummaryPending,   '$pending', _kOrange),
         const SizedBox(width: 10),
-        _SummaryChip('Ativas',     '$active',  _kCyan),
+        _SummaryChip(l10n.actionEngineSummaryActive,    '$active',  _kCyan),
         const SizedBox(width: 10),
-        _SummaryChip('Concluídas', '$done',    _kGreen),
+        _SummaryChip(l10n.actionEngineSummaryCompleted, '$done',    _kGreen),
       ],
     );
   }
@@ -337,7 +359,7 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erro: ${e.toString()}'),
+            content: Text(AppLocalizations.of(context)!.commonError),
             backgroundColor: _kRed,
           ),
         );
@@ -348,26 +370,27 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
   }
 
   Future<void> _confirmDelete() async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A2E),
-        title: const Text('Excluir ação?',
-            style: TextStyle(color: Colors.white, fontSize: 16)),
+        title: Text(l10n.actionEngineDeleteTitle,
+            style: const TextStyle(color: Colors.white, fontSize: 16)),
         content: Text(
-          'A ação "${widget.item.title}" será removida permanentemente.',
+          l10n.actionEngineDeleteBody(widget.item.title),
           style: const TextStyle(color: Colors.white54, fontSize: 13),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar',
-                style: TextStyle(color: Colors.white38)),
+            child: Text(l10n.commonCancel,
+                style: const TextStyle(color: Colors.white38)),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Excluir',
-                style: TextStyle(color: _kRed, fontWeight: FontWeight.bold)),
+            child: Text(l10n.actionEngineDelete,
+                style: const TextStyle(color: _kRed, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -381,6 +404,7 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n     = AppLocalizations.of(context)!;
     final notifier = ref.read(actionQueueNotifierProvider.notifier);
     final item     = widget.item;
 
@@ -429,7 +453,7 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    item.status,
+                    actionEngineStatusLabel(l10n, item.status),
                     style: TextStyle(
                         color: _statusColor(item.status),
                         fontSize: 9,
@@ -445,10 +469,10 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
           Wrap(
             spacing: 8,
             children: [
-              _ScoreBadge('ROI', item.roiScore),
-              _ScoreBadge('Impacto', item.impactScore),
-              _ScoreBadge('Esforço', item.effortScore),
-              _ScoreBadge('Prio.', item.priority, isSmaller: true),
+              _ScoreBadge(l10n.actionEngineScoreRoi, item.roiScore),
+              _ScoreBadge(l10n.actionEngineScoreImpact, item.impactScore),
+              _ScoreBadge(l10n.actionEngineScoreEffort, item.effortScore),
+              _ScoreBadge(l10n.actionEngineScorePriority, item.priority, isSmaller: true),
             ],
           ),
           const SizedBox(height: 10),
@@ -456,7 +480,7 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               if (item.status == 'pending' && !_loading) ...[
-                _ActionBtn('Aprovar', _kGreen, () => _run(
+                _ActionBtn(l10n.actionEngineApprove, _kGreen, () => _run(
                     () => notifier.approve(item.id, title: item.title))),
                 const SizedBox(width: 8),
               ],
@@ -465,7 +489,7 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
               // status write; there is no separate "complete" action left
               // (completion is proven by the receipt, not asserted by a tap).
               if (item.status == 'approved' && !_loading) ...[
-                _ActionBtn('Executar', _kCyan, () async {
+                _ActionBtn(l10n.actionEngineExecute, _kCyan, () async {
                   await ActionEngineExecuteSheet.show(context, item);
                   ref.invalidate(actionQueueItemByIdProvider(item.id));
                 }),
@@ -478,13 +502,13 @@ class _ActionCardState extends ConsumerState<_ActionCard> {
                 // its geometry so the placement engine steers clear;
                 // renders unchanged otherwise (ive_exclusion_region.dart).
                 IveExclusionRegion(
-                  child: _ActionBtn('Verificar', _kGreen, () async {
+                  child: _ActionBtn(l10n.actionEngineVerify, _kGreen, () async {
                     await ActionEngineExecuteSheet.show(context, item);
                     ref.invalidate(actionQueueItemByIdProvider(item.id));
                   }),
                 ),
                 const SizedBox(width: 8),
-                _ActionBtn('Pausar', _kOrange, () => _run(
+                _ActionBtn(l10n.actionEnginePause, _kOrange, () => _run(
                     () => notifier.approve(item.id, title: item.title))),
                 const SizedBox(width: 8),
               ],
@@ -563,6 +587,7 @@ class _ProjectFilter extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final projectsAsync = ref.watch(projectsProvider);
     return projectsAsync.maybeWhen(
       data: (projects) {
@@ -574,7 +599,7 @@ class _ProjectFilter extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             children: [
               _Chip(
-                label: 'Todos',
+                label: l10n.actionEngineFilterAll,
                 selected: selected == null,
                 onTap: () => onSelect(null),
               ),
@@ -633,23 +658,24 @@ class _EmptyQueue extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.all(32),
       child: Column(
         children: [
           const Icon(Icons.bolt_rounded, color: Colors.white24, size: 56),
           const SizedBox(height: 16),
-          const Text(
-            'Fila de ações vazia',
-            style: TextStyle(
+          Text(
+            l10n.actionEngineEmptyTitle,
+            style: const TextStyle(
                 color: Colors.white70,
                 fontSize: 16,
                 fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Ações serão geradas automaticamente a partir de análises de mercado e oportunidades.',
-            style: TextStyle(color: Colors.white38, fontSize: 12, height: 1.5),
+          Text(
+            l10n.actionEngineEmptyBody,
+            style: const TextStyle(color: Colors.white38, fontSize: 12, height: 1.5),
             textAlign: TextAlign.center,
           ),
         ],

@@ -45,6 +45,7 @@ class OpportunityDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final itemAsync = ref.watch(opportunityLabItemByIdProvider(itemId));
 
     return Scaffold(
@@ -58,9 +59,9 @@ class OpportunityDetailScreen extends ConsumerWidget {
               ? context.pop()
               : context.go(AppConstants.routeOpportunityLab),
         ),
-        title: const Text(
-          'Detalhe da Oportunidade',
-          style: TextStyle(
+        title: Text(
+          l10n.opportunityDetailTitle,
+          style: const TextStyle(
               color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
         ),
         actions: [
@@ -76,13 +77,13 @@ class OpportunityDetailScreen extends ConsumerWidget {
         loading: () =>
             const Center(child: CircularProgressIndicator(color: _kPrimary)),
         error: (e, _) => Center(
-          child: Text('Erro: $e',
+          child: Text(l10n.opportunityDetailLoadError('$e'),
               style: const TextStyle(color: Colors.white54)),
         ),
         data: (item) => item == null
-            ? const Center(
-                child: Text('Oportunidade não encontrada.',
-                    style: TextStyle(color: Colors.white54)))
+            ? Center(
+                child: Text(l10n.opportunityDetailNotFound,
+                    style: const TextStyle(color: Colors.white54)))
             : _DetailBody(item: item, ref: ref),
       ),
     );
@@ -98,6 +99,7 @@ class _StatusMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return PopupMenuButton<String>(
       icon: const Icon(Icons.more_vert, color: Colors.white),
       color: _kCard,
@@ -120,10 +122,10 @@ class _StatusMenu extends StatelessWidget {
             ref.invalidate(opportunityLabItemByIdProvider(item.id));
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: const Text('Aprovada e enviada ao Action Engine!'),
+                content: Text(l10n.opportunityDetailApprovedSentTitle),
                 backgroundColor: _kGreen,
                 action: SnackBarAction(
-                  label: 'Ver Ação',
+                  label: l10n.opportunityDetailViewAction,
                   textColor: Colors.white,
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute(
@@ -135,8 +137,8 @@ class _StatusMenu extends StatelessWidget {
             }
           } catch (_) {
             if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                content: Text('Oportunidade aprovada!'),
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(l10n.opportunityDetailApprovedTitle),
                 backgroundColor: _kGreen,
               ));
             }
@@ -146,21 +148,21 @@ class _StatusMenu extends StatelessWidget {
             context: context,
             builder: (_) => AlertDialog(
               backgroundColor: _kCard,
-              title: const Text('Excluir oportunidade?',
-                  style: TextStyle(color: Colors.white)),
+              title: Text(l10n.opportunityDetailDeleteConfirmTitle,
+                  style: const TextStyle(color: Colors.white)),
               content: Text(
-                '"${item.title}" será removida permanentemente.',
+                l10n.opportunityDetailDeleteConfirmBody(item.title),
                 style: const TextStyle(color: Colors.white70),
               ),
               actions: [
                 TextButton(
                     onPressed: () => Navigator.pop(context, false),
-                    child: const Text('Cancelar',
-                        style: TextStyle(color: Colors.white54))),
+                    child: Text(l10n.commonCancel,
+                        style: const TextStyle(color: Colors.white54))),
                 TextButton(
                     onPressed: () => Navigator.pop(context, true),
-                    child: const Text('Excluir',
-                        style: TextStyle(color: _kRed))),
+                    child: Text(l10n.opportunityDetailDelete,
+                        style: const TextStyle(color: _kRed))),
               ],
             ),
           );
@@ -174,13 +176,14 @@ class _StatusMenu extends StatelessWidget {
       },
       itemBuilder: (_) => [
         if (item.status == 'pending')
-          const PopupMenuItem(
+          PopupMenuItem(
             value: 'approve',
-            child: Text('Aprovar e criar ação', style: TextStyle(color: _kGreen)),
+            child: Text(l10n.opportunityDetailApproveAndCreateMenu,
+                style: const TextStyle(color: _kGreen)),
           ),
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'delete',
-          child: Text('Excluir', style: TextStyle(color: _kRed)),
+          child: Text(l10n.opportunityDetailDelete, style: const TextStyle(color: _kRed)),
         ),
       ],
     );
@@ -196,6 +199,7 @@ class _DetailBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final projectsAsync = ref.watch(projectsNotifierProvider);
     final projects = projectsAsync.valueOrNull ?? [];
     final projectName = item.projectId == null
@@ -228,7 +232,7 @@ class _DetailBody extends StatelessWidget {
         // ── Score breakdown ────────────────────────────────────
         _Section(
           icon: Icons.bar_chart_rounded,
-          title: 'Score Breakdown',
+          title: l10n.opportunityDetailScoreBreakdownTitle,
           child: _ScoreBreakdown(item: item),
         ),
 
@@ -237,7 +241,7 @@ class _DetailBody extends StatelessWidget {
         // ── Origem ─────────────────────────────────────────────
         _Section(
           icon: Icons.track_changes_rounded,
-          title: 'Origem',
+          title: l10n.opportunityDetailOriginTitle,
           child: _OriginSection(
             item: item,
             projectName: projectName,
@@ -249,7 +253,7 @@ class _DetailBody extends StatelessWidget {
           const SizedBox(height: 12),
           _Section(
             icon: Icons.source_rounded,
-            title: 'Fontes',
+            title: l10n.opportunityDetailSourcesTitle,
             child: _SourcesList(sources: item.sources),
           ),
         ],
@@ -258,7 +262,7 @@ class _DetailBody extends StatelessWidget {
           const SizedBox(height: 12),
           _Section(
             icon: Icons.psychology_rounded,
-            title: 'Justificativa da IA',
+            title: l10n.opportunityDetailAiRationaleTitle,
             child: _RationaleCard(rationale: item.rationale!),
           ),
         ],
@@ -269,7 +273,7 @@ class _DetailBody extends StatelessWidget {
         if (item.confidence > 0)
           _Section(
             icon: Icons.verified_rounded,
-            title: 'Confiança',
+            title: l10n.opportunityDetailConfidenceTitle,
             child: _ConfidenceMeter(value: item.confidence),
           ),
 
@@ -277,7 +281,7 @@ class _DetailBody extends StatelessWidget {
           const SizedBox(height: 12),
           _Section(
             icon: Icons.warning_amber_rounded,
-            title: 'Riscos',
+            title: l10n.opportunityDetailRisksTitle,
             child: _RisksList(risks: item.risks),
           ),
         ],
@@ -286,7 +290,7 @@ class _DetailBody extends StatelessWidget {
           const SizedBox(height: 12),
           _Section(
             icon: Icons.checklist_rounded,
-            title: 'Próximos Passos',
+            title: l10n.opportunityDetailNextStepsTitle,
             child: _ActionStepsList(steps: item.actionSteps),
           ),
         ],
@@ -420,12 +424,13 @@ class _ScoreBreakdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final dims = [
-      ('Mercado',          item.marketScore,      const Color(0xFF6C63FF)),
-      ('Receita',          item.revenueScore,     const Color(0xFF4CAF50)),
-      ('Competição',       item.competitionScore, const Color(0xFFFF9800)),
-      ('Sinergia',         item.synergyScore,     const Color(0xFF00BCD4)),
-      ('Fit Estratégico',  item.strategicFit,     const Color(0xFFB44FE8)),
+      (l10n.opportunityDetailScoreMarket,        item.marketScore,      const Color(0xFF6C63FF)),
+      (l10n.opportunityDetailScoreRevenue,       item.revenueScore,     const Color(0xFF4CAF50)),
+      (l10n.opportunityDetailScoreCompetition,   item.competitionScore, const Color(0xFFFF9800)),
+      (l10n.opportunityDetailScoreSynergy,       item.synergyScore,     const Color(0xFF00BCD4)),
+      (l10n.opportunityDetailScoreStrategicFit,  item.strategicFit,     const Color(0xFFB44FE8)),
     ];
 
     return Column(
@@ -495,24 +500,25 @@ class _OriginSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _InfoRow(
           icon: Icons.input_rounded,
-          label: 'Gerada por',
+          label: l10n.opportunityDetailOriginGeneratedBy,
           value: item.originLabel,
         ),
         if (projectName != null)
           _InfoRow(
             icon: Icons.folder_rounded,
-            label: 'Projeto',
+            label: l10n.opportunityDetailOriginProject,
             value: projectName!,
           ),
         if (item.marketAnalysisId != null)
           _InfoRow(
             icon: Icons.analytics_rounded,
-            label: 'Análise de mercado',
+            label: l10n.opportunityDetailOriginMarketAnalysis,
             // Falls back to the truncated id only while the lookup is
             // still loading or the analysis is unreachable (e.g. RLS) --
             // never the steady-state UX.
@@ -521,7 +527,7 @@ class _OriginSection extends StatelessWidget {
           ),
         _InfoRow(
           icon: Icons.calendar_today_rounded,
-          label: 'Criada em',
+          label: l10n.opportunityDetailOriginCreatedAt,
           value: _formatDate(item.createdAt),
         ),
       ],
@@ -646,12 +652,13 @@ class _ConfidenceMeter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final color = _scoreColor(value);
     final label = value >= 80
-        ? 'Alta'
+        ? l10n.opportunityDetailConfidenceHigh
         : value >= 60
-            ? 'Média'
-            : 'Baixa';
+            ? l10n.opportunityDetailConfidenceMedium
+            : l10n.opportunityDetailConfidenceLow;
 
     return Row(
       children: [
@@ -865,6 +872,7 @@ class _ActionButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         if (item.status == 'pending')
@@ -879,7 +887,7 @@ class _ActionButtons extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12)),
               ),
               icon: const Icon(Icons.bolt_rounded),
-              label: const Text('Aprovar e Criar Ação'),
+              label: Text(l10n.opportunityDetailApproveCreateActionButton),
               onPressed: () async {
                 await ref
                     .read(opportunityLabNotifierProvider.notifier)
@@ -907,7 +915,7 @@ class _ActionButtons extends StatelessWidget {
                 } catch (e) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text('Aprovada! Erro ao criar ação: $e'),
+                      content: Text(l10n.opportunityDetailApprovedCreateActionError('$e')),
                       backgroundColor: _kOrange,
                     ));
                   }
@@ -928,7 +936,7 @@ class _ActionButtons extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12)),
               ),
               icon: const Icon(Icons.bolt_rounded),
-              label: const Text('Enviar para Action Engine'),
+              label: Text(l10n.opportunityDetailSendToActionEngine),
               onPressed: () async {
                 try {
                   await ref
@@ -942,8 +950,8 @@ class _ActionButtons extends StatelessWidget {
                       .markExecuting(item.id);
                   ref.invalidate(opportunityLabItemByIdProvider(item.id));
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text('Ação criada no Action Engine!'),
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text(l10n.opportunityDetailActionCreatedTitle),
                       backgroundColor: _kGreen,
                     ));
                     context.go(AppConstants.routeActionEngine);
@@ -951,7 +959,7 @@ class _ActionButtons extends StatelessWidget {
                 } catch (e) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text('Erro: $e'),
+                      content: Text(l10n.opportunityDetailGenericError('$e')),
                       backgroundColor: _kRed,
                     ));
                   }
@@ -984,7 +992,7 @@ class _ActionButtons extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12)),
               ),
               icon: const Icon(Icons.auto_awesome_rounded),
-              label: const Text('Perguntar à IVE sobre esta oportunidade'),
+              label: Text(l10n.opportunityDetailAskIveButton),
               onPressed: () {
                 // IVE-COMMERCIAL-FOUNDATION-11 — antes, este botão navegava
                 // de volta para a lista de Opportunity Lab na esperança de

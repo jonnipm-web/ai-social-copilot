@@ -6,6 +6,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/language_utils.dart';
 import '../../../data/models/competitor.dart';
 import '../../../data/models/ive_interaction_request.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/market_analysis_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
 
@@ -77,13 +78,14 @@ class _CompetitorDiscoveryScreenState
   }
 
   Widget _buildScaffold(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final asyncList = ref.watch(competitorsByAnalysisProvider(widget.analysisId));
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F1A),
       appBar: AppBar(
         backgroundColor: const Color(0xFF0F0F1A),
-        title: const Text('Concorrentes', style: TextStyle(color: Colors.white)),
+        title: Text(l10n.miCompetitorTitle, style: const TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -102,7 +104,7 @@ class _CompetitorDiscoveryScreenState
                   )
                 : const Icon(Icons.search_rounded, color: Color(0xFFFF6B6B)),
             label: Text(
-              _running ? 'Buscando...' : 'Descobrir',
+              _running ? l10n.miCompetitorSearching : l10n.miCompetitorDiscoverButton,
               style: const TextStyle(color: Color(0xFFFF6B6B)),
             ),
           ),
@@ -124,7 +126,9 @@ class _CompetitorDiscoveryScreenState
           Expanded(
             child: asyncList.when(
               loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFFFF6B6B))),
-              error: (e, _) => Center(child: Text('Erro: $e', style: const TextStyle(color: Colors.redAccent))),
+              error: (e, _) => Center(
+                  child: Text(l10n.miSubErrorPrefix('$e'),
+                      style: const TextStyle(color: Colors.redAccent))),
               data: (competitors) => competitors.isEmpty
                   ? Center(
                       child: Column(
@@ -132,7 +136,8 @@ class _CompetitorDiscoveryScreenState
                         children: [
                           const Icon(Icons.people_alt_outlined, color: Colors.white24, size: 64),
                           const SizedBox(height: 16),
-                          const Text('Nenhum concorrente ainda', style: TextStyle(color: Colors.white38)),
+                          Text(l10n.miCompetitorEmptyTitle,
+                              style: const TextStyle(color: Colors.white38)),
                           const SizedBox(height: 8),
                           ElevatedButton(
                             onPressed: _running ? null : _discover,
@@ -140,7 +145,7 @@ class _CompetitorDiscoveryScreenState
                               backgroundColor: const Color(0xFFFF6B6B),
                               foregroundColor: Colors.white,
                             ),
-                            child: const Text('Descobrir Concorrentes'),
+                            child: Text(l10n.miCompetitorEmptyButton),
                           ),
                         ],
                       ),
@@ -172,6 +177,7 @@ class _CompetitorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -216,13 +222,13 @@ class _CompetitorCard extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              _ScoreItem(label: 'Simil.', value: competitor.similarityScore, color: const Color(0xFF4D96FF)),
+              _ScoreItem(label: l10n.miCompetitorScoreSimilarity, value: competitor.similarityScore, color: const Color(0xFF4D96FF)),
               const SizedBox(width: 12),
-              _ScoreItem(label: 'Autor.', value: competitor.authorityScore, color: const Color(0xFFFFD93D)),
+              _ScoreItem(label: l10n.miCompetitorScoreAuthority, value: competitor.authorityScore, color: const Color(0xFFFFD93D)),
               const SizedBox(width: 12),
-              _ScoreItem(label: 'Relev.', value: competitor.relevanceScore, color: const Color(0xFF6BCB77)),
+              _ScoreItem(label: l10n.miCompetitorScoreRelevance, value: competitor.relevanceScore, color: const Color(0xFF6BCB77)),
               const SizedBox(width: 12),
-              _ScoreItem(label: 'Geral', value: competitor.overallScore, color: const Color(0xFFFF6B6B)),
+              _ScoreItem(label: l10n.miCompetitorScoreOverall, value: competitor.overallScore, color: const Color(0xFFFF6B6B)),
             ],
           ),
           if (competitor.description.isNotEmpty) ...[
@@ -234,7 +240,7 @@ class _CompetitorCard extends StatelessWidget {
           ],
           if (competitor.strengths.isNotEmpty) ...[
             const SizedBox(height: 10),
-            const Text('Pontos fortes:', style: TextStyle(color: Colors.white54, fontSize: 11)),
+            Text(l10n.miCompetitorStrengthsLabel, style: const TextStyle(color: Colors.white54, fontSize: 11)),
             const SizedBox(height: 4),
             ...competitor.strengths.take(3).map(
               (s) => Padding(
@@ -257,7 +263,7 @@ class _CompetitorCard extends StatelessWidget {
           // fortes" above.
           if (competitor.weaknesses.isNotEmpty) ...[
             const SizedBox(height: 10),
-            const Text('Pontos fracos:', style: TextStyle(color: Colors.white54, fontSize: 11)),
+            Text(l10n.miCompetitorWeaknessesLabel, style: const TextStyle(color: Colors.white54, fontSize: 11)),
             const SizedBox(height: 4),
             ...competitor.weaknesses.take(3).map(
               (w) => Padding(
