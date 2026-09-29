@@ -46,10 +46,11 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
     setState(() => _error = null);
     try {
       final analysis = await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
+      if (!mounted) return;
       await _exec.run<void>(
         context: context,
         ref: ref,
-        analysisLabel: 'Revenue Planner',
+        analysisLabel: AppLocalizations.of(context)!.miRevenueTitle,
         request: IveInteractionRequest(
           projectId:        analysis.projectId,
           sourceModule:     'market_intelligence',
@@ -120,6 +121,10 @@ class _RevenuePlannerScreenState extends ConsumerState<RevenuePlannerScreen> {
                     const Icon(Icons.attach_money_outlined, color: Colors.white24, size: 64),
                     const SizedBox(height: 16),
                     Text(l10n.miRevenueEmptyTitle, style: const TextStyle(color: Colors.white38)),
+                    const SizedBox(height: 8),
+                    Text(l10n.miRevenueEmptyBody,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.white24, fontSize: 12, height: 1.4)),
                     const SizedBox(height: 24),
                     TextField(
                       controller: _projectCtrl,

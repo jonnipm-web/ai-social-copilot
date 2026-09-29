@@ -66,26 +66,30 @@ combinado com o próprio texto da missão atual do Owner.
   adicional. Confirmado pela `COMMERCIAL_PRODUCT_ARCHITECTURE.md` §4:
   "already confirmed well-structured... should be the pattern other
   refinements match, not replace."
-- `_ModuleNavGrid` (mesmo arquivo, linhas ~1195-1244): 6 módulos de
-  aprofundamento (Concorrentes, Gap Analysis, Oportunidades, Nichos,
-  Content Cluster, Revenue Planner) SÃO ainda ícone+label simples sem
-  resumo prévio — mas isso é aceitável dado que o resumo desses dados
-  já aparece nos cards acima deles na mesma tela (R1 já satisfeito no
-  nível do Hub, não precisa ser duplicado no grid de navegação).
-- Opportunity Lab (`opportunity_lab_screen.dart`, `_LabItemCard` linhas
-  277-417 por `COMMERCIAL_PRODUCT_ARCHITECTURE.md` §3.5): mostra
-  score/status no card, mas NÃO mostra o nome do projeto (gap
-  confirmado, ver R14).
+- **CORRIGIDO em missão posterior (PHYSICAL-QA-RECOVERY, PQ-02)**: o
+  `_ModuleNavGrid` genérico (ícone+label, sem resumo prévio) foi
+  REMOVIDO. Owner testou fisicamente e confirmou que o resumo nos cards
+  acima NÃO tornava o grid aceitável — Nichos/Content Cluster/Revenue
+  Planner não tinham NENHUM resumo próprio, só esse grid genérico. Agora
+  todos os 6 módulos de aprofundamento têm card information-first
+  dedicado (`_CompetitorRankingCard`, `_GapSummaryCard`,
+  `_OpportunitiesCard`, e os 3 novos `_NicheSummaryCard`/
+  `_ContentClusterSummaryCard`/`_RevenuePlannerSummaryCard`), cada um com
+  dados reais, estado vazio explícito e CTA de navegação — não mais
+  ícone+nome apenas.
+- Opportunity Lab (`opportunity_lab_screen.dart`, `_LabItemCard`) e
+  Action Engine (`_ActionCard`): ambos agora mostram o nome do projeto
+  vinculado no card (R14 fechado em missão posterior).
 - Action Engine: `_ActionSummaryRow`/`_SummaryChip`
   (`action_engine_screen.dart:201-254` por
   `COMMERCIAL_PRODUCT_ARCHITECTURE.md` §3.4) são contadores estáticos
   sem interatividade — mostram números mas não permitem navegar/filtrar
-  a partir deles.
+  a partir deles. Não abordado nesta rodada.
 
-**Status**: `IMPLEMENTED` para Dashboard (Pro cards) e Market
-Intelligence Hub. `MISSING` para: nome do projeto nos cards de
-Opportunity Lab/Action Engine (ver R14), e para os contadores não
-clicáveis do Action Engine.
+**Status**: `IMPLEMENTED` — Dashboard (Pro cards), Market Intelligence
+Hub (agora com os 6 módulos information-first, não só 3), Opportunity
+Lab e Action Engine (nome do projeto nos cards). Único resíduo: os
+contadores do Action Engine ainda não são clicáveis/filtráveis.
 
 **Gap**: contadores do Action Engine não filtram a lista ao toque.
 
@@ -366,22 +370,23 @@ competitors, opportunities, module nav grid, ROI integration)").
 no código de `market_intelligence_hub_screen.dart`
 (`_ExecScoreCard`, `_RevenuePotentialCard`+`_InvestmentCard`,
 `_CompetitorRankingCard`, `_GapSummaryCard`, `_OpportunitiesCard`,
-`_PriorityActionsCard`). Overflow mobile corrigido nesta sessão
-(`_ExecScoreCard`, `_InfoRow2`).
+`_PriorityActionsCard`), agora somados aos 3 novos cards
+information-first de Nichos/Content Cluster/Revenue Planner (PQ-02,
+missão PHYSICAL-QA-RECOVERY) — os 6 módulos de aprofundamento do
+requisito original agora têm resumo próprio, não só os 3 que já tinham.
+Overflow mobile corrigido em sessão anterior (`_ExecScoreCard`,
+`_InfoRow2`) e revalidado sem overflow em 360/390/768/1920px para os 3
+cards novos.
 
-**Status**: `IMPLEMENTED` no nível de código.
+**Status**: `IMPLEMENTED` — completo, tanto em código quanto em
+disponibilidade real.
 
-**RESSALVA CRÍTICA — P1 aberto e não resolvido por este documento**:
-o scroll da tela (`SingleChildScrollView`) está reportado como travado
-em produção (bug físico reproduzido ao vivo pela sessão principal,
-múltiplas técnicas de teste, causa raiz não confirmada — um teste de
-widget automatizado prova que o código Dart está correto, mas o
-comportamento em produção real segue `AWAITING_OWNER_PHYSICAL_
-VALIDATION` por instrução explícita do Owner). Enquanto esse P1 não for
-resolvido, a maior parte dos 6 elementos deste requisito pode estar
-**inacessível na prática** mesmo estando corretamente implementada no
-código — R9 é `IMPLEMENTED` em código mas com disponibilidade real
-condicionada ao P1 do scroll.
+**Ressalva anterior RESOLVIDA**: o P1 de scroll que condicionava a
+disponibilidade real deste requisito foi testado fisicamente pelo Owner
+(navegador/input real) e confirmado `CLOSED —
+NOT_REPRODUCED_ON_PHYSICAL_CLIENT / AUTOMATION_ARTIFACT` (ver
+`docs/COMMERCIAL-V1-PHYSICAL-QA-LEDGER.md`, PQ-04). Não há mais nenhuma
+condição pendente sobre este requisito.
 
 ---
 
@@ -448,9 +453,12 @@ misroute de UUID).
   — RenderFlex overflow de até 136px em viewport 390px, agora corrigido
   com `LayoutBuilder` responsivo + `Flexible`/`overflow:ellipsis`.
   Testado em 4 breakpoints (360/390/768/1920px), 0 overflows.
-- **P1 aberto (não corrigido por decisão do Owner)**: scroll travado no
-  Hub de MI e em Competitor Discovery — ver R9. Estado:
-  `AWAITING_OWNER_PHYSICAL_VALIDATION`.
+- **P1 RESOLVIDO**: scroll no Hub de MI e em Competitor Discovery — ver
+  R9. Owner testou fisicamente com mouse/trackpad real e confirmou
+  funcionamento normal. Estado final: `CLOSED —
+  NOT_REPRODUCED_ON_PHYSICAL_CLIENT / AUTOMATION_ARTIFACT` (ver
+  `docs/COMMERCIAL-V1-PHYSICAL-QA-LEDGER.md`, PQ-04). Nenhuma alteração
+  de código foi feita para este item, por instrução explícita do Owner.
 - Website Analyzer: bug de UUID roteado incorretamente
   (`22P02: invalid input syntax for UUID`) descrito em
   `COMMERCIAL_PRODUCT_ARCHITECTURE.md` §6 — NÃO re-verificado nesta
@@ -605,20 +613,22 @@ um item para uma decisão de produto futura, não uma regressão.
 | R6 | IMPLEMENTED | Dashboard enriquecido nesta sessão (Portfolio/Recomendações/Ações Pendentes); ExecutiveDashboardScreen/HomeScreen permanecem órfãos por decisão |
 | R7 | IMPLEMENTED (parcial) | MI→Opportunity→Action→ROI OK; Knowledge→Content Library FK não usada |
 | R8 | IMPLEMENTED | Empty states OK; UUID bruto corrigido nesta sessão (opportunity_detail_screen.dart) |
-| R9 | IMPLEMENTED (código) / condicionado (produção) | Todos os 6 elementos existem; disponibilidade real depende do P1 de scroll |
+| R9 | IMPLEMENTED | Todos os 6 elementos existem, incluindo os 3 novos cards information-first (Nichos/Cluster/Revenue); scroll P1 fechado (CLOSED, teste físico do Owner) |
 | R10 | IMPLEMENTED (parcial) | Duplicação de Action corrigida nesta sessão (sem migração de banco); "Pausar" ainda não pausa |
-| R11 | IMPLEMENTED (parcial) | Overflow mobile corrigido nesta sessão; scroll P1 aguardando Owner; navegação do Website Analyzer não re-testada |
+| R11 | IMPLEMENTED (parcial) | Overflow mobile corrigido; scroll P1 CLOSED (teste físico do Owner); navegação do Website Analyzer não re-testada |
 | R12 | IMPLEMENTED | 728/728 testes, nenhuma regressão em áreas críticas |
 | R13 | IMPLEMENTED | Mecanismo de auth-gate central correto e testado |
 | R14 | IMPLEMENTED | Seletor real de projeto (dropdown, reusa `_verifiedProjectId`) adicionado ao Market Intelligence; cards do Opportunity Lab agora mostram o nome do projeto vinculado |
 | R15 | IMPLEMENTED (núcleo) | Detecção proativa de issues real; vigilância executiva agregada não encontrada/não especificada |
 
-**Contagem**: 14 IMPLEMENTED (total ou parcial predominante), 0 MISSING,
-0 IMPLEMENTED_NOT_DEPLOYED, 2 com resultado condicionado a decisão
-externa (R9/R11 dependem do P1 de scroll aguardando validação física do
-Owner). R14 foi fechado em janela posterior a esta auditoria (dropdown
-de projeto + nome do projeto nos cards do Opportunity Lab), deixando
-R1-R15 sem nenhum item MISSING. Nenhum requisito ficou classificado
+**Contagem**: 15 IMPLEMENTED (total ou parcial predominante), 0 MISSING,
+0 IMPLEMENTED_NOT_DEPLOYED, 0 condicionados a decisão externa pendente —
+o P1 de scroll que condicionava R9/R11 foi fechado (CLOSED, teste físico
+do Owner, missão PHYSICAL-QA-RECOVERY). R14 foi fechado em janela
+posterior a esta auditoria (dropdown de projeto + nome do projeto nos
+cards do Opportunity Lab/Action Engine), e R1/R9 foram revalidados na
+mesma missão posterior após o redesign information-first do MI Hub
+(PQ-02), deixando R1-R15 sem nenhum item MISSING ou condicionado. Nenhum requisito ficou classificado
 como UNRECOVERED puro — todos tiveram evidência primária localizada nos
 documentos canônicos já existentes (`docs/commercial/*`,
 `docs/EXECUTIVE_UX_TEST_REPORT.md`) ou determinação direta do estado
