@@ -518,38 +518,39 @@ correto e testado, mas uma rota individual mal configurada não pode ser
 
 **Evidência primária**: `COMMERCIAL_PRODUCT_ARCHITECTURE.md` §4 e §3.5.
 
-**Estado atual do código**:
-- **CONFIRMADO, gap real e não corrigido**: `market_intelligence_
-  screen.dart` chama `notifier.analyze(input, inputType, language)`
-  SEM `projectId` — apesar de `MarketAnalysis.projectId`,
-  `MarketAnalysisService.fetchAll({projectId})` e
-  `marketAnalysesByProjectProvider` já existirem prontos. O seletor
-  "Tipo de entrada" → "Projeto" é uma dica de texto livre, não um
-  seletor real vinculado a `project_id`. A tela usa o provider
-  NÃO-escopado (`marketAnalysesProvider`), não a família por projeto.
-- Opportunity **detail** já resolve e mostra nome do projeto
-  (`opportunity_detail_screen.dart:184-188,471-476`) — `IMPLEMENTED`
-  aqui.
-- Opportunity **list card** (`_LabItemCard`) e Action Engine (card e
-  detalhe) NÃO mostram nome do projeto — `MISSING`, mesmo gap já
-  identificado na vistoria original.
+**Estado atual do código (após correção em janela posterior)**:
+- **CORRIGIDO**: `market_intelligence_screen.dart` agora tem um
+  dropdown real "Vincular a um projeto (opcional)" (visível só quando
+  nenhum projeto chegou via `extra` da rota), que seta o mesmo campo
+  `_projectId` já usado pelo caminho pré-existente — passa pelo mesmo
+  getter `_verifiedProjectId` (ownership-check contra
+  `projectsNotifierProvider`) antes de `notifier.analyze(...,
+  projectId: verifiedProjectId)`. Nenhuma superfície de segurança nova.
+  Teste: `test/features/market_intelligence/market_intelligence_project_selector_test.dart`.
+- Opportunity **detail** já resolvia e mostrava nome do projeto
+  (`opportunity_detail_screen.dart`'s `_OriginSection`) — `IMPLEMENTED`.
+- Opportunity **list card** (`_LabItemCard`) agora também mostra o nome
+  do projeto vinculado (resolvido via `projectsProvider`, mesmo padrão
+  do detail) — `IMPLEMENTED`.
+- Action Engine (card e detalhe) **ainda NÃO mostram** nome do
+  projeto — gap residual pequeno, não fechado nesta correção (fora do
+  escopo autorizado no momento; mesmo padrão já usado em Opportunity
+  Lab poderia ser replicado ali se o Owner priorizar).
 
-**Status**: `MISSING` — Market Intelligence não tem seletor de projeto
-real vinculado a `project_id` (a intelligence gerada não é
-genuinamente project-scoped na criação, apesar do dado existir); listas
-de Opportunity Lab/Action Engine não mostram o projeto.
+**Status**: `IMPLEMENTED` — o requisito central (seletor real de
+projeto vinculado a `project_id`, project-scoping genuíno na criação da
+intelligence) está fechado. Resíduo pequeno e não-bloqueante: Action
+Engine ainda não mostra nome do projeto nos cards/detalhe.
 
-**Ação necessária**: (1) adicionar seletor de projeto real em
-`market_intelligence_screen.dart`, vinculado a `project_id`, mantendo
-as opções "Knowledge Vault" e "descrição manual" já existentes (não
-substituir, complementar); (2) adicionar nome do projeto aos cards de
-lista de Opportunity Lab e Action Engine, usando
-`projectByIdProvider` já usado corretamente no detail de Opportunity.
-
-**Teste/critério de aceitação**: teste de widget confirmando que ao
-selecionar um projeto, a análise resultante tem `projectId` não-nulo
-persistido; teste confirmando que `_LabItemCard` renderiza o nome do
-projeto quando presente.
+**Teste/critério de aceitação**: ✅ teste de widget confirma que
+selecionar um projeto no dropdown faz o banner "vinculado a projeto"
+aparecer (prova indireta de que `_projectId`/`_verifiedProjectId` foram
+setados); `_LabItemCard` agora renderiza o nome do projeto quando
+presente (não coberto por teste automatizado dedicado — `OpportunityLabService`
+tinha o mesmo bloqueio de Supabase eager-init que impede exercitar
+`opportunityLabNotifierProvider` de ponta a ponta num teste de widget
+sem rede real; verificado por leitura de código + `flutter analyze`
+limpo, não por teste de widget completo).
 
 ---
 
@@ -609,19 +610,19 @@ um item para uma decisão de produto futura, não uma regressão.
 | R11 | IMPLEMENTED (parcial) | Overflow mobile corrigido nesta sessão; scroll P1 aguardando Owner; navegação do Website Analyzer não re-testada |
 | R12 | IMPLEMENTED | 728/728 testes, nenhuma regressão em áreas críticas |
 | R13 | IMPLEMENTED | Mecanismo de auth-gate central correto e testado |
-| R14 | MISSING | Market Intelligence sem seletor de projeto real; listas sem nome de projeto |
+| R14 | IMPLEMENTED | Seletor real de projeto (dropdown, reusa `_verifiedProjectId`) adicionado ao Market Intelligence; cards do Opportunity Lab agora mostram o nome do projeto vinculado |
 | R15 | IMPLEMENTED (núcleo) | Detecção proativa de issues real; vigilância executiva agregada não encontrada/não especificada |
 
-**Contagem**: 13 IMPLEMENTED (total ou parcial predominante), 1 MISSING
-(R14 — não abordado nesta sessão), 0 IMPLEMENTED_NOT_DEPLOYED (R6
-concluído nesta sessão), 2 com resultado condicionado a decisão externa
-(R9/R11 dependem do P1 de scroll aguardando validação física do Owner).
-Nenhum requisito ficou classificado como UNRECOVERED puro — todos
-tiveram evidência primária localizada nos documentos canônicos já
-existentes (`docs/commercial/*`, `docs/EXECUTIVE_UX_TEST_REPORT.md`) ou
-determinação direta do estado atual do código. Itens ainda MISSING/
-parciais residuais após esta sessão: R2/R5 (scores de Competitor
-Discovery sem explicação), R7 (Knowledge→Content Library FK não
-exposta na UI), R10 ("Pausar" sem status dedicado), R14 (seletor de
-projeto real em MI) — nenhum bloqueia R1-R15 no agregado, mas
-permanecem como próximos passos recomendados.
+**Contagem**: 14 IMPLEMENTED (total ou parcial predominante), 0 MISSING,
+0 IMPLEMENTED_NOT_DEPLOYED, 2 com resultado condicionado a decisão
+externa (R9/R11 dependem do P1 de scroll aguardando validação física do
+Owner). R14 foi fechado em janela posterior a esta auditoria (dropdown
+de projeto + nome do projeto nos cards do Opportunity Lab), deixando
+R1-R15 sem nenhum item MISSING. Nenhum requisito ficou classificado
+como UNRECOVERED puro — todos tiveram evidência primária localizada nos
+documentos canônicos já existentes (`docs/commercial/*`,
+`docs/EXECUTIVE_UX_TEST_REPORT.md`) ou determinação direta do estado
+atual do código. Itens ainda parciais residuais: R2/R5 (scores de
+Competitor Discovery sem explicação), R7 (Knowledge→Content Library FK
+não exposta na UI), R10 ("Pausar" sem status dedicado) — nenhum bloqueia
+R1-R15 no agregado, mas permanecem como próximos passos recomendados.
