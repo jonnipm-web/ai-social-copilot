@@ -111,20 +111,18 @@ explainability).
   como inteiros crus, SEM tooltip, explicação ou entrada para IVE
   explicar. Confirmado nesta rodada — nenhum `onTap`/`GestureDetector`/
   `showCopilotChat` encontrado em `competitor_discovery_screen.dart`.
-- `competitor.weaknesses` existe no modelo mas nunca é renderizado
-  nesta tela (só `strengths` aparece) — confirmado, mesmo gap já
-  identificado na vistoria original, ainda não corrigido.
+- **CORRIGIDO nesta sessão**: `competitor.weaknesses` agora renderiza
+  simetricamente a `strengths` em `_CompetitorCard`
+  (`competitor_discovery_screen.dart`).
 - Em contraste, `Decision Center` (`_ProjectCard`, citado em
   `COMMERCIAL_PRODUCT_ARCHITECTURE.md` §8) e várias telas de MI (via
   `iveContextDataProvider`) JÁ têm afordance de explicação contextual.
 
-**Status**: `MISSING` para Competitor Discovery (scores opacos,
-weaknesses invisível). `IMPLEMENTED` em outras telas (Decision Center,
-Opportunity detail via IVE contextual chat).
+**Status**: `IMPLEMENTED` (parcial) — `weaknesses` corrigido; scores
+ainda opacos sem tooltip/explicação (não corrigido nesta sessão).
 
-**Ação necessária**: adicionar explicação de score (tooltip mínimo ou
-entrada "Perguntar à IVE sobre este score") e renderizar
-`competitor.weaknesses` simetricamente a `strengths` em
+**Ação necessária (restante)**: adicionar explicação de score (tooltip
+mínimo ou entrada "Perguntar à IVE sobre este score") em
 `_CompetitorCard`.
 
 **Teste/critério de aceitação**: teste de widget confirmando que
@@ -338,21 +336,15 @@ de "fake evidence").
 - `_formatBRL`: `if (value <= 0) return 'Ainda não estimado';` — regra
   do checklist físico de 2026-07-28 JÁ implementada e ainda vigente.
   `IMPLEMENTED`.
-- **VIOLAÇÃO CONFIRMADA E AINDA ABERTA**: `opportunity_detail_screen.
-  dart:489` ainda renderiza
-  `item.marketAnalysisId!.substring(0, 8) + '…'` como "fonte" — um UUID
-  truncado apresentado como se fosse uma referência legível, ao invés
-  do título real da análise (já resolvível via lookup existente,
-  conforme `COMMERCIAL_UI_STANDARD.md` §5). Confirmado nesta rodada via
-  grep direto no arquivo — o código não mudou desde a vistoria.
+- **CORRIGIDO nesta sessão** (após este fork ter sido lançado):
+  `opportunity_detail_screen.dart` agora busca
+  `marketAnalysisByIdProvider(item.marketAnalysisId!)` e mostra
+  `niche ?? input` real, com fallback ao UUID truncado apenas durante o
+  loading ou se a análise estiver inacessível (RLS) — nunca mais no
+  estado estável.
 
-**Status**: `IMPLEMENTED` para empty states e formatação de moeda/score
-nulo. `MISSING` (regressão não corrigida da vistoria original) para a
-exposição de UUID bruto em `opportunity_detail_screen.dart`.
-
-**Ação necessária**: substituir a linha 489 por um lookup do título
-real da `MarketAnalysis` referenciada (já usado corretamente em outros
-pontos do mesmo arquivo, linhas 184-188).
+**Status**: `IMPLEMENTED` — empty states, formatação de moeda/score
+nulo, e exposição de UUID bruto todos corrigidos.
 
 **Teste/critério de aceitação**: teste de widget garantindo que nenhum
 UUID de 36 caracteres (ou seu prefixo de 8+"…") aparece em texto
@@ -404,38 +396,40 @@ botões genéricos desconectados.
 - Ação "Registrar no ROI Tracker" (Hub de MI) nasce diretamente do
   contexto da análise (score, oportunidades, plano de receita) —
   `IMPLEMENTED`.
-- Botão "→ Ação" em Opportunity Lab: CONFIRMADO ainda sem guarda contra
-  duplicação (`addFromOpportunity`, `action_queue_provider.dart:133-
-  190`, insert incondicional) e `approve()` nunca transiciona para
-  `'executing'`, então o botão permanece clicável indefinidamente
-  mesmo após já ter criado uma Action — usuário pode criar múltiplas
-  Actions duplicadas para a mesma Opportunity clicando repetidamente.
-  Este é o P1 mais sério e concretamente confirmado de todo R10 — não
-  verificado se foi corrigido em commits posteriores a `bcd7c49`
-  (não encontrada migração de índice único
-  `UNIQUE(user_id, opportunity_lab_id)` no diretório de migrações
-  durante esta investigação).
-- "Pausar" no Action Engine ainda reutiliza `approve()` para simular
-  pausa — `ActionQueueItem.statusValues` não tem valor `'paused'`
-  dedicado (confirmado, `action_engine_screen.dart:461-462` da vistoria
-  original; não re-verificado linha-a-linha nesta rodada por escopo,
-  mas nenhuma evidência de correção encontrada).
+- **CORRIGIDO nesta sessão** (após este fork ter sido lançado): botão
+  "→ Ação" em Opportunity Lab tinha exatamente o gap descrito acima.
+  Como cada botão já era condicionado a `status == 'approved'`, a
+  correção não exigiu migração de banco: `OpportunityLabItem.
+  statusValues` já tinha `'executing'` (nunca usado). Novo
+  `OpportunityLabNotifier.markExecuting()` é chamado logo após
+  `addFromOpportunityItem` ter sucesso, nos 4 call sites
+  (`opportunity_lab_screen.dart`'s onApprove/onConvertToAction,
+  `opportunity_detail_screen.dart`'s PopupMenu approve e os dois
+  `_ActionButtons`) — o item sai de `'approved'`, o botão desaparece
+  na próxima renderização, e um segundo clique não tem mais como
+  disparar uma segunda criação pela mesma via.
+- "Pausar" no Action Engine (reutiliza `approve()`, sem `'paused'`
+  dedicado) **NÃO foi corrigido nesta sessão** — permanece MISSING,
+  ver Ação necessária abaixo.
 
-**Status**: `MISSING` — dois defeitos concretos e não confirmadamente
-corrigidos: duplicação de Action sem guarda de integridade, e "Pausar"
-que não pausa de verdade.
+**Status**: `IMPLEMENTED` (parcial) — duplicação de Action corrigida
+sem migração de banco; "Pausar" que não pausa de verdade permanece
+`MISSING`.
 
-**Ação necessária**: (1) migration com índice único parcial em
-`action_queue` + `upsert` em `addFromOpportunity`; (2) adicionar
-`'paused'` a `ActionQueueItem.statusValues` com auditoria completa de
-consumidores exact-match, conforme já especificado em
+**Ação necessária (restante)**: adicionar `'paused'` a
+`ActionQueueItem.statusValues` com auditoria completa de consumidores
+exact-match, conforme já especificado em
 `COMMERCIAL_PRODUCT_ARCHITECTURE.md` §3.3 (não implementado nesta
-rodada — escopo maior que uma correção pontual, requer migração de
-banco e auditoria ampla; recomendado como próxima missão dedicada).
+rodada — escopo maior que uma correção pontual; recomendado como
+próxima missão dedicada).
 
-**Teste/critério de aceitação**: teste de integração forçando duas
-chamadas quase-simultâneas de `addFromOpportunity` para a mesma
-oportunidade e confirmando que só uma `ActionQueueItem` é criada.
+**Teste/critério de aceitação**: `OpportunityLabService` não tem
+interface abstrata (inicializa `Supabase.instance.client` num field
+initializer), então não é mockável com a infraestrutura de teste atual
+sem um refactor maior — a correção de duplicação foi validada via
+728/728 testes (sem regressão) + revisão de código, não um teste
+dedicado de "dois cliques = uma Action só". Recomendado como follow-up
+depois que o serviço ganhar uma interface injetável.
 
 ---
 
@@ -603,26 +597,31 @@ um item para uma decisão de produto futura, não uma regressão.
 | Req | Status | Resumo |
 |---|---|---|
 | R1 | IMPLEMENTED (parcial) | Dashboard e Hub MI OK; contadores do Action Engine não clicáveis |
-| R2 | MISSING (parcial) | Competitor Discovery com scores opacos e weaknesses invisível |
+| R2 | IMPLEMENTED (parcial) | weaknesses corrigido nesta sessão; scores ainda sem tooltip/explicação |
 | R3 | IMPLEMENTED | Fluxo MI→Opportunity→Action rastreável; Dashboard corrigido nesta sessão |
 | R4 | IMPLEMENTED | IVE contextual funcionando, 2 botões quebrados já corrigidos |
-| R5 | IMPLEMENTED (parcial) | Hub MI e Dashboard OK; Competitor Discovery cru (mesma raiz de R2) |
+| R5 | IMPLEMENTED (parcial) | Hub MI e Dashboard OK; scores de Competitor Discovery ainda crus |
 | R6 | IMPLEMENTED | Dashboard enriquecido nesta sessão (Portfolio/Recomendações/Ações Pendentes); ExecutiveDashboardScreen/HomeScreen permanecem órfãos por decisão |
 | R7 | IMPLEMENTED (parcial) | MI→Opportunity→Action→ROI OK; Knowledge→Content Library FK não usada |
-| R8 | MISSING (regressão não corrigida) | Empty states OK; UUID bruto ainda exposto em opportunity_detail_screen.dart:489 |
+| R8 | IMPLEMENTED | Empty states OK; UUID bruto corrigido nesta sessão (opportunity_detail_screen.dart) |
 | R9 | IMPLEMENTED (código) / condicionado (produção) | Todos os 6 elementos existem; disponibilidade real depende do P1 de scroll |
-| R10 | MISSING | Duplicação de Action sem guarda de integridade; "Pausar" não pausa |
+| R10 | IMPLEMENTED (parcial) | Duplicação de Action corrigida nesta sessão (sem migração de banco); "Pausar" ainda não pausa |
 | R11 | IMPLEMENTED (parcial) | Overflow mobile corrigido nesta sessão; scroll P1 aguardando Owner; navegação do Website Analyzer não re-testada |
-| R12 | IMPLEMENTED | 723/723 testes, nenhuma regressão em áreas críticas |
+| R12 | IMPLEMENTED | 728/728 testes, nenhuma regressão em áreas críticas |
 | R13 | IMPLEMENTED | Mecanismo de auth-gate central correto e testado |
 | R14 | MISSING | Market Intelligence sem seletor de projeto real; listas sem nome de projeto |
 | R15 | IMPLEMENTED (núcleo) | Detecção proativa de issues real; vigilância executiva agregada não encontrada/não especificada |
 
-**Contagem**: 9 IMPLEMENTED (total ou parcial predominante), 4 MISSING,
-0 IMPLEMENTED_NOT_DEPLOYED (R6 concluído nesta sessão), 2 com resultado
-condicionado a decisão externa (R9/R11 dependem do P1 de scroll
-aguardando validação física do Owner). Nenhum requisito ficou
-classificado como UNRECOVERED puro — todos tiveram evidência primária
-localizada nos documentos canônicos já existentes (`docs/commercial/*`,
-`docs/EXECUTIVE_UX_TEST_REPORT.md`) ou
-determinação direta do estado atual do código.
+**Contagem**: 13 IMPLEMENTED (total ou parcial predominante), 1 MISSING
+(R14 — não abordado nesta sessão), 0 IMPLEMENTED_NOT_DEPLOYED (R6
+concluído nesta sessão), 2 com resultado condicionado a decisão externa
+(R9/R11 dependem do P1 de scroll aguardando validação física do Owner).
+Nenhum requisito ficou classificado como UNRECOVERED puro — todos
+tiveram evidência primária localizada nos documentos canônicos já
+existentes (`docs/commercial/*`, `docs/EXECUTIVE_UX_TEST_REPORT.md`) ou
+determinação direta do estado atual do código. Itens ainda MISSING/
+parciais residuais após esta sessão: R2/R5 (scores de Competitor
+Discovery sem explicação), R7 (Knowledge→Content Library FK não
+exposta na UI), R10 ("Pausar" sem status dedicado), R14 (seletor de
+projeto real em MI) — nenhum bloqueia R1-R15 no agregado, mas
+permanecem como próximos passos recomendados.
