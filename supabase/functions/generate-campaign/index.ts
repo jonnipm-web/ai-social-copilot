@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { AuthenticatedUser, AuthClient, AuthError, resolveAuthenticatedUser, unauthorizedResponse } from "../_shared/auth.ts";
 import { EntitlementSubjectSource, requireModuleAccess } from "../_shared/entitlement.ts";
+import { outputLanguageSystemMessage, resolveOutputLanguage } from "../_shared/language.ts";
 import { QuotaClient, quotaBlockedResponse, refundQuota, reserveQuota } from "../_shared/quota.ts";
 
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") ?? "";
@@ -109,7 +110,6 @@ export async function handler(
       summary = "",
       value_proposition = "",
       keywords = [],
-      language = "pt-BR",
     } = body;
 
     const context = [
@@ -121,7 +121,10 @@ export async function handler(
       keywords.length ? `Keywords: ${keywords.slice(0, 6).join(", ")}` : "",
     ].filter(Boolean).join("\n");
 
-    const userMessage = `Idioma da campanha: ${language}\n\n${context}`;
+    // R16 — o idioma de APRESENTAÇÃO decide a saída; o idioma de origem do
+    // ativo (knowledge_items.language) nunca é usado aqui.
+    const language = resolveOutputLanguage(body);
+    const userMessage = `Output language: ${language}\n\n${context}`;
 
     const quota = await reserveQuota(req, quotaClient, idempotencyKey, 'generate-campaign');
     if (!quota.allowed) return quotaBlockedResponse(corsHeaders, quota);
@@ -138,6 +141,7 @@ export async function handler(
         model: "openai/gpt-oss-120b",
         messages: [
           { role: "system", content: buildSystemPrompt(objective, Math.min(duration_days, 30), channels) },
+          outputLanguageSystemMessage(language, { fixedValueFields: ["objective", "channels", "calendar[].channel"] }),
           { role: "user", content: userMessage },
         ],
         temperature: 0.7,

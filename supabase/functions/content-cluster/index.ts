@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { AuthClient, AuthenticatedUser, AuthError, resolveAuthenticatedUser, unauthorizedResponse } from "../_shared/auth.ts";
 import { EntitlementSubjectSource, requireModuleAccess } from "../_shared/entitlement.ts";
-import { normalizeLanguage, withLanguageDirective } from "../_shared/language.ts";
+import { outputLanguageSystemMessage, resolveOutputLanguage } from "../_shared/language.ts";
 import { QuotaClient, quotaBlockedResponse, refundQuota, reserveQuota } from "../_shared/quota.ts";
 
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") ?? "";
@@ -102,9 +102,11 @@ export async function handler(
   let idempotencyKey: string | undefined;
   let quotaResult: Awaited<ReturnType<typeof reserveQuota>> | undefined;
   try {
-    const { input, main_keyword, language: rawLanguage, idempotency_key } = await req.json();
+    const body = await req.json();
+    const { input, main_keyword, idempotency_key } = body;
     idempotencyKey = idempotency_key;
-    const language = normalizeLanguage(rawLanguage);
+    // R16 — idioma de APRESENTAÇÃO (UI) decide o idioma da saída.
+    const language = resolveOutputLanguage(body);
 
     if (!input || !main_keyword) {
       return new Response(JSON.stringify({ error: "Input e main_keyword são obrigatórios" }), {
@@ -128,9 +130,10 @@ export async function handler(
         model: "openai/gpt-oss-120b",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
+          outputLanguageSystemMessage(language, { fixedValueFields: ["articles[].type", "articles[].search_intent"] }),
           {
             role: "user",
-            content: withLanguageDirective(language, `Projeto/nicho: ${input}\nKeyword principal: ${main_keyword}\n\nCrie a estrutura completa de Content Cluster para esse projeto e retorne o JSON.`),
+            content: `Output language: ${language}\n\n` + `Projeto/nicho: ${input}\nKeyword principal: ${main_keyword}\n\nCrie a estrutura completa de Content Cluster para esse projeto e retorne o JSON.`,
           },
         ],
         temperature: 0.4,

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { AuthenticatedUser, AuthClient, AuthError, resolveAuthenticatedUser, unauthorizedResponse } from "../_shared/auth.ts";
 import { EntitlementSubjectSource, requireModuleAccess } from "../_shared/entitlement.ts";
+import { outputLanguageSystemMessage, resolveOutputLanguage } from "../_shared/language.ts";
 import { QuotaClient, quotaBlockedResponse, refundQuota, reserveQuota } from "../_shared/quota.ts";
 
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") ?? "";
@@ -55,6 +56,10 @@ Estrutura obrigatória:
   },
   "quick_wins": ["ação rápida 1", "ação rápida 2", "até 3"]
 }
+
+Valores permitidos (códigos fixos, nunca traduzir):
+- recommended_channels[].priority: "alta", "média" ou "baixa"
+- commercial_opportunities[].potential: "alto", "médio" ou "baixo"
 
 Retorne apenas o JSON. Nenhum texto antes ou depois.`;
 
@@ -111,7 +116,6 @@ export async function handler(
       summary = "",
       niche = "",
       target_audience = "",
-      language = "pt-BR",
       keywords_primary = [],
       pain_points = [],
       desires = [],
@@ -130,7 +134,10 @@ export async function handler(
       content ? `\nConteúdo (trecho):\n${content.trim().slice(0, 3000)}` : "",
     ].filter(Boolean).join("\n");
 
-    const userMessage = `Idioma: ${language}\n\n${context}`;
+    // R16 — o idioma de APRESENTAÇÃO decide a saída; o idioma de origem do
+    // ativo (knowledge_items.language) nunca é usado aqui.
+    const language = resolveOutputLanguage(body);
+    const userMessage = `Output language: ${language}\n\n${context}`;
 
     const quota = await reserveQuota(req, quotaClient, idempotencyKey, 'generate-strategy');
     if (!quota.allowed) return quotaBlockedResponse(corsHeaders, quota);
@@ -147,6 +154,7 @@ export async function handler(
         model: "openai/gpt-oss-120b",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
+          outputLanguageSystemMessage(language, { fixedValueFields: ["recommended_channels[].priority", "commercial_opportunities[].potential"] }),
           { role: "user", content: userMessage },
         ],
         temperature: 0.6,

@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { AuthClient, AuthenticatedUser, AuthError, resolveAuthenticatedUser, unauthorizedResponse } from '../_shared/auth.ts';
 import { EntitlementSubjectSource, requireModuleAccess } from '../_shared/entitlement.ts';
+import { outputLanguageSystemMessage, resolveOutputLanguage } from '../_shared/language.ts';
 import { QuotaClient, quotaBlockedResponse, refundQuota, reserveQuota } from '../_shared/quota.ts';
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
@@ -39,8 +40,11 @@ export async function handler(
   let idempotencyKey: string | undefined;
   let quotaResult: Awaited<ReturnType<typeof reserveQuota>> | undefined;
   try {
-    const { project_name, project_description, project_type, documents, market_context, idempotency_key } =
-      await req.json();
+    const body = await req.json();
+    const { project_name, project_description, project_type, documents, market_context, idempotency_key } = body;
+    // R16 — idioma de APRESENTAÇÃO (UI) decide o idioma da saída; o idioma dos
+    // documentos indexados do projeto nunca decide.
+    const language = resolveOutputLanguage(body);
     idempotencyKey = idempotency_key;
 
     const docLines = ((documents ?? []) as Array<{ title: string; content: string }>)
@@ -103,6 +107,7 @@ final_score = média ponderada dos demais scores.`;
             content:
               'Você é um especialista em estratégia de negócios digitais. Responda APENAS com JSON válido, sem markdown, sem texto antes ou depois do JSON.',
           },
+          outputLanguageSystemMessage(language, { fixedValueFields: ["opportunities[].opportunity_type"] }),
           { role: 'user', content: userPrompt },
         ],
         temperature: 0.7,

@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { AuthClient, AuthenticatedUser, AuthError, resolveAuthenticatedUser, unauthorizedResponse } from '../_shared/auth.ts';
 import { EntitlementSubjectSource, requireModuleAccess } from '../_shared/entitlement.ts';
+import { outputLanguageSystemMessage, resolveOutputLanguage } from '../_shared/language.ts';
 import { QuotaClient, quotaBlockedResponse, refundQuota, reserveQuota } from '../_shared/quota.ts';
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
@@ -39,14 +40,17 @@ export async function handler(
   let idempotencyKey: string | undefined;
   let quotaResult: Awaited<ReturnType<typeof reserveQuota>> | undefined;
   try {
+    const body = await req.json();
     const {
       scenario,        // string: descrição do cenário a simular
       ecosystem,       // { healthScore, projectCount, pendingActions, pendingOpportunities }
       projects,        // Array<{ name, ecosystemScore, executionScore, opportunityScore }>
       target,          // optional { type: 'project'|'opportunity'|'action', name: string }
       idempotency_key,
-    } = await req.json();
+    } = body;
     idempotencyKey = idempotency_key;
+    // R16 — idioma de APRESENTAÇÃO (UI) decide o idioma da análise.
+    const language = resolveOutputLanguage(body);
 
     const projectsBlock = (projects ?? [])
       .slice(0, 8)
@@ -100,8 +104,7 @@ Onde:
 - affected_projects: lista de nomes de projetos afetados
 - confidence: confiança da simulação de 0 a 100
 - timeline_weeks: tempo estimado para ver o impacto em semanas
-
-Responda sempre em Português do Brasil.`;
+- affected_projects: use os nomes dos projetos exatamente como listados acima`;
 
     const quota = await reserveQuota(req, quotaClient, idempotencyKey, 'decision-simulator');
     if (!quota.allowed) return quotaBlockedResponse(corsHeaders, quota);
@@ -120,6 +123,7 @@ Responda sempre em Português do Brasil.`;
         max_completion_tokens: 700,
         messages: [
           { role: 'system', content: systemPrompt },
+          outputLanguageSystemMessage(language, { fixedValueFields: ['risk_level', 'affected_projects'] }),
           { role: 'user', content: `Simule este cenário: ${scenario}` },
         ],
       }),

@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { AuthClient, AuthenticatedUser, AuthError, resolveAuthenticatedUser, unauthorizedResponse } from "../_shared/auth.ts";
 import { EntitlementSubjectSource, requireModuleAccess } from "../_shared/entitlement.ts";
-import { normalizeLanguage, withLanguageDirective } from "../_shared/language.ts";
+import { outputLanguageSystemMessage, resolveOutputLanguage } from "../_shared/language.ts";
 import { QuotaClient, quotaBlockedResponse, refundQuota, reserveQuota } from "../_shared/quota.ts";
 
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") ?? "";
@@ -81,9 +81,11 @@ export async function handler(
   let idempotencyKey: string | undefined;
   let quotaResult: Awaited<ReturnType<typeof reserveQuota>> | undefined;
   try {
-    const { input, language: rawLanguage, idempotency_key } = await req.json();
+    const body = await req.json();
+    const { input, idempotency_key } = body;
     idempotencyKey = idempotency_key;
-    const language = normalizeLanguage(rawLanguage);
+    // R16 — idioma de APRESENTAÇÃO (UI) decide o idioma da saída.
+    const language = resolveOutputLanguage(body);
 
     if (!input) {
       return new Response(JSON.stringify({ error: "Input obrigatório" }), {
@@ -107,7 +109,8 @@ export async function handler(
         model: "openai/gpt-oss-120b",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: withLanguageDirective(language, `Input/nicho/projeto: ${input}\n\nDescubra as melhores oportunidades e retorne o JSON.`) },
+          outputLanguageSystemMessage(language, { fixedValueFields: ["opportunities[].type", "opportunities[].effort"] }),
+          { role: "user", content: `Output language: ${language}\n\n` + `Input/nicho/projeto: ${input}\n\nDescubra as melhores oportunidades e retorne o JSON.` },
         ],
         temperature: 0.4,
         max_completion_tokens: 4000,

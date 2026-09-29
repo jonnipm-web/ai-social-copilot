@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { safeFetch, UnsafeUrlError } from "../_shared/safe_fetch.ts";
 import { AuthenticatedUser, AuthClient, AuthError, resolveAuthenticatedUser, unauthorizedResponse } from "../_shared/auth.ts";
 import { EntitlementSubjectSource, requireModuleAccess } from "../_shared/entitlement.ts";
+import { outputLanguageSystemMessage, resolveOutputLanguage } from "../_shared/language.ts";
 import { QuotaClient, quotaBlockedResponse, refundQuota, reserveQuota } from "../_shared/quota.ts";
 
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") ?? "";
@@ -181,6 +182,10 @@ export async function handler(
       );
     }
 
+    // R16 — idioma de APRESENTAÇÃO (UI) decide o idioma da análise; o
+    // idioma em que o site analisado está escrito nunca decide a saída.
+    const language = resolveOutputLanguage(body);
+
     const userMessage = `URL analisada: ${url}
 
 Conteúdo extraído do site:
@@ -204,6 +209,7 @@ ${content}`;
         model: "openai/gpt-oss-120b",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
+          outputLanguageSystemMessage(language),
           { role: "user", content: userMessage },
         ],
         temperature: 0.4,
