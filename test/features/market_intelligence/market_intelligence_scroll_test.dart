@@ -213,6 +213,10 @@ void main() {
               .overrideWith((ref) async => _fakeOpportunities(analysisId, 5)),
           revenuePlanByAnalysisProvider(analysisId)
               .overrideWith((ref) async => _fakePlan(analysisId)),
+          nichesByAnalysisProvider(analysisId)
+              .overrideWith((ref) async => const []),
+          contentClusterByAnalysisProvider(analysisId)
+              .overrideWith((ref) async => null),
         ],
         child: const MarketIntelligenceHubScreen(analysisId: analysisId),
       );
@@ -260,6 +264,10 @@ void main() {
               .overrideWith((ref) async => _fakeOpportunities(analysisId, 5)),
           revenuePlanByAnalysisProvider(analysisId)
               .overrideWith((ref) async => _fakePlan(analysisId)),
+          nichesByAnalysisProvider(analysisId)
+              .overrideWith((ref) async => const []),
+          contentClusterByAnalysisProvider(analysisId)
+              .overrideWith((ref) async => null),
         ],
         child: const MarketIntelligenceHubScreen(analysisId: analysisId),
       );
