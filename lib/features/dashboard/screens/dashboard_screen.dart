@@ -42,18 +42,24 @@ class DashboardScreen extends ConsumerWidget {
         error:   (e, _) => Center(child: Text(l10n.commonError)),
         data:    (profile) {
           final isAdmin = profile?.isAdmin ?? false;
+          final isPro   = profile?.isPro ?? false;
 
-          // IVE-COMMERCIAL-TARGETED-REMEDIATION-06S — the shortcuts below
-          // used to compute `locked` from `!isPro && !isAdmin`, but
-          // Personas/Biblioteca/Calendário (like Campanhas and Performance,
-          // which had no lock treatment at all) are commercialEnabled:false
-          // in the registry -- not released to anyone yet, not "PRO-
-          // exclusive". onTap called through unconditionally regardless of
-          // `locked` either way: a purely cosmetic badge with zero actual
-          // enforcement, which is the exact gap Remediation 06R closed at
-          // the route level and this mission closes at the CTA level, so a
-          // tap no longer produces a real navigation the route guard will
-          // immediately bounce back from.
+          // COMMERCIAL-V1-UX-RECONCILIATION — Personas/Biblioteca/
+          // Calendário/Campanhas/Performance were commercialEnabled:false
+          // ("not released to anyone") when Remediation-06S wrote the note
+          // this replaces. "Tranche 2: launch Growth Intelligence
+          // commercially at Pro tier" (module_registry.dart) flipped all 5
+          // to commercialEnabled:true / minimumPlan:pro — they are real,
+          // released, Pro-gated modules now, not unreleased ones. onTap
+          // still routes through isModuleActionable (commercialEnabled
+          // only, never minimumPlan — see route_policy.dart's own doc
+          // comment on isModuleActionable) so a tap always produces a real
+          // navigation; the route guard itself sends a Free user to
+          // /upgrade. The UX gap this mission section closes is different:
+          // a Free user previously had to tap-and-get-redirected to
+          // discover a card was Pro-gated at all. _ProShortcutCard below
+          // shows the PRO badge, one-line benefit, and access state BEFORE
+          // the tap.
           VoidCallback shortcutTap(String moduleId, String route) {
             if (isModuleActionable(moduleId, isAdmin: isAdmin)) {
               return () => context.go(route);
@@ -109,19 +115,23 @@ class DashboardScreen extends ConsumerWidget {
                     Row(
                       children: [
                         Expanded(
-                          child: _ShortcutCard(
+                          child: _ProShortcutCard(
                             icon: Icons.person_pin_rounded,
                             label: l10n.dashShortcutPersonas,
-                            locked: !isModuleActionable('personas', isAdmin: isAdmin),
+                            benefit: l10n.dashProBenefitPersonas,
+                            hasAccess: isPro || isAdmin,
+                            l10n: l10n,
                             onTap: shortcutTap('personas', AppConstants.routePersonas),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: _ShortcutCard(
+                          child: _ProShortcutCard(
                             icon: Icons.library_books_rounded,
                             label: l10n.dashShortcutLibrary,
-                            locked: !isModuleActionable('content-library', isAdmin: isAdmin),
+                            benefit: l10n.dashProBenefitLibrary,
+                            hasAccess: isPro || isAdmin,
+                            l10n: l10n,
                             onTap: shortcutTap('content-library', AppConstants.routeContent),
                           ),
                         ),
@@ -131,10 +141,12 @@ class DashboardScreen extends ConsumerWidget {
                     Row(
                       children: [
                         Expanded(
-                          child: _ShortcutCard(
+                          child: _ProShortcutCard(
                             icon: Icons.calendar_month_rounded,
                             label: l10n.dashShortcutCalendar,
-                            locked: !isModuleActionable('calendar', isAdmin: isAdmin),
+                            benefit: l10n.dashProBenefitCalendar,
+                            hasAccess: isPro || isAdmin,
+                            l10n: l10n,
                             onTap: shortcutTap('calendar', AppConstants.routeCalendar),
                           ),
                         ),
@@ -167,10 +179,12 @@ class DashboardScreen extends ConsumerWidget {
                           // so the placement engine steers clear; renders
                           // unchanged otherwise (ive_exclusion_region.dart).
                           child: IveExclusionRegion(
-                            child: _ShortcutCard(
+                            child: _ProShortcutCard(
                               icon: Icons.campaign_rounded,
                               label: l10n.dashShortcutCampaigns,
-                              locked: !isModuleActionable('campaigns', isAdmin: isAdmin),
+                              benefit: l10n.dashProBenefitCampaigns,
+                              hasAccess: isPro || isAdmin,
+                              l10n: l10n,
                               onTap: shortcutTap('campaigns', AppConstants.routeCampaigns),
                             ),
                           ),
@@ -189,10 +203,12 @@ class DashboardScreen extends ConsumerWidget {
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: _ShortcutCard(
+                          child: _ProShortcutCard(
                             icon: Icons.bar_chart_rounded,
                             label: l10n.dashShortcutPerformance,
-                            locked: !isModuleActionable('performance', isAdmin: isAdmin),
+                            benefit: l10n.dashProBenefitPerformance,
+                            hasAccess: isPro || isAdmin,
+                            l10n: l10n,
                             onTap: shortcutTap('performance', AppConstants.routePerformance),
                           ),
                         ),
@@ -380,17 +396,15 @@ class _ShortcutCard extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
-    this.locked = false,
   });
 
   final IconData icon;
   final String   label;
   final VoidCallback onTap;
-  final bool     locked;
 
   @override
   Widget build(BuildContext context) {
-    final color = locked ? Colors.white24 : Colors.white70;
+    const color = Colors.white70;
 
     return Material(
       color: Colors.white.withOpacity(0.05),
@@ -406,15 +420,93 @@ class _ShortcutCard extends StatelessWidget {
           ),
           child: Column(
             children: [
-              Stack(
+              Icon(icon, color: color, size: 28),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: color,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// COMMERCIAL-V1-UX-RECONCILIATION (Section A) — INFORMATION FIRST for a
+// released Pro-gated module: name, one-line benefit, a PRO badge and the
+// user's actual access state are all visible BEFORE the tap, instead of
+// the tap being the only way to discover a card is Pro-gated. `onTap`
+// still goes through the caller's `shortcutTap` (routes through
+// isModuleActionable + the route guard), so a Free user tapping still
+// lands on /upgrade exactly as before — this only changes what's
+// communicated before that tap, never the authorization path itself.
+class _ProShortcutCard extends StatelessWidget {
+  const _ProShortcutCard({
+    required this.icon,
+    required this.label,
+    required this.benefit,
+    required this.hasAccess,
+    required this.l10n,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String   label;
+  final String   benefit;
+  final bool     hasAccess;
+  final AppLocalizations l10n;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    const proColor = Color(0xFFFFD700);
+    final color = hasAccess ? Colors.white70 : Colors.white54;
+
+    return Material(
+      color: Colors.white.withOpacity(0.05),
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: hasAccess ? Colors.white12 : proColor.withOpacity(0.25),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Icon(icon, color: color, size: 28),
-                  if (locked)
-                    Positioned(
-                      right: -2,
-                      bottom: -2,
-                      child: const Icon(Icons.lock_rounded,
-                          color: Colors.white24, size: 12),
+                  Icon(icon, color: color, size: 24),
+                  const Spacer(),
+                  if (!hasAccess)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: proColor.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: proColor.withOpacity(0.4)),
+                      ),
+                      child: Text(
+                        l10n.dashProBadge,
+                        style: const TextStyle(
+                          color: proColor,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.6,
+                        ),
+                      ),
                     ),
                 ],
               ),
@@ -424,9 +516,37 @@ class _ShortcutCard extends StatelessWidget {
                 style: TextStyle(
                   color: color,
                   fontSize: 13,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w600,
                 ),
-                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 3),
+              Text(
+                benefit,
+                style: const TextStyle(color: Colors.white38, fontSize: 10.5),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Icon(
+                    hasAccess ? Icons.check_circle_rounded : Icons.lock_outline_rounded,
+                    color: hasAccess ? const Color(0xFF4CAF50) : proColor,
+                    size: 11,
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      hasAccess ? l10n.dashProIncluded : l10n.dashProUpgradeCta,
+                      style: TextStyle(
+                        color: hasAccess ? const Color(0xFF4CAF50) : proColor,
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

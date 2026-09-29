@@ -1865,4 +1865,28 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get dashAdminPanelSubtitle => 'Usuários, personas e planos';
+
+  @override
+  String get dashProBadge => 'PRO';
+
+  @override
+  String get dashProIncluded => 'Incluso no seu plano';
+
+  @override
+  String get dashProUpgradeCta => 'Toque para desbloquear';
+
+  @override
+  String get dashProBenefitPersonas => 'Crie personas de marca com IA';
+
+  @override
+  String get dashProBenefitLibrary => 'Organize todo seu conteúdo gerado';
+
+  @override
+  String get dashProBenefitCalendar => 'Planeje sua produção de conteúdo';
+
+  @override
+  String get dashProBenefitCampaigns => 'Gere campanhas completas com IA';
+
+  @override
+  String get dashProBenefitPerformance => 'Acompanhe métricas de desempenho';
 }

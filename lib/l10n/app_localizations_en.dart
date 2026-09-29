@@ -1853,4 +1853,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dashAdminPanelSubtitle => 'Users, personas and plans';
+
+  @override
+  String get dashProBadge => 'PRO';
+
+  @override
+  String get dashProIncluded => 'Included in your plan';
+
+  @override
+  String get dashProUpgradeCta => 'Tap to unlock';
+
+  @override
+  String get dashProBenefitPersonas => 'Create brand personas with AI';
+
+  @override
+  String get dashProBenefitLibrary => 'Organize all your generated content';
+
+  @override
+  String get dashProBenefitCalendar => 'Plan your content production';
+
+  @override
+  String get dashProBenefitCampaigns => 'Generate complete campaigns with AI';
+
+  @override
+  String get dashProBenefitPerformance => 'Track performance metrics';
 }

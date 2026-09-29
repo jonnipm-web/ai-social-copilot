@@ -652,5 +652,14 @@
   "dashAdminStatCampaigns": "Campaigns",
   "dashAdminStatAnalyzed": "Analyzed",
   "dashAdminPanelButton": "Admin Panel",
-  "dashAdminPanelSubtitle": "Users, personas and plans"
+  "dashAdminPanelSubtitle": "Users, personas and plans",
+
+  "dashProBadge": "PRO",
+  "dashProIncluded": "Included in your plan",
+  "dashProUpgradeCta": "Tap to unlock",
+  "dashProBenefitPersonas": "Create brand personas with AI",
+  "dashProBenefitLibrary": "Organize all your generated content",
+  "dashProBenefitCalendar": "Plan your content production",
+  "dashProBenefitCampaigns": "Generate complete campaigns with AI",
+  "dashProBenefitPerformance": "Track performance metrics"
 }

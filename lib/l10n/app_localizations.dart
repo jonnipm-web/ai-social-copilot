@@ -3373,6 +3373,54 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Usuários, personas e planos'**
   String get dashAdminPanelSubtitle;
+
+  /// No description provided for @dashProBadge.
+  ///
+  /// In pt, this message translates to:
+  /// **'PRO'**
+  String get dashProBadge;
+
+  /// No description provided for @dashProIncluded.
+  ///
+  /// In pt, this message translates to:
+  /// **'Incluso no seu plano'**
+  String get dashProIncluded;
+
+  /// No description provided for @dashProUpgradeCta.
+  ///
+  /// In pt, this message translates to:
+  /// **'Toque para desbloquear'**
+  String get dashProUpgradeCta;
+
+  /// No description provided for @dashProBenefitPersonas.
+  ///
+  /// In pt, this message translates to:
+  /// **'Crie personas de marca com IA'**
+  String get dashProBenefitPersonas;
+
+  /// No description provided for @dashProBenefitLibrary.
+  ///
+  /// In pt, this message translates to:
+  /// **'Organize todo seu conteúdo gerado'**
+  String get dashProBenefitLibrary;
+
+  /// No description provided for @dashProBenefitCalendar.
+  ///
+  /// In pt, this message translates to:
+  /// **'Planeje sua produção de conteúdo'**
+  String get dashProBenefitCalendar;
+
+  /// No description provided for @dashProBenefitCampaigns.
+  ///
+  /// In pt, this message translates to:
+  /// **'Gere campanhas completas com IA'**
+  String get dashProBenefitCampaigns;
+
+  /// No description provided for @dashProBenefitPerformance.
+  ///
+  /// In pt, this message translates to:
+  /// **'Acompanhe métricas de desempenho'**
+  String get dashProBenefitPerformance;
 }
 
 class _AppLocalizationsDelegate
