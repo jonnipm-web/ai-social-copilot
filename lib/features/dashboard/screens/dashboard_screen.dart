@@ -5,12 +5,18 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/modules/route_policy.dart';
 import '../../../core/utils/snackbar_utils.dart';
+import '../../../data/models/action_queue_item.dart';
+import '../../../data/models/market_analysis.dart';
+import '../../../data/models/project.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../providers/action_queue_provider.dart';
 import '../../../providers/campaign_provider.dart';
 import '../../../providers/content_provider.dart';
 import '../../../providers/knowledge_provider.dart';
+import '../../../providers/market_analysis_provider.dart';
 import '../../../providers/persona_provider.dart';
 import '../../../providers/profile_provider.dart';
+import '../../../providers/project_provider.dart';
 import '../../../providers/quota_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/ive_exclusion_region.dart';
@@ -31,6 +37,19 @@ class DashboardScreen extends ConsumerWidget {
     // instrumentation -- an undeniable, one-provider-swap fix, not a new
     // remediation effort.
     final usageAsync   = ref.watch(currentQuotaProvider);
+
+    // COMMERCIAL-V1-UX-RECONCILIATION (Section R6, Owner-approved Option C)
+    // — the Business Dashboard stays the ONE canonical entry point
+    // (INSIGHTVALUES-COMMERCIAL-MACRO-01 consolidation is NOT reverted),
+    // but is enriched with the real executive-intelligence components
+    // selectively ported from the orphaned ExecutiveDashboardScreen (kept
+    // in the tree for historical reference per module_registry.dart's own
+    // note, never routed) rather than reactivating that whole screen or
+    // duplicating a second dashboard. Same providers that screen already
+    // used; no new data source.
+    final projectsAsync = ref.watch(projectsProvider);
+    final analysesAsync = ref.watch(marketAnalysesProvider);
+    final pendingAsync  = ref.watch(pendingActionsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -98,6 +117,39 @@ class DashboardScreen extends ConsumerWidget {
                       loading: () => const SizedBox.shrink(),
                       error:   (_, __) => const SizedBox.shrink(),
                       data:    (quota) => _UsageCard(used: quota.used, limit: quota.limit, l10n: l10n),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // COMMERCIAL-V1-UX-RECONCILIATION (R6) — INFORMATION
+                    // (portfolio KPIs) -> INTERPRETATION/PRIORITY (executive
+                    // recommendations) -> PRIORITY (pending actions), all
+                    // ahead of the ACTION buttons below, per the owner's
+                    // explicit ordering rule. Ported from the orphaned
+                    // ExecutiveDashboardScreen's _SidebarKpiCard/
+                    // _ExecutiveRecommendations/_PendingActionsCard (same
+                    // providers, same no-fabricated-data guards), not
+                    // reactivating that screen.
+                    if (projectsAsync.valueOrNull?.isNotEmpty ?? false) ...[
+                      _PortfolioSummaryRow(
+                        activeProjects: (projectsAsync.valueOrNull ?? const [])
+                            .where((p) => p.status == 'active' || p.status == 'executing')
+                            .length,
+                        analysesCount: analysesAsync.valueOrNull?.length ?? 0,
+                        avgScore: _avgOpportunityScore(analysesAsync.valueOrNull ?? const []),
+                        l10n: l10n,
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    _ExecutiveRecommendationsCard(
+                      projects:  projectsAsync.valueOrNull ?? const [],
+                      analyses:  analysesAsync.valueOrNull ?? const [],
+                      pending:   pendingAsync.valueOrNull ?? const [],
+                      l10n: l10n,
+                    ),
+                    const SizedBox(height: 16),
+                    _DashboardPendingActionsCard(
+                      pending: pendingAsync.valueOrNull ?? const [],
+                      l10n: l10n,
                     ),
                     const SizedBox(height: 16),
 
@@ -686,6 +738,262 @@ class _StatTile extends StatelessWidget {
             label,
             style: const TextStyle(color: Colors.white38, fontSize: 10),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// COMMERCIAL-V1-UX-RECONCILIATION (R6) — helper functions ported
+// unchanged from the orphaned ExecutiveDashboardScreen's own
+// _DashboardBody._avgScore.
+int _avgOpportunityScore(List<MarketAnalysis> analyses) {
+  if (analyses.isEmpty) return 0;
+  final sum = analyses.map((a) => a.opportunityScore).fold<int>(0, (s, v) => s + v);
+  return (sum / analyses.length).round();
+}
+
+Color _execScoreColor(int score) {
+  if (score >= 80) return const Color(0xFF4CAF50);
+  if (score >= 60) return const Color(0xFFFF9800);
+  return const Color(0xFFF44336);
+}
+
+// ── R6: Portfolio summary (INFORMATION) ─────────────────────────────────────
+class _PortfolioSummaryRow extends StatelessWidget {
+  const _PortfolioSummaryRow({
+    required this.activeProjects,
+    required this.analysesCount,
+    required this.avgScore,
+    required this.l10n,
+  });
+
+  final int activeProjects;
+  final int analysesCount;
+  final int avgScore;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget stat(String value, String label, Color color) => Expanded(
+          child: Column(
+            children: [
+              Text(value,
+                  style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 2),
+              Text(label,
+                  style: const TextStyle(color: Colors.white38, fontSize: 10),
+                  textAlign: TextAlign.center),
+            ],
+          ),
+        );
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Row(
+        children: [
+          stat('$activeProjects', l10n.dashPortfolioActiveProjects, const Color(0xFF6C63FF)),
+          stat('$analysesCount', l10n.dashPortfolioAnalyses, const Color(0xFF00BCD4)),
+          stat(
+            avgScore > 0 ? '$avgScore' : '—',
+            l10n.dashPortfolioAvgScore,
+            avgScore > 0 ? _execScoreColor(avgScore) : Colors.white38,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── R6: Executive recommendations (INTERPRETATION + PRIORITY) ──────────────
+// Ported from ExecutiveDashboardScreen's _ExecutiveRecommendations: every
+// entry is conditioned on real data (empty projects/analyses, real pending
+// count, real top-scored analysis, real zero-revenue check) -- R8 "no
+// fabricated intelligence" by construction, not an added guard.
+class _ExecutiveRecommendationsCard extends StatelessWidget {
+  const _ExecutiveRecommendationsCard({
+    required this.projects,
+    required this.analyses,
+    required this.pending,
+    required this.l10n,
+  });
+
+  final List<Project> projects;
+  final List<MarketAnalysis> analyses;
+  final List<ActionQueueItem> pending;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final recs = <_Rec>[];
+
+    if (projects.isEmpty) {
+      recs.add(_Rec(Icons.add_business_rounded, const Color(0xFF6C63FF),
+          l10n.dashRecEmptyProjectTitle, l10n.dashRecEmptyProjectBody));
+    } else if (analyses.isEmpty) {
+      final projectName = projects.first.name;
+      recs.add(_Rec(Icons.analytics_rounded, const Color(0xFF00BCD4),
+          l10n.dashRecEmptyAnalysisTitle, l10n.dashRecEmptyAnalysisBody(projectName)));
+    }
+
+    if (pending.isNotEmpty) {
+      recs.add(_Rec(Icons.bolt_rounded, const Color(0xFFFFD700),
+          l10n.dashRecPendingActionsTitle(pending.length), l10n.dashRecPendingActionsBody));
+    }
+
+    final topAnalyses = analyses.where((a) => a.opportunityScore >= 75).toList()
+      ..sort((a, b) => b.opportunityScore.compareTo(a.opportunityScore));
+    if (topAnalyses.isNotEmpty) {
+      final top = topAnalyses.first;
+      recs.add(_Rec(
+        Icons.star_rounded,
+        const Color(0xFF4CAF50),
+        l10n.dashRecTopOpportunityTitle(top.niche ?? top.input),
+        l10n.dashRecTopOpportunityBody(top.opportunityScore),
+      ));
+    }
+
+    if (recs.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFFFD700).withOpacity(0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.lightbulb_rounded, color: Color(0xFFFFD700), size: 18),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(l10n.dashRecommendationsTitle,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...recs.take(4).map((r) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration:
+                          BoxDecoration(color: r.color.withOpacity(0.12), shape: BoxShape.circle),
+                      child: Icon(r.icon, color: r.color, size: 16),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(r.title,
+                              style: const TextStyle(
+                                  color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 2),
+                          Text(r.body,
+                              style: const TextStyle(
+                                  color: Colors.white54, fontSize: 11, height: 1.4)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              )),
+        ],
+      ),
+    );
+  }
+}
+
+class _Rec {
+  const _Rec(this.icon, this.color, this.title, this.body);
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String body;
+}
+
+// ── R6: Pending actions (PRIORITY, feeds directly into ACTION) ─────────────
+class _DashboardPendingActionsCard extends StatelessWidget {
+  const _DashboardPendingActionsCard({required this.pending, required this.l10n});
+  final List<ActionQueueItem> pending;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.bolt_rounded, color: Color(0xFFFF9800), size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(l10n.dashPendingActionsTitle,
+                    style: const TextStyle(
+                        color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+              ),
+              TextButton(
+                onPressed: () => context.push(AppConstants.routeActionEngine),
+                style: TextButton.styleFrom(
+                    minimumSize: Size.zero, padding: const EdgeInsets.symmetric(horizontal: 8)),
+                child: Text(l10n.dashPendingActionsViewAll,
+                    style: const TextStyle(color: Color(0xFF6C63FF), fontSize: 12)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (pending.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                l10n.dashPendingActionsEmpty,
+                style: const TextStyle(color: Colors.white38, fontSize: 12, height: 1.5),
+              ),
+            )
+          else
+            ...pending.take(5).map((item) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration:
+                            const BoxDecoration(color: Color(0xFFFF9800), shape: BoxShape.circle),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(item.title,
+                            style: const TextStyle(color: Colors.white70, fontSize: 13),
+                            overflow: TextOverflow.ellipsis),
+                      ),
+                      if (item.roiScore > 0)
+                        Text('ROI: ${item.roiScore}',
+                            style: const TextStyle(color: Color(0xFFFFD700), fontSize: 10)),
+                    ],
+                  ),
+                )),
         ],
       ),
     );

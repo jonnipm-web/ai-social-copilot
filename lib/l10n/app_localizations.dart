@@ -3421,6 +3421,114 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Acompanhe métricas de desempenho'**
   String get dashProBenefitPerformance;
+
+  /// No description provided for @dashPortfolioTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'PORTFÓLIO'**
+  String get dashPortfolioTitle;
+
+  /// No description provided for @dashPortfolioActiveProjects.
+  ///
+  /// In pt, this message translates to:
+  /// **'Projetos ativos'**
+  String get dashPortfolioActiveProjects;
+
+  /// No description provided for @dashPortfolioAnalyses.
+  ///
+  /// In pt, this message translates to:
+  /// **'Análises de mercado'**
+  String get dashPortfolioAnalyses;
+
+  /// No description provided for @dashPortfolioAvgScore.
+  ///
+  /// In pt, this message translates to:
+  /// **'Score médio'**
+  String get dashPortfolioAvgScore;
+
+  /// No description provided for @dashRecommendationsTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Recomendações Executivas'**
+  String get dashRecommendationsTitle;
+
+  /// No description provided for @dashRecEmptyProjectTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Cadastre seu primeiro projeto'**
+  String get dashRecEmptyProjectTitle;
+
+  /// No description provided for @dashRecEmptyProjectBody.
+  ///
+  /// In pt, this message translates to:
+  /// **'Acesse Projetos e cadastre pelo menos um para desbloquear análises e oportunidades.'**
+  String get dashRecEmptyProjectBody;
+
+  /// No description provided for @dashRecEmptyAnalysisTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Execute sua primeira análise de mercado'**
+  String get dashRecEmptyAnalysisTitle;
+
+  /// No description provided for @dashRecEmptyAnalysisBody.
+  ///
+  /// In pt, this message translates to:
+  /// **'Vá a Market Intelligence e analise o nicho de {projectName}.'**
+  String dashRecEmptyAnalysisBody(String projectName);
+
+  /// No description provided for @dashRecPendingActionsTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'{count, plural, one{1 ação aguardando aprovação} other{{count} ações aguardando aprovação}}'**
+  String dashRecPendingActionsTitle(int count);
+
+  /// No description provided for @dashRecPendingActionsBody.
+  ///
+  /// In pt, this message translates to:
+  /// **'Revise e aprove as ações pendentes no Action Engine para começar a execução.'**
+  String get dashRecPendingActionsBody;
+
+  /// No description provided for @dashRecTopOpportunityTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Oportunidade de alta pontuação: {niche}'**
+  String dashRecTopOpportunityTitle(String niche);
+
+  /// No description provided for @dashRecTopOpportunityBody.
+  ///
+  /// In pt, this message translates to:
+  /// **'Score {score}/100. Acione o Opportunity Lab para converter em tarefas.'**
+  String dashRecTopOpportunityBody(int score);
+
+  /// No description provided for @dashRecNoRevenueTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhuma receita registrada ainda'**
+  String get dashRecNoRevenueTitle;
+
+  /// No description provided for @dashRecNoRevenueBody.
+  ///
+  /// In pt, this message translates to:
+  /// **'Adicione entradas no ROI Tracker para acompanhar o retorno real dos seus projetos.'**
+  String get dashRecNoRevenueBody;
+
+  /// No description provided for @dashPendingActionsTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Prioridades da Semana'**
+  String get dashPendingActionsTitle;
+
+  /// No description provided for @dashPendingActionsViewAll.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ver todas'**
+  String get dashPendingActionsViewAll;
+
+  /// No description provided for @dashPendingActionsEmpty.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhuma ação pendente. O Action Engine preencherá automaticamente com base nas suas análises.'**
+  String get dashPendingActionsEmpty;
 }
 
 class _AppLocalizationsDelegate

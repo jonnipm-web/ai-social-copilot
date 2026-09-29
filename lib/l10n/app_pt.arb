@@ -771,5 +771,30 @@
   "dashProBenefitLibrary": "Organize todo seu conteúdo gerado",
   "dashProBenefitCalendar": "Planeje sua produção de conteúdo",
   "dashProBenefitCampaigns": "Gere campanhas completas com IA",
-  "dashProBenefitPerformance": "Acompanhe métricas de desempenho"
+  "dashProBenefitPerformance": "Acompanhe métricas de desempenho",
+
+  "dashPortfolioTitle": "PORTFÓLIO",
+  "dashPortfolioActiveProjects": "Projetos ativos",
+  "dashPortfolioAnalyses": "Análises de mercado",
+  "dashPortfolioAvgScore": "Score médio",
+
+  "dashRecommendationsTitle": "Recomendações Executivas",
+  "dashRecEmptyProjectTitle": "Cadastre seu primeiro projeto",
+  "dashRecEmptyProjectBody": "Acesse Projetos e cadastre pelo menos um para desbloquear análises e oportunidades.",
+  "dashRecEmptyAnalysisTitle": "Execute sua primeira análise de mercado",
+  "dashRecEmptyAnalysisBody": "Vá a Market Intelligence e analise o nicho de {projectName}.",
+  "@dashRecEmptyAnalysisBody": {"placeholders": {"projectName": {"type": "String"}}},
+  "dashRecPendingActionsTitle": "{count, plural, one{1 ação aguardando aprovação} other{{count} ações aguardando aprovação}}",
+  "@dashRecPendingActionsTitle": {"placeholders": {"count": {"type": "int"}}},
+  "dashRecPendingActionsBody": "Revise e aprove as ações pendentes no Action Engine para começar a execução.",
+  "dashRecTopOpportunityTitle": "Oportunidade de alta pontuação: {niche}",
+  "@dashRecTopOpportunityTitle": {"placeholders": {"niche": {"type": "String"}}},
+  "dashRecTopOpportunityBody": "Score {score}/100. Acione o Opportunity Lab para converter em tarefas.",
+  "@dashRecTopOpportunityBody": {"placeholders": {"score": {"type": "int"}}},
+  "dashRecNoRevenueTitle": "Nenhuma receita registrada ainda",
+  "dashRecNoRevenueBody": "Adicione entradas no ROI Tracker para acompanhar o retorno real dos seus projetos.",
+
+  "dashPendingActionsTitle": "Prioridades da Semana",
+  "dashPendingActionsViewAll": "Ver todas",
+  "dashPendingActionsEmpty": "Nenhuma ação pendente. O Action Engine preencherá automaticamente com base nas suas análises."
 }

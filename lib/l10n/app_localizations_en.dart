@@ -1877,4 +1877,76 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dashProBenefitPerformance => 'Track performance metrics';
+
+  @override
+  String get dashPortfolioTitle => 'PORTFOLIO';
+
+  @override
+  String get dashPortfolioActiveProjects => 'Active projects';
+
+  @override
+  String get dashPortfolioAnalyses => 'Market analyses';
+
+  @override
+  String get dashPortfolioAvgScore => 'Average score';
+
+  @override
+  String get dashRecommendationsTitle => 'Executive Recommendations';
+
+  @override
+  String get dashRecEmptyProjectTitle => 'Add your first project';
+
+  @override
+  String get dashRecEmptyProjectBody =>
+      'Go to Projects and add at least one to unlock analyses and opportunities.';
+
+  @override
+  String get dashRecEmptyAnalysisTitle => 'Run your first market analysis';
+
+  @override
+  String dashRecEmptyAnalysisBody(String projectName) {
+    return 'Go to Market Intelligence and analyze the niche for $projectName.';
+  }
+
+  @override
+  String dashRecPendingActionsTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count actions awaiting approval',
+      one: '1 action awaiting approval',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dashRecPendingActionsBody =>
+      'Review and approve the pending actions in Action Engine to start execution.';
+
+  @override
+  String dashRecTopOpportunityTitle(String niche) {
+    return 'High-scoring opportunity: $niche';
+  }
+
+  @override
+  String dashRecTopOpportunityBody(int score) {
+    return 'Score $score/100. Open Opportunity Lab to convert it into tasks.';
+  }
+
+  @override
+  String get dashRecNoRevenueTitle => 'No revenue recorded yet';
+
+  @override
+  String get dashRecNoRevenueBody =>
+      'Add entries in ROI Tracker to track the real return of your projects.';
+
+  @override
+  String get dashPendingActionsTitle => 'This Week\'s Priorities';
+
+  @override
+  String get dashPendingActionsViewAll => 'View all';
+
+  @override
+  String get dashPendingActionsEmpty =>
+      'No pending actions. Action Engine will fill this in automatically based on your analyses.';
 }

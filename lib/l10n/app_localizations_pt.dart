@@ -1889,4 +1889,77 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get dashProBenefitPerformance => 'Acompanhe métricas de desempenho';
+
+  @override
+  String get dashPortfolioTitle => 'PORTFÓLIO';
+
+  @override
+  String get dashPortfolioActiveProjects => 'Projetos ativos';
+
+  @override
+  String get dashPortfolioAnalyses => 'Análises de mercado';
+
+  @override
+  String get dashPortfolioAvgScore => 'Score médio';
+
+  @override
+  String get dashRecommendationsTitle => 'Recomendações Executivas';
+
+  @override
+  String get dashRecEmptyProjectTitle => 'Cadastre seu primeiro projeto';
+
+  @override
+  String get dashRecEmptyProjectBody =>
+      'Acesse Projetos e cadastre pelo menos um para desbloquear análises e oportunidades.';
+
+  @override
+  String get dashRecEmptyAnalysisTitle =>
+      'Execute sua primeira análise de mercado';
+
+  @override
+  String dashRecEmptyAnalysisBody(String projectName) {
+    return 'Vá a Market Intelligence e analise o nicho de $projectName.';
+  }
+
+  @override
+  String dashRecPendingActionsTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ações aguardando aprovação',
+      one: '1 ação aguardando aprovação',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dashRecPendingActionsBody =>
+      'Revise e aprove as ações pendentes no Action Engine para começar a execução.';
+
+  @override
+  String dashRecTopOpportunityTitle(String niche) {
+    return 'Oportunidade de alta pontuação: $niche';
+  }
+
+  @override
+  String dashRecTopOpportunityBody(int score) {
+    return 'Score $score/100. Acione o Opportunity Lab para converter em tarefas.';
+  }
+
+  @override
+  String get dashRecNoRevenueTitle => 'Nenhuma receita registrada ainda';
+
+  @override
+  String get dashRecNoRevenueBody =>
+      'Adicione entradas no ROI Tracker para acompanhar o retorno real dos seus projetos.';
+
+  @override
+  String get dashPendingActionsTitle => 'Prioridades da Semana';
+
+  @override
+  String get dashPendingActionsViewAll => 'Ver todas';
+
+  @override
+  String get dashPendingActionsEmpty =>
+      'Nenhuma ação pendente. O Action Engine preencherá automaticamente com base nas suas análises.';
 }
