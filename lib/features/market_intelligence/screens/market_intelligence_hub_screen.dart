@@ -345,13 +345,16 @@ class _ExecScoreCard extends StatelessWidget {
             children: [
               Icon(Icons.analytics_rounded, color: color, size: 18),
               const SizedBox(width: 6),
-              const Text(
-                'OPPORTUNITY SCORE',
-                style: TextStyle(
-                  color: Colors.white54,
-                  fontSize: 11,
-                  letterSpacing: 1.4,
-                  fontWeight: FontWeight.w700,
+              const Flexible(
+                child: Text(
+                  'OPPORTUNITY SCORE',
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white54,
+                    fontSize: 11,
+                    letterSpacing: 1.4,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               const Spacer(),
@@ -376,42 +379,59 @@ class _ExecScoreCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '$score',
-                style: TextStyle(
-                  fontSize: 68,
-                  fontWeight: FontWeight.w900,
-                  color: color,
-                  height: 1,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Text(
-                  '/100',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w300,
-                    color: color.withOpacity(0.55),
-                  ),
-                ),
-              ),
-              const Spacer(),
-              Column(
+          // COMMERCIAL-V1-UX-RECONCILIATION (mobile overflow fix) — a fixed
+          // horizontal Row(score, Spacer, context column) overflowed by
+          // ~136px at a 390px viewport (confirmed by
+          // test/features/market_intelligence/market_intelligence_scroll_test.dart's
+          // RenderFlex assertion in debug/test mode; silently clipped
+          // content in release since Flutter strips that assert there).
+          // LayoutBuilder switches to a stacked Column below a breakpoint
+          // instead of forcing the same horizontal layout into less
+          // width — the score also shrinks so it never dominates a narrow
+          // card on its own.
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 380;
+              final scoreRow = Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '$score',
+                    style: TextStyle(
+                      fontSize: isNarrow ? 48 : 68,
+                      fontWeight: FontWeight.w900,
+                      color: color,
+                      height: 1,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      '/100',
+                      style: TextStyle(
+                        fontSize: isNarrow ? 16 : 20,
+                        fontWeight: FontWeight.w300,
+                        color: color.withOpacity(0.55),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+              final contextColumn = Column(
+                crossAxisAlignment:
+                    isNarrow ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 140),
+                    constraints: BoxConstraints(maxWidth: isNarrow ? double.infinity : 140),
                     child: Text(
                       analysis.input,
                       style: const TextStyle(
                           color: Colors.white60, fontSize: 11, fontWeight: FontWeight.w500),
                       overflow: TextOverflow.ellipsis,
                       maxLines: 2,
-                      textAlign: TextAlign.end,
+                      textAlign: isNarrow ? TextAlign.start : TextAlign.end,
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -428,8 +448,27 @@ class _ExecScoreCard extends StatelessWidget {
                     ),
                   ),
                 ],
-              ),
-            ],
+              );
+
+              if (isNarrow) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    scoreRow,
+                    const SizedBox(height: 10),
+                    contextColumn,
+                  ],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  scoreRow,
+                  const Spacer(),
+                  contextColumn,
+                ],
+              );
+            },
           ),
           const SizedBox(height: 18),
           Row(
@@ -1427,10 +1466,14 @@ class _InfoRow2 extends StatelessWidget {
       children: [
         Icon(icon, size: 13, color: Colors.white38),
         const SizedBox(width: 4),
-        Text('$label: ',
-            style: const TextStyle(color: Colors.white38, fontSize: 11)),
+        Flexible(
+          child: Text('$label: ',
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white38, fontSize: 11)),
+        ),
         Flexible(
           child: Text(value,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                   color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w600)),
         ),
