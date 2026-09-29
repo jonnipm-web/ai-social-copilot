@@ -1,7 +1,20 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/website_analysis.dart';
+import 'content_localization_service.dart';
 
 class WebsiteAnalyzerService {
+  WebsiteAnalyzerService({RowLocalizer? localizer}) : _localizer = localizer ?? identityLocalizer;
+
+  // R16 — presentation localization of persisted content (never modifies the
+  // stored row; see content_localization_service.dart).
+  final RowLocalizer _localizer;
+
+  Future<List<Map<String, dynamic>>> _loc(String table, dynamic rows) =>
+      _localizer(table, (rows as List).map((r) => Map<String, dynamic>.from(r as Map)).toList());
+
+  Future<Map<String, dynamic>> _locOne(String table, Map<String, dynamic> row) async =>
+      (await _localizer(table, [row])).first;
+
   final _client = Supabase.instance.client;
 
   static const _table = 'website_analyses';
@@ -12,7 +25,7 @@ class WebsiteAnalyzerService {
         .from(_table)
         .select()
         .order('created_at', ascending: false);
-    return (rows as List).map((r) => WebsiteAnalysis.fromMap(r)).toList();
+    return (await _loc('website_analyses', rows)).map((r) => WebsiteAnalysis.fromMap(r)).toList();
   }
 
   Future<WebsiteAnalysis?> fetchById(String id) async {
@@ -21,7 +34,7 @@ class WebsiteAnalyzerService {
         .select()
         .eq('id', id)
         .maybeSingle();
-    return row == null ? null : WebsiteAnalysis.fromMap(row);
+    return row == null ? null : WebsiteAnalysis.fromMap(await _locOne('website_analyses', row));
   }
 
   Future<void> delete(String id) async {

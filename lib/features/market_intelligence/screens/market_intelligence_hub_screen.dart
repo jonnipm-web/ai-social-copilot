@@ -19,6 +19,7 @@ import '../../../providers/market_analysis_provider.dart';
 import '../../../providers/roi_metric_provider.dart';
 import '../../../shared/widgets/context_copilot_widget.dart';
 import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
+import '../../../shared/widgets/translated_content_notice.dart';
 
 // ── Colors ───────────────────────────────────────────────────────────────────
 const _kBg      = Color(0xFF0F0F1A);
@@ -239,6 +240,7 @@ class _HubState extends ConsumerState<MarketIntelligenceHubScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                TranslatedContentNotice(localizedFrom: analysis.localizedFrom),
                 // M1 — Executive Score Card
                 _ExecScoreCard(analysis: analysis),
                 const SizedBox(height: 12),

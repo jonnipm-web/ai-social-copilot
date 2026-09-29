@@ -6811,4 +6811,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ecoGateIntelligenceProfile => 'Intelligence profile';
+
+  @override
+  String r16TranslatedFrom(String language) {
+    return 'Automatically translated from $language';
+  }
+
+  @override
+  String get r16ShowingOriginalContent => 'Showing content in its original language';
+
+  @override
+  String get r16ViewOriginal => 'View original';
+
+  @override
+  String get r16ViewTranslation => 'View translation';
 }

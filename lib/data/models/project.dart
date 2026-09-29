@@ -1,4 +1,15 @@
 class Project {
+  /// R16: detected source language when the presentation text of this row
+  /// was translated for display (null = shown in its original language).
+  final String? localizedFrom;
+  /// R16: description translated for display; [description] keeps the
+  /// ORIGINAL text so edit forms never overwrite it with a translation.
+  final String? descriptionLocalized;
+  String get presentedDescription =>
+      (descriptionLocalized != null && descriptionLocalized!.trim().isNotEmpty)
+          ? descriptionLocalized!
+          : description;
+
   final String id;
   final String userId;
   final String name;
@@ -33,6 +44,8 @@ class Project {
     this.detailsJson = const {},
     required this.createdAt,
     required this.updatedAt,
+    this.localizedFrom,
+    this.descriptionLocalized,
   });
 
   List<String> get nextActions => _list(detailsJson['next_actions']);
@@ -53,6 +66,8 @@ class Project {
 
     return Project(
       id:                  map['id'] as String,
+      localizedFrom: map['r16_localized_from'] as String?,
+      descriptionLocalized: map['description_localized'] as String?,
       userId:              map['user_id'] as String,
       name:                map['name'] as String,
       description:         map['description'] as String? ?? '',
@@ -92,6 +107,8 @@ class Project {
   Project copyWith({String? status, int? priorityScore}) {
     return Project(
       id:                  id,
+      localizedFrom: localizedFrom,
+      descriptionLocalized: descriptionLocalized,
       userId:              userId,
       name:                name,
       description:         description,

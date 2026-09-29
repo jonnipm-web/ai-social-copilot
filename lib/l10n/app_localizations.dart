@@ -12095,6 +12095,30 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Perfil de inteligência'**
   String get ecoGateIntelligenceProfile;
+
+  /// No description provided for @r16TranslatedFrom.
+  ///
+  /// In pt, this message translates to:
+  /// **'Traduzido automaticamente do {language}'**
+  String r16TranslatedFrom(String language);
+
+  /// No description provided for @r16ShowingOriginalContent.
+  ///
+  /// In pt, this message translates to:
+  /// **'Exibindo o conteúdo no idioma original'**
+  String get r16ShowingOriginalContent;
+
+  /// No description provided for @r16ViewOriginal.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ver original'**
+  String get r16ViewOriginal;
+
+  /// No description provided for @r16ViewTranslation.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ver tradução'**
+  String get r16ViewTranslation;
 }
 
 class _AppLocalizationsDelegate

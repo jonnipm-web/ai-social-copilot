@@ -10,34 +10,35 @@ import '../data/models/ive_event.dart';
 import '../data/models/opportunity_lab_item.dart';
 import '../data/services/action_queue_service.dart';
 import '../l10n/app_localizations.dart';
+import '../data/services/content_localization_service.dart';
 
 final actionQueueServiceProvider =
-    Provider<ActionQueueService>((_) => ActionQueueService());
+    Provider<ActionQueueService>((ref) => ActionQueueService(localizer: ref.watch(rowLocalizerProvider)));
 
 final actionQueueProvider =
     FutureProvider.autoDispose<List<ActionQueueItem>>((ref) {
-  return ref.read(actionQueueServiceProvider).fetchAll();
+  return ref.watch(actionQueueServiceProvider).fetchAll();
 });
 
 final pendingActionsProvider =
     FutureProvider.autoDispose<List<ActionQueueItem>>((ref) {
-  return ref.read(actionQueueServiceProvider).fetchPending();
+  return ref.watch(actionQueueServiceProvider).fetchPending();
 });
 
 final actionQueueSummaryProvider =
     FutureProvider.autoDispose<Map<String, int>>((ref) {
-  return ref.read(actionQueueServiceProvider).summary();
+  return ref.watch(actionQueueServiceProvider).summary();
 });
 
 final actionQueueItemByIdProvider =
     FutureProvider.autoDispose.family<ActionQueueItem?, String>((ref, id) {
-  return ref.read(actionQueueServiceProvider).fetchById(id);
+  return ref.watch(actionQueueServiceProvider).fetchById(id);
 });
 
 // Action queue filtered by project_id (real Supabase filter)
 final actionQueueByProjectProvider =
     FutureProvider.autoDispose.family<List<ActionQueueItem>, String>((ref, projectId) {
-  return ref.read(actionQueueServiceProvider).fetchAll(projectId: projectId);
+  return ref.watch(actionQueueServiceProvider).fetchAll(projectId: projectId);
 });
 
 class ActionQueueNotifier

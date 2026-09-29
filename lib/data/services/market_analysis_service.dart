@@ -8,8 +8,21 @@ import '../models/content_cluster.dart';
 import '../models/revenue_plan.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/app_exceptions.dart';
+import 'content_localization_service.dart';
 
 class MarketAnalysisService {
+  MarketAnalysisService({RowLocalizer? localizer}) : _localizer = localizer ?? identityLocalizer;
+
+  // R16 — presentation localization of persisted content (never modifies the
+  // stored row; see content_localization_service.dart).
+  final RowLocalizer _localizer;
+
+  Future<List<Map<String, dynamic>>> _loc(String table, dynamic rows) =>
+      _localizer(table, (rows as List).map((r) => Map<String, dynamic>.from(r as Map)).toList());
+
+  Future<Map<String, dynamic>> _locOne(String table, Map<String, dynamic> row) async =>
+      (await _localizer(table, [row])).first;
+
   // Lazy getter, not an eager field initializer: MarketAnalysisNotifier's
   // constructor requires a real MarketAnalysisService instance, so any
   // widget test that mounts a screen watching marketAnalysisNotifierProvider
@@ -27,7 +40,7 @@ class MarketAnalysisService {
         .select();
     if (projectId != null) query = query.eq('project_id', projectId);
     final rows = await query.order('created_at', ascending: false);
-    return (rows as List).map((r) => MarketAnalysis.fromMap(r)).toList();
+    return (await _loc('market_analyses', rows)).map((r) => MarketAnalysis.fromMap(r)).toList();
   }
 
   Future<MarketAnalysis?> fetchById(String id) async {
@@ -36,7 +49,7 @@ class MarketAnalysisService {
         .select()
         .eq('id', id)
         .maybeSingle();
-    return row == null ? null : MarketAnalysis.fromMap(row);
+    return row == null ? null : MarketAnalysis.fromMap(await _locOne('market_analyses', row));
   }
 
   Future<void> delete(String id) async {
@@ -98,7 +111,7 @@ class MarketAnalysisService {
         .select()
         .eq('market_analysis_id', marketAnalysisId)
         .order('relevance_score', ascending: false);
-    return (rows as List).map((r) => Competitor.fromMap(r)).toList();
+    return (await _loc('competitors', rows)).map((r) => Competitor.fromMap(r)).toList();
   }
 
   Future<List<Competitor>> discoverCompetitors(
@@ -171,7 +184,7 @@ class MarketAnalysisService {
         .order('created_at', ascending: false)
         .limit(1);
     final list = rows as List;
-    return list.isEmpty ? null : GapAnalysis.fromMap(list.first as Map<String, dynamic>);
+    return list.isEmpty ? null : GapAnalysis.fromMap(await _locOne('gap_analyses', list.first as Map<String, dynamic>));
   }
 
   Future<GapAnalysis> runGapAnalysis(
@@ -232,7 +245,7 @@ class MarketAnalysisService {
         .select()
         .eq('market_analysis_id', marketAnalysisId)
         .order('opportunity_score', ascending: false);
-    return (rows as List).map((r) => Opportunity.fromMap(r)).toList();
+    return (await _loc('opportunities', rows)).map((r) => Opportunity.fromMap(r)).toList();
   }
 
   Future<List<Opportunity>> discoverOpportunities(
@@ -292,7 +305,7 @@ class MarketAnalysisService {
         .select()
         .eq('market_analysis_id', marketAnalysisId)
         .order('overall_score', ascending: false);
-    return (rows as List).map((r) => NicheRanking.fromMap(r)).toList();
+    return (await _loc('niche_rankings', rows)).map((r) => NicheRanking.fromMap(r)).toList();
   }
 
   Future<List<NicheRanking>> discoverNiches(
@@ -355,7 +368,7 @@ class MarketAnalysisService {
         .order('created_at', ascending: false)
         .limit(1);
     final list = rows as List;
-    return list.isEmpty ? null : ContentCluster.fromMap(list.first as Map<String, dynamic>);
+    return list.isEmpty ? null : ContentCluster.fromMap(await _locOne('content_clusters', list.first as Map<String, dynamic>));
   }
 
   Future<ContentCluster> buildContentCluster(
@@ -409,7 +422,7 @@ class MarketAnalysisService {
     var query = _client.from(AppConstants.tableRevenuePlans).select();
     if (projectId != null) query = query.eq('project_id', projectId);
     final rows = await query.order('created_at', ascending: false);
-    return (rows as List).map((r) => RevenuePlan.fromMap(r)).toList();
+    return (await _loc('revenue_plans', rows)).map((r) => RevenuePlan.fromMap(r)).toList();
   }
 
   // Revenue Plan — same current-state reasoning as fetchGapAnalysis above.
@@ -421,7 +434,7 @@ class MarketAnalysisService {
         .order('created_at', ascending: false)
         .limit(1);
     final list = rows as List;
-    return list.isEmpty ? null : RevenuePlan.fromMap(list.first as Map<String, dynamic>);
+    return list.isEmpty ? null : RevenuePlan.fromMap(await _locOne('revenue_plans', list.first as Map<String, dynamic>));
   }
 
   Future<RevenuePlan> buildRevenuePlan(

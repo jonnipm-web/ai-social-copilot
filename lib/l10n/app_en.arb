@@ -2366,5 +2366,10 @@
   "@bootstrapProgressProjectStep": {"placeholders": {"current": {"type": "int"}, "total": {"type": "int"}, "step": {"type": "String"}}},
   "ecoGateKnowledgeCoverage": "Knowledge coverage",
   "ecoGateLearningScore": "Learning score",
-  "ecoGateIntelligenceProfile": "Intelligence profile"
+  "ecoGateIntelligenceProfile": "Intelligence profile",
+  "r16TranslatedFrom": "Automatically translated from {language}",
+  "@r16TranslatedFrom": {"placeholders": {"language": {"type": "String"}}},
+  "r16ShowingOriginalContent": "Showing content in its original language",
+  "r16ViewOriginal": "View original",
+  "r16ViewTranslation": "View translation"
 }

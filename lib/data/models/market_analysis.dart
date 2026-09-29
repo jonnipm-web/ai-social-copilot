@@ -1,4 +1,8 @@
 class MarketAnalysis {
+  /// R16: detected source language when the presentation text of this row
+  /// was translated for display (null = shown in its original language).
+  final String? localizedFrom;
+
   final String  id;
   final String  userId;
   final String? projectId;
@@ -35,6 +39,7 @@ class MarketAnalysis {
     this.analysisJson = const {},
     required this.createdAt,
     required this.updatedAt,
+    this.localizedFrom,
   });
 
   // ── Getters básicos ──────────────────────────────────────────────────────
@@ -102,6 +107,7 @@ class MarketAnalysis {
   factory MarketAnalysis.fromMap(Map<String, dynamic> map) {
     return MarketAnalysis(
       id:                 map['id'] as String,
+      localizedFrom: map['r16_localized_from'] as String?,
       userId:             map['user_id'] as String,
       projectId:          map['project_id'] as String?,
       input:              map['input'] as String,

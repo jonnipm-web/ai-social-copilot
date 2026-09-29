@@ -5,9 +5,10 @@ import '../data/models/knowledge_analysis.dart';
 import '../data/models/knowledge_item.dart';
 import '../data/models/knowledge_strategy.dart';
 import '../data/services/strategy_service.dart';
+import '../data/services/content_localization_service.dart';
 
 final strategyServiceProvider =
-    Provider<StrategyService>((_) => StrategyService());
+    Provider<StrategyService>((ref) => StrategyService(localizer: ref.watch(rowLocalizerProvider)));
 
 final knowledgeStrategyProvider =
     FutureProvider.autoDispose.family<KnowledgeStrategy?, String>(

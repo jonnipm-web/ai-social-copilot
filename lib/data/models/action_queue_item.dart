@@ -1,6 +1,10 @@
 import '../../l10n/app_localizations.dart';
 
 class ActionQueueItem {
+  /// R16: detected source language when the presentation text of this row
+  /// was translated for display (null = shown in its original language).
+  final String? localizedFrom;
+
   final String id;
   final String userId;
   final String? projectId;
@@ -63,6 +67,7 @@ class ActionQueueItem {
     this.aefOperationId,
     this.aefReceiptId,
     this.aefReceiptOutcome,
+    this.localizedFrom,
   });
 
   static const List<String> statusValues = [
@@ -116,6 +121,7 @@ class ActionQueueItem {
 
   factory ActionQueueItem.fromMap(Map<String, dynamic> map) => ActionQueueItem(
         id:               map['id'] as String,
+        localizedFrom: map['r16_localized_from'] as String?,
         userId:           map['user_id'] as String,
         projectId:        map['project_id'] as String?,
         opportunityLabId: map['opportunity_lab_id'] as String?,

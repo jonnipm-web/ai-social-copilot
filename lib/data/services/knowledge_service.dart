@@ -5,6 +5,7 @@ import '../models/knowledge_item.dart';
 import '../../core/services/ive_event_bus.dart';
 import '../../data/models/ive_event.dart';
 import 'content_service.dart';
+import 'content_localization_service.dart';
 
 /// R16 — request body for `extract-knowledge`, extracted so it is
 /// unit-testable without a Supabase client. `language` is always the
@@ -27,6 +28,18 @@ Map<String, dynamic> buildExtractKnowledgeBody({
     };
 
 class KnowledgeService {
+  KnowledgeService({RowLocalizer? localizer}) : _localizer = localizer ?? identityLocalizer;
+
+  // R16 — presentation localization of persisted content (never modifies the
+  // stored row; see content_localization_service.dart).
+  final RowLocalizer _localizer;
+
+  Future<List<Map<String, dynamic>>> _loc(String table, dynamic rows) =>
+      _localizer(table, (rows as List).map((r) => Map<String, dynamic>.from(r as Map)).toList());
+
+  Future<Map<String, dynamic>> _locOne(String table, Map<String, dynamic> row) async =>
+      (await _localizer(table, [row])).first;
+
   final _client = Supabase.instance.client;
 
   static const _tableItems    = 'knowledge_items';
@@ -82,7 +95,7 @@ class KnowledgeService {
         .select()
         .eq('knowledge_item_id', knowledgeItemId)
         .maybeSingle();
-    return row == null ? null : KnowledgeAnalysis.fromMap(row);
+    return row == null ? null : KnowledgeAnalysis.fromMap(await _locOne('knowledge_analysis', row));
   }
 
   Future<List<KnowledgeAnalysis>> fetchAnalysisByProject(String projectId) async {
@@ -91,7 +104,7 @@ class KnowledgeService {
         .select()
         .eq('project_id', projectId)
         .order('created_at', ascending: false);
-    return (rows as List).map((r) => KnowledgeAnalysis.fromMap(r)).toList();
+    return (await _loc('knowledge_analysis', rows)).map((r) => KnowledgeAnalysis.fromMap(r)).toList();
   }
 
   Future<KnowledgeAnalysis> saveAnalysis(KnowledgeAnalysis analysis) async {

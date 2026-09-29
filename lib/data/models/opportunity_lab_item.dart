@@ -1,6 +1,10 @@
 import '../../l10n/app_localizations.dart';
 
 class OpportunityLabItem {
+  /// R16: detected source language when the presentation text of this row
+  /// was translated for display (null = shown in its original language).
+  final String? localizedFrom;
+
   final String id;
   final String userId;
   final String? projectId;
@@ -54,6 +58,7 @@ class OpportunityLabItem {
     this.risks = const [],
     this.actionSteps = const [],
     this.knowledgeItemIds = const [],
+    this.localizedFrom,
   });
 
   static const List<String> types = [
@@ -111,6 +116,7 @@ class OpportunityLabItem {
   factory OpportunityLabItem.fromMap(Map<String, dynamic> map) =>
       OpportunityLabItem(
         id:               map['id'] as String,
+        localizedFrom: map['r16_localized_from'] as String?,
         userId:           map['user_id'] as String,
         projectId:        map['project_id'] as String?,
         marketAnalysisId: map['market_analysis_id'] as String?,
@@ -168,6 +174,7 @@ class OpportunityLabItem {
   }) =>
       OpportunityLabItem(
         id:               id,
+        localizedFrom: localizedFrom,
         userId:           userId,
         projectId:        projectId,
         marketAnalysisId: marketAnalysisId,

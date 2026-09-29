@@ -2,28 +2,29 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/models/opportunity_lab_item.dart';
 import '../data/services/opportunity_lab_service.dart';
+import '../data/services/content_localization_service.dart';
 
 final opportunityLabServiceProvider =
-    Provider<OpportunityLabService>((_) => OpportunityLabService());
+    Provider<OpportunityLabService>((ref) => OpportunityLabService(localizer: ref.watch(rowLocalizerProvider)));
 
 final opportunityLabProvider =
     FutureProvider.autoDispose<List<OpportunityLabItem>>((ref) {
-  return ref.read(opportunityLabServiceProvider).fetchAll();
+  return ref.watch(opportunityLabServiceProvider).fetchAll();
 });
 
 final opportunityLabByProjectProvider =
     FutureProvider.autoDispose.family<List<OpportunityLabItem>, String>((ref, projectId) {
-  return ref.read(opportunityLabServiceProvider).fetchAll(projectId: projectId);
+  return ref.watch(opportunityLabServiceProvider).fetchAll(projectId: projectId);
 });
 
 final opportunityLabItemByIdProvider =
     FutureProvider.autoDispose.family<OpportunityLabItem?, String>((ref, id) {
-  return ref.read(opportunityLabServiceProvider).fetchById(id);
+  return ref.watch(opportunityLabServiceProvider).fetchById(id);
 });
 
 final opportunityLabSummaryProvider =
     FutureProvider.autoDispose<Map<String, int>>((ref) {
-  return ref.read(opportunityLabServiceProvider).summary();
+  return ref.watch(opportunityLabServiceProvider).summary();
 });
 
 class OpportunityLabNotifier

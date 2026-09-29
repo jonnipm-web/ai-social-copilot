@@ -4,8 +4,21 @@ import '../models/action_queue_item.dart';
 import '../models/aef_runtime.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/app_exceptions.dart';
+import 'content_localization_service.dart';
 
 class ActionQueueService {
+  ActionQueueService({RowLocalizer? localizer}) : _localizer = localizer ?? identityLocalizer;
+
+  // R16 — presentation localization of persisted content (never modifies the
+  // stored row; see content_localization_service.dart).
+  final RowLocalizer _localizer;
+
+  Future<List<Map<String, dynamic>>> _loc(String table, dynamic rows) =>
+      _localizer(table, (rows as List).map((r) => Map<String, dynamic>.from(r as Map)).toList());
+
+  Future<Map<String, dynamic>> _locOne(String table, Map<String, dynamic> row) async =>
+      (await _localizer(table, [row])).first;
+
   SupabaseClient get _client => Supabase.instance.client;
 
   String? get currentUserId => _client.auth.currentUser?.id;
@@ -19,7 +32,7 @@ class ActionQueueService {
     if (status != null)    filter = filter.eq('status', status);
 
     final rows = await filter.order('priority', ascending: true);
-    return rows.map((r) => ActionQueueItem.fromMap(r)).toList();
+    return (await _loc('action_queue', rows)).map((r) => ActionQueueItem.fromMap(r)).toList();
   }
 
   Future<ActionQueueItem> create(ActionQueueItem item) async {
@@ -118,7 +131,7 @@ class ActionQueueService {
         .select()
         .eq('id', id)
         .maybeSingle();
-    return row == null ? null : ActionQueueItem.fromMap(row);
+    return row == null ? null : ActionQueueItem.fromMap(await _locOne('action_queue', row));
   }
 
   Future<void> delete(String id) async {

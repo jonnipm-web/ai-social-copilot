@@ -2,9 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/utils/language_utils.dart';
 import '../data/models/website_analysis.dart';
 import '../data/services/website_analyzer_service.dart';
+import '../data/services/content_localization_service.dart';
 
 final websiteAnalyzerServiceProvider =
-    Provider<WebsiteAnalyzerService>((_) => WebsiteAnalyzerService());
+    Provider<WebsiteAnalyzerService>((ref) => WebsiteAnalyzerService(localizer: ref.watch(rowLocalizerProvider)));
 
 final websiteAnalysesProvider =
     FutureProvider.autoDispose<List<WebsiteAnalysis>>((ref) {
@@ -43,7 +44,7 @@ final websiteAnalyzerNotifierProvider = StateNotifierProvider.autoDispose<
 
 final websiteAnalysisByIdProvider =
     FutureProvider.autoDispose.family<WebsiteAnalysis, String>((ref, id) async {
-  final result = await ref.read(websiteAnalyzerServiceProvider).fetchById(id);
+  final result = await ref.watch(websiteAnalyzerServiceProvider).fetchById(id);
   if (result == null) throw Exception('Análise não encontrada');
   return result;
 });

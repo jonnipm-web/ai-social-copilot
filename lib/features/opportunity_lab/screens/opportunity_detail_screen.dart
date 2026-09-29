@@ -20,6 +20,7 @@ import '../../../shared/widgets/context_copilot_widget.dart'
 import '../../action_engine/screens/action_detail_screen.dart';
 import '../opportunity_type_labels.dart';
 import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
+import '../../../shared/widgets/translated_content_notice.dart';
 
 // ── Colors ────────────────────────────────────────────────────────────────────
 const _kBg      = Color(0xFF0F0F1A);
@@ -225,6 +226,7 @@ class _DetailBody extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
       children: [
+        TranslatedContentNotice(localizedFrom: item.localizedFrom),
         // ── Hero header ────────────────────────────────────────
         _HeroHeader(item: item),
 

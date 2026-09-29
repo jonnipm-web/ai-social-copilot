@@ -26,6 +26,7 @@ import '../../../providers/project_resource_allocation_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/context_copilot_widget.dart' show showCopilotChat;
+import '../../../shared/widgets/translated_content_notice.dart';
 
 class ProjectCommandCenterScreen extends ConsumerStatefulWidget {
   const ProjectCommandCenterScreen({super.key});
@@ -812,11 +813,11 @@ class _ProjectCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  if (project.description.isNotEmpty) ...[
+                  if (project.presentedDescription.isNotEmpty) ...[
                     const SizedBox(height: 6),
                     Padding(
                       padding: const EdgeInsets.only(left: 38),
-                      child: Text(project.description,
+                      child: Text(project.presentedDescription,
                           style: const TextStyle(
                               color: Colors.white54, fontSize: 12),
                           maxLines: 2,
@@ -1012,9 +1013,10 @@ class _ProjectDetailSheet extends ConsumerWidget {
                   ),
               ],
             ),
-            if (project.description.isNotEmpty) ...[
+            TranslatedContentNotice(localizedFrom: project.localizedFrom),
+            if (project.presentedDescription.isNotEmpty) ...[
               const SizedBox(height: 8),
-              Text(project.description,
+              Text(project.presentedDescription,
                   style:
                       const TextStyle(color: Colors.white60, fontSize: 13)),
             ],

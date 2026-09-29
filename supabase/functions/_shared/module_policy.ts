@@ -30,7 +30,7 @@
  *   and do not raise it.
  * - edgeFunctions.gateFile: optional; see EdgeFunctionPolicy.
  * - edgeFunctions.kind: MODULE (entitlement required, moduleId mandatory) |
- *   BILLING | ENTITLEMENT | PUBLIC_WEBHOOK | RETIRED (no module gate; each
+ *   BILLING | ENTITLEMENT | PUBLIC_WEBHOOK | RETIRED | PRESENTATION (no module gate; each
  *   has its own boundary, documented in MODULE_ARCHITECTURE.md §13).
  */
 
@@ -53,7 +53,12 @@ export interface ModulePolicy {
   actionClass: ActionClass;
 }
 
-export type EdgeFunctionKind = "MODULE" | "BILLING" | "ENTITLEMENT" | "PUBLIC_WEBHOOK" | "RETIRED";
+// PRESENTATION (R16): cross-module presentation service (localize-content).
+// Boundary: real user session (resolveAuthenticatedUser), reads ONLY rows the
+// caller owns from a server allowlist of tables/columns, never writes source
+// data, does not produce new analysis (no analysis quota) and is cost-capped
+// per user per day. It exposes no module capability, so no module gate.
+export type EdgeFunctionKind = "MODULE" | "BILLING" | "ENTITLEMENT" | "PUBLIC_WEBHOOK" | "RETIRED" | "PRESENTATION";
 
 export interface EdgeFunctionPolicy {
   kind: EdgeFunctionKind;
@@ -184,6 +189,7 @@ export const MODULE_POLICY: ModulePolicyDoc =
     "impact-lab": { "kind": "MODULE", "moduleId": "impact" },
     "module-access": { "kind": "ENTITLEMENT" },
     "stripe-webhook": { "kind": "PUBLIC_WEBHOOK" },
+    "localize-content": { "kind": "PRESENTATION" },
     "ive-agent-runner": { "kind": "RETIRED" },
     "aef-runtime": { "kind": "MODULE", "moduleId": "aef-runtime-lab", "gateFile": "_shared/aef_runtime_endpoint.ts", "actionClassOverride": "CONSEQUENTIAL" },
     "action-engine-runtime": { "kind": "MODULE", "moduleId": "action-engine", "gateFile": "_shared/aef_runtime_endpoint.ts", "actionClassOverride": "CONSEQUENTIAL" },

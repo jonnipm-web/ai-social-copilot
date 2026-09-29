@@ -4,9 +4,10 @@ import '../core/utils/language_utils.dart';
 import '../data/models/knowledge_analysis.dart';
 import '../data/models/knowledge_item.dart';
 import '../data/services/knowledge_service.dart';
+import '../data/services/content_localization_service.dart';
 
 final knowledgeServiceProvider =
-    Provider<KnowledgeService>((_) => KnowledgeService());
+    Provider<KnowledgeService>((ref) => KnowledgeService(localizer: ref.watch(rowLocalizerProvider)));
 
 final knowledgeItemsProvider =
     FutureProvider.autoDispose<List<KnowledgeItem>>((ref) {

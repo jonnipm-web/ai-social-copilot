@@ -201,6 +201,7 @@ Deno.test('MP-10 non-MODULE kinds are a closed, reviewed allowlist — a new fun
   assertEquals(nonModule, [
     'create-checkout-session:BILLING',
     'ive-agent-runner:RETIRED',
+    'localize-content:PRESENTATION',
     'module-access:ENTITLEMENT',
     'stripe-webhook:PUBLIC_WEBHOOK',
   ]);

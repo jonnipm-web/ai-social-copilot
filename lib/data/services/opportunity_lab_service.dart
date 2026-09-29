@@ -3,8 +3,21 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/opportunity_lab_item.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/app_exceptions.dart';
+import 'content_localization_service.dart';
 
 class OpportunityLabService {
+  OpportunityLabService({RowLocalizer? localizer}) : _localizer = localizer ?? identityLocalizer;
+
+  // R16 — presentation localization of persisted content (never modifies the
+  // stored row; see content_localization_service.dart).
+  final RowLocalizer _localizer;
+
+  Future<List<Map<String, dynamic>>> _loc(String table, dynamic rows) =>
+      _localizer(table, (rows as List).map((r) => Map<String, dynamic>.from(r as Map)).toList());
+
+  Future<Map<String, dynamic>> _locOne(String table, Map<String, dynamic> row) async =>
+      (await _localizer(table, [row])).first;
+
   // Lazy getter, not an eager field initializer -- same fix as
   // MarketAnalysisService/context_copilot_provider.dart: any widget test
   // that mounts a screen watching opportunityLabNotifierProvider (without
@@ -23,7 +36,7 @@ class OpportunityLabService {
     if (status != null)    filter = filter.eq('status', status);
 
     final rows = await filter.order('final_score', ascending: false);
-    return rows.map((r) => OpportunityLabItem.fromMap(r)).toList();
+    return (await _loc('opportunity_lab', rows)).map((r) => OpportunityLabItem.fromMap(r)).toList();
   }
 
   Future<OpportunityLabItem> create(OpportunityLabItem item) async {
@@ -57,7 +70,7 @@ class OpportunityLabService {
         .select()
         .eq('id', id)
         .maybeSingle();
-    return row == null ? null : OpportunityLabItem.fromMap(row);
+    return row == null ? null : OpportunityLabItem.fromMap(await _locOne('opportunity_lab', row));
   }
 
   Future<void> delete(String id) async {

@@ -176,7 +176,7 @@ EcosystemWideFields selectEcosystemWideFields(
     ..sort((a, b) => b.ecosystemScore.compareTo(a.ecosystemScore));
   final topThree = sorted.take(3).map((s) => {
         'name':        s.project.name,
-        'description': s.project.description,
+        'description': s.project.presentedDescription,
         'type':        s.project.type,
         'status':      s.project.status,
         'score':       s.ecosystemScore,
@@ -323,7 +323,7 @@ final iveContextDataProvider =
   // Contexto textual do projeto para seleção de chunks relevantes
   final projectContext = [
     top?.project.name ?? '',
-    top?.project.description ?? '',
+    top?.project.presentedDescription ?? '',
   ].where((s) => s.isNotEmpty).join(' ');
 
   // Total de documentos vinculados ao projeto (para coverage real, antes de take(5))
@@ -461,7 +461,7 @@ final iveContextDataProvider =
     pendingActionsCount:         pendingInScope.length,
     pendingOpportunitiesCount:   pendingLab,
     topProjectName:              top?.project.name,
-    topProjectDescription:       top?.project.description,
+    topProjectDescription:       top?.project.presentedDescription,
     topProjectType:              top?.project.type,
     topProjectScore:             top?.ecosystemScore,
     mainBottleneckName:          bottleneck?.project.name,

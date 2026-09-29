@@ -6,9 +6,10 @@ import '../data/models/knowledge_analysis.dart';
 import '../data/models/knowledge_item.dart';
 import '../data/models/knowledge_strategy.dart';
 import '../data/services/campaign_service.dart';
+import '../data/services/content_localization_service.dart';
 
 final campaignServiceProvider =
-    Provider<CampaignService>((_) => CampaignService());
+    Provider<CampaignService>((ref) => CampaignService(localizer: ref.watch(rowLocalizerProvider)));
 
 final campaignsProvider =
     FutureProvider.autoDispose<List<Campaign>>((ref) {

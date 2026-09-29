@@ -15,26 +15,27 @@ import '../data/models/opportunity_lab_item.dart';
 import '../data/services/market_analysis_service.dart';
 import '../data/services/opportunity_lab_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../data/services/content_localization_service.dart';
 
 final marketAnalysisServiceProvider = Provider<MarketAnalysisService>(
-  (_) => MarketAnalysisService(),
+  (ref) => MarketAnalysisService(localizer: ref.watch(rowLocalizerProvider)),
 );
 
 // List of all market analyses
 final marketAnalysesProvider = FutureProvider.autoDispose<List<MarketAnalysis>>((ref) {
-  return ref.read(marketAnalysisServiceProvider).fetchAll();
+  return ref.watch(marketAnalysisServiceProvider).fetchAll();
 });
 
 // Market analyses filtered by project_id
 final marketAnalysesByProjectProvider =
     FutureProvider.autoDispose.family<List<MarketAnalysis>, String>((ref, projectId) {
-  return ref.read(marketAnalysisServiceProvider).fetchAll(projectId: projectId);
+  return ref.watch(marketAnalysisServiceProvider).fetchAll(projectId: projectId);
 });
 
 // Single market analysis by id
 final marketAnalysisByIdProvider =
     FutureProvider.autoDispose.family<MarketAnalysis, String>((ref, id) async {
-  final result = await ref.read(marketAnalysisServiceProvider).fetchById(id);
+  final result = await ref.watch(marketAnalysisServiceProvider).fetchById(id);
   if (result == null) throw const AppException(AppErrorCode.notFound);
   return result;
 });
@@ -42,48 +43,48 @@ final marketAnalysisByIdProvider =
 // Competitors for a market analysis
 final competitorsByAnalysisProvider =
     FutureProvider.autoDispose.family<List<Competitor>, String>((ref, marketAnalysisId) {
-  return ref.read(marketAnalysisServiceProvider).fetchCompetitors(marketAnalysisId);
+  return ref.watch(marketAnalysisServiceProvider).fetchCompetitors(marketAnalysisId);
 });
 
 // Gap analysis for a market analysis
 final gapAnalysisByAnalysisProvider =
     FutureProvider.autoDispose.family<GapAnalysis?, String>((ref, marketAnalysisId) {
-  return ref.read(marketAnalysisServiceProvider).fetchGapAnalysis(marketAnalysisId);
+  return ref.watch(marketAnalysisServiceProvider).fetchGapAnalysis(marketAnalysisId);
 });
 
 // Opportunities for a market analysis
 final opportunitiesByAnalysisProvider =
     FutureProvider.autoDispose.family<List<Opportunity>, String>((ref, marketAnalysisId) {
-  return ref.read(marketAnalysisServiceProvider).fetchOpportunities(marketAnalysisId);
+  return ref.watch(marketAnalysisServiceProvider).fetchOpportunities(marketAnalysisId);
 });
 
 // Niches for a market analysis
 final nichesByAnalysisProvider =
     FutureProvider.autoDispose.family<List<NicheRanking>, String>((ref, marketAnalysisId) {
-  return ref.read(marketAnalysisServiceProvider).fetchNiches(marketAnalysisId);
+  return ref.watch(marketAnalysisServiceProvider).fetchNiches(marketAnalysisId);
 });
 
 // Content cluster for a market analysis
 final contentClusterByAnalysisProvider =
     FutureProvider.autoDispose.family<ContentCluster?, String>((ref, marketAnalysisId) {
-  return ref.read(marketAnalysisServiceProvider).fetchContentCluster(marketAnalysisId);
+  return ref.watch(marketAnalysisServiceProvider).fetchContentCluster(marketAnalysisId);
 });
 
 // Revenue plan for a market analysis
 final revenuePlanByAnalysisProvider =
     FutureProvider.autoDispose.family<RevenuePlan?, String>((ref, marketAnalysisId) {
-  return ref.read(marketAnalysisServiceProvider).fetchRevenuePlan(marketAnalysisId);
+  return ref.watch(marketAnalysisServiceProvider).fetchRevenuePlan(marketAnalysisId);
 });
 
 // All revenue plans — used by ecosystem scoring
 final allRevenuePlansProvider = FutureProvider.autoDispose<List<RevenuePlan>>((ref) {
-  return ref.read(marketAnalysisServiceProvider).fetchAllRevenuePlans();
+  return ref.watch(marketAnalysisServiceProvider).fetchAllRevenuePlans();
 });
 
 // Revenue plans filtered by project_id
 final revenuePlansByProjectProvider =
     FutureProvider.autoDispose.family<List<RevenuePlan>, String>((ref, projectId) {
-  return ref.read(marketAnalysisServiceProvider).fetchAllRevenuePlans(projectId: projectId);
+  return ref.watch(marketAnalysisServiceProvider).fetchAllRevenuePlans(projectId: projectId);
 });
 
 // Notifier for running market analysis

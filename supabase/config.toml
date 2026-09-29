@@ -21,6 +21,9 @@ verify_jwt = true
 [functions.improve-post]
 verify_jwt = true
 
+[functions.localize-content]
+verify_jwt = true
+
 [functions.generate-strategy]
 verify_jwt = true
 

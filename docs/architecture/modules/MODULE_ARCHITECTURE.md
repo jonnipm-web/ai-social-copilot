@@ -383,6 +383,7 @@ in this mission (no functional need for the Entitlement Core).
 | BILLING (1) | create-checkout-session | auth only — upgrade must stay reachable (parity with `kAlwaysAllowedRoutes`) |
 | PUBLIC_WEBHOOK (1) | stripe-webhook | Stripe signature, no user |
 | RETIRED (1) | ive-agent-runner | 410 for everyone |
+| PRESENTATION (1) | localize-content (R16) | auth required; reads only caller-owned rows from a server allowlist; never writes source data; no analysis quota; per-user daily cap |
 
 Intended behaviour change vs production: direct calls to `generate-campaign`,
 `improve-post` (INTERNAL) and `decision-simulator` (EXPERIMENTAL) by

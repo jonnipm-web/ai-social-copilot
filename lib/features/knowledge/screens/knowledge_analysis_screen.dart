@@ -13,6 +13,7 @@ import '../../../providers/knowledge_provider.dart';
 import '../../../providers/persona_provider.dart';
 import '../../../providers/persona_training_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
+import '../../../shared/widgets/translated_content_notice.dart';
 
 // IVE-COMMERCIAL-QUOTA-HARDENING-13 (Codex Gate 2 round-2 finding) — both
 // call sites below (the AppBar "Re-analisar" icon and _NoAnalysis's
@@ -222,6 +223,7 @@ class _AnalysisContent extends StatelessWidget {
       children: [
         _ItemHeader(item: item),
         const SizedBox(height: 12),
+        TranslatedContentNotice(localizedFrom: analysis.localizedFrom),
 
         // Botões de ação
         _ActionButtons(item: item, analysis: analysis),

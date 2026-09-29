@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/project.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/app_exceptions.dart';
+import 'content_localization_service.dart';
 
 /// Interface abstrata — permite mock em testes sem depender do Supabase.
 abstract class ProjectServiceInterface {
@@ -13,6 +14,18 @@ abstract class ProjectServiceInterface {
 }
 
 class ProjectService implements ProjectServiceInterface {
+  ProjectService({RowLocalizer? localizer}) : _localizer = localizer ?? identityLocalizer;
+
+  // R16 — presentation localization of persisted content (never modifies the
+  // stored row; see content_localization_service.dart).
+  final RowLocalizer _localizer;
+
+  Future<List<Map<String, dynamic>>> _loc(String table, dynamic rows) =>
+      _localizer(table, (rows as List).map((r) => Map<String, dynamic>.from(r as Map)).toList());
+
+  Future<Map<String, dynamic>> _locOne(String table, Map<String, dynamic> row) async =>
+      (await _localizer(table, [row])).first;
+
   final _client = Supabase.instance.client;
 
   @override
@@ -21,7 +34,7 @@ class ProjectService implements ProjectServiceInterface {
         .from(AppConstants.tableProjects)
         .select()
         .order('priority_score', ascending: false);
-    return (rows as List).map((r) => Project.fromMap(r)).toList();
+    return (await _loc('projects', rows)).map((r) => Project.fromMap(r)).toList();
   }
 
   @override
@@ -31,7 +44,7 @@ class ProjectService implements ProjectServiceInterface {
         .select()
         .eq('id', id)
         .maybeSingle();
-    return row == null ? null : Project.fromMap(row);
+    return row == null ? null : Project.fromMap(await _locOne('projects', row));
   }
 
   @override

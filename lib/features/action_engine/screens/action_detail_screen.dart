@@ -16,6 +16,7 @@ import '../../../shared/widgets/context_copilot_widget.dart'
     show showCopilotChat, IveInlineAskPresence;
 import '../widgets/action_engine_execute_sheet.dart';
 import 'action_engine_screen.dart' show actionEngineStatusLabel, actionEngineTypeLabel;
+import '../../../shared/widgets/translated_content_notice.dart';
 
 // ── Colors ────────────────────────────────────────────────────────────────────
 const _kBg      = Color(0xFF0F0F1A);
@@ -202,6 +203,7 @@ class _DetailBody extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
       children: [
+        TranslatedContentNotice(localizedFrom: item.localizedFrom),
         // ── Hero ───────────────────────────────────────────────
         _HeroHeader(item: item, projectName: projectName),
 
