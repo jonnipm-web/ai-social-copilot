@@ -204,7 +204,7 @@ As 16 funções de IA e mais `localize-content` (nova). A tabela por função es
 
 | Etapa | Estado |
 |---|---|
-| Migration `20261015000000_r16_content_localizations` | **APLICADA em produção** (Supabase `nzngvbajrnruknpzzjbf`); verificado: RLS on, 0 policies, sem SELECT para anon/authenticated; manifest `APPLIED_PRODUCTION` |
+| Migration `20261015000000_r16_content_localizations` | **APLICADA em produção** (Supabase `nzngvbajrnruknpzzjbf`); verificado: RLS on, 0 policies, sem SELECT para anon/authenticated. No manifest ela permanece `LAB`, seguindo a convenção vigente: `APPLIED_PRODUCTION` é congelado no conjunto de predecessores do preflight AEF, e outras migrations já aplicadas em produção, como `stripe_webhook_role_protection`, também constam como `LAB` |
 | Edge Functions (16 + `localize-content`) | **PENDENTE**: `workflow_dispatch` negado ao token da sessão (403) |
 | App web (GitHub Pages) | **PENDENTE**: mesmo motivo |
 
