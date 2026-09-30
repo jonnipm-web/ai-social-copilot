@@ -17,9 +17,10 @@
 #                      without a row (unexpected/renamed), a digest mismatch
 #                      (same name, changed content).
 #   --write            add rows for new files and refresh LAB digests. It
-#                      NEVER rewrites an APPLIED_PRODUCTION digest: changing
-#                      an applied migration is refused (edit the manifest by
-#                      hand, visibly, under an authorized mission).
+#                      NEVER rewrites an APPLIED_PRODUCTION or DO_NOT_APPLY
+#                      digest: changing a frozen migration is refused (edit
+#                      the manifest by hand, visibly, under an authorized
+#                      mission).
 #
 # Env overrides (tests): MIGRATIONS_DIR, MANIFEST.
 # Supabase's production history stores names and apply versions, not content
@@ -87,6 +88,9 @@ done
     if [[ "${STATUS[$name]:-}" == "APPLIED_PRODUCTION" ]]; then
       [[ "$actual" == "${DIGEST[$name]}" ]] || fail "refusing to rewrite the digest of APPLIED_PRODUCTION migration $name"
       printf '%s\t%s\t%s\n' "$name" "$actual" "APPLIED_PRODUCTION"
+    elif [[ "${STATUS[$name]:-}" == "DO_NOT_APPLY" ]]; then
+      [[ "$actual" == "${DIGEST[$name]}" ]] || fail "refusing to rewrite the digest of DO_NOT_APPLY migration $name (reclassify under an authorized mission first)"
+      printf '%s\t%s\t%s\n' "$name" "$actual" "DO_NOT_APPLY"
     else
       printf '%s\t%s\t%s\n' "$name" "$actual" "${STATUS[$name]:-LAB}"
     fi

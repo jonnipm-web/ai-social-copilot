@@ -53,12 +53,15 @@ if [[ -f "$MANIFEST" ]]; then
   while IFS=$'\t' read -r name _sum status; do
     [[ "$name" =~ ^#.*$ || -z "$name" ]] && continue
     [[ "$status" == "DO_NOT_APPLY" ]] || continue
-    # Check if this migration name appears in any deploy workflow or script
-    if grep -r --include="*.yml" --include="*.yaml" --include="*.sh" \
-         -l "$name" "$ROOT/.github/workflows/" "$ROOT/scripts/" 2>/dev/null | grep -v "drift_detection" | grep -q .; then
-      fail "DO_NOT_APPLY migration $name is referenced in a deploy workflow"
+    # Check if this migration name appears in any deploy workflow, script, or preflight SQL
+    if grep -r \
+         --include="*.yml" --include="*.yaml" --include="*.sh" --include="*.sql" \
+         -l "$name" \
+         "$ROOT/.github/workflows/" "$ROOT/scripts/" "$ROOT/supabase/preflight/" \
+         2>/dev/null | grep -v "drift_detection" | grep -q .; then
+      fail "DO_NOT_APPLY migration $name is referenced in a deploy workflow or preflight"
     else
-      pass "DO_NOT_APPLY migration $name is not referenced in deploy workflows"
+      pass "DO_NOT_APPLY migration $name is not referenced in deploy workflows or preflight"
     fi
   done < "$MANIFEST"
 else
