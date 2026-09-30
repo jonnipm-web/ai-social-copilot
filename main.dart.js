@@ -62460,7 +62460,7 @@ break}p=4
 c=c.bh("diagnostic_sessions")
 b=a0!=null?A.cfk(a0,200):null
 h=d!=null?A.iK(d,50):null
-g=A.bUl("280719dee6aff1836a0875525abcc70a1b95a339",100)
+g=A.bUl("0ff6b4cf8d6eda7b6d51de865bde27850c02ffcb",100)
 f=a1!=null?A.iK(a1,50):null
 s=7
 return A.f(c.f8(0,A.a7(["user_id",m,"label",b,"status","active","app_version",h,"build_sha",g,"platform","web","role_snapshot",f],t.N,t.T)).pp("id").eg(0),$async$Az)
@@ -62618,7 +62618,7 @@ s=q}for(;;)switch(s){case 0:q=3
 m=o.a.bh("diagnostic_events")
 l=A.c_W(b3)
 k=A.c_V(a3)
-j=A.bUl("280719dee6aff1836a0875525abcc70a1b95a339",100)
+j=A.bUl("0ff6b4cf8d6eda7b6d51de865bde27850c02ffcb",100)
 i=a9!=null?A.iK(a9,100):null
 h=b0!=null?A.iK(b0,100):null
 g=b1!=null?A.iK(b1,200):null
@@ -66918,7 +66918,7 @@ qM(a,b){return this.bwo(a,b)},
 bwo(a,b){var s=0,r=A.o(t.H),q=this,p,o
 var $async$qM=A.k(function(c,d){if(c===1)return A.l(d,r)
 for(;;)switch(s){case 0:o=B.aoD.h(0,b)
-if(o==null)o=15
+if(o==null)o=5
 p=t.z
 s=2
 return A.f(q.a.bh("profiles").d8(A.a7(["role",b,"monthly_limit",o],p,p)).cD("id",a),$async$qM)
@@ -167113,7 +167113,7 @@ B.ayh=new A.b5(B.d1,!1,!0,!0,!1,B.Y)
 B.ay7=new A.b5(B.d1,!1,!1,!0,!1,B.Y)
 B.O9=new A.dc([B.ayc,B.a5,B.axJ,B.a5,B.Ta,B.a5,B.T7,B.a5,B.ay3,B.a5,B.axV,B.a5,B.ayh,B.a5,B.ay7,B.a5],t.Fp)
 B.asD={admin:0,premium:1,pro:2,beta_tester:3,free:4}
-B.aoD=new A.aq(B.asD,[99999,1000,300,50,15],t.eL)
+B.aoD=new A.aq(B.asD,[99999,1000,300,50,5],t.eL)
 B.asZ={"Estrat\xe9gia":0,Marketing:1,SEO:2,"Monetiza\xe7\xe3o":3,"Neg\xf3cios":4,Geral:5}
 B.aoE=new A.aq(B.asZ,[B.o4,B.eC,B.fx,B.h6,B.BY,B.h7],t.gG)
 B.asI={"/projects":0,"/opportunity-lab":1,"/ecosystem":2,"/ecosystem/briefing":3,"/ecosystem/resources":4,"/personas":5,"/knowledge":6,"/action-engine":7,"/intelligence-debug":8,"/market-intelligence":9,"/roi-tracker":10}
