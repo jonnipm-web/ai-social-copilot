@@ -267,8 +267,8 @@ CI aceitável para merge: 9/11 green, 2 failures preexistentes confirmados.
 ## 12. Final Main SHA
 
 - **SHA antes do merge:** `ff8ef3461293697fe175cb1b0849e87d12d71c44`
-- **SHA após merge:** [ver pós-merge verification]
-- **SHA candidate (pré-merge):** [ver após push]
+- **SHA após merge:** 0ff6b4cf8d6eda7b6d51de865bde27850c02ffcb
+- **SHA candidate (pré-merge):** 0ff6b4cf8d6eda7b6d51de865bde27850c02ffcb
 
 ---
 
