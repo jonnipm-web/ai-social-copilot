@@ -143,9 +143,11 @@ reclassificação explícita em missão autorizada pelo Owner.
 
 ## Migrations DO_NOT_APPLY em vigor
 
-| Migration                              | Motivo                           |
-|----------------------------------------|----------------------------------|
-| 20261014000000_free_quota_15.sql       | FREE quota commercial decision pending Owner — servidor em FREE=5 |
+Nenhuma migration em DO_NOT_APPLY no momento.
+
+> `20261014000000_free_quota_15.sql` foi reclassificada de DO_NOT_APPLY → LAB
+> em 2026-09-30 após decisão do Owner: FREE=15. Aplicar em produção quando
+> o deploy desta migration for autorizado.
 
 ---
 
