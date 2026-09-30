@@ -10233,7 +10233,7 @@ _.w=h},
 bP4(a){var s,r,q,p="created_at",o="updated_at",n=A.a9(a.h(0,"id")),m=A.Y(a.h(0,"email")),l=A.Y(a.h(0,"full_name")),k=A.Y(a.h(0,"role"))
 if(k==null)k="free"
 s=A.bs(a.h(0,"monthly_limit"))
-if(s==null)s=5
+if(s==null)s=15
 r=A.j6(a.h(0,"is_active"))
 q=a.h(0,p)!=null?A.dl(A.a9(a.h(0,p))):new A.bb(Date.now(),0,!1)
 if(a.h(0,o)!=null)A.dl(A.a9(a.h(0,o)))
@@ -62460,7 +62460,7 @@ break}p=4
 c=c.bh("diagnostic_sessions")
 b=a0!=null?A.cfk(a0,200):null
 h=d!=null?A.iK(d,50):null
-g=A.bUl("5297fb21f33a6f130ff43a52b6b4a8f958885016",100)
+g=A.bUl("efc8bbbdf14c81ef38dd9e745cb6a75e90a97d66",100)
 f=a1!=null?A.iK(a1,50):null
 s=7
 return A.f(c.f8(0,A.a7(["user_id",m,"label",b,"status","active","app_version",h,"build_sha",g,"platform","web","role_snapshot",f],t.N,t.T)).pp("id").eg(0),$async$Az)
@@ -62618,7 +62618,7 @@ s=q}for(;;)switch(s){case 0:q=3
 m=o.a.bh("diagnostic_events")
 l=A.c_W(b3)
 k=A.c_V(a3)
-j=A.bUl("5297fb21f33a6f130ff43a52b6b4a8f958885016",100)
+j=A.bUl("efc8bbbdf14c81ef38dd9e745cb6a75e90a97d66",100)
 i=a9!=null?A.iK(a9,100):null
 h=b0!=null?A.iK(b0,100):null
 g=b1!=null?A.iK(b1,200):null
@@ -67267,7 +67267,7 @@ m=A.Y(n.h(0,"role"))
 if(m==null)m="free"
 e=A.k8(n.h(0,"monthly_limit"))
 l=e==null?null:B.d.e3(e)
-if(l==null)l=5
+if(l==null)l=15
 k=new A.bb(Date.now(),0,!1).pg()
 j=A.bMc(A.bI(k),A.bN(k),1,0,0,0,0)
 e=B.c.cS(B.j.k(A.bI(j)),4,"0")
@@ -81699,7 +81699,7 @@ p=d.gaIr()
 o=d.gaDP()
 n=f.a.d.gkx()
 m=t.j8
-l=A.a([new A.jB(d.aDO(5),!0),new A.jB(d.ga1B(),!0),new A.jB(d.ga1A(),!0),new A.jB(d.gaIq(),!1),new A.jB(d.ga1z(),!1),new A.jB(d.gaIo(),!1)],m)
+l=A.a([new A.jB(d.aDO(15),!0),new A.jB(d.ga1B(),!0),new A.jB(d.ga1A(),!0),new A.jB(d.gaIq(),!1),new A.jB(d.ga1z(),!1),new A.jB(d.gaIo(),!1)],m)
 k=f.a.d.gkx()?d.gaIv():d.ga0a()
 q=A.bRl(e,k,l,!n,!1,e,"",o,p,q)
 p=d.gOE()
@@ -81714,7 +81714,7 @@ m=A.a([new A.jB(d.aDQ(r),!0),new A.jB(d.ga1B(),!0),new A.jB(d.ga1A(),!0),new A.j
 if(f.a.d.gkx())h=d.ga0a()
 else h=f.x?d.gakw():d.gaIx()
 g=f.a.d.gkx()||f.x?e:f.gbap()
-return A.M(A.a([new A.ar2(s,e),B.q3,q,B.D,A.bRl(k,h,m,i,!j,g,l,n,o,p),B.t,A.c(d.gaDN(),e,e,e,e,e,B.bi,B.a8,e,e),B.dU,new A.aiM(5,e)],t.p),B.b8,e,B.e,B.f)},
+return A.M(A.a([new A.ar2(s,e),B.q3,q,B.D,A.bRl(k,h,m,i,!j,g,l,n,o,p),B.t,A.c(d.gaDN(),e,e,e,e,e,B.bi,B.a8,e,e),B.dU,new A.aiM(15,e)],t.p),B.b8,e,B.e,B.f)},
 C3(){var s=0,r=A.o(t.H),q=1,p=[],o=[],n=this,m,l,k,j,i,h,g
 var $async$C3=A.k(function(a,b){if(a===1){p.push(b)
 s=q}for(;;)switch(s){case 0:h=n.c
