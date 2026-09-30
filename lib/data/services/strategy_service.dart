@@ -3,8 +3,18 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/knowledge_item.dart';
 import '../models/knowledge_analysis.dart';
 import '../models/knowledge_strategy.dart';
+import 'content_localization_service.dart';
 
 class StrategyService {
+  StrategyService({RowLocalizer? localizer}) : _localizer = localizer ?? identityLocalizer;
+
+  // R16 — presentation localization of persisted content (never modifies the
+  // stored row; see content_localization_service.dart).
+  final RowLocalizer _localizer;
+
+  Future<Map<String, dynamic>> _locOne(String table, Map<String, dynamic> row) async =>
+      (await _localizer(table, [row])).first;
+
   final _client = Supabase.instance.client;
 
   static const _table        = 'knowledge_strategies';
@@ -18,7 +28,7 @@ class StrategyService {
         .order('created_at', ascending: false)
         .limit(1)
         .maybeSingle();
-    return row == null ? null : KnowledgeStrategy.fromMap(row);
+    return row == null ? null : KnowledgeStrategy.fromMap(await _locOne('knowledge_strategies', row));
   }
 
   Future<KnowledgeStrategy> save(KnowledgeStrategy strategy) async {
@@ -33,9 +43,12 @@ class StrategyService {
     return KnowledgeStrategy.fromMap(row);
   }
 
+  /// R16 — [outputLanguage] is the PRESENTATION language ('pt-BR'/'en-US');
+  /// `item.language` is source metadata and never decides the output.
   Future<KnowledgeStrategy> generate(
     KnowledgeItem item,
     KnowledgeAnalysis analysis, {
+    required String outputLanguage,
     String? idempotencyKey,
   }) async {
     final uid = _client.auth.currentUser?.id;
@@ -51,7 +64,7 @@ class StrategyService {
         'summary':           analysis.summary ?? '',
         'niche':             item.niche ?? '',
         'target_audience':   item.targetAudience ?? '',
-        'language':          item.language,
+        'language':          outputLanguage,
         'keywords_primary':  analysis.keywordsPrimary,
         'pain_points':       analysis.audiencePainPoints,
         'desires':           analysis.audienceDesires,

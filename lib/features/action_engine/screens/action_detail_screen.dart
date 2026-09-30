@@ -8,11 +8,15 @@ import '../../../core/constants/app_constants.dart';
 import '../../../data/models/action_queue_item.dart';
 import '../../../data/models/copilot_context_data.dart';
 import '../../../data/models/ive_interaction_request.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/action_queue_provider.dart';
 import '../../../providers/ive_context_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/context_copilot_widget.dart'
     show showCopilotChat, IveInlineAskPresence;
+import '../widgets/action_engine_execute_sheet.dart';
+import 'action_engine_screen.dart' show actionEngineStatusLabel, actionEngineTypeLabel;
+import '../../../shared/widgets/translated_content_notice.dart';
 
 // ── Colors ────────────────────────────────────────────────────────────────────
 const _kBg      = Color(0xFF0F0F1A);
@@ -50,6 +54,7 @@ class ActionDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final itemAsync = ref.watch(actionQueueItemByIdProvider(itemId));
 
     return Scaffold(
@@ -63,9 +68,9 @@ class ActionDetailScreen extends ConsumerWidget {
               ? context.pop()
               : context.go(AppConstants.routeActionEngine),
         ),
-        title: const Text(
-          'Detalhe da Ação',
-          style: TextStyle(
+        title: Text(
+          l10n.actionDetailTitle,
+          style: const TextStyle(
               color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
         ),
         actions: [
@@ -81,13 +86,13 @@ class ActionDetailScreen extends ConsumerWidget {
         loading: () =>
             const Center(child: CircularProgressIndicator(color: _kPrimary)),
         error: (e, _) => Center(
-          child: Text('Erro: $e',
+          child: Text(l10n.commonError,
               style: const TextStyle(color: Colors.white54)),
         ),
         data: (item) => item == null
-            ? const Center(
-                child: Text('Ação não encontrada.',
-                    style: TextStyle(color: Colors.white54)))
+            ? Center(
+                child: Text(l10n.actionDetailNotFound,
+                    style: const TextStyle(color: Colors.white54)))
             : _DetailBody(item: item, ref: ref),
       ),
     );
@@ -103,41 +108,42 @@ class _StatusMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return PopupMenuButton<String>(
       icon: const Icon(Icons.more_vert, color: Colors.white),
       color: _kCard,
       onSelected: (v) async {
         final notifier = ref.read(actionQueueNotifierProvider.notifier);
+        // INSIGHTVALUES-PRODUCTIZATION-MACRO-03 — 'execute' now opens the
+        // AEF Human Gate sheet instead of a direct status write; there is
+        // no separate 'complete' action anymore (see _StatusButtons).
+        if (v == 'execute') {
+          await ActionEngineExecuteSheet.show(context, item);
+          ref.invalidate(actionQueueItemByIdProvider(item.id));
+          return;
+        }
         try {
           if (v == 'approve')  await notifier.approve(item.id,  title: item.title);
-          if (v == 'execute')  await notifier.execute(item.id,  title: item.title);
-          if (v == 'complete') await notifier.complete(item.id, title: item.title);
           if (v == 'cancel')   await notifier.cancel(item.id,   title: item.title);
           ref.invalidate(actionQueueItemByIdProvider(item.id));
-          if (context.mounted && v == 'complete') {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Ação concluída!'),
-              backgroundColor: _kGreen,
-            ));
-          }
           if (v == 'delete') {
             final ok = await showDialog<bool>(
               context: context,
               builder: (_) => AlertDialog(
                 backgroundColor: _kCard,
-                title: const Text('Excluir ação?',
-                    style: TextStyle(color: Colors.white)),
-                content: Text('"${item.title}" será removida.',
+                title: Text(l10n.actionEngineDeleteTitle,
+                    style: const TextStyle(color: Colors.white)),
+                content: Text(l10n.actionDetailDeleteBody(item.title),
                     style: const TextStyle(color: Colors.white70)),
                 actions: [
                   TextButton(
                       onPressed: () => Navigator.pop(context, false),
-                      child: const Text('Cancelar',
-                          style: TextStyle(color: Colors.white54))),
+                      child: Text(l10n.commonCancel,
+                          style: const TextStyle(color: Colors.white54))),
                   TextButton(
                       onPressed: () => Navigator.pop(context, true),
-                      child: const Text('Excluir',
-                          style: TextStyle(color: _kRed))),
+                      child: Text(l10n.actionEngineDelete,
+                          style: const TextStyle(color: _kRed))),
                 ],
               ),
             );
@@ -149,7 +155,7 @@ class _StatusMenu extends StatelessWidget {
         } catch (e) {
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text('Erro: $e'),
+              content: Text(l10n.commonError),
               backgroundColor: _kRed,
             ));
           }
@@ -157,22 +163,22 @@ class _StatusMenu extends StatelessWidget {
       },
       itemBuilder: (_) => [
         if (item.status == 'pending')
-          const PopupMenuItem(value: 'approve',
-              child: Text('Aprovar', style: TextStyle(color: _kPrimary))),
+          PopupMenuItem(value: 'approve',
+              child: Text(l10n.actionEngineApprove, style: const TextStyle(color: _kPrimary))),
         if (item.status == 'approved')
-          const PopupMenuItem(value: 'execute',
-              child: Text('Iniciar', style: TextStyle(color: _kCyan))),
+          PopupMenuItem(value: 'execute',
+              child: Text(l10n.actionDetailExecuteWithApproval, style: const TextStyle(color: _kCyan))),
         if (item.status == 'executing') ...[
-          const PopupMenuItem(value: 'complete',
-              child: Text('Concluir', style: TextStyle(color: _kGreen))),
-          const PopupMenuItem(value: 'approve',
-              child: Text('Pausar', style: TextStyle(color: _kOrange))),
+          PopupMenuItem(value: 'execute',
+              child: Text(l10n.actionDetailRecheck, style: const TextStyle(color: _kCyan))),
+          PopupMenuItem(value: 'approve',
+              child: Text(l10n.actionEnginePause, style: const TextStyle(color: _kOrange))),
         ],
         if (item.status != 'completed' && item.status != 'cancelled')
-          const PopupMenuItem(value: 'cancel',
-              child: Text('Cancelar', style: TextStyle(color: Colors.white54))),
-        const PopupMenuItem(value: 'delete',
-            child: Text('Excluir', style: TextStyle(color: _kRed))),
+          PopupMenuItem(value: 'cancel',
+              child: Text(l10n.commonCancel, style: const TextStyle(color: Colors.white54))),
+        PopupMenuItem(value: 'delete',
+            child: Text(l10n.actionEngineDelete, style: const TextStyle(color: _kRed))),
       ],
     );
   }
@@ -187,6 +193,7 @@ class _DetailBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final projectsAsync = ref.watch(projectsNotifierProvider);
     final projects = projectsAsync.valueOrNull ?? [];
     final projectName = item.projectId == null
@@ -196,6 +203,7 @@ class _DetailBody extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
       children: [
+        TranslatedContentNotice(localizedFrom: item.localizedFrom),
         // ── Hero ───────────────────────────────────────────────
         _HeroHeader(item: item, projectName: projectName),
 
@@ -204,7 +212,7 @@ class _DetailBody extends StatelessWidget {
         // ── Score breakdown ────────────────────────────────────
         _Section(
           icon: Icons.bar_chart_rounded,
-          title: 'Score Breakdown',
+          title: l10n.actionDetailSectionScoreBreakdown,
           child: _ScoreBreakdown(item: item),
         ),
 
@@ -213,7 +221,7 @@ class _DetailBody extends StatelessWidget {
         // ── Origem ─────────────────────────────────────────────
         _Section(
           icon: Icons.track_changes_rounded,
-          title: 'Origem',
+          title: l10n.actionDetailSectionOrigin,
           child: _OriginSection(item: item, projectName: projectName),
         ),
 
@@ -221,7 +229,7 @@ class _DetailBody extends StatelessWidget {
           const SizedBox(height: 12),
           _Section(
             icon: Icons.source_rounded,
-            title: 'Fontes',
+            title: l10n.actionDetailSectionSources,
             child: _SourcesList(sources: item.sources),
           ),
         ],
@@ -230,7 +238,7 @@ class _DetailBody extends StatelessWidget {
           const SizedBox(height: 12),
           _Section(
             icon: Icons.description_rounded,
-            title: 'Descrição',
+            title: l10n.actionDetailSectionDescription,
             child: Text(
               item.description!,
               style: const TextStyle(
@@ -243,7 +251,7 @@ class _DetailBody extends StatelessWidget {
           const SizedBox(height: 12),
           _Section(
             icon: Icons.psychology_rounded,
-            title: 'Justificativa da IA',
+            title: l10n.actionDetailSectionRationale,
             child: _RationaleCard(rationale: item.rationale!),
           ),
         ],
@@ -252,7 +260,7 @@ class _DetailBody extends StatelessWidget {
           const SizedBox(height: 12),
           _Section(
             icon: Icons.list_alt_rounded,
-            title: 'Plano de Execução',
+            title: l10n.actionDetailSectionPlan,
             child: _PlanList(steps: item.plan),
           ),
         ],
@@ -261,7 +269,7 @@ class _DetailBody extends StatelessWidget {
           const SizedBox(height: 12),
           _Section(
             icon: Icons.warning_amber_rounded,
-            title: 'Riscos',
+            title: l10n.actionDetailSectionRisks,
             child: _RisksList(risks: item.risks),
           ),
         ],
@@ -312,7 +320,7 @@ class _HeroHeader extends StatelessWidget {
                           fontSize: 18,
                           fontWeight: FontWeight.bold),
                     ),
-                    Text('prio',
+                    Text(AppLocalizations.of(context)!.uxActionPriorityShort,
                         style: TextStyle(
                             color: sc.withOpacity(0.7), fontSize: 8)),
                   ],
@@ -405,16 +413,17 @@ class _ScoreBreakdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final fromLab = item.origin == 'opportunity_lab';
     final dims = [
       if (fromLab && item.marketScore > 0)
-        ('Mercado',   item.marketScore, const Color(0xFF6C63FF)),
-      ('Receita',     item.impactScore, const Color(0xFF4CAF50)),
-      ('ROI / Final', item.roiScore,    const Color(0xFFB44FE8)),
-      ('Esforço',     item.effortScore, const Color(0xFFFF9800)),
-      ('Prioridade',  item.priority,    const Color(0xFF00BCD4)),
+        (l10n.actionDetailScoreMarket,   item.marketScore, const Color(0xFF6C63FF)),
+      (l10n.actionDetailScoreRevenue,    item.impactScore, const Color(0xFF4CAF50)),
+      (l10n.actionDetailScoreRoiFinal,   item.roiScore,    const Color(0xFFB44FE8)),
+      (l10n.actionEngineScoreEffort,     item.effortScore, const Color(0xFFFF9800)),
+      (l10n.actionDetailScorePriority,   item.priority,    const Color(0xFF00BCD4)),
       if (fromLab && item.confidence > 0)
-        ('Confiança', item.confidence,  const Color(0xFFFFD700)),
+        (l10n.actionDetailScoreConfidence, item.confidence, const Color(0xFFFFD700)),
     ];
     return Column(
       children: dims
@@ -476,41 +485,44 @@ class _OriginSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _InfoRow(
           icon: Icons.input_rounded,
-          label: 'Gerada por',
-          value: item.originLabel,
+          label: l10n.actionDetailOriginGeneratedBy,
+          value: item.localizedOriginLabel(l10n),
         ),
         if (projectName != null)
           _InfoRow(
             icon: Icons.folder_rounded,
-            label: 'Projeto',
+            label: l10n.actionDetailOriginProject,
             value: projectName!,
           ),
         if (item.opportunityLabId != null)
           _InfoRow(
             icon: Icons.science_rounded,
-            label: 'Oportunidade',
-            value: 'Lab #${item.opportunityLabId!.substring(0, 8)}…',
+            label: l10n.actionDetailOriginOpportunity,
+            value: l10n.actionDetailOriginOpportunityValue(
+                item.opportunityLabId!.substring(0, 8)),
           ),
         if (item.marketAnalysisId != null)
           _InfoRow(
             icon: Icons.analytics_rounded,
-            label: 'Análise de mercado',
-            value: 'Market #${item.marketAnalysisId!.substring(0, 8)}…',
+            label: l10n.actionDetailOriginMarketAnalysis,
+            value: l10n.actionDetailOriginMarketAnalysisValue(
+                item.marketAnalysisId!.substring(0, 8)),
           ),
         _InfoRow(
           icon: Icons.calendar_today_rounded,
-          label: 'Criada em',
+          label: l10n.actionDetailOriginCreatedAt,
           value: _fmtDate(item.createdAt),
         ),
         if (item.updatedAt != null)
           _InfoRow(
             icon: Icons.update_rounded,
-            label: 'Atualizada em',
+            label: l10n.actionDetailOriginUpdatedAt,
             value: _fmtDate(item.updatedAt!),
           ),
       ],
@@ -741,6 +753,7 @@ class _TypeBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
@@ -748,7 +761,7 @@ class _TypeBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
-        type.toUpperCase(),
+        actionEngineTypeLabel(l10n, type).toUpperCase(),
         style: const TextStyle(
             color: _kPrimary, fontSize: 9, fontWeight: FontWeight.bold),
       ),
@@ -763,6 +776,7 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final c = _statusColor(status);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -770,7 +784,7 @@ class _StatusBadge extends StatelessWidget {
         color: c.withOpacity(0.12),
         borderRadius: BorderRadius.circular(6),
       ),
-      child: Text(status,
+      child: Text(actionEngineStatusLabel(l10n, status),
           style: TextStyle(
               color: c, fontSize: 9, fontWeight: FontWeight.bold)),
     );
@@ -791,7 +805,7 @@ class _StatusButtons extends StatelessWidget {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Erro: $e'),
+          content: Text(AppLocalizations.of(context)!.commonError),
           backgroundColor: _kRed,
         ));
       }
@@ -800,45 +814,68 @@ class _StatusButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final n = ref.read(actionQueueNotifierProvider.notifier);
 
     return Column(
       children: [
         if (item.status == 'pending')
           _Btn(
-            label: 'Aprovar Ação',
+            label: l10n.actionDetailApproveAction,
             icon: Icons.check_circle_outline_rounded,
             color: _kPrimary,
             onTap: () => _run(context, () => n.approve(item.id, title: item.title)),
           ),
 
+        // INSIGHTVALUES-PRODUCTIZATION-MACRO-03 — "execute"/"complete" are
+        // no longer separate manual writes: ActionEngineExecuteSheet drives
+        // a real AEF Human Gate (propose -> approve -> execute), and
+        // ActionQueueNotifier.applyGovernedResult persists exactly the
+        // receipted outcome. There is no "mark as done" button anymore —
+        // completion is something the receipt proves, not something the
+        // client asserts.
         if (item.status == 'approved') ...[
           _Btn(
-            label: 'Iniciar Execução',
+            label: l10n.actionDetailExecuteWithApproval,
             icon: Icons.play_arrow_rounded,
             color: _kCyan,
-            onTap: () => _run(context, () => n.execute(item.id, title: item.title)),
+            onTap: () => ActionEngineExecuteSheet.show(context, item)
+                .then((_) => ref.invalidate(actionQueueItemByIdProvider(item.id))),
           ),
         ],
 
         if (item.status == 'executing') ...[
-          _Btn(
-            label: 'Marcar como Concluída',
-            icon: Icons.task_alt_rounded,
-            color: _kGreen,
-            onTap: () async {
-              await _run(context, () => n.complete(item.id, title: item.title));
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Ação concluída!'),
-                  backgroundColor: _kGreen,
-                ));
-              }
-            },
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: _kCyan.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: _kCyan.withOpacity(0.3)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.help_outline_rounded, color: _kCyan, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    l10n.actionDetailReconciliationNeeded,
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 8),
           _Btn(
-            label: 'Pausar',
+            label: l10n.actionDetailRecheck,
+            icon: Icons.refresh_rounded,
+            color: _kCyan,
+            onTap: () => ActionEngineExecuteSheet.show(context, item)
+                .then((_) => ref.invalidate(actionQueueItemByIdProvider(item.id))),
+          ),
+          const SizedBox(height: 8),
+          _Btn(
+            label: l10n.actionEnginePause,
             icon: Icons.pause_rounded,
             color: _kOrange,
             outlined: true,
@@ -855,13 +892,17 @@ class _StatusButtons extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: _kGreen.withOpacity(0.3)),
             ),
-            child: const Row(
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.task_alt_rounded, color: _kGreen, size: 18),
-                SizedBox(width: 8),
-                Text('Concluída',
-                    style: TextStyle(color: _kGreen, fontWeight: FontWeight.bold)),
+                const Icon(Icons.task_alt_rounded, color: _kGreen, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  item.isAefVerifiedComplete
+                      ? l10n.actionDetailCompletedVerified
+                      : l10n.actionDetailCompleted,
+                  style: const TextStyle(color: _kGreen, fontWeight: FontWeight.bold),
+                ),
               ],
             ),
           ),
@@ -878,7 +919,7 @@ class _StatusButtons extends StatelessWidget {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             icon: const Icon(Icons.auto_awesome_rounded),
-            label: const Text('Perguntar à IVE sobre esta ação'),
+            label: Text(l10n.actionDetailAskIve),
             onPressed: () {
               // IVE-COMMERCIAL-FOUNDATION-11 — antes navegava de volta para
               // a lista do Action Engine em vez de abrir um diálogo
@@ -889,9 +930,9 @@ class _StatusButtons extends StatelessWidget {
                   ctx != null ? CopilotContextData.fromIveContext(ctx) : const CopilotContextData();
               showCopilotChat(
                 context,
-                screenName: 'Ações',
+                screenName: 'Ações', // canonical key (localized by the copilot widget)
                 contextData: contextData,
-                initialMessage: 'Analise a ação "${item.title}" e me dê orientação sobre como conduzi-la.',
+                initialMessage: l10n.actionDetailAskIveMessage(item.title),
                 request: IveInteractionRequest(
                   projectId:        item.projectId,
                   sourceModule:     'action_engine',

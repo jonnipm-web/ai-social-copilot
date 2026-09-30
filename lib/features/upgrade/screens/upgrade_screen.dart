@@ -52,7 +52,7 @@ class _UpgradeContent extends ConsumerStatefulWidget {
   const _UpgradeContent({required this.quota});
   final QuotaInfo quota;
 
-  static const _freeLimit = 5;
+  static const _freeLimit = 15;
   static const _proLimit = 300;
 
   @override
@@ -142,7 +142,7 @@ class _UpgradeContentState extends ConsumerState<_UpgradeContent> {
         showErrorSnack(context, t.checkoutOpeningError);
       }
     } catch (e) {
-      if (mounted) showErrorSnack(context, extractErrorMessage(e));
+      if (mounted) showErrorSnack(context, extractErrorMessage(e, t, t.checkoutOpeningError));
     } finally {
       if (mounted) setState(() => _isRedirecting = false);
     }
@@ -406,26 +406,18 @@ class _FaqSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     final items = [
-      _FaqItem(
-        q: 'Como funciona o limite gratuito?',
-        a: 'Você pode fazer até $freeLimit análises de IA por mês no plano gratuito (análise de site, estratégia, mercado, etc). O contador reinicia todo dia 1º.',
-      ),
-      _FaqItem(
-        q: 'Posso cancelar a qualquer momento?',
-        a: 'Sim. O plano Pro é mensal e você pode cancelar a qualquer momento sem taxa.',
-      ),
-      const _FaqItem(
-        q: 'Meus dados ficam salvos se eu cancelar?',
-        a: 'Sim. Seu histórico e projetos ficam salvos, mas o limite de análises volta para o do plano gratuito.',
-      ),
+      _FaqItem(q: t.upgradeFaqFreeLimitQ, a: t.upgradeFaqFreeLimitA(freeLimit)),
+      _FaqItem(q: t.upgradeFaqCancelQ, a: t.upgradeFaqCancelA),
+      _FaqItem(q: t.upgradeFaqDataQ, a: t.upgradeFaqDataA),
     ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Perguntas frequentes',
+          t.upgradeFaqTitle,
           style: Theme.of(context)
               .textTheme
               .titleMedium

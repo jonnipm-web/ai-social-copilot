@@ -1,27 +1,58 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../l10n/app_localizations.dart';
+import 'app_exceptions.dart';
+
+export 'app_exceptions.dart';
+
+/// Heuristic: does this error text look like a raw technical/provider dump
+/// (Supabase/Postgrest/Stripe/Google/Edge) that must not reach the UI?
+bool looksTechnicalError(String str) {
+  const markers = [
+    'PostgrestException', 'StorageException', 'FunctionException',
+    'AuthException', 'FormatException', 'TypeError', 'NoSuchMethodError',
+    'StateError', 'RangeError', 'statusCode', 'status_code', 'code:',
+    'stripe', 'Stripe', 'googleapis', 'PlatformException', 'Null check',
+    'http://', 'https://', 'Instance of', 'is not a subtype', '{', '}',
+    '[drive:',
+  ];
+  return markers.any(str.contains);
+}
+
 /// Extrai uma mensagem legível de qualquer tipo de exceção.
 /// Evita expor prefixos técnicos como "Exception: " ou dumps do Supabase.
-String extractErrorMessage(dynamic e) {
+///
+/// R16 — pass [l10n] (the current UI language) so the message is shown in
+/// the language the user picked; without it the message falls back to PT.
+/// Raw technical/provider text is replaced by a generic localized message.
+///
+/// [fallback] replaces any remaining unmapped raw text (e.g. a provider
+/// message from Stripe/Google on a commercial screen).
+String extractErrorMessage(dynamic e, [AppLocalizations? l10n, String? fallback]) {
+  final t = l10n ?? lookupAppLocalizations(const Locale('pt'));
+
+  if (e is NotAuthenticatedException) return t.uxErrorNotAuthenticated;
+  if (e is AppException) return appErrorMessage(e.code, t);
+
   if (e is AuthException) {
     final msg = e.message.toLowerCase();
     if (msg.contains('invalid login credentials')) {
-      return 'E-mail ou senha incorretos.';
+      return t.uxAuthErrorInvalidCredentials;
     }
     if (msg.contains('email not confirmed')) {
-      return 'Confirme seu e-mail antes de entrar.';
+      return t.uxAuthErrorEmailNotConfirmed;
     }
     if (msg.contains('user already registered')) {
-      return 'Este e-mail já está cadastrado.';
+      return t.uxAuthErrorAlreadyRegistered;
     }
     if (msg.contains('rate limit') || msg.contains('over_email')) {
-      return 'Muitas tentativas. Aguarde alguns segundos.';
+      return t.uxAuthErrorRateLimited;
     }
-    if (msg.contains('weak password')) {
-      return 'Senha muito fraca. Use pelo menos 6 caracteres.';
+    if (msg.contains('weak password') || msg.contains('password should be')) {
+      return t.uxAuthErrorWeakPassword;
     }
-    return e.message;
+    return t.uxAuthErrorGeneric;
   }
 
   final str = e.toString();
@@ -35,26 +66,60 @@ String extractErrorMessage(dynamic e) {
   // Mapeado uma vez neste utilitário compartilhado em vez de em cada um
   // dos 16 services.
   if (str.contains('QUOTA_EXCEEDED')) {
-    return 'Você atingiu o limite mensal de análises de IA do seu plano. Faça upgrade para o Pro para continuar.';
+    return t.uxErrorQuotaExceeded;
+  }
+
+  // MODULE-FOUNDATION-AND-ENTITLEMENT-02 — contrato de erro da autoridade de
+  // entitlement do servidor (supabase/functions/_shared/entitlement.ts):
+  // `error` é um CÓDIGO estável, traduzido só aqui. Checado antes dos
+  // padrões genéricos de 401/503 abaixo.
+  final entitlementCode = entitlementErrorCode(e);
+  if (entitlementCode != null) {
+    return switch (entitlementCode) {
+      'PLAN_REQUIRED' => t.uxErrorPlanRequired,
+      'MODULE_NOT_AVAILABLE' => t.uxErrorModuleNotAvailable,
+      'MODULE_DISABLED' => t.uxErrorModuleDisabled,
+      'ENTITLEMENT_UNAVAILABLE' => t.uxErrorEntitlementUnavailable,
+      _ => t.uxErrorSessionExpired,
+    };
   }
 
   if (str.contains('SocketException') ||
       str.contains('ClientException') ||
       str.contains('NetworkException') ||
       str.contains('Failed host lookup')) {
-    return 'Não foi possível conectar. Verifique sua internet.';
+    return t.uxErrorNoConnection;
   }
   if (str.contains('401') || str.contains('Unauthorized') || str.contains('jwt expired')) {
-    return 'Sua sessão expirou. Faça login novamente.';
+    return t.uxErrorSessionExpired;
   }
   if (str.contains('TimeoutException') || str.contains('timed out')) {
-    return 'A conexão demorou muito. Tente novamente.';
+    return t.uxErrorTimeout;
   }
   if (str.contains('502') || str.contains('503')) {
-    return 'Serviço temporariamente indisponível. Tente novamente.';
+    return t.uxErrorServiceUnavailable;
   }
+  if (looksTechnicalError(str)) return fallback ?? t.commonError;
+  if (fallback != null) return fallback;
   if (str.startsWith('Exception: ')) return str.substring(11);
   return str;
+}
+
+/// R16 — localized message for a text-free [AppErrorCode].
+String appErrorMessage(AppErrorCode code, AppLocalizations t) {
+  switch (code) {
+    case AppErrorCode.emptyResponse:               return t.uxErrorEmptyResponse;
+    case AppErrorCode.notFound:                    return t.uxErrorNotFound;
+    case AppErrorCode.fileTooLarge:                return t.uxErrorFileTooLarge;
+    case AppErrorCode.fileUnreadable:              return t.uxErrorFileUnreadable;
+    case AppErrorCode.fileTimeout:                 return t.uxErrorFileTimeout;
+    case AppErrorCode.extractionTimeout:           return t.uxErrorExtractionTimeout;
+    case AppErrorCode.extractedTextTooShort:       return t.uxErrorExtractedTextTooShort;
+    case AppErrorCode.checkoutFailed:              return t.checkoutOpeningError;
+    case AppErrorCode.googleSignInNotConfigured:   return t.uxErrorGoogleNotConfigured;
+    case AppErrorCode.googleCredentialsUnavailable:return t.uxErrorGoogleCredentials;
+    case AppErrorCode.signUpFailed:                return t.uxErrorSignUpFailed;
+  }
 }
 
 /// Verdadeiro quando o erro é especificamente cota de IA esgotada —
@@ -63,6 +128,34 @@ String extractErrorMessage(dynamic e) {
 bool isQuotaExceededError(dynamic e) {
   return e.toString().contains('QUOTA_EXCEEDED');
 }
+
+/// MODULE-FOUNDATION-AND-ENTITLEMENT-02 — códigos públicos de negação de
+/// entitlement do servidor (supabase/functions/_shared/entitlement.ts).
+const kEntitlementErrorCodes = [
+  'PLAN_REQUIRED',
+  'MODULE_NOT_AVAILABLE',
+  'MODULE_DISABLED',
+  'ENTITLEMENT_UNAVAILABLE',
+  'AUTH_REQUIRED',
+];
+
+/// O código de entitlement do erro, ou null. Só para UX (mensagem e botão de
+/// upgrade) — a decisão já foi tomada pelo servidor.
+///
+/// Igualdade EXATA (Codex Final CXF-03): os services relançam o campo
+/// `error` do servidor como `Exception(code)`, então só `code` ou
+/// `Exception: code` contam. Uma mensagem qualquer que apenas CONTENHA um
+/// desses textos (ex.: erro do provedor de IA) não é classificada como
+/// negação de acesso.
+String? entitlementErrorCode(dynamic e) {
+  var str = e.toString().trim();
+  if (str.startsWith('Exception: ')) str = str.substring('Exception: '.length).trim();
+  return kEntitlementErrorCodes.contains(str) ? str : null;
+}
+
+/// Verdadeiro quando o servidor negou por plano insuficiente — telas podem
+/// oferecer "Fazer upgrade", como já fazem para QUOTA_EXCEEDED.
+bool isPlanRequiredError(dynamic e) => entitlementErrorCode(e) == 'PLAN_REQUIRED';
 
 void showErrorSnack(BuildContext context, String message) {
   ScaffoldMessenger.of(context).showSnackBar(

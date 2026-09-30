@@ -1,10 +1,14 @@
+import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:ai_social_copilot/data/models/action_queue_item.dart';
 import 'package:ai_social_copilot/data/models/ecosystem_score.dart';
 import 'package:ai_social_copilot/data/models/knowledge_item.dart';
 import 'package:ai_social_copilot/data/models/project.dart';
+import 'package:ai_social_copilot/l10n/app_localizations.dart';
 import 'package:ai_social_copilot/providers/ive_context_provider.dart';
+
+final _pt = lookupAppLocalizations(const Locale('pt'));
 
 // ── IVE-COMMERCIAL-TARGETED-REMEDIATION-04 ──────────────────────────────────
 // Covers selectKnowledgeForGrounding(), the pure function extracted from
@@ -121,7 +125,7 @@ void main() {
     // sem projetos ainda), health=0 NUNCA pode virar um alerta de "saúde
     // baixa" — isso seria um diagnóstico factual sobre dados que não existem.
     test('E: scores vazio + health=0 (sentinela "sem dados") NÃO gera alerta de saúde baixa', () {
-      final alert = selectEcosystemAlert(scores: const [], health: 0, pending: const []);
+      final alert = selectEcosystemAlert(scores: const [], health: 0, pending: const [], l10n: _pt);
       expect(alert.hasAlert, isFalse);
       expect(alert.alertMessage, isEmpty);
     });
@@ -131,7 +135,7 @@ void main() {
       // vazio" -- apenas o ramo de SAÚDE (dependente de scores) é
       // desativado; ações pendentes são um sinal genuinamente independente.
       final manyPending = List.generate(6, (i) => buildAction(id: 'a$i'));
-      final alert = selectEcosystemAlert(scores: const [], health: 0, pending: manyPending);
+      final alert = selectEcosystemAlert(scores: const [], health: 0, pending: manyPending, l10n: _pt);
       expect(alert.hasAlert, isTrue);
       expect(alert.alertId, startsWith('actions_overdue_'));
     });
@@ -140,7 +144,7 @@ void main() {
     // carregados) deve continuar gerando o alerta normalmente.
     test('F: scores não-vazio + health<40 genuíno preserva o alerta de saúde baixa', () {
       final scores = [buildScore(projectId: 'p1', ecosystemScore: 35)];
-      final alert = selectEcosystemAlert(scores: scores, health: 35, pending: const []);
+      final alert = selectEcosystemAlert(scores: scores, health: 35, pending: const [], l10n: _pt);
       expect(alert.hasAlert, isTrue);
       expect(alert.alertId, 'health_low_35');
       expect(alert.alertMessage, contains('35/100'));
@@ -148,14 +152,14 @@ void main() {
 
     test('F (variante): scores não-vazio com ecosystemScore genuinamente 0 ainda alerta (zero real != zero desconhecido)', () {
       final scores = [buildScore(projectId: 'p1', ecosystemScore: 0)];
-      final alert = selectEcosystemAlert(scores: scores, health: 0, pending: const []);
+      final alert = selectEcosystemAlert(scores: scores, health: 0, pending: const [], l10n: _pt);
       expect(alert.hasAlert, isTrue);
       expect(alert.alertId, 'health_low_0');
     });
 
     test('scores não-vazio + health>=40 sem críticos nem pendências acumuladas: nenhum alerta', () {
       final scores = [buildScore(projectId: 'p1', ecosystemScore: 80)];
-      final alert = selectEcosystemAlert(scores: scores, health: 80, pending: const []);
+      final alert = selectEcosystemAlert(scores: scores, health: 80, pending: const [], l10n: _pt);
       expect(alert.hasAlert, isFalse);
     });
 
@@ -164,7 +168,7 @@ void main() {
         buildScore(projectId: 'ok', ecosystemScore: 90),
         buildScore(projectId: 'critico', ecosystemScore: 20),
       ];
-      final alert = selectEcosystemAlert(scores: scores, health: 55, pending: const []);
+      final alert = selectEcosystemAlert(scores: scores, health: 55, pending: const [], l10n: _pt);
       expect(alert.hasAlert, isTrue);
       expect(alert.alertId, 'score_critical_critico');
     });

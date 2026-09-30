@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/utils/language_utils.dart';
 import '../data/models/ecosystem_score.dart';
 import '../data/models/priority_recommendation.dart';
 import '../data/models/resource_allocation.dart';
@@ -10,11 +11,18 @@ import 'action_queue_provider.dart';
 import 'opportunity_lab_provider.dart';
 import 'roi_metric_provider.dart';
 
-final _eiService = EcosystemIntelligenceService();
+// R16 — the service renders its deterministic sentences in the presentation
+// language. Watching appL10nProvider makes every provider below recompute on
+// a PT↔EN switch (scores/verdict codes are language-independent; only text
+// changes), so no stale-language text survives.
+final ecosystemIntelligenceServiceProvider =
+    Provider.autoDispose<EcosystemIntelligenceService>((ref) =>
+        EcosystemIntelligenceService(l10n: ref.watch(appL10nProvider)));
 
 // ── Master provider: loads all data and computes ecosystem scores ──────────
 final ecosystemScoresProvider =
     FutureProvider.autoDispose<List<EcosystemScore>>((ref) async {
+  final eiService    = ref.watch(ecosystemIntelligenceServiceProvider);
   final projects     = await ref.watch(projectsProvider.future);
   final analyses     = await ref.watch(marketAnalysesProvider.future);
   final actions      = await ref.watch(actionQueueProvider.future);
@@ -22,7 +30,7 @@ final ecosystemScoresProvider =
   final roiList      = await ref.watch(roiMetricsProvider.future);
   final revenuePlans = await ref.watch(allRevenuePlansProvider.future);
 
-  return _eiService.computeProjectScores(
+  return eiService.computeProjectScores(
     projects:      projects,
     analyses:      analyses,
     actions:       actions,
@@ -35,11 +43,12 @@ final ecosystemScoresProvider =
 // ── Priority recommendations based on scores ─────────────────────────────
 final priorityRecommendationsProvider =
     FutureProvider.autoDispose<List<PriorityRecommendation>>((ref) async {
+  final eiService = ref.watch(ecosystemIntelligenceServiceProvider);
   final scores   = await ref.watch(ecosystemScoresProvider.future);
   final labItems = await ref.watch(opportunityLabProvider.future);
   final actions  = await ref.watch(actionQueueProvider.future);
 
-  return _eiService.generateRecommendations(
+  return eiService.generateRecommendations(
     scores:   scores,
     labItems: labItems,
     actions:  actions,
@@ -49,13 +58,14 @@ final priorityRecommendationsProvider =
 // ── Weekly briefing ────────────────────────────────────────────────────────
 final weeklyBriefingProvider =
     FutureProvider.autoDispose<WeeklyBriefing>((ref) async {
+  final eiService = ref.watch(ecosystemIntelligenceServiceProvider);
   final scores   = await ref.watch(ecosystemScoresProvider.future);
   final analyses = await ref.watch(marketAnalysesProvider.future);
   final actions  = await ref.watch(actionQueueProvider.future);
   final labItems = await ref.watch(opportunityLabProvider.future);
   final roiList  = await ref.watch(roiMetricsProvider.future);
 
-  return _eiService.generateBriefing(
+  return eiService.generateBriefing(
     scores:    scores,
     analyses:  analyses,
     actions:   actions,
@@ -76,13 +86,14 @@ final weeklyBriefingProvider =
 // project.id is exact, not a heuristic.
 final projectBriefingProvider =
     FutureProvider.autoDispose.family<WeeklyBriefing, String>((ref, projectId) async {
+  final eiService = ref.watch(ecosystemIntelligenceServiceProvider);
   final scores   = await ref.watch(ecosystemScoresProvider.future);
   final analyses = await ref.watch(marketAnalysesProvider.future);
   final actions  = await ref.watch(actionQueueProvider.future);
   final labItems = await ref.watch(opportunityLabProvider.future);
   final roiList  = await ref.watch(roiMetricsProvider.future);
 
-  return _eiService.generateBriefing(
+  return eiService.generateBriefing(
     scores:     scores.where((s) => s.project.id == projectId).toList(),
     analyses:   analyses.where((a) => a.projectId == projectId).toList(),
     actions:    actions.where((a) => a.projectId == projectId).toList(),
@@ -94,14 +105,16 @@ final projectBriefingProvider =
 // ── Resource allocation providers (parameterized by budget) ──────────────
 final resourceAllocationHoursProvider =
     Provider.autoDispose.family<AsyncValue<ResourceAllocation>, double>((ref, hours) {
+  final eiService = ref.watch(ecosystemIntelligenceServiceProvider);
   return ref.watch(ecosystemScoresProvider).whenData((scores) =>
-      _eiService.allocateResources(scores: scores, budget: hours, budgetType: 'hours'));
+      eiService.allocateResources(scores: scores, budget: hours, budgetType: 'hours'));
 });
 
 final resourceAllocationMoneyProvider =
     Provider.autoDispose.family<AsyncValue<ResourceAllocation>, double>((ref, money) {
+  final eiService = ref.watch(ecosystemIntelligenceServiceProvider);
   return ref.watch(ecosystemScoresProvider).whenData((scores) =>
-      _eiService.allocateResources(scores: scores, budget: money, budgetType: 'money'));
+      eiService.allocateResources(scores: scores, budget: money, budgetType: 'money'));
 });
 
 // ── Overall ecosystem health score ───────────────────────────────────────

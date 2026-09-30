@@ -1,10 +1,24 @@
 name: Edge Function Tests
 
 on:
+  # IV-QUANT-DATA-PLANE-AND-API-02: the Quant Lab branch never merges to main
+  # during the lab phase, and workflow_dispatch needs the file on the default
+  # branch, so pushes to the Quant line run CI directly. Scoped to that line
+  # only; deploy workflows are unaffected (none trigger on these branches).
+  push:
+    branches: ['claude/insightvalues-quant-**']
   pull_request:
     branches: [main]
     paths:
       - 'supabase/functions/**'
+      - 'contracts/aef/**'
+      - 'aef/**'
+      - 'supabase/migrations/**'
+      - 'supabase/tests/**'
+      - 'supabase/preflight/**'
+      - 'supabase/rollbacks/**'
+      - 'scripts/ci/**'
+      - 'supabase/migration_manifest.tsv'
   workflow_dispatch:
 
 jobs:
@@ -36,3 +50,323 @@ jobs:
             --allow-env \
             --allow-net=deno.land,esm.sh \
             supabase/functions/_shared/quota_test.ts
+
+  entitlement-core-ci:
+    name: Server-side entitlement + Promotion Gate (MODULE-FOUNDATION-AND-ENTITLEMENT-02)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Type-check entitlement authority, module policy and every Edge Function
+        run: |
+          deno check supabase/functions/_shared/entitlement.ts supabase/functions/_shared/module_policy.ts             supabase/functions/*/index.ts
+
+      - name: Lint entitlement core
+        run: |
+          deno lint supabase/functions/_shared/entitlement.ts supabase/functions/_shared/entitlement_test.ts             supabase/functions/_shared/entitlement_test_support.ts supabase/functions/_shared/entitlement_vectors_test.ts             supabase/functions/_shared/module_policy.ts supabase/functions/_shared/module_policy_test.ts             supabase/functions/_shared/module_gate_handlers_test.ts supabase/functions/module-access/ supabase/functions/_shared/ive/ supabase/functions/ive-intelligence/ supabase/functions/ive-memory/ supabase/functions/_shared/aef_runtime_endpoint.ts supabase/functions/aef-runtime/
+
+      - name: Entitlement authority, decision vectors, Promotion Gate invariants, executed gate on every module function, IVE Intelligence Core (isolation, injection, AEF routing, memory)
+        env:
+          DENO_TESTING: "1"
+          GROQ_API_KEY: "test-key-ci"
+        run: |
+          deno test --allow-env --allow-read --allow-net=deno.land,esm.sh             supabase/functions/_shared/entitlement_test.ts             supabase/functions/_shared/entitlement_vectors_test.ts             supabase/functions/_shared/module_policy_test.ts             supabase/functions/_shared/module_gate_handlers_test.ts             supabase/functions/module-access/index_test.ts supabase/functions/_shared/ive/
+
+  quant-foundation-ci:
+    name: Quant engine + quant-analytics APIs (IV-QUANT-FOUNDATION-01 / DATA-PLANE-AND-API-02)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Type-check and lint the Quant core and Quant Edge Functions
+        run: |
+          deno check supabase/functions/_shared/quant/*.ts supabase/functions/_shared/quant/fixtures/*.ts             supabase/functions/_shared/quant_server.ts supabase/functions/_shared/quant_provider_runtime.ts             supabase/functions/_shared/quant_provider_contract_test.ts supabase/functions/quant-analyze/*.ts supabase/functions/quant-watchlists/*.ts             tool/quant_lab_dev_server.ts tool/quant_benchmark.ts
+          deno lint supabase/functions/_shared/quant/ supabase/functions/_shared/quant_server.ts             supabase/functions/_shared/quant_provider_runtime.ts supabase/functions/_shared/quant_provider_contract_test.ts             supabase/functions/quant-analyze/ supabase/functions/quant-watchlists/ tool/quant_lab_dev_server.ts tool/quant_benchmark.ts
+
+      - name: Goldens, edge cases, seeded invariants, calendars, boundary tripwires (no network in the suite)
+        run: |
+          deno test --allow-read --allow-net=deno.land,esm.sh supabase/functions/_shared/quant/
+
+      - name: quant-analyze + quant-watchlists API tests (auth, entitlement, ownership, schema, limits, logging)
+        env:
+          DENO_TESTING: "1"
+        run: |
+          deno test --allow-env --allow-read --allow-net=deno.land,esm.sh             supabase/functions/quant-analyze/index_test.ts supabase/functions/quant-watchlists/index_test.ts
+
+      - name: Provider adapter contract + cache + safe_fetch allowlist (REAL-DATA-READINESS-03; fake fetch, no vendor, no key)
+        run: |
+          deno test --allow-env --allow-read --allow-net=deno.land,esm.sh             supabase/functions/_shared/quant_provider_contract_test.ts supabase/functions/_shared/safe_fetch_test.ts
+
+  disposable-db-rls-ci:
+    name: Migrations + RLS on a disposable PostgreSQL 17 (MODULE-FOUNDATION-AND-ENTITLEMENT-02)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: ci-disposable-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Deno (AEF persistence integration tests, IV-AEF-PERSISTENCE-01; Impact engine-rows parity)
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Apply stubs + every migration, prove idempotency, run RLS + AEF persistence + subject_roles RLS + Impact engine-rows tests
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGPASSWORD: ci-disposable-only
+          DENO: deno
+        run: |
+          set -o pipefail
+          bash scripts/ci/run_disposable_db_tests.sh | tee db.log
+          grep -qx 'AEF_PERSISTENCE_RLS: PASS' db.log
+          grep -qx 'AEF_PG_INTEGRATION: PASS' db.log
+          grep -qx 'AEF_ROLLBACK: PASS' db.log
+          grep -qx 'AEF_HARDENING: PASS' db.log
+          grep -qx 'AEF_HARDENING_ROLLBACK_REFUSAL: PASS' db.log
+          grep -qx 'AEF_LEGACY: PASS' db.log
+          grep -qx 'AEF_LEGACY: DOWN_OK' db.log
+          grep -qx 'AEF_SEQUENCE: PASS' db.log
+          grep -qx 'AEF_SEQUENCE: EXPOSED_BEFORE_FIX' db.log
+          grep -qx 'AEF_SEQUENCE_REPAIR: PASS' db.log
+          grep -qx 'AEF_FAIL_FAST: PASS' db.log
+          grep -qx 'AEF_SEQUENCE_POSTCONDITION: PASS' db.log
+          grep -qx 'AEF_DEPLOY_PREFLIGHT_TESTS: PASS' db.log
+          grep -qx 'AEF_DEFINER_BOUNDARY: PASS' db.log
+          grep -qx 'AEF_MIGRATION_PRECONDITIONS: PASS' db.log
+          grep -qx 'MIGRATION_MANIFEST_TESTS: PASS' db.log
+          grep -q 'MIGRATION_MANIFEST: PASS' db.log
+          grep -qx 'AEF_SEQUENCE_CATALOG_SCAN: PASS' db.log
+          grep -qx 'AEF_SEQUENCE_LINT: PASS' db.log
+          grep -qx 'AEF_FUTURE_SEQUENCE_GUARD: PASS' db.log
+          grep -qx 'DISPOSABLE_CLEANUP_TESTS: PASS' db.log
+          grep -q 'EXECUTOR_PSQL_PLAIN: NOT_ATOMIC' db.log
+          grep -q 'EXECUTOR_PSQL_SINGLE_TRANSACTION: ATOMIC' db.log
+          grep -qx 'EXECUTOR_PSQL_PLAIN_REAL_MIGRATION_LATE_FAILURE: NOT_ATOMIC (fingerprint changed)' db.log
+          grep -qx 'EXECUTOR_PSQL_SINGLE_TRANSACTION_REAL_MIGRATION_LATE_FAILURE: ATOMIC' db.log
+          grep -qx 'EXECUTOR_TRANSACTION_EXPERIMENT: DONE' db.log
+          grep -qx 'EXECUTOR_FINGERPRINT_COVERAGE: PASS' db.log
+          grep -qE '^IMPACT_LAB_RLS: PASS [0-9]+ checks$' db.log
+          grep -qE '^IMPACT_REGISTRY_RLS: PASS [0-9]+ checks$' db.log
+          grep -qE '^IMPACT_EVIDENCE_RLS: PASS [0-9]+ checks$' db.log
+          grep -qx 'IMPACT_EVIDENCE_RACE: PASS 4 orders' db.log
+          grep -qE '^IMPACT_DOSSIER_RLS: PASS [0-9]+ checks$' db.log
+          grep -qx 'IMPACT_DOSSIER_RACE: PASS 2 races' db.log
+          grep -qE '^IMPACT_RATE_LIMIT: PASS [0-9]+ checks$' db.log
+          grep -qx 'IMPACT_RATE_LIMIT_RACE: PASS no lost update' db.log
+          grep -qx 'IMPACT_RATE_LIMIT_DRIFT: PASS drifted table refused' db.log
+          grep -qE '^IMPACT_ENGINE_ROWS: (PASS |skipped locally)' db.log
+          grep -qx 'QUANT_WATCHLISTS_RLS: PASS' db.log
+          grep -qx 'QUANT_RATE_LIMITS: PASS' db.log
+
+  contract-and-aef-ci:
+    name: AEF contract + kernel CI (IV-AEF-FOUNDATION-01)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Type-check contracts/aef and aef/
+        run: |
+          deno check contracts/aef/*.ts contracts/aef/schema_parity_test.ts \
+            aef/*.ts aef/adapters/*.ts aef/persistence/*.ts aef/persistence/testing/*.ts aef/runtime/*.ts
+
+      - name: Lint contracts/aef and aef/
+        run: |
+          deno lint contracts/aef/*.ts contracts/aef/schema_parity_test.ts \
+            aef/*.ts aef/adapters/*.ts aef/persistence/*.ts aef/persistence/testing/*.ts aef/runtime/*.ts
+
+      - name: Run contract validator tests (65 cases)
+        run: |
+          deno test --allow-read contracts/aef/validators_test.ts
+
+      - name: Run schema-parity tests (10 cases, Codex Finding N-03)
+        run: |
+          deno test --allow-read --allow-net=registry.npmjs.org contracts/aef/schema_parity_test.ts
+
+      - name: Run AEF v0 kernel tests (security matrix + confused deputy + concurrency)
+        run: |
+          deno test --allow-read --allow-net=deno.land,esm.sh \
+            aef/kernel_test.ts aef/adapters/supabase_identity_resolver_test.ts
+
+      - name: Run AEF persistence unit tests (no database; PG tests run in disposable-db-rls-ci)
+        run: |
+          deno test --allow-read --allow-env \
+            aef/persistence/canonical_test.ts aef/persistence/ive_intent_mapping_test.ts \
+            aef/persistence/governance_unit_test.ts
+
+      - name: IVE -> AEF LAB runtime unit tests (IV-IVE-AEF-RUNTIME-INTEGRATION-01; PG tests run in disposable-db-rls-ci)
+        env:
+          DENO_TESTING: "1"
+        run: |
+          deno test --allow-read --allow-env --allow-net=deno.land,esm.sh aef/runtime/runtime_unit_test.ts
+
+      - name: Receipt v1 / v1.1 validator vs JSON Schema parity (IV-AEF-HARDENING-01)
+        run: |
+          deno test --allow-read --allow-net=registry.npmjs.org aef/persistence/receipt_v1_1_test.ts
+
+  impact-foundation-ci:
+    name: Impact evidence/verification core (IV-IMPACT-FOUNDATION-01)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Type-check and lint the Impact core and the impact-lab Edge Function
+        run: |
+          deno check supabase/functions/_shared/impact/*.ts supabase/functions/_shared/impact/fixtures/*.ts supabase/functions/impact-lab/*.ts supabase/functions/_shared/impact_registry/*.ts supabase/tests/impact_lab_engine_rows.ts
+          deno lint supabase/functions/_shared/impact/ supabase/functions/impact-lab/ supabase/functions/_shared/impact_registry/
+
+      - name: Run Impact tests (golden A-H, adversarial, boundary tripwires, Lab service, I3 file matrix + evidence collection)
+        run: |
+          deno test --allow-read --allow-net=deno.land,esm.sh supabase/functions/_shared/impact/
+
+      - name: Run registry adapter tests OFFLINE (IV-IMPACT-I2; no network, fixtures only)
+        run: |
+          deno test --allow-read --allow-net=deno.land,esm.sh supabase/functions/_shared/impact_registry/ supabase/functions/_shared/safe_fetch_test.ts
+
+      - name: Run impact-lab Edge Function tests (IV-IMPACT-I1)
+        env:
+          DENO_TESTING: "1"
+        run: |
+          deno test --allow-env --allow-read --allow-net=deno.land,esm.sh supabase/functions/impact-lab/
+
+  strategy-and-commercial-ci:
+    # Macro-10 §14/§41 (R-TEST-01 revalidation) — these Deno test files
+    # existed in the repo but were never referenced by any CI workflow;
+    # each was run locally first and confirmed green before being wired in
+    # here. project_ownership_realdb_test.ts and quota_realdb_test.ts are
+    # deliberately NOT included — they need a real Postgres instance, same
+    # as the disposable-db job below, and are tracked separately pending
+    # that rehearsal.
+    name: Strategy Builder core + commercial/billing Edge Functions (Macro-10 CI gap closure)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Type-check Strategy Builder core and commercial/billing Edge Functions
+        run: |
+          deno check supabase/functions/strategy-builder/*.ts supabase/functions/stripe-webhook/*.ts \
+            supabase/functions/_shared/stripe.ts supabase/functions/_shared/stripe_test.ts \
+            supabase/functions/create-checkout-session/*.ts supabase/functions/_shared/auth.ts \
+            supabase/functions/_shared/auth_test.ts supabase/functions/_shared/evidence_trust.ts \
+            supabase/functions/_shared/evidence_trust_test.ts supabase/functions/_shared/language.ts \
+            supabase/functions/_shared/language_test.ts supabase/functions/_shared/result_learning.ts \
+            supabase/functions/_shared/result_learning_test.ts supabase/functions/analyze-website/*.ts \
+            supabase/functions/extract-knowledge/*.ts supabase/functions/generate-campaign/*.ts \
+            supabase/functions/generate-strategy/*.ts supabase/functions/process-file/*.ts \
+            supabase/functions/_shared/strategy/*.ts
+
+      - name: Run Strategy Builder core tests (spec, engines, robustness, sensitivity, IVE analyst)
+        run: |
+          deno test --allow-env --allow-read --allow-net supabase/functions/_shared/strategy/
+
+      - name: Run Strategy Builder Edge Function tests
+        env:
+          DENO_TESTING: "1"
+        run: |
+          deno test --allow-env --allow-read --allow-net supabase/functions/strategy-builder/index_test.ts
+
+      - name: Run commercial/billing Edge Function tests (Stripe checkout + webhook)
+        env:
+          DENO_TESTING: "1"
+        run: |
+          deno test --allow-env --allow-read --allow-net \
+            supabase/functions/stripe-webhook/index_test.ts \
+            supabase/functions/_shared/stripe_test.ts \
+            supabase/functions/create-checkout-session/index_test.ts
+
+      - name: Run remaining shared-core and product Edge Function tests
+        env:
+          DENO_TESTING: "1"
+        run: |
+          deno test --allow-env --allow-read --allow-net \
+            supabase/functions/_shared/auth_test.ts \
+            supabase/functions/_shared/evidence_trust_test.ts \
+            supabase/functions/_shared/language_test.ts \
+            supabase/functions/_shared/result_learning_test.ts \
+            supabase/functions/analyze-website/index_test.ts \
+            supabase/functions/extract-knowledge/index_test.ts \
+            supabase/functions/generate-campaign/index_test.ts \
+            supabase/functions/generate-strategy/index_test.ts \
+            supabase/functions/process-file/index_test.ts
+
+  r16-language-consistency:
+    # R16 — global language consistency: output-language policy for every AI
+    # function + localize-content (presentation localization of persisted
+    # content: ownership, cache, cost cap, fail-closed, no source overwrite).
+    # Separate job so a failure elsewhere never hides these results.
+    name: R16 language consistency (output-language policy + localize-content)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Type-check R16 surfaces and every AI Edge Function
+        run: |
+          deno check supabase/functions/_shared/language.ts supabase/functions/_shared/language_test.ts \
+            supabase/functions/_shared/content_localization.ts supabase/functions/localize-content/*.ts \
+            supabase/functions/competitor-discovery/index.ts supabase/functions/niche-discovery/index.ts \
+            supabase/functions/gap-analysis/index.ts supabase/functions/opportunity-discovery/index.ts \
+            supabase/functions/market-analysis/index.ts supabase/functions/content-cluster/index.ts \
+            supabase/functions/revenue-planner/index.ts supabase/functions/generate-strategy/index.ts \
+            supabase/functions/generate-campaign/index.ts supabase/functions/extract-knowledge/index.ts \
+            supabase/functions/improve-post/index.ts supabase/functions/analyze-website/index.ts \
+            supabase/functions/generate-project-actions/index.ts supabase/functions/generate-project-opportunities/index.ts \
+            supabase/functions/decision-simulator/index.ts supabase/functions/context-copilot/index.ts
+
+      - name: Run R16 tests
+        env:
+          DENO_TESTING: "1"
+          GROQ_API_KEY: "test-key-ci"
+        run: |
+          deno test --allow-env --allow-read --allow-net \
+            supabase/functions/_shared/language_test.ts \
+            supabase/functions/localize-content/index_test.ts \
+            supabase/functions/context-copilot/index_test.ts \
+            supabase/functions/extract-knowledge/index_test.ts

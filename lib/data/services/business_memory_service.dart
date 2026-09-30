@@ -2,6 +2,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/business_memory.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/utils/app_exceptions.dart';
+import '../../l10n/app_localizations.dart';
 
 class BusinessMemoryService {
   final _client = Supabase.instance.client;
@@ -31,7 +33,7 @@ class BusinessMemoryService {
     String? projectId,
   }) async {
     final uid = _client.auth.currentUser?.id;
-    if (uid == null) throw Exception('Não autenticado');
+    if (uid == null) throw const NotAuthenticatedException();
 
     final row = await _client
         .from(AppConstants.tableBusinessMemory)
@@ -80,29 +82,37 @@ class BusinessMemoryService {
     );
   }
 
+  /// R16 — [l10n] must be the user's CURRENT UI-language localizations
+  /// (e.g. `ref.read(appL10nProvider)`): the content is persisted.
   Future<void> recordCampaign({
     required String title,
     required bool success,
+    required AppLocalizations l10n,
     String? projectId,
   }) async {
     await create(
       memoryType:      success ? 'success' : 'failure',
       title:           title,
-      content:         success ? 'Campanha bem-sucedida' : 'Campanha mal-sucedida',
+      content:         success
+          ? l10n.uxMemoryCampaignSucceeded
+          : l10n.uxMemoryCampaignFailed,
       confidenceScore: 80,
       source:          'campaigns',
       projectId:       projectId,
     );
   }
 
+  /// R16 — [l10n] must be the user's CURRENT UI-language localizations:
+  /// the title is persisted.
   Future<void> recordRoi({
     required double roiValue,
     required String description,
+    required AppLocalizations l10n,
     String? projectId,
   }) async {
     await create(
       memoryType:      'revenue',
-      title:           'ROI: R\$ ${roiValue.toStringAsFixed(2)}',
+      title:           l10n.uxMemoryRoiTitle(roiValue.toStringAsFixed(2)),
       content:         description,
       confidenceScore: 90,
       source:          'roi_tracker',

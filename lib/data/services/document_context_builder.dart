@@ -2,6 +2,7 @@ import 'dart:math';
 
 import '../models/document_grounding.dart';
 import '../models/knowledge_item.dart';
+import '../../l10n/app_localizations.dart';
 
 // Private helpers for the 2-pass budget algorithm.
 class _ScoredChunk {
@@ -89,6 +90,10 @@ class DocumentContextBuilder {
     List<KnowledgeItem> items, {
     String projectContext = '',
     int    maxChars       = maxDocumentContextChars,
+    // R16 — warning messages are user-facing (they reach the IVE UI and the
+    // AI grounding), so callers pass the presentation-language strings.
+    // Without it (pure/unit usage) the message is a neutral technical line.
+    AppLocalizations? l10n,
   }) {
     if (items.isEmpty) return DocumentGrounding.empty;
 
@@ -104,7 +109,9 @@ class DocumentContextBuilder {
       if (item.content.trim().isEmpty) {
         warnings.add(GroundingWarning(
           code:    'EMPTY_CONTENT',
-          message: '"${item.title}": registrado mas sem conteúdo processável.',
+          message: l10n != null
+              ? l10n.ctxGroundingEmptyContent(item.title)
+              : 'EMPTY_CONTENT: "${item.title}"',
         ));
         continue;
       }
@@ -138,7 +145,9 @@ class DocumentContextBuilder {
       if (charBudget <= 0) {
         warnings.add(GroundingWarning(
           code:    'BUDGET_EXCEEDED',
-          message: 'Limite de ${maxChars} chars atingido. Documentos posteriores omitidos.',
+          message: l10n != null
+              ? l10n.ctxGroundingBudgetExceeded(maxChars)
+              : 'BUDGET_EXCEEDED: $maxChars chars',
         ));
         break;
       }

@@ -64,4 +64,47 @@ void main() {
     final pt = await AppLocalizations.delegate.load(const Locale('pt'));
     expect(opportunityTypeLabel('valor-legado-desconhecido', pt), 'valor-legado-desconhecido');
   });
+
+  const expectedStatusPt = {
+    'pending':   'Pendente',
+    'analyzing': 'Analisando',
+    'approved':  'Aprovada',
+    'rejected':  'Rejeitada',
+    'executing': 'Em execução',
+  };
+
+  const expectedStatusEn = {
+    'pending':   'Pending',
+    'analyzing': 'Analyzing',
+    'approved':  'Approved',
+    'rejected':  'Rejected',
+    'executing': 'Executing',
+  };
+
+  test('OpportunityLabItem.statusValues is exactly the set this test covers (catches a future untranslated addition)', () {
+    expect(OpportunityLabItem.statusValues.toSet(), expectedStatusPt.keys.toSet());
+    expect(OpportunityLabItem.statusValues.toSet(), expectedStatusEn.keys.toSet());
+  });
+
+  test('every canonical status maps to the exact expected PT-BR label', () async {
+    final pt = await AppLocalizations.delegate.load(const Locale('pt'));
+    for (final canonical in OpportunityLabItem.statusValues) {
+      expect(opportunityStatusLabel(canonical, pt), expectedStatusPt[canonical],
+          reason: 'unexpected PT label for status "$canonical"');
+    }
+  });
+
+  test('every canonical status maps to the exact expected EN label (never the raw enum value)', () async {
+    final en = await AppLocalizations.delegate.load(const Locale('en'));
+    for (final canonical in OpportunityLabItem.statusValues) {
+      expect(opportunityStatusLabel(canonical, en), expectedStatusEn[canonical],
+          reason: 'unexpected EN label for status "$canonical" -- if this shows the raw '
+              'value, the untranslated status is leaking into the UI');
+    }
+  });
+
+  test('unmapped/legacy status falls back to itself rather than throwing', () async {
+    final pt = await AppLocalizations.delegate.load(const Locale('pt'));
+    expect(opportunityStatusLabel('status-legado-desconhecido', pt), 'status-legado-desconhecido');
+  });
 }

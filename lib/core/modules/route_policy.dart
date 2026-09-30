@@ -97,6 +97,10 @@ const Map<String, String> kRouteModuleOwnership = {
   AppConstants.routeActionDetail: 'action-engine',
   AppConstants.routeExecutiveDashboard: 'executive-dashboard',
   AppConstants.routeIntelligenceDebug: 'intelligence-debug',
+  AppConstants.routeImpact: 'impact',
+  AppConstants.routeImpactDossier: 'impact',
+  AppConstants.routeQuantLab: 'quant-analytics',
+  AppConstants.routeStrategyLab: 'strategy-builder',
 };
 
 /// Routes that must always remain reachable by any authenticated user,
@@ -144,11 +148,27 @@ ModuleDefinition? _moduleForRoute(String path) {
   return null; // unreachable if kRouteModuleOwnership only ever references real ids (test-covered)
 }
 
+/// Pure, module-level predicate behind [routeMayBeRestricted] — split out so
+/// tests can exercise it directly against a constructed [ModuleDefinition]
+/// (e.g. a lifecycleOverride combination no real registry entry uses yet),
+/// independent of the real [kRouteModuleOwnership]/[kModuleRegistry] lookup.
+///
+/// Codex INTEGRATION-MACRO-02 audit (P2-01): a module can be restricted via
+/// `lifecycle` alone (e.g. a lifecycleOverride putting it at ALPHA/BETA/
+/// RELEASE_CANDIDATE, reachable only with the beta_tester role) even when
+/// commercialEnabled/minimumPlan alone would suggest unconditional access —
+/// decideForModule's own `reachable` check consults lifecycle first. No
+/// module uses this combination today, but this pre-check must not create a
+/// path that skips that check.
+bool isModuleRestricted(ModuleDefinition module) =>
+    !module.commercialEnabled ||
+    module.minimumPlan != ModulePlan.free ||
+    module.lifecycle != ModuleLifecycle.commercial;
+
 /// Cheap, profile-free pre-check for the caller (see app.dart): true only
-/// when the route's owning module could possibly restrict access (not
-/// commercially enabled, or requires more than the free plan) — i.e. only
-/// when knowing the real isAdmin/isPro actually changes the outcome. Every
-/// other route resolves to `allow` regardless of who's asking, so the
+/// when the route's owning module could possibly restrict access — i.e.
+/// only when knowing the real isAdmin/isPro actually changes the outcome.
+/// Every other route resolves to `allow` regardless of who's asking, so the
 /// caller can skip fetching the user's profile entirely for the large
 /// majority of navigation (every free, already-released V1 screen), rather
 /// than paying an async profile read on every single in-app navigation.
@@ -156,7 +176,7 @@ bool routeMayBeRestricted(String path) {
   if (kAlwaysAllowedRoutes.contains(path)) return false;
   final module = _moduleForRoute(path);
   if (module == null) return false;
-  return !module.commercialEnabled || module.minimumPlan != ModulePlan.free;
+  return isModuleRestricted(module);
 }
 
 /// Pure entitlement decision, given an EXPLICIT (possibly synthetic) owning
@@ -190,7 +210,16 @@ RouteDecision decideForModule({
   required bool isAdmin,
   required bool isPro,
   required bool profileResolved,
+  bool isPremium = false,
+  bool isBetaTester = false,
 }) {
+  // MODULE-FOUNDATION-AND-ENTITLEMENT-02 — a DEPRECATED module is closed to
+  // everyone, admins included (server parity: MODULE_DISABLED). No module
+  // is deprecated today, so this changes no current navigation.
+  if (!isAlwaysAllowed && module?.lifecycle == ModuleLifecycle.deprecated) {
+    return RouteDecision.redirectDenied;
+  }
+
   // Preserve existing admin behavior (mission section 04): admins reach
   // everything through this gate. Individual admin-only screens
   // (admin_panel_screen.dart, intelligence_debug_hub_screen.dart) already
@@ -208,17 +237,29 @@ RouteDecision decideForModule({
   // isn't released yet stays unreachable no matter how high the user's
   // plan is — PRO does not unlock unreleased modules, and this check must
   // come BEFORE the plan check or exactly that bug is reintroduced.
-  if (!module.commercialEnabled) return RouteDecision.redirectDenied;
+  //
+  // MODULE-FOUNDATION-AND-ENTITLEMENT-02 — expressed through the module's
+  // lifecycle, with exactly the server's semantics
+  // (supabase/functions/_shared/entitlement.ts decideModuleAccess):
+  // EXPERIMENTAL/INTERNAL/DEPRECATED never reachable by plan;
+  // ALPHA/BETA/RELEASE_CANDIDATE only with the beta_tester ROLE (still
+  // subject to the plan below — beta is not an implicit premium). This
+  // guard is UX only; the server is the authority for every protected
+  // Edge Function.
+  final lifecycle = module.lifecycle;
+  final reachable = lifecycle == ModuleLifecycle.commercial ||
+      (lifecycle.betaReachable && isBetaTester && profileResolved);
+  if (!reachable) return RouteDecision.redirectDenied;
 
   switch (module.minimumPlan) {
-    case ModulePlan.admin:
-      // Not admin (checked above) — admin-only/internal, never "upgrade".
-      return RouteDecision.redirectDenied;
+    case ModulePlan.free:
+      return RouteDecision.allow;
     case ModulePlan.pro:
       if (!profileResolved) return RouteDecision.redirectDenied;
       return isPro ? RouteDecision.allow : RouteDecision.redirectUpgrade;
-    case ModulePlan.free:
-      return RouteDecision.allow;
+    case ModulePlan.premium:
+      if (!profileResolved) return RouteDecision.redirectDenied;
+      return isPremium ? RouteDecision.allow : RouteDecision.redirectUpgrade;
   }
 }
 
@@ -267,6 +308,8 @@ RouteDecision evaluateRouteAccess({
   required bool isAdmin,
   required bool isPro,
   required bool profileResolved,
+  bool isPremium = false,
+  bool isBetaTester = false,
 }) {
   return decideForModule(
     module: _moduleForRoute(path),
@@ -274,5 +317,7 @@ RouteDecision evaluateRouteAccess({
     isAdmin: isAdmin,
     isPro: isPro,
     profileResolved: profileResolved,
+    isPremium: isPremium,
+    isBetaTester: isBetaTester,
   );
 }

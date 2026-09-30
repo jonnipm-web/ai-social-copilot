@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { safeFetch, UnsafeUrlError } from "../_shared/safe_fetch.ts";
-import { AuthClient, AuthError, resolveAuthenticatedUser, unauthorizedResponse } from "../_shared/auth.ts";
+import { AuthenticatedUser, AuthClient, AuthError, resolveAuthenticatedUser, unauthorizedResponse } from "../_shared/auth.ts";
+import { EntitlementSubjectSource, requireModuleAccess } from "../_shared/entitlement.ts";
+import { outputLanguageSystemMessage, resolveOutputLanguage } from "../_shared/language.ts";
 import { QuotaClient, quotaBlockedResponse, refundQuota, reserveQuota } from "../_shared/quota.ts";
 
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") ?? "";
@@ -210,6 +212,7 @@ export async function handler(
   req: Request,
   authClient?: AuthClient,
   quotaClient?: QuotaClient,
+  subjectSource?: EntitlementSubjectSource,
 ): Promise<Response> {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -217,12 +220,20 @@ export async function handler(
 
   // IVE-COMMERCIAL-AUTH-01 — exige sessão de usuário real antes de qualquer
   // trabalho (fetch de URL, chamada ao Groq). Falha fechado.
+  let authUser: AuthenticatedUser;
   try {
-    await resolveAuthenticatedUser(req, authClient);
+    authUser = await resolveAuthenticatedUser(req, authClient);
   } catch (e) {
     if (e instanceof AuthError) return unauthorizedResponse(corsHeaders);
     throw e;
   }
+
+  // MODULE-FOUNDATION-AND-ENTITLEMENT-02 — server-side entitlement: the server
+  // (supabase/functions/_shared/module_policy.ts), not the client registry,
+  // decides whether this caller may use 'knowledge-vault'. Runs after authentication
+  // and before any quota reservation or AI call. Fails closed.
+  const access = await requireModuleAccess(req, authUser, 'knowledge-vault', corsHeaders, subjectSource);
+  if (!access.allowed) return access.response;
 
   let quotaReserved = false;
   let idempotencyKey: string | undefined;
@@ -286,12 +297,17 @@ export async function handler(
     const audience = body.target_audience
       ? `\nAudiência-alvo: ${neutralizeDelimiter(String(body.target_audience))}`
       : "";
-    const language = neutralizeDelimiter(String(body.language ?? "pt-BR"));
+    // R16 — o idioma de APRESENTAÇÃO (UI) decide o idioma da análise gerada;
+    // o idioma do documento de origem (detected_language / item.language)
+    // nunca decide a saída. resolveOutputLanguage só devolve 'pt-BR'|'en-US'
+    // (allowlist fixa do servidor), então nenhum texto do cliente é
+    // interpolado aqui e não há delimitador a neutralizar.
+    const language = resolveOutputLanguage(body);
 
     // PLAY-READINESS-18 (Section 19) — explicit delimiter matching the
     // system prompt's own instruction (see its own comment above).
     const safeContent = neutralizeDelimiter(content.trim().slice(0, 10000));
-    const userMessage = `Idioma de análise: ${language}${niche}${audience}\n\n<documento_do_usuario>\n${safeContent}\n</documento_do_usuario>`;
+    const userMessage = `Output language: ${language}${niche}${audience}\n\n<documento_do_usuario>\n${safeContent}\n</documento_do_usuario>`;
 
     // IVE-COMMERCIAL-ENTITLEMENTS-01 — reserva cota só depois de validar o
     // conteúdo (erros do usuário não custam cota).
@@ -305,6 +321,10 @@ export async function handler(
       model: "openai/gpt-oss-120b",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
+        // R16 — política de idioma confiável, fora do delimitador <documento_do_usuario>.
+        // detected_language descreve o documento de ORIGEM e detected_type é
+        // mapeado para código no cliente: ambos nunca devem ser traduzidos.
+        outputLanguageSystemMessage(language, { fixedValueFields: ["detected_language", "detected_type"] }),
         { role: "user", content: userMessage },
       ],
       temperature: 0.5,

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../core/utils/app_exceptions.dart';
 
 class AuthService {
   final _client = Supabase.instance.client;
@@ -19,7 +20,7 @@ class AuthService {
     if (serverClientId == null ||
         serverClientId.isEmpty ||
         serverClientId == 'placeholder.apps.googleusercontent.com') {
-      throw Exception('Login com Google não está configurado neste ambiente.');
+      throw const AppException(AppErrorCode.googleSignInNotConfigured);
     }
     return _googleAuthSignIn ??= GoogleSignIn(serverClientId: serverClientId);
   }
@@ -37,7 +38,7 @@ class AuthService {
       password: password,
     );
     if (response.user == null) {
-      throw Exception('Cadastro falhou. Tente novamente.');
+      throw const AppException(AppErrorCode.signUpFailed);
     }
   }
 
@@ -77,7 +78,7 @@ class AuthService {
     final idToken = googleAuth.idToken;
     final accessToken = googleAuth.accessToken;
     if (idToken == null || accessToken == null) {
-      throw Exception('Não foi possível obter as credenciais do Google.');
+      throw const AppException(AppErrorCode.googleCredentialsUnavailable);
     }
 
     await _client.auth.signInWithIdToken(

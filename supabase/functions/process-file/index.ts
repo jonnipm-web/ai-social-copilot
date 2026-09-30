@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { AuthClient, AuthError, resolveAuthenticatedUser, unauthorizedResponse } from "../_shared/auth.ts";
+import { AuthenticatedUser, AuthClient, AuthError, resolveAuthenticatedUser, unauthorizedResponse } from "../_shared/auth.ts";
+import { EntitlementSubjectSource, requireModuleAccess } from "../_shared/entitlement.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -124,19 +125,34 @@ function extractFromTxt(bytes: Uint8Array): string {
 }
 
 // Exportado para testes unitários. Em produção, serve() chama esta função.
-export async function handler(req: Request, authClient?: AuthClient): Promise<Response> {
+export async function handler(
+  req: Request,
+  authClient?: AuthClient,
+  // process-file consumes no AI quota; kept positional so every module
+  // handler shares one test-harness signature.
+  _quotaClient?: unknown,
+  subjectSource?: EntitlementSubjectSource,
+): Promise<Response> {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   // IVE-PROCESS-FILE-CLOSURE — mesmo limite de identidade real usado nas
   // outras 16 funções. Falha fechado antes de qualquer parsing.
+  let authUser: AuthenticatedUser;
   try {
-    await resolveAuthenticatedUser(req, authClient);
+    authUser = await resolveAuthenticatedUser(req, authClient);
   } catch (e) {
     if (e instanceof AuthError) return unauthorizedResponse(corsHeaders);
     throw e;
   }
+
+  // MODULE-FOUNDATION-AND-ENTITLEMENT-02 — server-side entitlement: the server
+  // (supabase/functions/_shared/module_policy.ts), not the client registry,
+  // decides whether this caller may use 'file-import'. Runs after authentication
+  // and before any quota reservation or AI call. Fails closed.
+  const access = await requireModuleAccess(req, authUser, 'file-import', corsHeaders, subjectSource);
+  if (!access.allowed) return access.response;
 
   try {
     if (req.method !== "POST") {

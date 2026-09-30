@@ -1,0 +1,77 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../models/aef_runtime.dart';
+
+/// IV-IVE-AEF-RUNTIME-INTEGRATION-01 — LAB client of the `aef-runtime`
+/// function. Sends only {op, intent|gate|operationId}; the server derives
+/// the subject from the session JWT. Every failure becomes a denied result
+/// (never a guessed state); nothing is retried automatically.
+abstract class AefRuntimeApi {
+  Future<AefRuntimeResult> propose(Map<String, dynamic> proposal);
+  Future<AefRuntimeResult> execute(Map<String, dynamic> proposal);
+  Future<AefRuntimeResult> decide(AefGate gate, {required bool approve});
+  Future<AefRuntimeResult> status(String operationId);
+}
+
+class AefRuntimeService implements AefRuntimeApi {
+  /// INSIGHTVALUES-PRODUCTIZATION-MACRO-03 — configurable so the SAME client
+  /// contract serves both the IVE-chat LAB card ('aef-runtime') and Action
+  /// Engine's governed execute transition ('action-engine-runtime'); each
+  /// points at its own Edge Function, gated by its own entitlement module
+  /// server-side (see supabase/functions/_shared/aef_runtime_endpoint.ts).
+  AefRuntimeService({this.functionName = 'aef-runtime'});
+
+  final String functionName;
+  SupabaseClient get _client => Supabase.instance.client;
+
+  Future<AefRuntimeResult> _call(Map<String, dynamic> body) async {
+    try {
+      final res = await _client.functions.invoke(functionName, body: body);
+      final data = res.data;
+      if (data is Map && data['result'] != null) return AefRuntimeResult.fromMap(data['result']);
+      return AefRuntimeResult.unreadable;
+    } on FunctionException catch (e) {
+      final details = e.details;
+      if (details is Map && details['result'] != null) return AefRuntimeResult.fromMap(details['result']);
+      final code = details is Map && details['error'] is String ? details['error'] as String : 'UNAVAILABLE';
+      return AefRuntimeResult.denied(code);
+    } catch (_) {
+      return AefRuntimeResult.denied('NETWORK_INTERRUPTED');
+    }
+  }
+
+  @override
+  Future<AefRuntimeResult> propose(Map<String, dynamic> proposal) => _call({'op': 'propose', 'intent': proposal});
+
+  @override
+  Future<AefRuntimeResult> execute(Map<String, dynamic> proposal) => _call({'op': 'execute', 'intent': proposal});
+
+  @override
+  Future<AefRuntimeResult> decide(AefGate gate, {required bool approve}) => _call({
+        'op': 'decide',
+        'gate': {'gateId': gate.gateId, 'decision': approve ? 'APPROVE' : 'REJECT', 'bindingHash': gate.bindingHash},
+      });
+
+  @override
+  Future<AefRuntimeResult> status(String operationId) => _call({'op': 'status', 'operationId': operationId});
+}
+
+/// Overridable in tests; the LAB card reads it only when [kAefRuntimeLabEnabled].
+final aefRuntimeApiProvider = Provider<AefRuntimeApi>((ref) => AefRuntimeService());
+
+/// INSIGHTVALUES-PRODUCTIZATION-MACRO-03 — Action Engine's own governed
+/// runtime client, pointed at action-engine-runtime instead of aef-runtime.
+/// Overridable in tests.
+final actionEngineRuntimeApiProvider =
+    Provider<AefRuntimeApi>((ref) => AefRuntimeService(functionName: 'action-engine-runtime'));
+
+/// INSIGHTVALUES-FINANCIAL-PRODUCT-MACRO-08 continuation §5-8 — Strategy
+/// Simulation's own governed approval step, pointed at
+/// strategy-simulation-runtime (aef/runtime/strategy_simulation_tools.ts).
+/// Same LAB-only posture as the other two: only reachable when
+/// [kAefRuntimeLabEnabled] and the caller is a real beta_tester with
+/// sufficient plan (module 'ive-strategy-simulation', BETA). Overridable in
+/// tests.
+final strategySimulationRuntimeApiProvider =
+    Provider<AefRuntimeApi>((ref) => AefRuntimeService(functionName: 'strategy-simulation-runtime'));

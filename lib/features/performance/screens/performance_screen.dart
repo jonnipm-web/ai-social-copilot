@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../data/models/performance_metrics.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/performance_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 
 const _bgColor = Color(0xFF0F0F1A);
 const _cardColor = Color(0xFF1A1A2E);
@@ -58,6 +60,7 @@ class PerformanceScreen extends ConsumerStatefulWidget {
 class _PerformanceScreenState extends ConsumerState<PerformanceScreen> {
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final metricsAsync = ref.watch(performanceMetricsProvider);
 
     return Scaffold(
@@ -74,9 +77,9 @@ class _PerformanceScreenState extends ConsumerState<PerformanceScreen> {
           },
         ),
         backgroundColor: _cardColor,
-        title: const Text(
-          'Performance',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        title: Text(
+          l10n.performanceTitle,
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
@@ -99,7 +102,7 @@ class _PerformanceScreenState extends ConsumerState<PerformanceScreen> {
               const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
               const SizedBox(height: 12),
               Text(
-                'Erro ao carregar métricas:\n$error',
+                l10n.performanceLoadError(extractErrorMessage(error, l10n)),
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.white70),
               ),
@@ -107,7 +110,7 @@ class _PerformanceScreenState extends ConsumerState<PerformanceScreen> {
               ElevatedButton(
                 style: ElevatedButton.styleFrom(backgroundColor: _primaryColor),
                 onPressed: () => ref.invalidate(performanceMetricsProvider),
-                child: const Text('Tentar novamente'),
+                child: Text(l10n.commonRetry),
               ),
             ],
           ),
@@ -120,14 +123,14 @@ class _PerformanceScreenState extends ConsumerState<PerformanceScreen> {
                 children: [
                   Icon(Icons.bar_chart, size: 72, color: _primaryColor.withOpacity(0.4)),
                   const SizedBox(height: 16),
-                  const Text(
-                    'Nenhuma métrica registrada ainda.',
-                    style: TextStyle(color: Colors.white54, fontSize: 16),
+                  Text(
+                    l10n.performanceEmpty,
+                    style: const TextStyle(color: Colors.white54, fontSize: 16),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Toque no + para adicionar uma entrada.',
-                    style: TextStyle(color: Colors.white38, fontSize: 13),
+                  Text(
+                    l10n.performanceEmptyHint,
+                    style: const TextStyle(color: Colors.white38, fontSize: 13),
                   ),
                 ],
               ),
@@ -151,24 +154,25 @@ class _PerformanceScreenState extends ConsumerState<PerformanceScreen> {
   }
 
   Future<void> _deleteMetric(PerformanceMetrics metric) async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: _cardColor,
-        title: const Text('Excluir métrica', style: TextStyle(color: Colors.white)),
+        title: Text(l10n.performanceDeleteTitle, style: const TextStyle(color: Colors.white)),
         content: Text(
-          'Deseja excluir a métrica de ${metric.platform}?',
+          l10n.performanceDeleteConfirm(metric.platform),
           style: const TextStyle(color: Colors.white70),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar', style: TextStyle(color: Colors.white54)),
+            child: Text(l10n.commonCancel, style: const TextStyle(color: Colors.white54)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Excluir'),
+            child: Text(l10n.commonDelete),
           ),
         ],
       ),
@@ -180,8 +184,8 @@ class _PerformanceScreenState extends ConsumerState<PerformanceScreen> {
         ref.invalidate(performanceMetricsProvider);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Métrica excluída com sucesso.'),
+            SnackBar(
+              content: Text(l10n.performanceDeleteSuccess),
               backgroundColor: Colors.redAccent,
             ),
           );
@@ -190,7 +194,7 @@ class _PerformanceScreenState extends ConsumerState<PerformanceScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Erro ao excluir: $e'),
+              content: Text(l10n.performanceDeleteError(extractErrorMessage(e, l10n))),
               backgroundColor: Colors.red,
             ),
           );
@@ -200,6 +204,7 @@ class _PerformanceScreenState extends ConsumerState<PerformanceScreen> {
   }
 
   void _openAddMetricSheet(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -208,8 +213,8 @@ class _PerformanceScreenState extends ConsumerState<PerformanceScreen> {
         onSaved: () {
           ref.invalidate(performanceMetricsProvider);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Métrica adicionada com sucesso!'),
+            SnackBar(
+              content: Text(l10n.performanceAddSuccess),
               backgroundColor: _primaryColor,
             ),
           );
@@ -227,6 +232,7 @@ class _MetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final score = metric.performanceScore.clamp(0.0, 100.0);
     final scoreColor = _scoreColor(score);
 
@@ -322,21 +328,21 @@ class _MetricCard extends StatelessWidget {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    _MetricChip(label: 'Impressões', value: _formatNumber(impressions)),
+                    _MetricChip(label: l10n.performanceMetricImpressions, value: _formatNumber(impressions)),
                     const SizedBox(width: 8),
-                    _MetricChip(label: 'Cliques', value: _formatNumber(clicks)),
+                    _MetricChip(label: l10n.performanceMetricClicks, value: _formatNumber(clicks)),
                     const SizedBox(width: 8),
-                    _MetricChip(label: 'Eng%', value: '${engRate.toStringAsFixed(1)}%'),
+                    _MetricChip(label: l10n.performanceMetricEngagement, value: '${engRate.toStringAsFixed(1)}%'),
                     const SizedBox(width: 8),
-                    _MetricChip(label: 'Conv%', value: '${convRate.toStringAsFixed(2)}%'),
+                    _MetricChip(label: l10n.performanceMetricConversion, value: '${convRate.toStringAsFixed(2)}%'),
                   ],
                 ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    const Text(
-                      'Score',
-                      style: TextStyle(color: Colors.white54, fontSize: 12),
+                    Text(
+                      l10n.performanceScoreLabel,
+                      style: const TextStyle(color: Colors.white54, fontSize: 12),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -381,6 +387,7 @@ class _MetricCard extends StatelessWidget {
   }
 
   void _showContextMenu(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       backgroundColor: _cardColor,
@@ -403,7 +410,7 @@ class _MetricCard extends StatelessWidget {
             const SizedBox(height: 12),
             ListTile(
               leading: const Icon(Icons.delete, color: Colors.redAccent),
-              title: const Text('Excluir métrica', style: TextStyle(color: Colors.white)),
+              title: Text(l10n.performanceDeleteTitle, style: const TextStyle(color: Colors.white)),
               onTap: () {
                 Navigator.pop(context);
                 onDelete();
@@ -502,11 +509,12 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
       double.tryParse(ctrl.text.trim().replaceAll(',', '.')) ?? 0.0;
 
   Future<void> _submit() async {
+    final l10n = AppLocalizations.of(context)!;
     if (!_formKey.currentState!.validate()) return;
     if (_selectedPlatform == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Selecione uma plataforma.'),
+        SnackBar(
+          content: Text(l10n.performanceSelectPlatform),
           backgroundColor: Colors.orangeAccent,
         ),
       );
@@ -543,7 +551,7 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erro ao salvar: $e'),
+            content: Text(AppLocalizations.of(context)!.performanceSaveError(extractErrorMessage(e, AppLocalizations.of(context)!))),
             backgroundColor: Colors.red,
           ),
         );
@@ -555,6 +563,7 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
@@ -580,9 +589,9 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
-                'Nova Métrica',
-                style: TextStyle(
+              Text(
+                l10n.performanceNewMetricTitle,
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -595,7 +604,7 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
                 value: _selectedPlatform,
                 dropdownColor: _bgColor,
                 style: const TextStyle(color: Colors.white),
-                decoration: _inputDecoration('Plataforma'),
+                decoration: _inputDecoration(l10n.performanceFieldPlatform),
                 items: PerformanceMetrics.platforms.map((p) {
                   return DropdownMenuItem(
                     value: p,
@@ -609,18 +618,18 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
                   );
                 }).toList(),
                 onChanged: (v) => setState(() => _selectedPlatform = v),
-                validator: (v) => v == null ? 'Selecione uma plataforma' : null,
+                validator: (v) => v == null ? l10n.performanceSelectPlatform : null,
               ),
               const SizedBox(height: 12),
 
               // Int fields — 2 columns
-              _intRow('Impressões', _impressoesCtrl, 'Cliques', _cliquesCtrl),
+              _intRow(l10n.performanceMetricImpressions, _impressoesCtrl, l10n.performanceMetricClicks, _cliquesCtrl),
               const SizedBox(height: 12),
-              _intRow('Curtidas', _curtidasCtrl, 'Comentários', _comentariosCtrl),
+              _intRow(l10n.performanceFieldLikes, _curtidasCtrl, l10n.performanceFieldComments, _comentariosCtrl),
               const SizedBox(height: 12),
-              _intRow('Compartilhamentos', _compartilhamentosCtrl, 'Salvamentos', _salvamentosCtrl),
+              _intRow(l10n.performanceFieldShares, _compartilhamentosCtrl, l10n.performanceFieldSaves, _salvamentosCtrl),
               const SizedBox(height: 12),
-              _intRow('Leads', _leadsCtrl, 'Vendas', _vendasCtrl),
+              _intRow(l10n.performanceFieldLeads, _leadsCtrl, l10n.performanceFieldSales, _vendasCtrl),
               const SizedBox(height: 12),
 
               // Revenue
@@ -628,7 +637,7 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
                 controller: _receitaCtrl,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 style: const TextStyle(color: Colors.white),
-                decoration: _inputDecoration('Receita (R\$)'),
+                decoration: _inputDecoration(l10n.performanceFieldRevenue),
               ),
               const SizedBox(height: 12),
 
@@ -637,7 +646,7 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
                 controller: _notasCtrl,
                 style: const TextStyle(color: Colors.white),
                 maxLines: 3,
-                decoration: _inputDecoration('Notas (opcional)'),
+                decoration: _inputDecoration(l10n.performanceFieldNotes),
               ),
               const SizedBox(height: 20),
 
@@ -663,9 +672,9 @@ class _AddMetricSheetState extends ConsumerState<_AddMetricSheet> {
                             color: Colors.white,
                           ),
                         )
-                      : const Text(
-                          'Salvar',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      : Text(
+                          l10n.commonSave,
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                 ),
               ),

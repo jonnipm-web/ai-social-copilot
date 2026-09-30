@@ -51,7 +51,7 @@ class ProfileService {
     required String email,
   }) async {
     final role = email == AppConstants.adminEmail ? 'admin' : 'free';
-    final limit = email == AppConstants.adminEmail ? 99999 : 5;
+    final limit = email == AppConstants.adminEmail ? 99999 : 15;
 
     await _client.from(AppConstants.tableProfiles).upsert({
       'id':            id,

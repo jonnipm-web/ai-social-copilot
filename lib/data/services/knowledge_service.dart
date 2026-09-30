@@ -5,8 +5,41 @@ import '../models/knowledge_item.dart';
 import '../../core/services/ive_event_bus.dart';
 import '../../data/models/ive_event.dart';
 import 'content_service.dart';
+import 'content_localization_service.dart';
+
+/// R16 — request body for `extract-knowledge`, extracted so it is
+/// unit-testable without a Supabase client. `language` is always the
+/// presentation/output language, never the source item's language.
+Map<String, dynamic> buildExtractKnowledgeBody({
+  required String content,
+  required String outputLanguage,
+  String? sourceUrl,
+  String? niche,
+  String? targetAudience,
+  String? idempotencyKey,
+}) =>
+    {
+      'content':         content,
+      'source_url':      sourceUrl,
+      'niche':           niche,
+      'target_audience': targetAudience,
+      'language':        outputLanguage,
+      if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
+    };
 
 class KnowledgeService {
+  KnowledgeService({RowLocalizer? localizer}) : _localizer = localizer ?? identityLocalizer;
+
+  // R16 — presentation localization of persisted content (never modifies the
+  // stored row; see content_localization_service.dart).
+  final RowLocalizer _localizer;
+
+  Future<List<Map<String, dynamic>>> _loc(String table, dynamic rows) =>
+      _localizer(table, (rows as List).map((r) => Map<String, dynamic>.from(r as Map)).toList());
+
+  Future<Map<String, dynamic>> _locOne(String table, Map<String, dynamic> row) async =>
+      (await _localizer(table, [row])).first;
+
   final _client = Supabase.instance.client;
 
   static const _tableItems    = 'knowledge_items';
@@ -62,7 +95,7 @@ class KnowledgeService {
         .select()
         .eq('knowledge_item_id', knowledgeItemId)
         .maybeSingle();
-    return row == null ? null : KnowledgeAnalysis.fromMap(row);
+    return row == null ? null : KnowledgeAnalysis.fromMap(await _locOne('knowledge_analysis', row));
   }
 
   Future<List<KnowledgeAnalysis>> fetchAnalysisByProject(String projectId) async {
@@ -71,7 +104,7 @@ class KnowledgeService {
         .select()
         .eq('project_id', projectId)
         .order('created_at', ascending: false);
-    return (rows as List).map((r) => KnowledgeAnalysis.fromMap(r)).toList();
+    return (await _loc('knowledge_analysis', rows)).map((r) => KnowledgeAnalysis.fromMap(r)).toList();
   }
 
   Future<KnowledgeAnalysis> saveAnalysis(KnowledgeAnalysis analysis) async {
@@ -88,24 +121,28 @@ class KnowledgeService {
 
   // ── AI Extraction ────────────────────────────────────────────
 
+  /// R16 — [outputLanguage] is the PRESENTATION language ('pt-BR'/'en-US',
+  /// from `outputLanguageCodeProvider`). It is required on purpose: the
+  /// source item's own `language` field describes the document and must
+  /// never decide the language of the generated analysis.
   Future<Map<String, dynamic>> extractWithAI({
     required String content,
+    required String outputLanguage,
     String? sourceUrl,
     String? niche,
     String? targetAudience,
-    String language = 'pt-BR',
     String? idempotencyKey,
   }) async {
     final response = await _client.functions.invoke(
       _edgeFunction,
-      body: {
-        'content':         content,
-        'source_url':      sourceUrl,
-        'niche':           niche,
-        'target_audience': targetAudience,
-        'language':        language,
-        if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
-      },
+      body: buildExtractKnowledgeBody(
+        content:        content,
+        outputLanguage: outputLanguage,
+        sourceUrl:      sourceUrl,
+        niche:          niche,
+        targetAudience: targetAudience,
+        idempotencyKey: idempotencyKey,
+      ),
     );
 
     if (response.data == null) {
@@ -122,7 +159,13 @@ class KnowledgeService {
 
   // ── Full analyze flow ─────────────────────────────────────────
 
-  Future<KnowledgeAnalysis> analyzeItem(KnowledgeItem item, {String? idempotencyKey}) async {
+  /// R16 — [outputLanguage] is the presentation language; `item.language`
+  /// stays source metadata only (it is still persisted to the Library below).
+  Future<KnowledgeAnalysis> analyzeItem(
+    KnowledgeItem item, {
+    required String outputLanguage,
+    String? idempotencyKey,
+  }) async {
     final uid = _client.auth.currentUser?.id;
     if (uid == null) throw Exception('Usuário não autenticado.');
 
@@ -138,7 +181,7 @@ class KnowledgeService {
         sourceUrl:      item.sourceType == 'url' ? item.sourceUrl : null,
         niche:          item.niche,
         targetAudience: item.targetAudience,
-        language:       item.language,
+        outputLanguage: outputLanguage,
         idempotencyKey: idempotencyKey,
       );
 

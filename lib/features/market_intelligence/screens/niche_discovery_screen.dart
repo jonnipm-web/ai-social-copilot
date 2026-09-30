@@ -6,8 +6,10 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/language_utils.dart';
 import '../../../data/models/ive_interaction_request.dart';
 import '../../../data/models/niche_ranking.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/market_analysis_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
+import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 
 class NicheDiscoveryScreen extends ConsumerStatefulWidget {
   const NicheDiscoveryScreen({super.key, required this.analysisId});
@@ -35,10 +37,11 @@ class _NicheDiscoveryScreenState extends ConsumerState<NicheDiscoveryScreen> {
     setState(() => _error = null);
     try {
       final analysis = await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
+      if (!mounted) return;
       await _exec.run<List<NicheRanking>>(
         context: context,
         ref: ref,
-        analysisLabel: 'Descobrir Nichos',
+        analysisLabel: AppLocalizations.of(context)!.miNicheTitle,
         request: IveInteractionRequest(
           projectId:        analysis.projectId,
           sourceModule:     'market_intelligence',
@@ -58,7 +61,8 @@ class _NicheDiscoveryScreenState extends ConsumerState<NicheDiscoveryScreen> {
       if (_exec.state != AiExecutionState.success) return;
       ref.invalidate(nichesByAnalysisProvider(widget.analysisId));
     } catch (e) {
-      setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+      if (!mounted) return;
+      setState(() => _error = extractErrorMessage(e, AppLocalizations.of(context)!));
     } finally {
       if (mounted) setState(() {});
     }
@@ -73,13 +77,14 @@ class _NicheDiscoveryScreenState extends ConsumerState<NicheDiscoveryScreen> {
   }
 
   Widget _buildScaffold(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final asyncList = ref.watch(nichesByAnalysisProvider(widget.analysisId));
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F1A),
       appBar: AppBar(
         backgroundColor: const Color(0xFF0F0F1A),
-        title: const Text('Nichos & Sub-nichos', style: TextStyle(color: Colors.white)),
+        title: Text(l10n.miNicheTitle, style: const TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -97,7 +102,7 @@ class _NicheDiscoveryScreenState extends ConsumerState<NicheDiscoveryScreen> {
                   )
                 : const Icon(Icons.hub_rounded, color: Color(0xFF4D96FF)),
             label: Text(
-              _running ? 'Descobrindo...' : 'Descobrir',
+              _running ? l10n.miNicheDiscovering : l10n.miNicheDiscoverButton,
               style: const TextStyle(color: Color(0xFF4D96FF)),
             ),
           ),
@@ -119,7 +124,9 @@ class _NicheDiscoveryScreenState extends ConsumerState<NicheDiscoveryScreen> {
           Expanded(
             child: asyncList.when(
               loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFF4D96FF))),
-              error: (e, _) => Center(child: Text('Erro: $e', style: const TextStyle(color: Colors.redAccent))),
+              error: (e, _) => Center(
+                  child: Text(l10n.miSubErrorPrefix(extractErrorMessage(e, l10n)),
+                      style: const TextStyle(color: Colors.redAccent))),
               data: (niches) => niches.isEmpty
                   ? Center(
                       child: Column(
@@ -127,15 +134,22 @@ class _NicheDiscoveryScreenState extends ConsumerState<NicheDiscoveryScreen> {
                         children: [
                           const Icon(Icons.hub_outlined, color: Colors.white24, size: 64),
                           const SizedBox(height: 16),
-                          const Text('Nenhum nicho ainda', style: TextStyle(color: Colors.white38)),
+                          Text(l10n.miNicheEmptyTitle, style: const TextStyle(color: Colors.white38)),
                           const SizedBox(height: 8),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Text(l10n.miNicheEmptyBody,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(color: Colors.white24, fontSize: 12, height: 1.4)),
+                          ),
+                          const SizedBox(height: 16),
                           ElevatedButton(
                             onPressed: _running ? null : _discover,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF4D96FF),
                               foregroundColor: Colors.white,
                             ),
-                            child: const Text('Descobrir Nichos'),
+                            child: Text(l10n.miNicheEmptyButton),
                           ),
                         ],
                       ),
@@ -166,16 +180,17 @@ class _NicheCard extends StatelessWidget {
     }
   }
 
-  String get _levelLabel {
+  String _levelLabel(AppLocalizations l10n) {
     switch (niche.level) {
-      case 'niche': return 'Nicho';
-      case 'sub_niche': return 'Sub-nicho';
-      default: return 'Micro-nicho';
+      case 'niche': return l10n.miNicheLevelNiche;
+      case 'sub_niche': return l10n.miNicheLevelSubNiche;
+      default: return l10n.miNicheLevelMicroNiche;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -209,7 +224,7 @@ class _NicheCard extends StatelessWidget {
                   children: [
                     Text(niche.name,
                         style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-                    Text(_levelLabel, style: TextStyle(color: _levelColor, fontSize: 11)),
+                    Text(_levelLabel(l10n), style: TextStyle(color: _levelColor, fontSize: 11)),
                   ],
                 ),
               ),
@@ -218,7 +233,7 @@ class _NicheCard extends StatelessWidget {
                 children: [
                   Text('${niche.overallScore}',
                       style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-                  const Text('score', style: TextStyle(color: Colors.white38, fontSize: 10)),
+                  Text(l10n.miNicheScoreLabel, style: const TextStyle(color: Colors.white38, fontSize: 10)),
                 ],
               ),
             ],
@@ -234,17 +249,17 @@ class _NicheCard extends StatelessWidget {
           // Score grid
           Row(
             children: [
-              _MiniBar(label: 'Potencial', value: niche.potentialScore, color: const Color(0xFF6BCB77)),
+              _MiniBar(label: l10n.miNicheScorePotential, value: niche.potentialScore, color: const Color(0xFF6BCB77)),
               const SizedBox(width: 8),
-              _MiniBar(label: 'Crescimento', value: niche.growthScore, color: const Color(0xFF4D96FF)),
+              _MiniBar(label: l10n.miNicheScoreGrowth, value: niche.growthScore, color: const Color(0xFF4D96FF)),
             ],
           ),
           const SizedBox(height: 6),
           Row(
             children: [
-              _MiniBar(label: 'Monetização', value: niche.monetizationScore, color: const Color(0xFFFFD93D)),
+              _MiniBar(label: l10n.miNicheScoreMonetization, value: niche.monetizationScore, color: const Color(0xFFFFD93D)),
               const SizedBox(width: 8),
-              _MiniBar(label: 'Tendência', value: niche.trendScore, color: const Color(0xFFAB83FF)),
+              _MiniBar(label: l10n.miNicheScoreTrend, value: niche.trendScore, color: const Color(0xFFAB83FF)),
             ],
           ),
           if (niche.keywords.isNotEmpty) ...[

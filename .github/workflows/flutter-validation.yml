@@ -1,6 +1,12 @@
 name: Flutter Validation — Analyze + Test
 
 on:
+  # IV-QUANT-DATA-PLANE-AND-API-02: the Quant Lab branch never merges to main
+  # during the lab phase, and workflow_dispatch needs the file on the default
+  # branch, so pushes to the Quant line run CI directly. Scoped to that line
+  # only; deploy workflows are unaffected (none trigger on these branches).
+  push:
+    branches: ['claude/insightvalues-quant-**']
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -36,10 +42,25 @@ jobs:
         run: flutter pub get
 
       - name: flutter analyze
-        run: flutter analyze --fatal-warnings --no-fatal-infos
+        # R16: analyzer findings are also published as check-run annotations
+        # (batched, <=9 per step) so they are readable from the PR / API
+        # without downloading raw logs. Exit code is unchanged.
+        run: |
+          set +e
+          flutter analyze --fatal-warnings --no-fatal-infos > analyze_out.txt 2>&1
+          code=$?
+          cat analyze_out.txt
+          grep -E "^\s*(error|warning) " analyze_out.txt | sed 's/%/%25/g' > analyze_findings.txt
+          split -l 25 -d analyze_findings.txt analyze_chunk_ || true
+          for f in $(ls analyze_chunk_* 2>/dev/null | head -9); do
+            msg=$(awk 'BEGIN{ORS="%0A"} {print}' "$f")
+            echo "::error title=flutter analyze::${msg}"
+          done
+          exit $code
 
       - name: flutter test
-        run: flutter test --reporter expanded
+        # R16: the github reporter emits failing tests as annotations.
+        run: flutter test --reporter github
 
       - name: Adicionar suporte à plataforma Web
         # web/ não é versionado neste repositório (gerado por `flutter

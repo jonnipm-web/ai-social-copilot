@@ -14,16 +14,26 @@ class AppConstants {
   static const freeTierLimit = 9999;
   static const maxBodyWidth = 700.0;
 
-  // Limites por papel
+  // Limites por papel -- deve espelhar exatamente os valores usados pelo
+  // servidor (supabase/functions/stripe-webhook/index.ts's PRO_ROLE_LIMIT/
+  // FREE_ROLE_LIMIT e a coluna profiles.monthly_limit). Usado por
+  // ProfileService.updateRole() no admin, que grava monthly_limit
+  // diretamente a partir deste mapa -- um valor desatualizado aqui dá à
+  // conta o limite errado quando um admin troca o papel manualmente
+  // (achado durante COMMERCIAL-V1-PHYSICAL-QA-RECOVERY PQ-03: 'pro' já
+  // estava desatualizado em 100 em vez dos 300 reais).
+  // FREE=15 per decisão comercial do Owner (2026-09-30).
+  // Migration 20261014000000_free_quota_15.sql aplicada em produção (APPLIED_PRODUCTION).
+  // Servidor (profiles.monthly_limit default) espelha 15.
   static const Map<String, int> planLimits = {
     'admin':       99999,
     'premium':     1000,
-    'pro':         100,
+    'pro':         300,
     'beta_tester': 50,
-    'free':        5,
+    'free':        15,
   };
 
-  static int limitForRole(String role) => planLimits[role] ?? 5;
+  static int limitForRole(String role) => planLimits[role] ?? 15;
 
   // Rotas
   static const routeSplash         = '/';
@@ -84,6 +94,16 @@ class AppConstants {
   // Fase 10F — Intelligence Debug & Observability
   static const routeIntelligenceDebug    = '/intelligence-debug';
 
+  // IV-IMPACT-I5 — Impact Lab (admin-only: module 'impact' is EXPERIMENTAL)
+  static const routeImpact               = '/impact';
+  static const routeImpactDossier        = '/impact/:id';
+
+  // ROBOT-BUILDER-MACRO-05 — Strategy Lab (module 'strategy-builder' is COMMERCIAL, free tier)
+  static const routeStrategyLab          = '/strategy-lab';
+
+  // IV-QUANT-DATA-PLANE-AND-API-02 — Quant Lab (INTERNAL, admin-only)
+  static const routeQuantLab             = '/quant-lab';
+
   // IVE-COMMERCIAL-RELEASE-CONTROL-PLANE-01
   static const routeAccount              = '/account';
   static const routeAbout                = '/about';
@@ -143,6 +163,10 @@ class AppConstants {
 
   // Fase 10K — Context Copilot
   static const edgeFunctionContextCopilot = 'context-copilot';
+  // MODULE-FOUNDATION-AND-ENTITLEMENT-02 — capability discovery (server authority).
+  static const edgeFunctionModuleAccess = 'module-access';
+  // IVE-INTELLIGENCE-CORE-01 — server IVE Intelligence Core (Module Lab; not deployed).
+  static const edgeFunctionIveIntelligence = 'ive-intelligence';
 
   // Fase 10L — Decision Simulator (IVE v1.1)
   static const edgeFunctionDecisionSimulator = 'decision-simulator';

@@ -5,8 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/language_utils.dart';
 import '../../../data/models/ive_interaction_request.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/market_analysis_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
+import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 
 class ContentClusterScreen extends ConsumerStatefulWidget {
   const ContentClusterScreen({super.key, required this.analysisId});
@@ -36,17 +38,20 @@ class _ContentClusterScreenState extends ConsumerState<ContentClusterScreen> {
     final kw = _keywordCtrl.text.trim();
     if (kw.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Digite a palavra-chave principal'), backgroundColor: Colors.orange),
+        SnackBar(
+            content: Text(AppLocalizations.of(context)!.miClusterKeywordRequired),
+            backgroundColor: Colors.orange),
       );
       return;
     }
     setState(() => _error = null);
     try {
       final analysis = await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
+      if (!mounted) return;
       await _exec.run<void>(
         context: context,
         ref: ref,
-        analysisLabel: 'Content Cluster',
+        analysisLabel: AppLocalizations.of(context)!.miClusterTitle,
         request: IveInteractionRequest(
           projectId:        analysis.projectId,
           sourceModule:     'market_intelligence',
@@ -67,7 +72,8 @@ class _ContentClusterScreenState extends ConsumerState<ContentClusterScreen> {
       if (_exec.state != AiExecutionState.success) return;
       ref.invalidate(contentClusterByAnalysisProvider(widget.analysisId));
     } catch (e) {
-      setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+      if (!mounted) return;
+      setState(() => _error = extractErrorMessage(e, AppLocalizations.of(context)!));
     } finally {
       if (mounted) setState(() {});
     }
@@ -82,13 +88,14 @@ class _ContentClusterScreenState extends ConsumerState<ContentClusterScreen> {
   }
 
   Widget _buildScaffold(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final asyncCluster = ref.watch(contentClusterByAnalysisProvider(widget.analysisId));
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F1A),
       appBar: AppBar(
         backgroundColor: const Color(0xFF0F0F1A),
-        title: const Text('Content Cluster Engine', style: TextStyle(color: Colors.white)),
+        title: Text(l10n.miClusterTitle, style: const TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -99,7 +106,9 @@ class _ContentClusterScreenState extends ConsumerState<ContentClusterScreen> {
       ),
       body: asyncCluster.when(
         loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFFAB83FF))),
-        error: (e, _) => Center(child: Text('Erro: $e', style: const TextStyle(color: Colors.redAccent))),
+        error: (e, _) => Center(
+            child: Text(l10n.miSubErrorPrefix(extractErrorMessage(e, l10n)),
+                style: const TextStyle(color: Colors.redAccent))),
         data: (cluster) => cluster == null
             ? SingleChildScrollView(
                 padding: const EdgeInsets.all(20),
@@ -107,13 +116,17 @@ class _ContentClusterScreenState extends ConsumerState<ContentClusterScreen> {
                   children: [
                     const Icon(Icons.account_tree_outlined, color: Colors.white24, size: 64),
                     const SizedBox(height: 16),
-                    const Text('Nenhum cluster ainda', style: TextStyle(color: Colors.white38)),
+                    Text(l10n.miClusterEmptyTitle, style: const TextStyle(color: Colors.white38)),
+                    const SizedBox(height: 8),
+                    Text(l10n.miClusterEmptyBody,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.white24, fontSize: 12, height: 1.4)),
                     const SizedBox(height: 24),
                     TextField(
                       controller: _keywordCtrl,
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
-                        labelText: 'Palavra-chave principal',
+                        labelText: l10n.miClusterKeywordFieldLabel,
                         labelStyle: const TextStyle(color: Colors.white54),
                         filled: true,
                         fillColor: const Color(0xFF1A1A2E),
@@ -142,7 +155,7 @@ class _ContentClusterScreenState extends ConsumerState<ContentClusterScreen> {
                         icon: _running
                             ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                             : const Icon(Icons.account_tree_rounded),
-                        label: Text(_running ? 'Gerando...' : 'Gerar Content Cluster'),
+                        label: Text(_running ? l10n.miClusterGenerating : l10n.miClusterGenerateButton),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFAB83FF),
                           foregroundColor: Colors.white,
@@ -169,14 +182,14 @@ class _ContentClusterScreenState extends ConsumerState<ContentClusterScreen> {
                         children: [
                           const Icon(Icons.key_rounded, color: Color(0xFFAB83FF), size: 18),
                           const SizedBox(width: 8),
-                          Text('Palavra-chave: ${cluster.mainKeyword}',
+                          Text(l10n.miClusterKeywordDisplay(cluster.mainKeyword),
                               style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                         ],
                       ),
                     ),
                     const SizedBox(height: 16),
-                    _ClusterSection(title: 'Clusters de Conteúdo', color: const Color(0xFFAB83FF), items: cluster.clusters, labelKey: 'name', descKey: 'description'),
-                    _ClusterSection(title: 'Silos de SEO', color: const Color(0xFF4D96FF), items: cluster.silos, labelKey: 'name', descKey: 'description'),
+                    _ClusterSection(title: l10n.miClusterSectionClusters, color: const Color(0xFFAB83FF), items: cluster.clusters, labelKey: 'name', descKey: 'description'),
+                    _ClusterSection(title: l10n.miClusterSectionSilos, color: const Color(0xFF4D96FF), items: cluster.silos, labelKey: 'name', descKey: 'description'),
                     _ArticleSection(articles: cluster.articles),
                     _RoadmapSection(roadmap: cluster.editorialRoadmap),
                   ],
@@ -248,10 +261,11 @@ class _ArticleSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (articles.isEmpty) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Artigos Sugeridos', style: TextStyle(color: Color(0xFF6BCB77), fontSize: 14, fontWeight: FontWeight.bold)),
+        Text(l10n.miClusterSectionArticles, style: const TextStyle(color: Color(0xFF6BCB77), fontSize: 14, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         ...articles.asMap().entries.map(
           (e) => Container(
@@ -285,7 +299,7 @@ class _ArticleSection extends StatelessWidget {
                       Text(e.value['title']?.toString() ?? '',
                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
                       if (e.value['keyword'] != null)
-                        Text('Keyword: ${e.value['keyword']}',
+                        Text(l10n.miClusterArticleKeyword('${e.value['keyword']}'),
                             style: const TextStyle(color: Colors.white38, fontSize: 11)),
                     ],
                   ),
@@ -307,10 +321,11 @@ class _RoadmapSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (roadmap.isEmpty) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Roadmap Editorial', style: TextStyle(color: Color(0xFFFFD93D), fontSize: 14, fontWeight: FontWeight.bold)),
+        Text(l10n.miClusterSectionRoadmap, style: const TextStyle(color: Color(0xFFFFD93D), fontSize: 14, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         ...roadmap.map(
           (item) => Container(
@@ -325,7 +340,7 @@ class _RoadmapSection extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (item['month'] != null)
-                  Text('Mês ${item['month']}', style: const TextStyle(color: Color(0xFFFFD93D), fontSize: 12, fontWeight: FontWeight.bold)),
+                  Text(l10n.miClusterRoadmapMonth('${item['month']}'), style: const TextStyle(color: Color(0xFFFFD93D), fontSize: 12, fontWeight: FontWeight.bold)),
                 if (item['focus'] != null)
                   Text(item['focus'].toString(), style: const TextStyle(color: Colors.white, fontSize: 13)),
               ],

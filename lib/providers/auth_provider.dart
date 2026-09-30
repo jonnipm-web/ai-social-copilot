@@ -4,7 +4,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/diagnostics/diagnostic_models.dart';
 import '../data/services/auth_service.dart';
 import 'diagnostic_session_provider.dart';
+import 'ive_memory_provider.dart';
+import 'ive_session_isolation.dart';
 import 'profile_provider.dart';
+import 'project_provider.dart';
 import 'quota_provider.dart';
 
 final authServiceProvider = Provider<AuthService>((_) => AuthService());
@@ -44,9 +47,38 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
   // still closed here for the same reason currentProfileProvider already
   // is: a second user signing in within the same tab, no reload, must
   // never see the first user's cached quota.
+  //
+  // INSIGHTVALUES-V1-LAUNCH-MACRO-13 continuation (V1 acceptance testing,
+  // reproduced live: an admin session logging out and a Free test account
+  // logging back in on the same tab, no reload, briefly showed the admin's
+  // real project names as Knowledge Vault filter tabs) — projectsNotifierProvider
+  // is the one AsyncNotifierProvider in this app that is NOT autoDispose (see
+  // its own "FONTE ÚNICA DE VERDADE" comment in project_provider.dart), so it
+  // was never covered by this sweep even though it is exactly as user-scoped
+  // as the two providers above. Invalidating it here forces the next read,
+  // for whoever is signed in next, to refetch from Supabase instead of
+  // serving the outgoing user's cached project list.
   void _invalidateProfile() {
     _ref.invalidate(currentProfileProvider);
     _ref.invalidate(currentQuotaProvider);
+    _ref.invalidate(projectsNotifierProvider);
+  }
+
+  // IVE-INTELLIGENCE-CORE-01 (IVE-F01) — after a successful sign-in, bind the
+  // IVE's device-local state to the user who is now signed in; if it
+  // belonged to someone else it is wiped (transcripts, capability cache,
+  // project context, device memory). Best effort: never blocks sign-in.
+  Future<void> _bindIveToCurrentUser() async {
+    if (state.hasError) return;
+    try {
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId == null) return;
+      await bindIveSessionToUser(
+        userId: userId,
+        invalidate: _ref.invalidate,
+        memory: _ref.read(iveMemoryProvider.notifier),
+      );
+    } catch (_) {}
   }
 
   // IVE-COMMERCIAL-OBSERVABILITY-07A — AUTH category (mission section 04:
@@ -75,6 +107,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
     );
     _logAuth('sign_in', success: !state.hasError, method: 'password');
     _invalidateProfile();
+    await _bindIveToCurrentUser();
   }
 
   Future<void> signUp({
@@ -87,6 +120,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
     );
     _logAuth('sign_up', success: !state.hasError, method: 'password');
     _invalidateProfile();
+    await _bindIveToCurrentUser();
   }
 
   Future<void> signInWithGoogle() async {
@@ -94,6 +128,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
     state = await AsyncValue.guard(_service.signInWithGoogle);
     _logAuth('sign_in', success: !state.hasError, method: 'google');
     _invalidateProfile();
+    await _bindIveToCurrentUser();
   }
 
   Future<void> signOut() async {
@@ -117,6 +152,13 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
     // force that here when nothing about the auth state actually changed).
     if (!state.hasError) {
       _ref.read(diagnosticSessionProvider.notifier).reset();
+      // IVE-INTELLIGENCE-CORE-01 (IVE-F01) — the outgoing user's IVE
+      // conversation, capability cache, project context and device-local
+      // memory must not reach whoever signs in next on this device.
+      await resetIveSessionState(
+        invalidate: _ref.invalidate,
+        memory: _ref.read(iveMemoryProvider.notifier),
+      );
     }
   }
 }

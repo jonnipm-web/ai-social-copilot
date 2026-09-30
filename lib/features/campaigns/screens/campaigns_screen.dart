@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/ai_enum_labels.dart';
 import '../../../data/models/campaign.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/campaign_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 
@@ -12,6 +14,7 @@ class CampaignsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final campaignsAsync = ref.watch(campaignsProvider);
 
     return Scaffold(
@@ -30,22 +33,22 @@ class CampaignsScreen extends ConsumerWidget {
         ),
         backgroundColor: const Color(0xFF0F0F1A),
         foregroundColor: Colors.white,
-        title: const Text(
-          'Campanhas',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        title: Text(
+          l10n.campaignsTitle,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
             onPressed: () => ref.invalidate(campaignsProvider),
-            tooltip: 'Atualizar',
+            tooltip: l10n.campaignsRefreshTooltip,
           ),
         ],
       ),
       body: campaignsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
-          child: Text('Erro: $e',
+          child: Text(l10n.commonError,
               style: const TextStyle(color: Colors.white70)),
         ),
         data: (campaigns) => campaigns.isEmpty
@@ -65,6 +68,7 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -74,18 +78,18 @@ class _EmptyState extends StatelessWidget {
             const Icon(Icons.campaign_rounded,
                 size: 72, color: Color(0xFF00BCD4)),
             const SizedBox(height: 16),
-            const Text(
-              'Nenhuma campanha',
-              style: TextStyle(
+            Text(
+              l10n.campaignsEmpty,
+              style: const TextStyle(
                   color: Colors.white,
                   fontSize: 20,
                   fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Acesse o Cofre de Conhecimento, analise um item e crie sua primeira campanha com IA.',
+            Text(
+              l10n.campaignsEmptyHint,
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white54, fontSize: 14),
+              style: const TextStyle(color: Colors.white54, fontSize: 14),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
@@ -96,7 +100,7 @@ class _EmptyState extends StatelessWidget {
                     horizontal: 24, vertical: 12),
               ),
               icon: const Icon(Icons.auto_stories_rounded),
-              label: const Text('Ir ao Cofre'),
+              label: Text(l10n.campaignsGoToVault),
               onPressed: onTap,
             ),
           ],
@@ -144,6 +148,7 @@ class _CampaignCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final color = _objColor(campaign.objective);
 
     return Card(
@@ -181,7 +186,7 @@ class _CampaignCard extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: color.withOpacity(0.4)),
                     ),
-                    child: Text(campaign.objective,
+                    child: Text(campaignObjectiveLabel(campaign.objective, l10n),
                         style: TextStyle(
                             color: color,
                             fontSize: 10,
@@ -205,7 +210,7 @@ class _CampaignCard extends ConsumerWidget {
                   const Icon(Icons.calendar_today_rounded,
                       color: Colors.white24, size: 12),
                   const SizedBox(width: 4),
-                  Text('${campaign.durationDays} dias',
+                  Text(l10n.campaignsDurationDays(campaign.durationDays),
                       style: const TextStyle(
                           color: Colors.white38, fontSize: 11)),
                   const SizedBox(width: 12),
@@ -225,22 +230,22 @@ class _CampaignCard extends ConsumerWidget {
                         context: context,
                         builder: (_) => AlertDialog(
                           backgroundColor: const Color(0xFF1A1A2E),
-                          title: const Text('Excluir campanha?',
-                              style: TextStyle(color: Colors.white)),
+                          title: Text(l10n.campaignsDeleteTitle,
+                              style: const TextStyle(color: Colors.white)),
                           content: Text(
-                            'A campanha "${campaign.title}" será removida.',
+                            l10n.campaignsDeleteConfirm(campaign.title),
                             style: const TextStyle(color: Colors.white70),
                           ),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(context, false),
-                              child: const Text('Cancelar',
-                                  style: TextStyle(color: Colors.white54)),
+                              child: Text(l10n.commonCancel,
+                                  style: const TextStyle(color: Colors.white54)),
                             ),
                             TextButton(
                               onPressed: () => Navigator.pop(context, true),
-                              child: const Text('Excluir',
-                                  style: TextStyle(
+                              child: Text(l10n.commonDelete,
+                                  style: const TextStyle(
                                       color: Color(0xFFF44336))),
                             ),
                           ],

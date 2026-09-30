@@ -1,8 +1,12 @@
+import 'dart:ui' show Locale;
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/knowledge_analysis.dart';
 import '../models/knowledge_item.dart';
 import '../models/persona_training.dart';
+import '../../core/utils/app_exceptions.dart';
+import '../../l10n/app_localizations.dart';
 
 class PersonaTrainingService {
   final _client = Supabase.instance.client;
@@ -34,14 +38,20 @@ class PersonaTrainingService {
     required String personaId,
     required KnowledgeItem item,
     required KnowledgeAnalysis analysis,
+    /// R16 — the user's CURRENT UI-language localizations; the summary is
+    /// persisted. Falls back to PT when omitted.
+    AppLocalizations? l10n,
   }) async {
     final uid = _client.auth.currentUser?.id;
-    if (uid == null) throw Exception('Usuário não autenticado.');
+    if (uid == null) throw const NotAuthenticatedException();
 
     final pt = analysis.personaTraining;
-    final summary = 'Treinamento com: ${item.title}. '
-        'Tom: ${pt['tone'] ?? '-'}. '
-        'Estilo: ${pt['communication_style'] ?? '-'}.';
+    final t = l10n ?? lookupAppLocalizations(const Locale('pt'));
+    final summary = t.uxPersonaTrainingSummary(
+      item.title,
+      '${pt['tone'] ?? '-'}',
+      '${pt['communication_style'] ?? '-'}',
+    );
 
     List<String> vocab = [];
     if (pt['vocabulary'] is List) {

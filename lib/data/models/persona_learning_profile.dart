@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import '../../l10n/app_localizations.dart';
 import 'persona.dart';
 import 'persona_training.dart';
 
@@ -26,12 +27,12 @@ class PersonaLearningProfile {
     required this.hasRecentTraining,
   });
 
-  String get learningLabel {
-    if (learningScore >= 80) return 'Especialista';
-    if (learningScore >= 60) return 'Avançado';
-    if (learningScore >= 40) return 'Intermediário';
-    if (learningScore >= 20) return 'Iniciante';
-    return 'Sem Treinamento';
+  String learningLabel(AppLocalizations l10n) {
+    if (learningScore >= 80) return l10n.ctxLearningExpert;
+    if (learningScore >= 60) return l10n.ctxLearningAdvanced;
+    if (learningScore >= 40) return l10n.ctxLearningIntermediate;
+    if (learningScore >= 20) return l10n.ctxLearningBeginner;
+    return l10n.ctxLearningUntrained;
   }
 
   String get learningEmoji {

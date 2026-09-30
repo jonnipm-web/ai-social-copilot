@@ -32,11 +32,19 @@ import '../../providers/profile_provider.dart';
 List<ModuleDefinition> visibleDrawerModules({
   required bool isAdmin,
   required bool isPro,
+  bool isPremium = false,
+  // Codex Tranche 2 audit, P3 — injectable so tests can exercise this real
+  // function (not just ModuleDefinition.visibleFor in isolation) against a
+  // synthetic ModulePlan.premium entry, since kModuleRegistry itself has
+  // none yet. Production code never passes this; it always defaults to the
+  // real registry.
+  List<ModuleDefinition> modules = kModuleRegistry,
 }) {
-  return kModuleRegistry.where((m) {
+  return modules.where((m) {
     if (m.route == null) return false;
     if (m.route == AppConstants.routeUpgrade) return false;
-    return m.visibleFor(isAdmin: isAdmin, isPro: isPro) && m.commercialEnabled;
+    return m.visibleFor(isAdmin: isAdmin, isPro: isPro, isPremium: isPremium) &&
+        m.commercialEnabled;
   }).toList();
 }
 
@@ -67,14 +75,15 @@ class _DrawerContent extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final t = AppLocalizations.of(context)!;
     final isEnglish = Localizations.localeOf(context).languageCode == 'en';
-    final isAdmin = profile?.isAdmin ?? false;
-    final isPro   = profile?.isPro   ?? false;
+    final isAdmin   = profile?.isAdmin   ?? false;
+    final isPro     = profile?.isPro     ?? false;
+    final isPremium = profile?.isPremium ?? false;
     final current = GoRouterState.of(context).fullPath ?? '';
 
     // Navegação comercial: só módulos habilitados para o plano do usuário,
     // com rota própria. Ver visibleDrawerModules() acima para a razão de
     // routeUpgrade ser excluído deste loop.
-    final visibleModules = visibleDrawerModules(isAdmin: false, isPro: isPro);
+    final visibleModules = visibleDrawerModules(isAdmin: false, isPro: isPro, isPremium: isPremium);
 
     return SafeArea(
       child: Column(
@@ -243,7 +252,10 @@ class _DrawerContent extends ConsumerWidget {
 // only makes its silent-fallback behavior testable.
 IconData drawerIconFor(String moduleId) {
   const icons = <String, IconData>{
-    'command-center': Icons.hub_rounded,
+    // INSIGHTVALUES-COMMERCIAL-MACRO-01 -- 'command-center' entry removed
+    // (Codex audit P3): that module has route: null since the dashboard
+    // consolidation, so it never reaches this map; drawer_test.dart's own
+    // fallback-icon test still covers any truly-unmapped moduleId.
     'business-dashboard': Icons.dashboard_rounded,
     'projects': Icons.rocket_launch_rounded,
     'knowledge-vault': Icons.auto_stories_rounded,
@@ -251,6 +263,20 @@ IconData drawerIconFor(String moduleId) {
     'market-intelligence': Icons.analytics_rounded,
     'opportunity-lab': Icons.science_rounded,
     'action-engine': Icons.bolt_rounded,
+    // INSIGHTVALUES-COMMERCIAL-MACRO-01 Tranche 2 -- Growth Intelligence
+    // commercially launched (commercialEnabled:true, ModulePlan.pro); each
+    // now needs a dedicated icon per this map's own coverage contract.
+    'improve-post': Icons.auto_fix_high_rounded,
+    'personas': Icons.groups_2_rounded,
+    'content-library': Icons.perm_media_rounded,
+    'calendar': Icons.calendar_month_rounded,
+    'campaigns': Icons.campaign_rounded,
+    'performance': Icons.insights_rounded,
+    'roi-tracker': Icons.trending_up_rounded,
+    // INSIGHTVALUES-FINANCIAL-PRODUCT-MACRO-08 -- Strategy Lab commercially
+    // enabled (COMMERCIAL/free); dedicated icon per this map's own coverage
+    // contract (app_drawer_test.dart's drawerIconFor coverage check).
+    'strategy-builder': Icons.candlestick_chart_rounded,
   };
   return icons[moduleId] ?? Icons.circle_outlined;
 }

@@ -1,0 +1,390 @@
+// IV-IMPACT-FOUNDATION-01 — regression tests for Codex Gate 1 findings
+// (G1-01..G1-06) and Claude's own review findings (C-01..C-03).
+import { assert, assertEquals, assertNotEquals } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
+import { EVALUATED_AT, FIXTURE_PROVIDERS, goldenCases, hash, providerFor, SOURCES } from './fixtures/golden.ts';
+import { type Actor, Investigation } from './investigation.ts';
+import { buildImpactEvent } from './observability.ts';
+import { parseIsoMs } from './provenance.ts';
+import { deriveIndicators } from './risk_indicators.ts';
+import { checkNarrative, findVerdictLanguage, hasMixedScript, statusesMentioned } from './safety.ts';
+import { authorityFor } from './source_authority.ts';
+import type { Claim, EvidenceItem, Source, SourceStatus } from './types.ts';
+import { verifyClaim, type VerificationContext } from './verification.ts';
+
+const CTX: VerificationContext = { evaluatedAt: EVALUATED_AT, subjectIdentity: 'CONFIRMED', trustedProviders: FIXTURE_PROVIDERS };
+const TRUSTED = new Map(FIXTURE_PROVIDERS.map((p) => [p.id, p]));
+const ORG = 'org-hopebridge';
+const cases = await goldenCases();
+
+const finClaim: Claim = {
+  id: 'c1', investigationId: 'inv-1', kind: 'FINANCIAL', text: 'Our 2025 accounts were audited.',
+  subjectOrganizationId: ORG, sourceId: SOURCES.hbWebsite.id, extractedAt: '2026-09-02T00:00:00Z', origin: 'MANUAL',
+};
+const ev = (id: string, sourceId: string, over: Partial<EvidenceItem> = {}): EvidenceItem => ({
+  id, investigationId: 'inv-1', claimId: 'c1', sourceId, aboutOrganizationId: ORG, relationship: 'SUPPORTS',
+  relationshipBasis: 'HUMAN_ASSESSED', personalData: 'NONE', addedAt: '2026-09-02T00:00:00Z', ...over,
+});
+async function run(c: Claim, evidence: EvidenceItem[], sources: Source[], ctx: VerificationContext = CTX) {
+  const r = await verifyClaim({ claim: c, evidence, sources: [SOURCES.hbWebsite, ...sources] }, ctx);
+  if (!r.ok) throw new Error(`${r.error.code}: ${r.error.message}`);
+  return r.value;
+}
+async function code(c: Claim, e: EvidenceItem[], s: Source[]) {
+  const r = await verifyClaim({ claim: c, evidence: e, sources: [SOURCES.hbWebsite, ...s] }, CTX);
+  return r.ok ? 'OK' : r.error.code;
+}
+
+// ── G1-01 forgeable provenance ─────────────────────────────────────────────
+
+Deno.test('G1-01a a "fake audit" typed by an analyst or uploaded by a user is never independent', async () => {
+  const fake: Source = { ...SOURCES.hbAudited, id: 'src-fake-audit', publisher: 'Fake Audit Co', acquisition: { method: 'ANALYST_ENTRY' } };
+  assertEquals(authorityFor(fake, finClaim, TRUSTED), 'CONTEXTUAL');
+  const v = await run(finClaim, [ev('e1', fake.id)], [fake]);
+  assertEquals(v.status, 'UNVERIFIED');
+  assertEquals(deriveIndicators({ results: [v] }).some((i) => i.code === 'AUDITED_ACCOUNTS'), false);
+  const upload: Source = { ...fake, id: 'src-upload', acquisition: { method: 'USER_UPLOAD' } };
+  assertEquals(authorityFor(upload, finClaim, TRUSTED), 'USER_SUBMITTED');
+});
+
+Deno.test('G1-01b a provider may only vouch for its own source type and jurisdiction; unknown providers are untrusted', async () => {
+  const relabelled: Source = { ...SOURCES.hbAudited, id: 'src-relabel', acquisition: providerFor('ORGANIZATION_WEBSITE') };
+  assertEquals(authorityFor(relabelled, finClaim, TRUSTED), 'CONTEXTUAL');
+  const unknown: Source = { ...SOURCES.hbAudited, id: 'src-unknown', acquisition: { method: 'PROVIDER', providerId: 'attacker-provider' } };
+  assertEquals(authorityFor(unknown, finClaim, TRUSTED), 'CONTEXTUAL');
+  const otherCountry: Source = { ...SOURCES.registry, id: 'src-xb', jurisdiction: { country: 'XB' } };
+  assertEquals(authorityFor(otherCountry, { ...finClaim, kind: 'LEGAL_REGISTRATION' }, TRUSTED), 'CONTEXTUAL');
+  // No trusted providers at all → nothing can be independent (fail closed).
+  const none = await run(finClaim, [ev('e1', SOURCES.hbAudited.id)], [SOURCES.hbAudited], { ...CTX, trustedProviders: [] });
+  assertEquals(none.status, 'UNVERIFIED');
+  const trusted = await run(finClaim, [ev('e1', SOURCES.hbAudited.id)], [SOURCES.hbAudited]);
+  assertEquals(trusted.status, 'SUPPORTED');
+});
+
+Deno.test('G1-01c a source without acquisition, or with a missing trustedProviders context, is rejected', async () => {
+  // deno-lint-ignore no-explicit-any
+  const noAcq = { ...SOURCES.hbAudited, acquisition: undefined } as any;
+  assertEquals(await code(finClaim, [], [noAcq]), 'INVALID_SOURCE');
+  // deno-lint-ignore no-explicit-any
+  const r = await verifyClaim({ claim: finClaim, evidence: [], sources: [SOURCES.hbWebsite] }, { evaluatedAt: EVALUATED_AT, subjectIdentity: 'CONFIRMED' } as any);
+  assertEquals(r.ok ? 'OK' : r.error.code, 'INTERNAL_ERROR');
+});
+
+// ── G1-02 future / reversed periods ────────────────────────────────────────
+
+const regClaim: Claim = { ...finClaim, kind: 'LEGAL_REGISTRATION', text: 'We are registered.' };
+
+Deno.test('G1-02a a future observedPeriod.to is rejected; 2020 evidence stays OUTDATED', async () => {
+  const old: Source = { ...SOURCES.registry, id: 'src-reg-2020', retrievedAt: '2020-01-01T00:00:00Z', contentHash: hash('20') };
+  assertEquals(await code(regClaim, [ev('e1', old.id, { observedPeriod: { to: '2099-01-01' } })], [old]), 'INVALID_EVIDENCE');
+  const v = await run(regClaim, [ev('e1', old.id, { observedPeriod: { to: '2020-01-01' } })], [old]);
+  assertEquals(v.status, 'OUTDATED');
+});
+
+Deno.test('G1-02b reversed periods, periods starting after retrieval and impossible dates are rejected', async () => {
+  assertEquals(await code(regClaim, [ev('e1', SOURCES.registry.id, { observedPeriod: { from: '2026-05-01', to: '2026-01-01' } })], [SOURCES.registry]), 'INVALID_EVIDENCE');
+  assertEquals(await code(regClaim, [ev('e1', SOURCES.registry.id, { observedPeriod: { from: '2026-09-10' } })], [SOURCES.registry]), 'INVALID_EVIDENCE');
+  assertEquals(await code({ ...regClaim, period: { from: '2025-12-31', to: '2025-01-01' } }, [], []), 'INVALID_CLAIM');
+  assertEquals(parseIsoMs('2025-02-30'), null);
+  assertEquals(parseIsoMs('2025-13-01'), null);
+  assert(parseIsoMs('2024-02-29') !== null);
+});
+
+// ── G1-03 case / homoglyph bypass of the narrative guards ──────────────────
+
+Deno.test('G1-03a status smuggling is detected case-insensitively and in PT/EN phrasing', async () => {
+  const g = cases.find((c) => c.id === 'G')!;
+  const r = await verifyClaim({ claim: g.claim, evidence: g.evidence, sources: g.sources }, g.ctx);
+  assert(r.ok && r.value.status === 'SUPPORTED');
+  for (const n of ['The claim is contradicted.', 'A alegação foi desmentida.', 'The claim is Inconclusive', 'status: partially supported']) {
+    assertEquals(checkNarrative(n, r.value).ok, false, n);
+  }
+  assertEquals(checkNarrative('Two independent sources support the claim; it is supported.', r.value).ok, true);
+  assertEquals([...statusesMentioned('A alegação não verificada')], ['UNVERIFIED']);
+  assertEquals([...statusesMentioned('partially supported')], ['PARTIALLY_SUPPORTED']);
+});
+
+Deno.test('G1-03b homoglyphs, invisible characters and combining marks cannot hide verdict language', async () => {
+  const f = cases.find((c) => c.id === 'F')!;
+  const r = await verifyClaim({ claim: f.claim, evidence: f.evidence, sources: f.sources }, f.ctx);
+  assert(r.ok);
+  const tricks = [
+    'The organization is a frаud.', //        Cyrillic a
+    'The organization is a fr​aud.', //       zero-width space
+    'The organization is a f́raud.', //       combining acute
+    'The organization is a ѕcam.', //         Cyrillic dze
+    'Eles são corruptοs.', //            Greek omicron
+    'This charity is тrustworthy.', //        Cyrillic te
+  ];
+  for (const t of tricks) {
+    assert(findVerdictLanguage(t).length > 0 || hasMixedScript(t), t);
+    assertEquals(checkNarrative(t, r.value).ok, false, t);
+  }
+  assertEquals(hasMixedScript('Organização Esperança'), false);
+});
+
+// ── G1-04 review binding covers flags / identity / providers ───────────────
+
+Deno.test('G1-04 a human review is invalidated when a source is newly flagged, identity changes or providers change', async () => {
+  const g = cases.find((c) => c.id === 'C')!;
+  const first = await verifyClaim({ claim: g.claim, evidence: g.evidence, sources: g.sources }, g.ctx);
+  assert(first.ok);
+  const review = { reviewedAt: '2026-09-22T00:00:00Z', reviewerRef: 'rev-1', reviewBindingHash: first.value.reviewBindingHash };
+  const same = await verifyClaim({ claim: g.claim, evidence: g.evidence, sources: g.sources }, { ...g.ctx, humanReview: review });
+  assert(same.ok && same.value.reviewState === 'HUMAN_REVIEWED');
+  const variants: VerificationContext[] = [
+    { ...g.ctx, humanReview: review, flaggedSourceIds: [SOURCES.newsSchools.id] },
+    { ...g.ctx, humanReview: review, subjectIdentity: 'PROBABLE' },
+    { ...g.ctx, humanReview: review, trustedProviders: FIXTURE_PROVIDERS.slice(1) },
+  ];
+  for (const ctx of variants) {
+    const r = await verifyClaim({ claim: g.claim, evidence: g.evidence, sources: g.sources }, ctx);
+    assert(r.ok);
+    assertEquals(r.value.reviewState, 'REVIEW_REQUIRED');
+  }
+  // A flag on a source NOT in this evidence set does not re-open review.
+  const unrelated = await verifyClaim({ claim: g.claim, evidence: g.evidence, sources: g.sources }, { ...g.ctx, humanReview: review, flaggedSourceIds: ['src-elsewhere'] });
+  assert(unrelated.ok && unrelated.value.reviewState === 'HUMAN_REVIEWED');
+});
+
+// ── G1-05 unknown enum values fail closed ──────────────────────────────────
+
+Deno.test('G1-05a unknown or prototype-key enum values are rejected everywhere', async () => {
+  for (const status of ['UNKNOWN_STATUS', 'retracted', 'constructor', '__proto__', 'toString']) {
+    assertEquals(await code(finClaim, [], [{ ...SOURCES.govWells, status: status as SourceStatus }]), 'INVALID_SOURCE', status);
+  }
+  for (const type of ['constructor', 'toString', 'AUDIT']) {
+    assertEquals(await code(finClaim, [], [{ ...SOURCES.govWells, type: type as Source['type'] }]), 'INVALID_SOURCE', type);
+  }
+  assertEquals(await code(finClaim, [], [{ ...SOURCES.govWells, retention: 'constructor' as Source['retention'] }]), 'INVALID_SOURCE');
+  assertEquals(await code({ ...finClaim, kind: 'toString' as Claim['kind'] }, [], []), 'INVALID_CLAIM');
+  assertEquals(await code({ ...finClaim, level: '__proto__' as Claim['level'] }, [], []), 'INVALID_CLAIM');
+  assertEquals(await code(finClaim, [ev('e1', SOURCES.govWells.id, { legalStage: 'GUILTY' as EvidenceItem['legalStage'] })], [SOURCES.govWells]), 'INVALID_EVIDENCE');
+});
+
+Deno.test('G1-05b updateSourceStatus refuses unknown statuses', async () => {
+  const owner: Actor = { subjectRef: 'subj-owner', projectIds: [] };
+  const inv = await Investigation.create(owner, { id: 'inv-1', subjectOrganizationId: ORG, createdAt: '2026-09-02T00:00:00Z' });
+  assert(inv.ok);
+  assert((await inv.value.addSource(owner, SOURCES.govWells, EVALUATED_AT)).ok);
+  const r = await inv.value.updateSourceStatus(owner, SOURCES.govWells.id, 'UNKNOWN_STATUS' as SourceStatus, EVALUATED_AT);
+  assertEquals(r.ok ? 'OK' : r.error.code, 'INVALID_SOURCE');
+});
+
+// ── G1-06 hash covers all provenance fields ────────────────────────────────
+
+Deno.test('G1-06 evidenceSetHash changes when jurisdiction, uri, retention or acquisition change', async () => {
+  const base = await run(finClaim, [ev('e1', SOURCES.hbAudited.id)], [SOURCES.hbAudited]);
+  const changes: Partial<Source>[] = [
+    { jurisdiction: { country: 'XA' } },
+    { uri: 'https://auditor.example/report-2025.pdf' },
+    { retention: 'HASH_ONLY' },
+    { acquisition: { method: 'ANALYST_ENTRY' } },
+  ];
+  for (const c of changes) {
+    const v = await run(finClaim, [ev('e1', SOURCES.hbAudited.id)], [{ ...SOURCES.hbAudited, ...c }]);
+    assertNotEquals(v.evidenceSetHash, base.evidenceSetHash, JSON.stringify(c));
+  }
+});
+
+// ── Codex Final findings ───────────────────────────────────────────────────
+
+Deno.test('CF-01 an investigation only accepts claims about its own subject', async () => {
+  const owner: Actor = { subjectRef: 'subj-owner', projectIds: [] };
+  const inv = await Investigation.create(owner, { id: 'inv-1', subjectOrganizationId: ORG, createdAt: '2026-09-02T00:00:00Z' });
+  assert(inv.ok);
+  assert((await inv.value.addSource(owner, SOURCES.hbWebsite, EVALUATED_AT)).ok);
+  const r = await inv.value.addClaim(owner, { ...finClaim, subjectOrganizationId: 'org-other' }, EVALUATED_AT);
+  assertEquals(r.ok ? 'OK' : r.error.code, 'CROSS_INVESTIGATION_DENIED');
+  assert((await inv.value.addClaim(owner, finClaim, EVALUATED_AT)).ok);
+});
+
+Deno.test('CF-02 an observed period extending past retrieval is rejected', async () => {
+  const src: Source = { ...SOURCES.govWells, id: 'src-gov-mid', retrievedAt: '2026-06-01T00:00:00Z', contentHash: hash('26') };
+  const q = { metric: 'wells_built', value: 20, unit: 'count' };
+  const c: Claim = { ...finClaim, kind: 'IMPACT_OUTPUT', quantity: q, period: { from: '2026-01-01', to: '2026-12-31' }, text: '20 wells in 2026.' };
+  assertEquals(await code(c, [ev('e1', src.id, { relationshipBasis: 'STRUCTURED_MATCH', reportedQuantity: q, observedPeriod: { from: '2026-01-01', to: '2026-12-31' } })], [src]), 'INVALID_EVIDENCE');
+  const ok = await run(c, [ev('e1', src.id, { relationshipBasis: 'STRUCTURED_MATCH', reportedQuantity: q, observedPeriod: { from: '2026-01-01', to: '2026-06-01' } })], [src]);
+  assertEquals(ok.status, 'SUPPORTED');
+});
+
+Deno.test('CF-03 jurisdiction-bound sources without a jurisdiction are never independent', () => {
+  for (const type of ['OFFICIAL_REGISTRY', 'REGULATOR', 'COURT_RECORD', 'GOVERNMENT_RECORD'] as const) {
+    const s: Source = { ...SOURCES.registry, id: `src-${type}`, type, acquisition: providerFor(type), jurisdiction: undefined, retention: 'EXCERPT_AND_HASH' };
+    const kind = type === 'GOVERNMENT_RECORD' ? 'IMPACT_OUTPUT' : 'REGULATORY_STATUS';
+    assertEquals(authorityFor(s, { ...finClaim, kind }, TRUSTED), 'CONTEXTUAL', type);
+  }
+  assertEquals(authorityFor(SOURCES.registry, regClaim, TRUSTED), 'AUTHORITATIVE');
+});
+
+const q = (v: number) => ({ metric: 'wells_built', value: v, unit: 'count' });
+const wellsClaim: Claim = { ...finClaim, kind: 'IMPACT_OUTPUT', quantity: q(20), text: '20 wells.' };
+const sx = (v: number) => ({ relationshipBasis: 'STRUCTURED_MATCH' as const, reportedQuantity: q(v) });
+const news = (id: string, publisher: string, over: Partial<Source> = {}): Source => ({
+  id, type: 'NEWS', newsGenre: 'REPORTING', publisher, acquisition: providerFor('NEWS'), retrievedAt: '2026-09-01T00:00:00Z',
+  status: 'ACTIVE', retention: 'EXCERPT_AND_HASH', contentHash: hash(id.replace(/[^a-f0-9]/g, '') + 'cd'), ...over,
+});
+
+Deno.test('CF-04 syndicated copies never add an independent voice', async () => {
+  const wire = news('n1', 'Wire Service');
+  const copy = news('n2', 'Outlet', { syndicatedFrom: 'Wire Service' });
+  const both = await run(wellsClaim, [ev('e1', 'n1', sx(20)), ev('e2', 'n2', sx(20))], [wire, copy]);
+  assertEquals(both.status, 'SUPPORTED');
+  assertEquals(both.sufficiency, 'INDEPENDENT_SUPPORT');
+  // copy of a copy (FV2-03) is still the original's voice
+  const copy2 = news('n3', 'Aggregator', { syndicatedFrom: 'Outlet' });
+  const chain = await run(wellsClaim, [ev('e1', 'n1', sx(20)), ev('e2', 'n2', sx(20)), ev('e3', 'n3', sx(21))], [wire, copy, copy2]);
+  assertEquals(chain.sufficiency, 'INDEPENDENT_SUPPORT');
+  // cycles terminate
+  const x = news('nx', 'X', { syndicatedFrom: 'Y' });
+  const y = news('ny', 'Y', { syndicatedFrom: 'X' });
+  const cyc = await run(wellsClaim, [ev('e1', 'nx', sx(20)), ev('e2', 'ny', sx(20))], [x, y]);
+  assertEquals(cyc.status, 'SUPPORTED');
+  // FV3-03: a cycle is ONE voice — never MULTI_SOURCE corroboration
+  assertEquals(cyc.sufficiency, 'INDEPENDENT_SUPPORT');
+  assertEquals(deriveIndicators({ results: [cyc] }).some((i) => i.code === 'MULTI_SOURCE_CORROBORATION'), false);
+  // I2: two different publishers are NOT two independent voices unless their
+  // independence is established (UNKNOWN lineage ≠ independent).
+  const indep = await run(wellsClaim, [ev('e1', 'n1', sx(20)), ev('e2', 'nz', sx(20))], [wire, news('nz', 'Other Paper')]);
+  assertEquals(indep.sufficiency, 'INDEPENDENT_SUPPORT');
+  assert(indep.gaps.includes('INDEPENDENCE_NOT_ESTABLISHED'));
+  // Established originals (primary publishers) ARE separate voices, and a
+  // forged label can only MERGE them (lower corroboration), never split them.
+  const gov = (id: string, publisher: string, over: Partial<Source> = {}): Source => ({
+    ...news(id, publisher, over), type: 'GOVERNMENT_RECORD', newsGenre: undefined, acquisition: providerFor('GOVERNMENT_RECORD'), jurisdiction: { country: 'XA' },
+  });
+  // Codex I2G2-06: two records served by the SAME provider share one upstream
+  // origin → one voice (two distinct primary origins → L-06 in registry_intelligence_test.ts).
+  const two = await run(wellsClaim, [ev('e1', 'g1', sx(20)), ev('e2', 'g2', sx(20))], [gov('g1', 'Ministry A'), gov('g2', 'Agency B')]);
+  assertEquals(two.sufficiency, 'INDEPENDENT_SUPPORT');
+  const forged = await run(wellsClaim, [ev('e1', 'g1', sx(20)), ev('e2', 'g2', sx(20))], [gov('g1', 'Ministry A'), gov('g2', 'Agency B', { syndicatedFrom: 'Ministry A' })]);
+  assertEquals(forged.sufficiency, 'INDEPENDENT_SUPPORT');
+  assertEquals(forged.status, 'SUPPORTED');
+  assertEquals(forged.excluded, []);
+});
+
+Deno.test('FV4-01 a chain through a non-counted intermediate source is still one voice', async () => {
+  const a = news('n8', 'Outlet A', { syndicatedFrom: 'Wire B' });
+  const b = news('n9', ' WIRE  b ', { syndicatedFrom: 'Wire C' }); // supplied, no evidence item
+  const c = news('na0', 'Wire C');
+  for (const order of [[a, b, c], [c, b, a], [b, c, a]]) {
+    const v = await run(wellsClaim, [ev('e8', 'n8', sx(20)), ev('e10', 'na0', sx(20))], order);
+    assertEquals(v.status, 'SUPPORTED');
+    assertEquals(v.sufficiency, 'INDEPENDENT_SUPPORT');
+    assertEquals(deriveIndicators({ results: [v] }).some((i) => i.code === 'MULTI_SOURCE_CORROBORATION'), false);
+  }
+  // the intermediate lineage is part of the evidence-set identity
+  const withB = await run(wellsClaim, [ev('e8', 'n8', sx(20)), ev('e10', 'na0', sx(20))], [a, b, c]);
+  const withoutB = await run(wellsClaim, [ev('e8', 'n8', sx(20)), ev('e10', 'na0', sx(20))], [a, c]);
+  assertNotEquals(withB.evidenceSetHash, withoutB.evidenceSetHash);
+  // cycle through an unreferenced node, and a self-link, are harmless
+  const x = news('nb1', 'X', { syndicatedFrom: 'Hub' });
+  const hub = news('nb2', 'Hub', { syndicatedFrom: 'Y' });
+  const y = news('nb3', 'Y', { syndicatedFrom: 'X' });
+  const self = news('nb4', 'Self', { syndicatedFrom: 'self' });
+  const v = await run(wellsClaim, [ev('e11', 'nb1', sx(20)), ev('e13', 'nb3', sx(20)), ev('e14', 'nb4', sx(20))], [x, hub, y, self]);
+  // {X,Hub,Y} + {Self}: two lineage components, but neither is an established
+  // original → one voice at most (I2).
+  assertEquals(v.sufficiency, 'INDEPENDENT_SUPPORT');
+});
+
+Deno.test('FV3-02 publisher-voice resolution is independent of input order (all permutations)', async () => {
+  const s1 = news('n4', 'Outlet', { syndicatedFrom: 'Wire A' });
+  const s2 = news('n5', 'Outlet', { syndicatedFrom: 'Wire B' });
+  const s3 = news('n6', 'Aggregator', { syndicatedFrom: 'Outlet' });
+  const s4 = news('n7', 'Wire B');
+  const srcs = [s1, s2, s3, s4];
+  const evs = [ev('e4', 'n4', sx(20)), ev('e5', 'n5', sx(20)), ev('e6', 'n6', sx(21)), ev('e7', 'n7', sx(0))];
+  const perms = <T>(xs: T[]): T[][] => xs.length <= 1 ? [xs] : xs.flatMap((x, i) => perms([...xs.slice(0, i), ...xs.slice(i + 1)]).map((p) => [x, ...p]));
+  const seen = new Set<string>();
+  for (const ps of perms(srcs)) {
+    for (const pe of [evs, [...evs].reverse()]) {
+      const v = await run(wellsClaim, pe, ps);
+      seen.add(JSON.stringify([v.resultId, v.status, v.sufficiency, v.conflicts.map((c) => c.basis), deriveIndicators({ results: [v] }).map((i) => i.code)]));
+    }
+  }
+  assertEquals(seen.size, 1);
+});
+
+Deno.test('FV2-02 a forged syndicatedFrom cannot suppress an opposing report (it stays a visible conflict)', async () => {
+  const a = news('na', 'Publisher A');
+  const b = news('nb', 'Publisher B', { syndicatedFrom: 'Publisher A' });
+  const v = await run(wellsClaim, [ev('e1', 'na', sx(20)), ev('e2', 'nb', sx(0))], [a, b]);
+  assertEquals(v.status, 'INCONCLUSIVE');
+  assertEquals(v.excluded, []);
+  assertEquals(v.conflicts.length, 1);
+  assertEquals(v.reviewState, 'REVIEW_REQUIRED');
+  // FV3-01: the forged label cannot reclassify a cross-publisher conflict —
+  // the concern stays visible.
+  assertEquals(v.conflicts[0].basis, 'INDEPENDENT_SOURCES');
+  assert(deriveIndicators({ results: [v] }).some((i) => i.code === 'CONFLICTING_CLAIMS'));
+  // and the reverse direction cannot manufacture a contradiction
+  const r = await run(wellsClaim, [ev('e1', 'na', sx(0)), ev('e2', 'nb', sx(20))], [a, b]);
+  assertNotEquals(r.status, 'CONTRADICTED');
+});
+
+Deno.test('FV-01 distinct reports from the same publisher are never collapsed: a disagreement stays a recorded conflict', async () => {
+  const a = news('na', 'Same Outlet', { publishedAt: '2025-04-01T00:00:00Z' });
+  const b = news('nb', 'Same Outlet', { publishedAt: '2025-05-01T00:00:00Z' });
+  const v = await run(wellsClaim, [ev('e1', 'na', sx(20)), ev('e2', 'nb', sx(0))], [a, b]);
+  assertEquals(v.status, 'INCONCLUSIVE');
+  assertEquals(v.conflicts.length, 1);
+  assertEquals(v.conflicts[0].basis, 'SAME_PUBLISHER');
+  assertEquals(v.excluded, []);
+  const ind = deriveIndicators({ results: [v] });
+  assertEquals(ind.filter((i) => i.polarity === 'CONCERN'), []);
+  assert(ind.some((i) => i.code === 'INCONSISTENT_PUBLISHER_REPORTING'));
+  const agree = await run(wellsClaim, [ev('e1', 'na', sx(20)), ev('e2', 'nb', sx(22))], [a, b]);
+  assertEquals(agree.sufficiency, 'INDEPENDENT_SUPPORT');
+});
+
+Deno.test('FV2-01 corrections go through the audited source-status path, not a free lineage pointer', async () => {
+  const a = news('na', 'Wire Service');
+  const corrected = await run(wellsClaim, [ev('e1', 'na', sx(20))], [{ ...a, status: 'UPDATED' }]);
+  assertEquals(corrected.excluded[0].reason, 'SOURCE_CHANGED');
+  // an unknown lineage field has no effect on the result
+  // deno-lint-ignore no-explicit-any
+  const smuggled = { ...news('nb', 'Other'), supersedesSourceId: 'na' } as any;
+  const v = await run(wellsClaim, [ev('e1', 'na', sx(20)), ev('e2', 'nb', sx(20))], [a, smuggled]);
+  assertEquals(v.excluded, []);
+  assertEquals(v.sufficiency, 'INDEPENDENT_SUPPORT'); // I2: unestablished news = one voice
+});
+
+Deno.test('CF-05 dispute kinds, resolutions and timestamps are validated at runtime', async () => {
+  const owner: Actor = { subjectRef: 'subj-owner', projectIds: [] };
+  const inv = await Investigation.create(owner, { id: 'inv-1', subjectOrganizationId: ORG, createdAt: '2026-09-02T00:00:00Z' });
+  assert(inv.ok);
+  const w = inv.value;
+  assert((await w.addSource(owner, SOURCES.hbWebsite, EVALUATED_AT)).ok);
+  assert((await w.addClaim(owner, finClaim, EVALUATED_AT)).ok);
+  const bad = [
+    { id: 'd1', claimId: 'c1', kind: 'UNKNOWN_KIND', openedAt: EVALUATED_AT, submittedEvidenceIds: [] },
+    { id: 'd2', claimId: 'c1', kind: 'constructor', openedAt: EVALUATED_AT, submittedEvidenceIds: [] },
+    { id: 'd3', claimId: 'c1', kind: 'ORGANIZATION_RESPONSE', openedAt: 'not-a-date', submittedEvidenceIds: [] },
+  ];
+  // deno-lint-ignore no-explicit-any
+  for (const d of bad) assertEquals((await w.openDispute(owner, d as any)).ok, false, d.id);
+  assertEquals((await w.openDispute(owner, { id: 'd9', claimId: 'c1', kind: 'ORGANIZATION_RESPONSE', openedAt: EVALUATED_AT, submittedEvidenceIds: ['ev-of-another-claim'] })).ok, false);
+  assert((await w.openDispute(owner, { id: 'd4', claimId: 'c1', kind: 'ORGANIZATION_RESPONSE', openedAt: EVALUATED_AT, submittedEvidenceIds: [] })).ok);
+  // deno-lint-ignore no-explicit-any
+  assertEquals((await w.resolveDispute(owner, 'd4', 'UNKNOWN_RESOLUTION' as any, EVALUATED_AT)).ok, false);
+  assertEquals((await w.resolveDispute(owner, 'd4', 'CORRECTED', 'yesterday')).ok, false);
+  assert((await w.resolveDispute(owner, 'd4', 'CORRECTED', EVALUATED_AT)).ok);
+});
+
+// ── Claude review findings ─────────────────────────────────────────────────
+
+Deno.test('C-01 an organization disagreeing with its own earlier figure is an information gap, not a CONCERN', async () => {
+  const q = (v: number) => ({ metric: 'wells_built', value: v, unit: 'count' });
+  const c: Claim = { ...finClaim, kind: 'IMPACT_OUTPUT', quantity: q(20), text: 'We built 20 wells.' };
+  const v = await run(c, [ev('e1', SOURCES.hbAnnualReport.id, { relationshipBasis: 'STRUCTURED_MATCH', reportedQuantity: q(18) })], [SOURCES.hbAnnualReport]);
+  assertEquals(v.conflicts[0].basis, 'SELF_REPORTED_ONLY');
+  const ind = deriveIndicators({ results: [v] });
+  assertEquals(ind.filter((i) => i.polarity === 'CONCERN'), []);
+  assert(ind.some((i) => i.code === 'INCONSISTENT_SELF_REPORTING' && i.polarity === 'INFORMATION_GAP'));
+});
+
+Deno.test('C-02 observability refuses bare JWTs and prototype-key field names', () => {
+  assertEquals(buildImpactEvent({ event: 'x', investigation_id: 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.sig' }), null);
+  assertEquals(buildImpactEvent({ event: 'x', constructor: 'abc' }), null);
+  assertEquals(buildImpactEvent({ event: 'x', toString: 'abc' }), null);
+});

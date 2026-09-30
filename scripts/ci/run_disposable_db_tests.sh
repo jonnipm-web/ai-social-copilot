@@ -1,0 +1,548 @@
+#!/usr/bin/env bash
+# Disposable-database SQL tests — INSIGHTVALUES-MODULE-FOUNDATION-AND-ENTITLEMENT-02.
+#
+# Creates a throwaway database on a LOCAL PostgreSQL, applies the Supabase
+# stubs and EVERY migration in order, re-applies the newest migration to
+# prove idempotency, then runs the RLS test files. Refuses to run against
+# any non-local host, so it can never touch a real Supabase project.
+#
+# Env: PGHOST (127.0.0.1|localhost), PGPORT, PGUSER, optional PSQL (path).
+set -euo pipefail
+
+PSQL="${PSQL:-psql}"
+# Migrations are UTF-8 (function bodies carry non-ASCII comments): never let the
+# client encoding default to the OS code page, or prosrc — and the preflight
+# fingerprints — would differ from a UTF-8 production apply.
+export PGCLIENTENCODING=UTF8
+HOST="${PGHOST:-127.0.0.1}"
+case "$HOST" in
+  127.0.0.1|localhost) ;;
+  *) echo "refusing to run against non-local host '$HOST'" >&2; exit 2 ;;
+esac
+
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+run() { "$PSQL" -h "$HOST" -v ON_ERROR_STOP=1 -q "$@"; }
+
+# Refuse a real Supabase project even when reached through a local address
+# (port forward, hosts entry): those always carry the authenticator role and
+# the storage / supabase_migrations schemas; a disposable cluster never does.
+if [[ "$(run -d postgres -tA -c "SELECT (SELECT count(*) FROM pg_roles WHERE rolname = 'authenticator') + (SELECT count(*) FROM pg_namespace WHERE nspname IN ('storage', 'supabase_migrations'));")" != "0" ]]; then
+  echo "refusing: the target looks like a real Supabase project" >&2; exit 2
+fi
+# F-04: every database/role of this run has a unique identity, is registered
+# only after this run created it, carries an ownership marker, and is dropped
+# on EXIT/INT/TERM only if the marker still matches (scripts/ci/lib_disposable.sh).
+# shellcheck source=lib_disposable.sh
+source "$ROOT/scripts/ci/lib_disposable.sh"
+dispo_init aefci
+dispo_db main; DB="$DISPO_LAST"
+dispo_db upgrade; UPG="$DISPO_LAST"
+
+# Migrations authored in the Module Lab (applied nowhere else yet); every one
+# of them must be idempotent.
+LAB_FROM="20260923000000"
+MEMORY_MIGRATION="20260924000000_ive_memory_governance.sql"
+
+# --single-transaction: a migration that fails anywhere leaves nothing behind
+# (the deploy mode AEF_PRODUCTION_DEPLOYMENT_PRECONDITIONS.md requires).
+apply() { run -d "$1" -1 -c "SET search_path = public, extensions;" -f "$2" >/dev/null; }
+
+run -d "$DB" -f "$ROOT/supabase/tests/support/supabase_stubs.sql"
+for m in $(ls "$ROOT"/supabase/migrations/*.sql | sort); do
+  apply "$DB" "$m"
+  echo "applied $(basename "$m")"
+done
+for m in $(ls "$ROOT"/supabase/migrations/*.sql | sort); do
+  if [[ "$(basename "$m")" > "$LAB_FROM" || "$(basename "$m")" == "$LAB_FROM"* ]]; then
+    apply "$DB" "$m" 2>/dev/null
+    echo "re-applied $(basename "$m") (idempotency)"
+  fi
+done
+
+check() {
+  local db="$1" file="$2" marker="$3" out
+  shift 3
+  out="$(run -d "$db" -tA "$@" -f "$ROOT/supabase/tests/$file")"
+  echo "$out" | tail -1
+  echo "$out" | grep -qx "$marker"
+}
+check "$DB" entitlement_subject_roles_rls_test.sql 'SUBJECT_ROLES_RLS: PASS'
+check "$DB" ive_memory_rls_test.sql 'IVE_MEMORY_RLS: PASS'
+check "$DB" aef_persistence_rls_test.sql 'AEF_PERSISTENCE_RLS: PASS'
+check "$DB" aef_hardening_test.sql 'AEF_HARDENING: PASS'
+# IV-AEF-HARDENING-01: once purge/erasure/reconciliation evidence exists the
+# hardening rollback must refuse (and change nothing).
+if run -d "$DB" -f "$ROOT/supabase/rollbacks/20260926000000_aef_hardening.down.sql" >/dev/null 2>&1; then
+  echo "hardening rollback did not refuse on a database holding hardening evidence" >&2; exit 1
+fi
+run -d "$DB" -tA -c "SELECT 1 FROM public.aef_idempotency_tombstones LIMIT 1;" | grep -qx 1
+echo "AEF_HARDENING_ROLLBACK_REFUSAL: PASS"
+# IV-AEF-PRE-RUNTIME-CLOSURE-01 (P03): sequence contract on the full chain.
+check "$DB" aef_sequence_privileges_test.sql 'AEF_SEQUENCE: PASS' -v phase=after
+
+# The AEF governance service end-to-end against a real database (concurrency,
+# crash recovery, idempotency, forgery, reconciliation, retention, erasure).
+# Needs Deno; skipping must be explicit (AEF_PG_INTEGRATION=skip), never silent.
+dispo_db aef; AEF_PG_DB_NAME="$DISPO_LAST"
+dispo_db rb; RB="$DISPO_LAST"
+dispo_db seqb; SEQB="$DISPO_LAST"
+dispo_db nf; NF="$DISPO_LAST"
+dispo_db pf; PF="$DISPO_LAST"
+dispo_db f3; F3="$DISPO_LAST"
+run -d "$AEF_PG_DB_NAME" -f "$ROOT/supabase/tests/support/supabase_stubs.sql"
+for m in $(ls "$ROOT"/supabase/migrations/*.sql | sort); do apply "$AEF_PG_DB_NAME" "$m"; done
+if [[ "${AEF_PG_INTEGRATION:-run}" == "skip" ]]; then
+  echo "AEF_PG_INTEGRATION: SKIPPED (explicit)"
+else
+  ( cd "$ROOT" && AEF_PG_DB="$AEF_PG_DB_NAME" PGHOST="$HOST" PSQL="$PSQL"       "${DENO:-deno}" test --allow-run --allow-env --allow-read         aef/persistence/governance_pg_test.ts aef/persistence/hardening_pg_test.ts aef/runtime/runtime_pg_test.ts )
+  echo "AEF_PG_INTEGRATION: PASS"
+fi
+
+# Full cycle on a dedicated database: persistence only → v1 data → hardening
+# UP → v1 untouched → hardening DOWN → still verifiable → persistence DOWN
+# (scoped: an unrelated aef_* object survives) → both UP → hardening suite.
+HARDENING_MIGRATION="20260926000000_aef_hardening.sql"
+SEQUENCE_MIGRATION="20260927000000_aef_sequence_privileges.sql"
+run -d "$RB" -f "$ROOT/supabase/tests/support/supabase_stubs.sql"
+for m in $(ls "$ROOT"/supabase/migrations/*.sql | sort); do
+  [[ "$(basename "$m")" == "$HARDENING_MIGRATION" ]] && continue
+  apply "$RB" "$m"
+done
+check "$RB" aef_hardening_legacy_test.sql 'AEF_LEGACY: SEEDED' -v phase=seed
+apply "$RB" "$ROOT/supabase/migrations/$HARDENING_MIGRATION"
+check "$RB" aef_hardening_legacy_test.sql 'AEF_LEGACY: PASS' -v phase=verify
+# Codex HG1-04: an active legal hold (or a registered verifier / changed
+# policy) makes the rollback refuse; nothing changes.
+run -d "$RB" -c "INSERT INTO public.aef_legal_holds (subject_id, reason_code) VALUES ('c7000000-0000-4000-8000-00000000000c', 'AUDIT_HOLD');"
+if run -d "$RB" -f "$ROOT/supabase/rollbacks/20260926000000_aef_hardening.down.sql" >/dev/null 2>&1; then
+  echo "hardening rollback ignored an active legal hold" >&2; exit 1
+fi
+run -d "$RB" -c "DELETE FROM public.aef_legal_holds;"
+run -d "$RB" -f "$ROOT/supabase/rollbacks/20260926000000_aef_hardening.down.sql" >/dev/null
+check "$RB" aef_hardening_legacy_test.sql 'AEF_LEGACY: DOWN_OK' -v phase=down
+run -d "$RB" -c "DROP TABLE public.aef_legacy_probe;"
+run -d "$RB" -c "CREATE FUNCTION public.aef_unrelated_sentinel() RETURNS int LANGUAGE sql AS 'SELECT 1';"
+run -d "$RB" -f "$ROOT/supabase/rollbacks/20260925000000_aef_persistence.down.sql" >/dev/null
+left="$(run -d "$RB" -tA -c "SELECT (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relkind = 'r' AND left(c.relname, 4) = 'aef_') || '|' || (SELECT string_agg(p.proname, ',') FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'public' AND left(p.proname, 4) = 'aef_');")"
+# Codex Final CF-02: every AEF object gone, the unrelated sentinel untouched.
+[[ "$left" == "0|aef_unrelated_sentinel" ]] || { echo "rollback left: $left" >&2; exit 1; }
+run -d "$RB" -c "DROP FUNCTION public.aef_unrelated_sentinel();"
+apply "$RB" "$ROOT/supabase/migrations/20260925000000_aef_persistence.sql"
+apply "$RB" "$ROOT/supabase/migrations/$HARDENING_MIGRATION"
+apply "$RB" "$ROOT/supabase/migrations/$SEQUENCE_MIGRATION"
+check "$RB" aef_hardening_test.sql 'AEF_HARDENING: PASS'
+# 20260927 rollback is a verified no-op (security state kept) and the contract still holds.
+run -d "$RB" -f "$ROOT/supabase/rollbacks/20260927000000_aef_sequence_privileges.down.sql" >/dev/null
+check "$RB" aef_sequence_privileges_test.sql 'AEF_SEQUENCE: PASS' -v phase=after
+apply "$RB" "$ROOT/supabase/migrations/$SEQUENCE_MIGRATION"   # re-UP after DOWN
+check "$RB" aef_sequence_privileges_test.sql 'AEF_SEQUENCE: PASS' -v phase=after
+echo "AEF_ROLLBACK: PASS"
+
+# Legacy-data upgrade (Codex Gate 1 IG1-04): seed with today's schema, then
+# apply the memory migration on top of that data.
+#
+# Macro-11 §8 rehearsal finding: 20260930000000_result_learning.sql adds a
+# CHECK constraint referencing business_memory.origin -- a column that only
+# exists once MEMORY_MIGRATION has run (result_learning's own header
+# documents this: it evolves business_memory rather than creating a second
+# memory system, and was always meant to build directly on top of the
+# memory-governance migration). Skipping MEMORY_MIGRATION alone in this loop
+# while still applying result_learning left origin undefined and broke the
+# ALTER TABLE ADD CONSTRAINT with a raw "column does not exist" error --
+# not a real production ordering bug (Supabase always applies migrations in
+# strict chronological order, so 20260924 precedes 20260930 in any real
+# apply), but this test's own deliberate skip-and-defer scenario needs both
+# migrations deferred together, in their real relative order.
+LEARNING_MIGRATION="20260930000000_result_learning.sql"
+run -d "$UPG" -f "$ROOT/supabase/tests/support/supabase_stubs.sql"
+for m in $(ls "$ROOT"/supabase/migrations/*.sql | sort); do
+  [[ "$(basename "$m")" == "$MEMORY_MIGRATION" || "$(basename "$m")" == "$LEARNING_MIGRATION" ]] && continue
+  apply "$UPG" "$m"
+done
+check "$UPG" ive_memory_legacy_upgrade_test.sql 'IVE_MEMORY_UPGRADE: SEEDED' -v phase=seed
+apply "$UPG" "$ROOT/supabase/migrations/$MEMORY_MIGRATION"
+apply "$UPG" "$ROOT/supabase/migrations/$LEARNING_MIGRATION"
+check "$UPG" ive_memory_legacy_upgrade_test.sql 'IVE_MEMORY_UPGRADE: PASS' -v phase=verify
+
+# ── IV-AEF-PRE-RUNTIME-CLOSURE-01 ───────────────────────────────────────
+# Every migration is applied with --single-transaction (the deploy mode the
+# runbook requires), so a failure anywhere in a file leaves nothing behind.
+q() { run -d "$1" -tA -c "$2"; }
+AEF_SEQ_EXPOSED="SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace CROSS JOIN (VALUES ('anon'), ('authenticated'), ('service_role')) g(r) CROSS JOIN (VALUES ('USAGE'), ('SELECT'), ('UPDATE')) pv(p) WHERE n.nspname = 'public' AND c.relkind = 'S' AND (left(c.relname, 4) = 'aef_' OR EXISTS (SELECT 1 FROM pg_depend d JOIN pg_class t ON t.oid = d.refobjid WHERE d.classid = 'pg_class'::regclass AND d.objid = c.oid AND d.refclassid = 'pg_class'::regclass AND d.deptype IN ('a', 'i') AND left(t.relname, 4) = 'aef_')) AND has_sequence_privilege(g.r, c.oid, pv.p);"
+
+# P03 reproduced. The earlier revision of 20260925 (b38ee2e) did not revoke,
+# so its audit sequence kept the rwU grants it inherited from production's
+# defaults (S01a proves the inheritance on a fresh identity sequence). That
+# pre-fix state is reconstructed with the exact grants inheritance produced,
+# then 20260927 must repair it.
+run -d "$SEQB" -f "$ROOT/supabase/tests/support/supabase_stubs.sql"
+for m in $(ls "$ROOT"/supabase/migrations/*.sql | sort); do
+  [[ "$(basename "$m")" == "$SEQUENCE_MIGRATION" ]] && continue
+  apply "$SEQB" "$m"
+done
+run -d "$SEQB" -c "GRANT ALL ON SEQUENCE public.aef_audit_events_id_seq TO anon, authenticated, service_role;"
+check "$SEQB" aef_sequence_privileges_test.sql 'AEF_SEQUENCE: EXPOSED_BEFORE_FIX' -v phase=before
+apply "$SEQB" "$ROOT/supabase/migrations/$SEQUENCE_MIGRATION"
+# operator repair after a rewind: move the sequence past the highest id (as owner)
+run -d "$SEQB" -c "SELECT setval('public.aef_audit_events_id_seq', (SELECT max(id) FROM public.aef_audit_events));" >/dev/null
+check "$SEQB" aef_sequence_privileges_test.sql 'AEF_SEQUENCE: PASS' -v phase=after
+echo "AEF_SEQUENCE_REPAIR: PASS"
+
+# P05 fail-fast: a Lab migration never applies (not even partially) without
+# the objects it really depends on.
+expect_fail() {  # db file expected-text
+  local out
+  if out="$(run -d "$1" -1 -c "SET search_path = public, extensions;" -f "$2" 2>&1)"; then
+    echo "expected $(basename "$2") to fail on $1" >&2; exit 1
+  fi
+  echo "$out" | grep -qF "$3" || { echo "unexpected failure for $(basename "$2"): $out" >&2; exit 1; }
+}
+catalog_fp() {  # the WHOLE public schema: a failed apply must leave it byte-identical (Codex G2V-04)
+  run -d "$1" -tA -f "$ROOT/scripts/ci/sql/catalog_fingerprint.sql" | tail -1
+}
+count_aef() {  # relations + functions + triggers + policies: a failed apply must leave none behind
+  q "$1" "SELECT (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND left(c.relname, 4) = 'aef_') + (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'public' AND left(p.proname, 4) = 'aef_') + (SELECT count(*) FROM pg_trigger WHERE left(tgname, 4) = 'aef_') + (SELECT count(*) FROM pg_policy WHERE left(polname, 4) = 'aef_');"
+}
+run -d "$NF" -f "$ROOT/supabase/tests/support/supabase_stubs.sql"
+# 20260923 / 20260924 on a database without their dependencies (no baseline)
+before_fp="$(catalog_fp "$NF")"
+expect_fail "$NF" "$ROOT/supabase/migrations/20260923000000_entitlement_subject_roles.sql" "LAB_PRECONDITION (20260923000000_entitlement_subject_roles)"
+[[ "$(q "$NF" "SELECT to_regclass('public.subject_roles') IS NULL;")" == "t" ]] || { echo "partial 20260923 state" >&2; exit 1; }
+expect_fail "$NF" "$ROOT/supabase/migrations/20260924000000_ive_memory_governance.sql" "LAB_PRECONDITION (20260924000000_ive_memory_governance)"
+[[ "$(q "$NF" "SELECT to_regprocedure('public.business_memory_derive_scope()') IS NULL;")" == "t" ]] || { echo "partial 20260924 state" >&2; exit 1; }
+expect_fail "$NF" "$ROOT/supabase/migrations/20260925000000_aef_persistence.sql" "AEF_PRECONDITION (20260925000000_aef_persistence)"
+[[ "$(count_aef "$NF")" == "0" && "$(catalog_fp "$NF")" == "$before_fp" ]] || { echo "partial state after a failed precondition" >&2; exit 1; }
+expect_fail "$NF" "$ROOT/supabase/migrations/$SEQUENCE_MIGRATION" "AEF_PRECONDITION"
+for m in $(ls "$ROOT"/supabase/migrations/*.sql | sort); do
+  [[ "$(basename "$m")" < "20260923000000" ]] && apply "$NF" "$m"
+done
+apply "$NF" "$ROOT/supabase/migrations/20260925000000_aef_persistence.sql"   # needs no subject_roles
+# no exposure window: 20260925 alone already leaves no API-role access to its sequence
+[[ "$(q "$NF" "$AEF_SEQ_EXPOSED")" == "0" ]] || { echo "20260925 alone leaves an AEF sequence exposed" >&2; exit 1; }
+before_fp="$(catalog_fp "$NF")"
+expect_fail "$NF" "$ROOT/supabase/migrations/$HARDENING_MIGRATION" "public.subject_roles"
+[[ "$(catalog_fp "$NF")" == "$before_fp" ]] || { echo "partial hardening state after a failed precondition" >&2; exit 1; }
+run -d "$NF" -c "CREATE TABLE public.subject_roles (subject_type text NOT NULL, subject_id uuid NOT NULL, role text NOT NULL);"
+before_fp="$(catalog_fp "$NF")"
+expect_fail "$NF" "$ROOT/supabase/migrations/$HARDENING_MIGRATION" "public.subject_roles primary key / role CHECK / RLS"
+[[ "$(catalog_fp "$NF")" == "$before_fp" ]] || { echo "partial hardening state (look-alike subject_roles)" >&2; exit 1; }
+run -d "$NF" -c "DROP TABLE public.subject_roles;"
+apply "$NF" "$ROOT/supabase/migrations/20260923000000_entitlement_subject_roles.sql"
+# atomicity: a LATE failure (conflicting function, after the precondition
+# passed and many objects were created) leaves nothing behind either
+run -d "$NF" -c "CREATE FUNCTION public.aef_purge(p jsonb) RETURNS int LANGUAGE sql AS 'SELECT 1';"
+before_fp="$(catalog_fp "$NF")"
+expect_fail "$NF" "$ROOT/supabase/migrations/$HARDENING_MIGRATION" "cannot change return type"
+[[ "$(catalog_fp "$NF")" == "$before_fp" && "$(q "$NF" "SELECT to_regclass('public.aef_retention_policy') IS NULL;")" == "t" ]] \
+  || { echo "partial hardening state after a late failure" >&2; exit 1; }
+run -d "$NF" -c "DROP FUNCTION public.aef_purge(jsonb);"
+apply "$NF" "$ROOT/supabase/migrations/$HARDENING_MIGRATION"
+apply "$NF" "$ROOT/supabase/migrations/$SEQUENCE_MIGRATION"
+echo "AEF_FAIL_FAST: PASS"
+
+# 20260927 postcondition / discovery / rollback verifier (Codex G1-01..03)
+# (a) a non-prefixed sequence owned by an AEF table, exposed by the defaults,
+#     is found and revoked on re-apply
+run -d "$NF" -c "CREATE SEQUENCE public.probe_owned_seq OWNED BY public.aef_legal_holds.reason_code;"
+[[ "$(q "$NF" "SELECT has_sequence_privilege('authenticated', 'public.probe_owned_seq', 'UPDATE');")" == "t" ]] \
+  || { echo "fixture: owned probe sequence did not inherit the defaults" >&2; exit 1; }
+apply "$NF" "$ROOT/supabase/migrations/$SEQUENCE_MIGRATION"
+[[ "$(q "$NF" "$AEF_SEQ_EXPOSED")" == "0" ]] || { echo "20260927 missed a non-prefixed AEF-owned sequence" >&2; exit 1; }
+check "$NF" aef_sequence_privileges_test.sql 'AEF_SEQUENCE: PASS' -v phase=after
+# (b) access through a group role cannot be revoked by the owner: the
+#     postcondition must fail the migration, and the rollback verifier refuse
+dispo_role probe1; PROBE_ROLE="$DISPO_LAST"
+run -d "$NF" -c "GRANT UPDATE ON SEQUENCE public.probe_owned_seq TO $PROBE_ROLE; GRANT $PROBE_ROLE TO anon;"
+expect_fail "$NF" "$ROOT/supabase/migrations/$SEQUENCE_MIGRATION" "AEF_POSTCONDITION: role anon still has UPDATE on sequence probe_owned_seq"
+if run -d "$NF" -f "$ROOT/supabase/rollbacks/20260927000000_aef_sequence_privileges.down.sql" >/dev/null 2>&1; then
+  echo "rollback verifier accepted an exposed sequence (group role)" >&2; exit 1
+fi
+run -d "$NF" -c "REVOKE $PROBE_ROLE FROM anon; DROP SEQUENCE public.probe_owned_seq;"
+run -d postgres -c "DROP ROLE $PROBE_ROLE;"
+# (c) the rollback verifier covers service_role / SELECT / PUBLIC as well
+for g in "SELECT ON SEQUENCE public.aef_audit_events_id_seq TO service_role" "USAGE ON SEQUENCE public.aef_audit_events_id_seq TO PUBLIC"; do
+  run -d "$NF" -c "GRANT $g;"
+  if run -d "$NF" -f "$ROOT/supabase/rollbacks/20260927000000_aef_sequence_privileges.down.sql" >/dev/null 2>&1; then
+    echo "rollback verifier accepted: $g" >&2; exit 1
+  fi
+  run -d "$NF" -c "REVOKE ${g/ TO / FROM };"
+done
+run -d "$NF" -f "$ROOT/supabase/rollbacks/20260927000000_aef_sequence_privileges.down.sql" >/dev/null
+echo "AEF_SEQUENCE_POSTCONDITION: PASS"
+
+# P10 deploy preflight: read-only, fail-closed, against simulated production
+# states (history recorded by NAME, as observed in production).
+PREFLIGHT="$ROOT/supabase/preflight/aef_deploy_preflight.sql"
+expect_preflight() {  # label PASS|FAIL expected-text
+  local out rc=0
+  out="$(run -d "$PF" -f "$PREFLIGHT" 2>&1)" || rc=$?
+  if [[ "$2" == "PASS" ]]; then
+    [[ $rc -eq 0 ]] && echo "$out" | grep -q "AEF_DEPLOY_PREFLIGHT: PASS" && echo "$out" | grep -qF "$3" \
+      || { echo "preflight $1: expected PASS/$3, got: $out" >&2; exit 1; }
+  else
+    [[ $rc -ne 0 ]] && echo "$out" | grep -q "AEF_DEPLOY_PREFLIGHT: FAIL" && echo "$out" | grep -qF "$3" \
+      && ! echo "$out" | grep -q "AEF_DEPLOY_PREFLIGHT: PASS" \
+      || { echo "preflight $1: expected FAIL/$3, got: $out" >&2; exit 1; }
+  fi
+}
+fail_then() {  # label expected-text break-sql fix-sql
+  run -d "$PF" -c "$3" >/dev/null; expect_preflight "$1" FAIL "$2"; run -d "$PF" -c "$4" >/dev/null
+}
+record() { run -d "$PF" -c "INSERT INTO supabase_migrations.schema_migrations (version, name) VALUES ('$1', '$2');" >/dev/null; }
+run -d "$PF" -f "$ROOT/supabase/tests/support/supabase_stubs.sql"
+expect_preflight "no history table" FAIL "no supabase_migrations.schema_migrations history table"
+# a malformed history table (no name column) is an unexpected error → still FAIL, never PASS
+run -d "$PF" -c "CREATE SCHEMA supabase_migrations; CREATE TABLE supabase_migrations.schema_migrations (version text PRIMARY KEY);"
+expect_preflight "malformed history table" FAIL "unexpected error"
+# (no key: the preflight must not rely on the history table's constraints)
+run -d "$PF" -c "DROP TABLE supabase_migrations.schema_migrations; CREATE TABLE supabase_migrations.schema_migrations (version text, name text, statements text[]);"
+expect_preflight "empty history" FAIL "predecessor migration baseline_production_pre_x4r missing"
+v=20260101000000
+for m in $(ls "$ROOT"/supabase/migrations/*.sql | sort); do
+  b="$(basename "$m" .sql)"
+  [[ "$b" < "20260923000000" ]] || continue
+  apply "$PF" "$m"; v=$((v + 1)); record "$v" "${b#*_}"
+done
+expect_preflight "production-like baseline" PASS "entitlement_subject_roles -> ive_memory_governance -> aef_persistence -> aef_hardening -> aef_sequence_privileges"
+fail_then "missing predecessor" "predecessor migration opportunity_knowledge_links missing" \
+  "UPDATE supabase_migrations.schema_migrations SET name = 'renamed' WHERE name = 'opportunity_knowledge_links';" \
+  "UPDATE supabase_migrations.schema_migrations SET name = 'opportunity_knowledge_links' WHERE name = 'renamed';"
+fail_then "NULL history name" "row(s) without a name" \
+  "INSERT INTO supabase_migrations.schema_migrations (version, name) VALUES ('20269999000090', NULL);" \
+  "DELETE FROM supabase_migrations.schema_migrations WHERE version = '20269999000090';"
+fail_then "duplicate history name" "duplicate migration names" \
+  "INSERT INTO supabase_migrations.schema_migrations (version, name) VALUES ('20269999000091', 'stripe_billing');" \
+  "DELETE FROM supabase_migrations.schema_migrations WHERE version = '20269999000091';"
+fail_then "history without objects" "aef_persistence is in the history but its objects are absent" \
+  "INSERT INTO supabase_migrations.schema_migrations (version, name) VALUES ('20269999000001', 'aef_persistence');" \
+  "DELETE FROM supabase_migrations.schema_migrations WHERE version = '20269999000001';"
+fail_then "stray aef object" "aef_* objects exist without aef_persistence" \
+  "CREATE TABLE public.aef_stray (id int);" "DROP TABLE public.aef_stray;"
+fail_then "NULL history version" "row(s) without a version" \
+  "INSERT INTO supabase_migrations.schema_migrations (version, name) VALUES (NULL, 'x_unversioned');" \
+  "DELETE FROM supabase_migrations.schema_migrations WHERE name = 'x_unversioned';"
+fail_then "projects FK drift" "public.projects(id uuid, user_id uuid NOT NULL) not as expected" \
+  "ALTER TABLE public.projects DROP CONSTRAINT projects_user_id_fkey;" \
+  "ALTER TABLE public.projects ADD CONSTRAINT projects_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;"
+fail_then "profiles drift" "public.profiles(id uuid PRIMARY KEY, role text NOT NULL)" \
+  "ALTER TABLE public.profiles ALTER COLUMN role DROP NOT NULL;" "ALTER TABLE public.profiles ALTER COLUMN role SET NOT NULL;"
+fail_then "business_memory drift" "public.business_memory(user_id uuid NOT NULL" \
+  "ALTER TABLE public.business_memory ALTER COLUMN user_id DROP NOT NULL;" "ALTER TABLE public.business_memory ALTER COLUMN user_id SET NOT NULL;"
+fail_then "projects drift" "public.projects(id uuid, user_id uuid NOT NULL) not as expected" \
+  "ALTER TABLE public.projects ALTER COLUMN user_id DROP NOT NULL;" "ALTER TABLE public.projects ALTER COLUMN user_id SET NOT NULL;"
+apply "$PF" "$ROOT/supabase/migrations/20260923000000_entitlement_subject_roles.sql"; record 20269999000002 entitlement_subject_roles
+fail_then "entitlement structure drift" "entitlement_subject_roles structure differs from the repository" \
+  "ALTER TABLE public.subject_roles DROP CONSTRAINT subject_roles_role_check;" \
+  "ALTER TABLE public.subject_roles ADD CONSTRAINT subject_roles_role_check CHECK (role = ANY (ARRAY['admin'::text, 'beta_tester'::text]));"
+apply "$PF" "$ROOT/supabase/migrations/20260924000000_ive_memory_governance.sql"; record 20269999000003 ive_memory_governance
+fail_then "memory structure drift" "ive_memory_governance structure differs from the repository" \
+  "ALTER TABLE public.business_memory ALTER COLUMN status DROP DEFAULT;" "ALTER TABLE public.business_memory ALTER COLUMN status SET DEFAULT 'active';"
+apply "$PF" "$ROOT/supabase/migrations/20260925000000_aef_persistence.sql"; record 20269999000004 aef_persistence
+expect_preflight "persistence only (fingerprint of the persistence state)" PASS "remaining, in order: aef_hardening -> aef_sequence_privileges"
+fail_then "persistence structure drift (extra column)" "AEF structure differs from the repository for the installed state (persistence only" \
+  "ALTER TABLE public.aef_receipts ADD COLUMN x_extra int;" "ALTER TABLE public.aef_receipts DROP COLUMN x_extra;"
+fail_then "persistence structure drift (stray aef table)" "AEF structure differs from the repository" \
+  "CREATE TABLE public.aef_stray (id int);" "DROP TABLE public.aef_stray;"
+fail_then "partial persistence" "aef_persistence is partially present" \
+  "ALTER TABLE public.aef_human_gates RENAME TO x_gates;" "ALTER TABLE public.x_gates RENAME TO aef_human_gates;"
+apply "$PF" "$ROOT/supabase/migrations/$HARDENING_MIGRATION"; record 20269999000005 aef_hardening
+expect_preflight "chain without 20260927 (20260925 revokes itself)" PASS "remaining, in order: aef_sequence_privileges"
+fail_then "partial hardening" "aef_hardening is partially present" \
+  "ALTER FUNCTION public.aef_purge(jsonb) RENAME TO x_purge;" "ALTER FUNCTION public.x_purge(jsonb) RENAME TO aef_purge;"
+fail_then "pre-fix exposed sequence" "AEF sequence exposed to an API role or PUBLIC" \
+  "GRANT ALL ON SEQUENCE public.aef_audit_events_id_seq TO anon, authenticated, service_role;" \
+  "REVOKE ALL ON SEQUENCE public.aef_audit_events_id_seq FROM anon, authenticated, service_role;"
+fail_then "PUBLIC SELECT on the sequence" "aef_audit_events_id_seq PUBLIC" \
+  "GRANT SELECT ON SEQUENCE public.aef_audit_events_id_seq TO PUBLIC;" "REVOKE SELECT ON SEQUENCE public.aef_audit_events_id_seq FROM PUBLIC;"
+fail_then "extra exposed AEF sequence" "aef_extra_seq anon USAGE" \
+  "CREATE SEQUENCE public.aef_extra_seq;" "DROP SEQUENCE public.aef_extra_seq;"
+fail_then "sequence used by an AEF column default (not owned, Codex RG3-02)" "shared_counter anon USAGE"   "CREATE SEQUENCE public.shared_counter; CREATE TABLE public.aef_uses_shared (id bigint DEFAULT nextval('public.shared_counter'));"   "DROP TABLE public.aef_uses_shared; DROP SEQUENCE public.shared_counter;"
+fail_then "non-prefixed AEF-owned sequence" "probe_owned_seq service_role SELECT" \
+  "CREATE SEQUENCE public.probe_owned_seq OWNED BY public.aef_legal_holds.reason_code;" "DROP SEQUENCE public.probe_owned_seq;"
+fail_then "RPC made SECURITY INVOKER" "RPC aef_get_operation is not SECURITY DEFINER" \
+  "ALTER FUNCTION public.aef_get_operation(jsonb) SECURITY INVOKER;" "ALTER FUNCTION public.aef_get_operation(jsonb) SECURITY DEFINER;"
+fail_then "search_path unpinned" "aef_get_operation has no pinned search_path" \
+  "ALTER FUNCTION public.aef_get_operation(jsonb) RESET search_path;" "ALTER FUNCTION public.aef_get_operation(jsonb) SET search_path = pg_catalog, pg_temp;"
+fail_then "RPC executable by anon" "aef_get_operation is executable by anon/authenticated/PUBLIC" \
+  "GRANT EXECUTE ON FUNCTION public.aef_get_operation(jsonb) TO anon;" "REVOKE EXECUTE ON FUNCTION public.aef_get_operation(jsonb) FROM anon;"
+fail_then "helper executable by service_role" "service_role EXECUTE on aef__view differs from the contract" \
+  "GRANT EXECUTE ON FUNCTION public.aef__view(uuid) TO service_role;" "REVOKE EXECUTE ON FUNCTION public.aef__view(uuid) FROM service_role;"
+fail_then "API role can write an AEF table" "service_role can write aef_receipts" \
+  "GRANT INSERT ON public.aef_receipts TO service_role;" "REVOKE INSERT ON public.aef_receipts FROM service_role;"
+fail_then "history claims 20260927 but a sequence is exposed" "aef_sequence_privileges is in the history but an AEF sequence is exposed" \
+  "INSERT INTO supabase_migrations.schema_migrations (version, name) VALUES ('20269999000009', 'aef_sequence_privileges'); GRANT UPDATE ON SEQUENCE public.aef_audit_events_id_seq TO authenticated;" \
+  "DELETE FROM supabase_migrations.schema_migrations WHERE version = '20269999000009'; REVOKE UPDATE ON SEQUENCE public.aef_audit_events_id_seq FROM authenticated;"
+apply "$PF" "$ROOT/supabase/migrations/$SEQUENCE_MIGRATION"; record 20269999000006 aef_sequence_privileges
+expect_preflight "fully applied chain" PASS "remaining, in order: (none)"
+fail_then "full structure drift (function body)" "AEF structure differs from the repository for the installed state (persistence+hardening" \
+  "CREATE OR REPLACE FUNCTION public.aef__denial_codes() RETURNS text[] LANGUAGE sql IMMUTABLE SET search_path = pg_catalog, pg_temp AS \$\$ SELECT ARRAY['X'] \$\$;" \
+  "SELECT 1;"
+apply "$PF" "$ROOT/supabase/migrations/$HARDENING_MIGRATION"   # idempotent re-apply restores the repository definition
+fail_then "function volatility drift" "AEF structure differs from the repository" \
+  "ALTER FUNCTION public.aef__denial_codes() STABLE;" "ALTER FUNCTION public.aef__denial_codes() IMMUTABLE;"
+dispo_role probe2; PROBE_ROLE="$DISPO_LAST"
+fail_then "SECURITY DEFINER owner drift" "AEF structure differs from the repository" \
+  "ALTER FUNCTION public.aef_get_operation(jsonb) OWNER TO $PROBE_ROLE;" "ALTER FUNCTION public.aef_get_operation(jsonb) OWNER TO postgres;"
+run -d postgres -c "DROP ROLE $PROBE_ROLE;"
+expect_preflight "restored after body drift" PASS "remaining, in order: (none)"
+# 20260927 recorded before 20260926 is an accepted order (depends on 20260925 only)
+run -d "$PF" -c "UPDATE supabase_migrations.schema_migrations SET version = '20269999000004a' WHERE name = 'aef_sequence_privileges';" >/dev/null
+expect_preflight "20260927 before 20260926" PASS "remaining, in order: (none)"
+fail_then "20260927 recorded before 20260925" "order: aef_sequence_privileges recorded before aef_persistence" \
+  "UPDATE supabase_migrations.schema_migrations SET version = '20269999000003a' WHERE name = 'aef_sequence_privileges';" \
+  "UPDATE supabase_migrations.schema_migrations SET version = '20269999000006' WHERE name = 'aef_sequence_privileges';"
+fail_then "hardening recorded before entitlement" "order: aef_hardening recorded before one of its dependencies" \
+  "UPDATE supabase_migrations.schema_migrations SET version = '20269999000005z' WHERE name = 'entitlement_subject_roles';" \
+  "UPDATE supabase_migrations.schema_migrations SET version = '20269999000002' WHERE name = 'entitlement_subject_roles';"
+fail_then "hardening without entitlement in the history" "order: aef_hardening applied without entitlement_subject_roles" \
+  "UPDATE supabase_migrations.schema_migrations SET name = 'x_entitlement' WHERE name = 'entitlement_subject_roles';" \
+  "UPDATE supabase_migrations.schema_migrations SET name = 'entitlement_subject_roles' WHERE name = 'x_entitlement';"
+expect_preflight "restored" PASS "remaining, in order: (none)"
+# The preflight is read-only by construction: READ ONLY transaction, rolled
+# back, and no write statement at all.
+grep -q "^BEGIN TRANSACTION READ ONLY;" "$PREFLIGHT" && grep -q "^ROLLBACK;" "$PREFLIGHT" \
+  || { echo "preflight is not wrapped in a READ ONLY transaction" >&2; exit 1; }
+if grep -qiE "^[[:space:]]*(INSERT|UPDATE|DELETE|ALTER|CREATE|DROP|GRANT|REVOKE|TRUNCATE|COMMIT)[[:space:]]" "$PREFLIGHT"; then
+  echo "preflight contains a write statement" >&2; exit 1
+fi
+echo "AEF_DEPLOY_PREFLIGHT_TESTS: PASS"
+
+# SECURITY DEFINER boundary (P06/P07): no AEF code calls the pre-existing
+# definer functions (runtime catalog check: S13 in aef_sequence_privileges_test.sql).
+if grep -rnE "get_current_user_role|handle_new_user|is_admin_user|validate_asset_" "$ROOT"/aef "$ROOT"/supabase/migrations/2026092[5-9]*.sql; then
+  echo "AEF references a pre-existing definer function (P06/P07)" >&2; exit 1
+fi
+echo "AEF_DEFINER_BOUNDARY: PASS"
+
+# P05: every Lab migration declares its real dependencies up front.
+for m in "$ROOT"/supabase/migrations/2026092[3-9]*.sql; do
+  grep -qE "(AEF|LAB)_PRECONDITION" "$m" || { echo "$(basename "$m") has no precondition guard" >&2; exit 1; }
+done
+echo "AEF_MIGRATION_PRECONDITIONS: PASS"
+
+# ── IV-IVE-AEF-RUNTIME-INTEGRATION-01: production-readiness hardening ─────
+# F-01: migration content integrity (same name + changed content, renames,
+# unexpected files, duplicates, frozen APPLIED_PRODUCTION digests).
+bash "$ROOT/scripts/ci/migration_manifest.sh" --check
+bash "$ROOT/scripts/ci/migration_manifest_test.sh"
+
+# F-03: no AEF sequence may be reachable by an API role — proven on the fully
+# migrated schema (catalog scan), against a future migration that forgets
+# the REVOKE (must FAIL), and at author time (static lint).
+check "$DB" aef_sequence_catalog_scan.sql 'AEF_SEQUENCE_CATALOG_SCAN: PASS'
+run -d "$F3" -f "$ROOT/supabase/tests/support/supabase_stubs.sql"
+for m in $(ls "$ROOT"/supabase/migrations/*.sql | sort); do apply "$F3" "$m"; done
+check "$F3" aef_sequence_catalog_scan.sql 'AEF_SEQUENCE_CATALOG_SCAN: PASS'
+apply "$F3" "$ROOT/supabase/tests/fixtures/f03_future_aef_sequence_unsafe.sql"
+if scan="$(run -d "$F3" -tA -f "$ROOT/supabase/tests/aef_sequence_catalog_scan.sql" 2>&1)"; then
+  echo "F-03: the catalog scan accepted a future AEF sequence without REVOKE" >&2; exit 1
+fi
+echo "$scan" | grep -q "aef_future_items_id_seq:anon:USAGE" && echo "$scan" | grep -q "future_counter:authenticated:UPDATE" \
+  && echo "$scan" | grep -q "shared_counter:anon:USAGE" && echo "$scan" | grep -q "aef_private.other_seq:anon:UPDATE" \
+  || { echo "F-03: unexpected scan output: $scan" >&2; exit 1; }
+apply "$F3" "$ROOT/supabase/tests/fixtures/f03_future_aef_sequence_safe.sql"
+check "$F3" aef_sequence_catalog_scan.sql 'AEF_SEQUENCE_CATALOG_SCAN: PASS'
+bash "$ROOT/scripts/ci/aef_sequence_lint.sh"
+LINT_DIR="$(mktemp -d)"
+cp "$ROOT"/supabase/migrations/*.sql "$LINT_DIR/"
+cp "$ROOT/supabase/tests/fixtures/f03_future_aef_sequence_unsafe.sql" "$LINT_DIR/20260930000000_future_aef_items.sql"
+if MIGRATIONS_DIR="$LINT_DIR" bash "$ROOT/scripts/ci/aef_sequence_lint.sh" 2>/dev/null; then
+  rm -rf "$LINT_DIR"; echo "F-03: the lint accepted a future AEF sequence without REVOKE" >&2; exit 1
+fi
+cp "$ROOT/supabase/tests/fixtures/f03_future_aef_sequence_safe.sql" "$LINT_DIR/20260930000000_future_aef_items.sql"
+MIGRATIONS_DIR="$LINT_DIR" bash "$ROOT/scripts/ci/aef_sequence_lint.sh" >/dev/null
+rm -rf "$LINT_DIR"
+echo "AEF_FUTURE_SEQUENCE_GUARD: PASS"
+
+# F-04: disposable resource ownership (collision, interruption, failure,
+# foreign resources with the same prefix, tampered markers, parallel ids).
+PGHOST="$HOST" PSQL="$PSQL" bash "$ROOT/scripts/ci/disposable_cleanup_test.sh" 2>/dev/null
+
+# Transactional executor experiment (canary DDL A → B → error → C, with a
+# non-atomic control). Uses the Supabase CLI when SUPABASE_CLI is set (CI).
+PGHOST="$HOST" PSQL="$PSQL" bash "$ROOT/scripts/ci/executor_transaction_experiment.sh" 2>&1 \
+  | grep -E "^(EXECUTOR_|CONTROL FAILED)" || { echo "executor experiment failed" >&2; exit 1; }
+
+# ── Impact (IV-IMPACT-FOUNDATION-01 and successors) ─────────────────────
+# SUBJECT_ROLES_RLS already checked against $DB above (line ~70); reuses
+# the same disposable database rather than re-running it redundantly.
+
+# IV-IMPACT-I1-PERSISTENCE-RLS-01 — Impact Lab RLS / invariants (migration 20260924010000).
+out="$(run -d "$DB" -tA -f "$ROOT/supabase/tests/impact_lab_rls_test.sql")"
+echo "$out" | tail -1
+echo "$out" | grep -qE '^IMPACT_LAB_RLS: PASS [0-9]+ checks$'
+
+# IV-IMPACT-I2-REGISTRY-INTELLIGENCE-01 — registry snapshots, lineage columns,
+# registry conflicts, REGISTRY_RECORD evidence, RLS (migration 20260925010000).
+out="$(run -d "$DB" -tA -f "$ROOT/supabase/tests/impact_registry_rls_test.sql")"
+echo "$out" | tail -1
+echo "$out" | grep -qE '^IMPACT_REGISTRY_RLS: PASS [0-9]+ checks$'
+
+# IV-IMPACT-I3-EVIDENCE-COLLECTION-01 — artifacts, evidence candidates,
+# human review → promotion, RLS (migration 20260926010000).
+out="$(run -d "$DB" -tA -f "$ROOT/supabase/tests/impact_evidence_rls_test.sql")"
+echo "$out" | tail -1
+echo "$out" | grep -qE '^IMPACT_EVIDENCE_RLS: PASS [0-9]+ checks$'
+# Codex I3F-01 / I3V-01: concurrent writers (artifact vs evidence; review vs promotion), two sessions, both orders.
+out="$(bash "$ROOT/supabase/tests/impact_evidence_race_test.sh" "$PSQL" -h "$HOST" -v ON_ERROR_STOP=1 -q -d "$DB" 2>&1)" || { echo "$out"; exit 1; }
+echo "$out" | tail -1
+echo "$out" | grep -qx 'IMPACT_EVIDENCE_RACE: PASS 4 orders'
+
+# IV-IMPACT-I4-VERIFICATION-DOSSIER-01 — atomic ingestion (I3F-03), dossier
+# snapshot register, RLS (migration 20260927010000), then two-session races.
+out="$(run -d "$DB" -tA -f "$ROOT/supabase/tests/impact_dossier_rls_test.sql")"
+echo "$out" | tail -1
+echo "$out" | grep -qE '^IMPACT_DOSSIER_RLS: PASS [0-9]+ checks$'
+out="$(bash "$ROOT/supabase/tests/impact_dossier_race_test.sh" "$PSQL" -h "$HOST" -v ON_ERROR_STOP=1 -q -d "$DB" 2>&1)" || { echo "$out"; exit 1; }
+echo "$out" | tail -1
+echo "$out" | grep -qx 'IMPACT_DOSSIER_RACE: PASS 2 races'
+
+# IV-IMPACT-I5-PRODUCT-UX-01 — dossier rate-limit counters (migration 20260928010000)
+# + a two-session same-window race (no lost update).
+out="$(run -d "$DB" -tA -f "$ROOT/supabase/tests/impact_rate_limit_test.sql")"
+echo "$out" | tail -1
+echo "$out" | grep -qE '^IMPACT_RATE_LIMIT: PASS [0-9]+ checks$'
+out="$(bash "$ROOT/supabase/tests/impact_rate_limit_race_test.sh" "$PSQL" -h "$HOST" -v ON_ERROR_STOP=1 -q -d "$DB" 2>&1)" || { echo "$out"; exit 1; }
+echo "$out" | tail -1
+echo "$out" | grep -qx 'IMPACT_RATE_LIMIT_RACE: PASS no lost update'
+# Codex I5G2-03 — a drifted pre-existing counter table must stop the migration.
+drift="$(mktemp)"
+{ echo "BEGIN; ALTER TABLE public.impact_rate_limits ADD COLUMN drift_probe integer; SET search_path = public, extensions;"
+  cat "$ROOT/supabase/migrations/20260928010000_impact_product_rate_limit.sql"
+  echo "ROLLBACK;"; } > "$drift"
+if out="$(run -d "$DB" -f "$drift" 2>&1)"; then rm -f "$drift"; echo "IMPACT_RATE_LIMIT_DRIFT: FAIL (drifted table accepted)"; exit 1; fi
+rm -f "$drift"
+echo "$out" | grep -q 'IMPACT_RATE_LIMIT_SCHEMA_DRIFT' || { echo "$out"; echo "IMPACT_RATE_LIMIT_DRIFT: FAIL (wrong error)"; exit 1; }
+echo "IMPACT_RATE_LIMIT_DRIFT: PASS drifted table refused"
+
+# IV-IMPACT-I1 — engine → database parity: rows produced by the REAL Lab flow
+# (engine + store row mappers) must satisfy every database invariant.
+if command -v deno >/dev/null 2>&1; then
+  rows="$(mktemp)"
+  deno run --allow-read "$ROOT/supabase/tests/impact_lab_engine_rows.ts" > "$rows"
+  out="$(run -d "$DB" -tA -f "$rows")"
+  rm -f "$rows"
+  echo "$out" | tail -1
+  echo "$out" | grep -qE '^IMPACT_ENGINE_ROWS: PASS '
+elif [ "${CI:-}" = "true" ]; then
+  echo "deno is required in CI for the Impact engine-rows parity test" >&2; exit 1
+else
+  echo "IMPACT_ENGINE_ROWS: skipped locally (deno not on PATH)"
+fi
+
+# ── Quant (IV-QUANT-DATA-PLANE-AND-API-02 and successors) ────────────────
+# SUBJECT_ROLES_RLS already checked against $DB above (line ~70); Quant's
+# own recheck of it (against the stale $out from the Impact block above)
+# would have been checking the wrong variable's content -- dropped rather
+# than carried forward as-is.
+
+# IV-QUANT-DATA-PLANE-AND-API-02 — Quant watchlists RLS (owner CRUD, cross-user,
+# anonymous, cross-project, immutable columns, limits, canonical identity).
+qout="$(run -d "$DB" -tA -f "$ROOT/supabase/tests/quant_watchlists_rls_test.sql")"
+echo "$qout" | tail -1
+echo "$qout" | grep -qx 'QUANT_WATCHLISTS_RLS: PASS'
+
+# IV-QUANT-REAL-DATA-READINESS-03 — Quant API rate-limit function (identity, limits, privacy).
+rout="$(run -d "$DB" -tA -f "$ROOT/supabase/tests/quant_rate_limits_test.sql")"
+echo "$rout" | tail -1
+echo "$rout" | grep -qx 'QUANT_RATE_LIMITS: PASS'

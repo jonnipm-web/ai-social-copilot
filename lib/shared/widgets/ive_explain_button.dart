@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'context_copilot_widget.dart' show showCopilotChat;
 import '../../data/models/copilot_context_data.dart';
 import '../../data/models/ive_interaction_request.dart';
+import '../../l10n/app_localizations.dart';
 import '../../providers/ive_context_provider.dart';
 
 /// Botão "Explicar com IVE" — qualquer componente pode adicionar.
@@ -52,7 +53,7 @@ class IveExplainButton extends ConsumerWidget {
             const Text('💬', style: TextStyle(fontSize: 12)),
             const SizedBox(width: 3),
             Text(
-              label ?? 'Entender',
+              label ?? AppLocalizations.of(context)!.ctxIveExplainCompact,
               style: const TextStyle(
                 color:      Color(0xFF9B8FFF),
                 fontSize:   11,
@@ -76,7 +77,7 @@ class IveExplainButton extends ConsumerWidget {
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
       icon: const Text('💬', style: TextStyle(fontSize: 13)),
-      label: Text(label ?? 'Explicar com IVE', style: const TextStyle(fontSize: 12)),
+      label: Text(label ?? AppLocalizations.of(context)!.ctxIveExplainFull, style: const TextStyle(fontSize: 12)),
       onPressed: () => _open(context, ref),
     );
   }

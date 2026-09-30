@@ -90,6 +90,10 @@ revenue-planner
 generate-project-actions
 generate-project-opportunities
 decision-simulator
+# R16 (global language consistency): presentation localization of persisted
+# content. verify_jwt=true + resolveAuthenticatedUser() inside; reads only
+# rows owned by the caller; no analysis quota (see function header).
+localize-content
 process-file
 create-checkout-session
 stripe-webhook	--no-verify-jwt

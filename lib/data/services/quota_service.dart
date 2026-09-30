@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/quota_info.dart';
+import '../../core/utils/app_exceptions.dart';
 
 /// Lê o estado de cota real (IVE-COMMERCIAL-ENTITLEMENTS-01) para exibição.
 /// Somente leitura: profiles.role/monthly_limit e ai_usage.request_count já
@@ -13,7 +14,7 @@ class QuotaService {
 
   Future<QuotaInfo> fetchCurrentQuota() async {
     final userId = _client.auth.currentUser?.id;
-    if (userId == null) throw Exception('Usuário não autenticado.');
+    if (userId == null) throw const NotAuthenticatedException();
 
     final profile = await _client
         .from('profiles')
@@ -22,7 +23,7 @@ class QuotaService {
         .single();
 
     final role = profile['role'] as String? ?? 'free';
-    final limit = (profile['monthly_limit'] as num?)?.toInt() ?? 5;
+    final limit = (profile['monthly_limit'] as num?)?.toInt() ?? 15;
 
     final now = DateTime.now().toUtc();
     final periodStart = DateTime.utc(now.year, now.month, 1);

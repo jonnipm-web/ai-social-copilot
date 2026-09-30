@@ -15,6 +15,7 @@ import 'core/diagnostics/ive_forensic_snapshot.dart';
 import 'core/modules/route_policy.dart';
 import 'core/theme/app_theme.dart';
 import 'data/models/profile.dart';
+import 'providers/ive_session_isolation.dart';
 import 'providers/diagnostic_session_provider.dart';
 import 'providers/profile_provider.dart';
 import 'l10n/app_localizations.dart';
@@ -33,7 +34,6 @@ import 'features/dashboard/screens/dashboard_screen.dart';
 import 'features/history/screens/history_detail_screen.dart';
 import 'features/history/screens/history_screen.dart';
 import 'features/home/screens/content_generation_screen.dart';
-import 'features/home/screens/home_screen.dart';
 import 'features/personas/screens/persona_form_screen.dart';
 import 'features/personas/screens/personas_screen.dart';
 import 'features/result/screens/result_screen.dart';
@@ -68,8 +68,11 @@ import 'features/opportunity_lab/screens/opportunity_lab_screen.dart';
 import 'features/opportunity_lab/screens/opportunity_detail_screen.dart';
 import 'features/action_engine/screens/action_engine_screen.dart';
 import 'features/action_engine/screens/action_detail_screen.dart';
-import 'features/dashboard/screens/executive_dashboard_screen.dart';
+import 'features/quant_lab/quant_lab_screen.dart';
 import 'features/debug/screens/intelligence_debug_hub_screen.dart';
+import 'features/impact/screens/impact_dossier_screen.dart';
+import 'features/impact/screens/impact_home_screen.dart';
+import 'features/strategy_lab/strategy_lab_screen.dart';
 
 final _iveObserver = IveRouteObserver();
 
@@ -99,6 +102,8 @@ Future<String?> _resolveEntitlementRedirect(
 
   bool isAdmin = false;
   bool isPro = false;
+  bool isPremium = false;
+  bool isBetaTester = false;
   bool profileResolved = false;
   // IVE-COMMERCIAL-TARGETED-REMEDIATION-06R (Codex adversarial review, P1) —
   // a bare `container.read(currentProfileProvider.future)` is not a durable
@@ -123,6 +128,8 @@ Future<String?> _resolveEntitlementRedirect(
         .timeout(const Duration(seconds: 8));
     isAdmin = profile?.isAdmin ?? false;
     isPro = profile?.isPro ?? false;
+    isPremium = profile?.isPremium ?? false;
+    isBetaTester = profile?.isBetaTester ?? false;
     profileResolved = true;
   } catch (_) {
     // Profile fetch failed or timed out -- fail closed (never grant PRO/
@@ -136,6 +143,8 @@ Future<String?> _resolveEntitlementRedirect(
     isAdmin: isAdmin,
     isPro: isPro,
     profileResolved: profileResolved,
+    isPremium: isPremium,
+    isBetaTester: isBetaTester,
   );
   switch (decision) {
     case RouteDecision.allow:
@@ -359,9 +368,15 @@ final _router = GoRouter(
       path: AppConstants.routeDashboard,
       builder: (_, __) => const DashboardScreen(),
     ),
+    // INSIGHTVALUES-COMMERCIAL-MACRO-01 — OS Command Center absorbed into
+    // Business Dashboard (see module_registry.dart 'command-center' notes).
+    // Route kept alive (not removed) because /result's own missing-`extra`
+    // fallback (below) and IveIntroGate's post-login settle target both
+    // navigate here by path; both now land on the single canonical
+    // dashboard instead of a second, divergent aggregation screen.
     GoRoute(
       path: AppConstants.routeHome,
-      builder: (_, __) => const HomeScreen(),
+      builder: (_, __) => const DashboardScreen(),
     ),
     GoRoute(
       path: AppConstants.routeGenerate,
@@ -651,15 +666,42 @@ final _router = GoRouter(
         itemId: state.pathParameters['id']!,
       ),
     ),
+    // INSIGHTVALUES-COMMERCIAL-MACRO-01 — Executive Dashboard absorbed into
+    // Business Dashboard (see module_registry.dart 'executive-dashboard'
+    // notes). Route kept alive for any existing deep link/bookmark.
     GoRoute(
       path: AppConstants.routeExecutiveDashboard,
-      builder: (_, __) => const ExecutiveDashboardScreen(),
+      builder: (_, __) => const DashboardScreen(),
     ),
 
     // ── Fase 10F — Intelligence Debug & Observability ────────────────────
     GoRoute(
       path: AppConstants.routeIntelligenceDebug,
       builder: (_, __) => const IntelligenceDebugHubScreen(),
+    ),
+
+    // ── IV-IMPACT-I5 — Impact Lab (admin-only; EXPERIMENTAL module) ───────
+    GoRoute(
+      path: AppConstants.routeImpact,
+      builder: (_, __) => const ImpactHomeScreen(),
+    ),
+    GoRoute(
+      path: AppConstants.routeImpactDossier,
+      builder: (_, state) => ImpactDossierScreen(
+        investigationId: state.pathParameters['id']!,
+      ),
+    ),
+
+    // ── IV-QUANT-DATA-PLANE-AND-API-02 — Quant Lab (INTERNAL, admin-only) ─
+    GoRoute(
+      path: AppConstants.routeQuantLab,
+      builder: (_, __) => const QuantLabScreen(),
+    ),
+
+    // ── ROBOT-BUILDER-MACRO-05 — Strategy Lab (COMMERCIAL, free tier) ──
+    GoRoute(
+      path: AppConstants.routeStrategyLab,
+      builder: (_, __) => const StrategyLabScreen(),
     ),
   ],
 );
@@ -777,6 +819,9 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    // IVE-INTELLIGENCE-CORE-01 (IVE-F01) — keeps IVE state bound to the
+    // signed-in user on every sign-in/sign-out path.
+    ref.watch(iveSessionGuardProvider);
     final locale = ref.watch(languageProvider);
     ref.listen<AsyncValue<Profile?>>(currentProfileProvider, (previous, next) {
       _maybeRecoverDiagnosticSession(next);

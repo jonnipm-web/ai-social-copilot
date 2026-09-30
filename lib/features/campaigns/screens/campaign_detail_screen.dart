@@ -3,7 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/models/campaign.dart';
+import '../../../core/utils/ai_enum_labels.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/campaign_provider.dart';
+import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 
 class CampaignDetailScreen extends ConsumerWidget {
   const CampaignDetailScreen({super.key, required this.campaignId});
@@ -12,6 +15,7 @@ class CampaignDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final campaignAsync = ref.watch(campaignByIdProvider(campaignId));
 
     return Scaffold(
@@ -19,21 +23,21 @@ class CampaignDetailScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: const Color(0xFF0F0F1A),
         foregroundColor: Colors.white,
-        title: const Text(
-          'Campanha',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        title: Text(
+          l10n.campaignDetailTitle,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
       ),
       body: campaignAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
-            child: Text('Erro: $e',
+            child: Text(l10n.iveChatErrorPrefix(extractErrorMessage(e, l10n)),
                 style: const TextStyle(color: Colors.white70))),
         data: (campaign) {
           if (campaign == null) {
-            return const Center(
-                child: Text('Campanha não encontrada.',
-                    style: TextStyle(color: Colors.white70)));
+            return Center(
+                child: Text(l10n.campaignDetailNotFound,
+                    style: const TextStyle(color: Colors.white70)));
           }
           return _CampaignContent(campaign: campaign);
         },
@@ -49,6 +53,7 @@ class _CampaignContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final c = campaign.campaignJson;
     final emails = _list(c['email_sequence']);
     final metrics = _strList(c['success_metrics']);
@@ -62,7 +67,7 @@ class _CampaignContent extends StatelessWidget {
 
         // Overview
         if (campaign.overview.isNotEmpty) ...[
-          _SectionTitle('Visão Geral'),
+          _SectionTitle(l10n.campaignDetailOverviewTitle),
           _Card(
             child: Text(campaign.overview,
                 style: const TextStyle(
@@ -73,7 +78,7 @@ class _CampaignContent extends StatelessWidget {
 
         // Key messages
         if (campaign.keyMessages.isNotEmpty) ...[
-          _SectionTitle('Mensagens-chave'),
+          _SectionTitle(l10n.campaignDetailKeyMessagesTitle),
           ...campaign.keyMessages.map((m) => _BulletItem(
               m, Icons.message_rounded, const Color(0xFF6C63FF))),
           const SizedBox(height: 16),
@@ -81,7 +86,7 @@ class _CampaignContent extends StatelessWidget {
 
         // Expected results
         if (campaign.expectedResults.isNotEmpty) ...[
-          _SectionTitle('Resultados Esperados'),
+          _SectionTitle(l10n.campaignDetailExpectedResultsTitle),
           ...campaign.expectedResults.map((r) => _BulletItem(
               r, Icons.check_circle_rounded, const Color(0xFF4CAF50))),
           const SizedBox(height: 16),
@@ -89,7 +94,7 @@ class _CampaignContent extends StatelessWidget {
 
         // Calendar
         if (campaign.calendar.isNotEmpty) ...[
-          _SectionTitle('Calendário de Conteúdo'),
+          _SectionTitle(l10n.campaignDetailCalendarTitle),
           const SizedBox(height: 8),
           ...campaign.calendar.map((entry) => _CalendarEntry(entry)),
           const SizedBox(height: 16),
@@ -97,7 +102,7 @@ class _CampaignContent extends StatelessWidget {
 
         // Email sequence
         if (emails.isNotEmpty) ...[
-          _SectionTitle('Sequência de Emails'),
+          _SectionTitle(l10n.campaignDetailEmailSequenceTitle),
           const SizedBox(height: 8),
           ...emails.map((e) {
             final em = e is Map ? Map<String, dynamic>.from(e) : <String, dynamic>{};
@@ -108,7 +113,7 @@ class _CampaignContent extends StatelessWidget {
 
         // Success metrics
         if (metrics.isNotEmpty) ...[
-          _SectionTitle('Métricas de Sucesso'),
+          _SectionTitle(l10n.campaignDetailMetricsTitle),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
@@ -151,6 +156,7 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -196,8 +202,9 @@ class _Header extends StatelessWidget {
           Wrap(
             spacing: 8,
             children: [
-              _Tag(campaign.objective, const Color(0xFF6C63FF)),
-              _Tag('${campaign.durationDays} dias', const Color(0xFFFF9800)),
+              _Tag(campaignObjectiveLabel(campaign.objective, l10n), const Color(0xFF6C63FF)),
+              _Tag(l10n.campaignsDurationDays(campaign.durationDays),
+                  const Color(0xFFFF9800)),
               ...campaign.channels.take(3).map(
                     (ch) => _Tag(ch, const Color(0xFF00BCD4)),
                   ),
@@ -315,6 +322,7 @@ class _CalendarEntry extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n        = AppLocalizations.of(context)!;
     final day         = entry['day']?.toString() ?? '';
     final channel     = entry['channel'] as String? ?? '';
     final contentType = entry['content_type'] as String? ?? '';
@@ -381,17 +389,20 @@ class _CalendarEntry extends StatelessWidget {
                 GestureDetector(
                   onTap: () {
                     final fullContent = [
-                      if (topic.isNotEmpty) 'Tópico: $topic',
-                      if (hook.isNotEmpty) 'Hook: $hook',
-                      if (cta.isNotEmpty) 'CTA: $cta',
+                      if (topic.isNotEmpty)
+                        '${l10n.campaignDetailTopicLabel}: $topic',
+                      if (hook.isNotEmpty)
+                        '${l10n.campaignDetailHookLabel}: $hook',
+                      if (cta.isNotEmpty)
+                        '${l10n.campaignDetailCtaLabel}: $cta',
                       if (brief.isNotEmpty) brief,
                     ].join('\n\n');
                     Clipboard.setData(ClipboardData(text: fullContent));
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Copiado!'),
-                        duration: Duration(seconds: 1),
-                        backgroundColor: Color(0xFF1A1A2E),
+                      SnackBar(
+                        content: Text(l10n.campaignDetailCopied),
+                        duration: const Duration(seconds: 1),
+                        backgroundColor: const Color(0xFF1A1A2E),
                       ),
                     );
                   },
@@ -402,15 +413,17 @@ class _CalendarEntry extends StatelessWidget {
             ),
             if (hook.isNotEmpty) ...[
               const SizedBox(height: 8),
-              _DetailRow('Hook', hook, Colors.white60),
+              _DetailRow(l10n.campaignDetailHookLabel, hook, Colors.white60),
             ],
             if (cta.isNotEmpty) ...[
               const SizedBox(height: 4),
-              _DetailRow('CTA', cta, const Color(0xFFFFD700)),
+              _DetailRow(
+                  l10n.campaignDetailCtaLabel, cta, const Color(0xFFFFD700)),
             ],
             if (brief.isNotEmpty) ...[
               const SizedBox(height: 4),
-              _DetailRow('Brief', brief, Colors.white38),
+              _DetailRow(
+                  l10n.campaignDetailBriefLabel, brief, Colors.white38),
             ],
           ],
         ),

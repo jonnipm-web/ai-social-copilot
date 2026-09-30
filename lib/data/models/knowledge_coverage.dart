@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import '../../l10n/app_localizations.dart';
 import 'action_queue_item.dart';
 import 'market_analysis.dart';
 import 'opportunity_lab_item.dart';
@@ -16,8 +17,8 @@ class KnowledgeCoverage {
   final int roadmapPoints;
   final int revenuePoints;
   final int personaPoints;
-  final List<String> gaps;
-  final List<String> strengths;
+  final List<String> gaps;      // R16: language-neutral codes (kGap*)
+  final List<String> strengths; // R16: language-neutral codes (kStrength*)
 
   const KnowledgeCoverage({
     required this.projectId,
@@ -38,13 +39,60 @@ class KnowledgeCoverage {
   int get knowledgePoints => docPoints;
   int get opportunityPoints => oppPoints;
 
-  String get coverageLabel {
-    if (score >= 80) return 'Excelente';
-    if (score >= 60) return 'Bom';
-    if (score >= 40) return 'Moderado';
-    if (score >= 20) return 'Básico';
-    return 'Mínimo';
+  String coverageLabel(AppLocalizations l10n) {
+    if (score >= 80) return l10n.ctxCoverageExcellent;
+    if (score >= 60) return l10n.ctxCoverageGood;
+    if (score >= 40) return l10n.ctxCoverageModerate;
+    if (score >= 20) return l10n.ctxCoverageBasic;
+    return l10n.ctxCoverageMinimal;
   }
+
+  // ── R16 — gaps/strengths are stored as language-neutral CODES ─────────────
+  // (see the k* constants below) and rendered in the presentation language
+  // only at display time via [gapLabel]/[strengthLabel].
+  static const kGapNoDocuments       = 'no_documents';
+  static const kGapNoOpportunities   = 'no_opportunities';
+  static const kGapNoActions         = 'no_actions';
+  static const kGapNoRoadmap         = 'no_roadmap';
+  static const kGapNoRevenuePlan     = 'no_revenue_plan';
+  static const kGapUntrainedPersonas = 'untrained_personas';
+
+  static const kStrengthKnowledgeBase   = 'knowledge_base';
+  static const kStrengthOpportunities   = 'opportunities_mapped';
+  static const kStrengthActions         = 'actions_planned';
+  static const kStrengthRoadmap         = 'roadmap_structured';
+  static const kStrengthRevenuePlan     = 'revenue_plan';
+  static const kStrengthTrainedPersonas = 'trained_personas';
+
+  static String gapLabel(String code, AppLocalizations l10n) {
+    switch (code) {
+      case kGapNoDocuments:       return l10n.ctxGapNoDocuments;
+      case kGapNoOpportunities:   return l10n.ctxGapNoOpportunities;
+      case kGapNoActions:         return l10n.ctxGapNoActions;
+      case kGapNoRoadmap:         return l10n.ctxGapNoRoadmap;
+      case kGapNoRevenuePlan:     return l10n.ctxGapNoRevenuePlan;
+      case kGapUntrainedPersonas: return l10n.ctxGapUntrainedPersonas;
+      default:                    return code;
+    }
+  }
+
+  static String strengthLabel(String code, AppLocalizations l10n) {
+    switch (code) {
+      case kStrengthKnowledgeBase:   return l10n.ctxStrengthKnowledgeBase;
+      case kStrengthOpportunities:   return l10n.ctxStrengthOpportunities;
+      case kStrengthActions:         return l10n.ctxStrengthActions;
+      case kStrengthRoadmap:         return l10n.ctxStrengthRoadmap;
+      case kStrengthRevenuePlan:     return l10n.ctxStrengthRevenuePlan;
+      case kStrengthTrainedPersonas: return l10n.ctxStrengthTrainedPersonas;
+      default:                       return code;
+    }
+  }
+
+  List<String> gapLabels(AppLocalizations l10n) =>
+      gaps.map((g) => gapLabel(g, l10n)).toList();
+
+  List<String> strengthLabels(AppLocalizations l10n) =>
+      strengths.map((g) => strengthLabel(g, l10n)).toList();
 
   String get coverageEmoji {
     if (score >= 80) return '🟢';
@@ -82,20 +130,20 @@ class KnowledgeCoverage {
     final total = docPts + oppPts + actionPts + roadmapPts + revenuePts + personaPts;
 
     final gaps = <String>[];
-    if (knowledgeItemCount == 0) gaps.add('Adicione documentos ao Cofre de Conhecimento');
-    if (labItems.isEmpty)        gaps.add('Sem oportunidades — execute o Knowledge → Action Engine');
-    if (actions.isEmpty)         gaps.add('Sem ações definidas para o projeto');
-    if (!hasRoadmap)             gaps.add('Roadmap não gerado — execute o Bootstrap');
-    if (revenuePlan == null)     gaps.add('Plano de receita não criado');
-    if (trainedPersonaCount == 0) gaps.add('Personas sem treinamento de conhecimento');
+    if (knowledgeItemCount == 0) gaps.add(kGapNoDocuments);
+    if (labItems.isEmpty)        gaps.add(kGapNoOpportunities);
+    if (actions.isEmpty)         gaps.add(kGapNoActions);
+    if (!hasRoadmap)             gaps.add(kGapNoRoadmap);
+    if (revenuePlan == null)     gaps.add(kGapNoRevenuePlan);
+    if (trainedPersonaCount == 0) gaps.add(kGapUntrainedPersonas);
 
     final strengths = <String>[];
-    if (knowledgeItemCount >= 3) strengths.add('Base de conhecimento estabelecida');
-    if (labItems.length >= 3)    strengths.add('Oportunidades mapeadas');
-    if (actions.length >= 3)     strengths.add('Ações planejadas');
-    if (hasRoadmap)              strengths.add('Roadmap estruturado');
-    if (revenuePlan != null)     strengths.add('Plano de receita projetado');
-    if (trainedPersonaCount > 0) strengths.add('Personas com conhecimento treinado');
+    if (knowledgeItemCount >= 3) strengths.add(kStrengthKnowledgeBase);
+    if (labItems.length >= 3)    strengths.add(kStrengthOpportunities);
+    if (actions.length >= 3)     strengths.add(kStrengthActions);
+    if (hasRoadmap)              strengths.add(kStrengthRoadmap);
+    if (revenuePlan != null)     strengths.add(kStrengthRevenuePlan);
+    if (trainedPersonaCount > 0) strengths.add(kStrengthTrainedPersonas);
 
     return KnowledgeCoverage(
       projectId:      project.id,

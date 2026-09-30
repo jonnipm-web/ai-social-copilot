@@ -1,0 +1,603 @@
+/**
+ * IV-IVE-AEF-RUNTIME-INTEGRATION-01 — LAB runtime unit tests (no database).
+ * Kill switches, tool input schemas, mock-only registry, intent mapping on
+ * the LAB table, presentation rules, the strict HTTP boundary.
+ *   deno test --allow-read --allow-env aef/runtime/runtime_unit_test.ts
+ */
+import { assert, assertEquals, assertThrows } from "jsr:@std/assert@1";
+import type { ExecutionRequest } from "../../contracts/aef/types.ts";
+import { mapIveActionIntentWith } from "../persistence/ive_intent_mapping.ts";
+import type { GovernanceResult } from "../persistence/governance.ts";
+import { defineToolInputSchema, validateToolInput } from "../persistence/tool_input_schema.ts";
+import { assertMockOnly, createLabToolRegistry, LAB_IVE_ACTION_TABLE, LAB_MOCK_TOOLS } from "./lab_tools.ts";
+import { ACTION_ENGINE_TABLE } from "./action_engine_tools.ts";
+import { QUANT_ACTION_TABLE } from "./quant_tools.ts";
+import { STRATEGY_SIMULATION_ACTION_TABLE } from "./strategy_simulation_tools.ts";
+import { presentResult } from "./presentation.ts";
+import { checkLabRuntime, type RuntimeEnv } from "./runtime_guard.ts";
+import { handleAefRuntime } from "../../supabase/functions/_shared/aef_runtime_endpoint.ts";
+import { fakeSubjectSource } from "../../supabase/functions/_shared/entitlement_test_support.ts";
+import { IveAefRuntime, type LearningEntryInput } from "./ive_aef_runtime.ts";
+import type { RuntimePresentation } from "./presentation.ts";
+import type { AefGovernance } from "../persistence/governance.ts";
+
+const env = (vars: Record<string, string>): RuntimeEnv => ({ get: (k) => vars[k] });
+const LAB = { AEF_RUNTIME_MODE: "LAB", AEF_TOOLS: "MOCK_ONLY", SUPABASE_URL: "http://127.0.0.1:54321" };
+
+// ── kill switches (T27, T28) ──────────────────────────────────────────────
+Deno.test("RU-01 kill switch: only LAB + MOCK_ONLY + a local stack passes", () => {
+  assertEquals(checkLabRuntime(env(LAB)), { ok: true });
+  for (const host of ["http://localhost:54321", "http://kong:8000", "http://host.docker.internal:54321", "http://[::1]:54321"]) {
+    assertEquals(checkLabRuntime(env({ ...LAB, SUPABASE_URL: host })).ok, true, host);
+  }
+});
+
+Deno.test("RU-02 kill switch: every missing, partial or production-shaped configuration fails closed", () => {
+  const cases: [Record<string, string>, string][] = [
+    [{}, "RUNTIME_NOT_ENABLED"],
+    [{ ...LAB, AEF_RUNTIME_MODE: "lab" }, "RUNTIME_NOT_ENABLED"],
+    [{ ...LAB, AEF_RUNTIME_MODE: "PRODUCTION" }, "RUNTIME_NOT_ENABLED"],
+    [{ AEF_TOOLS: "MOCK_ONLY", SUPABASE_URL: LAB.SUPABASE_URL }, "RUNTIME_NOT_ENABLED"],
+    [{ AEF_RUNTIME_MODE: "LAB", SUPABASE_URL: LAB.SUPABASE_URL }, "TOOLS_NOT_MOCK_ONLY"],
+    [{ ...LAB, AEF_TOOLS: "REAL" }, "TOOLS_NOT_MOCK_ONLY"],
+    [{ ...LAB, AEF_TOOLS: "MOCK_ONLY,REAL" }, "TOOLS_NOT_MOCK_ONLY"],
+    [{ AEF_RUNTIME_MODE: "LAB", AEF_TOOLS: "MOCK_ONLY" }, "NOT_LOCAL_STACK"],
+    [{ ...LAB, SUPABASE_URL: "https://nzngvbajrnruknpzzjbf.supabase.co" }, "PRODUCTION_LOCKED"],
+    [{ ...LAB, SUPABASE_URL: "http://127.0.0.1:54321/?ref=NZNGVBAJRNRUKNPZZJBF" }, "PRODUCTION_LOCKED"],
+    [{ ...LAB, SUPABASE_URL: "https://abcdefghijklmnopqrst.supabase.co" }, "NOT_LOCAL_STACK"],
+    [{ ...LAB, SUPABASE_URL: "http://127.0.0.1.evil.example:54321" }, "NOT_LOCAL_STACK"],
+    [{ ...LAB, SUPABASE_URL: "file:///etc/passwd" }, "NOT_LOCAL_STACK"],
+    [{ ...LAB, SUPABASE_URL: "not a url" }, "NOT_LOCAL_STACK"],
+    [{ ...LAB, AEF_RUNTIME_ALLOW_PRODUCTION: "1" }, "OVERRIDE_REFUSED"],
+    [{ ...LAB, AEF_TOOLS_ALLOW_REAL: "true" }, "OVERRIDE_REFUSED"],
+    [{ ...LAB, AEF_RUNTIME_FORCE: "" }, "OVERRIDE_REFUSED"],
+  ];
+  for (const [vars, reason] of cases) {
+    const r = checkLabRuntime(env(vars));
+    assert(!r.ok, JSON.stringify(vars));
+    assertEquals(!r.ok && r.reason, reason, JSON.stringify(vars));
+  }
+});
+
+// ── tool input schema (T18) ───────────────────────────────────────────────
+const PUBLISH = LAB_MOCK_TOOLS.find((t) => t.toolId === "internal.mock_publish_content")!.inputSchema;
+
+Deno.test("RU-03 schema: exact input passes; missing, wrong type, extra, oversized, bad enum, nested all fail", () => {
+  assert(validateToolInput(PUBLISH, { channel: "blog", text: "hello" }));
+  const bad: unknown[] = [
+    {}, // missing
+    { channel: "blog" }, // missing text
+    { channel: "blog", text: 42 }, // wrong type
+    { channel: "blog", text: "hi", extra: 1 }, // extra field
+    { channel: "blog", text: "hi", subject_id: "x" }, // forbidden authority-looking field
+    { channel: "blog", text: "x".repeat(281) }, // oversized
+    { channel: "blog", text: "" }, // below minLength
+    { channel: "tiktok", text: "hi" }, // malformed enum
+    { channel: "BLOG", text: "hi" }, // enum is exact
+    { channel: "blog", text: { $ne: null } }, // nested injection
+    { channel: ["blog"], text: "hi" }, // array
+    null,
+    [],
+    "text",
+    Object.assign(Object.create({ inherited: 1 }), { channel: "blog", text: "hi" }), // non-plain prototype
+  ];
+  for (const b of bad) assertEquals(validateToolInput(PUBLISH, b), false, JSON.stringify(b));
+});
+
+Deno.test("RU-04 schema definitions are validated and frozen at startup", () => {
+  assertThrows(() => defineToolInputSchema({}));
+  assertThrows(() => defineToolInputSchema({ "Bad-Name": { type: "boolean", required: true } }));
+  assertThrows(() => defineToolInputSchema({ a: { type: "string", required: true, maxLength: 0 } }));
+  assertThrows(() => defineToolInputSchema({ a: { type: "string", required: true, maxLength: 99_999 } }));
+  assertThrows(() => defineToolInputSchema({ a: { type: "integer", required: true, min: 5, max: 1 } }));
+  const s = defineToolInputSchema({ a: { type: "integer", required: false, min: 0, max: 3 } });
+  assert(Object.isFrozen(s) && Object.isFrozen(s.fields) && Object.isFrozen(s.fields.a));
+  assert(validateToolInput(s, {}) && validateToolInput(s, { a: 3 }) && !validateToolInput(s, { a: 1.5 }) && !validateToolInput(s, { a: 4 }));
+});
+
+// ── mock-only registry (T05, T17, T27) ────────────────────────────────────
+Deno.test("RU-05 the LAB registry holds only internal.mock_* tools, each with a schema and a mandatory gate; sealed", () => {
+  const { registry } = createLabToolRegistry();
+  for (const spec of LAB_MOCK_TOOLS) {
+    const d = registry.describe({ domain: "internal", action: spec.toolId } as ExecutionRequest)!;
+    assertEquals(d.classification, "CONSEQUENTIAL");
+    assertEquals(d.requiresHumanGate, true);
+    assert(d.inputSchema !== undefined);
+    assert(d.toolId.startsWith("internal.mock_"));
+  }
+  assertEquals(registry.describe({ domain: "core", action: "core.publish_content" } as ExecutionRequest), undefined);
+  assertThrows(() => registry.register({ toolId: "internal.mock_x", domain: "internal", classification: "READ_ONLY", requiresHumanGate: false, execute: () => Promise.resolve({ outcome: "SUCCESS", detail: "" }) }));
+});
+
+Deno.test("RU-06 assertMockOnly refuses any non-mock, schema-less or duplicate tool", () => {
+  const schema = PUBLISH;
+  assertThrows(() => assertMockOnly([{ toolId: "core.publish_content", iveAction: "x", inputSchema: schema }]));
+  assertThrows(() => assertMockOnly([{ toolId: "internal.real_email", iveAction: "x", inputSchema: schema }]));
+  assertThrows(() => assertMockOnly([{ toolId: "internal.mock_a", iveAction: "x", inputSchema: undefined as never }]));
+  assertThrows(() => assertMockOnly([{ toolId: "internal.mock_a", iveAction: "x", inputSchema: schema }, { toolId: "internal.mock_a", iveAction: "y", inputSchema: schema }]));
+});
+
+Deno.test("RU-07 the runtime modules import nothing that could reach a real system (static)", async () => {
+  for (const f of ["lab_tools.ts", "ive_aef_runtime.ts", "presentation.ts", "runtime_guard.ts"]) {
+    const src = await Deno.readTextFile(new URL(`./${f}`, import.meta.url));
+    const imports = [...src.matchAll(/^import[^;]*from\s+["']([^"']+)["']/gm)].map((m) => m[1]);
+    for (const i of imports) {
+      assert(i.startsWith("./") || i.startsWith("../"), `${f} imports a remote module: ${i}`);
+      assert(!/supabase|stripe|groq|fetch|http|service_client/i.test(i), `${f} imports ${i}`);
+    }
+    assert(!/\bfetch\(|Deno\.(connect|run|Command)|createClient/.test(src), `${f} reaches the network or a process`);
+  }
+});
+
+// ── intent mapping on the LAB table (T01, T19) ────────────────────────────
+const SUBJECT = "0a000000-0000-4000-8000-00000000000a";
+const intent = (o: Record<string, unknown> = {}) => ({
+  capabilityId: null,
+  requestedAction: "publish_content",
+  projectId: null,
+  riskClass: "CONSEQUENTIAL",
+  contextRef: "0b000000-0000-4000-8000-00000000000b",
+  parameters: { channel: "blog", text: "hello" },
+  ...o,
+});
+
+Deno.test("RU-08 LAB table: only the two mock actions map; everything else is refused before AEF", async () => {
+  const ok = await mapIveActionIntentWith(LAB_IVE_ACTION_TABLE, intent(), SUBJECT);
+  assert(ok.ok);
+  assertEquals(ok.ok && ok.request.action, "internal.mock_publish_content");
+  assertEquals(ok.ok && ok.request.actor.id, SUBJECT);
+  for (const action of ["payment", "transfer_funds", "delete_data", "execute_workflow", "module_action", "internal.mock_publish_content", "__proto__", "constructor"]) {
+    const r = await mapIveActionIntentWith(LAB_IVE_ACTION_TABLE, intent({ requestedAction: action }), SUBJECT);
+    assertEquals(r.ok ? "ok" : r.code, "INTENT_ACTION_UNKNOWN", action);
+  }
+  const trade = await mapIveActionIntentWith(LAB_IVE_ACTION_TABLE, intent({ requestedAction: "trade_order" }), SUBJECT);
+  assertEquals(trade.ok ? "ok" : trade.code, "POLICY_DENIED");
+});
+
+Deno.test("RU-09 forged authority in the intent is refused (subject, role, plan, approval, state, receipt, tool, risk)", async () => {
+  for (const extra of [{ subjectId: "x" }, { role: "admin" }, { plan: "premium" }, { approval: true }, { state: "AUTHORIZED" }, { receipt: {} }, { tool: "internal.mock_publish_content" }, { humanGateRef: "g" }]) {
+    const r = await mapIveActionIntentWith(LAB_IVE_ACTION_TABLE, intent(extra), SUBJECT);
+    assertEquals(r.ok ? "ok" : r.code, "INTENT_INVALID", JSON.stringify(extra));
+  }
+  // Authority aliases in the parameters are refused by the mapping itself…
+  const alias = await mapIveActionIntentWith(LAB_IVE_ACTION_TABLE, intent({ parameters: { channel: "blog", text: "hi", user_id: SUBJECT } }), SUBJECT);
+  assertEquals(alias.ok ? "ok" : alias.code, "INTENT_INVALID");
+  // …and any other extra field (e.g. a forged "approved") by the tool's closed schema, before persistence.
+  const extra = await mapIveActionIntentWith(LAB_IVE_ACTION_TABLE, intent({ parameters: { channel: "blog", text: "hi", approved: true } }), SUBJECT);
+  assert(extra.ok);
+  assertEquals(validateToolInput(PUBLISH, extra.request.parameters), false);
+});
+
+Deno.test("RU-10 the payload is part of the identity: a changed payload maps to a different idempotency key", async () => {
+  const a = await mapIveActionIntentWith(LAB_IVE_ACTION_TABLE, intent(), SUBJECT);
+  const a2 = await mapIveActionIntentWith(LAB_IVE_ACTION_TABLE, intent(), SUBJECT);
+  const b = await mapIveActionIntentWith(LAB_IVE_ACTION_TABLE, intent({ parameters: { channel: "blog", text: "hello!" } }), SUBJECT);
+  const c = await mapIveActionIntentWith(LAB_IVE_ACTION_TABLE, intent({ riskClass: "READ_ONLY" }), SUBJECT);
+  assert(a.ok && a2.ok && b.ok && c.ok);
+  assertEquals(a.request.idempotency_key, a2.request.idempotency_key);
+  assert(a.request.idempotency_key !== b.request.idempotency_key);
+  // riskClass is not authority: it neither changes the operation nor the tool/gate (server decides).
+  assertEquals(a.request.idempotency_key, c.request.idempotency_key);
+  assertEquals(a.request.action, c.request.action);
+});
+
+// ── presentation (T26, "never done before SUCCEEDED") ─────────────────────
+const op = (state: string) => ({
+  operationId: "0c000000-0000-4000-8000-00000000000c", state, stateReason: null, action: "internal.mock_publish_content",
+  toolId: "internal.mock_publish_content", actionClass: "CONSEQUENTIAL", bindingHash: "a".repeat(64), payloadHash: "b".repeat(64),
+  policyVersion: "p", riskVersion: "r", requiresHumanGate: true, attemptCount: 1, expiresAt: "2026-01-01T00:00:00Z",
+});
+const receipt = (outcome: string) => ({ receipt: { receipt_id: "r1", outcome, final_state: "SUCCEEDED" }, receiptHash: "c".repeat(64) });
+
+Deno.test("RU-11 presentation: completed ONLY for a persisted SUCCEEDED operation with a SUCCESS receipt", () => {
+  const view = (state: string, rc: unknown, status: GovernanceResult["status"] = "FINAL") =>
+    ({ status, replayed: false, operation: op(state), gate: null, receipt: rc, reconciliation: null }) as unknown as GovernanceResult;
+  assertEquals(presentResult(view("SUCCEEDED", receipt("SUCCESS"))).completed, true);
+  for (const [state, rc, status] of [
+    ["SUCCEEDED", null, "FINAL"], ["SUCCEEDED", receipt("FAILURE"), "FINAL"], ["FAILED", receipt("FAILURE"), "FINAL"],
+    ["UNKNOWN_OUTCOME", receipt("UNKNOWN_OUTCOME"), "FINAL"], ["AUTHORIZED", null, "AUTHORIZED"], ["EXECUTING", null, "EXECUTING"],
+    ["AWAITING_APPROVAL", null, "AWAITING_APPROVAL"], ["REJECTED", receipt("NOT_EXECUTED"), "FINAL"], ["CANCELLED", receipt("NOT_EXECUTED"), "FINAL"],
+    ["EXPIRED", receipt("NOT_EXECUTED"), "FINAL"], ["INVALIDATED", receipt("NOT_EXECUTED"), "FINAL"],
+  ] as const) {
+    const p = presentResult(view(state, rc, status as GovernanceResult["status"]));
+    assertEquals(p.completed, false, `${state}/${status}`);
+    assertEquals(p.retryAllowed, false);
+  }
+});
+
+Deno.test("RU-12 presentation: UNKNOWN_OUTCOME and an unpersisted completion are distinct from FAILED, never completed, never retried", () => {
+  const u1 = presentResult({ status: "OUTCOME_UNCONFIRMED", code: "STORE_UNAVAILABLE", operationId: "0c000000-0000-4000-8000-00000000000c" });
+  const u2 = presentResult({ status: "REMAINS_UNKNOWN", operationId: "0c000000-0000-4000-8000-00000000000c" });
+  const u3 = presentResult({ status: "FINAL", replayed: false, operation: op("UNKNOWN_OUTCOME"), gate: null, receipt: receipt("UNKNOWN_OUTCOME"), reconciliation: null } as unknown as GovernanceResult);
+  for (const u of [u1, u2, u3]) {
+    assertEquals(u.phase, "UNKNOWN_OUTCOME");
+    assertEquals(u.completed, false);
+    assertEquals(u.reconciliationRequired, true);
+    assertEquals(u.retryAllowed, false);
+  }
+  const f = presentResult({ status: "FINAL", replayed: false, operation: op("FAILED"), gate: null, receipt: receipt("FAILURE"), reconciliation: null } as unknown as GovernanceResult);
+  assertEquals(f.phase, "FAILED");
+  assertEquals(f.reconciliationRequired, false);
+  const d = presentResult({ status: "DENIED", code: "POLICY_DENIED" });
+  assertEquals([d.phase, d.denialCode, d.operationId, d.completed], ["DENIED", "POLICY_DENIED", null, false]);
+});
+
+// ── HTTP boundary (T02, T03, T04, T25) ────────────────────────────────────
+const auth = {
+  auth: {
+    getUser(token: string) {
+      return Promise.resolve(token === "session-jwt"
+        ? { data: { user: { id: SUBJECT } }, error: null }
+        : { data: { user: null }, error: { message: "invalid" } });
+    },
+  },
+};
+
+class RecordingRuntime {
+  calls: { op: string; args: unknown[] }[] = [];
+  built = 0;
+  private reply(op: string, args: unknown[]): Promise<RuntimePresentation> {
+    this.calls.push({ op, args });
+    return Promise.resolve({ phase: "AWAITING_APPROVAL", completed: false, reconciliationRequired: false, retryAllowed: false, operationId: null, denialCode: null, gate: null, receipt: null, replayed: false });
+  }
+  propose(...a: unknown[]) { return this.reply("propose", a); }
+  execute(...a: unknown[]) { return this.reply("execute", a); }
+  decide(...a: unknown[]) { return this.reply("decide", a); }
+  status(...a: unknown[]) { return this.reply("status", a); }
+  cancel(...a: unknown[]) { return this.reply("cancel", a); }
+}
+
+function call(body: unknown, o: { token?: string | null; role?: string; vars?: Record<string, string>; moduleId?: string } = {}) {
+  const rt = new RecordingRuntime();
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const token = o.token === undefined ? "session-jwt" : o.token;
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const req = new Request("http://localhost/", { method: "POST", headers, body: JSON.stringify(body) });
+  const res = handleAefRuntime(req, {
+    env: env(o.vars ?? LAB),
+    authClient: auth as never,
+    subjectSource: fakeSubjectSource(o.role ?? "admin"),
+    moduleId: o.moduleId ?? "aef-runtime-lab",
+    runtime: () => {
+      rt.built++;
+      return rt as unknown as IveAefRuntime;
+    },
+  });
+  return { res, rt };
+}
+
+Deno.test("RU-13 endpoint order: auth → entitlement (admin only) → kill switch; nothing is built before all pass", async () => {
+  let c = call({ op: "propose", intent: intent() }, { token: null });
+  assertEquals((await c.res).status, 401);
+  assertEquals(c.rt.built, 0);
+  for (const role of ["free", "pro", "premium", "beta_tester"]) {
+    c = call({ op: "propose", intent: intent() }, { role });
+    assertEquals((await c.res).status, 403, role);
+    assertEquals(c.rt.built, 0);
+  }
+  c = call({ op: "propose", intent: intent() }, { vars: { ...LAB, SUPABASE_URL: "https://nzngvbajrnruknpzzjbf.supabase.co" } });
+  const res = await c.res;
+  assertEquals(res.status, 503);
+  assertEquals((await res.json()).reason, "PRODUCTION_LOCKED");
+  assertEquals(c.rt.built, 0);
+  c = call({ op: "propose", intent: intent() });
+  assertEquals((await c.res).status, 200);
+  assertEquals(c.rt.calls.map((x) => x.op), ["propose"]);
+  // the subject passed to the runtime is the verified user, never a body field
+  assertEquals(c.rt.calls[0].args[1], SUBJECT);
+});
+
+Deno.test("RU-14 endpoint body is strict: unknown op, extra keys, forged subject/role/plan/approval/state/receipt are refused", async () => {
+  const bad: unknown[] = [
+    [], null, "x", {}, { op: "run" }, { op: "__proto__" }, { op: "propose" },
+    { op: "propose", intent: intent(), subjectId: SUBJECT },
+    { op: "propose", intent: intent(), role: "admin" },
+    { op: "propose", intent: intent(), plan: "premium" },
+    { op: "execute", intent: intent(), approval: { approved: true } },
+    { op: "execute", intent: intent(), state: "AUTHORIZED" },
+    { op: "status", operationId: "x", receipt: {} },
+    { op: "decide", gate: {}, result: "SUCCEEDED" },
+  ];
+  for (const body of bad) {
+    const c = call(body);
+    assertEquals((await c.res).status, 400, JSON.stringify(body));
+    assertEquals(c.rt.calls.length, 0, JSON.stringify(body));
+  }
+});
+
+// ── Promotion Gate coupling and deploy exclusion (T27, T28) ───────────────
+Deno.test("RU-15 'aef-runtime-lab' module default stays REVERSIBLE; its one real function correctly overrides to CONSEQUENTIAL and is independently fail-closed", async () => {
+  const { MODULE_POLICY, effectiveActionClass } = await import("../../supabase/functions/_shared/module_policy.ts");
+  const m = MODULE_POLICY.modules["aef-runtime-lab"];
+  assertEquals(m.lifecycle, "EXPERIMENTAL");
+  assert(LAB_MOCK_TOOLS.every((t) => t.toolId.startsWith("internal.mock_")));
+  // INTELLIGENCE-AUTOMATION-MACRO-04 §4-6: the module's own default stays
+  // REVERSIBLE (nothing about the module itself changed), but every LAB
+  // tool this function actually serves is unconditionally CONSEQUENTIAL by
+  // construction (createLabToolRegistry) -- effectiveActionClass now says
+  // so explicitly via the function's actionClassOverride, rather than the
+  // module's own (necessarily lower) default silently understating it.
+  // MP-09 is what proves this is still safe: a CONSEQUENTIAL-effective
+  // function must be hard-blocked in the deploy allowlist (RU-16 proves
+  // that hard block directly).
+  assertEquals(m.actionClass, "REVERSIBLE");
+  assertEquals(effectiveActionClass("aef-runtime"), "CONSEQUENTIAL");
+  assertEquals(MODULE_POLICY.edgeFunctions["aef-runtime"], {
+    kind: "MODULE",
+    moduleId: "aef-runtime-lab",
+    gateFile: "_shared/aef_runtime_endpoint.ts",
+    actionClassOverride: "CONSEQUENTIAL",
+  });
+});
+
+Deno.test("RU-16 aef-runtime is absent from the deploy allowlist and hard-blocked by the deploy resolver", async () => {
+  const allow = await Deno.readTextFile(new URL("../../.github/deploy-allowlist.tsv", import.meta.url));
+  const names = allow.split(/\r?\n/).map((l) => l.split("\t")[0].trim()).filter((l) => l && !l.startsWith("#"));
+  assert(!names.includes("aef-runtime"));
+  const resolver = await Deno.readTextFile(new URL("../../scripts/ci/resolve_deploy_selection.sh", import.meta.url));
+  assert(/if \[ "\$FUNCTION_NAME" = "aef-runtime" \]; then\s+deny /.test(resolver));
+});
+
+Deno.test("RU-17 (PRODUCTIZATION-MACRO-03) action-engine-runtime is absent from the deploy allowlist and hard-blocked by the deploy resolver", async () => {
+  const allow = await Deno.readTextFile(new URL("../../.github/deploy-allowlist.tsv", import.meta.url));
+  const names = allow.split(/\r?\n/).map((l) => l.split("\t")[0].trim()).filter((l) => l && !l.startsWith("#"));
+  assert(!names.includes("action-engine-runtime"));
+  const resolver = await Deno.readTextFile(new URL("../../scripts/ci/resolve_deploy_selection.sh", import.meta.url));
+  assert(/if \[ "\$FUNCTION_NAME" = "action-engine-runtime" \]; then\s+deny /.test(resolver));
+});
+
+// ── Action Engine <-> AEF reconciliation (PRODUCTIZATION-MACRO-03) ────────
+
+Deno.test("RU-18 ACTION_ENGINE_TABLE maps only complete_action; it does NOT inherit IVE's action vocabulary", async () => {
+  const ok = await mapIveActionIntentWith(ACTION_ENGINE_TABLE, intent({ requestedAction: "complete_action", parameters: { action_id: "a1", summary: "did it" } }), SUBJECT);
+  assert(ok.ok);
+  assertEquals(ok.ok && ok.request.action, "internal.mock_complete_action");
+  // Every IVE action -- including the two IVE actually has mock tools for --
+  // is UNKNOWN on this table. A calling surface confusion (Action Engine
+  // accidentally reaching IVE's publish_content, or vice versa) is exactly
+  // the class of bug two separate tables exist to prevent.
+  for (const action of ["publish_content", "send_message", "payment", "transfer_funds", "delete_data", "execute_workflow", "module_action", "trade_order"]) {
+    const r = await mapIveActionIntentWith(ACTION_ENGINE_TABLE, intent({ requestedAction: action, parameters: { action_id: "a1", summary: "x" } }), SUBJECT);
+    assertEquals(r.ok ? "ok" : r.code, "INTENT_ACTION_UNKNOWN", action);
+  }
+});
+
+Deno.test("RU-19 action-engine-runtime's entitlement gate is 'action-engine' (COMMERCIAL/free) -- not the admin-only 'aef-runtime-lab', and not the reverse", async () => {
+  // The exact authority-boundary proof this macro's own brief asks for:
+  // mixing up which module gates which calling surface would be a real
+  // authorization bug (an admin-only LAB surface becoming free-for-all, or
+  // a commercial surface becoming accidentally admin-locked).
+  for (const role of ["free", "pro", "premium", "beta_tester"]) {
+    const c = call({ op: "propose", intent: intent() }, { role, moduleId: "action-engine" });
+    const res = await c.res;
+    // Not blocked by ENTITLEMENT for a COMMERCIAL/free module -- whatever
+    // status comes back (e.g. the kill switch's own 503) is unrelated to
+    // authorization, so this only asserts entitlement itself didn't fire.
+    if (res.status === 403) {
+      const body = await res.clone().json().catch(() => ({}));
+      assert(body.error !== "MODULE_NOT_AVAILABLE" && body.error !== "PLAN_REQUIRED", `${role}: ${JSON.stringify(body)}`);
+    }
+  }
+  // The admin-only surface must still refuse every non-admin role when
+  // explicitly asked with its OWN moduleId (regression guard for RU-13).
+  for (const role of ["free", "pro", "premium", "beta_tester"]) {
+    const c = call({ op: "propose", intent: intent() }, { role, moduleId: "aef-runtime-lab" });
+    assertEquals((await c.res).status, 403, role);
+  }
+});
+
+Deno.test("RU-20 action-engine's registered tool is CONSEQUENTIAL + Human-Gate-required, regardless of the module policy's own (lower) actionClass label (Codex final audit)", () => {
+  // module_policy.ts declares 'action-engine' actionClass:REVERSIBLE (it
+  // predates this mission, dominated by generate-project-actions) --
+  // that label is a coarse, module-level Promotion Gate input, NOT what
+  // actually runs. createLabToolRegistry fixes classification:CONSEQUENTIAL
+  // and requiresHumanGate:true for EVERY LAB tool unconditionally
+  // (lab_tools.ts), so action-engine's one real capability is exactly as
+  // strictly gated at runtime as any IVE LAB tool, independent of that
+  // module-level label. Reclassifying the module itself would trip MP-03/
+  // MP-09 (no CONSEQUENTIAL module may be COMMERCIAL while
+  // AEF_PERSISTENCE_AVAILABLE is false) for a function that is already
+  // LAB-only, kill-switched and deploy-blocked -- a real, escalated
+  // architectural question (module-level vs function-level actionClass),
+  // not something to silently resolve here. See the final mission report.
+  const { registry } = createLabToolRegistry();
+  const descriptor = registry.describe({ domain: "internal", action: "internal.mock_complete_action" } as ExecutionRequest);
+  assert(descriptor !== undefined, "internal.mock_complete_action must be registered");
+  assertEquals(descriptor.classification, "CONSEQUENTIAL");
+  assertEquals(descriptor.requiresHumanGate, true);
+});
+
+// ── Quant -> Action Intent -> AEF (INSIGHTVALUES-INTELLIGENCE-AUTOMATION-MACRO-04 §15-17) ──
+Deno.test("RU-27 QUANT_ACTION_TABLE maps only acknowledge_signal; it inherits neither IVE's nor Action Engine's vocabulary", async () => {
+  const ok = await mapIveActionIntentWith(QUANT_ACTION_TABLE, intent({ requestedAction: "acknowledge_signal", parameters: { signal_id: "s1", event_kind: "triggered", note: "reviewed" } }), SUBJECT);
+  assert(ok.ok);
+  assertEquals(ok.ok && ok.request.action, "internal.mock_quant_signal_acknowledgment");
+  // TRADING_BOUNDARY (§17): trade_order and every other action -- including
+  // ones the OTHER two tables recognize -- are absent here, categorically.
+  for (const action of ["trade_order", "publish_content", "send_message", "complete_action", "payment", "transfer_funds", "delete_data", "execute_workflow"]) {
+    const r = await mapIveActionIntentWith(QUANT_ACTION_TABLE, intent({ requestedAction: action, parameters: { signal_id: "s1", event_kind: "triggered", note: "x" } }), SUBJECT);
+    assertEquals(r.ok ? "ok" : r.code, "INTENT_ACTION_UNKNOWN", action);
+  }
+});
+
+Deno.test("RU-28 quant-runtime's entitlement gate is 'ive-quant' (EXPERIMENTAL/admin-only) -- not the commercial action-engine or aef-runtime-lab modules, and not the reverse", async () => {
+  // ive-quant has no Owner decision to launch commercially (§20-21 Premium
+  // work is separate and did not change this): every non-admin role, at
+  // every plan, must still be refused.
+  for (const role of ["free", "pro", "premium", "beta_tester"]) {
+    const c = call({ op: "propose", intent: intent() }, { role, moduleId: "ive-quant" });
+    assertEquals((await c.res).status, 403, role);
+  }
+  const admin = call({ op: "propose", intent: intent() }, { role: "admin", moduleId: "ive-quant" });
+  const res = await admin.res;
+  if (res.status === 403) {
+    const body = await res.clone().json().catch(() => ({}));
+    assert(body.error !== "MODULE_NOT_AVAILABLE", `admin: ${JSON.stringify(body)}`);
+  }
+});
+
+Deno.test("RU-29 the Quant signal-acknowledgment tool is CONSEQUENTIAL + Human-Gate-required, same as every other LAB tool", () => {
+  const { registry } = createLabToolRegistry();
+  const descriptor = registry.describe({ domain: "internal", action: "internal.mock_quant_signal_acknowledgment" } as ExecutionRequest);
+  assert(descriptor !== undefined, "internal.mock_quant_signal_acknowledgment must be registered");
+  assertEquals(descriptor.classification, "CONSEQUENTIAL");
+  assertEquals(descriptor.requiresHumanGate, true);
+});
+
+// ── Strategy Simulation -> Action Intent -> AEF (INSIGHTVALUES-STRATEGY-INTELLIGENCE-MACRO-07 §24-27) ──
+Deno.test("RU-30 STRATEGY_SIMULATION_ACTION_TABLE maps only approve_simulation_result; it inherits no other table's vocabulary", async () => {
+  const ok = await mapIveActionIntentWith(STRATEGY_SIMULATION_ACTION_TABLE, intent({ requestedAction: "approve_simulation_result", parameters: { experiment_id: "e1", note: "reviewed" } }), SUBJECT);
+  assert(ok.ok);
+  assertEquals(ok.ok && ok.request.action, "internal.mock_strategy_simulation_approval");
+  // §49: trade_order and every other action -- including ones the OTHER
+  // tables recognize -- are absent here, categorically. There is no path
+  // from this table to a trade, an order, or live/paper execution.
+  for (const action of ["trade_order", "publish_content", "send_message", "complete_action", "acknowledge_signal", "payment", "transfer_funds", "delete_data", "execute_workflow"]) {
+    const r = await mapIveActionIntentWith(STRATEGY_SIMULATION_ACTION_TABLE, intent({ requestedAction: action, parameters: { experiment_id: "e1", note: "x" } }), SUBJECT);
+    assertEquals(r.ok ? "ok" : r.code, "INTENT_ACTION_UNKNOWN", action);
+  }
+});
+
+Deno.test("RU-31 strategy-simulation-runtime's entitlement gate is 'ive-strategy-simulation' (BETA/beta_tester, promoted from admin-only in Macro-08), not strategy-builder or ive-quant, and not the reverse", async () => {
+  // A plain free/pro/premium role (no beta_tester) is still denied --
+  // BETA_ELIGIBILITY_REQUIRED, same posture as before this module left
+  // EXPERIMENTAL, just via a different denial reason.
+  for (const role of ["free", "pro", "premium"]) {
+    const c = call({ op: "propose", intent: intent() }, { role, moduleId: "ive-strategy-simulation" });
+    const res = await c.res;
+    assertEquals(res.status, 403, role);
+    const body = await res.clone().json().catch(() => ({}));
+    assertEquals(body.error, "MODULE_NOT_AVAILABLE", role);
+  }
+  // beta_tester (plan 'free', which meets this module's minimumPlan)
+  // now genuinely passes the module gate -- this module is no longer
+  // admin-only.
+  const beta = call({ op: "propose", intent: intent() }, { role: "beta_tester", moduleId: "ive-strategy-simulation" });
+  const betaRes = await beta.res;
+  if (betaRes.status === 403) {
+    const body = await betaRes.clone().json().catch(() => ({}));
+    assert(body.error !== "MODULE_NOT_AVAILABLE", `beta_tester: ${JSON.stringify(body)}`);
+  }
+  const admin = call({ op: "propose", intent: intent() }, { role: "admin", moduleId: "ive-strategy-simulation" });
+  const res = await admin.res;
+  if (res.status === 403) {
+    const body = await res.clone().json().catch(() => ({}));
+    assert(body.error !== "MODULE_NOT_AVAILABLE", `admin: ${JSON.stringify(body)}`);
+  }
+});
+
+Deno.test("RU-32 the Strategy Simulation approval tool is CONSEQUENTIAL + Human-Gate-required, same as every other LAB tool", () => {
+  const { registry } = createLabToolRegistry();
+  const descriptor = registry.describe({ domain: "internal", action: "internal.mock_strategy_simulation_approval" } as ExecutionRequest);
+  assert(descriptor !== undefined, "internal.mock_strategy_simulation_approval must be registered");
+  assertEquals(descriptor.classification, "CONSEQUENTIAL");
+  assertEquals(descriptor.requiresHumanGate, true);
+});
+
+// ── Result -> Learning (INSIGHTVALUES-INTELLIGENCE-AUTOMATION-MACRO-04 §7-9) ──
+// IveAefRuntime.submit() is the one place a learningWriter can ever be
+// called from; a fake AefGovernance (same "cast a duck-typed object to the
+// class" pattern RecordingRuntime uses for IveAefRuntime above) lets these
+// tests drive it to any GovernanceResult without a real store or Postgres.
+class FakeGovernance {
+  result: GovernanceResult = { status: "DENIED", code: "POLICY_DENIED" } as unknown as GovernanceResult;
+  submit(_request: unknown, _credential: unknown) { return Promise.resolve(this.result); }
+  decideGate(_input: unknown, _credential: unknown) { return Promise.resolve(this.result); }
+  getOperation(_input: unknown, _credential: unknown) { return Promise.resolve(this.result); }
+  cancel(_input: unknown, _credential: unknown) { return Promise.resolve(this.result); }
+  auditRefusal(..._a: unknown[]) { return Promise.resolve(); }
+}
+
+const CREDENTIAL = { kind: "bearer_jwt" as const, token: "t" };
+const PROJECT = "0d000000-0000-4000-8000-00000000000d";
+
+function runtimeWithFakeGov(result: GovernanceResult, calls: LearningEntryInput[]) {
+  const gov = new FakeGovernance();
+  gov.result = result;
+  const runtime = new IveAefRuntime({
+    governance: gov as unknown as AefGovernance,
+    table: LAB_IVE_ACTION_TABLE,
+    source: "test_source",
+    learningWriter: (e) => { calls.push(e); return Promise.resolve(); },
+  });
+  return runtime;
+}
+
+Deno.test("RU-21 Result->Learning fires only for a terminal, RECEIPTED result -- never for AWAITING_APPROVAL/AUTHORIZED/EXECUTING/an unreceipted denial", async () => {
+  const nonTerminal: GovernanceResult[] = [
+    { status: "DENIED", code: "POLICY_DENIED" } as unknown as GovernanceResult,
+    { status: "FINAL", replayed: false, operation: op("AWAITING_APPROVAL"), gate: { gateId: "g", bindingHash: "a".repeat(64), expiresAt: "2026-01-01T00:00:00Z" }, receipt: null, reconciliation: null } as unknown as GovernanceResult,
+    { status: "FINAL", replayed: false, operation: op("AUTHORIZED"), gate: null, receipt: null, reconciliation: null } as unknown as GovernanceResult,
+    { status: "FINAL", replayed: false, operation: op("EXECUTING"), gate: null, receipt: null, reconciliation: null } as unknown as GovernanceResult,
+    { status: "OUTCOME_UNCONFIRMED", code: "STORE_UNAVAILABLE", operationId: "0c000000-0000-4000-8000-00000000000c" } as unknown as GovernanceResult,
+  ];
+  for (const result of nonTerminal) {
+    const calls: LearningEntryInput[] = [];
+    const runtime = runtimeWithFakeGov(result, calls);
+    await runtime.execute(intent({ projectId: PROJECT }), SUBJECT, CREDENTIAL);
+    assertEquals(calls.length, 0, JSON.stringify(result));
+  }
+});
+
+Deno.test("RU-22 Result->Learning writes the real project/context/operation/receipt identity for a terminal, receipted result", async () => {
+  const calls: LearningEntryInput[] = [];
+  const result = { status: "FINAL", replayed: false, operation: op("SUCCEEDED"), gate: null, receipt: receipt("SUCCESS"), reconciliation: null } as unknown as GovernanceResult;
+  const runtime = runtimeWithFakeGov(result, calls);
+  const ref = "0b000000-0000-4000-8000-00000000000b";
+  const presentation = await runtime.execute(intent({ projectId: PROJECT, contextRef: ref }), SUBJECT, CREDENTIAL);
+  assertEquals(presentation.completed, true);
+  assertEquals(calls.length, 1);
+  assertEquals(calls[0], {
+    subjectId: SUBJECT,
+    projectId: PROJECT,
+    contextRef: ref,
+    source: "test_source",
+    requestedAction: "internal.mock_publish_content",
+    operationId: "0c000000-0000-4000-8000-00000000000c",
+    receiptId: "r1",
+    outcome: "SUCCESS",
+    phase: "SUCCEEDED",
+  });
+});
+
+Deno.test("RU-23 Result->Learning records a real FAILURE/UNKNOWN_OUTCOME just as faithfully as a SUCCESS -- the fact of execution is learned either way", async () => {
+  for (const [state, outcomeStr] of [["FAILED", "FAILURE"], ["UNKNOWN_OUTCOME", "UNKNOWN_OUTCOME"]] as const) {
+    const calls: LearningEntryInput[] = [];
+    const result = { status: "FINAL", replayed: false, operation: op(state), gate: null, receipt: receipt(outcomeStr), reconciliation: null } as unknown as GovernanceResult;
+    const runtime = runtimeWithFakeGov(result, calls);
+    await runtime.execute(intent({ projectId: PROJECT }), SUBJECT, CREDENTIAL);
+    assertEquals(calls.length, 1, state);
+    assertEquals(calls[0].outcome, outcomeStr);
+    assertEquals(calls[0].phase, state);
+  }
+});
+
+Deno.test("RU-24 Result->Learning uses null projectId for a user-scoped (no project) intent -- never invents one", async () => {
+  const calls: LearningEntryInput[] = [];
+  const result = { status: "FINAL", replayed: false, operation: op("SUCCEEDED"), gate: null, receipt: receipt("SUCCESS"), reconciliation: null } as unknown as GovernanceResult;
+  const runtime = runtimeWithFakeGov(result, calls);
+  await runtime.execute(intent({ projectId: null }), SUBJECT, CREDENTIAL);
+  assertEquals(calls.length, 1);
+  assertEquals(calls[0].projectId, null);
+});
+
+Deno.test("RU-25 a learningWriter that throws never changes the response the caller sees (fire-and-forget, contained)", async () => {
+  const gov = new FakeGovernance();
+  gov.result = { status: "FINAL", replayed: false, operation: op("SUCCEEDED"), gate: null, receipt: receipt("SUCCESS"), reconciliation: null } as unknown as GovernanceResult;
+  const runtime = new IveAefRuntime({
+    governance: gov as unknown as AefGovernance,
+    table: LAB_IVE_ACTION_TABLE,
+    learningWriter: () => { throw new Error("boom"); },
+  });
+  const presentation = await runtime.execute(intent({ projectId: PROJECT }), SUBJECT, CREDENTIAL);
+  assertEquals(presentation.completed, true);
+  assertEquals(presentation.receipt?.outcome, "SUCCESS");
+});
+
+Deno.test("RU-26 no learningWriter configured is a complete no-op, not an error (existing callers with no writer are unaffected)", async () => {
+  const gov = new FakeGovernance();
+  gov.result = { status: "FINAL", replayed: false, operation: op("SUCCEEDED"), gate: null, receipt: receipt("SUCCESS"), reconciliation: null } as unknown as GovernanceResult;
+  const runtime = new IveAefRuntime({ governance: gov as unknown as AefGovernance, table: LAB_IVE_ACTION_TABLE });
+  const presentation = await runtime.execute(intent({ projectId: PROJECT }), SUBJECT, CREDENTIAL);
+  assertEquals(presentation.completed, true);
+});

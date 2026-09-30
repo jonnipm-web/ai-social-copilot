@@ -1,10 +1,17 @@
 class MarketAnalysis {
+  /// R16: detected source language when the presentation text of this row
+  /// was translated for display (null = shown in its original language).
+  final String? localizedFrom;
+
   final String  id;
   final String  userId;
   final String? projectId;
   final String  input;
   final String inputType;
   final String? niche;
+  /// R16: niche in its ORIGINAL (stored) language, for language-independent
+  /// logic (niche overlap, market inference). Equals [niche] when not translated.
+  final String? nicheOriginal;
   final String? subNiche;
   final String? targetAudience;
   final String? businessType;
@@ -35,6 +42,8 @@ class MarketAnalysis {
     this.analysisJson = const {},
     required this.createdAt,
     required this.updatedAt,
+    this.localizedFrom,
+    this.nicheOriginal,
   });
 
   // ── Getters básicos ──────────────────────────────────────────────────────
@@ -102,11 +111,13 @@ class MarketAnalysis {
   factory MarketAnalysis.fromMap(Map<String, dynamic> map) {
     return MarketAnalysis(
       id:                 map['id'] as String,
+      localizedFrom: map['r16_localized_from'] as String?,
       userId:             map['user_id'] as String,
       projectId:          map['project_id'] as String?,
       input:              map['input'] as String,
       inputType:          map['input_type'] as String? ?? 'url',
       niche:              map['niche'] as String?,
+      nicheOriginal:      (map.containsKey('r16_original_niche') ? map['r16_original_niche'] : map['niche']) as String?,
       subNiche:           map['sub_niche'] as String?,
       targetAudience:     map['target_audience'] as String?,
       businessType:       map['business_type'] as String?,

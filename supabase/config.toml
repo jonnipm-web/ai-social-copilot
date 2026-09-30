@@ -21,6 +21,9 @@ verify_jwt = true
 [functions.improve-post]
 verify_jwt = true
 
+[functions.localize-content]
+verify_jwt = true
+
 [functions.generate-strategy]
 verify_jwt = true
 
@@ -58,6 +61,10 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.process-file]
+verify_jwt = true
+
+# IV-IMPACT-I1 — Impact Lab (EXPERIMENTAL, admin-only). Not deployed by this mission.
+[functions.impact-lab]
 verify_jwt = true
 
 [functions.create-checkout-session]

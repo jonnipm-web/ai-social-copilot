@@ -8,10 +8,12 @@ import '../../../core/utils/snackbar_utils.dart';
 import '../../../data/models/ive_interaction_request.dart';
 import '../../../data/models/knowledge_analysis.dart';
 import '../../../data/models/knowledge_item.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/knowledge_provider.dart';
 import '../../../providers/persona_provider.dart';
 import '../../../providers/persona_training_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
+import '../../../shared/widgets/translated_content_notice.dart';
 
 // IVE-COMMERCIAL-QUOTA-HARDENING-13 (Codex Gate 2 round-2 finding) — both
 // call sites below (the AppBar "Re-analisar" icon and _NoAnalysis's
@@ -37,7 +39,7 @@ Future<KnowledgeAnalysis?> _confirmAndAnalyze(
   return exec.run<KnowledgeAnalysis?>(
     context: context,
     ref: ref,
-    analysisLabel: 'Analisar com IA',
+    analysisLabel: AppLocalizations.of(context)!.knowledgeVaultAnalyzeWithAi,
     request: IveInteractionRequest(
       projectId:        item.projectId,
       sourceModule:     'knowledge_vault',
@@ -73,6 +75,7 @@ class _KnowledgeAnalysisScreenState
 
   @override
   Widget build(BuildContext context) {
+    final l10n           = AppLocalizations.of(context)!;
     final itemId        = widget.itemId;
     final itemAsync     = ref.watch(knowledgeItemByIdProvider(itemId));
     final analysisAsync = ref.watch(knowledgeAnalysisProvider(itemId));
@@ -82,9 +85,9 @@ class _KnowledgeAnalysisScreenState
       appBar: AppBar(
         backgroundColor: const Color(0xFF0F0F1A),
         foregroundColor: Colors.white,
-        title: const Text(
-          'Análise de Conhecimento',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        title: Text(
+          l10n.knowledgeAnalysisTitle,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         actions: [
           itemAsync.maybeWhen(
@@ -95,7 +98,7 @@ class _KnowledgeAnalysisScreenState
                     children: [
                       IconButton(
                         icon: const Icon(Icons.rocket_launch_rounded),
-                        tooltip: 'Gerar Estratégia',
+                        tooltip: l10n.knowledgeStrategyGenerateButton,
                         onPressed: () => context.push(
                           AppConstants.routeKnowledgeStrategy
                               .replaceFirst(':id', item.id),
@@ -103,7 +106,7 @@ class _KnowledgeAnalysisScreenState
                       ),
                       IconButton(
                         icon: const Icon(Icons.auto_awesome_rounded),
-                        tooltip: 'Re-analisar',
+                        tooltip: l10n.knowledgeAnalysisReanalyzeTooltip,
                         onPressed: () async {
                           await _confirmAndAnalyze(context, ref, item, _exec);
                           ref.invalidate(knowledgeAnalysisProvider(itemId));
@@ -119,18 +122,18 @@ class _KnowledgeAnalysisScreenState
       body: itemAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
-          child: Text('Erro: $e', style: const TextStyle(color: Colors.white70)),
+          child: Text(l10n.knowledgeStrategyGenericError(extractErrorMessage(e, l10n)), style: const TextStyle(color: Colors.white70)),
         ),
         data: (item) {
           if (item == null) {
-            return const Center(
-              child: Text('Item não encontrado.',
-                  style: TextStyle(color: Colors.white70)),
+            return Center(
+              child: Text(l10n.knowledgeStrategyItemNotFound,
+                  style: const TextStyle(color: Colors.white70)),
             );
           }
           return analysisAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => _NoAnalysis(item: item, exec: _exec, error: e.toString()),
+            error: (e, _) => _NoAnalysis(item: item, exec: _exec, error: extractErrorMessage(e, l10n)),
             data: (analysis) => analysis == null
                 ? _NoAnalysis(item: item, exec: _exec)
                 : _AnalysisContent(item: item, analysis: analysis),
@@ -152,6 +155,7 @@ class _NoAnalysis extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final isLoading = ref.watch(knowledgeAnalysisNotifierProvider) is AsyncLoading || exec.isBusy;
 
     return Center(
@@ -165,7 +169,7 @@ class _NoAnalysis extends ConsumerWidget {
             const SizedBox(height: 16),
             if (error != null) ...[
               Text(
-                'Erro: $error',
+                l10n.knowledgeStrategyGenericError(error!),
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Color(0xFFF44336), fontSize: 13),
               ),
@@ -173,8 +177,8 @@ class _NoAnalysis extends ConsumerWidget {
             ],
             Text(
               isLoading
-                  ? 'Analisando com IA…'
-                  : 'Este item ainda não foi analisado.',
+                  ? l10n.knowledgeAnalysisLoadingLabel
+                  : l10n.knowledgeAnalysisNotYetLabel,
               style: const TextStyle(color: Colors.white70, fontSize: 15),
             ),
             const SizedBox(height: 24),
@@ -187,7 +191,7 @@ class _NoAnalysis extends ConsumerWidget {
                       const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
                 icon: const Icon(Icons.auto_awesome_rounded),
-                label: const Text('Analisar com IA'),
+                label: Text(l10n.knowledgeVaultAnalyzeWithAi),
                 onPressed: () async {
                   await _confirmAndAnalyze(context, ref, item, exec);
                   ref.invalidate(knowledgeAnalysisProvider(item.id));
@@ -213,11 +217,13 @@ class _AnalysisContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
       children: [
         _ItemHeader(item: item),
         const SizedBox(height: 12),
+        TranslatedContentNotice(localizedFrom: analysis.localizedFrom),
 
         // Botões de ação
         _ActionButtons(item: item, analysis: analysis),
@@ -230,98 +236,98 @@ class _AnalysisContent extends StatelessWidget {
         ],
 
         if (analysis.summary != null) ...[
-          _SectionTitle('Resumo'),
+          _SectionTitle(l10n.knowledgeAnalysisSectionSummary),
           _SummaryCard(analysis.summary!),
           const SizedBox(height: 16),
         ],
 
-        _SectionTitle('Pontuações por Canal'),
+        _SectionTitle(l10n.knowledgeAnalysisSectionChannelScores),
         const SizedBox(height: 8),
         _ScoreGrid(analysis: analysis),
         const SizedBox(height: 16),
 
-        _SectionTitle('Palavras-chave'),
+        _SectionTitle(l10n.knowledgeAnalysisSectionKeywords),
         const SizedBox(height: 8),
         if (analysis.keywordsPrimary.isNotEmpty)
-          _ChipSection('Primárias', analysis.keywordsPrimary,
+          _ChipSection(l10n.knowledgeAnalysisKeywordsPrimary, analysis.keywordsPrimary,
               const Color(0xFF6C63FF)),
         if (analysis.keywordsSecondary.isNotEmpty)
-          _ChipSection('Secundárias', analysis.keywordsSecondary,
+          _ChipSection(l10n.knowledgeAnalysisKeywordsSecondary, analysis.keywordsSecondary,
               const Color(0xFF00BCD4)),
         if (analysis.keywordsLongtail.isNotEmpty)
-          _ChipSection('Long-tail', analysis.keywordsLongtail,
+          _ChipSection(l10n.knowledgeAnalysisKeywordsLongtail, analysis.keywordsLongtail,
               const Color(0xFF4CAF50)),
         const SizedBox(height: 8),
 
         if (analysis.audiencePainPoints.isNotEmpty) ...[
-          _SectionTitle('Dores da Audiência'),
+          _SectionTitle(l10n.knowledgeAnalysisSectionAudiencePainPoints),
           _ListCards(analysis.audiencePainPoints,
               Icons.sentiment_dissatisfied_rounded, const Color(0xFFF44336)),
           const SizedBox(height: 12),
         ],
         if (analysis.audienceDesires.isNotEmpty) ...[
-          _SectionTitle('Desejos da Audiência'),
+          _SectionTitle(l10n.knowledgeAnalysisSectionAudienceDesires),
           _ListCards(analysis.audienceDesires, Icons.favorite_rounded,
               const Color(0xFFE91E63)),
           const SizedBox(height: 12),
         ],
 
         if (analysis.contentPillars.isNotEmpty) ...[
-          _SectionTitle('Pilares de Conteúdo'),
+          _SectionTitle(l10n.knowledgeAnalysisSectionContentPillars),
           _ChipSection('', analysis.contentPillars, const Color(0xFFFF9800)),
           const SizedBox(height: 8),
         ],
         if (analysis.topics.isNotEmpty) ...[
-          _SectionTitle('Tópicos Principais'),
+          _SectionTitle(l10n.knowledgeAnalysisSectionTopics),
           _ChipSection('', analysis.topics, const Color(0xFF9C27B0)),
           const SizedBox(height: 8),
         ],
 
         if (analysis.postIdeas.isNotEmpty) ...[
-          _SectionTitle('Ideias de Posts para Redes Sociais'),
+          _SectionTitle(l10n.knowledgeAnalysisSectionPostIdeas),
           _ListCards(analysis.postIdeas, Icons.chat_bubble_outline_rounded,
               const Color(0xFF00BCD4)),
           const SizedBox(height: 12),
         ],
         if (analysis.campaignIdeas.isNotEmpty) ...[
-          _SectionTitle('Ideias de Campanhas'),
+          _SectionTitle(l10n.knowledgeAnalysisSectionCampaignIdeas),
           _ListCards(analysis.campaignIdeas, Icons.campaign_rounded,
               const Color(0xFFFF9800)),
           const SizedBox(height: 12),
         ],
         if (analysis.articleIdeas.isNotEmpty) ...[
-          _SectionTitle('Ideias de Artigos / Blog'),
+          _SectionTitle(l10n.knowledgeAnalysisSectionArticleIdeas),
           _ListCards(analysis.articleIdeas, Icons.article_rounded,
               const Color(0xFF4CAF50)),
           const SizedBox(height: 12),
         ],
 
         if (analysis.commercialAngles.isNotEmpty) ...[
-          _SectionTitle('Ângulos Comerciais'),
+          _SectionTitle(l10n.knowledgeAnalysisSectionCommercialAngles),
           _ListCards(analysis.commercialAngles, Icons.monetization_on_rounded,
               const Color(0xFFFFD700)),
           const SizedBox(height: 12),
         ],
         if (analysis.ctas.isNotEmpty) ...[
-          _SectionTitle('CTAs Sugeridas'),
+          _SectionTitle(l10n.knowledgeAnalysisSectionCtas),
           _ChipSection('', analysis.ctas, const Color(0xFFFFD700)),
           const SizedBox(height: 8),
         ],
 
         if (analysis.seoOpportunities.isNotEmpty) ...[
-          _SectionTitle('Oportunidades SEO'),
+          _SectionTitle(l10n.knowledgeAnalysisSectionSeoOpportunities),
           _ListCards(analysis.seoOpportunities, Icons.search_rounded,
               const Color(0xFF4CAF50)),
           const SizedBox(height: 12),
         ],
         if (analysis.adsenseOpportunities.isNotEmpty) ...[
-          _SectionTitle('Oportunidades AdSense'),
+          _SectionTitle(l10n.knowledgeAnalysisSectionAdsenseOpportunities),
           _ListCards(analysis.adsenseOpportunities, Icons.attach_money_rounded,
               const Color(0xFF8BC34A)),
           const SizedBox(height: 12),
         ],
         if (analysis.amazonKdpOpportunities.isNotEmpty) ...[
-          _SectionTitle('Oportunidades Amazon KDP'),
+          _SectionTitle(l10n.knowledgeAnalysisSectionAmazonKdpOpportunities),
           _ListCards(analysis.amazonKdpOpportunities, Icons.book_rounded,
               const Color(0xFFFF5722)),
           const SizedBox(height: 12),
@@ -329,7 +335,7 @@ class _AnalysisContent extends StatelessWidget {
 
         // Hotmart
         if (analysis.scoreHotmart > 0 || analysis.hotmartData.isNotEmpty) ...[
-          _SectionTitle('Hotmart Engine'),
+          _SectionTitle(l10n.knowledgeAnalysisSectionHotmartEngine),
           _HotmartCard(
               score: analysis.scoreHotmart, data: analysis.hotmartData),
           const SizedBox(height: 12),
@@ -337,14 +343,14 @@ class _AnalysisContent extends StatelessWidget {
 
         // Shopify
         if (analysis.scoreShopify > 0 || analysis.shopifyData.isNotEmpty) ...[
-          _SectionTitle('Shopify Engine'),
+          _SectionTitle(l10n.knowledgeAnalysisSectionShopifyEngine),
           _ShopifyCard(
               score: analysis.scoreShopify, data: analysis.shopifyData),
           const SizedBox(height: 12),
         ],
 
         if (analysis.scoreDetails.isNotEmpty) ...[
-          _SectionTitle('Detalhes por Canal'),
+          _SectionTitle(l10n.knowledgeAnalysisSectionChannelDetails),
           _ScoreDetailsSection(analysis.scoreDetails),
         ],
       ],
@@ -365,6 +371,7 @@ class _ActionButtons extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final personas = ref.watch(personasProvider).valueOrNull ?? [];
+    final l10n = AppLocalizations.of(context)!;
 
     return Wrap(
       spacing: 8,
@@ -372,7 +379,7 @@ class _ActionButtons extends ConsumerWidget {
       children: [
         _ActionChip(
           icon:  Icons.rocket_launch_rounded,
-          label: 'Gerar Estratégia',
+          label: l10n.uxKnowledgeActionGenerateStrategy,
           color: const Color(0xFF6C63FF),
           onTap: () => context.push(
             AppConstants.routeKnowledgeStrategy.replaceFirst(':id', item.id),
@@ -380,7 +387,7 @@ class _ActionButtons extends ConsumerWidget {
         ),
         _ActionChip(
           icon:  Icons.campaign_rounded,
-          label: 'Criar Campanha',
+          label: l10n.uxKnowledgeActionCreateCampaign,
           color: const Color(0xFF00BCD4),
           onTap: () => context.push(
             AppConstants.routeCampaignNew,
@@ -389,7 +396,7 @@ class _ActionButtons extends ConsumerWidget {
         ),
         _ActionChip(
           icon:  Icons.person_pin_rounded,
-          label: 'Treinar Persona',
+          label: l10n.uxKnowledgeActionTrainPersona,
           color: const Color(0xFFFF9800),
           onTap: () => _trainPersona(context, ref, personas),
         ),
@@ -398,8 +405,9 @@ class _ActionButtons extends ConsumerWidget {
   }
 
   Future<void> _trainPersona(BuildContext context, WidgetRef ref, List personas) async {
+    final l10n = AppLocalizations.of(context)!;
     if (personas.isEmpty) {
-      showErrorSnack(context, 'Nenhuma persona encontrada. Crie uma persona primeiro.');
+      showErrorSnack(context, l10n.uxKnowledgeNoPersonas);
       return;
     }
     String? selectedPersonaId;
@@ -408,7 +416,7 @@ class _ActionButtons extends ConsumerWidget {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx2, setState) => AlertDialog(
           backgroundColor: const Color(0xFF1A1A2E),
-          title: const Text('Treinar Persona', style: TextStyle(color: Colors.white)),
+          title: Text(l10n.uxKnowledgeActionTrainPersona, style: const TextStyle(color: Colors.white)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: personas.map((p) => RadioListTile<String>(
@@ -422,7 +430,7 @@ class _ActionButtons extends ConsumerWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancelar'),
+              child: Text(l10n.commonCancel),
             ),
             ElevatedButton(
               onPressed: selectedPersonaId == null
@@ -438,17 +446,17 @@ class _ActionButtons extends ConsumerWidget {
                               analysis: analysis,
                             );
                         if (context.mounted) {
-                          showSuccessSnack(context, 'Persona treinada com sucesso!');
+                          showSuccessSnack(context, l10n.uxKnowledgePersonaTrained);
                         }
                       } catch (e) {
                         if (context.mounted) {
-                          showErrorSnack(context, e.toString());
+                          showErrorSnack(context, extractErrorMessage(e, l10n));
                         }
                       }
                     },
               style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF6C63FF)),
-              child: const Text('Treinar'),
+              child: Text(l10n.uxKnowledgeTrain),
             ),
           ],
         ),
@@ -510,11 +518,11 @@ class _OpportunityScoreCard extends StatelessWidget {
     return const Color(0xFFF44336);
   }
 
-  String get _label {
-    if (score >= 80) return 'Alta Oportunidade';
-    if (score >= 60) return 'Boa Oportunidade';
-    if (score >= 40) return 'Oportunidade Moderada';
-    return 'Baixa Oportunidade';
+  String _label(AppLocalizations l10n) {
+    if (score >= 80) return l10n.uxKnowledgeOppHigh;
+    if (score >= 60) return l10n.uxKnowledgeOppGood;
+    if (score >= 40) return l10n.uxKnowledgeOppModerate;
+    return l10n.uxKnowledgeOppLow;
   }
 
   @override
@@ -563,7 +571,7 @@ class _OpportunityScoreCard extends StatelessWidget {
                       fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
-                Text(_label,
+                Text(_label(AppLocalizations.of(context)!),
                     style: TextStyle(color: _color, fontSize: 12,
                         fontWeight: FontWeight.w600)),
                 const SizedBox(height: 6),
@@ -621,10 +629,10 @@ class _HotmartCard extends StatelessWidget {
             const Divider(color: Colors.white12, height: 1),
             const SizedBox(height: 10),
             ...{
-              'Produto':    data['product_name'],
-              'Promessa':   data['promise'],
-              'Formato':    data['format'],
-              'Preço':      data['price_range'],
+              AppLocalizations.of(context)!.uxKnowledgeFieldProduct:  data['product_name'],
+              AppLocalizations.of(context)!.uxKnowledgeFieldPromise:  data['promise'],
+              AppLocalizations.of(context)!.uxKnowledgeFieldFormat:   data['format'],
+              AppLocalizations.of(context)!.uxKnowledgeFieldPrice:    data['price_range'],
               'Upsell':     data['upsell'],
             }.entries
                 .where((e) => e.value != null && e.value.toString().isNotEmpty)
@@ -674,9 +682,9 @@ class _ShopifyCard extends StatelessWidget {
             const Divider(color: Colors.white12, height: 1),
             const SizedBox(height: 10),
             ...{
-              'Produto':   data['product_name'],
-              'Descrição': data['short_description'],
-              'Preço':     data['price_range'],
+              AppLocalizations.of(context)!.uxKnowledgeFieldProduct:     data['product_name'],
+              AppLocalizations.of(context)!.uxKnowledgeFieldDescription: data['short_description'],
+              AppLocalizations.of(context)!.uxKnowledgeFieldPrice:       data['price_range'],
             }.entries
                 .where((e) => e.value != null && e.value.toString().isNotEmpty)
                 .map((e) => _DataRow(e.key, e.value.toString())),
@@ -974,7 +982,7 @@ class _ChipSection extends StatelessWidget {
                     Clipboard.setData(ClipboardData(text: kw));
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Copiado: $kw'),
+                        content: Text(AppLocalizations.of(context)!.knowledgeAnalysisCopiedKeyword(kw)),
                         duration: const Duration(seconds: 1),
                         backgroundColor: const Color(0xFF1A1A2E),
                       ),
@@ -1037,10 +1045,10 @@ class _ListCards extends StatelessWidget {
                     onTap: () {
                       Clipboard.setData(ClipboardData(text: item));
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Copiado!'),
-                          duration: Duration(seconds: 1),
-                          backgroundColor: Color(0xFF1A1A2E),
+                        SnackBar(
+                          content: Text(AppLocalizations.of(context)!.knowledgeAnalysisCopied),
+                          duration: const Duration(seconds: 1),
+                          backgroundColor: const Color(0xFF1A1A2E),
                         ),
                       );
                     },
@@ -1132,17 +1140,17 @@ class _ChannelDetailState extends State<_ChannelDetail> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (strengths.isNotEmpty) ...[
-                    _SubLabel('Pontos Fortes', const Color(0xFF4CAF50)),
+                    _SubLabel(AppLocalizations.of(context)!.uxKnowledgeStrengths, const Color(0xFF4CAF50)),
                     ...strengths.map((s) => _DetailItem(s, const Color(0xFF4CAF50))),
                     const SizedBox(height: 6),
                   ],
                   if (weaknesses.isNotEmpty) ...[
-                    _SubLabel('Pontos Fracos', const Color(0xFFF44336)),
+                    _SubLabel(AppLocalizations.of(context)!.uxKnowledgeWeaknesses, const Color(0xFFF44336)),
                     ...weaknesses.map((s) => _DetailItem(s, const Color(0xFFF44336))),
                     const SizedBox(height: 6),
                   ],
                   if (improvements.isNotEmpty) ...[
-                    _SubLabel('Melhorias', const Color(0xFF6C63FF)),
+                    _SubLabel(AppLocalizations.of(context)!.uxKnowledgeImprovements, const Color(0xFF6C63FF)),
                     ...improvements.map((s) => _DetailItem(s, const Color(0xFF6C63FF))),
                   ],
                 ],

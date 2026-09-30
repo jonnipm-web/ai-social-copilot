@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 import '../../../data/models/content_item.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/content_provider.dart';
 
 class ContentFormScreen extends ConsumerStatefulWidget {
@@ -81,7 +83,7 @@ class _ContentFormScreenState extends ConsumerState<ContentFormScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text(AppLocalizations.of(context)!.iveChatErrorPrefix(extractErrorMessage(e, AppLocalizations.of(context)!))), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -102,9 +104,10 @@ class _ContentFormScreenState extends ConsumerState<ContentFormScreen> {
       });
     }
 
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEdit ? 'Editar Item' : 'Novo Item'),
+        title: Text(isEdit ? l10n.uxContentFormEditTitle : l10n.uxContentFormNewTitle),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -113,9 +116,9 @@ class _ContentFormScreenState extends ConsumerState<ContentFormScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                'Tipo de conteúdo',
-                style: TextStyle(color: Colors.white54, fontSize: 13),
+              Text(
+                l10n.uxContentFormTypeLabel,
+                style: const TextStyle(color: Colors.white54, fontSize: 13),
               ),
               const SizedBox(height: 8),
               Wrap(
@@ -127,7 +130,7 @@ class _ContentFormScreenState extends ConsumerState<ContentFormScreen> {
                     onTap: () => setState(() => _selectedType = t),
                     child: Chip(
                       label: Text(
-                        ContentItem.typeLabels[t] ?? t,
+                        ContentItem.localizedTypeLabel(t, l10n),
                         style: TextStyle(
                           color: selected ? Colors.white : Colors.white54,
                           fontSize: 12,
@@ -148,36 +151,36 @@ class _ContentFormScreenState extends ConsumerState<ContentFormScreen> {
               const SizedBox(height: 20),
               _Field(
                 controller: _titleCtrl,
-                label: 'Título *',
-                hint: 'Nome do conteúdo',
+                label: l10n.uxContentFormTitleLabel,
+                hint: l10n.uxContentFormTitleHint,
                 validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'Obrigatório' : null,
+                    v == null || v.trim().isEmpty ? l10n.uxFieldRequired : null,
               ),
               const SizedBox(height: 16),
               _Field(
                 controller: _descCtrl,
-                label: 'Descrição / Resumo',
-                hint: 'Breve descrição...',
+                label: l10n.uxContentFormDescLabel,
+                hint: l10n.uxContentFormDescHint,
                 maxLines: 2,
               ),
               const SizedBox(height: 16),
               _Field(
                 controller: _bodyCtrl,
-                label: 'Texto Base / Conteúdo',
-                hint: 'Cole o texto, trecho ou anotações...',
+                label: l10n.uxContentFormBodyLabel,
+                hint: l10n.uxContentFormBodyHint,
                 maxLines: 6,
               ),
               const SizedBox(height: 16),
               _Field(
                 controller: _nicheCtrl,
-                label: 'Nicho',
-                hint: 'Ex: Marketing Digital, Fitness',
+                label: l10n.uxContentFormNicheLabel,
+                hint: l10n.uxContentFormNicheHint,
               ),
               const SizedBox(height: 16),
               _Field(
                 controller: _audienceCtrl,
-                label: 'Público-alvo',
-                hint: 'Ex: Empreendedores iniciantes',
+                label: l10n.uxContentFormAudienceLabel,
+                hint: l10n.uxContentFormAudienceHint,
               ),
               const SizedBox(height: 28),
               ElevatedButton(
@@ -200,7 +203,7 @@ class _ContentFormScreenState extends ConsumerState<ContentFormScreen> {
                         ),
                       )
                     : Text(
-                        isEdit ? 'Salvar Alterações' : 'Adicionar à Biblioteca',
+                        isEdit ? l10n.uxContentFormSaveChanges : l10n.uxContentFormAddToLibrary,
                         style: const TextStyle(
                             fontSize: 15, fontWeight: FontWeight.bold),
                       ),

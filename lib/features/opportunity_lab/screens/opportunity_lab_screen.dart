@@ -15,6 +15,7 @@ import '../../../shared/widgets/app_drawer.dart';
 import '../../action_engine/screens/action_detail_screen.dart';
 import '../opportunity_type_labels.dart';
 import 'opportunity_detail_screen.dart';
+import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 
 // ── Colors ───────────────────────────────────────────────────────────────────
 const _kBg      = Color(0xFF0F0F1A);
@@ -120,9 +121,9 @@ class _FeatureGated extends StatelessWidget {
                   color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            const Text(
-              'O Opportunity Lab está sendo preparado para lançamento.\nEm breve você poderá gerar e avaliar oportunidades de negócio de forma massiva e inteligente.',
-              style: TextStyle(color: Colors.white54, fontSize: 13, height: 1.5),
+            Text(
+              AppLocalizations.of(context)!.oppLabFeatureGatedBody,
+              style: const TextStyle(color: Colors.white54, fontSize: 13, height: 1.5),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
@@ -133,12 +134,12 @@ class _FeatureGated extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: _kGold.withOpacity(0.25)),
               ),
-              child: const Column(
+              child: Column(
                 children: [
-                  Icon(Icons.lock_rounded, color: _kGold, size: 28),
-                  SizedBox(height: 8),
-                  Text('Disponível em breve — Plano Pro',
-                      style: TextStyle(
+                  const Icon(Icons.lock_rounded, color: _kGold, size: 28),
+                  const SizedBox(height: 8),
+                  Text(AppLocalizations.of(context)!.oppLabFeatureGatedProBadge,
+                      style: const TextStyle(
                           color: _kGold,
                           fontSize: 13,
                           fontWeight: FontWeight.w600)),
@@ -160,12 +161,21 @@ class _LabBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final itemsAsync = ref.watch(opportunityLabNotifierProvider);
+    final l10n = AppLocalizations.of(context)!;
+    // COMMERCIAL-V1-UX-RECONCILIATION (R14) -- the "Todos" filter (see
+    // _ProjectFilter above) mixes opportunities from every project in one
+    // list, so each card needs its own project name to stay legible; only
+    // resolved from the user's own RLS-scoped list, same as
+    // opportunity_detail_screen.dart's _OriginSection.
+    final projects = ref.watch(projectsProvider).valueOrNull ?? const [];
+    String? projectNameFor(String? id) =>
+        id == null ? null : projects.where((p) => p.id == id).map((p) => p.name).firstOrNull;
 
     return itemsAsync.when(
       loading: () =>
           const Center(child: CircularProgressIndicator(color: _kPrimary)),
       error: (e, _) => Center(
-        child: Text('Erro: $e',
+        child: Text(l10n.opportunityDetailGenericError(extractErrorMessage(e, l10n)),
             style: const TextStyle(color: Colors.white54)),
       ),
       data: (items) {
@@ -197,6 +207,7 @@ class _LabBody extends ConsumerWidget {
                   padding: const EdgeInsets.only(bottom: 12),
                   child: _LabItemCard(
                     item: items[i],
+                    projectName: projectNameFor(items[i].projectId),
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => OpportunityDetailScreen(itemId: items[i].id),
@@ -213,12 +224,20 @@ class _LabBody extends ConsumerWidget {
                           final action = await ref
                               .read(actionQueueNotifierProvider.notifier)
                               .addFromOpportunityItem(opp);
+                          // COMMERCIAL-V1-UX-RECONCILIATION (R10) — moves the
+                          // item out of 'approved' so onConvertToAction below
+                          // (and this same onApprove path on a future
+                          // rebuild) can no longer create a second Action
+                          // for it.
+                          await ref
+                              .read(opportunityLabNotifierProvider.notifier)
+                              .markExecuting(opp.id);
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                              content: const Text('Aprovada e enviada ao Action Engine!'),
+                              content: Text(l10n.opportunityDetailApprovedSentTitle),
                               backgroundColor: const Color(0xFF4CAF50),
                               action: SnackBarAction(
-                                label: 'Ver Ação',
+                                label: l10n.opportunityDetailViewAction,
                                 textColor: Colors.white,
                                 onPressed: () => Navigator.of(context).push(
                                   MaterialPageRoute(
@@ -232,7 +251,7 @@ class _LabBody extends ConsumerWidget {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('Aprovada, mas erro ao criar ação: $e'),
+                                content: Text(l10n.opportunityDetailApprovedCreateActionError(extractErrorMessage(e, l10n))),
                                 backgroundColor: Colors.orange,
                               ),
                             );
@@ -248,12 +267,17 @@ class _LabBody extends ConsumerWidget {
                               final action = await ref
                                   .read(actionQueueNotifierProvider.notifier)
                                   .addFromOpportunityItem(items[i]);
+                              // COMMERCIAL-V1-UX-RECONCILIATION (R10) — see
+                              // onApprove's identical call above.
+                              await ref
+                                  .read(opportunityLabNotifierProvider.notifier)
+                                  .markExecuting(items[i].id);
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                  content: const Text('Ação criada no Action Engine!'),
+                                  content: Text(l10n.opportunityDetailActionCreatedTitle),
                                   backgroundColor: const Color(0xFF4CAF50),
                                   action: SnackBarAction(
-                                    label: 'Ver',
+                                    label: l10n.oppLabViewActionShort,
                                     textColor: Colors.white,
                                     onPressed: () => Navigator.of(context).push(
                                       MaterialPageRoute(
@@ -266,7 +290,7 @@ class _LabBody extends ConsumerWidget {
                             } catch (e) {
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red),
+                                  SnackBar(content: Text(l10n.opportunityDetailGenericError(extractErrorMessage(e, l10n))), backgroundColor: Colors.red),
                                 );
                               }
                             }
@@ -290,12 +314,14 @@ class _LabItemCard extends StatelessWidget {
     required this.onApprove,
     required this.onDelete,
     this.onConvertToAction,
+    this.projectName,
   });
   final OpportunityLabItem item;
   final VoidCallback        onTap;
   final VoidCallback        onApprove;
   final VoidCallback        onDelete;
   final VoidCallback?       onConvertToAction;
+  final String?             projectName;
 
   static Color _statusColor(String s) {
     const m = {
@@ -310,6 +336,7 @@ class _LabItemCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final score = item.finalScore;
     final c     = _scoreColor(score);
+    final l10n  = AppLocalizations.of(context)!;
 
     return GestureDetector(
       onTap: onTap,
@@ -370,6 +397,21 @@ class _LabItemCard extends StatelessWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis),
           ],
+          if (projectName != null) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Icon(Icons.folder_outlined, size: 12, color: Colors.white38),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(projectName!,
+                      style: const TextStyle(color: Colors.white38, fontSize: 11),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 12),
           Row(
             children: [
@@ -380,7 +422,7 @@ class _LabItemCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  item.status,
+                  opportunityStatusLabel(item.status, l10n),
                   style: TextStyle(
                       color: _statusColor(item.status),
                       fontSize: 10,
@@ -395,7 +437,7 @@ class _LabItemCard extends StatelessWidget {
                       foregroundColor: _kGreen,
                       minimumSize: Size.zero,
                       padding: const EdgeInsets.symmetric(horizontal: 8)),
-                  child: const Text('Aprovar', style: TextStyle(fontSize: 12)),
+                  child: Text(l10n.oppLabApprove, style: const TextStyle(fontSize: 12)),
                 ),
               if (item.status == 'approved' && onConvertToAction != null)
                 TextButton(
@@ -404,7 +446,7 @@ class _LabItemCard extends StatelessWidget {
                       foregroundColor: const Color(0xFF00BCD4),
                       minimumSize: Size.zero,
                       padding: const EdgeInsets.symmetric(horizontal: 8)),
-                  child: const Text('→ Ação', style: TextStyle(fontSize: 12)),
+                  child: Text(l10n.oppLabConvertToAction, style: const TextStyle(fontSize: 12)),
                 ),
               IconButton(
                 icon: const Icon(Icons.delete_outline_rounded,
@@ -431,6 +473,7 @@ class _EmptyLab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -439,17 +482,17 @@ class _EmptyLab extends StatelessWidget {
           children: [
             const Icon(Icons.science_rounded, color: Colors.white24, size: 64),
             const SizedBox(height: 20),
-            const Text(
-              'Opportunity Lab vazio',
-              style: TextStyle(
+            Text(
+              l10n.oppLabEmptyTitle,
+              style: const TextStyle(
                   color: Colors.white70,
                   fontSize: 18,
                   fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            const Text(
-              'Adicione oportunidades para analisar, priorizar e executar.',
-              style: TextStyle(
+            Text(
+              l10n.oppLabEmptyBody,
+              style: const TextStyle(
                   color: Colors.white38, fontSize: 13, height: 1.5),
               textAlign: TextAlign.center,
             ),
@@ -457,7 +500,7 @@ class _EmptyLab extends StatelessWidget {
             ElevatedButton.icon(
               onPressed: onAdd,
               icon: const Icon(Icons.add_rounded),
-              label: const Text('Adicionar Oportunidade'),
+              label: Text(l10n.oppLabAddButton),
               style: ElevatedButton.styleFrom(
                 backgroundColor: _kPrimary,
                 foregroundColor: Colors.white,
@@ -494,7 +537,7 @@ class _ProjectFilter extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             children: [
               _Chip(
-                label: 'Todos',
+                label: AppLocalizations.of(context)!.commonAll,
                 selected: selected == null,
                 onTap: () => onSelect(null),
               ),

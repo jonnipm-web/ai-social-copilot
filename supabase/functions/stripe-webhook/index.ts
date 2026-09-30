@@ -49,7 +49,7 @@ interface StripeEvent {
 }
 
 const PRO_ROLE_LIMIT = { role: 'pro', monthly_limit: 300 } as const;
-const FREE_ROLE_LIMIT = { role: 'free', monthly_limit: 5 } as const;
+const FREE_ROLE_LIMIT = { role: 'free', monthly_limit: 15 } as const;
 
 /** Deliberately all-or-nothing: any status other than the two that mean
  * "currently paying and in good standing" reverts to FREE. There is no

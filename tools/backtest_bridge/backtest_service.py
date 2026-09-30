@@ -1,0 +1,242 @@
+"""INSIGHTVALUES-ROBOT-BUILDER-MACRO-06 §12-13 / MACRO-07 §5-7 -- Backtest
+bridge service.
+
+A minimal, stdlib-only HTTP service exposing ONE fixed, pre-coded engine
+(Strategy #001/V10, PAULO_TREND_FIBONACCI_V10) through a strict JSON
+contract. This is the ONLY thing that ever leaves the TypeScript process
+for a backtest (see supabase/functions/_shared/strategy/backtest_bridge.ts,
+the ts-side client, and engine_registry.ts, the allowlist that gates which
+engine may even reach this module).
+
+Security properties, by construction:
+  - No arbitrary code execution: the request body is numeric/string
+    PARAMETERS only, deserialized with json.loads (never eval/exec/pickle).
+    There is exactly one class ever instantiated
+    (V10BidirectionalSteppedBacktestOrchestrator); nothing here imports a
+    module named from request data.
+  - No shell injection: this process never shells out (no os.system,
+    subprocess, or similar) anywhere in this file.
+  - No filesystem path injection: `dataset_id` is looked up in
+    DATASET_PATHS below, a fixed dict this file owns -- the request body
+    can send any string, but only a handful of known keys ever resolve to
+    a real path. An unknown dataset_id is refused before anything is read.
+  - Binds to 127.0.0.1 only, never 0.0.0.0 -- this is a local development
+    bridge, never meant to be reachable from outside this machine.
+  - Bounded body size (MAX_BODY_BYTES) before JSON parsing.
+  - The real WIN1! dataset itself is NOT bundled with this script or this
+    repository (Macro-05 §17/§39: UNCLEAR_NOT_DISTRIBUTED) -- it must
+    already exist locally at the path this file's operator configures via
+    the WIN1_CSV_PATH environment variable. If that path is missing, every
+    request for dataset_id="win1-5min-qt01c3" fails closed with a clear
+    error, never a fabricated result.
+
+Run (from a machine that has the real WIN1! CSV available locally):
+    1. Copy bridge_config.example.json to bridge_config.json (gitignored)
+       next to this file and fill in the two real local paths, once.
+    2. python tools/backtest_bridge/backtest_service.py
+
+Macro-07 §5-7 collapsed what used to be two environment variables an
+operator had to export by hand before every run
+(STRATEGY_FIDELITY_PYTHONPATH, WIN1_CSV_PATH) into that one versioned
+config file, read once at process start -- see bridge_config.py. This
+was never end-user-facing plumbing (the TS/Flutter/HTTP paths only ever
+send dataset_id/engine_id, never a filesystem path); it narrows the
+remaining operator-facing surface for whoever runs this Lab-only bridge.
+GET /health reports, per engine, whether it is actually usable right
+now, so a caller can know before spending a POST /backtest round-trip.
+
+This process is started manually by an operator for local/Lab use only.
+It is never invoked automatically by AEF, a webhook, or any other
+auto-triggered path in this codebase.
+"""
+from __future__ import annotations
+
+import dataclasses
+import json
+import os
+import sys
+import time
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
+
+from bridge_config import BridgeConfig, describe_v10_availability, load_bridge_config
+
+MAX_BODY_BYTES = 16 * 1024
+HOST = "127.0.0.1"
+PORT = int(os.environ.get("BACKTEST_BRIDGE_PORT", "8737"))
+
+BRIDGE_CONFIG: BridgeConfig = load_bridge_config()
+if BRIDGE_CONFIG.strategy_fidelity_pythonpath and BRIDGE_CONFIG.strategy_fidelity_pythonpath not in sys.path:
+    sys.path.insert(0, BRIDGE_CONFIG.strategy_fidelity_pythonpath)
+
+
+# Fixed, server-owned dataset registry -- the ONLY way a dataset_id ever
+# becomes a filesystem path. The request body never supplies a path.
+def _dataset_paths() -> dict[str, str]:
+    win1 = BRIDGE_CONFIG.win1_csv_path
+    return {"win1-5min-qt01c3": win1} if win1 else {}
+
+
+ALLOWED_ENGINES = {"PAULO_TREND_FIBONACCI_V10"}
+
+
+def _run_v10(dataset_id: str, params: dict) -> dict:
+    from insightvalues_quant.costs.enums import SlippageMode
+    from insightvalues_quant.costs.models import TransactionCostConfig
+    from insightvalues_quant.historical_data.pipeline import HistoricalDataPipeline
+    from insightvalues_quant.strategy_fidelity.v10 import V10BidirectionalSteppedBacktestOrchestrator
+    from tests.historical_backtest.fixtures_win import make_win1_pipeline_config, make_win_registry
+
+    paths = _dataset_paths()
+    csv_path = paths.get(dataset_id)
+    if not csv_path:
+        return {"ok": False, "error": "UNKNOWN_DATASET", "detail": dataset_id}
+    if not os.path.isfile(csv_path):
+        return {"ok": False, "error": "DATASET_UNAVAILABLE", "detail": "win1_csv_path (bridge_config.json) does not point at a real file"}
+
+    registry = make_win_registry()
+    pipeline = HistoricalDataPipeline()
+    # make_win1_pipeline_config() hardcodes `source` to the small bundled
+    # test fixture CSV under the worktree's own tests/ tree (Codex final
+    # audit, P1 fix #2) -- the WIN1_CSV_PATH check above validated a real
+    # file exists, but nothing actually pointed the pipeline at it, so
+    # every request silently ran against the test fixture regardless of
+    # what WIN1_CSV_PATH was set to. Overriding `source` with the
+    # operator-configured, already-validated csv_path is what makes that
+    # gate real: this is now the only CSV this call can ever read.
+    cfg = dataclasses.replace(make_win1_pipeline_config(registry), source=Path(csv_path))
+    dataset = pipeline.process(cfg)
+
+    cost_cfg = None
+    raw_cost = params.get("cost_config")
+    if raw_cost:
+        cost_cfg = TransactionCostConfig(
+            brokerage_per_contract=float(raw_cost["brokerage_per_contract"]),
+            exchange_fee_per_contract=float(raw_cost["exchange_fee_per_contract"]),
+            slippage_mode=SlippageMode.TICKS,
+            slippage_ticks=float(raw_cost["slippage_ticks"]),
+        )
+
+    orchestrator = V10BidirectionalSteppedBacktestOrchestrator()
+    result = orchestrator.run(
+        dataset,
+        quantity=int(params.get("quantity", 1)),
+        registry=registry,
+        require_contract_specification=True,
+        cost_config=cost_cfg,
+    )
+    gap_trades = sum(1 for t in result.trades if t.execution_price_source == "BAR_OPEN_GAP")
+    target_touches = sum(1 for t in result.trades if t.execution_price_source == "TARGET_LEVEL")
+    stop_touches = sum(1 for t in result.trades if t.execution_price_source == "STOP_LEVEL")
+    long_count = sum(1 for t in result.trades if t.direction == "BULLISH")
+    short_count = sum(1 for t in result.trades if t.direction == "BEARISH")
+    wins = sum(1 for t in result.trades if t.net_pnl > 0)
+    losses = sum(1 for t in result.trades if t.net_pnl < 0)
+    gross_profit = sum(t.gross_pnl for t in result.trades if t.gross_pnl > 0)
+    gross_loss = -sum(t.gross_pnl for t in result.trades if t.gross_pnl < 0)
+    # total_cost is derived from gross_pnl - net_pnl (both real, trusted
+    # V4BacktestResult properties) rather than summed per-trade: a fresh
+    # E2E run against the real dataset caught sum(t.total_cost ...)
+    # disagreeing with gross-minus-net (63.75 vs the correct 213.75) --
+    # V4TradeTrace.total_cost evidently does not mean what a naive
+    # per-trade sum would assume. gross_pnl/net_pnl are the two figures
+    # this bridge's own callers (and the Macro-05 historical reference)
+    # already depend on being correct, so deriving from them here is the
+    # trustworthy path rather than the one just proven wrong.
+    total_cost = result.gross_pnl - result.net_pnl
+    return {
+        "ok": True,
+        "engine": "PAULO_TREND_FIBONACCI_V10",
+        "dataset_id": dataset_id,
+        "dataset_hash": dataset.manifest.dataset_hash,
+        "trade_count": len(result.trades),
+        "long_count": long_count,
+        "short_count": short_count,
+        "wins": wins,
+        "losses": losses,
+        "net_pnl": result.net_pnl,
+        "gross_pnl": result.gross_pnl,
+        "gross_profit": gross_profit,
+        "gross_loss": gross_loss,
+        "total_cost": total_cost,
+        "target_touches": target_touches,
+        "stop_touches": stop_touches,
+        "execution_ambiguity_count": gap_trades,
+        "result_hash": result.result_hash,
+    }
+
+
+class Handler(BaseHTTPRequestHandler):
+    def _send_json(self, status: int, payload: dict) -> None:
+        body = json.dumps(payload).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_GET(self) -> None:  # noqa: N802 (stdlib method name)
+        if self.path != "/health":
+            self._send_json(404, {"ok": False, "error": "NOT_FOUND"})
+            return
+        v10_available, v10_reason = describe_v10_availability(BRIDGE_CONFIG)
+        self._send_json(200, {
+            "ok": True,
+            "engines": {
+                "PAULO_TREND_FIBONACCI_V10": {"available": v10_available, "reason": v10_reason},
+            },
+        })
+
+    def do_POST(self) -> None:  # noqa: N802 (stdlib method name)
+        if self.path != "/backtest":
+            self._send_json(404, {"ok": False, "error": "NOT_FOUND"})
+            return
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            self._send_json(400, {"ok": False, "error": "INVALID_BODY"})
+            return
+        if length <= 0 or length > MAX_BODY_BYTES:
+            self._send_json(413, {"ok": False, "error": "BODY_TOO_LARGE"})
+            return
+        raw = self.rfile.read(length)
+        try:
+            body = json.loads(raw.decode("utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            self._send_json(400, {"ok": False, "error": "INVALID_JSON"})
+            return
+        if not isinstance(body, dict):
+            self._send_json(400, {"ok": False, "error": "INVALID_BODY"})
+            return
+
+        engine = body.get("engine")
+        dataset_id = body.get("dataset_id")
+        params = body.get("params") if isinstance(body.get("params"), dict) else {}
+        if engine not in ALLOWED_ENGINES:
+            self._send_json(400, {"ok": False, "error": "UNKNOWN_ENGINE", "detail": str(engine)})
+            return
+        if not isinstance(dataset_id, str) or not dataset_id:
+            self._send_json(400, {"ok": False, "error": "INVALID_DATASET_ID"})
+            return
+
+        started = time.monotonic()
+        try:
+            result = _run_v10(dataset_id, params)
+        except Exception as exc:  # noqa: BLE001 -- never leak a traceback to the caller
+            self._send_json(500, {"ok": False, "error": "INTERNAL_ERROR", "detail": type(exc).__name__})
+            return
+        result["elapsed_seconds"] = round(time.monotonic() - started, 3)
+        self._send_json(200 if result.get("ok") else 422, result)
+
+    def log_message(self, fmt: str, *args) -> None:  # noqa: A002 -- quiet, structured-enough for a local dev bridge
+        sys.stderr.write("[backtest_service] " + (fmt % args) + "\n")
+
+
+def main() -> None:
+    server = HTTPServer((HOST, PORT), Handler)
+    sys.stderr.write(f"[backtest_service] listening on {HOST}:{PORT} (local only)\n")
+    server.serve_forever()
+
+
+if __name__ == "__main__":
+    main()

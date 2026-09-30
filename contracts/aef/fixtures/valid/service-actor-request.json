@@ -1,0 +1,10 @@
+{
+  "contract_version": "1.0",
+  "request_id": "a0000000-0000-4000-8000-000000000002",
+  "requested_at": "2026-09-18T11:55:00.000Z",
+  "expires_at": "2027-01-01T00:00:00.000Z",
+  "actor": { "type": "service", "id": "svc-scheduler", "auth_ref": "svc:cron-job-01" },
+  "intent": "Scheduled weekly briefing generation",
+  "domain": "core",
+  "action": "core.weekly_briefing.generate"
+}

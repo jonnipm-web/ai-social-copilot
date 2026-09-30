@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/roi_metric.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/utils/app_exceptions.dart';
 
 class RoiMetricService {
   final _client = Supabase.instance.client;
@@ -29,7 +30,7 @@ class RoiMetricService {
     String? notes,
   }) async {
     final uid = _client.auth.currentUser?.id;
-    if (uid == null) throw Exception('Usuário não autenticado.');
+    if (uid == null) throw const NotAuthenticatedException();
 
     final row = await _client
         .from(AppConstants.tableRoiMetrics)

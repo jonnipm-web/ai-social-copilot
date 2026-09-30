@@ -5,6 +5,7 @@ import 'package:shimmer/shimmer.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../data/models/post_generation.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/post_provider.dart';
 
 class HistoryScreen extends ConsumerWidget {
@@ -13,10 +14,11 @@ class HistoryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final historyAsync = ref.watch(historyProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Histórico'),
+        title: Text(l10n.dashShortcutHistory),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () {
@@ -42,16 +44,16 @@ class HistoryScreen extends ConsumerWidget {
                     const Icon(Icons.wifi_off_rounded,
                         size: 48, color: Colors.white24),
                     const SizedBox(height: 16),
-                    const Text(
-                      'Não foi possível carregar o histórico.',
+                    Text(
+                      l10n.uxHistoryLoadError,
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white70),
+                      style: const TextStyle(color: Colors.white70),
                     ),
                     const SizedBox(height: 20),
                     ElevatedButton.icon(
                       onPressed: () => ref.invalidate(historyProvider),
                       icon: const Icon(Icons.refresh, size: 16),
-                      label: const Text('Tentar novamente'),
+                      label: Text(l10n.commonRetry),
                     ),
                   ],
                 ),
@@ -71,19 +73,19 @@ class HistoryScreen extends ConsumerWidget {
                           color: Colors.white12,
                         ),
                         const SizedBox(height: 20),
-                        const Text(
-                          'Nenhum conteúdo salvo ainda',
-                          style: TextStyle(
+                        Text(
+                          l10n.uxHistoryEmptyTitle,
+                          style: const TextStyle(
                             color: Colors.white70,
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         const SizedBox(height: 10),
-                        const Text(
-                          'Volte à tela principal, escreva um post\ne toque em "Salvar" após gerar o resultado.',
+                        Text(
+                          l10n.uxHistoryEmptyBody,
                           textAlign: TextAlign.center,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Colors.white38,
                             fontSize: 13,
                             height: 1.5,
@@ -160,11 +162,11 @@ class _HistoryCard extends StatelessWidget {
               const SizedBox(height: 10),
               Row(
                 children: [
-                  _ScoreBadge(label: 'C', value: item.clarityScore),
+                  _ScoreBadge(label: AppLocalizations.of(context)!.uxScoreClarityShort, value: item.clarityScore),
                   const SizedBox(width: 6),
-                  _ScoreBadge(label: 'I', value: item.impactScore),
+                  _ScoreBadge(label: AppLocalizations.of(context)!.uxScoreImpactShort, value: item.impactScore),
                   const SizedBox(width: 6),
-                  _ScoreBadge(label: 'E', value: item.engagementScore),
+                  _ScoreBadge(label: AppLocalizations.of(context)!.uxScoreEngagementShort, value: item.engagementScore),
                   const Spacer(),
                   Text(
                     _formatDateTime(item.createdAt),

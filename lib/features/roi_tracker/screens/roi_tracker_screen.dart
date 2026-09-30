@@ -4,9 +4,35 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../data/models/roi_metric.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/project_provider.dart';
 import '../../../providers/roi_metric_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
+
+// COMMERCIAL-V1-UX-RECONCILIATION (PT/EN commercial matrix) -- metric type
+// display text now comes from l10n, keyed off the same stable 'value'
+// string this list already uses for lookups/state. (R16: the dead PT-only
+// 'label' fields were removed from _metricTypes.)
+String _roiTypeLabel(AppLocalizations l10n, String type) {
+  switch (type) {
+    case 'revenue':               return l10n.roiTrackerTypeRevenue;
+    case 'investment':            return l10n.roiTrackerTypeInvestment;
+    case 'traffic':                return l10n.roiTrackerTypeTraffic;
+    case 'leads':                  return l10n.roiTrackerTypeLeads;
+    case 'conversions':            return l10n.roiTrackerTypeConversions;
+    case 'opportunities':          return l10n.roiTrackerTypeOpportunities;
+    case 'revenue_potential':      return l10n.roiTrackerTypeRevenuePotential;
+    case 'revenue_estimated':      return l10n.roiTrackerTypeRevenueEstimated;
+    case 'hours_saved':            return l10n.roiTrackerTypeHoursSaved;
+    case 'strategies_executed':    return l10n.roiTrackerTypeStrategiesExecuted;
+    case 'campaigns_executed':     return l10n.roiTrackerTypeCampaignsExecuted;
+    case 'decisions_made':         return l10n.roiTrackerTypeDecisionsMade;
+    case 'opportunity_score':      return l10n.roiTrackerTypeOpportunityScore;
+    case 'avg_opportunity_score':  return l10n.roiTrackerTypeAvgOpportunityScore;
+    default:                       return l10n.roiTrackerTypeOther;
+  }
+}
 
 class RoiTrackerScreen extends ConsumerStatefulWidget {
   const RoiTrackerScreen({super.key});
@@ -25,22 +51,22 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
 
   static const _metricTypes = [
     // ── Originais ──────────────────────────────────────────────
-    {'value': 'revenue',                'label': 'Receita',              'icon': Icons.attach_money_rounded,   'color': Color(0xFF6BCB77)},
-    {'value': 'investment',             'label': 'Investimento',         'icon': Icons.savings_rounded,         'color': Color(0xFFFF6B6B)},
-    {'value': 'traffic',                'label': 'Tráfego',              'icon': Icons.trending_up_rounded,     'color': Color(0xFF4D96FF)},
-    {'value': 'leads',                  'label': 'Leads',                'icon': Icons.people_alt_rounded,      'color': Color(0xFFAB83FF)},
-    {'value': 'conversions',            'label': 'Conversões',           'icon': Icons.check_circle_rounded,    'color': Color(0xFFFFD93D)},
-    {'value': 'other',                  'label': 'Outro',                'icon': Icons.category_rounded,        'color': Color(0xFF00BCD4)},
+    {'value': 'revenue',                'icon': Icons.attach_money_rounded,   'color': Color(0xFF6BCB77)},
+    {'value': 'investment',             'icon': Icons.savings_rounded,         'color': Color(0xFFFF6B6B)},
+    {'value': 'traffic',                'icon': Icons.trending_up_rounded,     'color': Color(0xFF4D96FF)},
+    {'value': 'leads',                  'icon': Icons.people_alt_rounded,      'color': Color(0xFFAB83FF)},
+    {'value': 'conversions',            'icon': Icons.check_circle_rounded,    'color': Color(0xFFFFD93D)},
+    {'value': 'other',                  'icon': Icons.category_rounded,        'color': Color(0xFF00BCD4)},
     // ── Fase 10A (Business OS) ─────────────────────────────────
-    {'value': 'opportunities',          'label': 'Oportunidades',        'icon': Icons.lightbulb_rounded,       'color': Color(0xFFFFD700)},
-    {'value': 'revenue_potential',      'label': 'Receita Potencial',    'icon': Icons.bar_chart_rounded,       'color': Color(0xFF00BCD4)},
-    {'value': 'revenue_estimated',      'label': 'Receita Estimada',     'icon': Icons.calculate_rounded,       'color': Color(0xFF4CAF50)},
-    {'value': 'hours_saved',            'label': 'Horas Economizadas',   'icon': Icons.schedule_rounded,        'color': Color(0xFF9C27B0)},
-    {'value': 'strategies_executed',    'label': 'Estratégias',          'icon': Icons.flag_rounded,            'color': Color(0xFF6C63FF)},
-    {'value': 'campaigns_executed',     'label': 'Campanhas',            'icon': Icons.campaign_rounded,        'color': Color(0xFFE91E63)},
-    {'value': 'decisions_made',         'label': 'Decisões',             'icon': Icons.psychology_rounded,      'color': Color(0xFFFF9800)},
-    {'value': 'opportunity_score',      'label': 'Score MI',             'icon': Icons.analytics_rounded,       'color': Color(0xFF4D96FF)},
-    {'value': 'avg_opportunity_score',  'label': 'Score Médio',          'icon': Icons.star_rounded,            'color': Color(0xFFFFD93D)},
+    {'value': 'opportunities',          'icon': Icons.lightbulb_rounded,       'color': Color(0xFFFFD700)},
+    {'value': 'revenue_potential',      'icon': Icons.bar_chart_rounded,       'color': Color(0xFF00BCD4)},
+    {'value': 'revenue_estimated',      'icon': Icons.calculate_rounded,       'color': Color(0xFF4CAF50)},
+    {'value': 'hours_saved',            'icon': Icons.schedule_rounded,        'color': Color(0xFF9C27B0)},
+    {'value': 'strategies_executed',    'icon': Icons.flag_rounded,            'color': Color(0xFF6C63FF)},
+    {'value': 'campaigns_executed',     'icon': Icons.campaign_rounded,        'color': Color(0xFFE91E63)},
+    {'value': 'decisions_made',         'icon': Icons.psychology_rounded,      'color': Color(0xFFFF9800)},
+    {'value': 'opportunity_score',      'icon': Icons.analytics_rounded,       'color': Color(0xFF4D96FF)},
+    {'value': 'avg_opportunity_score',  'icon': Icons.star_rounded,            'color': Color(0xFFFFD93D)},
   ];
 
   @override
@@ -50,9 +76,7 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
     super.dispose();
   }
 
-  String _label(String type) {
-    return _metricTypes.firstWhere((m) => m['value'] == type, orElse: () => _metricTypes.last)['label'] as String;
-  }
+  String _label(String type, AppLocalizations l10n) => _roiTypeLabel(l10n, type);
 
   Color _color(String type) {
     return _metricTypes.firstWhere((m) => m['value'] == type, orElse: () => _metricTypes.last)['color'] as Color;
@@ -63,11 +87,12 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
   }
 
   Future<void> _save() async {
+    final l10n = AppLocalizations.of(context)!;
     final raw = _valueCtrl.text.trim();
     final value = double.tryParse(raw.replaceAll(',', '.'));
     if (value == null || raw.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Informe um valor numérico válido'), backgroundColor: Colors.orange),
+        SnackBar(content: Text(l10n.roiTrackerInvalidValue), backgroundColor: Colors.orange),
       );
       return;
     }
@@ -84,7 +109,7 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
       setState(() { _showForm = false; _selectedProjectId = null; _metricType = 'revenue'; });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        SnackBar(content: Text(extractErrorMessage(e, l10n)), backgroundColor: Colors.red),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -93,6 +118,7 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final asyncMetrics = ref.watch(roiMetricsNotifierProvider);
     final asyncSummary = ref.watch(roiSummaryProvider);
 
@@ -110,7 +136,7 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
           },
         ),
         backgroundColor: const Color(0xFF0F0F1A),
-        title: const Text('ROI Tracker', style: TextStyle(color: Colors.white)),
+        title: Text(l10n.roiTrackerTitle, style: const TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
@@ -131,36 +157,42 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
             asyncSummary.when(
               loading: () => const SizedBox(height: 100, child: Center(child: CircularProgressIndicator(color: Color(0xFFFFD93D)))),
               error: (_, __) => const SizedBox.shrink(),
-              data: (summary) => _ExecutiveDashboardSection(summary: summary),
+              data: (summary) => _ExecutiveDashboardSection(summary: summary, l10n: l10n),
             ),
 
             // Summary cards
             asyncSummary.when(
               loading: () => const SizedBox.shrink(),
               error: (_, __) => const SizedBox.shrink(),
-              data: (summary) => _SummarySection(summary: summary, color: _color, icon: _icon, label: _label),
+              data: (summary) => _SummarySection(
+                summary: summary,
+                color: _color,
+                icon: _icon,
+                label: (t) => _label(t, l10n),
+                l10n: l10n,
+              ),
             ),
 
             // Form
             if (_showForm)
-              _buildForm(),
+              _buildForm(l10n),
 
             // Metrics list
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: const Text('Registros', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+              child: Text(l10n.roiTrackerRecordsTitle, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
             ),
             asyncMetrics.when(
               loading: () => const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator(color: Color(0xFFFFD93D)))),
               error: (e, _) => Padding(
                 padding: const EdgeInsets.all(16),
-                child: Text('Erro: $e', style: const TextStyle(color: Colors.redAccent)),
+                child: Text(l10n.iveChatErrorPrefix(extractErrorMessage(e, l10n)), style: const TextStyle(color: Colors.redAccent)),
               ),
               data: (metrics) => metrics.isEmpty
-                  ? const Padding(
-                      padding: EdgeInsets.all(32),
+                  ? Padding(
+                      padding: const EdgeInsets.all(32),
                       child: Center(
-                        child: Text('Nenhum registro ainda.\nToque em + para adicionar.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white38)),
+                        child: Text(l10n.roiTrackerEmptyRecords, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white38)),
                       ),
                     )
                   : ListView.builder(
@@ -172,7 +204,7 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
                         metric: metrics[i],
                         color: _color(metrics[i].metricType),
                         icon: _icon(metrics[i].metricType),
-                        label: _label(metrics[i].metricType),
+                        label: _label(metrics[i].metricType, l10n),
                         onDelete: () => ref.read(roiMetricsNotifierProvider.notifier).delete(metrics[i].id),
                       ),
                     ),
@@ -183,7 +215,7 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
     );
   }
 
-  Widget _buildForm() {
+  Widget _buildForm(AppLocalizations l10n) {
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
@@ -195,11 +227,11 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Novo Registro', style: TextStyle(color: Color(0xFFFFD93D), fontWeight: FontWeight.bold)),
+          Text(l10n.roiTrackerNewRecord, style: const TextStyle(color: Color(0xFFFFD93D), fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
 
           // Metric type
-          const Text('Tipo', style: TextStyle(color: Colors.white54, fontSize: 12)),
+          Text(l10n.roiTrackerTypeLabel, style: const TextStyle(color: Colors.white54, fontSize: 12)),
           const SizedBox(height: 6),
           Wrap(
             spacing: 6,
@@ -221,7 +253,7 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
                     children: [
                       Icon(m['icon'] as IconData, color: isSelected ? color : Colors.white38, size: 14),
                       const SizedBox(width: 4),
-                      Text(m['label'] as String,
+                      Text(_roiTypeLabel(l10n, m['value'] as String),
                           style: TextStyle(
                             color: isSelected ? color : Colors.white54,
                             fontSize: 12,
@@ -247,7 +279,7 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
                   : Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Projeto (opcional)', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                        Text(l10n.roiTrackerProjectOptional, style: const TextStyle(color: Colors.white54, fontSize: 12)),
                         const SizedBox(height: 6),
                         DropdownButtonFormField<String?>(
                           value: _selectedProjectId,
@@ -264,7 +296,7 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
                             ),
                           ),
                           items: [
-                            const DropdownMenuItem<String?>(value: null, child: Text('Nenhum', style: TextStyle(color: Colors.white54))),
+                            DropdownMenuItem<String?>(value: null, child: Text(l10n.roiTrackerProjectNone, style: const TextStyle(color: Colors.white54))),
                             ...projects.map((p) => DropdownMenuItem<String?>(
                               value: p.id,
                               child: Text(p.name, overflow: TextOverflow.ellipsis),
@@ -284,7 +316,7 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             style: const TextStyle(color: Colors.white, fontSize: 13),
             decoration: InputDecoration(
-              labelText: 'Valor *',
+              labelText: l10n.roiTrackerValueLabel,
               labelStyle: const TextStyle(color: Colors.white54, fontSize: 12),
               filled: true,
               fillColor: const Color(0xFF0F0F1A),
@@ -307,7 +339,7 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
             controller: _notesCtrl,
             style: const TextStyle(color: Colors.white, fontSize: 13),
             decoration: InputDecoration(
-              labelText: 'Observações (opcional)',
+              labelText: l10n.roiTrackerNotesLabel,
               labelStyle: const TextStyle(color: Colors.white54, fontSize: 12),
               filled: true,
               fillColor: const Color(0xFF0F0F1A),
@@ -334,7 +366,7 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
                     foregroundColor: Colors.white54,
                     side: const BorderSide(color: Color(0xFF333355)),
                   ),
-                  child: const Text('Cancelar'),
+                  child: Text(l10n.commonCancel),
                 ),
               ),
               const SizedBox(width: 10),
@@ -347,7 +379,7 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
                   ),
                   child: _saving
                       ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
-                      : const Text('Salvar', style: TextStyle(fontWeight: FontWeight.bold)),
+                      : Text(l10n.commonSave, style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
@@ -359,12 +391,19 @@ class _RoiTrackerScreenState extends ConsumerState<RoiTrackerScreen> {
 }
 
 class _SummarySection extends StatelessWidget {
-  const _SummarySection({required this.summary, required this.color, required this.icon, required this.label});
+  const _SummarySection({
+    required this.summary,
+    required this.color,
+    required this.icon,
+    required this.label,
+    required this.l10n,
+  });
 
   final Map<String, double> summary;
   final Color Function(String) color;
   final IconData Function(String) icon;
   final String Function(String) label;
+  final AppLocalizations l10n;
 
   String _fmt(double v) {
     if (v >= 1000000) return 'R\$ ${(v / 1000000).toStringAsFixed(1)}M';
@@ -400,7 +439,7 @@ class _SummarySection extends StatelessWidget {
             children: [
               const Icon(Icons.insights_rounded, color: Color(0xFFFFD93D), size: 18),
               const SizedBox(width: 8),
-              const Text('Resumo ROI', style: TextStyle(color: Color(0xFFFFD93D), fontWeight: FontWeight.bold)),
+              Text(l10n.roiTrackerSummaryTitle, style: const TextStyle(color: Color(0xFFFFD93D), fontWeight: FontWeight.bold)),
               const Spacer(),
               if ((summary['investment'] ?? 0) > 0)
                 Container(
@@ -415,7 +454,7 @@ class _SummarySection extends StatelessWidget {
                     ),
                   ),
                   child: Text(
-                    'ROI: ${_roi.toStringAsFixed(0)}%',
+                    l10n.roiTrackerRoiPercent(_roi.toStringAsFixed(0)),
                     style: TextStyle(
                       color: _roi >= 0 ? const Color(0xFF6BCB77) : const Color(0xFFFF6B6B),
                       fontWeight: FontWeight.bold,
@@ -523,8 +562,9 @@ class _MetricCard extends StatelessWidget {
 
 // ── M6: Executive Dashboard Section ──────────────────────────────────────────
 class _ExecutiveDashboardSection extends StatelessWidget {
-  const _ExecutiveDashboardSection({required this.summary});
+  const _ExecutiveDashboardSection({required this.summary, required this.l10n});
   final Map<String, double> summary;
+  final AppLocalizations l10n;
 
   String _fmtBRL(double v) {
     if (v <= 0) return 'R\$ 0';
@@ -564,9 +604,9 @@ class _ExecutiveDashboardSection extends StatelessWidget {
             children: [
               const Icon(Icons.insights_rounded, color: Color(0xFF4CAF50), size: 18),
               const SizedBox(width: 8),
-              const Text(
-                'Dashboard Executivo',
-                style: TextStyle(
+              Text(
+                l10n.roiTrackerExecutiveDashboardTitle,
+                style: const TextStyle(
                     color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
               ),
             ],
@@ -577,8 +617,8 @@ class _ExecutiveDashboardSection extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('RECEITA',
-                    style: TextStyle(
+                Text(l10n.roiTrackerRevenueSectionTitle,
+                    style: const TextStyle(
                         color: Colors.white38,
                         fontSize: 10,
                         letterSpacing: 1.2,
@@ -587,19 +627,19 @@ class _ExecutiveDashboardSection extends StatelessWidget {
                 Row(
                   children: [
                     if (revenue > 0)
-                      _ExecStat('Registrada',  _fmtBRL(revenue),      const Color(0xFF6BCB77)),
+                      _ExecStat(l10n.roiTrackerRevenueRegistered,  _fmtBRL(revenue),      const Color(0xFF6BCB77)),
                     if (revPotential > 0)
-                      _ExecStat('Potencial',   _fmtBRL(revPotential), const Color(0xFF00BCD4)),
+                      _ExecStat(l10n.roiTrackerRevenuePotentialLabel,   _fmtBRL(revPotential), const Color(0xFF00BCD4)),
                     if (revEstimated > 0)
-                      _ExecStat('Estimada',    _fmtBRL(revEstimated), const Color(0xFF4CAF50)),
+                      _ExecStat(l10n.roiTrackerRevenueEstimatedLabel,    _fmtBRL(revEstimated), const Color(0xFF4CAF50)),
                   ],
                 ),
                 const SizedBox(height: 12),
               ],
             ),
           // Activity row
-          const Text('ATIVIDADE',
-              style: TextStyle(
+          Text(l10n.roiTrackerActivitySectionTitle,
+              style: const TextStyle(
                   color: Colors.white38,
                   fontSize: 10,
                   letterSpacing: 1.2,
@@ -610,15 +650,15 @@ class _ExecutiveDashboardSection extends StatelessWidget {
             runSpacing: 8,
             children: [
               if (opportunities > 0)
-                _ExecStat('Oportunidades',    _fmt(opportunities), const Color(0xFFFFD700)),
+                _ExecStat(_roiTypeLabel(l10n, 'opportunities'),    _fmt(opportunities), const Color(0xFFFFD700)),
               if (strategies > 0)
-                _ExecStat('Estratégias',      _fmt(strategies),    const Color(0xFF6C63FF)),
+                _ExecStat(_roiTypeLabel(l10n, 'strategies_executed'),      _fmt(strategies),    const Color(0xFF6C63FF)),
               if (campaigns > 0)
-                _ExecStat('Campanhas',        _fmt(campaigns),     const Color(0xFFE91E63)),
+                _ExecStat(_roiTypeLabel(l10n, 'campaigns_executed'),        _fmt(campaigns),     const Color(0xFFE91E63)),
               if (decisions > 0)
-                _ExecStat('Decisões',         _fmt(decisions),     const Color(0xFFFF9800)),
+                _ExecStat(_roiTypeLabel(l10n, 'decisions_made'),         _fmt(decisions),     const Color(0xFFFF9800)),
               if (hoursSaved > 0)
-                _ExecStat('Horas Econ.',      '${hoursSaved.round()}h', const Color(0xFF9C27B0)),
+                _ExecStat(l10n.roiTrackerHoursSavedShort,      '${hoursSaved.round()}h', const Color(0xFF9C27B0)),
             ],
           ),
         ],

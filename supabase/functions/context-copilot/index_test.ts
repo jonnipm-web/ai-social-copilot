@@ -11,6 +11,7 @@
 import { assertEquals, assertStringIncludes, assertNotEquals } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
 import { AuthClient } from '../_shared/auth.ts';
 import { QuotaClient } from '../_shared/quota.ts';
+import { withSubject } from '../_shared/entitlement_test_support.ts';
 
 // Fake quota RPC — allowed by default; tests that need "exceeded" or
 // "refund was called" override rpcOverrides/refundCalls directly.
@@ -79,7 +80,10 @@ globalThis.fetch = async (input: string | URL | Request, options?: RequestInit):
 };
 
 // DENO_TESTING deve estar definido antes desta linha para suprimir serve().
-const { handler } = await import('./index.ts');
+const { handler: moduleHandler } = await import('./index.ts');
+// MODULE-FOUNDATION-AND-ENTITLEMENT-02 — the handler now checks server-side
+// entitlement; its module is COMMERCIAL/free, so the pre-existing tests run as a free user.
+const handler = withSubject(moduleHandler, 'free');
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 // Por padrão inclui Authorization Bearer para simular sessão autenticada.
@@ -645,4 +649,40 @@ Deno.test('CF-47: input malformado continua sendo rejeitado ANTES do RPC de cota
   });
   assertEquals(res.status, 400);
   assertEquals(lastReserveRpcParams, undefined);
+});
+
+// ── R16: idioma de saída = idioma de APRESENTAÇÃO ────────────────────────────
+
+function capturedMessages(): Array<{ role: string; content: string }> {
+  return (_capturedRequestBody.messages ?? []) as Array<{ role: string; content: string }>;
+}
+
+Deno.test('R16-CC-1: language en-US injeta política em inglês antes do histórico e sem o PT fixo', async () => {
+  const res = await post({
+    message: 'Qual o status do projeto?', screen_name: 'home', language: 'en-US',
+    context: { documents: [{ title: 'Doc PT', status: 'processed', content_excerpt: 'Conteúdo em português.' }] },
+    history: [{ role: 'user', content: 'Olá' }, { role: 'assistant', content: 'Olá!' }],
+  });
+  assertEquals(res.status, 200);
+  const msgs = capturedMessages();
+  assertEquals(msgs[0].role, 'system');
+  assertEquals(msgs[1].role, 'system');
+  assertStringIncludes(msgs[1].content, 'Respond in English');
+  assertEquals(msgs[2].content, 'Olá'); // histórico vem depois da política
+  assertEquals(msgs[0].content.includes('Responda sempre em Português do Brasil'), false);
+  assertStringIncludes(msgs[0].content, 'This document is registered in the Knowledge Vault');
+});
+
+Deno.test('R16-CC-2: sem language cai para pt-BR (comportamento anterior preservado)', async () => {
+  const res = await post({ message: 'Olá', screen_name: 'home', history: [] });
+  assertEquals(res.status, 200);
+  const msgs = capturedMessages();
+  assertStringIncludes(msgs[1].content, 'Responda em português do Brasil');
+  assertStringIncludes(msgs[0].content, 'Este documento está registrado no Knowledge Vault');
+});
+
+Deno.test('R16-CC-3: locale "en" também resolve para inglês', async () => {
+  const res = await post({ message: 'Hi', screen_name: 'home', locale: 'en', history: [] });
+  assertEquals(res.status, 200);
+  assertStringIncludes(capturedMessages()[1].content, 'Respond in English');
 });

@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/constants/app_constants.dart';
+import '../../core/utils/app_exceptions.dart';
 
 class FileImportResult {
   final String text;
@@ -61,9 +62,7 @@ class FileImportService {
       allowedExtensions: _supportedExtensions,
     ).timeout(
       _pickTimeout,
-      onTimeout: () => throw Exception(
-        'Tempo esgotado ao selecionar o arquivo. Tente novamente.',
-      ),
+      onTimeout: () => throw const AppException(AppErrorCode.fileTimeout),
     );
 
     if (file == null) return null;
@@ -75,11 +74,9 @@ class FileImportService {
 
     final bytes = await file.readAsBytes().timeout(
       _readTimeout,
-      onTimeout: () => throw Exception(
-        'Tempo esgotado ao ler o arquivo. Tente novamente.',
-      ),
+      onTimeout: () => throw const AppException(AppErrorCode.fileTimeout),
     );
-    if (bytes.isEmpty) throw Exception('Não foi possível ler o arquivo.');
+    if (bytes.isEmpty) throw const AppException(AppErrorCode.fileUnreadable);
 
     // TXT e CSV nunca passam pelo process-file (que já checa tamanho antes
     // de decodificar) -- sem este teto, um arquivo gigante seria
@@ -89,7 +86,7 @@ class FileImportService {
     // texto do Knowledge item exatamente como um .txt colado manualmente.
     if (extension == 'txt' || extension == 'csv') {
       if (bytes.length > AppConstants.maxLocalImportBytes) {
-        throw Exception('Arquivo de texto muito grande. O limite é de aproximadamente 6 MB.');
+        throw const AppException(AppErrorCode.fileTooLarge);
       }
       final text = utf8.decode(bytes, allowMalformed: true);
       return FileImportResult(
@@ -118,13 +115,11 @@ class FileImportService {
       },
     ).timeout(
       _extractTimeout,
-      onTimeout: () => throw Exception(
-        'O servidor demorou demais para extrair o texto. Tente novamente.',
-      ),
+      onTimeout: () => throw const AppException(AppErrorCode.extractionTimeout),
     );
 
     if (response.data == null || response.data is! Map<String, dynamic>) {
-      throw Exception('Resposta vazia do serviço de extração.');
+      throw const AppException(AppErrorCode.emptyResponse);
     }
 
     final data = response.data as Map<String, dynamic>;
@@ -132,9 +127,7 @@ class FileImportService {
 
     final text = data['text'] as String? ?? '';
     if (text.trim().length < 20) {
-      throw Exception(
-        'Conteúdo extraído muito curto. Tente copiar e colar o texto manualmente.',
-      );
+      throw const AppException(AppErrorCode.extractedTextTooShort);
     }
 
     return FileImportResult(

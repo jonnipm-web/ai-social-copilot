@@ -6,8 +6,10 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/language_utils.dart';
 import '../../../data/models/ive_interaction_request.dart';
 import '../../../data/models/gap_analysis.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/market_analysis_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
+import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 
 // IVE-COMMERCIAL-FOUNDATION-11 — this screen is the representative
 // quota-consuming call site migrated in Phase A (mission Section 11).
@@ -44,10 +46,12 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
     setState(() => _error = null);
     try {
       final analysis = await ref.read(marketAnalysisByIdProvider(widget.analysisId).future);
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
       await _exec.run<void>(
         context: context,
         ref: ref,
-        analysisLabel: 'Gap Analysis',
+        analysisLabel: l10n.miGapTitle,
         request: IveInteractionRequest(
           projectId:        analysis.projectId,
           sourceModule:     'market_intelligence',
@@ -71,7 +75,8 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
       if (_exec.state != AiExecutionState.success) return;
       ref.invalidate(gapAnalysisByAnalysisProvider(widget.analysisId));
     } catch (e) {
-      setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+      if (!mounted) return;
+      setState(() => _error = extractErrorMessage(e, AppLocalizations.of(context)!));
     } finally {
       if (mounted) setState(() {});
     }
@@ -91,11 +96,12 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
   }
 
   Widget _buildScaffold(BuildContext context, AsyncValue<GapAnalysis?> asyncGap) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F1A),
       appBar: AppBar(
         backgroundColor: const Color(0xFF0F0F1A),
-        title: const Text('Gap Analysis', style: TextStyle(color: Colors.white)),
+        title: Text(l10n.miGapTitle, style: const TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -110,7 +116,7 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
                 ? const AiThinkingIndicator(color: Color(0xFFFFD93D))
                 : const Icon(Icons.find_in_page_rounded, color: Color(0xFFFFD93D)),
             label: Text(
-              _running ? 'Analisando...' : 'Analisar',
+              _running ? l10n.miGapAnalyzing : l10n.miGapAnalyzeButton,
               style: const TextStyle(color: Color(0xFFFFD93D)),
             ),
           ),
@@ -132,7 +138,9 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
           Expanded(
             child: asyncGap.when(
               loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFFFFD93D))),
-              error: (e, _) => Center(child: Text('Erro: $e', style: const TextStyle(color: Colors.redAccent))),
+              error: (e, _) => Center(
+                  child: Text(l10n.miSubErrorPrefix(extractErrorMessage(e, l10n)),
+                      style: const TextStyle(color: Colors.redAccent))),
               data: (gap) => gap == null
                   ? Center(
                       child: Column(
@@ -140,15 +148,22 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
                         children: [
                           const Icon(Icons.find_in_page_outlined, color: Colors.white24, size: 64),
                           const SizedBox(height: 16),
-                          const Text('Nenhuma análise de gaps ainda', style: TextStyle(color: Colors.white38)),
+                          Text(l10n.miGapEmptyTitle, style: const TextStyle(color: Colors.white38)),
                           const SizedBox(height: 8),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Text(l10n.miGapEmptyBody,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(color: Colors.white24, fontSize: 12, height: 1.4)),
+                          ),
+                          const SizedBox(height: 16),
                           ElevatedButton(
                             onPressed: _running ? null : _run,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFFFFD93D),
                               foregroundColor: Colors.black,
                             ),
-                            child: const Text('Analisar Gaps'),
+                            child: Text(l10n.miGapEmptyButton),
                           ),
                         ],
                       ),
@@ -161,31 +176,31 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
                           _GapSection(
                             icon: Icons.article_rounded,
                             color: const Color(0xFFFF6B6B),
-                            title: 'Gaps de Conteúdo',
+                            title: l10n.miGapSectionContent,
                             items: gap.contentGaps,
                           ),
                           _GapSection(
                             icon: Icons.search_rounded,
                             color: const Color(0xFF4D96FF),
-                            title: 'Gaps de SEO',
+                            title: l10n.miGapSectionSeo,
                             items: gap.seoGaps,
                           ),
                           _GapSection(
                             icon: Icons.shield_rounded,
                             color: const Color(0xFF6BCB77),
-                            title: 'Gaps de Autoridade',
+                            title: l10n.miGapSectionAuthority,
                             items: gap.authorityGaps,
                           ),
                           _GapSection(
                             icon: Icons.attach_money_rounded,
                             color: const Color(0xFFFFD93D),
-                            title: 'Gaps de Monetização',
+                            title: l10n.miGapSectionMonetization,
                             items: gap.monetizationGaps,
                           ),
                           _GapSection(
                             icon: Icons.inventory_2_rounded,
                             color: const Color(0xFFAB83FF),
-                            title: 'Gaps de Produto',
+                            title: l10n.miGapSectionProduct,
                             items: gap.productGaps,
                           ),
                           const SizedBox(height: 8),
@@ -202,7 +217,7 @@ class _GapAnalysisScreenState extends ConsumerState<GapAnalysisScreen> {
                                 const Icon(Icons.summarize_rounded, color: Color(0xFFFFD93D), size: 18),
                                 const SizedBox(width: 8),
                                 Text(
-                                  'Total: ${gap.totalGaps} gaps identificados',
+                                  l10n.miGapTotalIdentified(gap.totalGaps),
                                   style: const TextStyle(
                                     color: Color(0xFFFFD93D),
                                     fontWeight: FontWeight.bold,

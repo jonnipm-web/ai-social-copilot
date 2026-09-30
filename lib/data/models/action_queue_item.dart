@@ -1,4 +1,10 @@
+import '../../l10n/app_localizations.dart';
+
 class ActionQueueItem {
+  /// R16: detected source language when the presentation text of this row
+  /// was translated for display (null = shown in its original language).
+  final String? localizedFrom;
+
   final String id;
   final String userId;
   final String? projectId;
@@ -26,6 +32,15 @@ class ActionQueueItem {
   final int     confidence;
   final String? marketAnalysisId;
 
+  // ── AEF governance provenance (INSIGHTVALUES-PRODUCTIZATION-MACRO-03) ──
+  // Null on every item never routed through the governed execute path
+  // (the common case: a self-performed real-world task, never AEF's
+  // concern). Set only by a real action-engine-runtime response — never
+  // client-invented.
+  final String? aefOperationId;
+  final String? aefReceiptId;
+  final String? aefReceiptOutcome;
+
   const ActionQueueItem({
     required this.id,
     required this.userId,
@@ -49,6 +64,10 @@ class ActionQueueItem {
     this.marketScore     = 0,
     this.confidence      = 0,
     this.marketAnalysisId,
+    this.aefOperationId,
+    this.aefReceiptId,
+    this.aefReceiptOutcome,
+    this.localizedFrom,
   });
 
   static const List<String> statusValues = [
@@ -67,7 +86,32 @@ class ActionQueueItem {
     'knowledge_engine': 'Knowledge Engine',
   };
 
+  /// Legacy PT-only label. R16: UI must use [localizedOriginLabel]; this
+  /// getter remains only for callers not yet migrated.
   String get originLabel => originLabels[origin] ?? origin;
+
+  /// R16 — origin label in the presentation language of [l10n]; unknown
+  /// origins are shown verbatim.
+  String localizedOriginLabel(AppLocalizations l10n) =>
+      originLabelFor(origin, l10n);
+
+  static String originLabelFor(String origin, AppLocalizations l10n) {
+    switch (origin) {
+      case 'manual':           return l10n.uxOriginManual;
+      case 'opportunity_lab':  return 'Opportunity Lab';
+      case 'market_analysis':  return l10n.uxOriginMarketAnalysis;
+      case 'auto_bootstrap':   return l10n.uxOriginAutoBootstrap;
+      case 'knowledge_engine': return 'Knowledge Engine';
+      default:                 return origin;
+    }
+  }
+
+  /// The ONLY condition under which this item's completion may be shown as
+  /// AEF-verified rather than self-attested: a real, persisted
+  /// ExecutionReceipt with outcome SUCCESS. Mirrors AefRuntimeResult's own
+  /// isCompleted rule (lib/data/models/aef_runtime.dart) so the two never
+  /// silently disagree about what "done" means.
+  bool get isAefVerifiedComplete => aefReceiptOutcome == 'SUCCESS';
 
   static List<String> _parseList(dynamic v) {
     if (v == null) return [];
@@ -77,6 +121,7 @@ class ActionQueueItem {
 
   factory ActionQueueItem.fromMap(Map<String, dynamic> map) => ActionQueueItem(
         id:               map['id'] as String,
+        localizedFrom: map['r16_localized_from'] as String?,
         userId:           map['user_id'] as String,
         projectId:        map['project_id'] as String?,
         opportunityLabId: map['opportunity_lab_id'] as String?,
@@ -100,6 +145,9 @@ class ActionQueueItem {
         marketScore:      map['market_score'] as int? ?? 0,
         confidence:       map['confidence'] as int? ?? 0,
         marketAnalysisId: map['market_analysis_id'] as String?,
+        aefOperationId:    map['aef_operation_id'] as String?,
+        aefReceiptId:      map['aef_receipt_id'] as String?,
+        aefReceiptOutcome: map['aef_receipt_outcome'] as String?,
       );
 
   Map<String, dynamic> toInsertMap() => {

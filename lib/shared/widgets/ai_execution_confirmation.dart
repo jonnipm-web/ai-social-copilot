@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/diagnostics/diagnostic_models.dart';
 import '../../data/models/ive_interaction_request.dart';
+import '../../l10n/app_localizations.dart';
 import '../../providers/diagnostic_session_provider.dart' show diagnosticLoggerProvider;
 import '../../providers/quota_provider.dart';
 
@@ -258,14 +259,15 @@ class AiExecutionController extends ChangeNotifier {
     required QuotaInfoSnapshot? quota,
     int estimatedUnits = 1,
   }) async {
+    final l10n = AppLocalizations.of(context)!;
     final costLine = estimatedUnits <= 1
-        ? '"$analysisLabel" vai consumir 1 das suas análises mensais.'
-        : '"$analysisLabel" pode consumir até $estimatedUnits das suas análises mensais.';
+        ? l10n.aiConfirmCostSingle(analysisLabel)
+        : l10n.aiConfirmCostMultiple(analysisLabel, estimatedUnits);
     final result = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: const Color(0xFF1E1B2E),
-        title: const Text('Confirmar análise', style: TextStyle(color: Colors.white)),
+        title: Text(l10n.aiConfirmTitle, style: const TextStyle(color: Colors.white)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -277,7 +279,7 @@ class AiExecutionController extends ChangeNotifier {
             if (quota != null) ...[
               const SizedBox(height: 8),
               Text(
-                'Restam ${quota.remaining} de ${quota.limit} análises este mês.',
+                l10n.aiConfirmRemaining(quota.remaining, quota.limit),
                 style: const TextStyle(color: Colors.white38, fontSize: 12),
               ),
             ],
@@ -286,11 +288,11 @@ class AiExecutionController extends ChangeNotifier {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('CANCELAR'),
+            child: Text(l10n.aiConfirmCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('CONFIRMAR'),
+            child: Text(l10n.aiConfirmConfirm),
           ),
         ],
       ),

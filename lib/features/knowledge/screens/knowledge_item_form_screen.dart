@@ -5,11 +5,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/diagnostics/diagnostic_container.dart';
 import '../../../core/diagnostics/diagnostic_models.dart';
+import '../../../core/utils/language_utils.dart';
 import '../../../data/models/knowledge_item.dart';
 import '../../../data/services/file_import_service.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/knowledge_provider.dart';
 import '../../../providers/project_provider.dart';
 import 'drive_picker_screen.dart';
+import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 
 class KnowledgeItemFormScreen extends ConsumerStatefulWidget {
   const KnowledgeItemFormScreen({super.key, this.itemId});
@@ -31,7 +34,11 @@ class _KnowledgeItemFormScreenState
   final _audienceCtrl       = TextEditingController();
 
   String  _sourceType = 'manual';
-  String  _language   = 'pt-BR';
+  // R16 — SOURCE language of the document (describes the data only; AI
+  // output language always follows the UI). Defaults to the current UI
+  // locale on first build; the user's explicit choice is kept thereafter.
+  String? _language;
+  bool    _languageTouched = false;
   String? _projectId;
   bool    _loading    = false;
   bool    _init       = false;
@@ -50,6 +57,28 @@ class _KnowledgeItemFormScreenState
     _nicheCtrl.dispose();
     _audienceCtrl.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_language == null && !_languageTouched) {
+      _language = backendLanguageCode(context);
+    }
+  }
+
+  /// Supported source-language codes offered by the selector.
+  static const _kSourceLanguages = ['pt-BR', 'en-US', 'es'];
+
+  String get _sourceLanguage {
+    final v = (_language ?? '').toLowerCase();
+    if (_kSourceLanguages.contains(_language)) return _language!;
+    // Normalise legacy/loose stored codes ('pt', 'en', 'es-ES', ...) so the
+    // dropdown always has a matching item.
+    if (v.startsWith('pt')) return 'pt-BR';
+    if (v.startsWith('en')) return 'en-US';
+    if (v.startsWith('es')) return 'es';
+    return backendLanguageCode(context);
   }
 
   Future<void> _loadExisting() async {
@@ -79,11 +108,13 @@ class _KnowledgeItemFormScreenState
     setState(() {
       _sourceType = item.sourceType;
       _language   = item.language;
+      _languageTouched = true;
       _projectId  = item.projectId;
     });
   }
 
   Future<void> _save() async {
+    final l10n = AppLocalizations.of(context)!;
     if (!_formKey.currentState!.validate()) return;
 
     final uid = Supabase.instance.client.auth.currentUser?.id;
@@ -98,9 +129,9 @@ class _KnowledgeItemFormScreenState
 
     if (content.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Importe ou cole o conteúdo antes de salvar.'),
-          backgroundColor: Color(0xFFF44336),
+        SnackBar(
+          content: Text(l10n.knowledgeFormContentEmptyError),
+          backgroundColor: const Color(0xFFF44336),
         ),
       );
       return;
@@ -123,7 +154,7 @@ class _KnowledgeItemFormScreenState
           'target_audience': _audienceCtrl.text.trim().isEmpty
               ? null
               : _audienceCtrl.text.trim(),
-          'language':        _language,
+          'language':        _sourceLanguage,
           'status':          'pending',
         });
       } else {
@@ -141,13 +172,16 @@ class _KnowledgeItemFormScreenState
           targetAudience: _audienceCtrl.text.trim().isEmpty
               ? null
               : _audienceCtrl.text.trim(),
-          language:       _language,
+          language:       _sourceLanguage,
           createdAt:      DateTime.now(),
           updatedAt:      DateTime.now(),
         ));
       }
 
       ref.invalidate(knowledgeItemsProvider);
+      if (_projectId != null) {
+        ref.invalidate(knowledgeItemsByProjectProvider(_projectId!));
+      }
 
       // Confirmação com nome do projeto
       if (mounted) {
@@ -163,8 +197,8 @@ class _KnowledgeItemFormScreenState
           SnackBar(
             content: Text(
               projectName != null
-                  ? 'Conhecimento adicionado ao projeto "$projectName"'
-                  : 'Conhecimento salvo sem projeto',
+                  ? l10n.knowledgeFormSavedWithProject(projectName)
+                  : l10n.knowledgeFormSavedNoProject,
             ),
             backgroundColor: const Color(0xFF4CAF50),
             duration: const Duration(seconds: 3),
@@ -176,7 +210,7 @@ class _KnowledgeItemFormScreenState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erro: $e'),
+            content: Text(l10n.iveChatErrorPrefix(extractErrorMessage(e, l10n))),
             backgroundColor: const Color(0xFFF44336),
           ),
         );
@@ -189,6 +223,7 @@ class _KnowledgeItemFormScreenState
   @override
   Widget build(BuildContext context) {
     _loadExisting();
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F1A),
@@ -196,7 +231,7 @@ class _KnowledgeItemFormScreenState
         backgroundColor: const Color(0xFF0F0F1A),
         foregroundColor: Colors.white,
         title: Text(
-          _isEdit ? 'Editar Conhecimento' : 'Novo Conhecimento',
+          _isEdit ? l10n.knowledgeFormEditTitle : l10n.knowledgeFormNewTitle,
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
       ),
@@ -216,7 +251,7 @@ class _KnowledgeItemFormScreenState
               const SizedBox(height: 20),
 
               // ── Tipo de fonte ────────────────────────────────
-              const _Label('Tipo de fonte'),
+              _Label(l10n.knowledgeFormSourceTypeLabel),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
@@ -224,28 +259,28 @@ class _KnowledgeItemFormScreenState
                 children: [
                   _SourceTypeButton(
                     icon:  Icons.edit_note_rounded,
-                    label: 'Texto Manual',
+                    label: l10n.knowledgeFormSourceManual,
                     value: 'manual',
                     current: _sourceType,
                     onTap: (v) => setState(() => _sourceType = v),
                   ),
                   _SourceTypeButton(
                     icon:  Icons.link_rounded,
-                    label: 'URL',
+                    label: l10n.knowledgeFormSourceUrl,
                     value: 'url',
                     current: _sourceType,
                     onTap: (v) => setState(() => _sourceType = v),
                   ),
                   _SourceTypeButton(
                     icon:  Icons.upload_file_rounded,
-                    label: 'Arquivo',
+                    label: l10n.knowledgeFormSourceFile,
                     value: 'file',
                     current: _sourceType,
                     onTap: (v) => setState(() => _sourceType = v),
                   ),
                   _SourceTypeButton(
                     icon:  Icons.add_to_drive_rounded,
-                    label: 'Google Drive',
+                    label: l10n.knowledgeFormSourceDrive,
                     value: 'drive',
                     current: _sourceType,
                     onTap: (v) => setState(() => _sourceType = v),
@@ -256,20 +291,20 @@ class _KnowledgeItemFormScreenState
               const SizedBox(height: 20),
 
               // ── Título ───────────────────────────────────────
-              const _Label('Título *'),
+              _Label(l10n.knowledgeFormTitleLabel),
               const SizedBox(height: 8),
               _Field(
                 controller: _titleCtrl,
-                hint: 'Ex.: Livro sobre Marketing Digital',
+                hint: l10n.knowledgeFormTitleHint,
                 validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'Informe o título.' : null,
+                    v == null || v.trim().isEmpty ? l10n.knowledgeFormTitleRequired : null,
               ),
 
               const SizedBox(height: 20),
 
               // ── Conteúdo ─────────────────────────────────────
               if (_sourceType == 'drive') ...[
-                const _Label('Importar do Google Drive'),
+                _Label(l10n.knowledgeFormImportFromDrive),
                 const SizedBox(height: 8),
                 _DriveImportSection(
                   importedFileName: _importedFileName,
@@ -278,7 +313,7 @@ class _KnowledgeItemFormScreenState
                   onImported: (name) => setState(() => _importedFileName = name),
                 ),
               ] else if (_sourceType == 'file') ...[
-                const _Label('Importar Arquivo (PDF, DOCX, TXT, CSV)'),
+                _Label(l10n.knowledgeFormImportFile),
                 const SizedBox(height: 8),
                 _FileImportSection(
                   importing:        _importing,
@@ -293,16 +328,16 @@ class _KnowledgeItemFormScreenState
                   onError: () => setState(() => _importing = false),
                 ),
               ] else if (_sourceType == 'url') ...[
-                const _Label('URL do conteúdo *'),
+                _Label(l10n.knowledgeFormUrlLabel),
                 const SizedBox(height: 8),
                 _Field(
                   controller: _urlCtrl,
-                  hint: 'https://docs.google.com/document/d/...',
+                  hint: l10n.knowledgeFormUrlHint,
                   keyboardType: TextInputType.url,
                   validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Informe a URL.';
+                    if (v == null || v.trim().isEmpty) return l10n.knowledgeFormUrlRequired;
                     if (!v.trim().startsWith('http')) {
-                      return 'URL deve começar com http ou https.';
+                      return l10n.knowledgeFormUrlInvalid;
                     }
                     return null;
                   },
@@ -315,35 +350,31 @@ class _KnowledgeItemFormScreenState
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: const Color(0xFF6C63FF).withOpacity(0.3)),
                   ),
-                  child: const Column(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '📄 Para Google Docs / Livros:',
-                        style: TextStyle(color: Color(0xFF6C63FF), fontSize: 12, fontWeight: FontWeight.w600),
+                        l10n.knowledgeFormGoogleDocsHintTitle,
+                        style: const TextStyle(color: Color(0xFF6C63FF), fontSize: 12, fontWeight: FontWeight.w600),
                       ),
-                      SizedBox(height: 4),
+                      const SizedBox(height: 4),
                       Text(
-                        '1. Abra o documento no Google Docs\n'
-                        '2. Clique em Compartilhar\n'
-                        '3. Mude para "Qualquer pessoa com o link pode visualizar"\n'
-                        '4. Copie o link e cole aqui',
-                        style: TextStyle(color: Colors.white54, fontSize: 12, height: 1.5),
+                        l10n.knowledgeFormGoogleDocsHintBody,
+                        style: const TextStyle(color: Colors.white54, fontSize: 12, height: 1.5),
                       ),
                     ],
                   ),
                 ),
               ] else ...[
-                const _Label('Conteúdo *'),
+                _Label(l10n.knowledgeFormContentLabel),
                 const SizedBox(height: 8),
                 _Field(
                   controller: _contentCtrl,
-                  hint:
-                      'Cole aqui o texto do livro, artigo, post, roteiro ou qualquer conteúdo que deseja analisar…',
+                  hint: l10n.knowledgeFormContentHint,
                   maxLines: 10,
                   validator: (v) {
                     if (v == null || v.trim().length < 20) {
-                      return 'Conteúdo muito curto (mínimo 20 caracteres).';
+                      return l10n.knowledgeFormContentTooShort;
                     }
                     return null;
                   },
@@ -353,30 +384,30 @@ class _KnowledgeItemFormScreenState
               const SizedBox(height: 20),
 
               // ── Nicho ────────────────────────────────────────
-              const _Label('Nicho (opcional)'),
+              _Label(l10n.knowledgeFormNicheLabel),
               const SizedBox(height: 8),
               _Field(
                 controller: _nicheCtrl,
-                hint: 'Ex.: Marketing Digital, Saúde, Finanças',
+                hint: l10n.knowledgeFormNicheHint,
               ),
 
               const SizedBox(height: 20),
 
               // ── Audiência ────────────────────────────────────
-              const _Label('Audiência-alvo (opcional)'),
+              _Label(l10n.knowledgeFormAudienceLabel),
               const SizedBox(height: 8),
               _Field(
                 controller: _audienceCtrl,
-                hint: 'Ex.: Empreendedores iniciantes, Mães de primeira viagem',
+                hint: l10n.knowledgeFormAudienceHint,
               ),
 
               const SizedBox(height: 20),
 
               // ── Idioma ───────────────────────────────────────
-              const _Label('Idioma'),
+              _Label(l10n.uxKnowledgeFormSourceLanguageLabel),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                value: _language,
+                value: _sourceLanguage,
                 dropdownColor: const Color(0xFF1A1A2E),
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
@@ -387,12 +418,15 @@ class _KnowledgeItemFormScreenState
                     borderSide: BorderSide.none,
                   ),
                 ),
-                items: const [
-                  DropdownMenuItem(value: 'pt-BR', child: Text('Português (BR)')),
-                  DropdownMenuItem(value: 'en-US', child: Text('English (US)')),
-                  DropdownMenuItem(value: 'es',    child: Text('Español')),
+                items: [
+                  DropdownMenuItem(value: 'pt-BR', child: Text(l10n.knowledgeFormLanguagePtBr)),
+                  DropdownMenuItem(value: 'en-US', child: Text(l10n.knowledgeFormLanguageEnUs)),
+                  DropdownMenuItem(value: 'es',    child: Text(l10n.knowledgeFormLanguageEs)),
                 ],
-                onChanged: (v) => setState(() => _language = v ?? 'pt-BR'),
+                onChanged: (v) => setState(() {
+                  _language = v ?? _sourceLanguage;
+                  _languageTouched = true;
+                }),
               ),
 
               const SizedBox(height: 32),
@@ -417,7 +451,7 @@ class _KnowledgeItemFormScreenState
                         )
                       : const Icon(Icons.save_rounded),
                   label:
-                      Text(_loading ? 'Salvando…' : (_isEdit ? 'Salvar' : 'Adicionar ao Cofre')),
+                      Text(_loading ? l10n.knowledgeFormSaving : (_isEdit ? l10n.commonSave : l10n.knowledgeFormAddToVault)),
                   onPressed: _loading ? null : _save,
                 ),
               ),
@@ -506,6 +540,7 @@ class _FileImportSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (importing) {
       return Container(
         padding: const EdgeInsets.all(20),
@@ -513,16 +548,16 @@ class _FileImportSection extends StatelessWidget {
           color: const Color(0xFF1A1A2E),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: const Row(
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SizedBox(
+            const SizedBox(
               width: 18,
               height: 18,
               child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF6C63FF)),
             ),
-            SizedBox(width: 12),
-            Text('Extraindo texto…', style: TextStyle(color: Colors.white54)),
+            const SizedBox(width: 12),
+            Text(l10n.knowledgeFormExtracting, style: const TextStyle(color: Colors.white54)),
           ],
         ),
       );
@@ -553,7 +588,7 @@ class _FileImportSection extends StatelessWidget {
                         fontWeight: FontWeight.w500),
                   ),
                   Text(
-                    '${contentCtrl.text.length} caracteres extraídos',
+                    l10n.knowledgeFormCharsExtracted(contentCtrl.text.length),
                     style: const TextStyle(color: Colors.white38, fontSize: 11),
                   ),
                 ],
@@ -561,8 +596,8 @@ class _FileImportSection extends StatelessWidget {
             ),
             TextButton(
               onPressed: () => _pickFile(context),
-              child: const Text('Trocar',
-                  style: TextStyle(color: Color(0xFF6C63FF), fontSize: 12)),
+              child: Text(l10n.knowledgeFormChangeFile,
+                  style: const TextStyle(color: Color(0xFF6C63FF), fontSize: 12)),
             ),
           ],
         ),
@@ -583,22 +618,22 @@ class _FileImportSection extends StatelessWidget {
                   color: const Color(0xFF6C63FF).withOpacity(0.3),
                   style: BorderStyle.solid),
             ),
-            child: const Column(
+            child: Column(
               children: [
-                Icon(Icons.upload_file_rounded,
+                const Icon(Icons.upload_file_rounded,
                     color: Color(0xFF6C63FF), size: 40),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 Text(
-                  'Clique para selecionar arquivo',
-                  style: TextStyle(
+                  l10n.knowledgeFormClickToSelectFile,
+                  style: const TextStyle(
                       color: Color(0xFF6C63FF),
                       fontSize: 14,
                       fontWeight: FontWeight.w500),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
-                  'PDF, DOCX, TXT ou CSV',
-                  style: TextStyle(color: Colors.white38, fontSize: 12),
+                  l10n.knowledgeFormFileTypes,
+                  style: const TextStyle(color: Colors.white38, fontSize: 12),
                 ),
               ],
             ),
@@ -613,9 +648,9 @@ class _FileImportSection extends StatelessWidget {
             border: Border.all(
                 color: const Color(0xFFFF9800).withOpacity(0.25)),
           ),
-          child: const Text(
-            'PDF deve ter texto selecionável (não imagem escaneada). Para melhores resultados, use TXT ou DOCX.',
-            style: TextStyle(color: Colors.white38, fontSize: 11, height: 1.4),
+          child: Text(
+            l10n.knowledgeFormPdfWarning,
+            style: const TextStyle(color: Colors.white38, fontSize: 11, height: 1.4),
           ),
         ),
       ],
@@ -676,9 +711,10 @@ class _FileImportSection extends StatelessWidget {
       );
       onError();
       if (context.mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erro ao importar: $e'),
+            content: Text(l10n.knowledgeFormImportError(extractErrorMessage(e, l10n))),
             backgroundColor: const Color(0xFFF44336),
           ),
         );
@@ -701,6 +737,7 @@ class _DriveImportSection extends StatelessWidget {
   final void Function(String)  onImported;
 
   Future<void> _openPicker(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
     final result = await Navigator.of(context).push<Map<String, String>>(
       MaterialPageRoute(builder: (_) => const DrivePickerScreen()),
     );
@@ -711,11 +748,12 @@ class _DriveImportSection extends StatelessWidget {
       final name = (result['name'] ?? '').replaceAll(RegExp(r'\.[^.]+$'), '');
       titleCtrl.text = name;
     }
-    onImported(result['name'] ?? 'arquivo do Drive');
+    onImported(result['name'] ?? l10n.knowledgeFormDriveDefaultName);
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (importedFileName != null) {
       return Container(
         padding: const EdgeInsets.all(14),
@@ -739,7 +777,7 @@ class _DriveImportSection extends StatelessWidget {
                           fontSize: 13,
                           fontWeight: FontWeight.w500)),
                   Text(
-                    '${contentCtrl.text.length} caracteres extraídos',
+                    l10n.knowledgeFormCharsExtracted(contentCtrl.text.length),
                     style:
                         const TextStyle(color: Colors.white38, fontSize: 11),
                   ),
@@ -748,8 +786,8 @@ class _DriveImportSection extends StatelessWidget {
             ),
             TextButton(
               onPressed: () => _openPicker(context),
-              child: const Text('Trocar',
-                  style: TextStyle(color: Color(0xFF6C63FF), fontSize: 12)),
+              child: Text(l10n.knowledgeFormChangeFile,
+                  style: const TextStyle(color: Color(0xFF6C63FF), fontSize: 12)),
             ),
           ],
         ),
@@ -766,22 +804,22 @@ class _DriveImportSection extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: const Color(0xFF6C63FF).withOpacity(0.3)),
         ),
-        child: const Column(
+        child: Column(
           children: [
-            Icon(Icons.add_to_drive_rounded,
+            const Icon(Icons.add_to_drive_rounded,
                 color: Color(0xFF6C63FF), size: 40),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text(
-              'Selecionar arquivo do Drive',
-              style: TextStyle(
+              l10n.knowledgeFormSelectDriveFile,
+              style: const TextStyle(
                   color: Color(0xFF6C63FF),
                   fontSize: 14,
                   fontWeight: FontWeight.w500),
             ),
-            SizedBox(height: 4),
+            const SizedBox(height: 4),
             Text(
-              'Google Docs, PDF, DOCX, TXT ou CSV',
-              style: TextStyle(color: Colors.white38, fontSize: 12),
+              l10n.knowledgeFormDriveFileTypes,
+              style: const TextStyle(color: Colors.white38, fontSize: 12),
             ),
           ],
         ),
@@ -805,11 +843,12 @@ class _ProjectSelector extends ConsumerWidget {
     final projects = projectsAsync.valueOrNull ?? [];
 
     if (projects.isEmpty) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context)!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _Label('Projeto (opcional)'),
+        _Label(l10n.knowledgeFormProjectLabel),
         const SizedBox(height: 8),
         DropdownButtonFormField<String?>(
           value: selectedId,
@@ -823,13 +862,13 @@ class _ProjectSelector extends ConsumerWidget {
               borderSide: BorderSide.none,
             ),
           ),
-          hint: const Text('Sem projeto',
-              style: TextStyle(color: Colors.white38)),
+          hint: Text(l10n.knowledgeFormNoProject,
+              style: const TextStyle(color: Colors.white38)),
           items: [
-            const DropdownMenuItem<String?>(
+            DropdownMenuItem<String?>(
               value: null,
-              child: Text('Sem projeto',
-                  style: TextStyle(color: Colors.white54)),
+              child: Text(l10n.knowledgeFormNoProject,
+                  style: const TextStyle(color: Colors.white54)),
             ),
             ...projects.map((p) => DropdownMenuItem<String?>(
                   value: p.id,

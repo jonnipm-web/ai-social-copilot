@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/utils/ai_enum_labels.dart';
 import '../../../data/models/ive_interaction_request.dart';
 import '../../../data/models/knowledge_analysis.dart';
 import '../../../data/models/knowledge_item.dart';
 import '../../../data/models/knowledge_strategy.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/knowledge_provider.dart';
 import '../../../providers/strategy_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
+import '../../../core/utils/snackbar_utils.dart' show extractErrorMessage;
 
 // IVE-COMMERCIAL-QUOTA-HARDENING-13 (Codex Gate 2 round-2 finding) — both
 // call sites below (the initial "Gerar Estratégia" button and "Regenerar
@@ -33,7 +36,7 @@ Future<KnowledgeStrategy?> _confirmAndGenerateStrategy(
   return exec.run<KnowledgeStrategy?>(
     context: context,
     ref: ref,
-    analysisLabel: 'Gerar Estratégia',
+    analysisLabel: AppLocalizations.of(context)!.knowledgeStrategyGenerateButton,
     request: IveInteractionRequest(
       projectId:        item.projectId,
       sourceModule:     'knowledge_vault',
@@ -67,6 +70,7 @@ class _StrategyScreenState extends ConsumerState<StrategyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n           = AppLocalizations.of(context)!;
     final itemId        = widget.itemId;
     final itemAsync     = ref.watch(knowledgeItemByIdProvider(itemId));
     final analysisAsync = ref.watch(knowledgeAnalysisProvider(itemId));
@@ -77,26 +81,26 @@ class _StrategyScreenState extends ConsumerState<StrategyScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF0F0F1A),
         foregroundColor: Colors.white,
-        title: const Text(
-          'Estratégia',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        title: Text(
+          l10n.knowledgeStrategyTitle,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
       ),
       body: itemAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
-            child: Text('Erro: $e',
+            child: Text(l10n.knowledgeStrategyGenericError(extractErrorMessage(e, l10n)),
                 style: const TextStyle(color: Colors.white70))),
         data: (item) {
           if (item == null) {
-            return const Center(
-                child: Text('Item não encontrado.',
-                    style: TextStyle(color: Colors.white70)));
+            return Center(
+                child: Text(l10n.knowledgeStrategyItemNotFound,
+                    style: const TextStyle(color: Colors.white70)));
           }
           return analysisAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(
-                child: Text('Erro: $e',
+                child: Text(l10n.knowledgeStrategyGenericError(extractErrorMessage(e, l10n)),
                     style: const TextStyle(color: Colors.white70))),
             data: (analysis) {
               if (analysis == null) {
@@ -104,7 +108,7 @@ class _StrategyScreenState extends ConsumerState<StrategyScreen> {
               }
               return strategyAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error:   (e, _) => _GeneratePrompt(item: item, analysis: analysis, exec: _exec, error: e.toString()),
+                error:   (e, _) => _GeneratePrompt(item: item, analysis: analysis, exec: _exec, error: extractErrorMessage(e, l10n)),
                 data:    (strategy) => strategy == null
                     ? _GeneratePrompt(item: item, analysis: analysis, exec: _exec)
                     : _StrategyContent(item: item, strategy: strategy, analysis: analysis, exec: _exec),
@@ -123,6 +127,7 @@ class _NoAnalysis extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -131,15 +136,15 @@ class _NoAnalysis extends StatelessWidget {
           children: [
             const Icon(Icons.analytics_outlined, size: 64, color: Color(0xFF6C63FF)),
             const SizedBox(height: 16),
-            const Text(
-              'Análise necessária',
-              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+            Text(
+              l10n.knowledgeStrategyAnalysisRequiredTitle,
+              style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Primeiro analise este item com IA para depois gerar a estratégia.',
+            Text(
+              l10n.knowledgeStrategyAnalysisRequiredBody,
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white54, fontSize: 13),
+              style: const TextStyle(color: Colors.white54, fontSize: 13),
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
@@ -148,7 +153,7 @@ class _NoAnalysis extends StatelessWidget {
                 foregroundColor: Colors.white,
               ),
               icon: const Icon(Icons.arrow_back_rounded),
-              label: const Text('Voltar e Analisar'),
+              label: Text(l10n.knowledgeStrategyBackAndAnalyze),
               onPressed: () => Navigator.pop(context),
             ),
           ],
@@ -167,6 +172,7 @@ class _GeneratePrompt extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final notifierState = ref.watch(strategyNotifierProvider);
     final isLoading = notifierState is AsyncLoading || exec.isBusy;
 
@@ -187,20 +193,20 @@ class _GeneratePrompt extends ConsumerWidget {
                   size: 48, color: Color(0xFF6C63FF)),
             ),
             const SizedBox(height: 20),
-            const Text(
-              'Gerar Estratégia Completa',
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+            Text(
+              l10n.knowledgeStrategyGenerateTitle,
+              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'A IA vai criar um plano estratégico completo com público-alvo, posicionamento, canais, funil, oportunidades comerciais e plano de crescimento.',
+            Text(
+              l10n.knowledgeStrategyGenerateBody,
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white54, fontSize: 13, height: 1.5),
+              style: const TextStyle(color: Colors.white54, fontSize: 13, height: 1.5),
             ),
             if (error != null) ...[
               const SizedBox(height: 12),
               Text(
-                'Erro: $error',
+                l10n.knowledgeStrategyGenericError(error!),
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Color(0xFFF44336), fontSize: 12),
               ),
@@ -209,8 +215,8 @@ class _GeneratePrompt extends ConsumerWidget {
             if (isLoading) ...[
               const CircularProgressIndicator(color: Color(0xFF6C63FF)),
               const SizedBox(height: 12),
-              const Text('Gerando estratégia…',
-                  style: TextStyle(color: Colors.white54, fontSize: 13)),
+              Text(l10n.knowledgeStrategyGenerating,
+                  style: const TextStyle(color: Colors.white54, fontSize: 13)),
             ] else
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
@@ -221,7 +227,7 @@ class _GeneratePrompt extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(12)),
                 ),
                 icon: const Icon(Icons.rocket_launch_rounded),
-                label: const Text('Gerar Estratégia', style: TextStyle(fontSize: 15)),
+                label: Text(l10n.knowledgeStrategyGenerateButton, style: const TextStyle(fontSize: 15)),
                 onPressed: () async {
                   final strategy = await _confirmAndGenerateStrategy(context, ref, item, analysis, exec);
                   if (strategy != null) {
@@ -251,6 +257,7 @@ class _StrategyContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final s = strategy.strategyJson;
 
     return ListView(
@@ -262,31 +269,31 @@ class _StrategyContent extends ConsumerWidget {
 
         // Resumo estratégico
         if (strategy.strategicSummary.isNotEmpty) ...[
-          _Section('Resumo Estratégico', Icons.summarize_rounded, const Color(0xFF6C63FF)),
+          _Section(l10n.knowledgeStrategySectionSummary, Icons.summarize_rounded, const Color(0xFF6C63FF)),
           _HighlightCard(strategy.strategicSummary, const Color(0xFF6C63FF)),
           const SizedBox(height: 16),
         ],
 
         // Proposta de valor
         if (strategy.valueProposition.isNotEmpty) ...[
-          _Section('Proposta de Valor', Icons.diamond_rounded, const Color(0xFFFFD700)),
+          _Section(l10n.knowledgeStrategySectionValueProp, Icons.diamond_rounded, const Color(0xFFFFD700)),
           _HighlightCard(strategy.valueProposition, const Color(0xFFFFD700)),
           const SizedBox(height: 16),
         ],
 
         // Posicionamento
         if (strategy.positioning.isNotEmpty) ...[
-          _Section('Posicionamento', Icons.flag_rounded, const Color(0xFF00BCD4)),
+          _Section(l10n.knowledgeStrategySectionPositioning, Icons.flag_rounded, const Color(0xFF00BCD4)),
           _HighlightCard(strategy.positioning, const Color(0xFF00BCD4)),
           const SizedBox(height: 16),
         ],
 
         // Público-alvo
-        _buildAudience(s),
+        _buildAudience(s, l10n),
 
         // Canais recomendados
         if (strategy.recommendedChannels.isNotEmpty) ...[
-          _Section('Canais Recomendados', Icons.broadcast_on_personal_rounded, const Color(0xFF4CAF50)),
+          _Section(l10n.knowledgeStrategySectionChannels, Icons.broadcast_on_personal_rounded, const Color(0xFF4CAF50)),
           const SizedBox(height: 8),
           ...strategy.recommendedChannels.map((ch) => _ChannelTile(ch)),
           const SizedBox(height: 16),
@@ -294,15 +301,15 @@ class _StrategyContent extends ConsumerWidget {
 
         // Funil
         if (strategy.funnel.isNotEmpty) ...[
-          _Section('Funil de Marketing', Icons.filter_alt_rounded, const Color(0xFFFF9800)),
+          _Section(l10n.knowledgeStrategySectionFunnel, Icons.filter_alt_rounded, const Color(0xFFFF9800)),
           const SizedBox(height: 8),
-          _FunnelCard(strategy.funnel),
+          _FunnelCard(strategy.funnel, l10n),
           const SizedBox(height: 16),
         ],
 
         // Oportunidades comerciais
         if (strategy.commercialOpportunities.isNotEmpty) ...[
-          _Section('Oportunidades Comerciais', Icons.monetization_on_rounded, const Color(0xFFFFD700)),
+          _Section(l10n.knowledgeStrategySectionOpportunities, Icons.monetization_on_rounded, const Color(0xFFFFD700)),
           const SizedBox(height: 8),
           ...strategy.commercialOpportunities.map((op) => _OpportunityTile(op)),
           const SizedBox(height: 16),
@@ -310,7 +317,7 @@ class _StrategyContent extends ConsumerWidget {
 
         // Keywords prioritárias
         if (strategy.priorityKeywords.isNotEmpty) ...[
-          _Section('Keywords Prioritárias', Icons.key_rounded, const Color(0xFF9C27B0)),
+          _Section(l10n.knowledgeStrategySectionKeywords, Icons.key_rounded, const Color(0xFF9C27B0)),
           const SizedBox(height: 8),
           _ChipRow(strategy.priorityKeywords, const Color(0xFF9C27B0)),
           const SizedBox(height: 16),
@@ -318,7 +325,7 @@ class _StrategyContent extends ConsumerWidget {
 
         // Quick wins
         if (strategy.quickWins.isNotEmpty) ...[
-          _Section('Ações Rápidas', Icons.bolt_rounded, const Color(0xFFFF5722)),
+          _Section(l10n.knowledgeStrategySectionQuickWins, Icons.bolt_rounded, const Color(0xFFFF5722)),
           const SizedBox(height: 8),
           ...strategy.quickWins.map((w) => _BulletItem(w, const Color(0xFFFF5722))),
           const SizedBox(height: 16),
@@ -326,9 +333,9 @@ class _StrategyContent extends ConsumerWidget {
 
         // Plano de crescimento
         if (strategy.growthPlan.isNotEmpty) ...[
-          _Section('Plano de Crescimento', Icons.trending_up_rounded, const Color(0xFF4CAF50)),
+          _Section(l10n.knowledgeStrategySectionGrowthPlan, Icons.trending_up_rounded, const Color(0xFF4CAF50)),
           const SizedBox(height: 8),
-          _GrowthCard(strategy.growthPlan),
+          _GrowthCard(strategy.growthPlan, l10n),
           const SizedBox(height: 16),
         ],
 
@@ -341,7 +348,7 @@ class _StrategyContent extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(vertical: 12),
           ),
           icon: const Icon(Icons.refresh_rounded, size: 16),
-          label: const Text('Regenerar Estratégia', style: TextStyle(fontSize: 13)),
+          label: Text(l10n.knowledgeStrategyRegenerateButton, style: const TextStyle(fontSize: 13)),
           onPressed: () async {
             await _confirmAndGenerateStrategy(context, ref, item, analysis, exec);
             ref.invalidate(knowledgeStrategyProvider(item.id));
@@ -351,7 +358,7 @@ class _StrategyContent extends ConsumerWidget {
     );
   }
 
-  Widget _buildAudience(Map<String, dynamic> s) {
+  Widget _buildAudience(Map<String, dynamic> s, AppLocalizations l10n) {
     final audience = s['target_audience'];
     if (audience == null) return const SizedBox.shrink();
     final a = audience is Map ? Map<String, dynamic>.from(audience) : <String, dynamic>{};
@@ -360,7 +367,7 @@ class _StrategyContent extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _Section('Público-alvo', Icons.people_rounded, const Color(0xFFE91E63)),
+        _Section(l10n.knowledgeStrategySectionAudience, Icons.people_rounded, const Color(0xFFE91E63)),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.all(14),
@@ -372,11 +379,11 @@ class _StrategyContent extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (a['primary'] != null)
-                _AudienceRow('Primário', a['primary'].toString(), const Color(0xFFE91E63)),
+                _AudienceRow(l10n.knowledgeStrategyAudiencePrimary, a['primary'].toString(), const Color(0xFFE91E63)),
               if (a['secondary'] != null)
-                _AudienceRow('Secundário', a['secondary'].toString(), Colors.white54),
+                _AudienceRow(l10n.knowledgeStrategyAudienceSecondary, a['secondary'].toString(), Colors.white54),
               if (a['age_range'] != null)
-                _AudienceRow('Faixa etária', a['age_range'].toString(), Colors.white38),
+                _AudienceRow(l10n.knowledgeStrategyAudienceAgeRange, a['age_range'].toString(), Colors.white38),
             ],
           ),
         ),
@@ -466,10 +473,10 @@ class _HighlightCard extends StatelessWidget {
       onTap: () {
         Clipboard.setData(ClipboardData(text: text));
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Copiado!'),
-            duration: Duration(seconds: 1),
-            backgroundColor: Color(0xFF1A1A2E),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.knowledgeStrategyCopied),
+            duration: const Duration(seconds: 1),
+            backgroundColor: const Color(0xFF1A1A2E),
           ),
         );
       },
@@ -505,10 +512,11 @@ class _ChannelTile extends StatelessWidget {
   final Map<String, dynamic> data;
 
   Color _priorityColor(String p) {
-    switch (p.toLowerCase()) {
-      case 'alta':  return const Color(0xFF4CAF50);
-      case 'média': return const Color(0xFFFF9800);
-      default:      return Colors.white38;
+    switch (aiLevel(p)) {
+      case AiLevel.high:
+      case AiLevel.critical: return const Color(0xFF4CAF50);
+      case AiLevel.medium:   return const Color(0xFFFF9800);
+      default:               return Colors.white38;
     }
   }
 
@@ -535,7 +543,7 @@ class _ChannelTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: color.withOpacity(0.4)),
             ),
-            child: Text(priority,
+            child: Text(aiPriorityLabel(priority, AppLocalizations.of(context)!),
                 style: TextStyle(
                     color: color, fontSize: 10, fontWeight: FontWeight.w600)),
           ),
@@ -562,16 +570,17 @@ class _ChannelTile extends StatelessWidget {
 }
 
 class _FunnelCard extends StatelessWidget {
-  const _FunnelCard(this.funnel);
+  const _FunnelCard(this.funnel, this.l10n);
   final Map<String, dynamic> funnel;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
     final stages = [
-      ('Awareness', funnel['awareness'], const Color(0xFF6C63FF)),
-      ('Consideração', funnel['consideration'], const Color(0xFF00BCD4)),
-      ('Conversão', funnel['conversion'], const Color(0xFF4CAF50)),
-      ('Retenção', funnel['retention'], const Color(0xFFFFD700)),
+      (l10n.knowledgeStrategyFunnelAwareness, funnel['awareness'], const Color(0xFF6C63FF)),
+      (l10n.knowledgeStrategyFunnelConsideration, funnel['consideration'], const Color(0xFF00BCD4)),
+      (l10n.knowledgeStrategyFunnelConversion, funnel['conversion'], const Color(0xFF4CAF50)),
+      (l10n.knowledgeStrategyFunnelRetention, funnel['retention'], const Color(0xFFFFD700)),
     ];
 
     return Column(
@@ -614,10 +623,11 @@ class _OpportunityTile extends StatelessWidget {
   final Map<String, dynamic> data;
 
   Color _potentialColor(String p) {
-    switch (p.toLowerCase()) {
-      case 'alto':  return const Color(0xFF4CAF50);
-      case 'médio': return const Color(0xFFFF9800);
-      default:      return Colors.white38;
+    switch (aiLevel(p)) {
+      case AiLevel.high:
+      case AiLevel.critical: return const Color(0xFF4CAF50);
+      case AiLevel.medium:   return const Color(0xFFFF9800);
+      default:               return Colors.white38;
     }
   }
 
@@ -663,7 +673,7 @@ class _OpportunityTile extends StatelessWidget {
                 color: color.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Text(potential,
+              child: Text(aiLevelLabel(potential, AppLocalizations.of(context)!),
                   style: TextStyle(
                       color: color, fontSize: 10, fontWeight: FontWeight.w600)),
             ),
@@ -689,7 +699,7 @@ class _ChipRow extends StatelessWidget {
                   Clipboard.setData(ClipboardData(text: kw));
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Copiado: $kw'),
+                      content: Text(AppLocalizations.of(context)!.knowledgeStrategyCopiedKeyword(kw)),
                       duration: const Duration(seconds: 1),
                       backgroundColor: const Color(0xFF1A1A2E),
                     ),
@@ -742,15 +752,16 @@ class _BulletItem extends StatelessWidget {
 }
 
 class _GrowthCard extends StatelessWidget {
-  const _GrowthCard(this.plan);
+  const _GrowthCard(this.plan, this.l10n);
   final Map<String, dynamic> plan;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
     final months = [
-      ('Mês 1', plan['month_1']),
-      ('Mês 2', plan['month_2']),
-      ('Mês 3', plan['month_3']),
+      (l10n.knowledgeStrategyMonth(1), plan['month_1']),
+      (l10n.knowledgeStrategyMonth(2), plan['month_2']),
+      (l10n.knowledgeStrategyMonth(3), plan['month_3']),
     ];
 
     final kpis = plan['kpis'];
@@ -788,7 +799,7 @@ class _GrowthCard extends StatelessWidget {
                 )),
         if (kpiList.isNotEmpty) ...[
           const SizedBox(height: 4),
-          Text('KPIs',
+          Text(l10n.knowledgeStrategyKpisLabel,
               style: const TextStyle(
                   color: Color(0xFF4CAF50),
                   fontSize: 11,

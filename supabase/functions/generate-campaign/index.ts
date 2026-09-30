@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { AuthClient, AuthError, resolveAuthenticatedUser, unauthorizedResponse } from "../_shared/auth.ts";
+import { AuthenticatedUser, AuthClient, AuthError, resolveAuthenticatedUser, unauthorizedResponse } from "../_shared/auth.ts";
+import { EntitlementSubjectSource, requireModuleAccess } from "../_shared/entitlement.ts";
+import { outputLanguageSystemMessage, resolveOutputLanguage } from "../_shared/language.ts";
 import { QuotaClient, quotaBlockedResponse, refundQuota, reserveQuota } from "../_shared/quota.ts";
 
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") ?? "";
@@ -56,18 +58,27 @@ export async function handler(
   req: Request,
   authClient?: AuthClient,
   quotaClient?: QuotaClient,
+  subjectSource?: EntitlementSubjectSource,
 ): Promise<Response> {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   // IVE-COMMERCIAL-AUTH-01 — exige sessão de usuário real antes do Groq. Falha fechado.
+  let authUser: AuthenticatedUser;
   try {
-    await resolveAuthenticatedUser(req, authClient);
+    authUser = await resolveAuthenticatedUser(req, authClient);
   } catch (e) {
     if (e instanceof AuthError) return unauthorizedResponse(corsHeaders);
     throw e;
   }
+
+  // MODULE-FOUNDATION-AND-ENTITLEMENT-02 — server-side entitlement: the server
+  // (supabase/functions/_shared/module_policy.ts), not the client registry,
+  // decides whether this caller may use 'campaigns'. Runs after authentication
+  // and before any quota reservation or AI call. Fails closed.
+  const access = await requireModuleAccess(req, authUser, 'campaigns', corsHeaders, subjectSource);
+  if (!access.allowed) return access.response;
 
   let quotaReserved = false;
   let idempotencyKey: string | undefined;
@@ -99,7 +110,6 @@ export async function handler(
       summary = "",
       value_proposition = "",
       keywords = [],
-      language = "pt-BR",
     } = body;
 
     const context = [
@@ -111,7 +121,10 @@ export async function handler(
       keywords.length ? `Keywords: ${keywords.slice(0, 6).join(", ")}` : "",
     ].filter(Boolean).join("\n");
 
-    const userMessage = `Idioma da campanha: ${language}\n\n${context}`;
+    // R16 — o idioma de APRESENTAÇÃO decide a saída; o idioma de origem do
+    // ativo (knowledge_items.language) nunca é usado aqui.
+    const language = resolveOutputLanguage(body);
+    const userMessage = `Output language: ${language}\n\n${context}`;
 
     const quota = await reserveQuota(req, quotaClient, idempotencyKey, 'generate-campaign');
     if (!quota.allowed) return quotaBlockedResponse(corsHeaders, quota);
@@ -128,6 +141,7 @@ export async function handler(
         model: "openai/gpt-oss-120b",
         messages: [
           { role: "system", content: buildSystemPrompt(objective, Math.min(duration_days, 30), channels) },
+          outputLanguageSystemMessage(language, { fixedValueFields: ["objective", "channels", "calendar[].channel"] }),
           { role: "user", content: userMessage },
         ],
         temperature: 0.7,

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../l10n/app_localizations.dart';
+
 class ResultBlock extends StatelessWidget {
   final String title;
   final String content;
@@ -17,7 +19,7 @@ class ResultBlock extends StatelessWidget {
     Clipboard.setData(ClipboardData(text: content));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('"$title" copiado!'),
+        content: Text(AppLocalizations.of(context)!.ctxResultCopied(title)),
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
       ),
@@ -49,7 +51,7 @@ class ResultBlock extends StatelessWidget {
                 ),
                 IconButton(
                   icon: const Icon(Icons.copy, size: 18, color: Colors.white38),
-                  tooltip: 'Copiar',
+                  tooltip: AppLocalizations.of(context)!.ctxResultCopyTooltip,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                   onPressed: () => _copy(context),

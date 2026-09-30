@@ -3,16 +3,33 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/constants/app_constants.dart';
 import '../models/post_generation.dart';
 
+/// R16 — request body for `improve-post`, extracted so it is unit-testable
+/// without a Supabase client.
+Map<String, dynamic> buildImprovePostBody(
+  String text, {
+  required String language,
+  String? idempotencyKey,
+}) =>
+    {
+      'text': text,
+      'language': language,
+      if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
+    };
+
 class PostService {
   final _client = Supabase.instance.client;
 
-  Future<Map<String, dynamic>> improvePost(String text, {String? idempotencyKey}) async {
+  /// R16 — [language] is the PRESENTATION language ('pt-BR'/'en-US', from
+  /// `outputLanguageCodeProvider`); it decides the language of the AI output,
+  /// regardless of the language the original post was written in.
+  Future<Map<String, dynamic>> improvePost(
+    String text, {
+    required String language,
+    String? idempotencyKey,
+  }) async {
     final response = await _client.functions.invoke(
       AppConstants.edgeFunctionImprove,
-      body: {
-        'text': text,
-        if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
-      },
+      body: buildImprovePostBody(text, language: language, idempotencyKey: idempotencyKey),
     );
 
     if (response.status != 200) {

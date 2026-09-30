@@ -1,4 +1,10 @@
+import '../../l10n/app_localizations.dart';
+
 class OpportunityLabItem {
+  /// R16: detected source language when the presentation text of this row
+  /// was translated for display (null = shown in its original language).
+  final String? localizedFrom;
+
   final String id;
   final String userId;
   final String? projectId;
@@ -52,6 +58,7 @@ class OpportunityLabItem {
     this.risks = const [],
     this.actionSteps = const [],
     this.knowledgeItemIds = const [],
+    this.localizedFrom,
   });
 
   static const List<String> types = [
@@ -80,7 +87,25 @@ class OpportunityLabItem {
     'knowledge_engine': 'Knowledge Engine',
   };
 
+  /// Legacy PT-only label. R16: UI must use [localizedOriginLabel]; this
+  /// getter remains only for callers not yet migrated.
   String get originLabel => originLabels[origin] ?? origin;
+
+  /// R16 — origin label in the presentation language of [l10n]; unknown
+  /// origins are shown verbatim.
+  String localizedOriginLabel(AppLocalizations l10n) =>
+      originLabelFor(origin, l10n);
+
+  static String originLabelFor(String origin, AppLocalizations l10n) {
+    switch (origin) {
+      case 'manual':           return l10n.uxOriginManual;
+      case 'opportunity_lab':  return 'Opportunity Lab';
+      case 'market_analysis':  return l10n.uxOriginMarketAnalysis;
+      case 'auto_bootstrap':   return l10n.uxOriginAutoBootstrap;
+      case 'knowledge_engine': return 'Knowledge Engine';
+      default:                 return origin;
+    }
+  }
 
   static List<String> _parseList(dynamic v) {
     if (v == null) return [];
@@ -91,6 +116,7 @@ class OpportunityLabItem {
   factory OpportunityLabItem.fromMap(Map<String, dynamic> map) =>
       OpportunityLabItem(
         id:               map['id'] as String,
+        localizedFrom: map['r16_localized_from'] as String?,
         userId:           map['user_id'] as String,
         projectId:        map['project_id'] as String?,
         marketAnalysisId: map['market_analysis_id'] as String?,
@@ -148,6 +174,7 @@ class OpportunityLabItem {
   }) =>
       OpportunityLabItem(
         id:               id,
+        localizedFrom: localizedFrom,
         userId:           userId,
         projectId:        projectId,
         marketAnalysisId: marketAnalysisId,

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/constants/app_constants.dart';
+import '../core/utils/language_utils.dart';
 import '../data/models/simulation_result.dart';
 import 'ive_context_provider.dart';
 import 'ecosystem_intelligence_provider.dart';
@@ -84,6 +85,8 @@ class DecisionSimulatorNotifier
           'scenario':  scenario,
           'ecosystem': ecosystemPayload,
           'projects':  projectsPayload,
+          // R16 — AI output language follows the presentation language.
+          'language':  _ref.read(outputLanguageCodeProvider),
         },
       );
 

@@ -2,7 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/models/bootstrap_result.dart';
 import '../data/models/project.dart';
+import '../core/utils/language_utils.dart';
 import '../data/services/auto_bootstrap_service.dart';
+import '../l10n/app_localizations.dart';
 import 'action_queue_provider.dart';
 import 'knowledge_provider.dart';
 import 'market_analysis_provider.dart';
@@ -40,6 +42,10 @@ class BootstrapState {
   final BootstrapReport? report;
   final String? error;
 
+  /// R16 — localized "Project x/y — step" text, computed by the notifier in
+  /// the presentation language. Null only for states built outside it.
+  final String? progressText;
+
   const BootstrapState({
     this.isRunning = false,
     this.currentStep,
@@ -47,6 +53,7 @@ class BootstrapState {
     this.totalProjects = 0,
     this.report,
     this.error,
+    this.progressText,
   });
 
   BootstrapState copyWith({
@@ -56,6 +63,7 @@ class BootstrapState {
     int? totalProjects,
     BootstrapReport? report,
     String? error,
+    String? progressText,
   }) =>
       BootstrapState(
         isRunning:       isRunning ?? this.isRunning,
@@ -64,13 +72,21 @@ class BootstrapState {
         totalProjects:   totalProjects ?? this.totalProjects,
         report:          report ?? this.report,
         error:           error ?? this.error,
+        progressText:    progressText ?? this.progressText,
       );
 
   bool get isDone => !isRunning && report != null;
   String get progressLabel {
     if (!isRunning) return '';
-    return 'Projeto $currentProject/$totalProjects${currentStep != null ? " — $currentStep" : ""}';
+    return progressText ?? '$currentProject/$totalProjects${currentStep != null ? " — $currentStep" : ""}';
   }
+
+  /// R16 — builds the localized progress text for [current]/[total] and an
+  /// optional (already localized) [step].
+  static String buildProgressText(AppLocalizations l10n, int current, int total, String? step) =>
+      step == null
+          ? l10n.bootstrapProgressProject(current, total)
+          : l10n.bootstrapProgressProjectStep(current, total, step);
 }
 
 class AutoBootstrapNotifier extends StateNotifier<BootstrapState> {
@@ -120,9 +136,14 @@ class AutoBootstrapNotifier extends StateNotifier<BootstrapState> {
           (a) => a.id == project.marketAnalysisId,
         );
 
+        // R16 — step labels and AI output follow the presentation language.
+        final l10n = _ref.read(appL10nProvider);
+        final outputLanguage = _ref.read(outputLanguageCodeProvider);
+        final startingStep = l10n.bootstrapStepStarting;
         state = state.copyWith(
           currentProject: i + 1,
-          currentStep:    'Iniciando',
+          currentStep:    startingStep,
+          progressText:   BootstrapState.buildProgressText(l10n, i + 1, toBootstrap.length, startingStep),
         );
 
         final result = await _bootstrapService.bootstrapProject(
@@ -132,7 +153,12 @@ class AutoBootstrapNotifier extends StateNotifier<BootstrapState> {
           personas:         personas,
           existingTrainings: trainings,
           linkedAnalysis:   linkedAnalysis.isEmpty ? null : linkedAnalysis.first,
-          onStep: (step) => state = state.copyWith(currentStep: step),
+          outputLanguage:   outputLanguage,
+          l10n:             l10n,
+          onStep: (step) => state = state.copyWith(
+            currentStep:  step,
+            progressText: BootstrapState.buildProgressText(l10n, i + 1, toBootstrap.length, step),
+          ),
         );
 
         results.add(result);

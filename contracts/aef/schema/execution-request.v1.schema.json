@@ -1,0 +1,186 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://insightvalues.internal/contracts/aef/execution-request.v1.schema.json",
+  "title": "ExecutionRequest v1",
+  "description": "An intent submitted by IVE (or any other request-originating component) describing what it would like AEF to consider executing. This object grants NO authority by itself -- see prohibited_fields.ts. Every object level below sets additionalProperties=false except `parameters`, which is intentionally open (domain-specific) but is additionally scanned at runtime by the recursive prohibited-field check, since JSON Schema alone cannot express 'reject this field name at any nesting depth'.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "request_id",
+    "requested_at",
+    "expires_at",
+    "actor",
+    "intent",
+    "domain",
+    "action"
+  ],
+  "properties": {
+    "contract_version": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Must be exactly '1.0' for this schema version. Missing or mismatched -> reject, never assume a default (Section 18)."
+    },
+    "request_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "description": "UUID v4. Uniquely identifies THIS request. Used for execution-replay defense -- a request with a previously-seen request_id must never be executed twice, distinct from idempotency_key (see docs)."
+    },
+    "correlation_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "description": "Optional. Links multiple requests in the same reasoning/execution flow for tracing. Never used for authorization."
+    },
+    "requested_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 UTC timestamp of when this request was constructed."
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 UTC timestamp. A request seen after this time must be rejected regardless of any other field (Section 15/9). Required unconditionally -- there is no such thing as a non-expiring ExecutionRequest in v1."
+    },
+    "actor": {
+      "$ref": "#/definitions/Actor"
+    },
+    "intent": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "description": "Short, human/machine-readable description of what is being requested. Advisory/descriptive only -- never parsed for authorization decisions."
+    },
+    "domain": {
+      "type": "string",
+      "enum": ["core", "quant", "impact", "internal"],
+      "description": "Routing/classification only (Section 14). This value grants no permission by itself; each domain adapter applies its own policy."
+    },
+    "action": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$",
+      "maxLength": 200,
+      "description": "Dot-namespaced action identifier, e.g. 'core.generate_strategy' or 'quant.controlled_live.submit_order'. Must be namespaced under a value consistent with `domain`."
+    },
+    "resource": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "id": { "type": "string", "minLength": 1, "maxLength": 200 }
+      },
+      "required": ["type", "id"],
+      "description": "Optional. What the action targets, if anything (e.g. a project, a campaign). Descriptive only."
+    },
+    "parameters": {
+      "allOf": [
+        { "$ref": "#/definitions/AsciiKeyedValue" },
+        {
+          "type": "object",
+          "maxProperties": 50
+        }
+      ],
+      "description": "Domain/action-specific data. Intentionally NOT additionalProperties=false at the schema level (extensible per action) and the specific PROHIBITED_AUTHORITY_FIELDS name list is NOT expressible here either (runtime-only, see prohibited_fields.ts) -- but the ASCII-identifier-key restriction (Codex adversarial review, round 3, Finding N-03) IS expressible in pure JSON Schema via the recursive AsciiKeyedValue definition below, so a schema-only implementation can no longer accept the Unicode-homoglyph bypass class that only the TypeScript validator previously caught."
+    },
+    "constraints": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_cost_estimate": { "type": "number", "minimum": 0 },
+        "note": { "type": "string", "maxLength": 500 }
+      },
+      "description": "Optional, ADVISORY ONLY. E.g. a caller-suggested budget ceiling. Never authoritative -- a future AEF Cost Guard makes the real determination independently."
+    },
+    "quant_execution_tier": {
+      "type": "string",
+      "enum": ["research", "backtest", "paper", "controlled_live", "expanded_live"],
+      "description": "Required when domain='quant' (enforced in validators.ts, not expressible in pure JSON Schema without knowing the action taxonomy). For domain='quant', the second dot-segment of `action` MUST always be one of these five tier names, and quant_execution_tier MUST exactly match it (e.g. action='quant.controlled_live.submit_order' requires quant_execution_tier='controlled_live') -- this field is intentionally redundant with the action's own namespace, not an independent, freely-settable classifier, because a caller could otherwise under-declare risk. Round-1 Codex adversarial review (Finding F-07) found a request naming a 'controlled_live' action could previously claim tier='research' and skip the human-gate requirement below; round-2 review (F-07 partial) found the round-1 fix only checked consistency when the action's segment happened to already be a recognized tier name, so a NON-STANDARD segment (e.g. 'quant.live.submit_order') bypassed it entirely -- the taxonomy is now mandatory, not conditional. controlled_live/expanded_live additionally require a non-null human_gate_ref pointing to an AUTHORIZED HumanGateRecord (Section 14/16)."
+    },
+    "context_ref": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "description": "Optional reference to reasoning/context stored elsewhere (never embedded raw reasoning text here) -- keeps requests small and prevents requests from being used to smuggle authority-shaped free text into an unvalidated blob."
+    },
+    "idempotency_key": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Optional but strongly recommended for consequential actions. Distinct from request_id: a legitimate client retry (e.g. after a timeout) gets a NEW request_id but the SAME idempotency_key, so a future AEF can recognize 'same business operation, don't double-execute' without conflating it with 'exact same request replayed maliciously' (that's request_id's job) or 'this delegation nonce was reused' (that's DelegationEnvelope's job). See docs on the three distinct replay/idempotency concepts."
+    },
+    "delegation_ref": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Reference (ID) to a DelegationEnvelope that must independently exist and validate -- the envelope itself is never embedded in the request, so the request cannot act as its own proof of delegation."
+    },
+    "human_gate_ref": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Reference (ID) to a HumanGateRecord. Only meaningful for actions requiring human approval (e.g. quant_execution_tier=controlled_live). The request NEVER carries the approval decision itself -- only a pointer the authorizing layer independently resolves."
+    },
+    "metadata": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+      "additionalProperties": { "type": "string", "maxLength": 500 },
+      "maxProperties": 20,
+      "description": "Optional, free-form STRING-only annotations. Explicitly documented and enforced (validators.ts) as NEVER consulted for authorization -- purely descriptive/telemetry. Still scanned for prohibited field names as defense-in-depth. Keys are restricted to plain ASCII identifiers at the schema level (Codex adversarial review, round 3, Finding N-03), matching prohibited_fields.ts's ASCII_IDENTIFIER_RE."
+    }
+  },
+  "definitions": {
+    "Actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "id", "auth_ref"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["user", "service", "system"]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "Claimed identity. NEVER trusted on its own -- see auth_ref."
+        },
+        "auth_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "description": "Reference to a verifiable authentication assertion that an INDEPENDENT component (not the request's own author) must resolve before treating `id` as real. For type=user this must be prefixed 'usr:' followed by a substantive identifier (>= 8 chars); for type=service, 'svc:' likewise; for type=system, the fixed literal 'system:internal'. The per-type pattern is enforced below via if/then, mirroring validators.ts's MIN_AUTH_REF_SUFFIX_LENGTH check (Codex adversarial review, round 3, Finding N-03 -- this schema previously only required minLength:1, silently accepting the degenerate values the validator already rejected). This schema does not implement the verification itself -- see README's trust principle section and its escalated-architectural-decision note on auth_ref (Finding F-02)."
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "user" } } },
+          "then": { "properties": { "auth_ref": { "type": "string", "pattern": "^usr:.{8,}$" } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "service" } } },
+          "then": { "properties": { "auth_ref": { "type": "string", "pattern": "^svc:.{8,}$" } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "system" } } },
+          "then": { "properties": { "auth_ref": { "type": "string", "const": "system:internal" } } }
+        }
+      ]
+    },
+    "AsciiKeyedValue": {
+      "description": "Recursively restricts every object key, at every nesting depth, to a plain ASCII identifier -- mirrors prohibited_fields.ts's ASCII_IDENTIFIER_RE (/^[A-Za-z_][A-Za-z0-9_]*$/) so a schema-only implementation cannot accept the Unicode-homoglyph field-name bypass that Codex adversarial review (round 2, Finding F-01 partial) found the TypeScript validator alone previously caught (round 3, Finding N-03). Used by ExecutionRequest.parameters, which is otherwise intentionally open/extensible (no fixed shape, no additionalProperties=false) -- this is the one constraint on that openness expressible in pure JSON Schema; the PROHIBITED_AUTHORITY_FIELDS name list itself remains runtime-only (see prohibited_fields.ts and README.md). NOTE (Codex adversarial review, round 4, Finding N-05, non-blocking): the leaf branch below uses a draft-07 array-valued `type` (a spec-compliant union, not an extension), which ajv's own opt-in `strict: true` linting mode flags and requires `allowUnionTypes: true` to accept -- this is an ajv-specific strictness preference, not a JSON Schema Draft-07 validity problem, and is deliberately left as-is rather than duplicated into four near-identical anyOf branches for no semantic gain.",
+      "anyOf": [
+        {
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+          "additionalProperties": { "$ref": "#/definitions/AsciiKeyedValue" }
+        },
+        {
+          "type": "array",
+          "items": { "$ref": "#/definitions/AsciiKeyedValue" }
+        },
+        {
+          "type": ["string", "number", "boolean", "null"]
+        }
+      ]
+    }
+  }
+}

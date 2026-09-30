@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../data/models/calendar_item.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/calendar_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 
@@ -19,6 +20,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final itemsAsync = ref.watch(calendarItemsProvider);
 
     return Scaffold(
@@ -33,13 +35,13 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             }
           },
         ),
-        title: const Text('Calendário Editorial'),
+        title: Text(l10n.calendarTitle),
       ),
       drawer: const AppDrawer(),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showCreateDialog(context),
         icon: const Icon(Icons.add_rounded),
-        label: const Text('Novo Post'),
+        label: Text(l10n.calendarNewPost),
         backgroundColor: const Color(0xFF6C63FF),
       ),
       body: Column(
@@ -52,13 +54,13 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               children: [
                 _StatusChip(
-                  label: 'Todos',
+                  label: l10n.commonAll,
                   selected: _filterStatus == null,
                   color: Colors.white54,
                   onTap: () => setState(() => _filterStatus = null),
                 ),
                 ...CalendarItem.statuses.map((s) => _StatusChip(
-                      label: CalendarItem.statusLabels[s] ?? s,
+                      label: CalendarItem.localizedStatusLabel(s, AppLocalizations.of(context)!),
                       selected: _filterStatus == s,
                       color: _statusColor(s),
                       onTap: () => setState(() => _filterStatus = s),
@@ -70,7 +72,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             child: itemsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error:   (e, _) => Center(
-                child: Text('Erro: $e',
+                child: Text(l10n.commonError,
                     style: const TextStyle(color: Colors.white54)),
               ),
               data: (items) {
@@ -81,18 +83,18 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                         .toList();
 
                 if (filtered.isEmpty) {
-                  return const Center(
+                  return Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.calendar_month_rounded,
+                        const Icon(Icons.calendar_month_rounded,
                             size: 64, color: Colors.white24),
-                        SizedBox(height: 12),
-                        Text('Nenhum post agendado.',
-                            style: TextStyle(color: Colors.white54)),
-                        SizedBox(height: 4),
-                        Text('Crie seu primeiro post usando o botão abaixo.',
-                            style: TextStyle(
+                        const SizedBox(height: 12),
+                        Text(l10n.calendarEmpty,
+                            style: const TextStyle(color: Colors.white54)),
+                        const SizedBox(height: 4),
+                        Text(l10n.calendarEmptyHint,
+                            style: const TextStyle(
                                 color: Colors.white38, fontSize: 12)),
                       ],
                     ),
@@ -150,8 +152,9 @@ class _CalendarCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final statusColor = _statusColor(item.status);
-    final statusLabel = CalendarItem.statusLabels[item.status] ?? item.status;
+    final statusLabel = CalendarItem.localizedStatusLabel(item.status, l10n);
 
     return Card(
       color: Colors.white.withOpacity(0.05),
@@ -224,16 +227,16 @@ class _CalendarCard extends StatelessWidget {
                         .map((s) => PopupMenuItem(
                               value: s,
                               child: Text(
-                                '→ ${CalendarItem.statusLabels[s] ?? s}',
+                                '→ ${CalendarItem.localizedStatusLabel(s, AppLocalizations.of(context)!)}',
                                 style: const TextStyle(
                                     color: Colors.white70, fontSize: 13),
                               ),
                             )),
                     const PopupMenuDivider(),
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'delete',
-                      child: Text('Excluir',
-                          style: TextStyle(color: Colors.red)),
+                      child: Text(l10n.commonDelete,
+                          style: const TextStyle(color: Colors.red)),
                     ),
                   ],
                 ),
@@ -241,7 +244,7 @@ class _CalendarCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              item.theme ?? '(sem tema)',
+              item.theme ?? l10n.calendarNoTheme,
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w600,
@@ -265,7 +268,7 @@ class _CalendarCard extends StatelessWidget {
                       color: Colors.white24, size: 13),
                   const SizedBox(width: 4),
                   Text(
-                    CalendarItem.formatLabels[item.format] ?? item.format!,
+                    CalendarItem.localizedFormatLabel(item.format!, AppLocalizations.of(context)!),
                     style: const TextStyle(
                         color: Colors.white38, fontSize: 11),
                   ),
@@ -375,6 +378,7 @@ class _CreateCalendarItemSheetState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: EdgeInsets.only(
         left: 20,
@@ -386,9 +390,9 @@ class _CreateCalendarItemSheetState
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-            'Novo Post no Calendário',
-            style: TextStyle(
+          Text(
+            l10n.calendarNewPostSheetTitle,
+            style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
               fontSize: 16,
@@ -397,19 +401,19 @@ class _CreateCalendarItemSheetState
           const SizedBox(height: 16),
           _SheetField(
             controller: _themeCtrl,
-            label: 'Tema / Assunto do post *',
-            hint: 'Ex: Dica de segunda sobre produtividade',
+            label: l10n.calendarThemeLabel,
+            hint: l10n.calendarThemeHint,
           ),
           const SizedBox(height: 12),
           _SheetField(
             controller: _objectiveCtrl,
-            label: 'Objetivo (opcional)',
-            hint: 'Ex: Gerar engajamento, Vender produto X',
+            label: l10n.calendarObjectiveLabel,
+            hint: l10n.calendarObjectiveHint,
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
             value: _platform,
-            decoration: _dropDecoration('Plataforma'),
+            decoration: _dropDecoration(l10n.calendarPlatformLabel),
             dropdownColor: const Color(0xFF1A1A2E),
             style: const TextStyle(color: Colors.white, fontSize: 13),
             items: CalendarItem.platforms
@@ -420,13 +424,13 @@ class _CreateCalendarItemSheetState
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
             value: _format,
-            decoration: _dropDecoration('Formato'),
+            decoration: _dropDecoration(l10n.calendarFormatLabel),
             dropdownColor: const Color(0xFF1A1A2E),
             style: const TextStyle(color: Colors.white, fontSize: 13),
             items: CalendarItem.formats
                 .map((f) => DropdownMenuItem(
                       value: f,
-                      child: Text(CalendarItem.formatLabels[f] ?? f),
+                      child: Text(CalendarItem.localizedFormatLabel(f, AppLocalizations.of(context)!)),
                     ))
                 .toList(),
             onChanged: (v) => setState(() => _format = v),
@@ -448,8 +452,9 @@ class _CreateCalendarItemSheetState
                 color: Colors.white54, size: 16),
             label: Text(
               _suggestedDate == null
-                  ? 'Definir data sugerida'
-                  : 'Data: ${_suggestedDate!.day}/${_suggestedDate!.month}/${_suggestedDate!.year}',
+                  ? l10n.calendarSetSuggestedDate
+                  : l10n.calendarSuggestedDateValue(
+                      _suggestedDate!.day, _suggestedDate!.month, _suggestedDate!.year),
               style: const TextStyle(color: Colors.white54, fontSize: 13),
             ),
             style: OutlinedButton.styleFrom(
@@ -479,8 +484,8 @@ class _CreateCalendarItemSheetState
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-            child: const Text('Adicionar ao Calendário',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+            child: Text(l10n.calendarAddButton,
+                style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),

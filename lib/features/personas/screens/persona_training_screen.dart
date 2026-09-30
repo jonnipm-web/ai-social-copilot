@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/utils/snackbar_utils.dart';
 import '../../../data/models/persona_training.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/persona_training_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 
@@ -22,13 +24,14 @@ class PersonaTrainingScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final trainingAsync = ref.watch(personaTrainingProvider(personaId));
 
     return Scaffold(
       backgroundColor: _bgColor,
       appBar: AppBar(
         title: Text(
-          'Treinamento: $personaName',
+          l10n.personaTrainingTitle(personaName),
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -53,7 +56,7 @@ class PersonaTrainingScreen extends ConsumerWidget {
                 const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
                 const SizedBox(height: 16),
                 Text(
-                  'Erro ao carregar treinamentos: $error',
+                  l10n.personaTrainingLoadError(extractErrorMessage(error, l10n)),
                   style: const TextStyle(color: Colors.white70),
                   textAlign: TextAlign.center,
                 ),
@@ -112,6 +115,7 @@ class _TrainingContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final vocabulary = _combinedUniqueVocabulary();
     final values = _combinedUniqueValues();
     final toneProfile = _mostRecentToneProfile();
@@ -126,9 +130,9 @@ class _TrainingContent extends StatelessWidget {
           values: values,
         ),
         const SizedBox(height: 20),
-        const Text(
-          'Histórico de Treinamentos',
-          style: TextStyle(
+        Text(
+          l10n.personaTrainingHistoryTitle,
+          style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 16,
@@ -162,6 +166,7 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
@@ -194,9 +199,9 @@ class _SummaryCard extends StatelessWidget {
                 child: const Icon(Icons.psychology, color: _primaryColor, size: 22),
               ),
               const SizedBox(width: 12),
-              const Text(
-                'Resumo do Treinamento',
-                style: TextStyle(
+              Text(
+                l10n.personaTrainingSummaryTitle,
+                style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
@@ -207,14 +212,14 @@ class _SummaryCard extends StatelessWidget {
           const SizedBox(height: 16),
           _SummaryRow(
             icon: Icons.layers,
-            label: 'Itens treinados',
-            value: '$count ${count == 1 ? "item" : "itens"}',
+            label: l10n.personaTrainingItemsLabel,
+            value: l10n.personaTrainingItemsCount(count),
           ),
           if (toneProfile != null && toneProfile!.isNotEmpty) ...[
             const SizedBox(height: 12),
-            const Text(
-              'Perfil de Tom (mais recente)',
-              style: TextStyle(
+            Text(
+              l10n.personaTrainingToneProfileLabel,
+              style: const TextStyle(
                 color: _textSecondary,
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
@@ -225,9 +230,9 @@ class _SummaryCard extends StatelessWidget {
           ],
           if (vocabulary.isNotEmpty) ...[
             const SizedBox(height: 12),
-            const Text(
-              'Vocabulário Combinado',
-              style: TextStyle(
+            Text(
+              l10n.personaTrainingVocabularyLabel,
+              style: const TextStyle(
                 color: _textSecondary,
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
@@ -241,9 +246,9 @@ class _SummaryCard extends StatelessWidget {
           ],
           if (values.isNotEmpty) ...[
             const SizedBox(height: 12),
-            const Text(
-              'Valores Combinados',
-              style: TextStyle(
+            Text(
+              l10n.personaTrainingValuesLabel,
+              style: const TextStyle(
                 color: _textSecondary,
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
@@ -388,27 +393,28 @@ class _TrainingItemCard extends StatelessWidget {
   }
 
   Future<void> _delete(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: _cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Remover treinamento?',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        title: Text(
+          l10n.personaTrainingDeleteTitle,
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        content: const Text(
-          'Este item de treinamento será removido permanentemente da persona.',
-          style: TextStyle(color: Colors.white70),
+        content: Text(
+          l10n.personaTrainingDeleteBody,
+          style: const TextStyle(color: Colors.white70),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancelar', style: TextStyle(color: _textSecondary)),
+            child: Text(l10n.commonCancel, style: const TextStyle(color: _textSecondary)),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Remover', style: TextStyle(color: Colors.redAccent)),
+            child: Text(l10n.personaTrainingRemove, style: const TextStyle(color: Colors.redAccent)),
           ),
         ],
       ),
@@ -422,6 +428,7 @@ class _TrainingItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final vocabulary = training.vocabularyJson;
     final tone = training.tone;
 
@@ -479,7 +486,7 @@ class _TrainingItemCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          training.trainingSummary ?? 'Item sem título',
+                          training.trainingSummary ?? l10n.personaTrainingNoTitle,
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w600,
@@ -502,7 +509,7 @@ class _TrainingItemCard extends StatelessWidget {
                   IconButton(
                     onPressed: () => _delete(context),
                     icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
-                    tooltip: 'Remover',
+                    tooltip: l10n.personaTrainingRemove,
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                   ),
@@ -514,9 +521,9 @@ class _TrainingItemCard extends StatelessWidget {
                   children: [
                     const Icon(Icons.record_voice_over, color: _textSecondary, size: 14),
                     const SizedBox(width: 6),
-                    const Text(
-                      'Tom: ',
-                      style: TextStyle(color: _textSecondary, fontSize: 12),
+                    Text(
+                      l10n.personaTrainingToneLabel,
+                      style: const TextStyle(color: _textSecondary, fontSize: 12),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
@@ -539,9 +546,9 @@ class _TrainingItemCard extends StatelessWidget {
               ],
               if (vocabulary.isNotEmpty) ...[
                 const SizedBox(height: 10),
-                const Text(
-                  'Vocabulário:',
-                  style: TextStyle(color: _textSecondary, fontSize: 11),
+                Text(
+                  l10n.personaTrainingItemVocabularyLabel,
+                  style: const TextStyle(color: _textSecondary, fontSize: 11),
                 ),
                 const SizedBox(height: 6),
                 Wrap(
@@ -578,7 +585,7 @@ class _TrainingItemCard extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
-                      '+${vocabulary.length - 6} palavras',
+                      l10n.personaTrainingMoreWords(vocabulary.length - 6),
                       style: const TextStyle(
                         color: _textSecondary,
                         fontSize: 10,
@@ -597,6 +604,7 @@ class _TrainingItemCard extends StatelessWidget {
 class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -620,9 +628,9 @@ class _EmptyState extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
-              'Nenhum treinamento ainda.',
-              style: TextStyle(
+            Text(
+              l10n.personaTrainingEmptyTitle,
+              style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
                 fontSize: 18,
@@ -630,9 +638,9 @@ class _EmptyState extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
-            const Text(
-              'Analise um item no Cofre de Conhecimento e clique em Treinar Persona.',
-              style: TextStyle(
+            Text(
+              l10n.personaTrainingEmptyBody,
+              style: const TextStyle(
                 color: _textSecondary,
                 fontSize: 14,
                 height: 1.5,

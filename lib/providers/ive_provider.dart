@@ -3,59 +3,80 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants/app_constants.dart';
+import '../core/utils/language_utils.dart';
 import '../core/services/ive_event_bus.dart';
 import '../data/models/ecosystem_score.dart';
 import '../data/models/ive_event.dart';
 import '../data/models/ive_issue.dart';
 import '../data/models/ive_state.dart';
+import '../l10n/app_localizations.dart';
 import 'ecosystem_intelligence_provider.dart';
 import 'ive_context_provider.dart';
 import 'ive_memory_provider.dart';
 
 // ── Screen context messages ────────────────────────────────────────────────
 
-const _kMessages = <String, List<String>>{
-  AppConstants.routeProjects: [
-    'Olá! Sou a IVE, sua consultora executiva. Posso analisar seu portfólio agora.',
-    'Quer saber qual projeto tem mais potencial de escala neste momento?',
-    'Identifico padrões entre seus projetos. Alguma dúvida estratégica?',
-  ],
-  AppConstants.routeOpportunityLab: [
-    'Identifiquei oportunidades com alto ROI nesta lista. Posso priorizar para você.',
-    'Cada oportunidade aqui tem critérios mensuráveis. Posso explicar qualquer uma.',
-    'Quer que eu indique quais oportunidades executar primeiro esta semana?',
-  ],
-  AppConstants.routeEcosystem: [
-    'Este é seu centro de decisão. Posso explicar qualquer score em linguagem simples.',
-    'Vejo projetos com potencial não explorado. Quer uma análise detalhada?',
-    'Posso simular o impacto de aprovar oportunidades ou concluir ações.',
-  ],
-  AppConstants.routeEcosystemBriefing: [
-    'Seu briefing executivo está pronto. Posso destacar o que é mais urgente.',
-    'Quer que eu traduza este relatório em próximos passos concretos?',
-    'Posso identificar o que mudou esta semana e por quê.',
-  ],
-  AppConstants.routePersonas: [
-    'Suas personas são sua presença no mercado. Posso comparar o desempenho de cada uma.',
-    'Quer saber qual persona tem maior potencial de crescimento agora?',
-    'Posso recomendar estratégias específicas para cada nicho.',
-  ],
-  AppConstants.routeKnowledge: [
-    'Seu cofre de conhecimento alimenta toda a inteligência do sistema.',
-    'Qual documento quer que eu analise ou conecte com seus projetos?',
-    'Posso mostrar quais conhecimentos estão gerando mais insights.',
-  ],
-  AppConstants.routeActionEngine: [
-    'Sua fila de ações determina sua velocidade de execução.',
-    'Posso ajudar a priorizar: quais ações têm maior impacto no score?',
-    'Quer que eu identifique o que está bloqueando seu progresso?',
-  ],
-  AppConstants.routeIntelligenceDebug: [
-    'Centro de observabilidade completo. Posso auditar qualquer cálculo.',
-    'Quer entender como um score foi gerado? Basta perguntar.',
-    'Posso rastrear a origem de qualquer dado ou recomendação.',
-  ],
-};
+/// R16 — per-route IVE greetings/suggestions, in the presentation language.
+/// Built from [AppLocalizations] (never hard-coded PT) so an English UI never
+/// shows a Portuguese bubble. Returns an empty list for unmapped routes.
+List<String> iveRouteMessages(String route, AppLocalizations l10n) {
+  switch (route) {
+    case AppConstants.routeProjects:
+      return [l10n.ctxIveProjectsMsg1, l10n.ctxIveProjectsMsg2, l10n.ctxIveProjectsMsg3];
+    case AppConstants.routeOpportunityLab:
+      return [l10n.ctxIveOppLabMsg1, l10n.ctxIveOppLabMsg2, l10n.ctxIveOppLabMsg3];
+    case AppConstants.routeEcosystem:
+      return [l10n.ctxIveEcosystemMsg1, l10n.ctxIveEcosystemMsg2, l10n.ctxIveEcosystemMsg3];
+    case AppConstants.routeEcosystemBriefing:
+      return [l10n.ctxIveBriefingMsg1, l10n.ctxIveBriefingMsg2, l10n.ctxIveBriefingMsg3];
+    case AppConstants.routePersonas:
+      return [l10n.ctxIvePersonasMsg1, l10n.ctxIvePersonasMsg2, l10n.ctxIvePersonasMsg3];
+    case AppConstants.routeKnowledge:
+      return [l10n.ctxIveKnowledgeMsg1, l10n.ctxIveKnowledgeMsg2, l10n.ctxIveKnowledgeMsg3];
+    case AppConstants.routeActionEngine:
+      return [l10n.ctxIveActionsMsg1, l10n.ctxIveActionsMsg2, l10n.ctxIveActionsMsg3];
+    case AppConstants.routeIntelligenceDebug:
+      return [l10n.ctxIveDebugMsg1, l10n.ctxIveDebugMsg2, l10n.ctxIveDebugMsg3];
+  }
+  return const [];
+}
+
+/// R16 — deterministic context-aware bubble text, in the presentation
+/// language. Pure (no Ref) so it is unit-testable per locale.
+String buildIveContextMessage(IveContextData ctx, String route, AppLocalizations l10n) {
+  if (ctx.healthScore == 0) return '';
+
+  switch (route) {
+    case AppConstants.routeEcosystem:
+      final bottleneck = ctx.mainBottleneckName ?? l10n.ctxIveCtxBottleneckFallback;
+      return l10n.ctxIveCtxEcosystem(ctx.healthScore, bottleneck);
+
+    case AppConstants.routeProjects:
+      if (ctx.topProjectName != null) {
+        final tail = ctx.pendingActionsCount > 0
+            ? l10n.ctxIveCtxPendingDetected(ctx.pendingActionsCount)
+            : l10n.ctxIveCtxAnalyzeOpportunities;
+        return '${l10n.ctxIveCtxProjectLeads(ctx.topProjectName!, ctx.topProjectScore ?? 0)} $tail';
+      }
+      break;
+
+    case AppConstants.routeOpportunityLab:
+      if (ctx.pendingOpportunitiesCount > 0) {
+        return l10n.ctxIveCtxOppLab(ctx.pendingOpportunitiesCount);
+      }
+      break;
+
+    case AppConstants.routeEcosystemBriefing:
+      return l10n.ctxIveCtxBriefing(ctx.healthScore);
+
+    case AppConstants.routeActionEngine:
+      if (ctx.pendingActionsCount > 0) {
+        return l10n.ctxIveCtxActions(ctx.pendingActionsCount);
+      }
+      break;
+  }
+  return '';
+}
 
 const _kExpressions = <String, IveExpression>{
   AppConstants.routeProjects:          IveExpression.excited,
@@ -136,6 +157,10 @@ class IveNotifier extends StateNotifier<IveState> {
   }
 
   final Ref _ref;
+
+  /// R16 — presentation-language strings. Read (not watched) at display
+  /// time, so every bubble reflects the language active when it is shown.
+  AppLocalizations get _l10n => _ref.read(appL10nProvider);
   StreamSubscription<IveEvent>? _eventSub;
 
   Timer? _dismissTimer;
@@ -165,21 +190,21 @@ class IveNotifier extends StateNotifier<IveState> {
       case IveEventType.assetAnalysisCompleted:
         final name = event.entityName;
         if (name != null) {
-          _showTransient('Análise de "$name" concluída!', IveExpression.excited);
+          _showTransient(_l10n.ctxIveAnalysisCompleted(name), IveExpression.excited);
         }
         break;
 
       case IveEventType.assetAnalysisStarted:
         final name = event.entityName;
         if (name != null) {
-          _showTransient('Analisando "$name"...', IveExpression.thinking);
+          _showTransient(_l10n.ctxIveAnalyzing(name), IveExpression.thinking);
         }
         break;
 
       case IveEventType.projectCreated:
         final name = event.entityName;
         if (name != null) {
-          _showTransient('Projeto "$name" criado!', IveExpression.excited);
+          _showTransient(_l10n.ctxIveProjectCreated(name), IveExpression.excited);
         }
         // IVE-COMMERCIAL-QUOTA-HARDENING-13 — this used to unconditionally
         // call runAll() here, silently reserving up to 3 quota units
@@ -197,7 +222,7 @@ class IveNotifier extends StateNotifier<IveState> {
       case IveEventType.projectDeleted:
         final name = event.entityName;
         if (name != null) {
-          _showTransient('Projeto "$name" removido.', IveExpression.neutral);
+          _showTransient(_l10n.ctxIveProjectRemoved(name), IveExpression.neutral);
         }
         break;
 
@@ -205,14 +230,15 @@ class IveNotifier extends StateNotifier<IveState> {
         final name   = event.entityName;
         final status = event.payload['status'] as String?;
         if (name != null && status != null) {
+          final l10n  = _l10n;
           final label = status == 'active'
-              ? 'ativado'
+              ? l10n.ctxIveStatusActivated
               : status == 'paused'
-                  ? 'pausado'
+                  ? l10n.ctxIveStatusPaused
                   : status == 'completed'
-                      ? 'concluído'
+                      ? l10n.ctxIveStatusCompleted
                       : status;
-          _showTransient('"$name" $label.', IveExpression.happy);
+          _showTransient(l10n.ctxIveProjectStatusChanged(name, label), IveExpression.happy);
         }
         break;
 
@@ -228,7 +254,7 @@ class IveNotifier extends StateNotifier<IveState> {
     _cycleTimer?.cancel();
     _dismissTimer?.cancel();
     state = state.copyWith(
-      message:       issue.userMessage,
+      message:       issue.localizedMessage(_l10n),
       expression:    issue.severity == IveIssueSeverity.critical
           ? IveExpression.neutral
           : IveExpression.thinking,
@@ -309,8 +335,8 @@ class IveNotifier extends StateNotifier<IveState> {
   }
 
   void _showMessage(String route, int index) {
-    final msgs = _kMessages[route];
-    if (msgs == null || msgs.isEmpty) {
+    final msgs = iveRouteMessages(route, _l10n);
+    if (msgs.isEmpty) {
       state = state.copyWith(bubbleVisible: false);
       return;
     }
@@ -426,43 +452,8 @@ class IveNotifier extends StateNotifier<IveState> {
     }
   }
 
-  String _buildContextMessage(IveContextData ctx, String route) {
-    if (ctx.healthScore == 0) return '';
-
-    switch (route) {
-      case AppConstants.routeEcosystem:
-        final bottleneck = ctx.mainBottleneckName ?? 'execução';
-        return 'Ecossistema em ${ctx.healthScore}/100. '
-               'Principal gargalo: $bottleneck. '
-               'Posso detalhar como melhorar.';
-
-      case AppConstants.routeProjects:
-        if (ctx.topProjectName != null) {
-          return '${ctx.topProjectName} lidera com score ${ctx.topProjectScore}. '
-                 '${ctx.pendingActionsCount > 0 ? "${ctx.pendingActionsCount} ações pendentes detectadas." : "Quer analisar oportunidades?"}';
-        }
-        break;
-
-      case AppConstants.routeOpportunityLab:
-        if (ctx.pendingOpportunitiesCount > 0) {
-          return '${ctx.pendingOpportunitiesCount} oportunidades aguardando sua avaliação. '
-                 'Posso priorizar as de maior ROI.';
-        }
-        break;
-
-      case AppConstants.routeEcosystemBriefing:
-        return 'Briefing gerado com saúde geral em ${ctx.healthScore}/100. '
-               'Posso traduzir os dados em ações concretas.';
-
-      case AppConstants.routeActionEngine:
-        if (ctx.pendingActionsCount > 0) {
-          return '${ctx.pendingActionsCount} ações pendentes. '
-                 'Posso identificar as de maior impacto no score de execução.';
-        }
-        break;
-    }
-    return '';
-  }
+  String _buildContextMessage(IveContextData ctx, String route) =>
+      buildIveContextMessage(ctx, route, _l10n);
 
   @override
   void dispose() {

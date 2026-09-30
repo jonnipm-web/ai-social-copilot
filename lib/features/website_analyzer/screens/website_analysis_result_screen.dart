@@ -3,9 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/snackbar_utils.dart';
 import '../../../data/models/copilot_context_data.dart';
 import '../../../data/models/ive_interaction_request.dart';
 import '../../../data/models/website_analysis.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/ive_context_provider.dart';
 import '../../../providers/website_analyzer_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
@@ -31,15 +33,16 @@ class WebsiteAnalysisResultScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final analysisAsync = ref.watch(websiteAnalysisByIdProvider(analysisId));
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: _background,
       drawer: const AppDrawer(),
       appBar: AppBar(
         backgroundColor: _cardColor,
-        title: const Text(
-          'Análise do Site',
-          style: TextStyle(color: Colors.white),
+        title: Text(
+          l10n.websiteResultTitle,
+          style: const TextStyle(color: Colors.white),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
@@ -60,16 +63,16 @@ class WebsiteAnalysisResultScreen extends ConsumerWidget {
                 TextButton.icon(
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Análise já salva no banco de dados!'),
+                      SnackBar(
+                        content: Text(l10n.websiteResultSavedSnack),
                         backgroundColor: Colors.green,
                       ),
                     );
                   },
                   icon: const Icon(Icons.lock, size: 16, color: _accent),
-                  label: const Text(
-                    'Salvar no Cofre',
-                    style: TextStyle(color: _accent, fontSize: 13),
+                  label: Text(
+                    l10n.websiteResultSaveToVault,
+                    style: const TextStyle(color: _accent, fontSize: 13),
                   ),
                 ),
                 TextButton.icon(
@@ -80,9 +83,9 @@ class WebsiteAnalysisResultScreen extends ConsumerWidget {
                     );
                   },
                   icon: const Icon(Icons.auto_awesome, size: 16, color: _primary),
-                  label: const Text(
-                    'Criar Estratégia',
-                    style: TextStyle(color: _primary, fontSize: 13),
+                  label: Text(
+                    l10n.websiteResultCreateStrategy,
+                    style: const TextStyle(color: _primary, fontSize: 13),
                   ),
                 ),
                 // IVE-EXPERIENCE-V1-06 (Section 21) — first contextual IVE
@@ -102,12 +105,15 @@ class WebsiteAnalysisResultScreen extends ConsumerWidget {
                         ctx != null ? CopilotContextData.fromIveContext(ctx) : const CopilotContextData();
                     showCopilotChat(
                       context,
-                      screenName: 'Website Analyzer',
+                      screenName: l10n.navWebsiteAnalyzer,
                       contextData: contextData,
-                      initialMessage:
-                          'Explique os resultados da análise do site ${analysis.url} '
-                          '(score geral ${analysis.scoreWebsite}, SEO ${analysis.scoreSeo}, '
-                          'AdSense ${analysis.scoreAdsense}, monetização ${analysis.scoreMonetization}).',
+                      initialMessage: l10n.websiteResultExplainPrompt(
+                        analysis.url,
+                        analysis.scoreWebsite.toString(),
+                        analysis.scoreSeo.toString(),
+                        analysis.scoreAdsense.toString(),
+                        analysis.scoreMonetization.toString(),
+                      ),
                       request: IveInteractionRequest(
                         sourceModule:     'website_analyzer',
                         sourceEntityType: 'website_analysis',
@@ -117,9 +123,9 @@ class WebsiteAnalysisResultScreen extends ConsumerWidget {
                     );
                   },
                   icon: const Icon(Icons.auto_awesome_rounded, size: 16, color: _accent),
-                  label: const Text(
-                    'Explicar com IVE',
-                    style: TextStyle(color: _accent, fontSize: 13),
+                  label: Text(
+                    l10n.knowledgeVaultExplainWithIve,
+                    style: const TextStyle(color: _accent, fontSize: 13),
                   ),
                 ),
               ],
@@ -134,18 +140,19 @@ class WebsiteAnalysisResultScreen extends ConsumerWidget {
           primary: _primary,
           accent: _accent,
           cardColor: _cardColor,
+          l10n: l10n,
         ),
       ),
       body: analysisAsync.when(
-        loading: () => const Center(
+        loading: () => Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircularProgressIndicator(color: _accent),
-              SizedBox(height: 16),
+              const CircularProgressIndicator(color: _accent),
+              const SizedBox(height: 16),
               Text(
-                'Carregando análise...',
-                style: TextStyle(color: Colors.white70),
+                l10n.websiteResultLoadingAnalysis,
+                style: const TextStyle(color: Colors.white70),
               ),
             ],
           ),
@@ -159,7 +166,7 @@ class WebsiteAnalysisResultScreen extends ConsumerWidget {
                 const Icon(Icons.error_outline, color: Colors.red, size: 48),
                 const SizedBox(height: 16),
                 Text(
-                  'Erro ao carregar análise',
+                  l10n.websiteResultLoadError,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 18,
@@ -168,7 +175,7 @@ class WebsiteAnalysisResultScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '$error',
+                  extractErrorMessage(error, l10n),
                   style: TextStyle(color: Colors.white.withOpacity(0.6)),
                   textAlign: TextAlign.center,
                 ),
@@ -183,6 +190,7 @@ class WebsiteAnalysisResultScreen extends ConsumerWidget {
           cardColor: _cardColor,
           primary: _primary,
           accent: _accent,
+          l10n: l10n,
         ),
       ),
     );
@@ -200,6 +208,7 @@ class _AnalysisContent extends StatelessWidget {
   final Color cardColor;
   final Color primary;
   final Color accent;
+  final AppLocalizations l10n;
 
   const _AnalysisContent({
     required this.analysis,
@@ -208,6 +217,7 @@ class _AnalysisContent extends StatelessWidget {
     required this.cardColor,
     required this.primary,
     required this.accent,
+    required this.l10n,
   });
 
   @override
@@ -263,7 +273,7 @@ class _AnalysisContent extends StatelessWidget {
             children: [
               Expanded(
                 child: _ScoreCard(
-                  label: 'Website',
+                  label: l10n.websiteResultScoreWebsite,
                   score: websiteScore,
                   icon: Icons.language,
                   color: scoreColor(websiteScore),
@@ -273,7 +283,7 @@ class _AnalysisContent extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: _ScoreCard(
-                  label: 'AdSense',
+                  label: l10n.websiteAnalyzerScoreAdsense,
                   score: adsenseScore,
                   icon: Icons.monetization_on,
                   color: scoreColor(adsenseScore),
@@ -283,7 +293,7 @@ class _AnalysisContent extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: _ScoreCard(
-                  label: 'SEO',
+                  label: l10n.websiteResultScoreSeo,
                   score: seoScore,
                   icon: Icons.search,
                   color: scoreColor(seoScore),
@@ -293,7 +303,7 @@ class _AnalysisContent extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: _ScoreCard(
-                  label: 'Monetização',
+                  label: l10n.websiteResultScoreMonetization,
                   score: monetizationScore,
                   icon: Icons.payments,
                   color: scoreColor(monetizationScore),
@@ -307,19 +317,19 @@ class _AnalysisContent extends StatelessWidget {
 
           // Expandable Sections
           _ExpandableSection(
-            title: 'Diagnóstico',
+            title: l10n.websiteResultSectionDiagnostic,
             icon: Icons.analytics,
             iconColor: primary,
             cardColor: cardColor,
             initiallyExpanded: true,
-            child: _DiagnosticContent(analysis: analysis),
+            child: _DiagnosticContent(analysis: analysis, l10n: l10n),
           ),
 
           const SizedBox(height: 8),
 
           if (analysis.strengths.isNotEmpty)
             _ExpandableSection(
-              title: 'Pontos Fortes',
+              title: l10n.websiteResultSectionStrengths,
               icon: Icons.thumb_up,
               iconColor: Colors.green,
               cardColor: cardColor,
@@ -334,7 +344,7 @@ class _AnalysisContent extends StatelessWidget {
 
           if (analysis.weaknesses.isNotEmpty)
             _ExpandableSection(
-              title: 'Pontos Fracos',
+              title: l10n.websiteResultSectionWeaknesses,
               icon: Icons.thumb_down,
               iconColor: Colors.orange,
               cardColor: cardColor,
@@ -349,7 +359,7 @@ class _AnalysisContent extends StatelessWidget {
 
           if (analysis.criticalIssues.isNotEmpty)
             _ExpandableSection(
-              title: 'Problemas Críticos',
+              title: l10n.websiteResultSectionCriticalIssues,
               icon: Icons.warning_amber,
               iconColor: Colors.red,
               cardColor: cardColor,
@@ -364,7 +374,7 @@ class _AnalysisContent extends StatelessWidget {
 
           if (analysis.seoAnalysis.isNotEmpty)
             _ExpandableSection(
-              title: 'Análise SEO',
+              title: l10n.websiteResultSectionSeoAnalysis,
               icon: Icons.search,
               iconColor: accent,
               cardColor: cardColor,
@@ -376,11 +386,11 @@ class _AnalysisContent extends StatelessWidget {
 
           if (analysis.adsenseAnalysis.isNotEmpty)
             _ExpandableSection(
-              title: 'Análise AdSense',
+              title: l10n.websiteResultSectionAdsenseAnalysis,
               icon: Icons.monetization_on,
               iconColor: Colors.amber,
               cardColor: cardColor,
-              child: _AdsenseContent(analysis: analysis),
+              child: _AdsenseContent(analysis: analysis, l10n: l10n),
             ),
 
           if (analysis.adsenseAnalysis.isNotEmpty)
@@ -388,7 +398,7 @@ class _AnalysisContent extends StatelessWidget {
 
           if (analysis.quickWins.isNotEmpty)
             _ExpandableSection(
-              title: 'Vitórias Rápidas',
+              title: l10n.websiteResultSectionQuickWins,
               icon: Icons.bolt,
               iconColor: Colors.yellow,
               cardColor: cardColor,
@@ -404,7 +414,7 @@ class _AnalysisContent extends StatelessWidget {
 
           if (analysis.plan7Days.isNotEmpty)
             _ExpandableSection(
-              title: 'Plano 7 Dias',
+              title: l10n.websiteResultSectionPlan7Days,
               icon: Icons.calendar_today,
               iconColor: primary,
               cardColor: cardColor,
@@ -416,7 +426,7 @@ class _AnalysisContent extends StatelessWidget {
 
           if (analysis.plan30Days.isNotEmpty)
             _ExpandableSection(
-              title: 'Plano 30 Dias',
+              title: l10n.websiteResultSectionPlan30Days,
               icon: Icons.date_range,
               iconColor: primary,
               cardColor: cardColor,
@@ -428,7 +438,7 @@ class _AnalysisContent extends StatelessWidget {
 
           if (analysis.articleIdeas.isNotEmpty)
             _ExpandableSection(
-              title: 'Ideias de Artigos',
+              title: l10n.websiteResultSectionArticleIdeas,
               icon: Icons.article,
               iconColor: accent,
               cardColor: cardColor,
@@ -443,7 +453,7 @@ class _AnalysisContent extends StatelessWidget {
 
           if (analysis.monetizationOpportunities.isNotEmpty)
             _ExpandableSection(
-              title: 'Oportunidades de Monetização',
+              title: l10n.websiteResultSectionMonetizationOpportunities,
               icon: Icons.attach_money,
               iconColor: Colors.green,
               cardColor: cardColor,
@@ -458,7 +468,7 @@ class _AnalysisContent extends StatelessWidget {
 
           if (analysis.commercialOpportunities.isNotEmpty)
             _ExpandableSection(
-              title: 'Oportunidades Comerciais',
+              title: l10n.websiteResultSectionCommercialOpportunities,
               icon: Icons.business_center,
               iconColor: Colors.amber,
               cardColor: cardColor,
@@ -619,8 +629,9 @@ class _ExpandableSectionState extends State<_ExpandableSection> {
 
 class _DiagnosticContent extends StatelessWidget {
   final WebsiteAnalysis analysis;
+  final AppLocalizations l10n;
 
-  const _DiagnosticContent({required this.analysis});
+  const _DiagnosticContent({required this.analysis, required this.l10n});
 
   @override
   Widget build(BuildContext context) {
@@ -657,7 +668,7 @@ class _DiagnosticContent extends StatelessWidget {
         ],
         if (mainTopics.isNotEmpty) ...[
           Text(
-            'Tópicos Principais:',
+            l10n.websiteResultMainTopicsLabel,
             style: TextStyle(
               color: Colors.white.withOpacity(0.6),
               fontSize: 13,
@@ -871,8 +882,9 @@ class _MapContent extends StatelessWidget {
 
 class _AdsenseContent extends StatelessWidget {
   final WebsiteAnalysis analysis;
+  final AppLocalizations l10n;
 
-  const _AdsenseContent({required this.analysis});
+  const _AdsenseContent({required this.analysis, required this.l10n});
 
   @override
   Widget build(BuildContext context) {
@@ -889,17 +901,17 @@ class _AdsenseContent extends StatelessWidget {
         Row(
           children: [
             _PolicyIndicator(
-              label: 'Política de Privacidade',
+              label: l10n.websiteResultPolicyPrivacy,
               hasIt: hasPrivacyPolicy,
             ),
             const SizedBox(width: 8),
             _PolicyIndicator(
-              label: 'Sobre',
+              label: l10n.websiteResultPolicyAbout,
               hasIt: hasAboutPage,
             ),
             const SizedBox(width: 8),
             _PolicyIndicator(
-              label: 'Contato',
+              label: l10n.websiteResultPolicyContact,
               hasIt: hasContactPage,
             ),
           ],
@@ -963,12 +975,14 @@ class _BottomActionBar extends StatelessWidget {
   final Color primary;
   final Color accent;
   final Color cardColor;
+  final AppLocalizations l10n;
 
   const _BottomActionBar({
     required this.analysis,
     required this.primary,
     required this.accent,
     required this.cardColor,
+    required this.l10n,
   });
 
   @override
@@ -991,7 +1005,7 @@ class _BottomActionBar extends StatelessWidget {
           children: [
             Expanded(
               child: _ActionButton(
-                label: 'Criar Estratégia',
+                label: l10n.websiteResultCreateStrategy,
                 icon: Icons.auto_awesome,
                 color: primary,
                 onTap: () => context.go(
@@ -1003,7 +1017,7 @@ class _BottomActionBar extends StatelessWidget {
             const SizedBox(width: 6),
             Expanded(
               child: _ActionButton(
-                label: 'Criar Campanha',
+                label: l10n.websiteResultCreateCampaign,
                 icon: Icons.campaign,
                 color: accent,
                 onTap: () => context.go(
@@ -1015,12 +1029,12 @@ class _BottomActionBar extends StatelessWidget {
             const SizedBox(width: 6),
             Expanded(
               child: _ActionButton(
-                label: 'Plano SEO',
+                label: l10n.websiteResultSeoPlan,
                 icon: Icons.search,
                 color: Colors.green,
                 onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Plano SEO — disponível na Fase 9'),
+                  SnackBar(
+                    content: Text(l10n.websiteResultSeoPlanComingSoon),
                     backgroundColor: Colors.green,
                   ),
                 ),
@@ -1029,12 +1043,12 @@ class _BottomActionBar extends StatelessWidget {
             const SizedBox(width: 6),
             Expanded(
               child: _ActionButton(
-                label: 'Plano AdSense',
+                label: l10n.websiteResultAdsensePlan,
                 icon: Icons.monetization_on,
                 color: Colors.amber,
                 onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Plano AdSense — disponível na Fase 9'),
+                  SnackBar(
+                    content: Text(l10n.websiteResultAdsensePlanComingSoon),
                     backgroundColor: Colors.amber,
                   ),
                 ),

@@ -1,6 +1,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { AuthError, resolveAuthenticatedUser, unauthorizedResponse } from '../_shared/auth.ts';
-import { quotaBlockedResponse, refundQuota, reserveQuota } from '../_shared/quota.ts';
+import { AuthClient, AuthenticatedUser, AuthError, resolveAuthenticatedUser, unauthorizedResponse } from '../_shared/auth.ts';
+import { EntitlementSubjectSource, requireModuleAccess } from '../_shared/entitlement.ts';
+import { outputLanguageSystemMessage, resolveOutputLanguage } from '../_shared/language.ts';
+import { QuotaClient, quotaBlockedResponse, refundQuota, reserveQuota } from '../_shared/quota.ts';
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const corsHeaders = {
@@ -8,29 +10,47 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req) => {
+// Exportado para testes (MODULE-FOUNDATION-AND-ENTITLEMENT-02). Em produção,
+// serve() chama esta função com os clients reais.
+export async function handler(
+  req: Request,
+  authClient?: AuthClient,
+  quotaClient?: QuotaClient,
+  subjectSource?: EntitlementSubjectSource,
+): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   // IVE-COMMERCIAL-AUTH-01 — exige sessão de usuário real antes do Groq. Falha fechado.
+  let authUser: AuthenticatedUser;
   try {
-    await resolveAuthenticatedUser(req);
+    authUser = await resolveAuthenticatedUser(req, authClient);
   } catch (e) {
     if (e instanceof AuthError) return unauthorizedResponse(corsHeaders);
     throw e;
   }
 
+  // MODULE-FOUNDATION-AND-ENTITLEMENT-02 — server-side entitlement: the server
+  // (supabase/functions/_shared/module_policy.ts), not the client registry,
+  // decides whether this caller may use 'decision-simulator'. Runs after authentication
+  // and before any quota reservation or AI call. Fails closed.
+  const access = await requireModuleAccess(req, authUser, 'decision-simulator', corsHeaders, subjectSource);
+  if (!access.allowed) return access.response;
+
   let quotaReserved = false;
   let idempotencyKey: string | undefined;
   let quotaResult: Awaited<ReturnType<typeof reserveQuota>> | undefined;
   try {
+    const body = await req.json();
     const {
       scenario,        // string: descrição do cenário a simular
       ecosystem,       // { healthScore, projectCount, pendingActions, pendingOpportunities }
       projects,        // Array<{ name, ecosystemScore, executionScore, opportunityScore }>
       target,          // optional { type: 'project'|'opportunity'|'action', name: string }
       idempotency_key,
-    } = await req.json();
+    } = body;
     idempotencyKey = idempotency_key;
+    // R16 — idioma de APRESENTAÇÃO (UI) decide o idioma da análise.
+    const language = resolveOutputLanguage(body);
 
     const projectsBlock = (projects ?? [])
       .slice(0, 8)
@@ -84,10 +104,9 @@ Onde:
 - affected_projects: lista de nomes de projetos afetados
 - confidence: confiança da simulação de 0 a 100
 - timeline_weeks: tempo estimado para ver o impacto em semanas
+- affected_projects: use os nomes dos projetos exatamente como listados acima`;
 
-Responda sempre em Português do Brasil.`;
-
-    const quota = await reserveQuota(req, undefined, idempotencyKey, 'decision-simulator');
+    const quota = await reserveQuota(req, quotaClient, idempotencyKey, 'decision-simulator');
     if (!quota.allowed) return quotaBlockedResponse(corsHeaders, quota);
     quotaReserved = true;
     quotaResult = quota;
@@ -104,6 +123,7 @@ Responda sempre em Português do Brasil.`;
         max_completion_tokens: 700,
         messages: [
           { role: 'system', content: systemPrompt },
+          outputLanguageSystemMessage(language, { fixedValueFields: ['risk_level', 'affected_projects'] }),
           { role: 'user', content: `Simule este cenário: ${scenario}` },
         ],
       }),
@@ -163,10 +183,14 @@ Responda sempre em Português do Brasil.`;
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (err) {
-    if (quotaReserved) await refundQuota(req, undefined, quotaResult);
+    if (quotaReserved) await refundQuota(req, quotaClient, quotaResult);
     return new Response(
       JSON.stringify({ error: String(err) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   }
-});
+}
+
+if (Deno.env.get('DENO_TESTING') !== '1') {
+  serve((req) => handler(req));
+}

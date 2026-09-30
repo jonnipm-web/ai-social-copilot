@@ -2,28 +2,29 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/models/opportunity_lab_item.dart';
 import '../data/services/opportunity_lab_service.dart';
+import '../data/services/content_localization_service.dart';
 
 final opportunityLabServiceProvider =
-    Provider<OpportunityLabService>((_) => OpportunityLabService());
+    Provider<OpportunityLabService>((ref) => OpportunityLabService(localizer: ref.watch(rowLocalizerProvider)));
 
 final opportunityLabProvider =
     FutureProvider.autoDispose<List<OpportunityLabItem>>((ref) {
-  return ref.read(opportunityLabServiceProvider).fetchAll();
+  return ref.watch(opportunityLabServiceProvider).fetchAll();
 });
 
 final opportunityLabByProjectProvider =
     FutureProvider.autoDispose.family<List<OpportunityLabItem>, String>((ref, projectId) {
-  return ref.read(opportunityLabServiceProvider).fetchAll(projectId: projectId);
+  return ref.watch(opportunityLabServiceProvider).fetchAll(projectId: projectId);
 });
 
 final opportunityLabItemByIdProvider =
     FutureProvider.autoDispose.family<OpportunityLabItem?, String>((ref, id) {
-  return ref.read(opportunityLabServiceProvider).fetchById(id);
+  return ref.watch(opportunityLabServiceProvider).fetchById(id);
 });
 
 final opportunityLabSummaryProvider =
     FutureProvider.autoDispose<Map<String, int>>((ref) {
-  return ref.read(opportunityLabServiceProvider).summary();
+  return ref.watch(opportunityLabServiceProvider).summary();
 });
 
 class OpportunityLabNotifier
@@ -56,6 +57,21 @@ class OpportunityLabNotifier
     await load(projectId: _activeProjectId);
   }
 
+  // COMMERCIAL-V1-UX-RECONCILIATION (R10) — every "-> Ação" button in the
+  // UI is already conditioned on `status == 'approved'`
+  // (opportunity_lab_screen.dart's onConvertToAction, opportunity_detail_
+  // screen.dart's equivalent), but nothing ever moved a converted item OUT
+  // of 'approved' after addFromOpportunityItem succeeded. That left the
+  // button clickable indefinitely, so repeated taps (or a slow network
+  // response tapped twice) created duplicate Action Engine rows for the
+  // SAME opportunity with no server-side guard. 'executing' already exists
+  // in OpportunityLabItem.statusValues (added for this exact transition,
+  // never wired up) -- this call site is the only piece that was missing.
+  Future<void> markExecuting(String id) async {
+    await _svc.updateStatus(id, 'executing');
+    await load(projectId: _activeProjectId);
+  }
+
   Future<void> delete(String id) async {
     await _svc.delete(id);
     await load(projectId: _activeProjectId);
@@ -64,5 +80,5 @@ class OpportunityLabNotifier
 
 final opportunityLabNotifierProvider = StateNotifierProvider.autoDispose<
     OpportunityLabNotifier, AsyncValue<List<OpportunityLabItem>>>(
-  (ref) => OpportunityLabNotifier(ref.read(opportunityLabServiceProvider)),
+  (ref) => OpportunityLabNotifier(ref.watch(opportunityLabServiceProvider)),
 );

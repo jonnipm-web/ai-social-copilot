@@ -1,6 +1,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { AuthError, resolveAuthenticatedUser, unauthorizedResponse } from '../_shared/auth.ts';
-import { quotaBlockedResponse, refundQuota, reserveQuota } from '../_shared/quota.ts';
+import { AuthClient, AuthenticatedUser, AuthError, resolveAuthenticatedUser, unauthorizedResponse } from '../_shared/auth.ts';
+import { EntitlementSubjectSource, requireModuleAccess } from '../_shared/entitlement.ts';
+import { outputLanguageSystemMessage, resolveOutputLanguage } from '../_shared/language.ts';
+import { QuotaClient, quotaBlockedResponse, refundQuota, reserveQuota } from '../_shared/quota.ts';
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const corsHeaders = {
@@ -8,22 +10,40 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req) => {
+// Exportado para testes (MODULE-FOUNDATION-AND-ENTITLEMENT-02). Em produção,
+// serve() chama esta função com os clients reais.
+export async function handler(
+  req: Request,
+  authClient?: AuthClient,
+  quotaClient?: QuotaClient,
+  subjectSource?: EntitlementSubjectSource,
+): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   // IVE-COMMERCIAL-AUTH-01 — exige sessão de usuário real antes do Groq. Falha fechado.
+  let authUser: AuthenticatedUser;
   try {
-    await resolveAuthenticatedUser(req);
+    authUser = await resolveAuthenticatedUser(req, authClient);
   } catch (e) {
     if (e instanceof AuthError) return unauthorizedResponse(corsHeaders);
     throw e;
   }
 
+  // MODULE-FOUNDATION-AND-ENTITLEMENT-02 — server-side entitlement: the server
+  // (supabase/functions/_shared/module_policy.ts), not the client registry,
+  // decides whether this caller may use 'action-engine'. Runs after authentication
+  // and before any quota reservation or AI call. Fails closed.
+  const access = await requireModuleAccess(req, authUser, 'action-engine', corsHeaders, subjectSource);
+  if (!access.allowed) return access.response;
+
   let quotaReserved = false;
   let idempotencyKey: string | undefined;
   let quotaResult: Awaited<ReturnType<typeof reserveQuota>> | undefined;
   try {
-    const { project_name, opportunities, idempotency_key } = await req.json();
+    const body = await req.json();
+    const { project_name, opportunities, idempotency_key } = body;
+    // R16 — idioma de APRESENTAÇÃO (UI) decide o idioma da saída.
+    const language = resolveOutputLanguage(body);
     idempotencyKey = idempotency_key;
 
     const oppLines = ((opportunities ?? []) as Array<{ title: string; description: string }>)
@@ -59,7 +79,7 @@ Regras:
 - roi_score: retorno sobre investimento esperado, 0-100
 - Tipos válidos para action_type: tarefa, conteúdo, campanha, produto, análise`;
 
-    const quota = await reserveQuota(req, undefined, idempotencyKey, 'generate-project-actions');
+    const quota = await reserveQuota(req, quotaClient, idempotencyKey, 'generate-project-actions');
     if (!quota.allowed) return quotaBlockedResponse(corsHeaders, quota);
     quotaReserved = true;
     quotaResult = quota;
@@ -78,6 +98,7 @@ Regras:
             content:
               'Você é um gerente de projetos especialista em marketing digital. Responda APENAS com JSON válido, sem markdown, sem texto antes ou depois do JSON.',
           },
+          outputLanguageSystemMessage(language, { fixedValueFields: ["actions[].action_type"] }),
           { role: 'user', content: userPrompt },
         ],
         temperature: 0.6,
@@ -88,7 +109,7 @@ Regras:
 
     if (!resp.ok) {
       const err = await resp.text();
-      await refundQuota(req, undefined, quotaResult);
+      await refundQuota(req, quotaClient, quotaResult);
       return Response.json({ error: `Groq error: ${err}` }, { status: 502, headers: corsHeaders });
     }
 
@@ -99,7 +120,7 @@ Regras:
     try {
       parsed = JSON.parse(content);
     } catch {
-      await refundQuota(req, undefined, quotaResult);
+      await refundQuota(req, quotaClient, quotaResult);
       return Response.json(
         { error: 'JSON inválido retornado pelo modelo', raw: content },
         { status: 502, headers: corsHeaders },
@@ -110,7 +131,11 @@ Regras:
 
     return Response.json(parsed, { headers: corsHeaders });
   } catch (e) {
-    if (quotaReserved) await refundQuota(req, undefined, quotaResult);
+    if (quotaReserved) await refundQuota(req, quotaClient, quotaResult);
     return Response.json({ error: String(e) }, { status: 500, headers: corsHeaders });
   }
-});
+}
+
+if (Deno.env.get('DENO_TESTING') !== '1') {
+  serve((req) => handler(req));
+}

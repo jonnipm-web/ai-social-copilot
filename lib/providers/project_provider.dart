@@ -7,10 +7,12 @@ import '../data/services/project_service.dart';
 import 'action_queue_provider.dart';
 import 'market_analysis_provider.dart';
 import 'opportunity_lab_provider.dart';
+import '../core/utils/app_exceptions.dart';
+import '../data/services/content_localization_service.dart';
 
 // ── Service provider — injetável em testes via override ───────────────────────
 final projectServiceProvider =
-    Provider<ProjectServiceInterface>((_) => ProjectService());
+    Provider<ProjectServiceInterface>((ref) => ProjectService(localizer: ref.watch(rowLocalizerProvider)));
 
 // ══════════════════════════════════════════════════════════════════════════════
 // FONTE ÚNICA DE VERDADE
@@ -28,7 +30,7 @@ final projectServiceProvider =
 class ProjectsNotifier extends AsyncNotifier<List<Project>> {
   @override
   Future<List<Project>> build() {
-    return ref.read(projectServiceProvider).fetchAll();
+    return ref.watch(projectServiceProvider).fetchAll();
   }
 
   // Invalida providers que não reagem automaticamente a projectsProvider
@@ -146,7 +148,7 @@ final projectByIdProvider =
     final found = list.where((p) => p.id == id).toList();
     if (found.isNotEmpty) return found.first;
   }
-  final result = await ref.read(projectServiceProvider).fetchById(id);
-  if (result == null) throw Exception('Projeto não encontrado');
+  final result = await ref.watch(projectServiceProvider).fetchById(id);
+  if (result == null) throw const AppException(AppErrorCode.notFound);
   return result;
 });

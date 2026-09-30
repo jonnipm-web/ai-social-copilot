@@ -1,0 +1,25 @@
+{
+  "contract_version": "1.0",
+  "request_id": "c0000000-0000-4000-8000-000000000002",
+  "requested_at": "2026-09-18T11:55:00.000Z",
+  "expires_at": "2026-09-18T13:00:00.000Z",
+  "actor": {
+    "type": "user",
+    "id": "user-42",
+    "auth_ref": "usr:session-abc123"
+  },
+  "intent": "Backtest a Fibonacci retracement strategy against 2 years of historical data",
+  "domain": "quant",
+  "action": "quant.backtest.run_strategy",
+  "quant_execution_tier": "backtest",
+  "parameters": {
+    "strategy_id": "fib-retracement-001",
+    "lookback_days": 730
+  },
+  "constraints": {
+    "max_cost_estimate": 0.5,
+    "note": "backtest only, no real-money execution -- quant_execution_tier=backtest requires no human_gate_ref"
+  },
+  "idempotency_key": "quant-backtest-fib-001-2026-09-18",
+  "delegation_ref": "d0000000-0000-4000-8000-000000000002"
+}

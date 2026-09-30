@@ -6,6 +6,7 @@ import 'package:shimmer/shimmer.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/snackbar_utils.dart';
 import '../../../data/models/post_generation.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/post_provider.dart';
 import '../../../shared/widgets/result_block.dart';
 import '../../../shared/widgets/score_chip.dart';
@@ -16,38 +17,40 @@ class HistoryDetailScreen extends ConsumerWidget {
   const HistoryDetailScreen({super.key, required this.id});
 
   void _copyAll(BuildContext context, PostGeneration gen) {
+    final l10n = AppLocalizations.of(context)!;
     final text = [
-      '✨ Post Melhorado\n${gen.improvedText}',
-      '💼 Versão Profissional\n${gen.professionalVersion}',
-      '😊 Versão Descontraída\n${gen.casualVersion}',
-      '📈 Versão Persuasiva\n${gen.persuasiveVersion}',
-      '💬 Sugestão de Resposta a Comentários\n${gen.commentReply}',
+      '✨ ${l10n.uxPostImproved}\n${gen.improvedText}',
+      '💼 ${l10n.uxPostProfessional}\n${gen.professionalVersion}',
+      '😊 ${l10n.uxPostCasual}\n${gen.casualVersion}',
+      '📈 ${l10n.uxPostPersuasive}\n${gen.persuasiveVersion}',
+      '💬 ${l10n.uxPostCommentReply}\n${gen.commentReply}',
     ].join('\n\n');
     Clipboard.setData(ClipboardData(text: text));
-    showSuccessSnack(context, 'Conteúdo copiado com sucesso!');
+    showSuccessSnack(context, l10n.uxContentCopied);
   }
 
-  String _formatDateTime(DateTime dt) {
+  String _formatDateTime(DateTime dt, AppLocalizations l10n) {
     final date =
         '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
     final time =
         '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-    return '$date às $time';
+    return l10n.uxDateAtTime(date, time);
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final detailAsync = ref.watch(generationDetailProvider(id));
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Detalhe'),
+        title: Text(l10n.projectCommandActionDetail),
         actions: [
           detailAsync.whenOrNull(
             data: (gen) => TextButton.icon(
               onPressed: () => _copyAll(context, gen),
               icon: const Icon(Icons.copy_all_rounded, size: 16),
-              label: const Text('Copiar Tudo'),
+              label: Text(l10n.uxCopyAll),
               style: TextButton.styleFrom(foregroundColor: Colors.white70),
             ),
           ) ??
@@ -68,10 +71,10 @@ class HistoryDetailScreen extends ConsumerWidget {
                     const Icon(Icons.error_outline,
                         size: 48, color: Colors.white24),
                     const SizedBox(height: 16),
-                    const Text(
-                      'Não foi possível carregar este item.',
+                    Text(
+                      l10n.uxHistoryItemLoadError,
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white70),
+                      style: const TextStyle(color: Colors.white70),
                     ),
                   ],
                 ),
@@ -93,9 +96,9 @@ class HistoryDetailScreen extends ConsumerWidget {
                     children: [
                       Row(
                         children: [
-                          const Text(
-                            'Texto original',
-                            style: TextStyle(
+                          Text(
+                            l10n.uxHistoryOriginalText,
+                            style: const TextStyle(
                               fontSize: 11,
                               color: Colors.white38,
                               fontWeight: FontWeight.w600,
@@ -109,7 +112,7 @@ class HistoryDetailScreen extends ConsumerWidget {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            _formatDateTime(gen.createdAt),
+                            _formatDateTime(gen.createdAt, l10n),
                             style: const TextStyle(
                               fontSize: 11,
                               color: Colors.white24,
@@ -131,39 +134,39 @@ class HistoryDetailScreen extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    ScoreChip(label: 'Clareza', score: gen.clarityScore),
-                    ScoreChip(label: 'Impacto', score: gen.impactScore),
-                    ScoreChip(label: 'Engajamento', score: gen.engagementScore),
+                    ScoreChip(label: l10n.uxScoreClarity, score: gen.clarityScore),
+                    ScoreChip(label: l10n.actionEngineScoreImpact, score: gen.impactScore),
+                    ScoreChip(label: l10n.uxScoreEngagement, score: gen.engagementScore),
                   ],
                 ),
                 const SizedBox(height: 20),
 
                 ResultBlock(
-                  title: 'Post Melhorado',
+                  title: l10n.uxPostImproved,
                   content: gen.improvedText,
                   icon: Icons.auto_awesome,
                 ),
                 const SizedBox(height: 12),
                 ResultBlock(
-                  title: 'Versão Profissional',
+                  title: l10n.uxPostProfessional,
                   content: gen.professionalVersion,
                   icon: Icons.work_outline,
                 ),
                 const SizedBox(height: 12),
                 ResultBlock(
-                  title: 'Versão Descontraída',
+                  title: l10n.uxPostCasual,
                   content: gen.casualVersion,
                   icon: Icons.emoji_emotions_outlined,
                 ),
                 const SizedBox(height: 12),
                 ResultBlock(
-                  title: 'Versão Persuasiva',
+                  title: l10n.uxPostPersuasive,
                   content: gen.persuasiveVersion,
                   icon: Icons.trending_up,
                 ),
                 const SizedBox(height: 12),
                 ResultBlock(
-                  title: 'Sugestão de Resposta a Comentários',
+                  title: l10n.uxPostCommentReply,
                   content: gen.commentReply,
                   icon: Icons.chat_bubble_outline,
                 ),

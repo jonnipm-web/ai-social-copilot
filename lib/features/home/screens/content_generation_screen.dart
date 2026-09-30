@@ -7,6 +7,7 @@ import '../../../core/utils/snackbar_utils.dart'
     show showErrorSnack, showSuccessSnack, extractErrorMessage;
 import '../../../data/models/ive_interaction_request.dart';
 import '../../../data/models/post_generation.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/post_provider.dart';
 import '../../../providers/profile_provider.dart';
@@ -51,11 +52,12 @@ class _ContentGenerationScreenState
   }
 
   Future<void> _improve() async {
+    final l10n = AppLocalizations.of(context)!;
     final text = _textCtrl.text.trim();
     if (text.length < AppConstants.minTextLength) {
       showErrorSnack(
         context,
-        'Escreva pelo menos ${AppConstants.minTextLength} caracteres.',
+        l10n.improvePostMinLength(AppConstants.minTextLength),
       );
       return;
     }
@@ -66,7 +68,7 @@ class _ContentGenerationScreenState
     if (usage >= limit) {
       showErrorSnack(
         context,
-        'Você atingiu o limite de $limit gerações este mês.',
+        l10n.improvePostLimitReached(limit),
       );
       return;
     }
@@ -75,7 +77,7 @@ class _ContentGenerationScreenState
     final result = await _exec.run<PostGeneration?>(
       context: context,
       ref: ref,
-      analysisLabel: 'Melhorar Conteúdo',
+      analysisLabel: l10n.improvePostAnalysisLabel,
       request: IveInteractionRequest(
         sourceModule:     'content_generation',
         sourceEntityType: 'post_generation',
@@ -90,7 +92,7 @@ class _ContentGenerationScreenState
 
     final state = ref.read(postNotifierProvider);
     if (state.hasError) {
-      showErrorSnack(context, extractErrorMessage(state.error));
+      showErrorSnack(context, extractErrorMessage(state.error, AppLocalizations.of(context)));
       return;
     }
 
@@ -99,7 +101,9 @@ class _ContentGenerationScreenState
       final elapsed = _startTime != null
           ? DateTime.now().difference(_startTime!).inMilliseconds / 1000
           : null;
-      if (mounted) showSuccessSnack(context, 'Resultado gerado com sucesso!');
+      if (mounted) {
+        showSuccessSnack(context, AppLocalizations.of(context)!.improvePostSuccess);
+      }
       context.push(AppConstants.routeResult, extra: {
         'originalText':     text,
         'result':           _generationToMap(result),
@@ -124,20 +128,21 @@ class _ContentGenerationScreenState
 
   Future<void> _clear() async {
     if (_textCtrl.text.isEmpty) return;
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Limpar texto'),
-        content: const Text('Deseja apagar todo o conteúdo digitado?'),
+        title: Text(l10n.improvePostClearTitle),
+        content: Text(l10n.improvePostClearBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
+            child: Text(l10n.commonCancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Limpar',
-                style: TextStyle(color: Colors.redAccent)),
+            child: Text(l10n.improvePostClearConfirm,
+                style: const TextStyle(color: Colors.redAccent)),
           ),
         ],
       ),
@@ -157,7 +162,7 @@ class _ContentGenerationScreenState
     return Colors.white38;
   }
 
-  Widget _buildCreditsBanner(int used, int limit) {
+  Widget _buildCreditsBanner(AppLocalizations l10n, int used, int limit) {
     final remaining = limit - used;
     final isFull = remaining <= 0;
     final color = isFull
@@ -184,8 +189,8 @@ class _ContentGenerationScreenState
           Expanded(
             child: Text(
               isFull
-                  ? 'Limite atingido ($limit/$limit gerações este mês).'
-                  : '$remaining de $limit gerações restantes este mês.',
+                  ? l10n.improvePostLimitBanner(limit)
+                  : l10n.improvePostRemainingBanner(remaining, limit),
               style: TextStyle(fontSize: 13, color: color),
             ),
           ),
@@ -199,7 +204,7 @@ class _ContentGenerationScreenState
               textStyle: const TextStyle(
                   fontSize: 12, fontWeight: FontWeight.w700),
             ),
-            child: Text(isFull ? 'Upgrade' : 'Ver planos'),
+            child: Text(isFull ? l10n.improvePostUpgradeCta : l10n.improvePostSeePlans),
           ),
         ],
       ),
@@ -215,6 +220,7 @@ class _ContentGenerationScreenState
   }
 
   Widget _buildScaffold(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final postState  = ref.watch(postNotifierProvider);
     final isLoading  = postState.isLoading || _exec.isBusy;
     final usageAsync = ref.watch(monthlyUsageProvider);
@@ -223,7 +229,7 @@ class _ContentGenerationScreenState
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Melhorar Post'),
+        title: Text(l10n.improvePostTitle),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () =>
@@ -232,12 +238,12 @@ class _ContentGenerationScreenState
         actions: [
           IconButton(
             icon: const Icon(Icons.history_rounded),
-            tooltip: 'Histórico',
+            tooltip: l10n.dashShortcutHistory,
             onPressed: () => context.push(AppConstants.routeHistory),
           ),
           IconButton(
             icon: const Icon(Icons.logout_rounded),
-            tooltip: 'Sair',
+            tooltip: l10n.authSignOut,
             onPressed: _signOut,
           ),
         ],
@@ -255,7 +261,7 @@ class _ContentGenerationScreenState
                 usageAsync.when(
                   data: (used) => Column(
                     children: [
-                      _buildCreditsBanner(used, limit),
+                      _buildCreditsBanner(l10n, used, limit),
                       const SizedBox(height: 14),
                     ],
                   ),
@@ -263,7 +269,7 @@ class _ContentGenerationScreenState
                   error:   (_, __) => const SizedBox.shrink(),
                 ),
                 Text(
-                  'Cole ou escreva seu post',
+                  l10n.improvePostHeading,
                   style: Theme.of(context)
                       .textTheme
                       .titleMedium
@@ -282,9 +288,8 @@ class _ContentGenerationScreenState
                             maxLength}) =>
                         const SizedBox.shrink(),
                     style: const TextStyle(fontSize: 15, height: 1.6),
-                    decoration: const InputDecoration(
-                      hintText:
-                          'Ex: Hoje aprendi algo incrível sobre produtividade...',
+                    decoration: InputDecoration(
+                      hintText: l10n.improvePostHint,
                       alignLabelWithHint: true,
                     ),
                   ),
@@ -293,7 +298,7 @@ class _ContentGenerationScreenState
                 Row(
                   children: [
                     Text(
-                      '$_charCount / ${AppConstants.maxTextLength} caracteres',
+                      l10n.improvePostCharCount(_charCount, AppConstants.maxTextLength),
                       style:
                           TextStyle(fontSize: 12, color: _counterColor()),
                     ),
@@ -302,7 +307,7 @@ class _ContentGenerationScreenState
                       TextButton.icon(
                         onPressed: isLoading ? null : _clear,
                         icon: const Icon(Icons.clear, size: 14),
-                        label: const Text('Limpar'),
+                        label: Text(l10n.improvePostClearConfirm),
                         style: TextButton.styleFrom(
                           foregroundColor: Colors.white38,
                           padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -313,8 +318,8 @@ class _ContentGenerationScreenState
                 ),
                 const SizedBox(height: 12),
                 LoadingButton(
-                  label: '✨  Melhorar post',
-                  loadingLabel: 'Analisando seu conteúdo...',
+                  label: l10n.improvePostButtonLabel,
+                  loadingLabel: l10n.improvePostButtonLoading,
                   isLoading: isLoading,
                   onPressed:
                       (usageAsync.valueOrNull ?? 0) >= limit ? null : _improve,

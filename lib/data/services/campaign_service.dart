@@ -4,8 +4,21 @@ import '../models/campaign.dart';
 import '../models/knowledge_item.dart';
 import '../models/knowledge_analysis.dart';
 import '../models/knowledge_strategy.dart';
+import 'content_localization_service.dart';
 
 class CampaignService {
+  CampaignService({RowLocalizer? localizer}) : _localizer = localizer ?? identityLocalizer;
+
+  // R16 — presentation localization of persisted content (never modifies the
+  // stored row; see content_localization_service.dart).
+  final RowLocalizer _localizer;
+
+  Future<List<Map<String, dynamic>>> _loc(String table, dynamic rows) =>
+      _localizer(table, (rows as List).map((r) => Map<String, dynamic>.from(r as Map)).toList());
+
+  Future<Map<String, dynamic>> _locOne(String table, Map<String, dynamic> row) async =>
+      (await _localizer(table, [row])).first;
+
   final _client = Supabase.instance.client;
 
   static const _tableCampaigns = 'campaigns';
@@ -16,7 +29,7 @@ class CampaignService {
         .from(_tableCampaigns)
         .select()
         .order('created_at', ascending: false);
-    return (rows as List).map((r) => Campaign.fromMap(r)).toList();
+    return (await _loc('campaigns', rows)).map((r) => Campaign.fromMap(r)).toList();
   }
 
   Future<Campaign?> fetchById(String id) async {
@@ -25,7 +38,7 @@ class CampaignService {
         .select()
         .eq('id', id)
         .maybeSingle();
-    return row == null ? null : Campaign.fromMap(row);
+    return row == null ? null : Campaign.fromMap(await _locOne('campaigns', row));
   }
 
   Future<List<Campaign>> fetchByItemId(String itemId) async {
@@ -34,13 +47,15 @@ class CampaignService {
         .select()
         .eq('knowledge_item_id', itemId)
         .order('created_at', ascending: false);
-    return (rows as List).map((r) => Campaign.fromMap(r)).toList();
+    return (await _loc('campaigns', rows)).map((r) => Campaign.fromMap(r)).toList();
   }
 
   Future<void> delete(String id) async {
     await _client.from(_tableCampaigns).delete().eq('id', id);
   }
 
+  /// R16 — [outputLanguage] is the PRESENTATION language ('pt-BR'/'en-US');
+  /// `item.language` is source metadata and never decides the output.
   Future<Campaign> generate({
     required KnowledgeItem item,
     required KnowledgeAnalysis analysis,
@@ -48,6 +63,7 @@ class CampaignService {
     required String objective,
     required int durationDays,
     required List<String> channels,
+    required String outputLanguage,
     String? idempotencyKey,
   }) async {
     final uid = _client.auth.currentUser?.id;
@@ -62,7 +78,7 @@ class CampaignService {
         'channels':          channels,
         'niche':             item.niche ?? '',
         'target_audience':   item.targetAudience ?? '',
-        'language':          item.language,
+        'language':          outputLanguage,
         'summary':           analysis.summary ?? '',
         'value_proposition': strategy?.valueProposition ?? '',
         'keywords':          analysis.keywordsPrimary,

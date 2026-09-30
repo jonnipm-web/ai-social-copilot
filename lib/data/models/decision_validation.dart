@@ -1,3 +1,5 @@
+import '../../l10n/app_localizations.dart';
+
 enum DecisionValidationStatus { approved, blocked, structuring }
 
 class DecisionValidation {
@@ -42,23 +44,21 @@ class DecisionValidation {
 
   bool get isStructuring => status == DecisionValidationStatus.structuring;
 
-  String get blockMessage => isStructuring
-      ? 'Projeto ainda em fase de estruturação. Conhecimento disponível, mas inteligência operacional insuficiente para recomendação estratégica.'
-      : 'Dados insuficientes para decisão estratégica.';
+  // R16 — display labels take the presentation-language [AppLocalizations].
+  String blockMessage(AppLocalizations l10n) => isStructuring
+      ? l10n.ctxDvBlockStructuring
+      : l10n.ctxDvBlockInsufficient;
 
-  String get indexingStatus =>
-      documentCount == 0 ? 'Sem documentos' : '$indexedDocuments/$documentCount indexados';
+  String indexingStatus(AppLocalizations l10n) => documentCount == 0
+      ? l10n.ctxDvNoDocuments
+      : l10n.ctxDvIndexedCount(indexedDocuments, documentCount);
 
-  String get coverageLabel {
-    if (coverageScore >= minCoverage) return '✅ $coverageScore% (mínimo $minCoverage%)';
-    return '❌ $coverageScore% (mínimo $minCoverage%)';
-  }
+  String coverageLabel(AppLocalizations l10n) => l10n.ctxDvThresholdLabel(
+      coverageScore >= minCoverage ? '✅' : '❌', coverageScore, minCoverage);
 
-  String get learningLabel {
-    if (learningScore >= minLearning) return '✅ $learningScore% (mínimo $minLearning%)';
-    return '❌ $learningScore% (mínimo $minLearning%)';
-  }
+  String learningLabel(AppLocalizations l10n) => l10n.ctxDvThresholdLabel(
+      learningScore >= minLearning ? '✅' : '❌', learningScore, minLearning);
 
-  String get profileLabel =>
-      profileComplete ? '✅ Completo' : '❌ Incompleto — vincule uma análise de mercado';
+  String profileLabel(AppLocalizations l10n) =>
+      profileComplete ? l10n.ctxDvProfileComplete : l10n.ctxDvProfileIncomplete;
 }

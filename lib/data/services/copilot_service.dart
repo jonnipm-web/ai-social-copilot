@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/copilot_session.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/utils/app_exceptions.dart';
 
 // Foundation only — AI activation gated behind 'copilot_enabled' feature flag
 class CopilotService {
@@ -18,9 +19,11 @@ class CopilotService {
     return (rows as List).map((r) => CopilotSession.fromMap(r)).toList();
   }
 
-  Future<CopilotSession> createSession({String title = 'Nova Conversa'}) async {
+  /// R16 — [title] is persisted: callers must pass it already localized in
+  /// the user's current UI language (no hard-coded PT default).
+  Future<CopilotSession> createSession({required String title}) async {
     final uid = _client.auth.currentUser?.id;
-    if (uid == null) throw Exception('Não autenticado');
+    if (uid == null) throw const NotAuthenticatedException();
 
     final row = await _client
         .from(AppConstants.tableCopilotSessions)
@@ -60,7 +63,7 @@ class CopilotService {
     required String content,
   }) async {
     final uid = _client.auth.currentUser?.id;
-    if (uid == null) throw Exception('Não autenticado');
+    if (uid == null) throw const NotAuthenticatedException();
 
     final row = await _client
         .from(AppConstants.tableCopilotMessages)

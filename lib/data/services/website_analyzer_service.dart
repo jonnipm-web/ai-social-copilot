@@ -1,7 +1,20 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/website_analysis.dart';
+import 'content_localization_service.dart';
 
 class WebsiteAnalyzerService {
+  WebsiteAnalyzerService({RowLocalizer? localizer}) : _localizer = localizer ?? identityLocalizer;
+
+  // R16 — presentation localization of persisted content (never modifies the
+  // stored row; see content_localization_service.dart).
+  final RowLocalizer _localizer;
+
+  Future<List<Map<String, dynamic>>> _loc(String table, dynamic rows) =>
+      _localizer(table, (rows as List).map((r) => Map<String, dynamic>.from(r as Map)).toList());
+
+  Future<Map<String, dynamic>> _locOne(String table, Map<String, dynamic> row) async =>
+      (await _localizer(table, [row])).first;
+
   final _client = Supabase.instance.client;
 
   static const _table = 'website_analyses';
@@ -12,7 +25,7 @@ class WebsiteAnalyzerService {
         .from(_table)
         .select()
         .order('created_at', ascending: false);
-    return (rows as List).map((r) => WebsiteAnalysis.fromMap(r)).toList();
+    return (await _loc('website_analyses', rows)).map((r) => WebsiteAnalysis.fromMap(r)).toList();
   }
 
   Future<WebsiteAnalysis?> fetchById(String id) async {
@@ -21,14 +34,20 @@ class WebsiteAnalyzerService {
         .select()
         .eq('id', id)
         .maybeSingle();
-    return row == null ? null : WebsiteAnalysis.fromMap(row);
+    return row == null ? null : WebsiteAnalysis.fromMap(await _locOne('website_analyses', row));
   }
 
   Future<void> delete(String id) async {
     await _client.from(_table).delete().eq('id', id);
   }
 
-  Future<WebsiteAnalysis> analyzeUrl(String url, {String? idempotencyKey}) async {
+  /// R16 — [outputLanguage] is the PRESENTATION language ('pt-BR'/'en-US');
+  /// the language the analyzed site is written in never decides the output.
+  Future<WebsiteAnalysis> analyzeUrl(
+    String url, {
+    required String outputLanguage,
+    String? idempotencyKey,
+  }) async {
     final uid = _client.auth.currentUser?.id;
     if (uid == null) throw Exception('Usuário não autenticado.');
 
@@ -36,6 +55,7 @@ class WebsiteAnalyzerService {
       _edgeFunction,
       body: {
         'url': url,
+        'language': outputLanguage,
         if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
       },
     );

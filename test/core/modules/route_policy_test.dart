@@ -12,6 +12,9 @@
 // "pure policy logic... tested without requiring full Supabase integration"
 // split the mission asked for.
 
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:ai_social_copilot/core/modules/module_definition.dart';
@@ -19,10 +22,27 @@ import 'package:ai_social_copilot/core/modules/module_registry.dart';
 import 'package:ai_social_copilot/core/modules/route_policy.dart';
 import 'package:ai_social_copilot/core/constants/app_constants.dart';
 
+/// Mirrors server_module_policy_drift_test.dart's own JSON extraction --
+/// duplicated locally (small, self-contained) rather than exported, to keep
+/// each test file's server-manifest coupling explicit and independent.
+Map<String, dynamic> _serverEdgeFunctions() {
+  final src = File('supabase/functions/_shared/module_policy.ts').readAsStringSync();
+  const begin = '// BEGIN_MODULE_POLICY_JSON';
+  const end = '// END_MODULE_POLICY_JSON';
+  final start = src.indexOf(begin);
+  final stop = src.indexOf(end);
+  if (start < 0 || stop <= start) {
+    throw StateError('module_policy.ts is missing its JSON markers');
+  }
+  final policy = jsonDecode(src.substring(src.indexOf('\n', start) + 1, stop)) as Map<String, dynamic>;
+  return (policy['edgeFunctions'] as Map).cast<String, dynamic>();
+}
+
 ModuleDefinition _module({
   required bool commercialEnabled,
   required ModulePlan minimumPlan,
   String moduleId = 'synthetic',
+  ModuleLifecycle? lifecycleOverride,
 }) =>
     ModuleDefinition(
       moduleId: moduleId,
@@ -36,6 +56,7 @@ ModuleDefinition _module({
       readinessPt: 'test',
       readinessEn: 'test',
       releaseClassification: ModuleReleaseClass.commercialV1,
+      lifecycleOverride: lifecycleOverride,
     );
 
 void main() {
@@ -85,7 +106,7 @@ void main() {
     );
 
     test('FREE -> admin/internal route -> redirectDenied', () {
-      final module = _module(commercialEnabled: true, minimumPlan: ModulePlan.admin);
+      final module = _module(commercialEnabled: false, minimumPlan: ModulePlan.free, moduleId: 'internal-admin-only');
       expect(
         decideForModule(module: module, isAlwaysAllowed: false, isAdmin: false, isPro: false, profileResolved: true),
         RouteDecision.redirectDenied,
@@ -93,7 +114,7 @@ void main() {
     });
 
     test('PRO -> admin/internal route -> redirectDenied (PRO plan does not imply admin)', () {
-      final module = _module(commercialEnabled: true, minimumPlan: ModulePlan.admin);
+      final module = _module(commercialEnabled: false, minimumPlan: ModulePlan.free, moduleId: 'internal-admin-only');
       expect(
         decideForModule(module: module, isAlwaysAllowed: false, isAdmin: false, isPro: true, profileResolved: true),
         RouteDecision.redirectDenied,
@@ -104,7 +125,7 @@ void main() {
       for (final module in [
         _module(commercialEnabled: false, minimumPlan: ModulePlan.free),
         _module(commercialEnabled: false, minimumPlan: ModulePlan.pro),
-        _module(commercialEnabled: true, minimumPlan: ModulePlan.admin),
+        _module(commercialEnabled: false, minimumPlan: ModulePlan.free, moduleId: 'internal-admin-only'),
       ]) {
         expect(
           decideForModule(module: module, isAlwaysAllowed: false, isAdmin: true, isPro: false, profileResolved: true),
@@ -118,7 +139,7 @@ void main() {
       // isAlwaysAllowed=true short-circuits before the module is even
       // consulted, matching how evaluateRouteAccess never looks the module
       // up for these paths (routeMayBeRestricted returns false for them).
-      final wouldOtherwiseBeDenied = _module(commercialEnabled: false, minimumPlan: ModulePlan.admin);
+      final wouldOtherwiseBeDenied = _module(commercialEnabled: false, minimumPlan: ModulePlan.pro);
       expect(
         decideForModule(module: wouldOtherwiseBeDenied, isAlwaysAllowed: true, isAdmin: false, isPro: false, profileResolved: true),
         RouteDecision.allow,
@@ -145,6 +166,83 @@ void main() {
       expect(
         decideForModule(module: module, isAlwaysAllowed: false, isAdmin: false, isPro: false, profileResolved: false),
         RouteDecision.allow,
+      );
+    });
+
+    // INSIGHTVALUES-COMMERCIAL-MACRO-01 Tranche 2 -- ModulePlan.premium
+    // gap closure. No real module uses this plan yet; these mirror the
+    // ModulePlan.pro cases above exactly, proving the new branch is real
+    // and load-bearing, not decorative.
+    test('PRO (but not premium) -> PREMIUM commercial route -> redirectUpgrade, not allow', () {
+      final module = _module(commercialEnabled: true, minimumPlan: ModulePlan.premium);
+      expect(
+        decideForModule(
+          module: module,
+          isAlwaysAllowed: false,
+          isAdmin: false,
+          isPro: true,
+          isPremium: false,
+          profileResolved: true,
+        ),
+        RouteDecision.redirectUpgrade,
+        reason: 'being PRO must not unlock a PREMIUM-gated module',
+      );
+    });
+
+    test('PREMIUM -> PREMIUM commercial route -> allow', () {
+      final module = _module(commercialEnabled: true, minimumPlan: ModulePlan.premium);
+      expect(
+        decideForModule(
+          module: module,
+          isAlwaysAllowed: false,
+          isAdmin: false,
+          isPro: true,
+          isPremium: true,
+          profileResolved: true,
+        ),
+        RouteDecision.allow,
+      );
+    });
+
+    test(
+      'PREMIUM -> commercialEnabled=false route -> redirectDenied '
+      '(same trap as PRO: no plan unlocks an unreleased module)',
+      () {
+        final module = _module(commercialEnabled: false, minimumPlan: ModulePlan.premium);
+        expect(
+          decideForModule(
+            module: module,
+            isAlwaysAllowed: false,
+            isAdmin: false,
+            isPro: true,
+            isPremium: true,
+            profileResolved: true,
+          ),
+          RouteDecision.redirectDenied,
+        );
+      },
+    );
+
+    test('profile not yet resolved on a PREMIUM route -> redirectDenied, never allow, never treated as premium', () {
+      final module = _module(commercialEnabled: true, minimumPlan: ModulePlan.premium);
+      expect(
+        decideForModule(
+          module: module,
+          isAlwaysAllowed: false,
+          isAdmin: false,
+          isPro: false,
+          isPremium: false,
+          profileResolved: false,
+        ),
+        RouteDecision.redirectDenied,
+      );
+    });
+
+    test('isPremium defaults to false when the caller omits it (no silent grant)', () {
+      final module = _module(commercialEnabled: true, minimumPlan: ModulePlan.premium);
+      expect(
+        decideForModule(module: module, isAlwaysAllowed: false, isAdmin: false, isPro: true, profileResolved: true),
+        RouteDecision.redirectUpgrade,
       );
     });
   });
@@ -174,7 +272,11 @@ void main() {
       );
     });
 
-    test('real PRO-gated-but-unreleased routes deny even a PRO user (personas/content/calendar)', () {
+    test('Growth Intelligence routes (personas/content/calendar) are Pro-gated, not disabled (Tranche 2 launch)', () {
+      // INSIGHTVALUES-COMMERCIAL-MACRO-01 Tranche 2: these routes were
+      // commercially launched at ModulePlan.pro -- a PRO user is now
+      // allowed, a FREE user is denied by minimumPlan (not by
+      // commercialEnabled, which is true).
       for (final path in [
         AppConstants.routePersonas,
         AppConstants.routeContent,
@@ -182,24 +284,45 @@ void main() {
       ]) {
         expect(
           evaluateRouteAccess(path: path, isAdmin: false, isPro: true, profileResolved: true),
-          RouteDecision.redirectDenied,
-          reason: '$path should deny even a PRO user (commercialEnabled:false)',
+          RouteDecision.allow,
+          reason: '$path is commercialEnabled:true (Tranche 2) and must allow a PRO user',
+        );
+        expect(
+          evaluateRouteAccess(path: path, isAdmin: false, isPro: false, profileResolved: true),
+          RouteDecision.redirectUpgrade,
+          reason: '$path requires ModulePlan.pro and must send a FREE user to Upgrade (released, plan-gated, not "unavailable")',
         );
       }
     });
 
-    test('real unreleased free-plan routes deny non-admin users (campaigns/performance/ecosystem/etc.)', () {
+    test('Growth Intelligence routes (improve-post/campaigns/performance/roi-tracker) are Pro-gated, not disabled (Tranche 2 launch)', () {
       for (final path in [
+        AppConstants.routeGenerate,
+        AppConstants.routeResult,
         AppConstants.routeCampaigns,
         AppConstants.routePerformance,
         AppConstants.routeRoiTracker,
+      ]) {
+        expect(
+          evaluateRouteAccess(path: path, isAdmin: false, isPro: true, profileResolved: true),
+          RouteDecision.allow,
+          reason: '$path is commercialEnabled:true (Tranche 2) and must allow a PRO user',
+        );
+        expect(
+          evaluateRouteAccess(path: path, isAdmin: false, isPro: false, profileResolved: true),
+          RouteDecision.redirectUpgrade,
+          reason: '$path requires ModulePlan.pro and must send a FREE user to Upgrade (released, plan-gated, not "unavailable")',
+        );
+      }
+    });
+
+    test('real unreleased routes deny non-admin users (decision-center/resource-allocation/weekly-briefing/executive-dashboard/etc.)', () {
+      for (final path in [
         AppConstants.routeEcosystem,
         AppConstants.routeEcosystemResources,
         AppConstants.routeEcosystemBriefing,
         AppConstants.routeExecutiveDashboard,
         AppConstants.routeAdvisorOnboarding,
-        AppConstants.routeGenerate,
-        AppConstants.routeResult,
       ]) {
         expect(
           evaluateRouteAccess(path: path, isAdmin: false, isPro: false, profileResolved: true),
@@ -375,6 +498,8 @@ void main() {
           AppConstants.routeActionDetail,
           AppConstants.routeExecutiveDashboard,
           AppConstants.routeIntelligenceDebug,
+          AppConstants.routeImpact,
+          AppConstants.routeImpactDossier,
         ];
 
         final unresolved = allAppRoutes
@@ -384,6 +509,54 @@ void main() {
                 !kDeliberatelyUnclassifiedRoutes.contains(r))
             .toList();
         expect(unresolved, isEmpty, reason: 'Unclassified app.dart routes (would silently fail-open): $unresolved');
+      },
+    );
+
+    test(
+      'every GoRoute path in lib/app.dart SOURCE is classified -- derived from the '
+      'source file, not a hand-maintained mirror',
+      () {
+        // MODULE-PORTFOLIO-ARCHITECTURE-01 (Codex CX-02): the test above
+        // mirrors app.dart's route list by hand, so a route added to
+        // app.dart but not to that list would still fall through to
+        // "unclassified -> allow" with CI green. Module Lab ships modules
+        // dark (commercialEnabled:false, route-denied), which only holds if
+        // every real route is classified. This test reads the routes from
+        // the source itself.
+        final appSource = File('lib/app.dart').readAsStringSync();
+        final constantsSource =
+            File('lib/core/constants/app_constants.dart').readAsStringSync();
+
+        final routeValues = <String, String>{
+          for (final m in RegExp(r"static const (route\w+)\s*=\s*'([^']*)'")
+              .allMatches(constantsSource))
+            m.group(1)!: m.group(2)!,
+        };
+        final routeNames = RegExp(r'path:\s*AppConstants\.(route\w+)')
+            .allMatches(appSource)
+            .map((m) => m.group(1)!)
+            .toList();
+
+        // A GoRoute declared with a literal path (not an AppConstants
+        // constant) would escape the extraction above -- fail loudly instead.
+        expect(routeNames.length, RegExp(r'GoRoute\(').allMatches(appSource).length,
+            reason: 'Every GoRoute in app.dart must use `path: AppConstants.routeX`');
+        expect(routeNames, isNotEmpty);
+
+        const resolvedEarlier = {AppConstants.routeSplash, AppConstants.routeLogin};
+        final unresolved = <String>[];
+        for (final name in routeNames) {
+          final path = routeValues[name];
+          expect(path, isNotNull, reason: 'AppConstants.$name not found in app_constants.dart');
+          if (resolvedEarlier.contains(path)) continue;
+          if (!kRouteModuleOwnership.containsKey(path) &&
+              !kAlwaysAllowedRoutes.contains(path) &&
+              !kDeliberatelyUnclassifiedRoutes.contains(path)) {
+            unresolved.add('$name ($path)');
+          }
+        }
+        expect(unresolved, isEmpty,
+            reason: 'Unclassified app.dart routes (would silently fail-open): $unresolved');
       },
     );
 
@@ -398,12 +571,18 @@ void main() {
   });
 
   group('isModuleActionable — mission section 07 commercial CTA consistency (06S)', () {
+    // INSIGHTVALUES-COMMERCIAL-MACRO-01 Tranche 2 -- 'improve-post' and the
+    // rest of the Growth Intelligence family were commercially launched
+    // (Owner decision) and are no longer commercialEnabled:false; the
+    // still-disabled example below was moved to 'executive-dashboard'
+    // (absorbed into the canonical dashboard, Tranche 1, commercialEnabled
+    // remains false).
     test('a commercialEnabled:false module is not actionable for a non-admin', () {
-      expect(isModuleActionable('improve-post', isAdmin: false), isFalse);
+      expect(isModuleActionable('executive-dashboard', isAdmin: false), isFalse);
     });
 
     test('the same commercialEnabled:false module IS actionable for an admin (preserve admin behavior)', () {
-      expect(isModuleActionable('improve-post', isAdmin: true), isTrue);
+      expect(isModuleActionable('executive-dashboard', isAdmin: true), isTrue);
     });
 
     test('a commercialEnabled:true, released module remains actionable for a non-admin (no regression)', () {
@@ -416,21 +595,90 @@ void main() {
       }
     });
 
-    test('PRO-gated-but-unreleased modules (personas/content-library/calendar) are not actionable for a non-admin', () {
+    test('Growth Intelligence modules (personas/content-library/calendar/campaigns/performance) are actionable for a non-admin Pro user (Tranche 2 launch)', () {
       // Mirrors the route guard's own CRITICAL RULE: commercialEnabled
-      // gates the CTA regardless of minimumPlan -- these are "not released
-      // to anyone", not "PRO-exclusive".
+      // gates the CTA regardless of minimumPlan -- these are now "released
+      // to Pro", the same rule that already applied to every other
+      // Pro-gated module before this launch, not a new exception.
       for (final moduleId in ['personas', 'content-library', 'calendar', 'campaigns', 'performance']) {
         expect(
           isModuleActionable(moduleId, isAdmin: false),
-          isFalse,
-          reason: '$moduleId is commercialEnabled:false and must not look actionable',
+          isTrue,
+          reason: '$moduleId is commercialEnabled:true (Tranche 2) and must look actionable',
         );
       }
     });
 
     test('an unclassified moduleId fails open (true) rather than silently hiding a real button', () {
       expect(isModuleActionable('this-module-does-not-exist', isAdmin: false), isTrue);
+    });
+  });
+
+  group('isModuleRestricted / routeMayBeRestricted — Codex INTEGRATION-MACRO-02 audit (P2-01)', () {
+    test('commercialEnabled:true + minimumPlan:free + a non-commercial lifecycleOverride is still restricted', () {
+      for (final lifecycle in [ModuleLifecycle.alpha, ModuleLifecycle.beta, ModuleLifecycle.releaseCandidate, ModuleLifecycle.experimental, ModuleLifecycle.internal, ModuleLifecycle.deprecated]) {
+        final module = _module(
+          commercialEnabled: true,
+          minimumPlan: ModulePlan.free,
+          lifecycleOverride: lifecycle,
+        );
+        expect(
+          isModuleRestricted(module),
+          isTrue,
+          reason: 'commercialEnabled:true + free + lifecycleOverride:$lifecycle must still be treated as possibly restricted',
+        );
+      }
+    });
+
+    test('commercialEnabled:true + minimumPlan:free + no override (lifecycle derives to commercial) is unrestricted', () {
+      final module = _module(commercialEnabled: true, minimumPlan: ModulePlan.free);
+      expect(module.lifecycle, ModuleLifecycle.commercial);
+      expect(isModuleRestricted(module), isFalse);
+    });
+
+    test('commercialEnabled:false is always restricted regardless of lifecycleOverride', () {
+      final module = _module(commercialEnabled: false, minimumPlan: ModulePlan.free);
+      expect(isModuleRestricted(module), isTrue);
+    });
+  });
+
+  group('registry/server Edge Function ownership parity — Codex INTEGRATION-MACRO-02 audit (P2-02)', () {
+    test('project-auto-bootstrap does not list an Edge Function owned by a different registry module', () {
+      // The exact regression this Codex finding named: project-auto-bootstrap
+      // (a route:null client-side orchestration entry with no Edge Function
+      // of its own) had listed generate-project-opportunities/
+      // generate-project-actions, which the server (module_policy.ts) -- and
+      // this same client registry, via opportunity-lab/action-engine's own
+      // entries -- already assign to those other modules. A hub module
+      // informationally mentioning a sub-feature's function (e.g.
+      // market-intelligence naming competitor-discovery's function) is a
+      // separate, pre-existing, accepted convention this test does not
+      // touch; this guards specifically against a module with no Edge
+      // Function of its own claiming one anyway.
+      final bootstrap = kModuleRegistry.firstWhere((m) => m.moduleId == 'project-auto-bootstrap');
+      expect(bootstrap.edgeFunctions, isEmpty);
+    });
+
+    test("every server MODULE-kind Edge Function's designated owner lists that function in its own registry entry", () {
+      // The server is the real authority on WHICH module a function
+      // belongs to; this checks that authority is self-consistent with the
+      // client registry for whichever module the server actually names --
+      // catching a future case where the server reassigns a function to a
+      // module that was never told about it, without forbidding an
+      // unrelated hub module from also mentioning it informationally.
+      final serverFunctions = _serverEdgeFunctions();
+      final byId = {for (final m in kModuleRegistry) m.moduleId: m};
+      final drift = <String>[];
+      for (final entry in serverFunctions.entries) {
+        final fn = entry.value as Map;
+        if (fn['kind'] != 'MODULE') continue;
+        final ownerId = fn['moduleId'] as String;
+        final owner = byId[ownerId];
+        if (owner == null || !owner.edgeFunctions.contains(entry.key)) {
+          drift.add('${entry.key}: server says $ownerId, but that module\'s own edgeFunctions does not list it');
+        }
+      }
+      expect(drift, isEmpty);
     });
   });
 }

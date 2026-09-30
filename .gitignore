@@ -61,3 +61,5 @@ Thumbs.db
 
 # Flutter SDK local (instalado pelo ambiente de CI)
 flutter/
+tools/backtest_bridge/bridge_config.json
+tools/backtest_bridge/__pycache__/

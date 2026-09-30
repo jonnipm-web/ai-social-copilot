@@ -1,5 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { AuthClient, AuthError, resolveAuthenticatedUser, unauthorizedResponse } from '../_shared/auth.ts';
+import { AuthenticatedUser, AuthClient, AuthError, resolveAuthenticatedUser, unauthorizedResponse } from '../_shared/auth.ts';
+import { EntitlementSubjectSource, requireModuleAccess } from '../_shared/entitlement.ts';
+import { OutputLanguage, outputLanguageSystemMessage, resolveOutputLanguage } from '../_shared/language.ts';
 import { QuotaClient, quotaBlockedResponse, refundQuota, reserveQuota } from '../_shared/quota.ts';
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
@@ -38,6 +40,15 @@ const MAX_CONTEXT_ARRAY_ITEMS = 200; // generous upper bound — real payloads s
 const MAX_CONTEXT_SERIALIZED_CHARS = 50000;
 const ALLOWED_HISTORY_ROLES = new Set(['user', 'assistant']);
 const CONTEXT_ARRAY_FIELDS = ['opportunities', 'actions', 'documents', 'personas'] as const;
+
+// R16 — frase fixa que o modelo deve repetir quando o usuário pergunta sobre
+// um documento registrado mas não processado. Antes era sempre em
+// português; agora segue o idioma de APRESENTAÇÃO pedido pelo cliente.
+export function ungroundedDocumentReply(lang: OutputLanguage): string {
+  return lang === 'en-US'
+    ? 'This document is registered in the Knowledge Vault, but its content was not processed in this analysis. To analyze it, open Knowledge and confirm the processing.'
+    : 'Este documento está registrado no Knowledge Vault mas seu conteúdo não foi processado nesta análise. Para analisá-lo, acesse o Conhecimento e confirme o processamento.';
+}
 
 function badRequestResponse(message: string): Response {
   return new Response(
@@ -146,6 +157,7 @@ export async function handler(
   req: Request,
   authClient?: AuthClient,
   quotaClient?: QuotaClient,
+  subjectSource?: EntitlementSubjectSource,
 ): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -155,12 +167,20 @@ export async function handler(
   // exige uma sessão de usuário real via getUser() e falha fechado (401)
   // para qualquer outro caso — chave anon, JWT inválido/expirado, erro do
   // serviço de auth. Nenhuma chamada ao Groq ocorre antes disso.
+  let authUser: AuthenticatedUser;
   try {
-    await resolveAuthenticatedUser(req, authClient);
+    authUser = await resolveAuthenticatedUser(req, authClient);
   } catch (e) {
     if (e instanceof AuthError) return unauthorizedResponse(corsHeaders);
     throw e;
   }
+
+  // MODULE-FOUNDATION-AND-ENTITLEMENT-02 — server-side entitlement: the server
+  // (supabase/functions/_shared/module_policy.ts), not the client registry,
+  // decides whether this caller may use 'context-copilot'. Runs after authentication
+  // and before any quota reservation or AI call. Fails closed.
+  const access = await requireModuleAccess(req, authUser, 'context-copilot', corsHeaders, subjectSource);
+  if (!access.allowed) return access.response;
 
   let quotaReserved = false;
   // IVE-COMMERCIAL-QUOTA-HARDENING-13 — hoisted above the try block (not
@@ -188,6 +208,9 @@ export async function handler(
 
     const { message, screen_name, context, history, idempotency_key } = body;
     idempotencyKey = idempotency_key;
+    // R16 — idioma de APRESENTAÇÃO (UI) decide o idioma da resposta; o idioma
+    // dos documentos, do histórico ou da pergunta nunca decide.
+    const language = resolveOutputLanguage(body);
 
     const ctx = context ?? {};
 
@@ -295,7 +318,7 @@ Você SOMENTE pode afirmar que analisou ou leu o conteúdo de um documento se es
 Documentos marcados com ⚠ sem conteúdo processado estão REGISTRADOS mas NÃO ANALISADOS. Nunca afirme ou implique que analisou esses documentos.
 
 Se o usuário perguntar sobre um documento sem conteúdo, diga exatamente:
-"Este documento está registrado no Knowledge Vault mas seu conteúdo não foi processado nesta análise. Para analisá-lo, acesse o Conhecimento e confirme o processamento."
+"${ungroundedDocumentReply(language)}"
 
 DOCUMENT EXISTS ≠ DOCUMENT ANALYZED. METADATA ≠ KNOWLEDGE.
 
@@ -345,9 +368,7 @@ Quando sugerir uma ação executável, substitua action_suggestion por:
   }
 }
 \`\`\`
-Tipos permitidos: "create_action", "approve_opportunity", "create_project", "generate_roadmap"
-
-Responda sempre em Português do Brasil.`;
+Tipos permitidos: "create_action", "approve_opportunity", "create_project", "generate_roadmap"`;
 
     // IVE-COMMERCIAL-ENTITLEMENTS-01 — reserva cota só agora (após validar o
     // corpo), nunca antes: um erro de input do próprio usuário não deve
@@ -372,6 +393,14 @@ Responda sempre em Português do Brasil.`;
         response_format: { type: 'text' },
         messages: [
           { role: 'system', content: systemPrompt },
+          // R16 — política de idioma confiável: depois do system prompt e
+          // antes de histórico/mensagem do usuário (fora de todo conteúdo
+          // não confiável). As chaves e os códigos do bloco JSON final
+          // (action_suggestion.type, data.action_type) ficam fixos.
+          outputLanguageSystemMessage(language, {
+            freeText: true,
+            fixedValueFields: ['action_suggestion.type', 'action_suggestion.data.action_type'],
+          }),
           ...historyMessages,
           { role: 'user', content: message },
         ],

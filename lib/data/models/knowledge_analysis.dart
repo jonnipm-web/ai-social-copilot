@@ -1,4 +1,8 @@
 class KnowledgeAnalysis {
+  /// R16: detected source language when the presentation text of this row
+  /// was translated for display (null = shown in its original language).
+  final String? localizedFrom;
+
   final String id;
   final String knowledgeItemId;
   final String userId;
@@ -72,6 +76,7 @@ class KnowledgeAnalysis {
     this.personaTraining      = const {},
     required this.createdAt,
     required this.updatedAt,
+    this.localizedFrom,
   });
 
   static List<String> _parseList(dynamic value) {
@@ -89,6 +94,7 @@ class KnowledgeAnalysis {
   factory KnowledgeAnalysis.fromMap(Map<String, dynamic> map) {
     return KnowledgeAnalysis(
       id:                       map['id'] as String,
+      localizedFrom: map['r16_localized_from'] as String?,
       knowledgeItemId:          map['knowledge_item_id'] as String,
       userId:                   map['user_id'] as String,
       projectId:                map['project_id'] as String?,

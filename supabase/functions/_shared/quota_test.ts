@@ -46,12 +46,12 @@ function recordingClient(rpcResults: Record<string, { data: unknown; error: unkn
 
 Deno.test('QUOTA-A: allowed=true passes through used/limit/role', async () => {
   const client = fakeClient({
-    try_reserve_ai_quota: { data: { allowed: true, used: 3, limit: 5, role: 'free' }, error: null },
+    try_reserve_ai_quota: { data: { allowed: true, used: 3, limit: 15, role: 'free' }, error: null },
   });
   const result = await reserveQuota(req(), client);
   assertEquals(result.allowed, true);
   assertEquals(result.used, 3);
-  assertEquals(result.limit, 5);
+  assertEquals(result.limit, 15);
 });
 
 Deno.test(
@@ -63,7 +63,7 @@ Deno.test(
         data: {
           allowed: true,
           used: 1,
-          limit: 5,
+          limit: 15,
           role: 'free',
           reservation_id: 'r-123',
           idempotent_replay: true,
@@ -80,7 +80,7 @@ Deno.test(
 Deno.test('QUOTA-B: quota_exceeded -> quotaBlockedResponse returns 429 with used/limit', async () => {
   const client = fakeClient({
     try_reserve_ai_quota: {
-      data: { allowed: false, reason: 'quota_exceeded', used: 5, limit: 5, role: 'free' },
+      data: { allowed: false, reason: 'quota_exceeded', used: 15, limit: 15, role: 'free' },
       error: null,
     },
   });
@@ -90,8 +90,8 @@ Deno.test('QUOTA-B: quota_exceeded -> quotaBlockedResponse returns 429 with used
   assertEquals(res.status, 429);
   const body = await res.json();
   assertEquals(body.error, 'QUOTA_EXCEEDED');
-  assertEquals(body.used, 5);
-  assertEquals(body.limit, 5);
+  assertEquals(body.used, 15);
+  assertEquals(body.limit, 15);
 });
 
 Deno.test('QUOTA-C: RPC error -> fails closed as quota_service_error, 500 (never treated as allowed)', async () => {
@@ -156,7 +156,7 @@ const OP = 'gap-analysis';
 
 Deno.test('QUOTA-H: reserveQuota forwards a valid key + operationType as p_idempotency_key/p_operation_type', async () => {
   const { client, calls } = recordingClient({
-    try_reserve_ai_quota: { data: { allowed: true, used: 1, limit: 5, role: 'free' }, error: null },
+    try_reserve_ai_quota: { data: { allowed: true, used: 1, limit: 15, role: 'free' }, error: null },
   });
   const result = await reserveQuota(req(), client, VALID_KEY, OP);
   assertEquals(result.allowed, true);
@@ -167,7 +167,7 @@ Deno.test('QUOTA-H: reserveQuota forwards a valid key + operationType as p_idemp
 
 Deno.test('QUOTA-I: reserveQuota with no key calls the RPC with no params (legacy behavior unchanged)', async () => {
   const { client, calls } = recordingClient({
-    try_reserve_ai_quota: { data: { allowed: true, used: 1, limit: 5, role: 'free' }, error: null },
+    try_reserve_ai_quota: { data: { allowed: true, used: 1, limit: 15, role: 'free' }, error: null },
   });
   await reserveQuota(req(), client);
   assertEquals(calls[0].params, undefined);
@@ -177,7 +177,7 @@ Deno.test(
   'QUOTA-J: reserveQuota with a malformed key fails closed WITHOUT ever calling the RPC',
   async () => {
     const { client, calls } = recordingClient({
-      try_reserve_ai_quota: { data: { allowed: true, used: 1, limit: 5, role: 'free' }, error: null },
+      try_reserve_ai_quota: { data: { allowed: true, used: 1, limit: 15, role: 'free' }, error: null },
     });
     const result = await reserveQuota(req(), client, 'not-a-real-uuid', OP);
     assertEquals(result.allowed, false);
@@ -267,7 +267,7 @@ Deno.test(
   'QUOTA-N: reserveQuota with a key but NO operationType fails closed as invalid_request, RPC never called',
   async () => {
     const { client, calls } = recordingClient({
-      try_reserve_ai_quota: { data: { allowed: true, used: 1, limit: 5, role: 'free' }, error: null },
+      try_reserve_ai_quota: { data: { allowed: true, used: 1, limit: 15, role: 'free' }, error: null },
     });
     const result = await reserveQuota(req(), client, VALID_KEY);
     assertEquals(result.allowed, false);
@@ -280,7 +280,7 @@ Deno.test(
   'QUOTA-O: reserveQuota with a key and an EMPTY-STRING operationType also fails closed',
   async () => {
     const { client, calls } = recordingClient({
-      try_reserve_ai_quota: { data: { allowed: true, used: 1, limit: 5, role: 'free' }, error: null },
+      try_reserve_ai_quota: { data: { allowed: true, used: 1, limit: 15, role: 'free' }, error: null },
     });
     const result = await reserveQuota(req(), client, VALID_KEY, '   ');
     assertEquals(result.allowed, false);
@@ -313,7 +313,7 @@ function captureLogs(): { lines: string[]; restore: () => void } {
 Deno.test('QUOTA-T: reserveQuota logs quota_reservation_created for a fresh (non-replay) reservation', async () => {
   const client = fakeClient({
     try_reserve_ai_quota: {
-      data: { allowed: true, used: 1, limit: 5, role: 'free', reservation_id: 'r-1', idempotent_replay: false },
+      data: { allowed: true, used: 1, limit: 15, role: 'free', reservation_id: 'r-1', idempotent_replay: false },
       error: null,
     },
   });
@@ -332,7 +332,7 @@ Deno.test('QUOTA-T: reserveQuota logs quota_reservation_created for a fresh (non
 Deno.test('QUOTA-U: reserveQuota logs quota_reservation_reused for an idempotent replay', async () => {
   const client = fakeClient({
     try_reserve_ai_quota: {
-      data: { allowed: true, used: 1, limit: 5, role: 'free', reservation_id: 'r-1', idempotent_replay: true },
+      data: { allowed: true, used: 1, limit: 15, role: 'free', reservation_id: 'r-1', idempotent_replay: true },
       error: null,
     },
   });
@@ -350,7 +350,7 @@ Deno.test('QUOTA-U: reserveQuota logs quota_reservation_reused for an idempotent
 Deno.test('QUOTA-V: reserveQuota logs quota_exceeded, not a reservation event, when blocked', async () => {
   const client = fakeClient({
     try_reserve_ai_quota: {
-      data: { allowed: false, reason: 'quota_exceeded', used: 5, limit: 5, role: 'free' },
+      data: { allowed: false, reason: 'quota_exceeded', used: 15, limit: 15, role: 'free' },
       error: null,
     },
   });
