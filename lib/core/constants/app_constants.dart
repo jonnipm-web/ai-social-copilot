@@ -22,19 +22,19 @@ class AppConstants {
   // conta o limite errado quando um admin troca o papel manualmente
   // (achado durante COMMERCIAL-V1-PHYSICAL-QA-RECOVERY PQ-03: 'pro' já
   // estava desatualizado em 100 em vez dos 300 reais).
-  // IV-MAIN-RECONCILIATION-01: FREE=5 per decisão comercial vigente.
-  // Migration 20261014000000_free_quota_15.sql está marcada DO_NOT_APPLY
-  // — não aplicar em produção sem nova decisão explícita do Owner.
-  // Servidor (profiles.monthly_limit default) usa 5; este mapa deve espelhar.
+  // FREE=15 per decisão comercial do Owner (2026-09-30).
+  // Migration 20261014000000_free_quota_15.sql (LAB) aplica este valor no
+  // servidor; deve ser promovida a APPLIED_PRODUCTION após deploy em produção.
+  // Servidor (profiles.monthly_limit default) deve espelhar 15 após aplicação.
   static const Map<String, int> planLimits = {
     'admin':       99999,
     'premium':     1000,
     'pro':         300,
     'beta_tester': 50,
-    'free':        5,
+    'free':        15,
   };
 
-  static int limitForRole(String role) => planLimits[role] ?? 5;
+  static int limitForRole(String role) => planLimits[role] ?? 15;
 
   // Rotas
   static const routeSplash         = '/';
