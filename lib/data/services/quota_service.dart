@@ -23,7 +23,7 @@ class QuotaService {
         .single();
 
     final role = profile['role'] as String? ?? 'free';
-    final limit = (profile['monthly_limit'] as num?)?.toInt() ?? 5;
+    final limit = (profile['monthly_limit'] as num?)?.toInt() ?? 15;
 
     final now = DateTime.now().toUtc();
     final periodStart = DateTime.utc(now.year, now.month, 1);

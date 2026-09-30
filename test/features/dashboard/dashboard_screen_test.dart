@@ -78,7 +78,7 @@ Future<void> _pump(
       overrides: [
         currentProfileProvider.overrideWith((ref) => Future.value(_fakeProfile())),
         currentQuotaProvider.overrideWith(
-          (ref) => Future.value(const QuotaInfo(role: 'free', limit: 5, used: 0)),
+          (ref) => Future.value(const QuotaInfo(role: 'free', limit: 15, used: 0)),
         ),
         projectsNotifierProvider
             .overrideWith(projectsNotifier ?? _FakeProjectsNotifier.new),

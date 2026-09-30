@@ -22,7 +22,8 @@ DECLARE
     'stripe_billing', 'stripe_billing_atomic_apply', 'stripe_billing_event_ordering', 'diagnostic_logger',
     'diagnostic_logger_anon_revoke_hardening', 'diagnostic_one_active_session', 'market_intelligence_current_state',
     'project_resource_allocations', 'project_resource_allocations_search_path_hardening', 'ai_quota_idempotency',
-    'project_ownership_boundary_closure', 'diagnostic_events_build_sha', 'opportunity_knowledge_links'];
+    'project_ownership_boundary_closure', 'diagnostic_events_build_sha', 'opportunity_knowledge_links',
+    'free_quota_15'];
   -- The chain, in the order it must be applied.
   chain text[] := ARRAY['entitlement_subject_roles', 'ive_memory_governance', 'aef_persistence', 'aef_hardening',
     'aef_sequence_privileges'];

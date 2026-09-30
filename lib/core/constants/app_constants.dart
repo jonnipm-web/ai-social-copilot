@@ -23,9 +23,8 @@ class AppConstants {
   // (achado durante COMMERCIAL-V1-PHYSICAL-QA-RECOVERY PQ-03: 'pro' já
   // estava desatualizado em 100 em vez dos 300 reais).
   // FREE=15 per decisão comercial do Owner (2026-09-30).
-  // Migration 20261014000000_free_quota_15.sql (LAB) aplica este valor no
-  // servidor; deve ser promovida a APPLIED_PRODUCTION após deploy em produção.
-  // Servidor (profiles.monthly_limit default) deve espelhar 15 após aplicação.
+  // Migration 20261014000000_free_quota_15.sql aplicada em produção (APPLIED_PRODUCTION).
+  // Servidor (profiles.monthly_limit default) espelha 15.
   static const Map<String, int> planLimits = {
     'admin':       99999,
     'premium':     1000,
