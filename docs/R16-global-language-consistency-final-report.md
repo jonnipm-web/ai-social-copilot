@@ -4,7 +4,7 @@ Data: 2026-09-29 · Executor: Claude (primary executor) · Branch: `claude/r16-g
 
 ## 24. Veredito final
 
-**BLOCKED — WEB_DEPLOY_DISPATCH_REQUIRED** (backend 100% publicado; falta 1 clique no Deploy Web)
+**CONDITIONAL_PASS — OWNER_PHYSICAL_R16_GATE_PENDING**
 
 A implementação, os testes, a auditoria e o CI estão completos e verdes. A migration já foi aplicada em produção. O deploy das Edge Functions e do app web está bloqueado por um motivo técnico, não por um gate P0/P1: o token do GitHub desta sessão não tem permissão `actions:write` (erro `403 Resource not accessible by integration`). As rotas canônicas (`deploy-edge-functions.yml` e `deploy-web.yml`) são por `workflow_dispatch`. Depois que o Owner disparar os workflows (seção 20), a missão passa a **CONDITIONAL_PASS — OWNER_PHYSICAL_R16_GATE_PENDING** assim que a verificação do app publicado (seção 21) confirmar.
 
@@ -206,7 +206,7 @@ As 16 funções de IA e mais `localize-content` (nova). A tabela por função es
 |---|---|
 | Migration `20261015000000_r16_content_localizations` | **APLICADA em produção** (Supabase `nzngvbajrnruknpzzjbf`); verificado: RLS on, 0 policies, sem SELECT para anon/authenticated. No manifest permanece `LAB` (convenção do preflight AEF) |
 | Edge Functions (16 de IA + `localize-content`) | **PUBLICADAS em 2026-09-29 ~21:17 UTC**, todas com `verify_jwt=true` (mesma política do `deploy-allowlist.tsv`) |
-| App web (GitHub Pages) | **PENDENTE: 1 clique do Owner** em *Actions → Deploy Web → Run workflow*, na branch `claude/r16-global-language-consistency` |
+| App web (GitHub Pages) | **PUBLICADO**: `deploy-web.yml` run 36686920055 (disparado pelo Owner em 2026-09-30 07:59 UTC) → `gh-pages` `ca2f569` "deploy: 280719de…" |
 
 **Rota de deploy das funções (exceção autorizada pelo Owner em 2026-09-29 22:1x BST):**
 - **Por que não a rota canônica:** o token da sessão recebe 403 em `workflow_dispatch`.
@@ -238,7 +238,17 @@ As 16 funções de IA e mais `localize-content` (nova). A tabela por função es
 
 ## 21. Verificação do app publicado
 
-Pendente do deploy. Assim que o Owner disparar os workflows, executo o smoke em EN e PT (Dashboard, Projects, Knowledge, Website Analyzer, MI, Strategy, Opportunity, Action Engine, IVE, Plans/Quota, Settings; PT→EN, EN→PT, reload, navegação, logout/login) e atualizo este relatório.
+Verificação técnica, em 2026-09-30:
+- **Build publicado:** `gh-pages` `ca2f569` contém o `main.dart.js` do commit `280719de…`, com o `BUILD_SHA` gravado no próprio build.
+- **Caminho base:** `base href="/ai-social-copilot/"` preservado.
+- **Strings da R16 presentes no bundle:** "Automatically translated from", "Traduzido automaticamente do", "View original", chamada a `localize-content`, 6 ocorrências de "Your ecosystem…". O "Seu ecossistema tem" aparece uma única vez, como tradução PT.
+- **Edge Functions:** 17 ativas, todas com `verify_jwt=true`.
+- **Migration:** aplicada, com RLS verificado.
+
+Limitações desta verificação:
+- O domínio `github.io` e os endpoints `*.supabase.co` são bloqueados pelo proxy desta sessão. Por isso o smoke E2E navegando o app publicado não pôde ser executado daqui.
+- Até 2026-09-30 08:10 UTC não houve nenhuma invocação das funções novas nos logs. A primeira execução real será o teste físico do Owner (seção 23).
+- Os logs do Supabase (`function_logs`/`function_edge_logs`) permitem acompanhar essa execução.
 
 ## 22. Limitações conhecidas
 
