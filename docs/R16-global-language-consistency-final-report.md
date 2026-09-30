@@ -1,12 +1,17 @@
 # R16 — Global End-to-End Language Consistency + AI Output Language — Final Report
 
-Data: 2026-09-29 · Executor: Claude (primary executor) · Branch: `claude/r16-global-language-consistency` · PR: #104 (draft, **não mergear em `main`**)
+Data: 2026-09-29/30 · Executor: Claude (primary executor) · Branch: `claude/r16-global-language-consistency` · PR: #104 (draft, **não mergear em `main`**)
 
 ## 24. Veredito final
 
 **CONDITIONAL_PASS — OWNER_PHYSICAL_R16_GATE_PENDING**
 
-A implementação, os testes, a auditoria e o CI estão completos e verdes. A migration já foi aplicada em produção. O deploy das Edge Functions e do app web está bloqueado por um motivo técnico, não por um gate P0/P1: o token do GitHub desta sessão não tem permissão `actions:write` (erro `403 Resource not accessible by integration`). As rotas canônicas (`deploy-edge-functions.yml` e `deploy-web.yml`) são por `workflow_dispatch`. Depois que o Owner disparar os workflows (seção 20), a missão passa a **CONDITIONAL_PASS — OWNER_PHYSICAL_R16_GATE_PENDING** assim que a verificação do app publicado (seção 21) confirmar.
+A implementação, os testes, a auditoria independente e o CI da R16 estão verdes. Tudo está publicado em produção:
+- **Migration:** aplicada.
+- **Edge Functions:** 17 ativas.
+- **App web:** `gh-pages` `ca2f569` a partir do commit `280719d`.
+
+Não há P0/P1 abertos. Resta apenas o teste físico do Owner (seção 23). Com ele aprovado, o veredito passa a **PASS**.
 
 ---
 
@@ -25,7 +30,7 @@ A implementação, os testes, a auditoria e o CI estão completos e verdes. A mi
 |---|---|
 | Starting SHA (baseline publicada) | `875fb0ce` |
 | Branch | `claude/r16-global-language-consistency` |
-| Commits R16 | `6f51e7a` helpers → `86d36be` backend → `81a2173` client/i18n → `b6c5574` CI annotations → `16eb9b4` localização persistida → `d24283e` reconciliação da auditoria → (este relatório) |
+| Commits R16 | `6f51e7a` helpers → `86d36be` backend → `81a2173` client/i18n → `b6c5574` CI annotations → `16eb9b4` localização persistida → `d24283e` reconciliação da auditoria → `22e07b8`/`aafe284` relatório + manifest → `280719d` registro do deploy das funções (build publicado) → `32e351b` verificação do deploy web |
 | Final SHA | o HEAD da branch que contém este arquivo |
 
 ## 5. Causas-raiz (não era um bug localizado)
