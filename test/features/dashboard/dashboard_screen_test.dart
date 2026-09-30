@@ -21,7 +21,7 @@ import 'package:ai_social_copilot/providers/quota_provider.dart';
 Profile _fakeProfile() => Profile(
       id: 'user-1',
       role: 'free',
-      monthlyLimit: 5,
+      monthlyLimit: 15,
       isActive: true,
       createdAt: DateTime(2026, 1, 1),
       updatedAt: DateTime(2026, 1, 1),
