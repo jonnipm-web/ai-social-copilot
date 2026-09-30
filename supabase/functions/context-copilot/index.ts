@@ -230,6 +230,9 @@ export async function handler(
 
     if (ctx.project) {
       lines.push(`\n## PROJETO ATUAL\nNome: ${ctx.project.name}\nDescrição: ${ctx.project.description || '—'}\nTipo: ${ctx.project.type || '—'}\nStatus: ${ctx.project.status || '—'}`);
+    } else {
+      // WEB-006: sem projeto ativo — contexto de portfólio (todos os projetos).
+      lines.push(`\n## ESCOPO: PORTFÓLIO COMPLETO\nNenhum projeto selecionado. Os dados de oportunidades, ações e scores abaixo abrangem TODOS os projetos do portfólio, não um projeto específico.`);
     }
 
     if (ctx.scores) {
@@ -347,7 +350,8 @@ ${contextBlock}
 1. Sempre baseie sua resposta nos dados do contexto fornecido acima.
 2. Seja direto e objetivo — resposta máxima: 4 parágrafos curtos.
 3. Use dados numéricos do contexto sempre que possível.
-4. Ao final de TODA resposta, inclua EXATAMENTE este bloco JSON (não inclua mais nada após ele):
+4. Se o contexto indicar "ESCOPO: PORTFÓLIO COMPLETO" (sem projeto ativo), e o usuário perguntar sobre "este projeto" ou "o projeto", esclareça que você está no contexto de portfólio e que os dados cobrem todos os projetos. Não invente nem assuma um projeto específico.
+5. Ao final de TODA resposta, inclua EXATAMENTE este bloco JSON (não inclua mais nada após ele):
 
 \`\`\`json
 {

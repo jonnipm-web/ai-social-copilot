@@ -11,6 +11,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/post_provider.dart';
 import '../../../providers/profile_provider.dart';
+import '../../../providers/quota_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/loading_button.dart';
@@ -62,9 +63,10 @@ class _ContentGenerationScreenState
       return;
     }
 
-    final usage   = ref.read(monthlyUsageProvider).valueOrNull ?? 0;
+    final quota   = ref.read(currentQuotaProvider).valueOrNull;
     final profile = ref.read(currentProfileProvider).valueOrNull;
-    final limit   = profile?.monthlyLimit ?? AppConstants.freeTierLimit;
+    final usage   = quota?.used ?? 0;
+    final limit   = quota?.limit ?? profile?.monthlyLimit ?? AppConstants.freeTierLimit;
     if (usage >= limit) {
       showErrorSnack(
         context,
@@ -97,7 +99,7 @@ class _ContentGenerationScreenState
     }
 
     if (result != null) {
-      ref.invalidate(monthlyUsageProvider);
+      ref.invalidate(currentQuotaProvider);
       final elapsed = _startTime != null
           ? DateTime.now().difference(_startTime!).inMilliseconds / 1000
           : null;
@@ -223,9 +225,7 @@ class _ContentGenerationScreenState
     final l10n = AppLocalizations.of(context)!;
     final postState  = ref.watch(postNotifierProvider);
     final isLoading  = postState.isLoading || _exec.isBusy;
-    final usageAsync = ref.watch(monthlyUsageProvider);
-    final profile    = ref.watch(currentProfileProvider).valueOrNull;
-    final limit      = profile?.monthlyLimit ?? AppConstants.freeTierLimit;
+    final usageAsync = ref.watch(currentQuotaProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -259,9 +259,9 @@ class _ContentGenerationScreenState
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 usageAsync.when(
-                  data: (used) => Column(
+                  data: (quota) => Column(
                     children: [
-                      _buildCreditsBanner(l10n, used, limit),
+                      _buildCreditsBanner(l10n, quota.used, quota.limit),
                       const SizedBox(height: 14),
                     ],
                   ),
@@ -322,7 +322,7 @@ class _ContentGenerationScreenState
                   loadingLabel: l10n.improvePostButtonLoading,
                   isLoading: isLoading,
                   onPressed:
-                      (usageAsync.valueOrNull ?? 0) >= limit ? null : _improve,
+                      (usageAsync.valueOrNull?.remaining ?? 1) <= 0 ? null : _improve,
                 ),
                 const SizedBox(height: 12),
               ],

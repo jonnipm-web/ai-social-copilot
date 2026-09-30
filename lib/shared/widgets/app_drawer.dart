@@ -159,65 +159,54 @@ class _DrawerContent extends ConsumerWidget {
                     route: module.route!,
                     current: current,
                   ),
-                const Divider(color: Colors.white12, height: 24),
-                // COMMERCIAL-EXPERIENCE-CLOSURE-16 (mission Section 27/35,
-                // physical Android E2E) — these five are drill-in
-                // "settings-style" destinations, not primary app sections.
-                // They used context.go() like every other drawer item,
-                // which REPLACES GoRouter's whole route stack instead of
-                // pushing onto it -- so Navigator.canPop() was false,
-                // AppBar auto-hid its back arrow, and Android's system
-                // back button had nothing to pop and closed the app
-                // entirely. Found live on a physical device (Samsung
-                // SM-S938B, Android 16): opened "Conta e Configurações"
-                // from the drawer, then back button exited the app rather
-                // than returning to the previous screen. push:true fixes
-                // this for exactly these five (Upgrade/Account/Support/
-                // About/Admin) without touching the dynamic module list's
-                // own navigation semantics, which is a separate, broader
-                // surface this fix deliberately leaves alone.
-                _NavItem(
-                  icon: Icons.workspace_premium_rounded,
-                  label: t.navUpgrade,
-                  route: AppConstants.routeUpgrade,
-                  current: current,
-                  push: true,
-                ),
-                _NavItem(
-                  icon: Icons.manage_accounts_rounded,
-                  label: t.navAccount,
-                  route: AppConstants.routeAccount,
-                  current: current,
-                  push: true,
-                ),
-                _NavItem(
-                  icon: Icons.help_outline_rounded,
-                  label: t.navHelpSupport,
-                  route: AppConstants.routeSupport,
-                  current: current,
-                  push: true,
-                ),
-                _NavItem(
-                  icon: Icons.info_outline_rounded,
-                  label: t.navAbout,
-                  route: AppConstants.routeAbout,
-                  current: current,
-                  push: true,
-                ),
-                if (isAdmin) ...[
-                  const Divider(color: Colors.white12, height: 24),
-                  _NavItem(
-                    icon: Icons.admin_panel_settings_rounded,
-                    label: t.navAdminPanel,
-                    route: AppConstants.routeAdmin,
-                    current: current,
-                    isAdmin: true,
-                    push: true,
-                  ),
-                ],
               ],
             ),
           ),
+
+          // Itens de configuração sempre visíveis (fora do Expanded para
+          // não serem ocultos quando há muitos módulos — WEB-007).
+          // push:true mantém o comportamento corrigido da CLOSURE-16 §27/35:
+          // estas telas empilham sobre o stack existente em vez de substituir.
+          const Divider(color: Colors.white12, height: 1),
+          _NavItem(
+            icon: Icons.workspace_premium_rounded,
+            label: t.navUpgrade,
+            route: AppConstants.routeUpgrade,
+            current: current,
+            push: true,
+          ),
+          _NavItem(
+            icon: Icons.manage_accounts_rounded,
+            label: t.navAccount,
+            route: AppConstants.routeAccount,
+            current: current,
+            push: true,
+          ),
+          _NavItem(
+            icon: Icons.help_outline_rounded,
+            label: t.navHelpSupport,
+            route: AppConstants.routeSupport,
+            current: current,
+            push: true,
+          ),
+          _NavItem(
+            icon: Icons.info_outline_rounded,
+            label: t.navAbout,
+            route: AppConstants.routeAbout,
+            current: current,
+            push: true,
+          ),
+          if (isAdmin) ...[
+            const Divider(color: Colors.white12, height: 1),
+            _NavItem(
+              icon: Icons.admin_panel_settings_rounded,
+              label: t.navAdminPanel,
+              route: AppConstants.routeAdmin,
+              current: current,
+              isAdmin: true,
+              push: true,
+            ),
+          ],
 
           // Sair
           const Divider(color: Colors.white12, height: 1),
