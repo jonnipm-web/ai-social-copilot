@@ -39,7 +39,7 @@ void main() {
     return ProviderScope(
       overrides: [
         currentQuotaProvider.overrideWith(
-          (ref) async => const QuotaInfo(role: 'free', limit: 5, used: 2),
+          (ref) async => const QuotaInfo(role: 'free', limit: 15, used: 2),
         ),
         diagnosticLoggerProvider.overrideWithValue(MockDiagnosticLoggerService()),
       ],

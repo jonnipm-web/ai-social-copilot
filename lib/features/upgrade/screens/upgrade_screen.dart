@@ -52,7 +52,7 @@ class _UpgradeContent extends ConsumerStatefulWidget {
   const _UpgradeContent({required this.quota});
   final QuotaInfo quota;
 
-  static const _freeLimit = 5;
+  static const _freeLimit = 15;
   static const _proLimit = 300;
 
   @override

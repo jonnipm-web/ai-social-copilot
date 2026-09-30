@@ -146,8 +146,10 @@ reclassificação explícita em missão autorizada pelo Owner.
 Nenhuma migration em DO_NOT_APPLY no momento.
 
 > `20261014000000_free_quota_15.sql` foi reclassificada de DO_NOT_APPLY → LAB
-> em 2026-09-30 após decisão do Owner: FREE=15. Aplicar em produção quando
-> o deploy desta migration for autorizado.
+> em 2026-09-30 após decisão do Owner: FREE=15. Aplicada em produção em
+> 2026-09-30 (APPLIED_PRODUCTION). monthly_limit default = 15, usuários FREE
+> existentes com limit=5 backfillados, trigger prevent_self_privilege_escalation
+> atualizado atomicamente.
 
 ---
 

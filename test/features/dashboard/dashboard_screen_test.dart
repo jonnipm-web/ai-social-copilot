@@ -21,7 +21,7 @@ import 'package:ai_social_copilot/providers/quota_provider.dart';
 Profile _fakeProfile() => Profile(
       id: 'user-1',
       role: 'free',
-      monthlyLimit: 5,
+      monthlyLimit: 15,
       isActive: true,
       createdAt: DateTime(2026, 1, 1),
       updatedAt: DateTime(2026, 1, 1),
@@ -78,7 +78,7 @@ Future<void> _pump(
       overrides: [
         currentProfileProvider.overrideWith((ref) => Future.value(_fakeProfile())),
         currentQuotaProvider.overrideWith(
-          (ref) => Future.value(const QuotaInfo(role: 'free', limit: 5, used: 0)),
+          (ref) => Future.value(const QuotaInfo(role: 'free', limit: 15, used: 0)),
         ),
         projectsNotifierProvider
             .overrideWith(projectsNotifier ?? _FakeProjectsNotifier.new),

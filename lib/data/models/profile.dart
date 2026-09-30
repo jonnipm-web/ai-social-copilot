@@ -43,7 +43,7 @@ class Profile {
       email:        map['email'] as String?,
       fullName:     map['full_name'] as String?,
       role:         map['role'] as String? ?? 'free',
-      monthlyLimit: map['monthly_limit'] as int? ?? 5,
+      monthlyLimit: map['monthly_limit'] as int? ?? 15,
       isActive:     map['is_active'] as bool? ?? true,
       createdAt:    map['created_at'] != null
           ? DateTime.parse(map['created_at'] as String)

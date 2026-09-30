@@ -49,8 +49,11 @@ if run --write >/dev/null; then echo "F01 write: silently dropped a vanished mig
 fresh; printf '\n-- lab edit\n' >> "$WORK/m/$LAB_FILE"; run --write >/dev/null; expect_pass "LAB change re-recorded"
 
 # The preflight's history reconciliation matches the manifest.
-# APPLIED_PRODUCTION = its predecessors, exactly (that set never grows once
-# frozen, so exact equality is the right check).
+# APPLIED_PRODUCTION must be a superset of preflight predecessors: every
+# predecessor listed in the preflight must appear in APPLIED_PRODUCTION
+# (ensuring all chain prerequisites are applied in production). The inverse
+# does not hold — APPLIED_PRODUCTION grows as new migrations reach production
+# beyond the original frozen set (e.g. free_quota_15 / mission IV-R16).
 #
 # LAB is different: aef_deploy_preflight.sql is deliberately scoped to only
 # the AEF migration chain (its own header: "the AEF migration chain can
@@ -68,7 +71,9 @@ applied="$(awk -F'\t' '$3=="APPLIED_PRODUCTION"{sub(/^[0-9]+_/,"",$1); sub(/\.sq
 lab="$(awk -F'\t' '$3=="LAB"{sub(/^[0-9]+_/,"",$1); sub(/\.sql$/,"",$1); printf "%s ", $1}' "$ROOT/supabase/migration_manifest.tsv")"
 pre="$(tr -d '\n' < "$PREFLIGHT" | grep -o "predecessors text\[\] := ARRAY\[[^]]*\]" | grep -o "'[a-z0-9_]*'" | tr -d "'" | tr '\n' ' ')"
 chain="$(tr -d '\n' < "$PREFLIGHT" | grep -o "chain text\[\] := ARRAY\[[^]]*\]" | grep -o "'[a-z0-9_]*'" | tr -d "'" | tr '\n' ' ')"
-[[ "$applied" == "$pre" ]] || { echo "F01: manifest APPLIED_PRODUCTION ($applied) != preflight predecessors ($pre)" >&2; exit 1; }
+for _pre_name in $pre; do
+  [[ " $applied " == *" $_pre_name "* ]] || { echo "F01: preflight predecessor $_pre_name not found in APPLIED_PRODUCTION ($applied)" >&2; exit 1; }
+done
 lab_chain_subset="$(for name in $lab; do for c in $chain; do [[ "$name" == "$c" ]] && printf "%s " "$name"; done; done; true)"
 [[ "$lab_chain_subset" == "$chain" ]] || { echo "F01: preflight chain ($chain) not present as LAB in the manifest, in order (found: $lab_chain_subset)" >&2; exit 1; }
 echo "MIGRATION_MANIFEST_TESTS: PASS"

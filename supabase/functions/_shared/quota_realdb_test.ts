@@ -124,7 +124,7 @@ if (!DATABASE_URL) {
     }
   }
 
-  async function makeUser(role = "free", limit = 5): Promise<string> {
+  async function makeUser(role = "free", limit = 15): Promise<string> {
     const id = uuid();
     const conn = await pool.connect();
     try {
