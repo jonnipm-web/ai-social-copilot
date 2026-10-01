@@ -162,7 +162,7 @@ Static analysis: no hardcoded string violations in commercial paths, no AEF expo
 |----|----------|------|-------------|--------|
 | FIX-001 | P1 | `web/index.html` | lang="pt", title/description/apple-title → InsightValues | APPLIED |
 | FIX-002 | P2 | `pubspec.yaml` | description → InsightValues brand | APPLIED |
-| FIX-003 | P1 | `lib/data/models/quota_info.dart` + `upgrade_screen.dart` | Admin ∞ display; isAdmin getter | APPLIED |
+| FIX-003 | P1 | `lib/data/models/quota_info.dart` + `lib/data/models/profile.dart` + `upgrade_screen.dart` + `account_screen.dart` | Admin/commercial-Pro separation: `isCommercialPro` getter added; admin shows `99.999` (not `∞`), not labeled Pro, cannot trigger checkout | APPLIED (v2 — a367f8d) |
 | FIX-004 | P1 | `lib/features/knowledge/screens/knowledge_analysis_screen.dart` + `lib/data/models/copilot_context_data.dart` | IVE context now includes analysis fields | APPLIED |
 | FIX-005 | P2 | `lib/features/action_engine/screens/action_engine_screen.dart` + `lib/providers/action_queue_provider.dart` | Pause button uses notifier.pause() not approve() | APPLIED |
 | FIX-006 | P2 | `lib/features/action_engine/screens/action_detail_screen.dart` | Same Pause button fix, popup menu value | APPLIED |
@@ -204,6 +204,7 @@ The following modules were audited and require no code changes:
 | OB-01 | `AppConstants.privacyPolicyUrl = null` | RELEASE BLOCKER — About screen shows "owner config required" | Create Privacy Policy page, set URL in app_constants.dart |
 | OB-02 | `AppConstants.termsOfUseUrl = null` | RELEASE BLOCKER — same | Create Terms of Use page, set URL |
 | OB-03 | `AppConstants.officialWebsiteUrl` points to legacy GitHub Pages | Low severity, cosmetic | Update to production domain when available |
+| OB-04 | `AppConstants.supportEmail = 'suporte@insigthvalues.com'` — typo in domain (`insigth` vs `insight`) | Medium — bounce risk | Confirm mailbox is active; if domain is `insightvalues.com`, update constant and ensure MX record exists |
 
 ---
 
@@ -212,7 +213,7 @@ The following modules were audited and require no code changes:
 Targeted manual tests only. Do NOT retest unchanged modules.
 
 ```
-[ ] 1. UPGRADE SCREEN — admin account: Usage banner shows "X / ∞", not "0 / 99999"
+[ ] 1. UPGRADE SCREEN — admin account: Usage banner shows "X / 99.999" (not "∞" and not "0 / 99999"); Pro plan card shows "Most Popular" badge (not "Plano Atual"); Upgrade button disabled for admin
 [ ] 2. UPGRADE SCREEN — free account: Usage banner shows correct used/limit and remaining text
 [ ] 3. UPGRADE SCREEN — exhausted free account: red bar + "You've used all analyses" text shown
 [ ] 4. KNOWLEDGE ANALYSIS → ASK IVE: IVE response must reference the document summary/keywords
@@ -249,4 +250,23 @@ Targeted manual tests only. Do NOT retest unchanged modules.
 
 **FINAL VERDICT: `READY_FOR_OWNER_PHYSICAL_VALIDATION`**
 
-All P1 and P2 code-fixable findings have been resolved. Two owner-only blockers remain (Privacy Policy + Terms of Use URLs). Physical validation against Owner Retest Checklist §11 is the next gate before production release.
+All P1 and P2 code-fixable findings have been resolved. Two owner-only release blockers remain (Privacy Policy + Terms of Use URLs). Physical validation against Owner Retest Checklist §11 is the next gate before production release.
+
+---
+
+## §13 — INTEGRATION STATUS (live, updated each CI push)
+
+| Item | Value |
+|------|-------|
+| BASE_MAIN_SHA | c8d1b698 |
+| PR_BRANCH | `iv-cross-platform-audit-01` |
+| PR_NUMBER | #111 |
+| FIX-003_v1_SHA | 41dc6d8 (isAdmin getter + ∞ display — semantic bug) |
+| FIX-003_v2_SHA | a367f8d (isCommercialPro separation — semantic correction) |
+| FIX-004_VALIDATED | ✅ — analysis map + identity fields confirmed in source |
+| CI_LAST_RESULT | PENDING (a367f8d push — awaiting run) |
+| MERGE_TO_MAIN_SHA | — (pending CI green) |
+| APK_SOURCE_SHA | — (pending merge) |
+| APK_SHA256 | — (pending build) |
+| NOTE20_INSTALL_STATUS | BLOCKED — ADB not available in cloud container |
+| OB-04_MAILBOX | UNCONFIRMED — owner action required |
