@@ -36,7 +36,7 @@ const List<ModuleDefinition> kModuleRegistry = [
   ),
   ModuleDefinition(
     moduleId: 'business-dashboard',
-    namePt: 'Business Dashboard',
+    namePt: 'Painel de Negócios',
     nameEn: 'Business Dashboard',
     status: ModuleStatus.active,
     adminVisible: true,
@@ -143,7 +143,7 @@ const List<ModuleDefinition> kModuleRegistry = [
   ),
   ModuleDefinition(
     moduleId: 'website-analyzer',
-    namePt: 'Website Analyzer',
+    namePt: 'Analisador de Site',
     nameEn: 'Website Analyzer',
     status: ModuleStatus.active,
     adminVisible: true,
@@ -160,7 +160,7 @@ const List<ModuleDefinition> kModuleRegistry = [
   ),
   ModuleDefinition(
     moduleId: 'market-intelligence',
-    namePt: 'Market Intelligence',
+    namePt: 'Inteligência de Mercado',
     nameEn: 'Market Intelligence',
     status: ModuleStatus.active,
     adminVisible: true,
@@ -296,7 +296,7 @@ const List<ModuleDefinition> kModuleRegistry = [
   ),
   ModuleDefinition(
     moduleId: 'opportunity-lab',
-    namePt: 'Opportunity Lab',
+    namePt: 'Lab de Oportunidades',
     nameEn: 'Opportunity Lab',
     status: ModuleStatus.active,
     adminVisible: true,
@@ -312,7 +312,7 @@ const List<ModuleDefinition> kModuleRegistry = [
   ),
   ModuleDefinition(
     moduleId: 'action-engine',
-    namePt: 'Action Engine',
+    namePt: 'Motor de Ações',
     nameEn: 'Action Engine',
     status: ModuleStatus.active,
     adminVisible: true,
@@ -329,7 +329,7 @@ const List<ModuleDefinition> kModuleRegistry = [
   ),
   ModuleDefinition(
     moduleId: 'context-copilot',
-    namePt: 'Context Copilot',
+    namePt: 'Copiloto Contextual',
     nameEn: 'Context Copilot',
     status: ModuleStatus.active,
     adminVisible: true,

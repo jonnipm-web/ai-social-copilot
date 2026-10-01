@@ -179,7 +179,7 @@ class AppConstants {
   // próprio repositório (commit cf806fa, tela de Upgrade original, usado
   // como canal real de suporte antes do checkout Stripe existir) -- não
   // inventado por esta missão.
-  static const supportEmail = 'suporte@aisocialcopilot.com';
+  static const supportEmail = 'suporte@insigthvalues.com';
   // Site oficial hoje é o próprio deploy do GitHub Pages -- nenhum domínio
   // próprio foi encontrado configurado em nenhum lugar do repositório.
   static const officialWebsiteUrl = 'https://jonnipm-web.github.io/ai-social-copilot/';

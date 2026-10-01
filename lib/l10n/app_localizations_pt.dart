@@ -172,7 +172,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get aboutTagline =>
-      'Copiloto de IA para estratégia de marketing e conteúdo.';
+      'Inteligência estratégica para fundadores e decisores.';
 
   @override
   String get aboutVersion => 'Versão do aplicativo';
@@ -6410,6 +6410,14 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get uxKnowledgeActionTrainPersona => 'Treinar Persona';
+
+  @override
+  String get uxKnowledgeActionAskIve => 'Perguntar à IVE';
+
+  @override
+  String uxKnowledgeAskIveMessage(String title) {
+    return 'Analise o item de conhecimento "$title" e me diga como aplicar os insights na estratégia do projeto.';
+  }
 
   @override
   String get uxKnowledgeNoPersonas => 'Nenhuma persona encontrada. Crie uma persona primeiro.';

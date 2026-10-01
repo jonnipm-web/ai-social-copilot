@@ -68,11 +68,11 @@ class _UpgradeContentState extends ConsumerState<_UpgradeContent> {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-    // Se o usuário já é Pro, mostra o limite REAL configurado no servidor
-    // (profiles.monthly_limit) em vez do número padrão de marketing --
-    // evita anunciar um limite diferente do que a cota realmente aplica
-    // (achado do Codex Gate).
-    final displayedProLimit = quota.isPro ? quota.limit : _UpgradeContent._proLimit;
+    // Sempre usar o limite comercial canônico (300), nunca substituir pelo
+    // quota.limit do usuário: admins têm limit=99999, o que exibiria um valor
+    // enganoso no catálogo de planos. O limite real de cota do usuário já está
+    // visível no _UsageBanner; aqui o contexto é marketing/comparação de planos.
+    final displayedProLimit = _UpgradeContent._proLimit;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

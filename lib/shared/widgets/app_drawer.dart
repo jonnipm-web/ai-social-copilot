@@ -149,17 +149,20 @@ class _DrawerContent extends ConsumerWidget {
 
           // Itens de navegação — gerados a partir do Module Registry
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              children: [
-                for (final module in visibleModules)
-                  _NavItem(
-                    icon: _iconFor(module.moduleId),
-                    label: isEnglish ? module.nameEn : module.namePt,
-                    route: module.route!,
-                    current: current,
-                  ),
-              ],
+            child: Scrollbar(
+              thumbVisibility: true,
+              child: ListView(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                children: [
+                  for (final module in visibleModules)
+                    _NavItem(
+                      icon: _iconFor(module.moduleId),
+                      label: isEnglish ? module.nameEn : module.namePt,
+                      route: module.route!,
+                      current: current,
+                    ),
+                ],
+              ),
             ),
           ),
 

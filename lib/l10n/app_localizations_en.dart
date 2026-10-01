@@ -171,7 +171,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aboutTitle => 'About InsightValues';
 
   @override
-  String get aboutTagline => 'AI copilot for marketing and content strategy.';
+  String get aboutTagline => 'Strategic intelligence for founders and decision-makers.';
 
   @override
   String get aboutVersion => 'App version';
@@ -6390,6 +6390,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get uxKnowledgeActionTrainPersona => 'Train Persona';
+
+  @override
+  String get uxKnowledgeActionAskIve => 'Ask IVE';
+
+  @override
+  String uxKnowledgeAskIveMessage(String title) {
+    return 'Analyze the knowledge item "$title" and tell me how to apply the insights to the project strategy.';
+  }
 
   @override
   String get uxKnowledgeNoPersonas => 'No personas found. Create a persona first.';
