@@ -12,7 +12,11 @@ import '../../../l10n/app_localizations.dart';
 import '../../../providers/knowledge_provider.dart';
 import '../../../providers/persona_provider.dart';
 import '../../../providers/persona_training_provider.dart';
+import '../../../data/models/copilot_context_data.dart';
+import '../../../providers/ive_context_provider.dart';
 import '../../../shared/widgets/ai_execution_confirmation.dart';
+import '../../../shared/widgets/context_copilot_widget.dart'
+    show showCopilotChat, IveInlineAskPresence;
 import '../../../shared/widgets/translated_content_notice.dart';
 
 // IVE-COMMERCIAL-QUOTA-HARDENING-13 (Codex Gate 2 round-2 finding) — both
@@ -399,6 +403,34 @@ class _ActionButtons extends ConsumerWidget {
           label: l10n.uxKnowledgeActionTrainPersona,
           color: const Color(0xFFFF9800),
           onTap: () => _trainPersona(context, ref, personas),
+        ),
+        IveInlineAskPresence(
+          child: _ActionChip(
+            icon:  Icons.psychology_rounded,
+            label: l10n.uxKnowledgeActionAskIve,
+            color: const Color(0xFF6C63FF),
+            onTap: () {
+              final ctx = ref
+                  .read(iveContextDataProvider(item.projectId))
+                  .valueOrNull;
+              final contextData = ctx != null
+                  ? CopilotContextData.fromIveContext(ctx)
+                  : const CopilotContextData();
+              showCopilotChat(
+                context,
+                screenName: 'knowledge_vault',
+                contextData: contextData,
+                initialMessage: l10n.uxKnowledgeAskIveMessage(item.title),
+                request: IveInteractionRequest(
+                  projectId:        item.projectId,
+                  sourceModule:     'knowledge_vault',
+                  sourceEntityType: 'knowledge_item',
+                  sourceEntityId:   item.id,
+                  operationType:    IveOperationType.ask,
+                ),
+              );
+            },
+          ),
         ),
       ],
     );

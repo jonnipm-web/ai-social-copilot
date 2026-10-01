@@ -11286,6 +11286,18 @@ abstract class AppLocalizations {
   /// **'Treinar Persona'**
   String get uxKnowledgeActionTrainPersona;
 
+  /// No description provided for @uxKnowledgeActionAskIve.
+  ///
+  /// In pt, this message translates to:
+  /// **'Perguntar à IVE'**
+  String get uxKnowledgeActionAskIve;
+
+  /// No description provided for @uxKnowledgeAskIveMessage.
+  ///
+  /// In pt, this message translates to:
+  /// **'Analise o item de conhecimento "{title}" e me diga como aplicar os insights na estratégia do projeto.'**
+  String uxKnowledgeAskIveMessage(String title);
+
   /// No description provided for @uxKnowledgeNoPersonas.
   ///
   /// In pt, this message translates to:
