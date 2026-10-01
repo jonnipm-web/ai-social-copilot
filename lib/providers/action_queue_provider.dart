@@ -132,6 +132,24 @@ class ActionQueueNotifier
     }
   }
 
+  // FIX-005: semantically distinct from approve() — resets an executing
+  // action back to 'approved' so it can be re-executed without needing a
+  // fresh approval decision. Calling approve() here was the original bug.
+  Future<void> pause(String id, {String? title}) async {
+    try {
+      await _svc.updateStatus(id, 'approved');
+      await load(projectId: _activeProjectId);
+    } catch (e) {
+      IveEventBus.instance.emit(
+        IveEvent.actionMutationFailed(
+          actionTitle:    _titleOr(title),
+          technicalError: e.toString(),
+        ),
+      );
+      rethrow;
+    }
+  }
+
   Future<void> cancel(String id, {String? title}) async {
     try {
       await _svc.updateStatus(id, 'cancelled');

@@ -435,9 +435,44 @@ class _ActionButtons extends ConsumerWidget {
               final ctx = ref
                   .read(iveContextDataProvider(item.projectId))
                   .valueOrNull;
-              final contextData = ctx != null
+              final baseContext = ctx != null
                   ? CopilotContextData.fromIveContext(ctx)
                   : const CopilotContextData();
+              // FIX-004: enrich context with the analysis currently on screen
+              // so IVE can answer questions about summary, keywords, ideas, etc.
+              final contextData = CopilotContextData(
+                project:          baseContext.project,
+                scores:           baseContext.scores,
+                opportunities:    baseContext.opportunities,
+                actions:          baseContext.actions,
+                documents:        baseContext.documents,
+                personas:         baseContext.personas,
+                revenue:          baseContext.revenue,
+                market:           baseContext.market,
+                documentCoverage: baseContext.documentCoverage,
+                documentWarnings: baseContext.documentWarnings,
+                analysis: {
+                  'item_title':           item.title,
+                  if (analysis.summary != null) 'summary': analysis.summary,
+                  if (analysis.keywordsPrimary.isNotEmpty)    'keywords_primary':    analysis.keywordsPrimary,
+                  if (analysis.keywordsSecondary.isNotEmpty)  'keywords_secondary':  analysis.keywordsSecondary,
+                  if (analysis.keywordsLongtail.isNotEmpty)   'keywords_longtail':   analysis.keywordsLongtail,
+                  if (analysis.topics.isNotEmpty)             'topics':              analysis.topics,
+                  if (analysis.contentPillars.isNotEmpty)     'content_pillars':     analysis.contentPillars,
+                  if (analysis.audiencePainPoints.isNotEmpty) 'audience_pain_points': analysis.audiencePainPoints,
+                  if (analysis.audienceDesires.isNotEmpty)    'audience_desires':    analysis.audienceDesires,
+                  if (analysis.commercialAngles.isNotEmpty)   'commercial_angles':   analysis.commercialAngles,
+                  if (analysis.postIdeas.isNotEmpty)          'post_ideas':          analysis.postIdeas,
+                  if (analysis.campaignIdeas.isNotEmpty)      'campaign_ideas':      analysis.campaignIdeas,
+                  if (analysis.seoOpportunities.isNotEmpty)   'seo_opportunities':   analysis.seoOpportunities,
+                  'scores': {
+                    'seo':         analysis.scoreSeo,
+                    'social':      analysis.scoreSocial,
+                    'opportunity': analysis.scoreOpportunity,
+                    'linkedin':    analysis.scoreLinkedin,
+                  },
+                },
+              );
               showCopilotChat(
                 context,
                 screenName: 'knowledge_vault',

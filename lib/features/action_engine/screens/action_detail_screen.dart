@@ -124,6 +124,7 @@ class _StatusMenu extends StatelessWidget {
         }
         try {
           if (v == 'approve')  await notifier.approve(item.id,  title: item.title);
+          if (v == 'pause')    await notifier.pause(item.id,    title: item.title);
           if (v == 'cancel')   await notifier.cancel(item.id,   title: item.title);
           ref.invalidate(actionQueueItemByIdProvider(item.id));
           if (v == 'delete') {
@@ -171,7 +172,7 @@ class _StatusMenu extends StatelessWidget {
         if (item.status == 'executing') ...[
           PopupMenuItem(value: 'execute',
               child: Text(l10n.actionDetailRecheck, style: const TextStyle(color: _kCyan))),
-          PopupMenuItem(value: 'approve',
+          PopupMenuItem(value: 'pause',
               child: Text(l10n.actionEnginePause, style: const TextStyle(color: _kOrange))),
         ],
         if (item.status != 'completed' && item.status != 'cancelled')
@@ -879,7 +880,7 @@ class _StatusButtons extends StatelessWidget {
             icon: Icons.pause_rounded,
             color: _kOrange,
             outlined: true,
-            onTap: () => _run(context, () => n.approve(item.id, title: item.title)),
+            onTap: () => _run(context, () => n.pause(item.id, title: item.title)),
           ),
         ],
 

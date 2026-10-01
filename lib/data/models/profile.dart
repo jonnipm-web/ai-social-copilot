@@ -21,6 +21,9 @@ class Profile {
 
   bool get isAdmin      => role == 'admin';
   bool get isPro        => role == 'pro' || role == 'premium' || role == 'admin';
+  // Commercial plan check: excludes admin so plan-display surfaces do not
+  // label admin accounts as paying Pro subscribers.
+  bool get isCommercialPro => role == 'pro' || role == 'premium';
   bool get isPremium    => role == 'premium' || role == 'admin';
   bool get isBetaTester => role == 'beta_tester' || isAdmin;
   bool get canUseCalendar   => isPro;

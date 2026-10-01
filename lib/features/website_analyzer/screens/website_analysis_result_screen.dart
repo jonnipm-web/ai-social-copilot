@@ -1032,12 +1032,6 @@ class _BottomActionBar extends StatelessWidget {
                 label: l10n.websiteResultSeoPlan,
                 icon: Icons.search,
                 color: Colors.green,
-                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(l10n.websiteResultSeoPlanComingSoon),
-                    backgroundColor: Colors.green,
-                  ),
-                ),
               ),
             ),
             const SizedBox(width: 6),
@@ -1046,12 +1040,6 @@ class _BottomActionBar extends StatelessWidget {
                 label: l10n.websiteResultAdsensePlan,
                 icon: Icons.monetization_on,
                 color: Colors.amber,
-                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(l10n.websiteResultAdsensePlanComingSoon),
-                    backgroundColor: Colors.amber,
-                  ),
-                ),
               ),
             ),
           ],
@@ -1065,36 +1053,39 @@ class _ActionButton extends StatelessWidget {
   final String label;
   final IconData icon;
   final Color color;
-  final VoidCallback onTap;
+  // null = coming-soon / disabled state (visually muted, no tap)
+  final VoidCallback? onTap;
 
   const _ActionButton({
     required this.label,
     required this.icon,
     required this.color,
-    required this.onTap,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isDisabled = onTap == null;
+    final effectiveColor = isDisabled ? Colors.white24 : color;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.15),
+          color: effectiveColor.withOpacity(0.08),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withOpacity(0.4)),
+          border: Border.all(color: effectiveColor.withOpacity(0.25)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: color, size: 18),
+            Icon(icon, color: effectiveColor, size: 18),
             const SizedBox(height: 3),
             Text(
               label,
               style: TextStyle(
-                color: color,
+                color: effectiveColor,
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
               ),
