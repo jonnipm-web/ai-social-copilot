@@ -7467,6 +7467,24 @@ abstract class AppLocalizations {
   /// **'Gerar oportunidades, ações e plano de receita automaticamente'**
   String get projectCommandAutoBootstrapLabel;
 
+  /// No description provided for @projectCommandCreatedSuccess.
+  ///
+  /// In pt, this message translates to:
+  /// **'Projeto criado! Adicione fontes de conhecimento para enriquecer a análise.'**
+  String get projectCommandCreatedSuccess;
+
+  /// No description provided for @projectCommandAddSources.
+  ///
+  /// In pt, this message translates to:
+  /// **'Adicionar Fonte'**
+  String get projectCommandAddSources;
+
+  /// No description provided for @knowledgeAnalysisSummaryHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'Use estes insights para criar campanhas, treinar personas ou gerar estratégias de conteúdo.'**
+  String get knowledgeAnalysisSummaryHint;
+
   /// No description provided for @projectCommandStatusActive.
   ///
   /// In pt, this message translates to:
