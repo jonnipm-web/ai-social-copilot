@@ -18,4 +18,7 @@ class QuotaInfo {
   double get fractionUsed => limit <= 0 ? 1.0 : (used / limit).clamp(0.0, 1.0);
   bool get isPro => role == 'pro' || role == 'premium' || role == 'admin';
   bool get isAdmin => role == 'admin';
+  // Commercial plan check: excludes admin so the upgrade UI does not treat
+  // admin accounts as paying Pro subscribers.
+  bool get isCommercialPro => role == 'pro' || role == 'premium';
 }

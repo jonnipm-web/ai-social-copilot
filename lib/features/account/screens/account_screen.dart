@@ -75,9 +75,9 @@ class AccountScreen extends ConsumerWidget {
             ),
             error: (_, __) => const SizedBox.shrink(),
             data: (quota) => _PlanSection(
-              isPro: quota.isPro,
-              planLabel: quota.isPro ? t.planPro : t.planFree,
-              usageLabel: '${t.accountUsage}: ${quota.used} / ${quota.limit}',
+              isPro: quota.isCommercialPro,
+              planLabel: quota.isAdmin ? 'Admin' : (quota.isCommercialPro ? t.planPro : t.planFree),
+              usageLabel: '${t.accountUsage}: ${quota.used} / ${quota.isAdmin ? '99.999' : quota.limit}',
               ctaLabel: t.accountUpgradeManage,
               onTapCta: () => context.push(AppConstants.routeUpgrade),
             ),

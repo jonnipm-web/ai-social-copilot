@@ -85,7 +85,7 @@ class _UpgradeContentState extends ConsumerState<_UpgradeContent> {
           price: t.planFreePrice,
           period: '',
           isHighlighted: false,
-          isCurrentPlan: !quota.isPro,
+          isCurrentPlan: !quota.isCommercialPro && !quota.isAdmin,
           badge: null,
           features: [
             _Feature(t.planFreeAnalyses(_UpgradeContent._freeLimit), true),
@@ -95,7 +95,7 @@ class _UpgradeContentState extends ConsumerState<_UpgradeContent> {
             _Feature(t.upgradeFeaturePriority, false),
             _Feature(t.upgradeFeatureSupport, false),
           ],
-          buttonLabel: quota.isPro ? t.upgradePreviousPlan : t.planCurrentPlan,
+          buttonLabel: quota.isCommercialPro ? t.upgradePreviousPlan : t.planCurrentPlan,
           onPressed: null,
         ),
         const SizedBox(height: 16),
@@ -104,9 +104,9 @@ class _UpgradeContentState extends ConsumerState<_UpgradeContent> {
           subtitle: t.upgradeProSubtitle,
           price: t.planProPriceAmount,
           period: t.planProPricePeriod,
-          isHighlighted: !quota.isPro,
-          isCurrentPlan: quota.isPro,
-          badge: quota.isPro ? t.upgradeCurrentPlanBadge : t.upgradeMostPopular,
+          isHighlighted: !quota.isCommercialPro,
+          isCurrentPlan: quota.isCommercialPro,
+          badge: quota.isCommercialPro ? t.upgradeCurrentPlanBadge : t.upgradeMostPopular,
           features: [
             _Feature(t.planProAnalyses(displayedProLimit), true),
             _Feature(t.upgradeFeatureWebsiteAnalysis, true),
@@ -115,10 +115,10 @@ class _UpgradeContentState extends ConsumerState<_UpgradeContent> {
             _Feature(t.upgradeFeatureSupportEmail, true),
             _Feature(t.upgradeFeatureEarlyAccess, true),
           ],
-          buttonLabel: quota.isPro
+          buttonLabel: quota.isCommercialPro
               ? t.planCurrentPlan
               : (_isRedirecting ? t.checkoutOpening : t.upgradeSubscribeCta),
-          onPressed: quota.isPro || _isRedirecting ? null : _onUpgradeTap,
+          onPressed: quota.isCommercialPro || quota.isAdmin || _isRedirecting ? null : _onUpgradeTap,
         ),
         const SizedBox(height: 12),
         Text(
@@ -181,7 +181,7 @@ class _UsageBanner extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                quota.isAdmin ? '${quota.used} / ∞' : '${quota.used} / ${quota.limit}',
+                quota.isAdmin ? '${quota.used} / 99.999' : '${quota.used} / ${quota.limit}',
                 style: const TextStyle(
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
@@ -204,9 +204,9 @@ class _UsageBanner extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             quota.isAdmin
-                ? t.upgradeAnalysesRemaining(remaining, t.planPro)
+                ? t.upgradeAnalysesRemaining(remaining, 'Admin')
                 : (remaining > 0
-                    ? t.upgradeAnalysesRemaining(remaining, quota.isPro ? t.planPro : t.planFree)
+                    ? t.upgradeAnalysesRemaining(remaining, quota.isCommercialPro ? t.planPro : t.planFree)
                     : t.upgradeUsedAllAnalyses),
             style: TextStyle(
               fontSize: 12,
