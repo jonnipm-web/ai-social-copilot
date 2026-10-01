@@ -264,9 +264,9 @@ All P1 and P2 code-fixable findings have been resolved. Two owner-only release b
 | FIX-003_v1_SHA | 41dc6d8 (isAdmin getter + ∞ display — semantic bug) |
 | FIX-003_v2_SHA | a367f8d (isCommercialPro separation — semantic correction) |
 | FIX-004_VALIDATED | ✅ — analysis map + identity fields confirmed in source |
-| CI_LAST_RESULT | PENDING (a367f8d push — awaiting run) |
-| MERGE_TO_MAIN_SHA | — (pending CI green) |
-| APK_SOURCE_SHA | — (pending merge) |
+| CI_LAST_RESULT | ✅ SUCCESS — job #110412084416, 8m42s, 2026-10-01T14:24:59Z |
+| MERGE_TO_MAIN_SHA | f9797d46 (2026-10-01T14:~27Z) |
+| APK_SOURCE_SHA | f9797d46 (use this SHA for QA APK build) |
 | APK_SHA256 | — (pending build) |
 | NOTE20_INSTALL_STATUS | BLOCKED — ADB not available in cloud container |
 | OB-04_MAILBOX | UNCONFIRMED — owner action required |
