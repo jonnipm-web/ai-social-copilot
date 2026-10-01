@@ -82,11 +82,12 @@ class IntelligenceDebugHubScreen extends ConsumerWidget {
     // caso teórico de um AsyncError reter um valor admin anterior.
     final isAdmin = profileAsync.hasValue && !profileAsync.hasError && (profileAsync.value?.isAdmin ?? false);
     if (!isAdmin) {
+      final t = AppLocalizations.of(context)!;
       return Scaffold(
-        appBar: AppBar(title: const Text('Acesso Negado')),
-        body: const Center(
-          child: Text('Você não tem permissão para acessar esta área.',
-              style: TextStyle(color: Colors.white54)),
+        appBar: AppBar(title: Text(t.uxAdminAccessDeniedTitle)),
+        body: Center(
+          child: Text(t.uxAdminAccessDeniedBody,
+              style: const TextStyle(color: Colors.white54)),
         ),
       );
     }

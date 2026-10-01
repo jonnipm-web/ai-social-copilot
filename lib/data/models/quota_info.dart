@@ -17,4 +17,5 @@ class QuotaInfo {
   bool get isExhausted => used >= limit;
   double get fractionUsed => limit <= 0 ? 1.0 : (used / limit).clamp(0.0, 1.0);
   bool get isPro => role == 'pro' || role == 'premium' || role == 'admin';
+  bool get isAdmin => role == 'admin';
 }

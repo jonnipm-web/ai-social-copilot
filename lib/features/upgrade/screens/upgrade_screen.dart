@@ -181,7 +181,7 @@ class _UsageBanner extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                '${quota.used} / ${quota.limit}',
+                quota.isAdmin ? '${quota.used} / ∞' : '${quota.used} / ${quota.limit}',
                 style: const TextStyle(
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
@@ -203,12 +203,14 @@ class _UsageBanner extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            remaining > 0
-                ? t.upgradeAnalysesRemaining(remaining, quota.isPro ? t.planPro : t.planFree)
-                : t.upgradeUsedAllAnalyses,
+            quota.isAdmin
+                ? t.upgradeAnalysesRemaining(remaining, t.planPro)
+                : (remaining > 0
+                    ? t.upgradeAnalysesRemaining(remaining, quota.isPro ? t.planPro : t.planFree)
+                    : t.upgradeUsedAllAnalyses),
             style: TextStyle(
               fontSize: 12,
-              color: remaining > 0 ? Colors.white54 : Colors.red.shade300,
+              color: remaining > 0 || quota.isAdmin ? Colors.white54 : Colors.red.shade300,
             ),
           ),
         ],

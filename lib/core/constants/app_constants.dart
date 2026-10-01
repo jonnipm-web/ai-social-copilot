@@ -11,7 +11,10 @@ class AppConstants {
   // checado antes desta missão. Mesma ordem de grandeza do teto efetivo já
   // usado no process-file (MAX_BASE64_LENGTH=8MB base64 ≈ 6MB decodificado).
   static const maxLocalImportBytes = 6 * 1024 * 1024;
-  static const freeTierLimit = 9999;
+  // FIX-008: was 9999 (stale placeholder). Mirrors planLimits['free'] = 15
+  // below. Used as a UI fallback when quota hasn't loaded yet — a stale
+  // 9999 would allow 9999 analyses client-side before the real gate fires.
+  static const freeTierLimit = 15;
   static const maxBodyWidth = 700.0;
 
   // Limites por papel -- deve espelhar exatamente os valores usados pelo

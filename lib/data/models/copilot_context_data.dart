@@ -14,6 +14,11 @@ class CopilotContextData {
   final Map<String, dynamic>? documentCoverage;
   // Avisos de grounding enviados ao LLM para instrução de honestidade epistêmica
   final List<String> documentWarnings;
+  // Análise detalhada do item de conhecimento atualmente visualizado (FIX-004).
+  // Presente apenas quando o chat é aberto a partir de uma tela de análise;
+  // nulo nos demais contextos. O backend usa este bloco para responder
+  // perguntas sobre o conteúdo analisado sem precisar buscá-lo novamente.
+  final Map<String, dynamic>? analysis;
 
   // IVE-COMMERCIAL-FOUNDATION-11 (Project Context Contract, Phase A) —
   // identity fields. Before this mission this class had NONE of these —
@@ -41,6 +46,7 @@ class CopilotContextData {
     this.market,
     this.documentCoverage,
     this.documentWarnings   = const [],
+    this.analysis,
     this.projectId,
     this.sourceModule,
     this.sourceEntityType,
@@ -63,6 +69,7 @@ class CopilotContextData {
         market:            market,
         documentCoverage:  documentCoverage,
         documentWarnings:  documentWarnings,
+        analysis:          analysis,
         projectId:         request.projectId,
         sourceModule:      request.sourceModule,
         sourceEntityType:  request.sourceEntityType,
@@ -134,6 +141,7 @@ class CopilotContextData {
     if (market       != null) 'market':        market,
     if (documentCoverage != null)         'document_coverage':  documentCoverage,
     if (documentWarnings.isNotEmpty)      'document_warnings':  documentWarnings,
+    if (analysis != null)                 'analysis':           analysis,
     if (projectId != null || sourceModule != null || sourceEntityType != null ||
         sourceEntityId != null || correlationId != null)
       'identity': {
