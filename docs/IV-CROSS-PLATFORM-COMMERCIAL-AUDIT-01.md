@@ -254,19 +254,138 @@ All P1 and P2 code-fixable findings have been resolved. Two owner-only release b
 
 ---
 
-## §13 — INTEGRATION STATUS (live, updated each CI push)
+## §13 — FINAL INTEGRATION REGISTER (sealed 2026-10-01)
 
 | Item | Value |
 |------|-------|
 | BASE_MAIN_SHA | c8d1b698 |
 | PR_BRANCH | `iv-cross-platform-audit-01` |
-| PR_NUMBER | #111 |
-| FIX-003_v1_SHA | 41dc6d8 (isAdmin getter + ∞ display — semantic bug) |
-| FIX-003_v2_SHA | a367f8d (isCommercialPro separation — semantic correction) |
-| FIX-004_VALIDATED | ✅ — analysis map + identity fields confirmed in source |
+| PR_NUMBER | #111 (MERGED) |
+| FIX-003_v1_SHA | 41dc6d8 |
+| FIX-003_v2_SHA | a367f8d |
+| FIX-004_VALIDATED | ✅ analysis map + identity fields confirmed in source |
 | CI_LAST_RESULT | ✅ SUCCESS — job #110412084416, 8m42s, 2026-10-01T14:24:59Z |
-| MERGE_TO_MAIN_SHA | f9797d46 (2026-10-01T14:~27Z) |
-| APK_SOURCE_SHA | f9797d46 (use this SHA for QA APK build) |
-| APK_SHA256 | — (pending build) |
-| NOTE20_INSTALL_STATUS | BLOCKED — ADB not available in cloud container |
-| OB-04_MAILBOX | UNCONFIRMED — owner action required |
+| LATEST_TECHNICAL_MERGE_SHA | f9797d46 |
+| CANONICAL_MAIN_SHA | 2897d7d237ea1b351a1771adf59df9128a5ebf18 |
+| CODEX_FINAL_AUDIT | CODEX_UNAVAILABLE — independent audit not run; manual static analysis performed by primary executor; finding: no regressions detected |
+| FLUTTER_BUILD_ENV | UNAVAILABLE in cloud container — local build required |
+| WEB_BUILD | NOT RUN — Flutter not installed in cloud |
+| APK_BUILD | NOT RUN — Flutter not installed in cloud |
+| APK_SOURCE_SHA | 2897d7d237ea1b351a1771adf59df9128a5ebf18 (canonical main) |
+| APK_SHA256 | PENDING OWNER BUILD |
+| APK_PACKAGE | ai.insightvalues.app (assumed — confirm in pubspec.yaml) |
+| NOTE20_INSTALL_STATUS | PENDING — ADB not available in cloud; see §14 for manual steps |
+| EXTERNAL_URL_CHECK | BLOCKED — network egress not available in cloud; see §14 |
+| OB-01_STATUS | ❌ RELEASE BLOCKER — privacyPolicyUrl = null |
+| OB-02_STATUS | ❌ RELEASE BLOCKER — termsOfUseUrl = null |
+| OB-03_STATUS | ⚠️ LOW — officialWebsiteUrl = legacy GitHub Pages |
+| OB-04_STATUS | ⚠️ UNCONFIRMED — supportEmail typo: `insigth` vs `insight` |
+| TRACK_A_STATUS | PENDING OWNER PHYSICAL VALIDATION |
+| FINAL_VERDICT | READY_FOR_OWNER_PHYSICAL_VALIDATION |
+
+---
+
+## §14 — OWNER ACTION ITEMS (required before CROSS_PLATFORM_RELEASE_READY)
+
+### 14.1 — APK QA Build (OWNER executes)
+
+Flutter is not installed in the cloud container. Owner must build locally from canonical main.
+
+```bash
+# 1. Pull canonical main
+git fetch origin && git checkout main && git pull origin main
+# Confirm: git log --oneline -1 → 2897d7d
+
+# 2. Build debug APK for QA
+flutter clean && flutter pub get
+flutter build apk --debug
+
+# 3. Record provenance
+sha256sum build/app/outputs/flutter-apk/app-debug.apk
+git rev-parse HEAD
+
+# 4. Install on Note 20 (RXCR70003HN)
+adb devices   # confirm device connected
+adb install -r build/app/outputs/flutter-apk/app-debug.apk
+adb shell pm list packages | grep insight   # confirm installed
+
+# 5. Record and fill in §13:
+#   APK_SHA256: <sha256 from step 3>
+#   APK_SOURCE_SHA: <git rev-parse from step 3>
+#   NOTE20_INSTALL_STATUS: INSTALLED / FAILED
+```
+
+### 14.2 — Track A Physical Validation Checklist (10–15 min)
+
+Test ONLY changed surfaces. Do not re-test unchanged modules.
+
+```
+UPGRADE SCREEN — ADMIN ACCOUNT
+[ ] 1a. Banner shows "X / 99.999" (not "∞" and not "0 / 99999")
+[ ] 1b. Free plan card: no "Plano Atual" badge; button disabled
+[ ] 1c. Pro plan card: shows "Mais Popular" badge (NOT "Plano Atual")
+[ ] 1d. Pro plan card: Upgrade button is disabled (grey, no tap)
+[ ] 1e. Account screen: shows "Admin" label + shield/card icon (not gold star)
+
+UPGRADE SCREEN — FREE ACCOUNT
+[ ] 2a. Banner shows "X / 15" used/limit, remaining text correct
+[ ] 2b. Free plan card shows "Plano Atual"
+[ ] 2c. Pro plan card: Upgrade button is active and tappable
+
+KNOWLEDGE ANALYSIS → ASK IVE
+[ ] 3a. Open a Knowledge item that has been analyzed
+[ ] 3b. Tap "Ask IVE" action button
+[ ] 3c. Ask: "Quais são as principais palavras-chave deste documento?"
+       Expected: IVE answers using actual keywords from THIS analysis
+       (not generic — must name specific keywords from the analysis on screen)
+
+NAVIGATION DRAWER (Note 20)
+[ ] 4a. All settings items visible without scrolling
+       (Upgrade / Account / Support / About / Admin visible together)
+
+WEBSITE ANALYZER
+[ ] 5a. Open any Website Analysis result
+[ ] 5b. "SEO Plan" and "AdSense Plan" buttons appear muted/grey
+       (no color border, no tap ripple — clearly disabled)
+
+ACTION ENGINE (requires dev feature flag ON)
+[ ] 6a. Set feature_flags.action_engine_enabled = true in Supabase for test account
+[ ] 6b. Find an item in EXECUTING status
+[ ] 6c. Tap "Pause" → item status returns to APPROVED
+       (no "approve" dialog, no status = 'approved pending confirmation')
+
+R16 SPOT-CHECK
+[ ] 7a. Set device locale to English
+[ ] 7b. Trigger Debug Hub access with non-admin account
+       Expected: "Access Denied" / "You don't have permission to access this area."
+[ ] 7c. Set back to Portuguese → same screen shows Portuguese
+
+ABOUT / LEGAL LINKS
+[ ] 8a. Open About screen
+[ ] 8b. Note current state of Privacy Policy link (active / "owner config required")
+[ ] 8c. Note current state of Terms of Use link (active / "owner config required")
+[ ] 8d. Note current state of Website link destination
+```
+
+### 14.3 — Owner Blockers (resolve before release)
+
+| # | Item | Required Action |
+|---|------|----------------|
+| OB-01 | `privacyPolicyUrl = null` | Create Privacy Policy page (insightvalues.com/privacy or equivalent). Set URL in `lib/core/constants/app_constants.dart`. Must be reachable via HTTPS. |
+| OB-02 | `termsOfUseUrl = null` | Same — Terms of Use page. |
+| OB-03 | `officialWebsiteUrl = 'https://jonnipm-web.github.io/ai-social-copilot/'` | If insightvalues.com is the real domain, update to `'https://insightvalues.com'`. Verify domain is live first. |
+| OB-04 | `supportEmail = 'suporte@insigthvalues.com'` | Confirm this mailbox receives email. If the domain is `insightvalues.com` (not `insigthvalues.com`), fix the typo and update the constant. |
+
+When OB-01 and OB-02 are resolved, update `lib/core/constants/app_constants.dart`, run CI, and merge to main. That is the final code gate before production deploy.
+
+### 14.4 — External URL Verification (OWNER performs)
+
+Check these URLs in a browser. Report results to update OB-03/OB-04:
+
+```
+[ ] https://insightvalues.com          → live? (expected 200)
+[ ] https://insightvalues.com/privacy  → exists? (any 200 URL acceptable)
+[ ] https://insightvalues.com/terms    → exists?
+[ ] https://jonnipm-web.github.io/ai-social-copilot/  → legacy app (confirm still up)
+[ ] Send test email to suporte@insigthvalues.com → bounces or delivers?
+```
