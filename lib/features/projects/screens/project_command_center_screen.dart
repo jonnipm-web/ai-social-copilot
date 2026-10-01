@@ -101,6 +101,25 @@ class _ProjectCommandCenterScreenState
       _descCtrl.clear();
       _urlCtrl.clear();
       setState(() { _showForm = false; _type = 'website'; });
+      if (mounted) {
+        final t = AppLocalizations.of(context)!;
+        final pid = project.id;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(t.projectCommandCreatedSuccess),
+            backgroundColor: const Color(0xFF6BCB77),
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: t.projectCommandAddSources,
+              textColor: Colors.white,
+              onPressed: () => context.push(
+                AppConstants.routeKnowledgeNew,
+                extra: {'projectId': pid},
+              ),
+            ),
+          ),
+        );
+      }
       if (mounted) _maybeOfferAutoBootstrap(project);
     } catch (e) {
       if (mounted) {

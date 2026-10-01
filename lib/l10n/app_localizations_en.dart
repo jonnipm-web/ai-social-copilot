@@ -4203,6 +4203,17 @@ class AppLocalizationsEn extends AppLocalizations {
       'Automatically generate opportunities, actions, and revenue plan';
 
   @override
+  String get projectCommandCreatedSuccess =>
+      'Project created! Add knowledge sources to enrich the analysis.';
+
+  @override
+  String get projectCommandAddSources => 'Add Source';
+
+  @override
+  String get knowledgeAnalysisSummaryHint =>
+      'Use these insights to create campaigns, train personas, or generate content strategies.';
+
+  @override
   String get projectCommandStatusActive => 'Active';
 
   @override

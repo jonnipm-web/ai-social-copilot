@@ -222,141 +222,163 @@ class _AnalysisContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
+    // F: INFORMATION → EXPLANATION → CONTEXTUAL ACTION (sticky bottom)
+    // Action buttons pinned at bottom so they are always reachable on mobile
+    // regardless of scroll position. Secondary content sections (ideas,
+    // angles, CTAs) are collapsed by default to reduce cognitive load.
+    return Column(
       children: [
-        _ItemHeader(item: item),
-        const SizedBox(height: 12),
-        TranslatedContentNotice(localizedFrom: analysis.localizedFrom),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            children: [
+              // ── INFORMATION ─────────────────────────────────
+              _ItemHeader(item: item),
+              const SizedBox(height: 12),
+              TranslatedContentNotice(localizedFrom: analysis.localizedFrom),
 
-        // Botões de ação
-        _ActionButtons(item: item, analysis: analysis),
-        const SizedBox(height: 16),
+              if (analysis.scoreOpportunity > 0) ...[
+                _OpportunityScoreCard(score: analysis.scoreOpportunity),
+                const SizedBox(height: 16),
+              ],
 
-        // Opportunity Score
-        if (analysis.scoreOpportunity > 0) ...[
-          _OpportunityScoreCard(score: analysis.scoreOpportunity),
-          const SizedBox(height: 16),
-        ],
+              if (analysis.summary != null) ...[
+                _SectionTitle(l10n.knowledgeAnalysisSectionSummary),
+                _SummaryCard(analysis.summary!),
+                const SizedBox(height: 16),
+              ],
 
-        if (analysis.summary != null) ...[
-          _SectionTitle(l10n.knowledgeAnalysisSectionSummary),
-          _SummaryCard(analysis.summary!),
-          const SizedBox(height: 16),
-        ],
+              // ── EXPLANATION ─────────────────────────────────
+              _SectionTitle(l10n.knowledgeAnalysisSectionChannelScores),
+              const SizedBox(height: 8),
+              _ScoreGrid(analysis: analysis),
+              const SizedBox(height: 16),
 
-        _SectionTitle(l10n.knowledgeAnalysisSectionChannelScores),
-        const SizedBox(height: 8),
-        _ScoreGrid(analysis: analysis),
-        const SizedBox(height: 16),
+              _SectionTitle(l10n.knowledgeAnalysisSectionKeywords),
+              const SizedBox(height: 8),
+              if (analysis.keywordsPrimary.isNotEmpty)
+                _ChipSection(l10n.knowledgeAnalysisKeywordsPrimary, analysis.keywordsPrimary,
+                    const Color(0xFF6C63FF)),
+              if (analysis.keywordsSecondary.isNotEmpty)
+                _ChipSection(l10n.knowledgeAnalysisKeywordsSecondary, analysis.keywordsSecondary,
+                    const Color(0xFF00BCD4)),
+              if (analysis.keywordsLongtail.isNotEmpty)
+                _ChipSection(l10n.knowledgeAnalysisKeywordsLongtail, analysis.keywordsLongtail,
+                    const Color(0xFF4CAF50)),
+              const SizedBox(height: 8),
 
-        _SectionTitle(l10n.knowledgeAnalysisSectionKeywords),
-        const SizedBox(height: 8),
-        if (analysis.keywordsPrimary.isNotEmpty)
-          _ChipSection(l10n.knowledgeAnalysisKeywordsPrimary, analysis.keywordsPrimary,
-              const Color(0xFF6C63FF)),
-        if (analysis.keywordsSecondary.isNotEmpty)
-          _ChipSection(l10n.knowledgeAnalysisKeywordsSecondary, analysis.keywordsSecondary,
-              const Color(0xFF00BCD4)),
-        if (analysis.keywordsLongtail.isNotEmpty)
-          _ChipSection(l10n.knowledgeAnalysisKeywordsLongtail, analysis.keywordsLongtail,
-              const Color(0xFF4CAF50)),
-        const SizedBox(height: 8),
+              if (analysis.audiencePainPoints.isNotEmpty) ...[
+                _SectionTitle(l10n.knowledgeAnalysisSectionAudiencePainPoints),
+                _ListCards(analysis.audiencePainPoints,
+                    Icons.sentiment_dissatisfied_rounded, const Color(0xFFF44336)),
+                const SizedBox(height: 12),
+              ],
+              if (analysis.audienceDesires.isNotEmpty) ...[
+                _SectionTitle(l10n.knowledgeAnalysisSectionAudienceDesires),
+                _ListCards(analysis.audienceDesires, Icons.favorite_rounded,
+                    const Color(0xFFE91E63)),
+                const SizedBox(height: 12),
+              ],
 
-        if (analysis.audiencePainPoints.isNotEmpty) ...[
-          _SectionTitle(l10n.knowledgeAnalysisSectionAudiencePainPoints),
-          _ListCards(analysis.audiencePainPoints,
-              Icons.sentiment_dissatisfied_rounded, const Color(0xFFF44336)),
-          const SizedBox(height: 12),
-        ],
-        if (analysis.audienceDesires.isNotEmpty) ...[
-          _SectionTitle(l10n.knowledgeAnalysisSectionAudienceDesires),
-          _ListCards(analysis.audienceDesires, Icons.favorite_rounded,
-              const Color(0xFFE91E63)),
-          const SizedBox(height: 12),
-        ],
+              if (analysis.contentPillars.isNotEmpty) ...[
+                _SectionTitle(l10n.knowledgeAnalysisSectionContentPillars),
+                _ChipSection('', analysis.contentPillars, const Color(0xFFFF9800)),
+                const SizedBox(height: 8),
+              ],
+              if (analysis.topics.isNotEmpty) ...[
+                _SectionTitle(l10n.knowledgeAnalysisSectionTopics),
+                _ChipSection('', analysis.topics, const Color(0xFF9C27B0)),
+                const SizedBox(height: 8),
+              ],
 
-        if (analysis.contentPillars.isNotEmpty) ...[
-          _SectionTitle(l10n.knowledgeAnalysisSectionContentPillars),
-          _ChipSection('', analysis.contentPillars, const Color(0xFFFF9800)),
-          const SizedBox(height: 8),
-        ],
-        if (analysis.topics.isNotEmpty) ...[
-          _SectionTitle(l10n.knowledgeAnalysisSectionTopics),
-          _ChipSection('', analysis.topics, const Color(0xFF9C27B0)),
-          const SizedBox(height: 8),
-        ],
+              // Secondary idea sections — collapsed by default on mobile
+              if (analysis.postIdeas.isNotEmpty)
+                _CollapsibleSection(
+                  title: l10n.knowledgeAnalysisSectionPostIdeas,
+                  icon: Icons.chat_bubble_outline_rounded,
+                  color: const Color(0xFF00BCD4),
+                  child: _ListCards(analysis.postIdeas,
+                      Icons.chat_bubble_outline_rounded, const Color(0xFF00BCD4)),
+                ),
+              if (analysis.campaignIdeas.isNotEmpty)
+                _CollapsibleSection(
+                  title: l10n.knowledgeAnalysisSectionCampaignIdeas,
+                  icon: Icons.campaign_rounded,
+                  color: const Color(0xFFFF9800),
+                  child: _ListCards(analysis.campaignIdeas, Icons.campaign_rounded,
+                      const Color(0xFFFF9800)),
+                ),
+              if (analysis.articleIdeas.isNotEmpty)
+                _CollapsibleSection(
+                  title: l10n.knowledgeAnalysisSectionArticleIdeas,
+                  icon: Icons.article_rounded,
+                  color: const Color(0xFF4CAF50),
+                  child: _ListCards(analysis.articleIdeas, Icons.article_rounded,
+                      const Color(0xFF4CAF50)),
+                ),
+              if (analysis.commercialAngles.isNotEmpty)
+                _CollapsibleSection(
+                  title: l10n.knowledgeAnalysisSectionCommercialAngles,
+                  icon: Icons.monetization_on_rounded,
+                  color: const Color(0xFFFFD700),
+                  child: _ListCards(analysis.commercialAngles,
+                      Icons.monetization_on_rounded, const Color(0xFFFFD700)),
+                ),
+              if (analysis.ctas.isNotEmpty)
+                _CollapsibleSection(
+                  title: l10n.knowledgeAnalysisSectionCtas,
+                  icon: Icons.ads_click_rounded,
+                  color: const Color(0xFFFFD700),
+                  child: _ChipSection('', analysis.ctas, const Color(0xFFFFD700)),
+                ),
 
-        if (analysis.postIdeas.isNotEmpty) ...[
-          _SectionTitle(l10n.knowledgeAnalysisSectionPostIdeas),
-          _ListCards(analysis.postIdeas, Icons.chat_bubble_outline_rounded,
-              const Color(0xFF00BCD4)),
-          const SizedBox(height: 12),
-        ],
-        if (analysis.campaignIdeas.isNotEmpty) ...[
-          _SectionTitle(l10n.knowledgeAnalysisSectionCampaignIdeas),
-          _ListCards(analysis.campaignIdeas, Icons.campaign_rounded,
-              const Color(0xFFFF9800)),
-          const SizedBox(height: 12),
-        ],
-        if (analysis.articleIdeas.isNotEmpty) ...[
-          _SectionTitle(l10n.knowledgeAnalysisSectionArticleIdeas),
-          _ListCards(analysis.articleIdeas, Icons.article_rounded,
-              const Color(0xFF4CAF50)),
-          const SizedBox(height: 12),
-        ],
+              if (analysis.seoOpportunities.isNotEmpty) ...[
+                _SectionTitle(l10n.knowledgeAnalysisSectionSeoOpportunities),
+                _ListCards(analysis.seoOpportunities, Icons.search_rounded,
+                    const Color(0xFF4CAF50)),
+                const SizedBox(height: 12),
+              ],
+              if (analysis.adsenseOpportunities.isNotEmpty) ...[
+                _SectionTitle(l10n.knowledgeAnalysisSectionAdsenseOpportunities),
+                _ListCards(analysis.adsenseOpportunities, Icons.attach_money_rounded,
+                    const Color(0xFF8BC34A)),
+                const SizedBox(height: 12),
+              ],
+              if (analysis.amazonKdpOpportunities.isNotEmpty) ...[
+                _SectionTitle(l10n.knowledgeAnalysisSectionAmazonKdpOpportunities),
+                _ListCards(analysis.amazonKdpOpportunities, Icons.book_rounded,
+                    const Color(0xFFFF5722)),
+                const SizedBox(height: 12),
+              ],
 
-        if (analysis.commercialAngles.isNotEmpty) ...[
-          _SectionTitle(l10n.knowledgeAnalysisSectionCommercialAngles),
-          _ListCards(analysis.commercialAngles, Icons.monetization_on_rounded,
-              const Color(0xFFFFD700)),
-          const SizedBox(height: 12),
-        ],
-        if (analysis.ctas.isNotEmpty) ...[
-          _SectionTitle(l10n.knowledgeAnalysisSectionCtas),
-          _ChipSection('', analysis.ctas, const Color(0xFFFFD700)),
-          const SizedBox(height: 8),
-        ],
+              if (analysis.scoreHotmart > 0 || analysis.hotmartData.isNotEmpty) ...[
+                _SectionTitle(l10n.knowledgeAnalysisSectionHotmartEngine),
+                _HotmartCard(score: analysis.scoreHotmart, data: analysis.hotmartData),
+                const SizedBox(height: 12),
+              ],
+              if (analysis.scoreShopify > 0 || analysis.shopifyData.isNotEmpty) ...[
+                _SectionTitle(l10n.knowledgeAnalysisSectionShopifyEngine),
+                _ShopifyCard(score: analysis.scoreShopify, data: analysis.shopifyData),
+                const SizedBox(height: 12),
+              ],
 
-        if (analysis.seoOpportunities.isNotEmpty) ...[
-          _SectionTitle(l10n.knowledgeAnalysisSectionSeoOpportunities),
-          _ListCards(analysis.seoOpportunities, Icons.search_rounded,
-              const Color(0xFF4CAF50)),
-          const SizedBox(height: 12),
-        ],
-        if (analysis.adsenseOpportunities.isNotEmpty) ...[
-          _SectionTitle(l10n.knowledgeAnalysisSectionAdsenseOpportunities),
-          _ListCards(analysis.adsenseOpportunities, Icons.attach_money_rounded,
-              const Color(0xFF8BC34A)),
-          const SizedBox(height: 12),
-        ],
-        if (analysis.amazonKdpOpportunities.isNotEmpty) ...[
-          _SectionTitle(l10n.knowledgeAnalysisSectionAmazonKdpOpportunities),
-          _ListCards(analysis.amazonKdpOpportunities, Icons.book_rounded,
-              const Color(0xFFFF5722)),
-          const SizedBox(height: 12),
-        ],
+              if (analysis.scoreDetails.isNotEmpty) ...[
+                _SectionTitle(l10n.knowledgeAnalysisSectionChannelDetails),
+                _ScoreDetailsSection(analysis.scoreDetails),
+              ],
+            ],
+          ),
+        ),
 
-        // Hotmart
-        if (analysis.scoreHotmart > 0 || analysis.hotmartData.isNotEmpty) ...[
-          _SectionTitle(l10n.knowledgeAnalysisSectionHotmartEngine),
-          _HotmartCard(
-              score: analysis.scoreHotmart, data: analysis.hotmartData),
-          const SizedBox(height: 12),
-        ],
-
-        // Shopify
-        if (analysis.scoreShopify > 0 || analysis.shopifyData.isNotEmpty) ...[
-          _SectionTitle(l10n.knowledgeAnalysisSectionShopifyEngine),
-          _ShopifyCard(
-              score: analysis.scoreShopify, data: analysis.shopifyData),
-          const SizedBox(height: 12),
-        ],
-
-        if (analysis.scoreDetails.isNotEmpty) ...[
-          _SectionTitle(l10n.knowledgeAnalysisSectionChannelDetails),
-          _ScoreDetailsSection(analysis.scoreDetails),
-        ],
+        // ── CONTEXTUAL ACTION (sticky) ───────────────────────
+        Container(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          decoration: const BoxDecoration(
+            color: Color(0xFF0F0F1A),
+            border: Border(top: BorderSide(color: Color(0xFF1A1A2E))),
+          ),
+          child: _ActionButtons(item: item, analysis: analysis),
+        ),
       ],
     );
   }
@@ -876,6 +898,70 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
+// I: Collapsed secondary section with expand/collapse for mobile UX
+class _CollapsibleSection extends StatefulWidget {
+  const _CollapsibleSection({
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.child,
+  });
+
+  final String   title;
+  final IconData icon;
+  final Color    color;
+  final Widget   child;
+
+  @override
+  State<_CollapsibleSection> createState() => _CollapsibleSectionState();
+}
+
+class _CollapsibleSectionState extends State<_CollapsibleSection> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: () => setState(() => _expanded = !_expanded),
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              children: [
+                Icon(widget.icon, size: 16, color: widget.color),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    widget.title,
+                    style: TextStyle(
+                      color: widget.color,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Icon(
+                  _expanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                  color: Colors.white38,
+                  size: 18,
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (_expanded) ...[
+          widget.child,
+          const SizedBox(height: 12),
+        ],
+      ],
+    );
+  }
+}
+
+// I: Summary/Synopsis card with contextual usage hint
 class _SummaryCard extends StatelessWidget {
   const _SummaryCard(this.summary);
 
@@ -883,6 +969,7 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
@@ -890,9 +977,32 @@ class _SummaryCard extends StatelessWidget {
         color: const Color(0xFF1A1A2E),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Text(summary,
-          style: const TextStyle(
-              color: Colors.white70, fontSize: 13, height: 1.5)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(summary,
+              style: const TextStyle(
+                  color: Colors.white70, fontSize: 13, height: 1.5)),
+          const SizedBox(height: 10),
+          const Divider(color: Color(0xFF2A2A3E), height: 1),
+          const SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.lightbulb_outline_rounded,
+                  size: 13, color: Color(0xFFFFD700)),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  l10n.knowledgeAnalysisSummaryHint,
+                  style: const TextStyle(
+                      color: Colors.white38, fontSize: 11, height: 1.4),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
