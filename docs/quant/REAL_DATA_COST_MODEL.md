@@ -1,8 +1,8 @@
 # InsightValues Quant — Real Data Cost Model
 # IV-QUANT-LICENSED-PROVIDER-PILOT-04
 
-**Date:** 2026-10-02  
-**Scope:** Databento DBEQ.BASIC; usage-based pricing as of 2026-10-02.  
+**Date:** 2026-10-03 (updated from 2026-10-02)  
+**Scope:** Databento EQUS.SUMMARY (replaces deprecated DBEQ.BASIC — EV-DB-01); usage-based pricing as of 2026-10-03.  
 **All figures are estimates only — not quotes. Verify at https://databento.com/pricing.**
 
 ---
