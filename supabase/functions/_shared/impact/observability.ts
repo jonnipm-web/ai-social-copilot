@@ -40,6 +40,18 @@ const ALLOWED: Readonly<Record<string, 'id' | 'count' | 'code'>> = {
   dossier_status: 'code',
   rate_bucket: 'code',
   reverification_count: 'count',
+  // I7 Trust + Egress + AEF (ids / codes only — never content, user data or secrets)
+  service_id: 'code',
+  aef_request_id: 'id',
+  aef_intent_kind: 'code',
+  aef_policy_outcome: 'code',
+  aef_execution_outcome: 'code',
+  aef_classification: 'code',
+  aef_gate_id: 'id',
+  egress_purpose: 'code',
+  egress_outcome: 'code',
+  egress_status_code: 'count',
+  trust_outcome: 'code',
 };
 
 /** Safe registry event names (mission §76). */
