@@ -1,5 +1,7 @@
 /**
  * Impact error contract — IV-IMPACT-FOUNDATION-01.
+ * I7: PROJECT_SCOPE_VIOLATION, EGRESS_DENIED, FETCH_TIMEOUT, HUMAN_GATE_INVALID,
+ *     IDEMPOTENCY_CONFLICT, AEF_PERSISTENCE_UNAVAILABLE added.
  *
  * `code` is the logical contract (stable, machine-readable). `message` is a
  * human-readable hint for logs only and is NOT part of the contract: callers
@@ -44,6 +46,13 @@ export type ImpactErrorCode =
   | 'EVIDENCE_REVIEW_REQUIRED'
   | 'DOSSIER_TOO_LARGE'
   | 'RATE_LIMITED'
+  // I7 Trust + Egress + AEF — operational/governance states.
+  | 'PROJECT_SCOPE_VIOLATION'
+  | 'EGRESS_DENIED'
+  | 'FETCH_TIMEOUT'
+  | 'HUMAN_GATE_INVALID'
+  | 'IDEMPOTENCY_CONFLICT'
+  | 'AEF_PERSISTENCE_UNAVAILABLE'
   | 'INTERNAL_ERROR';
 
 export const IMPACT_ERROR_CODES: readonly ImpactErrorCode[] = Object.freeze([
@@ -81,6 +90,12 @@ export const IMPACT_ERROR_CODES: readonly ImpactErrorCode[] = Object.freeze([
   'EVIDENCE_REVIEW_REQUIRED',
   'DOSSIER_TOO_LARGE',
   'RATE_LIMITED',
+  'PROJECT_SCOPE_VIOLATION',
+  'EGRESS_DENIED',
+  'FETCH_TIMEOUT',
+  'HUMAN_GATE_INVALID',
+  'IDEMPOTENCY_CONFLICT',
+  'AEF_PERSISTENCE_UNAVAILABLE',
   'INTERNAL_ERROR',
 ]);
 
