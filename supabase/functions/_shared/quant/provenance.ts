@@ -95,6 +95,40 @@ export function evidenceStrength(p: DataProvenance): EvidenceStrength {
 }
 
 // ---------------------------------------------------------------------------
+// Provider display status — §11 IV-QUANT-LICENSED-PROVIDER-PILOT-04
+// ---------------------------------------------------------------------------
+
+/**
+ * Combined display status for the UI data-source indicator.
+ * Derived from ProviderKind + FreshnessState + provider availability.
+ *
+ * REAL       = EXTERNAL_PROVIDER data that is fresh (not stale/delayed)
+ * DELAYED    = EXTERNAL_PROVIDER data within the delayed window
+ * STALE      = any data older than its freshness policy
+ * SYNTHETIC  = FIXTURE / synthetic / demo data
+ * UPLOADED   = user-uploaded CSV or file
+ * UNAVAILABLE = provider returned an error or no data is available
+ *
+ * The UI must never claim REAL when the status is STALE, DELAYED, UNAVAILABLE,
+ * SYNTHETIC, or UPLOADED. A missing provider → UNAVAILABLE, not REAL.
+ */
+export type ProviderDisplayStatus = 'REAL' | 'DELAYED' | 'STALE' | 'SYNTHETIC' | 'UPLOADED' | 'UNAVAILABLE';
+
+export function computeProviderDisplayStatus(
+  provenance: DataProvenance | null,
+  freshness: FreshnessState,
+  providerAvailable: boolean,
+): ProviderDisplayStatus {
+  if (!providerAvailable || !provenance) return 'UNAVAILABLE';
+  if (provenance.providerKind === 'FIXTURE') return 'SYNTHETIC';
+  if (provenance.providerKind === 'USER_UPLOAD') return 'UPLOADED';
+  // EXTERNAL_PROVIDER path
+  if (freshness === 'STALE' || freshness === 'UNKNOWN') return 'STALE';
+  if (freshness === 'DELAYED') return 'DELAYED';
+  return 'REAL'; // FRESH
+}
+
+// ---------------------------------------------------------------------------
 // Freshness
 // ---------------------------------------------------------------------------
 
