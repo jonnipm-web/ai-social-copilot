@@ -8205,19 +8205,19 @@ abstract class AppLocalizations {
   /// No description provided for @r16LanguageNamePortuguese.
   ///
   /// In pt, this message translates to:
-  /// **'Português'**
+  /// **'português'**
   String get r16LanguageNamePortuguese;
 
   /// No description provided for @r16LanguageNameEnglish.
   ///
   /// In pt, this message translates to:
-  /// **'Inglês'**
+  /// **'inglês'**
   String get r16LanguageNameEnglish;
 
   /// No description provided for @r16LanguageNameSpanish.
   ///
   /// In pt, this message translates to:
-  /// **'Espanhol'**
+  /// **'espanhol'**
   String get r16LanguageNameSpanish;
 
   /// No description provided for @r16LanguageNameOther.
@@ -8307,13 +8307,13 @@ abstract class AppLocalizations {
   /// No description provided for @ecoRecScaleTitle.
   ///
   /// In pt, this message translates to:
-  /// **'Escale "{name}"'**
+  /// **'Escale \"{name}\"'**
   String ecoRecScaleTitle(String name);
 
   /// No description provided for @ecoRecInvestTitle.
   ///
   /// In pt, this message translates to:
-  /// **'Invista mais em "{name}"'**
+  /// **'Invista mais em \"{name}\"'**
   String ecoRecInvestTitle(String name);
 
   /// No description provided for @ecoRecTopReason.
@@ -8337,7 +8337,7 @@ abstract class AppLocalizations {
   /// No description provided for @ecoRecValidateTitle.
   ///
   /// In pt, this message translates to:
-  /// **'Valide as premissas de "{name}"'**
+  /// **'Valide as premissas de \"{name}\"'**
   String ecoRecValidateTitle(String name);
 
   /// No description provided for @ecoRecValidateReason.
@@ -8361,7 +8361,7 @@ abstract class AppLocalizations {
   /// No description provided for @ecoRecOppTitle.
   ///
   /// In pt, this message translates to:
-  /// **'Execute a oportunidade "{title}"'**
+  /// **'Execute a oportunidade \"{title}\"'**
   String ecoRecOppTitle(String title);
 
   /// No description provided for @ecoRecOppReason.
@@ -8385,7 +8385,7 @@ abstract class AppLocalizations {
   /// No description provided for @ecoRecQuickWinTitle.
   ///
   /// In pt, this message translates to:
-  /// **'Ganho rápido: "{title}"'**
+  /// **'Ganho rápido: \"{title}\"'**
   String ecoRecQuickWinTitle(String title);
 
   /// No description provided for @ecoRecQuickWinReason.
@@ -8409,7 +8409,7 @@ abstract class AppLocalizations {
   /// No description provided for @ecoRecPauseTitle.
   ///
   /// In pt, this message translates to:
-  /// **'Pause ou revise "{name}"'**
+  /// **'Pause ou revise \"{name}\"'**
   String ecoRecPauseTitle(String name);
 
   /// No description provided for @ecoRecPauseReason.
@@ -8433,7 +8433,7 @@ abstract class AppLocalizations {
   /// No description provided for @ecoRecRiskTitle.
   ///
   /// In pt, this message translates to:
-  /// **'Risco em "{name}": {risk}'**
+  /// **'Risco em \"{name}\": {risk}'**
   String ecoRecRiskTitle(String name, String risk);
 
   /// No description provided for @ecoRecRiskReason.
@@ -8475,8 +8475,9 @@ abstract class AppLocalizations {
   /// No description provided for @ecoAllocSummary.
   ///
   /// In pt, this message translates to:
-  /// **'Priorize "{name}" com {amount} {unit} ({percent}% do orçamento). Score: {score}/100.'**
-  String ecoAllocSummary(String name, String amount, String unit, int percent, int score);
+  /// **'Priorize \"{name}\" com {amount} {unit} ({percent}% do orçamento). Score: {score}/100.'**
+  String ecoAllocSummary(
+      String name, String amount, String unit, int percent, int score);
 
   /// No description provided for @ecoAllocReasonScale.
   ///
@@ -8523,7 +8524,7 @@ abstract class AppLocalizations {
   /// No description provided for @ecoAllocModeMoney.
   ///
   /// In pt, this message translates to:
-  /// **'💰 Dinheiro (R$)'**
+  /// **'💰 Dinheiro (R\$)'**
   String get ecoAllocModeMoney;
 
   /// No description provided for @ecoAllocBudgetQuestion.
@@ -8853,7 +8854,7 @@ abstract class AppLocalizations {
   /// No description provided for @ecoTop5Empty.
   ///
   /// In pt, this message translates to:
-  /// **'Nenhum projeto encontrado. Adicione textos no Cofre e crie projetos.'**
+  /// **'Nenhum projeto encontrado.\nAdicione textos no Cofre e crie projetos.'**
   String get ecoTop5Empty;
 
   /// No description provided for @ecoTop5ProjectsTitle.
@@ -8883,7 +8884,7 @@ abstract class AppLocalizations {
   /// No description provided for @ecoOppExplanation.
   ///
   /// In pt, this message translates to:
-  /// **'Oportunidade do tipo "{type}" com score {score}/100. Status atual: {status}.'**
+  /// **'Oportunidade do tipo \"{type}\" com score {score}/100. Status atual: {status}.'**
   String ecoOppExplanation(String type, int score, String status);
 
   /// No description provided for @ecoLabelType.
@@ -8913,7 +8914,7 @@ abstract class AppLocalizations {
   /// No description provided for @ecoIveAskOpportunity.
   ///
   /// In pt, this message translates to:
-  /// **'Analise a oportunidade "{title}" (score {score}) e diga como aproveitá-la.'**
+  /// **'Analise a oportunidade \"{title}\" (score {score}) e diga como aproveitá-la.'**
   String ecoIveAskOpportunity(String title, int score);
 
   /// No description provided for @ecoTop5QuickWinsTitle.
@@ -9009,7 +9010,7 @@ abstract class AppLocalizations {
   /// No description provided for @ecoProjectExplanation.
   ///
   /// In pt, this message translates to:
-  /// **'{name} tem um Ecosystem Score de {score}/100. Isso significa que o projeto está classificado como "{verdict}". O score combina oportunidades de mercado, fit estratégico, ROI potencial e capacidade de execução.'**
+  /// **'{name} tem um Ecosystem Score de {score}/100. Isso significa que o projeto está classificado como \"{verdict}\". O score combina oportunidades de mercado, fit estratégico, ROI potencial e capacidade de execução.'**
   String ecoProjectExplanation(String name, int score, String verdict);
 
   /// No description provided for @ecoLabelOpportunity.
@@ -9081,7 +9082,7 @@ abstract class AppLocalizations {
   /// No description provided for @ecoIveAskImproveProject.
   ///
   /// In pt, this message translates to:
-  /// **'Como posso melhorar o Ecosystem Score do projeto "{name}" que está em {score}/100? Explique cada componente e quais ações têm maior impacto.'**
+  /// **'Como posso melhorar o Ecosystem Score do projeto \"{name}\" que está em {score}/100? Explique cada componente e quais ações têm maior impacto.'**
   String ecoIveAskImproveProject(String name, int score);
 
   /// No description provided for @ecoShortMarket.
@@ -9117,7 +9118,7 @@ abstract class AppLocalizations {
   /// No description provided for @ecoCardFooter.
   ///
   /// In pt, this message translates to:
-  /// **'{count} ações  •  {percent}% concluídas  •  R${roi} ROI'**
+  /// **'{count} ações  •  {percent}% concluídas  •  R\${roi} ROI'**
   String ecoCardFooter(int count, int percent, String roi);
 
   /// No description provided for @ecoStrengthsTitle.
@@ -9207,7 +9208,7 @@ abstract class AppLocalizations {
   /// No description provided for @ecoIveAskRecommendation.
   ///
   /// In pt, this message translates to:
-  /// **'Explique a recomendação "{title}" e me dê um plano de ação concreto.'**
+  /// **'Explique a recomendação \"{title}\" e me dê um plano de ação concreto.'**
   String ecoIveAskRecommendation(String title);
 
   /// No description provided for @ecoConfidencePct.
@@ -9507,31 +9508,31 @@ abstract class AppLocalizations {
   /// No description provided for @ctxIveAnalysisCompleted.
   ///
   /// In pt, this message translates to:
-  /// **'Análise de "{name}" concluída!'**
+  /// **'Análise de \"{name}\" concluída!'**
   String ctxIveAnalysisCompleted(String name);
 
   /// No description provided for @ctxIveAnalyzing.
   ///
   /// In pt, this message translates to:
-  /// **'Analisando "{name}"...'**
+  /// **'Analisando \"{name}\"...'**
   String ctxIveAnalyzing(String name);
 
   /// No description provided for @ctxIveProjectCreated.
   ///
   /// In pt, this message translates to:
-  /// **'Projeto "{name}" criado!'**
+  /// **'Projeto \"{name}\" criado!'**
   String ctxIveProjectCreated(String name);
 
   /// No description provided for @ctxIveProjectRemoved.
   ///
   /// In pt, this message translates to:
-  /// **'Projeto "{name}" removido.'**
+  /// **'Projeto \"{name}\" removido.'**
   String ctxIveProjectRemoved(String name);
 
   /// No description provided for @ctxIveProjectStatusChanged.
   ///
   /// In pt, this message translates to:
-  /// **'"{name}" {status}.'**
+  /// **'\"{name}\" {status}.'**
   String ctxIveProjectStatusChanged(String name, String status);
 
   /// No description provided for @ctxIveStatusActivated.
@@ -9603,19 +9604,19 @@ abstract class AppLocalizations {
   /// No description provided for @ctxIssueAnalysisFailed.
   ///
   /// In pt, this message translates to:
-  /// **'Não consegui analisar "{name}". A falha ocorreu durante o processamento pela IA. Você pode tentar novamente.'**
+  /// **'Não consegui analisar \"{name}\".\nA falha ocorreu durante o processamento pela IA.\nVocê pode tentar novamente.'**
   String ctxIssueAnalysisFailed(String name);
 
   /// No description provided for @ctxIssueDownloadFailed.
   ///
   /// In pt, this message translates to:
-  /// **'Não consegui importar "{name}". A falha ocorreu durante o download do arquivo. O conteúdo ainda não foi analisado.'**
+  /// **'Não consegui importar \"{name}\".\nA falha ocorreu durante o download do arquivo.\nO conteúdo ainda não foi analisado.'**
   String ctxIssueDownloadFailed(String name);
 
   /// No description provided for @ctxIssueActionMutationFailed.
   ///
   /// In pt, this message translates to:
-  /// **'Não consegui atualizar "{name}". Verifique sua conexão e tente novamente.'**
+  /// **'Não consegui atualizar \"{name}\".\nVerifique sua conexão e tente novamente.'**
   String ctxIssueActionMutationFailed(String name);
 
   /// No description provided for @ctxIssueActionViewDetails.
@@ -9669,7 +9670,7 @@ abstract class AppLocalizations {
   /// No description provided for @ctxGroundingEmptyContent.
   ///
   /// In pt, this message translates to:
-  /// **'"{title}": registrado mas sem conteúdo processável.'**
+  /// **'\"{title}\": registrado mas sem conteúdo processável.'**
   String ctxGroundingEmptyContent(String title);
 
   /// No description provided for @ctxGroundingBudgetExceeded.
@@ -10503,7 +10504,7 @@ abstract class AppLocalizations {
   /// No description provided for @ctxResultCopied.
   ///
   /// In pt, this message translates to:
-  /// **'"{title}" copiado!'**
+  /// **'\"{title}\" copiado!'**
   String ctxResultCopied(String title);
 
   /// No description provided for @ctxResultCopyTooltip.
@@ -10821,7 +10822,7 @@ abstract class AppLocalizations {
   /// No description provided for @uxMemoryRoiTitle.
   ///
   /// In pt, this message translates to:
-  /// **'ROI: R$ {value}'**
+  /// **'ROI: R\$ {value}'**
   String uxMemoryRoiTitle(String value);
 
   /// No description provided for @uxAuthErrorInvalidCredentials.
@@ -11193,7 +11194,7 @@ abstract class AppLocalizations {
   /// No description provided for @uxDriveConfigError.
   ///
   /// In pt, this message translates to:
-  /// **'Não foi possível conectar ao Google (erro de configuração). Use o tipo "URL" e cole o link de compartilhamento do Google Docs, ou use o tipo "Arquivo" para importar PDFs locais.'**
+  /// **'Não foi possível conectar ao Google (erro de configuração).\nUse o tipo \"URL\" e cole o link de compartilhamento do Google Docs, ou use o tipo \"Arquivo\" para importar PDFs locais.'**
   String get uxDriveConfigError;
 
   /// No description provided for @uxDriveNoInternet.
@@ -11277,7 +11278,7 @@ abstract class AppLocalizations {
   /// No description provided for @uxDriveNoFiles.
   ///
   /// In pt, this message translates to:
-  /// **'Nenhum arquivo encontrado. São suportados: Google Docs, PDF, DOCX, TXT e CSV.'**
+  /// **'Nenhum arquivo encontrado.\nSão suportados: Google Docs, PDF, DOCX, TXT e CSV.'**
   String get uxDriveNoFiles;
 
   /// No description provided for @uxDriveTypeText.
@@ -11313,7 +11314,7 @@ abstract class AppLocalizations {
   /// No description provided for @uxKnowledgeAskIveMessage.
   ///
   /// In pt, this message translates to:
-  /// **'Analise o item de conhecimento "{title}" e me diga como aplicar os insights na estratégia do projeto.'**
+  /// **'Analise o item de conhecimento \"{title}\" e me diga como aplicar os insights na estratégia do projeto.'**
   String uxKnowledgeAskIveMessage(String title);
 
   /// No description provided for @uxKnowledgeNoPersonas.
@@ -11535,7 +11536,7 @@ abstract class AppLocalizations {
   /// No description provided for @uxHistoryEmptyBody.
   ///
   /// In pt, this message translates to:
-  /// **'Volte à tela principal, escreva um post e toque em "Salvar" após gerar o resultado.'**
+  /// **'Volte à tela principal, escreva um post\ne toque em \"Salvar\" após gerar o resultado.'**
   String get uxHistoryEmptyBody;
 
   /// No description provided for @uxContentTypeBook.
@@ -11799,7 +11800,7 @@ abstract class AppLocalizations {
   /// No description provided for @uxAdvisorNameTitle.
   ///
   /// In pt, this message translates to:
-  /// **'Escolha o nome do seu Personal AI Advisor'**
+  /// **'Escolha o nome do seu\nPersonal AI Advisor'**
   String get uxAdvisorNameTitle;
 
   /// No description provided for @uxAdvisorNameSubtitle.
@@ -11817,7 +11818,7 @@ abstract class AppLocalizations {
   /// No description provided for @uxAdvisorRoleTitle.
   ///
   /// In pt, this message translates to:
-  /// **'Qual será a especialidade do seu Advisor?'**
+  /// **'Qual será a especialidade\ndo seu Advisor?'**
   String get uxAdvisorRoleTitle;
 
   /// No description provided for @uxAdvisorRoleSubtitle.
@@ -11829,7 +11830,7 @@ abstract class AppLocalizations {
   /// No description provided for @uxAdvisorStyleTitle.
   ///
   /// In pt, this message translates to:
-  /// **'Como {name} deve se comunicar?'**
+  /// **'Como {name} deve\nse comunicar?'**
   String uxAdvisorStyleTitle(String name);
 
   /// No description provided for @uxAdvisorStyleSubtitle.
@@ -11961,7 +11962,7 @@ abstract class AppLocalizations {
   /// No description provided for @uxOppAskIveMessage.
   ///
   /// In pt, this message translates to:
-  /// **'Analise a oportunidade "{title}" (score {score}) e diga como aproveitá-la.'**
+  /// **'Analise a oportunidade \"{title}\" (score {score}) e diga como aproveitá-la.'**
   String uxOppAskIveMessage(String title, String score);
 
   /// No description provided for @uxPersonaTrainingSummary.
