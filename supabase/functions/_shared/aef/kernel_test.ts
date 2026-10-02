@@ -6,7 +6,7 @@
  */
 import { assertEquals, assertExists, assertMatch } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
 import { InMemoryAefStore } from './store.ts';
-import { AEF_POLICY_VERSION, classifyIntent, resolveHumanGate, submitAction } from './kernel.ts';
+import { AEF_POLICY_VERSION, buildRequestBindingHash, classifyIntent, resolveHumanGate, submitAction } from './kernel.ts';
 import type { CallerContext, ImpactActionIntent } from './types.ts';
 
 const RECEIPT_HASH_RE = /^[0-9a-f]{64}$/;
@@ -122,6 +122,15 @@ Deno.test('submitAction: same key for different intents is a new request', async
   assertEquals(r2.ok, true); // different kind — new request
 });
 
+// ── resolveHumanGate helpers ──────────────────────────────────────────────────
+
+/** Compute the real binding hash for a submitted request (mirrors what the approver must compute). */
+async function getRealBindingHash(store: InMemoryAefStore, requestId: string): Promise<string> {
+  const result = await store.getRequest(requestId);
+  if (!result.ok || !result.value) throw new Error('request not found in store');
+  return buildRequestBindingHash(result.value);
+}
+
 // ── resolveHumanGate ──────────────────────────────────────────────────────────
 
 Deno.test('resolveHumanGate: approve resolves gate', async () => {
@@ -133,14 +142,9 @@ Deno.test('resolveHumanGate: approve resolves gate', async () => {
   const error = submitResult.error;
   if (error.code !== 'REQUIRES_HUMAN_REVIEW') return;
 
-  const bindingHash = '0'.repeat(64);
-  const gateResult = await resolveHumanGate(
-    submitResult.receipt!.requestId,
-    'APPROVED',
-    'reviewer-001',
-    bindingHash,
-    { store },
-  );
+  const requestId = submitResult.receipt!.requestId;
+  const bindingHash = await getRealBindingHash(store, requestId);
+  const gateResult = await resolveHumanGate(requestId, 'APPROVED', 'reviewer-001', bindingHash, { store });
   assertEquals(gateResult.ok, true);
   assertExists(gateResult.receipt);
   assertEquals(gateResult.receipt!.executionOutcome, 'AUTHORIZED');
@@ -154,13 +158,9 @@ Deno.test('resolveHumanGate: reject denies gate', async () => {
   assertEquals(submitResult.ok, false);
   if (submitResult.ok || submitResult.error.code !== 'REQUIRES_HUMAN_REVIEW') return;
 
-  const gateResult = await resolveHumanGate(
-    submitResult.receipt!.requestId,
-    'REJECTED',
-    'reviewer-001',
-    '0'.repeat(64),
-    { store },
-  );
+  const requestId = submitResult.receipt!.requestId;
+  const bindingHash = await getRealBindingHash(store, requestId);
+  const gateResult = await resolveHumanGate(requestId, 'REJECTED', 'reviewer-001', bindingHash, { store });
   assertEquals(gateResult.ok, false);
   if (!gateResult.ok) {
     assertEquals(gateResult.receipt!.executionOutcome, 'DENIED');
@@ -174,8 +174,9 @@ Deno.test('resolveHumanGate: double-resolve rejected with HUMAN_GATE_INVALID', a
   if (submitResult.ok || submitResult.error.code !== 'REQUIRES_HUMAN_REVIEW') return;
 
   const requestId = submitResult.receipt!.requestId;
-  await resolveHumanGate(requestId, 'APPROVED', 'r-001', '0'.repeat(64), { store });
-  const second = await resolveHumanGate(requestId, 'APPROVED', 'r-002', '0'.repeat(64), { store });
+  const bindingHash = await getRealBindingHash(store, requestId);
+  await resolveHumanGate(requestId, 'APPROVED', 'r-001', bindingHash, { store });
+  const second = await resolveHumanGate(requestId, 'APPROVED', 'r-002', bindingHash, { store });
   assertEquals(second.ok, false);
   if (!second.ok) assertEquals(second.error.code, 'HUMAN_GATE_INVALID');
 });
@@ -186,18 +187,14 @@ Deno.test('resolveHumanGate: invalid approver ref rejected', async () => {
   const submitResult = await submitAction(makeCallerContext(), intent, { store });
   if (submitResult.ok || submitResult.error.code !== 'REQUIRES_HUMAN_REVIEW') return;
 
-  const result = await resolveHumanGate(
-    submitResult.receipt!.requestId,
-    'APPROVED',
-    '', // empty approver
-    '0'.repeat(64),
-    { store },
-  );
+  const requestId = submitResult.receipt!.requestId;
+  const bindingHash = await getRealBindingHash(store, requestId);
+  const result = await resolveHumanGate(requestId, 'APPROVED', '', bindingHash, { store });
   assertEquals(result.ok, false);
   if (!result.ok) assertEquals(result.error.code, 'HUMAN_GATE_INVALID');
 });
 
-Deno.test('resolveHumanGate: invalid binding hash rejected', async () => {
+Deno.test('resolveHumanGate: invalid binding hash format rejected', async () => {
   const store = new InMemoryAefStore();
   const intent = makeIntent({ kind: 'REQUEST_MANUAL_VERIFICATION', classification: 'CONSEQUENTIAL' });
   const submitResult = await submitAction(makeCallerContext(), intent, { store });
@@ -207,7 +204,25 @@ Deno.test('resolveHumanGate: invalid binding hash rejected', async () => {
     submitResult.receipt!.requestId,
     'APPROVED',
     'reviewer',
-    'not-a-hash', // invalid
+    'not-a-hash', // invalid format
+    { store },
+  );
+  assertEquals(result.ok, false);
+  if (!result.ok) assertEquals(result.error.code, 'HUMAN_GATE_INVALID');
+});
+
+Deno.test('resolveHumanGate: mismatched binding hash rejected', async () => {
+  const store = new InMemoryAefStore();
+  const intent = makeIntent({ kind: 'REQUEST_MANUAL_VERIFICATION', classification: 'CONSEQUENTIAL' });
+  const submitResult = await submitAction(makeCallerContext(), intent, { store });
+  if (submitResult.ok || submitResult.error.code !== 'REQUIRES_HUMAN_REVIEW') return;
+
+  // Correct format but wrong hash (all-zeros does not match the real request binding)
+  const result = await resolveHumanGate(
+    submitResult.receipt!.requestId,
+    'APPROVED',
+    'reviewer',
+    'a'.repeat(64), // valid format but wrong hash
     { store },
   );
   assertEquals(result.ok, false);
@@ -222,13 +237,9 @@ Deno.test('resolveHumanGate: expired gate rejected', async () => {
   const submitResult = await submitAction(makeCallerContext(), intent, { store, now: pastNow });
   if (submitResult.ok || submitResult.error.code !== 'REQUIRES_HUMAN_REVIEW') return;
 
-  const result = await resolveHumanGate(
-    submitResult.receipt!.requestId,
-    'APPROVED',
-    'reviewer',
-    '0'.repeat(64),
-    { store }, // uses current time — gate is expired
-  );
+  const requestId = submitResult.receipt!.requestId;
+  const bindingHash = await getRealBindingHash(store, requestId);
+  const result = await resolveHumanGate(requestId, 'APPROVED', 'reviewer', bindingHash, { store });
   assertEquals(result.ok, false);
   if (!result.ok) assertEquals(result.error.code, 'HUMAN_GATE_INVALID');
 });
