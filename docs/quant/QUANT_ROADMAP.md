@@ -118,15 +118,25 @@ limits, multi-series + watchlist → analysis (API + Lab), physical Android
 validation (6 findings fixed), measured resource budget. See
 QUANT_REAL_DATA_READINESS.md.
 
-Still open:
-1. **Licensing (Owner)** — send the drafted vendor e-mails, obtain written
-   answers (QUANT_VENDOR_LICENSING_DOSSIER.md). All candidates are
-   BLOCKED_PENDING_WRITTEN_RIGHTS.
-2. First licensed adapter + server secret + total request deadline.
-3. Edge runtime re-measurement (PLATFORM_RUNTIME_NOT_MEASURED).
-4. Promotion Gate `quant-analytics` / `quant-watchlists` INTERNAL → ALPHA
-   (new watchlist RLS predicate migration, CLASS D review) —
-   ALPHA_PROMOTION_AUTHORIZED: NO.
+## 9. After IV-QUANT-LICENSED-PROVIDER-PILOT-04 (2026-10-02)
 
-Recommended next gate: **IV-QUANT-LICENSED-PROVIDER-PILOT-04**, only after
-item 1 returns written rights for at least one vendor.
+**Databento DBEQ.BASIC classified GREEN** (see REAL_DATA_PROVIDER_DECISION.md).
+Adapter implemented and tested (29/29 tests). Security: CONDITIONAL_PASS (P0/P1 = 0).
+
+**Remaining before first real data flows:**
+1. **Owner Gate** — Create Databento account (https://databento.com); requires payment method.
+   Set Supabase secret `DATABENTO_AUTH = "Basic <base64(apiKey:)>"`.
+2. **Attribution confirmation** — Confirm Databento attribution requirements in writing.
+3. **GET vs POST** — Verify Databento's `timeseries.get_range` accepts GET; if POST required,
+   extend `SafeFetchOptions` with `method` and `body` fields (minimal change).
+4. **Edge runtime measurement** — Run adapter against real endpoint; measure response time + size.
+5. **Physical Android + Web validation** — After key is configured (lab environment only).
+
+**UK/XLON still blocked:** No GREEN provider for UK equities found. All YELLOW candidates
+(Twelve Data Business, EODHD Enterprise) require written display rights from Owner.
+
+**ALPHA_PROMOTION_AUTHORIZED: NO** — Modules remain INTERNAL until full validation.
+
+Still open from Mission 03:
+- Edge runtime re-measurement (PLATFORM_RUNTIME_NOT_MEASURED)
+- Promotion Gate `quant-analytics` / `quant-watchlists` INTERNAL → ALPHA (CLASS D review)
