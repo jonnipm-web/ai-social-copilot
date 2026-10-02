@@ -97,7 +97,7 @@ At the data volumes above, the $125 credit will last years for daily OHLCV only.
 
 The adapter emits the following metadata for cost tracking (no billing in this mission):
 
-- `provider: 'databento-dbeq-basic-v1'`
+- `provider: 'databento-equs-summary-v1'`
 - `cache_outcome: 'HIT' | 'MISS' | 'STALE_FALLBACK'`
 - `rows_returned: number`
 - `response_bytes: number` (approximated from body.length)
@@ -108,7 +108,7 @@ See `observability.ts` for the log contract.
 
 ## 6. Recommendation
 
-Databento DBEQ.BASIC is the **most cost-effective GREEN provider** for the pilot:
+Databento EQUS.SUMMARY is the **most cost-effective YELLOW/NOT_VERIFIED provider** for the pilot:
 - Zero financial commitment at pilot scale
 - No per-user or per-display fees
 - Cost scales linearly with data volume; daily OHLCV is very small

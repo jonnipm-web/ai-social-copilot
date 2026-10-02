@@ -98,6 +98,8 @@ constitute legal advice. Owner must verify current terms before any commercial c
 | Document | NautilusTrader Databento integration docs (third-party, cross-reference) |
 | Claim | EQUS.SUMMARY supports `ohlcv-1d` schema; the ohlcv-1d schema is standardized across Databento datasets |
 | Criticality | HIGH — confirms adapter schema compatibility |
+| Verification Status | **YELLOW — third-party source only (Codex VND-04, 2026-10-03)** |
+| Action Required | Add official Databento schema documentation as authoritative citation. Candidate URL: https://databento.com/docs/schemas-and-formats/ohlcv — verify and record as EV-DB-07B when Owner creates account and can access docs. |
 
 ### EV-DB-08 — Standard Subscription Plan Pricing
 
