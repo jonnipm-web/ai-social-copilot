@@ -63,6 +63,27 @@ function randomUuid(): string {
 
 // ── Receipt hash ─────────────────────────────────────────────────────────────
 
+/**
+ * Canonical binding hash for an AefExecutionRequest. Used by resolveHumanGate
+ * to verify the approver's binding hash against the stored request state.
+ * The approver must compute this same hash over the request they intend to approve.
+ */
+export async function buildRequestBindingHash(request: AefExecutionRequest): Promise<string> {
+  const canonical = [
+    request.requestId,
+    request.correlationId,
+    request.caller.authenticatedUserId,
+    request.caller.projectId ?? '',
+    request.caller.serviceId,
+    request.intent.kind,
+    request.intent.investigationId,
+    request.intent.idempotencyKey,
+    request.intent.classification,
+    request.requestedAt,
+  ].join('|');
+  return sha256Hex(canonical);
+}
+
 async function buildReceiptHash(receipt: Omit<ExecutionReceipt, 'receiptHash'>): Promise<string> {
   const canonical = [
     receipt.receiptId,
@@ -225,7 +246,10 @@ export async function submitAction(
     outcome: attemptOutcome,
     errorCode: null,
   };
-  await store.insertAttempt(attempt);
+  const attemptResult = await store.insertAttempt(attempt);
+  if (!attemptResult.ok) {
+    return { ok: false, error: { code: 'AEF_PERSISTENCE_UNAVAILABLE' }, receipt: null };
+  }
 
   // 6. Issue receipt
   const receiptPartial: Omit<ExecutionReceipt, 'receiptHash'> = {
@@ -248,7 +272,10 @@ export async function submitAction(
   };
   const receiptHash = await buildReceiptHash(receiptPartial);
   const receipt: ExecutionReceipt = { ...receiptPartial, receiptHash };
-  await store.insertReceipt(receipt);
+  const receiptResult = await store.insertReceipt(receipt);
+  if (!receiptResult.ok) {
+    return { ok: false, error: { code: 'AEF_PERSISTENCE_UNAVAILABLE' }, receipt: null };
+  }
 
   // 7. Return result
   if (policyOutcome === 'DENIED') {
@@ -292,8 +319,8 @@ export async function resolveHumanGate(
   if (gate.status !== 'PENDING') {
     return { ok: false, error: { code: 'HUMAN_GATE_INVALID', reason: `gate already ${gate.status}` }, receipt: null };
   }
-  // Expiry check
-  if (Date.parse(now) > Date.parse(gate.expiresAt)) {
+  // Expiry check (>= to reject approval exactly at the expiry instant)
+  if (Date.parse(now) >= Date.parse(gate.expiresAt)) {
     await store.updateHumanGate(gate.gateId, 'EXPIRED', null, null, now);
     return { ok: false, error: { code: 'HUMAN_GATE_INVALID', reason: 'gate expired' }, receipt: null };
   }
@@ -301,9 +328,20 @@ export async function resolveHumanGate(
   if (!approverRef || approverRef.length > 64) {
     return { ok: false, error: { code: 'HUMAN_GATE_INVALID', reason: 'invalid approver ref' }, receipt: null };
   }
-  // Binding hash must be present
+  // Binding hash: validate format then verify against stored request state
   if (!bindingHash || !/^[0-9a-f]{64}$/.test(bindingHash)) {
     return { ok: false, error: { code: 'HUMAN_GATE_INVALID', reason: 'invalid binding hash' }, receipt: null };
+  }
+  const requestResult = await store.getRequest(requestId);
+  if (!requestResult.ok) {
+    return { ok: false, error: { code: 'AEF_PERSISTENCE_UNAVAILABLE' }, receipt: null };
+  }
+  if (!requestResult.value) {
+    return { ok: false, error: { code: 'HUMAN_GATE_INVALID', reason: 'no request found for binding hash verification' }, receipt: null };
+  }
+  const expectedHash = await buildRequestBindingHash(requestResult.value);
+  if (bindingHash !== expectedHash) {
+    return { ok: false, error: { code: 'HUMAN_GATE_INVALID', reason: 'binding hash mismatch' }, receipt: null };
   }
 
   const updateResult = await store.updateHumanGate(
@@ -317,19 +355,20 @@ export async function resolveHumanGate(
     return { ok: false, error: { code: 'AEF_PERSISTENCE_UNAVAILABLE' }, receipt: null };
   }
 
-  // Issue receipt for gate resolution
+  // Issue receipt for gate resolution (use stored request fields for completeness)
   const executionOutcome = resolution === 'APPROVED' ? 'AUTHORIZED' : 'DENIED';
+  const storedReq = requestResult.value; // already fetched above for binding hash verification
   const receiptPartial: Omit<ExecutionReceipt, 'receiptHash'> = {
     receiptId: randomUuid(),
     requestId,
-    correlationId: '',
+    correlationId: storedReq.correlationId,
     callerUserId: approverRef,
-    projectId: null,
+    projectId: storedReq.caller.projectId,
     serviceId: 'aef-gate-resolver',
-    intentKind: 'REQUEST_MANUAL_VERIFICATION', // placeholder; real lookup from request omitted for simplicity
-    investigationId: '',
+    intentKind: storedReq.intent.kind,
+    investigationId: storedReq.intent.investigationId,
     idempotencyKey: gate.gateId,
-    classification: 'CONSEQUENTIAL',
+    classification: storedReq.intent.classification,
     policyVersion: AEF_POLICY_VERSION,
     policyOutcome: resolution === 'APPROVED' ? 'AUTHORIZED' : 'DENIED',
     executionOutcome,
@@ -339,7 +378,10 @@ export async function resolveHumanGate(
   };
   const receiptHash = await buildReceiptHash(receiptPartial);
   const receipt: ExecutionReceipt = { ...receiptPartial, receiptHash };
-  await store.insertReceipt(receipt);
+  const gateReceiptResult = await store.insertReceipt(receipt);
+  if (!gateReceiptResult.ok) {
+    return { ok: false, error: { code: 'AEF_PERSISTENCE_UNAVAILABLE' }, receipt: null };
+  }
 
   if (resolution === 'APPROVED') {
     return { ok: true, value: { gateId: gate.gateId }, receipt };

@@ -54,6 +54,9 @@ export interface AefStore {
 
   /** Return receipt by requestId (most recent attempt). */
   getReceipt(requestId: string): Promise<AefStoreResult<ExecutionReceipt | null>>;
+
+  /** Return the original execution request by requestId. */
+  getRequest(requestId: string): Promise<AefStoreResult<AefExecutionRequest | null>>;
 }
 
 export type AefStoreResult<T> =
@@ -143,5 +146,9 @@ export class InMemoryAefStore implements AefStore {
     const receiptId = this.receiptsByRequest.get(requestId);
     if (!receiptId) return { ok: true, value: null };
     return { ok: true, value: this.receipts.get(receiptId) ?? null };
+  }
+
+  async getRequest(requestId: string): Promise<AefStoreResult<AefExecutionRequest | null>> {
+    return { ok: true, value: this.requests.get(requestId) ?? null };
   }
 }
