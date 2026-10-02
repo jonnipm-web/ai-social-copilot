@@ -84,7 +84,16 @@ interface AefStore {
 }
 ```
 
-`InMemoryAefStore` implements this interface for tests. Production requires `SupabaseAefStore` backed by the `impact_aef_*` tables (not yet implemented; migration is ready).
+`InMemoryAefStore` implements this interface for tests only; restricted from runtime use.
+
+`SupabaseAefStore` (in `supabase/functions/impact-lab/supabase_store.ts`) is the
+production default — backed by the 4 `impact_aef_*` tables from migration
+`20261002010000_impact_aef_persistence.sql`. Created via `createSupabaseAefStore()`
+which fails closed if `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` are absent.
+
+Note: `insertAttempt` is a no-op in `SupabaseAefStore` — attempts are absorbed into
+the receipt (which captures the same `executionOutcome`). A separate attempts table
+is a future migration task.
 
 ## Receipt Hash
 

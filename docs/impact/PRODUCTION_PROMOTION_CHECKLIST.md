@@ -24,11 +24,13 @@
 
 ## Blockers (must be resolved before any production deployment)
 
-### B1 — DB-backed AefStore not implemented
-- `InMemoryAefStore` is used in the Edge Function (non-persistent across invocations)
-- Requires: `SupabaseAefStore` in `impact-lab/supabase_store.ts` backed by `impact_aef_*` tables
-- Migration is ready (`20261002010000_impact_aef_persistence.sql`) — must be applied to production DB
-- Authorization required: explicit mission from Agente Martins + Paulo
+### ~~B1~~ — ✅ CLOSED: DB-backed AefStore implemented (commit 1804143)
+- `SupabaseAefStore` implemented in `impact-lab/supabase_store.ts`; backed by 4 `impact_aef_*` tables
+- Runtime uses `createSupabaseAefStore()` by default; fails closed if Supabase env vars absent
+- `InMemoryAefStore` restricted to test injection via `deps.aefStore` only
+- Investigation binding: investigationId validated (RLS-scoped ownership check) before AEF submission
+- Idempotency: client provides stable `idempotency_key`; per-request `crypto.randomUUID()` removed
+- 10 new integration tests: binding, gate, idempotency, restart survival, concurrency (742/742)
 
 ### B2 — Gate resolution endpoint missing
 - `resolveHumanGate` exists in the kernel but is not exposed via any HTTP endpoint
@@ -51,7 +53,7 @@
 
 ## Prerequisites (must be present before attempting production)
 
-- [ ] `SupabaseAefStore` implemented and tested with integration tests against Supabase
+- [x] `SupabaseAefStore` implemented and tested (742/742, commit 1804143)
 - [ ] Gate resolution HTTP endpoint implemented and adversarial-reviewed
 - [ ] Migration applied to staging, smoke-tested, then applied to production
 - [ ] `bindingHash` verification against request state implemented (TM-1)
