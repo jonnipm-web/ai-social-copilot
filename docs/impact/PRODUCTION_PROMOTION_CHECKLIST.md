@@ -4,6 +4,24 @@
 **Status:** NOT READY FOR PRODUCTION  
 **Authority to promote:** Agente Martins + Paulo
 
+## Codex Adversarial Review (Class D) — Result
+
+**Verdict:** CONDITIONAL PASS after P1 fixes applied.
+
+| Finding | Level | Status |
+|---|---|---|
+| V13: receipt without durable persistence | P1 | ✅ FIXED — fail-closed on insertAttempt/insertReceipt |
+| V10: binding hash not server-verified | P1 | ✅ FIXED — buildRequestBindingHash + server comparison |
+| V11: expiry boundary `>` vs `>=` | P2 | ✅ FIXED — changed to `>=` |
+| V6: SSRF DNS-rebinding (safeFetch.ts) | P1 | ⚠️ DEFERRED — pre-existing, not introduced by I7; requires egress proxy |
+| V12: cross-instance non-atomic idempotency | P1 | ⚠️ DEFERRED — requires DB-backed store (B1) |
+| V8: PUBLIC_SOURCE_FETCH no allowlist | P2 | ✅ BY DESIGN — I2 requires arbitrary user URLs |
+| V9: receipt hash unkeyed SHA-256 | P2 | ⚠️ DEFERRED — Lab limitation documented |
+| V16: raw IDs in AEF tables | P2 | ⚠️ DEFERRED — acceptable for Lab; RLS correct |
+| V1,2,3,4,5,7,14,15,17,18 | P3/SAFE | ✅ All vectors SAFE |
+
+---
+
 ## Blockers (must be resolved before any production deployment)
 
 ### B1 — DB-backed AefStore not implemented
@@ -17,13 +35,19 @@
 - A human approver has no way to approve/reject a gate through a production API
 - Requires: `impact-lab/gate.ts` or dedicated `impact-gate/index.ts` Edge Function
 
-### B3 — bindingHash not verified against request state (TM-1)
-- `resolveHumanGate` validates binding hash format (64 hex chars) but does not verify it against the actual request contents
-- A P2 security gap; should be resolved before production consequential actions are live
+### B3 — Gate resolution HTTP endpoint missing
+- `resolveHumanGate` exists in the kernel and is now server-verified (V10 fixed)
+- But there is no HTTP endpoint to call it via the API
+- Requires: `impact-lab/gate.ts` or dedicated `impact-gate/index.ts` Edge Function
 
-### B4 — Migration not applied to production
+### B4 — SSRF DNS-rebinding gap (Codex V6)
+- `safeFetch.ts` validates the destination IP before `fetch()` but DNS rebinding can change resolution between check and connection
+- Pre-existing limitation not introduced by I7; requires egress proxy or destination IP pinning
+- Low risk in short-lived Edge Function requests but should be addressed before production
+
+### B5 — Migration not applied to production
 - Per mission constraints: "NO migration apply to production"
-- Requires explicit authorization
+- Requires explicit authorization from Agente Martins + Paulo
 
 ## Prerequisites (must be present before attempting production)
 
