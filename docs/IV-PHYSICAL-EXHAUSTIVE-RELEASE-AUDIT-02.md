@@ -13,9 +13,11 @@
 ## 1. EXECUTIVE VERDICT
 
 ```
-CONDITIONAL_PASS — Web: PASS (all P0/P1 code bugs fixed, all modules verified)
-                   Android: PASS (Samsung S25, APK Oct 2, Pro + IVE fallback verified)
-                   Owner blockers: OB-01 (privacyPolicyUrl) + OB-02 (termsOfUseUrl) still open
+PARTIAL_EXECUTION — Web: PASS (todos módulos verificados interativamente, 2 fixes P2)
+                    Android: PARTIAL — 52 interações verificadas, 61 PENDING (S25 bloqueado),
+                             14 BLOCKED_OWNER (requer senha admin)
+                    Owner blockers: OB-01 (privacyPolicyUrl) + OB-02 (termsOfUseUrl) abertos
+                    RELEASE_PHYSICAL_GATE_PASS requer: desbloqueio do S25 + preenchimento ⏳
 ```
 
 ---
@@ -294,117 +296,323 @@ No new security issues found in this physical audit.
 
 ---
 
-## 12. ANDROID (Samsung S25) AUDIT — COMPLETE
+## 12. ANDROID (Samsung S25) AUDIT — EXHAUSTIVE INTERACTION MATRIX
 
 **Device:** SM-S938B, serial R5CXC355NQP  
 **APK:** Release build (--release --no-pub), Oct 2 19:07, 85MB — includes commit 28cadae fixes  
-**Account tested:** jaop9769@gmail.com (Pro Founder, 0/300)  
-**Admin-specific tests:** Verified via web audit (BUG-P2 + PHYS-004) — shared Dart codebase
+**Accounts tested:**
+- PRO: jaop9769@gmail.com (Pro Founder, 0/300) — ACTIVE on device
+- FREE: BLOCKED_OWNER — credenciais não disponíveis no projeto (seed/fixtures)
+- ADMIN: BLOCKED_OWNER — jpaulo.start@gmail.com requer senha (proibição de segurança)
 
-### 12.1 Install & Launch
-- ✅ `adb uninstall` + `adb install` clean install — Success
-- ✅ `am start` launches MainActivity — no crash
-- ✅ Login screen renders: logo sparkles, "InsightValues", "Bem-vindo de volta", Google button, email/senha fields, Entrar button, Cadastre-se link — PT-BR ✅
+**Legenda status:** ✅ PASS | ❌ FAIL | ⚠️ BLOCKER | 🔒 BLOCKED_OWNER | ⏳ PENDING
 
-### 12.2 Home Screen
-- ✅ Auto-login (session cached): "Olá! Bem-vindo de volta 👋"
-- ✅ "Plano: Pro" subtitle ✅
-- ✅ "300 de 300 gerações restantes este mês" — correct Pro quota ✅
-- ✅ 0 Projetos ativos, 0 Análises de mercado (fresh account) ✅
-- ✅ "Recomendações Executivas" + "Prioridades da Semana" sections ✅
-- ✅ "Melhorar Post com IA" quick action ✅
-- ✅ IVE floating avatar visible in bottom-right corner ✅
+---
 
-### 12.3 IVE Intro Sheet (first launch)
-- ✅ "Conheça a IVE" intro sheet appears on first launch ✅
-- ✅ IVE portrait renders (Flutter fallback — Rive frozen per 03B6O) ✅
-- ✅ PT-BR text: "Eu sou a IVE, sua copiloto estratégica..." ✅
-- ✅ "Entendi" + "Pular" buttons visible ✅
-- ✅ Home screen visible in background ("Plano: Pro", 300/300) ✅
+### 12.0 INSTALL & SESSION BASELINE
 
-### 12.4 Drawer Navigation
-- ✅ Hamburger opens drawer — header: InsightValues logo, "Pro" badge chip, jaop9769@gmail.com
-- ✅ All 9 navigation items present in PT-BR:
-  - Painel de Negócios, Projetos, Cofre de Conhecimento, Analisador de Site,
-    Inteligência de Mercado, Plano / Upgrade, Conta e Configurações,
-    Ajuda e Suporte, Sobre, Sair ✅
-- ✅ No "Painel Admin" visible (Pro user — correct) ✅
-- ✅ IVE avatar visible in background ✅
+| # | CONTROLE | ANDROID | PT | EN | ROLE | ESPERADO | OBSERVADO | EVIDÊNCIA |
+|---|----------|---------|----|----|------|----------|-----------|-----------|
+| A-000 | `adb install` clean install | ✅ | — | — | ANY | Instala sem erro | Success, no crash | adb output Oct 2 |
+| A-001 | `am start` MainActivity | ✅ | — | — | ANY | App lança sem crash | Login screen render OK | am start OK |
+| A-002 | Tela de login (visual) | ✅ | ✅ | — | ANY | Logo, campos, Entrar, Google btn, Cadastre-se | Todos visíveis em PT-BR | screenshot §12.1 |
 
-### 12.5 Cofre de Conhecimento
-- ✅ Empty state: book icon, "Nenhum item ainda", PT-BR description ✅
-- ✅ "+ Adicio..." (Adicionar) button ✅
-- ✅ IVE bubble tooltip: "Seu cofre de conhecimento alimenta toda a inteligência do sistema." + "Conversar com a IVE" ✅
-- ✅ "+ Novo Item" FAB ✅
+---
 
-### 12.6 Upgrade / Plans Screen
-- ✅ Title: "Planos" ✅
-- ✅ Usage banner: "Análises de IA este mês — 0 / 300" ✅
-- ✅ "300 análises restantes no plano Pro Founder." ✅
-- **FREE card (Pro user view):**
-  - ✅ "Gratuito" title, "R$ 0" ✅
-  - ✅ "Plano anterior" button (disabled/gray) — correct for Pro user ✅
-  - ✅ All 6 features with correct ✅/❌ icons ✅
-- **PRO card:**
-  - ✅ "Seu plano" badge (teal banner) ✅
-  - ✅ "Pro Founder" title, "R$ 29 /mês" ✅
-  - ✅ All 6 features with ✅ ✅
-  - ✅ "Plano atual" button (disabled) ✅
-  - ✅ "Preço de lançamento (fundador) -- não é um valor permanente." footnote ✅
-- ✅ "Perguntas frequentes" section, "Como funciona o limite gratuito?" FAQ ✅
-- ✅ IVE avatar visible throughout ✅
-- NOTE: BUG-P2 fix (admin subtitle='') verified on web; Pro user behavior unchanged (shows "Plano atual" under Gratuito subtitle — pre-existing for non-admin users)
+### 12.1 AUTH / SESSION
 
-### 12.7 Conta e Configurações
-- ✅ Title "Conta e Configurações" ✅
-- ✅ Profile: jaop9769@gmail.com ✅
-- ✅ Idioma: Português ● / English ○ radio buttons ✅
-- ✅ "Plano atual — Pro Founder · Uso / Cota: 0 / 300" ✅
-- ✅ "Fazer upgrade / gerenciar assinatura" link ✅
-- ✅ "Ajuda e Suporte", "Sobre o InsightValues" links ✅
-- ✅ "Sair da conta" (red) ✅
+| # | MÓDULO | TELA | CONTROLE | ANDROID | PT | EN | ROLE | ESPERADO | OBSERVADO | EVIDÊNCIA |
+|---|--------|------|----------|---------|----|----|------|----------|-----------|-----------|
+| A-010 | Auth | Login | Auto-login com sessão cacheada | ✅ | ✅ | — | PRO | Vai direto ao Home sem login manual | Home exibiu "Plano: Pro" | screenshot §12.2 |
+| A-011 | Auth | Login | Campos email + senha renderizam | ✅ | ✅ | — | ANY | Campos visíveis e focáveis | Ambos visíveis | screenshot §12.1 |
+| A-012 | Auth | Login | Botão Google OAuth | ✅ | — | — | ANY | Botão presente | Visível | DEFERRED_GOOGLE_AUTH_2026-10-04 |
+| A-013 | Auth | Login | Link "Cadastre-se" | ✅ | ✅ | — | ANY | Visível | Visível | screenshot §12.1 |
+| A-014 | Auth | Sair da conta | Botão "Sair da conta" (vermelho) | ✅ | ✅ | ✅ | PRO | Retorna à tela de login | Visível em Conta; fluxo completo ⏳ | screenshot §12.7 |
 
-### 12.8 EN Locale Switch (PHYS-003)
-- ✅ Tap English → immediate switch, no reload ✅
-- ✅ "Account & Settings" title ✅
-- ✅ "Language" section ✅
-- ✅ "Current plan · Pro Founder · Usage / Quota: 0 / 300" ✅
-- ✅ "Upgrade / manage subscription" ✅
-- ✅ "Help & Support", "About InsightValues", "Sign out" ✅
-- ✅ Plans screen in EN: "AI analyses this month", "Free", "Previous plan", "Your plan", "Pro Founder" ✅
+---
 
-### 12.9 About InsightValues (EN)
-- ✅ "About InsightValues" title ✅
-- ✅ App version: 1.0.0 (build 1) ✅
-- ✅ "Official website" link ✅
-- ✅ Support: suporte@insigthvalues.com (intentional spelling preserved) ✅
-- ⚠️ **Privacy Policy: "Not yet configured by the product administrator."** — OB-01 BLOCKER (confirmed on Android)
-- ⚠️ **Terms of Use: "Not yet configured by the product administrator."** — OB-02 BLOCKER (confirmed on Android)
-- ✅ "Plan & subscription" link ✅
-- ✅ "© 2026 InsightValues. All rights reserved." ✅
+### 12.2 HOME / DASHBOARD
 
-### 12.10 IVE Avatar (FALLBACK-04 verification)
-- ✅ IVE avatar portrait renders in ALL tested screens (Home, Drawer background, Knowledge, Upgrade, Account, About) ✅
-- ✅ No Rive crash — Flutter fallback working correctly on Android ✅
-- ✅ IVE intro sheet shows avatar portrait (correct static image) ✅
-- ✅ Tooltip bubble ("Conversar com a IVE") renders correctly in Knowledge screen ✅
-- NOTE: Interactive tap via ADB not confirmed (Flutter overlay GestureDetector not exposed as separate accessibility node); avatar renders as expected per FALLBACK-04 ship decision
+| # | MÓDULO | TELA | CONTROLE | ANDROID | PT | EN | ROLE | ESPERADO | OBSERVADO | EVIDÊNCIA |
+|---|--------|------|----------|---------|----|----|------|----------|-----------|-----------|
+| A-020 | Home | Dashboard | Saudação + plano | ✅ | ✅ | ⏳ | PRO | "Olá! Bem-vindo de volta 👋" + "Plano: Pro" | Correto | screenshot §12.2 |
+| A-021 | Home | Dashboard | Contador de gerações | ✅ | ✅ | ⏳ | PRO | "300 de 300 gerações restantes este mês" | Correto | screenshot §12.2 |
+| A-022 | Home | Dashboard | Stats (Projetos, Análises, Score) | ✅ | ✅ | ⏳ | PRO | 0 Projetos, 0 Análises (conta fresh) | Correto | screenshot §12.2 |
+| A-023 | Home | Dashboard | Seção Recomendações Executivas | ✅ | ✅ | ⏳ | PRO | Seção visível | Visível | screenshot §12.2 |
+| A-024 | Home | Dashboard | Seção Prioridades da Semana | ✅ | ✅ | ⏳ | PRO | Seção visível | Visível | screenshot §12.2 |
+| A-025 | Home | Dashboard | Quick action "Melhorar Post com IA" | ✅ | ✅ | ⏳ | PRO | Botão visível e tappable | Visível; tap ⏳ | screenshot §12.2 |
+| A-026 | Home | Dashboard | IVE avatar visível | ✅ | ✅ | ⏳ | PRO | Avatar no canto inferior direito | Confirmado | screenshot §12.2 |
+| A-027 | Home | Dashboard | Tap IVE avatar → Context Copilot | ⏳ | ⏳ | ⏳ | PRO | Abre sheet da IVE | ⏳ PENDING | — |
+| A-028 | Home | Dashboard | Home em EN | ⏳ | — | ⏳ | PRO | Títulos localizados | ⏳ PENDING | — |
 
-### 12.11 Admin-Specific Tests (Web-Verified)
-- **BUG-P2 (upgrade subtitle for admin):** `quota.isAdmin ? '' : t.upgradeFreeSubtitle` — verified on web with admin account. Android uses same Dart code.
-- **PHYS-004 (Admin Personas tab layout):** `crossAxisAlignment: CrossAxisAlignment.stretch` on `_PersonasAdminTab` Column — verified on web with admin account. Android uses same Dart code.
-- Admin account login not performed on S25 (would require entering production password — per security rules).
+---
 
-### 12.12 Android Verdict
+### 12.3 IVE INTRO SHEET
+
+| # | MÓDULO | TELA | CONTROLE | ANDROID | PT | EN | ROLE | ESPERADO | OBSERVADO | EVIDÊNCIA |
+|---|--------|------|----------|---------|----|----|------|----------|-----------|-----------|
+| A-030 | IVE Intro | Sheet | Portrait IVE renderiza | ✅ | ✅ | — | PRO | Avatar visível (fallback Flutter) | Confirmado | screenshot §12.3 |
+| A-031 | IVE Intro | Sheet | Texto PT-BR "Eu sou a IVE..." | ✅ | ✅ | — | PRO | Texto correto | Confirmado | screenshot §12.3 |
+| A-032 | IVE Intro | Sheet | Botão "Entendi" | ✅ | ✅ | — | PRO | Visível | Visível | screenshot §12.3 |
+| A-033 | IVE Intro | Sheet | Botão "Pular" | ✅ | ✅ | — | PRO | Visível | Visível | screenshot §12.3 |
+| A-034 | IVE Intro | Sheet | Tap "Entendi" → fecha sheet | ⏳ | ⏳ | ⏳ | PRO | Sheet fecha, Home visível | ⏳ PENDING | — |
+
+---
+
+### 12.4 DRAWER
+
+| # | MÓDULO | TELA | CONTROLE | ANDROID | PT | EN | ROLE | ESPERADO | OBSERVADO | EVIDÊNCIA |
+|---|--------|------|----------|---------|----|----|------|----------|-----------|-----------|
+| A-040 | Drawer | Nav | Hamburger abre drawer | ✅ | ✅ | ⏳ | PRO | Drawer abre | Confirmado | screenshot §12.4 |
+| A-041 | Drawer | Nav | Header: logo + badge "Pro" + email | ✅ | ✅ | ⏳ | PRO | Correto | Confirmado | screenshot §12.4 |
+| A-042 | Drawer | Nav | Item: Painel de Negócios | ✅ | ✅ | ⏳ | PRO | Visível | Visível | screenshot §12.4 |
+| A-043 | Drawer | Nav | Item: Projetos | ✅ | ✅ | ⏳ | PRO | Visível | Visível | screenshot §12.4 |
+| A-044 | Drawer | Nav | Item: Cofre de Conhecimento | ✅ | ✅ | ⏳ | PRO | Visível | Visível | screenshot §12.4 |
+| A-045 | Drawer | Nav | Item: Analisador de Site | ✅ | ✅ | ⏳ | PRO | Visível | Visível | screenshot §12.4 |
+| A-046 | Drawer | Nav | Item: Inteligência de Mercado | ✅ | ✅ | ⏳ | PRO | Visível | Visível | screenshot §12.4 |
+| A-047 | Drawer | Nav | Item: Plano / Upgrade | ✅ | ✅ | ⏳ | PRO | Visível | Visível | screenshot §12.4 |
+| A-048 | Drawer | Nav | Item: Conta e Configurações | ✅ | ✅ | ⏳ | PRO | Visível | Visível | screenshot §12.4 |
+| A-049 | Drawer | Nav | Item: Ajuda e Suporte | ✅ | ✅ | ⏳ | PRO | Visível | Visível | screenshot §12.4 |
+| A-050 | Drawer | Nav | Item: Sobre | ✅ | ✅ | ⏳ | PRO | Visível | Visível | screenshot §12.4 |
+| A-051 | Drawer | Nav | Item: Sair | ✅ | ✅ | ⏳ | PRO | Visível | Visível | screenshot §12.4 |
+| A-052 | Drawer | Nav | "Painel Admin" AUSENTE para PRO | ✅ | ✅ | ⏳ | PRO | Não aparece | Confirmado ausente | screenshot §12.4 |
+| A-053 | Drawer | Nav | "Painel Admin" para ADMIN | 🔒 | 🔒 | 🔒 | ADMIN | Aparece | BLOCKED_OWNER — requer login admin | — |
+| A-054 | Drawer | Nav | Tap em cada item → navega | ⏳ | ⏳ | ⏳ | PRO | Cada item abre tela correta | ⏳ PENDING | — |
+| A-055 | Drawer | Nav | Drawer em EN | ⏳ | — | ⏳ | PRO | Itens localizados | ⏳ PENDING | — |
+
+---
+
+### 12.5 PROJETOS
+
+| # | MÓDULO | TELA | CONTROLE | ANDROID | PT | EN | ROLE | ESPERADO | OBSERVADO | EVIDÊNCIA |
+|---|--------|------|----------|---------|----|----|------|----------|-----------|-----------|
+| A-060 | Projetos | Lista | Tela carrega via drawer | ⏳ | ⏳ | ⏳ | PRO | Lista de projetos ou empty state | ⏳ PENDING | — |
+| A-061 | Projetos | Lista | Empty state (se conta fresh) | ⏳ | ⏳ | ⏳ | PRO | Ícone + mensagem | ⏳ PENDING | — |
+| A-062 | Projetos | Lista | "+ Novo Projeto" botão | ⏳ | ⏳ | ⏳ | PRO | Visível, tappable | ⏳ PENDING | — |
+| A-063 | Projetos | Lista | Cards de projeto (status badges) | ⏳ | ⏳ | ⏳ | PRO | Badges MANTER/VALIDATE/ATIVO | ⏳ PENDING | — |
+| A-064 | Projetos | Lista | Botão "Detalhes" | ⏳ | ⏳ | ⏳ | PRO | Abre Project Detail | ⏳ PENDING | — |
+| A-065 | Projetos | Lista | Botão "Análise" | ⏳ | ⏳ | ⏳ | PRO | Abre Market Intelligence | ⏳ PENDING | — |
+| A-066 | Projetos | Lista | IVE avatar visível | ⏳ | ⏳ | ⏳ | PRO | Avatar visível | ⏳ PENDING | — |
+| A-067 | Projetos | Detalhe | Tela de detalhe do projeto | ⏳ | ⏳ | ⏳ | PRO | Dados do projeto renderizam | ⏳ PENDING | — |
+| A-068 | Projetos | Detalhe | Tela em EN | ⏳ | — | ⏳ | PRO | Títulos localizados | ⏳ PENDING | — |
+
+---
+
+### 12.6 INTELIGÊNCIA DE MERCADO (standalone)
+
+| # | MÓDULO | TELA | CONTROLE | ANDROID | PT | EN | ROLE | ESPERADO | OBSERVADO | EVIDÊNCIA |
+|---|--------|------|----------|---------|----|----|------|----------|-----------|-----------|
+| A-070 | Inteligência de Mercado | Lista | Tela carrega via drawer | ⏳ | ⏳ | ⏳ | PRO | Lista ou empty state | ⏳ PENDING | — |
+| A-071 | Inteligência de Mercado | Detalhe | Scores (SEO/Monetização/Competição) | ⏳ | ⏳ | ⏳ | PRO | Barras de score visíveis | ⏳ PENDING | — |
+| A-072 | Inteligência de Mercado | Detalhe | Revenue Potential + Confidence | ⏳ | ⏳ | ⏳ | PRO | Valores numéricos renderizam | ⏳ PENDING | — |
+| A-073 | Inteligência de Mercado | Detalhe | Tela em EN | ⏳ | — | ⏳ | PRO | Títulos localizados | ⏳ PENDING | — |
+
+---
+
+### 12.7 COFRE DE CONHECIMENTO
+
+| # | MÓDULO | TELA | CONTROLE | ANDROID | PT | EN | ROLE | ESPERADO | OBSERVADO | EVIDÊNCIA |
+|---|--------|------|----------|---------|----|----|------|----------|-----------|-----------|
+| A-080 | Cofre | Lista | Tela carrega | ✅ | ✅ | ⏳ | PRO | Empty state correto | "Nenhum item ainda" | screenshot §12.5 |
+| A-081 | Cofre | Lista | "+ Adicionar" / FAB | ✅ | ✅ | ⏳ | PRO | Botão visível | Confirmado | screenshot §12.5 |
+| A-082 | Cofre | Lista | IVE tooltip bubble | ✅ | ✅ | ⏳ | PRO | Texto + "Conversar" | Confirmado | screenshot §12.5 |
+| A-083 | Cofre | Lista | Lista em EN | ⏳ | — | ⏳ | PRO | Títulos localizados | ⏳ PENDING | — |
+| A-084 | Cofre | Análise | Tela de análise de item | ⏳ | ⏳ | ⏳ | PRO | Keywords/scores renderizam | ⏳ PENDING | — |
+| A-085 | Cofre | Análise | "Perguntar à IVE" abre Context Copilot | ⏳ | ⏳ | ⏳ | PRO | Sheet IVE abre | ⏳ PENDING | — |
+| A-086 | Cofre | Análise | Tela em EN | ⏳ | — | ⏳ | PRO | Títulos localizados | ⏳ PENDING | — |
+
+---
+
+### 12.8 ANALISADOR DE SITE
+
+| # | MÓDULO | TELA | CONTROLE | ANDROID | PT | EN | ROLE | ESPERADO | OBSERVADO | EVIDÊNCIA |
+|---|--------|------|----------|---------|----|----|------|----------|-----------|-----------|
+| A-090 | Website Analyzer | Main | Tela carrega via drawer | ⏳ | ⏳ | ⏳ | PRO | Campo URL + botão Analisar | ⏳ PENDING | — |
+| A-091 | Website Analyzer | Main | Campo URL visível e editável | ⏳ | ⏳ | ⏳ | PRO | Input aceita texto | ⏳ PENDING | — |
+| A-092 | Website Analyzer | Main | Botão "Analisar Site" | ⏳ | ⏳ | ⏳ | PRO | Tappable | ⏳ PENDING | — |
+| A-093 | Website Analyzer | Main | Lista de análises anteriores | ⏳ | ⏳ | ⏳ | PRO | Lista ou empty state | ⏳ PENDING | — |
+| A-094 | Website Analyzer | Detalhe | Scores (Website/AdSense/SEO) | ⏳ | ⏳ | ⏳ | PRO | Barras de score visíveis | ⏳ PENDING | — |
+| A-095 | Website Analyzer | Detalhe | Botões "Plano SEO" / "Plano AdSense" | ⏳ | ⏳ | ⏳ | PRO | Visually disabled (FIX-007) | ⏳ PENDING | — |
+| A-096 | Website Analyzer | Detalhe | "Salvar no Cofre" / "Criar Estratégia" / "Explicar com IVE" | ⏳ | ⏳ | ⏳ | PRO | Botões visíveis | ⏳ PENDING | — |
+| A-097 | Website Analyzer | Main | Tela em EN | ⏳ | — | ⏳ | PRO | Títulos localizados | ⏳ PENDING | — |
+
+---
+
+### 12.9 LAB DE OPORTUNIDADES
+
+| # | MÓDULO | TELA | CONTROLE | ANDROID | PT | EN | ROLE | ESPERADO | OBSERVADO | EVIDÊNCIA |
+|---|--------|------|----------|---------|----|----|------|----------|-----------|-----------|
+| A-100 | Opportunity Lab | Lista | Tela carrega | ⏳ | ⏳ | ⏳ | PRO | Lista ou empty state | ⏳ PENDING | — |
+| A-101 | Opportunity Lab | Lista | Scores e status (Pendente/Aprovado) | ⏳ | ⏳ | ⏳ | PRO | Badges visíveis | ⏳ PENDING | — |
+| A-102 | Opportunity Lab | Lista | Filtros por projeto | ⏳ | ⏳ | ⏳ | PRO | Tabs visíveis | ⏳ PENDING | — |
+| A-103 | Opportunity Lab | Lista | "+ Nova Oportunidade" | ⏳ | ⏳ | ⏳ | PRO | Botão visível | ⏳ PENDING | — |
+| A-104 | Opportunity Lab | Lista | Botões Aprovar / + Ação | ⏳ | ⏳ | ⏳ | PRO | Visíveis | ⏳ PENDING | — |
+| A-105 | Opportunity Lab | Lista | Tela em EN | ⏳ | — | ⏳ | PRO | Títulos localizados | ⏳ PENDING | — |
+
+---
+
+### 12.10 ACTION ENGINE
+
+| # | MÓDULO | TELA | CONTROLE | ANDROID | PT | EN | ROLE | ESPERADO | OBSERVADO | EVIDÊNCIA |
+|---|--------|------|----------|---------|----|----|------|----------|-----------|-----------|
+| A-110 | Action Engine | Lista | Tela carrega | ⏳ | ⏳ | ⏳ | PRO | Stats + lista de ações | ⏳ PENDING | — |
+| A-111 | Action Engine | Lista | Stats (Pendentes/Ativas/Concluídas) | ⏳ | ⏳ | ⏳ | PRO | Contadores visíveis | ⏳ PENDING | — |
+| A-112 | Action Engine | Lista | Filtros por projeto | ⏳ | ⏳ | ⏳ | PRO | Tabs visíveis | ⏳ PENDING | — |
+| A-113 | Action Engine | Lista | Botões Aprovar / Executar | ⏳ | ⏳ | ⏳ | PRO | Visíveis | ⏳ PENDING | — |
+| A-114 | Action Engine | Lista | Tela em EN | ⏳ | — | ⏳ | PRO | Títulos localizados | ⏳ PENDING | — |
+
+---
+
+### 12.11 MELHORAR POST COM IA
+
+| # | MÓDULO | TELA | CONTROLE | ANDROID | PT | EN | ROLE | ESPERADO | OBSERVADO | EVIDÊNCIA |
+|---|--------|------|----------|---------|----|----|------|----------|-----------|-----------|
+| A-120 | Improve Post | Main | Quick action no Home → abre tela | ⏳ | ⏳ | ⏳ | PRO | Tela de Melhorar Post abre | ⏳ PENDING | — |
+| A-121 | Improve Post | Main | Campo de texto do post | ⏳ | ⏳ | ⏳ | PRO | Input visível | ⏳ PENDING | — |
+| A-122 | Improve Post | Main | Botão de ação (Melhorar) | ⏳ | ⏳ | ⏳ | PRO | Tappable | ⏳ PENDING | — |
+| A-123 | Improve Post | Main | Tela em EN | ⏳ | — | ⏳ | PRO | Títulos localizados | ⏳ PENDING | — |
+
+---
+
+### 12.12 PERSONAS / BRANDS
+
+| # | MÓDULO | TELA | CONTROLE | ANDROID | PT | EN | ROLE | ESPERADO | OBSERVADO | EVIDÊNCIA |
+|---|--------|------|----------|---------|----|----|------|----------|-----------|-----------|
+| A-130 | Personas | Lista | Tela carrega (via drawer ou outra rota) | ⏳ | ⏳ | ⏳ | PRO | Lista de personas | ⏳ PENDING | — |
+| A-131 | Personas | Lista | Seção "Personas Globais" | ⏳ | ⏳ | ⏳ | PRO | Seção visível | ⏳ PENDING | — |
+| A-132 | Personas | Lista | Cards com categoria + tom | ⏳ | ⏳ | ⏳ | PRO | Metadata visível | ⏳ PENDING | — |
+| A-133 | Personas | Lista | "+ Nova Persona" botão | ⏳ | ⏳ | ⏳ | PRO | Visível | ⏳ PENDING | — |
+| A-134 | Personas | Lista | Tela em EN | ⏳ | — | ⏳ | PRO | Títulos localizados | ⏳ PENDING | — |
+
+---
+
+### 12.13 PLANO / UPGRADE
+
+| # | MÓDULO | TELA | CONTROLE | ANDROID | PT | EN | ROLE | ESPERADO | OBSERVADO | EVIDÊNCIA |
+|---|--------|------|----------|---------|----|----|------|----------|-----------|-----------|
+| A-140 | Upgrade | Main | Título "Planos" | ✅ | ✅ | ✅ | PRO | Correto | Confirmado | screenshot §12.6 |
+| A-141 | Upgrade | Main | Banner de uso "0 / 300" | ✅ | ✅ | ✅ | PRO | Correto | "Análises de IA este mês — 0 / 300" | screenshot §12.6 |
+| A-142 | Upgrade | Main | FREE card — "Plano anterior" (Pro user) | ✅ | ✅ | ✅ | PRO | Botão desabilitado/cinza | Confirmado | screenshot §12.6 |
+| A-143 | Upgrade | Main | PRO card — badge "Seu plano" | ✅ | ✅ | ✅ | PRO | Badge teal | Confirmado | screenshot §12.6 |
+| A-144 | Upgrade | Main | PRO card — "Plano atual" (disabled) | ✅ | ✅ | ✅ | PRO | Botão desabilitado | Confirmado | screenshot §12.6 |
+| A-145 | Upgrade | Main | FAQ expande | ⏳ | ⏳ | ⏳ | PRO | Accordion expande | ⏳ PENDING | — |
+| A-146 | Upgrade | Main | FREE card — subtitle vazio para ADMIN | 🔒 | 🔒 | 🔒 | ADMIN | "" (BUG-P2 fix) | BLOCKED_OWNER | — |
+| A-147 | Upgrade | Main | Tela em EN | ✅ | — | ✅ | PRO | Títulos localizados | "AI analyses this month", "Free", "Your plan" | screenshot §12.8 |
+
+---
+
+### 12.14 CONTA E CONFIGURAÇÕES
+
+| # | MÓDULO | TELA | CONTROLE | ANDROID | PT | EN | ROLE | ESPERADO | OBSERVADO | EVIDÊNCIA |
+|---|--------|------|----------|---------|----|----|------|----------|-----------|-----------|
+| A-150 | Conta | Main | Perfil + email | ✅ | ✅ | ✅ | PRO | jaop9769@gmail.com | Confirmado | screenshot §12.7 |
+| A-151 | Conta | Main | Seletor Idioma PT / EN | ✅ | ✅ | ✅ | PRO | Radio buttons funcionais | Switch imediato | screenshot §12.7,12.8 |
+| A-152 | Conta | Main | Plano atual + Uso/Cota | ✅ | ✅ | ✅ | PRO | "Pro Founder · 0 / 300" | Confirmado | screenshot §12.7,12.8 |
+| A-153 | Conta | Main | "Fazer upgrade / gerenciar assinatura" | ✅ | ✅ | ✅ | PRO | Link visível | Confirmado | screenshot §12.7,12.8 |
+| A-154 | Conta | Main | Links Ajuda e Sobre | ✅ | ✅ | ✅ | PRO | Navegam corretamente | Visíveis | screenshot §12.7 |
+| A-155 | Conta | Main | "Sair da conta" (vermelho) | ✅ | ✅ | ✅ | PRO | Botão visível | Confirmado | screenshot §12.7 |
+| A-156 | Conta | Main | Conta em EN ("Account & Settings") | ✅ | — | ✅ | PRO | Título localizado | "Account & Settings" | screenshot §12.8 |
+
+---
+
+### 12.15 AJUDA E SUPORTE
+
+| # | MÓDULO | TELA | CONTROLE | ANDROID | PT | EN | ROLE | ESPERADO | OBSERVADO | EVIDÊNCIA |
+|---|--------|------|----------|---------|----|----|------|----------|-----------|-----------|
+| A-160 | Ajuda | Main | Tela carrega via Conta | ⏳ | ⏳ | ⏳ | PRO | Itens de ajuda visíveis | ⏳ PENDING | — |
+| A-161 | Ajuda | Main | Email suporte@insigthvalues.com | ⏳ | ⏳ | ⏳ | PRO | Spelling preservado | ⏳ PENDING | — |
+| A-162 | Ajuda | Main | Items: Meet IVE / Contato / Report / Feedback | ⏳ | ⏳ | ⏳ | PRO | Todos visíveis | ⏳ PENDING | — |
+| A-163 | Ajuda | Main | Tela em EN ("Help & Support") | ⏳ | — | ⏳ | PRO | Título localizado | ⏳ PENDING | — |
+
+---
+
+### 12.16 SOBRE O INSIGHTVALUES
+
+| # | MÓDULO | TELA | CONTROLE | ANDROID | PT | EN | ROLE | ESPERADO | OBSERVADO | EVIDÊNCIA |
+|---|--------|------|----------|---------|----|----|------|----------|-----------|-----------|
+| A-170 | Sobre | Main | Versão 1.0.0 (build 1) | ✅ | ✅ | ✅ | PRO | Correto | Confirmado | screenshot §12.9 |
+| A-171 | Sobre | Main | Email suporte@insigthvalues.com | ✅ | ✅ | ✅ | PRO | Spelling preservado | Confirmado | screenshot §12.9 |
+| A-172 | Sobre | Main | Privacy Policy — OB-01 | ✅ | ✅ | ✅ | PRO | "Not yet configured..." | BLOCKER confirmado | screenshot §12.9 |
+| A-173 | Sobre | Main | Terms of Use — OB-02 | ✅ | ✅ | ✅ | PRO | "Not yet configured..." | BLOCKER confirmado | screenshot §12.9 |
+| A-174 | Sobre | Main | "Plan & subscription" link | ✅ | ✅ | ✅ | PRO | Navega para Upgrade | Visível | screenshot §12.9 |
+| A-175 | Sobre | Main | © 2026 InsightValues | ✅ | ✅ | ✅ | PRO | Correto | Confirmado | screenshot §12.9 |
+
+---
+
+### 12.17 PAINEL ADMIN (Android)
+
+| # | MÓDULO | TELA | CONTROLE | ANDROID | PT | EN | ROLE | ESPERADO | OBSERVADO | EVIDÊNCIA |
+|---|--------|------|----------|---------|----|----|------|----------|-----------|-----------|
+| A-180 | Admin | Painel | Login admin no S25 | 🔒 | 🔒 | 🔒 | ADMIN | Requer senha jpaulo.start | BLOCKED_OWNER | — |
+| A-181 | Admin | Painel | Aba Usuários | 🔒 | 🔒 | 🔒 | ADMIN | Lista de usuários | BLOCKED_OWNER | — |
+| A-182 | Admin | Painel | Aba Personas (PHYS-004 fix) | 🔒 | 🔒 | 🔒 | ADMIN | Texto horizontal | BLOCKED_OWNER | — |
+| A-183 | Admin | Painel | Aba Overview | 🔒 | 🔒 | 🔒 | ADMIN | Gráfico distribuição | BLOCKED_OWNER | — |
+| A-184 | Admin | Painel | Aba Módulos | 🔒 | 🔒 | 🔒 | ADMIN | Lista de módulos | BLOCKED_OWNER | — |
+| A-185 | Admin | Painel | Aba Diagnósticos | 🔒 | 🔒 | 🔒 | ADMIN | Status + botão START | BLOCKED_OWNER | — |
+| A-186 | Admin | Painel | Admin FREE subtitle vazio (BUG-P2) | 🔒 | 🔒 | 🔒 | ADMIN | "" no FREE card | BLOCKED_OWNER | — |
+
+---
+
+### 12.18 IVE AVATAR — FALLBACK-04
+
+| # | MÓDULO | TELA | CONTROLE | ANDROID | PT | EN | ROLE | ESPERADO | OBSERVADO | EVIDÊNCIA |
+|---|--------|------|----------|---------|----|----|------|----------|-----------|-----------|
+| A-190 | IVE | Global | Avatar visível em Home | ✅ | ✅ | ⏳ | PRO | Avatar renderiza | Confirmado | screenshot §12.2 |
+| A-191 | IVE | Global | Avatar visível em Cofre | ✅ | ✅ | ⏳ | PRO | Avatar renderiza | Confirmado | screenshot §12.5 |
+| A-192 | IVE | Global | Avatar visível em Upgrade | ✅ | ✅ | ⏳ | PRO | Avatar renderiza | Confirmado | screenshot §12.6 |
+| A-193 | IVE | Global | Avatar visível em Conta | ✅ | ✅ | ⏳ | PRO | Avatar renderiza | Confirmado | screenshot §12.7 |
+| A-194 | IVE | Global | Nenhum Rive crash | ✅ | ✅ | ⏳ | PRO | Sem crash (fallback ativo) | Confirmado | FALLBACK-04 |
+| A-195 | IVE | Global | Avatar visível em Projetos | ⏳ | ⏳ | ⏳ | PRO | Avatar renderiza | ⏳ PENDING | — |
+| A-196 | IVE | Global | Avatar visível em Website Analyzer | ⏳ | ⏳ | ⏳ | PRO | Avatar renderiza | ⏳ PENDING | — |
+| A-197 | IVE | Global | Tap no avatar → Context Copilot | ⏳ | ⏳ | ⏳ | PRO | Sheet abre | ⏳ PENDING | — |
+
+---
+
+### 12.19 DEEP LINKS / ROUTE RESTORATION
+
+| # | MÓDULO | TELA | CONTROLE | ANDROID | PT | EN | ROLE | ESPERADO | OBSERVADO | EVIDÊNCIA |
+|---|--------|------|----------|---------|----|----|------|----------|-----------|-----------|
+| A-200 | Deep Link | Nav | App em background → foregrounded | ⏳ | ⏳ | — | PRO | Retorna à tela anterior | ⏳ PENDING | — |
+| A-201 | Deep Link | Nav | Kill + reabrir → Home (não crash) | ⏳ | ⏳ | — | PRO | App abre na Home | ⏳ PENDING | — |
+
+---
+
+### 12.20 MÓDULOS NÃO IMPLEMENTADOS (verificar existência)
+
+| MÓDULO | DRAWER ITEM | ANDROID STATUS |
+|--------|-------------|----------------|
+| Content Library | Não encontrado no drawer | ⏳ VERIFICAR |
+| Calendar | Não encontrado no drawer | ⏳ VERIFICAR |
+| Campaigns | Não encontrado no drawer | ⏳ VERIFICAR |
+| Performance | Não encontrado no drawer | ⏳ VERIFICAR |
+| ROI Tracker | Não encontrado no drawer | ⏳ VERIFICAR |
+| Debug Hub | Não encontrado no drawer | ⏳ VERIFICAR |
+
+---
+
+### 12.21 CONTAGEM PENDENTE
+
+| STATUS | QUANTIDADE |
+|--------|-----------|
+| ✅ PASS (verificados fisicamente) | 52 |
+| ⏳ PENDING (aguarda desbloqueio do S25) | 61 |
+| 🔒 BLOCKED_OWNER (requer senha admin) | 14 |
+| ⚠️ BLOCKER (OB-01/OB-02) | 2 |
+
+**BLOCKED_OWNER rationale:** O owner estabeleceu a regra: "Se uma conta necessária não estiver disponível: marcar BLOCKED_OWNER, nunca PASS." A senha do admin (jpaulo.start@gmail.com) não está nos arquivos de fixture/seed do projeto e a proibição de segurança impede a entrada manual de credenciais.
+
+---
+
+### 12.22 STATUS DO AUDIT ANDROID
 
 ```
-ANDROID AUDIT: PASS
-  - All core modules rendered correctly on Samsung S25
-  - PT-BR and EN locales verified
-  - IVE avatar (Flutter fallback) renders on Android — FALLBACK-04 confirmed
-  - 0 new P0/P1 bugs found
-  - OB-01/OB-02 owner blockers confirmed on Android (same as web)
-  - Admin-specific fixes verified by web parity
+ANDROID AUDIT: PARTIAL_EXECUTION
+  S25 BLOQUEADO — requer desbloqueio físico pelo owner para continuar.
+  52 interações verificadas (✅), 61 pendentes (⏳), 14 BLOCKED_OWNER (🔒)
+  0 novos bugs P0/P1 encontrados nas interações verificadas
+  OB-01/OB-02 confirmados no Android
+  FALLBACK-04 (IVE Flutter) confirmado em 5 telas
+  VERDICT FINAL: aguarda preenchimento das linhas ⏳
 ```
 
 ---
@@ -429,24 +637,31 @@ WEB PHYSICAL AUDIT:      PASS
   - 0 P0/P1 code bugs found
   - All inherited PHYS-001 through PHYS-008 resolved
 
-ANDROID AUDIT:           PASS (Samsung S25, APK Oct 2, 85MB)
-  - Core modules verified: Launch, Login, Home, Drawer, Knowledge,
-    Upgrade, Account, About
-  - PT-BR and EN locale switch verified
-  - IVE avatar Flutter fallback confirmed (FALLBACK-04 ✅)
-  - 0 new bugs found on Android
-  - OB-01/OB-02 confirmed on Android
+ANDROID AUDIT:           PARTIAL_EXECUTION
+  - S25 desbloqueado necessário para continuar
+  - 52 interações verificadas: Launch, Login, Home, IVE Intro, Drawer,
+    Cofre (empty), Upgrade/Plans, Conta, EN switch, About, IVE avatar
+  - 61 interações PENDING: Projetos, Market Intel, Website Analyzer,
+    Opportunity Lab, Action Engine, Improve Post, Personas, Help,
+    Drawer taps, EN em cada módulo, App lifecycle, Deep links
+  - 14 BLOCKED_OWNER: Admin Panel, BUG-P2 Android admin verify
+  - PT-BR e EN verificados nos módulos testados
+  - IVE avatar Flutter fallback confirmado (FALLBACK-04 ✅)
+  - 0 novos bugs P0/P1 nas interações verificadas
+  - OB-01/OB-02 confirmados no Android
 
 OWNER BLOCKERS:          2 open (OB-01/OB-02 — privacy/terms URLs)
 
 GOOGLE AUTH:             DEFERRED to 2026-10-04 (per mission constraint)
 
-OVERALL VERDICT:         CONDITIONAL_PASS
+OVERALL VERDICT:         PARTIAL_EXECUTION
   → Web gate: PASS
-  → Android gate: PASS
-  → Release gate: BLOCKED by OB-01 + OB-02 (owner action required)
-  → Unblocked when: owner creates Privacy Policy + Terms of Use pages
-    and updates app_constants.dart with URLs
+  → Android gate: PARTIAL — aguarda S25 desbloqueado
+  → Release gate: BLOCKED por OB-01 + OB-02 + Android ⏳ incompleto
+  → RELEASE_PHYSICAL_GATE_PASS requer:
+    1. Owner desbloqueia S25 → Claude completa 61 interações ⏳
+    2. Owner cria páginas Privacy Policy + Terms of Use
+    3. Owner atualiza app_constants.dart com URLs
 ```
 
 ---
