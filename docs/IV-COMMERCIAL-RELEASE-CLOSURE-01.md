@@ -134,7 +134,7 @@ introduces no new code — only the documentation file.
 |------|--------|-----------|
 | CI (flutter analyze + test) on origin/main | ✅ SUCCESS | job #110412084416 · 2026-10-01T14:24:59Z |
 | flutter test (local — 2026-10-02) | ✅ **841/841 PASS** | Exit code 0 · 1m43s |
-| flutter analyze (local — 2026-10-02) | ⏳ RUNNING | Result: see CI gate |
+| flutter analyze (local — 2026-10-02) | ✅ **Exit 0** — 548 info-level (pre-existing withOpacity deprecations) | No errors · 203s |
 | This mission's code delta | `docs/` only — no Dart changes | No new analyze/test risk |
 | Prior known analyze issues | 548 `info`-level `withOpacity` deprecation warnings (pre-existing, non-fatal) | Not errors |
 
