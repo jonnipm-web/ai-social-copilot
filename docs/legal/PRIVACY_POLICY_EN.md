@@ -1,0 +1,241 @@
+# InsightValues Privacy Policy
+
+**Effective date:** October 2026  
+**Last updated:** October 2026  
+**Contact:** suporte@insigthvalues.com
+
+---
+
+## 1. Who We Are
+
+InsightValues ("InsightValues," "we," "our," or "us") is a business intelligence platform that helps entrepreneurs and business owners analyze market opportunities, manage projects, and make data-informed decisions through AI-assisted tools.
+
+**OWNER_LEGAL_DECISION_REQUIRED:** InsightValues is currently operated by an individual operator. A formal legal entity name, registration number, and jurisdiction have not been established. The owner must define the legal entity structure and update this policy accordingly before public release.
+
+This Privacy Policy applies to the InsightValues mobile application ("App") and the InsightValues website at insightvalues.com ("Site").
+
+---
+
+## 2. Scope
+
+This policy applies when you:
+- Create an account and use the InsightValues App or Site
+- Contact us for support
+- Browse insightvalues.com
+
+It does not apply to third-party websites or services that may be linked from InsightValues.
+
+---
+
+## 3. Information We Collect
+
+### 3.1 Account Information
+
+When you register, we collect:
+- **Email address** — required for authentication and account management
+- **Authentication method** — whether you signed in with email/password or Google
+
+We do not require you to provide a name. If a name is provided (for example through Google Sign-In), it may be associated with your profile.
+
+### 3.2 Subscription and Billing Information
+
+If you subscribe to a paid plan (PRO), we collect:
+- **Email address** — shared with Stripe to create a billing customer record
+- **Subscription status and plan details** — stored in our database to control feature access
+
+We do **not** collect or store your payment card number, CVV, or bank account details. Payment card data is entered directly into Stripe's secure checkout and is handled entirely by Stripe.
+
+### 3.3 User-Created Content
+
+When you use InsightValues features, you create content that we store on your behalf:
+- **Project data** — project names, descriptions, objectives, resource allocations
+- **Personas** — brand personas and their attributes
+- **Knowledge Vault items** — text, documents, or files you upload for analysis
+- **Content items** — posts and content you create or improve within the app
+- **Calendar entries** — editorial calendar events
+- **Campaign data** — marketing campaigns and their details
+- **Market intelligence** — URLs, niches, and analysis inputs you provide
+- **Website analysis requests** — website URLs you submit for analysis
+- **Business memory** — context and preferences derived from your use of IVE features
+
+### 3.4 IVE Conversation Data
+
+When you use the IVE Context Copilot, we store:
+- **Conversation sessions** — session metadata (start time, context)
+- **Messages** — the questions you ask and the AI responses generated
+
+This data is used to provide the IVE feature and is not used for advertising.
+
+### 3.5 Technical and Usage Data
+
+We collect limited technical data necessary to operate the service:
+- **Server logs** — IP addresses, request timestamps, error information (maintained by our infrastructure providers, Supabase)
+- **Diagnostic events** — owner-initiated diagnostic sessions only (not automatic user analytics)
+- **Language preference** — stored locally on your device and synced to your profile
+
+We do **not** use third-party analytics SDKs (such as Firebase Analytics, Google Analytics, Mixpanel, or Amplitude). We do not track your behavior for advertising purposes.
+
+### 3.6 Files and Uploads
+
+When you upload files to the Knowledge Vault, these files are:
+- Stored in Supabase Storage
+- Processed by our server-side AI functions (via Groq) to extract insights
+- Associated with your account and subject to your control
+
+---
+
+## 4. How We Use Your Information
+
+We use the information we collect to:
+
+- **Provide the service** — authenticate you, run the features you request, store your data
+- **Process payments** — manage your subscription via Stripe
+- **AI-powered analysis** — send the content you provide to AI functions (via Groq, server-side) to generate insights, analyses, and recommendations
+- **Personalize your experience** — remember your language preference and business context for the IVE assistant
+- **Communicate with you** — respond to support requests sent to suporte@insigthvalues.com
+- **Maintain security** — detect and prevent fraud or abuse
+- **Improve the service** — analyze aggregated, non-personally-identifying patterns to improve product features
+
+---
+
+## 5. AI Processing
+
+InsightValues uses AI language models to power features such as:
+- Market intelligence analysis
+- Website analysis
+- Knowledge extraction and strategy generation
+- Content improvement (IVE "Improve Post")
+- Context Copilot (IVE) conversations
+- Opportunity and action generation
+
+**Important disclosures:**
+- AI outputs are generated by a language model and **may contain errors, inaccuracies, or outdated information**. They are provided for informational and analytical purposes only.
+- AI outputs are **not professional advice** — they are not financial, legal, medical, or investment advice.
+- **Content you provide is sent to our AI processing service (Groq)** server-side when you use AI-powered features. Groq's privacy policy governs how they handle inference inputs.
+- We do not use your content to train AI models unless you have given explicit consent.
+
+---
+
+## 6. Data Sharing and Disclosure
+
+We do **not** sell your personal information. We do not share your data with advertisers.
+
+We share your data only in the following circumstances:
+
+| Recipient | What is shared | Why |
+|-----------|---------------|-----|
+| Supabase | All stored data | Infrastructure/database/authentication provider |
+| Stripe | Email address, subscription metadata | Billing and payment processing |
+| Groq | Content you provide to AI features | AI inference processing |
+| Google | Your Google account credentials (if you use Google Sign-In) | Authentication |
+| Legal authorities | Information required by law | Legal compliance only |
+
+### 6.1 Legal Obligations
+
+We may disclose your information if required to do so by law, court order, or regulatory authority, or if we believe in good faith that disclosure is necessary to protect the rights, property, or safety of InsightValues, our users, or the public.
+
+---
+
+## 7. Data Retention
+
+We retain your data for as long as your account is active and as necessary to provide the service.
+
+- **Account data** — retained until you request account deletion
+- **User-created content** — retained until you delete it or request account deletion
+- **Billing records** — Stripe retains billing and invoice records per their own retention policy, which may exceed account deletion
+- **Server logs** — retained per our infrastructure provider's (Supabase's) policy; generally 30–90 days
+
+---
+
+## 8. Account Deletion
+
+**ACCOUNT_DELETION_FLOW_REQUIRED:** A self-service account deletion feature is not yet available within the app. To request deletion of your account and associated data, please contact us at suporte@insigthvalues.com with the subject "Account Deletion Request."
+
+Upon receiving a verified deletion request, we will:
+1. Delete your account from our authentication system
+2. Delete your profile and associated content from our database
+3. Request cancellation of any active subscription from Stripe
+4. Confirm deletion by email
+
+Note: Stripe retains billing records per their own policy. Aggregated, anonymized data may be retained for operational analysis.
+
+---
+
+## 9. Security
+
+We take reasonable measures to protect your information:
+- All data is transmitted over HTTPS (TLS)
+- Supabase provides encrypted storage for database data
+- Row Level Security (RLS) ensures users can only access their own data
+- API keys and secrets are stored server-side only and never included in the app
+- Stripe's certified payment processing handles card data — we never see it
+
+We cannot guarantee absolute security of any data transmitted over the internet. You are responsible for keeping your account credentials secure.
+
+---
+
+## 10. International Data Transfers
+
+InsightValues uses service providers based primarily in the United States (Supabase, Stripe, Groq). If you are located outside the United States, your data may be transferred to and processed in the United States, which may have different data protection laws than your country.
+
+**OWNER_LEGAL_DECISION_REQUIRED:** If InsightValues targets users in the European Union or Brazil (LGPD scope), additional legal bases for international transfers may need to be established. The owner should consult legal counsel on this matter.
+
+---
+
+## 11. Children and Minors
+
+InsightValues is a business intelligence platform intended for adults. We do not knowingly collect personal information from individuals under the age of 18. If you believe a minor has provided us with personal information, please contact us at suporte@insigthvalues.com.
+
+---
+
+## 12. Cookies and Web Technologies
+
+**Mobile App:** The InsightValues app does not use browser cookies. It uses device local storage (SharedPreferences) to store your language preference locally.
+
+**Website (insightvalues.com):** The website may use cookies and similar technologies for standard WordPress functionality. Please refer to the cookie consent manager on the website for details.
+
+---
+
+## 13. Your Rights
+
+Depending on your location, you may have rights regarding your personal information, including:
+- **Access** — request a copy of the data we hold about you
+- **Correction** — request correction of inaccurate data
+- **Deletion** — request deletion of your account and data (see Section 8)
+- **Data portability** — request your data in a machine-readable format
+
+To exercise these rights, contact us at suporte@insigthvalues.com.
+
+**OWNER_LEGAL_DECISION_REQUIRED:** Specific statutory rights (e.g., GDPR rights for EU residents, LGPD rights for Brazilian residents) and the timelines for responding to requests depend on the applicable jurisdiction. The owner should verify this section with legal counsel.
+
+---
+
+## 14. Experimental and Lab Features
+
+InsightValues includes features that are in active development and accessible only to certain user roles:
+- **Quant Lab** — financial data analysis (admin-only, not publicly released)
+- **Impact Lab** — evidence organization and investigation (admin-only, not publicly released)
+- **Strategy Lab** — strategy building and simulation
+
+Data processed through experimental features is subject to the same data handling practices described in this policy.
+
+---
+
+## 15. Changes to This Policy
+
+We may update this Privacy Policy from time to time. If we make material changes, we will notify you by updating the "Last updated" date above and, where appropriate, by notifying you in the app or by email.
+
+Your continued use of InsightValues after changes are posted constitutes your acceptance of the updated policy.
+
+---
+
+## 16. Contact
+
+For privacy-related questions, requests, or complaints:
+
+**Email:** suporte@insigthvalues.com  
+**Website:** https://insightvalues.com
+
+---
+
+*This document was prepared as part of IV-RELEASE-LEGAL-POLICIES-01. It reflects the product as implemented and is intended to be accurate and not misleading. It is not legal advice. The owner should review with qualified legal counsel before publication.*
