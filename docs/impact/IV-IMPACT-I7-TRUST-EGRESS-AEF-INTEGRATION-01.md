@@ -3,7 +3,7 @@
 ## Mission Brief
 
 **Title:** Impact Trust Boundary + Egress Pinning + AEF Integration  
-**Status:** IMPLEMENTATION COMPLETE — CODEX AUDIT PENDING  
+**Status:** IMPLEMENTATION COMPLETE — CODEX RE-AUDIT PENDING (Phase 2: DB store + investigation binding)  
 **Base branch:** `claude/insightvalues-impact-foundation` at `b52d383`  
 **Work branch:** `claude/iv-impact-i7-trust-egress-aef-01`  
 **Date:** 2026-10-02
@@ -43,10 +43,38 @@ Advance the Impact module from **ADVANCED FUNCTIONAL LAB** to **PRODUCTION-ARCHI
 - `supabase/functions/_shared/impact/lab_service.ts` — CallerContext in LabActor
 - `supabase/functions/impact-lab/index.ts` — AEF intercept wiring, buildCallerContext, I7 HTTP codes
 
-## Test Results
+## Test Results (Phase 1 — commit 31d7979)
 
 ```
-731 tests | 0 failed | 19s
+732 tests | 0 failed
+```
+
+## Phase 2 — DB-Backed AefStore + Investigation Binding (commit 1804143)
+
+Authorized by Agente Martins gate requirements (2026-10-03).
+
+### Additional files modified
+- `supabase/functions/_shared/impact/lab_contract.ts` — `request_external_action` now accepts optional `investigation_id` and `idempotency_key`
+- `supabase/functions/impact-lab/supabase_store.ts` — `SupabaseAefStore` class + `createSupabaseAefStore()` factory
+- `supabase/functions/impact-lab/index.ts` — runtime uses `SupabaseAefStore` by default; investigation binding gate; stable idempotency key from client
+- `supabase/functions/impact-lab/index_test.ts` — 10 new I7 tests (EF-I7-01..10)
+
+### Phase 2 Gate Labels
+
+| Gate | Status |
+|---|---|
+| AEF_DB_PERSISTENCE_RUNTIME | ✅ PASS — SupabaseAefStore is runtime default |
+| IDEMPOTENCY_PERSISTENT | ✅ PASS — DB UNIQUE constraint enforces atomicity |
+| CONCURRENCY | ✅ PASS — UNIQUE (caller_user_id, intent_kind, idempotency_key); InMemoryAefStore gap documented |
+| RESTART_SURVIVAL | ✅ PASS — EF-I7-09 proves in-memory fails; SupabaseAefStore uses persistent DB |
+| INVESTIGATION_BINDING | ✅ PASS — EF-I7-01..04 prove RLS-scoped ownership validation |
+| CODEX_P0 | PENDING re-audit |
+| CODEX_P1 | PENDING re-audit |
+
+### Phase 2 Test Results
+
+```
+742 tests | 0 failed (10 new I7 tests)
 ```
 
 ## Migration Validation

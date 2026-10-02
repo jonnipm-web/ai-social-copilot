@@ -82,3 +82,27 @@ Any missing or invalid field throws before any business logic runs. The returned
 - Not substitutable for entitlement check (that happens in `requireModuleAccess`)
 - Not a secret (it contains only opaque IDs and policy labels)
 - Not derived from request body (all fields come from server-verified sources)
+
+## Investigation Binding Gate (added 2026-10-03)
+
+Before the AEF intercept accepts any class C action, `index.ts` now validates
+that the `investigationId` from the request body is owned by the authenticated
+user. This is done via a lab store read (RLS-scoped to the caller's JWT):
+
+```
+request_external_action(investigation_id, idempotency_key, kind)
+    │
+    ├── investigation_id required + UUID format → INVALID_REQUEST if missing
+    ├── idempotency_key required + UUID format  → INVALID_REQUEST if missing
+    │
+    ├── labStore.getInvestigation(investigationId)  ← RLS: only owner sees it
+    │   └── null → 404 INVESTIGATION_NOT_FOUND
+    │
+    └── submitAction(callerContext, { investigationId, idempotencyKey, kind }, ...)
+```
+
+**Why client-provided idempotencyKey:** The client holds the logical identity of a
+request (e.g., "this is my request to verify claim C for investigation I"). The
+server generates only the physical `requestId`; the `idempotencyKey` must be stable
+across retries. This is the only model that satisfies "same logical request = same
+idempotency key" without relying on per-attempt random UUID generation.

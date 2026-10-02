@@ -166,6 +166,26 @@ export async function submitAction(
 
   const insertResult = await store.insertRequest(aefRequest);
   if (!insertResult.ok) {
+    if (insertResult.code === 'ALREADY_EXISTS') {
+      // Concurrent duplicate: two requests raced past the idempotency check and
+      // both tried to insert. The loser gets ALREADY_EXISTS from the DB UNIQUE
+      // constraint. Re-fetch to return IDEMPOTENCY_CONFLICT (not 503) so the
+      // client gets a consistent idempotent response rather than a false
+      // persistence error.
+      const raceResult = await store.findByIdempotencyKey(
+        intent.idempotencyKey,
+        caller.authenticatedUserId,
+        intent.kind,
+      );
+      if (raceResult.ok && raceResult.value !== null) {
+        const raceReceipt = await store.getReceipt(raceResult.value.requestId);
+        return {
+          ok: false,
+          error: { code: 'IDEMPOTENCY_CONFLICT', existingRequestId: raceResult.value.requestId },
+          receipt: raceReceipt.ok ? raceReceipt.value : null,
+        };
+      }
+    }
     return {
       ok: false,
       error: { code: 'AEF_PERSISTENCE_UNAVAILABLE' },
