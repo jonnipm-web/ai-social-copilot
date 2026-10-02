@@ -196,7 +196,7 @@ export type LabRequest =
   | { readonly action: 'run_verification'; readonly investigationId: string; readonly claimRef: string; readonly idempotencyKey?: string; readonly humanReviewBindingHash?: string }
   | { readonly action: 'open_dispute'; readonly investigationId: string; readonly ref: string; readonly claimRef: string; readonly kind: typeof DISPUTE_KINDS[number]; readonly submittedEvidenceRefs: readonly string[] }
   | { readonly action: 'resolve_dispute'; readonly investigationId: string; readonly disputeRef: string; readonly resolution: typeof DISPUTE_RESOLUTIONS[number] }
-  | { readonly action: 'request_external_action'; readonly kind: string }
+  | { readonly action: 'request_external_action'; readonly kind: string; readonly investigationId?: string; readonly idempotencyKey?: string }
   // I2 Registry Intelligence
   | { readonly action: 'search_registry'; readonly investigationId: string; readonly providerId: string; readonly query: RegistryQueryInput }
   | { readonly action: 'import_registry_claim'; readonly investigationId: string; readonly sourceRef: string; readonly ref: string }
@@ -528,9 +528,9 @@ export function parseLabRequest(body: unknown): ImpactResult<LabRequest> {
         allowOnly(['investigation_id', 'source_ref', 'ref']);
         return ok({ action, investigationId: inv(), sourceRef: id(top, 'source_ref')!, ref: id(top, 'ref')! });
       case 'request_external_action':
-        allowOnly(['kind']);
+        allowOnly(['kind', 'investigation_id', 'idempotency_key']);
         if (typeof top.kind !== 'string' || top.kind.length > 64) throw new Bad('kind must be a string');
-        return ok({ action, kind: top.kind });
+        return ok({ action, kind: top.kind, investigationId: uuid(top, 'investigation_id', false), idempotencyKey: uuid(top, 'idempotency_key', false) });
       default:
         throw new Bad('unknown action');
     }

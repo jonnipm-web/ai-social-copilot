@@ -526,6 +526,245 @@ export function createSupabaseImpactLabStore(req: Request): SupabaseImpactLabSto
   return new SupabaseImpactLabStore(user as unknown as DbClient, service as unknown as DbClient);
 }
 
+// ── AEF store ────────────────────────────────────────────────────────────────
+
+import type { AefStore, AefStoreResult } from '../_shared/aef/store.ts';
+import type {
+  ActionClassification,
+  AefExecutionRequest,
+  ExecutionAttempt,
+  ExecutionReceipt,
+  HumanGateState,
+  HumanGateStatus,
+  ImpactActionIntentKind,
+  PolicyDecision,
+  PolicyOutcome,
+} from '../_shared/aef/types.ts';
+
+function aefFail(code: 'AEF_PERSISTENCE_UNAVAILABLE' | 'ALREADY_EXISTS' | 'NOT_FOUND'): { ok: false; code: typeof code } {
+  return { ok: false, code };
+}
+const aefOk = <T>(value: T): AefStoreResult<T> => ({ ok: true, value });
+
+function rowToAefRequest(r: Row): AefExecutionRequest {
+  return {
+    requestId: r.request_id as string,
+    correlationId: r.correlation_id as string,
+    caller: {
+      authenticatedUserId: r.caller_user_id as string,
+      moduleId: 'impact',
+      correlationId: r.correlation_id as string,
+      projectId: (r.project_id as string | null),
+      serviceId: r.service_id as string,
+    },
+    intent: {
+      kind: r.intent_kind as ImpactActionIntentKind,
+      investigationId: r.investigation_id as string,
+      idempotencyKey: r.idempotency_key as string,
+      classification: r.classification as ActionClassification,
+    },
+    requestedAt: r.requested_at as string,
+  };
+}
+
+function rowToGate(r: Row): HumanGateState {
+  return {
+    gateId: r.gate_id as string,
+    requestId: r.request_id as string,
+    approverRef: (r.approver_ref as string | null),
+    status: r.status as HumanGateStatus,
+    expiresAt: r.expires_at as string,
+    resolvedAt: (r.resolved_at as string | null),
+    bindingHash: (r.binding_hash as string | null),
+  };
+}
+
+function rowToReceipt(r: Row): ExecutionReceipt {
+  return {
+    receiptId: r.receipt_id as string,
+    requestId: r.request_id as string,
+    correlationId: r.correlation_id as string,
+    callerUserId: r.caller_user_id as string,
+    projectId: (r.project_id as string | null),
+    serviceId: r.service_id as string,
+    intentKind: r.intent_kind as ImpactActionIntentKind,
+    investigationId: r.investigation_id as string,
+    idempotencyKey: r.idempotency_key as string,
+    classification: r.classification as ActionClassification,
+    policyVersion: r.policy_version as string,
+    policyOutcome: r.policy_outcome as PolicyOutcome,
+    executionOutcome: r.execution_outcome as ExecutionReceipt['executionOutcome'],
+    humanGateId: (r.human_gate_id as string | null),
+    errorCode: (r.error_code as string | null),
+    issuedAt: r.issued_at as string,
+    receiptHash: r.receipt_hash as string,
+  };
+}
+
+/**
+ * Supabase-backed AEF store — IV-IMPACT-I7 production default.
+ *
+ * All writes use the service_role client (RLS bypassed; auth enforced before
+ * the kernel is called). Reads also use service_role since these are internal
+ * kernel reads, not user-facing queries.
+ *
+ * insertAttempt is a no-op: the receipt captures the same execution_outcome
+ * and is the canonical persistent record. A dedicated attempts table (with
+ * its own trigger semantics) is a future migration task.
+ */
+export class SupabaseAefStore implements AefStore {
+  constructor(private readonly service: DbClient) {}
+
+  async insertRequest(req: AefExecutionRequest): Promise<AefStoreResult<void>> {
+    const { error } = await this.service.from('impact_aef_requests').insert({
+      request_id: req.requestId,
+      correlation_id: req.correlationId,
+      caller_user_id: req.caller.authenticatedUserId,
+      project_id: req.caller.projectId,
+      service_id: req.caller.serviceId,
+      intent_kind: req.intent.kind,
+      investigation_id: req.intent.investigationId,
+      idempotency_key: req.intent.idempotencyKey,
+      classification: req.intent.classification,
+      requested_at: req.requestedAt,
+    });
+    if (!error) return aefOk(undefined);
+    if (error.code === '23505') return aefFail('ALREADY_EXISTS');
+    return aefFail('AEF_PERSISTENCE_UNAVAILABLE');
+  }
+
+  async findByIdempotencyKey(
+    idempotencyKey: string,
+    callerUserId: string,
+    intentKind: string,
+  ): Promise<AefStoreResult<AefExecutionRequest | null>> {
+    const { data, error } = await this.service.from('impact_aef_requests')
+      .select('*')
+      .eq('caller_user_id', callerUserId)
+      .eq('intent_kind', intentKind)
+      .eq('idempotency_key', idempotencyKey)
+      .maybeSingle();
+    if (error) return aefFail('AEF_PERSISTENCE_UNAVAILABLE');
+    return aefOk(data ? rowToAefRequest(data as Row) : null);
+  }
+
+  async insertPolicyDecision(decision: PolicyDecision): Promise<AefStoreResult<void>> {
+    const { error } = await this.service.from('impact_aef_decisions').insert({
+      request_id: decision.requestId,
+      outcome: decision.outcome,
+      policy_version: decision.policyVersion,
+      reason: decision.reason,
+      decided_at: decision.decidedAt,
+    });
+    if (!error) return aefOk(undefined);
+    if (error.code === '23505') return aefFail('ALREADY_EXISTS');
+    return aefFail('AEF_PERSISTENCE_UNAVAILABLE');
+  }
+
+  async insertHumanGate(gate: HumanGateState): Promise<AefStoreResult<void>> {
+    const { error } = await this.service.from('impact_aef_gates').insert({
+      gate_id: gate.gateId,
+      request_id: gate.requestId,
+      approver_ref: gate.approverRef,
+      status: gate.status,
+      expires_at: gate.expiresAt,
+      resolved_at: gate.resolvedAt,
+      binding_hash: gate.bindingHash,
+    });
+    if (!error) return aefOk(undefined);
+    if (error.code === '23505') return aefFail('ALREADY_EXISTS');
+    return aefFail('AEF_PERSISTENCE_UNAVAILABLE');
+  }
+
+  async updateHumanGate(
+    gateId: string,
+    status: Exclude<HumanGateStatus, 'PENDING'>,
+    approverRef: string | null,
+    bindingHash: string | null,
+    resolvedAt: string,
+  ): Promise<AefStoreResult<void>> {
+    const { data, error } = await this.service.from('impact_aef_gates')
+      .update({ status, approver_ref: approverRef, binding_hash: bindingHash, resolved_at: resolvedAt })
+      .eq('gate_id', gateId)
+      .eq('status', 'PENDING')
+      .select('gate_id');
+    if (error) {
+      if (/IMPACT_AEF_GATE_ALREADY_RESOLVED/.test(error.message ?? '')) return aefFail('ALREADY_EXISTS');
+      return aefFail('AEF_PERSISTENCE_UNAVAILABLE');
+    }
+    const rows = data as Row[] | null;
+    if (!rows?.length) return aefFail('NOT_FOUND');
+    return aefOk(undefined);
+  }
+
+  async getHumanGate(requestId: string): Promise<AefStoreResult<HumanGateState | null>> {
+    const { data, error } = await this.service.from('impact_aef_gates')
+      .select('*')
+      .eq('request_id', requestId)
+      .maybeSingle();
+    if (error) return aefFail('AEF_PERSISTENCE_UNAVAILABLE');
+    return aefOk(data ? rowToGate(data as Row) : null);
+  }
+
+  // Attempts are absorbed into receipts for Lab use; no separate table exists.
+  async insertAttempt(_attempt: ExecutionAttempt): Promise<AefStoreResult<void>> {
+    return aefOk(undefined);
+  }
+
+  async insertReceipt(receipt: ExecutionReceipt): Promise<AefStoreResult<void>> {
+    const { error } = await this.service.from('impact_aef_receipts').insert({
+      receipt_id: receipt.receiptId,
+      request_id: receipt.requestId,
+      correlation_id: receipt.correlationId,
+      caller_user_id: receipt.callerUserId,
+      project_id: receipt.projectId,
+      service_id: receipt.serviceId,
+      intent_kind: receipt.intentKind,
+      investigation_id: receipt.investigationId,
+      idempotency_key: receipt.idempotencyKey,
+      classification: receipt.classification,
+      policy_version: receipt.policyVersion,
+      policy_outcome: receipt.policyOutcome,
+      execution_outcome: receipt.executionOutcome,
+      human_gate_id: receipt.humanGateId,
+      error_code: receipt.errorCode,
+      issued_at: receipt.issuedAt,
+      receipt_hash: receipt.receiptHash,
+    });
+    if (!error) return aefOk(undefined);
+    if (error.code === '23505') return aefFail('ALREADY_EXISTS');
+    return aefFail('AEF_PERSISTENCE_UNAVAILABLE');
+  }
+
+  async getReceipt(requestId: string): Promise<AefStoreResult<ExecutionReceipt | null>> {
+    const { data, error } = await this.service.from('impact_aef_receipts')
+      .select('*')
+      .eq('request_id', requestId)
+      .order('issued_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) return aefFail('AEF_PERSISTENCE_UNAVAILABLE');
+    return aefOk(data ? rowToReceipt(data as Row) : null);
+  }
+
+  async getRequest(requestId: string): Promise<AefStoreResult<AefExecutionRequest | null>> {
+    const { data, error } = await this.service.from('impact_aef_requests')
+      .select('*')
+      .eq('request_id', requestId)
+      .maybeSingle();
+    if (error) return aefFail('AEF_PERSISTENCE_UNAVAILABLE');
+    return aefOk(data ? rowToAefRequest(data as Row) : null);
+  }
+}
+
+export function createSupabaseAefStore(): SupabaseAefStore {
+  const url = Deno.env.get('SUPABASE_URL');
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!url || !serviceKey) throw new Error('impact-lab: missing Supabase configuration for AEF store');
+  const service = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
+  return new SupabaseAefStore(service as unknown as DbClient);
+}
+
 /**
  * I5 rate limiter: impact_rate_limit_hit() through the CALLER'S OWN session
  * client — identity is auth.uid() inside the database, never a parameter,
