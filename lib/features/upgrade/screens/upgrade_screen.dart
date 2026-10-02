@@ -81,7 +81,7 @@ class _UpgradeContentState extends ConsumerState<_UpgradeContent> {
         const SizedBox(height: 28),
         _PlanCard(
           title: t.planFree,
-          subtitle: t.upgradeFreeSubtitle,
+          subtitle: quota.isAdmin ? '' : t.upgradeFreeSubtitle,
           price: t.planFreePrice,
           period: '',
           isHighlighted: false,
