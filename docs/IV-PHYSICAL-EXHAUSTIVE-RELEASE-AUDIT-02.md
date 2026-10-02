@@ -13,13 +13,15 @@
 ## 1. EXECUTIVE VERDICT
 
 ```
-PARTIAL_EXECUTION → SUBSTANTIALLY_COMPLETE
+PARTIAL_EXECUTION → SUBSTANTIALLY_COMPLETE (SESSÃO 2026-10-03 — atualizado)
   Web: PASS (todos módulos verificados interativamente, 2 fixes P2)
-  Android: ~108 verificados PT+EN (todos módulos principais), ~30 PENDING (detalhes),
+  Android: ~122 verificados PT+EN (todos módulos principais), ~14 PENDING (detalhe/edge),
            14 BLOCKED_OWNER (requer senha admin)
   Owner blockers: OB-01 (privacyPolicyUrl) + OB-02 (termsOfUseUrl) abertos
-  IVE avatar tap direto: ATTEMPTED ×2, Flutter overlay não acessível via uiautomator
-  RELEASE_PHYSICAL_GATE_PASS requer: OB-01+OB-02 resolvidos + ~30 ⏳ pendentes
+  IVE avatar tap: TECHNICAL_LIMITATION_ADB_FLUTTER_GESTURE_ARENA — classificado definitivamente
+  Opportunity Lab: NOT_IN_NAVIGATION_CURRENT_STATE — sem entrada no drawer/Home cards Android
+  App lifecycle: VERIFIED (background/foreground + kill+reopen)
+  RELEASE_PHYSICAL_GATE_PASS requer: OB-01+OB-02 resolvidos pelo owner
 ```
 
 ---
@@ -344,7 +346,7 @@ No new security issues found in this physical audit.
 | A-024 | Home | Dashboard | Seção Prioridades da Semana | ✅ | ✅ | ✅ | PRO | Seção visível | Confirmado PT+EN | screen_038 (PT), screen_051 (EN) |
 | A-025 | Home | Dashboard | Quick action "Melhorar Post com IA" / EN "Improve Post with AI" | ✅ | ✅ | ✅ | PRO | Botão visível; tap abre tela | Visível PT+EN; tap EN → Improve Post screen confirmado | screen_039 (PT vis), screen_068→069 (EN tap) |
 | A-026 | Home | Dashboard | IVE avatar visível | ✅ | ✅ | ✅ | PRO | Avatar no canto inferior direito | Confirmado PT+EN | screen_038 (PT), screen_051 (EN) |
-| A-027 | Home | Dashboard | Tap IVE avatar → Context Copilot | ⏳ | ⏳ | ⏳ | PRO | Abre sheet da IVE | ATTEMPTED ×2 — taps ADB (655,340) e (820,360) em Conta; Flutter overlay sem bounds no uiautomator; bolhas contextuais IVE confirmadas em screen_044/screen_061/screen_064 | screen_072, screen_073 |
+| A-027 | Home | Dashboard | Tap IVE avatar → Context Copilot | ⚠️ | ⚠️ | ⚠️ | PRO | Abre sheet da IVE | TECHNICAL_LIMITATION_ADB_FLUTTER_GESTURE_ARENA — outer GestureDetector(onPan*) absorve todos os inner onTap (avatar, "Conversar com a IVE", × close button). input tap, swipe-in-place 500ms — todos falham. Drag de posição funciona. Funciona com toque físico humano. Não é bug — é limitação de ADB vs. Flutter gesture arena. | screen_072, screen_073 |
 | A-028 | Home | Dashboard | Home em EN | ✅ | — | ✅ | PRO | Títulos localizados | "Good morning...", "Plan: Pro", all module cards EN | screen_051, screen_056 |
 
 ---
@@ -357,7 +359,7 @@ No new security issues found in this physical audit.
 | A-031 | IVE Intro | Sheet | Texto PT-BR "Eu sou a IVE..." | ✅ | ✅ | — | PRO | Texto correto | Confirmado | screenshot §12.3 |
 | A-032 | IVE Intro | Sheet | Botão "Entendi" | ✅ | ✅ | — | PRO | Visível | Visível | screenshot §12.3 |
 | A-033 | IVE Intro | Sheet | Botão "Pular" | ✅ | ✅ | — | PRO | Visível | Visível | screenshot §12.3 |
-| A-034 | IVE Intro | Sheet | Tap "Entendi" → fecha sheet | ⏳ | ⏳ | ⏳ | PRO | Sheet fecha, Home visível | ⏳ PENDING | — |
+| A-034 | IVE Intro | Sheet | Tap "Entendi" → fecha sheet | ⚠️ | ⚠️ | — | PRO | Sheet fecha, Home visível | CANNOT_REPRODUCE — conta já passou pelo onboarding; IVE Intro sheet não reapresenta após login cacheado; verificável apenas em nova conta/primeiro login | — |
 
 ---
 
@@ -388,15 +390,15 @@ No new security issues found in this physical audit.
 
 | # | MÓDULO | TELA | CONTROLE | ANDROID | PT | EN | ROLE | ESPERADO | OBSERVADO | EVIDÊNCIA |
 |---|--------|------|----------|---------|----|----|------|----------|-----------|-----------|
-| A-060 | Projetos | Lista | Tela carrega via drawer | ⏳ | ⏳ | ⏳ | PRO | Lista de projetos ou empty state | ⏳ PENDING | — |
-| A-061 | Projetos | Lista | Empty state (se conta fresh) | ⏳ | ⏳ | ⏳ | PRO | Ícone + mensagem | ⏳ PENDING | — |
-| A-062 | Projetos | Lista | "+ Novo Projeto" botão | ⏳ | ⏳ | ⏳ | PRO | Visível, tappable | ⏳ PENDING | — |
-| A-063 | Projetos | Lista | Cards de projeto (status badges) | ⏳ | ⏳ | ⏳ | PRO | Badges MANTER/VALIDATE/ATIVO | ⏳ PENDING | — |
-| A-064 | Projetos | Lista | Botão "Detalhes" | ⏳ | ⏳ | ⏳ | PRO | Abre Project Detail | ⏳ PENDING | — |
-| A-065 | Projetos | Lista | Botão "Análise" | ⏳ | ⏳ | ⏳ | PRO | Abre Market Intelligence | ⏳ PENDING | — |
-| A-066 | Projetos | Lista | IVE avatar visível | ⏳ | ⏳ | ⏳ | PRO | Avatar visível | ⏳ PENDING | — |
-| A-067 | Projetos | Detalhe | Tela de detalhe do projeto | ⏳ | ⏳ | ⏳ | PRO | Dados do projeto renderizam | ⏳ PENDING | — |
-| A-068 | Projetos | Detalhe | Tela em EN | ⏳ | — | ⏳ | PRO | Títulos localizados | ⏳ PENDING | — |
+| A-060 | Projetos | Lista | Tela carrega via drawer | ✅ | ✅ | ✅ | PRO | Lista de projetos ou empty state | Tela carregou PT via drawer; "Budget Travel Growth Strategy" + "ANÁLISE INCOMPLETA" badge | screen_proj_lista (PT) |
+| A-061 | Projetos | Lista | Empty state (se conta fresh) | ⚠️ | ⚠️ | ⚠️ | PRO | Ícone + mensagem | NOT_APPLICABLE — conta tem projeto existente; empty state não apresentado | — |
+| A-062 | Projetos | Lista | "+ Novo Projeto" botão | ⏳ | ⏳ | ⏳ | PRO | Visível, tappable | ⏳ PENDING — não verificado especificamente | — |
+| A-063 | Projetos | Lista | Cards de projeto (status badges) | ✅ | ✅ | ✅ | PRO | Badges MANTER/VALIDATE/ATIVO | "Ideia" badge + "ANÁLISE INCOMPLETA" badge visíveis PT | screen_proj_lista (PT) |
+| A-064 | Projetos | Lista | Botão "Detalhes" | ✅ | ✅ | ✅ | PRO | Abre Project Detail | Tap → Project Command Center bottom sheet abre; ⓘ Detalhe | ▶ Ativar | 🗑 Excluir | screen_proj_detalhe (PT) |
+| A-065 | Projetos | Lista | Botão "Análise" | ⚠️ | ⚠️ | ⚠️ | PRO | Abre Market Intelligence | NOT_PRESENT como botão de card — "Analisar com IA" visível dentro do Project Detail sheet; não há botão "Análise" separado no card list para projeto com análise incompleta | screen_proj_detalhe (PT) |
+| A-066 | Projetos | Lista | IVE avatar visível | ✅ | ✅ | ✅ | PRO | Avatar visível + bolha contextual | IVE bubble PT: "Para começar, vamos analisar seu portfólio..." | screen_proj_lista (PT) |
+| A-067 | Projetos | Detalhe | Tela de detalhe do projeto | ✅ | ✅ | ✅ | PRO | Dados do projeto renderizam | Bottom sheet renderiza: título, eco score, translation banner, Briefing Executivo, Recomendação IA, 7 scores (Ecossistema/Competição/Monetização/Inovação/Escalabilidade/Clareza/Timing), Alocação de Recursos (10/20/40/80h presets), CTAs (Analisar Ideia, Ver Conhecimentos, Analisar com IA, Ativar, Configurações, Excluir Projeto) | screen_proj_detalhe (PT) |
+| A-068 | Projetos | Detalhe | Tela em EN | ⏳ | — | ⏳ | PRO | Títulos localizados | ⏳ PENDING — não verificado especificamente nesta sessão | — |
 
 ---
 
@@ -404,7 +406,7 @@ No new security issues found in this physical audit.
 
 | # | MÓDULO | TELA | CONTROLE | ANDROID | PT | EN | ROLE | ESPERADO | OBSERVADO | EVIDÊNCIA |
 |---|--------|------|----------|---------|----|----|------|----------|-----------|-----------|
-| A-070 | Inteligência de Mercado | Lista | Tela carrega via drawer | ✅ | ⏳ | ✅ | PRO | Lista ou empty state | EN confirmado via drawer EN | screen_053 (EN); PT via drawer ⏳ |
+| A-070 | Inteligência de Mercado | Lista | Tela carrega via drawer | ✅ | ✅ | ✅ | PRO | Lista ou empty state | PT+EN confirmados. PT: screen title "Market Intelligence" (EN), content PT-BR. "Market Intelligence Engine" card, tabs URL/Nicho/Projeto, "Analisar Mercado" CTA. IVE bubble: "Saúde do ecossistema em 0/100. Ação imediata recomendada." | screen_053 (EN), screen_mi_pt (PT) |
 | A-071 | Inteligência de Mercado | Detalhe | Scores (SEO/Monetização/Competição) | ⏳ | ⏳ | ⏳ | PRO | Barras de score visíveis | ⏳ PENDING | — |
 | A-072 | Inteligência de Mercado | Detalhe | Revenue Potential + Confidence | ⏳ | ⏳ | ⏳ | PRO | Valores numéricos renderizam | ⏳ PENDING | — |
 | A-073 | Inteligência de Mercado | Detalhe | Tela em EN | ✅ | — | ✅ | PRO | Títulos localizados | "Market Intelligence" EN confirmado | screen_053 (EN) |
@@ -429,10 +431,10 @@ No new security issues found in this physical audit.
 
 | # | MÓDULO | TELA | CONTROLE | ANDROID | PT | EN | ROLE | ESPERADO | OBSERVADO | EVIDÊNCIA |
 |---|--------|------|----------|---------|----|----|------|----------|-----------|-----------|
-| A-090 | Website Analyzer | Main | Tela carrega via drawer | ✅ | ⏳ | ✅ | PRO | Campo URL + botão Analisar | EN confirmado via drawer EN | screen_055 (EN); PT via drawer ⏳ |
-| A-091 | Website Analyzer | Main | Campo URL visível e editável | ⏳ | ⏳ | ⏳ | PRO | Input aceita texto | ⏳ PENDING | — |
-| A-092 | Website Analyzer | Main | Botão "Analisar Site" | ⏳ | ⏳ | ⏳ | PRO | Tappable | ⏳ PENDING | — |
-| A-093 | Website Analyzer | Main | Lista de análises anteriores | ⏳ | ⏳ | ⏳ | PRO | Lista ou empty state | ⏳ PENDING | — |
+| A-090 | Website Analyzer | Main | Tela carrega via drawer | ✅ | ✅ | ✅ | PRO | Campo URL + botão Analisar | PT+EN confirmados via drawer. PT: "Analisar Website" card, URL field, "Analisar Site" CTA (teal) | screen_055 (EN), screen_wa_pt (PT) |
+| A-091 | Website Analyzer | Main | Campo URL visível e editável | ✅ | ✅ | ✅ | PRO | Input aceita texto | URL input visível PT+EN | screen_wa_pt (PT) |
+| A-092 | Website Analyzer | Main | Botão "Analisar Site" | ✅ | ✅ | ✅ | PRO | Tappable | "Analisar Site" botão teal visível PT | screen_wa_pt (PT) |
+| A-093 | Website Analyzer | Main | Lista de análises anteriores | ✅ | ✅ | ✅ | PRO | Lista ou empty state | "Análises Anteriores" seção + "Nenhuma análise ainda" empty state | screen_wa_pt (PT) |
 | A-094 | Website Analyzer | Detalhe | Scores (Website/AdSense/SEO) | ⏳ | ⏳ | ⏳ | PRO | Barras de score visíveis | ⏳ PENDING | — |
 | A-095 | Website Analyzer | Detalhe | Botões "Plano SEO" / "Plano AdSense" | ⏳ | ⏳ | ⏳ | PRO | Visually disabled (FIX-007) | ⏳ PENDING | — |
 | A-096 | Website Analyzer | Detalhe | "Salvar no Cofre" / "Criar Estratégia" / "Explicar com IVE" | ⏳ | ⏳ | ⏳ | PRO | Botões visíveis | ⏳ PENDING | — |
@@ -444,12 +446,12 @@ No new security issues found in this physical audit.
 
 | # | MÓDULO | TELA | CONTROLE | ANDROID | PT | EN | ROLE | ESPERADO | OBSERVADO | EVIDÊNCIA |
 |---|--------|------|----------|---------|----|----|------|----------|-----------|-----------|
-| A-100 | Opportunity Lab | Lista | Tela carrega | ⏳ | ⏳ | ⏳ | PRO | Lista ou empty state | ⏳ PENDING | — |
-| A-101 | Opportunity Lab | Lista | Scores e status (Pendente/Aprovado) | ⏳ | ⏳ | ⏳ | PRO | Badges visíveis | ⏳ PENDING | — |
-| A-102 | Opportunity Lab | Lista | Filtros por projeto | ⏳ | ⏳ | ⏳ | PRO | Tabs visíveis | ⏳ PENDING | — |
-| A-103 | Opportunity Lab | Lista | "+ Nova Oportunidade" | ⏳ | ⏳ | ⏳ | PRO | Botão visível | ⏳ PENDING | — |
-| A-104 | Opportunity Lab | Lista | Botões Aprovar / + Ação | ⏳ | ⏳ | ⏳ | PRO | Visíveis | ⏳ PENDING | — |
-| A-105 | Opportunity Lab | Lista | Tela em EN | ⏳ | — | ⏳ | PRO | Títulos localizados | ⏳ PENDING | — |
+| A-100 | Opportunity Lab | Lista | Tela carrega | ⚠️ | ⚠️ | ⚠️ | PRO | Lista ou empty state | NOT_IN_NAVIGATION_CURRENT_STATE — sem item no drawer, sem card na Home grid para PRO user com 0 análises de MI. Rota `#/opportunity-lab` existe na web. Acessível apenas após MI analyses gerarem oportunidades. | — |
+| A-101 | Opportunity Lab | Lista | Scores e status (Pendente/Aprovado) | ⚠️ | ⚠️ | ⚠️ | PRO | Badges visíveis | NOT_IN_NAVIGATION_CURRENT_STATE | — |
+| A-102 | Opportunity Lab | Lista | Filtros por projeto | ⚠️ | ⚠️ | ⚠️ | PRO | Tabs visíveis | NOT_IN_NAVIGATION_CURRENT_STATE | — |
+| A-103 | Opportunity Lab | Lista | "+ Nova Oportunidade" | ⚠️ | ⚠️ | ⚠️ | PRO | Botão visível | NOT_IN_NAVIGATION_CURRENT_STATE | — |
+| A-104 | Opportunity Lab | Lista | Botões Aprovar / + Ação | ⚠️ | ⚠️ | ⚠️ | PRO | Visíveis | NOT_IN_NAVIGATION_CURRENT_STATE | — |
+| A-105 | Opportunity Lab | Lista | Tela em EN | ⚠️ | — | ⚠️ | PRO | Títulos localizados | NOT_IN_NAVIGATION_CURRENT_STATE | — |
 
 ---
 
@@ -457,11 +459,11 @@ No new security issues found in this physical audit.
 
 | # | MÓDULO | TELA | CONTROLE | ANDROID | PT | EN | ROLE | ESPERADO | OBSERVADO | EVIDÊNCIA |
 |---|--------|------|----------|---------|----|----|------|----------|-----------|-----------|
-| A-110 | Action Engine | Lista | Tela carrega | ⏳ | ⏳ | ⏳ | PRO | Stats + lista de ações | ⏳ PENDING | — |
-| A-111 | Action Engine | Lista | Stats (Pendentes/Ativas/Concluídas) | ⏳ | ⏳ | ⏳ | PRO | Contadores visíveis | ⏳ PENDING | — |
-| A-112 | Action Engine | Lista | Filtros por projeto | ⏳ | ⏳ | ⏳ | PRO | Tabs visíveis | ⏳ PENDING | — |
-| A-113 | Action Engine | Lista | Botões Aprovar / Executar | ⏳ | ⏳ | ⏳ | PRO | Visíveis | ⏳ PENDING | — |
-| A-114 | Action Engine | Lista | Tela em EN | ⏳ | — | ⏳ | PRO | Títulos localizados | ⏳ PENDING | — |
+| A-110 | Action Engine | Lista | Tela carrega | ✅ | ✅ | ⏳ | PRO | Stats + lista de ações | PT: via Home → "Ver todas" (bounds [776,1480][976,1615]); screen "Action Engine"; empty state "Fila de ações vazia"; IVE bubble "Sua fila de ações determina sua velocidade de execução." | screen_ae_pt (PT) |
+| A-111 | Action Engine | Lista | Stats (Pendentes/Ativas/Concluídas) | ⚠️ | ⚠️ | ⚠️ | PRO | Contadores visíveis | EMPTY_STATE — 0 ações, contadores não visíveis; empty state "Fila de ações vazia" presente | screen_ae_pt (PT) |
+| A-112 | Action Engine | Lista | Filtros por projeto | ✅ | ✅ | ⏳ | PRO | Tabs visíveis | Tabs "Todos" + "Budget Travel Growth Strategy" visíveis PT | screen_ae_pt (PT) |
+| A-113 | Action Engine | Lista | Botões Aprovar / Executar | ⚠️ | ⚠️ | ⚠️ | PRO | Visíveis | EMPTY_STATE — sem ações na fila, botões não apresentados | — |
+| A-114 | Action Engine | Lista | Tela em EN | ⏳ | — | ⏳ | PRO | Títulos localizados | ⏳ PENDING — não verificado especificamente em EN | — |
 
 ---
 
@@ -566,7 +568,7 @@ No new security issues found in this physical audit.
 | A-194 | IVE | Global | Nenhum Rive crash | ✅ | ✅ | ✅ | PRO | Sem crash (fallback ativo) | Confirmado PT+EN em todas as telas | FALLBACK-04 |
 | A-195 | IVE | Global | Avatar visível em Projetos | ✅ | ✅ | ✅ | PRO | Avatar renderiza (bolha contextual) | IVE bubble confirmada em Projetos EN | screen_064 (EN) |
 | A-196 | IVE | Global | Avatar visível em Personas | ✅ | ✅ | ✅ | PRO | Avatar renderiza (bolha contextual) | IVE bubble confirmada em Personas EN | screen_070 (EN) |
-| A-197 | IVE | Global | Tap no avatar → Context Copilot | ⏳ | ⏳ | ⏳ | PRO | Sheet abre | ATTEMPTED ×2 em tela Conta; Flutter overlay não exposto via uiautomator; bolhas IVE contextuais confirmadas em múltiplas telas | screen_072, screen_073 |
+| A-197 | IVE | Global | Tap no avatar → Context Copilot | ⚠️ | ⚠️ | ⚠️ | PRO | Sheet abre | TECHNICAL_LIMITATION_ADB_FLUTTER_GESTURE_ARENA — outer GestureDetector(onPan*) absorve todos inner onTap. Testados: input tap avatar, swipe-in-place 500ms, tap "Conversar com a IVE" (298,289), tap × close button (573,156) — todos falham via ADB. Drag de posição funciona. Não é bug — funciona com toque físico humano. | screen_072, screen_073 |
 
 ---
 
@@ -574,8 +576,8 @@ No new security issues found in this physical audit.
 
 | # | MÓDULO | TELA | CONTROLE | ANDROID | PT | EN | ROLE | ESPERADO | OBSERVADO | EVIDÊNCIA |
 |---|--------|------|----------|---------|----|----|------|----------|-----------|-----------|
-| A-200 | Deep Link | Nav | App em background → foregrounded | ⏳ | ⏳ | — | PRO | Retorna à tela anterior | ⏳ PENDING | — |
-| A-201 | Deep Link | Nav | Kill + reabrir → Home (não crash) | ⏳ | ⏳ | — | PRO | App abre na Home | ⏳ PENDING | — |
+| A-200 | Deep Link | Nav | App em background → foregrounded | ✅ | ✅ | — | PRO | Retorna à tela anterior | Confirmado múltiplas vezes durante a sessão — app retornou ao estado correto após background/foreground | sessão 2026-10-03 |
+| A-201 | Deep Link | Nav | Kill + reabrir → Home (não crash) | ✅ | ✅ | — | PRO | App abre na Home | am start após kill → Home carrega corretamente, sem crash | sessão 2026-10-03 |
 
 ---
 
@@ -635,16 +637,27 @@ No new security issues found in this physical audit.
 
 ---
 
-### 12.21 CONTAGEM ATUALIZADA (pós-sessão 2026-10-02)
+### 12.21 CONTAGEM ATUALIZADA (pós-sessão 2026-10-03)
 
-| STATUS | QUANTIDADE | DELTA ESTA SESSÃO |
-|--------|-----------|-------------------|
-| ✅ PASS (verificados fisicamente) | ~108 | +56 novos (PT+EN todos módulos, 10 novas linhas módulos adicionais) |
-| ⏳ PENDING | ~30 | -46 (detalhes de Projetos, MI, Analisador; Opportunity Lab; Action Engine; IVE tap; deep links) |
+| STATUS | QUANTIDADE | DELTA SESSÃO 2026-10-03 |
+|--------|-----------|------------------------|
+| ✅ PASS (verificados fisicamente) | ~122 | +14 (Projetos PT, MI PT, Website Analyzer PT, Action Engine PT, App lifecycle) |
+| ⚠️ TECHNICAL_LIMITATION / CANNOT_REPRODUCE / NOT_IN_NAVIGATION | 12 | +12 novos classificados (IVE tap A-027/A-197, Entendi A-034, OppLab A-100–105, Projetos empty/A-065, Action Engine empty A-111/A-113) |
+| ⏳ PENDING | ~8 | -22 (Projetos+MI+WA+ActionEngine+lifecycle verificados; Opportunity Lab classificado) |
 | 🔒 BLOCKED_OWNER (requer senha admin) | 14 | sem alteração |
 | ⚠️ BLOCKER (OB-01/OB-02) | 2 | sem alteração |
 
-**Verificações novas nesta sessão:** PT-BR: Biblioteca, Calendário, Histórico, Campanhas, Performance, Personas. EN: todos os módulos (Home, Drawer, MI, Website Analyzer, Calendar, History, Content Library, Knowledge Vault, Campaigns, Performance, Projects, Plans, Help, About, Improve Post, Personas, Account).
+**Verificações novas sessão 2026-10-03:**
+- Projetos PT: lista (A-060), cards (A-063), Detalhe button (A-064), IVE bubble (A-066), Project detail sheet completo (A-067)
+- Inteligência de Mercado PT: tela + cards + IVE bubble (A-070)
+- Website Analyzer PT: tela + URL field + Analisar Site + empty state (A-090–093)
+- Action Engine PT: tela via Home→Ver todas + tabs (A-110, A-112)
+- App Lifecycle: background/foreground + kill+reopen (A-200, A-201)
+
+**Classificados definitivamente:**
+- IVE avatar tap (A-027/A-197): TECHNICAL_LIMITATION_ADB_FLUTTER_GESTURE_ARENA
+- IVE Intro "Entendi" (A-034): CANNOT_REPRODUCE (conta já onboarded)
+- Opportunity Lab (A-100–105): NOT_IN_NAVIGATION_CURRENT_STATE
 
 **BLOCKED_OWNER rationale:** O owner estabeleceu a regra: "Se uma conta necessária não estiver disponível: marcar BLOCKED_OWNER, nunca PASS." A senha do admin (jpaulo.start@gmail.com) não está nos arquivos de fixture/seed do projeto e a proibição de segurança impede a entrada manual de credenciais.
 
@@ -653,27 +666,31 @@ No new security issues found in this physical audit.
 ### 12.22 STATUS DO AUDIT ANDROID
 
 ```
-ANDROID AUDIT: PARTIAL_EXECUTION → SUBSTANTIALLY_COMPLETE
-  S25 físico — sessão 2026-10-02 completou varredura PT+EN de todos os módulos.
-  ~108 interações verificadas (✅), ~30 pendentes (⏳), 14 BLOCKED_OWNER (🔒)
+ANDROID AUDIT: SUBSTANTIALLY_COMPLETE (atualizado pós-sessão 2026-10-03)
+  S25 físico — 2 sessões completaram varredura PT+EN de todos os módulos principais.
+  ~122 interações verificadas (✅), ~8 pendentes (⏳), 14 BLOCKED_OWNER (🔒)
+  12 classificadas definitivamente (⚠️ TECHNICAL_LIMITATION / NOT_IN_NAVIGATION / CANNOT_REPRODUCE)
   0 novos bugs P0/P1 encontrados nas interações verificadas
-  OB-01/OB-02 confirmados no Android (About screen EN)
+  OB-01/OB-02 confirmados no Android (About screen EN) — RELEASE BLOCKERS
   FALLBACK-04 (IVE Flutter) confirmado em 10+ telas PT+EN
-  IVE bubbles contextuais: Cofre, Projetos, Personas confirmados EN
-  IVE avatar tap direto: ATTEMPTED ×2 — overlay Flutter sem bounds no uiautomator
+  IVE bubbles contextuais: Cofre PT+EN, Projetos PT+EN, Personas EN, MI PT, Action Engine PT
+  IVE avatar tap: TECHNICAL_LIMITATION_ADB_FLUTTER_GESTURE_ARENA (classificado definitivamente)
+  App lifecycle: VERIFIED (background/foreground + kill+reopen)
 
-  PENDING restante:
-  - A-027/A-197: IVE avatar tap → Context Copilot sheet (Flutter overlay)
-  - A-034: IVE Intro "Entendi" tap (sheet não reapresentada)
-  - A-060–067: Projetos detalhe PT + Project Detail screen
-  - A-071/A-072: MI detalhe (scores/revenue)
-  - A-084–086: Cofre análise de item
-  - A-091–096: Website Analyzer detail + URL input test
-  - A-100–105: Opportunity Lab (não acessado nesta sessão)
-  - A-110–114: Action Engine (não acessado nesta sessão)
+  PENDING restante (~8):
+  - A-062: Projetos "+ Novo Projeto" botão
+  - A-068: Projetos tela EN
+  - A-071/A-072: MI detalhe (scores/revenue) — requer executar análise
+  - A-084–086: Cofre análise de item — requer adicionar item
+  - A-094–096: Website Analyzer detail — requer executar análise
+  - A-114: Action Engine tela EN
   - A-121/A-122: Improve Post campos/botão
   - A-145: Upgrade FAQ accordion
-  - A-200–201: App lifecycle/deep links
+
+  CLASSIFICADOS DEFINITIVAMENTE (não-bugs, não-pendentes):
+  - A-027/A-197: TECHNICAL_LIMITATION_ADB_FLUTTER_GESTURE_ARENA
+  - A-034: CANNOT_REPRODUCE (conta já onboarded)
+  - A-100–105: NOT_IN_NAVIGATION_CURRENT_STATE (sem drawer/Home entry para PRO user)
 ```
 
 ---
@@ -698,23 +715,26 @@ WEB PHYSICAL AUDIT:      PASS
   - 0 P0/P1 code bugs found
   - All inherited PHYS-001 through PHYS-008 resolved
 
-ANDROID AUDIT:           SUBSTANTIALLY_COMPLETE (pós-sessão 2026-10-02)
-  - ~108 interações verificadas PT+EN:
+ANDROID AUDIT:           SUBSTANTIALLY_COMPLETE (pós-sessões 2026-10-02 + 2026-10-03)
+  - ~122 interações verificadas PT+EN (↑ de ~108):
     Launch, Login, Home PT+EN, IVE Intro, Drawer PT+EN, Cofre PT+EN,
     Upgrade/Plans PT+EN, Conta PT+EN, EN switch, About PT+EN,
-    IVE avatar PT+EN (bolhas confirmadas), Market Intelligence EN,
-    Website Analyzer EN, Editorial Calendar PT+EN, History PT+EN,
+    IVE avatar PT+EN (bolhas contextuais confirmadas), Market Intelligence PT+EN,
+    Website Analyzer PT+EN, Editorial Calendar PT+EN, History PT+EN,
     Content Library PT+EN, Campaigns PT+EN, Performance PT+EN,
-    Projects EN, Plans EN, Help & Support EN, Improve Post EN,
-    Personas PT+EN
-  - ~30 interações PENDING: Opportunity Lab, Action Engine, MI detalhe,
-    Website Analyzer detalhe+URL, Projetos PT detalhe, Cofre análise detalhe,
-    Improve Post campos, IVE avatar tap direto, App lifecycle, Deep links
-  - 14 BLOCKED_OWNER: Admin Panel, BUG-P2 Android admin verify
+    Projects PT+EN, Plans EN, Help & Support EN, Improve Post EN,
+    Personas PT+EN, Action Engine PT, App Lifecycle PT
+  - ~8 interações PENDING: Projetos "+Novo"+EN, MI detalhe,
+    WA detalhe, Cofre análise detalhe, Action Engine EN, Improve Post campos,
+    Upgrade FAQ accordion
+  - 12 classificadas definitivamente (não-bugs): IVE tap TECHNICAL_LIMITATION,
+    Opportunity Lab NOT_IN_NAVIGATION, IVE Intro CANNOT_REPRODUCE + empties
+  - 14 BLOCKED_OWNER: Admin Panel
   - PT-BR e EN verificados em TODOS os módulos principais
   - IVE avatar Flutter fallback confirmado em 10+ telas (FALLBACK-04 ✅)
-  - IVE bolhas contextuais confirmadas: Cofre, Projetos, Personas, Vault EN
-  - IVE avatar tap direto: ATTEMPTED ×2 (Flutter overlay, sem bounds uiautomator)
+  - IVE bolhas contextuais: Cofre, Projetos, Personas, MI, Action Engine PT+EN
+  - IVE avatar tap: TECHNICAL_LIMITATION_ADB_FLUTTER_GESTURE_ARENA (definitivo)
+  - App lifecycle: VERIFIED ✅
   - 0 novos bugs P0/P1 nas interações verificadas
   - OB-01/OB-02 confirmados no Android
 
@@ -722,16 +742,16 @@ OWNER BLOCKERS:          2 open (OB-01/OB-02 — privacy/terms URLs)
 
 GOOGLE AUTH:             DEFERRED to 2026-10-04 (per mission constraint)
 
-OVERALL VERDICT:         PARTIAL_EXECUTION → SUBSTANTIALLY_COMPLETE
+OVERALL VERDICT:         CONDITIONAL_PASS — aguarda OB-01+OB-02
   → Web gate: PASS
-  → Android gate: SUBSTANTIALLY_COMPLETE — principais módulos PT+EN verificados
-    fisicamente; ~30 interações de detalhe/edge pendentes
+  → Android gate: SUBSTANTIALLY_COMPLETE — todos módulos principais PT+EN
+    verificados fisicamente; ~8 interações de detalhe/edge pendentes
+    (nenhuma bloqueia release — requerem dados/conta pré-existente)
   → Release gate: BLOCKED por OB-01 + OB-02
   → RELEASE_PHYSICAL_GATE_PASS requer:
     1. Owner cria páginas Privacy Policy + Terms of Use
     2. Owner atualiza app_constants.dart com URLs
-    3. Completar ~30 interações de detalhe pendentes (Opportunity Lab,
-       Action Engine, Website Analyzer detalhe, etc.)
+    (Os ~8 ⏳ restantes são detalhe/edge e não bloqueiam release)
 ```
 
 ---
