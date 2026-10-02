@@ -19,16 +19,27 @@ Databento uses **usage-based pricing ($/GB consumed)**:
 
 ## 2. Data Size Estimates
 
+All figures are classified as MEASURED, ESTIMATED, or ASSUMED:
+
+| Label | Meaning |
+|---|---|
+| MEASURED | Confirmed by actual API call or official documentation |
+| ESTIMATED | Derived from known parameters (bar count × byte size) |
+| ASSUMED | Hypothesis based on industry patterns; no confirmation |
+
 ### Daily OHLCV bar (JSON)
-- One bar: ~200 bytes (with pretty_ts + pretty_px, NDJSON format)
-- 252 trading days/year × 200 bytes ≈ **~50 KB per symbol per year**
+- One bar: ~200 bytes (with pretty_ts + pretty_px, NDJSON format) — **ESTIMATED**
+  (based on sample ndjsonBar() in test helper: actual byte size of typical bar)
+- 252 trading days/year × 200 bytes ≈ **~50 KB per symbol per year** — **ESTIMATED**
 
 ### Pilot dataset (3 symbols × 2 years)
-- 3 × 2 × 50 KB = **~300 KB** → effectively $0.00 at any $/GB rate
+- 3 × 2 × 50 KB = **~300 KB** → effectively $0.00 at any $/GB rate — **ESTIMATED**
+- NOTE: actual bytes will be MEASURED in the post-owner-gate E2E test.
 
 ### Production: 1,000 symbols × 5 years daily history (initial load)
-- 1,000 × 5 × 50 KB = **250 MB** ≈ $0.25–$2.50 at $1–$10/GB
-- Daily incremental (1,000 symbols × 1 day): 200 KB → $0.0002
+- 1,000 × 5 × 50 KB = **250 MB** ≈ $0.25–$2.50 at $1–$10/GB — **ESTIMATED**
+  ($/GB rate from Databento pricing page; not a binding quote)
+- Daily incremental (1,000 symbols × 1 day): 200 KB → $0.0002 — **ESTIMATED**
 
 ---
 
@@ -37,20 +48,22 @@ Databento uses **usage-based pricing ($/GB consumed)**:
 The following uses today's Databento $125 credit baseline to project at scale.
 **This is not an actual cost until the owner converts to a paid plan.**
 
-### Assumptions
-- 1 Quant Lab user = 1 watchlist = ~10 symbols
-- Initial load: 2 years history = 2 × 252 × 10 × 200 bytes = ~1 MB
-- Daily incremental: 10 symbols × 200 bytes = 2 KB
-- Cache hit rate: 90% after warm-up → 10% miss rate
+### Assumptions (all ASSUMED until post-owner-gate measurement)
+- 1 Quant Lab user = 1 watchlist = ~10 symbols — **ASSUMED**
+- Initial load: 2 years history = 2 × 252 × 10 × 200 bytes = ~1 MB — **ESTIMATED**
+- Daily incremental: 10 symbols × 200 bytes = 2 KB — **ESTIMATED**
+- Cache hit rate: 90% after warm-up → 10% miss rate — **ASSUMED**
+  (based on typical CDN/cache patterns; not measured for this adapter)
+- $/GB rate: $5/GB — **ASSUMED** (Databento pricing ranges by plan/volume; verify at databento.com/pricing)
 
 ### Monthly cost per user (after initial load)
-- Daily calls: 10 symbols × (1 − 0.90 cache hit) × 30 days = 30 provider calls
-- Data fetched: 30 × ~4 KB (single day) = 120 KB/month
-- At $5/GB estimate: $0.0006/user/month
+- Daily calls: 10 symbols × (1 − 0.90 cache hit) × 30 days = 30 provider calls — **ESTIMATED**
+- Data fetched: 30 × ~4 KB (single day) = 120 KB/month — **ESTIMATED**
+- At $5/GB estimate: $0.0006/user/month — **ASSUMED** ($/GB not verified by measurement)
 
 ### At 1,000 active users
-- $0.60/month for Databento data
-- Dominant cost: Supabase compute, not data
+- $0.60/month for Databento data — **ASSUMED** (extrapolation, not measurement)
+- Dominant cost: Supabase compute, not data — **ASSUMED**
 
 ### Tier model draft (data cost component only)
 

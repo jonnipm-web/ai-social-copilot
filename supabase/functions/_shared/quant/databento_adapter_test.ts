@@ -469,3 +469,134 @@ Deno.test('parseResponse: duplicate timestamps are passed through to engine (not
     assertEquals(result.value.data.length, 2);
   }
 });
+
+// ---------------------------------------------------------------------------
+// Hardening tests — P1 fixes (Codex IV-QUANT-04 adversarial audit)
+// ---------------------------------------------------------------------------
+
+Deno.test('historicalBars: non-Latin-1 secret causes secretTransform to throw → PROVIDER_UNAVAILABLE', async () => {
+  // btoa() throws InvalidCharacterError for characters outside Latin-1 (e.g. emoji).
+  // The runtime must catch this and return PROVIDER_UNAVAILABLE, not crash.
+  const provider = new HttpAdapterProvider(databentoAdapter, BASE_URL, {
+    fetchImpl: mockFetch(200, ndjsonBar() + '\n') as never,
+    readSecret: () => 'db-😀', // U+1F600 emoji — non-Latin-1
+    clock: () => NOW_MS,
+  });
+  const result = await provider.historicalBars(req());
+  assertEquals(result.ok, false);
+  if (result.ok) throw new Error();
+  assertEquals(result.error.code, 'PROVIDER_UNAVAILABLE');
+});
+
+Deno.test('historicalBars: parseResponse that throws is caught and returns PROVIDER_MALFORMED', async () => {
+  // The runtime wraps parseResponse in try/catch; adapter exceptions must not escape.
+  const throwingAdapter = { ...databentoAdapter, parseResponse: () => { throw new Error('boom'); } };
+  const provider = new HttpAdapterProvider(throwingAdapter as never, BASE_URL, {
+    fetchImpl: mockFetch(200, ndjsonBar() + '\n') as never,
+    readSecret: () => 'db-test00000000000000000000000000000',
+    clock: () => NOW_MS,
+  });
+  const result = await provider.historicalBars(req());
+  assertEquals(result.ok, false);
+  if (result.ok) throw new Error();
+  assertEquals(result.error.code, 'PROVIDER_MALFORMED');
+});
+
+// ---------------------------------------------------------------------------
+// Hardening tests — P2 fixes (Codex IV-QUANT-04 adversarial audit)
+// ---------------------------------------------------------------------------
+
+Deno.test('buildRequest: base URL with embedded credentials returns PROVIDER_UNAVAILABLE', () => {
+  const result = databentoAdapter.buildRequest(req(), 'https://user:pass@hist.databento.com');
+  assertEquals(result.ok, false);
+  if (result.ok) throw new Error();
+  assertEquals(result.error.code, 'PROVIDER_UNAVAILABLE');
+});
+
+Deno.test('buildRequest: NaN fromT returns PROVIDER_UNAVAILABLE', () => {
+  const result = databentoAdapter.buildRequest(req({ fromT: NaN }), BASE_URL);
+  assertEquals(result.ok, false);
+  if (result.ok) throw new Error();
+  assertEquals(result.error.code, 'PROVIDER_UNAVAILABLE');
+});
+
+Deno.test('buildRequest: Infinity toT returns PROVIDER_UNAVAILABLE', () => {
+  const result = databentoAdapter.buildRequest(req({ toT: Infinity }), BASE_URL);
+  assertEquals(result.ok, false);
+  if (result.ok) throw new Error();
+  assertEquals(result.error.code, 'PROVIDER_UNAVAILABLE');
+});
+
+Deno.test('buildRequest: fromT > toT returns PROVIDER_UNAVAILABLE (reversed window)', () => {
+  const result = databentoAdapter.buildRequest(req({ fromT: NOW_MS, toT: NOW_MS - 1 }), BASE_URL);
+  assertEquals(result.ok, false);
+  if (result.ok) throw new Error();
+  assertEquals(result.error.code, 'PROVIDER_UNAVAILABLE');
+});
+
+Deno.test('parseResponse: invalid retrievedAtMs (NaN) returns PROVIDER_MALFORMED', () => {
+  const result = databentoAdapter.parseResponse(
+    req(),
+    200,
+    new Headers({ 'Content-Type': 'application/json' }),
+    ndjsonBar() + '\n',
+    NaN,
+  );
+  assertEquals(result.ok, false);
+  if (result.ok) throw new Error();
+  assertEquals(result.error.code, 'PROVIDER_MALFORMED');
+});
+
+Deno.test('parseResponse: instrument_id = 0 returns PROVIDER_MALFORMED', () => {
+  const result = databentoAdapter.parseResponse(
+    req(),
+    200,
+    new Headers({ 'Content-Type': 'application/json' }),
+    ndjsonBar({ instrument_id: 0 }) + '\n',
+    NOW_MS,
+  );
+  assertEquals(result.ok, false);
+  if (result.ok) throw new Error();
+  assertEquals(result.error.code, 'PROVIDER_MALFORMED');
+});
+
+Deno.test('parseResponse: instrument_id = -1 returns PROVIDER_MALFORMED', () => {
+  const result = databentoAdapter.parseResponse(
+    req(),
+    200,
+    new Headers({ 'Content-Type': 'application/json' }),
+    ndjsonBar({ instrument_id: -1 }) + '\n',
+    NOW_MS,
+  );
+  assertEquals(result.ok, false);
+  if (result.ok) throw new Error();
+  assertEquals(result.error.code, 'PROVIDER_MALFORMED');
+});
+
+Deno.test('parseResponse: fractional instrument_id (1.5) returns PROVIDER_MALFORMED', () => {
+  const result = databentoAdapter.parseResponse(
+    req(),
+    200,
+    new Headers({ 'Content-Type': 'application/json' }),
+    ndjsonBar({ instrument_id: 1.5 }) + '\n',
+    NOW_MS,
+  );
+  assertEquals(result.ok, false);
+  if (result.ok) throw new Error();
+  assertEquals(result.error.code, 'PROVIDER_MALFORMED');
+});
+
+Deno.test('parseResponse: oversized NDJSON line (>128 KB) returns PROVIDER_MALFORMED', () => {
+  // A 130 KB padding field makes the line exceed MAX_LINE_BYTES.
+  const giantBar = ndjsonBar({ _padding: 'x'.repeat(130 * 1024) });
+  const result = databentoAdapter.parseResponse(
+    req(),
+    200,
+    new Headers({ 'Content-Type': 'application/json' }),
+    giantBar + '\n',
+    NOW_MS,
+  );
+  assertEquals(result.ok, false);
+  if (result.ok) throw new Error();
+  assertEquals(result.error.code, 'PROVIDER_MALFORMED');
+});
