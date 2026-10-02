@@ -130,13 +130,13 @@ Deno.test('buildRequest: accepts UNKNOWN adjustment', () => {
   assertEquals(result.ok, true);
 });
 
-Deno.test('buildRequest: rejects unsupported exchange MIC', () => {
+Deno.test('buildRequest: accepts any exchangeMic (EQUS.SUMMARY covers all US NMS; no allowlist)', () => {
+  // VND-02: prior 13-MIC allowlist removed — not officially documented for EQUS.SUMMARY.
+  // Unknown/non-US MICs pass through; Databento returns empty data if unsupported.
   const result = databentoAdapter.buildRequest(req({
     instrument: { ...AAPL_INSTRUMENT, exchangeMic: 'XLON' },
   }), BASE_URL);
-  assertEquals(result.ok, false);
-  if (result.ok) throw new Error();
-  assertEquals(result.error.code, 'PROVIDER_UNAVAILABLE');
+  assertEquals(result.ok, true);
 });
 
 Deno.test('buildRequest: accepts null exchangeMic (symbol-only request)', () => {
@@ -294,9 +294,9 @@ Deno.test('parseResponse: bar with invalid ts_event returns PROVIDER_MALFORMED',
 });
 
 Deno.test('parseResponse: bar outside requested window returns PROVIDER_MALFORMED', async () => {
-  // Bar far in the future — outside the request window
-  const futureDateMs = NOW_MS + 30 * 86_400_000;
-  const futureIso = new Date(futureDateMs).toISOString();
+  // Bar at midnight 30 days after toT — calendar-date outside the window.
+  const toDayPlus30 = (Math.floor(NOW_MS / 86_400_000) + 30) * 86_400_000;
+  const futureIso = new Date(toDayPlus30).toISOString(); // midnight UTC, 30 days out
   const bar = ndjsonBar({ ts_event: futureIso });
   const provider = makeProvider(mockFetch(200, bar + '\n'));
   const result = await provider.historicalBars(req());
@@ -306,12 +306,12 @@ Deno.test('parseResponse: bar outside requested window returns PROVIDER_MALFORME
 });
 
 Deno.test('parseResponse: bar ts_event after retrieval time returns PROVIDER_MALFORMED (look-ahead guard)', async () => {
-  // Bar stamped 1 hour after "now" — clock manipulation / look-ahead contamination
-  const futureTs = new Date(NOW_MS + 3_600_000).toISOString();
-  const bar = ndjsonBar({ ts_event: futureTs });
+  // Bar at midnight 2023-11-15T00:00:00Z, which is AFTER NOW_MS (2023-11-14T22:13:20Z).
+  // Passes the midnight check and the extended window check; fails the look-ahead guard.
+  const bar = ndjsonBar({ ts_event: '2023-11-15T00:00:00.000000000Z' });
   const provider = makeProvider(mockFetch(200, bar + '\n'));
   const result = await provider.historicalBars(req({
-    toT: NOW_MS + 2 * 86_400_000, // extended window so the window check passes
+    toT: NOW_MS + 2 * 86_400_000, // extend window to include 2023-11-15
   }));
   assertEquals(result.ok, false);
   if (result.ok) throw new Error();
@@ -407,14 +407,20 @@ Deno.test('parseResponse: 500 returns PROVIDER_UNAVAILABLE (server error)', asyn
 // Hardening tests — response overflow
 // ---------------------------------------------------------------------------
 
-Deno.test('parseResponse: response exceeding MAX_BARS (50 000) returns DATASET_TOO_LARGE', async () => {
-  // Generate 50 001 bars at 1 ms intervals so all fall within a single wide window.
-  // Using 1 ms granularity avoids going before the UNIX epoch.
+Deno.test('parseResponse: response exceeding MAX_BARS (50 000) returns DATASET_TOO_LARGE', () => {
+  // 50 001 consecutive UTC-midnight daily bars (i * DAY_MS), spanning 1970-01-01..2106-11-17.
+  // Each passes the midnight check. A far-future retrievedAtMs satisfies the look-ahead guard.
+  const FAR_FUTURE_MS = 50_002 * 86_400_000; // one day after the last bar
   const body = Array.from({ length: 50_001 }, (_, i) =>
-    ndjsonBar({ ts_event: new Date(NOW_MS - i).toISOString() })
+    ndjsonBar({ ts_event: new Date(i * 86_400_000).toISOString() })
   ).join('\n') + '\n';
-  const provider = makeProvider(mockFetch(200, body));
-  const result = await provider.historicalBars(req({ fromT: NOW_MS - 50_001, toT: NOW_MS }));
+  const result = databentoAdapter.parseResponse(
+    req({ fromT: 0, toT: 50_001 * 86_400_000 }),
+    200,
+    new Headers({ 'Content-Type': 'application/json' }),
+    body,
+    FAR_FUTURE_MS,
+  );
   assertEquals(result.ok, false);
   if (result.ok) throw new Error();
   assertEquals(result.error.code, 'DATASET_TOO_LARGE');
@@ -612,4 +618,126 @@ Deno.test('parseResponse: oversized NDJSON line (>128 KB) returns PROVIDER_MALFO
   assertEquals(result.ok, false);
   if (result.ok) throw new Error();
   assertEquals(result.error.code, 'PROVIDER_MALFORMED');
+});
+
+// ---------------------------------------------------------------------------
+// Hardening tests — Codex adversarial audit (§17 Amendment findings)
+// ---------------------------------------------------------------------------
+
+// SEC-01: epoch range validation — finite but out-of-range epoch causes isoMs() to throw
+Deno.test('buildRequest: out-of-range fromT (9e15, beyond JS Date limit) returns PROVIDER_UNAVAILABLE', () => {
+  const result = databentoAdapter.buildRequest(req({ fromT: 9e15 }), BASE_URL);
+  assertEquals(result.ok, false);
+  if (result.ok) throw new Error();
+  assertEquals(result.error.code, 'PROVIDER_UNAVAILABLE');
+});
+
+Deno.test('buildRequest: out-of-range toT (9e15) returns PROVIDER_UNAVAILABLE', () => {
+  const result = databentoAdapter.buildRequest(req({ fromT: 0, toT: 9e15 }), BASE_URL);
+  assertEquals(result.ok, false);
+  if (result.ok) throw new Error();
+  assertEquals(result.error.code, 'PROVIDER_UNAVAILABLE');
+});
+
+Deno.test('parseResponse: out-of-range retrievedAtMs (9e15) returns PROVIDER_MALFORMED', () => {
+  const result = databentoAdapter.parseResponse(
+    req(),
+    200,
+    new Headers({ 'Content-Type': 'application/json' }),
+    ndjsonBar() + '\n',
+    9e15,
+  );
+  assertEquals(result.ok, false);
+  if (result.ok) throw new Error();
+  assertEquals(result.error.code, 'PROVIDER_MALFORMED');
+});
+
+// SEC-02: calendar-date window check — non-midnight ts_event is rejected
+Deno.test('parseResponse: non-midnight ts_event returns PROVIDER_MALFORMED (ohlcv-1d bars must be UTC midnight)', () => {
+  // 2023-11-13T12:00:00Z — noon, not midnight
+  const bar = ndjsonBar({ ts_event: '2023-11-13T12:00:00.000000000Z' });
+  const result = databentoAdapter.parseResponse(
+    req(),
+    200,
+    new Headers({ 'Content-Type': 'application/json' }),
+    bar + '\n',
+    NOW_MS,
+  );
+  assertEquals(result.ok, false);
+  if (result.ok) throw new Error();
+  assertEquals(result.error.code, 'PROVIDER_MALFORMED');
+});
+
+Deno.test('parseResponse: bar at fromT-1day (midnight before window) returns PROVIDER_MALFORMED', () => {
+  // Calendar date before fromT's date — previously accepted under old DAY_MS grace.
+  const fromT = NOW_MS - 5 * 86_400_000; // 5 days ago
+  // Bar at midnight one calendar day before fromT
+  const barDayMs = (Math.floor(fromT / 86_400_000) - 1) * 86_400_000;
+  const barTs = new Date(barDayMs).toISOString();
+  const result = databentoAdapter.parseResponse(
+    req({ fromT }),
+    200,
+    new Headers({ 'Content-Type': 'application/json' }),
+    ndjsonBar({ ts_event: barTs }) + '\n',
+    NOW_MS,
+  );
+  assertEquals(result.ok, false);
+  if (result.ok) throw new Error();
+  assertEquals(result.error.code, 'PROVIDER_MALFORMED');
+});
+
+// SEC-03: parsePrice — non-integer numeric price returns PROVIDER_MALFORMED
+Deno.test('parseResponse: numeric decimal open price (185.79) returns PROVIDER_MALFORMED (not silently /1e9)', () => {
+  // If pretty_px is silently ignored and a decimal is returned as a float,
+  // the adapter must reject rather than silently divide by 1e9.
+  const bar = ndjsonBar({ open: 185.79, high: 186.0, low: 184.0, close: 185.0 });
+  const result = databentoAdapter.parseResponse(
+    req(),
+    200,
+    new Headers({ 'Content-Type': 'application/json' }),
+    bar + '\n',
+    NOW_MS,
+  );
+  assertEquals(result.ok, false);
+  if (result.ok) throw new Error();
+  assertEquals(result.error.code, 'PROVIDER_MALFORMED');
+});
+
+// SEC-04: instrument_id uint32 bound
+Deno.test('parseResponse: instrument_id > uint32 max (4294967296) returns PROVIDER_MALFORMED', () => {
+  const result = databentoAdapter.parseResponse(
+    req(),
+    200,
+    new Headers({ 'Content-Type': 'application/json' }),
+    ndjsonBar({ instrument_id: 4_294_967_296 }) + '\n', // 0x100000000 — exceeds uint32
+    NOW_MS,
+  );
+  assertEquals(result.ok, false);
+  if (result.ok) throw new Error();
+  assertEquals(result.error.code, 'PROVIDER_MALFORMED');
+});
+
+// SEC-05: Infinity volume from JSON overflow
+Deno.test('parseResponse: Infinity volume (from 1e309 JSON overflow) is treated as undefined, not passed through', async () => {
+  // JSON.parse('1e309') === Infinity — ensure it does not propagate as a volume value.
+  const bar = ndjsonBar({ volume: 1e309 });
+  const provider = makeProvider(mockFetch(200, bar + '\n'));
+  const result = await provider.historicalBars(req());
+  assertEquals(result.ok, true);
+  if (!result.ok) throw new Error(result.error.message);
+  // Infinity volume is stripped to undefined (non-finite → treated as absent)
+  assertEquals(result.value.data[0].volume, undefined);
+});
+
+// SEC-07: deprecation guard for other wrong datasets (extends the DBEQ.BASIC guard)
+Deno.test('DEPRECATION GUARD: adapter never uses DBEQ.MINI or other wrong datasets', () => {
+  const result = databentoAdapter.buildRequest(req(), BASE_URL);
+  assertEquals(result.ok, true);
+  if (!result.ok) throw new Error();
+  const u = new URL(result.value.url);
+  const dataset = u.searchParams.get('dataset');
+  assertNotEquals(dataset, 'DBEQ.BASIC');
+  assertNotEquals(dataset, 'DBEQ.MINI');
+  assertNotEquals(dataset, 'EQUS.MINI');
+  assertEquals(dataset, 'EQUS.SUMMARY'); // canonical positive assertion
 });

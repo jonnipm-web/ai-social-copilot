@@ -7,12 +7,15 @@
  * updated to EQUS.SUMMARY, the current replacement product. API endpoint, auth,
  * schema (ohlcv-1d), and encoding are unchanged. See BOOTSTRAP_PROVIDER_DECISION.md.
  *
- * RIGHTS CLASSIFICATION: GREEN
- * Databento US Equities Summary (EQUS.SUMMARY) carries zero exchange license fees
- * and explicitly permits redistribution, display, and non-display commercial
- * applications. Databento markets EQUS.SUMMARY as "the only provider with zero
- * license fees AND free redistribution rights."
- * Evidence: EV-DB-02, EV-DB-03, EV-DB-04 (PROVIDER_EVIDENCE_REGISTER.md)
+ * RIGHTS CLASSIFICATION: YELLOW — NOT_VERIFIED (Codex VND-01, 2026-10-03)
+ * EV-DB-03 (the source of the "free redistribution rights" claim) is a third-party
+ * PRNewswire article, not a Databento contractual document. EV-DB-04 describes
+ * EQUS.MINI (live data), not EQUS.SUMMARY historical. Rights for SaaS display,
+ * caching, derived analytics, AI processing, and raw retention require written
+ * confirmation from Databento before commercial production launch.
+ * Action required: Owner sends DATABENTO_RIGHTS_CONFIRMATION_REQUEST.md and
+ * receives written reply. Until then, classification is YELLOW/NOT_VERIFIED.
+ * Evidence reviewed: EV-DB-02, EV-DB-03, EV-DB-04 (PROVIDER_EVIDENCE_REGISTER.md)
  *
  * CREDENTIALS:
  * Secret name : DATABENTO_API_KEY
@@ -54,35 +57,24 @@ const METADATA_RTYPE = 0; // rtype=0 is the DBN metadata record, skip it
 const MAX_BARS = 50_000;
 const DAY_MS = 86_400_000;
 const MAX_LINE_BYTES = 128 * 1024; // reject a single NDJSON line larger than 128 KB
-
-// EQUS.SUMMARY covers all 15 NMS exchanges + 30 ATSs. This includes the major venues;
-// add others as needed (all standard US NMS MICs are supported by the dataset).
-const SUPPORTED_MICS = new Set([
-  'XNYS', // NYSE
-  'XNAS', // Nasdaq Global Select / Nasdaq
-  'ARCX', // NYSE Arca
-  'XASE', // NYSE American (AMEX)
-  'XCHI', // NYSE Chicago
-  'BATS', // CBOE BZX (formerly BATS)
-  'EDGX', // CBOE EDGX
-  'BATY', // CBOE BYX
-  'EDGA', // CBOE EDGA
-  'XBOS', // Nasdaq BX
-  'XPHL', // Nasdaq PSX
-  'IEXG', // IEX Exchange
-  'MEMX', // Members Exchange (MEMX)
-]);
+// JavaScript Date representable range: ±8,640,000,000,000,000 ms
+const MAX_EPOCH_MS = 8_640_000_000_000_000;
+// Databento instrument_id is a uint32 per the DBN spec (Codex SEC-04)
+const MAX_INSTRUMENT_ID = 0xffffffff;
 
 /**
  * Parse a price value from Databento JSON.
  * With pretty_px=true the API returns decimal strings ("185.790000000").
- * Without pretty_px the API returns nano-integers (185790000000).
+ * Without pretty_px the API returns nano-integers (185790000000, always integers).
  * This adapter requests pretty_px=true; the string path is primary.
+ * Numeric path is only accepted for integer values (nanoint encoding).
+ * A non-integer numeric price (e.g. 185.79) is rejected as PROVIDER_MALFORMED
+ * to prevent silent 1e-9 scaling of unexpected decimal responses (Codex SEC-03).
  */
 function parsePrice(v: unknown): number | null {
   if (typeof v === 'number') {
-    // nano-int path (fallback if pretty_px is ignored)
-    if (!Number.isFinite(v) || v <= 0) return null;
+    // Only accept integers as nanosecond prices; reject non-integer numerics.
+    if (!Number.isInteger(v) || !Number.isFinite(v) || v <= 0) return null;
     return v / 1e9;
   }
   if (typeof v === 'string') {
@@ -118,10 +110,11 @@ export const databentoAdapter: AdapterSpec = {
       );
     }
 
-    const mic = req.instrument.exchangeMic?.toUpperCase();
-    if (mic && !SUPPORTED_MICS.has(mic)) {
-      return fail('PROVIDER_UNAVAILABLE', `exchange ${mic} not in EQUS.SUMMARY coverage`, { mic });
-    }
+    // MIC validation: EQUS.SUMMARY covers all US NMS exchanges and 30 ATSs.
+    // No hard allowlist — Databento handles routing by symbol. Unsupported venue
+    // returns empty data (INSUFFICIENT_DATA downstream). MIC is passed through
+    // for informational purposes only. (Codex VND-02: prior 13-MIC allowlist was
+    // not officially documented and rejected valid US instruments.)
 
     let baseU: URL;
     try {
@@ -137,6 +130,11 @@ export const databentoAdapter: AdapterSpec = {
     }
     if (!Number.isFinite(req.fromT) || !Number.isFinite(req.toT) || req.fromT > req.toT) {
       return fail('PROVIDER_UNAVAILABLE', 'databento-equs-summary-v1: invalid or inconsistent time range');
+    }
+    // Guard against finite epoch values outside the JavaScript Date representable range
+    // which would cause isoMs() → new Date(ms).toISOString() to throw RangeError (Codex SEC-01).
+    if (Math.abs(req.fromT) > MAX_EPOCH_MS || Math.abs(req.toT) > MAX_EPOCH_MS) {
+      return fail('PROVIDER_UNAVAILABLE', 'databento-equs-summary-v1: time range exceeds JavaScript Date representable limit');
     }
 
     const u = new URL('/v0/timeseries.get_range', baseUrl);
@@ -163,7 +161,8 @@ export const databentoAdapter: AdapterSpec = {
     body: string,
     retrievedAtMs: number,
   ): QuantResult<ProviderResponse<RawBarInput[]>> {
-    if (!Number.isFinite(retrievedAtMs)) {
+    // Validate retrievedAtMs: must be finite and within JS Date range (Codex SEC-01).
+    if (!Number.isFinite(retrievedAtMs) || Math.abs(retrievedAtMs) > MAX_EPOCH_MS) {
       return fail('PROVIDER_MALFORMED', 'databento-equs-summary-v1: invalid retrieval timestamp');
     }
 
@@ -208,12 +207,13 @@ export const databentoAdapter: AdapterSpec = {
       // Instrument-ID consistency check: all bars in a single-symbol request
       // must share the same instrument_id. Multiple IDs would indicate the
       // provider responded for more than one instrument (response poisoning defence).
-      // instrument_id must be a positive finite integer (> 0, no floats, no NaN).
+      // instrument_id is a Databento uint32 (DBN spec): must be a safe positive integer
+      // within [1, 0xffffffff] with no fractional component (Codex SEC-04).
       if (
         typeof r.instrument_id !== 'number' ||
-        !Number.isFinite(r.instrument_id) ||
+        !Number.isSafeInteger(r.instrument_id) ||
         r.instrument_id <= 0 ||
-        !Number.isInteger(r.instrument_id)
+        r.instrument_id > MAX_INSTRUMENT_ID
       ) {
         return fail('PROVIDER_MALFORMED', 'databento bar has invalid instrument_id', { row: i });
       }
@@ -238,9 +238,18 @@ export const databentoAdapter: AdapterSpec = {
       }
 
       // Window bounds validation (Codex Gate 2 precedent from mission 03).
-      // One DAY_MS grace on fromT because daily bars are stamped at 00:00 UTC.
-      if (t > req.toT || t < req.fromT - DAY_MS) {
-        return fail('PROVIDER_MALFORMED', 'databento bar outside the requested time window', { row: i });
+      // EQUS.SUMMARY ohlcv-1d bars are stamped at UTC midnight (session open 00:00:00Z).
+      // Require midnight alignment to reject non-session timestamps (Codex SEC-02).
+      if (t % DAY_MS !== 0) {
+        return fail('PROVIDER_MALFORMED', 'databento ohlcv-1d bar ts_event is not UTC midnight (00:00:00Z)', { row: i });
+      }
+      // Use calendar-date comparison rather than unrestricted millisecond grace (Codex SEC-02).
+      // Bar's UTC date must fall within [floor(fromT/DAY), floor(toT/DAY)].
+      const barDay = Math.floor(t / DAY_MS);
+      const fromDay = Math.floor(req.fromT / DAY_MS);
+      const toDay = Math.floor(req.toT / DAY_MS);
+      if (barDay < fromDay || barDay > toDay) {
+        return fail('PROVIDER_MALFORMED', 'databento bar date outside the requested time window', { row: i });
       }
 
       const open = parsePrice(r.open);
@@ -251,7 +260,8 @@ export const databentoAdapter: AdapterSpec = {
         return fail('PROVIDER_MALFORMED', 'databento bar has invalid or non-positive prices', { row: i });
       }
 
-      const vol = typeof r.volume === 'number' && r.volume >= 0 ? r.volume : undefined;
+      // Volume: reject Infinity (e.g. 1e309 parsed from JSON overflows to Infinity) (Codex SEC-05).
+      const vol = typeof r.volume === 'number' && r.volume >= 0 && Number.isFinite(r.volume) ? r.volume : undefined;
       rows.push({ t, open, high, low, close, ...(vol !== undefined ? { volume: vol } : {}) });
       if (t > latestEventMs) latestEventMs = t;
     }

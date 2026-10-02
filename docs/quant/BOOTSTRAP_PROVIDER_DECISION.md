@@ -9,7 +9,7 @@
 
 | Role | Selected | Dataset | Rights | Bootstrap Cost |
 |---|---|---|---|---|
-| PRIMARY_BOOTSTRAP | **Databento EQUS.SUMMARY** | EQUS.SUMMARY | **GREEN** | ~$0/month (PAYG historical) |
+| PRIMARY_BOOTSTRAP | **Databento EQUS.SUMMARY** | EQUS.SUMMARY | **YELLOW/NOT_VERIFIED** (see §2.2) | ~$0/month (PAYG historical) |
 | SECONDARY_FUTURE | Tiingo Redistribution | EOD + IEX | YELLOW → confirm | $250/month (Phase 2) |
 | FUNDAMENTALS_FUTURE | FMP Enterprise | Market + Fundamentals | YELLOW → negotiate | Phase 2/3 |
 | UK/XLON Phase 1 | **NONE** | — | BLOCKED | — |
@@ -33,17 +33,22 @@ EQUS.SUMMARY is the current replacement:
 
 | Right | DBEQ.BASIC (deprecated) | EQUS.SUMMARY |
 |---|---|---|
-| Commercial display | GREEN (documented) | **GREEN — explicit** |
-| Redistribution | GREEN | **"free redistribution rights"** |
-| Web application | GREEN | **"permissive distribution terms for web apps"** |
-| Zero exchange fees | YES | **YES — "zero license fees"** |
-| SaaS use | GREEN | **GREEN** |
+| Commercial display | GREEN (documented) | **YELLOW — NOT_VERIFIED** |
+| Redistribution | GREEN | **YELLOW — NOT_VERIFIED** |
+| Web application | GREEN | **YELLOW — NOT_VERIFIED** |
+| Zero exchange fees | YES | **YES — "zero license fees" (EV-DB-03)** |
+| SaaS use | GREEN | **YELLOW — NOT_VERIFIED** |
 
-Evidence: EV-DB-03, EV-DB-04
+Evidence: EV-DB-03 (PRNewswire press release — third-party), EV-DB-04 (describes EQUS.MINI live, not EQUS.SUMMARY historical)
 
-EQUS.SUMMARY rights are STRONGER than DBEQ.BASIC:
-- Explicitly says "free redistribution rights"
-- Databento markets this as "the only provider with zero license fees AND free redistribution"
+**RIGHTS CLASSIFICATION: YELLOW/NOT_VERIFIED — Codex VND-01 (2026-10-03)**
+
+EV-DB-03 is a PRNewswire article, not a Databento contractual document.
+EV-DB-04 explicitly describes EQUS.MINI (live data), not EQUS.SUMMARY (historical).
+Written confirmation from Databento is required before commercial production.
+Rights for SaaS display, caching, derived analytics, AI processing, and raw retention are unverified.
+Action required: Owner sends `DATABENTO_RIGHTS_CONFIRMATION_REQUEST.md` to support@databento.com
+and receives written reply. Until then, classification remains YELLOW/NOT_VERIFIED.
 
 ### 2.3 Cost Model
 
@@ -69,7 +74,7 @@ Evidence: EV-DB-05, EV-DB-06
 
 | Dimension | Score | Rationale |
 |---|---|---|
-| RIGHTS | 10/10 | Explicit GREEN, "free redistribution rights" |
+| RIGHTS | 6/10 | YELLOW/NOT_VERIFIED — Codex VND-01; EV-DB-03 third-party press release; written Databento confirmation required |
 | LOW COST | 10/10 | ~$0/month PAYG for pilot |
 | HISTORICAL DATA | 10/10 | Full history available |
 | TECHNICAL FIT | 10/10 | Minimal adapter change |
