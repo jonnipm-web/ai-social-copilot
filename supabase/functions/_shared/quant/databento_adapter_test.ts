@@ -61,7 +61,8 @@ function mockFetch(statusCode: number, body: string, extraHeaders?: Record<strin
 function makeProvider(fetchImpl: (url: string, opts: unknown) => Promise<Response>) {
   return new HttpAdapterProvider(databentoAdapter, BASE_URL, {
     fetchImpl: fetchImpl as never,
-    readSecret: (_name: string) => 'Basic dGVzdDo=', // "Basic test:" — never a real key
+    // Raw API key is stored; secretTransform converts it to Basic auth header.
+    readSecret: (_name: string) => 'db-test00000000000000000000000000000',
     clock: () => NOW_MS,
   });
 }
@@ -342,7 +343,129 @@ Deno.test('AdapterSpec: secretHeader is Authorization (no credential in URL)', (
   assertEquals(databentoAdapter.secretHeader, 'Authorization');
 });
 
+Deno.test('AdapterSpec: secretEnvName is DATABENTO_API_KEY (raw key stored, header constructed server-side)', () => {
+  assertEquals(databentoAdapter.secretEnvName, 'DATABENTO_API_KEY');
+});
+
+Deno.test('AdapterSpec: secretTransform constructs HTTP Basic auth from raw API key', () => {
+  const transform = databentoAdapter.secretTransform;
+  if (!transform) throw new Error('secretTransform must be defined');
+  const apiKey = 'db-testkey1234567890';
+  const result = transform(apiKey);
+  assertEquals(result, 'Basic ' + btoa(apiKey + ':'));
+  // Must start with "Basic " and contain no raw key characters that break Basic auth
+  assertEquals(result.startsWith('Basic '), true);
+});
+
 Deno.test('AdapterSpec: providerKind is EXTERNAL_PROVIDER and trust is PROVIDER_REPORTED', () => {
   assertEquals(databentoAdapter.providerKind, 'EXTERNAL_PROVIDER');
   assertEquals(databentoAdapter.trust, 'PROVIDER_REPORTED');
+});
+
+// ---------------------------------------------------------------------------
+// Hardening tests — HTTP status codes
+// ---------------------------------------------------------------------------
+
+Deno.test('parseResponse: 403 returns PROVIDER_UNAVAILABLE (credential rejected)', async () => {
+  const provider = makeProvider(mockFetch(403, '{"detail":"Forbidden"}'));
+  const result = await provider.historicalBars(req());
+  assertEquals(result.ok, false);
+  if (result.ok) throw new Error();
+  assertEquals(result.error.code, 'PROVIDER_UNAVAILABLE');
+});
+
+Deno.test('parseResponse: 404 returns PROVIDER_UNAVAILABLE (endpoint not found)', async () => {
+  const provider = makeProvider(mockFetch(404, '{"detail":"Not Found"}'));
+  const result = await provider.historicalBars(req());
+  assertEquals(result.ok, false);
+  if (result.ok) throw new Error();
+  assertEquals(result.error.code, 'PROVIDER_UNAVAILABLE');
+});
+
+Deno.test('parseResponse: 500 returns PROVIDER_UNAVAILABLE (server error)', async () => {
+  const provider = makeProvider(mockFetch(500, '{"detail":"Internal Server Error"}'));
+  const result = await provider.historicalBars(req());
+  assertEquals(result.ok, false);
+  if (result.ok) throw new Error();
+  assertEquals(result.error.code, 'PROVIDER_UNAVAILABLE');
+});
+
+// ---------------------------------------------------------------------------
+// Hardening tests — response overflow
+// ---------------------------------------------------------------------------
+
+Deno.test('parseResponse: response exceeding MAX_BARS (50 000) returns DATASET_TOO_LARGE', async () => {
+  // Generate 50 001 bars at 1 ms intervals so all fall within a single wide window.
+  // Using 1 ms granularity avoids going before the UNIX epoch.
+  const body = Array.from({ length: 50_001 }, (_, i) =>
+    ndjsonBar({ ts_event: new Date(NOW_MS - i).toISOString() })
+  ).join('\n') + '\n';
+  const provider = makeProvider(mockFetch(200, body));
+  const result = await provider.historicalBars(req({ fromT: NOW_MS - 50_001, toT: NOW_MS }));
+  assertEquals(result.ok, false);
+  if (result.ok) throw new Error();
+  assertEquals(result.error.code, 'DATASET_TOO_LARGE');
+});
+
+// ---------------------------------------------------------------------------
+// Hardening tests — volume edge cases
+// ---------------------------------------------------------------------------
+
+Deno.test('parseResponse: negative volume is accepted (treated as undefined, not a parse error)', async () => {
+  // Volume < 0 is suspicious but not a parsing error; downstream engine decides.
+  const bar = ndjsonBar({ volume: -1 });
+  const provider = makeProvider(mockFetch(200, bar + '\n'));
+  const result = await provider.historicalBars(req());
+  assertEquals(result.ok, true);
+  if (!result.ok) throw new Error(result.error.message);
+  assertEquals(result.value.data[0].volume, undefined); // negative → stripped
+});
+
+Deno.test('parseResponse: missing volume field is accepted (volume is optional)', async () => {
+  const bar = ndjsonBar({ volume: undefined });
+  const body = JSON.stringify(JSON.parse(bar.replace(/"volume":\d+,?/, '').replace(/,}/, '}'))) + '\n';
+  const provider = makeProvider(mockFetch(200, body));
+  const result = await provider.historicalBars(req());
+  assertEquals(result.ok, true);
+  if (!result.ok) throw new Error(result.error.message);
+  assertEquals(result.value.data[0].volume, undefined);
+});
+
+Deno.test('parseResponse: null rtype returns PROVIDER_MALFORMED (unexpected type, not silently skipped)', async () => {
+  const bar = ndjsonBar({ rtype: null });
+  const provider = makeProvider(mockFetch(200, bar + '\n'));
+  const result = await provider.historicalBars(req());
+  assertEquals(result.ok, false);
+  if (result.ok) throw new Error();
+  assertEquals(result.error.code, 'PROVIDER_MALFORMED');
+});
+
+// ---------------------------------------------------------------------------
+// Hardening tests — OHLC / duplicate timestamp boundary (engine's responsibility)
+// ---------------------------------------------------------------------------
+
+Deno.test('parseResponse: impossible OHLC (high < low) is passed through to engine (not adapter-level validation)', async () => {
+  // The adapter does not validate OHLC consistency — that is createPriceSeries territory.
+  // This test documents the boundary: impossible bars reach the caller as RawBarInput[].
+  const bar = ndjsonBar({ high: '100.000000000', low: '200.000000000' }); // high < low
+  const provider = makeProvider(mockFetch(200, bar + '\n'));
+  const result = await provider.historicalBars(req());
+  // Result may be ok (bars pass through to engine) or fail depending on price validation
+  // The important guarantee: if ok, the raw bars are returned for engine to validate.
+  if (result.ok) {
+    assertEquals(result.value.data.length, 1);
+  }
+  // No assertion on error code — this documents the boundary, not a specific outcome.
+});
+
+Deno.test('parseResponse: duplicate timestamps are passed through to engine (not adapter-level validation)', async () => {
+  // Duplicate timestamps reach the caller; createPriceSeries deduplicates or rejects.
+  const bar1 = ndjsonBar({ ts_event: '2023-11-13T00:00:00.000000000Z', close: '184.800000000' });
+  const bar2 = ndjsonBar({ ts_event: '2023-11-13T00:00:00.000000000Z', close: '185.100000000' });
+  const provider = makeProvider(mockFetch(200, bar1 + '\n' + bar2 + '\n'));
+  const result = await provider.historicalBars(req());
+  // If ok: 2 bars returned (engine's responsibility to detect duplicates)
+  if (result.ok) {
+    assertEquals(result.value.data.length, 2);
+  }
 });

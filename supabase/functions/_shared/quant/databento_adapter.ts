@@ -11,13 +11,12 @@
  *         https://databento.com/blog/databento-us-equities-mini-now-available
  *
  * CREDENTIALS:
- * Secret name : DATABENTO_AUTH
- * Header      : Authorization
- * Value format: "Basic <base64(apiKey:)>"  — note the trailing colon.
- * To generate : btoa("db-YOUR_KEY_HERE:")  → run in browser console or:
- *               echo -n "db-YOUR_KEY_HERE:" | base64
- * Then store  : DATABENTO_AUTH = "Basic <that base64 string>"
- * Never store the raw key or put credentials in the URL.
+ * Secret name : DATABENTO_API_KEY
+ * Header      : Authorization (constructed server-side via secretTransform)
+ * Value stored: the raw Databento API key (db-xxxxxxxx…), nothing else
+ * Never store : base64, "Basic …", or any derived value — the adapter
+ *               constructs the Authorization header server-side via btoa().
+ * Never        : put the key in the URL, expose to Flutter, or log it.
  *
  * DATASET: DBEQ.BASIC
  * Coverage    : US equities (XNYS, XNAS) — historical OHLCV-1d
@@ -77,8 +76,11 @@ export const databentoAdapter: AdapterSpec = {
   providerKind: 'EXTERNAL_PROVIDER',
   trust: 'PROVIDER_REPORTED',
   allowedHosts: ['hist.databento.com'],
-  secretEnvName: 'DATABENTO_AUTH',
+  secretEnvName: 'DATABENTO_API_KEY',
   secretHeader: 'Authorization',
+  // Databento uses HTTP Basic auth: username = apiKey, password = empty string.
+  // The raw key (db-xxx) is stored; the Authorization header is constructed here.
+  secretTransform: (apiKey: string) => 'Basic ' + btoa(apiKey + ':'),
   maxResponseBytes: 16 * 1024 * 1024, // 16 MB — generous for multi-year daily history
   timeoutMs: 30_000, // historical streaming can be slow for large date ranges
 

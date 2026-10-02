@@ -125,7 +125,7 @@ Adapter implemented and tested (29/29 tests). Security: CONDITIONAL_PASS (P0/P1 
 
 **Remaining before first real data flows:**
 1. **Owner Gate** — Create Databento account (https://databento.com); requires payment method.
-   Set Supabase secret `DATABENTO_AUTH = "Basic <base64(apiKey:)>"`.
+   Set Supabase secret `DATABENTO_API_KEY = "db-your-raw-key"` (adapter constructs the Authorization header automatically).
 2. **Attribution confirmation** — Confirm Databento attribution requirements in writing.
 3. **GET vs POST** — Verify Databento's `timeseries.get_range` accepts GET; if POST required,
    extend `SafeFetchOptions` with `method` and `body` fields (minimal change).

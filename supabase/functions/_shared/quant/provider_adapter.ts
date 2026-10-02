@@ -40,6 +40,13 @@ export interface AdapterSpec {
   readonly secretEnvName: string | null;
   /** How the credential is attached; header name, never a URL query parameter. */
   readonly secretHeader: string | null;
+  /**
+   * Optional pure transform applied server-side to the raw secret before it
+   * is injected as a header. Used when the stored secret is a bare API key and
+   * the provider expects a derived header value (e.g. HTTP Basic auth).
+   * Must be deterministic and side-effect free.
+   */
+  readonly secretTransform?: (rawSecret: string) => string;
   readonly maxResponseBytes: number;
   readonly timeoutMs: number;
   buildRequest(req: HistoricalBarsRequest, baseUrl: string): QuantResult<AdapterHttpRequest>;

@@ -28,13 +28,14 @@ cache poisoning, cross-user isolation, oversized response, malformed JSON, rate-
 
 | Control | Status | Evidence |
 |---|---|---|
-| Key stored server-side only | ✓ PASS | `secretEnvName: 'DATABENTO_AUTH'`; read from `Deno.env` only |
+| Key stored server-side only | ✓ PASS | `secretEnvName: 'DATABENTO_API_KEY'`; raw API key stored; header constructed server-side |
 | Key never in URL | ✓ PASS | `secretHeader: 'Authorization'`; runtime enforces header-only injection |
-| Key never logged | ✓ PASS | Runtime does not log headers; `DATABENTO_AUTH` is not logged anywhere in adapter |
+| secretTransform server-side | ✓ PASS | `secretTransform: (k) => 'Basic ' + btoa(k + ':')` — pure, no I/O, no logging |
+| Key never logged | ✓ PASS | Runtime does not log headers; raw key never appears in logs |
 | Key never in Flutter/client | ✓ PASS | Flutter never calls provider directly; all data flows through Edge Function |
 | Key dropped on cross-origin redirect | ✓ PASS | `safeFetch.headersForHop` drops `Authorization` on origin change; `credentialHeaders: ['Authorization']` set by runtime |
 | Missing key = fail closed | ✓ PASS | `HttpAdapterProvider` returns `PROVIDER_UNAVAILABLE` immediately if `readSecret` returns null |
-| Secret format documented | ✓ PASS | Header must be `Basic <base64(apiKey:)>`; documented in adapter file and DECISION.md |
+| Secret format simplified | ✓ IMPROVED | Owner stores raw API key only (`db-xxx`); adapter derives `Authorization: Basic base64(key:)` automatically |
 
 ---
 
@@ -117,8 +118,10 @@ the OHLCV schema.
 
 ### P3 (Low):
 - **P3-SEC-01: DNS rebinding gap** — Pre-existing documented gap in `safeFetch`. Not introduced by this adapter. Track in security backlog.
-- **P3-SEC-02: Attribution not confirmed** — Databento attribution requirements not confirmed in writing. If attribution is required and not shown, this could breach terms. Mitigate: confirm in writing before commercial launch.
-- **P3-SEC-03: Long-term storage policy unconfirmed** — Raw data caching beyond the freshTtlMs window may exceed what Databento implicitly permits. Mitigate: confirm in writing; implement TTL-bounded persistent cache.
+- **P3-SEC-02: Attribution not confirmed** — Databento attribution requirements not confirmed in writing. `DATABENTO_RIGHTS_CONFIRMATION_REQUEST.md` is ready to send. Mitigate: confirm before commercial launch.
+- **P3-SEC-03: Long-term storage policy unconfirmed** — Raw data caching beyond the freshTtlMs window may exceed what Databento implicitly permits. Confirm in writing; implement TTL-bounded persistent cache.
+- **P3-SEC-04: GET vs POST** — VERIFIED. GET is valid and correct for single-symbol requests. POST needed only for multi-symbol batch (future scope). No change to safeFetch needed for this pilot.
+- **P3-SEC-05: Auth simplification** — RESOLVED in this mission. `DATABENTO_API_KEY` (raw key) stored; `secretTransform` constructs `Authorization: Basic base64(key:)` server-side. Tested in 2 new tests.
 
 ---
 

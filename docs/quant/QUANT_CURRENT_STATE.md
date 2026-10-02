@@ -122,7 +122,7 @@ multi-series bound, PLATFORM_RUNTIME_NOT_MEASURED).
 | Mission report | IV-QUANT-LICENSED-PROVIDER-PILOT-04.md |
 
 Adapter: `supabase/functions/_shared/quant/databento_adapter.ts` (29/29 tests).  
-Secret name: `DATABENTO_AUTH` (format: `Basic <base64(apiKey:)>`).  
+Secret name: `DATABENTO_API_KEY` (raw API key; adapter constructs `Authorization: Basic base64(key:)` via `secretTransform`).  
 Status: **CONDITIONAL_PASS — BLOCKED_OWNER** (account + API key required from Owner).
 
 ## 9. Real-data readiness (IV-QUANT-REAL-DATA-READINESS-03, 2026-09-25)
