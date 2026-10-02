@@ -70,7 +70,13 @@ export class HttpAdapterProvider implements MarketDataProvider {
     if (this.spec.secretEnvName) {
       let secret = (this.deps.readSecret ?? ((n: string) => Deno.env.get(n) ?? null))(this.spec.secretEnvName);
       if (!secret || !this.spec.secretHeader) return fail('PROVIDER_UNAVAILABLE', 'provider credential not configured');
-      if (this.spec.secretTransform) secret = this.spec.secretTransform(secret);
+      if (this.spec.secretTransform) {
+        try {
+          secret = this.spec.secretTransform(secret);
+        } catch {
+          return fail('PROVIDER_UNAVAILABLE', 'provider credential transformation failed (invalid secret format)');
+        }
+      }
       headers[this.spec.secretHeader] = secret;
     }
 
@@ -97,6 +103,10 @@ export class HttpAdapterProvider implements MarketDataProvider {
     } catch {
       return fail('PROVIDER_MALFORMED', 'provider response unreadable or too large');
     }
-    return this.spec.parseResponse(req, res.status, res.headers, body, clock());
+    try {
+      return this.spec.parseResponse(req, res.status, res.headers, body, clock());
+    } catch {
+      return fail('PROVIDER_MALFORMED', 'provider response parser threw an unexpected exception');
+    }
   }
 }

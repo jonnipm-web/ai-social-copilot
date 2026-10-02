@@ -48,6 +48,7 @@ const OHLCV_1D_RTYPE = 32;
 const METADATA_RTYPE = 0; // rtype=0 is the DBN metadata record, skip it
 const MAX_BARS = 50_000;
 const DAY_MS = 86_400_000;
+const MAX_LINE_BYTES = 128 * 1024; // reject a single NDJSON line larger than 128 KB
 
 // Supported exchanges for DBEQ.BASIC (US equities)
 const SUPPORTED_MICS = new Set(['XNYS', 'XNAS', 'ARCX', 'BATS', 'IEXG']);
@@ -111,6 +112,12 @@ export const databentoAdapter: AdapterSpec = {
     if (baseU.protocol !== 'https:') {
       return fail('PROVIDER_UNAVAILABLE', 'provider base URL must use https');
     }
+    if (baseU.username || baseU.password) {
+      return fail('PROVIDER_UNAVAILABLE', 'provider base URL must not contain embedded credentials');
+    }
+    if (!Number.isFinite(req.fromT) || !Number.isFinite(req.toT) || req.fromT > req.toT) {
+      return fail('PROVIDER_UNAVAILABLE', 'databento-dbeq-basic-v1: invalid or inconsistent time range');
+    }
 
     const u = new URL('/v0/timeseries.get_range', baseUrl);
     u.searchParams.set('dataset', 'DBEQ.BASIC');
@@ -136,6 +143,10 @@ export const databentoAdapter: AdapterSpec = {
     body: string,
     retrievedAtMs: number,
   ): QuantResult<ProviderResponse<RawBarInput[]>> {
+    if (!Number.isFinite(retrievedAtMs)) {
+      return fail('PROVIDER_MALFORMED', 'databento-dbeq-basic-v1: invalid retrieval timestamp');
+    }
+
     const transport = normalizeVendorStatus(status, headers);
     if (!transport.ok) return transport;
 
@@ -150,6 +161,9 @@ export const databentoAdapter: AdapterSpec = {
     let latestEventMs = 0;
 
     for (let i = 0; i < lines.length; i++) {
+      if (lines[i].length > MAX_LINE_BYTES) {
+        return fail('PROVIDER_MALFORMED', 'databento NDJSON line exceeds maximum line length', { row: i });
+      }
       let rec: unknown;
       try {
         rec = JSON.parse(lines[i]);
@@ -174,8 +188,14 @@ export const databentoAdapter: AdapterSpec = {
       // Instrument-ID consistency check: all bars in a single-symbol request
       // must share the same instrument_id. Multiple IDs would indicate the
       // provider responded for more than one instrument (response poisoning defence).
-      if (typeof r.instrument_id !== 'number') {
-        return fail('PROVIDER_MALFORMED', 'databento bar missing instrument_id', { row: i });
+      // instrument_id must be a positive finite integer (> 0, no floats, no NaN).
+      if (
+        typeof r.instrument_id !== 'number' ||
+        !Number.isFinite(r.instrument_id) ||
+        r.instrument_id <= 0 ||
+        !Number.isInteger(r.instrument_id)
+      ) {
+        return fail('PROVIDER_MALFORMED', 'databento bar has invalid instrument_id', { row: i });
       }
       if (firstInstrumentId === null) {
         firstInstrumentId = r.instrument_id;
