@@ -27,8 +27,7 @@ import { buildImpactEvent } from '../_shared/impact/observability.ts';
 import { bucketFor, decideRate, type ImpactRateLimiter, type RateBucket, type RateRule, rateLimitsFrom } from '../_shared/impact/rate_limit.ts';
 import { buildCallerContext } from '../_shared/impact/trust.ts';
 import { IMPACT_POLICY_VERSION } from '../_shared/impact/verification.ts';
-import { createSupabaseImpactLabStore, createSupabaseRateLimiter } from './supabase_store.ts';
-import { InMemoryAefStore } from '../_shared/aef/store.ts';
+import { createSupabaseAefStore, createSupabaseImpactLabStore, createSupabaseRateLimiter } from './supabase_store.ts';
 import type { AefStore } from '../_shared/aef/store.ts';
 import { submitAction } from '../_shared/aef/kernel.ts';
 import { IMPACT_ACTION_INTENTS, type ImpactActionIntentKind } from '../_shared/aef/types.ts';
@@ -188,24 +187,52 @@ export async function handler(
     projectId: null,
     serviceId: 'impact-lab',
   });
-  const aefStore = deps.aefStore ?? new InMemoryAefStore();
 
   // I7: intercept class C actions with known intent kinds and route through AEF.
   if (parsed.value.action === 'request_external_action') {
     const kind = parsed.value.kind;
     if ((IMPACT_ACTION_INTENTS as readonly string[]).includes(kind)) {
+      // Require client-provided investigationId and idempotencyKey for AEF actions.
+      const investigationId = parsed.value.investigationId;
+      const idempotencyKey = parsed.value.idempotencyKey;
+      if (!investigationId) return errorResponse({ code: 'INVALID_REQUEST', message: 'investigation_id required for AEF actions' }, correlationId);
+      if (!idempotencyKey) return errorResponse({ code: 'INVALID_REQUEST', message: 'idempotency_key required for AEF actions' }, correlationId);
+
+      // I7 gate: validate investigation ownership before AEF submission.
+      try {
+        const labStore = deps.store ? deps.store(req, user) : createSupabaseImpactLabStore(req);
+        const invResult = await labStore.getInvestigation(investigationId);
+        if (!invResult.ok || !invResult.value) {
+          return errorResponse({ code: 'INVESTIGATION_NOT_FOUND', message: 'investigation not found' }, correlationId);
+        }
+      } catch {
+        return errorResponse({ code: 'INTERNAL_ERROR', message: 'investigation lookup failed' }, correlationId);
+      }
+
+      // I7: DB-backed AEF store — fail closed if unavailable.
+      let aefStore: AefStore;
+      if (deps.aefStore) {
+        aefStore = deps.aefStore;
+      } else {
+        try {
+          aefStore = createSupabaseAefStore();
+        } catch {
+          return errorResponse({ code: 'AEF_PERSISTENCE_UNAVAILABLE', message: 'AEF store unavailable' }, correlationId);
+        }
+      }
+
       try {
         const intent = {
           kind: kind as ImpactActionIntentKind,
-          investigationId: 'context-free',
-          idempotencyKey: crypto.randomUUID(),
+          investigationId,
+          idempotencyKey,
           classification: 'CONSEQUENTIAL' as const,
         };
         const aefResult = await submitAction(callerContext, intent, { store: aefStore, now: deps.now });
         if (!aefResult.ok) {
           const err = aefResult.error;
           if (err.code === 'REQUIRES_HUMAN_REVIEW') {
-            return errorResponse({ code: 'REVIEW_REQUIRED', message: 'human gate required' }, correlationId);
+            return errorResponse({ code: 'ACTION_BLOCKED', message: 'human gate required; gate pending' }, correlationId);
           }
           if (err.code === 'DENIED') return errorResponse({ code: 'ACTION_BLOCKED', message: err.reason }, correlationId);
           if (err.code === 'IDEMPOTENCY_CONFLICT') return errorResponse({ code: 'ALREADY_EXISTS', message: 'duplicate request' }, correlationId);
