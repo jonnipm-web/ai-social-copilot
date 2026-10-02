@@ -1,10 +1,11 @@
 /**
- * Tests for the Databento DBEQ.BASIC adapter — IV-QUANT-LICENSED-PROVIDER-PILOT-04
+ * Tests for the Databento EQUS.SUMMARY adapter — IV-QUANT-LICENSED-PROVIDER-PILOT-04
+ * (Migrated from DBEQ.BASIC, deprecated 2025-01-13, EV-DB-01.)
  *
  * All tests use a mock fetch (no real network I/O) via the HttpAdapterProvider
  * dependency-injection interface. Credentials are never present in test code.
  */
-import { assertEquals, assertMatch } from 'https://deno.land/std@0.224.0/assert/mod.ts';
+import { assertEquals, assertMatch, assertNotEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts';
 import { databentoAdapter } from './databento_adapter.ts';
 import { HttpAdapterProvider } from '../quant_provider_runtime.ts';
 import type { HistoricalBarsRequest } from './provider.ts';
@@ -78,7 +79,7 @@ Deno.test('buildRequest: valid DAILY UNADJUSTED returns https URL for hist.datab
   const u = new URL(result.value.url);
   assertEquals(u.hostname, 'hist.databento.com');
   assertEquals(u.pathname, '/v0/timeseries.get_range');
-  assertEquals(u.searchParams.get('dataset'), 'DBEQ.BASIC');
+  assertEquals(u.searchParams.get('dataset'), 'EQUS.SUMMARY');
   assertEquals(u.searchParams.get('schema'), 'ohlcv-1d');
   assertEquals(u.searchParams.get('symbols'), 'AAPL');
   assertEquals(u.searchParams.get('encoding'), 'json');
@@ -89,6 +90,18 @@ Deno.test('buildRequest: valid DAILY UNADJUSTED returns https URL for hist.datab
   assertEquals(result.value.url.includes('key='), false);
   assertEquals(result.value.url.includes('token='), false);
   assertEquals(result.value.url.includes('Authorization='), false);
+});
+
+// DEPRECATION GUARD — prevents regression to DBEQ.BASIC (deprecated 2025-01-13, EV-DB-01)
+Deno.test('DEPRECATION GUARD: adapter uses EQUS.SUMMARY, never deprecated DBEQ.BASIC', () => {
+  const result = databentoAdapter.buildRequest(req(), BASE_URL);
+  assertEquals(result.ok, true);
+  if (!result.ok) throw new Error();
+  const u = new URL(result.value.url);
+  // Positive assertion: must use current dataset
+  assertEquals(u.searchParams.get('dataset'), 'EQUS.SUMMARY');
+  // Negative assertion: must not regress to deprecated dataset
+  assertNotEquals(u.searchParams.get('dataset'), 'DBEQ.BASIC');
 });
 
 Deno.test('buildRequest: rejects non-DAILY frequency', () => {
@@ -159,7 +172,7 @@ Deno.test('parseResponse: valid single bar returns correct RawBarInput and prove
   assertEquals(bar.volume, 52_038_800);
 
   const prov = result.value.provenance;
-  assertEquals(prov.providerId, 'databento-dbeq-basic-v1');
+  assertEquals(prov.providerId, 'databento-equs-summary-v1');
   assertEquals(prov.providerKind, 'EXTERNAL_PROVIDER');
   assertEquals(prov.trust, 'PROVIDER_REPORTED');
   assertEquals(prov.frequency, 'DAILY');
@@ -180,7 +193,7 @@ Deno.test('parseResponse: multiple valid bars parsed correctly', async () => {
 });
 
 Deno.test('parseResponse: skips metadata records (rtype=0)', async () => {
-  const metaRecord = JSON.stringify({ rtype: 0, version: 2, dataset: 'DBEQ.BASIC' });
+  const metaRecord = JSON.stringify({ rtype: 0, version: 2, dataset: 'EQUS.SUMMARY' });
   const bar = ndjsonBar();
   const provider = makeProvider(mockFetch(200, metaRecord + '\n' + bar + '\n'));
   const result = await provider.historicalBars(req());
@@ -326,7 +339,7 @@ Deno.test('parseResponse: zero-price bar returns PROVIDER_MALFORMED', async () =
   assertEquals(result.error.code, 'PROVIDER_MALFORMED');
 });
 
-Deno.test('parseResponse: provenance.adjustment is always UNADJUSTED for DBEQ.BASIC', async () => {
+Deno.test('parseResponse: provenance.adjustment is always UNADJUSTED for EQUS.SUMMARY', async () => {
   // Even when caller requests UNKNOWN, we report what the provider actually delivers.
   const provider = makeProvider(mockFetch(200, ndjsonBar() + '\n'));
   const result = await provider.historicalBars(req({ adjustment: 'UNKNOWN' }));

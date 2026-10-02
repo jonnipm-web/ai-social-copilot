@@ -1,14 +1,18 @@
 /**
- * Databento DBEQ.BASIC market-data adapter — IV-QUANT-LICENSED-PROVIDER-PILOT-04
- * (docs/quant/REAL_DATA_PROVIDER_DECISION.md).
+ * Databento EQUS.SUMMARY market-data adapter — IV-QUANT-LICENSED-PROVIDER-PILOT-04
+ * (docs/quant/BOOTSTRAP_PROVIDER_DECISION.md, docs/quant/PROVIDER_EVIDENCE_REGISTER.md).
+ *
+ * MIGRATION NOTE: This adapter was previously pointed at DBEQ.BASIC, which was
+ * deprecated by Databento on January 13, 2025 (EV-DB-01). The dataset has been
+ * updated to EQUS.SUMMARY, the current replacement product. API endpoint, auth,
+ * schema (ohlcv-1d), and encoding are unchanged. See BOOTSTRAP_PROVIDER_DECISION.md.
  *
  * RIGHTS CLASSIFICATION: GREEN
- * Databento US Equities Basic (DBEQ.BASIC) carries a derived-use license
- * with participating NMS exchanges. Databento's public documentation confirms
- * commercial use, external redistribution, and display applications are
- * explicitly permitted without additional exchange licensing or reporting.
- * Source: https://databento.com/blog/dbeq-basic
- *         https://databento.com/blog/databento-us-equities-mini-now-available
+ * Databento US Equities Summary (EQUS.SUMMARY) carries zero exchange license fees
+ * and explicitly permits redistribution, display, and non-display commercial
+ * applications. Databento markets EQUS.SUMMARY as "the only provider with zero
+ * license fees AND free redistribution rights."
+ * Evidence: EV-DB-02, EV-DB-03, EV-DB-04 (PROVIDER_EVIDENCE_REGISTER.md)
  *
  * CREDENTIALS:
  * Secret name : DATABENTO_API_KEY
@@ -18,11 +22,12 @@
  *               constructs the Authorization header server-side via btoa().
  * Never        : put the key in the URL, expose to Flutter, or log it.
  *
- * DATASET: DBEQ.BASIC
- * Coverage    : US equities (XNYS, XNAS) — historical OHLCV-1d
+ * DATASET: EQUS.SUMMARY (replaces deprecated DBEQ.BASIC)
+ * Coverage    : All 15 US NMS exchanges + 30 ATSs — consolidated EOD OHLCV
  * Adjustment  : UNADJUSTED (raw trade aggregates; no corporate action adjustment)
  * Frequency   : DAILY only in this adapter version
- * History     : Available from Databento (check dataset availability at portal)
+ * History     : Full history available via pay-as-you-go (billed per byte)
+ * Pricing     : ~$0/month PAYG historical; $199/month subscription for live data
  *
  * IDENTITY LIMITATION (documented, not a defect):
  * Databento OHLCV-1d bar records do not echo back the requested symbol.
@@ -50,8 +55,23 @@ const MAX_BARS = 50_000;
 const DAY_MS = 86_400_000;
 const MAX_LINE_BYTES = 128 * 1024; // reject a single NDJSON line larger than 128 KB
 
-// Supported exchanges for DBEQ.BASIC (US equities)
-const SUPPORTED_MICS = new Set(['XNYS', 'XNAS', 'ARCX', 'BATS', 'IEXG']);
+// EQUS.SUMMARY covers all 15 NMS exchanges + 30 ATSs. This includes the major venues;
+// add others as needed (all standard US NMS MICs are supported by the dataset).
+const SUPPORTED_MICS = new Set([
+  'XNYS', // NYSE
+  'XNAS', // Nasdaq Global Select / Nasdaq
+  'ARCX', // NYSE Arca
+  'XASE', // NYSE American (AMEX)
+  'XCHI', // NYSE Chicago
+  'BATS', // CBOE BZX (formerly BATS)
+  'EDGX', // CBOE EDGX
+  'BATY', // CBOE BYX
+  'EDGA', // CBOE EDGA
+  'XBOS', // Nasdaq BX
+  'XPHL', // Nasdaq PSX
+  'IEXG', // IEX Exchange
+  'MEMX', // Members Exchange (MEMX)
+]);
 
 /**
  * Parse a price value from Databento JSON.
@@ -73,7 +93,7 @@ function parsePrice(v: unknown): number | null {
 }
 
 export const databentoAdapter: AdapterSpec = {
-  id: 'databento-dbeq-basic-v1',
+  id: 'databento-equs-summary-v1',
   providerKind: 'EXTERNAL_PROVIDER',
   trust: 'PROVIDER_REPORTED',
   allowedHosts: ['hist.databento.com'],
@@ -87,20 +107,20 @@ export const databentoAdapter: AdapterSpec = {
 
   buildRequest(req: HistoricalBarsRequest, baseUrl: string): QuantResult<AdapterHttpRequest> {
     if (req.frequency !== 'DAILY') {
-      return fail('PROVIDER_UNAVAILABLE', 'databento-dbeq-basic-v1 supports DAILY frequency only');
+      return fail('PROVIDER_UNAVAILABLE', 'databento-equs-summary-v1 supports DAILY frequency only');
     }
-    // Only UNADJUSTED supported; DBEQ.BASIC provides raw trade aggregates.
+    // Only UNADJUSTED supported; EQUS.SUMMARY provides raw trade aggregates.
     if (req.adjustment !== 'UNADJUSTED' && req.adjustment !== 'UNKNOWN') {
       return fail(
         'PROVIDER_UNAVAILABLE',
-        'databento-dbeq-basic-v1 provides UNADJUSTED prices; SPLIT_ADJUSTED / SPLIT_AND_DIVIDEND_ADJUSTED not available in this adapter version',
+        'databento-equs-summary-v1 provides UNADJUSTED prices; SPLIT_ADJUSTED / SPLIT_AND_DIVIDEND_ADJUSTED not available in this adapter version',
         { requested: req.adjustment },
       );
     }
 
     const mic = req.instrument.exchangeMic?.toUpperCase();
     if (mic && !SUPPORTED_MICS.has(mic)) {
-      return fail('PROVIDER_UNAVAILABLE', `exchange ${mic} not in DBEQ.BASIC coverage`, { mic });
+      return fail('PROVIDER_UNAVAILABLE', `exchange ${mic} not in EQUS.SUMMARY coverage`, { mic });
     }
 
     let baseU: URL;
@@ -116,11 +136,11 @@ export const databentoAdapter: AdapterSpec = {
       return fail('PROVIDER_UNAVAILABLE', 'provider base URL must not contain embedded credentials');
     }
     if (!Number.isFinite(req.fromT) || !Number.isFinite(req.toT) || req.fromT > req.toT) {
-      return fail('PROVIDER_UNAVAILABLE', 'databento-dbeq-basic-v1: invalid or inconsistent time range');
+      return fail('PROVIDER_UNAVAILABLE', 'databento-equs-summary-v1: invalid or inconsistent time range');
     }
 
     const u = new URL('/v0/timeseries.get_range', baseUrl);
-    u.searchParams.set('dataset', 'DBEQ.BASIC');
+    u.searchParams.set('dataset', 'EQUS.SUMMARY');
     u.searchParams.set('schema', 'ohlcv-1d');
     u.searchParams.set('symbols', req.instrument.symbol);
     // Databento uses nanosecond-precision ISO timestamps; we provide millisecond UTC.
@@ -144,7 +164,7 @@ export const databentoAdapter: AdapterSpec = {
     retrievedAtMs: number,
   ): QuantResult<ProviderResponse<RawBarInput[]>> {
     if (!Number.isFinite(retrievedAtMs)) {
-      return fail('PROVIDER_MALFORMED', 'databento-dbeq-basic-v1: invalid retrieval timestamp');
+      return fail('PROVIDER_MALFORMED', 'databento-equs-summary-v1: invalid retrieval timestamp');
     }
 
     const transport = normalizeVendorStatus(status, headers);
@@ -249,7 +269,7 @@ export const databentoAdapter: AdapterSpec = {
       return fail('PROVIDER_MALFORMED', 'databento bar ts_event is after retrieval time (look-ahead contamination)');
     }
 
-    // Adjustment policy: DBEQ.BASIC provides raw trade aggregates (unadjusted).
+    // Adjustment policy: EQUS.SUMMARY provides raw trade aggregates (unadjusted).
     // If the caller requested UNKNOWN we report UNADJUSTED as delivered.
     const reportedAdjustment: AdjustmentPolicy = 'UNADJUSTED';
 
@@ -262,7 +282,7 @@ export const databentoAdapter: AdapterSpec = {
       frequency: 'DAILY',
       currency: req.instrument.currency,
       adjustment: reportedAdjustment,
-      sourceLabel: 'Databento DBEQ.BASIC ohlcv-1d',
+      sourceLabel: 'Databento EQUS.SUMMARY ohlcv-1d',
     };
 
     return ok({ data: rows, provenance });

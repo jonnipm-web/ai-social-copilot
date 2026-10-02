@@ -257,7 +257,7 @@ Deno.test('DT-37 arbitrary non-OHLCV CSV is never accepted as a price series', (
 // ---------------------------------------------------------------------------
 
 const EXT_PROV: DataProvenance = {
-  providerId: 'databento-dbeq-basic-v1', providerKind: 'EXTERNAL_PROVIDER',
+  providerId: 'databento-equs-summary-v1', providerKind: 'EXTERNAL_PROVIDER',
   retrievedAt: '2026-01-12T10:00:00.000Z', frequency: 'DAILY',
   currency: 'USD', adjustment: 'UNADJUSTED', trust: 'PROVIDER_REPORTED',
   sourceAsOf: '2026-01-10T00:00:00.000Z',

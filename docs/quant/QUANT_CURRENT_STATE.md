@@ -111,19 +111,22 @@ be re-measured on the platform before any promotion.
 Superseded for READINESS-03 by QUANT_RESOURCE_BUDGET.md (calendar memo fix,
 multi-series bound, PLATFORM_RUNTIME_NOT_MEASURED).
 
-## 10. Licensed Provider Pilot (IV-QUANT-LICENSED-PROVIDER-PILOT-04, 2026-10-02)
+## 10. Licensed Provider Pilot (IV-QUANT-LICENSED-PROVIDER-PILOT-04, 2026-10-03)
 
 | Area | Doc |
 |---|---|
-| Provider decision record (GREEN: Databento DBEQ.BASIC) | REAL_DATA_PROVIDER_DECISION.md |
-| Rights matrix (all candidates) | REAL_DATA_RIGHTS_MATRIX.md |
-| Security review (P0/P1 = 0) | REAL_DATA_SECURITY_REVIEW.md |
-| Cost model | REAL_DATA_COST_MODEL.md |
+| Provider decision record (GREEN: Databento EQUS.SUMMARY) | BOOTSTRAP_PROVIDER_DECISION.md |
+| Current provider market snapshot (7 providers) | CURRENT_PROVIDER_MARKET_2026-10.md |
+| Evidence register (15 EV-IDs) | PROVIDER_EVIDENCE_REGISTER.md |
+| Lifecycle/freshness policy (90-day revalidation) | PROVIDER_LIFECYCLE_POLICY.md |
+| Cost model (EQUS.SUMMARY PAYG) | REAL_DATA_COST_MODEL.md |
 | Mission report | IV-QUANT-LICENSED-PROVIDER-PILOT-04.md |
 
-Adapter: `supabase/functions/_shared/quant/databento_adapter.ts` (29/29 tests).  
+Adapter: `supabase/functions/_shared/quant/databento_adapter.ts` (52/52 tests).  
+Adapter ID: `databento-equs-summary-v1` (migrated from deprecated `databento-dbeq-basic-v1`).  
+Dataset: `EQUS.SUMMARY` — current replacement for deprecated DBEQ.BASIC (EV-DB-01).  
 Secret name: `DATABENTO_API_KEY` (raw API key; adapter constructs `Authorization: Basic base64(key:)` via `secretTransform`).  
-Status: **CONDITIONAL_PASS — BLOCKED_OWNER** (account + API key required from Owner).
+Status: **CONDITIONAL_PASS — BLOCKED_OWNER** (account + API key required from Owner; Codex adversarial audit pending).
 
 ## 9. Real-data readiness (IV-QUANT-REAL-DATA-READINESS-03, 2026-09-25)
 
