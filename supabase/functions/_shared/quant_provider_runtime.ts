@@ -68,8 +68,9 @@ export class HttpAdapterProvider implements MarketDataProvider {
 
     const headers: Record<string, string> = { ...built.value.headers };
     if (this.spec.secretEnvName) {
-      const secret = (this.deps.readSecret ?? ((n: string) => Deno.env.get(n) ?? null))(this.spec.secretEnvName);
+      let secret = (this.deps.readSecret ?? ((n: string) => Deno.env.get(n) ?? null))(this.spec.secretEnvName);
       if (!secret || !this.spec.secretHeader) return fail('PROVIDER_UNAVAILABLE', 'provider credential not configured');
+      if (this.spec.secretTransform) secret = this.spec.secretTransform(secret);
       headers[this.spec.secretHeader] = secret;
     }
 

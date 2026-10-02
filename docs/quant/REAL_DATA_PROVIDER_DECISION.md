@@ -131,7 +131,7 @@ Before integrating Databento into production:
 
 1. **Create Databento account** at https://databento.com (requires payment method)
 2. **Obtain API key** from the portal
-3. **Compute auth header**: `btoa("db-YOUR-KEY-HERE:")` → store as Supabase secret `DATABENTO_AUTH = "Basic <result>"`
+3. **Store raw API key** as Supabase secret `DATABENTO_API_KEY = "db-YOUR-KEY-HERE"` (adapter constructs Authorization header automatically)
 4. **Confirm attribution** requirements in writing with Databento support
 5. **Review long-term data storage** policy with Databento
 
