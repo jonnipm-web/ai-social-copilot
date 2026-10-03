@@ -1784,28 +1784,179 @@ abstract class AppLocalizations {
   /// **'Abrir módulo'**
   String get adminModulesOpen;
 
-  // ── IVE Analysis / Insight vertical ─────────────────────────────────────
+  /// No description provided for @insightTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Análise IVE'**
   String get insightTitle;
+
+  /// No description provided for @insightSubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Pergunte ao IVE sobre este projeto'**
   String get insightSubtitle;
+
+  /// No description provided for @insightAskHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'O que você gostaria de saber sobre este projeto?'**
   String get insightAskHint;
+
+  /// No description provided for @insightAnalyzeProject.
+  ///
+  /// In pt, this message translates to:
+  /// **'Analisar com IVE'**
   String get insightAnalyzeProject;
+
+  /// No description provided for @insightEmpty.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhum insight ainda para este projeto.'**
   String get insightEmpty;
+
+  /// No description provided for @insightEmptyPrompt.
+  ///
+  /// In pt, this message translates to:
+  /// **'Faça uma pergunta ao IVE para gerar seu primeiro insight.'**
   String get insightEmptyPrompt;
+
+  /// No description provided for @insightThinking.
+  ///
+  /// In pt, this message translates to:
+  /// **'IVE está pensando...'**
   String get insightThinking;
+
+  /// No description provided for @insightGenerating.
+  ///
+  /// In pt, this message translates to:
+  /// **'Gerando insight...'**
   String get insightGenerating;
+
+  /// No description provided for @insightError.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não foi possível gerar o insight. Tente novamente.'**
   String get insightError;
+
+  /// No description provided for @insightSaved.
+  ///
+  /// In pt, this message translates to:
+  /// **'Insight salvo'**
   String get insightSaved;
+
+  /// No description provided for @insightConfidence.
+  ///
+  /// In pt, this message translates to:
+  /// **'Confiança'**
   String get insightConfidence;
+
+  /// No description provided for @insightRecommendedAction.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ação recomendada'**
   String get insightRecommendedAction;
+
+  /// No description provided for @insightSources.
+  ///
+  /// In pt, this message translates to:
+  /// **'Fontes'**
   String get insightSources;
+
+  /// No description provided for @insightAddToActions.
+  ///
+  /// In pt, this message translates to:
+  /// **'Adicionar às ações'**
   String get insightAddToActions;
+
+  /// No description provided for @insightRecent.
+  ///
+  /// In pt, this message translates to:
+  /// **'Insights recentes'**
   String get insightRecent;
+
+  /// No description provided for @insightProjectContext.
+  ///
+  /// In pt, this message translates to:
+  /// **'Contexto do projeto'**
   String get insightProjectContext;
+
+  /// No description provided for @insightFreeLimit.
+  ///
+  /// In pt, this message translates to:
+  /// **'Plano gratuito: análises de IA limitadas por mês.'**
   String get insightFreeLimit;
+
+  /// No description provided for @insightUpgradeForMore.
+  ///
+  /// In pt, this message translates to:
+  /// **'Faça upgrade para Pro e tenha mais análises'**
   String get insightUpgradeForMore;
+
+  /// No description provided for @insightViewAll.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ver todos os insights'**
   String get insightViewAll;
+
+  /// No description provided for @insightDeleteConfirm.
+  ///
+  /// In pt, this message translates to:
+  /// **'Excluir este insight?'**
   String get insightDeleteConfirm;
-  String insightNOf(int n);
+
+  /// No description provided for @insightNOf.
+  ///
+  /// In pt, this message translates to:
+  /// **'{n, plural, one{{n} insight} other{{n} insights}}'**
+  String insightNOf(num n);
+
+  /// No description provided for @insightUsageOf.
+  ///
+  /// In pt, this message translates to:
+  /// **'{used} / {max} análises usadas este mês'**
+  String insightUsageOf(num used, num max);
+
+  /// No description provided for @insightQuotaExceeded.
+  ///
+  /// In pt, this message translates to:
+  /// **'Limite mensal de análises atingido.'**
+  String get insightQuotaExceeded;
+
+  /// No description provided for @insightUpgradeCta.
+  ///
+  /// In pt, this message translates to:
+  /// **'Faça upgrade para Pro e tenha análises ilimitadas'**
+  String get insightUpgradeCta;
+
+  /// No description provided for @insightAddedToActions.
+  ///
+  /// In pt, this message translates to:
+  /// **'Adicionado às ações'**
+  String get insightAddedToActions;
+
+  /// No description provided for @insightAddToActionsError.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não foi possível adicionar às ações. Tente novamente.'**
+  String get insightAddToActionsError;
+
+  /// No description provided for @insightRecentAll.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ver todos os insights recentes'**
+  String get insightRecentAll;
+
+  /// No description provided for @insightCancel.
+  ///
+  /// In pt, this message translates to:
+  /// **'Cancelar'**
+  String get insightCancel;
+
+  /// No description provided for @insightRetry.
+  ///
+  /// In pt, this message translates to:
+  /// **'Tentar novamente'**
+  String get insightRetry;
 }
 
 class _AppLocalizationsDelegate

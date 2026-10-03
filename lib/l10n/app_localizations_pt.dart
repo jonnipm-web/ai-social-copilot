@@ -958,13 +958,14 @@ class AppLocalizationsPt extends AppLocalizations {
   String get adminModulesOpen => 'Abrir módulo';
 
   @override
-  String get insightTitle => 'Análise com IVE';
+  String get insightTitle => 'Análise IVE';
 
   @override
-  String get insightSubtitle => 'Pergunte à IVE sobre este projeto';
+  String get insightSubtitle => 'Pergunte ao IVE sobre este projeto';
 
   @override
-  String get insightAskHint => 'O que você gostaria de saber sobre este projeto?';
+  String get insightAskHint =>
+      'O que você gostaria de saber sobre este projeto?';
 
   @override
   String get insightAnalyzeProject => 'Analisar com IVE';
@@ -973,16 +974,18 @@ class AppLocalizationsPt extends AppLocalizations {
   String get insightEmpty => 'Nenhum insight ainda para este projeto.';
 
   @override
-  String get insightEmptyPrompt => 'Faça uma pergunta à IVE para gerar seu primeiro insight.';
+  String get insightEmptyPrompt =>
+      'Faça uma pergunta ao IVE para gerar seu primeiro insight.';
 
   @override
-  String get insightThinking => 'IVE está processando…';
+  String get insightThinking => 'IVE está pensando...';
 
   @override
-  String get insightGenerating => 'Gerando insight…';
+  String get insightGenerating => 'Gerando insight...';
 
   @override
-  String get insightError => 'Não foi possível gerar insight. Tente novamente.';
+  String get insightError =>
+      'Não foi possível gerar o insight. Tente novamente.';
 
   @override
   String get insightSaved => 'Insight salvo';
@@ -1006,10 +1009,12 @@ class AppLocalizationsPt extends AppLocalizations {
   String get insightProjectContext => 'Contexto do projeto';
 
   @override
-  String get insightFreeLimit => 'Plano Free: análises de IA limitadas por mês.';
+  String get insightFreeLimit =>
+      'Plano gratuito: análises de IA limitadas por mês.';
 
   @override
-  String get insightUpgradeForMore => 'Faça upgrade para Pro e obtenha mais análises';
+  String get insightUpgradeForMore =>
+      'Faça upgrade para Pro e tenha mais análises';
 
   @override
   String get insightViewAll => 'Ver todos os insights';
@@ -1018,5 +1023,55 @@ class AppLocalizationsPt extends AppLocalizations {
   String get insightDeleteConfirm => 'Excluir este insight?';
 
   @override
-  String insightNOf(int n) => '$n insight${n == 1 ? '' : 's'}';
+  String insightNOf(num n) {
+    final intl.NumberFormat nNumberFormat = intl.NumberFormat.compact(
+      locale: localeName,
+    );
+    final String nString = nNumberFormat.format(n);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$nString insights',
+      one: '$nString insight',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String insightUsageOf(num used, num max) {
+    final intl.NumberFormat usedNumberFormat = intl.NumberFormat.compact(
+      locale: localeName,
+    );
+    final String usedString = usedNumberFormat.format(used);
+    final intl.NumberFormat maxNumberFormat = intl.NumberFormat.compact(
+      locale: localeName,
+    );
+    final String maxString = maxNumberFormat.format(max);
+
+    return '$usedString / $maxString análises usadas este mês';
+  }
+
+  @override
+  String get insightQuotaExceeded => 'Limite mensal de análises atingido.';
+
+  @override
+  String get insightUpgradeCta =>
+      'Faça upgrade para Pro e tenha análises ilimitadas';
+
+  @override
+  String get insightAddedToActions => 'Adicionado às ações';
+
+  @override
+  String get insightAddToActionsError =>
+      'Não foi possível adicionar às ações. Tente novamente.';
+
+  @override
+  String get insightRecentAll => 'Ver todos os insights recentes';
+
+  @override
+  String get insightCancel => 'Cancelar';
+
+  @override
+  String get insightRetry => 'Tentar novamente';
 }

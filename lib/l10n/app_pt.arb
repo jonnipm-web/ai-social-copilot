@@ -1,4 +1,4 @@
-{
+﻿{
   "@@locale": "pt",
   "appName": "InsightValues",
   "commonCancel": "Cancelar",
@@ -408,5 +408,36 @@
     }
   },
   "impactVerifyInconclusive": "Verificação inconclusiva: não confie nos metadados deste snapshot. Obtenha um novo export antes de usá-lo.",
-  "adminModulesOpen": "Abrir módulo"
+  "adminModulesOpen": "Abrir módulo",
+  "insightTitle": "Análise IVE",
+  "insightSubtitle": "Pergunte ao IVE sobre este projeto",
+  "insightAskHint": "O que você gostaria de saber sobre este projeto?",
+  "insightAnalyzeProject": "Analisar com IVE",
+  "insightEmpty": "Nenhum insight ainda para este projeto.",
+  "insightEmptyPrompt": "Faça uma pergunta ao IVE para gerar seu primeiro insight.",
+  "insightThinking": "IVE está pensando...",
+  "insightGenerating": "Gerando insight...",
+  "insightError": "Não foi possível gerar o insight. Tente novamente.",
+  "insightSaved": "Insight salvo",
+  "insightConfidence": "Confiança",
+  "insightRecommendedAction": "Ação recomendada",
+  "insightSources": "Fontes",
+  "insightAddToActions": "Adicionar às ações",
+  "insightRecent": "Insights recentes",
+  "insightProjectContext": "Contexto do projeto",
+  "insightFreeLimit": "Plano gratuito: análises de IA limitadas por mês.",
+  "insightUpgradeForMore": "Faça upgrade para Pro e tenha mais análises",
+  "insightViewAll": "Ver todos os insights",
+  "insightDeleteConfirm": "Excluir este insight?",
+  "insightNOf": "{n, plural, one{{n} insight} other{{n} insights}}",
+  "@insightNOf": { "placeholders": { "n": { "type": "num", "format": "compact" } } },
+  "insightUsageOf": "{used} / {max} análises usadas este mês",
+  "@insightUsageOf": { "placeholders": { "used": { "type": "num", "format": "compact" }, "max": { "type": "num", "format": "compact" } } },
+  "insightQuotaExceeded": "Limite mensal de análises atingido.",
+  "insightUpgradeCta": "Faça upgrade para Pro e tenha análises ilimitadas",
+  "insightAddedToActions": "Adicionado às ações",
+  "insightAddToActionsError": "Não foi possível adicionar às ações. Tente novamente.",
+  "insightRecentAll": "Ver todos os insights recentes",
+  "insightCancel": "Cancelar",
+  "insightRetry": "Tentar novamente"
 }

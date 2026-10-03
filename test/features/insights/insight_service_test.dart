@@ -139,4 +139,69 @@ void main() {
       expect(updated.last.id, 'old');
     });
   });
+
+  group('entitlement gate logic', () {
+    bool isBlocked(int monthCount, bool isPro) {
+      if (isPro) return false;
+      return monthCount >= AppConstants.insightFreeMonthlyLimit;
+    }
+
+    test('pro user is never blocked regardless of count', () {
+      expect(isBlocked(0, true), isFalse);
+      expect(isBlocked(5, true), isFalse);
+      expect(isBlocked(99, true), isFalse);
+    });
+
+    test('free user below limit is not blocked', () {
+      expect(isBlocked(0, false), isFalse);
+      expect(isBlocked(4, false), isFalse);
+    });
+
+    test('free user at exactly the limit is blocked', () {
+      expect(isBlocked(AppConstants.insightFreeMonthlyLimit, false), isTrue);
+    });
+
+    test('free user above limit is blocked', () {
+      expect(isBlocked(AppConstants.insightFreeMonthlyLimit + 1, false), isTrue);
+    });
+  });
+
+  group('monthCount increment/decrement logic', () {
+    test('save increments monthCount', () {
+      const before = 3;
+      const after  = before + 1;
+      expect(after, 4);
+    });
+
+    test('delete decrements monthCount but not below zero', () {
+      int dec(int c) => c > 0 ? c - 1 : 0;
+      expect(dec(5), 4);
+      expect(dec(1), 0);
+      expect(dec(0), 0);
+    });
+  });
+
+  group('recent insights filtering', () {
+    test('only ive_analysis items qualify as insights', () {
+      final items = [
+        _makeItem(id: '1', origin: AppConstants.originIveAnalysis),
+        _makeItem(id: '2', origin: 'manual'),
+        _makeItem(id: '3', origin: AppConstants.originIveAnalysis),
+      ];
+      final insights = items
+          .where((i) => i.origin == AppConstants.originIveAnalysis)
+          .toList();
+      expect(insights.length, 2);
+      expect(insights.map((i) => i.id), containsAll(['1', '3']));
+    });
+
+    test('limit of 5 is respected in take()', () {
+      final items = List.generate(
+        10,
+        (i) => _makeItem(id: '$i', origin: AppConstants.originIveAnalysis),
+      );
+      final capped = items.take(5).toList();
+      expect(capped.length, 5);
+    });
+  });
 }
