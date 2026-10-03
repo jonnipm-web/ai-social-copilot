@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/constants/app_constants.dart';
 import '../core/diagnostics/diagnostic_models.dart';
 import '../data/models/action_queue_item.dart';
 import '../data/models/opportunity_lab_item.dart';
@@ -116,8 +117,15 @@ class InsightNotifier extends StateNotifier<InsightState> {
       _log('insight_save');
       return item;
     } catch (e) {
-      state = state.copyWith(saving: false, error: e.toString());
-      _log('insight_save', status: 'failure', error: e);
+      final isQuota = e.toString().contains('quota_exceeded');
+      state = state.copyWith(
+        saving: false,
+        error:  isQuota ? 'quota_exceeded' : e.toString(),
+        monthCount: isQuota
+            ? AppConstants.insightFreeMonthlyLimit
+            : state.monthCount,
+      );
+      _log('insight_save', status: isQuota ? 'quota' : 'failure', error: e);
       return null;
     }
   }

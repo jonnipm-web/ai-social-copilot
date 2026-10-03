@@ -41,31 +41,23 @@ class InsightService {
     required String question,
     required CopilotTurn turn,
   }) async {
-    final uid = _client.auth.currentUser?.id;
-    if (uid == null) throw Exception('Não autenticado');
+    if (_client.auth.currentUser?.id == null) throw Exception('Não autenticado');
 
-    final item = OpportunityLabItem(
-      id:             '',
-      userId:         uid,
-      projectId:      projectId,
-      title:          _titleFromQuestion(question),
-      description:    turn.content,
-      confidence:     turn.confidence,
-      sources:        turn.sources,
-      actionSteps:    _actionStepsFromSuggestion(turn.actionSuggestion),
-      origin:         AppConstants.originIveAnalysis,
-      createdAt:      turn.timestamp,
-    );
-
-    final map = item.toInsertMap();
-    map['user_id'] = uid;
-
-    final row = await _client
-        .from(AppConstants.tableOpportunityLab)
-        .insert(map)
-        .select()
-        .single();
-    return OpportunityLabItem.fromMap(row);
+    // P1-Q1/Q2: quota enforced server-side via SECURITY DEFINER RPC.
+    // Throws 'quota_exceeded' when the free monthly limit is reached.
+    final rows = await _client.rpc('save_insight_quota_checked', params: {
+      'p_project_id':       projectId,
+      'p_title':            _titleFromQuestion(question),
+      'p_description':      turn.content,
+      'p_confidence':       turn.confidence,
+      'p_sources':          turn.sources,
+      'p_action_steps':     _actionStepsFromSuggestion(turn.actionSuggestion),
+      'p_opportunity_type': 'expansão',
+    });
+    if (rows == null || (rows as List).isEmpty) {
+      throw Exception('save_insight_quota_checked: empty result');
+    }
+    return OpportunityLabItem.fromMap(rows.first as Map<String, dynamic>);
   }
 
   Future<List<OpportunityLabItem>> fetchRecent({int limit = 5}) async {

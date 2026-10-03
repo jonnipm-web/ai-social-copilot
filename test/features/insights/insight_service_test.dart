@@ -181,6 +181,38 @@ void main() {
     });
   });
 
+  group('server quota_exceeded error handling (P1-Q1/Q2)', () {
+    // Mirrors InsightNotifier.save() catch block logic.
+    ({int monthCount, String? error}) handleSaveError(Object e, int currentCount) {
+      final isQuota = e.toString().contains('quota_exceeded');
+      return (
+        monthCount: isQuota ? AppConstants.insightFreeMonthlyLimit : currentCount,
+        error:      isQuota ? 'quota_exceeded' : e.toString(),
+      );
+    }
+
+    test('quota_exceeded error pins monthCount to free limit', () {
+      final result = handleSaveError(Exception('quota_exceeded'), 4);
+      expect(result.monthCount, AppConstants.insightFreeMonthlyLimit);
+      expect(result.error, 'quota_exceeded');
+    });
+
+    test('non-quota error preserves monthCount', () {
+      final result = handleSaveError(Exception('network error'), 3);
+      expect(result.monthCount, 3);
+      expect(result.error, contains('network error'));
+    });
+
+    test('quota_exceeded in nested message is detected', () {
+      final result = handleSaveError(
+        Exception('PostgrestException: quota_exceeded'),
+        2,
+      );
+      expect(result.monthCount, AppConstants.insightFreeMonthlyLimit);
+      expect(result.error, 'quota_exceeded');
+    });
+  });
+
   group('recent insights filtering', () {
     test('only ive_analysis items qualify as insights', () {
       final items = [

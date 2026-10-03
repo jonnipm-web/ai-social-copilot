@@ -117,21 +117,30 @@ class _IveAnalysisScreenState extends ConsumerState<IveAnalysisScreen> {
       orElse: () => CopilotTurn(role: 'user', content: '', timestamp: DateTime.now()),
     ).content;
 
-    await ref.read(insightNotifierProvider(widget.projectId).notifier).save(
-          question: question,
-          turn:     lastTurn,
-        );
+    final saved = await ref
+        .read(insightNotifierProvider(widget.projectId).notifier)
+        .save(question: question, turn: lastTurn);
 
-    if (mounted) {
+    if (!mounted) return;
+    final t = AppLocalizations.of(context)!;
+
+    if (saved != null) {
       setState(() {
         _pendingInsight = null;
         _justSaved      = true;
       });
-      final t = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content:         Text(t.insightSaved),
         backgroundColor: const Color(0xFF6BCB77),
         duration:        const Duration(seconds: 2),
+      ));
+    } else {
+      final error = ref.read(insightNotifierProvider(widget.projectId)).error;
+      final isQuota = error == 'quota_exceeded';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content:         Text(isQuota ? t.insightQuotaExceeded : t.insightAddToActionsError),
+        backgroundColor: Colors.red,
+        duration:        const Duration(seconds: 3),
       ));
     }
   }
