@@ -191,4 +191,6 @@ class AppConstants {
       'https://insightvalues.com/en/privacy-policy/';
   static const String? termsOfUseUrl =
       'https://insightvalues.com/en/terms-of-use/';
+  static const String? accountDeletionUrl =
+      'https://insightvalues.com/en/delete-account/';
 }

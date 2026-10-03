@@ -165,6 +165,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get accountTerms => 'Termos de Uso';
 
   @override
+  String get accountDeleteAccount => 'Solicitar exclusão de conta';
+
+  @override
   String get accountSignOut => 'Sair da conta';
 
   @override

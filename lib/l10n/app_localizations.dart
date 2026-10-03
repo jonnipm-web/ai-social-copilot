@@ -410,6 +410,12 @@ abstract class AppLocalizations {
   /// **'Termos de Uso'**
   String get accountTerms;
 
+  /// No description provided for @accountDeleteAccount.
+  ///
+  /// In pt, this message translates to:
+  /// **'Solicitar exclusão de conta'**
+  String get accountDeleteAccount;
+
   /// No description provided for @accountSignOut.
   ///
   /// In pt, this message translates to:

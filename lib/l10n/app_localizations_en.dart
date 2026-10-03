@@ -165,6 +165,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountTerms => 'Terms of Use';
 
   @override
+  String get accountDeleteAccount => 'Request account deletion';
+
+  @override
   String get accountSignOut => 'Sign out';
 
   @override
