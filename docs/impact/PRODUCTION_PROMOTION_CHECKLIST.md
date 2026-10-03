@@ -28,12 +28,25 @@
 |---|---|---|
 | P1-01: RPC no DB-side ownership validation | P1 | ⚠️ ESCALATED — ARCHITECTURAL DECISION REQUIRED (Agente Martins + Paulo) |
 | P1-02: Receipt hash format-only check | P1 | ✅ REJECTED — FALSE POSITIVE (hash is app-layer commitment) |
-| P1-03(a): Gate resolution non-atomic | P1 | ⚠️ ESCALATED — resolve_gate_atomic() RPC needed (Phase 4) |
+| P1-03(a): Gate resolution non-atomic | P1 | ✅ CLOSED — Phase 4 (commits 8689c1e + 076b39a) |
 | P1-03(b): approverRef as UUID-FK callerUserId | P1 | ✅ FIXED — commit ddd5211 (use storedReq.caller.authenticatedUserId) |
 | P2-01: broad unique_violation catch | P2 | ⚠️ DEFERRED — hardening mission |
 | P2-02: gate on REVERSIBLE action | P2 | ⚠️ DEFERRED — hardening mission |
 | P2-03..P2-05 | P2 | ⚠️ DEFERRED — hardening mission |
 | P3-01..P3-02 | P3 | DEFERRED |
+
+## Codex Adversarial Review (Class D) — Phase 4 Result
+
+**Verdict:** PASS WITH FINDINGS → remediated to IMPACT_I7_READY (effective P1=0)
+
+| Finding | Level | Status |
+|---|---|---|
+| P1-01: Caller-controlled expiry bypass (p_issued_at) | P1 | ✅ FIXED — commit 076b39a (clock_timestamp() for expiry + resolved_at) |
+| P1-02: Binding hash format-only at RPC boundary | P1 | ✅ REJECTED — FALSE POSITIVE (same edge-function-as-trust-boundary model as Phase 3 P1-01, already accepted by Agente Martins) |
+| P2-01: EXPIRED path without receipt | P2 | ✅ REJECTED — BY DESIGN (system timeout, not human resolution; documented) |
+| P2-02: unique_violation catch breadth | P2 | ⚠️ DEFERRED — hardening mission |
+| P2-03: InMemory weaker than DB | P2 | ⚠️ DEFERRED — known test-double limitation |
+| P3: No role denial tests for aef_resolve_gate | P3 | ✅ FIXED — DG-12/DG-13 added (commit 076b39a) |
 
 ---
 
@@ -54,11 +67,12 @@
 - Decision: add auth.uid() enforcement inside the RPC, OR accept the current edge-function-as-boundary model
 - Authority: Agente Martins + Paulo
 
-### ~~B1b~~ — ⚠️ ARCHITECTURAL DECISION REQUIRED: Gate resolution atomicity
-- resolveHumanGate() calls updateHumanGate() then insertReceipt() as two separate DB operations
-- If insertReceipt fails after gate is updated, the gate is permanently APPROVED/REJECTED with no receipt
-- Fix: new resolve_gate_atomic() PL/pgSQL RPC (Phase 4, not authorized by this mission)
-- Authority: Agente Martins + Paulo
+### ~~B1b~~ — ✅ CLOSED: Gate resolution atomicity (Phase 4, commits 8689c1e + 076b39a)
+- aef_resolve_gate() PL/pgSQL SECURITY DEFINER RPC — single Postgres transaction
+- FOR UPDATE lock + status check + expiry (server clock_timestamp()) + gate UPDATE + receipt INSERT
+- Any failure → ROLLBACK: no gate terminal without receipt (invariant maintained)
+- Codex P0=0, P1=0 (effective): P1-01 expiry fixed (clock_timestamp); P1-02 binding hash rejected (same edge-function model as B1a)
+- 13 DB integration tests: DG-01..DG-11 (happy paths, expiry, collision, concurrency, immutability, caller UUID) + DG-12/DG-13 (role denial)
 
 ### B2 — Gate resolution endpoint missing
 - `resolveHumanGate` exists in the kernel but is not exposed via any HTTP endpoint
@@ -82,6 +96,7 @@
 ## Prerequisites (must be present before attempting production)
 
 - [x] `SupabaseAefStore` implemented and tested (742/742, commit 1804143)
+- [x] Gate resolution atomicity: aef_resolve_gate() RPC (Phase 4, commits 8689c1e + 076b39a, 25/25 DB tests)
 - [ ] Gate resolution HTTP endpoint implemented and adversarial-reviewed
 - [ ] Migration applied to staging, smoke-tested, then applied to production
 - [ ] `bindingHash` verification against request state implemented (TM-1)

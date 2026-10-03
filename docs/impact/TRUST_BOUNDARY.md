@@ -135,3 +135,23 @@ The `aef_submit_action()` PL/pgSQL SECURITY DEFINER RPC is the terminal write bo
 - The RPC trusts the Edge Function as the authorized caller.
 
 **Security posture:** REVOKE ALL on all 4 AEF tables from PUBLIC; REVOKE from anon + authenticated; GRANT EXECUTE only to service_role. The RPC is not reachable from client-side Supabase clients.
+
+## Gate Resolution Trust Boundary (aef_resolve_gate RPC, Phase 4)
+
+The `aef_resolve_gate()` PL/pgSQL SECURITY DEFINER RPC is the terminal write boundary for gate resolution.
+
+**What the RPC enforces (atomically in one Postgres transaction):**
+- Parameter validation (format, enum, length)
+- `FOR UPDATE` lock on gate row — prevents concurrent double-resolution
+- Status = PENDING check (returns GATE_ALREADY_RESOLVED if not)
+- Server-time expiry: `clock_timestamp() >= expires_at` (caller-supplied `p_issued_at` CANNOT bypass expiry — P1-01 fix)
+- Gate status update (APPROVED/REJECTED) + `resolved_at` = server time
+- Resolution receipt INSERT with `caller_user_id = v_request.caller_user_id` (requester UUID, not approverRef — P1-03(b) fix)
+- On receipt PK collision: ROLLBACK (gate stays PENDING) → RECEIPT_ALREADY_EXISTS
+- On any other failure: Postgres rolls back implicitly (no orphan gate updates)
+
+**What the RPC does NOT enforce:**
+- Binding hash semantic verification (format-only check; semantic equality is enforced by the kernel before calling the RPC — same trust model as aef_submit_action)
+- auth.uid() re-derivation (accepted for lab; production-hardening requirement)
+
+**Security posture:** Same REVOKE/GRANT chain as aef_submit_action — only service_role can call the function (confirmed by DG-12/DG-13 tests).

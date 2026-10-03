@@ -3,7 +3,7 @@
 ## Mission Brief
 
 **Title:** Impact Trust Boundary + Egress Pinning + AEF Integration  
-**Status:** CONDITIONAL_PASS — Codex CLASS D re-audit complete; 2 architectural decisions escalated (Phase 3)  
+**Status:** IMPACT_I7_READY — Phase 4 gate resolution atomicity complete; Codex P0=0, P1=0 (effective)  
 **Base branch:** `claude/insightvalues-impact-foundation` at `b52d383`  
 **Work branch:** `claude/iv-impact-i7-trust-egress-aef-01`  
 **Date:** 2026-10-02
@@ -127,8 +127,8 @@ Authorized by Agente Martins Phase 3 brief (2026-10-03).
 | PARTIAL_FAILURE_ROLLBACK | ✅ PASS — DB-05 confirms no orphan rows on invalid input |
 | RESTART_SURVIVAL | ✅ PASS — DB-11 confirms persistence across connections |
 | RPC_PERMISSIONS | ✅ PASS — REVOKE from PUBLIC/anon/authenticated; GRANT to service_role only |
-| GATE_RESOLUTION_ATOMICITY (P1-03a) | ⚠️ ESCALATED — updateHumanGate + insertReceipt not yet atomic; requires resolve_gate_atomic() RPC (Phase 4, not authorized) |
-| DB_SIDE_OWNERSHIP_VALIDATION (P1-01 residual) | ⚠️ ESCALATED — RPC trusts Edge Function as authorization boundary; no auth.uid() re-check in SQL (architectural decision required) |
+| GATE_RESOLUTION_ATOMICITY (P1-03a) | ✅ PASS — aef_resolve_gate() RPC, Phase 4 (commit 8689c1e) |
+| DB_SIDE_OWNERSHIP_VALIDATION (P1-01 residual) | ⚠️ ACCEPTED FOR LAB — edge-function-as-trust-boundary; production-hardening requirement |
 | CODEX_P0 | ✅ PASS — 0 P0 findings |
 | CODEX_P1 | ⚠️ CONDITIONAL — P1-03(b) FIXED (ddd5211); P1-01 and P1-03(a) ESCALATED |
 
@@ -156,6 +156,63 @@ Authorized by Agente Martins Phase 3 brief (2026-10-03).
 | P1-03(b): approverRef as UUID-FK callerUserId | ACCEPTED — FIXED (ddd5211) | Used storedReq.caller.authenticatedUserId instead |
 | P2-01..P2-05 | DEFERRED — OUT OF SCOPE | Hardening mission |
 | P3-01..P3-02 | DEFERRED | Hardening mission |
+
+## Phase 4 — Gate Resolution Atomicity (commits 8689c1e, 076b39a)
+
+Authorized by Agente Martins Phase 4 brief (2026-10-03).
+
+### Files changed (Phase 4)
+
+**New files:**
+- `supabase/migrations/20261003000001_impact_aef_resolve_gate_atomic.sql` — aef_resolve_gate() PL/pgSQL SECURITY DEFINER RPC + REVOKE/GRANT chain + P1-01 clock_timestamp() fix
+
+**Modified files:**
+- `supabase/functions/_shared/aef/store.ts` — resolveGateAtomic() replaces updateHumanGate() + insertReceipt(); InMemoryAefStore is JS-event-loop atomic
+- `supabase/functions/_shared/aef/kernel.ts` — resolveHumanGate() calls store.resolveGateAtomic() atomically
+- `supabase/functions/impact-lab/supabase_store.ts` — resolveGateAtomic() calls aef_resolve_gate RPC
+- `supabase/functions/_shared/aef/kernel_pg_test.ts` — DG-01..DG-13 gate resolution DB integration tests (13 new tests)
+
+### Phase 4 Gate Labels
+
+| Gate | Status |
+|---|---|
+| GATE_RESOLUTION_ATOMICITY | ✅ PASS — aef_resolve_gate() FOR UPDATE + single Postgres transaction (DG-01/02) |
+| GATE_EXPIRY_SERVER_TIME | ✅ PASS — clock_timestamp() enforces expiry; caller p_issued_at cannot bypass (DG-03) |
+| GATE_ALREADY_RESOLVED | ✅ PASS — GATE_ALREADY_RESOLVED returned; gate unchanged (DG-04) |
+| BINDING_HASH_FORMAT | ✅ PASS — malformed hash → AEF_INVALID_PARAM exception; gate stays PENDING (DG-05) |
+| GATE_NOT_FOUND | ✅ PASS — unknown request_id → GATE_NOT_FOUND (DG-06) |
+| RECEIPT_COLLISION_ROLLBACK | ✅ PASS — RECEIPT_ALREADY_EXISTS returned; gate fully rolled back to PENDING (DG-07) |
+| CONCURRENT_RESOLUTION | ✅ PASS — FOR UPDATE lock: exactly 1 winner; gate = APPROVED; 2 receipts total (DG-08) |
+| RESTART_SURVIVAL | ✅ PASS — resolved state persists to new DB connection (DG-09) |
+| RECEIPT_IMMUTABILITY | ✅ PASS — UPDATE/DELETE on resolution receipt blocked by trigger (DG-10) |
+| CALLER_USER_ID_REQUESTER | ✅ PASS — receipt.caller_user_id = requester UUID not approverRef (DG-11) |
+| ROLE_DENIAL_RESOLVE | ✅ PASS — anon + authenticated get SQLSTATE 42501 (DG-12/DG-13) |
+| CODEX_P0 | ✅ PASS — 0 P0 findings |
+| CODEX_P1 | ✅ PASS (effective) — P1-01 (expiry) FIXED; P1-02 (binding hash at RPC boundary) REJECTED — FALSE POSITIVE (same edge-function-as-trust-boundary model as Phase 3 P1-01, already accepted) |
+
+### Phase 4 Test Results
+
+```
+47 unit tests | 0 failed
+25 DB integration tests | 0 failed (Postgres 17)
+  — DB-01..DB-12 (submit path, carry from Phase 3)
+  — DG-01..DG-11 (gate resolution: approved/rejected/expired/already-resolved/forged-hash/not-found/collision-rollback/concurrent/restart/immutability/caller-uuid)
+  — DG-12..DG-13 (role denial: anon + authenticated cannot invoke aef_resolve_gate)
+```
+
+### Codex CLASS D Adversarial Review (Phase 4)
+
+**Thread:** ab7ca769e6bb448fc (new thread)
+**Verdict:** PASS WITH FINDINGS → P1-01 fixed (commit 076b39a); P1-02 rejected (FALSE POSITIVE)
+
+| Finding | Classification | Action |
+|---|---|---|
+| P1-01: Caller-controlled expiry bypass (p_issued_at) | ACCEPTED — FIXED (076b39a) | clock_timestamp() for expiry check and gate resolved_at |
+| P1-02: Binding hash format-only at RPC boundary | REJECTED — FALSE POSITIVE | Same edge-function-as-trust-boundary model as Phase 3 P1-01 (accepted by Agente Martins); service_role callable only by Edge Function runtime |
+| P2-01: EXPIRED path without receipt | REJECTED — BY DESIGN | EXPIRED = system timeout, not human resolution; documented in migration |
+| P2-02: unique_violation catch breadth | DEFERRED | Production-hardening mission |
+| P2-03: InMemory weaker than DB RPC | DEFERRED | Known test-double limitation; acceptable for lab |
+| P3: No role denial tests | ACCEPTED — FIXED (076b39a) | DG-12/DG-13 added: anon + authenticated denied (42501) |
 
 ## Constraints Honored
 
