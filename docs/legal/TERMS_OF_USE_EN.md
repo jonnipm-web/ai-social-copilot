@@ -132,6 +132,18 @@ When and if the Impact Lab becomes publicly available, the following applies:
 
 ---
 
+## 10b. Strategy Lab — Business Strategy Disclaimer
+
+The Strategy Lab feature provides tools for strategy building, scenario simulation, and planning. By using Strategy Lab, you acknowledge:
+
+- Strategy Lab provides **informational and analytical frameworks** for business planning only
+- Strategy Lab outputs are AI-generated and may contain errors, assumptions, or omissions
+- Strategy Lab does not constitute business, financial, legal, or professional consulting advice
+- Strategic recommendations are hypothetical and depend on inputs you provide — they do not guarantee business outcomes
+- You are solely responsible for any decisions made based on Strategy Lab outputs
+
+---
+
 ## 11. Subscription and Billing
 
 ### 11.1 Plans

@@ -112,7 +112,7 @@ O InsightValues utiliza modelos de linguagem de IA para alimentar funcionalidade
 - Os resultados gerados por IA são produzidos por um modelo de linguagem e **podem conter erros, imprecisões ou informações desatualizadas**. São fornecidos apenas para fins informativos e analíticos.
 - Os resultados de IA **não são aconselhamento profissional** — não são aconselhamento financeiro, jurídico, médico ou de investimento.
 - **O conteúdo que você fornece é enviado ao nosso serviço de processamento de IA (Groq)** no lado do servidor quando você usa funcionalidades alimentadas por IA. A política de privacidade do Groq rege como eles tratam os dados de inferência.
-- Não usamos seu conteúdo para treinar modelos de IA sem o seu consentimento explícito.
+- Não utilizamos seu conteúdo para treinar modelos de IA por iniciativa própria. O Groq processa entradas de inferência de acordo com sua própria política de privacidade e termos de serviço — consulte a documentação do Groq para suas práticas de tratamento e retenção de dados.
 
 ---
 
@@ -127,7 +127,7 @@ Compartilhamos seus dados apenas nas seguintes circunstâncias:
 | Supabase | Todos os dados armazenados | Provedor de infraestrutura/banco de dados/autenticação |
 | Stripe | Endereço de e-mail, metadados de assinatura | Cobrança e processamento de pagamentos |
 | Groq | Conteúdo fornecido às funcionalidades de IA | Processamento de inferência de IA |
-| Google | Credenciais da conta Google (se você usar Google Sign-In) | Autenticação |
+| Google | Endereço de e-mail e identificador único de usuário da sua conta Google, obtidos via Google OAuth (se você usar Google Sign-In) | Autenticação |
 | Autoridades legais | Informações exigidas por lei | Conformidade legal apenas |
 
 ### 6.1 Obrigações Legais

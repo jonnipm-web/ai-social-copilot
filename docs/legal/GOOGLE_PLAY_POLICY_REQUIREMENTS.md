@@ -19,7 +19,7 @@
 | GP-07 | No deceptive behavior or misleading claims | Play Policy — Deception | ✅ MET | No deceptive claims found | Maintain |
 | GP-08 | App must not collect, use, or share user data in ways the user hasn't consented to | User Data policy | ✅ MET (server-side AI processing disclosed in policies) | — | Maintain via accurate policies |
 | GP-09 | AI-generated content disclosure for AI features | Play Policy — Generative AI (emerging) | ✅ PARTIAL — IVE branding communicates AI nature | Policies should state AI output limitations | Include in Privacy Policy + Terms of Use (addressed in IV-RELEASE-LEGAL-POLICIES-01) |
-| GP-10 | Financial products/services: additional disclosures | Financial Services policy | ⚠️ WATCH | Quant Lab and Strategy Lab contain financial analysis features (admin-only currently) | Quant and Strategy disclaimers must be included in Terms — see TERMS_OF_USE_EN.md Section 12 |
+| GP-10 | Financial products/services: additional disclosures | Financial Services policy | ⚠️ WATCH | Quant Lab and Strategy Lab contain financial analysis features (admin-only currently) | Quant disclaimer: TERMS_OF_USE_EN.md §9; Impact Lab: §10; Strategy Lab: §10b — jurisdiction-specific review required before public release |
 | GP-11 | Subscription terms must be clearly disclosed before purchase | Play Billing policy | ✅ MET | Upgrade screen shows plan/price before Stripe checkout | Maintain |
 | GP-12 | No sharing of data with third parties for advertising | — | ✅ MET | No advertising SDK or data sharing for ads | Maintain |
 | GP-13 | COPPA / children's content | Families policy | ✅ NOT APPLICABLE | App is for business users (adults), not designed for children | Maintain — state minimum age (18) in Terms |
@@ -37,7 +37,7 @@ CRITICAL (blocks submission):
   GP-04: Account deletion flow — BLOCKED_OWNER (minimum: Option A email form)
 
 IMPORTANT:
-  GP-10: Quant/Strategy disclaimers in Terms of Use (addressed in this mission)
+  GP-10: Quant (§9), Impact Lab (§10), Strategy Lab (§10b) disclaimers in Terms of Use (addressed in this mission; jurisdiction review required before public release)
 
 LOWER PRIORITY:
   GP-06: Prominent disclosure — acceptable for initial release if policies are accurate

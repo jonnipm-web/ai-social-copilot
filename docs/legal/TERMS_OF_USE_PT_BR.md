@@ -132,6 +132,18 @@ Quando e se o Impact Lab se tornar publicamente disponível, o seguinte se aplic
 
 ---
 
+## 10b. Strategy Lab — Isenção de Responsabilidade para Estratégia de Negócios
+
+O Strategy Lab fornece ferramentas para construção de estratégias, simulação de cenários e planejamento. Ao usar o Strategy Lab, você reconhece:
+
+- O Strategy Lab fornece **frameworks informativos e analíticos** para planejamento empresarial apenas
+- Os resultados do Strategy Lab são gerados por IA e podem conter erros, premissas ou omissões
+- O Strategy Lab não constitui consultoria empresarial, financeira, jurídica ou profissional
+- As recomendações estratégicas são hipotéticas e dependem dos dados que você fornece — não garantem resultados de negócios
+- Você é o único responsável por quaisquer decisões tomadas com base nos resultados do Strategy Lab
+
+---
+
 ## 11. Assinatura e Faturamento
 
 ### 11.1 Planos
