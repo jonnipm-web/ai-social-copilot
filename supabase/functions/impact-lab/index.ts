@@ -180,7 +180,8 @@ export async function handler(
     }
   }
 
-  // I7: build caller context for consequential action governance.
+  // I7: build a baseline caller context (used by non-AEF paths; projectId is
+  // null here and derived from the investigation for AEF actions below).
   const callerContext = buildCallerContext({
     authenticatedUserId: user.id,
     correlationId,
@@ -198,16 +199,29 @@ export async function handler(
       if (!investigationId) return errorResponse({ code: 'INVALID_REQUEST', message: 'investigation_id required for AEF actions' }, correlationId);
       if (!idempotencyKey) return errorResponse({ code: 'INVALID_REQUEST', message: 'idempotency_key required for AEF actions' }, correlationId);
 
-      // I7 gate: validate investigation ownership before AEF submission.
+      // I7 gate: validate investigation ownership + derive project scope.
+      // getInvestigation uses the caller's JWT (RLS-scoped) — a foreign
+      // investigation returns null, not an error.
+      let investigationProjectId: string | null = null;
       try {
         const labStore = deps.store ? deps.store(req, user) : createSupabaseImpactLabStore(req);
         const invResult = await labStore.getInvestigation(investigationId);
         if (!invResult.ok || !invResult.value) {
           return errorResponse({ code: 'INVESTIGATION_NOT_FOUND', message: 'investigation not found' }, correlationId);
         }
+        // P1-02: derive project_id from the validated investigation.
+        investigationProjectId = invResult.value.projectId;
       } catch {
         return errorResponse({ code: 'INTERNAL_ERROR', message: 'investigation lookup failed' }, correlationId);
       }
+
+      // Build AEF-specific caller context with project scope from investigation.
+      const aefCallerContext = buildCallerContext({
+        authenticatedUserId: user.id,
+        correlationId,
+        projectId: investigationProjectId,
+        serviceId: 'impact-lab',
+      });
 
       // I7: DB-backed AEF store — fail closed if unavailable.
       let aefStore: AefStore;
@@ -228,7 +242,7 @@ export async function handler(
           idempotencyKey,
           classification: 'CONSEQUENTIAL' as const,
         };
-        const aefResult = await submitAction(callerContext, intent, { store: aefStore, now: deps.now });
+        const aefResult = await submitAction(aefCallerContext, intent, { store: aefStore, now: deps.now });
         if (!aefResult.ok) {
           const err = aefResult.error;
           if (err.code === 'REQUIRES_HUMAN_REVIEW') {
