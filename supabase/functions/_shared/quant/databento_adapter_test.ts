@@ -35,21 +35,35 @@ function req(overrides?: Partial<HistoricalBarsRequest>): HistoricalBarsRequest 
   };
 }
 
-/** Build a single valid NDJSON bar line. */
+/**
+ * Build a single valid NDJSON bar line in Databento's official JSON wire format.
+ *
+ * Official shape (encoding=json, pretty_px=true, pretty_ts=true):
+ *   { "hd": { "ts_event": "...", "rtype": 35, "publisher_id": N, "instrument_id": N },
+ *     "open": "NNN.NNN", "high": "...", "low": "...", "close": "...",
+ *     "volume": "NNNNNNN" }   ← uint64 string-encoded
+ *
+ * Fields in overrides that are header-level (ts_event, rtype, publisher_id,
+ * instrument_id) are placed inside 'hd'; all others stay at the top level.
+ */
 function ndjsonBar(overrides: Record<string, unknown> = {}): string {
-  const defaults = {
-    ts_recv: '2023-11-13T21:00:00.000000000Z',
-    ts_event: '2023-11-13T00:00:00.000000000Z', // session date
-    rtype: 35, // 0x23 per Databento DBN spec — ohlcv-1d (daily). rtype 32 = ohlcv-1h (hourly).
-    publisher_id: 39,
-    instrument_id: 170352,
-    open: '182.000000000',
-    high: '184.950000000',
-    low: '181.440000000',
-    close: '184.800000000',
-    volume: 52_038_800,
-  };
-  return JSON.stringify({ ...defaults, ...overrides });
+  const {
+    ts_event = '2023-11-13T00:00:00.000000000Z',
+    rtype = 35, // 0x23 = ohlcv-1d (daily); rtype 32 = ohlcv-1h (wrong granularity)
+    publisher_id = 39,
+    instrument_id = 170352,
+    open = '182.000000000',
+    high = '184.950000000',
+    low = '181.440000000',
+    close = '184.800000000',
+    volume = '52038800', // uint64 string-encoded per Databento JSON encoding
+    ...rest
+  } = overrides;
+  return JSON.stringify({
+    hd: { ts_event, rtype, publisher_id, instrument_id },
+    open, high, low, close, volume,
+    ...rest,
+  });
 }
 
 function mockFetch(statusCode: number, body: string, extraHeaders?: Record<string, string>) {
@@ -192,8 +206,11 @@ Deno.test('parseResponse: multiple valid bars parsed correctly', async () => {
   assertEquals(result.value.data.length, 2);
 });
 
-Deno.test('parseResponse: skips metadata records (rtype=0)', async () => {
-  const metaRecord = JSON.stringify({ rtype: 0, version: 2, dataset: 'EQUS.SUMMARY' });
+Deno.test('parseResponse: skips non-hd records (metadata/non-OHLCV lines without hd field)', async () => {
+  // Databento metadata lines have no 'hd' field — they are the DBN header block
+  // serialized as a JSON object (version, dataset, schema, stype_in, etc.).
+  // Note: rtype=0 is MBP-0 (trades), NOT metadata; the skip is on absence of 'hd'.
+  const metaRecord = JSON.stringify({ version: 2, dataset: 'EQUS.SUMMARY', schema: 'ohlcv-1d' });
   const bar = ndjsonBar();
   const provider = makeProvider(mockFetch(200, metaRecord + '\n' + bar + '\n'));
   const result = await provider.historicalBars(req());
@@ -248,8 +265,8 @@ Deno.test('parseResponse: empty body returns INSUFFICIENT_DATA', async () => {
   assertEquals(result.error.code, 'INSUFFICIENT_DATA');
 });
 
-Deno.test('parseResponse: body with only metadata record returns INSUFFICIENT_DATA', async () => {
-  const metaOnly = JSON.stringify({ rtype: 0, version: 2 });
+Deno.test('parseResponse: body with only metadata record (no hd) returns INSUFFICIENT_DATA', async () => {
+  const metaOnly = JSON.stringify({ version: 2, dataset: 'EQUS.SUMMARY', schema: 'ohlcv-1d' });
   const provider = makeProvider(mockFetch(200, metaOnly + '\n'));
   const result = await provider.historicalBars(req());
   assertEquals(result.ok, false);
@@ -266,7 +283,18 @@ Deno.test('parseResponse: non-JSON line returns PROVIDER_MALFORMED', async () =>
 });
 
 Deno.test('parseResponse: unexpected rtype returns PROVIDER_MALFORMED', async () => {
-  const bar = ndjsonBar({ rtype: 99 }); // unknown rtype
+  const bar = ndjsonBar({ rtype: 99 }); // unknown rtype in hd
+  const provider = makeProvider(mockFetch(200, bar + '\n'));
+  const result = await provider.historicalBars(req());
+  assertEquals(result.ok, false);
+  if (result.ok) throw new Error();
+  assertEquals(result.error.code, 'PROVIDER_MALFORMED');
+});
+
+Deno.test('parseResponse: rtype=0 with hd returns PROVIDER_MALFORMED (MBP-0 is not ohlcv-1d, not metadata)', async () => {
+  // rtype=0 is MBP-0 (trades) in the DBN spec — NOT a metadata skip signal.
+  // A record with hd.rtype=0 must be rejected as wrong granularity, not silently skipped.
+  const bar = ndjsonBar({ rtype: 0 });
   const provider = makeProvider(mockFetch(200, bar + '\n'));
   const result = await provider.historicalBars(req());
   assertEquals(result.ok, false);
@@ -430,9 +458,9 @@ Deno.test('parseResponse: response exceeding MAX_BARS (50 000) returns DATASET_T
 // Hardening tests — volume edge cases
 // ---------------------------------------------------------------------------
 
-Deno.test('parseResponse: negative volume is accepted (treated as undefined, not a parse error)', async () => {
-  // Volume < 0 is suspicious but not a parsing error; downstream engine decides.
-  const bar = ndjsonBar({ volume: -1 });
+Deno.test('parseResponse: negative numeric volume is stripped (treated as undefined)', async () => {
+  // Negative volume is invalid; adapter strips it rather than failing the request.
+  const bar = ndjsonBar({ volume: -1 }); // numeric negative
   const provider = makeProvider(mockFetch(200, bar + '\n'));
   const result = await provider.historicalBars(req());
   assertEquals(result.ok, true);
@@ -440,10 +468,24 @@ Deno.test('parseResponse: negative volume is accepted (treated as undefined, not
   assertEquals(result.value.data[0].volume, undefined); // negative → stripped
 });
 
+Deno.test('parseResponse: string volume is parsed correctly (uint64 canonical encoding)', async () => {
+  // Databento encodes volume as a uint64 string in JSON; adapter must parse it.
+  const bar = ndjsonBar({ volume: '12345678' });
+  const provider = makeProvider(mockFetch(200, bar + '\n'));
+  const result = await provider.historicalBars(req());
+  assertEquals(result.ok, true);
+  if (!result.ok) throw new Error(result.error.message);
+  assertEquals(result.value.data[0].volume, 12_345_678);
+});
+
 Deno.test('parseResponse: missing volume field is accepted (volume is optional)', async () => {
-  const bar = ndjsonBar({ volume: undefined });
-  const body = JSON.stringify(JSON.parse(bar.replace(/"volume":\d+,?/, '').replace(/,}/, '}'))) + '\n';
-  const provider = makeProvider(mockFetch(200, body));
+  // Build a bar without the volume field entirely.
+  const record = {
+    hd: { ts_event: '2023-11-13T00:00:00.000000000Z', rtype: 35, publisher_id: 39, instrument_id: 170352 },
+    open: '182.000000000', high: '184.950000000', low: '181.440000000', close: '184.800000000',
+    // volume intentionally omitted
+  };
+  const provider = makeProvider(mockFetch(200, JSON.stringify(record) + '\n'));
   const result = await provider.historicalBars(req());
   assertEquals(result.ok, true);
   if (!result.ok) throw new Error(result.error.message);

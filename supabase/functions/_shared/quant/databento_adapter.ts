@@ -53,13 +53,15 @@ import { normalizeVendorStatus } from './provider_adapter.ts';
 import type { RawBarInput } from './timeseries.ts';
 
 // Databento DBN rtype values (per official DBN spec):
+//   0x00 ( 0) = MBP-0 / trades (NOT metadata — do not skip on rtype=0)
 //   0x20 (32) = ohlcv-1h  (hourly)
 //   0x21 (33) = ohlcv-1m  (minute)
 //   0x22 (34) = ohlcv-1s  (second)
 //   0x23 (35) = ohlcv-1d  (daily) ← this adapter
 // CONTRACT GUARD: any other rtype in a response to an ohlcv-1d request is rejected as PROVIDER_MALFORMED.
+// Databento metadata lines (DBN header serialized as JSON) have NO 'hd' field — they are skipped
+// by the 'typeof r.hd !== object' check, not by rtype value.
 const OHLCV_1D_RTYPE = 35;
-const METADATA_RTYPE = 0; // rtype=0 is the DBN metadata record, skip it
 const MAX_BARS = 50_000;
 const DAY_MS = 86_400_000;
 const MAX_LINE_BYTES = 128 * 1024; // reject a single NDJSON line larger than 128 KB
@@ -186,8 +188,8 @@ export const databentoAdapter: AdapterSpec = {
     let latestEventMs = 0;
 
     for (let i = 0; i < lines.length; i++) {
-      if (lines[i].length > MAX_LINE_BYTES) {
-        return fail('PROVIDER_MALFORMED', 'databento NDJSON line exceeds maximum line length', { row: i });
+      if (new TextEncoder().encode(lines[i]).length > MAX_LINE_BYTES) {
+        return fail('PROVIDER_MALFORMED', 'databento NDJSON line exceeds maximum line length (bytes)', { row: i });
       }
       let rec: unknown;
       try {
@@ -200,45 +202,50 @@ export const databentoAdapter: AdapterSpec = {
       }
       const r = rec as Record<string, unknown>;
 
-      // Skip DBN metadata records (rtype=0) — these appear first in some responses.
-      if (r.rtype === METADATA_RTYPE || r.rtype === undefined) continue;
+      // Databento JSON encoding: DBN header fields (rtype, instrument_id, ts_event,
+      // publisher_id) are nested under 'hd'. Records without 'hd' are metadata lines
+      // (DBN header blocks) that do not represent OHLCV bars — skip them silently.
+      // Codex P0/P1: the previous adapter incorrectly read these fields at top-level,
+      // causing every real Databento response to be rejected as INSUFFICIENT_DATA.
+      if (typeof r.hd !== 'object' || r.hd === null) continue;
+      const hd = r.hd as Record<string, unknown>;
 
-      if (r.rtype !== OHLCV_1D_RTYPE) {
+      if (hd.rtype !== OHLCV_1D_RTYPE) {
         // Unexpected record type — reject rather than silently skip unknown data.
+        // Note: rtype=0 is MBP-0 (trades), not metadata — rejected here if it arrives.
         return fail('PROVIDER_MALFORMED', 'databento response contains unexpected record type', {
-          row: i, rtype: typeof r.rtype === 'number' ? r.rtype : -1,
+          row: i, rtype: typeof hd.rtype === 'number' ? hd.rtype : -1,
         });
       }
 
-      // Instrument-ID consistency check: all bars in a single-symbol request
-      // must share the same instrument_id. Multiple IDs would indicate the
-      // provider responded for more than one instrument (response poisoning defence).
-      // instrument_id is a Databento uint32 (DBN spec): must be a safe positive integer
+      // instrument_id is in hd; Databento uint32 (DBN spec) — safe positive integer
       // within [1, 0xffffffff] with no fractional component (Codex SEC-04).
+      // Instrument-ID consistency: all bars must share the same instrument_id to
+      // prevent response poisoning (mixed instruments for a single-symbol request).
       if (
-        typeof r.instrument_id !== 'number' ||
-        !Number.isSafeInteger(r.instrument_id) ||
-        r.instrument_id <= 0 ||
-        r.instrument_id > MAX_INSTRUMENT_ID
+        typeof hd.instrument_id !== 'number' ||
+        !Number.isSafeInteger(hd.instrument_id) ||
+        hd.instrument_id <= 0 ||
+        hd.instrument_id > MAX_INSTRUMENT_ID
       ) {
         return fail('PROVIDER_MALFORMED', 'databento bar has invalid instrument_id', { row: i });
       }
       if (firstInstrumentId === null) {
-        firstInstrumentId = r.instrument_id;
-      } else if (r.instrument_id !== firstInstrumentId) {
+        firstInstrumentId = hd.instrument_id as number;
+      } else if (hd.instrument_id !== firstInstrumentId) {
         return fail(
           'PROVIDER_MALFORMED',
           'databento response contains multiple instrument IDs for a single-symbol request',
-          { row: i, first: firstInstrumentId, got: r.instrument_id },
+          { row: i, first: firstInstrumentId, got: hd.instrument_id },
         );
       }
 
-      // Timestamp: pretty_ts=true yields ISO 8601 strings.
+      // ts_event is in hd; with pretty_ts=true returns ISO 8601 string.
       // For ohlcv-1d, ts_event is the start of the session (00:00:00 UTC for the date).
-      if (typeof r.ts_event !== 'string') {
+      if (typeof hd.ts_event !== 'string') {
         return fail('PROVIDER_MALFORMED', 'databento bar missing ts_event', { row: i });
       }
-      const t = Date.parse(r.ts_event);
+      const t = Date.parse(hd.ts_event);
       if (!Number.isFinite(t)) {
         return fail('PROVIDER_MALFORMED', 'databento bar ts_event is not a parseable date', { row: i });
       }
@@ -266,8 +273,17 @@ export const databentoAdapter: AdapterSpec = {
         return fail('PROVIDER_MALFORMED', 'databento bar has invalid or non-positive prices', { row: i });
       }
 
-      // Volume: reject Infinity (e.g. 1e309 parsed from JSON overflows to Infinity) (Codex SEC-05).
-      const vol = typeof r.volume === 'number' && r.volume >= 0 && Number.isFinite(r.volume) ? r.volume : undefined;
+      // Volume: DBN type is uint64_t; Databento JSON encoding returns it as a string.
+      // Accept both string (canonical) and number (numeric fallback for non-pretty_px).
+      // Values exceeding Number.MAX_SAFE_INTEGER (2^53-1) lose precision — stripped.
+      // Infinity (e.g. 1e309 overflowed in JSON) is rejected (Codex SEC-05, P2).
+      let vol: number | undefined = undefined;
+      if (typeof r.volume === 'string') {
+        const vn = Number(r.volume);
+        if (Number.isFinite(vn) && vn >= 0 && vn <= Number.MAX_SAFE_INTEGER) vol = vn;
+      } else if (typeof r.volume === 'number' && r.volume >= 0 && Number.isFinite(r.volume) && r.volume <= Number.MAX_SAFE_INTEGER) {
+        vol = r.volume;
+      }
       rows.push({ t, open, high, low, close, ...(vol !== undefined ? { volume: vol } : {}) });
       if (t > latestEventMs) latestEventMs = t;
     }
