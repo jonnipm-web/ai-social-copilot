@@ -40,7 +40,7 @@ function ndjsonBar(overrides: Record<string, unknown> = {}): string {
   const defaults = {
     ts_recv: '2023-11-13T21:00:00.000000000Z',
     ts_event: '2023-11-13T00:00:00.000000000Z', // session date
-    rtype: 32,
+    rtype: 35, // 0x23 per Databento DBN spec — ohlcv-1d (daily). rtype 32 = ohlcv-1h (hourly).
     publisher_id: 39,
     instrument_id: 170352,
     open: '182.000000000',
@@ -727,6 +727,38 @@ Deno.test('parseResponse: Infinity volume (from 1e309 JSON overflow) is treated 
   if (!result.ok) throw new Error(result.error.message);
   // Infinity volume is stripped to undefined (non-finite → treated as absent)
   assertEquals(result.value.data[0].volume, undefined);
+});
+
+// CONTRACT GUARD: rtype values for the wrong granularity must be rejected
+// rtype 32 (0x20) = ohlcv-1h; 33 = ohlcv-1m; 34 = ohlcv-1s — none are daily bars.
+// If Databento sends an hourly-bar record in response to an ohlcv-1d request,
+// the adapter MUST reject it rather than silently process the wrong granularity.
+Deno.test('CONTRACT GUARD: rtype=32 (ohlcv-1h) is rejected by ohlcv-1d adapter (wrong granularity)', () => {
+  const bar = ndjsonBar({ rtype: 32 }); // 0x20 = hourly, not daily
+  const result = databentoAdapter.parseResponse(
+    req(),
+    200,
+    new Headers({ 'Content-Type': 'application/json' }),
+    bar + '\n',
+    NOW_MS,
+  );
+  assertEquals(result.ok, false);
+  if (result.ok) throw new Error('Expected PROVIDER_MALFORMED for hourly rtype in daily adapter');
+  assertEquals(result.error.code, 'PROVIDER_MALFORMED');
+});
+
+Deno.test('CONTRACT GUARD: rtype=33 (ohlcv-1m) is rejected by ohlcv-1d adapter (wrong granularity)', () => {
+  const bar = ndjsonBar({ rtype: 33 }); // 0x21 = minute
+  const result = databentoAdapter.parseResponse(
+    req(),
+    200,
+    new Headers({ 'Content-Type': 'application/json' }),
+    bar + '\n',
+    NOW_MS,
+  );
+  assertEquals(result.ok, false);
+  if (result.ok) throw new Error('Expected PROVIDER_MALFORMED for minute rtype in daily adapter');
+  assertEquals(result.error.code, 'PROVIDER_MALFORMED');
 });
 
 // SEC-07: deprecation guard for other wrong datasets (extends the DBEQ.BASIC guard)

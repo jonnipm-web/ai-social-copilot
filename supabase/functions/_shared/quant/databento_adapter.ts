@@ -52,7 +52,13 @@ import type { AdapterHttpRequest, AdapterSpec } from './provider_adapter.ts';
 import { normalizeVendorStatus } from './provider_adapter.ts';
 import type { RawBarInput } from './timeseries.ts';
 
-const OHLCV_1D_RTYPE = 32;
+// Databento DBN rtype values (per official DBN spec):
+//   0x20 (32) = ohlcv-1h  (hourly)
+//   0x21 (33) = ohlcv-1m  (minute)
+//   0x22 (34) = ohlcv-1s  (second)
+//   0x23 (35) = ohlcv-1d  (daily) ← this adapter
+// CONTRACT GUARD: any other rtype in a response to an ohlcv-1d request is rejected as PROVIDER_MALFORMED.
+const OHLCV_1D_RTYPE = 35;
 const METADATA_RTYPE = 0; // rtype=0 is the DBN metadata record, skip it
 const MAX_BARS = 50_000;
 const DAY_MS = 86_400_000;
