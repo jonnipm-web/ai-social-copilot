@@ -283,30 +283,15 @@ export async function resolveHumanGate(
   const now = deps.now ? deps.now() : new Date().toISOString();
   const store = deps.store;
 
-  const gateResult = await store.getHumanGate(requestId);
-  if (!gateResult.ok) {
-    return { ok: false, error: { code: 'AEF_PERSISTENCE_UNAVAILABLE' }, receipt: null };
-  }
-  const gate = gateResult.value;
-  if (!gate) {
-    return { ok: false, error: { code: 'HUMAN_GATE_INVALID', reason: 'no gate found for request' }, receipt: null };
-  }
-  if (gate.status !== 'PENDING') {
-    return { ok: false, error: { code: 'HUMAN_GATE_INVALID', reason: `gate already ${gate.status}` }, receipt: null };
-  }
-  // Expiry check (>= to reject approval exactly at the expiry instant)
-  if (Date.parse(now) >= Date.parse(gate.expiresAt)) {
-    await store.updateHumanGate(gate.gateId, 'EXPIRED', null, null, now);
-    return { ok: false, error: { code: 'HUMAN_GATE_INVALID', reason: 'gate expired' }, receipt: null };
-  }
-  // Approver must be non-empty opaque ref
+  // 1. Validate approver and binding hash format first (fail fast, no I/O)
   if (!approverRef || approverRef.length > 64) {
     return { ok: false, error: { code: 'HUMAN_GATE_INVALID', reason: 'invalid approver ref' }, receipt: null };
   }
-  // Binding hash: validate format then verify against stored request state
   if (!bindingHash || !/^[0-9a-f]{64}$/.test(bindingHash)) {
     return { ok: false, error: { code: 'HUMAN_GATE_INVALID', reason: 'invalid binding hash' }, receipt: null };
   }
+
+  // 2. Load request for binding hash semantic verification
   const requestResult = await store.getRequest(requestId);
   if (!requestResult.ok) {
     return { ok: false, error: { code: 'AEF_PERSISTENCE_UNAVAILABLE' }, receipt: null };
@@ -319,27 +304,24 @@ export async function resolveHumanGate(
     return { ok: false, error: { code: 'HUMAN_GATE_INVALID', reason: 'binding hash mismatch' }, receipt: null };
   }
 
-  const updateResult = await store.updateHumanGate(
-    gate.gateId,
-    resolution,
-    approverRef,
-    bindingHash,
-    now,
-  );
-  if (!updateResult.ok) {
+  // 3. Load gate to get gateId (needed to build the receipt)
+  const gateResult = await store.getHumanGate(requestId);
+  if (!gateResult.ok) {
     return { ok: false, error: { code: 'AEF_PERSISTENCE_UNAVAILABLE' }, receipt: null };
   }
+  const gate = gateResult.value;
+  if (!gate) {
+    return { ok: false, error: { code: 'HUMAN_GATE_INVALID', reason: 'no gate found for request' }, receipt: null };
+  }
 
-  // Issue receipt for gate resolution
+  // 4. Build resolution receipt in memory (before any write)
   const executionOutcome = resolution === 'APPROVED' ? 'AUTHORIZED' : 'DENIED';
   const storedReq = requestResult.value;
-  // P1-03(b): use the original requester's UUID as callerUserId — not approverRef
-  // (approverRef is an opaque string, but caller_user_id is a uuid FK in the DB).
-  // The gate record already stores approverRef; the receipt attributes to the requester.
   const receiptPartial: Omit<ExecutionReceipt, 'receiptHash'> = {
     receiptId: randomUuid(),
     requestId,
     correlationId: storedReq.correlationId,
+    // callerUserId: requester UUID — NOT approverRef (opaque string ≠ uuid FK)
     callerUserId: storedReq.caller.authenticatedUserId,
     projectId: storedReq.caller.projectId,
     serviceId: 'aef-gate-resolver',
@@ -356,9 +338,21 @@ export async function resolveHumanGate(
   };
   const receiptHash = await buildReceiptHash(receiptPartial);
   const receipt: ExecutionReceipt = { ...receiptPartial, receiptHash };
-  const gateReceiptResult = await store.insertReceipt(receipt);
-  if (!gateReceiptResult.ok) {
-    return { ok: false, error: { code: 'AEF_PERSISTENCE_UNAVAILABLE' }, receipt: null };
+
+  // 5. Atomic resolution: update gate + insert receipt in one operation.
+  //    The store validates status=PENDING and expiry again atomically (TOCTOU safety).
+  const atomicResult = await store.resolveGateAtomic(requestId, resolution, approverRef, bindingHash, receipt);
+  if (!atomicResult.ok) {
+    switch (atomicResult.code) {
+      case 'GATE_NOT_FOUND':
+        return { ok: false, error: { code: 'HUMAN_GATE_INVALID', reason: 'no gate found for request' }, receipt: null };
+      case 'GATE_ALREADY_RESOLVED':
+        return { ok: false, error: { code: 'HUMAN_GATE_INVALID', reason: `gate already ${gate.status}` }, receipt: null };
+      case 'GATE_EXPIRED':
+        return { ok: false, error: { code: 'HUMAN_GATE_INVALID', reason: 'gate expired' }, receipt: null };
+      default:
+        return { ok: false, error: { code: 'AEF_PERSISTENCE_UNAVAILABLE' }, receipt: null };
+    }
   }
 
   if (resolution === 'APPROVED') {

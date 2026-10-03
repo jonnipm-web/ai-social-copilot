@@ -417,3 +417,303 @@ pgTest('DB-12 RPC_PERMISSIONS: aef_submit_action is callable by superuser (servi
   assertExists(result.receipt_id);
   assertExists(result.request_id);
 });
+
+// ── Gate resolution helpers ───────────────────────────────────────────────────
+
+async function callResolveGate(args: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const result = await query(
+    `SELECT aef_resolve_gate($1, $2, $3, $4, $5, $6, $7, $8) AS result`,
+    [
+      args.p_request_id, args.p_resolution, args.p_approver_ref, args.p_binding_hash,
+      args.p_receipt_id, args.p_receipt_hash, args.p_policy_version, args.p_issued_at,
+    ],
+  );
+  return result.rows[0].result as Record<string, unknown>;
+}
+
+async function seedGate(userId: string, invId: string): Promise<{ reqId: string; gateId: string; submitReceiptId: string }> {
+  const reqId = uuid(); const gateId = uuid(); const submitReceiptId = uuid();
+  const res = await callRpc({
+    p_request_id: reqId, p_correlation_id: `dg-${reqId.slice(0, 8)}`, p_caller_user_id: userId,
+    p_project_id: null, p_service_id: 'impact-lab', p_intent_kind: 'REQUEST_MANUAL_VERIFICATION',
+    p_investigation_id: invId, p_idempotency_key: uuid(), p_classification: 'CONSEQUENTIAL',
+    p_requested_at: NOW, p_policy_outcome: 'REQUIRES_HUMAN_REVIEW', p_policy_version: POLICY_VERSION,
+    p_policy_reason: 'human gate required', p_gate_id: gateId, p_gate_expires_at: FUTURE,
+    p_receipt_id: submitReceiptId, p_receipt_hash: hex64(), p_execution_outcome: 'REQUIRES_HUMAN_REVIEW', p_issued_at: NOW,
+  });
+  if (!res.ok) throw new Error(`seedGate RPC failed: ${JSON.stringify(res)}`);
+  return { reqId, gateId, submitReceiptId };
+}
+
+// ── Gate resolution tests (DG-01..DG-11) ─────────────────────────────────────
+
+pgTest('DG-01 aef_resolve_gate: APPROVED happy path — gate updated + receipt inserted atomically', async () => {
+  const userId = uuid(); const invId = uuid();
+  await seedUser(userId); await seedInvestigation(invId, userId, null);
+  const { reqId, gateId } = await seedGate(userId, invId);
+
+  const resReceiptId = uuid();
+  const res = await callResolveGate({
+    p_request_id: reqId, p_resolution: 'APPROVED',
+    p_approver_ref: 'approver-dg01', p_binding_hash: hex64(),
+    p_receipt_id: resReceiptId, p_receipt_hash: hex64(),
+    p_policy_version: POLICY_VERSION, p_issued_at: NOW,
+  });
+  assertEquals(res.ok, true);
+  assertEquals(res.request_id, reqId);
+  assertEquals(res.gate_id, gateId);
+
+  const gate = await query('SELECT status, approver_ref FROM impact_aef_gates WHERE gate_id = $1', [gateId]);
+  assertEquals(gate.rows[0].status, 'APPROVED');
+  assertEquals(gate.rows[0].approver_ref, 'approver-dg01');
+
+  const receipt = await query('SELECT policy_outcome, execution_outcome, human_gate_id FROM impact_aef_receipts WHERE receipt_id = $1', [resReceiptId]);
+  assertEquals(receipt.rows.length, 1);
+  assertEquals(receipt.rows[0].policy_outcome, 'AUTHORIZED');
+  assertEquals(receipt.rows[0].execution_outcome, 'AUTHORIZED');
+  assertEquals(receipt.rows[0].human_gate_id, gateId);
+});
+
+pgTest('DG-02 aef_resolve_gate: REJECTED happy path — gate REJECTED + receipt DENIED', async () => {
+  const userId = uuid(); const invId = uuid();
+  await seedUser(userId); await seedInvestigation(invId, userId, null);
+  const { reqId, gateId } = await seedGate(userId, invId);
+
+  const resReceiptId = uuid();
+  const res = await callResolveGate({
+    p_request_id: reqId, p_resolution: 'REJECTED',
+    p_approver_ref: 'approver-dg02', p_binding_hash: hex64(),
+    p_receipt_id: resReceiptId, p_receipt_hash: hex64(),
+    p_policy_version: POLICY_VERSION, p_issued_at: NOW,
+  });
+  assertEquals(res.ok, true);
+
+  const gate = await query('SELECT status FROM impact_aef_gates WHERE gate_id = $1', [gateId]);
+  assertEquals(gate.rows[0].status, 'REJECTED');
+
+  const receipt = await query('SELECT policy_outcome, execution_outcome FROM impact_aef_receipts WHERE receipt_id = $1', [resReceiptId]);
+  assertEquals(receipt.rows[0].policy_outcome, 'DENIED');
+  assertEquals(receipt.rows[0].execution_outcome, 'DENIED');
+});
+
+pgTest('DG-03 aef_resolve_gate: expired gate → GATE_EXPIRED, gate marked EXPIRED, no receipt', async () => {
+  const userId = uuid(); const invId = uuid();
+  await seedUser(userId); await seedInvestigation(invId, userId, null);
+  const { reqId, gateId } = await seedGate(userId, invId);
+
+  // Gate expires_at = FUTURE (+24 h). Pass p_issued_at = +48 h so that
+  // p_issued_at >= expires_at → the RPC marks the gate EXPIRED and returns GATE_EXPIRED.
+  // (Updating expires_at directly would trigger the gate state-machine trigger.)
+  const AFTER_FUTURE = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+
+  const resReceiptId = uuid();
+  const res = await callResolveGate({
+    p_request_id: reqId, p_resolution: 'APPROVED',
+    p_approver_ref: 'approver-dg03', p_binding_hash: hex64(),
+    p_receipt_id: resReceiptId, p_receipt_hash: hex64(),
+    p_policy_version: POLICY_VERSION, p_issued_at: AFTER_FUTURE,
+  });
+  assertEquals(res.ok, false);
+  assertEquals(res.code, 'GATE_EXPIRED');
+
+  const gate = await query('SELECT status FROM impact_aef_gates WHERE gate_id = $1', [gateId]);
+  assertEquals(gate.rows[0].status, 'EXPIRED');
+
+  const receipt = await query('SELECT * FROM impact_aef_receipts WHERE receipt_id = $1', [resReceiptId]);
+  assertEquals(receipt.rows.length, 0, 'no receipt must be inserted for an expired gate');
+});
+
+pgTest('DG-04 aef_resolve_gate: already resolved gate → GATE_ALREADY_RESOLVED, status unchanged', async () => {
+  const userId = uuid(); const invId = uuid();
+  await seedUser(userId); await seedInvestigation(invId, userId, null);
+  const { reqId, gateId } = await seedGate(userId, invId);
+
+  const res1 = await callResolveGate({
+    p_request_id: reqId, p_resolution: 'APPROVED',
+    p_approver_ref: 'approver-dg04', p_binding_hash: hex64(),
+    p_receipt_id: uuid(), p_receipt_hash: hex64(),
+    p_policy_version: POLICY_VERSION, p_issued_at: NOW,
+  });
+  assertEquals(res1.ok, true);
+
+  const res2 = await callResolveGate({
+    p_request_id: reqId, p_resolution: 'REJECTED',
+    p_approver_ref: 'approver-dg04b', p_binding_hash: hex64(),
+    p_receipt_id: uuid(), p_receipt_hash: hex64(),
+    p_policy_version: POLICY_VERSION, p_issued_at: NOW,
+  });
+  assertEquals(res2.ok, false);
+  assertEquals(res2.code, 'GATE_ALREADY_RESOLVED');
+
+  const gate = await query('SELECT status FROM impact_aef_gates WHERE gate_id = $1', [gateId]);
+  assertEquals(gate.rows[0].status, 'APPROVED', 'gate must remain APPROVED after GATE_ALREADY_RESOLVED');
+});
+
+pgTest('DG-05 aef_resolve_gate: malformed binding_hash → exception, gate stays PENDING', async () => {
+  const userId = uuid(); const invId = uuid();
+  await seedUser(userId); await seedInvestigation(invId, userId, null);
+  const { reqId, gateId } = await seedGate(userId, invId);
+
+  let caught = false;
+  try {
+    await callResolveGate({
+      p_request_id: reqId, p_resolution: 'APPROVED',
+      p_approver_ref: 'approver-dg05', p_binding_hash: 'not-a-valid-64-char-hex',
+      p_receipt_id: uuid(), p_receipt_hash: hex64(),
+      p_policy_version: POLICY_VERSION, p_issued_at: NOW,
+    });
+  } catch {
+    caught = true;
+  }
+  assertEquals(caught, true, 'malformed binding_hash must raise AEF_INVALID_PARAM exception');
+
+  const gate = await query('SELECT status FROM impact_aef_gates WHERE gate_id = $1', [gateId]);
+  assertEquals(gate.rows[0].status, 'PENDING', 'gate must remain PENDING after invalid binding_hash');
+});
+
+pgTest('DG-06 aef_resolve_gate: unknown request_id (no gate) → GATE_NOT_FOUND', async () => {
+  const res = await callResolveGate({
+    p_request_id: uuid(), p_resolution: 'APPROVED',
+    p_approver_ref: 'approver-dg06', p_binding_hash: hex64(),
+    p_receipt_id: uuid(), p_receipt_hash: hex64(),
+    p_policy_version: POLICY_VERSION, p_issued_at: NOW,
+  });
+  assertEquals(res.ok, false);
+  assertEquals(res.code, 'GATE_NOT_FOUND');
+});
+
+pgTest('DG-07 aef_resolve_gate: receipt PK collision → RECEIPT_ALREADY_EXISTS, gate stays PENDING', async () => {
+  const userId = uuid(); const invId = uuid();
+  await seedUser(userId); await seedInvestigation(invId, userId, null);
+  const { reqId, gateId } = await seedGate(userId, invId);
+
+  // Pre-occupy the target receipt_id via a different gate
+  const userId2 = uuid(); const invId2 = uuid();
+  await seedUser(userId2); await seedInvestigation(invId2, userId2, null);
+  const { reqId: reqId2 } = await seedGate(userId2, invId2);
+  const collidingReceiptId = uuid();
+  const preRes = await callResolveGate({
+    p_request_id: reqId2, p_resolution: 'APPROVED',
+    p_approver_ref: 'pre-approver', p_binding_hash: hex64(),
+    p_receipt_id: collidingReceiptId, p_receipt_hash: hex64(),
+    p_policy_version: POLICY_VERSION, p_issued_at: NOW,
+  });
+  assertEquals(preRes.ok, true, 'pre-condition: collision receipt must be inserted first');
+
+  // Now resolve first gate with the same receipt_id → must collide
+  const res = await callResolveGate({
+    p_request_id: reqId, p_resolution: 'APPROVED',
+    p_approver_ref: 'approver-dg07', p_binding_hash: hex64(),
+    p_receipt_id: collidingReceiptId,
+    p_receipt_hash: hex64(), p_policy_version: POLICY_VERSION, p_issued_at: NOW,
+  });
+  assertEquals(res.ok, false);
+  assertEquals(res.code, 'RECEIPT_ALREADY_EXISTS');
+
+  // Gate must be fully rolled back to PENDING
+  const gate = await query('SELECT status FROM impact_aef_gates WHERE gate_id = $1', [gateId]);
+  assertEquals(gate.rows[0].status, 'PENDING', 'gate must remain PENDING after full rollback on receipt collision');
+});
+
+pgTest('DG-08 aef_resolve_gate: concurrent resolution → exactly 1 winner (FOR UPDATE lock)', async () => {
+  const userId = uuid(); const invId = uuid();
+  await seedUser(userId); await seedInvestigation(invId, userId, null);
+  const { reqId, gateId, submitReceiptId } = await seedGate(userId, invId);
+
+  const makeResolve = () => callResolveGate({
+    p_request_id: reqId, p_resolution: 'APPROVED',
+    p_approver_ref: 'approver-dg08', p_binding_hash: hex64(),
+    p_receipt_id: uuid(), p_receipt_hash: hex64(),
+    p_policy_version: POLICY_VERSION, p_issued_at: NOW,
+  });
+
+  const [r1, r2] = await Promise.all([makeResolve(), makeResolve()]);
+  const successes = [r1, r2].filter((r) => r.ok === true).length;
+  assertEquals(successes, 1, 'exactly one concurrent resolution must win');
+
+  const gate = await query('SELECT status FROM impact_aef_gates WHERE gate_id = $1', [gateId]);
+  assertEquals(gate.rows[0].status, 'APPROVED');
+
+  // 2 receipts: submit receipt + exactly 1 resolution receipt
+  const receipts = await query('SELECT receipt_id FROM impact_aef_receipts WHERE request_id = $1', [reqId]);
+  assertEquals(receipts.rows.length, 2, 'must have submit receipt + exactly 1 resolution receipt');
+  assertExists(receipts.rows.find((r) => r.receipt_id === submitReceiptId), 'submit receipt must be present');
+});
+
+pgTest('DG-09 aef_resolve_gate: resolved state persists to new connection (restart survival)', async () => {
+  const userId = uuid(); const invId = uuid();
+  await seedUser(userId); await seedInvestigation(invId, userId, null);
+  const { reqId, gateId } = await seedGate(userId, invId);
+
+  const resReceiptId = uuid();
+  await callResolveGate({
+    p_request_id: reqId, p_resolution: 'APPROVED',
+    p_approver_ref: 'approver-dg09', p_binding_hash: hex64(),
+    p_receipt_id: resReceiptId, p_receipt_hash: hex64(),
+    p_policy_version: POLICY_VERSION, p_issued_at: NOW,
+  });
+
+  // Each query() call opens its own fresh connection (see helper above) — simulates restart
+  const gate = await query('SELECT status FROM impact_aef_gates WHERE gate_id = $1', [gateId]);
+  assertEquals(gate.rows[0].status, 'APPROVED', 'resolved gate state must survive a new connection');
+
+  const receipt = await query('SELECT receipt_id FROM impact_aef_receipts WHERE receipt_id = $1', [resReceiptId]);
+  assertEquals(receipt.rows.length, 1, 'resolution receipt must survive a new connection');
+});
+
+pgTest('DG-10 aef_resolve_gate: resolution receipt is immutable (UPDATE + DELETE blocked)', async () => {
+  const userId = uuid(); const invId = uuid();
+  await seedUser(userId); await seedInvestigation(invId, userId, null);
+  const { reqId } = await seedGate(userId, invId);
+
+  const resReceiptId = uuid();
+  await callResolveGate({
+    p_request_id: reqId, p_resolution: 'APPROVED',
+    p_approver_ref: 'approver-dg10', p_binding_hash: hex64(),
+    p_receipt_id: resReceiptId, p_receipt_hash: hex64(),
+    p_policy_version: POLICY_VERSION, p_issued_at: NOW,
+  });
+
+  let updateBlocked = false;
+  try {
+    await exec('UPDATE impact_aef_receipts SET error_code = $1 WHERE receipt_id = $2', ['tampered', resReceiptId]);
+  } catch (e) {
+    updateBlocked = /IMPACT_AEF_RECEIPT_IMMUTABLE/.test(String(e));
+  }
+  assertEquals(updateBlocked, true, 'resolution receipt UPDATE must be blocked by immutability trigger');
+
+  let deleteBlocked = false;
+  try {
+    await exec('DELETE FROM impact_aef_receipts WHERE receipt_id = $1', [resReceiptId]);
+  } catch (e) {
+    deleteBlocked = /IMPACT_AEF_RECEIPT_IMMUTABLE/.test(String(e));
+  }
+  assertEquals(deleteBlocked, true, 'resolution receipt DELETE must be blocked by immutability trigger');
+});
+
+pgTest('DG-11 aef_resolve_gate: receipt caller_user_id is requester UUID not approverRef (P1-03b)', async () => {
+  const userId = uuid(); const invId = uuid();
+  await seedUser(userId); await seedInvestigation(invId, userId, null);
+  const { reqId } = await seedGate(userId, invId);
+
+  const resReceiptId = uuid();
+  // approverRef is an opaque external reference, NOT a UUID — must NOT appear as caller_user_id
+  const approverRef = 'external-reviewer-ref-dg11';
+  await callResolveGate({
+    p_request_id: reqId, p_resolution: 'APPROVED',
+    p_approver_ref: approverRef, p_binding_hash: hex64(),
+    p_receipt_id: resReceiptId, p_receipt_hash: hex64(),
+    p_policy_version: POLICY_VERSION, p_issued_at: NOW,
+  });
+
+  const receipt = await query(
+    'SELECT caller_user_id FROM impact_aef_receipts WHERE receipt_id = $1',
+    [resReceiptId],
+  );
+  assertEquals(receipt.rows.length, 1);
+  assertEquals(
+    receipt.rows[0].caller_user_id,
+    userId,
+    'receipt caller_user_id must be the original requester UUID (P1-03b fix), not approverRef',
+  );
+});

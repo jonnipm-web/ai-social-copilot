@@ -540,7 +540,16 @@ import type {
   PolicyOutcome,
 } from '../_shared/aef/types.ts';
 
-function aefFail(code: 'AEF_PERSISTENCE_UNAVAILABLE' | 'ALREADY_EXISTS' | 'NOT_FOUND'): { ok: false; code: typeof code } {
+type AefFailCode =
+  | 'AEF_PERSISTENCE_UNAVAILABLE'
+  | 'ALREADY_EXISTS'
+  | 'NOT_FOUND'
+  | 'GATE_NOT_FOUND'
+  | 'GATE_ALREADY_RESOLVED'
+  | 'GATE_EXPIRED'
+  | 'RECEIPT_ALREADY_EXISTS';
+
+function aefFail(code: AefFailCode): { ok: false; code: AefFailCode } {
   return { ok: false, code };
 }
 const aefOk = <T>(value: T): AefStoreResult<T> => ({ ok: true, value });
@@ -670,24 +679,33 @@ export class SupabaseAefStore implements AefStore {
     return aefOk(undefined);
   }
 
-  async updateHumanGate(
-    gateId: string,
-    status: Exclude<HumanGateStatus, 'PENDING'>,
-    approverRef: string | null,
-    bindingHash: string | null,
-    resolvedAt: string,
+  async resolveGateAtomic(
+    requestId: string,
+    resolution: 'APPROVED' | 'REJECTED',
+    approverRef: string,
+    bindingHash: string,
+    receipt: ExecutionReceipt,
   ): Promise<AefStoreResult<void>> {
-    const { data, error } = await this.service.from('impact_aef_gates')
-      .update({ status, approver_ref: approverRef, binding_hash: bindingHash, resolved_at: resolvedAt })
-      .eq('gate_id', gateId)
-      .eq('status', 'PENDING')
-      .select('gate_id');
-    if (error) {
-      if (/IMPACT_AEF_GATE_ALREADY_RESOLVED/.test(error.message ?? '')) return aefFail('ALREADY_EXISTS');
+    const { data, error } = await this.service.rpc('aef_resolve_gate', {
+      p_request_id:    requestId,
+      p_resolution:    resolution,
+      p_approver_ref:  approverRef,
+      p_binding_hash:  bindingHash,
+      p_receipt_id:    receipt.receiptId,
+      p_receipt_hash:  receipt.receiptHash,
+      p_policy_version: receipt.policyVersion,
+      p_issued_at:     receipt.issuedAt,
+    });
+    if (error) return aefFail('AEF_PERSISTENCE_UNAVAILABLE');
+    const result = data as { ok: boolean; code?: string } | null;
+    if (!result?.ok) {
+      const code = result?.code;
+      if (code === 'GATE_NOT_FOUND')       return aefFail('GATE_NOT_FOUND');
+      if (code === 'GATE_ALREADY_RESOLVED') return aefFail('GATE_ALREADY_RESOLVED');
+      if (code === 'GATE_EXPIRED')          return aefFail('GATE_EXPIRED');
+      if (code === 'RECEIPT_ALREADY_EXISTS') return aefFail('RECEIPT_ALREADY_EXISTS');
       return aefFail('AEF_PERSISTENCE_UNAVAILABLE');
     }
-    const rows = data as Row[] | null;
-    if (!rows?.length) return aefFail('NOT_FOUND');
     return aefOk(undefined);
   }
 
@@ -698,31 +716,6 @@ export class SupabaseAefStore implements AefStore {
       .maybeSingle();
     if (error) return aefFail('AEF_PERSISTENCE_UNAVAILABLE');
     return aefOk(data ? rowToGate(data as Row) : null);
-  }
-
-  async insertReceipt(receipt: ExecutionReceipt): Promise<AefStoreResult<void>> {
-    const { error } = await this.service.from('impact_aef_receipts').insert({
-      receipt_id:        receipt.receiptId,
-      request_id:        receipt.requestId,
-      correlation_id:    receipt.correlationId,
-      caller_user_id:    receipt.callerUserId,
-      project_id:        receipt.projectId,
-      service_id:        receipt.serviceId,
-      intent_kind:       receipt.intentKind,
-      investigation_id:  receipt.investigationId,
-      idempotency_key:   receipt.idempotencyKey,
-      classification:    receipt.classification,
-      policy_version:    receipt.policyVersion,
-      policy_outcome:    receipt.policyOutcome,
-      execution_outcome: receipt.executionOutcome,
-      human_gate_id:     receipt.humanGateId,
-      error_code:        receipt.errorCode,
-      issued_at:         receipt.issuedAt,
-      receipt_hash:      receipt.receiptHash,
-    });
-    if (!error) return aefOk(undefined);
-    if (error.code === '23505') return aefFail('ALREADY_EXISTS');
-    return aefFail('AEF_PERSISTENCE_UNAVAILABLE');
   }
 
   async getReceipt(requestId: string): Promise<AefStoreResult<ExecutionReceipt | null>> {
