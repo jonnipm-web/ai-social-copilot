@@ -25,8 +25,12 @@ import { handleLabRequest } from '../_shared/impact/lab_service.ts';
 import type { ImpactLabStore } from '../_shared/impact/lab_store.ts';
 import { buildImpactEvent } from '../_shared/impact/observability.ts';
 import { bucketFor, decideRate, type ImpactRateLimiter, type RateBucket, type RateRule, rateLimitsFrom } from '../_shared/impact/rate_limit.ts';
+import { buildCallerContext } from '../_shared/impact/trust.ts';
 import { IMPACT_POLICY_VERSION } from '../_shared/impact/verification.ts';
-import { createSupabaseImpactLabStore, createSupabaseRateLimiter } from './supabase_store.ts';
+import { createSupabaseAefStore, createSupabaseImpactLabStore, createSupabaseRateLimiter } from './supabase_store.ts';
+import type { AefStore } from '../_shared/aef/store.ts';
+import { submitAction } from '../_shared/aef/kernel.ts';
+import { IMPACT_ACTION_INTENTS, type ImpactActionIntentKind } from '../_shared/aef/types.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -41,6 +45,8 @@ export interface ImpactLabDeps {
   rateLimits?: Readonly<Record<RateBucket, RateRule>>;
   now?: () => string;
   log?: (line: string) => void;
+  /** I7: AEF store (tests inject in-memory; production uses DB-backed via supabase_store). */
+  aefStore?: AefStore;
 }
 
 const HTTP: Readonly<Partial<Record<ImpactErrorCode, number>>> = {
@@ -72,6 +78,13 @@ const HTTP: Readonly<Partial<Record<ImpactErrorCode, number>>> = {
   EVIDENCE_REVIEW_REQUIRED: 400,
   DOSSIER_TOO_LARGE: 413,
   RATE_LIMITED: 429,
+  // I7 Trust + Egress + AEF
+  PROJECT_SCOPE_VIOLATION: 403,
+  EGRESS_DENIED: 403,
+  FETCH_TIMEOUT: 504,
+  HUMAN_GATE_INVALID: 422,
+  IDEMPOTENCY_CONFLICT: 409,
+  AEF_PERSISTENCE_UNAVAILABLE: 503,
   INTERNAL_ERROR: 500,
 };
 
@@ -167,11 +180,106 @@ export async function handler(
     }
   }
 
+  // I7: build a baseline caller context (used by non-AEF paths; projectId is
+  // null here and derived from the investigation for AEF actions below).
+  const callerContext = buildCallerContext({
+    authenticatedUserId: user.id,
+    correlationId,
+    projectId: null,
+    serviceId: 'impact-lab',
+  });
+
+  // I7: intercept class C actions with known intent kinds and route through AEF.
+  if (parsed.value.action === 'request_external_action') {
+    const kind = parsed.value.kind;
+    if ((IMPACT_ACTION_INTENTS as readonly string[]).includes(kind)) {
+      // Require client-provided investigationId and idempotencyKey for AEF actions.
+      const investigationId = parsed.value.investigationId;
+      const idempotencyKey = parsed.value.idempotencyKey;
+      if (!investigationId) return errorResponse({ code: 'INVALID_REQUEST', message: 'investigation_id required for AEF actions' }, correlationId);
+      if (!idempotencyKey) return errorResponse({ code: 'INVALID_REQUEST', message: 'idempotency_key required for AEF actions' }, correlationId);
+
+      // I7 gate: validate investigation ownership + derive project scope.
+      // getInvestigation uses the caller's JWT (RLS-scoped) — a foreign
+      // investigation returns null, not an error.
+      let investigationProjectId: string | null = null;
+      try {
+        const labStore = deps.store ? deps.store(req, user) : createSupabaseImpactLabStore(req);
+        const invResult = await labStore.getInvestigation(investigationId);
+        if (!invResult.ok || !invResult.value) {
+          return errorResponse({ code: 'INVESTIGATION_NOT_FOUND', message: 'investigation not found' }, correlationId);
+        }
+        // P1-02: derive project_id from the validated investigation.
+        investigationProjectId = invResult.value.projectId;
+      } catch {
+        return errorResponse({ code: 'INTERNAL_ERROR', message: 'investigation lookup failed' }, correlationId);
+      }
+
+      // Build AEF-specific caller context with project scope from investigation.
+      const aefCallerContext = buildCallerContext({
+        authenticatedUserId: user.id,
+        correlationId,
+        projectId: investigationProjectId,
+        serviceId: 'impact-lab',
+      });
+
+      // I7: DB-backed AEF store — fail closed if unavailable.
+      let aefStore: AefStore;
+      if (deps.aefStore) {
+        aefStore = deps.aefStore;
+      } else {
+        try {
+          aefStore = createSupabaseAefStore();
+        } catch {
+          return errorResponse({ code: 'AEF_PERSISTENCE_UNAVAILABLE', message: 'AEF store unavailable' }, correlationId);
+        }
+      }
+
+      try {
+        const intent = {
+          kind: kind as ImpactActionIntentKind,
+          investigationId,
+          idempotencyKey,
+          classification: 'CONSEQUENTIAL' as const,
+        };
+        const aefResult = await submitAction(aefCallerContext, intent, { store: aefStore, now: deps.now });
+        if (!aefResult.ok) {
+          const err = aefResult.error;
+          if (err.code === 'REQUIRES_HUMAN_REVIEW') {
+            return errorResponse({ code: 'ACTION_BLOCKED', message: 'human gate required; gate pending' }, correlationId);
+          }
+          if (err.code === 'DENIED') return errorResponse({ code: 'ACTION_BLOCKED', message: err.reason }, correlationId);
+          if (err.code === 'IDEMPOTENCY_CONFLICT') return errorResponse({ code: 'ALREADY_EXISTS', message: 'duplicate request' }, correlationId);
+          if (err.code === 'AEF_PERSISTENCE_UNAVAILABLE') return errorResponse({ code: 'AEF_PERSISTENCE_UNAVAILABLE', message: 'AEF store unavailable' }, correlationId);
+          return errorResponse({ code: 'INTERNAL_ERROR', message: 'AEF error' }, correlationId);
+        }
+        const receipt = aefResult.receipt;
+        const ev = buildImpactEvent({
+          event: 'impact.aef.request_submitted',
+          correlation_id: correlationId,
+          aef_intent_kind: kind,
+          aef_policy_outcome: receipt.policyOutcome,
+          aef_execution_outcome: receipt.executionOutcome,
+          aef_classification: receipt.classification,
+        });
+        if (ev) log(JSON.stringify(ev));
+        return json(200, {
+          ok: true,
+          action: 'request_external_action',
+          data: { decision: 'AEF_AUTHORIZED', actionClass: 'C', receiptId: receipt.receiptId, requestId: receipt.requestId, policyVersion: receipt.policyVersion },
+          correlation_id: correlationId,
+        });
+      } catch {
+        return errorResponse({ code: 'INTERNAL_ERROR', message: 'internal error' }, correlationId);
+      }
+    }
+  }
+
   let result;
   try {
     const store = deps.store ? deps.store(req, user) : createSupabaseImpactLabStore(req);
     const now = deps.now ? deps.now() : new Date().toISOString();
-    result = await handleLabRequest(store, { userId: user.id }, parsed.value, now);
+    result = await handleLabRequest(store, { userId: user.id, callerContext }, parsed.value, now);
   } catch {
     result = { ok: false as const, error: { code: 'INTERNAL_ERROR' as const, message: 'internal error' } };
   }

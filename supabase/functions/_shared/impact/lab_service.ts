@@ -28,6 +28,7 @@
  * No LLM, no network, no verdict field.
  */
 import { requestImpactAction } from './boundaries.ts';
+import type { CallerContext } from './trust.ts';
 import { resolveEntity } from './entity_resolution.ts';
 import { ARTIFACT_LIMITS, ARTIFACT_POLICY_VERSION, locatorFitsSummary, locatorKey } from './artifact_model.ts';
 import { detectArtifact } from './artifact_detect.ts';
@@ -54,6 +55,8 @@ import { canonical, IMPACT_POLICY_VERSION, type SubjectIdentityStatus, type Veri
 export interface LabActor {
   /** auth.users id, derived from the verified session — never from the body. */
   readonly userId: string;
+  /** I7: full caller context for consequential actions (optional; required for AEF routing). */
+  readonly callerContext?: CallerContext;
 }
 
 export interface LabResponse {
@@ -359,6 +362,9 @@ export async function handleLabRequest(
 
   switch (req.action) {
     case 'request_external_action': {
+      // I7: class C routing is handled at the Edge Function (index.ts) before
+      // this service is called. This path is reached only for unknown or
+      // non-AEF-wired class C kinds.
       const d = requestImpactAction(req.kind);
       if (d.decision === 'BLOCKED') {
         return fail('ACTION_BLOCKED', 'class C actions are not available', { requires: 'AEF_HUMAN_GATE', actionClass: 'C' });

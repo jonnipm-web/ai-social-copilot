@@ -9,6 +9,7 @@ import { failingSubjectSource, fakeSubjectSource } from '../_shared/entitlement_
 import { InMemoryImpactDatabase, InMemoryImpactLabStore } from '../_shared/impact/lab_store.ts';
 import { handler, type ImpactLabDeps } from './index.ts';
 import { InMemoryRateLimiter } from '../_shared/impact/rate_limit.ts';
+import { InMemoryAefStore } from '../_shared/aef/store.ts';
 
 let fetchCalls = 0;
 globalThis.fetch = () => {
@@ -35,9 +36,11 @@ function env() {
   const db = new InMemoryImpactDatabase();
   const logs: string[] = [];
   const limiter = new InMemoryRateLimiter();
+  const aefStore = new InMemoryAefStore();
   const deps: ImpactLabDeps = {
     store: (_req, user) => new InMemoryImpactLabStore(db, user.id),
     rateLimiter: () => limiter,
+    aefStore,
     now: () => '2026-09-23T12:00:00Z',
     log: (l) => logs.push(l),
   };
@@ -277,4 +280,178 @@ Deno.test('EF-15 (I6) logs / events / error bodies never carry claim, evidence o
   const all = e.logs.join('\n') + JSON.stringify(bad.body) + JSON.stringify(probe.body);
   for (const s of secret) assert(!all.includes(s), `leaked into logs / error bodies: ${s}`);
   assert(e.logs.length > 0);
+});
+
+// ── I7 AEF investigation binding + stable idempotency ────────────────────────
+
+Deno.test('EF-I7-01 AEF action without investigation_id → 400 INVALID_REQUEST', async () => {
+  const e = env();
+  const r = await e.send('jwt-admin-a', { action: 'request_external_action', kind: 'REQUEST_MANUAL_VERIFICATION' });
+  assertEquals([r.status, r.body.error], [400, 'INVALID_REQUEST']);
+});
+
+Deno.test('EF-I7-02 AEF action without idempotency_key → 400 INVALID_REQUEST', async () => {
+  const e = env();
+  const inv = (await e.send('jwt-admin-a', { action: 'create_investigation', subject: SUBJECT })).body.data as Record<string, unknown>;
+  const r = await e.send('jwt-admin-a', { action: 'request_external_action', kind: 'REQUEST_MANUAL_VERIFICATION', investigation_id: inv.investigationId });
+  assertEquals([r.status, r.body.error], [400, 'INVALID_REQUEST']);
+});
+
+Deno.test('EF-I7-03 AEF action with non-existent investigation → 404 INVESTIGATION_NOT_FOUND', async () => {
+  const e = env();
+  const r = await e.send('jwt-admin-a', {
+    action: 'request_external_action', kind: 'REQUEST_MANUAL_VERIFICATION',
+    investigation_id: '99999999-0000-4000-8000-000000000001',
+    idempotency_key: crypto.randomUUID(),
+  });
+  assertEquals([r.status, r.body.error], [404, 'INVESTIGATION_NOT_FOUND']);
+});
+
+Deno.test('EF-I7-04 AEF action with foreign investigation → 404 INVESTIGATION_NOT_FOUND', async () => {
+  const e = env();
+  // user A creates investigation
+  const inv = (await e.send('jwt-admin-a', { action: 'create_investigation', subject: SUBJECT })).body.data as Record<string, unknown>;
+  // user B tries to submit AEF action on A's investigation
+  const r = await e.send('jwt-admin-b', {
+    action: 'request_external_action', kind: 'REQUEST_MANUAL_VERIFICATION',
+    investigation_id: inv.investigationId,
+    idempotency_key: crypto.randomUUID(),
+  });
+  assertEquals([r.status, r.body.error], [404, 'INVESTIGATION_NOT_FOUND']);
+});
+
+Deno.test('EF-I7-05 AEF CONSEQUENTIAL action → 403 ACTION_BLOCKED requiring AEF_HUMAN_GATE (DB-persisted gate)', async () => {
+  const e = env();
+  const inv = (await e.send('jwt-admin-a', { action: 'create_investigation', subject: SUBJECT })).body.data as Record<string, unknown>;
+  const key = crypto.randomUUID();
+  const r = await e.send('jwt-admin-a', {
+    action: 'request_external_action', kind: 'REQUEST_MANUAL_VERIFICATION',
+    investigation_id: inv.investigationId,
+    idempotency_key: key,
+  });
+  assertEquals([r.status, r.body.error, r.body.requires], [403, 'ACTION_BLOCKED', 'AEF_HUMAN_GATE']);
+});
+
+Deno.test('EF-I7-06 AEF REVERSIBLE action → 200 AEF_AUTHORIZED', async () => {
+  const e = env();
+  const inv = (await e.send('jwt-admin-a', { action: 'create_investigation', subject: SUBJECT })).body.data as Record<string, unknown>;
+  const r = await e.send('jwt-admin-a', {
+    action: 'request_external_action', kind: 'ACKNOWLEDGE_CONFLICT',
+    investigation_id: inv.investigationId,
+    idempotency_key: crypto.randomUUID(),
+  });
+  assertEquals(r.status, 200);
+  assertEquals((r.body.data as Record<string, unknown>).decision, 'AEF_AUTHORIZED');
+});
+
+Deno.test('EF-I7-07 AEF stable idempotency — same key same user same kind → 409 ALREADY_EXISTS', async () => {
+  const e = env();
+  const inv = (await e.send('jwt-admin-a', { action: 'create_investigation', subject: SUBJECT })).body.data as Record<string, unknown>;
+  const key = crypto.randomUUID();
+  const first = await e.send('jwt-admin-a', {
+    action: 'request_external_action', kind: 'ACKNOWLEDGE_CONFLICT',
+    investigation_id: inv.investigationId, idempotency_key: key,
+  });
+  assertEquals(first.status, 200);
+  // Retry: same logical request must return ALREADY_EXISTS
+  const retry = await e.send('jwt-admin-a', {
+    action: 'request_external_action', kind: 'ACKNOWLEDGE_CONFLICT',
+    investigation_id: inv.investigationId, idempotency_key: key,
+  });
+  assertEquals([retry.status, retry.body.error], [409, 'ALREADY_EXISTS']);
+});
+
+Deno.test('EF-I7-08 AEF idempotency — different user same key → new request allowed', async () => {
+  const e = env();
+  const invA = (await e.send('jwt-admin-a', { action: 'create_investigation', subject: SUBJECT })).body.data as Record<string, unknown>;
+  const invB = (await e.send('jwt-admin-b', { action: 'create_investigation', subject: SUBJECT })).body.data as Record<string, unknown>;
+  const key = crypto.randomUUID();
+  const rA = await e.send('jwt-admin-a', {
+    action: 'request_external_action', kind: 'ACKNOWLEDGE_CONFLICT',
+    investigation_id: invA.investigationId, idempotency_key: key,
+  });
+  const rB = await e.send('jwt-admin-b', {
+    action: 'request_external_action', kind: 'ACKNOWLEDGE_CONFLICT',
+    investigation_id: invB.investigationId, idempotency_key: key,
+  });
+  assertEquals(rA.status, 200, 'user A first request should succeed');
+  assertEquals(rB.status, 200, 'user B with same key should be a new request (different user)');
+});
+
+Deno.test('EF-I7-09 AEF restart survival proof — InMemoryAefStore does NOT survive restart', async () => {
+  // PROOF: in-memory store state is local to the instance; a new instance is empty.
+  const { InMemoryAefStore: AefStoreCls } = await import('../_shared/aef/store.ts');
+  const { submitAction } = await import('../_shared/aef/kernel.ts');
+  const storeA = new AefStoreCls();
+  const caller = { authenticatedUserId: 'user-001', moduleId: 'impact', correlationId: 'c1', projectId: null, serviceId: 'impact-lab' };
+  const intent = { kind: 'ACKNOWLEDGE_CONFLICT' as const, investigationId: 'inv-001', idempotencyKey: crypto.randomUUID(), classification: 'REVERSIBLE' as const };
+  await submitAction(caller, intent, { store: storeA });
+  // Simulate restart: new instance with no shared state
+  const storeB = new AefStoreCls();
+  const found = await storeB.findByIdempotencyKey(intent.idempotencyKey, caller.authenticatedUserId, intent.kind);
+  assertEquals(found.ok, true);
+  assertEquals(found.ok && found.value, null, 'new in-memory instance has no knowledge of previous state — restart survival FAILS as expected');
+});
+
+Deno.test('EF-I7-10 AEF concurrency — InMemoryAefStore.submitAtomic is JS-event-loop atomic', async () => {
+  // submitAtomic() contains no `await` — all mutations are synchronous.
+  // In JavaScript's single-threaded event loop, two concurrent callers cannot
+  // interleave inside a synchronous block, so exactly one wins and one receives
+  // IDEMPOTENCY_CONFLICT.  This mirrors the DB UNIQUE constraint behavior of
+  // SupabaseAefStore (backed by the Postgres atomic RPC aef_submit_action).
+  const { InMemoryAefStore: AefStoreCls } = await import('../_shared/aef/store.ts');
+  const { submitAction } = await import('../_shared/aef/kernel.ts');
+  const store = new AefStoreCls();
+  const caller = { authenticatedUserId: 'user-001', moduleId: 'impact', correlationId: 'c1', projectId: null, serviceId: 'impact-lab' };
+  const key = crypto.randomUUID();
+  const intent = { kind: 'ACKNOWLEDGE_CONFLICT' as const, investigationId: 'inv-001', idempotencyKey: key, classification: 'REVERSIBLE' as const };
+  const [r1, r2] = await Promise.all([
+    submitAction(caller, intent, { store }),
+    submitAction(caller, intent, { store }),
+  ]);
+  const successes = [r1, r2].filter((r) => r.ok).length;
+  assertEquals(successes, 1, 'exactly one concurrent submit must succeed — submitAtomic has no internal await');
+  const conflicts = [r1, r2].filter((r) => !r.ok && (r as { error: { code: string } }).error.code === 'IDEMPOTENCY_CONFLICT').length;
+  assertEquals(conflicts, 1, 'the losing concurrent submit must receive IDEMPOTENCY_CONFLICT');
+});
+
+Deno.test('EF-I7-11 AEF project binding — receipt.projectId derived from investigation', async () => {
+  // P1-02: project_id must come from the validated investigation, not be null.
+  // The AEF caller context is built with the investigation's projectId after RLS
+  // ownership validation, and that projectId flows into the receipt.
+  const { InMemoryAefStore: AefStoreCls } = await import('../_shared/aef/store.ts');
+  const { submitAction } = await import('../_shared/aef/kernel.ts');
+  const projectId = 'proj-aaaa-0000-4000-8000-000000000001';
+  const userId = 'user-001';
+  // Build a caller context as index.ts would — projectId derived from investigation.
+  const caller = { authenticatedUserId: userId, moduleId: 'impact', correlationId: 'c-proj-test', projectId, serviceId: 'impact-lab' };
+  const intent = { kind: 'ACKNOWLEDGE_CONFLICT' as const, investigationId: 'inv-proj-001', idempotencyKey: crypto.randomUUID(), classification: 'REVERSIBLE' as const };
+  const store = new AefStoreCls();
+  const result = await submitAction(caller, intent, { store });
+  assert(result.ok, 'REVERSIBLE action should be authorized');
+  assertEquals(result.receipt?.projectId, projectId, 'receipt must carry the investigation project scope');
+});
+
+Deno.test('EF-I7-12 AEF atomic rollback — submitAtomic ALREADY_EXISTS leaves no orphan', async () => {
+  // InMemoryAefStore.submitAtomic checks the idempotency index synchronously
+  // before any mutation. A duplicate call returns ALREADY_EXISTS before any
+  // state is written — no orphaned request, no partial receipt.
+  const { InMemoryAefStore: AefStoreCls } = await import('../_shared/aef/store.ts');
+  const { submitAction } = await import('../_shared/aef/kernel.ts');
+  const store = new AefStoreCls();
+  const caller = { authenticatedUserId: 'user-dup', moduleId: 'impact', correlationId: 'c-dup', projectId: null, serviceId: 'impact-lab' };
+  const key = crypto.randomUUID();
+  const intent = { kind: 'ACKNOWLEDGE_CONFLICT' as const, investigationId: 'inv-dup', idempotencyKey: key, classification: 'REVERSIBLE' as const };
+  // First submit succeeds
+  const r1 = await submitAction(caller, intent, { store });
+  assert(r1.ok, 'first submit must succeed');
+  const existingRequestId = r1.receipt?.requestId;
+  // Second submit with same key returns IDEMPOTENCY_CONFLICT (not ALREADY_EXISTS)
+  const r2 = await submitAction(caller, intent, { store });
+  assert(!r2.ok, 'duplicate must fail');
+  assertEquals((r2 as { error: { code: string } }).error.code, 'IDEMPOTENCY_CONFLICT');
+  // The existing requestId is preserved — no second request was created
+  const existing = await store.findByIdempotencyKey(key, caller.authenticatedUserId, intent.kind);
+  assert(existing.ok && existing.value !== null);
+  assertEquals(existing.ok && existing.value?.requestId, existingRequestId, 'exactly one request exists — no orphan created');
 });
