@@ -27,12 +27,15 @@ index.ts (Edge Function)
     └── submitAction(caller, intent, { store })
             │
             ├── findByIdempotencyKey()   ← idempotency check
-            ├── insertRequest()          ← persist AefExecutionRequest
-            ├── [policy evaluation]      ← classification → PolicyOutcome
-            ├── insertPolicyDecision()   ← persist PolicyDecision
-            ├── insertHumanGate()?       ← if CONSEQUENTIAL/IRREVERSIBLE
-            ├── insertAttempt()          ← persist ExecutionAttempt
-            └── insertReceipt()          ← persist immutable ExecutionReceipt
+            ├── [build request + decision + gate + receipt in memory]
+            └── submitAtomic(req, dec, gate?, receipt)
+                    │
+                    ╔══ SupabaseAefStore ══════════════════════════════╗
+                    ║  aef_submit_action() PL/pgSQL RPC                ║
+                    ║  inserts all 4 records in ONE Postgres tx.       ║
+                    ║  unique_violation → ALREADY_EXISTS (idempotency) ║
+                    ║  any other failure → full rollback, no orphans   ║
+                    ╚══════════════════════════════════════════════════╝
 ```
 
 ## Action Flow

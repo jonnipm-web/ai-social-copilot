@@ -4,7 +4,7 @@
 **Status:** NOT READY FOR PRODUCTION  
 **Authority to promote:** Agente Martins + Paulo
 
-## Codex Adversarial Review (Class D) — Result
+## Codex Adversarial Review (Class D) — Phase 1/2 Result
 
 **Verdict:** CONDITIONAL PASS after P1 fixes applied.
 
@@ -20,17 +20,45 @@
 | V16: raw IDs in AEF tables | P2 | ⚠️ DEFERRED — acceptable for Lab; RLS correct |
 | V1,2,3,4,5,7,14,15,17,18 | P3/SAFE | ✅ All vectors SAFE |
 
+## Codex Adversarial Review (Class D) — Phase 3 Result
+
+**Verdict:** FAIL → remediated to CONDITIONAL_PASS
+
+| Finding | Level | Status |
+|---|---|---|
+| P1-01: RPC no DB-side ownership validation | P1 | ⚠️ ESCALATED — ARCHITECTURAL DECISION REQUIRED (Agente Martins + Paulo) |
+| P1-02: Receipt hash format-only check | P1 | ✅ REJECTED — FALSE POSITIVE (hash is app-layer commitment) |
+| P1-03(a): Gate resolution non-atomic | P1 | ⚠️ ESCALATED — resolve_gate_atomic() RPC needed (Phase 4) |
+| P1-03(b): approverRef as UUID-FK callerUserId | P1 | ✅ FIXED — commit ddd5211 (use storedReq.caller.authenticatedUserId) |
+| P2-01: broad unique_violation catch | P2 | ⚠️ DEFERRED — hardening mission |
+| P2-02: gate on REVERSIBLE action | P2 | ⚠️ DEFERRED — hardening mission |
+| P2-03..P2-05 | P2 | ⚠️ DEFERRED — hardening mission |
+| P3-01..P3-02 | P3 | DEFERRED |
+
 ---
 
 ## Blockers (must be resolved before any production deployment)
 
-### ~~B1~~ — ✅ CLOSED: DB-backed AefStore implemented (commit 1804143)
+### ~~B1~~ — ✅ CLOSED: DB-backed AefStore + atomic RPC (commits 1804143, 8795854, ddd5211)
 - `SupabaseAefStore` implemented in `impact-lab/supabase_store.ts`; backed by 4 `impact_aef_*` tables
 - Runtime uses `createSupabaseAefStore()` by default; fails closed if Supabase env vars absent
 - `InMemoryAefStore` restricted to test injection via `deps.aefStore` only
 - Investigation binding: investigationId validated (RLS-scoped ownership check) before AEF submission
 - Idempotency: client provides stable `idempotency_key`; per-request `crypto.randomUUID()` removed
 - 10 new integration tests: binding, gate, idempotency, restart survival, concurrency (742/742)
+- **Phase 3:** aef_submit_action() atomic RPC (P1-01); project binding via investigation (P1-02); P2-03 RESTRICT FK; P3-01 REVOKE chain; 12 DB integration tests (Postgres 17); P1-03(b) callerUserId fix (ddd5211)
+
+### ~~B1a~~ — ⚠️ ARCHITECTURAL DECISION REQUIRED: DB-side ownership validation
+- aef_submit_action() RPC accepts caller-supplied identity params without re-validating auth.uid() inside SQL
+- Current model: Edge Function is the authorized trust boundary; RPC is a privileged write primitive
+- Decision: add auth.uid() enforcement inside the RPC, OR accept the current edge-function-as-boundary model
+- Authority: Agente Martins + Paulo
+
+### ~~B1b~~ — ⚠️ ARCHITECTURAL DECISION REQUIRED: Gate resolution atomicity
+- resolveHumanGate() calls updateHumanGate() then insertReceipt() as two separate DB operations
+- If insertReceipt fails after gate is updated, the gate is permanently APPROVED/REJECTED with no receipt
+- Fix: new resolve_gate_atomic() PL/pgSQL RPC (Phase 4, not authorized by this mission)
+- Authority: Agente Martins + Paulo
 
 ### B2 — Gate resolution endpoint missing
 - `resolveHumanGate` exists in the kernel but is not exposed via any HTTP endpoint

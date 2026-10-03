@@ -106,3 +106,32 @@ request (e.g., "this is my request to verify claim C for investigation I"). The
 server generates only the physical `requestId`; the `idempotencyKey` must be stable
 across retries. This is the only model that satisfies "same logical request = same
 idempotency key" without relying on per-attempt random UUID generation.
+
+## Project Binding via Investigation (P1-02, added 2026-10-03 Phase 3)
+
+After investigation ownership is confirmed, `index.ts` derives `projectId` from the
+validated investigation record and builds a **separate `aefCallerContext`** with it:
+
+```
+invResult.value.projectId → aefCallerContext.projectId
+```
+
+The outer `callerContext` retains `projectId: null` for non-AEF paths. This ensures
+every AEF request/receipt is bound to the exact project the investigation belongs to,
+not a client-supplied claim.
+
+## AEF Persistence Trust Boundary (aef_submit_action RPC, Phase 3)
+
+The `aef_submit_action()` PL/pgSQL SECURITY DEFINER RPC is the terminal write boundary.
+
+**What the RPC enforces:**
+- Parameter validation (format, enum membership, FK constraints)
+- Idempotency: UNIQUE constraint on `(caller_user_id, intent_kind, idempotency_key)` — catches racing duplicates
+- Atomicity: all 4 records in a single Postgres transaction
+
+**What the RPC does NOT enforce (architectural escalation):**
+- It does not re-derive `auth.uid()` or validate investigation ownership inside SQL.
+- Authorization is enforced at the Edge Function boundary (JWT + RLS + investigation binding).
+- The RPC trusts the Edge Function as the authorized caller.
+
+**Security posture:** REVOKE ALL on all 4 AEF tables from PUBLIC; REVOKE from anon + authenticated; GRANT EXECUTE only to service_role. The RPC is not reachable from client-side Supabase clients.
