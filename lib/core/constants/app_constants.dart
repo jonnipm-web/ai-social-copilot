@@ -187,9 +187,8 @@ class AppConstants {
   // próprio foi encontrado configurado em nenhum lugar do repositório.
   static const officialWebsiteUrl = 'https://jonnipm-web.github.io/ai-social-copilot/';
   // Nenhuma página de Política de Privacidade ou Termos de Uso foi
-  // encontrada em nenhum lugar do repositório ou configuração conhecida.
-  // Deliberadamente null -- ver mission section 12 (não fabricar texto
-  // legal). Reportado como OWNER CONTENT REQUIRED no relatório final.
-  static const String? privacyPolicyUrl = null;
-  static const String? termsOfUseUrl = null;
+  static const String? privacyPolicyUrl =
+      'https://insightvalues.com/en/privacy-policy/';
+  static const String? termsOfUseUrl =
+      'https://insightvalues.com/en/terms-of-use/';
 }

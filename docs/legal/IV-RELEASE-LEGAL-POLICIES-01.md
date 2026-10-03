@@ -77,25 +77,25 @@ BLOCKED_OWNER: Option A requires owner to create the page first.
 
 | Page | URL | Status |
 |------|-----|--------|
-| Privacy Policy (EN) | https://insightvalues.com/en/privacy-policy/ | ⏳ PENDING — not yet published |
-| Privacy Policy (PT) | https://insightvalues.com/politica-de-privacidade/ | ⏳ PENDING — not yet published |
-| Terms of Use (EN) | https://insightvalues.com/en/terms-of-use/ | ⏳ PENDING — not yet published |
-| Terms of Use (PT) | https://insightvalues.com/termos-de-uso/ | ⏳ PENDING — not yet published |
+| Privacy Policy (EN) | https://insightvalues.com/en/privacy-policy/ | ✅ PUBLISHED (ID 500, 2026-10-03) |
+| Privacy Policy (PT) | https://insightvalues.com/politica-de-privacidade/ | ✅ PUBLISHED (ID 15, 2026-10-03) |
+| Terms of Use (EN) | https://insightvalues.com/en/terms-of-use/ | ✅ PUBLISHED (ID 502, 2026-10-03) |
+| Terms of Use (PT) | https://insightvalues.com/termos-de-uso/ | ✅ PUBLISHED (ID 18, 2026-10-03) |
 
 ---
 
 ## app_constants.dart Status
 
-| Constant | Current value | Target value | Status |
-|----------|--------------|--------------|--------|
-| privacyPolicyUrl | null | https://insightvalues.com/en/privacy-policy/ | ⏳ PENDING — awaiting site publication |
-| termsOfUseUrl | null | https://insightvalues.com/en/terms-of-use/ | ⏳ PENDING — awaiting site publication |
+| Constant | Value | Status |
+|----------|-------|--------|
+| privacyPolicyUrl | https://insightvalues.com/en/privacy-policy/ | ✅ UPDATED |
+| termsOfUseUrl | https://insightvalues.com/en/terms-of-use/ | ✅ UPDATED |
 
 ---
 
 ## Codex Review Status
 
-⏳ PENDING — to be invoked after site publication and app_constants update
+⏳ PENDING — to be invoked after physical validation
 
 ---
 
@@ -113,26 +113,26 @@ BLOCKED_OWNER: Option A requires owner to create the page first.
 | PROCESSORS | ✅ COMPLETE |
 | QUANT_DISCLOSURE | ✅ IN TERMS_EN + TERMS_PT (Section 9) |
 | IMPACT_DISCLOSURE | ✅ IN TERMS_EN + TERMS_PT (Section 10) |
-| SITE_PUBLISHED | ⏳ PENDING |
-| APP_CONSTANTS | ⏳ PENDING (awaiting site URLs) |
+| SITE_PUBLISHED | ✅ COMPLETE (4/4 pages live) |
+| APP_CONSTANTS | ✅ UPDATED |
 | WEB_PHYSICAL | ⏳ PENDING |
 | ANDROID_PHYSICAL | ⏳ PENDING |
-| PT | ✅ WRITTEN |
-| EN | ✅ WRITTEN |
+| PT | ✅ WRITTEN + PUBLISHED |
+| EN | ✅ WRITTEN + PUBLISHED |
 | CODEX | ⏳ PENDING |
-| OB-01 | ⏳ PENDING — awaiting site publication + app_constants |
-| OB-02 | ⏳ PENDING — awaiting site publication + app_constants |
+| OB-01 | ⏳ PENDING — awaiting physical validation + Codex |
+| OB-02 | ⏳ PENDING — awaiting physical validation + Codex |
 
 ---
 
 ## Current Verdict
 
 ```
-CONDITIONAL_PASS — awaiting site publication + app_constants update
+CONDITIONAL_PASS — awaiting physical validation + Codex review
 
 Documents: COMPLETE
-Site publication: PENDING (requires WordPress access)
-App constants: PENDING (after URLs confirmed)
+Site publication: COMPLETE (4/4 pages live)
+App constants: UPDATED (841/841 tests passing)
 Owner legal decisions: 5 items outstanding (do not block OB-01/OB-02)
 Account deletion: BLOCKED_OWNER
 ```
