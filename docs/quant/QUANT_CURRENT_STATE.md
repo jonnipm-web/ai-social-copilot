@@ -111,6 +111,25 @@ be re-measured on the platform before any promotion.
 Superseded for READINESS-03 by QUANT_RESOURCE_BUDGET.md (calendar memo fix,
 multi-series bound, PLATFORM_RUNTIME_NOT_MEASURED).
 
+## 10. Licensed Provider Pilot (IV-QUANT-LICENSED-PROVIDER-PILOT-04, 2026-10-03)
+
+| Area | Doc |
+|---|---|
+| Provider decision record (YELLOW/NOT_VERIFIED: Databento EQUS.SUMMARY) | BOOTSTRAP_PROVIDER_DECISION.md |
+| Current provider market snapshot (7 providers) | CURRENT_PROVIDER_MARKET_2026-10.md |
+| Evidence register (15 EV-IDs) | PROVIDER_EVIDENCE_REGISTER.md |
+| Lifecycle/freshness policy (90-day revalidation) | PROVIDER_LIFECYCLE_POLICY.md |
+| Cost model (EQUS.SUMMARY PAYG) | REAL_DATA_COST_MODEL.md |
+| Mission report | IV-QUANT-LICENSED-PROVIDER-PILOT-04.md |
+
+Adapter: `supabase/functions/_shared/quant/databento_adapter.ts` (63/63 adapter tests; 215/215 suite total).  
+Adapter ID: `databento-equs-summary-v1` (migrated from deprecated `databento-dbeq-basic-v1`).  
+Dataset: `EQUS.SUMMARY` — current replacement for deprecated DBEQ.BASIC (EV-DB-01).  
+OHLCV_1D_RTYPE: `35` (0x23 per DBN spec — corrected from 32 which is ohlcv-1h).  
+Secret name: `DATABENTO_API_KEY` (raw API key; adapter constructs `Authorization: Basic base64(key:)` via `secretTransform`).  
+Rights: YELLOW/NOT_VERIFIED — written Databento confirmation required before commercial production (Codex VND-01).  
+Status: **CONDITIONAL_PASS — BLOCKED_OWNER** (account + API key required from Owner).
+
 ## 9. Real-data readiness (IV-QUANT-REAL-DATA-READINESS-03, 2026-09-25)
 
 | Area | Doc |

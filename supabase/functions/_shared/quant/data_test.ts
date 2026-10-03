@@ -7,7 +7,7 @@
  */
 import { assert, assertEquals } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
 import { createInstrument, instrumentKey, isValidFigi, isValidIsin, requireFoundationSupported } from './instrument.ts';
-import { assessFreshness, DEFAULT_FRESHNESS_POLICIES, type DataProvenance, evidenceStrength, validateProvenance } from './provenance.ts';
+import { assessFreshness, computeProviderDisplayStatus, DEFAULT_FRESHNESS_POLICIES, type DataProvenance, evidenceStrength, validateProvenance } from './provenance.ts';
 import { alignOnTimestamps, createPriceSeries, MAX_BARS_PER_SERIES, normalizeBars, type RawBarInput } from './timeseries.ts';
 import { MAX_CSV_BYTES, parseOhlcvCsv, parseStrictNumber, parseStrictTimestamp } from './csv.ts';
 import { dailyBars, G1_CLOSES, G_START_T, INSTR_A, INSTR_BRL } from './fixtures/golden.ts';
@@ -250,4 +250,45 @@ Deno.test('DT-37 arbitrary non-OHLCV CSV is never accepted as a price series', (
   // Valid shape but inconsistent OHLC is caught by normalization.
   const parsed = val(parseOhlcvCsv('date,open,high,low,close\n2026-01-05,10,9,8,10\n'));
   assertEquals(code(createPriceSeries(INSTR_A, PROV, parsed.rows)), 'DATA_QUALITY_ERROR');
+});
+
+// ---------------------------------------------------------------------------
+// DT-40..45: ProviderDisplayStatus — §11 IV-QUANT-LICENSED-PROVIDER-PILOT-04
+// ---------------------------------------------------------------------------
+
+const EXT_PROV: DataProvenance = {
+  providerId: 'databento-equs-summary-v1', providerKind: 'EXTERNAL_PROVIDER',
+  retrievedAt: '2026-01-12T10:00:00.000Z', frequency: 'DAILY',
+  currency: 'USD', adjustment: 'UNADJUSTED', trust: 'PROVIDER_REPORTED',
+  sourceAsOf: '2026-01-10T00:00:00.000Z',
+};
+const FIXTURE_PROV: DataProvenance = {
+  ...PROV, providerKind: 'FIXTURE', trust: 'SYNTHETIC_FIXTURE', providerId: 'fixture-golden',
+};
+
+Deno.test('DT-40 EXTERNAL_PROVIDER + FRESH → REAL', () => {
+  assertEquals(computeProviderDisplayStatus(EXT_PROV, 'FRESH', true), 'REAL');
+});
+
+Deno.test('DT-41 EXTERNAL_PROVIDER + DELAYED → DELAYED', () => {
+  assertEquals(computeProviderDisplayStatus(EXT_PROV, 'DELAYED', true), 'DELAYED');
+});
+
+Deno.test('DT-42 EXTERNAL_PROVIDER + STALE → STALE', () => {
+  assertEquals(computeProviderDisplayStatus(EXT_PROV, 'STALE', true), 'STALE');
+});
+
+Deno.test('DT-43 EXTERNAL_PROVIDER + UNKNOWN freshness → STALE (conservative)', () => {
+  assertEquals(computeProviderDisplayStatus(EXT_PROV, 'UNKNOWN', true), 'STALE');
+});
+
+Deno.test('DT-44 FIXTURE → SYNTHETIC regardless of freshness', () => {
+  assertEquals(computeProviderDisplayStatus(FIXTURE_PROV, 'FRESH', true), 'SYNTHETIC');
+  assertEquals(computeProviderDisplayStatus(FIXTURE_PROV, 'STALE', true), 'SYNTHETIC');
+});
+
+Deno.test('DT-45 USER_UPLOAD → UPLOADED; providerAvailable=false or null prov → UNAVAILABLE', () => {
+  assertEquals(computeProviderDisplayStatus(PROV, 'FRESH', true), 'UPLOADED');
+  assertEquals(computeProviderDisplayStatus(null, 'FRESH', false), 'UNAVAILABLE');
+  assertEquals(computeProviderDisplayStatus(EXT_PROV, 'FRESH', false), 'UNAVAILABLE');
 });
