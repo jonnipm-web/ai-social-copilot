@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/diagnostics/diagnostic_models.dart';
 import '../data/services/auth_service.dart';
+import 'context_copilot_provider.dart';
 import 'diagnostic_session_provider.dart';
 import 'profile_provider.dart';
 import 'quota_provider.dart';
@@ -47,6 +48,10 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
   void _invalidateProfile() {
     _ref.invalidate(currentProfileProvider);
     _ref.invalidate(currentQuotaProvider);
+    // P1-Q9: contextCopilotProvider is NOT autoDispose — conversation history
+    // persists in memory.  Without this, a second user signing in within the
+    // same app session could see the first user's IVE Analysis history.
+    _ref.invalidate(contextCopilotProvider);
   }
 
   // IVE-COMMERCIAL-OBSERVABILITY-07A — AUTH category (mission section 04:

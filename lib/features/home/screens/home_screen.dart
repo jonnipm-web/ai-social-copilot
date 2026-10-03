@@ -10,12 +10,14 @@ import '../../../data/models/persona_learning_profile.dart';
 import '../../../data/models/project_intelligence_profile.dart';
 import '../../../providers/action_queue_provider.dart';
 import '../../../providers/ecosystem_intelligence_provider.dart';
+import '../../../providers/insight_provider.dart';
 import '../../../providers/opportunity_lab_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/project_intelligence_provider.dart';
 import '../../../providers/project_provider.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/ive_exclusion_region.dart';
+import '../../insights/widgets/insight_card.dart';
 
 // IVE-COMMERCIAL-TARGETED-REMEDIATION-06S — same fix as
 // dashboard_screen.dart's shortcuts: several cards here (the AppBar's
@@ -125,6 +127,8 @@ class HomeScreen extends ConsumerWidget {
             _PersonasCard(),
             SizedBox(height: 16),
             _EcosystemIntelligenceCard(),
+            SizedBox(height: 16),
+            _RecentInsightsCard(),
           ],
         ),
       ),
@@ -486,6 +490,51 @@ class _EcosystemIntelligenceCard extends ConsumerWidget {
           );
         },
       ),
+    );
+  }
+}
+
+// ── Card 6: Recent IVE Insights ───────────────────────────────────────────
+class _RecentInsightsCard extends ConsumerWidget {
+  const _RecentInsightsCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final insightsAsync = ref.watch(recentInsightsProvider);
+
+    return insightsAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error:   (_, __) => const SizedBox.shrink(),
+      data: (items) {
+        if (items.isEmpty) return const SizedBox.shrink();
+        return _OsCard(
+          title:     'Insights Recentes (IVE)',
+          icon:      Icons.psychology_rounded,
+          iconColor: const Color(0xFF6C63FF),
+          child: Column(children: [
+            ...items.take(3).map((item) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: InsightCard(
+                item:     item,
+                elevated: false,
+                onAddToActions: null,
+              ),
+            )),
+            if (items.length > 3)
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () => context.push(AppConstants.routeHome),
+                  icon: const Icon(Icons.arrow_forward_rounded,
+                      size: 14, color: Color(0xFF6C63FF)),
+                  label: const Text('Ver todos',
+                      style: TextStyle(
+                          color: Color(0xFF6C63FF), fontSize: 12)),
+                ),
+              ),
+          ]),
+        );
+      },
     );
   }
 }

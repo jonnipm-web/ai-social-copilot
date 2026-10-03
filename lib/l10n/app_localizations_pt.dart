@@ -1,0 +1,1077 @@
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+import 'app_localizations.dart';
+
+// ignore_for_file: type=lint
+
+/// The translations for Portuguese (`pt`).
+class AppLocalizationsPt extends AppLocalizations {
+  AppLocalizationsPt([String locale = 'pt']) : super(locale);
+
+  @override
+  String get appName => 'InsightValues';
+
+  @override
+  String get commonCancel => 'Cancelar';
+
+  @override
+  String get commonClose => 'Fechar';
+
+  @override
+  String get commonSave => 'Salvar';
+
+  @override
+  String get commonBack => 'Voltar';
+
+  @override
+  String get commonOr => 'ou';
+
+  @override
+  String get commonLoading => 'Carregando...';
+
+  @override
+  String get commonError => 'Algo deu errado. Tente novamente.';
+
+  @override
+  String get commonRetry => 'Tentar novamente';
+
+  @override
+  String get commonComingSoon => 'Em breve';
+
+  @override
+  String get authWelcomeBack => 'Bem-vindo de volta';
+
+  @override
+  String get authCreateAccount => 'Crie sua conta';
+
+  @override
+  String get authEmail => 'E-mail';
+
+  @override
+  String get authPassword => 'Senha';
+
+  @override
+  String get authEmailRequired => 'Informe seu e-mail';
+
+  @override
+  String get authEmailInvalid => 'E-mail inválido';
+
+  @override
+  String get authPasswordRequired => 'Informe sua senha';
+
+  @override
+  String get authPasswordMinLength => 'Mínimo de 6 caracteres';
+
+  @override
+  String get authSignIn => 'Entrar';
+
+  @override
+  String get authSignUp => 'Criar conta';
+
+  @override
+  String get authContinueWithGoogle => 'Continuar com Google';
+
+  @override
+  String get checkoutOpening => 'Abrindo checkout...';
+
+  @override
+  String get authNoAccount => 'Não tem conta? Cadastre-se';
+
+  @override
+  String get authHasAccount => 'Já tem conta? Faça login';
+
+  @override
+  String get authSignOut => 'Sair';
+
+  @override
+  String get navCommandCenter => 'OS Command Center';
+
+  @override
+  String get navBusinessDashboard => 'Business Dashboard';
+
+  @override
+  String get navKnowledgeVault => 'Cofre de Conhecimento';
+
+  @override
+  String get navWebsiteAnalyzer => 'Website Analyzer';
+
+  @override
+  String get navMarketIntelligence => 'Market Intelligence';
+
+  @override
+  String get navProjects => 'Projetos';
+
+  @override
+  String get navOpportunityLab => 'Opportunity Lab';
+
+  @override
+  String get navActionEngine => 'Action Engine';
+
+  @override
+  String get navUpgrade => 'Plano / Upgrade';
+
+  @override
+  String get navAccount => 'Conta e Configurações';
+
+  @override
+  String get navAdminPanel => 'Painel Admin';
+
+  @override
+  String get navAdminModules => 'Módulos (Admin)';
+
+  @override
+  String get navHelpSupport => 'Ajuda e Suporte';
+
+  @override
+  String get navAbout => 'Sobre';
+
+  @override
+  String get accountTitle => 'Conta e Configurações';
+
+  @override
+  String get accountProfile => 'Perfil';
+
+  @override
+  String get accountLanguage => 'Idioma';
+
+  @override
+  String get accountLanguagePortuguese => 'Português';
+
+  @override
+  String get accountLanguageEnglish => 'English';
+
+  @override
+  String get accountCurrentPlan => 'Plano atual';
+
+  @override
+  String get accountUsage => 'Uso / Cota';
+
+  @override
+  String get accountUpgradeManage => 'Fazer upgrade / gerenciar assinatura';
+
+  @override
+  String get accountGoogleLinked => 'Conectado com Google';
+
+  @override
+  String get accountHelpSupport => 'Ajuda e Suporte';
+
+  @override
+  String get accountAbout => 'Sobre o InsightValues';
+
+  @override
+  String get accountPrivacy => 'Política de Privacidade';
+
+  @override
+  String get accountTerms => 'Termos de Uso';
+
+  @override
+  String get accountSignOut => 'Sair da conta';
+
+  @override
+  String get aboutTitle => 'Sobre o InsightValues';
+
+  @override
+  String get aboutTagline =>
+      'Copiloto de IA para estratégia de marketing e conteúdo.';
+
+  @override
+  String get aboutVersion => 'Versão do aplicativo';
+
+  @override
+  String aboutCopyright(int year) {
+    return '© $year InsightValues. Todos os direitos reservados.';
+  }
+
+  @override
+  String get aboutWebsite => 'Site oficial';
+
+  @override
+  String get aboutSupportContact => 'Suporte';
+
+  @override
+  String get aboutPrivacyPolicy => 'Política de Privacidade';
+
+  @override
+  String get aboutTermsOfUse => 'Termos de Uso';
+
+  @override
+  String get aboutPlanInfo => 'Plano e assinatura';
+
+  @override
+  String get aboutOwnerConfigRequired =>
+      'Ainda não configurado pelo administrador do produto.';
+
+  @override
+  String get supportTitle => 'Ajuda e Suporte';
+
+  @override
+  String get supportContact => 'Contato';
+
+  @override
+  String get supportReportProblem => 'Relatar um problema';
+
+  @override
+  String get supportSendFeedback => 'Enviar feedback';
+
+  @override
+  String supportContactEmail(String email) {
+    return 'Fale conosco por e-mail: $email';
+  }
+
+  @override
+  String get supportOwnerConfigRequired =>
+      'Canal de suporte ainda não configurado pelo administrador do produto.';
+
+  @override
+  String get planFree => 'Gratuito';
+
+  @override
+  String get planFreePrice => 'R\$ 0';
+
+  @override
+  String planFreeAnalyses(int count) {
+    return '$count análises de IA por mês';
+  }
+
+  @override
+  String get planPro => 'Pro Founder';
+
+  @override
+  String get planProPrice => 'R\$ 29/mês';
+
+  @override
+  String get planProPriceAmount => 'R\$ 29';
+
+  @override
+  String get planProPricePeriod => '/mês';
+
+  @override
+  String planProAnalyses(int count) {
+    return '$count análises de IA por mês';
+  }
+
+  @override
+  String get planFounderNote =>
+      'Preço de lançamento (fundador) -- não é um valor permanente.';
+
+  @override
+  String get planCurrentPlan => 'Plano atual';
+
+  @override
+  String get planUpgradeCta => 'Assinar Pro';
+
+  @override
+  String get billingTestMode => 'Modo de teste (nenhuma cobrança real)';
+
+  @override
+  String get billingWaitingSecrets =>
+      'Aguardando configuração final do provedor de pagamento';
+
+  @override
+  String get checkoutOpeningError =>
+      'Não foi possível abrir a página de pagamento.';
+
+  @override
+  String get upgradePlansTitle => 'Planos';
+
+  @override
+  String get upgradeLoadError =>
+      'Não foi possível carregar seu plano agora. Tente novamente em instantes.';
+
+  @override
+  String get upgradeUsageThisMonth => 'Análises de IA este mês';
+
+  @override
+  String get upgradeUsedAllAnalyses =>
+      'Você usou todas as análises de IA deste mês.';
+
+  @override
+  String upgradeAnalysesRemaining(int count, String plan) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count análises restantes',
+      one: '1 análise restante',
+    );
+    return '$_temp0 no plano $plan.';
+  }
+
+  @override
+  String get upgradeFreeSubtitle => 'Plano atual';
+
+  @override
+  String get upgradeProSubtitle => 'Para quem já está executando a estratégia';
+
+  @override
+  String get upgradeFeatureWebsiteAnalysis =>
+      'Análise de site, mercado e concorrência';
+
+  @override
+  String get upgradeFeatureStrategyActions => 'Estratégia e ações priorizadas';
+
+  @override
+  String get upgradeFeatureUnlimited => 'Análises ilimitadas';
+
+  @override
+  String get upgradeFeaturePriority => 'Prioridade no processamento';
+
+  @override
+  String get upgradeFeatureSupport => 'Suporte prioritário';
+
+  @override
+  String get upgradeFeatureSupportEmail => 'Suporte prioritário por e-mail';
+
+  @override
+  String get upgradeFeatureEarlyAccess => 'Acesso a novos recursos primeiro';
+
+  @override
+  String get upgradePreviousPlan => 'Plano anterior';
+
+  @override
+  String get upgradeCurrentPlanBadge => 'Seu plano';
+
+  @override
+  String get upgradeMostPopular => 'Mais popular';
+
+  @override
+  String get upgradeSubscribeCta => '🚀  Assinar Pro — R\$ 29/mês';
+
+  @override
+  String get adminModulesTitle => 'Inventário de Módulos';
+
+  @override
+  String get adminModulesStatus => 'Status';
+
+  @override
+  String get adminModulesCommercial => 'Comercial';
+
+  @override
+  String get adminModulesPlan => 'Plano mínimo';
+
+  @override
+  String get adminModulesRoute => 'Rota';
+
+  @override
+  String get adminModulesAi => 'Usa IA';
+
+  @override
+  String get adminModulesReadiness => 'Prontidão';
+
+  @override
+  String get adminModulesNotes => 'Notas';
+
+  @override
+  String get adminModulesNoRoute => 'Sem rota própria';
+
+  @override
+  String get adminModulesYes => 'Sim';
+
+  @override
+  String get adminModulesNo => 'Não';
+
+  @override
+  String get projectBriefingSectionTitle => 'Briefing Executivo';
+
+  @override
+  String get projectBriefingNoKnowledge =>
+      'Nenhum conhecimento cadastrado ainda';
+
+  @override
+  String projectBriefingKnowledgeCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count itens de conhecimento disponíveis',
+      one: '1 item de conhecimento disponível',
+      zero: 'Nenhum item de conhecimento',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get projectBriefingRecentChanges => 'O que mudou recentemente';
+
+  @override
+  String get projectAnalyzeIdea => 'Analisar Ideia';
+
+  @override
+  String get projectOpenConfig => 'Configurações';
+
+  @override
+  String get projectConfigTitle => 'Configurações do Projeto';
+
+  @override
+  String get projectConfigNameLabel => 'Nome';
+
+  @override
+  String get projectConfigDescriptionLabel => 'Descrição';
+
+  @override
+  String get projectConfigUrlLabel => 'URL';
+
+  @override
+  String get projectConfigTypeLabel => 'Tipo';
+
+  @override
+  String get projectConfigStatusLabel => 'Status';
+
+  @override
+  String get projectConfigEdit => 'Editar';
+
+  @override
+  String get projectConfigNameRequired =>
+      'O nome do projeto não pode ficar vazio.';
+
+  @override
+  String projectConfigSaveError(String error) {
+    return 'Falha ao salvar: $error';
+  }
+
+  @override
+  String get ideaAnalysisProjectBannerText =>
+      'Esta análise será vinculada ao projeto selecionado';
+
+  @override
+  String get ivIntroTitle => 'Conheça a IVE';
+
+  @override
+  String get ivIntroWhoBody =>
+      'Eu sou a IVE, sua copiloto estratégica dentro do InsightValues.';
+
+  @override
+  String get ivIntroWhatBody =>
+      'Posso explicar seus resultados, apontar riscos e oportunidades, e sugerir o que fazer a seguir — sempre com base nos dados reais do seu projeto.';
+
+  @override
+  String get ivIntroWhereBody =>
+      'Você me encontra de dois jeitos: o ícone flutuante aparece em qualquer tela, e alguns módulos têm um botão direto para me perguntar sobre o que você está vendo ali.';
+
+  @override
+  String get ivIntroControlBody =>
+      'Eu só respondo quando você pede — você decide quando e sobre o que perguntar.';
+
+  @override
+  String get ivIntroContinueButton => 'Entendi';
+
+  @override
+  String get ivIntroSkipButton => 'Pular';
+
+  @override
+  String get ivIntroSemanticLabel =>
+      'Introdução à IVE, sua copiloto estratégica';
+
+  @override
+  String get ivIntroReplayLabel => 'Conhecer a IVE';
+
+  @override
+  String get iveSemanticsLabel => 'IVE, assistente executiva';
+
+  @override
+  String get iveBubbleChatCta => 'Conversar com a IVE';
+
+  @override
+  String get iveChatAskCta => 'Pergunte à IVE';
+
+  @override
+  String get iveChatHint => 'Pergunte à IVE…';
+
+  @override
+  String get iveChatClearHistory => 'Limpar histórico';
+
+  @override
+  String iveChatErrorPrefix(String error) {
+    return 'Erro: $error';
+  }
+
+  @override
+  String get iveScreenActions => 'Ações';
+
+  @override
+  String get iveScreenWebsiteAnalyzer => 'Website Analyzer';
+
+  @override
+  String get iveScreenProjects => 'Projetos';
+
+  @override
+  String get iveScreenDecisions => 'Decisões';
+
+  @override
+  String get iveScreenKnowledge => 'Conhecimento';
+
+  @override
+  String get iveScreenMarketIntelligence => 'Market Intelligence';
+
+  @override
+  String get iveScreenBusinessOs => 'Business OS';
+
+  @override
+  String get iveScreenOpportunities => 'Oportunidades';
+
+  @override
+  String get iveScreenBriefing => 'Briefing';
+
+  @override
+  String get iveScreenResources => 'Recursos';
+
+  @override
+  String get iveScreenPersonas => 'Personas';
+
+  @override
+  String get iveScreenDebugHub => 'Debug Hub';
+
+  @override
+  String get iveScreenRoiTracker => 'ROI Tracker';
+
+  @override
+  String get iveScreenScores => 'Scores';
+
+  @override
+  String get iveSuggestionProjects1 => 'Qual projeto devo focar?';
+
+  @override
+  String get iveSuggestionProjects2 => 'Quais projetos têm mais risco?';
+
+  @override
+  String get iveSuggestionOpportunities1 => 'Qual oportunidade tem maior ROI?';
+
+  @override
+  String get iveSuggestionOpportunities2 => 'O que devo aprovar agora?';
+
+  @override
+  String get iveSuggestionScores1 => 'Por que meu score está baixo?';
+
+  @override
+  String get iveSuggestionScores2 => 'Como melhorar o Ecosystem Score?';
+
+  @override
+  String get iveSuggestionDecisions1 => 'O que devo escalar?';
+
+  @override
+  String get iveSuggestionDecisions2 =>
+      'Simule o impacto de aprovar a top oportunidade';
+
+  @override
+  String get iveSuggestionBriefing1 => 'Resuma minha semana';
+
+  @override
+  String get iveSuggestionBriefing2 => 'Quais ações críticas estão atrasadas?';
+
+  @override
+  String get iveSuggestionKnowledge1 => 'O que aprendi esta semana?';
+
+  @override
+  String get iveSuggestionKnowledge2 =>
+      'Qual documento mais impacta meu projeto?';
+
+  @override
+  String get iveSuggestionPersonas1 => 'Qual persona mais avançou?';
+
+  @override
+  String get iveSuggestionPersonas2 => 'Qual nicho tem mais potencial?';
+
+  @override
+  String get iveSuggestionDefault1 => 'Me explique os dados desta tela';
+
+  @override
+  String get iveSuggestionDefault2 => 'O que devo fazer agora?';
+
+  @override
+  String iveActionSuggestionHint(String label) {
+    return 'Sugestão da IVE: $label. Complete os detalhes na tela que abriu.';
+  }
+
+  @override
+  String get iveActionNoDestination =>
+      'Este tipo de ação ainda não tem um destino direto. Pergunte à IVE para mais detalhes.';
+
+  @override
+  String get oppNewTitle => 'Nova Oportunidade';
+
+  @override
+  String get oppTypeLabel => 'Tipo';
+
+  @override
+  String get oppTitleLabel => 'Título';
+
+  @override
+  String get oppDescriptionLabel => 'Descrição (opcional)';
+
+  @override
+  String get oppCancel => 'Cancelar';
+
+  @override
+  String get oppAdd => 'Adicionar';
+
+  @override
+  String get oppKnowledgeSectionTitle => 'Conhecimento do projeto';
+
+  @override
+  String get oppKnowledgeSectionHint =>
+      'Selecione itens do Cofre de Conhecimento deste projeto para dar contexto real à oportunidade.';
+
+  @override
+  String get oppKnowledgeSelectProjectFirst =>
+      'Selecione um projeto no filtro acima para usar conhecimento do projeto (opcional).';
+
+  @override
+  String get oppKnowledgeEmpty =>
+      'Este projeto ainda não tem itens no Cofre de Conhecimento.';
+
+  @override
+  String oppKnowledgeCountSelected(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count itens selecionados',
+      one: '1 item selecionado',
+      zero: 'Nenhum item selecionado',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get oppLinkedKnowledgeTitle => 'Conhecimento vinculado';
+
+  @override
+  String get oppTypeExpansao => 'Expansão';
+
+  @override
+  String get oppTypeNovoProduto => 'Novo Produto';
+
+  @override
+  String get oppTypeNovoNicho => 'Novo Nicho';
+
+  @override
+  String get oppTypeAfiliado => 'Afiliado';
+
+  @override
+  String get oppTypeSaas => 'SaaS';
+
+  @override
+  String get oppTypeEbook => 'Ebook';
+
+  @override
+  String get oppTypeCurso => 'Curso';
+
+  @override
+  String get oppTypeAssinatura => 'Assinatura';
+
+  @override
+  String get impactTitle => 'Impact Lab';
+
+  @override
+  String get impactInvestigations => 'Investigações';
+
+  @override
+  String get impactInvestigationsEmpty => 'Nenhuma investigação ainda.';
+
+  @override
+  String get impactAdminOnly => 'O Impact Lab é restrito a administradores.';
+
+  @override
+  String get impactNoScoreNote =>
+      'Este dossiê organiza evidências. Não atribui nota, ranking nem veredito à organização.';
+
+  @override
+  String get impactLiveView => 'Visão ao vivo';
+
+  @override
+  String get impactLiveViewHint =>
+      'Reflete o estado atual e muda quando a evidência muda.';
+
+  @override
+  String get impactSnapshot => 'Snapshot emitido';
+
+  @override
+  String get impactSnapshotHint =>
+      'Retrato histórico: não é reescrito quando a evidência muda.';
+
+  @override
+  String impactAsOf(String date) {
+    return 'Situação em $date';
+  }
+
+  @override
+  String get impactAsOfUnknown => 'Sem data de referência ainda';
+
+  @override
+  String get impactSummary => 'Resumo';
+
+  @override
+  String get impactIdentity => 'Identidade';
+
+  @override
+  String get impactClaims => 'Afirmações';
+
+  @override
+  String get impactEvidence => 'Evidências';
+
+  @override
+  String get impactConflicts => 'Divergências';
+
+  @override
+  String get impactLimitations => 'Limitações';
+
+  @override
+  String get impactNotEstablished => 'O que este dossiê NÃO estabelece';
+
+  @override
+  String get impactDisputes => 'Contestações';
+
+  @override
+  String get impactSources => 'Fontes e proveniência';
+
+  @override
+  String get impactIntegrity => 'Integridade';
+
+  @override
+  String get impactOpenDisputes => 'Contestações abertas';
+
+  @override
+  String get impactReverifyPending => 'Reverificação pendente';
+
+  @override
+  String get impactNotVerifiedYet => 'Ainda não verificada.';
+
+  @override
+  String get impactNoClaims => 'Nenhuma afirmação registrada ainda.';
+
+  @override
+  String get impactNoEvidence =>
+      'Nenhuma evidência vinculada a esta afirmação.';
+
+  @override
+  String get impactNoConflicts => 'Nenhuma divergência registrada.';
+
+  @override
+  String get impactNoDisputes => 'Nenhuma contestação registrada.';
+
+  @override
+  String get impactNoLimitations => 'Nenhuma limitação registrada.';
+
+  @override
+  String get impactNoRegistry =>
+      'Nenhum registro oficial anexado. Isso não significa que a organização não seja registrada.';
+
+  @override
+  String get impactNoSnapshot => 'Nenhum snapshot emitido ainda.';
+
+  @override
+  String get impactQuotedFromSource => 'Citação da fonte';
+
+  @override
+  String get impactQuotedFromUpload =>
+      'Citação de documento enviado — contexto, nunca autoridade';
+
+  @override
+  String get impactWithheld => 'Trecho omitido por privacidade';
+
+  @override
+  String get impactRedactedNote =>
+      'Dados pessoais foram removidos deste texto.';
+
+  @override
+  String get impactPublisher => 'Publicador';
+
+  @override
+  String impactHostedOn(String host) {
+    return 'Hospedado em $host (não é o publicador)';
+  }
+
+  @override
+  String get impactUserSubmitted =>
+      'Enviado por usuário — contexto, nunca autoridade';
+
+  @override
+  String impactVoices(int voices, int documents) {
+    return 'Vozes independentes: $voices · fontes avaliadas: $documents';
+  }
+
+  @override
+  String get impactVoicesNote =>
+      'Vários documentos não significam várias fontes independentes.';
+
+  @override
+  String get impactRules => 'Regras aplicadas';
+
+  @override
+  String get impactGaps => 'Lacunas';
+
+  @override
+  String get impactLocator => 'Localização no documento';
+
+  @override
+  String get impactProvenanceChain =>
+      'Fonte → documento → localização → evidência → afirmação';
+
+  @override
+  String get impactPositionsNoWinner =>
+      'Todas as posições lado a lado — nenhuma é escolhida.';
+
+  @override
+  String get impactContentHash => 'Hash do conteúdo';
+
+  @override
+  String get impactHashNotTruth =>
+      'O hash prova que o conteúdo não foi alterado — não prova que ele é verdadeiro.';
+
+  @override
+  String get impactSnapshotRef => 'Referência do snapshot';
+
+  @override
+  String get impactVerifyCurrent =>
+      'Snapshot atual: o conteúdo não mudou desde a emissão.';
+
+  @override
+  String get impactVerifyStale =>
+      'Snapshot desatualizado: o conteúdo do dossiê mudou depois da emissão (evidência ou política de apresentação). O snapshot continua válido como registro histórico.';
+
+  @override
+  String get impactVerifyNotIssued =>
+      'Este hash não foi emitido para esta investigação.';
+
+  @override
+  String get impactEnvelopeMismatch =>
+      'Os metadados do snapshot não conferem com o registro.';
+
+  @override
+  String get impactVerifySnapshot => 'Verificar snapshot';
+
+  @override
+  String get impactExport => 'Emitir snapshot';
+
+  @override
+  String get impactExportConfirmTitle => 'Antes de emitir o snapshot';
+
+  @override
+  String impactExportLimitations(int count) {
+    return 'Limitações que acompanham este dossiê: $count';
+  }
+
+  @override
+  String get impactExportPrivacy =>
+      'O export é privado e autenticado: não há link público nem compartilhamento.';
+
+  @override
+  String get impactExportFormats =>
+      'Formatos disponíveis: JSON e texto. PDF não disponível.';
+
+  @override
+  String get impactExportConfirm => 'Emitir';
+
+  @override
+  String get impactExportDone => 'Snapshot emitido';
+
+  @override
+  String get impactCopyJson => 'Copiar JSON';
+
+  @override
+  String get impactCopyText => 'Copiar texto';
+
+  @override
+  String get impactCopied => 'Copiado';
+
+  @override
+  String get impactErrorAuth => 'Sua sessão expirou. Entre novamente.';
+
+  @override
+  String get impactErrorNotAvailable =>
+      'Investigação não encontrada ou indisponível.';
+
+  @override
+  String get impactErrorTooLarge =>
+      'Este dossiê excede o limite e não foi truncado. Nada parcial é exibido.';
+
+  @override
+  String impactErrorRateLimited(int seconds) {
+    return 'Muitas solicitações. Tente novamente em $seconds s.';
+  }
+
+  @override
+  String get impactErrorNetwork =>
+      'Sem conexão. Verifique a rede e tente novamente.';
+
+  @override
+  String get impactErrorServer => 'O serviço não respondeu. Tente novamente.';
+
+  @override
+  String impactShowMore(int count) {
+    return 'Mostrar mais ($count)';
+  }
+
+  @override
+  String get impactExpand => 'Expandir';
+
+  @override
+  String get impactCollapse => 'Recolher';
+
+  @override
+  String get impactClaimDetail => 'Detalhe da afirmação';
+
+  @override
+  String get impactErrorContract =>
+      'Resposta do servidor em formato não suportado. Nada foi exibido para não mostrar um dossiê incompleto.';
+
+  @override
+  String get impactRetry => 'Tentar novamente';
+
+  @override
+  String get impactEvidenceExcluded =>
+      'Excluídas da avaliação (com o motivo nas regras)';
+
+  @override
+  String get impactDeclaredQuote =>
+      'Identidade declarada para esta investigação — citada, não verificada';
+
+  @override
+  String get impactRegistryQuote => 'Como consta no registro — citado';
+
+  @override
+  String get impactClaimCaveats => 'Antes de ler esta afirmação';
+
+  @override
+  String get impactClaimLimitations =>
+      'Limitações que se aplicam a esta afirmação';
+
+  @override
+  String get impactSnapshotCaveats =>
+      'A confirmação descreveu a visão ao vivo naquele momento. As ressalvas do snapshot emitido são estas:';
+
+  @override
+  String get impactClaimScopeNote =>
+      'Situação desta afirmação apenas — não é um veredito sobre a organização.';
+
+  @override
+  String get impactIdentityScopeNote =>
+      'Identidade apenas — não avalia a conduta da organização.';
+
+  @override
+  String impactPosition(int index, int total) {
+    return 'Posição $index de $total';
+  }
+
+  @override
+  String get impactVerifyInconclusive =>
+      'Verificação inconclusiva: não confie nos metadados deste snapshot. Obtenha um novo export antes de usá-lo.';
+
+  @override
+  String get adminModulesOpen => 'Abrir módulo';
+
+  @override
+  String get insightTitle => 'Análise IVE';
+
+  @override
+  String get insightSubtitle => 'Pergunte ao IVE sobre este projeto';
+
+  @override
+  String get insightAskHint =>
+      'O que você gostaria de saber sobre este projeto?';
+
+  @override
+  String get insightAnalyzeProject => 'Analisar com IVE';
+
+  @override
+  String get insightEmpty => 'Nenhum insight ainda para este projeto.';
+
+  @override
+  String get insightEmptyPrompt =>
+      'Faça uma pergunta ao IVE para gerar seu primeiro insight.';
+
+  @override
+  String get insightThinking => 'IVE está pensando...';
+
+  @override
+  String get insightGenerating => 'Gerando insight...';
+
+  @override
+  String get insightError =>
+      'Não foi possível gerar o insight. Tente novamente.';
+
+  @override
+  String get insightSaved => 'Insight salvo';
+
+  @override
+  String get insightConfidence => 'Confiança';
+
+  @override
+  String get insightRecommendedAction => 'Ação recomendada';
+
+  @override
+  String get insightSources => 'Fontes';
+
+  @override
+  String get insightAddToActions => 'Adicionar às ações';
+
+  @override
+  String get insightRecent => 'Insights recentes';
+
+  @override
+  String get insightProjectContext => 'Contexto do projeto';
+
+  @override
+  String get insightFreeLimit =>
+      'Plano gratuito: análises de IA limitadas por mês.';
+
+  @override
+  String get insightUpgradeForMore =>
+      'Faça upgrade para Pro e tenha mais análises';
+
+  @override
+  String get insightViewAll => 'Ver todos os insights';
+
+  @override
+  String get insightDeleteConfirm => 'Excluir este insight?';
+
+  @override
+  String insightNOf(num n) {
+    final intl.NumberFormat nNumberFormat = intl.NumberFormat.compact(
+      locale: localeName,
+    );
+    final String nString = nNumberFormat.format(n);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$nString insights',
+      one: '$nString insight',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String insightUsageOf(num used, num max) {
+    final intl.NumberFormat usedNumberFormat = intl.NumberFormat.compact(
+      locale: localeName,
+    );
+    final String usedString = usedNumberFormat.format(used);
+    final intl.NumberFormat maxNumberFormat = intl.NumberFormat.compact(
+      locale: localeName,
+    );
+    final String maxString = maxNumberFormat.format(max);
+
+    return '$usedString / $maxString análises usadas este mês';
+  }
+
+  @override
+  String get insightQuotaExceeded => 'Limite mensal de análises atingido.';
+
+  @override
+  String get insightUpgradeCta =>
+      'Faça upgrade para Pro e tenha análises ilimitadas';
+
+  @override
+  String get insightAddedToActions => 'Adicionado às ações';
+
+  @override
+  String get insightAddToActionsError =>
+      'Não foi possível adicionar às ações. Tente novamente.';
+
+  @override
+  String get insightRecentAll => 'Ver todos os insights recentes';
+
+  @override
+  String get insightCancel => 'Cancelar';
+
+  @override
+  String get insightRetry => 'Tentar novamente';
+}

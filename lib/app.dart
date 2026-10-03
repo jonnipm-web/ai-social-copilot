@@ -72,6 +72,7 @@ import 'features/dashboard/screens/executive_dashboard_screen.dart';
 import 'features/debug/screens/intelligence_debug_hub_screen.dart';
 import 'features/impact/screens/impact_dossier_screen.dart';
 import 'features/impact/screens/impact_home_screen.dart';
+import 'features/insights/screens/ive_analysis_screen.dart';
 
 final _iveObserver = IveRouteObserver();
 
@@ -679,6 +680,14 @@ final _router = GoRouter(
       path: AppConstants.routeImpactDossier,
       builder: (_, state) => ImpactDossierScreen(
         investigationId: state.pathParameters['id']!,
+      ),
+    ),
+
+    // MACRO-08 — IVE Analysis (per-project insight vertical)
+    GoRoute(
+      path: AppConstants.routeProjectAnalysis,
+      builder: (_, state) => IveAnalysisScreen(
+        projectId: state.pathParameters['id']!,
       ),
     ),
   ],
