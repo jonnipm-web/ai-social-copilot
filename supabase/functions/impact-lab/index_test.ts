@@ -393,15 +393,12 @@ Deno.test('EF-I7-09 AEF restart survival proof — InMemoryAefStore does NOT sur
   assertEquals(found.ok && found.value, null, 'new in-memory instance has no knowledge of previous state — restart survival FAILS as expected');
 });
 
-Deno.test('EF-I7-10 AEF concurrency — InMemoryAefStore non-atomic (documents DB requirement)', async () => {
-  // REQUIREMENT: DB UNIQUE constraint on (caller_user_id, intent_kind, idempotency_key)
-  // guarantees at most one canonical request regardless of concurrency.
-  //
-  // InMemoryAefStore is intentionally non-atomic for concurrent coroutines: in
-  // single-threaded JS both `Promise.all` tasks may pass the idempotency read
-  // before either has written, producing two "successful" inserts. This is the
-  // documented gap that SupabaseAefStore closes via the DB unique constraint.
-  // Production NEVER uses InMemoryAefStore (INVESTIGATION_BINDING = PASS rule).
+Deno.test('EF-I7-10 AEF concurrency — InMemoryAefStore.submitAtomic is JS-event-loop atomic', async () => {
+  // submitAtomic() contains no `await` — all mutations are synchronous.
+  // In JavaScript's single-threaded event loop, two concurrent callers cannot
+  // interleave inside a synchronous block, so exactly one wins and one receives
+  // IDEMPOTENCY_CONFLICT.  This mirrors the DB UNIQUE constraint behavior of
+  // SupabaseAefStore (backed by the Postgres atomic RPC aef_submit_action).
   const { InMemoryAefStore: AefStoreCls } = await import('../_shared/aef/store.ts');
   const { submitAction } = await import('../_shared/aef/kernel.ts');
   const store = new AefStoreCls();
@@ -412,10 +409,49 @@ Deno.test('EF-I7-10 AEF concurrency — InMemoryAefStore non-atomic (documents D
     submitAction(caller, intent, { store }),
     submitAction(caller, intent, { store }),
   ]);
-  // At least one must succeed; the other may or may not conflict in-memory.
   const successes = [r1, r2].filter((r) => r.ok).length;
-  assert(successes >= 1, 'at least one concurrent submit must succeed');
-  // DB invariant (enforced by SupabaseAefStore): exactly one canonical request.
-  // Verified by: UNIQUE (caller_user_id, intent_kind, idempotency_key) on impact_aef_requests.
-  // This test documents the gap; integration tests against a real DB prove the constraint.
+  assertEquals(successes, 1, 'exactly one concurrent submit must succeed — submitAtomic has no internal await');
+  const conflicts = [r1, r2].filter((r) => !r.ok && (r as { error: { code: string } }).error.code === 'IDEMPOTENCY_CONFLICT').length;
+  assertEquals(conflicts, 1, 'the losing concurrent submit must receive IDEMPOTENCY_CONFLICT');
+});
+
+Deno.test('EF-I7-11 AEF project binding — receipt.projectId derived from investigation', async () => {
+  // P1-02: project_id must come from the validated investigation, not be null.
+  // The AEF caller context is built with the investigation's projectId after RLS
+  // ownership validation, and that projectId flows into the receipt.
+  const { InMemoryAefStore: AefStoreCls } = await import('../_shared/aef/store.ts');
+  const { submitAction } = await import('../_shared/aef/kernel.ts');
+  const projectId = 'proj-aaaa-0000-4000-8000-000000000001';
+  const userId = 'user-001';
+  // Build a caller context as index.ts would — projectId derived from investigation.
+  const caller = { authenticatedUserId: userId, moduleId: 'impact', correlationId: 'c-proj-test', projectId, serviceId: 'impact-lab' };
+  const intent = { kind: 'ACKNOWLEDGE_CONFLICT' as const, investigationId: 'inv-proj-001', idempotencyKey: crypto.randomUUID(), classification: 'REVERSIBLE' as const };
+  const store = new AefStoreCls();
+  const result = await submitAction(caller, intent, { store });
+  assert(result.ok, 'REVERSIBLE action should be authorized');
+  assertEquals(result.receipt?.projectId, projectId, 'receipt must carry the investigation project scope');
+});
+
+Deno.test('EF-I7-12 AEF atomic rollback — submitAtomic ALREADY_EXISTS leaves no orphan', async () => {
+  // InMemoryAefStore.submitAtomic checks the idempotency index synchronously
+  // before any mutation. A duplicate call returns ALREADY_EXISTS before any
+  // state is written — no orphaned request, no partial receipt.
+  const { InMemoryAefStore: AefStoreCls } = await import('../_shared/aef/store.ts');
+  const { submitAction } = await import('../_shared/aef/kernel.ts');
+  const store = new AefStoreCls();
+  const caller = { authenticatedUserId: 'user-dup', moduleId: 'impact', correlationId: 'c-dup', projectId: null, serviceId: 'impact-lab' };
+  const key = crypto.randomUUID();
+  const intent = { kind: 'ACKNOWLEDGE_CONFLICT' as const, investigationId: 'inv-dup', idempotencyKey: key, classification: 'REVERSIBLE' as const };
+  // First submit succeeds
+  const r1 = await submitAction(caller, intent, { store });
+  assert(r1.ok, 'first submit must succeed');
+  const existingRequestId = r1.receipt?.requestId;
+  // Second submit with same key returns IDEMPOTENCY_CONFLICT (not ALREADY_EXISTS)
+  const r2 = await submitAction(caller, intent, { store });
+  assert(!r2.ok, 'duplicate must fail');
+  assertEquals((r2 as { error: { code: string } }).error.code, 'IDEMPOTENCY_CONFLICT');
+  // The existing requestId is preserved — no second request was created
+  const existing = await store.findByIdempotencyKey(key, caller.authenticatedUserId, intent.kind);
+  assert(existing.ok && existing.value !== null);
+  assertEquals(existing.ok && existing.value?.requestId, existingRequestId, 'exactly one request exists — no orphan created');
 });

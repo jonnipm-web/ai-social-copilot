@@ -532,7 +532,6 @@ import type { AefStore, AefStoreResult } from '../_shared/aef/store.ts';
 import type {
   ActionClassification,
   AefExecutionRequest,
-  ExecutionAttempt,
   ExecutionReceipt,
   HumanGateState,
   HumanGateStatus,
@@ -608,30 +607,17 @@ function rowToReceipt(r: Row): ExecutionReceipt {
  * the kernel is called). Reads also use service_role since these are internal
  * kernel reads, not user-facing queries.
  *
- * insertAttempt is a no-op: the receipt captures the same execution_outcome
- * and is the canonical persistent record. A dedicated attempts table (with
- * its own trigger semantics) is a future migration task.
+ * The submit path calls the aef_submit_action() PL/pgSQL SECURITY DEFINER
+ * function, which atomically persists request + decision + gate + receipt in
+ * a single Postgres transaction. Any failure performs a complete rollback —
+ * no orphaned requests, no stranded idempotency keys, no partial state.
+ *
+ * Attempt-level records are NOT persisted. The receipt captures the same
+ * execution_outcome and is the canonical audit record. A dedicated attempts
+ * table is a future migration task.
  */
 export class SupabaseAefStore implements AefStore {
   constructor(private readonly service: DbClient) {}
-
-  async insertRequest(req: AefExecutionRequest): Promise<AefStoreResult<void>> {
-    const { error } = await this.service.from('impact_aef_requests').insert({
-      request_id: req.requestId,
-      correlation_id: req.correlationId,
-      caller_user_id: req.caller.authenticatedUserId,
-      project_id: req.caller.projectId,
-      service_id: req.caller.serviceId,
-      intent_kind: req.intent.kind,
-      investigation_id: req.intent.investigationId,
-      idempotency_key: req.intent.idempotencyKey,
-      classification: req.intent.classification,
-      requested_at: req.requestedAt,
-    });
-    if (!error) return aefOk(undefined);
-    if (error.code === '23505') return aefFail('ALREADY_EXISTS');
-    return aefFail('AEF_PERSISTENCE_UNAVAILABLE');
-  }
 
   async findByIdempotencyKey(
     idempotencyKey: string,
@@ -648,32 +634,40 @@ export class SupabaseAefStore implements AefStore {
     return aefOk(data ? rowToAefRequest(data as Row) : null);
   }
 
-  async insertPolicyDecision(decision: PolicyDecision): Promise<AefStoreResult<void>> {
-    const { error } = await this.service.from('impact_aef_decisions').insert({
-      request_id: decision.requestId,
-      outcome: decision.outcome,
-      policy_version: decision.policyVersion,
-      reason: decision.reason,
-      decided_at: decision.decidedAt,
+  async submitAtomic(
+    request: AefExecutionRequest,
+    decision: PolicyDecision,
+    gate: HumanGateState | null,
+    receipt: ExecutionReceipt,
+  ): Promise<AefStoreResult<void>> {
+    const { data, error } = await this.service.rpc('aef_submit_action', {
+      p_request_id:        request.requestId,
+      p_correlation_id:    request.correlationId,
+      p_caller_user_id:    request.caller.authenticatedUserId,
+      p_project_id:        request.caller.projectId ?? null,
+      p_service_id:        request.caller.serviceId,
+      p_intent_kind:       request.intent.kind,
+      p_investigation_id:  request.intent.investigationId,
+      p_idempotency_key:   request.intent.idempotencyKey,
+      p_classification:    request.intent.classification,
+      p_requested_at:      request.requestedAt,
+      p_policy_outcome:    decision.outcome,
+      p_policy_version:    decision.policyVersion,
+      p_policy_reason:     decision.reason,
+      p_gate_id:           gate?.gateId ?? null,
+      p_gate_expires_at:   gate?.expiresAt ?? null,
+      p_receipt_id:        receipt.receiptId,
+      p_receipt_hash:      receipt.receiptHash,
+      p_execution_outcome: receipt.executionOutcome,
+      p_issued_at:         receipt.issuedAt,
     });
-    if (!error) return aefOk(undefined);
-    if (error.code === '23505') return aefFail('ALREADY_EXISTS');
-    return aefFail('AEF_PERSISTENCE_UNAVAILABLE');
-  }
-
-  async insertHumanGate(gate: HumanGateState): Promise<AefStoreResult<void>> {
-    const { error } = await this.service.from('impact_aef_gates').insert({
-      gate_id: gate.gateId,
-      request_id: gate.requestId,
-      approver_ref: gate.approverRef,
-      status: gate.status,
-      expires_at: gate.expiresAt,
-      resolved_at: gate.resolvedAt,
-      binding_hash: gate.bindingHash,
-    });
-    if (!error) return aefOk(undefined);
-    if (error.code === '23505') return aefFail('ALREADY_EXISTS');
-    return aefFail('AEF_PERSISTENCE_UNAVAILABLE');
+    if (error) return aefFail('AEF_PERSISTENCE_UNAVAILABLE');
+    const result = data as { ok: boolean; code?: string } | null;
+    if (!result?.ok) {
+      if (result?.code === 'ALREADY_EXISTS') return aefFail('ALREADY_EXISTS');
+      return aefFail('AEF_PERSISTENCE_UNAVAILABLE');
+    }
+    return aefOk(undefined);
   }
 
   async updateHumanGate(
@@ -706,30 +700,25 @@ export class SupabaseAefStore implements AefStore {
     return aefOk(data ? rowToGate(data as Row) : null);
   }
 
-  // Attempts are absorbed into receipts for Lab use; no separate table exists.
-  async insertAttempt(_attempt: ExecutionAttempt): Promise<AefStoreResult<void>> {
-    return aefOk(undefined);
-  }
-
   async insertReceipt(receipt: ExecutionReceipt): Promise<AefStoreResult<void>> {
     const { error } = await this.service.from('impact_aef_receipts').insert({
-      receipt_id: receipt.receiptId,
-      request_id: receipt.requestId,
-      correlation_id: receipt.correlationId,
-      caller_user_id: receipt.callerUserId,
-      project_id: receipt.projectId,
-      service_id: receipt.serviceId,
-      intent_kind: receipt.intentKind,
-      investigation_id: receipt.investigationId,
-      idempotency_key: receipt.idempotencyKey,
-      classification: receipt.classification,
-      policy_version: receipt.policyVersion,
-      policy_outcome: receipt.policyOutcome,
+      receipt_id:        receipt.receiptId,
+      request_id:        receipt.requestId,
+      correlation_id:    receipt.correlationId,
+      caller_user_id:    receipt.callerUserId,
+      project_id:        receipt.projectId,
+      service_id:        receipt.serviceId,
+      intent_kind:       receipt.intentKind,
+      investigation_id:  receipt.investigationId,
+      idempotency_key:   receipt.idempotencyKey,
+      classification:    receipt.classification,
+      policy_version:    receipt.policyVersion,
+      policy_outcome:    receipt.policyOutcome,
       execution_outcome: receipt.executionOutcome,
-      human_gate_id: receipt.humanGateId,
-      error_code: receipt.errorCode,
-      issued_at: receipt.issuedAt,
-      receipt_hash: receipt.receiptHash,
+      human_gate_id:     receipt.humanGateId,
+      error_code:        receipt.errorCode,
+      issued_at:         receipt.issuedAt,
+      receipt_hash:      receipt.receiptHash,
     });
     if (!error) return aefOk(undefined);
     if (error.code === '23505') return aefFail('ALREADY_EXISTS');

@@ -6,9 +6,11 @@
  *   1. Idempotency — same (user, intentKind, idempotencyKey) never executes twice.
  *   2. Policy — every class C action is evaluated before execution.
  *   3. Human Gate — CONSEQUENTIAL actions require human review when policy demands.
- *   4. Receipt — every attempt (success or failure) produces a durable receipt.
+ *   4. Receipt — every submission produces a durable, immutable receipt.
  *   5. Identity separation — authentication / authorization / service / user / tenant
  *      are never conflated.
+ *   6. Atomicity — request + decision + gate + receipt are persisted as one unit
+ *      (via store.submitAtomic); any failure rolls back completely.
  *
  * The kernel does NOT execute the action itself. It governs the authorization
  * envelope, then hands back an AUTHORIZED receipt for the caller to act on.
@@ -23,7 +25,6 @@ import type {
   AefExecutionRequest,
   AefResult,
   CallerContext,
-  ExecutionAttempt,
   ExecutionReceipt,
   HumanGateState,
   ImpactActionIntent,
@@ -116,6 +117,10 @@ export interface KernelDeps {
 /**
  * Submit a consequential Impact action for AEF governance.
  *
+ * All AEF records (request, decision, gate, receipt) are built in memory
+ * before any I/O, then persisted atomically via store.submitAtomic(). A
+ * failure at any point leaves no orphaned records.
+ *
  * Returns:
  *   ok=true  + receipt.executionOutcome=AUTHORIZED  → caller may execute
  *   ok=false + error.code=REQUIRES_HUMAN_REVIEW     → caller must wait for gate
@@ -131,18 +136,14 @@ export async function submitAction(
   const now = deps.now ? deps.now() : new Date().toISOString();
   const store = deps.store;
 
-  // 1. Idempotency check
+  // 1. Idempotency pre-check
   const existingResult = await store.findByIdempotencyKey(
     intent.idempotencyKey,
     caller.authenticatedUserId,
     intent.kind,
   );
   if (!existingResult.ok) {
-    return {
-      ok: false,
-      error: { code: 'AEF_PERSISTENCE_UNAVAILABLE' },
-      receipt: null,
-    };
+    return { ok: false, error: { code: 'AEF_PERSISTENCE_UNAVAILABLE' }, receipt: null };
   }
   if (existingResult.value !== null) {
     const existingReq = existingResult.value;
@@ -154,7 +155,7 @@ export async function submitAction(
     };
   }
 
-  // 2. Create execution request
+  // 2. Build execution request (no I/O)
   const requestId = randomUuid();
   const aefRequest: AefExecutionRequest = {
     requestId,
@@ -163,42 +164,12 @@ export async function submitAction(
     intent: { ...intent, classification: classifyIntent(intent.kind) },
     requestedAt: now,
   };
-
-  const insertResult = await store.insertRequest(aefRequest);
-  if (!insertResult.ok) {
-    if (insertResult.code === 'ALREADY_EXISTS') {
-      // Concurrent duplicate: two requests raced past the idempotency check and
-      // both tried to insert. The loser gets ALREADY_EXISTS from the DB UNIQUE
-      // constraint. Re-fetch to return IDEMPOTENCY_CONFLICT (not 503) so the
-      // client gets a consistent idempotent response rather than a false
-      // persistence error.
-      const raceResult = await store.findByIdempotencyKey(
-        intent.idempotencyKey,
-        caller.authenticatedUserId,
-        intent.kind,
-      );
-      if (raceResult.ok && raceResult.value !== null) {
-        const raceReceipt = await store.getReceipt(raceResult.value.requestId);
-        return {
-          ok: false,
-          error: { code: 'IDEMPOTENCY_CONFLICT', existingRequestId: raceResult.value.requestId },
-          receipt: raceReceipt.ok ? raceReceipt.value : null,
-        };
-      }
-    }
-    return {
-      ok: false,
-      error: { code: 'AEF_PERSISTENCE_UNAVAILABLE' },
-      receipt: null,
-    };
-  }
-
-  // 3. Evaluate policy
   const classification = aefRequest.intent.classification;
+
+  // 3. Evaluate policy (pure logic, no I/O)
   let policyOutcome: PolicyOutcome;
   let policyReason: string;
 
-  // In the Lab, IRREVERSIBLE actions are always denied (no real executor).
   if (classification === 'IRREVERSIBLE') {
     policyOutcome = 'DENIED';
     policyReason = 'IRREVERSIBLE actions are not available in the Lab';
@@ -218,23 +189,14 @@ export async function submitAction(
     reason: policyReason,
   };
 
-  const decisionResult = await store.insertPolicyDecision(decision);
-  if (!decisionResult.ok) {
-    return {
-      ok: false,
-      error: { code: 'AEF_PERSISTENCE_UNAVAILABLE' },
-      receipt: null,
-    };
-  }
-
-  // 4. Human gate (if required)
-  let gateId: string | null = null;
+  // 4. Build human gate if required (no I/O)
+  let gate: HumanGateState | null = null;
   let gateError: AefError | null = null;
 
   if (policyOutcome === 'REQUIRES_HUMAN_REVIEW') {
-    gateId = randomUuid();
+    const gateId = randomUuid();
     const expiresAt = new Date(Date.parse(now) + HUMAN_GATE_TTL_MS).toISOString();
-    const gate: HumanGateState = {
+    gate = {
       gateId,
       requestId,
       approverRef: null,
@@ -243,35 +205,14 @@ export async function submitAction(
       resolvedAt: null,
       bindingHash: null,
     };
-    const gateResult = await store.insertHumanGate(gate);
-    if (!gateResult.ok) {
-      return {
-        ok: false,
-        error: { code: 'AEF_PERSISTENCE_UNAVAILABLE' },
-        receipt: null,
-      };
-    }
     gateError = { code: 'REQUIRES_HUMAN_REVIEW', gateId, expiresAt };
   }
 
-  // 5. Record attempt
+  // 5. Build receipt (no I/O — computed before atomic persist)
   const attemptOutcome = policyOutcome === 'DENIED' ? 'DENIED'
     : policyOutcome === 'REQUIRES_HUMAN_REVIEW' ? 'REQUIRES_HUMAN_REVIEW'
     : 'AUTHORIZED';
 
-  const attempt: ExecutionAttempt = {
-    attemptId: randomUuid(),
-    requestId,
-    attemptedAt: now,
-    outcome: attemptOutcome,
-    errorCode: null,
-  };
-  const attemptResult = await store.insertAttempt(attempt);
-  if (!attemptResult.ok) {
-    return { ok: false, error: { code: 'AEF_PERSISTENCE_UNAVAILABLE' }, receipt: null };
-  }
-
-  // 6. Issue receipt
   const receiptPartial: Omit<ExecutionReceipt, 'receiptHash'> = {
     receiptId: randomUuid(),
     requestId,
@@ -286,29 +227,43 @@ export async function submitAction(
     policyVersion: AEF_POLICY_VERSION,
     policyOutcome,
     executionOutcome: attemptOutcome,
-    humanGateId: gateId,
+    humanGateId: gate?.gateId ?? null,
     errorCode: null,
     issuedAt: now,
   };
   const receiptHash = await buildReceiptHash(receiptPartial);
   const receipt: ExecutionReceipt = { ...receiptPartial, receiptHash };
-  const receiptResult = await store.insertReceipt(receipt);
-  if (!receiptResult.ok) {
+
+  // 6. Atomic persist — request + decision + gate? + receipt in one operation
+  const atomicResult = await store.submitAtomic(aefRequest, decision, gate, receipt);
+  if (!atomicResult.ok) {
+    if (atomicResult.code === 'ALREADY_EXISTS') {
+      // Concurrent duplicate: re-fetch so the response is consistent with
+      // the normal idempotency-conflict path (not a false 503).
+      const raceResult = await store.findByIdempotencyKey(
+        intent.idempotencyKey,
+        caller.authenticatedUserId,
+        intent.kind,
+      );
+      if (raceResult.ok && raceResult.value !== null) {
+        const raceReceipt = await store.getReceipt(raceResult.value.requestId);
+        return {
+          ok: false,
+          error: { code: 'IDEMPOTENCY_CONFLICT', existingRequestId: raceResult.value.requestId },
+          receipt: raceReceipt.ok ? raceReceipt.value : null,
+        };
+      }
+    }
     return { ok: false, error: { code: 'AEF_PERSISTENCE_UNAVAILABLE' }, receipt: null };
   }
 
   // 7. Return result
   if (policyOutcome === 'DENIED') {
-    return {
-      ok: false,
-      error: { code: 'DENIED', reason: policyReason },
-      receipt,
-    };
+    return { ok: false, error: { code: 'DENIED', reason: policyReason }, receipt };
   }
   if (gateError) {
     return { ok: false, error: gateError, receipt };
   }
-
   return { ok: true, value: { requestId }, receipt };
 }
 
@@ -375,9 +330,9 @@ export async function resolveHumanGate(
     return { ok: false, error: { code: 'AEF_PERSISTENCE_UNAVAILABLE' }, receipt: null };
   }
 
-  // Issue receipt for gate resolution (use stored request fields for completeness)
+  // Issue receipt for gate resolution
   const executionOutcome = resolution === 'APPROVED' ? 'AUTHORIZED' : 'DENIED';
-  const storedReq = requestResult.value; // already fetched above for binding hash verification
+  const storedReq = requestResult.value;
   const receiptPartial: Omit<ExecutionReceipt, 'receiptHash'> = {
     receiptId: randomUuid(),
     requestId,
