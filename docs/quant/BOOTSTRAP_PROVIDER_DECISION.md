@@ -114,15 +114,23 @@ Owner must confirm budget before any UK integration begins.
 
 ---
 
-## 5. Adapter Migration Required
+## 5. Adapter Migration — COMPLETED (2026-10-03)
 
-Existing `databento_adapter.ts` references deprecated DBEQ.BASIC:
-- `dataset: 'DBEQ.BASIC'` → **must change to** `dataset: 'EQUS.SUMMARY'`
+Migration from DBEQ.BASIC to EQUS.SUMMARY was completed in commit 874746e.
+A subsequent Codex adversarial audit (commit c203723) applied security hardening.
+
+Changes applied:
+- `dataset`: `'DBEQ.BASIC'` → `'EQUS.SUMMARY'`
 - Adapter ID: `'databento-dbeq-basic-v1'` → `'databento-equs-summary-v1'`
 - Source label: `'Databento DBEQ.BASIC ohlcv-1d'` → `'Databento EQUS.SUMMARY ohlcv-1d'`
-- SUPPORTED_MICS: expand from 5 to 13 exchanges (EQUS.SUMMARY covers all NMS)
+- OHLCV_1D_RTYPE: corrected from 32 (ohlcv-1h) to 35 (ohlcv-1d) per DBN spec
+- MIC allowlist removed: EQUS.SUMMARY covers all US NMS — no hard allowlist needed
+- Deprecation guard test added (DBEQ.BASIC guard + DBEQ.MINI guard)
+- Contract guard tests added: rtype=32 (ohlcv-1h) and rtype=33 (ohlcv-1m) rejected
+- Rights classification: GREEN → YELLOW/NOT_VERIFIED (Codex VND-01; see §2.2)
 
-A deprecation guard test must be added to prevent regression to DBEQ.BASIC.
+Rights: YELLOW/NOT_VERIFIED until written confirmation received from Databento.
+Tests: 215/215 PASS (0 failed) as of 2026-10-03.
 
 ---
 
