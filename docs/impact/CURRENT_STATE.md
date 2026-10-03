@@ -19,6 +19,7 @@
 | AEF kernel | — | — | — | — | — | — | ✅ |
 | AEF wiring | — | — | — | — | — | — | ✅ |
 | AEF atomic RPC | — | — | — | — | — | — | ✅ |
+| AEF gate resolution atomic | — | — | — | — | — | — | ✅ |
 
 ## Classification
 
@@ -32,8 +33,8 @@
 | Human gate | IMPLEMENTED — PENDING→terminal, 24h TTL, binding hash |
 | Idempotency | ENFORCED — DB UNIQUE via aef_submit_action() RPC (single transaction) |
 | Privacy | NO PII in AEF tables — opaque IDs only |
-| Migration | VALIDATED on Postgres 17 local DB (aef_test_i7); 2 migrations applied + 12 DB integration tests PASS |
-| Tests | 59 AEF+impact-lab (0 failed); 744 total suite (0 related failures) |
+| Migration | VALIDATED on Postgres 17 local DB (aef_test_i7); 3 migrations applied + 25 DB integration tests PASS |
+| Tests | 47 AEF unit + 25 DB integration (0 failed); 744+ total suite |
 | Production deploy | NOT DEPLOYED — lab only |
 
 ## Known Lab Limitations (by design)
@@ -41,14 +42,13 @@
 - IRREVERSIBLE actions always DENIED in Lab (no real executor available)
 - `aef-gate-resolver` as service_id in gate receipts is a placeholder (real gate endpoint not yet implemented)
 - Egress registry hosts list is static; production will need version control
-- Gate resolution (resolveHumanGate) is not yet atomic — updateHumanGate + insertReceipt are two DB calls; a future `resolve_gate_atomic()` RPC closes this gap (Phase 4, not authorized)
-- RPC trusts Edge Function as authorization boundary; no redundant auth.uid() re-check inside the SQL function (architectural decision escalated to Agente Martins + Paulo)
+- RPC trusts Edge Function as authorization boundary; no redundant auth.uid() re-check inside the SQL function (accepted for lab; production-hardening requirement)
+- Gate resolution (resolveHumanGate) is atomic via aef_resolve_gate() RPC (Phase 4, commit 8689c1e)
 
 ## Next Gates (not authorized by this mission)
 
 1. Gate resolution endpoint (`impact-lab/gate.ts` or `impact-gate/index.ts`)
-2. `resolve_gate_atomic()` RPC to make gate resolution atomic (Phase 4)
-3. DB-side ownership validation decision (Agente Martins + Paulo architectural gate)
-4. End-to-end production AEF path with real Supabase tables
-5. Migration applied to staging → production
-6. Merge gate after Agente Martins + Paulo review
+2. DB-side ownership validation decision (Agente Martins + Paulo architectural gate)
+3. End-to-end production AEF path with real Supabase tables
+4. Migration applied to staging → production
+5. Merge gate after Agente Martins + Paulo review

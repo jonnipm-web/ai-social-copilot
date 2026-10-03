@@ -71,32 +71,55 @@ Non-AEF actions fall through to `handleLabRequest` unchanged.
 
 Policy is versioned via `AEF_POLICY_VERSION = 'aef-policy/1+impact-i7'`. A policy upgrade must increment this string. All receipts carry the policy version at issue time for audit reconstruction.
 
-## Store Interface
+## Store Interface (Phase 3 + Phase 4)
 
 ```typescript
 interface AefStore {
-  insertRequest(req: AefExecutionRequest): Promise<AefStoreResult<void>>
   findByIdempotencyKey(key, userId, kind): Promise<AefStoreResult<AefExecutionRequest | null>>
-  insertPolicyDecision(decision: PolicyDecision): Promise<AefStoreResult<void>>
-  insertHumanGate(gate: HumanGateState): Promise<AefStoreResult<void>>
-  updateHumanGate(gateId, status, approverRef, bindingHash, now): Promise<AefStoreResult<void>>
+  // Phase 3: atomic submit — all 4 records in one operation
+  submitAtomic(req, decision, gate?, receipt): Promise<AefStoreResult<void>>
+  // Phase 4: atomic gate resolution — gate update + receipt insert in one operation
+  resolveGateAtomic(requestId, resolution, approverRef, bindingHash, receipt): Promise<AefStoreResult<void>>
   getHumanGate(requestId): Promise<AefStoreResult<HumanGateState | null>>
-  insertAttempt(attempt: ExecutionAttempt): Promise<AefStoreResult<void>>
-  insertReceipt(receipt: ExecutionReceipt): Promise<AefStoreResult<void>>
   getReceipt(requestId): Promise<AefStoreResult<ExecutionReceipt | null>>
+  getRequest(requestId): Promise<AefStoreResult<AefExecutionRequest | null>>
 }
 ```
 
 `InMemoryAefStore` implements this interface for tests only; restricted from runtime use.
+`resolveGateAtomic()` in InMemoryAefStore is JS-event-loop atomic (no awaits between state mutations).
 
 `SupabaseAefStore` (in `supabase/functions/impact-lab/supabase_store.ts`) is the
-production default — backed by the 4 `impact_aef_*` tables from migration
-`20261002010000_impact_aef_persistence.sql`. Created via `createSupabaseAefStore()`
-which fails closed if `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` are absent.
+production default — backed by the 4 `impact_aef_*` tables.
+- `submitAtomic()` → calls `aef_submit_action()` PL/pgSQL RPC (migration 20261003000000)
+- `resolveGateAtomic()` → calls `aef_resolve_gate()` PL/pgSQL RPC (migration 20261003000001)
 
-Note: `insertAttempt` is a no-op in `SupabaseAefStore` — attempts are absorbed into
-the receipt (which captures the same `executionOutcome`). A separate attempts table
-is a future migration task.
+Both RPCs are SECURITY DEFINER, search_path-fixed, and grant EXECUTE to service_role only.
+
+## Gate Resolution Architecture (Phase 4)
+
+```
+resolveHumanGate(requestId, resolution, approverRef, bindingHash, deps)
+    │
+    ├── [validate format: approverRef, bindingHash]  ← fail fast, no I/O
+    ├── store.getRequest(requestId)                   ← load for semantic binding hash verify
+    ├── buildRequestBindingHash(storedReq)            ← compute expected hash
+    ├── [compare bindingHash === expected]            ← reject if mismatch
+    ├── store.getHumanGate(requestId)                 ← get gateId for receipt construction
+    ├── [build resolution receipt in memory]
+    └── store.resolveGateAtomic(...)
+            │
+            ╔══ SupabaseAefStore ══════════════════════════════════╗
+            ║  aef_resolve_gate() PL/pgSQL RPC                     ║
+            ║  1. FOR UPDATE lock on gate (prevents double-resolve) ║
+            ║  2. Validate status = PENDING                         ║
+            ║  3. Validate clock_timestamp() < expires_at           ║
+            ║  4. UPDATE gate (status, approver_ref, resolved_at)   ║
+            ║  5. INSERT resolution receipt                         ║
+            ║  On unique_violation → RECEIPT_ALREADY_EXISTS        ║
+            ║  Any failure → ROLLBACK (gate stays PENDING)         ║
+            ╚══════════════════════════════════════════════════════╝
+```
 
 ## Receipt Hash
 
