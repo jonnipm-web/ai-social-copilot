@@ -333,11 +333,14 @@ export async function resolveHumanGate(
   // Issue receipt for gate resolution
   const executionOutcome = resolution === 'APPROVED' ? 'AUTHORIZED' : 'DENIED';
   const storedReq = requestResult.value;
+  // P1-03(b): use the original requester's UUID as callerUserId — not approverRef
+  // (approverRef is an opaque string, but caller_user_id is a uuid FK in the DB).
+  // The gate record already stores approverRef; the receipt attributes to the requester.
   const receiptPartial: Omit<ExecutionReceipt, 'receiptHash'> = {
     receiptId: randomUuid(),
     requestId,
     correlationId: storedReq.correlationId,
-    callerUserId: approverRef,
+    callerUserId: storedReq.caller.authenticatedUserId,
     projectId: storedReq.caller.projectId,
     serviceId: 'aef-gate-resolver',
     intentKind: storedReq.intent.kind,
