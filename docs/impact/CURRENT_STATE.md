@@ -18,6 +18,7 @@
 | Egress pinning | — | — | — | — | — | — | ✅ |
 | AEF kernel | — | — | — | — | — | — | ✅ |
 | AEF wiring | — | — | — | — | — | — | ✅ |
+| AEF atomic RPC | — | — | — | — | — | — | ✅ |
 
 ## Classification
 
@@ -29,10 +30,10 @@
 | Consequential actions | AEF-gated — submitAction before any class C execution |
 | Audit trail | DURABLE — append-only receipts, immutable triggers |
 | Human gate | IMPLEMENTED — PENDING→terminal, 24h TTL, binding hash |
-| Idempotency | ENFORCED — DB unique constraint (SupabaseAefStore) + in-memory index |
+| Idempotency | ENFORCED — DB UNIQUE via aef_submit_action() RPC (single transaction) |
 | Privacy | NO PII in AEF tables — opaque IDs only |
-| Migration | VALIDATED on Postgres 17.11 local cluster |
-| Tests | 742 / 742 (0 failed) — +10 I7 AEF integration tests |
+| Migration | VALIDATED on Postgres 17 local DB (aef_test_i7); 2 migrations applied + 12 DB integration tests PASS |
+| Tests | 59 AEF+impact-lab (0 failed); 744 total suite (0 related failures) |
 | Production deploy | NOT DEPLOYED — lab only |
 
 ## Known Lab Limitations (by design)
@@ -40,12 +41,14 @@
 - IRREVERSIBLE actions always DENIED in Lab (no real executor available)
 - `aef-gate-resolver` as service_id in gate receipts is a placeholder (real gate endpoint not yet implemented)
 - Egress registry hosts list is static; production will need version control
-- `insertAttempt` is a no-op in `SupabaseAefStore` (attempts absorbed into receipts; separate table is a future migration)
-- Concurrency atomicity: DB UNIQUE constraint enforced by Postgres; InMemoryAefStore is non-atomic (tests/Lab only)
+- Gate resolution (resolveHumanGate) is not yet atomic — updateHumanGate + insertReceipt are two DB calls; a future `resolve_gate_atomic()` RPC closes this gap (Phase 4, not authorized)
+- RPC trusts Edge Function as authorization boundary; no redundant auth.uid() re-check inside the SQL function (architectural decision escalated to Agente Martins + Paulo)
 
 ## Next Gates (not authorized by this mission)
 
 1. Gate resolution endpoint (`impact-lab/gate.ts` or `impact-gate/index.ts`)
-2. End-to-end production AEF path with real Supabase tables
-3. Migration applied to staging → production
-4. Merge gate after Agente Martins + Paulo review
+2. `resolve_gate_atomic()` RPC to make gate resolution atomic (Phase 4)
+3. DB-side ownership validation decision (Agente Martins + Paulo architectural gate)
+4. End-to-end production AEF path with real Supabase tables
+5. Migration applied to staging → production
+6. Merge gate after Agente Martins + Paulo review
