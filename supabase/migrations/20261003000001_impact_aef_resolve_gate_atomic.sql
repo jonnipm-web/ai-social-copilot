@@ -47,11 +47,17 @@ SECURITY DEFINER
 SET search_path = public, pg_catalog
 AS $$
 DECLARE
-  v_gate    public.impact_aef_gates%ROWTYPE;
-  v_request public.impact_aef_requests%ROWTYPE;
+  v_gate            public.impact_aef_gates%ROWTYPE;
+  v_request         public.impact_aef_requests%ROWTYPE;
   v_policy_outcome  text;
   v_exec_outcome    text;
+  v_now             timestamptz;  -- server-authoritative time; not caller-supplied
 BEGIN
+  -- v_now is captured once at function start. All expiry decisions and
+  -- resolved_at timestamps use this server time, not p_issued_at, so a
+  -- caller cannot supply a backdated timestamp to bypass real-time expiry.
+  v_now := clock_timestamp();
+
   -- ── parameter validation ──────────────────────────────────────────────────
   IF p_resolution NOT IN ('APPROVED', 'REJECTED') THEN
     RAISE EXCEPTION 'AEF_INVALID_PARAM: resolution must be APPROVED or REJECTED';
@@ -86,11 +92,12 @@ BEGIN
   END IF;
 
   -- ── 3. validate expiry ────────────────────────────────────────────────────
-  -- >= to reject resolution exactly at the expiry instant (consistent with kernel).
-  IF p_issued_at >= v_gate.expires_at THEN
+  -- Uses v_now (server time) — not p_issued_at — so a caller cannot supply a
+  -- backdated timestamp to bypass real-time expiry (P1-01 fix).
+  IF v_now >= v_gate.expires_at THEN
     -- Atomically expire the gate; no receipt for EXPIRED (system timeout, not resolution).
     UPDATE public.impact_aef_gates
-    SET status = 'EXPIRED', resolved_at = p_issued_at
+    SET status = 'EXPIRED', resolved_at = v_now
     WHERE gate_id = v_gate.gate_id;
     RETURN jsonb_build_object('ok', false, 'code', 'GATE_EXPIRED');
   END IF;
@@ -113,7 +120,7 @@ BEGIN
     status       = p_resolution,
     approver_ref = p_approver_ref,
     binding_hash = p_binding_hash,
-    resolved_at  = p_issued_at
+    resolved_at  = v_now  -- server time; not caller-supplied
   WHERE gate_id = v_gate.gate_id;
 
   -- ── 6. insert resolution receipt ─────────────────────────────────────────
