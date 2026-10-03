@@ -68,6 +68,11 @@ class AppConstants {
   static const routeProjects                      = '/projects';
   static const routeRoiTracker                    = '/roi-tracker';
 
+  // MACRO-08 — IVE Analysis (per-project insight vertical)
+  static const routeProjectAnalysis      = '/projects/:id/analysis';
+  static const originIveAnalysis         = 'ive_analysis';
+  static const insightFreeMonthlyLimit   = 5;
+
   // Fase 10A — Business Operating System
   static const routeEcosystem            = '/ecosystem';
   static const routeAdvisorOnboarding    = '/advisor-onboarding';

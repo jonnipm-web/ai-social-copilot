@@ -621,6 +621,9 @@ class _ProjectCommandCenterScreenState
               ? () => context.go(AppConstants.routeMarketIntelligenceHub
                   .replaceFirst(':id', p.marketAnalysisId!))
               : null,
+          onIveAnalysis: () => context.push(
+            AppConstants.routeProjectAnalysis.replaceFirst(':id', p.id),
+          ),
         );
       },
     );
@@ -675,6 +678,7 @@ class _ProjectCard extends StatelessWidget {
     required this.onDelete,
     this.ecosystemScore,
     this.onAnalyze,
+    this.onIveAnalysis,
   });
 
   final Project project;
@@ -684,6 +688,7 @@ class _ProjectCard extends StatelessWidget {
   final void Function(String) onStatusChange;
   final VoidCallback onDelete;
   final VoidCallback? onAnalyze;
+  final VoidCallback? onIveAnalysis;
 
   Color get _statusColor {
     switch (project.status) {
@@ -870,6 +875,12 @@ class _ProjectCard extends StatelessWidget {
                         label: 'Análise',
                         color: const Color(0xFF00BCD4),
                         onTap: onAnalyze!),
+                  if (onIveAnalysis != null)
+                    _ActionBtn(
+                        icon: Icons.psychology_rounded,
+                        label: 'IVE',
+                        color: const Color(0xFF6C63FF),
+                        onTap: onIveAnalysis!),
                   _ActionBtn(
                     icon: Icons.play_arrow_rounded,
                     label: 'Ativar',
