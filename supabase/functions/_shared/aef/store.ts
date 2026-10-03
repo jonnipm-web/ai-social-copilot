@@ -6,12 +6,11 @@
  * idempotency enforcement, gate state machine) so the kernel can be
  * tested without a real database.
  *
- * Note on attempt tracking: executions attempts are NOT persisted in either
- * the in-memory or Supabase store. The receipt (issued atomically with the
- * request) is the canonical record of every submission outcome. A dedicated
- * attempts table (with retry-level granularity) is a future migration task.
- * The AefStore interface does not expose an insertAttempt method to avoid
- * pretending persistence exists where it does not.
+ * Phase 3: submitAtomic() replaces individual insert methods.
+ * Phase 4: resolveGateAtomic() replaces updateHumanGate() + insertReceipt().
+ *
+ * Note on attempt tracking: execution attempts are NOT persisted.
+ * The receipt (issued atomically with the request) is the canonical record.
  */
 import type {
   AefExecutionRequest,
@@ -37,9 +36,8 @@ export interface AefStore {
   /**
    * Atomic submit: persists request + policy decision + optional human gate +
    * receipt in one all-or-nothing operation. Returns ALREADY_EXISTS if the
-   * idempotency key is already present (unique_violation); returns
-   * AEF_PERSISTENCE_UNAVAILABLE on any other failure. On success every record
-   * is guaranteed to be durable and consistent — no partial state is possible.
+   * idempotency key is already present; AEF_PERSISTENCE_UNAVAILABLE on other
+   * failures. On success every record is durable — no partial state possible.
    */
   submitAtomic(
     request: AefExecutionRequest,
@@ -48,23 +46,29 @@ export interface AefStore {
     receipt: ExecutionReceipt,
   ): Promise<AefStoreResult<void>>;
 
-  /** Update human gate status (PENDING → APPROVED/REJECTED/EXPIRED only). */
-  updateHumanGate(
-    gateId: string,
-    status: Exclude<HumanGateStatus, 'PENDING'>,
-    approverRef: string | null,
-    bindingHash: string | null,
-    resolvedAt: string,
+  /**
+   * Atomic gate resolution: validates gate state, updates gate status +
+   * approver_ref + binding_hash + resolved_at, AND inserts the resolution
+   * receipt, all in a single all-or-nothing operation.
+   *
+   * Returns:
+   *   ok: true           — gate resolved, receipt persisted
+   *   GATE_NOT_FOUND     — no gate exists for this requestId
+   *   GATE_ALREADY_RESOLVED — gate is not PENDING
+   *   GATE_EXPIRED       — gate expired; atomically marks EXPIRED, no receipt
+   *   RECEIPT_ALREADY_EXISTS — receipt PK collision (full rollback)
+   *   AEF_PERSISTENCE_UNAVAILABLE — DB error
+   */
+  resolveGateAtomic(
+    requestId: string,
+    resolution: 'APPROVED' | 'REJECTED',
+    approverRef: string,
+    bindingHash: string,
+    receipt: ExecutionReceipt,
   ): Promise<AefStoreResult<void>>;
 
   /** Return the current gate state for a request. */
   getHumanGate(requestId: string): Promise<AefStoreResult<HumanGateState | null>>;
-
-  /**
-   * Persist a gate-resolution receipt (approve/reject path).
-   * Only used by resolveHumanGate, not by submitAction.
-   */
-  insertReceipt(receipt: ExecutionReceipt): Promise<AefStoreResult<void>>;
 
   /** Return receipt by requestId (most recent). */
   getReceipt(requestId: string): Promise<AefStoreResult<ExecutionReceipt | null>>;
@@ -75,7 +79,17 @@ export interface AefStore {
 
 export type AefStoreResult<T> =
   | { readonly ok: true; readonly value: T }
-  | { readonly ok: false; readonly code: 'AEF_PERSISTENCE_UNAVAILABLE' | 'ALREADY_EXISTS' | 'NOT_FOUND' };
+  | {
+      readonly ok: false;
+      readonly code:
+        | 'AEF_PERSISTENCE_UNAVAILABLE'
+        | 'ALREADY_EXISTS'
+        | 'NOT_FOUND'
+        | 'GATE_NOT_FOUND'
+        | 'GATE_ALREADY_RESOLVED'
+        | 'GATE_EXPIRED'
+        | 'RECEIPT_ALREADY_EXISTS';
+    };
 
 // ── In-memory store ──────────────────────────────────────────────────────────
 
@@ -123,31 +137,51 @@ export class InMemoryAefStore implements AefStore {
     return { ok: true, value: undefined };
   }
 
-  async updateHumanGate(
-    gateId: string,
-    status: Exclude<HumanGateStatus, 'PENDING'>,
-    approverRef: string | null,
-    bindingHash: string | null,
-    resolvedAt: string,
+  resolveGateAtomic(
+    requestId: string,
+    resolution: 'APPROVED' | 'REJECTED',
+    approverRef: string,
+    bindingHash: string,
+    receipt: ExecutionReceipt,
   ): Promise<AefStoreResult<void>> {
-    const existing = this.gates.get(gateId);
-    if (!existing) return { ok: false, code: 'NOT_FOUND' };
-    if (existing.status !== 'PENDING') return { ok: false, code: 'ALREADY_EXISTS' };
-    this.gates.set(gateId, { ...existing, status, approverRef, bindingHash, resolvedAt });
-    return { ok: true, value: undefined };
+    // All operations below are synchronous — JS-event-loop atomic.
+    const gateId = this.gatesByRequest.get(requestId);
+    if (!gateId) return Promise.resolve({ ok: false, code: 'GATE_NOT_FOUND' });
+    const gate = this.gates.get(gateId);
+    if (!gate) return Promise.resolve({ ok: false, code: 'GATE_NOT_FOUND' });
+
+    if (gate.status !== 'PENDING') {
+      return Promise.resolve({ ok: false, code: 'GATE_ALREADY_RESOLVED' });
+    }
+
+    // Expiry check: consistent with the RPC (>= to reject at the expiry instant).
+    if (new Date(receipt.issuedAt).getTime() >= new Date(gate.expiresAt).getTime()) {
+      this.gates.set(gateId, { ...gate, status: 'EXPIRED', resolvedAt: receipt.issuedAt });
+      return Promise.resolve({ ok: false, code: 'GATE_EXPIRED' });
+    }
+
+    // Receipt ID uniqueness (mirrors receipt PK constraint).
+    if (this.receipts.has(receipt.receiptId)) {
+      return Promise.resolve({ ok: false, code: 'RECEIPT_ALREADY_EXISTS' });
+    }
+
+    // Atomic update: gate state + receipt (no awaits → event-loop atomic).
+    this.gates.set(gateId, {
+      ...gate,
+      status: resolution,
+      approverRef,
+      bindingHash,
+      resolvedAt: receipt.issuedAt,
+    });
+    this.receipts.set(receipt.receiptId, receipt);
+    this.receiptsByRequest.set(requestId, receipt.receiptId);
+    return Promise.resolve({ ok: true, value: undefined });
   }
 
   async getHumanGate(requestId: string): Promise<AefStoreResult<HumanGateState | null>> {
     const gateId = this.gatesByRequest.get(requestId);
     if (!gateId) return { ok: true, value: null };
     return { ok: true, value: this.gates.get(gateId) ?? null };
-  }
-
-  async insertReceipt(receipt: ExecutionReceipt): Promise<AefStoreResult<void>> {
-    if (this.receipts.has(receipt.receiptId)) return { ok: false, code: 'ALREADY_EXISTS' };
-    this.receipts.set(receipt.receiptId, receipt);
-    this.receiptsByRequest.set(receipt.requestId, receipt.receiptId);
-    return { ok: true, value: undefined };
   }
 
   async getReceipt(requestId: string): Promise<AefStoreResult<ExecutionReceipt | null>> {
