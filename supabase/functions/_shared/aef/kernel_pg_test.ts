@@ -499,19 +499,29 @@ pgTest('DG-02 aef_resolve_gate: REJECTED happy path — gate REJECTED + receipt 
 pgTest('DG-03 aef_resolve_gate: expired gate → GATE_EXPIRED, gate marked EXPIRED, no receipt', async () => {
   const userId = uuid(); const invId = uuid();
   await seedUser(userId); await seedInvestigation(invId, userId, null);
-  const { reqId, gateId } = await seedGate(userId, invId);
 
-  // Gate expires_at = FUTURE (+24 h). Pass p_issued_at = +48 h so that
-  // p_issued_at >= expires_at → the RPC marks the gate EXPIRED and returns GATE_EXPIRED.
-  // (Updating expires_at directly would trigger the gate state-machine trigger.)
-  const AFTER_FUTURE = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+  // Create a gate with expires_at already in the past by passing it directly to
+  // aef_submit_action (the submit RPC does not enforce expires_at > now).
+  // The RPC now uses clock_timestamp() for the expiry check (P1-01 fix), so
+  // we need a gate that is already expired at server time — not a future-dated one.
+  const PAST_EXPIRY = new Date(Date.now() - 60000).toISOString();
+  const reqId = uuid(); const gateId = uuid(); const submitReceiptId = uuid();
+  const submitRes = await callRpc({
+    p_request_id: reqId, p_correlation_id: 'dg-03-exp', p_caller_user_id: userId,
+    p_project_id: null, p_service_id: 'impact-lab', p_intent_kind: 'REQUEST_MANUAL_VERIFICATION',
+    p_investigation_id: invId, p_idempotency_key: uuid(), p_classification: 'CONSEQUENTIAL',
+    p_requested_at: NOW, p_policy_outcome: 'REQUIRES_HUMAN_REVIEW', p_policy_version: POLICY_VERSION,
+    p_policy_reason: 'human gate required', p_gate_id: gateId, p_gate_expires_at: PAST_EXPIRY,
+    p_receipt_id: submitReceiptId, p_receipt_hash: hex64(), p_execution_outcome: 'REQUIRES_HUMAN_REVIEW', p_issued_at: NOW,
+  });
+  if (!submitRes.ok) throw new Error(`DG-03 seed failed: ${JSON.stringify(submitRes)}`);
 
   const resReceiptId = uuid();
   const res = await callResolveGate({
     p_request_id: reqId, p_resolution: 'APPROVED',
     p_approver_ref: 'approver-dg03', p_binding_hash: hex64(),
     p_receipt_id: resReceiptId, p_receipt_hash: hex64(),
-    p_policy_version: POLICY_VERSION, p_issued_at: AFTER_FUTURE,
+    p_policy_version: POLICY_VERSION, p_issued_at: NOW,
   });
   assertEquals(res.ok, false);
   assertEquals(res.code, 'GATE_EXPIRED');
@@ -716,4 +726,48 @@ pgTest('DG-11 aef_resolve_gate: receipt caller_user_id is requester UUID not app
     userId,
     'receipt caller_user_id must be the original requester UUID (P1-03b fix), not approverRef',
   );
+});
+
+// ── Role-denial tests (DG-12/DG-13) ─────────────────────────────────────────
+
+// Helper: run a query on the same connection after SET ROLE, to verify permission denial.
+async function queryAsRole(role: string, sql: string, params: unknown[] = []): Promise<{ rows: Record<string, unknown>[]; error?: unknown }> {
+  const { Client } = await import('https://deno.land/x/postgres@v0.17.0/mod.ts');
+  const client = new Client(pgUrl!);
+  await client.connect();
+  try {
+    await client.queryObject(`SET ROLE ${role}`);
+    const result = await client.queryObject(sql, params);
+    return { rows: result.rows as Record<string, unknown>[] };
+  } catch (e) {
+    return { rows: [], error: e };
+  } finally {
+    await client.end();
+  }
+}
+
+// SQLSTATE 42501 = insufficient_privilege. The human-readable message is locale-dependent
+// (e.g. "permission denied" in EN, "permissão negada" in PT). Match both.
+const PERMISSION_DENIED_RE = /42501|permission denied|insufficient_privilege|permissão negada|permissao negada/i;
+
+pgTest('DG-12 ROLE_DENIAL: anon role cannot call aef_resolve_gate (P3-01 REVOKE)', async () => {
+  const result = await queryAsRole(
+    'anon',
+    `SELECT aef_resolve_gate($1, $2, $3, $4, $5, $6, $7, $8) AS r`,
+    [uuid(), 'APPROVED', 'approver-dg12', hex64(), uuid(), hex64(), POLICY_VERSION, NOW],
+  );
+  assertExists(result.error, 'anon role must not be able to call aef_resolve_gate');
+  const errStr = String(result.error);
+  assertEquals(PERMISSION_DENIED_RE.test(errStr), true, `expected permission denied, got: ${errStr}`);
+});
+
+pgTest('DG-13 ROLE_DENIAL: authenticated role cannot call aef_resolve_gate (P3-01 REVOKE)', async () => {
+  const result = await queryAsRole(
+    'authenticated',
+    `SELECT aef_resolve_gate($1, $2, $3, $4, $5, $6, $7, $8) AS r`,
+    [uuid(), 'APPROVED', 'approver-dg13', hex64(), uuid(), hex64(), POLICY_VERSION, NOW],
+  );
+  assertExists(result.error, 'authenticated role must not be able to call aef_resolve_gate');
+  const errStr = String(result.error);
+  assertEquals(PERMISSION_DENIED_RE.test(errStr), true, `expected permission denied, got: ${errStr}`);
 });
