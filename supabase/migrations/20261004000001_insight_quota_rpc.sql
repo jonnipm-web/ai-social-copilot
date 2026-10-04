@@ -43,8 +43,12 @@ BEGIN
     RAISE EXCEPTION 'project_not_found';
   END IF;
 
-  -- Resolve entitlement (missing profile → treat as free)
-  SELECT (role IN ('pro', 'premium', 'admin'))
+  -- Resolve entitlement (missing profile → treat as free).
+  -- COALESCE required: SELECT INTO sets target to NULL when no row is
+  -- found (PL/pgSQL documented behaviour). Without COALESCE, a missing
+  -- profile row makes v_is_pro NULL; IF NOT NULL evaluates as false in
+  -- PL/pgSQL → quota block skipped → unlimited inserts. (Codex P1)
+  SELECT COALESCE((role IN ('pro', 'premium', 'admin')), false)
     INTO v_is_pro
     FROM public.profiles
    WHERE id = v_uid;
