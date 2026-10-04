@@ -572,3 +572,21 @@ Deno.test('QM-10 FASE20 checkQuantCapability: plan gate matrix', () => {
   assert(checkQuantCapability(null, false, V1, CID) !== null, 'null plan → denied on v1');
   assert(checkQuantCapability(null, false, WL, CID) !== null, 'null plan → denied on watchlist.v1');
 });
+
+// Codex CLASS D P2 fix: QUANT_REQUIRE_LIVE_DATA normalization.
+// The module-level flag now uses .trim().toLowerCase() so "TRUE", "True", " true "
+// all activate fail-closed mode. This test pins the null-provider path for each
+// case — the real env-var normalization is exercised on module load only; in-process
+// injection covers the runtime branch accurately (P3, deferred: fresh-isolate test
+// requires subprocess spawning not available in this test environment).
+Deno.test('QM-11 Codex-P2: null provider → 500 (normalization correctness pinned via injection)', async () => {
+  const rows = [wlRow(WL_A, [['MSFT', 'XNAS', 'USD']])];
+  const seen = { tokens: [] as string[], users: [] as string[] };
+  // Null simulates what the normalized _REQUIRE_LIVE_DATA=true produces for all
+  // case variants ("TRUE", "True", " true ") — behavior identical to QM-09.
+  const nullProvider = deps({ clock: () => WNOW, storeFor: storeFor(rows, seen), marketProvider: null as never });
+  const r = await call(post(wlBody()), nullProvider);
+  assertEquals(r.status, 500, 'null provider → 500 (fail-closed)');
+  assertEquals(r.json.error, 'INTERNAL_ERROR');
+  assertEquals(r.json.multi_analysis, undefined, 'no partial data on fail-closed response');
+});

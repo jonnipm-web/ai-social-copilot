@@ -99,7 +99,8 @@ const _LIVE_HTTP_PROVIDER: MarketDataProvider | null = Deno.env.get('DATABENTO_A
 // with live data). Absent or 'false' → synthetic fallback is allowed (dev/CI/LAB).
 // This prevents silent degradation to synthetic data in production deployments
 // where the API key was accidentally omitted.
-const _REQUIRE_LIVE_DATA = Deno.env.get('QUANT_REQUIRE_LIVE_DATA') === 'true';
+// Codex P2 fix: normalize so "TRUE" / " true " / "True" all behave identically to "true".
+const _REQUIRE_LIVE_DATA = (Deno.env.get('QUANT_REQUIRE_LIVE_DATA') ?? '').trim().toLowerCase() === 'true';
 const _LIVE_CONFIG_ERROR: string | null = _REQUIRE_LIVE_DATA && !_LIVE_HTTP_PROVIDER
   ? 'QUANT_REQUIRE_LIVE_DATA=true but DATABENTO_API_KEY is not configured'
   : null;
