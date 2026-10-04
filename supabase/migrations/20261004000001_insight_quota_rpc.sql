@@ -73,7 +73,7 @@ BEGIN
     )
     VALUES (
       v_uid, p_project_id, p_title, p_description,
-      p_confidence, p_sources, p_action_steps, 'ive_analysis',
+      p_confidence, to_jsonb(p_sources), to_jsonb(p_action_steps), 'ive_analysis',
       p_opportunity_type
     )
     RETURNING *;
