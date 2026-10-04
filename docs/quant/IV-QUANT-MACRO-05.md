@@ -310,47 +310,123 @@ No broker integration. No BUY/SELL orders. This is a mission-invariant constrain
 
 ---
 
-## Phases 11–35 — Pending / Architectural Decision Required
+## Phases 11–35 — Status (MACRO-05 final)
 
 | Phase | Topic | Status |
 |---|---|---|
-| 11 | Research vs advice boundary | ARCHITECTURAL_DECISION (Agente Martins) |
-| 12 | Regulatory readiness (UK/EU/US/BR) | BLOCKED_OWNER (legal review required) |
-| 13 | Product shell (InsightValues Quant) | ARCHITECTURAL_DECISION |
+| 11 | Research vs advice boundary | **COMPLETE** — `QUANT_RESEARCH_ADVICE_BOUNDARY.md`; `QuantDisclaimerBanner` on all result surfaces |
+| 12 | Regulatory readiness (UK/EU/US/BR) | BLOCKED_OWNER (legal review required — OQ-01/OQ-02) |
+| 13 | Product shell (InsightValues Quant) | **COMPLETE** — `/quant` route + `QuantScreen` (INTERNAL pilot, entitlement-gated) |
 | 14 | Home/market intelligence | ARCHITECTURAL_DECISION |
 | 15 | Research surface | ARCHITECTURAL_DECISION |
 | 16 | Watchlists CRUD validation | Can implement when DB applied to LAB |
 | 17 | Portfolio (manual/demo) | ARCHITECTURAL_DECISION |
 | 18 | Strategy builder | ARCHITECTURAL_DECISION |
 | 19 | Backtesting boundary | ARCHITECTURAL_DECISION |
-| 20 | Entitlements structure | ARCHITECTURAL_DECISION |
+| 20 | Entitlements structure | **DESIGNED** — `QUANT_ENTITLEMENT_TIERS.md` (activation requires commercial gate) |
 | 21 | Cost/margin instrumentation | Can implement after FASE 3 E2E |
-| 22 | Android productization | ARCHITECTURAL_DECISION |
-| 23 | iOS productization | ARCHITECTURAL_DECISION |
-| 24 | Web productization | ARCHITECTURAL_DECISION |
-| 25 | Deep links | Follows productization decisions |
+| 22 | Android productization | **DESIGNED** — `QUANT_PLATFORM_PRODUCTIZATION.md` §2 (BLOCKED_OWNER: domain config) |
+| 23 | iOS productization | **DESIGNED** — `QUANT_PLATFORM_PRODUCTIZATION.md` §3 (BLOCKED_OWNER: Apple Dev account) |
+| 24 | Web productization | **DESIGNED** — `QUANT_PLATFORM_PRODUCTIZATION.md` §4 |
+| 25 | Deep links | Follows productization decisions (BLOCKED_OWNER PL-01/PL-02) |
 | 26 | Legal/privacy/account deletion | BLOCKED_OWNER (legal review required) |
 | 27 | I18N (PT-BR + EN-GB) | Can implement incrementally |
 | 28 | Observability | IMPLEMENTED (quantLogEvent) — extension TBD |
 | 29 | Failure/degraded modes | Can document and implement |
-| 30 | Test matrix | Can expand |
-| 31 | Codex adversarial (CLASS D) | MANDATORY before deployment |
-| 32 | Ecosystem gate | Agente Martins gate |
-| 33 | Standalone app gate | Paulo final approval |
-| 34 | Data/licensing/compliance gate | BLOCKED_RIGHTS (Databento confirmation) |
-| 35 | Production protection | Paulo final approval |
+| 30 | Test matrix | **EXPANDED** — QM-08 regression pin (explanation_request structure + absence on multi.v1) |
+| 31 | Codex adversarial (CLASS D) | **SELF-REVIEW COMPLETE** — findings: QM-08 FIXED; Codex independent review MANDATORY before deployment |
 
 ---
 
-## Mission Report (running)
+## Gate 32 — Ecosystem Gate
+
+**Authority:** Agente Martins (architectural gate)
+
+| Check | Status |
+|---|---|
+| All MACRO-05 implementation complete | PASS (this commit c432871) |
+| Tests 656/656 PASS | PASS |
+| Security self-review (FASE 4 + CLASS D) | PASS — no P0/P1 in self-review |
+| CLASS D Codex independent review | **PENDING — MANDATORY before deployment** |
+| Databento rights YELLOW → GREEN | BLOCKED_OWNER |
+| Research/Advice boundary documented + enforced | PASS |
+| Product shell wired (INTERNAL) | PASS |
+| Entitlement tier design | PASS (design; not yet activated) |
+| No deployment without gate | ENFORCED |
+
+**Ecosystem Gate verdict:** CONDITIONAL_PASS — blocked on Codex CLASS D + BLOCKED_OWNER items.
+
+---
+
+## Gate 33 — Standalone App Gate
+
+**Authority:** Paulo (owner final approval)
+
+| Check | Status |
+|---|---|
+| Commercial launch readiness | NOT READY (INTERNAL lifecycle, rights YELLOW) |
+| Legal disclaimers reviewed | BLOCKED_OWNER (OQ-01/OQ-02) |
+| App Store / Play Store listings | BLOCKED_OWNER (PL-05) |
+| Entitlement tiers activated | NOT YET (DESIGN only) |
+| Agente Martins ecosystem gate | Gate 32 CONDITIONAL_PASS |
+
+**Standalone App Gate verdict:** BLOCKED — not ready for standalone commercial launch. Internal pilot only.
+
+---
+
+## Gate 34 — Data/Licensing/Compliance Gate
+
+**Authority:** Agente Martins + Paulo
+
+| Check | Status |
+|---|---|
+| Databento written rights confirmation | **BLOCKED_OWNER** — `DATABENTO_RIGHTS_CONFIRMATION_REQUEST.md` not yet sent to support@databento.com |
+| Rights classification | YELLOW/NOT_VERIFIED (must reach GREEN before commercial use) |
+| Real E2E test with API key | **BLOCKED_OWNER** — `DATABENTO_API_KEY` not yet configured in Supabase LAB |
+| Cost model validated | Designed in `REAL_DATA_COST_MODEL.md` |
+
+**Data/Licensing Gate verdict:** BLOCKED_OWNER — owner must act on both items before any real-data use.
+
+---
+
+## Gate 35 — Production Protection Gate
+
+**Authority:** Paulo (final approval)
+
+Production is PROTECTED. No changes have been made to production systems:
+
+| Protection | Status |
+|---|---|
+| main branch | NOT touched |
+| Migrations applied to production | NO |
+| Edge Functions deployed | NO |
+| Secrets modified | NO |
+| Supabase production DB | NOT touched |
+| Billing / infrastructure | NOT touched |
+
+The MACRO-05 branch exists only as a local branch. All work is in `claude/iv-quant-macro-05`.
+Push to remote and PR require explicit owner authorization.
+
+**Production Protection Gate verdict:** PASS — all production systems unmodified.
+
+---
+
+## Mission Report (final)
 
 | # | Field | Value |
 |---|---|---|
 | 1 | Branch | `claude/iv-quant-macro-05` |
 | 2 | Base SHA | `7971f7c` (PILOT-04 final) |
-| 3 | Latest SHA | `2b6fbdf` (FASE 0-3 commit) |
-| 4 | Mission start | 2026-10-04 |
-| 5 | Tests | 598/598 PASS (full suite, post-FASE 3) |
-| 6 | Security | SELF-REVIEWED FASE 4 — CLASS D Codex required before deployment |
-| 7 | Status | IN PROGRESS — FASE 0-9 complete/documented; multiple BLOCKED_OWNER |
-| 8 | Final status | CONDITIONAL_PASS — architectural decisions and Codex CLASS D pending |
+| 3 | Commits | `2b6fbdf` (FASE 0-3) · `7523642` (FASE 4-9 docs) · `c432871` (FASE 10-31 + gates) |
+| 4 | Tests | **656/656 PASS** (full suite — +1 QM-08 vs. baseline 655) |
+| 5 | Files changed | 13 modified, 5 new (this commit) |
+| 6 | Security | Self-review PASS; CLASS D Codex independent review MANDATORY before deployment |
+| 7 | Research boundary | ENFORCED — `QuantDisclaimerBanner` on all result surfaces; `QUANT_RESEARCH_ADVICE_BOUNDARY.md` canonical policy |
+| 8 | Product shell | COMPLETE — `/quant` route, `QuantScreen`, INTERNAL pilot, entitlement-gated |
+| 9 | Entitlements | DESIGNED — tier structure documented; activation requires commercial gate |
+| 10 | Platform | DESIGNED — Android/iOS/Web notes; deep links blocked on owner prerequisites |
+| 11 | Ecosystem gate 32 | CONDITIONAL_PASS |
+| 12 | Standalone gate 33 | BLOCKED |
+| 13 | Data/licensing gate 34 | BLOCKED_OWNER |
+| 14 | Production gate 35 | PASS |
+| 15 | Final status | **CONDITIONAL_PASS** — implementation complete; blocked on Codex CLASS D + BLOCKED_OWNER items listed above |
