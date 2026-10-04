@@ -7207,4 +7207,37 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get impactEntitlementProDescription =>
       'Available on the PRO plan or higher.';
+
+  @override
+  String get impactClaimVerificationStatus => 'Verification status';
+
+  @override
+  String get impactClaimStatusNote =>
+      'This status reflects evidence collected up to this date. It is not a final verdict on the organisation.';
+
+  @override
+  String get impactLegalSourcesNote =>
+      'Sources: public registers, voluntary disclosures, and verified third-party data. Absence of records does not imply irregularity.';
+
+  @override
+  String get impactLegalAiNote =>
+      'Organised with AI assistance. Every conclusion should be independently verified before use.';
+
+  @override
+  String get impactLegalFalsePositiveNote =>
+      'Automated results may contain inaccuracies. Errors can be flagged via support.';
+
+  @override
+  String get impactIveBoundaryFact => 'FACT (server-verified)';
+
+  @override
+  String get impactIveInference =>
+      'INFERENCE (derived from facts — not independently verified)';
+
+  @override
+  String get impactIveHypothesis => 'HYPOTHESIS (unverified)';
+
+  @override
+  String get impactIveCannotInvent =>
+      'IVE may summarise existing evidence but cannot invent, assume or verify evidence on its own.';
 }

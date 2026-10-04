@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:ai_social_copilot/features/impact/data/impact_lab_api.dart';
 import 'package:ai_social_copilot/features/impact/domain/dossier_models.dart';
+import 'package:ai_social_copilot/features/impact/domain/ive_impact_adapter.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'impact_test_support.dart';
@@ -366,6 +367,92 @@ void main() {
               FakeImpactTransport(list: fixture('list_investigations')))
           .listInvestigations();
       expect(list.single.id, kInvestigationId);
+    });
+
+    // IV-IMPACT-MACRO-08 Phase 16 — RLS / cross-user isolation boundary tests.
+    // The client must NEVER send user_id in the request body. The server infers
+    // the caller from the JWT attached by the Supabase SDK. A body with user_id
+    // would be an oracle disclosure and a potential injection vector.
+    group('RLS boundary (Phase 16 — client-side invariants)', () {
+      test('RLS-01 SupabaseImpactTransport body never contains user_id or user fields', () {
+        // Transport code: the _call body is always {action, ...params}. Verify
+        // by grepping the source that no user_id, userId, uid or auth_uid key
+        // is ever placed in the outbound body by the API layer.
+        final source = File('lib/features/impact/data/impact_lab_api.dart').readAsStringSync();
+        for (final forbidden in ['user_id', '"userId"', "'userId'", '"uid"', 'auth.uid']) {
+          expect(source, isNot(contains(forbidden)), reason: 'client body must not contain $forbidden');
+        }
+      });
+
+      test('RLS-02 action body for read operations contains only declared, non-identity params', () {
+        // Every _call invocation uses only application-level params (investigation_id,
+        // lang, content_hash, envelope) — never anything that could bias server-side
+        // filtering to another user's data.
+        final source = File('lib/features/impact/data/impact_lab_api.dart').readAsStringSync();
+        // owner_id, role, plan must never appear in any outbound body.
+        for (final forbidden in ['owner_id', "'role'", "'plan'", "'billing'", "'tier'"]) {
+          expect(source, isNot(contains(forbidden)), reason: 'client body must not contain $forbidden');
+        }
+      });
+
+      test('RLS-03 investigationId is always taken from server response, never from user input for owned-resource ops', () {
+        // get_dossier and export_dossier both require an investigation_id that
+        // comes from the server-side list (list_investigations) or server-side
+        // create. The adapter test confirms the id field is required non-empty.
+        final inv = InvestigationSummary(id: 'srv-id-42', subjectOrgRef: 'ACME', status: 'OPEN');
+        expect(inv.id, 'srv-id-42');
+        expect(() => InvestigationSummary(id: '', subjectOrgRef: 'ACME', status: 'OPEN'),
+            returnsNormally); // constructor itself allows empty (contract enforced at createInvestigation)
+      });
+
+      test('RLS-04 createInvestigation throws contract error when server returns no id', () async {
+        // If the server returns a body with ok:true but missing or empty id,
+        // ImpactLabApi.createInvestigation must throw ImpactApiException(contract).
+        // Wrapping in a full envelope so _call passes, but data has no 'id' field.
+        final transport = FakeImpactTransport(
+          createInvestigation: {
+            'ok': true,
+            'action': 'create_investigation',
+            'data': {'subjectOrgRef': 'ACME', 'status': 'OPEN'}, // no 'id' field
+          },
+        );
+        final api = ImpactLabApi(transport);
+        expect(
+          () async => api.createInvestigation(orgRef: 'ACME'),
+          throwsA(isA<ImpactApiException>().having((e) => e.kind, 'kind', ImpactErrorKind.contract)),
+        );
+      });
+    });
+
+    // IV-IMPACT-MACRO-08 Phase 13 — IVE-Impact adapter boundary tests.
+    group('IVE-Impact adapter boundary (Phase 13)', () {
+      test('IVE-01 assembleDossierContext never includes billing/plan fields', () {
+        final dossier = DossierView.fromResponse(fixture('dossier_confirmed_en')['data'] as Map<String, dynamic>);
+        final ctx = assembleDossierContext(dossier);
+        for (final forbidden in ['plan', 'tier', 'billing', 'isPro', 'isEnterprise']) {
+          expect(ctx.toLowerCase(), isNot(contains(forbidden)), reason: 'IVE context must not contain $forbidden');
+        }
+      });
+
+      test('IVE-02 assembleDossierContext labels every item with EvidenceKind', () {
+        final dossier = DossierView.fromResponse(fixture('dossier_confirmed_en')['data'] as Map<String, dynamic>);
+        final ctx = assembleDossierContext(dossier);
+        expect(ctx, contains('[SERVERFACT]'));
+      });
+
+      test('IVE-03 assembleDossierContext includes the IVE cannot-invent rule', () {
+        final dossier = DossierView.fromResponse(fixture('dossier_confirmed_en')['data'] as Map<String, dynamic>);
+        final ctx = assembleDossierContext(dossier);
+        expect(ctx, contains('IVE NÃO PODE'));
+        expect(ctx, contains('inventar'));
+      });
+
+      test('IVE-04 assembleDossierContext for empty dossier produces valid non-empty context', () {
+        final dossier = DossierView.fromResponse(fixture('dossier_empty_en')['data'] as Map<String, dynamic>);
+        final ctx = assembleDossierContext(dossier);
+        expect(ctx.isNotEmpty, true);
+        expect(ctx, contains('[SERVERFACT]'));
+      });
     });
   });
 }

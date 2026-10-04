@@ -7246,4 +7246,37 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get impactEntitlementProDescription =>
       'Disponível no plano PRO ou superior.';
+
+  @override
+  String get impactClaimVerificationStatus => 'Estado da verificação';
+
+  @override
+  String get impactClaimStatusNote =>
+      'Este estado reflete a evidência coletada até esta data. Não é um veredito final sobre a organização.';
+
+  @override
+  String get impactLegalSourcesNote =>
+      'Fontes: registros públicos, informações voluntárias e dados de terceiros verificados. A ausência de registros não implica irregularidade.';
+
+  @override
+  String get impactLegalAiNote =>
+      'Organizado com assistência de IA. Toda conclusão deve ser verificada de forma independente antes de ser utilizada.';
+
+  @override
+  String get impactLegalFalsePositiveNote =>
+      'Resultados automatizados podem conter imprecisões. Erros podem ser sinalizados pelo suporte.';
+
+  @override
+  String get impactIveBoundaryFact => 'FATO (verificado pelo servidor)';
+
+  @override
+  String get impactIveInference =>
+      'INFERÊNCIA (derivada dos fatos — não verificada independentemente)';
+
+  @override
+  String get impactIveHypothesis => 'HIPÓTESE (não verificada)';
+
+  @override
+  String get impactIveCannotInvent =>
+      'A IVE pode resumir evidências existentes, mas não pode inventar, pressupor ou verificar evidências por conta própria.';
 }

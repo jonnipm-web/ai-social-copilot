@@ -116,3 +116,43 @@ Deno.test('buildEgressOptions: user cannot widen REGISTRY_QUERY allowlist', () =
     Error,
   );
 });
+
+// ── IV-IMPACT-MACRO-08 Phase 15 — SSRF redirect hardening ────────────────────
+// These tests document the defence-in-depth invariants that safeFetch's own
+// redirect-handling (redirect:"manual" + per-hop re-validation) provides.
+// The egress policy itself does not follow redirects; safeFetch does, but
+// re-validates each hop against the same SSRF rules. The tests here confirm
+// that the egress policy for PUBLIC_SOURCE_FETCH produces OPTIONS without an
+// allowedHosts restriction (delegating host validation to safeFetch) and that
+// REGISTRY_QUERY cannot be widened to include a URL that looks like a redirect
+// target to a private namespace.
+
+Deno.test('MACRO-08 Phase 15: PUBLIC_SOURCE_FETCH options delegate SSRF to safeFetch (no allowedHosts here)', () => {
+  const opts = buildEgressOptions('PUBLIC_SOURCE_FETCH');
+  // allowedHosts is intentionally absent — safeFetch validates each hop
+  // against private/reserved IP ranges. The egress policy must not add a
+  // wildcard allowedHosts that could circumvent safeFetch's own checks.
+  assertEquals(opts.allowedHosts, undefined);
+});
+
+Deno.test('MACRO-08 Phase 15: a localhost/loopback host is rejected by REGISTRY_QUERY allowlist', () => {
+  // Confirms that even if a redirect followed by safeFetch tried to escalate
+  // to a loopback target, the registry allowlist (used for non-PUBLIC calls)
+  // would never include it.
+  assertThrows(
+    () => buildEgressOptions('REGISTRY_QUERY', new Set(['localhost'])),
+    Error,
+    'EGRESS_POLICY_VIOLATION',
+  );
+});
+
+Deno.test('MACRO-08 Phase 15: a metadata-service IP host is rejected by REGISTRY_QUERY allowlist', () => {
+  // AWS instance metadata service pattern: 169.254.169.254 must not be in
+  // any registry allowlist. safeFetch additionally blocks it by IP range, but
+  // the policy itself must be explicit.
+  assertThrows(
+    () => buildEgressOptions('REGISTRY_QUERY', new Set(['169.254.169.254'])),
+    Error,
+    'EGRESS_POLICY_VIOLATION',
+  );
+});

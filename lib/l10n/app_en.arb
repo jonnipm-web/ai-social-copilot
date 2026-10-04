@@ -2460,5 +2460,17 @@
   "impactEntitlementFreeLimit": "You have reached the free plan limit for this feature.",
   "impactEntitlementUpgradeCta": "View plans",
   "impactEntitlementProRequired": "PRO Feature",
-  "impactEntitlementProDescription": "Available on the PRO plan or higher."
+  "impactEntitlementProDescription": "Available on the PRO plan or higher.",
+
+  "impactClaimVerificationStatus": "Verification status",
+  "impactClaimStatusNote": "This status reflects evidence collected up to this date. It is not a final verdict on the organisation.",
+
+  "impactLegalSourcesNote": "Sources: public registers, voluntary disclosures, and verified third-party data. Absence of records does not imply irregularity.",
+  "impactLegalAiNote": "Organised with AI assistance. Every conclusion should be independently verified before use.",
+  "impactLegalFalsePositiveNote": "Automated results may contain inaccuracies. Errors can be flagged via support.",
+
+  "impactIveBoundaryFact": "FACT (server-verified)",
+  "impactIveInference": "INFERENCE (derived from facts — not independently verified)",
+  "impactIveHypothesis": "HYPOTHESIS (unverified)",
+  "impactIveCannotInvent": "IVE may summarise existing evidence but cannot invent, assume or verify evidence on its own."
 }

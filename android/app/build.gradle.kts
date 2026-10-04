@@ -112,6 +112,39 @@ android {
         }
     }
 
+    // IV-IMPACT-MACRO-08 Phase 18 — standalone Impact product flavor.
+    //
+    // PRODUCTION PROTECTION: this flavor exists as a BUILD CONFIGURATION only.
+    // No release build, no Play Store publish, no Firebase setup has been done
+    // for this flavor. Activating it for production release requires:
+    //   - Paulo + Agente Martins explicit authorization
+    //   - A separate Firebase/Google Services project for com.insightvalues.impact
+    //   - A separate upload keystore entry in key.properties
+    //   - A separate Play Console app
+    //
+    // Usage (local debug install):
+    //   flutter build apk --debug --flavor impact -t lib/main.dart
+    //   flutter install --flavor impact
+    flavorDimensions += "product"
+    productFlavors {
+        create("insightvalues") {
+            dimension = "product"
+            // Default: unchanged applicationId, same as the main app.
+        }
+        create("impact") {
+            dimension = "product"
+            applicationId = "com.insightvalues.impact"
+            versionNameSuffix = "-impact"
+            // In a future release, a separate google-services.json for
+            // com.insightvalues.impact would be placed in:
+            //   android/app/src/impact/google-services.json
+            // For now this flavor uses the default google-services.json
+            // (which means Firebase Auth works only for the main package ID —
+            // the standalone app will need its own Firebase project before
+            // production release).
+        }
+    }
+
     buildTypes {
         debug {
             // Side-by-side DEBUG install for physical validation without

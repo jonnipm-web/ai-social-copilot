@@ -12594,6 +12594,60 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Disponível no plano PRO ou superior.'**
   String get impactEntitlementProDescription;
+
+  /// No description provided for @impactClaimVerificationStatus.
+  ///
+  /// In pt, this message translates to:
+  /// **'Estado da verificação'**
+  String get impactClaimVerificationStatus;
+
+  /// No description provided for @impactClaimStatusNote.
+  ///
+  /// In pt, this message translates to:
+  /// **'Este estado reflete a evidência coletada até esta data. Não é um veredito final sobre a organização.'**
+  String get impactClaimStatusNote;
+
+  /// No description provided for @impactLegalSourcesNote.
+  ///
+  /// In pt, this message translates to:
+  /// **'Fontes: registros públicos, informações voluntárias e dados de terceiros verificados. A ausência de registros não implica irregularidade.'**
+  String get impactLegalSourcesNote;
+
+  /// No description provided for @impactLegalAiNote.
+  ///
+  /// In pt, this message translates to:
+  /// **'Organizado com assistência de IA. Toda conclusão deve ser verificada de forma independente antes de ser utilizada.'**
+  String get impactLegalAiNote;
+
+  /// No description provided for @impactLegalFalsePositiveNote.
+  ///
+  /// In pt, this message translates to:
+  /// **'Resultados automatizados podem conter imprecisões. Erros podem ser sinalizados pelo suporte.'**
+  String get impactLegalFalsePositiveNote;
+
+  /// No description provided for @impactIveBoundaryFact.
+  ///
+  /// In pt, this message translates to:
+  /// **'FATO (verificado pelo servidor)'**
+  String get impactIveBoundaryFact;
+
+  /// No description provided for @impactIveInference.
+  ///
+  /// In pt, this message translates to:
+  /// **'INFERÊNCIA (derivada dos fatos — não verificada independentemente)'**
+  String get impactIveInference;
+
+  /// No description provided for @impactIveHypothesis.
+  ///
+  /// In pt, this message translates to:
+  /// **'HIPÓTESE (não verificada)'**
+  String get impactIveHypothesis;
+
+  /// No description provided for @impactIveCannotInvent.
+  ///
+  /// In pt, this message translates to:
+  /// **'A IVE pode resumir evidências existentes, mas não pode inventar, pressupor ou verificar evidências por conta própria.'**
+  String get impactIveCannotInvent;
 }
 
 class _AppLocalizationsDelegate

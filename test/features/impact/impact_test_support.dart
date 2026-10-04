@@ -27,13 +27,25 @@ Map<String, dynamic> copyOf(Map<String, dynamic> m) =>
 const kInvestigationId = '00000000-0000-4000-8000-000000000001';
 
 class FakeImpactTransport implements ImpactTransport {
-  FakeImpactTransport(
-      {this.dossier, this.list, this.export, this.verify, this.error});
+  FakeImpactTransport({
+    this.dossier,
+    this.list,
+    this.export,
+    this.verify,
+    this.error,
+    // IV-IMPACT-MACRO-08 Phase 7/9 — write action responses.
+    // Each maps to a fully-formed envelope {ok:true, action:..., data:{...}}.
+    // When null the call throws [ImpactErrorKind.invalidRequest].
+    this.createInvestigation,
+    this.runVerification,
+  });
 
   Map<String, dynamic>? dossier;
   Map<String, dynamic>? list;
   Map<String, dynamic>? export;
   Map<String, dynamic>? verify;
+  Map<String, dynamic>? createInvestigation;
+  Map<String, dynamic>? runVerification;
 
   /// When set, every call fails with it (after being recorded).
   ImpactApiException? error;
@@ -45,11 +57,13 @@ class FakeImpactTransport implements ImpactTransport {
     calls.add(body);
     if (error != null) throw error!;
     final res = switch (body['action']) {
-      'list_investigations' => list,
-      'get_dossier' => dossier,
-      'export_dossier' => export,
-      'verify_dossier' => verify,
-      _ => null,
+      'list_investigations'  => list,
+      'get_dossier'          => dossier,
+      'export_dossier'       => export,
+      'verify_dossier'       => verify,
+      'create_investigation' => createInvestigation,
+      'run_verification'     => runVerification,
+      _                      => null,
     };
     if (res == null)
       throw const ImpactApiException(ImpactErrorKind.invalidRequest);

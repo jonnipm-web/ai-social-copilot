@@ -342,6 +342,16 @@ export async function handler(
   if (result.ok && (result.value.metrics?.lineageLinks ?? 0) > 0) {
     registryEvent('lineage_detected', { lineage_links_count: result.value.metrics!.lineageLinks! });
   }
+  // IV-IMPACT-MACRO-08 Phase 17 — observability for new Discover/Monitor actions.
+  // Logs investigation_id and outcome only — no org name, no content, no hashes.
+  if (action === 'create_investigation') {
+    if (result.ok) registryEvent('investigation_created', {});
+    else registryEvent('investigation_create_failed', { error_code: result.error.code });
+  }
+  if (action === 'run_verification') {
+    if (result.ok) registryEvent('verification_run', {});
+    else registryEvent('verification_run_failed', { error_code: result.error.code });
+  }
 
   if (!result.ok) return errorResponse(result.error, correlationId);
   return json(200, { ok: true, action: result.value.action, data: result.value.data, correlation_id: correlationId });
