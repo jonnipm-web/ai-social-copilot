@@ -345,7 +345,7 @@ void main() {
           .where((f) => f.path.endsWith('.dart'))
           .map((f) => f.readAsStringSync())
           .join(' ');
-      final actions = RegExp(r"_call\('([a-z_]+)'")
+      final actions = RegExp(r"_call\(\s*'([a-z_]+)'")
           .allMatches(sources)
           .map((m) => m.group(1))
           .toSet();
