@@ -1,19 +1,26 @@
-// quant-analyze — IV-QUANT-DATA-PLANE-AND-API-02.
+// quant-analyze — IV-QUANT-DATA-PLANE-AND-API-02 / IV-QUANT-MACRO-05 FASE 3.
 //
 // First read-only Quant API (module 'quant-analytics', READ_ONLY, INTERNAL).
 // READINESS-03 adds two explicit contracts on the same endpoint, dispatched
 // by contract_version (v1 unchanged): quant.analyze.multi.v1 (≤ 10 CSV
 // series) and quant.analyze.watchlist.v1 (the caller's own watchlist, data
-// from the server-side SYNTHETIC provider through the provenance cache; also
-// requires the 'quant-watchlists' entitlement). No client-supplied URL.
+// from the server-side provider through the provenance cache; also requires
+// the 'quant-watchlists' entitlement). No client-supplied URL.
 // Order: authenticate → entitlement → method/body limits → strict schema →
 // project ownership (if project_id) → data plane (CSV → canonical series →
 // deterministic engine) → structured QuantAnalysisResult.
 //
-// Deliberately NOT here: any URL/remote fetch of market data (no SSRF
-// surface), any LLM call (numbers come only from the engine), any write,
-// any broker/order path, any quota reservation (no paid dependency; the
+// PROVIDER SELECTION (MACRO-05 FASE 3): makeLiveProvider() selects the real
+// Databento EQUS.SUMMARY provider when DATABENTO_API_KEY is configured in the
+// Edge Function environment. Falls back to SyntheticInProcessProvider when the
+// key is absent. This is the ONLY path that may perform outbound market-data
+// calls; the runtime enforces SSRF validation, host allowlisting, credential
+// isolation, and byte/time limits via safeFetch.
+//
+// Deliberately NOT here: any LLM call (numbers come only from the engine), any
+// write, any broker/order path, any quota reservation (no paid dependency; the
 // resource bounds below are the protection — see QUANT_API_CONTRACT.md §6).
+// Client-supplied URLs are rejected; credentials never reach the client.
 //
 // NOT DEPLOYED (Quant Lab). Not on .github/deploy-allowlist.tsv.
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
@@ -34,6 +41,8 @@ import {
 import { MAX_SERIES_PER_ANALYSIS, type MultiSeriesResult } from '../_shared/quant/multi_series.ts';
 import type { MarketDataProvider } from '../_shared/quant/provider.ts';
 import { SyntheticInProcessProvider } from '../_shared/quant/synthetic_market.ts';
+import { databentoAdapter } from '../_shared/quant/databento_adapter.ts';
+import { HttpAdapterProvider } from '../_shared/quant_provider_runtime.ts';
 import type { WatchlistRow, WatchlistStore } from '../_shared/quant/watchlist_contract.ts';
 import type { QuantErrorCode } from '../_shared/quant/errors.ts';
 import { quantLogEvent } from '../_shared/quant/observability.ts';
@@ -66,6 +75,26 @@ export interface AnalyzeDeps {
 
 /** Per-instance LRU (Edge isolates are short-lived; provenance is preserved on every hit). */
 const DEFAULT_MARKET_CACHE = new InMemoryMarketCache(256);
+
+const DATABENTO_BASE_URL = 'https://hist.databento.com';
+
+/**
+ * Selects the market-data provider for watchlist.v1 requests.
+ * When DATABENTO_API_KEY is present in the Edge Function environment, returns
+ * the real Databento EQUS.SUMMARY provider (YELLOW/NOT_VERIFIED rights — see
+ * docs/quant/BOOTSTRAP_PROVIDER_DECISION.md §2.2). When the key is absent,
+ * falls back to SyntheticInProcessProvider so the function degrades gracefully
+ * without credentials (safe default; no external calls; no billing).
+ * RIGHTS: YELLOW/NOT_VERIFIED — commercial use requires written Databento
+ * confirmation (docs/quant/DATABENTO_RIGHTS_CONFIRMATION_REQUEST.md).
+ */
+function makeLiveProvider(clock: () => number): MarketDataProvider {
+  const key = Deno.env.get('DATABENTO_API_KEY');
+  const inner: MarketDataProvider = key
+    ? new HttpAdapterProvider(databentoAdapter, DATABENTO_BASE_URL)
+    : new SyntheticInProcessProvider(clock);
+  return new CachingProvider(inner, DEFAULT_MARKET_CACHE, clock);
+}
 
 export async function handler(
   req: Request,
@@ -195,7 +224,7 @@ export async function handler(
       if (!inst.ok) return failWith('INVALID_INSTRUMENT');
       instruments.push(inst.value);
     }
-    const provider = deps.marketProvider ?? new CachingProvider(new SyntheticInProcessProvider(clock), DEFAULT_MARKET_CACHE, clock);
+    const provider = deps.marketProvider ?? makeLiveProvider(clock);
     const result = await runWatchlistAnalysis(instruments, parsed.value, provider, clock());
     if (!result.ok) return failWith(result.error.code, result.error.details);
     const c = result.value.dataSource.cache;
