@@ -334,7 +334,28 @@ No broker integration. No BUY/SELL orders. This is a mission-invariant constrain
 | 28 | Observability | IMPLEMENTED (quantLogEvent) — extension TBD |
 | 29 | Failure/degraded modes | Can document and implement |
 | 30 | Test matrix | **EXPANDED** — QM-08 regression pin (explanation_request structure + absence on multi.v1) |
-| 31 | Codex adversarial (CLASS D) | **SELF-REVIEW COMPLETE** — findings: QM-08 FIXED; Codex independent review MANDATORY before deployment |
+| 31 | Codex adversarial (CLASS D) | **PASS WITH FINDINGS** — P0=0, P1=0; P2 FIXED (6ddb881); P3 DEFERRED |
+
+---
+
+## Codex CLASS D Review (MACRO-05)
+
+**Date:** 2026-10-04  
+**Scope:** `index.ts` (fail-closed, capability gate, explanation_request), `quant_server.ts` (checkQuantCapability), `module_policy.ts` (minimumPlan change)  
+**Verdict: PASS WITH FINDINGS**
+
+| Severity | Count | Status |
+|---|---|---|
+| P0 — CRITICAL | 0 | N/A |
+| P1 — HIGH | 0 | N/A |
+| P2 — MEDIUM | 1 | **FIXED** (6ddb881) |
+| P3 — LOW | 1 | DEFERRED |
+
+**P2 — ACCEPTED + FIXED:** `QUANT_REQUIRE_LIVE_DATA` env var check was case-sensitive (`=== 'true'`). Values like `"TRUE"` or `" true "` silently permitted synthetic fallback. Fix: `.trim().toLowerCase()` normalization (commit `6ddb881`). QM-11 regression pin added.
+
+**P3 — DEFERRED:** QM-09 covers fail-closed behavior via null injection rather than real env-var module load. Fresh-isolate subprocess test would be stronger but requires subprocess runner not available in Deno test env. Injection correctly covers the runtime branch; deferred for future CI subprocess capability.
+
+**Security verdict:** No credential leak, provider fail-open path, free-user watchlist bypass, forged-admin path, contract mix-up, or singleton confidentiality issue confirmed. Admin isolation, plan gate, explanation_request containment, and cache key isolation all verified.
 
 ---
 
@@ -344,17 +365,19 @@ No broker integration. No BUY/SELL orders. This is a mission-invariant constrain
 
 | Check | Status |
 |---|---|
-| All MACRO-05 implementation complete | PASS (this commit c432871) |
-| Tests 656/656 PASS | PASS |
-| Security self-review (FASE 4 + CLASS D) | PASS — no P0/P1 in self-review |
-| CLASS D Codex independent review | **PENDING — MANDATORY before deployment** |
+| All MACRO-05 implementation complete | PASS |
+| Tests 659/659 PASS | PASS |
+| Security self-review (FASE 4) | PASS |
+| CLASS D Codex independent review | **PASS WITH FINDINGS** — P0=0, P1=0; P2 FIXED; P3 DEFERRED |
+| FASE 3 fail-closed (QUANT_REQUIRE_LIVE_DATA) | PASS — `fc194a5` + `6ddb881` |
+| FASE 20 server-side plan gate (checkQuantCapability) | PASS — `fc194a5` |
 | Databento rights YELLOW → GREEN | BLOCKED_OWNER |
 | Research/Advice boundary documented + enforced | PASS |
 | Product shell wired (INTERNAL) | PASS |
 | Entitlement tier design | PASS (design; not yet activated) |
 | No deployment without gate | ENFORCED |
 
-**Ecosystem Gate verdict:** CONDITIONAL_PASS — blocked on Codex CLASS D + BLOCKED_OWNER items.
+**Ecosystem Gate verdict:** CONDITIONAL_PASS — blocked on BLOCKED_OWNER items only. Codex CLASS D gate is now CLEARED.
 
 ---
 
@@ -417,10 +440,10 @@ Push to remote and PR require explicit owner authorization.
 |---|---|---|
 | 1 | Branch | `claude/iv-quant-macro-05` |
 | 2 | Base SHA | `7971f7c` (PILOT-04 final) |
-| 3 | Commits | `2b6fbdf` (FASE 0-3) · `7523642` (FASE 4-9 docs) · `c432871` (FASE 10-31 + gates) |
-| 4 | Tests | **656/656 PASS** (full suite — +1 QM-08 vs. baseline 655) |
-| 5 | Files changed | 13 modified, 5 new (this commit) |
-| 6 | Security | Self-review PASS; CLASS D Codex independent review MANDATORY before deployment |
+| 3 | Commits | `2b6fbdf` · `7523642` · `c432871` · `e82014a` · `fc194a5` · `6ddb881` |
+| 4 | Tests | **659/659 PASS** (full suite — QM-08 + QM-09 + QM-10 + QM-11 vs. baseline 655) |
+| 5 | Files changed | 15 modified, 5 new |
+| 6 | Security | CLASS D Codex PASS WITH FINDINGS — P0=0, P1=0; P2 FIXED; P3 DEFERRED |
 | 7 | Research boundary | ENFORCED — `QuantDisclaimerBanner` on all result surfaces; `QUANT_RESEARCH_ADVICE_BOUNDARY.md` canonical policy |
 | 8 | Product shell | COMPLETE — `/quant` route, `QuantScreen`, INTERNAL pilot, entitlement-gated |
 | 9 | Entitlements | DESIGNED — tier structure documented; activation requires commercial gate |
@@ -429,4 +452,4 @@ Push to remote and PR require explicit owner authorization.
 | 12 | Standalone gate 33 | BLOCKED |
 | 13 | Data/licensing gate 34 | BLOCKED_OWNER |
 | 14 | Production gate 35 | PASS |
-| 15 | Final status | **CONDITIONAL_PASS** — implementation complete; blocked on Codex CLASS D + BLOCKED_OWNER items listed above |
+| 15 | Final status | **CONDITIONAL_PASS** — Codex CLASS D CLEARED; blocked on BLOCKED_OWNER items (Databento rights + API key) only |
