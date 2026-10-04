@@ -49,6 +49,7 @@ import { quantLogEvent } from '../_shared/quant/observability.ts';
 import { buildExplanationRequest } from '../_shared/quant/ive_boundary.ts';
 import {
   bearerToken,
+  checkQuantCapability,
   enforceRateLimit,
   type ProjectAccessSource,
   quantCorsHeaders,
@@ -70,8 +71,13 @@ export interface AnalyzeDeps {
   rateLimiter?: QuantRateLimiter;
   /** quant.analyze.watchlist.v1: watchlist storage as the caller (tests inject a fake). */
   storeFor?: (accessToken: string) => WatchlistStore;
-  /** quant.analyze.watchlist.v1: server-side market data (default: cached in-process SYNTHETIC provider). */
-  marketProvider?: MarketDataProvider;
+  /**
+   * quant.analyze.watchlist.v1: server-side market data.
+   * undefined = use makeLiveProvider() (default runtime path)
+   * null      = provider explicitly unavailable (fail-closed test path, mirrors QUANT_REQUIRE_LIVE_DATA)
+   * provider  = injected fake/real provider (test injection)
+   */
+  marketProvider?: MarketDataProvider | null;
 }
 
 /** Per-instance LRU (Edge isolates are short-lived; provenance is preserved on every hit). */
@@ -88,16 +94,28 @@ const _LIVE_HTTP_PROVIDER: MarketDataProvider | null = Deno.env.get('DATABENTO_A
   ? new HttpAdapterProvider(databentoAdapter, DATABENTO_BASE_URL)
   : null;
 
+// QUANT_REQUIRE_LIVE_DATA=true → fail closed when DATABENTO_API_KEY is absent.
+// Set this in any environment that declares real-data mode (production, staging
+// with live data). Absent or 'false' → synthetic fallback is allowed (dev/CI/LAB).
+// This prevents silent degradation to synthetic data in production deployments
+// where the API key was accidentally omitted.
+const _REQUIRE_LIVE_DATA = Deno.env.get('QUANT_REQUIRE_LIVE_DATA') === 'true';
+const _LIVE_CONFIG_ERROR: string | null = _REQUIRE_LIVE_DATA && !_LIVE_HTTP_PROVIDER
+  ? 'QUANT_REQUIRE_LIVE_DATA=true but DATABENTO_API_KEY is not configured'
+  : null;
+
 /**
  * Selects the market-data provider for watchlist.v1 requests.
  * When DATABENTO_API_KEY was present at module load, returns the real
  * Databento EQUS.SUMMARY provider (YELLOW/NOT_VERIFIED rights).
- * When absent, falls back to SyntheticInProcessProvider (no external calls,
- * no billing — safe default for lab/CI environments without credentials).
+ * When QUANT_REQUIRE_LIVE_DATA=true and no API key → returns null (fail closed).
+ * When key absent and live data not required → SyntheticInProcessProvider
+ * (safe default for lab/CI environments without credentials).
  * On real-provider failure the error propagates as a Quant error code;
  * there is NO silent automatic fallback to synthetic once the key is set.
  */
-function makeLiveProvider(clock: () => number): MarketDataProvider {
+function makeLiveProvider(clock: () => number): MarketDataProvider | null {
+  if (_LIVE_CONFIG_ERROR) return null; // caller must fail closed
   const inner: MarketDataProvider = _LIVE_HTTP_PROVIDER ?? new SyntheticInProcessProvider(clock);
   return new CachingProvider(inner, DEFAULT_MARKET_CACHE, clock);
 }
@@ -164,6 +182,19 @@ export async function handler(
     ? (body.value as Record<string, unknown>).contract_version
     : undefined;
   contract = typeof version === 'string' ? version : null;
+
+  // Quant capability gate (MACRO-05 FASE 20): per-capability plan enforcement.
+  // Runs after module access (which gates lifecycle) and after contract version
+  // is known. Watchlist.v1 (server-side data) requires plan ≥ PRO.
+  // Admin bypasses. Inactive while lifecycle is INTERNAL (admin-only path).
+  const capDenied = checkQuantCapability(
+    access.subject.plan,
+    access.subject.roles.has('admin'),
+    contract,
+    cid,
+  );
+  if (capDenied) return done(capDenied, { errorCode: 'ENTITLEMENT_DENIED' });
+
   const token = bearerToken(req) ?? '';
   const checkProject = async (projectId: string | undefined): Promise<Response | null> => {
     if (!projectId) return null;
@@ -230,7 +261,11 @@ export async function handler(
       if (!inst.ok) return failWith('INVALID_INSTRUMENT');
       instruments.push(inst.value);
     }
-    const provider = deps.marketProvider ?? makeLiveProvider(clock);
+    // deps.marketProvider === undefined → runtime path (makeLiveProvider selects real or synthetic)
+    // deps.marketProvider === null      → explicitly unavailable (fail-closed — used in tests and when
+    //                                     QUANT_REQUIRE_LIVE_DATA=true makes makeLiveProvider return null)
+    const provider = deps.marketProvider !== undefined ? deps.marketProvider : makeLiveProvider(clock);
+    if (!provider) return failWith('INTERNAL_ERROR', { reason: _LIVE_CONFIG_ERROR ?? 'provider_unavailable' });
     const result = await runWatchlistAnalysis(instruments, parsed.value, provider, clock());
     if (!result.ok) return failWith(result.error.code, result.error.details);
     const c = result.value.dataSource.cache;

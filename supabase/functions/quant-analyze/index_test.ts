@@ -9,7 +9,7 @@ import { assert, assertEquals } from 'https://deno.land/std@0.168.0/testing/asse
 import type { AuthClient } from '../_shared/auth.ts';
 import { fakeSubjectSource } from '../_shared/entitlement_test_support.ts';
 import { type AnalyzeDeps, handler } from './index.ts';
-import { InMemoryRateLimiter } from '../_shared/quant_server.ts';
+import { checkQuantCapability, InMemoryRateLimiter } from '../_shared/quant_server.ts';
 import type { WatchlistRow, WatchlistStore } from '../_shared/quant/watchlist_contract.ts';
 import type { EntitlementSubjectSource } from '../_shared/entitlement.ts';
 
@@ -500,6 +500,23 @@ Deno.test('QM-07 FASE3 makeLiveProvider: synthetic fallback when DATABENTO_API_K
   assertEquals(r.json.multi_analysis.series[0].instrument.symbol, 'AAPL');
 });
 
+// MACRO-05 FASE 3 — fail-closed when QUANT_REQUIRE_LIVE_DATA=true and key absent.
+// Tests that setting the env var causes watchlist.v1 to return 500 (not silent
+// synthetic). Injected marketProvider bypasses the flag so normal tests still pass.
+Deno.test('QM-09 FASE3 fail-closed: QUANT_REQUIRE_LIVE_DATA=true + no key → 500, not synthetic', async () => {
+  const rows = [wlRow(WL_A, [['AAPL', 'XNAS', 'USD']])];
+  const seen = { tokens: [] as string[], users: [] as string[] };
+  // Simulate what the module-level check produces: marketProvider returns null.
+  // The handler must fail with 500, not silently use synthetic.
+  const nullProvider = deps({ clock: () => WNOW, storeFor: storeFor(rows, seen), marketProvider: null as never });
+  // We test the null-provider path directly — the env-var flag is module-level
+  // and cannot be toggled in-process. The null injection replicates exactly what
+  // _LIVE_CONFIG_ERROR triggers in production.
+  const r = await call(post(wlBody()), nullProvider);
+  assertEquals(r.status, 500, 'expected 500 when provider is unavailable (fail-closed)');
+  assertEquals(r.json.multi_analysis, undefined, 'no partial analysis must be returned on provider failure');
+});
+
 // CLASS D regression pin (MACRO-05 FASE 28): explanation_request structure.
 // Verifies the field is present on quant.analyze.v1 responses, absent on
 // multi.v1, and carries the correct contract version and engine-sourced facts.
@@ -523,4 +540,35 @@ Deno.test('QM-08 FASE9 explanation_request: present on v1, absent on multi.v1, v
   const r2 = await call(post(multiBody()), deps());
   assertEquals(r2.status, 200);
   assertEquals(r2.json.explanation_request, undefined, 'explanation_request must not appear on multi.v1 response');
+});
+
+// MACRO-05 FASE 20: checkQuantCapability unit tests.
+// These exercise the tier gate directly; integration coverage through the
+// handler requires ALPHA+ lifecycle (non-admin users). Admin always bypasses.
+Deno.test('QM-10 FASE20 checkQuantCapability: plan gate matrix', () => {
+  const CID = 'test-cid';
+  const WL = 'quant.analyze.watchlist.v1';
+  const V1 = 'quant.analyze.v1';
+  const MV1 = 'quant.analyze.multi.v1';
+
+  // Admin bypasses all gates
+  assertEquals(checkQuantCapability('free', true, WL, CID), null, 'admin+free → allowed on watchlist');
+  assertEquals(checkQuantCapability(null, true, WL, CID), null, 'admin+null plan → allowed on watchlist');
+
+  // free plan: CSV analyze allowed, watchlist denied
+  assertEquals(checkQuantCapability('free', false, V1, CID), null, 'free → allowed on v1');
+  assertEquals(checkQuantCapability('free', false, MV1, CID), null, 'free → allowed on multi.v1');
+  assert(checkQuantCapability('free', false, WL, CID) !== null, 'free → denied on watchlist.v1');
+  assertEquals(checkQuantCapability('free', false, WL, CID)?.status, 403, 'free+watchlist → 403');
+
+  // pro plan: all allowed
+  assertEquals(checkQuantCapability('pro', false, WL, CID), null, 'pro → allowed on watchlist.v1');
+  assertEquals(checkQuantCapability('pro', false, V1, CID), null, 'pro → allowed on v1');
+
+  // premium plan: all allowed
+  assertEquals(checkQuantCapability('premium', false, WL, CID), null, 'premium → allowed on watchlist.v1');
+
+  // null plan: denied (unknown plan = fail closed)
+  assert(checkQuantCapability(null, false, V1, CID) !== null, 'null plan → denied on v1');
+  assert(checkQuantCapability(null, false, WL, CID) !== null, 'null plan → denied on watchlist.v1');
 });
