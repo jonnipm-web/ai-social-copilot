@@ -183,24 +183,66 @@ class ImpactLabApi {
     return parseInvestigations(data);
   }
 
-  /// IV-IMPACT-MACRO-08 Phase 7 — Creates a new investigation from an
-  /// organisation name/reference and returns the summary for navigation.
-  Future<InvestigationSummary> createInvestigation({required String orgRef}) async {
-    final data = await _call('create_investigation', {'org_ref': orgRef});
-    final id = data['id'];
-    if (id is! String || id.isEmpty) throw const ImpactApiException(ImpactErrorKind.contract);
+  /// IV-IMPACT-MACRO-08 Phase 7 (Fix 4 — contract aligned) — Creates a new
+  /// investigation. Server contract: subject.ref + subject.type + identity.
+  ///
+  /// [subjectRef]: unique org reference (slug, e.g. 'hopebridge-foundation').
+  /// [subjectType]: one of CHARITY|NGO|NONPROFIT|FOUNDATION|SOCIAL_ENTERPRISE|
+  ///   RELIGIOUS_ORGANIZATION (server-validated enum).
+  /// [legalName]: optional human-readable name passed as identity.legalName.
+  /// [projectId]: optional UUID of an owned project to scope the investigation.
+  ///
+  /// Server response: data.investigationId (not data.id).
+  Future<InvestigationSummary> createInvestigation({
+    required String subjectRef,
+    required String subjectType,
+    String? legalName,
+    String? projectId,
+  }) async {
+    final subject = <String, dynamic>{
+      'ref': subjectRef,
+      'type': subjectType,
+      'identity': <String, dynamic>{
+        if (legalName != null) 'legalName': legalName,
+      },
+    };
+    final params = <String, dynamic>{
+      'subject': subject,
+      if (projectId != null) 'project_id': projectId,
+    };
+    final data = await _call('create_investigation', params);
+    // Server returns investigationId (not id) per lab_service.ts:412.
+    final investigationId = data['investigationId'];
+    if (investigationId is! String || investigationId.isEmpty) {
+      throw const ImpactApiException(ImpactErrorKind.contract);
+    }
     return InvestigationSummary(
-      id:            id,
-      subjectOrgRef: data['subjectOrgRef'] is String ? data['subjectOrgRef'] as String : orgRef,
+      id:            investigationId,
+      subjectOrgRef: data['subjectOrgRef'] is String ? data['subjectOrgRef'] as String : subjectRef,
       status:        data['status'] is String ? data['status'] as String : '—',
       createdAt:     data['createdAt'] as String?,
     );
   }
 
-  /// IV-IMPACT-MACRO-08 Phase 9 — Triggers a re-verification run for an
-  /// existing investigation and returns the updated dossier view.
-  Future<DossierView> runVerification(String investigationId, String lang) async {
-    final data = await _call('run_verification', {'investigation_id': investigationId});
+  /// IV-IMPACT-MACRO-08 Phase 9 (Fix 4 — contract aligned) — Triggers a
+  /// verification run for ONE claim in an existing investigation.
+  ///
+  /// Server contract: investigation_id + claim_ref required.
+  /// After the run, fetches the updated dossier and returns it.
+  ///
+  /// [claimRef]: the ref of the specific claim to verify (e.g. 'c-reg').
+  /// [idempotencyKey]: optional UUID for idempotent re-runs.
+  Future<DossierView> runVerification({
+    required String investigationId,
+    required String claimRef,
+    String? idempotencyKey,
+    String lang = 'pt',
+  }) async {
+    await _call('run_verification', <String, dynamic>{
+      'investigation_id': investigationId,
+      'claim_ref': claimRef,
+      if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
+    });
     return getDossier(investigationId, lang);
   }
 

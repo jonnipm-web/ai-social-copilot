@@ -50,7 +50,14 @@ class _ImpactDiscoverScreenState extends ConsumerState<ImpactDiscoverScreen> {
       final api = ref.read(impactLabApiProvider);
       // create_investigation is the entry point — even for "discover" the server
       // performs entity resolution as the first step and returns an initial dossier.
-      final inv = await api.createInvestigation(orgRef: query);
+      // Fix 4: send correct subject object (ref = slug, type = NONPROFIT default,
+      // identity.legalName = original query). Server returns investigationId not id.
+      final ref_ = query.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-').replaceAll(RegExp(r'^-+|-+$'), '');
+      final inv = await api.createInvestigation(
+        subjectRef: ref_.isEmpty ? 'query-${DateTime.now().millisecondsSinceEpoch}' : ref_,
+        subjectType: 'NONPROFIT',
+        legalName: query,
+      );
       if (mounted) {
         setState(() { _loading = false; _result = _DiscoverResult.fromSummary(inv, query); });
       }
@@ -141,10 +148,8 @@ class _ErrorBanner extends StatelessWidget {
   final String   message;
   final VoidCallback onRetry;
   @override
-  Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
-    return ImpactErrorView(error: message, onRetry: onRetry);
-  }
+  Widget build(BuildContext context) =>
+      ImpactErrorView(error: message, onRetry: onRetry);
 }
 
 class _ResultCard extends StatelessWidget {

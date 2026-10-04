@@ -514,6 +514,43 @@ export function rowToDossierSnapshot(r: Row): StoredDossierSnapshot {
   };
 }
 
+// ── action-level entitlement check ──────────────────────────────────────────
+
+/** Result of the check_impact_access RPC. */
+export interface ActionAccessResult {
+  allowed: boolean;
+  tier: string;
+  reason: string;
+}
+
+/**
+ * IV-IMPACT-MACRO-08 Fix 2 — calls the server-side `check_impact_access` RPC
+ * using the caller's JWT so auth.uid() is the authenticated user, not service.
+ * Returns null on any error (fail closed).
+ */
+export async function checkImpactActionAccess(req: Request, action: string): Promise<ActionAccessResult | null> {
+  const url = Deno.env.get('SUPABASE_URL');
+  const anon = Deno.env.get('SUPABASE_ANON_KEY');
+  const token = req.headers.get('Authorization')?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
+  if (!url || !anon || !token) return null; // fail closed: missing config
+  const opts = { auth: { autoRefreshToken: false, persistSession: false } };
+  const client = createClient(url, anon, { ...opts, global: { headers: { Authorization: `Bearer ${token}` } } });
+  try {
+    const { data, error } = await (client as unknown as DbClient).rpc('check_impact_access', { p_action: action });
+    if (error || !data) return null;
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row || typeof row !== 'object') return null;
+    const r = row as Record<string, unknown>;
+    return {
+      allowed: r['allowed'] === true,
+      tier: typeof r['tier'] === 'string' ? r['tier'] : 'unknown',
+      reason: typeof r['reason'] === 'string' ? r['reason'] : 'unknown',
+    };
+  } catch {
+    return null; // fail closed on any unexpected error
+  }
+}
+
 export function createSupabaseImpactLabStore(req: Request): SupabaseImpactLabStore {
   const url = Deno.env.get('SUPABASE_URL');
   const anon = Deno.env.get('SUPABASE_ANON_KEY');

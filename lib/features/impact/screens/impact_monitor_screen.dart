@@ -36,7 +36,22 @@ class _ImpactMonitorScreenState extends ConsumerState<ImpactMonitorScreen> {
     if (_rechecking) return;
     setState(() { _rechecking = true; _recheckError = null; });
     try {
-      await ref.read(impactLabApiProvider).runVerification(widget.investigationId, 'pt');
+      final api = ref.read(impactLabApiProvider);
+      // run_verification requires a specific claim_ref (Fix 4 — server contract).
+      // We re-verify every claim in the current dossier in sequence.
+      final dossier = ref.read(impactDossierProvider((id: widget.investigationId, lang: 'pt'))).valueOrNull;
+      final claims = dossier?.claims ?? const [];
+      if (claims.isEmpty) {
+        // Nothing to re-verify — dossier has no claims yet; still succeed.
+        if (mounted) setState(() { _rechecking = false; _lastChecked = DateTime.now(); });
+        return;
+      }
+      for (final c in claims) {
+        await api.runVerification(
+          investigationId: widget.investigationId,
+          claimRef: c.ref,
+        );
+      }
       if (mounted) {
         setState(() { _rechecking = false; _lastChecked = DateTime.now(); });
         ref.invalidate(impactDossierProvider((id: widget.investigationId, lang: 'pt')));

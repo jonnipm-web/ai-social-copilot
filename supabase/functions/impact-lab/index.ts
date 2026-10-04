@@ -27,7 +27,7 @@ import { buildImpactEvent } from '../_shared/impact/observability.ts';
 import { bucketFor, decideRate, type ImpactRateLimiter, type RateBucket, type RateRule, rateLimitsFrom } from '../_shared/impact/rate_limit.ts';
 import { buildCallerContext } from '../_shared/impact/trust.ts';
 import { IMPACT_POLICY_VERSION } from '../_shared/impact/verification.ts';
-import { createSupabaseAefStore, createSupabaseImpactLabStore, createSupabaseRateLimiter } from './supabase_store.ts';
+import { type ActionAccessResult, checkImpactActionAccess, createSupabaseAefStore, createSupabaseImpactLabStore, createSupabaseRateLimiter } from './supabase_store.ts';
 import type { AefStore } from '../_shared/aef/store.ts';
 import { submitAction } from '../_shared/aef/kernel.ts';
 import { IMPACT_ACTION_INTENTS, type ImpactActionIntentKind } from '../_shared/aef/types.ts';
@@ -47,6 +47,12 @@ export interface ImpactLabDeps {
   log?: (line: string) => void;
   /** I7: AEF store (tests inject in-memory; production uses DB-backed via supabase_store). */
   aefStore?: AefStore;
+  /**
+   * MACRO-08 Fix 2: action-level entitlement override for tests.
+   * Production uses checkImpactActionAccess() (calls check_impact_access RPC).
+   * Tests inject a stub to simulate FREE/PRO/denied/expired states.
+   */
+  checkAccess?: (req: Request, action: string) => Promise<ActionAccessResult | null>;
 }
 
 const HTTP: Readonly<Partial<Record<ImpactErrorCode, number>>> = {
@@ -155,6 +161,21 @@ export async function handler(
   }
   const parsed = parseLabRequest(raw);
   if (!parsed.ok) return errorResponse(parsed.error, correlationId);
+
+  // MACRO-08 Fix 2: action-level entitlement via check_impact_access RPC.
+  // requireModuleAccess above already enforces module-level (EXPERIMENTAL=admin).
+  // This adds action-level granularity (free/pro/admin once commercial) and
+  // creates a hard server-side authority for every action independently.
+  // Fails closed: null response (RPC error, config missing) = deny.
+  {
+    const entitlement = deps.checkAccess
+      ? await deps.checkAccess(req, parsed.value.action)
+      : await checkImpactActionAccess(req, parsed.value.action);
+    if (!entitlement || !entitlement.allowed) {
+      log(JSON.stringify({ event: 'impact.action_denied', correlation_id: correlationId, action: parsed.value.action, reason: entitlement?.reason ?? 'rpc_failed' }));
+      return errorResponse({ code: 'ENTITLEMENT_DENIED', message: 'action_not_allowed' }, correlationId);
+    }
+  }
 
   // I5 (closes I4G3-04): server-authoritative rate limit for dossier actions, per CALLER,
   // applied BEFORE the ownership check (a foreign / missing investigation costs the same and
