@@ -104,6 +104,9 @@ const Map<String, String> kRouteModuleOwnership = {
   AppConstants.routeQuantLab: 'quant-analytics',
   AppConstants.routeStrategyLab: 'strategy-builder',
   AppConstants.routeProjectAnalysis: 'projects',
+  // IV-QUANT-MACRO-05: product shell — same module gate as the lab, INTERNAL
+  // pilot; will move to EXPOSED when commercial launch is authorised.
+  AppConstants.routeQuant: 'quant-analytics',
 };
 
 /// Routes that must always remain reachable by any authenticated user,

@@ -68,6 +68,7 @@ import 'features/opportunity_lab/screens/opportunity_lab_screen.dart';
 import 'features/opportunity_lab/screens/opportunity_detail_screen.dart';
 import 'features/action_engine/screens/action_engine_screen.dart';
 import 'features/action_engine/screens/action_detail_screen.dart';
+import 'features/quant/quant_screen.dart';
 import 'features/quant_lab/quant_lab_screen.dart';
 import 'features/debug/screens/intelligence_debug_hub_screen.dart';
 import 'features/impact/screens/impact_discover_screen.dart';
@@ -704,6 +705,12 @@ final _router = GoRouter(
       builder: (_, state) => ImpactMonitorScreen(
         investigationId: state.pathParameters['id']!,
       ),
+    ),
+
+    // ── IV-QUANT-MACRO-05 — Quant product shell (INTERNAL pilot) ──────────
+    GoRoute(
+      path: AppConstants.routeQuant,
+      builder: (_, __) => const QuantScreen(),
     ),
 
     // ── IV-QUANT-DATA-PLANE-AND-API-02 — Quant Lab (INTERNAL, admin-only) ─

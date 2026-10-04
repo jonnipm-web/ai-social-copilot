@@ -46,6 +46,7 @@ import { HttpAdapterProvider } from '../_shared/quant_provider_runtime.ts';
 import type { WatchlistRow, WatchlistStore } from '../_shared/quant/watchlist_contract.ts';
 import type { QuantErrorCode } from '../_shared/quant/errors.ts';
 import { quantLogEvent } from '../_shared/quant/observability.ts';
+import { buildExplanationRequest } from '../_shared/quant/ive_boundary.ts';
 import {
   bearerToken,
   enforceRateLimit,
@@ -78,21 +79,26 @@ const DEFAULT_MARKET_CACHE = new InMemoryMarketCache(256);
 
 const DATABENTO_BASE_URL = 'https://hist.databento.com';
 
+// Read once at module load — the Edge Function env is fixed per isolate (set at
+// deploy time and never changes within an isolate lifetime). Creating
+// HttpAdapterProvider here avoids repeated instantiation on hot paths and makes
+// the credential check eager (fail-fast on cold start rather than first request).
+// RIGHTS: YELLOW/NOT_VERIFIED — see docs/quant/BOOTSTRAP_PROVIDER_DECISION.md §2.2.
+const _LIVE_HTTP_PROVIDER: MarketDataProvider | null = Deno.env.get('DATABENTO_API_KEY')
+  ? new HttpAdapterProvider(databentoAdapter, DATABENTO_BASE_URL)
+  : null;
+
 /**
  * Selects the market-data provider for watchlist.v1 requests.
- * When DATABENTO_API_KEY is present in the Edge Function environment, returns
- * the real Databento EQUS.SUMMARY provider (YELLOW/NOT_VERIFIED rights — see
- * docs/quant/BOOTSTRAP_PROVIDER_DECISION.md §2.2). When the key is absent,
- * falls back to SyntheticInProcessProvider so the function degrades gracefully
- * without credentials (safe default; no external calls; no billing).
- * RIGHTS: YELLOW/NOT_VERIFIED — commercial use requires written Databento
- * confirmation (docs/quant/DATABENTO_RIGHTS_CONFIRMATION_REQUEST.md).
+ * When DATABENTO_API_KEY was present at module load, returns the real
+ * Databento EQUS.SUMMARY provider (YELLOW/NOT_VERIFIED rights).
+ * When absent, falls back to SyntheticInProcessProvider (no external calls,
+ * no billing — safe default for lab/CI environments without credentials).
+ * On real-provider failure the error propagates as a Quant error code;
+ * there is NO silent automatic fallback to synthetic once the key is set.
  */
 function makeLiveProvider(clock: () => number): MarketDataProvider {
-  const key = Deno.env.get('DATABENTO_API_KEY');
-  const inner: MarketDataProvider = key
-    ? new HttpAdapterProvider(databentoAdapter, DATABENTO_BASE_URL)
-    : new SyntheticInProcessProvider(clock);
+  const inner: MarketDataProvider = _LIVE_HTTP_PROVIDER ?? new SyntheticInProcessProvider(clock);
   return new CachingProvider(inner, DEFAULT_MARKET_CACHE, clock);
 }
 
@@ -244,8 +250,14 @@ export async function handler(
   const result = await runAnalyze(parsed.value, clock());
   if (!result.ok) return failWith(result.error.code, result.error.details);
   const a = result.value;
+  // IVE integration (MACRO-05 FASE 9): include the structured explanation
+  // request so the Flutter client can forward it to IVE Core for narration.
+  // The explanation request carries only engine-computed facts and placeholders;
+  // no prices, portfolio positions, or numeric content that was not already in
+  // `analysis`. It is optional: clients that do not use IVE narration ignore it.
+  const explanation_request = buildExplanationRequest(a);
   return done(
-    quantJson({ contract_version: ANALYZE_CONTRACT_VERSION, correlation_id: cid, analysis: a }),
+    quantJson({ contract_version: ANALYZE_CONTRACT_VERSION, correlation_id: cid, analysis: a, explanation_request }),
     { analysisId: a.analysisId, bars: a.period.bars, period: [a.period.start, a.period.end], calcs: a.metrics.map((m) => m.id), freshness: a.dataSnapshot.freshness.state },
   );
 }

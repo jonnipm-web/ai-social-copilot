@@ -119,6 +119,9 @@ class AppConstants {
   // IV-QUANT-DATA-PLANE-AND-API-02 — Quant Lab (INTERNAL, admin-only)
   static const routeQuantLab = '/quant-lab';
 
+  // IV-QUANT-MACRO-05 — Quant product shell (INTERNAL pilot, entitlement-gated)
+  static const routeQuant                = '/quant';
+
   // IVE-COMMERCIAL-RELEASE-CONTROL-PLANE-01
   static const routeAccount = '/account';
   static const routeAbout = '/about';

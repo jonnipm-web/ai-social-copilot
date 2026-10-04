@@ -499,3 +499,28 @@ Deno.test('QM-07 FASE3 makeLiveProvider: synthetic fallback when DATABENTO_API_K
   assertEquals(r.json.multi_analysis.series.length, 1);
   assertEquals(r.json.multi_analysis.series[0].instrument.symbol, 'AAPL');
 });
+
+// CLASS D regression pin (MACRO-05 FASE 28): explanation_request structure.
+// Verifies the field is present on quant.analyze.v1 responses, absent on
+// multi.v1, and carries the correct contract version and engine-sourced facts.
+Deno.test('QM-08 FASE9 explanation_request: present on v1, absent on multi.v1, valid contract', async () => {
+  // v1 → explanation_request must be present with correct contract
+  const r1 = await call(post(body()), deps());
+  assertEquals(r1.status, 200);
+  const er = r1.json.explanation_request;
+  assert(er !== undefined, 'explanation_request missing from quant.analyze.v1 response');
+  assertEquals(er.contract, 'quant.explanation.v1');
+  assert(typeof er.analysisId === 'string' && er.analysisId.length > 0, 'analysisId must be non-empty string');
+  assert(Array.isArray(er.facts) && er.facts.length > 0, 'facts must be non-empty array');
+  // Every fact must declare DETERMINISTIC_ENGINE as source — no LLM-generated values
+  for (const f of er.facts) {
+    assertEquals(f.source, 'DETERMINISTIC_ENGINE', `fact ${f.id} has wrong source`);
+    assert(typeof f.display === 'string', `fact ${f.id} display must be string`);
+  }
+  assert(Array.isArray(er.rules) && er.rules.length > 0, 'rules must be non-empty');
+
+  // multi.v1 → explanation_request must NOT be present (different response schema)
+  const r2 = await call(post(multiBody()), deps());
+  assertEquals(r2.status, 200);
+  assertEquals(r2.json.explanation_request, undefined, 'explanation_request must not appear on multi.v1 response');
+});
