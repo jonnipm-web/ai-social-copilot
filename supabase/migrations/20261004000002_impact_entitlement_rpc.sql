@@ -28,12 +28,12 @@ SET search_path = public, extensions;
 
 -- ─── check_impact_access ────────────────────────────────────────────────────
 --
--- INTEGRATION STATUS: This RPC is infrastructure for the commercial promotion
--- of Impact. The Edge Function (impact-lab) does NOT yet call it — current
--- protection relies on requireModuleAccess (EXPERIMENTAL = admin-only).
--- When Impact is promoted to commercialEnabled:true, the Edge Function MUST
--- call this RPC for every action before any data access.
--- Gate: Agente Martins + Paulo must authorize the wiring change.
+-- INTEGRATION STATUS: This RPC is now called by the Edge Function (impact-lab)
+-- for every action before any data access (wired in supabase_store.ts via
+-- checkImpactActionAccess). The call uses the caller's JWT; fail-closed on RPC
+-- error. Current tier logic: EXPERIMENTAL = admin-only.
+-- When Impact is promoted to commercialEnabled:true, the tier logic below MUST
+-- be extended to free/pro/premium (requires Agente Martins + Paulo gate).
 
 CREATE OR REPLACE FUNCTION public.check_impact_access(p_action text)
 RETURNS TABLE(allowed boolean, tier text, reason text)

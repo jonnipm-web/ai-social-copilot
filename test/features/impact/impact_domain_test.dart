@@ -444,6 +444,20 @@ void main() {
         expect((subject['identity'] as Map)['legalName'], 'ACME Corp');
       });
 
+      test('RLS-04d parseInvestigations silently drops entries with empty id', () {
+        // Codex P2: empty-string id must not create a corrupt InvestigationSummary.
+        final data = {
+          'investigations': [
+            {'id': kInvestigationId, 'subjectOrgRef': 'ACME', 'status': 'OPEN'},
+            {'id': '',               'subjectOrgRef': 'BAD',  'status': 'OPEN'},
+            {'id': null,             'subjectOrgRef': 'BAD2', 'status': 'OPEN'},
+          ],
+        };
+        final list = parseInvestigations(data);
+        expect(list, hasLength(1));
+        expect(list.single.id, kInvestigationId);
+      });
+
       test('RLS-04c runVerification sends claim_ref (required by server contract)', () async {
         // Fix 4: run_verification requires investigation_id AND claim_ref
         final transport = FakeImpactTransport(
@@ -520,19 +534,24 @@ void main() {
         expect(re.hasMatch(ctx), isTrue, reason: 'USER_CLAIM values must be delimited');
       });
 
-      test('IVE-06 assembled context does not contain raw </value> from data values', () {
-        // If claim text contains "</value>", it is escaped to "<\/value>" so
+      test('IVE-06 assembled context escapes </value> case variants', () {
+        // If claim text contains "</value>" or case variants, they are escaped so
         // injected text cannot close the delimiter.
         expect(_sanitizeForTest('normal text'), equals('normal text'));
         expect(_sanitizeForTest('inject </value> here'), equals('inject <\\/value> here'));
         expect(_sanitizeForTest('</value></value>'), equals('<\\/value><\\/value>'));
+        expect(_sanitizeForTest('</VALUE>'), equals('<\\/VALUE>'));
+        expect(_sanitizeForTest('</Value>'), equals('<\\/Value>'));
       });
     });
   });
 }
 
 /// Mirror of the private _sanitize() in ive_impact_adapter.dart, used only in tests.
-String _sanitizeForTest(String s) => s.replaceAll('</value>', '<\\/value>');
+String _sanitizeForTest(String s) => s
+    .replaceAll('</value>', '<\\/value>')
+    .replaceAll('</VALUE>', '<\\/VALUE>')
+    .replaceAll('</Value>', '<\\/Value>');
 
 /// A large dossier derived from a real fixture: 500 copies of its claim.
 Map<String, dynamic> largeDossier(int n) {

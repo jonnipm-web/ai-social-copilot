@@ -55,7 +55,7 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.impact_has_module_access() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.impact_has_module_access() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.impact_has_module_access() TO authenticated;
 
 COMMENT ON FUNCTION public.impact_has_module_access() IS
@@ -79,13 +79,17 @@ CREATE POLICY impact_investigations_select_own ON public.impact_investigations
   );
 
 -- All child tables: sources, claims, evidence, verifications, conflicts,
--- disputes, audit_events — each already has an investigation_id FK.
+-- disputes, audit_events + artifacts, evidence_candidates, registry_conflicts
+-- — each already has an investigation_id FK.
+-- Codex P1: impact_artifacts, impact_evidence_candidates, impact_registry_conflicts
+--   were missing the module-access guard in the initial fix.
 DO $$
 DECLARE t text;
 BEGIN
   FOREACH t IN ARRAY ARRAY[
     'impact_sources', 'impact_claims', 'impact_evidence', 'impact_verifications',
-    'impact_conflicts', 'impact_disputes', 'impact_audit_events'
+    'impact_conflicts', 'impact_disputes', 'impact_audit_events',
+    'impact_artifacts', 'impact_evidence_candidates', 'impact_registry_conflicts'
   ] LOOP
     EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', t || '_select_own', t);
     EXECUTE format($p$

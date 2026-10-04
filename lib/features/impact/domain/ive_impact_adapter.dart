@@ -172,5 +172,9 @@ String _trunc(String? s, int max) {
 }
 
 // Escape </value> sequences in user-controlled text so the delimiter cannot
-// be broken by injected content.
-String _sanitize(String s) => s.replaceAll('</value>', '<\\/value>');
+// be broken by injected content. Case variants are also escaped (defense-in-depth;
+// the IVE system prompt is the primary injection boundary, not this escaping).
+String _sanitize(String s) => s
+    .replaceAll('</value>', '<\\/value>')
+    .replaceAll('</VALUE>', '<\\/VALUE>')
+    .replaceAll('</Value>', '<\\/Value>');
